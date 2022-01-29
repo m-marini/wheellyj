@@ -1,5 +1,5 @@
-#ifndef AsyncTimer_h
-#define AsyncTimer_h
+#ifndef Timer_h
+#define Timer_h
 
 #include "Arduino.h"
 
@@ -8,43 +8,46 @@
 /*
  * ASynchronous timer
  */
-class AsyncTimer {
+class Timer {
   public:
 
     // Sets the intervals sequence
-    AsyncTimer& intervals(int noIntervals, unsigned long *intervals);
+    Timer& intervals(int noIntervals, unsigned long *intervals);
 
     // Sets a single interval
-    AsyncTimer& interval(unsigned long interval);
+    Timer& interval(unsigned long interval);
 
     // Sets true if continuos events
-    AsyncTimer& continuous(boolean cont);
+    Timer& continuous(boolean cont);
 
     // Starts the timer
-    AsyncTimer& start();
+    Timer& start(void *context = NULL);
 
     // Stops the timer
-    AsyncTimer& stop();
+    Timer& stop();
   
     // Returns true if timer is not expired (is timing)
-    bool operator!() const {return _running;}
+    bool isRunning() const {return _running;}
 
     // Sets the callback 
-    AsyncTimer& onNext(void (*callback)(int, long));
+    Timer& onNext(void (*callback)(void* context, int interval, long cycles));
 
     // Polls the timer
-    AsyncTimer& polling();
+    Timer& polling();
+
+    unsigned long next() const {return _next;}
 
   private:
     bool _continuous;
     int _noIntervals;
     unsigned long _intervals[MAX_INTERVALS];
-    void (*_onNext)(int, long);
-
+    void (*_onNext)(void* context, int interval, long cycles);
+    
     unsigned long _next;
     int _interval;
     long _cycles;
     boolean _running;
+    void *_context;
 };
 
 #endif

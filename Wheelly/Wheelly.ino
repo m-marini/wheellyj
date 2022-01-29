@@ -1,91 +1,122 @@
-#include <Servo.h>
 #include "IRremote.h"
-#include "AsyncTimer.h"
+#include "Timer.h"
 #include "Multiplexer.h"
+#include "SR04.h"
+#include "AsyncServo.h"
+#include "RemoteCtrl.h"
+#include "MotorCtrl.h"
 
-#define SONAR_INACTIVITY 50
-#define SONAR_TIMEOUT (SONAR_INACTIVITY * 1000ul) // micros
+#define RED1 3
+#define RED2 2
+#define RED3 1
+#define RED4 0
+#define LEFT_BACK 4
+#define LEFT_FORW 5
+#define RIGHT_BACK 7
+#define RIGHT_FORW 6
 
-#define RED1_MASK 8
-#define RED2_MASK 4
-#define RED3_MASK 2
-#define RED4_MASK 1
-#define LEFT_BACK_MASK 0x10
-#define LEFT_FORW_MASK 0x20
-#define RIGHT_BACK_MASK 0x80
-#define RIGHT_FORW_MASK 0x40
+#define MAX_FORWARD 255
+#define MAX_BACKWARD -255
+
+#define THRESHOLD_DISTANCE  60
+#define STOP_DISTANCE  (THRESHOLD_DISTANCE / 2)
 
 #define LATCH_PIN 8
 #define CLOCK_PIN 7
 #define DATA_PIN 12
 
-int servoPin = 3;
-int triggerPin = 5;
-int echoPin = 4;
-int receiver = 11; // Signal Pin of IR receiver to Arduino Digital Pin 11
+#define TRIGGER_PIN 9
+#define ECHO_PIN 4
 
+#define SERVO_PIN 10
 
-/*-----( Declare objects )-----*/
-IRrecv irrecv(receiver);     // create instance of 'irrecv'
-decode_results results;      // create instance of 'decode_results'
+#define RECEIVER_PIN 11
 
-// Sonar timeout micros
-int tDelay = 300;
-int pos = 0;    // variable to store the servo position
+#define ENABLE_PIN 5
 
-Servo myservo;  // create servo object to control a servo
-// twelve servo objects can be created on most boards
-AsyncTimer timer;
-AsyncTimer timer1;
+#define DIR_0   0
+#define DIR_N   1
+#define DIR_NE  2
+#define DIR_E   3
+#define DIR_SE  4
+#define DIR_S   5
+#define DIR_SW  6
+#define DIR_W   7
+#define DIR_NW   8
+
+#define NO_DIRECTIONS (sizeof(speedsByDirection) / sizeof(speedsByDirection[0]))
+
+Timer timer;
+Timer timer1;
+
 Multiplexer multiplexer(LATCH_PIN, CLOCK_PIN, DATA_PIN);
+
+SR04 sr04(TRIGGER_PIN, ECHO_PIN);
+
+AsyncServo servo;
+
+MotorCtrl leftMotor(ENABLE_PIN, LEFT_FORW, LEFT_BACK);
+MotorCtrl rightMotor(ENABLE_PIN, RIGHT_FORW, RIGHT_BACK);
+
+RemoteCtrl remoteCtrl(RECEIVER_PIN);
 
 long counter;
 unsigned long started;
+int distance;
+byte direction;
+int speedsByDirection[][2] = {
+  {0, 0},
+  {MAX_FORWARD, MAX_FORWARD},   // N
+  {MAX_FORWARD, 0},             // NE
+  {MAX_FORWARD, MAX_BACKWARD},  // E
+  {0, MAX_BACKWARD},            // SE
+  {MAX_BACKWARD, MAX_BACKWARD}, // S
+  {MAX_BACKWARD, 0},            // SW
+  {MAX_BACKWARD, MAX_FORWARD},  // W
+  {0, MAX_FORWARD},             // NW
+};
 
 void setup() {
-  Serial.begin(9600);
-  multiplexer.begin();
-
-  pinMode(echoPin, INPUT);
-  pinMode(triggerPin, OUTPUT);
+  Serial.begin(115200);
   pinMode(LED_BUILTIN, OUTPUT);
-
-  myservo.attach(servoPin);  // attaches the servo on pin 9 to the servo object
-  myservo.write(90);              // tell servo to go to position in variable 'pos'
-  irrecv.enableIRIn(); // Start the receiver
+  multiplexer.begin();
+  sr04.begin();
+  servo.attach(SERVO_PIN);
+  leftMotor.begin(multiplexer);
+  rightMotor.begin(multiplexer);
+  remoteCtrl.begin();
   
-  digitalWrite(LED_BUILTIN, LOW);
+  servo.angle(90);
   multiplexer.reset().flush();
-  delay(100);
 
-  digitalWrite(LED_BUILTIN, HIGH);
-  multiplexer.values(0xff).flush();
-  delay(100);
-  
   digitalWrite(LED_BUILTIN, LOW);
-  multiplexer.reset().flush();
-  delay(100);
-
-  digitalWrite(LED_BUILTIN, HIGH);
-  multiplexer.values(0xff).flush();
-  delay(100);
-  
-  digitalWrite(LED_BUILTIN, LOW);
-  multiplexer.reset().flush();
+  for (int i = 0; i < 3; i++) {
+    delay(100);
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(50);
+    digitalWrite(LED_BUILTIN, LOW);
+  }
   
   Serial.println(F("Hello! I'm Wheelly"));
 
-  unsigned long times[] = {50, 250};
-  timer
-    .onNext(&handleNext)
+  unsigned long times[] = {50, 950};
+  timer.onNext(&handleNext)
     .intervals(2, times)
     .continuous(true)
     .start();
-  timer1
-    .onNext(&handleStats)
+  timer1.onNext(&handleStats)
     .interval(10000)
     .continuous(true)
     .start();
+
+  sr04.noSamples(3)
+    .onSample(&handleSample)
+    .start();
+
+  servo.onReached(handleReached)
+    .angle(90);
+
+  remoteCtrl.onData(&handleData);
 
   started = millis();
 }
@@ -94,104 +125,98 @@ void loop() {
   counter++;
   timer.polling();
   timer1.polling();
+  servo.polling();
+  sr04.polling();
+  remoteCtrl.polling();
   multiplexer.flush();
 } 
 
-void handleNext(int i, long j) {
-  if (i == 0){
-    digitalWrite(LED_BUILTIN, HIGH);
-    multiplexer.set(j%8);
-  } else {
-    digitalWrite(LED_BUILTIN, LOW);
-    multiplexer.reset();
+void moveTo(int direction) {
+  direction = max(direction, DIR_0);
+  if (direction >= NO_DIRECTIONS) {
+    direction = DIR_0;
+  }
+  int left = speedsByDirection[direction][0];
+  int right = speedsByDirection[direction][1];
+  leftMotor.speed(left);
+  rightMotor.speed(right);
+}
+
+void handleData(decode_results& results) {
+  switch (results.value) {
+    case KEY_1:
+      moveTo(DIR_NW);
+      break;
+    case KEY_2:
+      moveTo(DIR_N);
+      break;
+    case KEY_3:
+      moveTo(DIR_NE);
+      break;
+    case KEY_4:
+      moveTo(DIR_W);
+      break;
+    case KEY_0:
+    case KEY_5:
+    case KEY_POWER:
+    case KEY_VOL_PLUS:
+    case KEY_FUNC_STOP:
+    case KEY_FAST_BACK:
+    case KEY_PAUSE:
+    case KEY_FAST_FORWARD:
+    case KEY_DOWN:
+    case KEY_VOL_MINUS:
+    case KEY_UP:
+    case KEY_EQ:
+    case KEY_ST_REPT:
+      moveTo(DIR_0);
+      break;
+    case KEY_6:
+      moveTo(DIR_E);
+      break;
+    case KEY_7:
+      moveTo(DIR_SW);
+      break;
+    case KEY_8:
+      moveTo(DIR_S);
+      break;
+    case KEY_9:
+      moveTo(DIR_SE);
+      break;
   }
 }
 
-void handleStats(int i, long j) {
+void handleReached(void *, int angle) {
+  Serial.print("Reached ");  
+  Serial.println(angle);
+}
+
+void handleSample(void *, int distance) {
+  showDistance(distance);
+  if (distance < STOP_DISTANCE) {
+    moveTo(DIR_0);
+  }
+  sr04.start();
+}
+
+void showDistance(int distance) {
+  multiplexer.set(RED1, distance <= THRESHOLD_DISTANCE);
+  multiplexer.set(RED2, distance <= (THRESHOLD_DISTANCE * 3) / 4);
+  multiplexer.set(RED3, distance <= THRESHOLD_DISTANCE / 2);
+  multiplexer.set(RED4, distance <= THRESHOLD_DISTANCE / 4);  
+}
+
+void handleNext(void *, int i, long) {
+  if (i == 0){
+    digitalWrite(LED_BUILTIN, LOW);
+  } else {
+    digitalWrite(LED_BUILTIN, HIGH);
+  }
+}
+
+void handleStats(void *context, int i, long j) {
   Serial.print("Stats: ");
   Serial.println (counter * 1000 / (millis() - started));
   started = millis();
   counter = 0;
 }
-
-void loopIR()   /*----( LOOP: RUNS CONSTANTLY )----*/
-{
-  if (irrecv.decode(&results)) // have we received an IR signal?
-
-  {
-    translateIR(); 
-    irrecv.resume(); // receive the next value
-  }  
-}/* --(end main loop )-- */
-
-
-void loopSR04() {
-    long _duration = 0;
-    digitalWrite(triggerPin, LOW);
-    delayMicroseconds(2);
-    digitalWrite(triggerPin, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(triggerPin, LOW);
-    delayMicroseconds(2);
-    _duration = pulseIn(echoPin, HIGH, SONAR_TIMEOUT);
-    // Convert microsec to cm
-    long distance = (_duration * 100) / 5882;
-    Serial.print("Distance ");
-    Serial.println(distance);
-    if (distance <= 40) {
-      digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
-    } else {
-      digitalWrite(LED_BUILTIN, LOW);   // turn the LED on (HIGH is the voltage level)
-    }
-    delay(500);
-}
-
-void loopServo() {
-  for (pos = 0; pos <= 180; pos += 1) { // goes from 0 degrees to 180 degrees
-    // in steps of 1 degree
-    myservo.write(pos);              // tell servo to go to position in variable 'pos'
-    delay(15);                       // waits 15ms for the servo to reach the position
-  }
-  for (pos = 180; pos >= 0; pos -= 1) { // goes from 180 degrees to 0 degrees
-    myservo.write(pos);              // tell servo to go to position in variable 'pos'
-    delay(15);                       // waits 15ms for the servo to reach the position
-  }
-
-  //myservo.write(90);              // tell servo to go to position in variable 'pos'
-}
-
-/*-----( Function )-----*/
-// takes action based on IR code received{
-void translateIR() {
-  // describing Remote IR codes 
-  switch(results.value){
-  case 0xFFA25D: Serial.println("POWER"); break;
-  case 0xFFE21D: Serial.println("FUNC/STOP"); break;
-  case 0xFF629D: Serial.println("VOL+"); break;
-  case 0xFF22DD: Serial.println("FAST BACK");    break;
-  case 0xFF02FD: Serial.println("PAUSE");    break;
-  case 0xFFC23D: Serial.println("FAST FORWARD");   break;
-  case 0xFFE01F: Serial.println("DOWN");    break;
-  case 0xFFA857: Serial.println("VOL-");    break;
-  case 0xFF906F: Serial.println("UP");    break;
-  case 0xFF9867: Serial.println("EQ");    break;
-  case 0xFFB04F: Serial.println("ST/REPT");    break;
-  case 0xFF6897: Serial.println("0");    break;
-  case 0xFF30CF: Serial.println("1");    break;
-  case 0xFF18E7: Serial.println("2");    break;
-  case 0xFF7A85: Serial.println("3");    break;
-  case 0xFF10EF: Serial.println("4");    break;
-  case 0xFF38C7: Serial.println("5");    break;
-  case 0xFF5AA5: Serial.println("6");    break;
-  case 0xFF42BD: Serial.println("7");    break;
-  case 0xFF4AB5: Serial.println("8");    break;
-  case 0xFF52AD: Serial.println("9");    break;
-  case 0xFFFFFFFF: Serial.println(" REPEAT");break;  
-
-  default: 
-    Serial.println(" other button   ");
-
-  }// End Case
-
-  delay(500); // Do not get immediate repeat
-} //END translateIR

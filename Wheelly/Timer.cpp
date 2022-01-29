@@ -1,16 +1,15 @@
+#include "Timer.h"
 
-#include "AsyncTimer.h"
-
-AsyncTimer& AsyncTimer::continuous(bool cont) {
+Timer& Timer::continuous(bool cont) {
   _continuous = cont;
   return *this;
 }
 
-AsyncTimer& AsyncTimer::interval(unsigned long interval) {
+Timer& Timer::interval(unsigned long interval) {
   return intervals(1, &interval);
 }
 
-AsyncTimer& AsyncTimer::intervals(int noIntervals, unsigned long *intervals) {
+Timer& Timer::intervals(int noIntervals, unsigned long *intervals) {
   if (noIntervals >= 1) {
     if (noIntervals > MAX_INTERVALS) {
       noIntervals = MAX_INTERVALS;
@@ -23,41 +22,46 @@ AsyncTimer& AsyncTimer::intervals(int noIntervals, unsigned long *intervals) {
   return *this;
 }
 
-AsyncTimer& AsyncTimer::start() {
-  _next = millis();
+Timer& Timer::start(void *context) {
   _interval = 0;
   _cycles = 0;
+  unsigned long now = millis();
+  _next = now + _intervals[0];
+  _context = context;
   _running = true;
   return *this;
 }
 
-AsyncTimer& AsyncTimer::stop() {
+Timer& Timer::stop() {
   _running = false;
   return *this;
 }
 
-AsyncTimer& AsyncTimer::polling() {
+Timer& Timer::polling() {
   if (_running) {
     unsigned long clockTime = millis();
     if (clockTime >= _next) {
-      _next += _intervals[_interval];
-      if (_onNext != NULL) {
-        _onNext(_interval, _cycles);
-      }
+      int interval = _interval;
+      long cycles = _cycles;
       _interval++;
       if (_interval >= _noIntervals) {
         _interval = 0;
         _cycles++;
-        if (!_continuous) {
-          _running = false;
-        }
+      }
+      if (!_continuous) {
+        stop();
+      } else {
+        _next += _intervals[_interval];
+      }
+      if (_onNext != NULL) {
+        _onNext(_context, interval, cycles);
       }
     }
   }
   return *this;
 }
 
-AsyncTimer& AsyncTimer::onNext(void (*callback)(int, long)) {
+Timer& Timer::onNext(void (*callback)(void*, int, long)) {
   _onNext = callback;
   return *this;
 }

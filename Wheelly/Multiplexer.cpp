@@ -24,8 +24,18 @@ Multiplexer& Multiplexer::set(int index) {
   return *this;
 }
 
+Multiplexer& Multiplexer::values(int data) {
+  _values = data;
+  return *this;
+}
+
 Multiplexer& Multiplexer::set(int index, bool value) {
   _values = bitWrite(_values, index, value);
+  return *this;
+}
+
+Multiplexer& Multiplexer::reset() {
+  _values = 0;
   return *this;
 }
 
