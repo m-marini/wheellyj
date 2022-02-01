@@ -6,19 +6,19 @@
 #include "RemoteCtrl.h"
 #include "MotorCtrl.h"
 
-#define RED1 3
-#define RED2 2
-#define RED3 1
-#define RED4 0
-#define LEFT_BACK 4
-#define LEFT_FORW 5
-#define RIGHT_BACK 7
-#define RIGHT_FORW 6
+#define RED1 4
+#define RED2 5
+#define RED3 6
+#define RED4 7  
+#define LEFT_BACK 0
+#define LEFT_FORW 1
+#define RIGHT_FORW 2
+#define RIGHT_BACK 3
 
 #define MAX_FORWARD 255
 #define MAX_BACKWARD -255
 
-#define THRESHOLD_DISTANCE  60
+#define THRESHOLD_DISTANCE  50
 #define STOP_DISTANCE  (THRESHOLD_DISTANCE / 2)
 
 #define LATCH_PIN 8
@@ -32,17 +32,18 @@
 
 #define RECEIVER_PIN 11
 
-#define ENABLE_PIN 5
+#define ENABLE_LEFT_PIN 5
+#define ENABLE_RIGHT_PIN 6
 
-#define DIR_0   0
-#define DIR_N   1
-#define DIR_NE  2
-#define DIR_E   3
-#define DIR_SE  4
-#define DIR_S   5
-#define DIR_SW  6
-#define DIR_W   7
-#define DIR_NW   8
+#define FORWARD_LEFT    0
+#define FORWARD         1
+#define FORWARD_RIGHT   2
+#define LEFT            3
+#define STOP            4
+#define RIGHT           5
+#define BACKWARD_LEFT   6
+#define BACKWARD        7
+#define BACKWARD_RIGHT  8
 
 #define NO_DIRECTIONS (sizeof(speedsByDirection) / sizeof(speedsByDirection[0]))
 
@@ -55,8 +56,8 @@ SR04 sr04(TRIGGER_PIN, ECHO_PIN);
 
 AsyncServo servo;
 
-MotorCtrl leftMotor(ENABLE_PIN, LEFT_FORW, LEFT_BACK);
-MotorCtrl rightMotor(ENABLE_PIN, RIGHT_FORW, RIGHT_BACK);
+MotorCtrl leftMotor(ENABLE_LEFT_PIN, LEFT_FORW, LEFT_BACK);
+MotorCtrl rightMotor(ENABLE_RIGHT_PIN, RIGHT_FORW, RIGHT_BACK);
 
 RemoteCtrl remoteCtrl(RECEIVER_PIN);
 
@@ -65,15 +66,15 @@ unsigned long started;
 int distance;
 byte direction;
 int speedsByDirection[][2] = {
-  {0, 0},
-  {MAX_FORWARD, MAX_FORWARD},   // N
-  {MAX_FORWARD, 0},             // NE
-  {MAX_FORWARD, MAX_BACKWARD},  // E
-  {0, MAX_BACKWARD},            // SE
-  {MAX_BACKWARD, MAX_BACKWARD}, // S
-  {MAX_BACKWARD, 0},            // SW
-  {MAX_BACKWARD, MAX_FORWARD},  // W
-  {0, MAX_FORWARD},             // NW
+  {0, MAX_FORWARD},             // FORWARD_LEFT
+  {MAX_FORWARD, MAX_FORWARD},   // FORWARD
+  {MAX_FORWARD, 0},             // FORWARD_RIGHT
+  {MAX_BACKWARD, MAX_FORWARD},  // LEFT
+  {0, 0},                       // STOP
+  {MAX_FORWARD, MAX_BACKWARD},  // RIGHT
+  {MAX_BACKWARD, 0},            // BACKWARD_LEFT
+  {MAX_BACKWARD, MAX_BACKWARD}, // BACKWARD
+  {0, MAX_BACKWARD},            // BACKWARD_RIGHT
 };
 
 void setup() {
@@ -132,9 +133,8 @@ void loop() {
 } 
 
 void moveTo(int direction) {
-  direction = max(direction, DIR_0);
-  if (direction >= NO_DIRECTIONS) {
-    direction = DIR_0;
+  if (direction < 0 || direction >= NO_DIRECTIONS) {
+    direction = STOP;
   }
   int left = speedsByDirection[direction][0];
   int right = speedsByDirection[direction][1];
@@ -145,16 +145,16 @@ void moveTo(int direction) {
 void handleData(decode_results& results) {
   switch (results.value) {
     case KEY_1:
-      moveTo(DIR_NW);
+      moveTo(FORWARD_LEFT);
       break;
     case KEY_2:
-      moveTo(DIR_N);
+      moveTo(FORWARD);
       break;
     case KEY_3:
-      moveTo(DIR_NE);
+      moveTo(FORWARD_RIGHT);
       break;
     case KEY_4:
-      moveTo(DIR_W);
+      moveTo(LEFT);
       break;
     case KEY_0:
     case KEY_5:
@@ -169,19 +169,19 @@ void handleData(decode_results& results) {
     case KEY_UP:
     case KEY_EQ:
     case KEY_ST_REPT:
-      moveTo(DIR_0);
+      moveTo(STOP);
       break;
     case KEY_6:
-      moveTo(DIR_E);
+      moveTo(RIGHT);
       break;
     case KEY_7:
-      moveTo(DIR_SW);
+      moveTo(BACKWARD_LEFT);
       break;
     case KEY_8:
-      moveTo(DIR_S);
+      moveTo(BACKWARD);
       break;
     case KEY_9:
-      moveTo(DIR_SE);
+      moveTo(BACKWARD_RIGHT);
       break;
   }
 }
@@ -194,7 +194,7 @@ void handleReached(void *, int angle) {
 void handleSample(void *, int distance) {
   showDistance(distance);
   if (distance < STOP_DISTANCE) {
-    moveTo(DIR_0);
+    moveTo(STOP);
   }
   sr04.start();
 }

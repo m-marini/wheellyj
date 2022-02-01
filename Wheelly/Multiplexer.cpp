@@ -42,7 +42,7 @@ Multiplexer& Multiplexer::reset() {
 Multiplexer& Multiplexer::flush() {
   if (_values != _last) {
     digitalWrite(_latchPin, LOW);
-    shiftOut(_dataPin, _clockPin, LSBFIRST, _values);
+    shiftOut(_dataPin, _clockPin, MSBFIRST, _values);
     digitalWrite(_latchPin, HIGH);
     _last = _values;
   }
