@@ -1,5 +1,8 @@
 #include "Timer.h"
 
+Timer::Timer() {
+}
+
 Timer& Timer::continuous(bool cont) {
   _continuous = cont;
   return *this;
@@ -34,6 +37,14 @@ Timer& Timer::start(void *context) {
 
 Timer& Timer::stop() {
   _running = false;
+  return *this;
+}
+
+Timer& Timer::restart() {
+  if (_running) {
+    unsigned long now = millis();
+    _next = now + _intervals[_interval];
+  }
   return *this;
 }
 

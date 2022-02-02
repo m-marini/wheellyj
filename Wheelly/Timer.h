@@ -11,6 +11,8 @@
 class Timer {
   public:
 
+    Timer();
+
     // Sets the intervals sequence
     Timer& intervals(int noIntervals, unsigned long *intervals);
 
@@ -25,6 +27,9 @@ class Timer {
 
     // Stops the timer
     Timer& stop();
+  
+    // Restarts the timer
+    Timer& restart();
   
     // Returns true if timer is not expired (is timing)
     bool isRunning() const {return _running;}
