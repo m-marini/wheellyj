@@ -1,5 +1,4 @@
 #include "debug.h"
-#include "IRremote.h"
 #include "Timer.h"
 #include "Multiplexer.h"
 #include "SR04.h"
@@ -105,8 +104,6 @@ const AsyncServo servo;
 
 const MotorCtrl leftMotor(ENABLE_LEFT_PIN, LEFT_FORW, LEFT_BACK);
 const MotorCtrl rightMotor(ENABLE_RIGHT_PIN, RIGHT_FORW, RIGHT_BACK);
-
-const RemoteCtrl remoteCtrl(RECEIVER_PIN);
 
 long counter;
 unsigned long started;
