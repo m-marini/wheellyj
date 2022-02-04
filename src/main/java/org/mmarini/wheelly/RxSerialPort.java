@@ -44,7 +44,7 @@ public class RxSerialPort {
 
     private final String name;
     private final SerialPort port;
-    private final PublishProcessor<byte[]> dataEvents;
+    private final PublishProcessor<RowEvent<byte[]>> dataEvents;
 
     protected RxSerialPort(String name) {
         this.name = name;
@@ -75,7 +75,6 @@ public class RxSerialPort {
     }
 
     /**
-     *
      * @param cmd
      * @throws SerialPortException
      */
@@ -84,6 +83,13 @@ public class RxSerialPort {
         port.writeString(cmd);
         port.writeString("\n");
         return this;
+    }
+
+    /**
+     *
+     */
+    public Flowable<RowEvent<byte[]>> getDataEvents() {
+        return dataEvents;
     }
 
     /**
@@ -104,12 +110,14 @@ public class RxSerialPort {
     /**
      *
      */
-    public Flowable<String> getLines() {
+    public Flowable<RowEvent<String>> getLines() {
         StringBuilder builder = new StringBuilder();
         return dataEvents
-                .flatMap(buffer -> {
-                    String[] data = parseForLines(builder, buffer);
-                    return Flowable.fromArray(data);
+                .flatMap(event -> {
+                    String[] data = parseForLines(builder, event.data);
+                    return Flowable.fromArray(data).<RowEvent<String>>map(line ->
+                            createEvent(event.time, line)
+                    );
                 });
     }
 
@@ -125,7 +133,9 @@ public class RxSerialPort {
             port.addEventListener(event -> {
                 if (event.isRXCHAR() && event.getEventValue() > 0) {
                     try {
-                        dataEvents.onNext(event.getPort().readBytes(event.getEventValue()));
+                        dataEvents.onNext(
+                                createEvent(System.nanoTime(),
+                                        event.getPort().readBytes(event.getEventValue())));
                     } catch (SerialPortException e) {
                         dataEvents.onError(e);
                     }
@@ -137,4 +147,30 @@ public class RxSerialPort {
         return this;
     }
 
+    public static <T> RowEvent createEvent(long time, T data) {
+        return new RowEvent(time, data);
+    }
+
+    public static class RowEvent<T> {
+        public final long time;
+        public final T data;
+
+        protected RowEvent(long time, T data) {
+            this.time = time;
+            this.data = data;
+        }
+
+        public long getTime() {
+            return time;
+        }
+
+        public T getData() {
+            return data;
+        }
+
+        @Override
+        public String toString() {
+            return String.valueOf(data);
+        }
+    }
 }

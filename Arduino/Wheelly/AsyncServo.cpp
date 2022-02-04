@@ -17,11 +17,16 @@ AsyncServo& AsyncServo::onReached(void (*callback)(void*, int)){
   return *this;
 }
 
+AsyncServo& AsyncServo::offset(const int value) {
+  _offset = value;
+  return *this;
+}
+
 AsyncServo& AsyncServo::angle(void* context, int value){
   _timer.stop();
   _angle = value;
   _context = context;
-  _servo.write(value);
+  _servo.write(value + _offset);
   _timer.start(this);
   return *this;
 }

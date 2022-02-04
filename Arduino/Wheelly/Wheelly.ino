@@ -27,6 +27,8 @@
 #define ENABLE_LEFT_PIN 5
 #define ENABLE_RIGHT_PIN 6
 
+#define VOLTAGE_PIN A3
+
 /*
  * Serial config
  */
@@ -85,6 +87,7 @@
 #define NO_SAMPLES  3
 #define FRONT_SCAN_INDEX  (NO_SCAN_DIRECTIONS / 2)
 #define NO_SCAN_DIRECTIONS (sizeof(scanDirections) / sizeof(scanDirections[0]))
+#define SERVO_OFFSET  -7
 
 #define COMMANDS            3
 #define COMMAND_ARGS        4
@@ -149,6 +152,13 @@ const int speedsByDirection[][2] = {
 };
 
 const static unsigned long standbyTime[] = {50, 1450};
+
+/*
+ * Voltage sensor
+ */
+unsigned long voltageTime;
+int voltageValue;
+ 
 
 /*
  * Set up
@@ -249,7 +259,9 @@ void setup() {
   /*
    * Init sensor servo
    */
-  servo.onReached([](void *, int angle) {
+  servo
+    .offset(SERVO_OFFSET)
+    .onReached([](void *, int angle) {
     /*
      * Handles position reached event from scan servo
      */
@@ -302,6 +314,8 @@ void setup() {
  */
 void loop() {
   counter++;
+  voltageTime = millis();
+  voltageValue = analogRead(VOLTAGE_PIN);
   ledTimer.polling();
   statsTimer.polling();
   motorsTimer.polling();
@@ -446,6 +460,9 @@ void sendStatus() {
     Serial.print(distances[i]);
     Serial.print(F(" "));    
   }
+  Serial.print(voltageTime);
+  Serial.print(F(" "));
+  Serial.print(voltageValue);
   Serial.println();
 }
 

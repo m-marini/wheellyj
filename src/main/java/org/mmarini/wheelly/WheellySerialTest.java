@@ -45,7 +45,16 @@ public class WheellySerialTest {
                 .doOnComplete(port::disconnect)
                 .subscribe();
 
+        port.getLines()
+                .map(RxSerialPort.RowEvent::getData)
+                .filter("ha"::equals)
+                .firstElement()
+                .doOnSuccess(x -> port.write("sc"))
+                .subscribe();
+
         port.connect();
+
+
         port.getLines().blockingSubscribe();
         logger.info("Wheely completed.");
     }
