@@ -18,17 +18,18 @@ class Multiplexer {
     Multiplexer& set(int index, bool value);
     Multiplexer& reset(int index);
 
-    Multiplexer& values(byte data) {_values = data; return *this;}
-    Multiplexer& reset(){_values = 0; return *this;}
+    Multiplexer& values(int data);
+    Multiplexer& reset();
 
     Multiplexer& resetAll();
 
+    int values() const {return _values;}
   private:
     int _latchPin;
     int _clockPin;
     int _dataPin;
-    byte _values;
-    byte _last;
+    int _values;
+    int _last;
 };
 
 #endif

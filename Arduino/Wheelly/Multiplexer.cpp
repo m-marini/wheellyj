@@ -24,15 +24,25 @@ Multiplexer& Multiplexer::set(int index) {
   return *this;
 }
 
+Multiplexer& Multiplexer::values(int data) {
+  _values = data;
+  return *this;
+}
+
 Multiplexer& Multiplexer::set(int index, bool value) {
   _values = bitWrite(_values, index, value);
+  return *this;
+}
+
+Multiplexer& Multiplexer::reset() {
+  _values = 0;
   return *this;
 }
 
 Multiplexer& Multiplexer::flush() {
   if (_values != _last) {
     digitalWrite(_latchPin, LOW);
-    shiftOut(_dataPin, _clockPin, LSBFIRST, _values);
+    shiftOut(_dataPin, _clockPin, MSBFIRST, _values);
     digitalWrite(_latchPin, HIGH);
     _last = _values;
   }
