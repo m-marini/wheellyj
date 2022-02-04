@@ -1,10 +1,14 @@
+//#include <Streaming.h>
+
+#include <CommandParser.h>
+
 #include "debug.h"
 #include "Timer.h"
 #include "Multiplexer.h"
 #include "SR04.h"
 #include "AsyncServo.h"
-#include "RemoteCtrl.h"
 #include "MotorCtrl.h"
+#include "AsyncSerial.h"
 
 /*
  * Pins
@@ -24,16 +28,21 @@
 #define ENABLE_RIGHT_PIN 6
 
 /*
+ * Serial config
+ */
+#define SERIAL_BPS  115200
+
+/*
  * Multiplexer outputs
  */
 #define LEFT_BACK   0
 #define LEFT_FORW   1
 #define RIGHT_FORW  2
 #define RIGHT_BACK  3
-#define RED1        4
-#define RED2        5
-#define RED3        6
-#define RED4        7
+#define GREEN        4
+#define YELLOW        5
+#define RED        6
+#define BLOCK_LED        7
 
 /*
  * Motor speeds
@@ -44,8 +53,9 @@
 /*
  * Distances
  */
-#define THRESHOLD_DISTANCE  90
-#define STOP_DISTANCE  (THRESHOLD_DISTANCE / 3)
+#define STOP_DISTANCE  30
+#define WARNING_DISTANCE  50
+#define INFO_DISTANCE  70
 
 /*
  * Directions
@@ -63,22 +73,11 @@
 
 #define NO_COMMAND      -1
 
-
 /*
  * Intervals
  */
 #define SCAN_INTERVAL   10000ul
 #define MOVE_INTERVAL   750ul
-
-/*
- * Status
- */
-#define STANDBY       0
-#define IDLE          1
-#define SCANNING      2
-#define MOVE_FORWARD  3
-#define ROTATING      4
-#define MOVE_BACKWARD 5
 
 /*
  * Scanner constants
@@ -87,14 +86,23 @@
 #define FRONT_SCAN_INDEX  (NO_SCAN_DIRECTIONS / 2)
 #define NO_SCAN_DIRECTIONS (sizeof(scanDirections) / sizeof(scanDirections[0]))
 
+#define COMMANDS            3
+#define COMMAND_ARGS        4
+#define COMMAND_NAME_LENGTH 2
+#define COMMAND_ARG_SIZE    64
+#define RESPONSE_SIZE       64
+
+typedef CommandParser<COMMANDS, COMMAND_ARGS, COMMAND_NAME_LENGTH, COMMAND_ARG_SIZE, RESPONSE_SIZE> Parser;
+
+Parser parser;
+
 /*
  * Global variables
  */
 
 const Timer ledTimer;
-const Timer scanTimer;
 const Timer statsTimer;
-const Timer moveTimer;
+const Timer motorsTimer;
 
 Multiplexer multiplexer(LATCH_PIN, CLOCK_PIN, DATA_PIN);
 
@@ -105,22 +113,29 @@ const AsyncServo servo;
 const MotorCtrl leftMotor(ENABLE_LEFT_PIN, LEFT_FORW, LEFT_BACK);
 const MotorCtrl rightMotor(ENABLE_RIGHT_PIN, RIGHT_FORW, RIGHT_BACK);
 
-long counter;
-unsigned long started;
-byte status;
-int scanIndex;  // Scan index
+const AsyncSerial asyncSerial;
 
 /*
- * Scan directions
+ * Stats
+ */
+long counter;
+unsigned long started;
+
+/*
+ * Obstacle distance scanner
  */
 const int scanDirections[] = {
   0, 30, 60, 90, 120, 150, 180
 };
-/*
- * Obstacle distances
- */
-int distances[NO_SCAN_DIRECTIONS] ;
+bool isFullScanning;
+int scanIndex;  // Scan index
+int distances[NO_SCAN_DIRECTIONS];
+unsigned long scanTimes[NO_SCAN_DIRECTIONS];
 
+/*
+ * Motor speeds [left, right] by direction
+ */
+int currentDirection;
 const int speedsByDirection[][2] = {
   {0, MAX_FORWARD},             // FORWARD_LEFT
   {MAX_FORWARD, MAX_FORWARD},   // FORWARD
@@ -134,23 +149,20 @@ const int speedsByDirection[][2] = {
 };
 
 const static unsigned long standbyTime[] = {50, 1450};
-const static unsigned long idleTime[] = {50, 200};
 
 /*
  * Set up
  */
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(SERIAL_BPS);
   pinMode(LED_BUILTIN, OUTPUT);
   multiplexer.begin();
   sr04.begin();
   servo.attach(SERVO_PIN);
   leftMotor.begin(multiplexer);
   rightMotor.begin(multiplexer);
-  remoteCtrl.begin();
   
   multiplexer.reset().flush();
-  servo.angle(90);
 
   digitalWrite(LED_BUILTIN, LOW);
   for (int i = 0; i < 3; i++) {
@@ -160,31 +172,129 @@ void setup() {
     digitalWrite(LED_BUILTIN, LOW);
   }
   
-  Serial.println(F("Hello! I'm Wheelly"));
+  Serial.println(F("ha"));
 
-  ledTimer.onNext(&handleLedBlink)
-    .continuous(true);
-  statsTimer.onNext(&handleStats)
+  /*
+   * Init led timer
+   */
+  ledTimer.onNext([](void *, int i, long) {
+    /*
+     * Handles timeout event from LED blink timer
+     */
+    digitalWrite(LED_BUILTIN, i == 0 ? LOW : HIGH);
+  })
+  .intervals(2, standbyTime)
+  .continuous(true)
+  .start();
+
+  /*
+   * Init stats timer
+   */
+  statsTimer.onNext([](void *context, int i, long j) {
+    /*
+    * Handle timeout event from statistics timer
+    */
+
+#if DEBUG
+    Serial.print("Stats: ");
+    Serial.println (counter * 1000 / (millis() - started));
+#endif
+
+    started = millis();
+    counter = 0;
+  })
     .interval(10000)
     .continuous(true)
     .start();
-  scanTimer
-    .interval(SCAN_INTERVAL)
-    .onNext(&handleScanTimer);
-  moveTimer
-    .interval(MOVE_INTERVAL)
-    .onNext(&handleMoveTimer);
 
+  motorsTimer.interval(1)
+    .onNext([](void *, int i, long) {
+      moveTo(STOP);
+    });
+
+  /*
+   * Init distance sensor
+   */
   sr04.noSamples(NO_SAMPLES)
-    .onSample(&handleSample);
+    .onSample([](void *, int distance) {
+      /*
+       * Handles sample event from distance sensor
+       */
 
-  servo.onReached(handleReached)
-    .angle(scanDirections[FRONT_SCAN_INDEX]);
+#if DEBUG
+      Serial << "handleSample: dir=" << scanDirections[scanIndex] << ", distance=" << distance << endl;
+#endif
 
-  remoteCtrl.onData(&handleIRData);
+      distances[scanIndex] = distance;
+      scanTimes[scanIndex] = millis();
+
+      showDistance(distance);
+
+      if (isForward(currentDirection) && !canMoveForward()) {
+        moveTo(STOP);
+        startFullScanning();
+      } else {
+        if (isFullScanning) {
+          scanIndex++;
+          if (scanIndex >= NO_SCAN_DIRECTIONS) {
+            scanIndex = FRONT_SCAN_INDEX;
+            isFullScanning = false;
+            sendStatus();
+          }
+        }
+        servo.angle(scanDirections[scanIndex]);
+      }
+    });
+
+  /*
+   * Init sensor servo
+   */
+  servo.onReached([](void *, int angle) {
+    /*
+     * Handles position reached event from scan servo
+     */
+#if DEBUG
+    Serial << "handleReached: dir=" << angle << endl;
+#endif
+
+    sr04.start();
+  }).angle(scanDirections[FRONT_SCAN_INDEX]);
+
+  /*
+   * Init async serial port
+   */
+  asyncSerial.onData([](void *, const char *line, const Timing& timing) {
+    processCommand(line, timing);
+  });
+
+  /*
+   * Init parser
+   */
+  parser.registerCommand("mt", "ui", [](Parser::Argument *args, char *response) {
+    unsigned long timeout = args[0].asUInt64;
+    int dir = args[1].asInt64;
+    if (dir == STOP) {
+      moveTo(dir);
+      motorsTimer.stop();
+    } else if (isValidDirection(dir)
+      && timeout > millis()
+      && (!isForward(dir) || canMoveForward())) {
+      moveTo(dir);
+      motorsTimer.start(timeout);
+    }
+  });
+  parser.registerCommand("sc", "", [](Parser::Argument *args, char *response) {
+    startFullScanning();
+  });
+  parser.registerCommand("qs", "", [](Parser::Argument *args, char *response) {
+    sendStatus();
+  });
 
   started = millis();
-  changeToStandby();
+  
+  scanIndex = FRONT_SCAN_INDEX;
+  servo.angle(scanDirections[scanIndex]);
+  moveTo(STOP);
 }
 
 /*
@@ -194,218 +304,61 @@ void loop() {
   counter++;
   ledTimer.polling();
   statsTimer.polling();
-  scanTimer.polling();
-  moveTimer.polling();
+  motorsTimer.polling();
   servo.polling();
   sr04.polling();
-  remoteCtrl.polling();
+  asyncSerial.polling();
   multiplexer.flush();
 }
 
 /*
- * Handle timeout event from scan timer
+ * 
  */
-void handleScanTimer(void *, int long) {
-  changeToScanning();
-}
-
-/*
- * Handle timeout event from scan timer
- */
-void handleMoveTimer(void *, int long) {
-#if DEBUG
-  Serial << "handleMoveTimer" << endl;
-#endif
-  changeToIdle();
-}
-
-/*
- * Handles data received from IR remote controller
- */
-void handleIRData(decode_results& results) {
-#if DEBUG
-  Serial << "handleIRData " << _HEX(results.value) << endl;
-#endif
-  unsigned long cmd = results.value;
-  handleCommand(cmd);
-}
-
-/*
- * Handles command from IR remote controller
- */
-void handleCommand(unsigned long cmd) {
+void processCommand(const char *line, const Timing& timing) {
 
 #if DEBUG
-  Serial << "handleCommand " << _HEX(cmd) << endl;
+  Serial << "processCommand: " << line << endl;
 #endif
-  if (status == STANDBY) {
-    if (cmd == KEY_POWER) {
-#if DEBUG
-  Serial << " changeToScanning " << _HEX(cmd) << endl;
-#endif
-      changeToScanning();
-    }
+
+  char response[Parser::MAX_RESPONSE_SIZE];
+  char cmd[BUFFER_SIZE + 1];
+  strtrim(cmd, line);
+
+  if (strncmp(cmd, "ck ", 3) == 0) {
+    Serial.print(cmd);
+    Serial.print(F(" "));
+    Serial.print(timing.millis);
+    Serial.print(F(" "));
+    Serial.print(timing.micros);
+    Serial.print(F(" "));
+    unsigned long ms = millis();
+    unsigned long us = micros();
+    Serial.print(ms);
+    Serial.print(F(" "));
+    Serial.println(us);
   } else {
-    int direction = toDirection(cmd);
-    if (cmd == KEY_POWER) {
-      changeToStandby();
-    } else if (cmd == KEY_EQ) {
-      changeToScanning();
-    } else if (isRotating(direction)) {
-      changeToRotating(direction);
-    } else if (isBackward(direction)) {
-      changeToBackward(direction);
-    } else if (direction == STOP) {
-      changeToIdle();
-    } else if (isForward(direction) && canMoveForward()) {
-      changeToForward(direction);
-    }
-  }
-}
-
-/*
- * Handles position reached event from scan servo
- */
-void handleReached(void *, int angle) {
-
+    parser.processCommand(cmd, response);
 #if DEBUG
-    Serial << "handleReached: dir=" << angle << endl;
+    Serial << "  response: " << response << endl;
 #endif
 
-  if (status != STANDBY) {
-    sr04.start();
   }
 }
 
-/*
- * Handles sample event from distance sensor
- */
-void handleSample(void *, int distance) {
-
-#if DEBUG
-    Serial << "handleSample: dir=" << scanDirections[scanIndex] << ", distance=" << distance << endl;
-#endif
-
-  if (status != STANDBY) {
-    showDistance(distance);
-    distances[scanIndex] = distance;
-    switch (status) {
-      case SCANNING:
-        scanIndex++;
-        if (scanIndex >= NO_SCAN_DIRECTIONS) {
-          scanIndex = FRONT_SCAN_INDEX;
-          changeToIdle();
-        }
-        servo.angle(scanDirections[scanIndex]);
-        break;
-      case MOVE_FORWARD:
-        if (!canMoveForward()) {
-          changeToScanning();
-        } else {
-          scanFront();
-        }
-        break;
-      default:
-        servo.angle(scanDirections[scanIndex]);
-    }
+char *strtrim(char *out, const char *from) {
+  while (isSpace(*from)) {
+    from++;
   }
-}
-
-/*
- * Handles timeout event from LED blink timer
- */
-void handleLedBlink(void *, int i, long) {
-  if (i == 0){
-    digitalWrite(LED_BUILTIN, LOW);
-  } else {
-    digitalWrite(LED_BUILTIN, HIGH);
+  const char *to = from + strlen(from) - 1;
+  while (to >= from && isSpace(*to)) {
+      to--;
   }
-}
-
-/*
- * Handle timeout event from statistics timer
- */
-void handleStats(void *context, int i, long j) {
-
-#if DEBUG
-  Serial.print("Stats: ");
-  Serial.println (counter * 1000 / (millis() - started));
-#endif
-
-  started = millis();
-  counter = 0;
-}
-
-/*
- * Set idle status (scanning and wait for commands)
- */
-void changeToIdle() {
-  status = IDLE;
-  ledTimer
-    .intervals(2, idleTime)
-    .start();
-  moveTo(STOP);
-  scanTimer.start();
-  moveTimer.stop();
-}
-
-/**
- * Set standby status do nothing
- */
-void changeToStandby() {
-  status = STANDBY;
-  ledTimer
-    .intervals(2, standbyTime)
-    .start();
-  moveTo(STOP);
-  multiplexer.reset();
-  scanTimer.stop();
-  moveTimer.stop();
-}
-
-/*
- * Set scanning status
- */
-void changeToScanning() {
-  status = SCANNING;
-  scanTimer.stop();
-  scanIndex = 0;
-  moveTo(STOP);
-  servo.angle(scanDirections[scanIndex]);
-  moveTimer.stop();
-}
-
-/*
- * Set forward status
- */
-void changeToForward(int direction) {
-  status = MOVE_FORWARD;
-  moveTo(direction);
-  scanTimer.stop();
-  moveTimer.stop();
-  scanFront();
-}
-
-/*
- * Set rotating status
- */
-void changeToRotating(int direction) {
-  status = ROTATING;
-  scanTimer.stop();
-  moveTo(direction);
-  moveTimer.start();
-  scanFront();
-}
-
-/*
- * Set rotating status
- */
-void changeToBackward(int direction) {
-  status = MOVE_BACKWARD;
-  scanTimer.stop();
-  moveTo(direction);
-  moveTimer.start();
-  scanFront();
+  char *s = out;
+  while (from <= to) {
+    *s++ = *from++;
+  }
+  *s = '\0';
+  return out;
 }
 
 /*
@@ -422,31 +375,8 @@ bool isForward(int direction) {
   }
 }
 
-/*
- * Returns true if forward direction
- */
-bool isRotating(int direction) {
-  switch (direction) {
-    case LEFT:
-    case RIGHT:
-      return true;
-    default:
-      return false;
-  }
-}
-
-/*
- * Returns true if forward direction
- */
-bool isBackward(int direction) {
-  switch (direction) {
-    case BACKWARD_LEFT:
-    case BACKWARD_RIGHT:
-    case BACKWARD:
-      return true;
-    default:
-      return false;
-  }
+bool isValidDirection(int direction) {
+  return direction >= 0 && direction < NO_DIRECTIONS;
 }
 
 /*
@@ -462,11 +392,6 @@ bool canMoveForward() {
   return true;
 }
 
-void scanFront() {
-  scanIndex = FRONT_SCAN_INDEX;
-  servo.angle(scanDirections[scanIndex]);
-}
-
 /*
  * Move Wheelly to direction
  */
@@ -478,53 +403,55 @@ void moveTo(int direction) {
   int right = speedsByDirection[direction][1];
   leftMotor.speed(left);
   rightMotor.speed(right);
-}
-
-/*
- * Returns the directino from a IR receiver data
- */
-int toDirection(unsigned long cmd) {
-  switch (cmd) {
-    case KEY_1:
-      return FORWARD_LEFT;
-    case KEY_2:
-       return FORWARD;
-    case KEY_3:
-      return FORWARD_RIGHT;
-    case KEY_4:
-      return LEFT;
-    case KEY_0:
-    case KEY_5:
-    case KEY_POWER:
-    case KEY_VOL_PLUS:
-    case KEY_FUNC_STOP:
-    case KEY_FAST_BACK:
-    case KEY_PAUSE:
-    case KEY_FAST_FORWARD:
-    case KEY_DOWN:
-    case KEY_VOL_MINUS:
-    case KEY_UP:
-    case KEY_EQ:
-    case KEY_ST_REPT:
-      return STOP;
-    case KEY_6:
-      return RIGHT;
-    case KEY_7:
-      return BACKWARD_LEFT;
-    case KEY_8:
-      return BACKWARD;
-    case KEY_9:
-      return BACKWARD_RIGHT;
+  int prevDir = currentDirection;
+  currentDirection = direction;
+  if (prevDir != currentDirection) {    
+    sendStatus();
   }
-  return NO_COMMAND;
 }
 
 /*
  * Show distances
  */
 void showDistance(int distance) {
-  multiplexer.set(RED1, distance <= THRESHOLD_DISTANCE);
-  multiplexer.set(RED2, distance <= (THRESHOLD_DISTANCE * 2) / 3);
-  multiplexer.set(RED3, distance <= THRESHOLD_DISTANCE / 3);
-  multiplexer.set(RED4, !canMoveForward());
+  multiplexer.set(GREEN, distance > 0 && distance <= INFO_DISTANCE);
+  multiplexer.set(YELLOW, distance > 0 && distance <= WARNING_DISTANCE);
+  multiplexer.set(RED, distance > 0 && distance <= STOP_DISTANCE);
+  multiplexer.set(BLOCK_LED, !canMoveForward());
+}
+
+void startFullScanning() {
+  sr04.stop();
+
+#if DEBUG
+  Serial << "startFullScanning" << endl;
+#endif
+
+  isFullScanning = true;
+  scanIndex = 0;
+  servo.angle(scanDirections[scanIndex]);
+}
+
+void sendStatus() {
+  Serial.print(F("st "));
+  Serial.print(millis());
+  Serial.print(F(" "));
+  Serial.print(currentDirection);
+  Serial.print(F(" "));
+  for (int i = 0; i < NO_SCAN_DIRECTIONS; i++) {
+    Serial.print(scanTimes[i]);
+    Serial.print(F(" "));
+    Serial.print(scanDirections[i]);
+    Serial.print(F(" "));
+    Serial.print(distances[i]);
+    Serial.print(F(" "));    
+  }
+  Serial.println();
+}
+
+/*
+ * Process serial event 
+ */
+void serialEvent() {
+  asyncSerial.serialEvent();
 }

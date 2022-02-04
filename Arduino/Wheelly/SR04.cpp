@@ -43,6 +43,12 @@ SR04& SR04::start(void *context) {
   return *this;
 }
 
+SR04& SR04::stop() {
+  _timer.stop();
+  _sampling = false;
+  return *this;
+}
+
 SR04& SR04::_measure() {
   digitalWrite(_triggerPin, LOW);
   delayMicroseconds(2);

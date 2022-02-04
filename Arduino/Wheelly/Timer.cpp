@@ -1,17 +1,29 @@
 #include "Timer.h"
 
+/*
+ * 
+ */
 Timer::Timer() {
 }
 
+/*
+ * 
+ */
 Timer& Timer::continuous(bool cont) {
   _continuous = cont;
   return *this;
 }
 
+/*
+ * 
+ */
 Timer& Timer::interval(unsigned long interval) {
   return intervals(1, &interval);
 }
 
+/*
+ * 
+ */
 Timer& Timer::intervals(int noIntervals, unsigned long *intervals) {
   if (noIntervals >= 1) {
     if (noIntervals > MAX_INTERVALS) {
@@ -25,11 +37,26 @@ Timer& Timer::intervals(int noIntervals, unsigned long *intervals) {
   return *this;
 }
 
+/*
+ * 
+ */
 Timer& Timer::start(void *context) {
   _interval = 0;
   _cycles = 0;
   unsigned long now = millis();
   _next = now + _intervals[0];
+  _context = context;
+  _running = true;
+  return *this;
+}
+
+/*
+ * 
+ */
+Timer& Timer::start(void *context, unsigned long timeout) {
+  _interval = 0;
+  _cycles = 0;
+  _next = timeout;
   _context = context;
   _running = true;
   return *this;

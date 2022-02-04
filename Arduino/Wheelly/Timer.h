@@ -25,6 +25,12 @@ class Timer {
     // Starts the timer
     Timer& start(void *context = NULL);
 
+    // Starts the timer
+    Timer& start(void *context, unsigned long timeout);
+
+    // Starts the timer
+    Timer& start(unsigned long timeout) {return start(NULL, timeout);};
+
     // Stops the timer
     Timer& stop();
   
