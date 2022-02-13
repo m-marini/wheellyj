@@ -31,11 +31,62 @@ package org.mmarini.wheelly.swing;
 
 import javax.swing.*;
 import java.awt.*;
+import java.net.URL;
 
-public class Led extends JPanel {
-    public Led() {
-        setBorder(BorderFactory.createLineBorder(Color.BLACK));
-        setBackground(Color.BLACK);
-        setPreferredSize(new Dimension(20, 20));
+import static java.awt.Color.BLACK;
+import static java.util.Objects.requireNonNull;
+
+/**
+ *
+ */
+public class Led extends JComponent {
+    public static Led create(String... images) {
+        ImageIcon[] icons = new ImageIcon[images.length];
+        for (int i = 0; i < images.length; i++) {
+            if (images[i] != null) {
+                URL url = Led.class.getResource(images[i]);
+                if (url != null) {
+                    icons[i] = new ImageIcon(url);
+                }
+            }
+        }
+        return new Led(icons);
     }
+
+    private final ImageIcon[] icons;
+    private int value;
+
+    /**
+     * @param icons the icons
+     */
+    public Led(ImageIcon... icons) {
+        this.icons = requireNonNull(icons);
+        setBackground(BLACK);
+        setBorder(BorderFactory.createEmptyBorder());
+        Dimension size = new Dimension(30, 30);
+        setSize(size);
+        setPreferredSize(size);
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Dimension size = getSize();
+        g.setColor(getBackground());
+        g.fillRect(0, 0, size.width, size.height);
+        if (value >= 0 && value < icons.length && icons[value] != null) {
+            g.drawImage(icons[value].getImage(), 0, 0, size.width, size.height, this);
+        }
+    }
+
+    /**
+     * @param i the value
+     */
+    public Led setValue(int i) {
+        this.value = i;
+        repaint();
+        return this;
+    }
+
+
 }

@@ -53,8 +53,9 @@ import static org.mmarini.wheelly.swing.Dashboard.*;
 public class Radar extends JComponent {
     public static final Color BACKGROUND = Color.BLACK;
     public static final Color GRID = new Color(0, 63, 0);
-    private static final Color GRID1 =  new Color(0, 127, 0);;
     public static final Color FOREGROUND = Color.GREEN;
+    ;
+    private static final Color GRID1 = new Color(0, 127, 0);
     private static final Logger logger = LoggerFactory.getLogger(Radar.class);
     private static final int GRID_DISTANCE = 25;
     private static final int GRID_DISTANCE1 = 100;
@@ -97,7 +98,7 @@ public class Radar extends JComponent {
                     int angle = t._1;
                     InstantValue<Integer> ping = t._2;
                     Instant time = ping.instant;
-                    double distance = min(ping.value, MAX_DISTANCE);
+                    double distance = max(STOP_DISTANCE, min(ping.value, MAX_DISTANCE));
                     double dt = Duration.between(time, now).toMillis() / 1000d;
                     double x = exp(-dt / TAU);
                     float brigth = (float) ((x * 0.8) + 0.2);
