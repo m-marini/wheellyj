@@ -27,7 +27,7 @@
  *
  */
 
-package org.mmarini.wheelly;
+package org.mmarini.wheelly.model;
 
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
@@ -39,19 +39,16 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ *
+ */
 public class RxSerialPort {
     private static final Logger logger = LoggerFactory.getLogger(RxSerialPort.class);
 
-    private final String name;
-    private final SerialPort port;
-    private final PublishProcessor<RowEvent<byte[]>> dataEvents;
-
-    protected RxSerialPort(String name) {
-        this.name = name;
-        this.port = new SerialPort(name);
-        this.dataEvents = PublishProcessor.create();
-    }
-
+    /**
+     * @param builder the dtring builder
+     * @param buffer  the buffer
+     */
     private static String[] parseForLines(StringBuilder builder, byte[] buffer) {
         List<String> result = new ArrayList<>();
         for (byte b : buffer) {
@@ -70,8 +67,28 @@ public class RxSerialPort {
         return result.toArray(String[]::new);
     }
 
-    public static RxSerialPort create(String port) {
-        return new RxSerialPort(port);
+    /**
+     * @param port
+     * @param bps
+     */
+    public static RxSerialPort create(String port, int bps) {
+        return new RxSerialPort(port, bps);
+    }
+
+    public static <T> RowEvent createEvent(long time, T data) {
+        return new RowEvent(time, data);
+    }
+
+    private final String name;
+    private final SerialPort port;
+    private final int bps;
+    private final PublishProcessor<RowEvent<byte[]>> dataEvents;
+
+    protected RxSerialPort(String name, int bps) {
+        this.name = name;
+        this.port = new SerialPort(name);
+        this.bps = bps;
+        this.dataEvents = PublishProcessor.create();
     }
 
     /**
@@ -95,7 +112,7 @@ public class RxSerialPort {
     /**
      *
      */
-    public RxSerialPort disconnect() {
+    public RxSerialPort disconnect() throws SerialPortException {
         logger.debug("Device {} disconnecting ...", name);
         try {
             port.removeEventListener();
@@ -103,6 +120,7 @@ public class RxSerialPort {
             dataEvents.onComplete();
         } catch (SerialPortException e) {
             dataEvents.onError(e);
+            throw e;
         }
         return this;
     }
@@ -121,36 +139,57 @@ public class RxSerialPort {
                 });
     }
 
-    public RxSerialPort connect() {
-        try {
-            port.openPort();
-            port.setParams(SerialPort.BAUDRATE_115200,
-                    SerialPort.DATABITS_8,
-                    SerialPort.STOPBITS_1,
-                    SerialPort.PARITY_NONE);
-            port.setFlowControlMode(SerialPort.FLOWCONTROL_RTSCTS_IN
-                    | SerialPort.FLOWCONTROL_RTSCTS_OUT);
-            port.addEventListener(event -> {
-                if (event.isRXCHAR() && event.getEventValue() > 0) {
-                    try {
-                        dataEvents.onNext(
-                                createEvent(System.nanoTime(),
-                                        event.getPort().readBytes(event.getEventValue())));
-                    } catch (SerialPortException e) {
-                        dataEvents.onError(e);
-                    }
+    /**
+     *
+     */
+    public String getName() {
+        return name;
+    }
+
+    /**
+     *
+     */
+    public int getBps() {
+        return bps;
+    }
+
+    /**
+     * @return
+     */
+    public RxSerialPort connect() throws SerialPortException {
+        port.openPort();
+        port.setParams(bps,
+                SerialPort.DATABITS_8,
+                SerialPort.STOPBITS_1,
+                SerialPort.PARITY_NONE);
+        port.setFlowControlMode(SerialPort.FLOWCONTROL_RTSCTS_IN
+                | SerialPort.FLOWCONTROL_RTSCTS_OUT);
+        port.addEventListener(event -> {
+            if (event.isRXCHAR() && event.getEventValue() > 0) {
+                try {
+                    dataEvents.onNext(
+                            createEvent(System.nanoTime(),
+                                    event.getPort().readBytes(event.getEventValue())));
+                } catch (SerialPortException e) {
+                    dataEvents.onError(e);
                 }
-            }, SerialPort.MASK_RXCHAR);
-        } catch (SerialPortException e) {
-            dataEvents.onError(e);
-        }
+            }
+        }, SerialPort.MASK_RXCHAR);
         return this;
     }
 
-    public static <T> RowEvent createEvent(long time, T data) {
-        return new RowEvent(time, data);
+    /**
+     * @param data
+     * @
+     */
+    public RxSerialPort write(byte[] data) throws SerialPortException {
+        port.writeBytes(data);
+        return this;
     }
 
+    /**
+     * @param <T>
+     */
     public static class RowEvent<T> {
         public final long time;
         public final T data;

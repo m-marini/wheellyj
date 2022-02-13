@@ -26,17 +26,16 @@
  *
  */
 
-package org.mmarini.yaml;
+package org.mmarini.json;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
 import java.io.*;
 
 public class Utils {
 
-    public static final ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
+    static final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * @param file the filename

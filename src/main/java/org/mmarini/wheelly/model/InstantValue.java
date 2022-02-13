@@ -27,35 +27,61 @@
  *
  */
 
-package org.mmarini.wheelly;
+package org.mmarini.wheelly.model;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.time.Instant;
+import java.util.StringJoiner;
+import java.util.function.Supplier;
 
-public class WheellySerialTest {
-    private static final Logger logger = LoggerFactory.getLogger(WheellySerialTest.class);
+/**
+ * @param <T>
+ */
+public class InstantValue<T> implements Supplier<T> {
+    /**
+     * @param instant
+     * @param value
+     * @param <T>
+     */
+    public static <T> InstantValue<T> of(Instant instant, T value) {
+        return new InstantValue<>(instant, value);
+    }
 
-    public static void main(String[] args) {
-        logger.info("Wheely started.");
-        RxSerialPort port = RxSerialPort.create("COM4");
-        port.getLines()
-                .doOnError(ex -> logger.error(ex.getMessage(), ex))
-                .doOnNext(line -> logger.debug("<--{}", line))
-                .take(4)
-                .doOnComplete(port::disconnect)
-                .subscribe();
+    public final Instant instant;
+    public final T value;
 
-        port.getLines()
-                .map(RxSerialPort.RowEvent::getData)
-                .filter("ha"::equals)
-                .firstElement()
-                .doOnSuccess(x -> port.write("sc"))
-                .subscribe();
+    /**
+     * @param instant
+     * @param value
+     */
+    protected InstantValue(Instant instant, T value) {
+        this.instant = instant;
+        this.value = value;
+    }
 
-        port.connect();
+    @Override
+    public T get() {
+        return value;
+    }
 
+    /**
+     *
+     */
+    public Instant getInstant() {
+        return instant;
+    }
 
-        port.getLines().blockingSubscribe();
-        logger.info("Wheely completed.");
+    /**
+     *
+     */
+    public T getValue() {
+        return value;
+    }
+
+    @Override
+    public String toString() {
+        return new StringJoiner(", ", InstantValue.class.getSimpleName() + "[", "]")
+                .add("instant=" + instant)
+                .add("value=" + value)
+                .toString();
     }
 }
