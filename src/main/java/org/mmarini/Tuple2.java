@@ -65,10 +65,8 @@ public class Tuple2<T1, T2> {
      * @param v2 second value
      */
     public Tuple2(T1 v1, T2 v2) {
-        requireNonNull(v1);
-        requireNonNull(v2);
-        this._1 = v1;
-        this._2 = v2;
+        this._1 = requireNonNull(v1);
+        this._2 = requireNonNull(v2);
     }
 
     @Override

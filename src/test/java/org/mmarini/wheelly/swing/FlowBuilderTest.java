@@ -31,11 +31,12 @@ package org.mmarini.wheelly.swing;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.mmarini.wheelly.model.FlowBuilder;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
-class UIControllerTest {
+class FlowBuilderTest {
 
     @ParameterizedTest
     @CsvSource(value = {
@@ -48,8 +49,8 @@ class UIControllerTest {
             "0,-1,N",
             "1,-1,NE"
     })
-    void toDir(float x, float y, String dir) {
-        MotorCommand.Direction result = UIController.toDir(x, y);
-        assertThat(result, equalTo(MotorCommand.Direction.valueOf(dir)));
+    static void toDir(float x, float y, String dir) {
+        FlowBuilder.Direction result = FlowBuilder.toDir(x, y);
+        assertThat(result, equalTo(FlowBuilder.Direction.valueOf(dir)));
     }
 }

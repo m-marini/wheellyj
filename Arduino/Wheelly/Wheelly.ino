@@ -49,26 +49,28 @@
 /*
  * Motor speeds
  */
-#define MAX_FORWARD   255
-#define MAX_BACKWARD  -255
+#define MAX_FORWARD   4
+#define MAX_BACKWARD  -4
+#define NUM_PULSE     4
 
 /*
  * Distances
  */
-#define STOP_DISTANCE  30
+#define STOP_DISTANCE     30
 #define WARNING_DISTANCE  50
-#define INFO_DISTANCE  70
+#define INFO_DISTANCE     70
 
 /*
  * Intervals
  */
 #define SCAN_INTERVAL   10000ul
 #define MOVE_INTERVAL   750ul
+#define MOTOR_PULSE     100ul
 
 /*
  * Scanner constants
  */
-#define NO_SAMPLES          3
+#define NO_SAMPLES          5
 #define FRONT_SCAN_INDEX    (NO_SCAN_DIRECTIONS / 2)
 #define NO_SCAN_DIRECTIONS  (sizeof(scanDirections) / sizeof(scanDirections[0]))
 #define CAN_MOVE_MIN_DIR    (FRONT_SCAN_INDEX - 1)
@@ -89,26 +91,29 @@ Parser parser;
  * Global variables
  */
 
-const Timer ledTimer;
-const Timer statsTimer;
-const Timer motorsTimer;
+Timer ledTimer;
+Timer statsTimer;
+Timer motorsTimer;
+Timer pcmMotorsTimer;
 
 Multiplexer multiplexer(LATCH_PIN, CLOCK_PIN, DATA_PIN);
 
-const SR04 sr04(TRIGGER_PIN, ECHO_PIN);
+SR04 sr04(TRIGGER_PIN, ECHO_PIN);
 
-const AsyncServo servo;
+AsyncServo servo;
 
-const MotorCtrl leftMotor(ENABLE_LEFT_PIN, LEFT_FORW, LEFT_BACK);
-const MotorCtrl rightMotor(ENABLE_RIGHT_PIN, RIGHT_FORW, RIGHT_BACK);
+MotorCtrl leftMotor(ENABLE_LEFT_PIN, LEFT_FORW, LEFT_BACK);
+MotorCtrl rightMotor(ENABLE_RIGHT_PIN, RIGHT_FORW, RIGHT_BACK);
 
-const AsyncSerial asyncSerial;
+AsyncSerial asyncSerial;
 
 /*
  * Stats
  */
 long counter;
 unsigned long started;
+unsigned long statsTime;
+unsigned long tps;
 
 /*
  * Obstacle distance scanner
@@ -178,54 +183,28 @@ void setup() {
     * Handle timeout event from statistics timer
     */
 
-#if DEBUG
-    Serial.print("Stats: ");
-    Serial.println (counter * 1000 / (millis() - started));
-#endif
-
-    started = millis();
+    statsTime = millis();
+    tps = counter * 1000 / (statsTime - started);
+    started = statsTime;
     counter = 0;
-  })
-    .interval(10000)
-    .continuous(true)
-    .start();
+#if DEBUG
+    Serial.print("// Stats: ");
+    Serial.println(tps);
+#endif
+  }).interval(10000).continuous(true).start();
 
-  motorsTimer.interval(1)
-    .onNext([](void *, int i, long) {
-      moveTo(0, 0);
-    });
+  motorsTimer.interval(1).onNext([](void *, int i, long) {
+    moveTo(0, 0);
+  });
+  pcmMotorsTimer.interval(MOTOR_PULSE)
+    .onNext(&handlePcmMotorsTimer)
+    .continuous(true).start();
 
   /*
    * Init distance sensor
    */
   sr04.noSamples(NO_SAMPLES)
-    .onSample([](void *, int distance) {
-      /*
-       * Handles sample event from distance sensor
-       */
-
-#if DEBUG
-      Serial << "handleSample: dir=" << scanDirections[scanIndex] << ", distance=" << distance << endl;
-#endif
-
-      distances[scanIndex] = distance;
-      scanTimes[scanIndex] = millis();
-
-      showDistance(distance);
-
-      if (isForward() && !canMoveForward()) {
-        moveTo(0, 0);
-      }
-      if (isFullScanning) {
-        scanIndex++;
-        if (scanIndex >= NO_SCAN_DIRECTIONS) {
-          scanIndex = FRONT_SCAN_INDEX;
-          isFullScanning = false;
-          sendStatus();
-        }
-      }
-      servo.angle(scanDirections[scanIndex]);
-    });
+    .onSample(&handleSample);
 
   /*
    * Init sensor servo
@@ -253,23 +232,10 @@ void setup() {
   /*
    * Init parser
    */
-  parser.registerCommand("mt", "uii", [](Parser::Argument *args, char *response) {
-    unsigned long timeout = args[0].asUInt64;
-    int left = int(args[1].asInt64);
-    int right = int(args[2].asInt64);
-    if (isForward(left, right) && !canMoveForward()) {
-      left = right = 0;
-    }
-    moveTo(left, right);
-    if (left == 0 && right == 0) {
-      motorsTimer.stop();
-    } else  {
-      motorsTimer.start(timeout);
-    }
-    sendStatus();
-  });
+  parser.registerCommand("mt", "uii", &handleMtCommand);
   parser.registerCommand("sc", "", [](Parser::Argument *args, char *response) {
     startFullScanning();
+    sendStatus();
   });
   parser.registerCommand("qs", "", [](Parser::Argument *args, char *response) {
     sendStatus();
@@ -278,10 +244,11 @@ void setup() {
   scanIndex = FRONT_SCAN_INDEX;
   servo.angle(scanDirections[scanIndex]);
   moveTo(0, 0);
-  
+    
   Serial.println();
   Serial.println(F("ha"));
   started = millis();
+  serialFlush();
 }
 
 /*
@@ -294,10 +261,17 @@ void loop() {
   ledTimer.polling();
   statsTimer.polling();
   motorsTimer.polling();
+  pcmMotorsTimer.polling();
   servo.polling();
   sr04.polling();
   asyncSerial.polling();
   multiplexer.flush();
+}
+
+void serialFlush() {
+  while (Serial.available() > 0) {
+    Serial.read(); 
+  }
 }
 
 /*
@@ -315,12 +289,14 @@ void processCommand(const char *line, const Timing& timing) {
 
   if (strncmp(cmd, "ck ", 3) == 0) {
     sendClock(cmd, timing);
-  } else if (strncmp(cmd, "// ", 3) == 0) {
+  } else if (strncmp(cmd, "//", 2) == 0) {
     // Ignore comments
-  } else if (strncmp(cmd, "er ", 3) == 0) {
+  } else if (strncmp(cmd, "!!", 2) == 0) {
     // Ignore errors
+  } else if (strlen(cmd) == 0) {
+    // Ignore empty commands
   } else if (!parser.processCommand(cmd, response)) {
-    Serial.print("er ");
+    Serial.print("!! ");
     Serial.println(response);
   }
 }
@@ -336,6 +312,66 @@ void sendClock(const char *cmd, const Timing& timing) {
     unsigned long ms = millis();
     Serial.print(ms);
     Serial.println();
+}
+
+/*
+ *  Handles mt command
+ */
+void handleMtCommand(Parser::Argument *args, char *response) {
+  unsigned long timeout = args[0].asUInt64;
+  int left = min(max(MAX_BACKWARD, int(args[1].asInt64)), MAX_FORWARD);
+  int right = min(max(MAX_BACKWARD, int(args[2].asInt64)), MAX_FORWARD);
+  if (isForward(left, right) && !canMoveForward()) {
+    left = right = 0;
+  }
+  moveTo(left, right);
+  if (left == 0 && right == 0) {
+    motorsTimer.stop();
+  } else  {
+    motorsTimer.start(timeout);
+  }
+  sendStatus();
+}
+
+/*
+ * Handles sample event from distance sensor
+ */
+void handleSample(void *, int distance) {
+
+#if DEBUG
+  Serial << "handleSample: dir=" << scanDirections[scanIndex] << ", distance=" << distance << endl;
+#endif
+
+  distances[scanIndex] = distance;
+  scanTimes[scanIndex] = millis();
+
+  showDistance(distance);
+
+  if (isForward() && !canMoveForward()) {
+    moveTo(0, 0);
+  }
+  if (isFullScanning) {
+    scanIndex++;
+    if (scanIndex >= NO_SCAN_DIRECTIONS) {
+      scanIndex = FRONT_SCAN_INDEX;
+      isFullScanning = false;
+    }
+  }
+  servo.angle(scanDirections[scanIndex]);
+}
+
+/*
+ * Handle pcm motors timer
+ */
+void handlePcmMotorsTimer(void *, int, long i) {
+  int left = (i % NUM_PULSE) < abs(leftMotorSpeed) ? leftMotorSpeed : 0;
+  int right = (i % NUM_PULSE) < abs(rightMotorSpeed) ? rightMotorSpeed : 0;
+  setMotors(left, right);
+#if DEBUG
+  Serial.print("// left right");
+  Serial.print(left, right);
+  Serial.println();
+#endif
 }
 
 /*
@@ -393,10 +429,19 @@ bool canMoveForward() {
  * Move Wheelly to direction
  */
 void moveTo(int left, int right) {
-  leftMotor.speed(left);
-  rightMotor.speed(right);
   leftMotorSpeed = left;
   rightMotorSpeed = right;
+  if (left == 0 && right == 0) {
+    setMotors(0, 0);    
+  }
+}
+
+/*
+ * 
+ */
+void setMotors(int left, int right) {
+  leftMotor.speed(left);
+  rightMotor.speed(right);  
 }
 
 /*
@@ -440,8 +485,14 @@ void sendStatus() {
   Serial.print(voltageTime);
   Serial.print(F(" "));
   Serial.print(voltageValue);
+  Serial.print(F(" "));
+  Serial.print(statsTime);
+  Serial.print(F(" "));
+  Serial.print(tps);
   Serial.println();
 }
+
+
 
 /*
  * Process serial event 

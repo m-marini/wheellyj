@@ -1,6 +1,6 @@
-A sonar scanner for Arduino with Java user interface
+A wheel robot (Wheelly)
 
-The Arduino board is connected to computer via USB serial port.
+The Arduino board is connected to computer via WiFi module
 
 Properties:
 

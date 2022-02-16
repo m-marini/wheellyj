@@ -12,16 +12,19 @@ AsyncSerial::AsyncSerial() {
  */
 AsyncSerial& AsyncSerial::serialEvent() {
   while (Serial.available() && _noChars < BUFFER_SIZE) {
+    // get the new byte:
+    char inChar = (char) Serial.read();
+    
+    // get the time of first char
     if (_noChars == 0) {
       _timing.millis = millis();
       _timing.micros = micros();
     }
-    // get the new byte:
-    char inChar = (char) Serial.read();
+    
     // add it to the inputString:
-    // if the incoming character is a newline, set a flag so the main loop can
-    // do something about it:
     _inputString[_noChars++] = inChar;
+
+    // if the incoming character is a newline, set a flag of line completed
     if (inChar == '\n' || _noChars >= BUFFER_SIZE) {
       _inputString[_noChars] = '\0';
       _stringComplete = true;

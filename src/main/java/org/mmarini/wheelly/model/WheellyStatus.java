@@ -44,7 +44,7 @@ import static org.mmarini.Tuple2.toMap;
  */
 public class WheellyStatus {
 
-    public static final int NO_STATUS_PARMS = 1 + 3 + 7 * 3 + 2;
+    public static final int NO_STATUS_PARMS = 1 + 3 + 7 * 3 + 2 + 2;
     public static final double VOLTAGE_PRECISION = 5d * 3 / 1023;
     private static final int NO_DIRECTIONS = 7;
 
