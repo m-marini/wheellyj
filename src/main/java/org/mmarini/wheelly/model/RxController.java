@@ -30,20 +30,16 @@
 package org.mmarini.wheelly.model;
 
 import io.reactivex.Flowable;
-import io.reactivex.schedulers.Schedulers;
 import org.glassfish.jersey.client.rx.rxjava2.RxFlowableInvoker;
 import org.glassfish.jersey.client.rx.rxjava2.RxFlowableInvokerProvider;
-import org.glassfish.jersey.logging.LoggingFeature;
+import org.mmarini.Tuple2;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 import java.time.Instant;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 
 /**
  *
@@ -51,19 +47,10 @@ import java.util.logging.Level;
 public class RxController {
 
     /**
-     * @param baseUrl
-     * @return
+     * @param baseUrl the base URL
      */
     public static RxController create(String baseUrl) {
         return new RxController(baseUrl);
-    }
-
-    /**
-     * @param body
-     * @param clock
-     */
-    public static WheellyStatus toStatus(StatusBody body, RemoteClock clock) {
-        return WheellyStatus.from(body.getStatus(), clock);
     }
 
     /**
@@ -72,7 +59,15 @@ public class RxController {
     private static Client createClient() {
         return ClientBuilder.newClient()
                 .register(RxFlowableInvokerProvider.class)
-                .register(new LoggingFeature(java.util.logging.Logger.getLogger(RxController.class.getName()), Level.FINE, null, null));
+//                .register(new LoggingFeature(java.util.logging.Logger.getLogger(RxController.class.getName()), Level.INFO, null, null))
+                ;
+    }
+
+    /**
+     * @param tuple the tuple with status message and remote clock
+     */
+    public static WheellyStatus toStatus(Tuple2<StatusBody, RemoteClock> tuple) {
+        return WheellyStatus.from(tuple._1.getStatus(), tuple._2);
     }
 
     private final String baseUrl;
@@ -85,67 +80,22 @@ public class RxController {
     }
 
     /**
-     *
+     * Returns the clock message from wheelly
      */
-    private WebTarget createWebTarget() {
-        return createClient().target(baseUrl);
-    }
-
-    /**
-     *
-     */
-    Flowable<ClockSyncEvent> clockSync() {
-        long time = Instant.now().toEpochMilli();
+    public Flowable<ClockBody> clock() {
         return createWebTarget().path("clock")
-                .queryParam("ck", String.valueOf(time))
+                .queryParam("ck", String.valueOf(Instant.now().toEpochMilli()))
                 .request()
                 .accept(MediaType.APPLICATION_JSON)
                 .rx(RxFlowableInvoker.class)
-                .get(ClockBody.class)
-                .map(body -> {
-                    long destinationTimestamp = Instant.now().toEpochMilli();
-                    String data = body.getClock();
-                    return ClockSyncEvent.from(data, destinationTimestamp);
-                });
+                .get(ClockBody.class);
     }
 
     /**
-     * @param noSamples number of samples
+     * Creates the web target
      */
-    public Flowable<RemoteClock> remoteClock(int noSamples) {
-        return Flowable.range(1, noSamples)
-                .observeOn(Schedulers.io())
-                .flatMap(i -> clockSync())
-                .map(ClockSyncEvent::getRemoteOffset)
-                .reduce(Long::sum)
-                .map(x -> RemoteClock.create((x + noSamples / 2) / noSamples))
-                .toFlowable();
-    }
-
-    /**
-     * @param period    period
-     * @param unit      unit
-     * @param noSamples no samples
-     */
-    public Flowable<RemoteClock> remoteClock(long period, TimeUnit unit, int noSamples) {
-        return Flowable.interval(0, period, unit)
-                .flatMap(x -> remoteClock(noSamples));
-    }
-
-    /**
-     * @param respFlowable the response flowable
-     * @param clock        the clock
-     */
-    Flowable<WheellyStatus> manageStatusResponse(Flowable<Response> respFlowable, RemoteClock clock) {
-        return respFlowable.map(
-                resp -> {
-                    if (resp.getStatus() != 200) {
-                        throw new IllegalArgumentException("HTTP ERROR " + resp.getStatus());
-                    }
-                    StatusBody body = resp.readEntity(StatusBody.class);
-                    return toStatus(body, clock);
-                }
-        );
+    private WebTarget createWebTarget() {
+        return createClient().target(baseUrl);
     }
 
     /**
@@ -155,7 +105,7 @@ public class RxController {
      */
     public Flowable<StatusBody> moveTo(int left, int right, long validTo) {
         MoveToBody reqBody = new MoveToBody(left, right, validTo);
-        return createWebTarget().path("direction")
+        return createWebTarget().path("motors")
                 .request()
                 .accept(MediaType.APPLICATION_JSON)
                 .rx(RxFlowableInvoker.class)

@@ -34,6 +34,7 @@ class SR04 {
 
     // Polls the timer
     SR04& polling();
+    SR04& _send();
 
   private:
     unsigned long _inactivity;
@@ -49,8 +50,6 @@ class SR04 {
     void* _context;
     Timer _timer;
 
-    static void _handleTimeout(void *, int, long);
-    SR04& _send();
     SR04& _measure();
 };
 

@@ -34,8 +34,6 @@ import org.mmarini.wheelly.model.RemoteClock;
 import java.util.Optional;
 import java.util.StringJoiner;
 
-import static java.lang.Math.min;
-import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
 
 
@@ -43,8 +41,7 @@ import static java.util.Objects.requireNonNull;
  *
  */
 public class MotorCommand {
-    private static final MotorCommand emptyCommand = new MotorCommand(null, Direction.NONE, 0f, 0);
-    private static final int MAX_PULSE_COUNT = 4;
+    private static final MotorCommand emptyCommand = new MotorCommand(null, 0, 0);
 
     /**
      *
@@ -53,51 +50,28 @@ public class MotorCommand {
         return emptyCommand;
     }
 
+    @Override
+    public String toString() {
+        return new StringJoiner(", ", MotorCommand.class.getSimpleName() + "[", "]")
+                .add("left=" + left)
+                .add("right=" + right)
+                .add("clock=" + clock)
+                .toString();
+    }
+
     public final RemoteClock clock;
-    public final Direction direction;
-    public final float speed;
-    public final long tick;
+    public final int left;
+    public final int right;
 
     /**
-     * @param clock     the remote clock
-     * @param direction the direction
-     * @param speed     the speed
-     * @param tick      the tick clock counter
+     * @param clock the remote clock
+     * @param left  the left speed
+     * @param right the right speed
      */
-    protected MotorCommand(RemoteClock clock, Direction direction, float speed, long tick) {
+    protected MotorCommand(RemoteClock clock, int left, int right) {
         this.clock = clock;
-        this.direction = requireNonNull(direction);
-        this.speed = speed;
-        this.tick = tick;
-    }
-
-    /**
-     *
-     */
-    public boolean isPulse() {
-        int n = round(min(speed, 1f) * MAX_PULSE_COUNT);
-        return (tick % MAX_PULSE_COUNT) < n;
-    }
-
-    /**
-     *
-     */
-    public float getSpeed() {
-        return speed;
-    }
-
-    /**
-     * @param speed the speed
-     */
-    public MotorCommand setSpeed(float speed) {
-        return new MotorCommand(clock, direction, speed, tick);
-    }
-
-    /**
-     *
-     */
-    public Optional<RemoteClock> getClock() {
-        return Optional.ofNullable(clock);
+        this.left = left;
+        this.right = right;
     }
 
     /**
@@ -105,102 +79,27 @@ public class MotorCommand {
      */
     public MotorCommand setClock(RemoteClock clock) {
         requireNonNull(clock);
-        return new MotorCommand(clock, direction, speed, tick);
+        return new MotorCommand(clock, left, right);
     }
 
     /**
-     *
+     * Returns true if any motor is running
      */
-    public Direction getDirection() {
-        return direction;
-    }
-
-    /**
-     * @param direction the direction
-     */
-    public MotorCommand setDirection(Direction direction) {
-        requireNonNull(direction);
-        return new MotorCommand(clock, direction, speed, tick);
-    }
-
-    /**
-     *
-     */
-    public long getTick() {
-        return tick;
-    }
-
-    /**
-     * @param tick the clock tick
-     */
-    public MotorCommand setTick(long tick) {
-        return new MotorCommand(clock, direction, speed, tick);
-    }
-
-    /**
-     *
-     */
-    public int getLeftSpeed() {
-        if (isPulse()) {
-            switch (direction) {
-                case N:
-                case NE:
-                case E:
-                    return 255;
-                case W:
-                case S:
-                case SW:
-                    return -255;
-            }
-        }
-        return 0;
-    }
-
-    /**
-     *
-     */
-    public int getRightSpeed() {
-        if (isPulse()) {
-            switch (direction) {
-                case N:
-                case NW:
-                case W:
-                    return 255;
-                case E:
-                case S:
-                case SE:
-                    return -255;
-            }
-        }
-        return 0;
-    }
-
-    @Override
-    public String toString() {
-        return new StringJoiner(", ", MotorCommand.class.getSimpleName() + "[", "]")
-                .add("direction=" + direction)
-                .add("speed=" + speed)
-                .add("tick=" + tick)
-                .add("clock=" + clock)
-                .toString();
-    }
-
     public boolean isRunning() {
-        return getLeftSpeed() != 0 || getRightSpeed() != 0;
+        return left != 0 || right != 0;
     }
 
     /**
-     *
+     * @param left the left speed
      */
-    public enum Direction {
-        NONE,
-        N,
-        NE,
-        E,
-        SE,
-        S,
-        SW,
-        W,
-        NW
+    public MotorCommand setLeft(int left) {
+        return new MotorCommand(clock, left, right);
+    }
+
+    /**
+     * @param right the right speed
+     */
+    public MotorCommand setRight(int right) {
+        return new MotorCommand(clock, left, right);
     }
 }

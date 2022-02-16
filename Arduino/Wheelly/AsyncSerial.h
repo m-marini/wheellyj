@@ -4,7 +4,7 @@
 #include "Arduino.h"
 #include "Timing.h"
 
-#define BUFFER_SIZE 63
+#define BUFFER_SIZE 200
 
 class AsyncSerial {
   public:

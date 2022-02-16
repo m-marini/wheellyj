@@ -2,6 +2,10 @@
 
 #define INACTIVITY 50ul
 
+void _handleTimeout(void *context, int, long){
+  ((SR04*)context)->_send();
+}
+
 SR04::SR04(int triggerPin, int echoPin)
   : _triggerPin{triggerPin}, _echoPin{echoPin}  {
   _inactivity = INACTIVITY;
@@ -85,8 +89,4 @@ SR04& SR04::_send() {
     _measure();
     _timer.start(this);
   }
-}
-
-static void SR04::_handleTimeout(void *context, int, long){
-  ((SR04*)context)->_send();
 }
