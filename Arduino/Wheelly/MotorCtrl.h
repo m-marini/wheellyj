@@ -2,20 +2,18 @@
 #define MotorCtrl_h
 
 #include "Arduino.h"
-#include "Multiplexer.h"
+
 /*
  * Multiplexer
  */
 class MotorCtrl {
   public:
-    MotorCtrl(int enablePin, int forwardBit, int backwardBit);
-    MotorCtrl& begin(Multiplexer& multiplexer);
+    MotorCtrl(int forwardPin, int backwardPin);
+    MotorCtrl& begin();
     MotorCtrl& speed(int value);
   private:
-    Multiplexer* _multiplexer;
-    int _enablePin;
-    int _forwardBit;
-    int _backwardBit;
+    int _forwardPin;
+    int _backwardPin;
 };
 
 #endif

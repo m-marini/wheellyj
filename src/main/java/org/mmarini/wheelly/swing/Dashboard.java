@@ -29,13 +29,17 @@
 
 package org.mmarini.wheelly.swing;
 
+import hu.akarnokd.rxjava3.swing.SwingObservable;
+import io.reactivex.rxjava3.core.BackpressureStrategy;
+import io.reactivex.rxjava3.core.Flowable;
 import org.mmarini.swing.GridLayoutHelper;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 
 import static java.awt.Color.*;
-import static java.lang.Math.round;
+import static java.lang.Math.*;
 import static java.lang.String.format;
 
 /**
@@ -43,13 +47,12 @@ import static java.lang.String.format;
  */
 public class Dashboard extends JPanel {
 
-    public static final double MAX_VOLTAGE = 15;
     public static final int MAX_DISTANCE = 300;
     public static final int STOP_DISTANCE = 30;
     public static final int WARN_DISTANCE = 50;
     public static final int INFO_DISTANCE = 70;
-    public static final double MIN_VOLTAGE = 5.0;
-    public static final double MID_VOLTAGE = 5.8;
+    public static final double MIN_VOLTAGE = 9.0;
+    public static final double FULL_VOLTAGE = 12.6;
 
     private final Led leftForwardMotor;
     private final Led leftBackwardMotor;
@@ -62,23 +65,30 @@ public class Dashboard extends JPanel {
     private final Led powerLed;
     private final JProgressBar powerMeasureBar;
     private final JLabel powerMeasure;
+    private final Led wifiLed;
+    private final JLabel tps;
+    private final Flowable<ActionEvent> resetFlow;
 
     /**
      *
      */
     public Dashboard() {
-
-        this.leftForwardMotor = Led.create(null, "/images/up.png");
-        this.leftBackwardMotor = Led.create(null, "/images/down.png");
-        this.rightForwardMotor = Led.create(null, "/images/up.png");
-        this.rightBackwardMotor = Led.create(null, "/images/down.png");
-        this.forwardBlock = Led.create(null, "/images/brake.png");
-        this.obstacleLed = Led.create(null, "/images/green-barrier.png", "/images/yellow-barrier.png", "/images/red-barrier.png");
+        this.leftForwardMotor = Led.create("/images/up-off.png", "/images/up.png");
+        this.leftBackwardMotor = Led.create("/images/down-off.png", "/images/down.png");
+        this.rightForwardMotor = Led.create("/images/up-off.png", "/images/up.png");
+        this.rightBackwardMotor = Led.create("/images/down-off.png", "/images/down.png");
+        this.forwardBlock = Led.create("/images/brake-off.png", "/images/brake.png");
+        this.obstacleLed = Led.create("/images/barrier-off.png", "/images/green-barrier.png", "/images/yellow-barrier.png", "/images/red-barrier.png");
+        this.wifiLed = Led.create("/images/wifi-off.png", "/images/wifi-on.png");
         this.obstacleMeasureBar = new JProgressBar(JProgressBar.VERTICAL);
         this.obstacleMeasure = new JLabel();
         this.powerMeasureBar = new JProgressBar(JProgressBar.VERTICAL);
         this.powerLed = Led.create("/images/red-charge.png", "/images/yellow-charge.png", "/images/green-charge.png");
         this.powerMeasure = new JLabel();
+        this.tps = new JLabel();
+        JButton reset = new JButton("Reset");
+        this.resetFlow = SwingObservable.actions(reset).toFlowable(BackpressureStrategy.DROP);
+        setCps(0);
 
         setBackground(BLACK);
 
@@ -86,13 +96,19 @@ public class Dashboard extends JPanel {
         obstacleMeasureBar.setMaximum(MAX_DISTANCE);
         powerMeasureBar.setMinimum(0);
         powerMeasureBar.setMaximum(100);
+        tps.setBackground(BLACK);
+        tps.setForeground(WHITE);
 
         new GridLayoutHelper<>(this)
-                .modify("weight,1,1 right hfill vfill")
+                .modify("hw,0.3 right ")
+                .add(createConnectionPanel())
+                .modify("weight,1,1 hfill vfill")
                 .add(createMotorsPanel())
                 .modify("hw,0.3")
                 .add(createObstaclePanel(),
-                        createPowerPanel());
+                        createPowerPanel())
+                .modify("nofill")
+                .add(reset);
 
         setObstacleDistance(0);
         setPower(0);
@@ -100,45 +116,17 @@ public class Dashboard extends JPanel {
     }
 
     /**
-     * @param distance
+     *
      */
-    public void setObstacleDistance(int distance) {
-        if (distance > 0) {
-            obstacleMeasureBar.setValue(MAX_DISTANCE - distance);
-            obstacleMeasure.setText(format("%d cm", distance));
-            Color color = distance <= STOP_DISTANCE ? RED
-                    : distance <= WARN_DISTANCE ? YELLOW
-                    : distance <= INFO_DISTANCE ? GREEN
-                    : GRAY;
-            int led = distance <= STOP_DISTANCE ? 3
-                    : distance <= WARN_DISTANCE ? 2
-                    : distance <= INFO_DISTANCE ? 1
-                    : 0;
-            obstacleLed.setValue(led);
-            obstacleMeasureBar.setForeground(color);
-        } else {
-            obstacleMeasureBar.setValue(0);
-            obstacleMeasure.setText(format("-"));
-            Color color = GREEN;
-            obstacleLed.setValue(0);
-            obstacleMeasureBar.setForeground(color);
-        }
-    }
-
-    /**
-     * @param voltage
-     */
-    public void setPower(double voltage) {
-        powerMeasureBar.setValue((int) round(100 * voltage / MAX_VOLTAGE));
-        powerMeasure.setText(format("%.1f V", voltage));
-        Color color = voltage <= MIN_VOLTAGE ? RED
-                : voltage <= MID_VOLTAGE ? YELLOW
-                : GREEN;
-        int led = voltage <= MIN_VOLTAGE ? 0
-                : voltage <= MID_VOLTAGE ? 1
-                : 2;
-        powerLed.setValue(led);
-        powerMeasureBar.setForeground(color);
+    private JPanel createConnectionPanel() {
+        JPanel container = new GridLayoutHelper<>(new JPanel())
+                .modify("insets,2 at,0,0 span,2,1")
+                .add(wifiLed)
+                .modify("at,0,1 weight,1,1 span,1,1 center")
+                .add(tps)
+                .getContainer();
+        container.setBackground(BLACK);
+        return container;
     }
 
     /**
@@ -204,6 +192,24 @@ public class Dashboard extends JPanel {
     }
 
     /**
+     *
+     */
+    public Flowable<ActionEvent> getResetFlow() {
+        return resetFlow;
+    }
+
+    /**
+     * @param cps the transitions per second
+     */
+    public void setCps(double cps) {
+        tps.setText(format("%.1f CPS", cps));
+    }
+
+    public void setForwardBlock(boolean block) {
+        forwardBlock.setValue(block ? 1 : 0);
+    }
+
+    /**
      * @param left  left speed
      * @param right right speed
      */
@@ -230,7 +236,50 @@ public class Dashboard extends JPanel {
         }
     }
 
-    public void setForwardBlock(boolean block) {
-        forwardBlock.setValue(block ? 1 : 0);
+    /**
+     * @param distance the distance
+     */
+    public void setObstacleDistance(int distance) {
+        if (distance > 0) {
+            obstacleMeasureBar.setValue(MAX_DISTANCE - distance);
+            obstacleMeasure.setText(format("%d cm", distance));
+            Color color = distance <= STOP_DISTANCE ? RED
+                    : distance <= WARN_DISTANCE ? YELLOW
+                    : distance <= INFO_DISTANCE ? GREEN
+                    : GRAY;
+            int led = distance <= STOP_DISTANCE ? 3
+                    : distance <= WARN_DISTANCE ? 2
+                    : distance <= INFO_DISTANCE ? 1
+                    : 0;
+            obstacleLed.setValue(led);
+            obstacleMeasureBar.setForeground(color);
+        } else {
+            obstacleMeasureBar.setValue(0);
+            obstacleMeasure.setText("-");
+            obstacleLed.setValue(0);
+            obstacleMeasureBar.setForeground(GREEN);
+        }
+    }
+
+    /**
+     * @param voltage the voltage
+     */
+    public void setPower(double voltage) {
+        int perc = max(0, min((int) round(100 * (voltage - MIN_VOLTAGE) / (FULL_VOLTAGE - MIN_VOLTAGE)), 100));
+        powerMeasureBar.setValue(perc);
+        powerMeasure.setText(format("%.1f V", voltage));
+        Color color = perc < 33 ? RED
+                : perc <= 66 ? YELLOW : GREEN;
+        int led = perc < 33 ? 0
+                : perc < 67 ? 1 : 2;
+        powerLed.setValue(led);
+        powerMeasureBar.setForeground(color);
+    }
+
+    /**
+     * @param on true if connected
+     */
+    public void setWifiLed(boolean on) {
+        wifiLed.setValue(on ? 1 : 0);
     }
 }

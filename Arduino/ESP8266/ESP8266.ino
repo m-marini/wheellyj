@@ -11,7 +11,7 @@
 #include "Timer.h"
 
 #define LED LED_BUILTIN
-#define SERIAL_TIMEOUT  5000ul
+#define SERIAL_TIMEOUT  2000ul
 #define EEPROM_ADDRESS  0
 #define CURRENT_VERSION 0
 
@@ -98,7 +98,7 @@ void setup(void) {
 void loop(void) {
   server.handleClient();
   MDNS.update();
- // ledTimer.polling();
+  ledTimer.polling();
 }
 
 /*

@@ -4,7 +4,6 @@
 
 #include "debug.h"
 #include "Timer.h"
-#include "Multiplexer.h"
 #include "SR04.h"
 #include "AsyncServo.h"
 #include "MotorCtrl.h"
@@ -13,21 +12,18 @@
 /*
  * Pins
  */
-#define LATCH_PIN 8
-#define CLOCK_PIN 7
-#define DATA_PIN  12
-
-#define TRIGGER_PIN 9
-#define ECHO_PIN    4
-
-#define SERVO_PIN 10
-
-#define RECEIVER_PIN 11
-
-#define ENABLE_LEFT_PIN   5
-#define ENABLE_RIGHT_PIN  6
-
-#define VOLTAGE_PIN A3
+#define RIGHT_BACK_PIN  9
+#define RIGHT_FORW_PIN  3
+#define LEFT_FORW_PIN   10
+#define LEFT_BACK_PIN   11
+#define RED_PIN         2
+#define YELLOW_PIN      4
+#define GREEN_PIN       8
+#define BLOCK_LED_PIN   12
+#define SERVO_PIN       5
+#define ECHO_PIN        6
+#define TRIGGER_PIN     7
+#define VOLTAGE_PIN     A3
 
 /*
  * Serial config
@@ -37,14 +33,6 @@
 /*
  * Multiplexer outputs
  */
-#define LEFT_BACK   0
-#define LEFT_FORW   1
-#define RIGHT_FORW  2
-#define RIGHT_BACK  3
-#define GREEN       4
-#define YELLOW      5
-#define RED         6
-#define BLOCK_LED   7
 
 /*
  * Motor speeds
@@ -96,14 +84,12 @@ Timer statsTimer;
 Timer motorsTimer;
 Timer pcmMotorsTimer;
 
-Multiplexer multiplexer(LATCH_PIN, CLOCK_PIN, DATA_PIN);
-
 SR04 sr04(TRIGGER_PIN, ECHO_PIN);
 
 AsyncServo servo;
 
-MotorCtrl leftMotor(ENABLE_LEFT_PIN, LEFT_FORW, LEFT_BACK);
-MotorCtrl rightMotor(ENABLE_RIGHT_PIN, RIGHT_FORW, RIGHT_BACK);
+MotorCtrl leftMotor(LEFT_FORW_PIN, LEFT_BACK_PIN);
+MotorCtrl rightMotor(RIGHT_FORW_PIN, RIGHT_BACK_PIN);
 
 AsyncSerial asyncSerial;
 
@@ -146,14 +132,15 @@ int voltageValue;
 void setup() {
   Serial.begin(SERIAL_BPS);
   pinMode(LED_BUILTIN, OUTPUT);
-  multiplexer.begin();
+  pinMode(GREEN_PIN, OUTPUT);
+  pinMode(YELLOW_PIN, OUTPUT);
+  pinMode(RED_PIN, OUTPUT);
+  pinMode(BLOCK_LED_PIN, OUTPUT);
   sr04.begin();
   servo.attach(SERVO_PIN);
-  leftMotor.begin(multiplexer);
-  rightMotor.begin(multiplexer);
+  leftMotor.begin();
+  rightMotor.begin();
   
-  multiplexer.reset().flush();
-
   digitalWrite(LED_BUILTIN, LOW);
   for (int i = 0; i < 3; i++) {
     delay(100);
@@ -265,7 +252,6 @@ void loop() {
   servo.polling();
   sr04.polling();
   asyncSerial.polling();
-  multiplexer.flush();
 }
 
 void serialFlush() {
@@ -448,10 +434,14 @@ void setMotors(int left, int right) {
  * Show distances
  */
 void showDistance(int distance) {
-  multiplexer.set(GREEN, distance > 0 && distance <= INFO_DISTANCE);
-  multiplexer.set(YELLOW, distance > 0 && distance <= WARNING_DISTANCE);
-  multiplexer.set(RED, distance > 0 && distance <= STOP_DISTANCE);
-  multiplexer.set(BLOCK_LED, !canMoveForward());
+  int green = distance > 0 && distance <= INFO_DISTANCE ? LOW : HIGH;
+  int yellow = distance > 0 && distance <= WARNING_DISTANCE ? LOW : HIGH;
+  int red = distance > 0 && distance <= STOP_DISTANCE ? LOW : HIGH;
+  int block = !canMoveForward() ? LOW : HIGH;
+  digitalWrite(GREEN_PIN, green);
+  digitalWrite(YELLOW_PIN, yellow);
+  digitalWrite(RED_PIN, red);
+  digitalWrite(BLOCK_LED_PIN, block);
 }
 
 void startFullScanning() {

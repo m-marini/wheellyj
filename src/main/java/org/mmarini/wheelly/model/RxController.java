@@ -29,10 +29,13 @@
 
 package org.mmarini.wheelly.model;
 
-import io.reactivex.Flowable;
+import hu.akarnokd.rxjava3.bridge.RxJavaBridge;
+import io.reactivex.rxjava3.core.Flowable;
 import org.glassfish.jersey.client.rx.rxjava2.RxFlowableInvoker;
 import org.glassfish.jersey.client.rx.rxjava2.RxFlowableInvokerProvider;
 import org.mmarini.Tuple2;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -45,6 +48,7 @@ import java.time.Instant;
  *
  */
 public class RxController {
+    private static final Logger logger = LoggerFactory.getLogger(RxController.class);
 
     /**
      * @param baseUrl the base URL
@@ -83,12 +87,13 @@ public class RxController {
      * Returns the clock message from wheelly
      */
     public Flowable<ClockBody> clock() {
-        return createWebTarget().path("clock")
+        logger.debug("Creating clock request ...");
+        return RxJavaBridge.toV3Flowable(createWebTarget().path("clock")
                 .queryParam("ck", String.valueOf(Instant.now().toEpochMilli()))
                 .request()
                 .accept(MediaType.APPLICATION_JSON)
                 .rx(RxFlowableInvoker.class)
-                .get(ClockBody.class);
+                .get(ClockBody.class));
     }
 
     /**
@@ -105,11 +110,11 @@ public class RxController {
      */
     public Flowable<StatusBody> moveTo(int left, int right, long validTo) {
         MoveToBody reqBody = new MoveToBody(left, right, validTo);
-        return createWebTarget().path("motors")
-                .request()
-                .accept(MediaType.APPLICATION_JSON)
-                .rx(RxFlowableInvoker.class)
-                .post(Entity.json(reqBody))
+        return RxJavaBridge.toV3Flowable(createWebTarget().path("motors")
+                        .request()
+                        .accept(MediaType.APPLICATION_JSON)
+                        .rx(RxFlowableInvoker.class)
+                        .post(Entity.json(reqBody)))
                 .map(resp -> resp.readEntity(StatusBody.class));
     }
 
@@ -117,11 +122,11 @@ public class RxController {
      *
      */
     public Flowable<StatusBody> scan() {
-        return createWebTarget().path("scan")
-                .request()
-                .accept(MediaType.APPLICATION_JSON)
-                .rx(RxFlowableInvoker.class)
-                .post(Entity.json(null))
+        return RxJavaBridge.toV3Flowable(createWebTarget().path("scan")
+                        .request()
+                        .accept(MediaType.APPLICATION_JSON)
+                        .rx(RxFlowableInvoker.class)
+                        .post(Entity.json(null)))
                 .map(resp -> resp.readEntity(StatusBody.class));
     }
 
@@ -129,10 +134,10 @@ public class RxController {
      *
      */
     public Flowable<StatusBody> status() {
-        return createWebTarget().path("status")
+        return RxJavaBridge.toV3Flowable(createWebTarget().path("status")
                 .request()
                 .accept(MediaType.APPLICATION_JSON)
                 .rx(RxFlowableInvoker.class)
-                .get(StatusBody.class);
+                .get(StatusBody.class));
     }
 }

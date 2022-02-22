@@ -1,14 +1,13 @@
 #include "MotorCtrl.h"
 
-MotorCtrl::MotorCtrl(int enablePin, int forwardBit, int backwardBit) {
-  _enablePin = enablePin;
-  _forwardBit = forwardBit;
-  _backwardBit = backwardBit;
+MotorCtrl::MotorCtrl(int forwardPin, int backwardPin) {
+  _forwardPin = forwardPin;
+  _backwardPin = backwardPin;
 }
 
-MotorCtrl& MotorCtrl::begin(Multiplexer& multiplexer){
-  _multiplexer = &multiplexer;
-  pinMode(_enablePin, OUTPUT);  
+MotorCtrl& MotorCtrl::begin(){
+  pinMode(_forwardPin, OUTPUT);  
+  pinMode(_backwardPin, OUTPUT);  
   return *this;
 }
 
@@ -17,17 +16,14 @@ MotorCtrl& MotorCtrl::begin(Multiplexer& multiplexer){
  */
 MotorCtrl& MotorCtrl::speed(int value) {
   if (value == 0) {
-    analogWrite(_enablePin, 0);
-    _multiplexer->set(_forwardBit)
-      .set(_backwardBit);
+    digitalWrite(_forwardPin, HIGH);
+    digitalWrite(_backwardPin, HIGH);
   } else if (value > 0) {
-    _multiplexer->reset(_forwardBit)
-      .set(_backwardBit);
-    analogWrite(_enablePin, min(value, 255));
+    digitalWrite(_forwardPin, LOW);
+    digitalWrite(_backwardPin, HIGH);
   } else {
-    _multiplexer->set(_forwardBit)
-      .reset(_backwardBit);
-    analogWrite(_enablePin, min(-value, 255));      
+    digitalWrite(_forwardPin, HIGH);
+    digitalWrite(_backwardPin, LOW);
   }
   return *this;
 }
