@@ -83,22 +83,29 @@ public class WheellyStatus {
         Instant voltageInstant = clock.fromRemote(Long.parseLong(parms[25]));
         double v = Integer.parseInt(parms[26]) * VOLTAGE_PRECISION;
         InstantValue<Double> voltage = InstantValue.of(voltageInstant, v);
-        return new WheellyStatus(direction, obstacles, voltage);
+
+        Instant cpsInstant = clock.fromRemote(Long.parseLong(parms[27]));
+        double cpsValue = Integer.parseInt(parms[28]);
+        InstantValue<Double> cps = InstantValue.of(cpsInstant, cpsValue);
+        return new WheellyStatus(direction, obstacles, voltage, cps);
     }
 
     public final InstantValue<Tuple2<Integer, Integer>> direction;
     public final Map<Integer, InstantValue<Integer>> obstacles;
     public final InstantValue<Double> voltage;
+    public final InstantValue<Double> cps;
 
     /**
      * @param direction
      * @param obstacles
      * @param voltage
+     * @param cps
      */
-    public WheellyStatus(InstantValue<Tuple2<Integer, Integer>> direction, Map<Integer, InstantValue<Integer>> obstacles, InstantValue<Double> voltage) {
+    public WheellyStatus(InstantValue<Tuple2<Integer, Integer>> direction, Map<Integer, InstantValue<Integer>> obstacles, InstantValue<Double> voltage, InstantValue<Double> cps) {
         this.direction = requireNonNull(direction);
         this.obstacles = requireNonNull(obstacles);
         this.voltage = requireNonNull(voltage);
+        this.cps = requireNonNull(cps);
     }
 
     /**

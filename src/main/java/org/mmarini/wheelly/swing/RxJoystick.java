@@ -29,9 +29,9 @@
 
 package org.mmarini.wheelly.swing;
 
-import io.reactivex.Flowable;
-import io.reactivex.processors.PublishProcessor;
-import io.reactivex.schedulers.Schedulers;
+import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.processors.PublishProcessor;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import net.java.games.input.Controller;
 import net.java.games.input.ControllerEnvironment;
 import net.java.games.input.Event;
@@ -119,6 +119,14 @@ public class RxJoystick {
         this.publisher = PublishProcessor.create();
         createUnsafe(controller).subscribeOn(Schedulers.single())
                 .subscribe(this.publisher);
+        logger.debug("Created reactive joystick");
+    }
+
+    /**
+     *
+     */
+    public void close() {
+        publisher.onComplete();
     }
 
     /**
@@ -134,14 +142,7 @@ public class RxJoystick {
     public Flowable<Float> getValues(String id) {
         return publisher.filter(ev -> id.equals(ev.getComponent().getIdentifier().getName()))
                 .map(Event::getValue)
-                .startWith(0f);
-    }
-
-    /**
-     *
-     */
-    public void close() {
-        publisher.onComplete();
+                .startWithItem(0f);
     }
 
     /**

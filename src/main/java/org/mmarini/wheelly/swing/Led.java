@@ -32,14 +32,19 @@ package org.mmarini.wheelly.swing;
 import javax.swing.*;
 import java.awt.*;
 import java.net.URL;
+import java.util.Arrays;
 
 import static java.awt.Color.BLACK;
+import static java.lang.Math.max;
 import static java.util.Objects.requireNonNull;
 
 /**
  *
  */
 public class Led extends JComponent {
+
+    public static final int DEFAULT_SIZE = 30;
+
     public static Led create(String... images) {
         ImageIcon[] icons = new ImageIcon[images.length];
         for (int i = 0; i < images.length; i++) {
@@ -63,7 +68,11 @@ public class Led extends JComponent {
         this.icons = requireNonNull(icons);
         setBackground(BLACK);
         setBorder(BorderFactory.createEmptyBorder());
-        Dimension size = new Dimension(30, 30);
+        Dimension size = Arrays.stream(icons)
+                .filter(x -> x != null)
+                .map(icon -> new Dimension(icon.getIconWidth(), icon.getIconHeight()))
+                .reduce((a, b) -> new Dimension(max(a.width, b.width), max(a.height, b.height)))
+                .orElseGet(() -> new Dimension(DEFAULT_SIZE, DEFAULT_SIZE));
         setSize(size);
         setPreferredSize(size);
     }

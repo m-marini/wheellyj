@@ -29,9 +29,11 @@
 
 package org.mmarini.wheelly.model;
 
-import io.reactivex.Flowable;
-import io.reactivex.processors.BehaviorProcessor;
-import io.reactivex.schedulers.Schedulers;
+import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.core.Scheduler;
+import io.reactivex.rxjava3.processors.BehaviorProcessor;
+import io.reactivex.rxjava3.processors.PublishProcessor;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.swing.MotorCommand;
 import org.mmarini.wheelly.swing.RxJoystick;
@@ -40,9 +42,12 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
-import static io.reactivex.Flowable.*;
+import static io.reactivex.rxjava3.core.Flowable.*;
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
 
@@ -50,11 +55,11 @@ import static java.util.Objects.requireNonNull;
  *
  */
 public class FlowBuilder {
-    private static final long REMOTE_CLOCK_PERIOD = 60;   // Seconds
+    static final long REMOTE_CLOCK_PERIOD = 60;   // Seconds
     private static final int REMOTE_CLOCK_SAMPLES = 10;
     private static final long STATUS_INTERVAL = 200; // Millis
-    private static final long MOTOR_INTERVAL = 1000;
-    private static final long MOTOR_VALIDITY = 1500;
+    private static final long MOTOR_INTERVAL = 2000;
+    private static final long MOTOR_VALIDITY = 2500;
     private static final Logger logger = LoggerFactory.getLogger(FlowBuilder.class);
     private static final int MAX_MOTOR_SPEED = 4;
 
@@ -114,7 +119,7 @@ public class FlowBuilder {
      * @param x the joystick x-axis
      * @param y the joystick y-axis
      */
-    public static Direction toDir(float x, float y) {
+    static Direction toDir(float x, float y) {
         double dir = atan2(y, x) + Math.PI;
         int i = ((int) round(dir * 8 / Math.PI)) % 16;
         int d = ((i + 13) / 2) % 8;
@@ -139,8 +144,11 @@ public class FlowBuilder {
 
     private final RxController controller;
     private final RxJoystick joystick;
-    private final Flowable<WheellyStatus> status;
+    private final PublishProcessor<Throwable> errors;
+    private final PublishProcessor<WheellyStatus> status;
     private final BehaviorProcessor<Boolean> connection;
+    private final BehaviorProcessor<RemoteClock> remoteClock;
+    private final Scheduler scheduler;
 
     /**
      * @param controller the controller
@@ -150,102 +158,97 @@ public class FlowBuilder {
         this.controller = requireNonNull(controller);
         this.joystick = requireNonNull(joystick);
         this.connection = BehaviorProcessor.createDefault(false);
-        BehaviorProcessor<RemoteClock> remoteClock = BehaviorProcessor.create();
+        this.errors = PublishProcessor.create();
+        this.status = PublishProcessor.create();
+        this.remoteClock = BehaviorProcessor.create();
+        ExecutorService exec = Executors.newSingleThreadExecutor();
+        this.scheduler = Schedulers.from(exec);
+    }
 
-        createRemoteClock().subscribe(remoteClock);
+    /**
+     *
+     */
+    public FlowBuilder build() {
+        toRemoteClock(() ->
+                toRemoteClock(REMOTE_CLOCK_SAMPLES,
+                        () -> toClockSync(controller.clock())))
+                .subscribe(remoteClock);
 
         // Status polling
-        Flowable<Tuple2<StatusBody, RemoteClock>> statusFlow = interval(0, STATUS_INTERVAL, TimeUnit.MILLISECONDS)
-                .withLatestFrom(remoteClock, Tuple2::of)
-                .flatMap(t -> controller.status()
-                        .doOnError(ex -> {
-                            logger.error(ex.getMessage(), ex);
-                            connection.onNext(false);
-                        })
-                        .doOnNext(x -> connection.onNext(true))
-                        .map(t::setV1)
-                        .onErrorResumeNext(empty())
-                );
+        Flowable<Tuple2<StatusBody, RemoteClock>> statusFlow = createStatusPoller();
 
         // Scan command
-        //noinspection unchecked
-        Flowable<Tuple2<StatusBody, RemoteClock>> scanCommand = Flowable.mergeArray(
+        Flowable<Tuple2<StatusBody, RemoteClock>> scanCommand = createScannerCommand();
+
+        // Motor command
+        Flowable<Tuple2<StatusBody, RemoteClock>> statusByMotors = createMotorCommand()
+                .concatMap(this::sendMotorCommand);
+        status.window(STATUS_INTERVAL * 2, TimeUnit.MILLISECONDS)
+                .concatMap(f -> f.isEmpty().toFlowable())
+                .map(x -> !x)
+                .subscribe(connection);
+        Flowable.merge(statusFlow, scanCommand, statusByMotors).map(RxController::toStatus).subscribe(status);
+        return this;
+    }
+
+    /**
+     *
+     */
+    private Flowable<Tuple2<Integer, Integer>> createJoystickDirCommand() {
+        logger.debug("Creating joystick command ...");
+        return joystick.getXY()
+                .map(FlowBuilder::toMotorSpeed)
+                .buffer(2, 1)
+                .filter(FlowBuilder::isSpeedChanged)
+                .map(x -> x.get(1));
+    }
+
+    /**
+     *
+     */
+    private Flowable<MotorCommand> createMotorCommand() {
+        return combineLatest(
+                interval(0, MOTOR_INTERVAL, TimeUnit.MILLISECONDS),
+                createJoystickDirCommand(),
+                (i, cmd) -> cmd)
+                .onBackpressureDrop()
+                .buffer(2, 1)
+                .filter(FlowBuilder::isMoving)
+                .map(x -> x.get(1))
+                .map(t -> MotorCommand.empty().setLeft(t._1).setRight(t._2))
+                .withLatestFrom(remoteClock, MotorCommand::setClock);
+    }
+
+    /**
+     *
+     */
+    private Flowable<Tuple2<StatusBody, RemoteClock>> createScannerCommand() {
+        return Flowable.mergeArray(
                         joystick.getValues(RxJoystick.BUTTON_0),
                         joystick.getValues(RxJoystick.BUTTON_1),
                         joystick.getValues(RxJoystick.BUTTON_2),
                         joystick.getValues(RxJoystick.BUTTON_3))
                 .filter(x -> x > 0f)
                 .withLatestFrom(remoteClock, Tuple2::of)
-                .flatMap(t -> controller.scan()
-                        .doOnError(ex -> {
-                            logger.error(ex.getMessage(), ex);
-                            connection.onNext(false);
-                        })
-                        .doOnNext(x -> connection.onNext(true))
+                .doOnNext(x -> logger.debug("Posting scan command ..."))
+                .concatMap(t -> controller.scan()
+                        .doOnError(errors::onNext)
                         .map(t::setV1))
-                .onErrorResumeNext(empty());
-
-        // Motor command
-        Flowable<Tuple2<Integer, Integer>> joystickCommand = joystick.getXY()
-                .map(FlowBuilder::toMotorSpeed)
-                .buffer(2, 1)
-                .filter(FlowBuilder::isSpeedChanged)
-                .map(x -> x.get(1));
-        Flowable<MotorCommand> motorCommand = combineLatest(
-                interval(0, MOTOR_INTERVAL, TimeUnit.MILLISECONDS),
-                joystickCommand,
-                (i, cmd) -> cmd)
-                .buffer(2, 1)
-                .filter(FlowBuilder::isMoving)
-                .map(x -> x.get(1))
-                .map(t -> MotorCommand.empty().setRight(t._1).setLeft(t._2))
-                .withLatestFrom(remoteClock, MotorCommand::setClock);
-
-        Flowable<Tuple2<StatusBody, RemoteClock>> statusByMotors = motorCommand
-                .flatMap(this::sendMotorCommand);
-        this.status = Flowable.merge(statusFlow, scanCommand, statusByMotors).map(RxController::toStatus);
+                .onErrorResumeWith(empty());
     }
 
     /**
-     * Returns the clock synchronization event
-     * In case of error it signals the connection flowable
-     */
-    Flowable<ClockSyncEvent> clockSync() {
-        return controller.clock()
-                .doOnError(ex -> {
-                    logger.error(ex.getMessage(), ex);
-                    connection.onNext(false);
-                })
-                .doOnNext(x -> connection.onNext(true))
-                .map(body -> {
-                    long destinationTimestamp = Instant.now().toEpochMilli();
-                    String data = body.getClock();
-                    return ClockSyncEvent.from(data, destinationTimestamp);
-                });
-    }
-
-    /**
-     * Returns the remote clock by synchronizing the clocks every REMOTE_CLOCK_PERIOD
-     */
-    Flowable<RemoteClock> createRemoteClock() {
-        return interval(0, REMOTE_CLOCK_PERIOD, TimeUnit.SECONDS)
-                .flatMap(x -> createRemoteClock(REMOTE_CLOCK_SAMPLES));
-    }
-
-    /**
-     * Returns the remote clock by averaging the synchronization of local clock with remote clock
      *
-     * @param noSamples number of samples
      */
-    Flowable<RemoteClock> createRemoteClock(int noSamples) {
-        return Flowable.range(1, noSamples)
-                .observeOn(Schedulers.io())
-                .flatMap(i -> clockSync())
-                .map(ClockSyncEvent::getRemoteOffset)
-                .reduce(Long::sum)
-                .map(t -> RemoteClock.create((t + noSamples / 2) / noSamples))
-                .toFlowable()
-                .onErrorResumeNext(empty());
+    Flowable<Tuple2<StatusBody, RemoteClock>> createStatusPoller() {
+        return interval(0, STATUS_INTERVAL, TimeUnit.MILLISECONDS)
+                .onBackpressureDrop()
+                .withLatestFrom(remoteClock, Tuple2::of)
+                .concatMap(t -> controller.status()
+                        .doOnError(errors::onNext)
+                        .map(t::setV1)
+                        .onErrorResumeWith(empty())
+                );
     }
 
     /**
@@ -263,6 +266,13 @@ public class FlowBuilder {
     }
 
     /**
+     *
+     */
+    public Flowable<Throwable> getErrors() {
+        return errors;
+    }
+
+    /**
      * Returns the status events
      */
     public Flowable<WheellyStatus> getStatus() {
@@ -277,12 +287,50 @@ public class FlowBuilder {
                         cmd.left,
                         cmd.right,
                         cmd.clock.toRemote(Instant.now().plusMillis(MOTOR_VALIDITY)))
-                .doOnError(ex -> {
-                    logger.error(ex.getMessage(), ex);
-                    connection.onNext(false);
-                })
-                .onErrorResumeNext(empty())
+                .doOnError(errors::onNext)
+                .onErrorResumeWith(empty())
                 .map(body -> Tuple2.of(body, cmd.clock));
+    }
+
+    /**
+     * Returns the clock synchronization event
+     * In case of error it signals the connection flowable
+     *
+     * @param flow the clock body flow
+     */
+    Flowable<ClockSyncEvent> toClockSync(Flowable<ClockBody> flow) {
+        return flow
+                .doOnError(errors::onNext)
+                .map(body -> {
+                    long destinationTimestamp = Instant.now().toEpochMilli();
+                    String data = body.getClock();
+                    return ClockSyncEvent.from(data, destinationTimestamp);
+                });
+    }
+
+    /**
+     * Returns the remote clock by synchronizing the clocks every REMOTE_CLOCK_PERIOD
+     */
+    Flowable<RemoteClock> toRemoteClock(Supplier<Flowable<RemoteClock>> builder) {
+        logger.debug("Creating remote clock ...");
+        return interval(0, REMOTE_CLOCK_PERIOD, TimeUnit.SECONDS)
+                .onBackpressureDrop()
+                .concatMap(x -> builder.get());
+    }
+
+    /**
+     * Returns the remote clock by averaging the synchronization of local clock with remote clock
+     *
+     * @param noSamples number of samples
+     */
+    Flowable<RemoteClock> toRemoteClock(int noSamples, Supplier<Flowable<ClockSyncEvent>> builder) {
+        return Flowable.range(1, noSamples)
+                .concatMap(x -> builder.get())
+                .map(ClockSyncEvent::getRemoteOffset)
+                .reduce(Long::sum)
+                .map(t -> RemoteClock.create((t + noSamples / 2) / noSamples))
+                .toFlowable()
+                .onErrorResumeWith(Flowable.empty());
     }
 
     /**

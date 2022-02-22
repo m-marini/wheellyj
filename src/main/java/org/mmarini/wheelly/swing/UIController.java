@@ -31,10 +31,12 @@ package org.mmarini.wheelly.swing;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
-import io.reactivex.Flowable;
 import io.reactivex.rxjava3.core.BackpressureStrategy;
-import org.mmarini.Tuple2;
-import org.mmarini.wheelly.model.*;
+import io.reactivex.rxjava3.disposables.Disposable;
+import org.mmarini.wheelly.model.FlowBuilder;
+import org.mmarini.wheelly.model.InstantValue;
+import org.mmarini.wheelly.model.RxController;
+import org.mmarini.wheelly.model.WheellyStatus;
 import org.mmarini.yaml.schema.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,13 +47,9 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
-import static java.lang.Math.*;
 import static org.mmarini.Utils.getValue;
 import static org.mmarini.wheelly.swing.RxJoystick.NONE_CONTROLLER;
 import static org.mmarini.yaml.Utils.fromFile;
@@ -93,6 +91,9 @@ public class UIController {
     private String baseUrl;
     private String joystickPort;
     private FlowBuilder flowBuilder;
+    private Disposable statusDisposable;
+    private Disposable connectionDisposable;
+    private Disposable errorDisposable;
 
     /**
      *
@@ -120,9 +121,14 @@ public class UIController {
      */
     private UIController buildFlow() {
         SwingObservable.actions(frame.getPreferences())
-                .doOnNext(x -> logger.debug("{]", x))
                 .toFlowable(BackpressureStrategy.BUFFER)
                 .doOnNext(this::handlePreferences)
+                .subscribe();
+        dashboard.getResetFlow()
+                .doOnNext(ev -> {
+                    closeConfig();
+                    openConfig();
+                })
                 .subscribe();
         return this;
     }
@@ -131,6 +137,18 @@ public class UIController {
      * Returns the UIController with current configuration closed
      */
     private UIController closeConfig() {
+        if (statusDisposable != null) {
+            statusDisposable.dispose();
+            statusDisposable = null;
+        }
+        if (errorDisposable != null) {
+            errorDisposable.dispose();
+            errorDisposable = null;
+        }
+        if (connectionDisposable != null) {
+            connectionDisposable.dispose();
+            connectionDisposable = null;
+        }
         flowBuilder.detach();
         return this;
     }
@@ -173,8 +191,8 @@ public class UIController {
      * Returns the UIController with current configuration opened
      */
     private void openConfig() {
-        this.flowBuilder = FlowBuilder.create(RxController.create(baseUrl), RxJoystick.create(joystickPort));
-        flowBuilder.getStatus()
+        this.flowBuilder = FlowBuilder.create(RxController.create(baseUrl), RxJoystick.create(joystickPort)).build();
+        this.statusDisposable = flowBuilder.getStatus()
                 .doOnNext(s -> {
                     dashboard.setPower(s.voltage.value);
                     dashboard.setObstacleDistance(
@@ -183,8 +201,22 @@ public class UIController {
                                     .orElse(400));
                     dashboard.setMotors(s.direction.value._1, s.direction.value._2);
                     dashboard.setForwardBlock(isBlockDistance(s));
+                    dashboard.setCps(s.cps.value);
                     radar.setSamples(s.obstacles);
                 }).subscribe();
+        this.connectionDisposable = flowBuilder.getConnection()
+                .distinctUntilChanged()
+                .doOnNext(connected -> {
+                    dashboard.setWifiLed(connected);
+                    frame.log(connected ? "Connected" : "Disconnected");
+                })
+                .subscribe();
+        this.errorDisposable = flowBuilder.getErrors()
+                .doOnNext(ex -> {
+                    logger.error("Error on flow", ex);
+                    frame.log(ex.getMessage());
+                })
+                .subscribe();
     }
 
     /**
