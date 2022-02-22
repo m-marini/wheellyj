@@ -32,12 +32,14 @@ package org.mmarini.wheelly.model;
 import java.time.Instant;
 
 /**
- *
+ * The remote clock map the local clock to the remote clock ticks
  */
 public class RemoteClock {
 
     /**
-     * @param offset
+     * Returns a remote clock
+     *
+     * @param offset the local offset of remote clock
      */
     public static RemoteClock create(long offset) {
         return new RemoteClock(offset);
@@ -46,21 +48,27 @@ public class RemoteClock {
     public final long offset;
 
     /**
-     * @param offset
+     * Creates a remote clock
+     *
+     * @param offset the local offset of remote clock
      */
     protected RemoteClock(long offset) {
         this.offset = offset;
     }
 
     /**
-     * @param millis
+     * Returns the local instant of a remote clock ticks
+     *
+     * @param millis the remote clock ticks
      */
     public Instant fromRemote(long millis) {
         return Instant.ofEpochMilli(offset + millis);
     }
 
     /**
-     * @param instant
+     * Returns the remote clock ticks of a local instant
+     *
+     * @param instant the local instant
      */
     public long toRemote(Instant instant) {
         return instant.toEpochMilli() - offset;

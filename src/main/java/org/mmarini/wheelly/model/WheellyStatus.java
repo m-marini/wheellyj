@@ -40,33 +40,34 @@ import static java.util.Objects.requireNonNull;
 import static org.mmarini.Tuple2.toMap;
 
 /**
- *
+ * The Wheelly status contain the sensor value of Wheelly
  */
 public class WheellyStatus {
 
-    public static final int NO_STATUS_PARMS = 1 + 3 + 7 * 3 + 2 + 2;
+    public static final int NO_STATUS_PARAMS = 1 + 3 + 7 * 3 + 2 + 2;
     public static final double VOLTAGE_PRECISION = 5d * 3 / 1023;
     private static final int NO_DIRECTIONS = 7;
 
     /**
-     * @param statusString
-     * @return
+     * Returns the Wheelly status from status string
+     *
+     * @param statusString the status string
      */
     public static WheellyStatus from(String statusString, RemoteClock clock) {
-        String[] parms = statusString.split(" ");
-        if (parms.length != NO_STATUS_PARMS) {
+        String[] params = statusString.split(" ");
+        if (params.length != NO_STATUS_PARAMS) {
             throw new IllegalArgumentException("Missing status parameters");
         }
-        Instant directionInstant = clock.fromRemote(Long.parseLong(parms[1]));
-        int left = Integer.parseInt(parms[2]);
-        int right = Integer.parseInt(parms[3]);
+        Instant directionInstant = clock.fromRemote(Long.parseLong(params[1]));
+        int left = Integer.parseInt(params[2]);
+        int right = Integer.parseInt(params[3]);
         InstantValue<Tuple2<Integer, Integer>> direction = InstantValue.of(directionInstant, Tuple2.of(left, right));
 
         Map<Integer, InstantValue<Integer>> obstacles = IntStream.range(0, NO_DIRECTIONS)
                 .mapToObj(i -> {
-                    long instant = Long.parseLong(parms[i * 3 + 4]);
-                    int dirScan = Integer.parseInt(parms[i * 3 + 5]);
-                    int distance = Integer.parseInt(parms[i * 3 + 6]);
+                    long instant = Long.parseLong(params[i * 3 + 4]);
+                    int dirScan = Integer.parseInt(params[i * 3 + 5]);
+                    int distance = Integer.parseInt(params[i * 3 + 6]);
                     return Tuple2.of(instant, Tuple2.of(dirScan, distance));
                 })
                 .filter(t -> t._1 > 0)
@@ -80,26 +81,28 @@ public class WheellyStatus {
                 )
                 .collect(toMap());
 
-        Instant voltageInstant = clock.fromRemote(Long.parseLong(parms[25]));
-        double v = Integer.parseInt(parms[26]) * VOLTAGE_PRECISION;
+        Instant voltageInstant = clock.fromRemote(Long.parseLong(params[25]));
+        double v = Integer.parseInt(params[26]) * VOLTAGE_PRECISION;
         InstantValue<Double> voltage = InstantValue.of(voltageInstant, v);
 
-        Instant cpsInstant = clock.fromRemote(Long.parseLong(parms[27]));
-        double cpsValue = Integer.parseInt(parms[28]);
+        Instant cpsInstant = clock.fromRemote(Long.parseLong(params[27]));
+        double cpsValue = Integer.parseInt(params[28]);
         InstantValue<Double> cps = InstantValue.of(cpsInstant, cpsValue);
         return new WheellyStatus(direction, obstacles, voltage, cps);
     }
 
+    public final InstantValue<Double> cps;
     public final InstantValue<Tuple2<Integer, Integer>> direction;
     public final Map<Integer, InstantValue<Integer>> obstacles;
     public final InstantValue<Double> voltage;
-    public final InstantValue<Double> cps;
 
     /**
-     * @param direction
-     * @param obstacles
-     * @param voltage
-     * @param cps
+     * Creates the Wheelly status
+     *
+     * @param direction the motor speed
+     * @param obstacles the obstacles values
+     * @param voltage   the voltage value
+     * @param cps       the cycle per seconds
      */
     public WheellyStatus(InstantValue<Tuple2<Integer, Integer>> direction, Map<Integer, InstantValue<Integer>> obstacles, InstantValue<Double> voltage, InstantValue<Double> cps) {
         this.direction = requireNonNull(direction);
@@ -109,7 +112,7 @@ public class WheellyStatus {
     }
 
     /**
-     * @return
+     * Returns the motor speeds
      */
     public InstantValue<Tuple2<Integer, Integer>> getDirection() {
         return direction;
@@ -117,14 +120,14 @@ public class WheellyStatus {
 
 
     /**
-     *
+     * Returns the obstacles
      */
     public Map<Integer, InstantValue<Integer>> getObstacles() {
         return obstacles;
     }
 
     /**
-     *
+     * Returns the battery voltage
      */
     public InstantValue<Double> getVoltage() {
         return voltage;

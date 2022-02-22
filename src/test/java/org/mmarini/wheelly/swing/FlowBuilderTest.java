@@ -27,7 +27,7 @@
  *
  */
 
-package org.mmarini.wheelly.model;
+package org.mmarini.wheelly.swing;
 
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
@@ -35,7 +35,10 @@ import io.reactivex.rxjava3.subscribers.TestSubscriber;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.mmarini.wheelly.swing.RxJoystick;
+import org.mmarini.Tuple2;
+import org.mmarini.wheelly.model.ClockSyncEvent;
+import org.mmarini.wheelly.model.RemoteClock;
+import org.mmarini.wheelly.model.RxController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -141,6 +144,49 @@ class FlowBuilderTest {
         tserr.assertValue(ex -> ex.getMessage().matches("Mock error"));
 
         tsconn.assertValues(false, false);
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            "0,0,0,0",
+            "0.12,0.12,0,0",
+            "-0.12,-0.12,0,0",
+
+            "0,-1,4,4",
+            "0,-0.5,2,2",
+            "0.5,-1,4,2",
+            "-0.5,-1,2,4",
+            "1,-1,4,0",
+            "-1,-1,0,4",
+            "0.25,-0.5,2,1",
+            "-0.25,-0.5,1,2",
+
+            "0,1,-4,-4",
+            "0,0.5,-2,-2",
+            "0.5,1,-2,-4",
+            "-0.5,1,-4,-2",
+            "1,1,0,-4",
+            "-1,1,-4,0",
+            "0.25,0.5,-1,-2",
+            "-0.25,0.5,-2,-1",
+
+            "-1,0,-4,4",
+            "-0.5,0,-2,2",
+            "-1,0.5,-4,2",
+            "-1,-0.5,-2,4",
+            "-0.5,0.25,-2,1",
+            "-0.5,-0.25,-1,2",
+
+            "1,0,4,-4",
+            "0.5,0,2,-2",
+            "1,0.5,2,-4",
+            "1,-0.5,4,-2",
+            "0.5,0.25,1,-2",
+            "0.5,-0.25,2,-1",
+    })
+    void speedFromAxis(float x, float y, int left, int right) {
+        Tuple2<Integer, Integer> result = FlowBuilder.speedFromAxis(Tuple2.of(x, y));
+        assertThat(result, equalTo(Tuple2.of(left, right)));
     }
 
     @ParameterizedTest

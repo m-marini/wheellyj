@@ -29,31 +29,28 @@
 
 package org.mmarini.wheelly.model;
 
-import io.reactivex.Flowable;
-import org.glassfish.jersey.client.rx.rxjava2.RxFlowableInvoker;
-import org.glassfish.jersey.client.rx.rxjava2.RxFlowableInvokerProvider;
-import org.mmarini.json.Utils;
-
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.MediaType;
-import java.time.Instant;
-
 /**
- *
+ * The clock sync event
  */
 public class ClockSyncEvent {
     /**
-     * @param originateTimestamp
-     * @param receiveTimestamp
-     * @param transmitTimestamp
-     * @param destinationTimestamp
+     * Returns the clock sync event
+     *
+     * @param originateTimestamp   the originate timestamp in local clock ticks (ms)
+     * @param receiveTimestamp     the receive timestamp in remote clock ticks (ms)
+     * @param transmitTimestamp    the transmit timestamp in remote clock ticks (ms)
+     * @param destinationTimestamp the destination timestamp in local clock ticks (ms)
      */
     public static ClockSyncEvent create(long originateTimestamp, long receiveTimestamp, long transmitTimestamp, long destinationTimestamp) {
         return new ClockSyncEvent(originateTimestamp, receiveTimestamp, transmitTimestamp, destinationTimestamp);
     }
 
+    /**
+     * Returns the clock sync event from a clock sync string
+     *
+     * @param data                 the sync string
+     * @param destinationTimestamp the destination timestamp in local clock ticks (ms)
+     */
     public static ClockSyncEvent from(String data, long destinationTimestamp) {
         String[] fields = data.split(" ");
         if (fields.length != 4) {
@@ -71,10 +68,12 @@ public class ClockSyncEvent {
     public final long transmitTimestamp;
 
     /**
-     * @param originateTimestamp
-     * @param receiveTimestamp
-     * @param transmitTimestamp
-     * @param destinationTimestamp
+     * Creates the clock sync event
+     *
+     * @param originateTimestamp   the originate timestamp in local clock ticks (ms)
+     * @param receiveTimestamp     the receive timestamp in remote clock ticks (ms)
+     * @param transmitTimestamp    the transmit timestamp in remote clock ticks (ms)
+     * @param destinationTimestamp the destination timestamp in local clock ticks (ms)
      */
     protected ClockSyncEvent(long originateTimestamp, long receiveTimestamp, long transmitTimestamp, long destinationTimestamp) {
         this.originateTimestamp = originateTimestamp;
@@ -84,7 +83,7 @@ public class ClockSyncEvent {
     }
 
     /**
-     *
+     * Returns the destination timestamp in local clock ticks (ms)
      */
     public long getDestinationTimestamp() {
         return destinationTimestamp;
@@ -98,28 +97,28 @@ public class ClockSyncEvent {
     }
 
     /**
-     *
+     * Returns the originate timestamp in local clock ticks (ms)
      */
     public long getOriginateTimestamp() {
         return originateTimestamp;
     }
 
     /**
-     *
+     * Returns the receive timestamp in remote clock ticks (ms)
      */
     public long getReceiveTimestamp() {
         return receiveTimestamp;
     }
 
     /**
-     *
+     * Returns the remote offset
      */
     public long getRemoteOffset() {
         return originateTimestamp + getLatency() - receiveTimestamp;
     }
 
     /**
-     *
+     * Returns the transmit timestamp in remote clock ticks (ms)
      */
     public long getTransmitTimestamp() {
         return transmitTimestamp;
