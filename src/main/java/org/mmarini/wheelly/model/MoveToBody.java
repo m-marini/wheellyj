@@ -33,7 +33,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import java.util.StringJoiner;
 
 /**
- *
+ * The move message
  */
 @XmlRootElement
 public class MoveToBody {
@@ -42,12 +42,14 @@ public class MoveToBody {
     private long validTo;
 
     /**
-     *
+     * Creates an empty move message
      */
     public MoveToBody() {
     }
 
     /**
+     * Creates the move message
+     *
      * @param left    the left motor speed
      * @param right   the left motor speed
      * @param validTo the expiration instant (robot timestamp)
@@ -59,13 +61,15 @@ public class MoveToBody {
     }
 
     /**
-     *
+     * Returns the left motor speed
      */
     public int getLeft() {
         return left;
     }
 
     /**
+     * Sets the left motors speed
+     *
      * @param left the left motor speed
      */
     public void setLeft(int left) {
@@ -73,27 +77,31 @@ public class MoveToBody {
     }
 
     /**
-     *
+     * Returns the right motor speed
      */
     public int getRight() {
         return right;
     }
 
     /**
-     * @param right the left motor speed
+     * Sets the right motors speed
+     *
+     * @param right the right motor speed
      */
     public void setRight(int right) {
         this.right = right;
     }
 
     /**
-     *
+     * Returns the validity in remote clock ticks
      */
     public long getValidTo() {
         return validTo;
     }
 
     /**
+     * Sets the validity in remote clock ticks
+     *
      * @param validTo the expiration instant (robot timestamp)
      */
     public void setValidTo(long validTo) {

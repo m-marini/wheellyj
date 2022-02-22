@@ -34,13 +34,17 @@ import java.util.StringJoiner;
 import java.util.function.Supplier;
 
 /**
- * @param <T>
+ * Value at a specific instant
+ *
+ * @param <T> the type ov value
  */
 public class InstantValue<T> implements Supplier<T> {
     /**
-     * @param instant
-     * @param value
-     * @param <T>
+     * Retusn a instant value
+     *
+     * @param instant the instant
+     * @param value   the value
+     * @param <T>     the type ov value
      */
     public static <T> InstantValue<T> of(Instant instant, T value) {
         return new InstantValue<>(instant, value);
@@ -50,8 +54,10 @@ public class InstantValue<T> implements Supplier<T> {
     public final T value;
 
     /**
-     * @param instant
-     * @param value
+     * Creates an instant value
+     *
+     * @param instant the instant
+     * @param value   the value
      */
     protected InstantValue(Instant instant, T value) {
         this.instant = instant;
@@ -64,14 +70,14 @@ public class InstantValue<T> implements Supplier<T> {
     }
 
     /**
-     *
+     * Returns the instant of value
      */
     public Instant getInstant() {
         return instant;
     }
 
     /**
-     *
+     * Returns the value
      */
     public T getValue() {
         return value;

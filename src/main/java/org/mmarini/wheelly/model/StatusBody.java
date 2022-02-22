@@ -32,13 +32,15 @@ package org.mmarini.wheelly.model;
 import javax.xml.bind.annotation.XmlRootElement;
 
 /**
- *
+ * The status body a API Wheelly requests
  */
 @XmlRootElement
 public class StatusBody {
     private String status;
 
     /**
+     * Creates a status body
+     *
      * @param status the status string
      */
     public StatusBody(String status) {
@@ -46,19 +48,21 @@ public class StatusBody {
     }
 
     /**
-     *
+     * Creates an empty status body
      */
     public StatusBody() {
     }
 
     /**
-     *
+     * Returns the status string
      */
     public String getStatus() {
         return status;
     }
 
     /**
+     * Sets the status string
+     *
      * @param status the status string
      */
     public void setStatus(String status) {

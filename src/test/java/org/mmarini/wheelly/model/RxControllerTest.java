@@ -53,7 +53,6 @@ public class RxControllerTest {
                 .doOnError(ex -> logger.error(ex.getMessage(), ex))
                 .subscribe(ts);
         ts.awaitDone(10, TimeUnit.SECONDS);
-        ts.assertComplete();
         ts.assertError(ex -> ex.getMessage().matches(".*UnknownHostException.*"));
     }
 }

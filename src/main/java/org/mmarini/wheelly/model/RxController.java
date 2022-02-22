@@ -29,10 +29,8 @@
 
 package org.mmarini.wheelly.model;
 
-import hu.akarnokd.rxjava3.bridge.RxJavaBridge;
 import io.reactivex.rxjava3.core.Flowable;
-import org.glassfish.jersey.client.rx.rxjava2.RxFlowableInvoker;
-import org.glassfish.jersey.client.rx.rxjava2.RxFlowableInvokerProvider;
+import io.reactivex.rxjava3.processors.AsyncProcessor;
 import org.mmarini.Tuple2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,31 +41,38 @@ import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import java.time.Instant;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
- *
+ * Reactive controller generates the API requests to Wheelly.
+ * The requests are queued and processed one by one.
  */
 public class RxController {
     private static final Logger logger = LoggerFactory.getLogger(RxController.class);
+    private static final ExecutorService worker = Executors.newSingleThreadExecutor();
 
     /**
-     * @param baseUrl the base URL
+     * Returns the controller
+     *
+     * @param baseUrl the base URL the base URL
      */
     public static RxController create(String baseUrl) {
         return new RxController(baseUrl);
     }
 
     /**
-     *
+     * Returns a web client
      */
     private static Client createClient() {
         return ClientBuilder.newClient()
-                .register(RxFlowableInvokerProvider.class)
 //                .register(new LoggingFeature(java.util.logging.Logger.getLogger(RxController.class.getName()), Level.INFO, null, null))
                 ;
     }
 
     /**
+     * Returns the Wheelly status from status body and remote clock
+     *
      * @param tuple the tuple with status message and remote clock
      */
     public static WheellyStatus toStatus(Tuple2<StatusBody, RemoteClock> tuple) {
@@ -77,6 +82,8 @@ public class RxController {
     private final String baseUrl;
 
     /**
+     * Creates an RxController
+     *
      * @param baseUrl the base url
      */
     protected RxController(String baseUrl) {
@@ -84,60 +91,104 @@ public class RxController {
     }
 
     /**
-     * Returns the clock message from wheelly
+     * Returns the clock message from Wheelly
      */
     public Flowable<ClockBody> clock() {
-        logger.debug("Creating clock request ...");
-        return RxJavaBridge.toV3Flowable(createWebTarget().path("clock")
-                .queryParam("ck", String.valueOf(Instant.now().toEpochMilli()))
-                .request()
-                .accept(MediaType.APPLICATION_JSON)
-                .rx(RxFlowableInvoker.class)
-                .get(ClockBody.class));
+        AsyncProcessor<ClockBody> processor = AsyncProcessor.create();
+        Runnable task = () -> {
+            try {
+                logger.debug("Creating clock request ...");
+                ClockBody body = createWebTarget().path("clock")
+                        .queryParam("ck", String.valueOf(Instant.now().toEpochMilli()))
+                        .request()
+                        .accept(MediaType.APPLICATION_JSON)
+                        .get(ClockBody.class);
+                processor.onNext(body);
+                processor.onComplete();
+            } catch (Throwable ex) {
+                processor.onError(ex);
+            }
+        };
+        worker.submit(task);
+        return processor;
     }
 
     /**
-     * Creates the web target
+     * Returns the web target
      */
     private WebTarget createWebTarget() {
         return createClient().target(baseUrl);
     }
 
     /**
+     * Returns the status message by invoking a move command
+     *
      * @param left    left speed
      * @param right   right speed
      * @param validTo expiration in remote clock
      */
     public Flowable<StatusBody> moveTo(int left, int right, long validTo) {
-        MoveToBody reqBody = new MoveToBody(left, right, validTo);
-        return RxJavaBridge.toV3Flowable(createWebTarget().path("motors")
+        AsyncProcessor<StatusBody> result = AsyncProcessor.create();
+        Runnable task = () -> {
+            try {
+                logger.debug("Creating move request {} {} ...", left, right);
+                MoveToBody reqBody = new MoveToBody(left, right, validTo);
+                StatusBody resBody = createWebTarget().path("motors")
                         .request()
                         .accept(MediaType.APPLICATION_JSON)
-                        .rx(RxFlowableInvoker.class)
-                        .post(Entity.json(reqBody)))
-                .map(resp -> resp.readEntity(StatusBody.class));
+                        .post(Entity.json(reqBody))
+                        .readEntity(StatusBody.class);
+                result.onNext(resBody);
+                result.onComplete();
+            } catch (Throwable ex) {
+                result.onError(ex);
+            }
+        };
+        worker.submit(task);
+        return result;
     }
 
     /**
-     *
+     * Returns the status message by invoking a scan command
      */
     public Flowable<StatusBody> scan() {
-        return RxJavaBridge.toV3Flowable(createWebTarget().path("scan")
+        AsyncProcessor<StatusBody> result = AsyncProcessor.create();
+        Runnable task = () -> {
+            try {
+                logger.debug("Creating scan request ...");
+                StatusBody body = createWebTarget().path("scan")
                         .request()
                         .accept(MediaType.APPLICATION_JSON)
-                        .rx(RxFlowableInvoker.class)
-                        .post(Entity.json(null)))
-                .map(resp -> resp.readEntity(StatusBody.class));
+                        .post(Entity.json(null))
+                        .readEntity(StatusBody.class);
+                result.onNext(body);
+                result.onComplete();
+            } catch (Throwable ex) {
+                result.onError(ex);
+            }
+        };
+        worker.submit(task);
+        return result;
     }
 
     /**
-     *
+     * Returns the status message by invoking a query status command
      */
     public Flowable<StatusBody> status() {
-        return RxJavaBridge.toV3Flowable(createWebTarget().path("status")
-                .request()
-                .accept(MediaType.APPLICATION_JSON)
-                .rx(RxFlowableInvoker.class)
-                .get(StatusBody.class));
+        AsyncProcessor<StatusBody> result = AsyncProcessor.create();
+        Runnable task = () -> {
+            try {
+                StatusBody body = createWebTarget().path("status")
+                        .request()
+                        .accept(MediaType.APPLICATION_JSON)
+                        .get(StatusBody.class);
+                result.onNext(body);
+                result.onComplete();
+            } catch (Throwable ex) {
+                result.onError(ex);
+            }
+        };
+        worker.submit(task);
+        return result;
     }
 }

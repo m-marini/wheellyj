@@ -27,23 +27,18 @@
  *
  */
 
-package org.mmarini.wheelly.model;
+package org.mmarini.wheelly.swing;
 
 import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.processors.BehaviorProcessor;
 import io.reactivex.rxjava3.processors.PublishProcessor;
-import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.swing.MotorCommand;
-import org.mmarini.wheelly.swing.RxJoystick;
+import org.mmarini.wheelly.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -52,18 +47,21 @@ import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
 
 /**
- *
+ * The builder of process flowables
  */
 public class FlowBuilder {
-    static final long REMOTE_CLOCK_PERIOD = 60;   // Seconds
+    static final long REMOTE_CLOCK_PERIOD = 300;   // Seconds
     private static final int REMOTE_CLOCK_SAMPLES = 10;
     private static final long STATUS_INTERVAL = 200; // Millis
-    private static final long MOTOR_INTERVAL = 2000;
-    private static final long MOTOR_VALIDITY = 2500;
+    private static final long MOTOR_INTERVAL = 1000;
+    private static final long MOTOR_VALIDITY = 1500;
     private static final Logger logger = LoggerFactory.getLogger(FlowBuilder.class);
     private static final int MAX_MOTOR_SPEED = 4;
+    private static final long MIN_MOTOR_INTERVAL = 100;
 
     /**
+     * Returns a flow builder
+     *
      * @param controller the controller
      * @param joystick   the joystick
      */
@@ -72,6 +70,8 @@ public class FlowBuilder {
     }
 
     /**
+     * Returns the left speed from absolute speed and direction
+     *
      * @param speed     the speed
      * @param direction the direction
      */
@@ -89,6 +89,12 @@ public class FlowBuilder {
         return 0;
     }
 
+    /**
+     * Returns the right speed from absolute speed and direction
+     *
+     * @param speed     the speed
+     * @param direction the direction
+     */
     private static int getRightSpeed(int speed, Direction direction) {
         switch (direction) {
             case N:
@@ -103,19 +109,83 @@ public class FlowBuilder {
         return 0;
     }
 
+    /**
+     * Returns true if Wheelly is moving
+     *
+     * @param tuples the tuple list with speeds
+     */
     private static boolean isMoving(List<Tuple2<Integer, Integer>> tuples) {
         Tuple2<Integer, Integer> m0 = tuples.get(0);
         Tuple2<Integer, Integer> m1 = tuples.get(1);
         return !(m0._1 == 0 && m0._2 == 0 && m1._1 == 0 && m1._2 == 0);
     }
 
+    /**
+     * Returns true if the speed is changing
+     *
+     * @param tuples the tuple list with speeds
+     */
     private static boolean isSpeedChanged(List<Tuple2<Integer, Integer>> tuples) {
         Tuple2<Integer, Integer> m0 = tuples.get(0);
         Tuple2<Integer, Integer> m1 = tuples.get(1);
         return !m0.equals(m1);
     }
 
+    static Tuple2<Integer, Integer> speedFromAxis(Tuple2<Float, Float> xy) {
+        int x = round(xy._1 * MAX_MOTOR_SPEED);
+        int y = round(xy._2 * MAX_MOTOR_SPEED);
+        int ax = abs(x);
+        int ay = abs(y);
+        int value = max(ax, ay);
+        if (value > 0) {
+            if (ay >= ax) {
+                if (y < 0) {
+                    if (x >= 0) {
+                        // y < 0, x >= 0 |y| >= |x|
+                        // NNE
+                        return Tuple2.of(-y, -y - x);
+                    } else {
+                        // y < 0, x < 0 |y| >= |x|
+                        // NNW
+                        return Tuple2.of(-y + x, -y);
+                    }
+                } else if (x >= 0) {
+                    // y > 0, x >= 0 |y| >= |x|
+                    // SSE
+                    return Tuple2.of(x - y, -y);
+                } else {
+                    // y > 0, x < 0 |y| >= |x|
+                    // SSW
+                    return Tuple2.of(-y, -y - x);
+                }
+            } else if (x > 0) {
+                if (y <= 0) {
+                    // x > 0, y <= 0 |x| >= |y|
+                    // ENE
+                    return Tuple2.of(x, -x - y);
+                } else {
+                    // x > 0, y > 0 |x| >= |y|
+                    // ESE
+                    return Tuple2.of(x - y, -x);
+                }
+            } else {
+                if (y <= 0) {
+                    // x < 0, y <= 0 |x| >= |y|
+                    // WNW
+                    return Tuple2.of(x - y, -x);
+                } else {
+                    // x < 0, y > 0 |x| >= |y|
+                    // WSW
+                    return Tuple2.of(x, -x - y);
+                }
+            }
+        }
+        return Tuple2.of(0, 0);
+    }
+
     /**
+     * Returns the direction from the joystick axis
+     *
      * @param x the joystick x-axis
      * @param y the joystick y-axis
      */
@@ -127,6 +197,8 @@ public class FlowBuilder {
     }
 
     /**
+     * Returns the tuple of motor speeds (left, right)
+     *
      * @param xy the joystick axis
      */
     private static Tuple2<Integer, Integer> toMotorSpeed(Tuple2<Float, Float> xy) {
@@ -142,15 +214,33 @@ public class FlowBuilder {
         return Tuple2.of(left, right);
     }
 
+    /**
+     * Returns the polar coordinates of joystick (value, angle)
+     *
+     * @param xy the xy axis
+     */
+    static Tuple2<Float, Float> toPolar(Tuple2<Float, Float> xy) {
+        float x = xy._1;
+        float y = xy._2;
+        float value = max(abs(x), abs(y));
+        float angle = 0;
+        if (value >= (1f / 128)) {
+            //angle = atan2(y, x);
+            angle = (float) atan2(x, -y);
+        }
+        return Tuple2.of(value, angle);
+    }
+
     private final RxController controller;
     private final RxJoystick joystick;
     private final PublishProcessor<Throwable> errors;
     private final PublishProcessor<WheellyStatus> status;
     private final BehaviorProcessor<Boolean> connection;
     private final BehaviorProcessor<RemoteClock> remoteClock;
-    private final Scheduler scheduler;
 
     /**
+     * Creates a flow builder
+     *
      * @param controller the controller
      * @param joystick   the joystick
      */
@@ -161,12 +251,10 @@ public class FlowBuilder {
         this.errors = PublishProcessor.create();
         this.status = PublishProcessor.create();
         this.remoteClock = BehaviorProcessor.create();
-        ExecutorService exec = Executors.newSingleThreadExecutor();
-        this.scheduler = Schedulers.from(exec);
     }
 
     /**
-     *
+     * Returns this flow builder with the build flowables
      */
     public FlowBuilder build() {
         toRemoteClock(() ->
@@ -182,6 +270,7 @@ public class FlowBuilder {
 
         // Motor command
         Flowable<Tuple2<StatusBody, RemoteClock>> statusByMotors = createMotorCommand()
+                .debounce(MIN_MOTOR_INTERVAL, TimeUnit.MILLISECONDS)
                 .concatMap(this::sendMotorCommand);
         status.window(STATUS_INTERVAL * 2, TimeUnit.MILLISECONDS)
                 .concatMap(f -> f.isEmpty().toFlowable())
@@ -192,19 +281,19 @@ public class FlowBuilder {
     }
 
     /**
-     *
+     * Creates a flowable of motor speeds from joystick events
      */
     private Flowable<Tuple2<Integer, Integer>> createJoystickDirCommand() {
         logger.debug("Creating joystick command ...");
         return joystick.getXY()
-                .map(FlowBuilder::toMotorSpeed)
+                .map(FlowBuilder::speedFromAxis)
                 .buffer(2, 1)
                 .filter(FlowBuilder::isSpeedChanged)
                 .map(x -> x.get(1));
     }
 
     /**
-     *
+     * Returns the flowable of motor commands
      */
     private Flowable<MotorCommand> createMotorCommand() {
         return combineLatest(
@@ -220,9 +309,10 @@ public class FlowBuilder {
     }
 
     /**
-     *
+     * Create the Flowable of scan command results
      */
     private Flowable<Tuple2<StatusBody, RemoteClock>> createScannerCommand() {
+        //noinspection unchecked
         return Flowable.mergeArray(
                         joystick.getValues(RxJoystick.BUTTON_0),
                         joystick.getValues(RxJoystick.BUTTON_1),
@@ -238,7 +328,7 @@ public class FlowBuilder {
     }
 
     /**
-     *
+     * Create the Flowable of status command results
      */
     Flowable<Tuple2<StatusBody, RemoteClock>> createStatusPoller() {
         return interval(0, STATUS_INTERVAL, TimeUnit.MILLISECONDS)
@@ -252,7 +342,7 @@ public class FlowBuilder {
     }
 
     /**
-     *
+     * Returns this flow builder with detached flowables
      */
     public FlowBuilder detach() {
         return this;
@@ -266,7 +356,7 @@ public class FlowBuilder {
     }
 
     /**
-     *
+     * Returns the wheelly errors
      */
     public Flowable<Throwable> getErrors() {
         return errors;
@@ -280,6 +370,8 @@ public class FlowBuilder {
     }
 
     /**
+     * Returns the flowable of status of a motor command
+     *
      * @param cmd the motor command
      */
     private Flowable<Tuple2<StatusBody, RemoteClock>> sendMotorCommand(MotorCommand cmd) {

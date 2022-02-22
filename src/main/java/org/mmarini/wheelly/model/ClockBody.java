@@ -32,13 +32,15 @@ package org.mmarini.wheelly.model;
 import javax.xml.bind.annotation.XmlRootElement;
 
 /**
- *
+ * The clock body
  */
 @XmlRootElement
 public class ClockBody {
     private String clock;
 
     /**
+     * Creates a clock body
+     *
      * @param clock the clock string
      */
     public ClockBody(String clock) {
@@ -46,19 +48,21 @@ public class ClockBody {
     }
 
     /**
-     *
+     * Creates and empty clock body
      */
     public ClockBody() {
     }
 
     /**
-     *
+     * Returns the clock string
      */
     public String getClock() {
         return clock;
     }
 
     /**
+     * Sets the clock string
+     *
      * @param clock the clock string
      */
     public void setClock(String clock) {
