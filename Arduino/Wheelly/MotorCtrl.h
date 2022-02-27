@@ -8,12 +8,12 @@
  */
 class MotorCtrl {
   public:
-    MotorCtrl(int forwardPin, int backwardPin);
+    MotorCtrl(byte forwPin, byte backPin);
     MotorCtrl& begin();
     MotorCtrl& speed(int value);
   private:
-    int _forwardPin;
-    int _backwardPin;
+    byte _forwPin;
+    byte _backPin;
 };
 
 #endif

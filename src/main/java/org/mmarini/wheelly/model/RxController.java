@@ -31,6 +31,7 @@ package org.mmarini.wheelly.model;
 
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.AsyncProcessor;
+import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.Tuple2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +41,7 @@ import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -80,6 +82,7 @@ public class RxController {
     }
 
     private final String baseUrl;
+    private final PublishProcessor<Long> elaps;
 
     /**
      * Creates an RxController
@@ -88,6 +91,7 @@ public class RxController {
      */
     protected RxController(String baseUrl) {
         this.baseUrl = baseUrl;
+        this.elaps = PublishProcessor.create();
     }
 
     /**
@@ -98,11 +102,13 @@ public class RxController {
         Runnable task = () -> {
             try {
                 logger.debug("Creating clock request ...");
+                Instant now = Instant.now();
                 ClockBody body = createWebTarget().path("clock")
                         .queryParam("ck", String.valueOf(Instant.now().toEpochMilli()))
                         .request()
                         .accept(MediaType.APPLICATION_JSON)
                         .get(ClockBody.class);
+                trackElaps(Duration.between(now, Instant.now()).toMillis());
                 processor.onNext(body);
                 processor.onComplete();
             } catch (Throwable ex) {
@@ -121,6 +127,13 @@ public class RxController {
     }
 
     /**
+     * Returns the elapsed interval of request
+     */
+    public Flowable<Long> getElaps() {
+        return elaps;
+    }
+
+    /**
      * Returns the status message by invoking a move command
      *
      * @param left    left speed
@@ -131,6 +144,7 @@ public class RxController {
         AsyncProcessor<StatusBody> result = AsyncProcessor.create();
         Runnable task = () -> {
             try {
+                Instant now = Instant.now();
                 logger.debug("Creating move request {} {} ...", left, right);
                 MoveToBody reqBody = new MoveToBody(left, right, validTo);
                 StatusBody resBody = createWebTarget().path("motors")
@@ -138,6 +152,7 @@ public class RxController {
                         .accept(MediaType.APPLICATION_JSON)
                         .post(Entity.json(reqBody))
                         .readEntity(StatusBody.class);
+                trackElaps(Duration.between(now, Instant.now()).toMillis());
                 result.onNext(resBody);
                 result.onComplete();
             } catch (Throwable ex) {
@@ -156,11 +171,13 @@ public class RxController {
         Runnable task = () -> {
             try {
                 logger.debug("Creating scan request ...");
+                Instant now = Instant.now();
                 StatusBody body = createWebTarget().path("scan")
                         .request()
                         .accept(MediaType.APPLICATION_JSON)
                         .post(Entity.json(null))
                         .readEntity(StatusBody.class);
+                trackElaps(Duration.between(now, Instant.now()).toMillis());
                 result.onNext(body);
                 result.onComplete();
             } catch (Throwable ex) {
@@ -178,10 +195,12 @@ public class RxController {
         AsyncProcessor<StatusBody> result = AsyncProcessor.create();
         Runnable task = () -> {
             try {
+                Instant now = Instant.now();
                 StatusBody body = createWebTarget().path("status")
                         .request()
                         .accept(MediaType.APPLICATION_JSON)
                         .get(StatusBody.class);
+                trackElaps(Duration.between(now, Instant.now()).toMillis());
                 result.onNext(body);
                 result.onComplete();
             } catch (Throwable ex) {
@@ -190,5 +209,15 @@ public class RxController {
         };
         worker.submit(task);
         return result;
+    }
+
+    /**
+     * Returns this controller with tracked elapsed time
+     *
+     * @param elaps the elapsed time
+     */
+    private RxController trackElaps(long elaps) {
+        this.elaps.onNext(elaps);
+        return this;
     }
 }

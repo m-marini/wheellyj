@@ -31,14 +31,14 @@ AsyncServo& AsyncServo::angle(void* context, int value){
   return *this;
 }
 
-void AsyncServo::_handleTimeout(void * context, int, long) {
+void AsyncServo::_handleTimeout(void * context, unsigned long) {
   AsyncServo* servo = (AsyncServo*) context;
   if (servo->_onReached != NULL) {
     servo->_onReached(servo->_context, servo->_angle);
   }
 }
 
-AsyncServo& AsyncServo::polling() {
-  _timer.polling();
+AsyncServo& AsyncServo::polling(unsigned long clockTime) {
+  _timer.polling(clockTime);
   return *this;
 }

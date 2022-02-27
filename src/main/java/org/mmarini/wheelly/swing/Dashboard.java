@@ -48,9 +48,9 @@ import static java.lang.String.format;
 public class Dashboard extends JPanel {
 
     public static final int MAX_DISTANCE = 300;
-    public static final int STOP_DISTANCE = 30;
-    public static final int WARN_DISTANCE = 50;
-    public static final int INFO_DISTANCE = 70;
+    public static final int STOP_DISTANCE = 40;
+    public static final int WARN_DISTANCE = 60;
+    public static final int INFO_DISTANCE = 80;
     public static final double MIN_VOLTAGE = 9.0;
     public static final double FULL_VOLTAGE = 12.6;
 
@@ -66,8 +66,9 @@ public class Dashboard extends JPanel {
     private final JProgressBar powerMeasureBar;
     private final JLabel powerMeasure;
     private final Led wifiLed;
-    private final JLabel tps;
+    private final JLabel cps;
     private final Flowable<ActionEvent> resetFlow;
+    private final JLabel elaps;
 
     /**
      *
@@ -85,10 +86,12 @@ public class Dashboard extends JPanel {
         this.powerMeasureBar = new JProgressBar(JProgressBar.VERTICAL);
         this.powerLed = Led.create("/images/red-charge.png", "/images/yellow-charge.png", "/images/green-charge.png");
         this.powerMeasure = new JLabel();
-        this.tps = new JLabel();
+        this.cps = new JLabel();
+        this.elaps = new JLabel();
         JButton reset = new JButton("Reset");
         this.resetFlow = SwingObservable.actions(reset).toFlowable(BackpressureStrategy.DROP);
         setCps(0);
+        setElapsed(0);
 
         setBackground(BLACK);
 
@@ -96,8 +99,10 @@ public class Dashboard extends JPanel {
         obstacleMeasureBar.setMaximum(MAX_DISTANCE);
         powerMeasureBar.setMinimum(0);
         powerMeasureBar.setMaximum(100);
-        tps.setBackground(BLACK);
-        tps.setForeground(WHITE);
+        cps.setBackground(BLACK);
+        cps.setForeground(WHITE);
+        elaps.setBackground(BLACK);
+        elaps.setForeground(WHITE);
 
         new GridLayoutHelper<>(this)
                 .modify("hw,0.3 right ")
@@ -120,10 +125,12 @@ public class Dashboard extends JPanel {
      */
     private JPanel createConnectionPanel() {
         JPanel container = new GridLayoutHelper<>(new JPanel())
-                .modify("insets,2 at,0,0 span,2,1")
+                .modify("insets,2 at,0,0 weight,1,1")
                 .add(wifiLed)
-                .modify("at,0,1 weight,1,1 span,1,1 center")
-                .add(tps)
+                .modify("at,0,1 center")
+                .add(cps)
+                .modify("at,0,2")
+                .add(elaps)
                 .getContainer();
         container.setBackground(BLACK);
         return container;
@@ -202,9 +209,23 @@ public class Dashboard extends JPanel {
      * @param cps the transitions per second
      */
     public void setCps(double cps) {
-        tps.setText(format("%.1f CPS", cps));
+        this.cps.setText(format("%.1f CPS", cps));
     }
 
+    /**
+     * Sets the average elapsed time
+     *
+     * @param elaps the average elapsed time
+     */
+    public void setElapsed(double elaps) {
+        this.elaps.setText(format("%.0f ms", elaps));
+    }
+
+    /**
+     * Sets the forward direction block
+     *
+     * @param block true if blocked
+     */
     public void setForwardBlock(boolean block) {
         forwardBlock.setValue(block ? 1 : 0);
     }

@@ -1,29 +1,29 @@
 #include "MotorCtrl.h"
 
-MotorCtrl::MotorCtrl(int forwardPin, int backwardPin) {
-  _forwardPin = forwardPin;
-  _backwardPin = backwardPin;
+MotorCtrl::MotorCtrl(byte forwPin, byte backPin) {
+  _forwPin = forwPin;
+  _backPin = backPin;
 }
 
-MotorCtrl& MotorCtrl::begin(){
-  pinMode(_forwardPin, OUTPUT);  
-  pinMode(_backwardPin, OUTPUT);  
+MotorCtrl& MotorCtrl::begin() {
+  pinMode(_forwPin, OUTPUT);
+  pinMode(_backPin, OUTPUT);
   return *this;
 }
 
-/* 
- * Set speed 
- */
+/*
+   Set speed
+*/
 MotorCtrl& MotorCtrl::speed(int value) {
   if (value == 0) {
-    digitalWrite(_forwardPin, HIGH);
-    digitalWrite(_backwardPin, HIGH);
+    analogWrite(_forwPin, 0);
+    analogWrite(_backPin, 0);
   } else if (value > 0) {
-    digitalWrite(_forwardPin, LOW);
-    digitalWrite(_backwardPin, HIGH);
+    analogWrite(_forwPin, value);
+    analogWrite(_backPin, 0);
   } else {
-    digitalWrite(_forwardPin, HIGH);
-    digitalWrite(_backwardPin, LOW);
+    analogWrite(_forwPin, 0);
+    analogWrite(_backPin, -value);
   }
   return *this;
 }

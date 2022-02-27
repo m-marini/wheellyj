@@ -9,7 +9,7 @@
  */
 class SR04 {
   public:
-    SR04(int triggerPin, int echoPin);
+    SR04(byte triggerPin, byte echoPin);
 
     // Sets a single interval
     SR04& begin();
@@ -33,13 +33,13 @@ class SR04 {
     SR04& onSample(void (*callback)(void* context, int distance));
 
     // Polls the timer
-    SR04& polling();
+    SR04& polling(unsigned long clockTime = millis());
     SR04& _send();
 
   private:
     unsigned long _inactivity;
-    int _triggerPin;
-    int _echoPin;
+    byte _triggerPin;
+    byte _echoPin;
     int _noSamples;
     void (*_onSample)(void*, int);
 

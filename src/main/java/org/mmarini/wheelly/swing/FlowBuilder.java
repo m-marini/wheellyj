@@ -52,12 +52,13 @@ import static java.util.Objects.requireNonNull;
 public class FlowBuilder {
     static final long REMOTE_CLOCK_PERIOD = 300;   // Seconds
     private static final int REMOTE_CLOCK_SAMPLES = 10;
-    private static final long STATUS_INTERVAL = 200; // Millis
+    private static final long STATUS_INTERVAL = 300; // Millis
     private static final long MOTOR_INTERVAL = 1000;
     private static final long MOTOR_VALIDITY = 1500;
     private static final Logger logger = LoggerFactory.getLogger(FlowBuilder.class);
-    private static final int MAX_MOTOR_SPEED = 4;
-    private static final long MIN_MOTOR_INTERVAL = 100;
+    private static final int MAX_MOTOR_SPEED = 255;
+    private static final int NUM_MOTOR_SPEED = 2;
+    private static final long MIN_MOTOR_INTERVAL = 200;
 
     /**
      * Returns a flow builder
@@ -67,46 +68,6 @@ public class FlowBuilder {
      */
     public static FlowBuilder create(RxController controller, RxJoystick joystick) {
         return new FlowBuilder(controller, joystick);
-    }
-
-    /**
-     * Returns the left speed from absolute speed and direction
-     *
-     * @param speed     the speed
-     * @param direction the direction
-     */
-    private static int getLeftSpeed(int speed, Direction direction) {
-        switch (direction) {
-            case N:
-            case NE:
-            case E:
-                return speed;
-            case W:
-            case S:
-            case SW:
-                return -speed;
-        }
-        return 0;
-    }
-
-    /**
-     * Returns the right speed from absolute speed and direction
-     *
-     * @param speed     the speed
-     * @param direction the direction
-     */
-    private static int getRightSpeed(int speed, Direction direction) {
-        switch (direction) {
-            case N:
-            case NW:
-            case W:
-                return speed;
-            case E:
-            case S:
-            case SE:
-                return -speed;
-        }
-        return 0;
     }
 
     /**
@@ -132,8 +93,8 @@ public class FlowBuilder {
     }
 
     static Tuple2<Integer, Integer> speedFromAxis(Tuple2<Float, Float> xy) {
-        int x = round(xy._1 * MAX_MOTOR_SPEED);
-        int y = round(xy._2 * MAX_MOTOR_SPEED);
+        int x = round(xy._1 * (NUM_MOTOR_SPEED - 1)) * MAX_MOTOR_SPEED / (NUM_MOTOR_SPEED - 1);
+        int y = round(xy._2 * (NUM_MOTOR_SPEED - 1)) * MAX_MOTOR_SPEED / (NUM_MOTOR_SPEED - 1);
         int ax = abs(x);
         int ay = abs(y);
         int value = max(ax, ay);
@@ -183,54 +144,6 @@ public class FlowBuilder {
         return Tuple2.of(0, 0);
     }
 
-    /**
-     * Returns the direction from the joystick axis
-     *
-     * @param x the joystick x-axis
-     * @param y the joystick y-axis
-     */
-    static Direction toDir(float x, float y) {
-        double dir = atan2(y, x) + Math.PI;
-        int i = ((int) round(dir * 8 / Math.PI)) % 16;
-        int d = ((i + 13) / 2) % 8;
-        return Direction.values()[d + 1];
-    }
-
-    /**
-     * Returns the tuple of motor speeds (left, right)
-     *
-     * @param xy the joystick axis
-     */
-    private static Tuple2<Integer, Integer> toMotorSpeed(Tuple2<Float, Float> xy) {
-        float x = xy._1;
-        float y = xy._2;
-        int speed = min(round((float) sqrt(x * x + y * y) * MAX_MOTOR_SPEED), MAX_MOTOR_SPEED);
-        Direction direction = Direction.NONE;
-        if (speed >= 1) {
-            direction = toDir(x, y);
-        }
-        int left = getLeftSpeed(speed, direction);
-        int right = getRightSpeed(speed, direction);
-        return Tuple2.of(left, right);
-    }
-
-    /**
-     * Returns the polar coordinates of joystick (value, angle)
-     *
-     * @param xy the xy axis
-     */
-    static Tuple2<Float, Float> toPolar(Tuple2<Float, Float> xy) {
-        float x = xy._1;
-        float y = xy._2;
-        float value = max(abs(x), abs(y));
-        float angle = 0;
-        if (value >= (1f / 128)) {
-            //angle = atan2(y, x);
-            angle = (float) atan2(x, -y);
-        }
-        return Tuple2.of(value, angle);
-    }
-
     private final RxController controller;
     private final RxJoystick joystick;
     private final PublishProcessor<Throwable> errors;
@@ -277,6 +190,7 @@ public class FlowBuilder {
                 .map(x -> !x)
                 .subscribe(connection);
         Flowable.merge(statusFlow, scanCommand, statusByMotors).map(RxController::toStatus).subscribe(status);
+
         return this;
     }
 
@@ -356,6 +270,13 @@ public class FlowBuilder {
     }
 
     /**
+     * Returns the elapsed interval of request
+     */
+    public Flowable<Long> getElaps() {
+        return controller.getElaps();
+    }
+
+    /**
      * Returns the wheelly errors
      */
     public Flowable<Throwable> getErrors() {
@@ -423,20 +344,5 @@ public class FlowBuilder {
                 .map(t -> RemoteClock.create((t + noSamples / 2) / noSamples))
                 .toFlowable()
                 .onErrorResumeWith(Flowable.empty());
-    }
-
-    /**
-     *
-     */
-    public enum Direction {
-        NONE,
-        N,
-        NE,
-        E,
-        SE,
-        S,
-        SW,
-        W,
-        NW
     }
 }

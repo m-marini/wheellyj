@@ -15,7 +15,7 @@ class AsyncServo {
     AsyncServo& onReached(void (*callback)(void *context, int angle));
     AsyncServo& angle(void* context, int value);
     AsyncServo& angle(int value) {return angle(NULL, value);}
-    AsyncServo& polling();
+    AsyncServo& polling(unsigned long clockTime = millis());
     AsyncServo& offset(const int value);
     
 
@@ -29,7 +29,7 @@ class AsyncServo {
     void *_context;
     int _offset;
 
-    static void _handleTimeout(void *, int, long);
+    static void _handleTimeout(void *, unsigned long);
 };
 
 #endif
