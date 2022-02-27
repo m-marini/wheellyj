@@ -13,9 +13,6 @@ class Timer {
 
     Timer();
 
-    // Sets the intervals sequence
-    Timer& intervals(int noIntervals, unsigned long *intervals);
-
     // Sets a single interval
     Timer& interval(unsigned long interval);
 
@@ -40,25 +37,26 @@ class Timer {
     // Returns true if timer is not expired (is timing)
     bool isRunning() const {return _running;}
 
+    // Returns the interval
+    unsigned long interval() const {return _interval;}
+
     // Sets the callback 
-    Timer& onNext(void (*callback)(void* context, int interval, long cycles));
+    Timer& onNext(void (*callback)(void* context, unsigned long counter));
 
     // Polls the timer
-    Timer& polling();
+    Timer& polling(unsigned long clockTime = millis());
 
     unsigned long next() const {return _next;}
 
   private:
     bool _continuous;
-    int _noIntervals;
-    unsigned long _intervals[MAX_INTERVALS];
-    void (*_onNext)(void* context, int interval, long cycles);
+    unsigned long _interval;
+    void (*_onNext)(void*, unsigned long);
+    void *_context;
     
     unsigned long _next;
-    int _interval;
-    long _cycles;
+    unsigned long _counter;
     boolean _running;
-    void *_context;
 };
 
 #endif

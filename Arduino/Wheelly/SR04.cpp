@@ -2,11 +2,11 @@
 
 #define INACTIVITY 50ul
 
-void _handleTimeout(void *context, int, long){
+void _handleTimeout(void *context, unsigned long){
   ((SR04*)context)->_send();
 }
 
-SR04::SR04(int triggerPin, int echoPin)
+SR04::SR04(byte triggerPin, byte echoPin)
   : _triggerPin{triggerPin}, _echoPin{echoPin}  {
   _inactivity = INACTIVITY;
   _noSamples = 1;
@@ -70,8 +70,8 @@ SR04& SR04::_measure() {
   return *this;
 }
 
-SR04& SR04::polling() {
-  _timer.polling();
+SR04& SR04::polling(unsigned long clockTime) {
+  _timer.polling(clockTime);
   return *this;
 }
 

@@ -58,8 +58,11 @@ import static org.mmarini.yaml.Utils.fromFile;
  */
 public class UIController {
     public static final String DEFAULT_BASE_URL = "http://192.168.1.10/api/v1/wheelly";
+    public static final int ELAPS_COUNT = 10;
     private static final String CONFIG_FILE = ".wheelly.yml";
     private static final Logger logger = LoggerFactory.getLogger(UIController.class);
+    public static final int MAX_DISTANCE = 400;
+    public static final int FORWARD_DIRECTION = 90;
 
     /**
      *
@@ -93,6 +96,7 @@ public class UIController {
     private Disposable statusDisposable;
     private Disposable connectionDisposable;
     private Disposable errorDisposable;
+    private Disposable elapsDisposable;
 
     /**
      *
@@ -148,6 +152,10 @@ public class UIController {
             connectionDisposable.dispose();
             connectionDisposable = null;
         }
+        if (elapsDisposable != null) {
+            elapsDisposable.dispose();
+            elapsDisposable = null;
+        }
         flowBuilder.detach();
         return this;
     }
@@ -195,9 +203,9 @@ public class UIController {
                 .doOnNext(s -> {
                     dashboard.setPower(s.voltage.value);
                     dashboard.setObstacleDistance(
-                            getValue(s.obstacles, 90)
+                            getValue(s.obstacles, FORWARD_DIRECTION)
                                     .map(InstantValue::get)
-                                    .orElse(400));
+                                    .orElse(MAX_DISTANCE));
                     dashboard.setMotors(s.direction.value._1, s.direction.value._2);
                     dashboard.setForwardBlock(isBlockDistance(s));
                     dashboard.setCps(s.cps.value);
@@ -216,6 +224,18 @@ public class UIController {
                     frame.log(ex.getMessage());
                 })
                 .subscribe();
+        this.elapsDisposable = flowBuilder.getElaps()
+                .window(ELAPS_COUNT, 1, ELAPS_COUNT)
+                .flatMap(list -> list.toList().toFlowable())
+                .map(list -> {
+                    long sum = list.stream()
+                            .mapToLong(x -> x)
+                            .sum();
+                    return (double) sum / list.size();
+                })
+                .doOnNext(dashboard::setElapsed)
+                .subscribe();
+
     }
 
     /**

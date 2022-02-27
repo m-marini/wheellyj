@@ -188,20 +188,4 @@ class FlowBuilderTest {
         Tuple2<Integer, Integer> result = FlowBuilder.speedFromAxis(Tuple2.of(x, y));
         assertThat(result, equalTo(Tuple2.of(left, right)));
     }
-
-    @ParameterizedTest
-    @CsvSource(value = {
-            "1,0,E",
-            "1,1,SE",
-            "0,1,S",
-            "-1,1,SW",
-            "-1,0,W",
-            "-1,-1,NW",
-            "0,-1,N",
-            "1,-1,NE"
-    })
-    void toDir(float x, float y, String dir) {
-        FlowBuilder.Direction result = FlowBuilder.toDir(x, y);
-        assertThat(result, equalTo(FlowBuilder.Direction.valueOf(dir)));
-    }
 }
