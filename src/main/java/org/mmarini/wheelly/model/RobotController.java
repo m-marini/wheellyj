@@ -29,46 +29,44 @@
 
 package org.mmarini.wheelly.model;
 
+import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.schedulers.Timed;
+
 /**
- * The remote clock map the local clock to the remote clock ticks
+ *
  */
-public class RemoteClock {
+public interface RobotController {
 
     /**
-     * Returns a remote clock
-     *
-     * @param offset the local offset of remote clock
+     * @param commands the command flow
      */
-    public static RemoteClock create(long offset) {
-        return new RemoteClock(offset);
-    }
+    Completable activateMotors(Flowable<MotorCommand> commands);
 
-    public final long offset;
+    Completable close();
 
     /**
-     * Creates a remote clock
-     *
-     * @param offset the local offset of remote clock
+     * @param commands the command flow
      */
-    protected RemoteClock(long offset) {
-        this.offset = offset;
-    }
+    Completable scan(Flowable<?> commands);
 
     /**
-     * Returns the local instant of a remote clock ticks
      *
-     * @param millis the remote clock ticks
      */
-    public long fromRemote(long millis) {
-        return offset + millis;
-    }
+    Flowable<Timed<RobotAsset>> readAsset();
 
     /**
-     * Returns the remote clock ticks of a local instant
      *
-     * @param instant the local instant
      */
-    public long toRemote(long instant) {
-        return instant - offset;
-    }
+    Flowable<Boolean> readConnection();
+
+    /**
+     *
+     */
+    Flowable<Throwable> readErrors();
+
+    /**
+     *
+     */
+    Flowable<WheellyStatus> readStatus();
 }

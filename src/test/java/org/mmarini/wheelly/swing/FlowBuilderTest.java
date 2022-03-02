@@ -29,20 +29,11 @@
 
 package org.mmarini.wheelly.swing;
 
-import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.schedulers.Schedulers;
-import io.reactivex.rxjava3.subscribers.TestSubscriber;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.model.ClockSyncEvent;
-import org.mmarini.wheelly.model.RemoteClock;
-import org.mmarini.wheelly.model.RxController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -52,10 +43,11 @@ class FlowBuilderTest {
     public static final int DURATION = 10;
     private static final Logger logger = LoggerFactory.getLogger(FlowBuilderTest.class);
 
+    /*
     @Test
     void clockSync() {
         RxController ctrl = RxController.create("http://dummy/api");
-        RxJoystick joy = RxJoystick.create("USB Game Controllers");
+        RxJoystick joy = RxJoystickImpl.create("USB Game Controllers");
         FlowBuilder fb = FlowBuilder.create(ctrl, joy);
 //        Flowable<ClockSyncEvent> flow = fb.createClockSync();
         Flowable<ClockSyncEvent> flow = fb.toClockSync(ctrl.clock());
@@ -85,7 +77,7 @@ class FlowBuilderTest {
     @Test
     void createRemote1Clock() {
         RxController ctrl = RxController.create("http://dummy/api");
-        RxJoystick joy = RxJoystick.create("USB Game Controllers");
+        RxJoystick joy = RxJoystickImpl.create("USB Game Controllers");
         FlowBuilder fb = FlowBuilder.create(ctrl, joy);
         Flowable<RemoteClock> flow = fb.toRemoteClock(() ->
                 Flowable.error(new IllegalArgumentException("Mock error"))
@@ -117,7 +109,7 @@ class FlowBuilderTest {
     @Test
     void createRemoteClock() {
         RxController ctrl = RxController.create("http://dummy/api");
-        RxJoystick joy = RxJoystick.create("USB Game Controllers");
+        RxJoystick joy = RxJoystickImpl.create("USB Game Controllers");
         FlowBuilder fb = FlowBuilder.create(ctrl, joy);
 
         Flowable<RemoteClock> flow = fb.toRemoteClock(3, () ->
@@ -145,7 +137,7 @@ class FlowBuilderTest {
 
         tsconn.assertValues(false, false);
     }
-
+*/
     @ParameterizedTest
     @CsvSource(value = {
             "0,0,0,0",

@@ -70,8 +70,9 @@
 /*
    Intervals
 */
-#define LED_INTERVAL      50ul
-#define OBSTACLE_INTERVAL 50ul
+#define LED_INTERVAL        50ul
+#define OBSTACLE_INTERVAL   50ul
+#define MOTOR_SAFE_INTERVAL 1000ul
 
 /*
    Dividers
@@ -214,7 +215,7 @@ void setup() {
   // Init motor controllers
   leftMotor.begin();
   rightMotor.begin();
-  motorsTimer.interval(1).onNext([](void *, unsigned long) {
+  motorsTimer.interval(MOTOR_SAFE_INTERVAL).onNext([](void *, unsigned long) {
     moveTo(0, 0);
   });
   moveTo(0, 0);
@@ -347,13 +348,8 @@ void handleMtCommand(const char* parms) {
   }
   unsigned long timeout = args.substring(0, s1).toInt();
 
-  int s2 = args.indexOf(' ', s1 + 1);
-  if (s2 <= 0) {
-    Serial.println(F("!! Wrong arg[2]"));
-    return;
-  }
-  int left = min(max(MAX_BACKWARD, int(args.substring(s1 + 1, s2).toInt())), MAX_FORWARD);
-  int right = min(max(MAX_BACKWARD, int(args.substring(s2 + 1).toInt())), MAX_FORWARD);
+  int left = min(max(MAX_BACKWARD, int(args.substring(0 , s1).toInt())), MAX_FORWARD);
+  int right = min(max(MAX_BACKWARD, int(args.substring(s1 + 1).toInt())), MAX_FORWARD);
 
   if (isForward(left, right) && !canMoveForward()) {
     left = right = 0;
@@ -362,7 +358,7 @@ void handleMtCommand(const char* parms) {
   if (left == 0 && right == 0) {
     motorsTimer.stop();
   } else  {
-    motorsTimer.start(timeout);
+    motorsTimer.start();
   }
   sendStatus();
 }

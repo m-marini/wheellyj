@@ -13,5 +13,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #2: Manage motor pulse in arduino
 - Issue #3: Add Led image
 - Issue #6: Remove shift latch
+- Issue #8: Add PWM motors control
 - Issue #9: Serialize comunication with API
 - Issue #11: Add gyroscope and accelerometer for motion traking

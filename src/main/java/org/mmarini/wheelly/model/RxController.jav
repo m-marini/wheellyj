@@ -32,6 +32,7 @@ package org.mmarini.wheelly.model;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.AsyncProcessor;
 import io.reactivex.rxjava3.processors.PublishProcessor;
+import org.glassfish.jersey.logging.LoggingFeature;
 import org.mmarini.Tuple2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +46,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
 
 /**
  * Reactive controller generates the API requests to Wheelly.
@@ -68,7 +70,7 @@ public class RxController {
      */
     private static Client createClient() {
         return ClientBuilder.newClient()
-//                .register(new LoggingFeature(java.util.logging.Logger.getLogger(RxController.class.getName()), Level.INFO, null, null))
+                .register(new LoggingFeature(java.util.logging.Logger.getLogger(RxController.class.getName()), Level.INFO, null, null))
                 ;
     }
 

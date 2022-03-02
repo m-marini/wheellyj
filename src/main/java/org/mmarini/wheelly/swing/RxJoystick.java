@@ -30,117 +30,41 @@
 package org.mmarini.wheelly.swing;
 
 import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.processors.PublishProcessor;
-import io.reactivex.rxjava3.schedulers.Schedulers;
-import net.java.games.input.Controller;
-import net.java.games.input.ControllerEnvironment;
 import net.java.games.input.Event;
 import org.mmarini.Tuple2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
-
-import static java.util.Objects.requireNonNull;
-
 /**
  *
  */
-public class RxJoystick {
-    public static final String NONE_CONTROLLER = "None";
-    public static final String X = "x";
-    public static final String Y = "y";
-    public static final String Z = "z";
-    public static final String BUTTON_0 = "0";
-    public static final String BUTTON_1 = "1";
-    public static final String BUTTON_2 = "2";
-    public static final String BUTTON_3 = "3";
-    public static final String POW = "pov";
-    private static final Logger logger = LoggerFactory.getLogger(RxJoystick.class);
-
-    /**
-     * @param joystickPort the controller name
-     */
-    public static RxJoystick create(String joystickPort) {
-        return new RxJoystick(findController(joystickPort));
-    }
-
-    /**
-     * @param controller the controller
-     */
-    private static Flowable<Event> createUnsafe(Controller controller) {
-        return Flowable.generate(
-                () -> (net.java.games.input.EventQueue) null,
-                (queue, emitter) -> {
-                    net.java.games.input.Event event = new Event();
-                    if (queue == null) {
-                        controller.poll();
-                        net.java.games.input.EventQueue queue1 = controller.getEventQueue();
-                        if (queue1.getNextEvent(event)) {
-                            emitter.onNext(event);
-                            return queue1;
-                        } else {
-                            return null;
-                        }
-                    } else if (queue.getNextEvent(event)) {
-                        emitter.onNext(event);
-                        return queue;
-                    } else {
-                        controller.poll();
-                        net.java.games.input.EventQueue queue1 = controller.getEventQueue();
-                        if (queue.getNextEvent(event)) {
-                            emitter.onNext(event);
-                            return queue1;
-                        } else {
-                            return null;
-                        }
-                    }
-                });
-    }
-
-    /**
-     * @param name the controller name
-     */
-    private static Controller findController(String name) {
-        Controller[] controllers = ControllerEnvironment.getDefaultEnvironment().getControllers();
-        return Arrays.stream(controllers).filter(x -> x.getName().equals(name))
-                .findAny()
-                .orElseThrow(IllegalArgumentException::new);
-    }
-
-    private final PublishProcessor<Event> publisher;
-
-    /**
-     * @param controller the controller
-     */
-    protected RxJoystick(Controller controller) {
-        logger.debug("Create reactive joystick");
-        requireNonNull(controller);
-        this.publisher = PublishProcessor.create();
-        createUnsafe(controller).subscribeOn(Schedulers.single())
-                .subscribe(this.publisher);
-        logger.debug("Created reactive joystick");
-    }
+public interface RxJoystick {
+    String NONE_CONTROLLER = "None";
+    String X = "x";
+    String Y = "y";
+    String Z = "z";
+    String BUTTON_0 = "0";
+    String BUTTON_1 = "1";
+    String BUTTON_2 = "2";
+    String BUTTON_3 = "3";
+    String POV = "pov";
 
     /**
      *
      */
-    public void close() {
-        publisher.onComplete();
-    }
+    void close();
 
     /**
      *
      */
-    public Flowable<Event> getEvents() {
-        return publisher;
-    }
+    Flowable<Event> readEvents();
 
     /**
      *
+     * @param id
      */
-    public Flowable<Float> getValues(String id) {
-        return publisher.filter(ev -> id.equals(ev.getComponent().getIdentifier().getName()))
+    default Flowable<Float> readValues(String id) {
+        return readEvents().filter(ev -> id.equals(ev.getComponent().getIdentifier().getName()))
                 .map(Event::getValue)
                 .startWithItem(0f);
     }
@@ -148,8 +72,7 @@ public class RxJoystick {
     /**
      * @return
      */
-    public Flowable<Tuple2<Float, Float>> getXY() {
-        return Flowable.combineLatest(getValues(X), getValues(Y), Tuple2::of);
+    default Flowable<Tuple2<Float, Float>> readXY() {
+        return Flowable.combineLatest(readValues(X), readValues(Y), Tuple2::of);
     }
-
 }

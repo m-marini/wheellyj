@@ -49,7 +49,7 @@ public class LevelMeter extends JComponent {
     private int value;
     private Color[] colorMap;
     private int[] colorLevels;
-    private boolean horizontal;
+    private final boolean horizontal;
 
     /**
      *
