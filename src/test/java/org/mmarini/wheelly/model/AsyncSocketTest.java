@@ -29,46 +29,24 @@
 
 package org.mmarini.wheelly.model;
 
-/**
- * The remote clock map the local clock to the remote clock ticks
- */
-public class RemoteClock {
+import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.schedulers.Timed;
+import org.junit.jupiter.api.Test;
 
-    /**
-     * Returns a remote clock
-     *
-     * @param offset the local offset of remote clock
-     */
-    public static RemoteClock create(long offset) {
-        return new RemoteClock(offset);
+import java.util.List;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItems;
+
+class AsyncSocketTest {
+    @Test
+    void toLine() {
+        Flowable<Timed<String>> data = Flowable.just("\n", "a", "b\n", "c\nd", "\nef", "\n\n")
+                .timestamp();
+        List<String> result = AsyncSocket.toLines(data)
+                .map(Timed::value)
+                .toList().blockingGet();
+        assertThat(result, hasItems("", "ab", "c", "d", "ef", ""));
     }
 
-    public final long offset;
-
-    /**
-     * Creates a remote clock
-     *
-     * @param offset the local offset of remote clock
-     */
-    protected RemoteClock(long offset) {
-        this.offset = offset;
-    }
-
-    /**
-     * Returns the local instant of a remote clock ticks
-     *
-     * @param millis the remote clock ticks
-     */
-    public long fromRemote(long millis) {
-        return offset + millis;
-    }
-
-    /**
-     * Returns the remote clock ticks of a local instant
-     *
-     * @param instant the local instant
-     */
-    public long toRemote(long instant) {
-        return instant - offset;
-    }
 }

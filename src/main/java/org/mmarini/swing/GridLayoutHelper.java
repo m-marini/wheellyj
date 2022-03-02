@@ -459,7 +459,7 @@ public class GridLayoutHelper<T extends Container> {
      * @param container
      */
     public GridLayoutHelper(final T container) {
-        this((ResourceBundle) null, container);
+        this(null, container);
     }
 
     /**

@@ -29,65 +29,65 @@
 
 package org.mmarini.wheelly.model;
 
-import java.time.Instant;
 import java.util.StringJoiner;
-import java.util.function.Supplier;
 
 /**
- * Value at a specific instant
  *
- * @param <T> the type ov value
  */
-public class InstantValue<T> implements Supplier<T> {
+public class MotorCommand {
     /**
-     * Retusn a instant value
+     * @param leftPower
+     * @param rightPower
+     */
+    public static MotorCommand create(int leftPower, int rightPower) {
+        return new MotorCommand(leftPower, rightPower);
+    }
+
+    public final int leftPower;
+    public final int rightPower;
+
+    /**
+     * @param leftPower
+     * @param rightPower
+     */
+    protected MotorCommand(int leftPower, int rightPower) {
+        this.leftPower = leftPower;
+        this.rightPower = rightPower;
+    }
+
+    /**
      *
-     * @param instant the instant
-     * @param value   the value
-     * @param <T>     the type ov value
      */
-    public static <T> InstantValue<T> of(Instant instant, T value) {
-        return new InstantValue<>(instant, value);
+    public int getLeftPower() {
+        return leftPower;
     }
 
-    public final Instant instant;
-    public final T value;
+    /**
+     * @param leftPower
+     */
+    public MotorCommand setLeftPower(int leftPower) {
+        return new MotorCommand(leftPower, rightPower);
+    }
 
     /**
-     * Creates an instant value
      *
-     * @param instant the instant
-     * @param value   the value
      */
-    protected InstantValue(Instant instant, T value) {
-        this.instant = instant;
-        this.value = value;
-    }
-
-    @Override
-    public T get() {
-        return value;
+    public int getRightPower() {
+        return rightPower;
     }
 
     /**
-     * Returns the instant of value
+     * @param rightPower
      */
-    public Instant getInstant() {
-        return instant;
-    }
-
-    /**
-     * Returns the value
-     */
-    public T getValue() {
-        return value;
+    public MotorCommand setRightPower(int rightPower) {
+        return new MotorCommand(leftPower, rightPower);
     }
 
     @Override
     public String toString() {
-        return new StringJoiner(", ", InstantValue.class.getSimpleName() + "[", "]")
-                .add("instant=" + instant)
-                .add("value=" + value)
+        return new StringJoiner(", ", MotorCommand.class.getSimpleName() + "[", "]")
+                .add("leftPower=" + leftPower)
+                .add("rightPower=" + rightPower)
                 .toString();
     }
 }

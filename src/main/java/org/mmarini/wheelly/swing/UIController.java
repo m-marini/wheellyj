@@ -33,8 +33,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.BackpressureStrategy;
 import io.reactivex.rxjava3.disposables.Disposable;
-import org.mmarini.wheelly.model.InstantValue;
-import org.mmarini.wheelly.model.RxController;
+import io.reactivex.rxjava3.schedulers.Timed;
+import org.mmarini.wheelly.model.RawController;
+import org.mmarini.wheelly.model.RobotController;
 import org.mmarini.wheelly.model.WheellyStatus;
 import org.mmarini.yaml.schema.Locator;
 import org.slf4j.Logger;
@@ -58,11 +59,10 @@ import static org.mmarini.yaml.Utils.fromFile;
  */
 public class UIController {
     public static final String DEFAULT_BASE_URL = "http://192.168.1.10/api/v1/wheelly";
-    public static final int ELAPS_COUNT = 10;
-    private static final String CONFIG_FILE = ".wheelly.yml";
-    private static final Logger logger = LoggerFactory.getLogger(UIController.class);
     public static final int MAX_DISTANCE = 400;
     public static final int FORWARD_DIRECTION = 90;
+    private static final String CONFIG_FILE = ".wheelly.yml";
+    private static final Logger logger = LoggerFactory.getLogger(UIController.class);
 
     /**
      *
@@ -80,7 +80,7 @@ public class UIController {
                 .boxed()
                 .map(getValue(s.obstacles))
                 .flatMap(Optional::stream)
-                .map(InstantValue::getValue)
+                .map(Timed::value)
                 .filter(x -> x > 0 && x <= Dashboard.STOP_DISTANCE)
                 .findAny()
                 .isPresent();
@@ -90,20 +90,21 @@ public class UIController {
     private final WheellyFrame frame;
     private final Dashboard dashboard;
     private final Radar radar;
-    private String baseUrl;
+    private String host;
     private String joystickPort;
     private FlowBuilder flowBuilder;
     private Disposable statusDisposable;
     private Disposable connectionDisposable;
     private Disposable errorDisposable;
     private Disposable elapsDisposable;
+    private int port;
 
     /**
      *
      */
     protected UIController() {
         this.joystickPort = NONE_CONTROLLER;
-        this.baseUrl = DEFAULT_BASE_URL;
+        this.host = DEFAULT_BASE_URL;
         this.frame = new WheellyFrame();
         this.preferencesPane = new PreferencesPane();
         this.dashboard = frame.getDashboard();
@@ -165,13 +166,13 @@ public class UIController {
      */
     private void handlePreferences(ActionEvent actionEvent) {
         preferencesPane.setJoystickPort(joystickPort)
-                .setBaseUrl(baseUrl);
+                .setBaseUrl(host);
         int result = JOptionPane.showConfirmDialog(
                 frame, preferencesPane, "Preferences",
                 JOptionPane.OK_CANCEL_OPTION);
         if (result == JOptionPane.OK_OPTION) {
             joystickPort = preferencesPane.getJoystickPort();
-            baseUrl = preferencesPane.getBaseUrl();
+            host = preferencesPane.getBaseUrl();
             saveConfig();
         }
     }
@@ -191,39 +192,42 @@ public class UIController {
         JsonNode node = fromFile(CONFIG_FILE);
         Yaml.config().apply(Locator.root()).accept(node);
         joystickPort = Yaml.joystickPort(node);
-        baseUrl = Yaml.baseUrl(node);
+        host = Yaml.host(node);
+        port = Yaml.port(node);
     }
 
     /**
      * Returns the UIController with current configuration opened
      */
     private void openConfig() {
-        this.flowBuilder = FlowBuilder.create(RxController.create(baseUrl), RxJoystick.create(joystickPort)).build();
-        this.statusDisposable = flowBuilder.getStatus()
-                .doOnNext(s -> {
-                    dashboard.setPower(s.voltage.value);
-                    dashboard.setObstacleDistance(
-                            getValue(s.obstacles, FORWARD_DIRECTION)
-                                    .map(InstantValue::get)
-                                    .orElse(MAX_DISTANCE));
-                    dashboard.setMotors(s.direction.value._1, s.direction.value._2);
-                    dashboard.setForwardBlock(isBlockDistance(s));
-                    dashboard.setCps(s.cps.value);
-                    radar.setSamples(s.obstacles);
-                }).subscribe();
-        this.connectionDisposable = flowBuilder.getConnection()
-                .distinctUntilChanged()
-                .doOnNext(connected -> {
-                    dashboard.setWifiLed(connected);
-                    frame.log(connected ? "Connected" : "Disconnected");
-                })
-                .subscribe();
-        this.errorDisposable = flowBuilder.getErrors()
-                .doOnNext(ex -> {
-                    logger.error("Error on flow", ex);
-                    frame.log(ex.getMessage());
-                })
-                .subscribe();
+        try {
+            RobotController controller = RawController.create(host, port);
+            this.flowBuilder = FlowBuilder.create(controller, RxJoystickImpl.create(joystickPort)).build();
+            this.statusDisposable = controller.readStatus()
+                    .doOnNext(s -> {
+                        dashboard.setPower(s.voltage.value());
+                        dashboard.setObstacleDistance(
+                                getValue(s.obstacles, FORWARD_DIRECTION)
+                                        .map(Timed::value)
+                                        .orElse(MAX_DISTANCE));
+                        dashboard.setMotors(s.direction.value()._1, s.direction.value()._2);
+                        dashboard.setForwardBlock(isBlockDistance(s));
+                        dashboard.setCps(s.cps.value());
+                        radar.setSamples(s.obstacles);
+                    }).subscribe();
+            this.connectionDisposable = controller.readConnection()
+                    .doOnNext(connected -> {
+                        dashboard.setWifiLed(connected);
+                        frame.log(connected ? "Connected" : "Disconnected");
+                    })
+                    .subscribe();
+            this.errorDisposable = controller.readErrors()
+                    .doOnNext(ex -> {
+                        logger.error("Error on flow", ex);
+                        frame.log(ex.getMessage());
+                    })
+                    .subscribe();
+        /*
         this.elapsDisposable = flowBuilder.getElaps()
                 .window(ELAPS_COUNT, 1, ELAPS_COUNT)
                 .flatMap(list -> list.toList().toFlowable())
@@ -235,7 +239,11 @@ public class UIController {
                 })
                 .doOnNext(dashboard::setElapsed)
                 .subscribe();
-
+        */
+        } catch (Exception ex) {
+            logger.error(ex.getMessage(), ex);
+            frame.log(ex.getMessage());
+        }
     }
 
     /**
@@ -243,7 +251,7 @@ public class UIController {
      */
     private void saveConfig() {
         try {
-            Yaml.saveConfig(CONFIG_FILE, joystickPort, baseUrl);
+            Yaml.saveConfig(CONFIG_FILE, joystickPort, host, port);
         } catch (IOException ex) {
             logger.error(ex.getMessage(), ex);
         }

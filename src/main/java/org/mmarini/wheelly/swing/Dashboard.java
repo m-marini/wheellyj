@@ -53,12 +53,15 @@ public class Dashboard extends JPanel {
     public static final int INFO_DISTANCE = 80;
     public static final double MIN_VOLTAGE = 9.0;
     public static final double FULL_VOLTAGE = 12.6;
+    private static final float MAX_POWER = 255;
 
     private final Led leftForwardMotor;
     private final Led leftBackwardMotor;
     private final Led rightForwardMotor;
     private final Led rightBackwardMotor;
     private final Led forwardBlock;
+    private final JLabel leftPower;
+    private final JLabel rightPower;
     private final JProgressBar obstacleMeasureBar;
     private final Led obstacleLed;
     private final JLabel obstacleMeasure;
@@ -86,6 +89,8 @@ public class Dashboard extends JPanel {
         this.powerMeasureBar = new JProgressBar(JProgressBar.VERTICAL);
         this.powerLed = Led.create("/images/red-charge.png", "/images/yellow-charge.png", "/images/green-charge.png");
         this.powerMeasure = new JLabel();
+        this.leftPower = new JLabel();
+        this.rightPower = new JLabel();
         this.cps = new JLabel();
         this.elaps = new JLabel();
         JButton reset = new JButton("Reset");
@@ -103,6 +108,10 @@ public class Dashboard extends JPanel {
         cps.setForeground(WHITE);
         elaps.setBackground(BLACK);
         elaps.setForeground(WHITE);
+        leftPower.setBackground(BLACK);
+        leftPower.setForeground(WHITE);
+        rightPower.setBackground(BLACK);
+        rightPower.setForeground(WHITE);
 
         new GridLayoutHelper<>(this)
                 .modify("hw,0.3 right ")
@@ -148,8 +157,12 @@ public class Dashboard extends JPanel {
                 .modify("at,1,1")
                 .add(rightForwardMotor)
                 .modify("at,0,2")
-                .add(leftBackwardMotor)
+                .add(leftPower)
                 .modify("at,1,2")
+                .add(rightPower)
+                .modify("at,0,3")
+                .add(leftBackwardMotor)
+                .modify("at,1,3")
                 .add(rightBackwardMotor)
                 .getContainer();
         container.setBackground(BLACK);
@@ -255,6 +268,8 @@ public class Dashboard extends JPanel {
             rightForwardMotor.setValue(0);
             rightBackwardMotor.setValue(0);
         }
+        leftPower.setText(format("%d%%", round(abs(left * 100f / MAX_POWER))));
+        rightPower.setText(format("%d%%", round(abs(right * 100f / MAX_POWER))));
     }
 
     /**
