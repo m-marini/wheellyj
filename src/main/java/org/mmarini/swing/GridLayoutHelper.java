@@ -351,6 +351,16 @@ public class GridLayoutHelper<T extends Container> {
                 return n;
             }
         });
+        MODIFIERS.put("fill", new Modifier() {
+
+            @Override
+            public GridBagConstraints apply(final GridBagConstraints c,
+                                            final String[] args) {
+                final GridBagConstraints n = create(c);
+                n.fill = GridBagConstraints.BOTH;
+                return n;
+            }
+        });
         MODIFIERS.put("hfill", new Modifier() {
 
             @Override

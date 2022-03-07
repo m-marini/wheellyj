@@ -51,6 +51,10 @@ public class WheellyStatus {
 
     /**
      * Returns the Wheelly status from status string
+     * The string status is formatted as:
+     * <pre>
+     *     st [motorTime] [leftMotor] [rightMotor] [time0] 0 [distance0] [time30] 30 [distance30] [time60] 60 [distance60] [time90] 90 [distance90] [time120] 120 [distance120] [time150] 150 [distance150] [time180] 180 [distance180] [voltageTime] [voltage] [cpsTime] [cps]
+     * </pre>
      *
      * @param statusString the status string
      */

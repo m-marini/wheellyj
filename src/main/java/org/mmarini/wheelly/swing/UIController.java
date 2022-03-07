@@ -97,6 +97,7 @@ public class UIController {
     private Disposable connectionDisposable;
     private Disposable errorDisposable;
     private Disposable elapsDisposable;
+    private Disposable assetDisposable;
     private int port;
 
     /**
@@ -156,6 +157,10 @@ public class UIController {
         if (elapsDisposable != null) {
             elapsDisposable.dispose();
             elapsDisposable = null;
+        }
+        if (assetDisposable != null) {
+            assetDisposable.dispose();
+            assetDisposable = null;
         }
         flowBuilder.detach();
         return this;
@@ -226,7 +231,16 @@ public class UIController {
                         logger.error("Error on flow", ex);
                         frame.log(ex.getMessage());
                     })
+                    .doOnError(ex -> {
+                        logger.error("Error reading errors", ex);
+                        frame.log(ex.getMessage());
+                    })
                     .subscribe();
+            this.assetDisposable = controller.readAsset()
+                    .doOnNext(as -> {
+                        dashboard.setAsset(as);
+                    }).subscribe();
+            controller.start();
         /*
         this.elapsDisposable = flowBuilder.getElaps()
                 .window(ELAPS_COUNT, 1, ELAPS_COUNT)

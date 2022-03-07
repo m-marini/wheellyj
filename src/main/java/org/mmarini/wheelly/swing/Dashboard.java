@@ -32,7 +32,9 @@ package org.mmarini.wheelly.swing;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.BackpressureStrategy;
 import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.swing.GridLayoutHelper;
+import org.mmarini.wheelly.model.RobotAsset;
 
 import javax.swing.*;
 import java.awt.*;
@@ -72,6 +74,10 @@ public class Dashboard extends JPanel {
     private final JLabel cps;
     private final Flowable<ActionEvent> resetFlow;
     private final JLabel elaps;
+    private final JLabel xSpeed;
+    private final JButton reset;
+    private final JLabel yaw;
+    private final Compass compass;
 
     /**
      *
@@ -93,10 +99,15 @@ public class Dashboard extends JPanel {
         this.rightPower = new JLabel();
         this.cps = new JLabel();
         this.elaps = new JLabel();
-        JButton reset = new JButton("Reset");
+        this.xSpeed = new JLabel();
+        this.yaw = new JLabel();
+        this.reset = new JButton("Reset");
+        this.compass = new Compass();
         this.resetFlow = SwingObservable.actions(reset).toFlowable(BackpressureStrategy.DROP);
         setCps(0);
         setElapsed(0);
+        setXSpeed(0);
+        setYaw(0);
 
         setBackground(BLACK);
 
@@ -112,21 +123,44 @@ public class Dashboard extends JPanel {
         leftPower.setForeground(WHITE);
         rightPower.setBackground(BLACK);
         rightPower.setForeground(WHITE);
+        xSpeed.setBackground(BLACK);
+        xSpeed.setForeground(WHITE);
+        yaw.setBackground(BLACK);
+        yaw.setForeground(WHITE);
 
         new GridLayoutHelper<>(this)
-                .modify("hw,0.3 right ")
+                .modify("weight,1,1 fill at,0,0")
                 .add(createConnectionPanel())
-                .modify("weight,1,1 hfill vfill")
+                .modify("at,1,0")
                 .add(createMotorsPanel())
-                .modify("hw,0.3")
-                .add(createObstaclePanel(),
-                        createPowerPanel())
-                .modify("nofill")
-                .add(reset);
+                .modify("at,2,0")
+                .add(createObstaclePanel())
+                .modify("at,3,0")
+                .add(createPowerPanel())
+                .modify("at,4,0")
+                .add(createAssetPanel());
 
         setObstacleDistance(0);
         setPower(0);
         setMotors(0, 0);
+    }
+
+    /**
+     *
+     */
+    private JPanel createAssetPanel() {
+        JPanel container = new GridLayoutHelper<>(new JPanel())
+                .modify("insets,2 at,0,0 weight,1,1 fill center")
+                .add(compass)
+                .modify("at,0,1 nofill noweight")
+                .add(yaw)
+                .modify("at,0,2")
+                .add(xSpeed)
+                .modify("at,0,3")
+                .add(reset)
+                .getContainer();
+        container.setBackground(BLACK);
+        return container;
     }
 
     /**
@@ -216,6 +250,16 @@ public class Dashboard extends JPanel {
      */
     public Flowable<ActionEvent> getResetFlow() {
         return resetFlow;
+    }
+
+    /**
+     * @param asset the robot asset
+     */
+    public void setAsset(Timed<RobotAsset> asset) {
+        RobotAsset value = asset.value();
+        setXSpeed(value.xSpeed);
+        setYaw(value.yaw);
+        compass.setAngle(value.yaw);
     }
 
     /**
@@ -317,5 +361,20 @@ public class Dashboard extends JPanel {
      */
     public void setWifiLed(boolean on) {
         wifiLed.setValue(on ? 1 : 0);
+    }
+
+    private void setXSpeed(float xSpeed) {
+        this.xSpeed.setText(format("%.2f m/s", xSpeed));
+    }
+
+    /**
+     * @param yaw the yow (radians)
+     */
+    private void setYaw(float yaw) {
+        int deg = (int) round(toDegrees(yaw));
+        while (deg < 0) {
+            deg += 360;
+        }
+        this.yaw.setText(format("%03d DEG", deg));
     }
 }

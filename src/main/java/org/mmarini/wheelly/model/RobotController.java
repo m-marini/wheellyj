@@ -29,7 +29,6 @@
 
 package org.mmarini.wheelly.model;
 
-import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.schedulers.Timed;
 
@@ -41,14 +40,12 @@ public interface RobotController {
     /**
      * @param commands the command flow
      */
-    Completable activateMotors(Flowable<MotorCommand> commands);
-
-    Completable close();
+    RobotController activateMotors(Flowable<MotorCommand> commands);
 
     /**
-     * @param commands the command flow
+     *
      */
-    Completable scan(Flowable<?> commands);
+    RobotController close();
 
     /**
      *
@@ -69,4 +66,14 @@ public interface RobotController {
      *
      */
     Flowable<WheellyStatus> readStatus();
+
+    /**
+     * @param commands
+     */
+    RobotController scan(Flowable<?> commands);
+
+    /**
+     * Starts the controller
+     */
+    RobotController start();
 }

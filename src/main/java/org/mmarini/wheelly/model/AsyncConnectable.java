@@ -30,23 +30,23 @@
 package org.mmarini.wheelly.model;
 
 import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.schedulers.Timed;
-import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.List;
+/**
+ *
+ */
+public interface AsyncConnectable {
+    Logger logger = LoggerFactory.getLogger(AsyncConnectable.class);
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasItems;
+    /**
+     * Connects the socket to remote server.
+     * Returns a flow that completes on connection of socket
+     */
+    AsyncConnectable connect();
 
-class AsyncSocketTest {
-    @Test
-    void toLine() {
-        Flowable<Timed<String>> data = Flowable.just("\n", "a", "b\n", "c\nd", "\nef", "\n\n")
-                .timestamp();
-        List<String> result = AsyncSocket.toLines(data)
-                .map(Timed::value)
-                .toList().blockingGet();
-        assertThat(result, hasItems("", "ab", "c", "d", "ef", ""));
-    }
-
+    /**
+     * Returns the connection flow, true when connected
+     */
+    Flowable<Boolean> readConnection();
 }

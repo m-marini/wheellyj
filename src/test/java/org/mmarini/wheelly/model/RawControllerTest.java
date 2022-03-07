@@ -30,7 +30,6 @@
 package org.mmarini.wheelly.model;
 
 import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.observers.TestObserver;
 import io.reactivex.rxjava3.schedulers.Timed;
 import io.reactivex.rxjava3.subscribers.TestSubscriber;
 import org.junit.jupiter.api.Test;
@@ -38,13 +37,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.*;
 
 class RawControllerTest {
     public static final String HOST = "192.168.1.11";
@@ -55,115 +52,75 @@ class RawControllerTest {
     void activateMotor() throws IOException, InterruptedException {
         RawController controller = RawController.create(HOST, PORT,
                 10,
-                Duration.ofSeconds(3),
-                Duration.ofSeconds(3));
-        TestObserver<ClockSyncEvent> testObserver = TestObserver.create();
-        controller.activateMotors(Flowable.just(
-                                MotorCommand.create(0, 0),
-                                MotorCommand.create(-200, -200),
-                                MotorCommand.create(0, 0))
-                        .zipWith(Flowable.interval(500, 500, TimeUnit.MILLISECONDS),
-                                (a, b) -> a))
-                .subscribe(testObserver);
-        testObserver.await(20, TimeUnit.SECONDS);
-        testObserver.assertNoErrors();
-        testObserver.assertComplete();
+                3000,
+                3000,
+                3000,
+                1000,
+                1000);
+        controller.start().activateMotors(Flowable.just(
+                        MotorCommand.create(0, 0),
+                        MotorCommand.create(-200, -200),
+                        MotorCommand.create(0, 0))
+                .zipWith(Flowable.interval(500, 500, TimeUnit.MILLISECONDS),
+                        (a, b) -> a));
+        Thread.sleep(3000);
         controller.close();
-    }
-
-    @Test
-    void readAveragedClock() throws IOException, InterruptedException {
-        RawController controller = RawController.create(HOST, PORT);
-        TestObserver<RemoteClock> testObserver = TestObserver.create();
-        controller.readAveragedClock()
-                .doOnError(ex -> logger.error(ex.getMessage(), ex))
-                .subscribe(testObserver);
-        testObserver.await();
-        testObserver.assertNoErrors();
-        testObserver.assertComplete();
-        testObserver.assertValue(clock -> clock.offset > 0);
-        controller.close();
-    }
-
-    @Test
-    void readClockSync() throws IOException, InterruptedException {
-        RawController controller = RawController.create(HOST, PORT);
-        TestObserver<ClockSyncEvent> testObserver = TestObserver.create();
-        controller.readClockSync()
-                .doOnError(ex -> logger.error(ex.getMessage(), ex))
-                .subscribe(testObserver);
-        testObserver.await();
-        testObserver.assertNoErrors();
-        testObserver.assertComplete();
-        testObserver.assertValue(clock -> clock.getLatency() > 0);
-        controller.close();
-    }
-
-    @Test
-    void readRemoteClock() throws IOException, InterruptedException {
-        RawController controller = RawController.create(HOST, PORT,
-                10,
-                Duration.ofSeconds(3),
-                Duration.ofSeconds(3));
-        TestSubscriber<RemoteClock> testObserver = TestSubscriber.create();
-        controller.readRemoteClock()
-                .doOnError(ex -> logger.error(ex.getMessage(), ex))
-                .subscribe(testObserver);
-        testObserver.await(1, TimeUnit.SECONDS);
-        testObserver.assertNoErrors();
-        testObserver.assertValueCount(1);
-        testObserver.assertValue(clock -> clock.offset > 0);
-
-        testObserver.await(3, TimeUnit.SECONDS);
-        testObserver.assertNoErrors();
-        testObserver.assertValueCount(2);
-        testObserver.assertValueAt(1, clock -> clock.offset > 0);
-
-        controller.close();
-    }
-
-    @Test
-    void readStatus() throws IOException, InterruptedException {
-        RawController controller = RawController.create(HOST, PORT,
-                10,
-                Duration.ofSeconds(3),
-                Duration.ofMillis(300));
-        TestSubscriber<WheellyStatus> testObserver = controller.readStatus().test();
-        testObserver.await(3, TimeUnit.SECONDS);
-        testObserver.assertNoErrors();
-        List<WheellyStatus> values = testObserver.values();
-        assertThat(values, hasSize(greaterThan(6)));
-        controller.close();
+        Thread.sleep(3000);
     }
 
     @Test
     void readAsset() throws IOException, InterruptedException {
         RawController controller = RawController.create(HOST, PORT,
                 10,
-                Duration.ofSeconds(3),
-                Duration.ofMillis(300));
-        TestSubscriber<Timed<RobotAsset>> testObserver = controller.readAsset().test();
-        testObserver.await(3, TimeUnit.SECONDS);
-        testObserver.assertNoErrors();
-        List<Timed<RobotAsset>> values = testObserver.values();
-        assertThat(values, hasSize(greaterThan(6)));
+                3000,
+                3000,
+                300,
+                1000,
+                1000);
+        TestSubscriber<Timed<RobotAsset>> assetTest = controller.readAsset().test();
+        controller.start();
+        assetTest.await(6, TimeUnit.SECONDS);
+        assetTest.assertNoErrors();
+        List<Timed<RobotAsset>> values = assetTest.values();
+        assertThat(values, not(empty()));
         controller.close();
+        Thread.sleep(3000);
+    }
+
+    @Test
+    void readStatus() throws IOException, InterruptedException {
+        RawController controller = RawController.create(HOST, PORT,
+                10,
+                3000,
+                3000,
+                300,
+                1000,
+                1000);
+        TestSubscriber<WheellyStatus> testObserver = controller.readStatus().test();
+        controller.start();
+        testObserver.await(6, TimeUnit.SECONDS);
+        testObserver.assertNoErrors();
+        List<WheellyStatus> values = testObserver.values();
+        assertThat(values, not(empty()));
+        controller.close();
+        Thread.sleep(3000);
     }
 
     @Test
     void scan() throws IOException, InterruptedException {
         RawController controller = RawController.create(HOST, PORT,
                 10,
-                Duration.ofSeconds(3),
-                Duration.ofSeconds(3));
-        TestObserver<ClockSyncEvent> testObserver = TestObserver.create();
+                3000,
+                3000,
+                3000,
+                1000,
+                1000);
+        controller.start();
         controller.scan(Flowable.interval(500, 4000, TimeUnit.MILLISECONDS)
-                        .take(2))
-                .subscribe(testObserver);
-        testObserver.await(20, TimeUnit.SECONDS);
-        testObserver.assertNoErrors();
-        testObserver.assertComplete();
+                .take(2));
+        Thread.sleep(10000);
         controller.close();
+        Thread.sleep(3000);
     }
 
 }
