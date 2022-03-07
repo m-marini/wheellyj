@@ -28,6 +28,8 @@
 
 package org.mmarini;
 
+import io.reactivex.rxjava3.core.Flowable;
+
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.Function;
@@ -40,28 +42,6 @@ import java.util.stream.Stream;
 import static java.util.Map.entry;
 
 public interface Utils {
-
-    /**
-     * Returns the cumulative values
-     *
-     * @param values the values
-     */
-    static double[] cumulative(double... values) {
-        int n = values.length;
-        if (n == 0) {
-            return new double[0];
-        } else if (n == 1) {
-            return new double[]{1};
-        } else {
-            double[] cumulative = new double[n];
-            double sum = 0;
-            for (int i = 0; i < n; i++) {
-                sum += values[i];
-                cumulative[i] = sum;
-            }
-            return cumulative;
-        }
-    }
 
     /**
      * Returns the collector of Map
@@ -144,6 +124,15 @@ public interface Utils {
             p *= random.nextDouble();
         } while (p > l);
         return k;
+    }
+
+    /**
+     *
+     * @param opt
+     * @param <T>
+     */
+    static <T> Flowable<T> optionalToFlow(Optional<T> opt) {
+        return opt.map(Flowable::just).orElse(Flowable.empty());
     }
 
     /**

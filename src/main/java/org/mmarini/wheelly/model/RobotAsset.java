@@ -39,21 +39,29 @@ import static java.util.Objects.requireNonNull;
  *
  */
 public class RobotAsset {
-    private static final int NO_PARAMS = 8;
+    private static final int NO_PARAMS = 15;
 
     /**
      * @param yaw
      * @param pitch
      * @param roll
      * @param acc
+     * @param linAcc
+     * @param worldAcc
+     * @param xSpeed
      */
-    public static RobotAsset create(float yaw, float pitch, float roll, float[] acc) {
-        return new RobotAsset(yaw, pitch, roll, acc);
+    public static RobotAsset create(float yaw, float pitch, float roll, float[] acc, float[] linAcc, float[] worldAcc, float xSpeed) {
+        return new RobotAsset(yaw, pitch, roll, acc, linAcc, worldAcc, xSpeed);
     }
 
     /**
-     * @param msg
-     * @param clock
+     * The string status is formatted as:
+     * <pre>
+     *     as [assetTime] [accX] [accY] [accZ] [linAccX] [linAccY] [linAccZ] [worldAccX] [worldAccY] [worldAccZ] [yaw] [pitch] [roll]
+     * </pre>
+     *
+     * @param msg   the asset message
+     * @param clock the remote clock
      */
     public static Timed<RobotAsset> from(String msg, RemoteClock clock) {
         String[] params = msg.split(" ");
@@ -61,19 +69,31 @@ public class RobotAsset {
             throw new IllegalArgumentException("Missing status parameters");
         }
         long instant = clock.fromRemote(Long.parseLong(params[1]));
-        float yaw = Float.parseFloat(params[2]);
-        float pitch = Float.parseFloat(params[3]);
-        float roll = Float.parseFloat(params[4]);
         float[] acc = new float[3];
-        acc[0] = Float.parseFloat(params[5]);
-        acc[1] = Float.parseFloat(params[6]);
-        acc[2] = Float.parseFloat(params[7]);
-        return new Timed<>(new RobotAsset(yaw, pitch, roll, acc), instant, TimeUnit.MILLISECONDS);
+        acc[0] = Float.parseFloat(params[2]);
+        acc[1] = Float.parseFloat(params[3]);
+        acc[2] = Float.parseFloat(params[4]);
+        float[] linAcc = new float[3];
+        linAcc[0] = Float.parseFloat(params[5]);
+        linAcc[1] = Float.parseFloat(params[6]);
+        linAcc[2] = Float.parseFloat(params[7]);
+        float[] worldAcc = new float[3];
+        worldAcc[0] = Float.parseFloat(params[8]);
+        worldAcc[1] = Float.parseFloat(params[9]);
+        worldAcc[2] = Float.parseFloat(params[10]);
+        float yaw = Float.parseFloat(params[11]);
+        float pitch = Float.parseFloat(params[12]);
+        float roll = Float.parseFloat(params[13]);
+        float xSpeed = Float.parseFloat(params[14]);
+        return new Timed<>(new RobotAsset(yaw, pitch, roll, acc, linAcc, worldAcc, xSpeed), instant, TimeUnit.MILLISECONDS);
     }
 
     public final float[] acc;
+    public final float[] linAcc;
     public final float pitch;
     public final float roll;
+    public final float[] worldAcc;
+    public final float xSpeed;
     public final float yaw;
 
     /**
@@ -81,12 +101,18 @@ public class RobotAsset {
      * @param pitch
      * @param roll
      * @param acc
+     * @param linAcc
+     * @param worldAcc
+     * @param xSpeed
      */
-    protected RobotAsset(float yaw, float pitch, float roll, float[] acc) {
+    protected RobotAsset(float yaw, float pitch, float roll, float[] acc, float[] linAcc, float[] worldAcc, float xSpeed) {
         this.yaw = yaw;
         this.pitch = pitch;
         this.roll = roll;
+        this.xSpeed = xSpeed;
         this.acc = requireNonNull(acc);
+        this.linAcc = requireNonNull(linAcc);
+        this.worldAcc = requireNonNull(worldAcc);
     }
 
     /**
@@ -94,6 +120,13 @@ public class RobotAsset {
      */
     public float[] getAcc() {
         return acc;
+    }
+
+    /**
+     *
+     */
+    public float[] getLinAcc() {
+        return linAcc;
     }
 
     /**
@@ -113,7 +146,21 @@ public class RobotAsset {
     /**
      *
      */
+    public float[] getWorldAcc() {
+        return worldAcc;
+    }
+
+    /**
+     *
+     */
     public float getYaw() {
         return yaw;
+    }
+
+    /**
+     *
+     */
+    public float getxSpeed() {
+        return xSpeed;
     }
 }

@@ -29,22 +29,17 @@
 
 package org.mmarini.wheelly.model;
 
-import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.core.Maybe;
-import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Tuple2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-import static io.reactivex.rxjava3.core.Flowable.*;
-import static java.time.Instant.now;
+import static io.reactivex.rxjava3.core.Flowable.empty;
+import static io.reactivex.rxjava3.core.Flowable.interval;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -52,160 +47,182 @@ import static java.util.Objects.requireNonNull;
  */
 public class RawController implements RobotController {
     public static final int NUM_CLOCK_SAMPLES = 10;
-    public static final long CLOCK_TIMEOUT = 30000; // millis
-    private static final long REMOTE_CLOCK_PERIOD = 10; // Seconds
-    private static final long STATUS_INTERVAL = 300; // Millis
+    public static final long CLOCK_TIMEOUT = 3000; // millis
+    public static final long REMOTE_CLOCK_PERIOD = 300000; // millis
+    public static final long STATUS_INTERVAL = 300; // millis
+    public static final long ASSET_INTERVAL = 300; // millis
+    public static final long RETRY_CONNECTION_INTERVAL = 3000; // millis
+
     private static final Logger logger = LoggerFactory.getLogger(RawController.class);
 
     /**
-     * @param host
-     * @param port
-     * @param numClockSamples
-     * @param clockInterval
-     * @param statusInterval
-     * @throws IOException in case of error
+     * Returns the raw controller
+     *
+     * @param host                    the host name
+     * @param port                    the port
+     * @param numClockSamples         the number of samples to measure synchronized remote clock
+     * @param retryConnectionInterval the retry connection interval (ms)
+     * @param clockInterval           the interval between clock synchronization (ms)
+     * @param statusInterval          the interval between status queries (ms)
+     * @param assetInterval           the interval between asset queries (ms)
+     * @param clockTimeout            the clock response timeout (ms)
      */
-    public static RawController create(String host, int port, int numClockSamples, Duration clockInterval, Duration statusInterval) throws IOException {
-        AsyncSocket socket = AsyncSocket.create(host, port);
-        return new RawController(socket, numClockSamples, clockInterval, statusInterval);
+    public static RawController create(String host, int port, int numClockSamples,
+                                       long retryConnectionInterval, long clockInterval, long statusInterval, long assetInterval,
+                                       long clockTimeout) {
+        return new RawController(host, port, numClockSamples, retryConnectionInterval, clockInterval, statusInterval, assetInterval, clockTimeout);
     }
 
     /**
-     * @param host
-     * @param port
-     * @throws IOException in case of error
+     * @param host the host name
+     * @param port the port
      */
-    public static RawController create(String host, int port) throws IOException {
+    public static RawController create(String host, int port) {
         return create(host, port, NUM_CLOCK_SAMPLES,
-                Duration.ofSeconds(REMOTE_CLOCK_PERIOD),
-                Duration.ofMillis(STATUS_INTERVAL));
+                RETRY_CONNECTION_INTERVAL,
+                REMOTE_CLOCK_PERIOD,
+                STATUS_INTERVAL,
+                ASSET_INTERVAL,
+                CLOCK_TIMEOUT);
     }
 
-    private final AsyncSocket socket;
-    private final PublishProcessor<Throwable> errors;
-    private final int numClockSamples;
-    private final Duration clockInterval;
-    private final Duration statusInterval;
+    private final PublishProcessor<Timed<RobotAsset>> assets;
+    private final PublishProcessor<WheellyStatus> states;
+    private final PublishProcessor<Throwable> localErrors;
+    private final RemoteClockController clockController;
+    private final ReliableSocket socket;
+    private final long statusInterval;
+    private final long assetInterval;
 
     /**
-     * @param socket
-     * @param numClockSamples
-     * @param clockInterval
-     * @param statusInterval
+     * Creates a raw robot controller
+     *
+     * @param host                    the host name
+     * @param port                    the port
+     * @param numClockSamples         the number of samples to measure synchronized remote clock
+     * @param retryConnectionInterval the retry connection interval (ms)
+     * @param clockInterval           the interval between clock synchronization (ms)
+     * @param statusInterval          the interval between status queries (ms)
+     * @param assetInterval           the interval between asset queries (ms)
+     * @param clockTimeout            the clock response timeout (ms)
      */
-    protected RawController(AsyncSocket socket, int numClockSamples, Duration clockInterval, Duration statusInterval) {
-        this.socket = requireNonNull(socket);
-        this.numClockSamples = numClockSamples;
-        this.clockInterval = clockInterval;
+    protected RawController(String host, int port, int numClockSamples, long retryConnectionInterval, long clockInterval, long statusInterval, long assetInterval, long clockTimeout) {
+        requireNonNull(host);
         this.statusInterval = statusInterval;
-        this.errors = PublishProcessor.create();
-
-        Flowable<String> queryStatusCmd = interval(0, statusInterval.toMillis(), TimeUnit.MILLISECONDS)
-                .map(x -> "qs");
-        Flowable<String> queryAssetCmd = interval(0, statusInterval.toMillis(), TimeUnit.MILLISECONDS)
-                .map(x -> "qa");
-        Flowable<String> cmd = Flowable.merge(queryStatusCmd, queryAssetCmd);
-        socket.println(cmd).subscribe();
+        this.assetInterval = assetInterval;
+        this.socket = ReliableSocket.create(host, port, retryConnectionInterval);
+        this.assets = PublishProcessor.create();
+        this.states = PublishProcessor.create();
+        this.localErrors = PublishProcessor.create();
+        this.clockController = RemoteClockController.create(socket, numClockSamples, clockInterval, clockTimeout);
     }
 
     @Override
-    public Completable activateMotors(Flowable<MotorCommand> data) {
-        return socket.println(data.map(cmd ->
-                "mt " + cmd.leftPower + " " + cmd.rightPower
-        ));
+    public RawController activateMotors(Flowable<MotorCommand> data) {
+        return sendCommands(data.map(cmd -> "mt " + cmd.leftPower + " " + cmd.rightPower));
     }
 
     @Override
-    public Completable close() {
-        return socket.close();
+    public RawController close() {
+        clockController.close();
+        assets.onComplete();
+        states.onComplete();
+        localErrors.onComplete();
+        socket.close();
+        return this;
     }
 
     @Override
     public Flowable<Timed<RobotAsset>> readAsset() {
-        return socket.readLines()
-                .map(Timed::value)
-                .filter(line -> line.startsWith("as "))
-                .withLatestFrom(readRemoteClock(), Tuple2::of)
-                .map(t -> RobotAsset.from(t._1, t._2));
-    }
-
-    /**
-     *
-     */
-    Maybe<RemoteClock> readAveragedClock() {
-        return Flowable.range(0, numClockSamples)
-                .concatMap(originateTimestamp ->
-                        readClockSync().toFlowable()
-                )
-                .map(ClockSyncEvent::getRemoteOffset)
-                .reduce(Long::sum)
-                .map(t -> RemoteClock.create((t + numClockSamples / 2) / numClockSamples));
-    }
-
-    /**
-     * @param originateTimestamp
-     */
-    Single<Timed<String>> readClock(long originateTimestamp) {
-        String pattern = "ck " + originateTimestamp + " ";
-        return socket.readLines()
-                .doOnNext(x -> logger.debug("readCLock: {}", x))
-                .filter(line -> line.value().startsWith(pattern))
-                .timeout(CLOCK_TIMEOUT, TimeUnit.MILLISECONDS)
-                .firstElement()
-                .doOnSuccess(x -> logger.debug("readCLock: {}", x))
-                .toSingle();
-    }
-
-    /**
-     *
-     */
-    Single<ClockSyncEvent> readClockSync() {
-        long originateTimestamp = now().toEpochMilli();
-        Single<Timed<String>> readClock = readClock(originateTimestamp);
-        writeClock(originateTimestamp);
-        return readClock.map(data ->
-                ClockSyncEvent.from(data.value(), data.time(TimeUnit.MILLISECONDS)));
+        return assets;
     }
 
     @Override
     public Flowable<Boolean> readConnection() {
-        return Flowable.concat(just(true), never());
+        return socket.readConnection();
     }
 
     @Override
     public Flowable<Throwable> readErrors() {
-        return never();
+        return socket.readErrors().mergeWith(localErrors);
     }
 
     /**
-     *
+     * Returns the flow of remote clocks
      */
     Flowable<RemoteClock> readRemoteClock() {
-        return interval(0, clockInterval.toMillis(), TimeUnit.MILLISECONDS)
-                .onBackpressureDrop()
-                .concatMap(x -> readAveragedClock().toFlowable())
-                .share();
-
+        return clockController.readRemoteClocks();
     }
 
     @Override
     public Flowable<WheellyStatus> readStatus() {
-        return socket.readLines()
-                .map(Timed::value)
-                .filter(line -> line.startsWith("st "))
-                .withLatestFrom(readRemoteClock(), Tuple2::of)
-                .map(t -> WheellyStatus.from(t._1, t._2));
+        return states;
     }
 
     @Override
-    public Completable scan(Flowable<?> commands) {
-        return socket.println(commands.map(x -> "sc"));
+    public RawController scan(Flowable<?> commands) {
+        return sendCommands(commands.map(x -> "sc"));
     }
 
     /**
-     * @param originateTimestamp
+     * @param cmds
      */
-    Completable writeClock(long originateTimestamp) {
-        return socket.println("ck " + originateTimestamp);
+    private RawController sendCommands(Flowable<String> cmds) {
+        socket.println(cmds);
+        return this;
+    }
+
+    @Override
+    public RawController start() {
+
+        // Transforms the received line into assets
+        socket.readLines()
+                .map(Timed::value)
+                .filter(line -> line.startsWith("as "))
+                .withLatestFrom(readRemoteClock(), Tuple2::of)
+                .doOnNext(t -> logger.debug("Read asset {}", t._1))
+                .map(t -> RobotAsset.from(t._1, t._2))
+                .onErrorResumeNext(ex -> {
+                    this.localErrors.onNext(ex);
+                    return empty();
+                })
+                .subscribe(assets);
+
+        // Transforms the received line into states
+        socket.readLines()
+                .map(Timed::value)
+                .filter(line -> line.startsWith("st "))
+                .withLatestFrom(readRemoteClock(), Tuple2::of)
+                .doOnNext(t -> logger.debug("Read state {}", t._1))
+                .map(t -> WheellyStatus.from(t._1, t._2))
+                .onErrorResumeNext(ex -> {
+                    this.localErrors.onNext(ex);
+                    return empty();
+                })
+                .subscribe(states);
+
+        // Flows of query command
+        sendCommands(readRemoteClock()
+                .firstElement()
+                .toFlowable()
+                .concatMap(n -> {
+                    logger.debug("Ready to start query commands");
+                    Flowable<String> queryStatusCmd = interval(0, statusInterval, TimeUnit.MILLISECONDS)
+                            .map(x -> "qs");
+                    Flowable<String> queryAssetCmd = interval(statusInterval / 2, assetInterval, TimeUnit.MILLISECONDS)
+                            .map(x -> "qa");
+                    return Flowable.merge(queryStatusCmd, queryAssetCmd);
+                }));
+
+        // Debugging flows
+        if (logger.isDebugEnabled()) {
+            assets.subscribe(s -> logger.debug("Debug: asset {}", s));
+            states.subscribe(s -> logger.debug("Debug: status {}", s));
+            localErrors.subscribe(s -> logger.debug("Debug: localErrors {}", s.getMessage()));
+        }
+        // Start the clock controller
+        clockController.start();
+        socket.connect();
+        return this;
     }
 }

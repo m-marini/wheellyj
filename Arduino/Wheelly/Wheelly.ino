@@ -200,9 +200,8 @@ void setup() {
   .offset(SERVO_OFFSET)
   .onReached([](void *, int angle) {
     // Handles position reached event from scan servo
-#if DEBUG
-    Serial << "handleReached: dir=" << angle << endl;
-#endif
+    DEBUG_PRINT(F("// handleReached: dir="));
+    DEBUG_PRINTLN(angle);
     sr04.start();
   })
   .angle(scanDirections[scanIndex]);
@@ -296,10 +295,8 @@ void handleStatsTimer(void *context, unsigned long) {
   tps = counter * 1000 / (statsTime - started);
   started = statsTime;
   counter = 0;
-#if DEBUG
-  Serial.print("// Stats: ");
-  Serial.println(tps);
-#endif
+  DEBUG_PRINT(F("// Stats: "));
+  DEBUG_PRINTLN(tps);
 }
 
 /*
@@ -308,7 +305,6 @@ void handleStatsTimer(void *context, unsigned long) {
 void handleLedTimer(void *, unsigned long n) {
   unsigned long ledDivider = imuFailure ? LED_FAST_PULSE_DIVIDER : LED_PULSE_DIVIDER;
   digitalWrite(LED_BUILTIN, (n % ledDivider) == 0 ? HIGH : LOW);
-
   digitalWrite(BLOCK_LED_PIN, !canMoveForward() &&  (n % BLOCK_PULSE_DIVIDER) == 0 ? LOW : HIGH);
 }
 
@@ -368,9 +364,10 @@ void handleMtCommand(const char* parms) {
 */
 void handleSample(void *, int distance) {
 
-#if DEBUG
-  Serial << "// handleSample: dir=" << scanDirections[scanIndex] << ", distance=" << distance << endl;
-#endif
+  DEBUG_PRINT(F("// handleSample: dir="));
+  DEBUG_PRINT(scanDirections[scanIndex]);
+  DEBUG_PRINT(F(", distance="));
+  DEBUG_PRINTLN(distance);
 
   distances[scanIndex] = distance;
   scanTimes[scanIndex] = millis();
@@ -392,9 +389,8 @@ void handleSample(void *, int distance) {
   Process a command from serial port
 */
 void processCommand(unsigned long time) {
-#if DEBUG
-  Serial << "processCommand: " << line << endl;
-#endif
+  DEBUG_PRINT(F("// processCommand: "));
+  DEBUG_PRINTLN(line);
   strtrim(line, line);
   if (strncmp(line, "ck ", 3) == 0) {
     sendClock(line, time);
@@ -420,23 +416,30 @@ void processCommand(unsigned long time) {
 
 */
 void sendAsset() {
-  float* ypr = imu.ypr();
-  float* acc = imu.accel();
   Serial.print(F("as "));
   Serial.print(assetTime);
   Serial.print(F(" "));
-  Serial.print(ypr[0]);
+  printVect(imu.acc());
   Serial.print(F(" "));
-  Serial.print(ypr[1]);
+  printVect(imu.linAcc());
   Serial.print(F(" "));
-  Serial.print(ypr[2]);
+  printVect(imu.worldAcc());
   Serial.print(F(" "));
-  Serial.print(acc[0]);
+  printVect(imu.ypr());
   Serial.print(F(" "));
-  Serial.print(acc[1]);
-  Serial.print(F(" "));
-  Serial.print(acc[2]);
+  Serial.print(imu.vx());
   Serial.println();
+}
+
+/*
+
+*/
+void printVect(float* vect) {
+  Serial.print(*vect++);
+  Serial.print(F(" "));
+  Serial.print(*vect++);
+  Serial.print(F(" "));
+  Serial.print(*vect++);
 }
 
 /*
@@ -520,9 +523,7 @@ void setMotors(int left, int right) {
 void startFullScanning() {
   sr04.stop();
 
-#if DEBUG
-  Serial << "startFullScanning" << endl;
-#endif
+  DEBUG_PRINTLN(F("startFullScanning"));
 
   isFullScanning = true;
   scanIndex = 0;

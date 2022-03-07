@@ -29,30 +29,39 @@
 
 package org.mmarini.wheelly.model;
 
-import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.subscribers.TestSubscriber;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-
-public class RxControllerTest {
-    private static final Logger logger = LoggerFactory.getLogger(RxControllerTest.class);
+class RemoteClockControllerTest {
+    @Test
+    void remoteClock() throws InterruptedException {
+        ReliableSocket socket = ReliableSocket.create("192.168.1.11", 22, 3000);
+        socket.connect();
+        RemoteClockController controller = RemoteClockController.create(socket, 10, 60000, 3000);
+        TestSubscriber<RemoteClock> test = controller.start().readRemoteClocks().test();
+        test.await(3000, TimeUnit.MILLISECONDS);
+        test.assertValueCount(1);
+        controller.close();
+        test.await(3000, TimeUnit.MILLISECONDS);
+        test.assertComplete();
+        socket.close();
+        socket.closed().blockingAwait();
+    }
 
     @Test
-    void testConnection() {
-        RxController ctrl = RxController.create("http://dummy/api");
-        //RxController ctrl = RxController.create("http://192.168.1.11/api/v1/wheelly");
-        Flowable<ClockBody> flow = ctrl.clock();
-        TestSubscriber<ClockBody> ts = TestSubscriber.create();
-        flow
-                .doOnError(ex -> logger.error(ex.getMessage(), ex))
-                .subscribe(ts);
-        ts.awaitDone(10, TimeUnit.SECONDS);
-        ts.assertError(ex -> ex.getMessage().matches(".*UnknownHostException.*"));
+    void remoteClock2() throws InterruptedException {
+        ReliableSocket socket = ReliableSocket.create("192.168.1.11", 22, 3000);
+        socket.connect();
+        RemoteClockController controller = RemoteClockController.create(socket, 10, 5000, 3000);
+        TestSubscriber<RemoteClock> test = controller.start().readRemoteClocks().test();
+        test.await(9500, TimeUnit.MILLISECONDS);
+        test.assertValueCount(2);
+        controller.close();
+        test.await(3000, TimeUnit.MILLISECONDS);
+        test.assertComplete();
+        socket.close();
+        socket.closed().blockingAwait();
     }
 }

@@ -29,55 +29,35 @@
 
 package org.mmarini.wheelly.model;
 
-import java.util.StringJoiner;
+import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.schedulers.Timed;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * The remote clock map the local clock to the remote clock ticks
+ *
  */
-public class RemoteClock {
+public interface AsyncChannel {
+    Logger logger = LoggerFactory.getLogger(AsyncChannel.class);
 
     /**
-     * Returns a remote clock
-     *
-     * @param offset the local offset of remote clock
+     * Close the socket
      */
-    public static RemoteClock create(long offset) {
-        return new RemoteClock(offset);
-    }
-
-    public final long offset;
-
-    @Override
-    public String toString() {
-        return new StringJoiner(", ", RemoteClock.class.getSimpleName() + "[", "]")
-                .add("offset=" + offset)
-                .toString();
-    }
+    AsyncChannel close();
 
     /**
-     * Creates a remote clock
      *
-     * @param offset the local offset of remote clock
      */
-    protected RemoteClock(long offset) {
-        this.offset = offset;
-    }
+    Completable closed();
 
     /**
-     * Returns the local instant of a remote clock ticks
-     *
-     * @param millis the remote clock ticks
+     * @param dataFlow the data flow
      */
-    public long fromRemote(long millis) {
-        return offset + millis;
-    }
+    Completable println(Flowable<String> dataFlow);
 
     /**
-     * Returns the remote clock ticks of a local instant
      *
-     * @param instant the local instant
      */
-    public long toRemote(long instant) {
-        return instant - offset;
-    }
+    Flowable<Timed<String>> readLines();
 }
