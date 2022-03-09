@@ -58,17 +58,18 @@ IMU& IMU::reset() {
 /*
 
 */
-void IMU::polling(unsigned long clockTime) {
+void IMU::polling(unsigned long clockMillis, unsigned long clockMicros) {
   if (_devStatus == 0) {
     if (_mpu.getFIFOCount() >= _packetSize) {
       // read a packet from FIFO
       _mpu.getFIFOBytes(_fifoBuffer, _packetSize);
       _mpu.resetFIFO();
-      kickAt(clockTime + _watchDogInterval);
+      kickAt(clockMicros + _watchDogInterval);
 
-      _dt = (float)(clockTime - _prevTime) * 1e-6;
+      _dt = (float)(clockMicros - _prevTime) * 1e-6;
       if (_dt > 0 && _dt < 1.0) {
-        _prevTime = clockTime;
+        _lastTime = clockMillis;
+        _prevTime = clockMicros;
         VectorInt16 accel;      // [x, y, z]            accel sensor measurements
         VectorInt16 gyro;       // [x, y, z]            gyro sensor measurements
         VectorInt16 linAcc;     // [x, y, z]            gravity-free accel sensor measurements
@@ -104,8 +105,8 @@ void IMU::polling(unsigned long clockTime) {
           _onData(_context, *this);
         }
       }
-    } else if (clockTime >= _watchDogTime && _onWatchDog != NULL) {
-      kickAt(clockTime + _watchDogInterval);
+    } else if (clockMicros >= _watchDogTime && _onWatchDog != NULL) {
+      kickAt(clockMicros + _watchDogInterval);
       _onWatchDog(_context, *this);
     }
   }

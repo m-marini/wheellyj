@@ -5,9 +5,9 @@
 #include "Timer.h"
 #include "SR04.h"
 #include "AsyncServo.h"
-#include "MotorCtrl.h"
 #include "I2Cdev.h"
 #include "IMU.h"
+#include "MotionCtrl.h"
 
 /*
    Pins
@@ -31,12 +31,6 @@
 /*
    Multiplexer outputs
 */
-
-/*
-   Motor speeds
-*/
-#define MAX_FORWARD   255
-#define MAX_BACKWARD  -255
 
 /*
    Distances
@@ -72,7 +66,6 @@
 */
 #define LED_INTERVAL        50ul
 #define OBSTACLE_INTERVAL   50ul
-#define MOTOR_SAFE_INTERVAL 1000ul
 
 /*
    Dividers
@@ -117,10 +110,7 @@ unsigned long scanTimes[NO_SCAN_DIRECTIONS];
    Movement motors
    Motor speeds [left, right] by direction
 */
-MotorCtrl leftMotor(LEFT_FORW_PIN, LEFT_BACK_PIN);
-MotorCtrl rightMotor(RIGHT_FORW_PIN, RIGHT_BACK_PIN);
-int leftMotorSpeed;
-int rightMotorSpeed;
+MotionCtrl motionController(LEFT_FORW_PIN, LEFT_BACK_PIN, RIGHT_FORW_PIN, RIGHT_BACK_PIN);
 
 /*
    Statistics
@@ -141,7 +131,6 @@ int voltageValue;
 */
 MPU6050 mpu;
 IMU imu(mpu);
-unsigned long assetTime;
 bool imuFailure;
 
 /*
@@ -176,6 +165,7 @@ void setup() {
   .calibrate()
   .enableDMP()
   .reset();
+  Serial.println();
 
   // Init led
   digitalWrite(LED_BUILTIN, LOW);
@@ -212,12 +202,7 @@ void setup() {
   .start();
 
   // Init motor controllers
-  leftMotor.begin();
-  rightMotor.begin();
-  motorsTimer.interval(MOTOR_SAFE_INTERVAL).onNext([](void *, unsigned long) {
-    moveTo(0, 0);
-  });
-  moveTo(0, 0);
+  motionController.begin();
 
   // Init staqstistics time
   started = millis();
@@ -237,7 +222,7 @@ void setup() {
 */
 void loop() {
   unsigned long now = millis();
-  imu.polling();
+  imu.polling(now);
   counter++;
   voltageTime = now;
   voltageValue = analogRead(VOLTAGE_PIN);
@@ -250,7 +235,10 @@ void loop() {
 
   statsTimer.polling(now);
 
-  motorsTimer.polling(now);
+  motionController
+  .assetTime(imu.lastTime())
+  .yaw(imu.ypr()[0])
+  .polling(now);
 
   pollSerialPort();
 }
@@ -272,7 +260,6 @@ void pollSerialPort() {
 */
 void handleImuData(void*, IMU& imu) {
   imuFailure = false;
-  assetTime = millis();
 }
 
 /*
@@ -280,9 +267,8 @@ void handleImuData(void*, IMU& imu) {
 */
 void handleWatchDog(void*, IMU& imu) {
   imuFailure = true;
-  Serial.print("!! Watch dog status: ");
-  Serial.print(imu.status());
-  Serial.println();
+  DEBUG_PRINT("!! Watch dog status: ");
+  DEBUG_PRINTLN(imu.status());
   imu.reset()
   .kickAt(micros() + 1000000ul);
 }
@@ -350,12 +336,7 @@ void handleMtCommand(const char* parms) {
   if (isForward(left, right) && !canMoveForward()) {
     left = right = 0;
   }
-  moveTo(left, right);
-  if (left == 0 && right == 0) {
-    motorsTimer.stop();
-  } else  {
-    motorsTimer.start();
-  }
+  motionController.speed(left, right);
   sendStatus();
 }
 
@@ -372,8 +353,8 @@ void handleSample(void *, int distance) {
   distances[scanIndex] = distance;
   scanTimes[scanIndex] = millis();
 
-  if (isForward() && !canMoveForward()) {
-    moveTo(0, 0);
+  if (motionController.isForward() && !canMoveForward()) {
+    motionController.speed(0, 0);
   }
   if (isFullScanning) {
     scanIndex++;
@@ -417,7 +398,7 @@ void processCommand(unsigned long time) {
 */
 void sendAsset() {
   Serial.print(F("as "));
-  Serial.print(assetTime);
+  Serial.print(imu.lastTime());
   Serial.print(F(" "));
   printVect(imu.acc());
   Serial.print(F(" "));
@@ -481,10 +462,6 @@ bool isForward(int left, int right) {
   return left > 0 || right > 0;
 }
 
-boolean isForward() {
-  return isForward(leftMotorSpeed, rightMotorSpeed);
-}
-
 /*
    Returns true if can move forward
 */
@@ -504,22 +481,8 @@ int forwardBlockDistance() {
 }
 
 /*
-   Move Wheelly to direction
-*/
-void moveTo(int left, int right) {
-  leftMotorSpeed = left;
-  rightMotorSpeed = right;
-  setMotors(left, right);
-}
-
-/*
 
 */
-void setMotors(int left, int right) {
-  leftMotor.speed(left);
-  rightMotor.speed(right);
-}
-
 void startFullScanning() {
   sr04.stop();
 
@@ -530,13 +493,16 @@ void startFullScanning() {
   servo.angle(scanDirections[scanIndex]);
 }
 
+/*
+
+*/
 void sendStatus() {
   Serial.print(F("st "));
   Serial.print(millis());
   Serial.print(F(" "));
-  Serial.print(leftMotorSpeed);
+  Serial.print(motionController.leftSpeed());
   Serial.print(F(" "));
-  Serial.print(rightMotorSpeed);
+  Serial.print(motionController.rightSpeed());
   Serial.print(F(" "));
   for (int i = 0; i < NO_SCAN_DIRECTIONS; i++) {
     Serial.print(scanTimes[i]);
