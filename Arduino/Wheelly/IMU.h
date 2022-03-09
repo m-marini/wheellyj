@@ -15,7 +15,7 @@ class IMU {
     void begin();
     IMU& calibrate(int steps = 6);
     IMU& enableDMP();
-    void polling(unsigned long clock = micros());
+    void polling(unsigned long clockMillis = millis(), unsigned long clockMicros = micros());
     IMU& reset();
     IMU& kickAt(unsigned long time) {
       _watchDogTime = time;
@@ -56,6 +56,9 @@ class IMU {
     const float dt() const {
       return _dt;
     }
+    const unsigned long lastTime() const {
+      return _lastTime;
+    }
     const float* acc() const {
       return _acc;
     }
@@ -85,6 +88,7 @@ class IMU {
     uint8_t _fifoBuffer[64]; // FIFO storage buffer
     uint16_t _packetSize;
     unsigned long _prevTime;
+    unsigned long _lastTime;
     unsigned long _watchDogInterval;
     unsigned long _watchDogTime;
     void *_context;

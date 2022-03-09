@@ -17,3 +17,4 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #9: Serialize comunication with API
 - Issue #11: Add gyroscope and accelerometer for motion traking
 - Issue #13: Add direct socket connection
+- Issue #16: Motion control through trim
