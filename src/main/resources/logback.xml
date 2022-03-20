@@ -23,8 +23,14 @@
     <logger name="org.mmarini.wheelly.model.AsyncSocketImpl.dataLog" level="TRACE">
         <appender-ref ref="DATA_FILE"/>
     </logger>
+    <logger name="org.mmarini.wheelly.model.AsyncSocketImpl" level="INFO">
+        <appender-ref ref="DATA_FILE"/>
+    </logger>
+    <logger name="org.mmarini.wheelly.model.ReliableSocket" level="INFO">
+        <appender-ref ref="DATA_FILE"/>
+    </logger>
 
     <root level="DEBUG">
-        <appender-ref ref="INFO"/>
+        <appender-ref ref="STDOUT"/>
     </root>
 </configuration>

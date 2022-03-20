@@ -241,19 +241,6 @@ public class UIController {
                         dashboard.setAsset(as);
                     }).subscribe();
             controller.start();
-        /*
-        this.elapsDisposable = flowBuilder.getElaps()
-                .window(ELAPS_COUNT, 1, ELAPS_COUNT)
-                .flatMap(list -> list.toList().toFlowable())
-                .map(list -> {
-                    long sum = list.stream()
-                            .mapToLong(x -> x)
-                            .sum();
-                    return (double) sum / list.size();
-                })
-                .doOnNext(dashboard::setElapsed)
-                .subscribe();
-        */
         } catch (Exception ex) {
             logger.error(ex.getMessage(), ex);
             frame.log(ex.getMessage());

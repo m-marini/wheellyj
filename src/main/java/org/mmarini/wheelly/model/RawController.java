@@ -47,11 +47,11 @@ import static java.util.Objects.requireNonNull;
  */
 public class RawController implements RobotController {
     public static final int NUM_CLOCK_SAMPLES = 10;
+    public static final long RETRY_CONNECTION_INTERVAL = 3000; // millis
     public static final long CLOCK_TIMEOUT = 3000; // millis
     public static final long REMOTE_CLOCK_PERIOD = 300000; // millis
-    public static final long STATUS_INTERVAL = 300; // millis
-    public static final long ASSET_INTERVAL = 300; // millis
-    public static final long RETRY_CONNECTION_INTERVAL = 3000; // millis
+    private static final long START_QUERY_INTERVAL = 300000; // (millis)
+    private static final long QUERIES_INTERVAL = 300;
 
     private static final Logger logger = LoggerFactory.getLogger(RawController.class);
 
@@ -63,14 +63,14 @@ public class RawController implements RobotController {
      * @param numClockSamples         the number of samples to measure synchronized remote clock
      * @param retryConnectionInterval the retry connection interval (ms)
      * @param clockInterval           the interval between clock synchronization (ms)
-     * @param statusInterval          the interval between status queries (ms)
-     * @param assetInterval           the interval between asset queries (ms)
      * @param clockTimeout            the clock response timeout (ms)
+     * @param startQueryInterval      the start query interval (ms)
+     * @param queriesInterval         the queries' interval (ms)
      */
     public static RawController create(String host, int port, int numClockSamples,
-                                       long retryConnectionInterval, long clockInterval, long statusInterval, long assetInterval,
-                                       long clockTimeout) {
-        return new RawController(host, port, numClockSamples, retryConnectionInterval, clockInterval, statusInterval, assetInterval, clockTimeout);
+                                       long retryConnectionInterval, long clockInterval,
+                                       long clockTimeout, long startQueryInterval, long queriesInterval) {
+        return new RawController(host, port, numClockSamples, retryConnectionInterval, clockInterval, clockTimeout, startQueryInterval, queriesInterval);
     }
 
     /**
@@ -81,9 +81,7 @@ public class RawController implements RobotController {
         return create(host, port, NUM_CLOCK_SAMPLES,
                 RETRY_CONNECTION_INTERVAL,
                 REMOTE_CLOCK_PERIOD,
-                STATUS_INTERVAL,
-                ASSET_INTERVAL,
-                CLOCK_TIMEOUT);
+                CLOCK_TIMEOUT, START_QUERY_INTERVAL, QUERIES_INTERVAL);
     }
 
     private final PublishProcessor<Timed<RobotAsset>> assets;
@@ -91,8 +89,8 @@ public class RawController implements RobotController {
     private final PublishProcessor<Throwable> localErrors;
     private final RemoteClockController clockController;
     private final ReliableSocket socket;
-    private final long statusInterval;
-    private final long assetInterval;
+    private final long startQueryInterval;
+    private final long queriesInterval;
 
     /**
      * Creates a raw robot controller
@@ -102,14 +100,14 @@ public class RawController implements RobotController {
      * @param numClockSamples         the number of samples to measure synchronized remote clock
      * @param retryConnectionInterval the retry connection interval (ms)
      * @param clockInterval           the interval between clock synchronization (ms)
-     * @param statusInterval          the interval between status queries (ms)
-     * @param assetInterval           the interval between asset queries (ms)
      * @param clockTimeout            the clock response timeout (ms)
+     * @param startQueryInterval      the start query interval (ms)
+     * @param queriesInterval         the queries interval (ms)
      */
-    protected RawController(String host, int port, int numClockSamples, long retryConnectionInterval, long clockInterval, long statusInterval, long assetInterval, long clockTimeout) {
+    protected RawController(String host, int port, int numClockSamples, long retryConnectionInterval, long clockInterval, long clockTimeout, long startQueryInterval, long queriesInterval) {
+        this.startQueryInterval = startQueryInterval;
+        this.queriesInterval = queriesInterval;
         requireNonNull(host);
-        this.statusInterval = statusInterval;
-        this.assetInterval = assetInterval;
         this.socket = ReliableSocket.create(host, port, retryConnectionInterval);
         this.assets = PublishProcessor.create();
         this.states = PublishProcessor.create();
@@ -165,7 +163,7 @@ public class RawController implements RobotController {
     }
 
     /**
-     * @param cmds
+     * @param cmds the commands
      */
     private RawController sendCommands(Flowable<String> cmds) {
         socket.println(cmds);
@@ -207,11 +205,8 @@ public class RawController implements RobotController {
                 .toFlowable()
                 .concatMap(n -> {
                     logger.debug("Ready to start query commands");
-                    Flowable<String> queryStatusCmd = interval(0, statusInterval, TimeUnit.MILLISECONDS)
-                            .map(x -> "qs");
-                    Flowable<String> queryAssetCmd = interval(statusInterval / 2, assetInterval, TimeUnit.MILLISECONDS)
-                            .map(x -> "qa");
-                    return Flowable.merge(queryStatusCmd, queryAssetCmd);
+                    return interval(0, startQueryInterval, TimeUnit.MILLISECONDS)
+                            .map(x -> "sq " + queriesInterval);
                 }));
 
         // Debugging flows

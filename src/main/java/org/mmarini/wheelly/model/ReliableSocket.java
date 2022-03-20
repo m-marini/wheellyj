@@ -177,7 +177,7 @@ public class ReliableSocket implements AsyncSocket {
      */
     private ReliableSocket generateNewSocket() {
         AsyncSocketImpl socket = AsyncSocketImpl.create(host, port);
-        logger.error("Connecting");
+        logger.debug("Connecting");
         socket.connect();
         socket.readConnection()
                 .filter(connected -> connected)

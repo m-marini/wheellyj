@@ -54,9 +54,9 @@ class RawControllerTest {
                 10,
                 3000,
                 3000,
-                3000,
                 1000,
-                1000);
+                300000,
+                300);
         controller.start().activateMotors(Flowable.just(
                         MotorCommand.create(0, 0),
                         MotorCommand.create(-200, -200),
@@ -74,9 +74,9 @@ class RawControllerTest {
                 10,
                 3000,
                 3000,
-                300,
                 1000,
-                1000);
+                300000,
+                300);
         TestSubscriber<Timed<RobotAsset>> assetTest = controller.readAsset().test();
         controller.start();
         assetTest.await(6, TimeUnit.SECONDS);
@@ -93,9 +93,9 @@ class RawControllerTest {
                 10,
                 3000,
                 3000,
-                300,
                 1000,
-                1000);
+                300000,
+                300);
         TestSubscriber<WheellyStatus> testObserver = controller.readStatus().test();
         controller.start();
         testObserver.await(6, TimeUnit.SECONDS);
@@ -112,9 +112,9 @@ class RawControllerTest {
                 10,
                 3000,
                 3000,
-                3000,
                 1000,
-                1000);
+                300000,
+                300);
         controller.start();
         controller.scan(Flowable.interval(500, 4000, TimeUnit.MILLISECONDS)
                 .take(2));
@@ -122,5 +122,4 @@ class RawControllerTest {
         controller.close();
         Thread.sleep(3000);
     }
-
 }

@@ -6,6 +6,12 @@
 #define MOTOR_SAFE_INTERVAL 1000ul
 #define VALID_ASSET_INTERVAL 500ul
 
+// Power coefficient (1/RAD)
+#define K_POWER (180 / 30 / PI)
+
+// max rotation speed 4.66 RAD/sec
+#define K_OMEGA (4.66 / 2)
+
 /*
    Returns the normalized angle in range (-PI, PI)
 */
@@ -24,8 +30,8 @@ float normAngle(float angle) {
 */
 MotionCtrl::MotionCtrl(byte leftForwPin, byte leftBackPin, byte rightForwPin, byte rightBackPin)
   : _leftMotor(leftForwPin, leftBackPin), _rightMotor(rightForwPin, rightBackPin) {
-  _kpower = 180 / 10 / PI; // angle correction power (10 DEG = full rotation power)
-  _komega = PI; // max rotation speed (PI RAD/s = 0.5 Hz = 30 RPM)
+  _kpower = K_POWER; // angle correction power (10 DEG = full rotation power)
+  _komega = K_OMEGA;
 }
 
 /*
