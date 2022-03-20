@@ -39,25 +39,27 @@ import static java.util.Objects.requireNonNull;
  *
  */
 public class RobotAsset {
-    private static final int NO_PARAMS = 15;
+    private static final int NO_PARAMS = 17;
 
     /**
-     * @param yaw
-     * @param pitch
-     * @param roll
-     * @param acc
-     * @param linAcc
-     * @param worldAcc
-     * @param xSpeed
+     * @param status   the imu status
+     * @param failure  the imue failure
+     * @param yaw      the yaw
+     * @param pitch    the pitch
+     * @param roll     the roll
+     * @param acc      the acceleration
+     * @param linAcc   the linear acceleration
+     * @param worldAcc the world acceleration
+     * @param xSpeed   the x speed
      */
-    public static RobotAsset create(float yaw, float pitch, float roll, float[] acc, float[] linAcc, float[] worldAcc, float xSpeed) {
-        return new RobotAsset(yaw, pitch, roll, acc, linAcc, worldAcc, xSpeed);
+    public static RobotAsset create(int status, int failure, float yaw, float pitch, float roll, float[] acc, float[] linAcc, float[] worldAcc, float xSpeed) {
+        return new RobotAsset(status, failure, yaw, pitch, roll, acc, linAcc, worldAcc, xSpeed);
     }
 
     /**
      * The string status is formatted as:
      * <pre>
-     *     as [assetTime] [accX] [accY] [accZ] [linAccX] [linAccY] [linAccZ] [worldAccX] [worldAccY] [worldAccZ] [yaw] [pitch] [roll]
+     *     as [status] [failure] [assetTime] [accX] [accY] [accZ] [linAccX] [linAccY] [linAccZ] [worldAccX] [worldAccY] [worldAccZ] [yaw] [pitch] [roll]
      * </pre>
      *
      * @param msg   the asset message
@@ -68,44 +70,51 @@ public class RobotAsset {
         if (params.length != NO_PARAMS) {
             throw new IllegalArgumentException("Missing status parameters");
         }
-        long instant = clock.fromRemote(Long.parseLong(params[1]));
+        int status = Integer.parseInt(params[1]);
+        int failure = Integer.parseInt(params[2]);
+        long instant = clock.fromRemote(Long.parseLong(params[3]));
         float[] acc = new float[3];
-        acc[0] = Float.parseFloat(params[2]);
-        acc[1] = Float.parseFloat(params[3]);
-        acc[2] = Float.parseFloat(params[4]);
+        acc[0] = Float.parseFloat(params[4]);
+        acc[1] = Float.parseFloat(params[5]);
+        acc[2] = Float.parseFloat(params[6]);
         float[] linAcc = new float[3];
-        linAcc[0] = Float.parseFloat(params[5]);
-        linAcc[1] = Float.parseFloat(params[6]);
-        linAcc[2] = Float.parseFloat(params[7]);
+        linAcc[0] = Float.parseFloat(params[7]);
+        linAcc[1] = Float.parseFloat(params[8]);
+        linAcc[2] = Float.parseFloat(params[9]);
         float[] worldAcc = new float[3];
-        worldAcc[0] = Float.parseFloat(params[8]);
-        worldAcc[1] = Float.parseFloat(params[9]);
-        worldAcc[2] = Float.parseFloat(params[10]);
-        float yaw = Float.parseFloat(params[11]);
-        float pitch = Float.parseFloat(params[12]);
-        float roll = Float.parseFloat(params[13]);
-        float xSpeed = Float.parseFloat(params[14]);
-        return new Timed<>(new RobotAsset(yaw, pitch, roll, acc, linAcc, worldAcc, xSpeed), instant, TimeUnit.MILLISECONDS);
+        worldAcc[0] = Float.parseFloat(params[10]);
+        worldAcc[1] = Float.parseFloat(params[11]);
+        worldAcc[2] = Float.parseFloat(params[12]);
+        float yaw = Float.parseFloat(params[13]);
+        float pitch = Float.parseFloat(params[14]);
+        float roll = Float.parseFloat(params[15]);
+        float xSpeed = Float.parseFloat(params[16]);
+        return new Timed<>(new RobotAsset(status, failure, yaw, pitch, roll, acc, linAcc, worldAcc, xSpeed), instant, TimeUnit.MILLISECONDS);
     }
-
     public final float[] acc;
+    public final int failure;
     public final float[] linAcc;
     public final float pitch;
     public final float roll;
+    public final int status;
     public final float[] worldAcc;
     public final float xSpeed;
     public final float yaw;
 
     /**
-     * @param yaw
-     * @param pitch
-     * @param roll
-     * @param acc
-     * @param linAcc
-     * @param worldAcc
-     * @param xSpeed
+     * @param status   the imu status
+     * @param failure  the imue failure
+     * @param yaw      the yaw
+     * @param pitch    the pitch
+     * @param roll     the roll
+     * @param acc      the acceleration
+     * @param linAcc   the linear acceleration
+     * @param worldAcc the world acceleration
+     * @param xSpeed   the x speed
      */
-    protected RobotAsset(float yaw, float pitch, float roll, float[] acc, float[] linAcc, float[] worldAcc, float xSpeed) {
+    protected RobotAsset(int status, int failure, float yaw, float pitch, float roll, float[] acc, float[] linAcc, float[] worldAcc, float xSpeed) {
+        this.status = status;
+        this.failure = failure;
         this.yaw = yaw;
         this.pitch = pitch;
         this.roll = roll;

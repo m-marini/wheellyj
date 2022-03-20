@@ -35,8 +35,8 @@
 /*
    Distances
 */
-#define STOP_DISTANCE 40
-#define WARN_DISTANCE 80
+#define STOP_DISTANCE 20
+#define WARN_DISTANCE 60
 #define MAX_DISTANCE  400
 
 
@@ -54,7 +54,7 @@
 #define NO_SCAN_DIRECTIONS  (sizeof(scanDirections) / sizeof(scanDirections[0]))
 #define CAN_MOVE_MIN_DIR    (FRONT_SCAN_INDEX - 1)
 #define CAN_MOVE_MAX_DIR    (FRONT_SCAN_INDEX + 1)
-#define SERVO_OFFSET        -7
+#define SERVO_OFFSET        4
 
 /*
    Command parser definitions
@@ -64,8 +64,11 @@
 /*
    Intervals
 */
-#define LED_INTERVAL        50ul
-#define OBSTACLE_INTERVAL   50ul
+#define LED_INTERVAL          50ul
+#define OBSTACLE_INTERVAL     50ul
+#define STATS_INTERVAL        10000ul
+#define QUERIES_INTERVAL      1000ul
+#define MIN_QUERIES_INTERVAL  300ul
 
 /*
    Dividers
@@ -87,6 +90,7 @@ Timer ledTimer;
 Timer obstacleTimer;
 Timer statsTimer;
 Timer motorsTimer;
+Timer queriesTimer;
 
 /*
    Proximity sensor servo
@@ -156,7 +160,17 @@ void setup() {
   pinMode(RIGHT_FORW_PIN, OUTPUT);
   pinMode(RIGHT_BACK_PIN, OUTPUT);
 
-  // Init IMU
+  digitalWrite(LED_BUILTIN, LOW);
+  digitalWrite(PROXY_LED_PIN, LOW);
+  digitalWrite(BLOCK_LED_PIN, LOW);
+  digitalWrite(LEFT_FORW_PIN, LOW);
+  digitalWrite(LEFT_BACK_PIN, LOW);
+  digitalWrite(RIGHT_FORW_PIN, LOW);
+  digitalWrite(RIGHT_BACK_PIN, LOW);
+
+  /*
+     Init IMU
+  */
   imuFailure = true;
   imu.begin();
   imu
@@ -167,7 +181,9 @@ void setup() {
   .reset();
   Serial.println();
 
-  // Init led
+  /*
+    Init led
+  */
   digitalWrite(LED_BUILTIN, LOW);
   for (int i = 0; i < 3; i++) {
     delay(100);
@@ -180,11 +196,11 @@ void setup() {
   .continuous(true)
   .start();
 
-  // Init servo and scanner
+  /*
+    Init servo and scanner
+  */
   sr04.begin();
-  sr04.noSamples(NO_SAMPLES)
-  .onSample(&handleSample);
-
+  sr04.noSamples(NO_SAMPLES).onSample(&handleSample);
   scanIndex = FRONT_SCAN_INDEX;
   servo.attach(SERVO_PIN)
   .offset(SERVO_OFFSET)
@@ -201,15 +217,22 @@ void setup() {
   .continuous(true)
   .start();
 
-  // Init motor controllers
+  /*
+     Init motor controllers
+  */
   motionController.begin();
 
   // Init staqstistics time
   started = millis();
   statsTimer.onNext(handleStatsTimer)
-  .interval(10000)
+  .interval(STATS_INTERVAL)
   .continuous(true)
   .start();
+
+  /*
+     Init queries timer
+  */
+  queriesTimer.onNext(handleQuery).continuous(true);
 
   // Final setup
   Serial.println(F("ha"));
@@ -234,6 +257,8 @@ void loop() {
   sr04.polling(now);
 
   statsTimer.polling(now);
+
+  queriesTimer.polling(now);
 
   motionController
   .assetTime(imu.lastTime())
@@ -286,12 +311,20 @@ void handleStatsTimer(void *context, unsigned long) {
 }
 
 /*
+   Handles query
+*/
+void handleQuery(void *, unsigned long) {
+  sendStatus();
+  sendAsset();
+}
+
+/*
    Handles the led timer
 */
 void handleLedTimer(void *, unsigned long n) {
   unsigned long ledDivider = imuFailure ? LED_FAST_PULSE_DIVIDER : LED_PULSE_DIVIDER;
   digitalWrite(LED_BUILTIN, (n % ledDivider) == 0 ? HIGH : LOW);
-  digitalWrite(BLOCK_LED_PIN, !canMoveForward() &&  (n % BLOCK_PULSE_DIVIDER) == 0 ? LOW : HIGH);
+  digitalWrite(BLOCK_LED_PIN, !canMoveForward() &&  (n % BLOCK_PULSE_DIVIDER) == 0 ? HIGH : LOW);
 }
 
 /*
@@ -300,20 +333,20 @@ void handleLedTimer(void *, unsigned long n) {
 void handleObstacleTimer(void *, unsigned long i) {
   static unsigned long last = 0;
   int distance = distances[FRONT_SCAN_INDEX];
-  if (distance <= STOP_DISTANCE) {
-    digitalWrite(PROXY_LED_PIN, LOW);
-    last = i;
-  } else if (distance > WARN_DISTANCE) {
+  if (distance == 0 || distance > WARN_DISTANCE) {
+    digitalWrite(PROXY_LED_PIN, LOW);    
+  } else if (distance <= STOP_DISTANCE) {
     digitalWrite(PROXY_LED_PIN, HIGH);
+    last = i;
   } else {
     int n = map(distance,
                 STOP_DISTANCE, WARN_DISTANCE,
                 MIN_OBSTACLE_PULSES, MAX_OBSTACLE_PULSES);
     if (i >= last + n) {
-      digitalWrite(PROXY_LED_PIN, LOW);
+      digitalWrite(PROXY_LED_PIN, HIGH);
       last = i;
     } else {
-      digitalWrite(PROXY_LED_PIN, HIGH);
+      digitalWrite(PROXY_LED_PIN, LOW);
     }
   }
 }
@@ -328,8 +361,6 @@ void handleMtCommand(const char* parms) {
     Serial.println(F("!! Wrong arg[1]"));
     return;
   }
-  unsigned long timeout = args.substring(0, s1).toInt();
-
   int left = min(max(MAX_BACKWARD, int(args.substring(0 , s1).toInt())), MAX_FORWARD);
   int right = min(max(MAX_BACKWARD, int(args.substring(s1 + 1).toInt())), MAX_FORWARD);
 
@@ -337,7 +368,18 @@ void handleMtCommand(const char* parms) {
     left = right = 0;
   }
   motionController.speed(left, right);
-  sendStatus();
+}
+
+/*
+    Handles start queries
+*/
+void handleStartQueries(const char* parms) {
+  String args = parms;
+  long interval = args.toInt();
+  queriesTimer.stop();
+  if (interval > 0) {
+    queriesTimer.interval(max(interval, MIN_QUERIES_INTERVAL)).start();
+  }
 }
 
 /*
@@ -377,11 +419,8 @@ void processCommand(unsigned long time) {
     sendClock(line, time);
   } else if (strcmp(line, "sc") == 0) {
     startFullScanning();
-    sendStatus();
-  } else if (strcmp(line, "qs") == 0) {
-    sendStatus();
-  } else if (strcmp(line, "qa") == 0) {
-    sendAsset();
+  } else if (strncmp(line, "sq ", 3) == 0) {
+    handleStartQueries(line + 3);
   } else if (strncmp(line, "mt ", 3) == 0) {
     handleMtCommand(line + 3);
   } else if (strncmp(line, "//", 2) == 0
@@ -398,6 +437,10 @@ void processCommand(unsigned long time) {
 */
 void sendAsset() {
   Serial.print(F("as "));
+  Serial.print(imu.status());
+  Serial.print(F(" "));
+  Serial.print(imuFailure);
+  Serial.print(F(" "));
   Serial.print(imu.lastTime());
   Serial.print(F(" "));
   printVect(imu.acc());

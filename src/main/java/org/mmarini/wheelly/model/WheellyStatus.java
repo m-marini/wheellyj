@@ -144,6 +144,7 @@ public class WheellyStatus {
                 .add("direction=" + direction)
                 .add("voltage=" + voltage)
                 .add("obstacles=" + obstacles)
+                .add("cps=" + cps)
                 .toString();
     }
 }

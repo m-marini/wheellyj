@@ -1,5 +1,8 @@
 #include "SR04.h"
 
+//#define DEBUG
+#include "debug.h"
+
 #define INACTIVITY 50ul
 
 void _handleTimeout(void *context, unsigned long){
@@ -62,6 +65,11 @@ SR04& SR04::_measure() {
   delayMicroseconds(2);
   unsigned long to = _inactivity * 1000;
   long duration = pulseIn(_echoPin, HIGH, to);
+  DEBUG_PRINT(F("// SR04::_measure to,duration: "));
+  DEBUG_PRINT(to);
+  DEBUG_PRINT(F(", "));
+  DEBUG_PRINT(duration);
+  DEBUG_PRINTLN();
   _noMeasures++;
   if (duration > 0 || duration < _inactivity * 1000) {
     _totalDuration += duration;

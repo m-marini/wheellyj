@@ -78,6 +78,8 @@ public class Dashboard extends JPanel {
     private final JButton reset;
     private final JLabel yaw;
     private final Compass compass;
+    private final Led imuStatus;
+    private final Led imuFailure;
 
     /**
      *
@@ -102,6 +104,8 @@ public class Dashboard extends JPanel {
         this.xSpeed = new JLabel();
         this.yaw = new JLabel();
         this.reset = new JButton("Reset");
+        this.imuStatus = Led.create("/images/engine-off.png", "/images/engine-on.png");
+        this.imuFailure = Led.create("/images/gyro-off.png", "/images/gyro-on.png");
         this.compass = new Compass();
         this.resetFlow = SwingObservable.actions(reset).toFlowable(BackpressureStrategy.DROP);
         setCps(0);
@@ -128,17 +132,7 @@ public class Dashboard extends JPanel {
         yaw.setBackground(BLACK);
         yaw.setForeground(WHITE);
 
-        new GridLayoutHelper<>(this)
-                .modify("weight,1,1 fill at,0,0")
-                .add(createConnectionPanel())
-                .modify("at,1,0")
-                .add(createMotorsPanel())
-                .modify("at,2,0")
-                .add(createObstaclePanel())
-                .modify("at,3,0")
-                .add(createPowerPanel())
-                .modify("at,4,0")
-                .add(createAssetPanel());
+        new GridLayoutHelper<>(this).modify("weight,1,1 fill at,0,0").add(createConnectionPanel()).modify("at,1,0").add(createMotorsPanel()).modify("at,2,0").add(createObstaclePanel()).modify("at,3,0").add(createPowerPanel()).modify("at,4,0").add(createAssetPanel());
 
         setObstacleDistance(0);
         setPower(0);
@@ -149,16 +143,7 @@ public class Dashboard extends JPanel {
      *
      */
     private JPanel createAssetPanel() {
-        JPanel container = new GridLayoutHelper<>(new JPanel())
-                .modify("insets,2 at,0,0 weight,1,1 fill center")
-                .add(compass)
-                .modify("at,0,1 nofill noweight")
-                .add(yaw)
-                .modify("at,0,2")
-                .add(xSpeed)
-                .modify("at,0,3")
-                .add(reset)
-                .getContainer();
+        JPanel container = new GridLayoutHelper<>(new JPanel()).modify("insets,2 at,0,0 weight,1,1 fill center").add(compass).modify("at,0,1 nofill noweight").add(yaw).modify("at,0,2").add(xSpeed).modify("at,0,3").add(imuStatus).modify("at,0,4").add(imuFailure).modify("at,0,5").add(reset).getContainer();
         container.setBackground(BLACK);
         return container;
     }
@@ -167,14 +152,7 @@ public class Dashboard extends JPanel {
      *
      */
     private JPanel createConnectionPanel() {
-        JPanel container = new GridLayoutHelper<>(new JPanel())
-                .modify("insets,2 at,0,0 weight,1,1")
-                .add(wifiLed)
-                .modify("at,0,1 center")
-                .add(cps)
-                .modify("at,0,2")
-                .add(elaps)
-                .getContainer();
+        JPanel container = new GridLayoutHelper<>(new JPanel()).modify("insets,2 at,0,0 weight,1,1").add(wifiLed).modify("at,0,1 center").add(cps).modify("at,0,2").add(elaps).getContainer();
         container.setBackground(BLACK);
         return container;
     }
@@ -183,22 +161,7 @@ public class Dashboard extends JPanel {
      *
      */
     private JPanel createMotorsPanel() {
-        JPanel container = new GridLayoutHelper<>(new JPanel())
-                .modify("insets,2 at,0,0 span,2,1")
-                .add(forwardBlock)
-                .modify("at,0,1 weight,1,1 span,1,1 center")
-                .add(leftForwardMotor)
-                .modify("at,1,1")
-                .add(rightForwardMotor)
-                .modify("at,0,2")
-                .add(leftPower)
-                .modify("at,1,2")
-                .add(rightPower)
-                .modify("at,0,3")
-                .add(leftBackwardMotor)
-                .modify("at,1,3")
-                .add(rightBackwardMotor)
-                .getContainer();
+        JPanel container = new GridLayoutHelper<>(new JPanel()).modify("insets,2 at,0,0 span,2,1").add(forwardBlock).modify("at,0,1 weight,1,1 span,1,1 center").add(leftForwardMotor).modify("at,1,1").add(rightForwardMotor).modify("at,0,2").add(leftPower).modify("at,1,2").add(rightPower).modify("at,0,3").add(leftBackwardMotor).modify("at,1,3").add(rightBackwardMotor).getContainer();
         container.setBackground(BLACK);
         return container;
     }
@@ -212,14 +175,7 @@ public class Dashboard extends JPanel {
         obstacleMeasureBar.setBackground(BLACK);
         obstacleMeasureBar.setBorderPainted(false);
         obstacleMeasure.setForeground(WHITE);
-        JPanel container = new GridLayoutHelper<>(new JPanel())
-                .modify("insets,2 at,0,0")
-                .add(label)
-                .modify("below")
-                .add(obstacleMeasureBar)
-                .add(obstacleMeasure)
-                .add(obstacleLed)
-                .getContainer();
+        JPanel container = new GridLayoutHelper<>(new JPanel()).modify("insets,2 at,0,0").add(label).modify("below").add(obstacleMeasureBar).add(obstacleMeasure).add(obstacleLed).getContainer();
         container.setBackground(BLACK);
         return container;
     }
@@ -233,14 +189,7 @@ public class Dashboard extends JPanel {
         powerMeasureBar.setBackground(BLACK);
         powerMeasureBar.setBorderPainted(false);
         powerMeasure.setForeground(WHITE);
-        JPanel container = new GridLayoutHelper<>(new JPanel())
-                .modify("insets,2 at,0,0")
-                .add(label1)
-                .modify("below")
-                .add(powerMeasureBar)
-                .add(powerMeasure)
-                .add(powerLed)
-                .getContainer();
+        JPanel container = new GridLayoutHelper<>(new JPanel()).modify("insets,2 at,0,0").add(label1).modify("below").add(powerMeasureBar).add(powerMeasure).add(powerLed).getContainer();
         container.setBackground(BLACK);
         return container;
     }
@@ -259,6 +208,8 @@ public class Dashboard extends JPanel {
         RobotAsset value = asset.value();
         setXSpeed(value.xSpeed);
         setYaw(value.yaw);
+        setImuStatus(value.status);
+        setImuFailure(value.failure);
         compass.setAngle(value.yaw);
     }
 
@@ -285,6 +236,20 @@ public class Dashboard extends JPanel {
      */
     public void setForwardBlock(boolean block) {
         forwardBlock.setValue(block ? 1 : 0);
+    }
+
+    /**
+     * @param failure the failure status
+     */
+    private void setImuFailure(int failure) {
+        imuFailure.setValue(failure != 0 ? 0 : 1);
+    }
+
+    /**
+     * @param status the imu status
+     */
+    private void setImuStatus(int status) {
+        imuStatus.setValue(status != 0 ? 0 : 1);
     }
 
     /**
@@ -323,14 +288,8 @@ public class Dashboard extends JPanel {
         if (distance > 0) {
             obstacleMeasureBar.setValue(MAX_DISTANCE - distance);
             obstacleMeasure.setText(format("%d cm", distance));
-            Color color = distance <= STOP_DISTANCE ? RED
-                    : distance <= WARN_DISTANCE ? YELLOW
-                    : distance <= INFO_DISTANCE ? GREEN
-                    : GRAY;
-            int led = distance <= STOP_DISTANCE ? 3
-                    : distance <= WARN_DISTANCE ? 2
-                    : distance <= INFO_DISTANCE ? 1
-                    : 0;
+            Color color = distance <= STOP_DISTANCE ? RED : distance <= WARN_DISTANCE ? YELLOW : distance <= INFO_DISTANCE ? GREEN : GRAY;
+            int led = distance <= STOP_DISTANCE ? 3 : distance <= WARN_DISTANCE ? 2 : distance <= INFO_DISTANCE ? 1 : 0;
             obstacleLed.setValue(led);
             obstacleMeasureBar.setForeground(color);
         } else {
@@ -348,10 +307,8 @@ public class Dashboard extends JPanel {
         int perc = max(0, min((int) round(100 * (voltage - MIN_VOLTAGE) / (FULL_VOLTAGE - MIN_VOLTAGE)), 100));
         powerMeasureBar.setValue(perc);
         powerMeasure.setText(format("%.1f V", voltage));
-        Color color = perc < 33 ? RED
-                : perc <= 66 ? YELLOW : GREEN;
-        int led = perc < 33 ? 0
-                : perc < 67 ? 1 : 2;
+        Color color = perc < 33 ? RED : perc <= 66 ? YELLOW : GREEN;
+        int led = perc < 33 ? 0 : perc < 67 ? 1 : 2;
         powerLed.setValue(led);
         powerMeasureBar.setForeground(color);
     }
