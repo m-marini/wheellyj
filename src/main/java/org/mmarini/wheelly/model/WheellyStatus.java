@@ -32,28 +32,23 @@ package org.mmarini.wheelly.model;
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Tuple2;
 
-import java.util.Map;
 import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.IntStream;
 
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.Tuple2.toMap;
 
 /**
  * The Wheelly status contain the sensor value of Wheelly
  */
 public class WheellyStatus {
 
-    public static final int NO_STATUS_PARAMS = 1 + 3 + 7 * 3 + 2 + 2;
-    public static final double VOLTAGE_PRECISION = 5d * 3 / 1023;
-    private static final int NO_DIRECTIONS = 7;
+    public static final int NO_STATUS_PARAMS = 12;
 
     /**
      * Returns the Wheelly status from status string
      * The string status is formatted as:
      * <pre>
-     *     st [motorTime] [leftMotor] [rightMotor] [time0] 0 [distance0] [time30] 30 [distance30] [time60] 60 [distance60] [time90] 90 [distance90] [time120] 120 [distance120] [time150] 150 [distance150] [time180] 180 [distance180] [voltageTime] [voltage] [cpsTime] [cps]
+     *     st [sampleTime] [xLocation] [yLocation] [angle] [leftMotor] [rightMotor] [canMoveForward] [voltageTime] [voltage] [cpsTime] [cps]
      * </pre>
      *
      * @param statusString the status string
@@ -63,55 +58,51 @@ public class WheellyStatus {
         if (params.length != NO_STATUS_PARAMS) {
             throw new IllegalArgumentException("Missing status parameters");
         }
-        long directionInstant = clock.fromRemote(Long.parseLong(params[1]));
-        int left = Integer.parseInt(params[2]);
-        int right = Integer.parseInt(params[3]);
-        Timed<Tuple2<Integer, Integer>> direction = new Timed<>(Tuple2.of(left, right), directionInstant, TimeUnit.MILLISECONDS);
 
-        Map<Integer, Timed<Integer>> obstacles = IntStream.range(0, NO_DIRECTIONS)
-                .mapToObj(i -> {
-                    long instant = Long.parseLong(params[i * 3 + 4]);
-                    int dirScan = Integer.parseInt(params[i * 3 + 5]);
-                    int distance = Integer.parseInt(params[i * 3 + 6]);
-                    return Tuple2.of(instant, Tuple2.of(dirScan, distance));
-                })
-                .filter(t -> t._1 > 0)
-                .map(t -> {
-                            long instant = t._1;
-                            int dirs = t._2._1;
-                            int distance = t._2._2;
-                            return Tuple2.of(dirs,
-                                    new Timed<>(distance, clock.fromRemote(instant), TimeUnit.MILLISECONDS));
-                        }
-                )
-                .collect(toMap());
+        long sampleInstant = clock.fromRemote(Long.parseLong(params[1]));
+        float x = Float.parseFloat(params[2]);
+        float y = Float.parseFloat(params[3]);
+        int angle = Integer.parseInt(params[4]);
+        Timed<RobotAsset> asset = new Timed<>(RobotAsset.create(x, y, angle), sampleInstant, TimeUnit.MILLISECONDS);
 
-        long voltageInstant = clock.fromRemote(Long.parseLong(params[25]));
-        double v = Integer.parseInt(params[26]) * VOLTAGE_PRECISION;
-        Timed<Double> voltage = new Timed<>(v, voltageInstant, TimeUnit.MILLISECONDS);
+        float left = Float.parseFloat(params[5]);
+        float right = Float.parseFloat(params[6]);
+        Timed<Tuple2<Float, Float>> motors = new Timed<>(Tuple2.of(left, right), sampleInstant, TimeUnit.MILLISECONDS);
 
-        long cpsInstant = clock.fromRemote(Long.parseLong(params[27]));
-        double cpsValue = Integer.parseInt(params[28]);
-        Timed<Double> cps = new Timed<>(cpsValue, cpsInstant, TimeUnit.MILLISECONDS);
-        return new WheellyStatus(direction, obstacles, voltage, cps);
+        boolean moveForward = Integer.parseInt(params[7]) != 0;
+        Timed<Boolean> canMoveForward = new Timed<>(moveForward, sampleInstant, TimeUnit.MILLISECONDS);
+        ;
+
+        long voltageInstant = clock.fromRemote(Long.parseLong(params[8]));
+        float v = Float.parseFloat(params[9]);
+        Timed<Float> voltage = new Timed<>(v, voltageInstant, TimeUnit.MILLISECONDS);
+
+        long cpsInstant = clock.fromRemote(Long.parseLong(params[10]));
+        float cpsValue = Float.parseFloat(params[11]);
+        Timed<Float> cps = new Timed<>(cpsValue, cpsInstant, TimeUnit.MILLISECONDS);
+
+        return new WheellyStatus(asset, motors, canMoveForward, voltage, cps);
     }
 
-    public final Timed<Double> cps;
-    public final Timed<Tuple2<Integer, Integer>> direction;
-    public final Map<Integer, Timed<Integer>> obstacles;
-    public final Timed<Double> voltage;
+    public final Timed<RobotAsset> asset;
+    public final Timed<Boolean> canMoveForward;
+    public final Timed<Float> cps;
+    public final Timed<Tuple2<Float, Float>> motors;
+    public final Timed<Float> voltage;
 
     /**
      * Creates the Wheelly status
      *
-     * @param direction the motor speed
-     * @param obstacles the obstacles values
-     * @param voltage   the voltage value
-     * @param cps       the cycle per seconds
+     * @param asset          robot asset
+     * @param motors         the motor speed
+     * @param canMoveForward true if robot can move forward
+     * @param voltage        the voltage value
+     * @param cps            the cycle per seconds
      */
-    public WheellyStatus(Timed<Tuple2<Integer, Integer>> direction, Map<Integer, Timed<Integer>> obstacles, Timed<Double> voltage, Timed<Double> cps) {
-        this.direction = requireNonNull(direction);
-        this.obstacles = requireNonNull(obstacles);
+    protected WheellyStatus(Timed<RobotAsset> asset, Timed<Tuple2<Float, Float>> motors, Timed<Boolean> canMoveForward, Timed<Float> voltage, Timed<Float> cps) {
+        this.asset = requireNonNull(asset);
+        this.motors = requireNonNull(motors);
+        this.canMoveForward = canMoveForward;
         this.voltage = requireNonNull(voltage);
         this.cps = requireNonNull(cps);
     }
@@ -119,31 +110,16 @@ public class WheellyStatus {
     /**
      * Returns the motor speeds
      */
-    public Timed<Tuple2<Integer, Integer>> getDirection() {
-        return direction;
-    }
-
-
-    /**
-     * Returns the obstacles
-     */
-    public Map<Integer, Timed<Integer>> getObstacles() {
-        return obstacles;
-    }
-
-    /**
-     * Returns the battery voltage
-     */
-    public Timed<Double> getVoltage() {
-        return voltage;
+    public Timed<Tuple2<Float, Float>> getMotors() {
+        return motors;
     }
 
     @Override
     public String toString() {
         return new StringJoiner(", ", WheellyStatus.class.getSimpleName() + "[", "]")
-                .add("direction=" + direction)
+                .add("asset=" + asset)
+                .add("motors=" + motors)
                 .add("voltage=" + voltage)
-                .add("obstacles=" + obstacles)
                 .add("cps=" + cps)
                 .toString();
     }

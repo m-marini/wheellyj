@@ -69,25 +69,6 @@ class RawControllerTest {
     }
 
     @Test
-    void readAsset() throws IOException, InterruptedException {
-        RawController controller = RawController.create(HOST, PORT,
-                10,
-                3000,
-                3000,
-                1000,
-                300000,
-                300);
-        TestSubscriber<Timed<RobotAsset>> assetTest = controller.readAsset().test();
-        controller.start();
-        assetTest.await(6, TimeUnit.SECONDS);
-        assetTest.assertNoErrors();
-        List<Timed<RobotAsset>> values = assetTest.values();
-        assertThat(values, not(empty()));
-        controller.close();
-        Thread.sleep(3000);
-    }
-
-    @Test
     void readStatus() throws IOException, InterruptedException {
         RawController controller = RawController.create(HOST, PORT,
                 10,

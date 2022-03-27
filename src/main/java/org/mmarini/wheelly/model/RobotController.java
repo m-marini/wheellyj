@@ -50,7 +50,7 @@ public interface RobotController {
     /**
      *
      */
-    Flowable<Timed<RobotAsset>> readAsset();
+    Flowable<Timed<ProxySample>> readProxy();
 
     /**
      *

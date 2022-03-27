@@ -61,8 +61,6 @@
 #define NO_SAMPLES          5
 #define FRONT_SCAN_INDEX    (NO_SCAN_DIRECTIONS / 2)
 #define NO_SCAN_DIRECTIONS  (sizeof(scanDirections) / sizeof(scanDirections[0]))
-#define CAN_MOVE_MIN_DIR    (FRONT_SCAN_INDEX - 1)
-#define CAN_MOVE_MAX_DIR    (FRONT_SCAN_INDEX + 1)
 #define SERVO_OFFSET        4
 
 /*
@@ -89,7 +87,7 @@
 /*
    Voltage scale
 */
-#define VOLTAGE_SCALE (5.0 * 3 / 1023)
+#define VOLTAGE_SCALE (4.75 * 3 / 1023)
 
 /*
    Command parser
@@ -121,8 +119,7 @@ const int scanDirections[] = {
 };
 bool isFullScanning;
 int scanIndex;  // Scan index
-int distances[NO_SCAN_DIRECTIONS];
-unsigned long scanTimes[NO_SCAN_DIRECTIONS];
+int frontDistance;
 
 /*
    Movement motors
@@ -341,7 +338,6 @@ void handleStatsTimer(void *context, unsigned long) {
 */
 void handleQuery(void *, unsigned long) {
   sendStatus();
-  sendAsset();
 }
 
 /*
@@ -362,14 +358,13 @@ void handleLedTimer(void *, unsigned long n) {
 */
 void handleObstacleTimer(void *, unsigned long i) {
   static unsigned long last = 0;
-  int distance = distances[FRONT_SCAN_INDEX];
-  if (distance == 0 || distance > WARN_DISTANCE) {
+  if (frontDistance == 0 || frontDistance > WARN_DISTANCE) {
     digitalWrite(PROXY_LED_PIN, LOW);
-  } else if (distance <= STOP_DISTANCE) {
+  } else if (frontDistance <= STOP_DISTANCE) {
     digitalWrite(PROXY_LED_PIN, HIGH);
     last = i;
   } else {
-    int n = map(distance,
+    int n = map(frontDistance,
                 STOP_DISTANCE, WARN_DISTANCE,
                 MIN_OBSTACLE_PULSES, MAX_OBSTACLE_PULSES);
     if (i >= last + n) {
@@ -414,19 +409,20 @@ void handleStartQueries(const char* parms) {
 /*
    Handles sample event from distance sensor
 */
-void handleSample(void *, int distance) {
+void handleSample(void *, int dist) {
 
   DEBUG_PRINT(F("// handleSample: dir="));
   DEBUG_PRINT(scanDirections[scanIndex]);
   DEBUG_PRINT(F(", distance="));
-  DEBUG_PRINTLN(distance);
+  DEBUG_PRINTLN(dist);
 
-  distances[scanIndex] = distance;
-  scanTimes[scanIndex] = millis();
-
-  if (motionController.isForward() && !canMoveForward()) {
-    motionController.speed(0, 0);
+  if (scanIndex == FRONT_SCAN_INDEX) {
+    frontDistance = dist;
+    if (motionController.isForward() && !canMoveForward()) {
+      motionController.speed(0, 0);
+    }
   }
+  sendSample(dist);
   if (isFullScanning) {
     scanIndex++;
     if (scanIndex >= NO_SCAN_DIRECTIONS) {
@@ -473,38 +469,20 @@ void resetWhelly() {
 /*
 
 */
-void sendAsset() {
-#ifdef WITH_IMU
-  Serial.print(F("as "));
-  Serial.print(imu.status());
+void sendSample(int distance) {
+  Serial.print(F("pr "));
+  Serial.print(millis());
   Serial.print(F(" "));
-  Serial.print(imuFailure);
+  Serial.print(scanDirections[scanIndex] - 90);
   Serial.print(F(" "));
-  Serial.print(imu.lastTime());
+  Serial.print(distance * 0.01, 2);
   Serial.print(F(" "));
-  printVect(imu.acc());
+  Serial.print(motionController.x(), 3);
   Serial.print(F(" "));
-  printVect(imu.linAcc());
+  Serial.print(motionController.y(), 3);
   Serial.print(F(" "));
-  printVect(imu.worldAcc());
-  Serial.print(F(" "));
-  printVect(imu.ypr());
-  Serial.print(F(" "));
-  Serial.print(imu.vx());
-  Serial.print(F(" "));
-  Serial.print(motionController.x());
-  Serial.print(F(" "));
-  Serial.print(motionController.y());
+  Serial.print(motionController.angle() * 180 / PI, 0);
   Serial.println();
-#else
-  Serial.print(F("as 0 0 0 0 0 0 "));
-  Serial.print(motionController.angle());
-  Serial.print(F(" 0 0 0 "));
-  Serial.print(motionController.x());
-  Serial.print(F(" "));
-  Serial.print(motionController.y());
-  Serial.println();
-#endif
 }
 
 /*
@@ -565,14 +543,7 @@ bool canMoveForward() {
 }
 
 int forwardBlockDistance() {
-  int dist = MAX_DISTANCE;
-  for (int i = CAN_MOVE_MIN_DIR; i <= CAN_MOVE_MAX_DIR; i++) {
-    int d = distances[i];
-    if (d > 0 && d <= dist) {
-      dist = d;
-    }
-  }
-  return dist;
+  return (frontDistance > 0 && frontDistance <= MAX_DISTANCE) ? frontDistance : MAX_DISTANCE;
 }
 
 /*
@@ -595,21 +566,21 @@ void sendStatus() {
   Serial.print(F("st "));
   Serial.print(millis());
   Serial.print(F(" "));
-  Serial.print(motionController.left());
+  Serial.print(motionController.x(), 3);
   Serial.print(F(" "));
-  Serial.print(motionController.right());
+  Serial.print(motionController.y(), 3);
   Serial.print(F(" "));
-  for (int i = 0; i < NO_SCAN_DIRECTIONS; i++) {
-    Serial.print(scanTimes[i]);
-    Serial.print(F(" "));
-    Serial.print(scanDirections[i]);
-    Serial.print(F(" "));
-    Serial.print(distances[i]);
-    Serial.print(F(" "));
-  }
+  Serial.print(motionController.angle() * 180 / PI, 0);
+  Serial.print(F(" "));
+  Serial.print(motionController.left(), 3);
+  Serial.print(F(" "));
+  Serial.print(motionController.right(), 3);
+  Serial.print(F(" "));
+  Serial.print(canMoveForward());
+  Serial.print(F(" "));
   Serial.print(voltageTime);
   Serial.print(F(" "));
-  Serial.print(voltageValue * VOLTAGE_SCALE);
+  Serial.print(VOLTAGE_SCALE * voltageValue);
   Serial.print(F(" "));
   Serial.print(statsTime);
   Serial.print(F(" "));

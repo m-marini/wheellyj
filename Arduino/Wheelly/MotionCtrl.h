@@ -47,10 +47,12 @@ class MotionCtrl {
     float _expectedY;
     float _left;
     float _right;
+    float _leftSpeed;
+    float _rightSpeed;
     unsigned long _prevTime;
     bool _assetControl;
 
-    MotionCtrl& power(float left, float right);
+    MotionCtrl& power(unsigned long dt, float left, float right);
     MotionCtrl& computePower(unsigned long dt);
 };
 

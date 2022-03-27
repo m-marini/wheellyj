@@ -69,9 +69,9 @@ public class FlowBuilder {
      *
      * @param tuples the tuple list with speeds
      */
-    private static boolean isMoving(List<Tuple2<Integer, Integer>> tuples) {
-        Tuple2<Integer, Integer> m0 = tuples.get(0);
-        Tuple2<Integer, Integer> m1 = tuples.get(1);
+    private static boolean isMoving(List<Tuple2<Float, Float>> tuples) {
+        Tuple2<Float, Float> m0 = tuples.get(0);
+        Tuple2<Float, Float> m1 = tuples.get(1);
         return !(m0._1 == 0 && m0._2 == 0 && m1._1 == 0 && m1._2 == 0);
     }
 
@@ -80,18 +80,18 @@ public class FlowBuilder {
      *
      * @param tuples the tuple list with speeds
      */
-    private static boolean isSpeedChanged(List<Tuple2<Integer, Integer>> tuples) {
-        Tuple2<Integer, Integer> m0 = tuples.get(0);
-        Tuple2<Integer, Integer> m1 = tuples.get(1);
+    private static boolean isSpeedChanged(List<Tuple2<Float, Float>> tuples) {
+        Tuple2<Float, Float> m0 = tuples.get(0);
+        Tuple2<Float, Float> m1 = tuples.get(1);
         return !m0.equals(m1);
     }
 
-    static Tuple2<Integer, Integer> speedFromAxis(Tuple2<Float, Float> xy) {
-        int x = round(xy._1 * (NUM_MOTOR_SPEED - 1)) * MAX_MOTOR_SPEED / (NUM_MOTOR_SPEED - 1);
-        int y = round(xy._2 * (NUM_MOTOR_SPEED - 1)) * MAX_MOTOR_SPEED / (NUM_MOTOR_SPEED - 1);
-        int ax = abs(x);
-        int ay = abs(y);
-        int value = max(ax, ay);
+    static Tuple2<Float, Float> speedFromAxis(Tuple2<Float, Float> xy) {
+        float x = (float) round(xy._1 * (NUM_MOTOR_SPEED - 1)) / (NUM_MOTOR_SPEED - 1);
+        float y = (float) round(xy._2 * (NUM_MOTOR_SPEED - 1)) / (NUM_MOTOR_SPEED - 1);
+        float ax = abs(x);
+        float ay = abs(y);
+        float value = max(ax, ay);
         if (value > 0) {
             if (ay >= ax) {
                 if (y < 0) {
@@ -135,7 +135,7 @@ public class FlowBuilder {
                 }
             }
         }
-        return Tuple2.of(0, 0);
+        return Tuple2.of(0f, 0f);
     }
 
     private final RobotController controller;
@@ -171,7 +171,7 @@ public class FlowBuilder {
     /**
      * Creates a flowable of motor speeds from joystick events
      */
-    private Flowable<Tuple2<Integer, Integer>> createJoystickDirCommand() {
+    private Flowable<Tuple2<Float, Float>> createJoystickDirCommand() {
         logger.debug("Creating joystick command ...");
         return joystick.readXY()
                 .map(FlowBuilder::speedFromAxis)

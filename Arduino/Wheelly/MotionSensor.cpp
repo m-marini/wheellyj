@@ -24,11 +24,19 @@ MotionSensor& MotionSensor::reset() {
   _rightForward = true;
   _xPulses = 0;
   _yPulses = 0;
+  _leftPulses = 0;
+  _rightPulses = 0;
   _angle = 0;
   return *this;
 }
 
 MotionSensor& MotionSensor::setDirection(float left, float right) {
+  DEBUG_PRINT(F("// MotionSensor::setDirection "));
+  DEBUG_PRINT(left);
+  DEBUG_PRINT(F(" "));
+  DEBUG_PRINT(right);
+  DEBUG_PRINTLN();
+
   if (left > 0) {
     _leftForward = true;
   } else if (left < 0) {
@@ -66,6 +74,9 @@ MotionSensor& MotionSensor::update(int dl, int dr, unsigned long clockTime) {
   DEBUG_PRINT(dr);
   DEBUG_PRINTLN();
 
+  _leftPulses += dl;
+  _rightPulses += dr;
+
   // Updates location
   float sa = sinf(_angle);
   float ca = cosf(_angle);
@@ -84,6 +95,12 @@ MotionSensor& MotionSensor::update(int dl, int dr, unsigned long clockTime) {
 
   DEBUG_PRINT(F("// angle "));
   DEBUG_PRINT(_angle * 180 / PI);
+  DEBUG_PRINTLN();
+
+  DEBUG_PRINT(F("// location "));
+  DEBUG_PRINT(x());
+  DEBUG_PRINT(F(", "));
+  DEBUG_PRINT(y());
   DEBUG_PRINTLN();
   return *this;
 }

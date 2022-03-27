@@ -5,8 +5,11 @@
 
 #define MOTOR_SAFE_INTERVAL 1000ul
 
-#define MAX_LIN_SPEED 0.319
-#define MIN_REACTION_DISTANCE (2 * DISTANCE_PER_PULSE)
+#define MOTOR_REACTION_TIME 10ul
+
+#define MOTOR_FILTER_TIME 0.5f
+
+#define MAX_LIN_SPEED 0.319f
 
 const float leftXCorrection[] = { -1,  -0.06055, 0, 0.02311, 1};
 const float leftYCorrection[] = { -1, -0.30432, 0, 0.12577, 1};
@@ -29,7 +32,7 @@ MotionCtrl& MotionCtrl::begin() {
   _leftMotor.begin().setCorrection(leftXCorrection, leftYCorrection);
   _rightMotor.begin().setCorrection(rightXCorrection, rightYCorrection);
   _sensors.begin();
-  
+
   DEBUG_PRINTLN(F("// Motion controller begin"));
   _stopTimer.interval(MOTOR_SAFE_INTERVAL).onNext([](void *ctx, unsigned long) {
     DEBUG_PRINTLN("// Motor timer triggered");
@@ -64,7 +67,7 @@ MotionCtrl& MotionCtrl::speed(float left, float right) {
   } else {
     _stopTimer.stop();
   }
-  power(_left, _right);
+  power(0, _left, _right);
 }
 
 /*
@@ -77,7 +80,7 @@ MotionCtrl& MotionCtrl::polling(unsigned long clockTime) {
   // Computes exepected asset
   if (_left != 0 && _right != 0) {
     unsigned long dt = clockTime - _prevTime;
-    if (dt > 0) {
+    if (dt > MOTOR_REACTION_TIME) {
       float ds = (_left + _right) * MAX_LIN_SPEED * dt / 2000;
       _expectedX += ds * cosf(_expectedYaw);
       _expectedY += ds * sinf(_expectedYaw);
@@ -94,9 +97,9 @@ MotionCtrl& MotionCtrl::polling(unsigned long clockTime) {
       DEBUG_PRINT(_expectedYaw * 180 / PI);
       DEBUG_PRINTLN();
       computePower(dt);
+      _prevTime = clockTime;
     }
   }
-  _prevTime = clockTime;
 }
 
 /*
@@ -145,7 +148,7 @@ MotionCtrl& MotionCtrl::computePower(unsigned long dt) {
   DEBUG_PRINT(lambda);
   DEBUG_PRINTLN();
 
-  power(l, r);
+  power(dt, l, r);
   DEBUG_PRINT(F("// left:"));
   DEBUG_PRINT(l);
   DEBUG_PRINT(F(" right:"));
@@ -157,14 +160,24 @@ MotionCtrl& MotionCtrl::computePower(unsigned long dt) {
 /*
 
 */
-MotionCtrl& MotionCtrl::power(float left, float right) {
+MotionCtrl& MotionCtrl::power(unsigned long dt, float left, float right) {
   /*
     DEBUG_PRINT("// Power ");
     DEBUG_PRINT(left);
     DEBUG_PRINT(", ");
     DEBUG_PRINTLN(right);
   */
-  _leftMotor.speed(left);
-  _rightMotor.speed(right);
-  _sensors.setDirection(left, right);
+
+  if (left == 0 && right == 0) {
+    _leftSpeed = _rightSpeed = 0;
+  } else {
+    // Computes low frequence filtered speeds
+    float alpha = min(dt * 1e-3 / MOTOR_FILTER_TIME, 1);
+    float notAlpha = 1 - alpha;
+    _leftSpeed = _leftSpeed * notAlpha + left * alpha;
+    _rightSpeed = _rightSpeed * notAlpha + right * alpha;
+  }
+  _leftMotor.speed(_leftSpeed);
+  _rightMotor.speed(_rightSpeed);
+  _sensors.setDirection(_leftSpeed, _rightSpeed);
 }

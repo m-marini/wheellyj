@@ -39,18 +39,18 @@ public class MotorCommand {
      * @param leftPower
      * @param rightPower
      */
-    public static MotorCommand create(int leftPower, int rightPower) {
+    public static MotorCommand create(float leftPower, float rightPower) {
         return new MotorCommand(leftPower, rightPower);
     }
 
-    public final int leftPower;
-    public final int rightPower;
+    public final float leftPower;
+    public final float rightPower;
 
     /**
      * @param leftPower
      * @param rightPower
      */
-    protected MotorCommand(int leftPower, int rightPower) {
+    protected MotorCommand(float leftPower, float rightPower) {
         this.leftPower = leftPower;
         this.rightPower = rightPower;
     }
@@ -58,28 +58,28 @@ public class MotorCommand {
     /**
      *
      */
-    public int getLeftPower() {
+    public float getLeftPower() {
         return leftPower;
     }
 
     /**
      * @param leftPower
      */
-    public MotorCommand setLeftPower(int leftPower) {
+    public MotorCommand setLeftPower(float leftPower) {
         return new MotorCommand(leftPower, rightPower);
     }
 
     /**
      *
      */
-    public int getRightPower() {
+    public float getRightPower() {
         return rightPower;
     }
 
     /**
      * @param rightPower
      */
-    public MotorCommand setRightPower(int rightPower) {
+    public MotorCommand setRightPower(float rightPower) {
         return new MotorCommand(leftPower, rightPower);
     }
 

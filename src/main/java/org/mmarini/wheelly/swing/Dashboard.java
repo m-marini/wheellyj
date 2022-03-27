@@ -34,7 +34,7 @@ import io.reactivex.rxjava3.core.BackpressureStrategy;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.swing.GridLayoutHelper;
-import org.mmarini.wheelly.model.RobotAsset;
+import org.mmarini.wheelly.model.ProxySample;
 
 import javax.swing.*;
 import java.awt.*;
@@ -49,13 +49,12 @@ import static java.lang.String.format;
  */
 public class Dashboard extends JPanel {
 
-    public static final int MAX_DISTANCE = 300;
-    public static final int STOP_DISTANCE = 40;
-    public static final int WARN_DISTANCE = 60;
-    public static final int INFO_DISTANCE = 80;
-    public static final double MIN_VOLTAGE = 9.0;
-    public static final double FULL_VOLTAGE = 12.6;
-    private static final float MAX_POWER = 255;
+    public static final float MAX_DISTANCE = 3f;
+    public static final float STOP_DISTANCE = 0.2f;
+    public static final float WARN_DISTANCE = 0.4f;
+    public static final float INFO_DISTANCE = 0.6f;
+    public static final float MIN_VOLTAGE = 7f;
+    public static final float FULL_VOLTAGE = 12.6f;
 
     private final Led leftForwardMotor;
     private final Led leftBackwardMotor;
@@ -115,8 +114,6 @@ public class Dashboard extends JPanel {
 
         setBackground(BLACK);
 
-        obstacleMeasureBar.setMinimum(0);
-        obstacleMeasureBar.setMaximum(MAX_DISTANCE);
         powerMeasureBar.setMinimum(0);
         powerMeasureBar.setMaximum(100);
         cps.setBackground(BLACK);
@@ -202,8 +199,9 @@ public class Dashboard extends JPanel {
     }
 
     /**
-     * @param asset the robot asset
+     * @param angle
      */
+    /*
     public void setAsset(Timed<RobotAsset> asset) {
         RobotAsset value = asset.value();
         setXSpeed(value.xSpeed);
@@ -211,6 +209,12 @@ public class Dashboard extends JPanel {
         setImuStatus(value.status);
         setImuFailure(value.failure);
         compass.setAngle(value.yaw);
+    }
+     */
+
+    void setAngle(float angle) {
+        compass.setAngle(angle);
+        setYaw(angle);
     }
 
     /**
@@ -256,7 +260,7 @@ public class Dashboard extends JPanel {
      * @param left  left speed
      * @param right right speed
      */
-    public void setMotors(int left, int right) {
+    public void setMotors(float left, float right) {
         if (left > 0) {
             leftForwardMotor.setValue(1);
             leftBackwardMotor.setValue(0);
@@ -277,17 +281,18 @@ public class Dashboard extends JPanel {
             rightForwardMotor.setValue(0);
             rightBackwardMotor.setValue(0);
         }
-        leftPower.setText(format("%d%%", round(abs(left * 100f / MAX_POWER))));
-        rightPower.setText(format("%d%%", round(abs(right * 100f / MAX_POWER))));
+        leftPower.setText(format("%d%%", round(abs(left * 100f))));
+        rightPower.setText(format("%d%%", round(abs(right * 100f))));
     }
 
     /**
      * @param distance the distance
      */
-    public void setObstacleDistance(int distance) {
+    public void setObstacleDistance(float distance) {
         if (distance > 0) {
-            obstacleMeasureBar.setValue(MAX_DISTANCE - distance);
-            obstacleMeasure.setText(format("%d cm", distance));
+            int barValue = min(max(round(100 * (INFO_DISTANCE - distance) / INFO_DISTANCE), 0), 100);
+            obstacleMeasureBar.setValue(barValue);
+            obstacleMeasure.setText(format("%.0f cm", distance * 100));
             Color color = distance <= STOP_DISTANCE ? RED : distance <= WARN_DISTANCE ? YELLOW : distance <= INFO_DISTANCE ? GREEN : GRAY;
             int led = distance <= STOP_DISTANCE ? 3 : distance <= WARN_DISTANCE ? 2 : distance <= INFO_DISTANCE ? 1 : 0;
             obstacleLed.setValue(led);
@@ -311,6 +316,9 @@ public class Dashboard extends JPanel {
         int led = perc < 33 ? 0 : perc < 67 ? 1 : 2;
         powerLed.setValue(led);
         powerMeasureBar.setForeground(color);
+    }
+
+    public void setProxy(Timed<ProxySample> sa) {
     }
 
     /**
