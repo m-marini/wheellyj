@@ -341,7 +341,6 @@ void handleStatsTimer(void *context, unsigned long) {
 */
 void handleQuery(void *, unsigned long) {
   sendStatus();
-  sendAsset();
 }
 
 /*
@@ -595,18 +594,16 @@ void sendStatus() {
   Serial.print(F("st "));
   Serial.print(millis());
   Serial.print(F(" "));
-  Serial.print(motionController.left());
+  Serial.print(motionController.x(), 3);
   Serial.print(F(" "));
-  Serial.print(motionController.right());
+  Serial.print(motionController.y(), 3);
   Serial.print(F(" "));
-  for (int i = 0; i < NO_SCAN_DIRECTIONS; i++) {
-    Serial.print(scanTimes[i]);
-    Serial.print(F(" "));
-    Serial.print(scanDirections[i]);
-    Serial.print(F(" "));
-    Serial.print(distances[i]);
-    Serial.print(F(" "));
-  }
+  Serial.print(motionController.angle() * 180 / PI, 0);
+  Serial.print(F(" "));
+  Serial.print(motionController.left(), 3);
+  Serial.print(F(" "));
+  Serial.print(motionController.right(), 3);
+  Serial.print(F(" "));
   Serial.print(voltageTime);
   Serial.print(F(" "));
   Serial.print(voltageValue * VOLTAGE_SCALE);

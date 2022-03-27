@@ -28,18 +28,26 @@ class MotionSensor {
       return _angle;
     }
 
-    const long xPulses() const {
+    const float xPulses() const {
       return _xPulses;
     }
 
-    const long yPulses() const {
+    const float yPulses() const {
       return _yPulses;
     }
 
-    const long x() const {
+    const long rightPulses() const {
+      return _rightPulses;
+    }
+
+    const long leftPulses() const {
+      return _leftPulses;
+    }
+
+    const float x() const {
       return _xPulses * DISTANCE_PER_PULSE;
     }
-    const long y() const {
+    const float y() const {
       return _yPulses * DISTANCE_PER_PULSE;
     }
 
@@ -53,6 +61,8 @@ class MotionSensor {
     float _angle;
     float _xPulses;
     float _yPulses;
+    long  _leftPulses;
+    long  _rightPulses;
 
     MotionSensor& update(int dl, int dr, unsigned long clockTime);
 };
