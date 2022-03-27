@@ -4,42 +4,32 @@
 #include "debug.h"
 
 #define MOTOR_SAFE_INTERVAL 1000ul
-#define VALID_ASSET_INTERVAL 500ul
 
-// Power coefficient (1/RAD)
-#define K_POWER (180 / 30 / PI)
+#define MAX_LIN_SPEED 0.319
+#define MIN_REACTION_DISTANCE (2 * DISTANCE_PER_PULSE)
 
-// max rotation speed 4.66 RAD/sec
-#define K_OMEGA (4.66 / 2)
-
-/*
-   Returns the normalized angle in range (-PI, PI)
-*/
-float normAngle(float angle) {
-  while (angle <= PI) {
-    angle += (PI + PI);
-  }
-  while (angle > PI) {
-    angle -= (PI + PI);
-  }
-  return angle;
-}
+const float leftXCorrection[] = { -1,  -0.06055, 0, 0.02311, 1};
+const float leftYCorrection[] = { -1, -0.30432, 0, 0.12577, 1};
+const float rightXCorrection[] = { -1, -0.03759, 0, 0.02041, 1};
+const float rightYCorrection[] = { -1, -0.2667, 0, 0.12648, 1};
 
 /*
   Creates the motion controller
 */
-MotionCtrl::MotionCtrl(byte leftForwPin, byte leftBackPin, byte rightForwPin, byte rightBackPin)
-  : _leftMotor(leftForwPin, leftBackPin), _rightMotor(rightForwPin, rightBackPin) {
-  _kpower = K_POWER; // angle correction power (10 DEG = full rotation power)
-  _komega = K_OMEGA;
+MotionCtrl::MotionCtrl(byte leftForwPin, byte leftBackPin, byte rightForwPin, byte rightBackPin, byte leftSensorPin, byte rightSensorPin)
+  : _leftMotor(leftForwPin, leftBackPin),
+    _rightMotor(rightForwPin, rightBackPin),
+    _sensors(leftSensorPin, rightSensorPin) {
 }
 
 /*
   Initializes the motion controller
 */
 MotionCtrl& MotionCtrl::begin() {
-  _leftMotor.begin();
-  _rightMotor.begin();
+  _leftMotor.begin().setCorrection(leftXCorrection, leftYCorrection);
+  _rightMotor.begin().setCorrection(rightXCorrection, rightYCorrection);
+  _sensors.begin();
+  
   DEBUG_PRINTLN(F("// Motion controller begin"));
   _stopTimer.interval(MOTOR_SAFE_INTERVAL).onNext([](void *ctx, unsigned long) {
     DEBUG_PRINTLN("// Motor timer triggered");
@@ -50,94 +40,124 @@ MotionCtrl& MotionCtrl::begin() {
 }
 
 /*
+  Resets the controller
+*/
+MotionCtrl& MotionCtrl::reset() {
+  _sensors.reset();
+  return *this;
+}
+
+/*
   Sets the motion speeds
 */
-MotionCtrl& MotionCtrl::speed(int left, int right) {
-  _leftSpeed = left;
-  _rightSpeed = right;
+MotionCtrl& MotionCtrl::speed(float left, float right) {
+  _left = left;
+  _right = right;
+
   unsigned long now = millis();
-  if (_leftSpeed == 0 && _rightSpeed == 0) {
-    _prevTime = now;
-    _expectedYaw = _yaw;
-    _assetControl = (now - _assetTime) <= VALID_ASSET_INTERVAL;
-  }
-  computePower(now);
-  if (left == 0 && right == 0) {
-    _stopTimer.stop();
-  } else  {
-    DEBUG_PRINTLN(F("// Motor timer started"));
+  if (_left != 0 && _right != 0) {
     _stopTimer.start(this);
+    _prevTime = now;
+    _expectedYaw = _sensors.angle();
+    _expectedX = _sensors.x();
+    _expectedY = _sensors.y();
+  } else {
+    _stopTimer.stop();
   }
+  power(_left, _right);
 }
 
 /*
 
 */
 MotionCtrl& MotionCtrl::polling(unsigned long clockTime) {
+  _sensors.polling(clockTime);
   _stopTimer.polling(clockTime);
-  unsigned long dt = clockTime - _prevTime;
-  float sd = (_leftSpeed - _rightSpeed) / MAX_FORWARD;
-  _expectedYaw += sd * _komega * dt * 1e-3;
+
+  // Computes exepected asset
+  if (_left != 0 && _right != 0) {
+    unsigned long dt = clockTime - _prevTime;
+    if (dt > 0) {
+      float ds = (_left + _right) * MAX_LIN_SPEED * dt / 2000;
+      _expectedX += ds * cosf(_expectedYaw);
+      _expectedY += ds * sinf(_expectedYaw);
+
+      float dyaw = (_left - _right) * MAX_LIN_SPEED * dt / 1000 / TRACK;
+      _expectedYaw = normAngle(_expectedYaw + dyaw);
+      DEBUG_PRINT(F("// dt:"));
+      DEBUG_PRINT(dt);
+      DEBUG_PRINT(F(" expX:"));
+      DEBUG_PRINT(_expectedX);
+      DEBUG_PRINT(F(" expY:"));
+      DEBUG_PRINT(_expectedY);
+      DEBUG_PRINT(F(" expYaw:"));
+      DEBUG_PRINT(_expectedYaw * 180 / PI);
+      DEBUG_PRINTLN();
+      computePower(dt);
+    }
+  }
   _prevTime = clockTime;
-  computePower(clockTime);
 }
 
 /*
 
 */
-MotionCtrl& MotionCtrl::computePower(unsigned long clockTime) {
-  unsigned long dt = clockTime - _assetTime;
-  if ((_leftSpeed == 0 && _rightSpeed == 0) || !_assetControl || dt >= VALID_ASSET_INTERVAL) {
-    // Invalid asset, disable power control by asset
-    power(_leftSpeed, _rightSpeed);
-  } else {
-    float sl = (float)_leftSpeed / MAX_FORWARD;
-    float sr = (float)_rightSpeed / MAX_FORWARD;
-    float ss = sl + sr;
-    float sd = sl - sr;
-    float deltaYaw = normAngle(_yaw - _expectedYaw);
-    float ps = ss * cos(deltaYaw);
-    float pd = sd - deltaYaw * _kpower;
-    float pl = (ps + pd) / 2;
-    float pr = (ps - pd) / 2;
-    float pk = max(1.0, max(abs(pl), abs(pr)));
-    if (pk > 1) {
-      pl /= pk;
-      pr /= pk;
-    }
-    DEBUG_PRINT(F("// sl,sr,ss,sd: "));
-    DEBUG_PRINT(sl);
-    DEBUG_PRINT(F(" "));
-    DEBUG_PRINT(sr);
-    DEBUG_PRINT(F(" "));
-    DEBUG_PRINT(ss);
-    DEBUG_PRINT(F(" "));
-    DEBUG_PRINTLN(sd);
-    DEBUG_PRINT(F("// yaw,yaw0,expYaw,deltaYaw: "));
-    DEBUG_PRINT(_yaw * 180 / PI);
-    DEBUG_PRINT(F(" "));
-    DEBUG_PRINT(_yaw0 * 180 / PI);
-    DEBUG_PRINT(F(" "));
-    DEBUG_PRINT(expYaw * 180 / PI);
-    DEBUG_PRINT(F(" "));
-    DEBUG_PRINTLN(deltaYaw * 180 / PI);
-    DEBUG_PRINT(F("// pl,pr,ps,pd: "));
-    DEBUG_PRINT(pl);
-    DEBUG_PRINT(F(" "));
-    DEBUG_PRINT(pr);
-    DEBUG_PRINT(F(" "));
-    DEBUG_PRINT(ps);
-    DEBUG_PRINT(F(" "));
-    DEBUG_PRINTLN(pd);
-    power(round(pl * MAX_FORWARD), round(pr * MAX_FORWARD));
-  }
+MotionCtrl& MotionCtrl::computePower(unsigned long dt) {
+  float dx = _expectedX - _sensors.x();
+  float dy = _expectedY - _sensors.y();
+  float alpha = _sensors.angle();
+  float dq = dx * cos(alpha) + dy * sin(alpha);
+  float dbeta = normAngle(_expectedYaw - alpha);
+  float l = 0, r = 0;
+  DEBUG_PRINT(F("// dx:"));
+  DEBUG_PRINT(dx);
+  DEBUG_PRINT(F(" dy:"));
+  DEBUG_PRINT(dy);
+  DEBUG_PRINT(F(" dq:"));
+  DEBUG_PRINT(dq);
+  DEBUG_PRINT(F(" alpha:"));
+  DEBUG_PRINT(_sensors.angle() * 180 / PI);
+  DEBUG_PRINTLN();
+
+  float sumLR = dq * 2000.0 / MAX_LIN_SPEED / dt;
+  float diffLR = dbeta * 1000.0 * TRACK / MAX_LIN_SPEED / dt;
+
+  float expLeft = (sumLR + diffLR) / 2;
+  float expRight = (sumLR - diffLR) / 2;
+
+  float lambda = min(1, 1 / max(abs(expLeft), abs(expRight)));
+  l = expLeft * lambda;
+  r = expRight * lambda;
+
+  DEBUG_PRINT(F("// beta:"));
+  DEBUG_PRINT(_expectedYaw * 180 / PI);
+  DEBUG_PRINT(F(" dbeta:"));
+  DEBUG_PRINT(dbeta * 180 / PI);
+  DEBUG_PRINT(F(" sumLR:"));
+  DEBUG_PRINT(sumLR);
+  DEBUG_PRINT(F(" diffLR:"));
+  DEBUG_PRINT(diffLR);
+  DEBUG_PRINT(F(" expL:"));
+  DEBUG_PRINT(expLeft);
+  DEBUG_PRINT(F(" expR:"));
+  DEBUG_PRINT(expRight);
+  DEBUG_PRINT(F(" lambda:"));
+  DEBUG_PRINT(lambda);
+  DEBUG_PRINTLN();
+
+  power(l, r);
+  DEBUG_PRINT(F("// left:"));
+  DEBUG_PRINT(l);
+  DEBUG_PRINT(F(" right:"));
+  DEBUG_PRINT(r);
+  DEBUG_PRINTLN();
   return *this;
 }
 
 /*
 
 */
-MotionCtrl& MotionCtrl::power(int left, int right) {
+MotionCtrl& MotionCtrl::power(float left, float right) {
   /*
     DEBUG_PRINT("// Power ");
     DEBUG_PRINT(left);
@@ -146,4 +166,5 @@ MotionCtrl& MotionCtrl::power(int left, int right) {
   */
   _leftMotor.speed(left);
   _rightMotor.speed(right);
+  _sensors.setDirection(left, right);
 }

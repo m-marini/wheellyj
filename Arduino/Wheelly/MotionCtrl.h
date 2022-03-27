@@ -2,59 +2,56 @@
 #define MotionCtrl_h
 
 #include "MotorCtrl.h"
+#include "MotionSensor.h"
 #include "Timer.h"
-
-/*
-   Motor speeds
-*/
-#define MAX_FORWARD   255
-#define MAX_BACKWARD  -255
 
 /*
    Multiplexer
 */
 class MotionCtrl {
   public:
-    MotionCtrl(byte leftForwPin, byte leftBackPin, byte rightForwPin, byte rightBackPin);
+    MotionCtrl(byte leftForwPin, byte leftBackPin, byte rightForwPin, byte rightBackPin, byte leftSensorPin, byte rightSensorPin);
     MotionCtrl& begin();
     MotionCtrl& polling(unsigned long clockTime = millis());
-    MotionCtrl& speed(int left, int right);
-    MotionCtrl& yaw(float yaw) {
-      _yaw = yaw;
-      return *this;
-    };
-    MotionCtrl& assetTime(unsigned long value) {
-      _assetTime = value;
-      return *this;
-    };
+    MotionCtrl& speed(float left, float right);
+    MotionCtrl& reset();
+    
 
-    const int leftSpeed() const {
-      return _leftSpeed;
+    const float x() const {
+      return _sensors.x();
     }
-    const int rightSpeed() const {
-      return _rightSpeed;
+    const float y() const {
+      return _sensors.y();
+    }
+    const float angle() const {
+      return _sensors.angle();
+    }
+    const float left() const {
+      return _left;
+    }
+    const float right() const {
+      return _right;
     }
     const boolean isForward() const {
-      return _leftSpeed > 0 || _rightSpeed > 0;
+      return _left > 0 || _right > 0;
     }
 
 
   private:
     MotorCtrl _leftMotor;
     MotorCtrl _rightMotor;
-    float _komega;
-    float _kpower;
+    MotionSensor _sensors;
     Timer _stopTimer;
-    float _yaw;
     float _expectedYaw;
-    int _leftSpeed;
-    int _rightSpeed;
-    unsigned long _assetTime;
+    float _expectedX;
+    float _expectedY;
+    float _left;
+    float _right;
     unsigned long _prevTime;
     bool _assetControl;
 
-    MotionCtrl& power(int left, int right);
-    MotionCtrl& computePower(unsigned long clockTime = millis());
+    MotionCtrl& power(float left, float right);
+    MotionCtrl& computePower(unsigned long dt);
 };
 
 #endif
