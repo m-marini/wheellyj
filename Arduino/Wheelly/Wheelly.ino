@@ -87,7 +87,7 @@
 /*
    Voltage scale
 */
-#define VOLTAGE_SCALE (5.0 * 3 / 1023)
+#define VOLTAGE_SCALE (4.75 * 3 / 1023)
 
 /*
    Command parser
@@ -475,7 +475,7 @@ void sendSample(int distance) {
   Serial.print(F(" "));
   Serial.print(scanDirections[scanIndex] - 90);
   Serial.print(F(" "));
-  Serial.print(distance * 0.001, 3);
+  Serial.print(distance * 0.01, 2);
   Serial.print(F(" "));
   Serial.print(motionController.x(), 3);
   Serial.print(F(" "));
@@ -576,9 +576,11 @@ void sendStatus() {
   Serial.print(F(" "));
   Serial.print(motionController.right(), 3);
   Serial.print(F(" "));
+  Serial.print(canMoveForward());
+  Serial.print(F(" "));
   Serial.print(voltageTime);
   Serial.print(F(" "));
-  Serial.print(voltageValue * VOLTAGE_SCALE);
+  Serial.print(VOLTAGE_SCALE * voltageValue);
   Serial.print(F(" "));
   Serial.print(statsTime);
   Serial.print(F(" "));

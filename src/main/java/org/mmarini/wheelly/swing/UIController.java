@@ -34,6 +34,7 @@ import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.BackpressureStrategy;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.schedulers.Timed;
+import org.mmarini.wheelly.model.ProxySample;
 import org.mmarini.wheelly.model.RawController;
 import org.mmarini.wheelly.model.RobotController;
 import org.mmarini.wheelly.model.WheellyStatus;
@@ -47,10 +48,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Optional;
-import java.util.stream.IntStream;
 
-import static org.mmarini.Utils.getValue;
 import static org.mmarini.wheelly.swing.RxJoystick.NONE_CONTROLLER;
 import static org.mmarini.yaml.Utils.fromFile;
 
@@ -59,31 +57,15 @@ import static org.mmarini.yaml.Utils.fromFile;
  */
 public class UIController {
     public static final String DEFAULT_BASE_URL = "http://192.168.1.10/api/v1/wheelly";
-    public static final int MAX_DISTANCE = 400;
-    public static final int FORWARD_DIRECTION = 90;
     private static final String CONFIG_FILE = ".wheelly.yml";
     private static final Logger logger = LoggerFactory.getLogger(UIController.class);
+    private static final int FORWARD_DIRECTION = 0;
 
     /**
      *
      */
     public static UIController create() {
         return new UIController();
-    }
-
-    /**
-     * @param s
-     * @return
-     */
-    private static boolean isBlockDistance(WheellyStatus s) {
-        return IntStream.of(75, 90, 105)
-                .boxed()
-                .map(getValue(s.obstacles))
-                .flatMap(Optional::stream)
-                .map(Timed::value)
-                .filter(x -> x > 0 && x <= Dashboard.STOP_DISTANCE)
-                .findAny()
-                .isPresent();
     }
 
     private final PreferencesPane preferencesPane;
@@ -97,7 +79,7 @@ public class UIController {
     private Disposable connectionDisposable;
     private Disposable errorDisposable;
     private Disposable elapsDisposable;
-    private Disposable assetDisposable;
+    private Disposable proxyDisposable;
     private int port;
 
     /**
@@ -158,9 +140,9 @@ public class UIController {
             elapsDisposable.dispose();
             elapsDisposable = null;
         }
-        if (assetDisposable != null) {
-            assetDisposable.dispose();
-            assetDisposable = null;
+        if (proxyDisposable != null) {
+            proxyDisposable.dispose();
+            proxyDisposable = null;
         }
         flowBuilder.detach();
         return this;
@@ -180,6 +162,26 @@ public class UIController {
             host = preferencesPane.getBaseUrl();
             saveConfig();
         }
+    }
+
+    /**
+     * @param sample
+     */
+    private void handleProxySample(Timed<ProxySample> sample) {
+        dashboard.setProxy(sample);
+        ProxySample value = sample.value();
+        if (value.relativeDirection == FORWARD_DIRECTION) {
+            dashboard.setObstacleDistance(value.distance);
+        }
+        //radar.setSamples(s.obstacles);
+    }
+
+    private void handleStatusMessage(WheellyStatus s) {
+        dashboard.setPower(s.voltage.value());
+        dashboard.setMotors(s.motors.value()._1, s.motors.value()._2);
+        dashboard.setCps(s.cps.value());
+        dashboard.setForwardBlock(!s.canMoveForward.value());
+        dashboard.setAngle(s.asset.value().getAngle());
     }
 
     /**
@@ -209,17 +211,8 @@ public class UIController {
             RobotController controller = RawController.create(host, port);
             this.flowBuilder = FlowBuilder.create(controller, RxJoystickImpl.create(joystickPort)).build();
             this.statusDisposable = controller.readStatus()
-                    .doOnNext(s -> {
-                        dashboard.setPower(s.voltage.value());
-                        dashboard.setObstacleDistance(
-                                getValue(s.obstacles, FORWARD_DIRECTION)
-                                        .map(Timed::value)
-                                        .orElse(MAX_DISTANCE));
-                        dashboard.setMotors(s.direction.value()._1, s.direction.value()._2);
-                        dashboard.setForwardBlock(isBlockDistance(s));
-                        dashboard.setCps(s.cps.value());
-                        radar.setSamples(s.obstacles);
-                    }).subscribe();
+                    .doOnNext(this::handleStatusMessage)
+                    .subscribe();
             this.connectionDisposable = controller.readConnection()
                     .doOnNext(connected -> {
                         dashboard.setWifiLed(connected);
@@ -236,10 +229,10 @@ public class UIController {
                         frame.log(ex.getMessage());
                     })
                     .subscribe();
-            this.assetDisposable = controller.readAsset()
-                    .doOnNext(as -> {
-                        dashboard.setAsset(as);
-                    }).subscribe();
+            this.proxyDisposable = controller.readProxy()
+                    .doOnNext(this::handleProxySample)
+                    .doOnNext(dashboard::setProxy)
+                    .subscribe();
             controller.start();
         } catch (Exception ex) {
             logger.error(ex.getMessage(), ex);

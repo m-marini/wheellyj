@@ -84,8 +84,8 @@ public class RawController implements RobotController {
                 CLOCK_TIMEOUT, START_QUERY_INTERVAL, QUERIES_INTERVAL);
     }
 
-    private final PublishProcessor<Timed<RobotAsset>> assets;
     private final PublishProcessor<WheellyStatus> states;
+    private final PublishProcessor<Timed<ProxySample>> proxy;
     private final PublishProcessor<Throwable> localErrors;
     private final RemoteClockController clockController;
     private final ReliableSocket socket;
@@ -109,7 +109,7 @@ public class RawController implements RobotController {
         this.queriesInterval = queriesInterval;
         requireNonNull(host);
         this.socket = ReliableSocket.create(host, port, retryConnectionInterval);
-        this.assets = PublishProcessor.create();
+        this.proxy = PublishProcessor.create();
         this.states = PublishProcessor.create();
         this.localErrors = PublishProcessor.create();
         this.clockController = RemoteClockController.create(socket, numClockSamples, clockInterval, clockTimeout);
@@ -123,7 +123,7 @@ public class RawController implements RobotController {
     @Override
     public RawController close() {
         clockController.close();
-        assets.onComplete();
+        proxy.onComplete();
         states.onComplete();
         localErrors.onComplete();
         socket.close();
@@ -131,18 +131,19 @@ public class RawController implements RobotController {
     }
 
     @Override
-    public Flowable<Timed<RobotAsset>> readAsset() {
-        return assets;
-    }
-
-    @Override
     public Flowable<Boolean> readConnection() {
         return socket.readConnection();
     }
 
+
     @Override
     public Flowable<Throwable> readErrors() {
         return socket.readErrors().mergeWith(localErrors);
+    }
+
+    @Override
+    public Flowable<Timed<ProxySample>> readProxy() {
+        return this.proxy;
     }
 
     /**
@@ -176,15 +177,15 @@ public class RawController implements RobotController {
         // Transforms the received line into assets
         socket.readLines()
                 .map(Timed::value)
-                .filter(line -> line.startsWith("as "))
+                .filter(line -> line.startsWith("pr "))
                 .withLatestFrom(readRemoteClock(), Tuple2::of)
                 .doOnNext(t -> logger.debug("Read asset {}", t._1))
-                .map(t -> RobotAsset.from(t._1, t._2))
+                .map(t -> ProxySample.from(t._1, t._2))
                 .onErrorResumeNext(ex -> {
                     this.localErrors.onNext(ex);
                     return empty();
                 })
-                .subscribe(assets);
+                .subscribe(proxy);
 
         // Transforms the received line into states
         socket.readLines()
@@ -211,7 +212,7 @@ public class RawController implements RobotController {
 
         // Debugging flows
         if (logger.isDebugEnabled()) {
-            assets.subscribe(s -> logger.debug("Debug: asset {}", s));
+            proxy.subscribe(s -> logger.debug("Debug: proxy {}", s));
             states.subscribe(s -> logger.debug("Debug: status {}", s));
             localErrors.subscribe(s -> logger.debug("Debug: localErrors {}", s.getMessage()));
         }

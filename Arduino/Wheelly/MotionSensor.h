@@ -4,8 +4,8 @@
 #include "Arduino.h"
 
 #define PULSES_PER_ROOT     40
-#define WHEEL_DIAMETER      0.067
-#define TRACK               0.136
+#define WHEEL_DIAMETER      0.067f
+#define TRACK               0.136f
 
 #define DISTANCE_PER_PULSE  (WHEEL_DIAMETER * PI / PULSES_PER_ROOT)
 
