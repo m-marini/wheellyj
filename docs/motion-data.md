@@ -10,3 +10,7 @@
 - Rotazione completa del veicolo con velocità massima lineare dei motori in 2.033 giri per ruota (L / -R).
 - Velocità massima di rotazione del veicolo 5 giri / 6.75 s. = 0.741 giri/s (1.35 sec/giro, 4.66 RAD/s)
 - Velocità lineare massima = 427 * 0.741 = 316 mm/s
+
+- Velocità lineare massima con partenza da fermo per 1 sec 320 + 318 + 318 + 325 + 320 + 313 = 319 mm/s
+- Velocità massima di rotazione del veicolo 319 / 136 / 2 = 1.17 RAD/s (67 DEG/s)
+

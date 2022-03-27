@@ -1,17 +1,25 @@
 
 #include <Wire.h>
 
+//#define DEBUG
 #include "debug.h"
 #include "Timer.h"
 #include "SR04.h"
 #include "AsyncServo.h"
 #include "I2Cdev.h"
+
+//#define WITH_IMU
+
+#ifdef WITH_IMU
 #include "IMU.h"
+#endif
+
 #include "MotionCtrl.h"
 
 /*
    Pins
 */
+#define LEFT_PIN        2
 #define RIGHT_FORW_PIN  3
 #define BLOCK_LED_PIN   4
 #define RIGHT_BACK_PIN  5
@@ -19,6 +27,7 @@
 #define ECHO_PIN        7
 #define TRIGGER_PIN     8
 #define SERVO_PIN       9
+#define RIGHT_PIN       10
 #define LEFT_FORW_PIN   11
 #define PROXY_LED_PIN   12
 #define VOLTAGE_PIN     A3
@@ -78,6 +87,11 @@
 #define BLOCK_PULSE_DIVIDER  11
 
 /*
+   Voltage scale
+*/
+#define VOLTAGE_SCALE (5.0 * 3 / 1023)
+
+/*
    Command parser
 */
 char line[LINE_SIZE];
@@ -114,7 +128,7 @@ unsigned long scanTimes[NO_SCAN_DIRECTIONS];
    Movement motors
    Motor speeds [left, right] by direction
 */
-MotionCtrl motionController(LEFT_FORW_PIN, LEFT_BACK_PIN, RIGHT_FORW_PIN, RIGHT_BACK_PIN);
+MotionCtrl motionController(LEFT_FORW_PIN, LEFT_BACK_PIN, RIGHT_FORW_PIN, RIGHT_BACK_PIN, LEFT_PIN, RIGHT_PIN);
 
 /*
    Statistics
@@ -133,9 +147,11 @@ int voltageValue;
 /*
    Gyrosc
 */
+#ifdef WITH_IMU
 MPU6050 mpu;
 IMU imu(mpu);
 bool imuFailure;
+#endif
 
 /*
    Set up
@@ -168,6 +184,7 @@ void setup() {
   digitalWrite(RIGHT_FORW_PIN, LOW);
   digitalWrite(RIGHT_BACK_PIN, LOW);
 
+#ifdef WITH_IMU
   /*
      Init IMU
   */
@@ -179,6 +196,8 @@ void setup() {
   .calibrate()
   .enableDMP()
   .reset();
+#endif
+
   Serial.println();
 
   /*
@@ -236,7 +255,9 @@ void setup() {
 
   // Final setup
   Serial.println(F("ha"));
+#ifdef WITH_IMU
   imu.reset();
+#endif
   serialFlush();
 }
 
@@ -245,7 +266,11 @@ void setup() {
 */
 void loop() {
   unsigned long now = millis();
+
+#ifdef WITH_IMU
   imu.polling(now);
+#endif
+
   counter++;
   voltageTime = now;
   voltageValue = analogRead(VOLTAGE_PIN);
@@ -261,8 +286,6 @@ void loop() {
   queriesTimer.polling(now);
 
   motionController
-  .assetTime(imu.lastTime())
-  .yaw(imu.ypr()[0])
   .polling(now);
 
   pollSerialPort();
@@ -279,6 +302,8 @@ void pollSerialPort() {
     processCommand(time);
   }
 }
+
+#ifdef WITH_IMU
 
 /*
 
@@ -297,6 +322,7 @@ void handleWatchDog(void*, IMU& imu) {
   imu.reset()
   .kickAt(micros() + 1000000ul);
 }
+#endif
 
 /*
   Handles timeout event from statistics timer
@@ -322,7 +348,11 @@ void handleQuery(void *, unsigned long) {
    Handles the led timer
 */
 void handleLedTimer(void *, unsigned long n) {
+#ifdef WITH_IMU
   unsigned long ledDivider = imuFailure ? LED_FAST_PULSE_DIVIDER : LED_PULSE_DIVIDER;
+#else
+  unsigned long ledDivider = LED_PULSE_DIVIDER;
+#endif
   digitalWrite(LED_BUILTIN, (n % ledDivider) == 0 ? HIGH : LOW);
   digitalWrite(BLOCK_LED_PIN, !canMoveForward() &&  (n % BLOCK_PULSE_DIVIDER) == 0 ? HIGH : LOW);
 }
@@ -334,7 +364,7 @@ void handleObstacleTimer(void *, unsigned long i) {
   static unsigned long last = 0;
   int distance = distances[FRONT_SCAN_INDEX];
   if (distance == 0 || distance > WARN_DISTANCE) {
-    digitalWrite(PROXY_LED_PIN, LOW);    
+    digitalWrite(PROXY_LED_PIN, LOW);
   } else if (distance <= STOP_DISTANCE) {
     digitalWrite(PROXY_LED_PIN, HIGH);
     last = i;
@@ -361,9 +391,8 @@ void handleMtCommand(const char* parms) {
     Serial.println(F("!! Wrong arg[1]"));
     return;
   }
-  int left = min(max(MAX_BACKWARD, int(args.substring(0 , s1).toInt())), MAX_FORWARD);
-  int right = min(max(MAX_BACKWARD, int(args.substring(s1 + 1).toInt())), MAX_FORWARD);
-
+  float left = min(max(-1.0, args.substring(0 , s1).toFloat()), 1.0);
+  float right = min(max(-1.0, args.substring(s1 + 1).toFloat()), 1.0);
   if (isForward(left, right) && !canMoveForward()) {
     left = right = 0;
   }
@@ -417,6 +446,8 @@ void processCommand(unsigned long time) {
   strtrim(line, line);
   if (strncmp(line, "ck ", 3) == 0) {
     sendClock(line, time);
+  } else if (strcmp(line, "rs") == 0) {
+    resetWhelly();
   } else if (strcmp(line, "sc") == 0) {
     startFullScanning();
   } else if (strncmp(line, "sq ", 3) == 0) {
@@ -433,9 +464,17 @@ void processCommand(unsigned long time) {
 }
 
 /*
+   Reset Wheelly
+*/
+void resetWhelly() {
+  motionController.reset();
+}
+
+/*
 
 */
 void sendAsset() {
+#ifdef WITH_IMU
   Serial.print(F("as "));
   Serial.print(imu.status());
   Serial.print(F(" "));
@@ -452,7 +491,20 @@ void sendAsset() {
   printVect(imu.ypr());
   Serial.print(F(" "));
   Serial.print(imu.vx());
+  Serial.print(F(" "));
+  Serial.print(motionController.x());
+  Serial.print(F(" "));
+  Serial.print(motionController.y());
   Serial.println();
+#else
+  Serial.print(F("as 0 0 0 0 0 0 "));
+  Serial.print(motionController.angle());
+  Serial.print(F(" 0 0 0 "));
+  Serial.print(motionController.x());
+  Serial.print(F(" "));
+  Serial.print(motionController.y());
+  Serial.println();
+#endif
 }
 
 /*
@@ -501,7 +553,7 @@ char *strtrim(char *out, const char *from) {
 /*
    Returns true if forward direction
 */
-bool isForward(int left, int right) {
+bool isForward(float left, float right) {
   return left > 0 || right > 0;
 }
 
@@ -543,9 +595,9 @@ void sendStatus() {
   Serial.print(F("st "));
   Serial.print(millis());
   Serial.print(F(" "));
-  Serial.print(motionController.leftSpeed());
+  Serial.print(motionController.left());
   Serial.print(F(" "));
-  Serial.print(motionController.rightSpeed());
+  Serial.print(motionController.right());
   Serial.print(F(" "));
   for (int i = 0; i < NO_SCAN_DIRECTIONS; i++) {
     Serial.print(scanTimes[i]);
@@ -557,7 +609,7 @@ void sendStatus() {
   }
   Serial.print(voltageTime);
   Serial.print(F(" "));
-  Serial.print(voltageValue);
+  Serial.print(voltageValue * VOLTAGE_SCALE);
   Serial.print(F(" "));
   Serial.print(statsTime);
   Serial.print(F(" "));
