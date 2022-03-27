@@ -19,3 +19,4 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #13: Add direct socket connection
 - Issue #16: Motion control through trim
 - Issue #18: Automatic send of status and asset
+- Issue #19: Speed sensor management
