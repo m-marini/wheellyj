@@ -159,8 +159,8 @@ public class RawController implements RobotController {
     }
 
     @Override
-    public RawController scan(Flowable<?> commands) {
-        return sendCommands(commands.map(x -> "sc"));
+    public RawController scan(Flowable<Integer> commands) {
+        return sendCommands(commands.map(x -> "sc " + x));
     }
 
     /**
@@ -207,7 +207,7 @@ public class RawController implements RobotController {
                 .concatMap(n -> {
                     logger.debug("Ready to start query commands");
                     return interval(0, startQueryInterval, TimeUnit.MILLISECONDS)
-                            .map(x -> "sq " + queriesInterval);
+                            .map(x -> "sq " + queriesInterval).startWithItem("rs");
                 }));
 
         // Debugging flows

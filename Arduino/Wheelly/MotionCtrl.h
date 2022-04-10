@@ -15,7 +15,7 @@ class MotionCtrl {
     MotionCtrl& polling(unsigned long clockTime = millis());
     MotionCtrl& speed(float left, float right);
     MotionCtrl& reset();
-    
+    MotionCtrl& handleMotion(unsigned long clockTime);
 
     const float x() const {
       return _sensors.x();
@@ -42,18 +42,14 @@ class MotionCtrl {
     MotorCtrl _rightMotor;
     MotionSensor _sensors;
     Timer _stopTimer;
-    float _expectedYaw;
-    float _expectedX;
-    float _expectedY;
+    Timer _checkTimer;
     float _left;
     float _right;
     float _leftSpeed;
     float _rightSpeed;
     unsigned long _prevTime;
-    bool _assetControl;
 
-    MotionCtrl& power(unsigned long dt, float left, float right);
-    MotionCtrl& computePower(unsigned long dt);
+    MotionCtrl& power(float left, float right);
 };
 
 #endif

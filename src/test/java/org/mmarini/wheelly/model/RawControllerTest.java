@@ -86,21 +86,4 @@ class RawControllerTest {
         controller.close();
         Thread.sleep(3000);
     }
-
-    @Test
-    void scan() throws IOException, InterruptedException {
-        RawController controller = RawController.create(HOST, PORT,
-                10,
-                3000,
-                3000,
-                1000,
-                300000,
-                300);
-        controller.start();
-        controller.scan(Flowable.interval(500, 4000, TimeUnit.MILLISECONDS)
-                .take(2));
-        Thread.sleep(10000);
-        controller.close();
-        Thread.sleep(3000);
-    }
 }

@@ -35,6 +35,9 @@ import java.awt.*;
 import static java.awt.Color.*;
 import static java.lang.Math.*;
 
+/**
+ *
+ */
 public class Compass extends JComponent {
     private static final Color COMPASS_BACKGROUND = BLACK;
     private static final int MINOR_DEG_STEP = 5;
@@ -44,7 +47,7 @@ public class Compass extends JComponent {
     private static final Color PROTRACTOR_COLOR = WHITE;
     private static final Color ROSE_COLOR = GRAY;
     private static final Color NEEDLE_COLOR = RED;
-    private float angle;
+    private double angle;
 
     public Compass() {
         setBackground(BLACK);
@@ -93,7 +96,11 @@ public class Compass extends JComponent {
         g.drawLine(xc, yc, x3, y3);
     }
 
-    public void setAngle(float angle) {
+    /**
+     *
+     * @param angle the angle in RAD
+     */
+    public void setAngle(double angle) {
         this.angle = angle;
         repaint();
     }

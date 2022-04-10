@@ -39,8 +39,7 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static io.reactivex.rxjava3.core.Flowable.combineLatest;
-import static io.reactivex.rxjava3.core.Flowable.interval;
+import static io.reactivex.rxjava3.core.Flowable.*;
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
 
@@ -48,9 +47,8 @@ import static java.util.Objects.requireNonNull;
  * The builder of process flowables
  */
 public class FlowBuilder {
-    private static final long MOTOR_INTERVAL = 1000;
+    private static final long MOTOR_INTERVAL = 500;
     private static final Logger logger = LoggerFactory.getLogger(FlowBuilder.class);
-    private static final int MAX_MOTOR_SPEED = 255;
     private static final int NUM_MOTOR_SPEED = 11;
     private static final long MIN_MOTOR_INTERVAL = 200;
 
@@ -69,9 +67,9 @@ public class FlowBuilder {
      *
      * @param tuples the tuple list with speeds
      */
-    private static boolean isMoving(List<Tuple2<Float, Float>> tuples) {
-        Tuple2<Float, Float> m0 = tuples.get(0);
-        Tuple2<Float, Float> m1 = tuples.get(1);
+    private static boolean isMoving(List<Tuple2<Double, Double>> tuples) {
+        Tuple2<Double, Double> m0 = tuples.get(0);
+        Tuple2<Double, Double> m1 = tuples.get(1);
         return !(m0._1 == 0 && m0._2 == 0 && m1._1 == 0 && m1._2 == 0);
     }
 
@@ -80,18 +78,18 @@ public class FlowBuilder {
      *
      * @param tuples the tuple list with speeds
      */
-    private static boolean isSpeedChanged(List<Tuple2<Float, Float>> tuples) {
-        Tuple2<Float, Float> m0 = tuples.get(0);
-        Tuple2<Float, Float> m1 = tuples.get(1);
+    private static boolean isSpeedChanged(List<Tuple2<Double, Double>> tuples) {
+        Tuple2<Double, Double> m0 = tuples.get(0);
+        Tuple2<Double, Double> m1 = tuples.get(1);
         return !m0.equals(m1);
     }
 
-    static Tuple2<Float, Float> speedFromAxis(Tuple2<Float, Float> xy) {
-        float x = (float) round(xy._1 * (NUM_MOTOR_SPEED - 1)) / (NUM_MOTOR_SPEED - 1);
-        float y = (float) round(xy._2 * (NUM_MOTOR_SPEED - 1)) / (NUM_MOTOR_SPEED - 1);
-        float ax = abs(x);
-        float ay = abs(y);
-        float value = max(ax, ay);
+    static Tuple2<Double, Double> speedFromAxis(Tuple2<Float, Float> xy) {
+        double x = (double) round(xy._1 * (NUM_MOTOR_SPEED - 1)) / (NUM_MOTOR_SPEED - 1);
+        double y = (double) round(xy._2 * (NUM_MOTOR_SPEED - 1)) / (NUM_MOTOR_SPEED - 1);
+        double ax = abs(x);
+        double ay = abs(y);
+        double value = max(ax, ay);
         if (value > 0) {
             if (ay >= ax) {
                 if (y < 0) {
@@ -135,7 +133,7 @@ public class FlowBuilder {
                 }
             }
         }
-        return Tuple2.of(0f, 0f);
+        return Tuple2.of(0d, 0d);
     }
 
     private final RobotController controller;
@@ -162,7 +160,7 @@ public class FlowBuilder {
         controller.activateMotors(moveToFlow);
 
         // Scan command
-        Flowable<Float> scanCommand = createScannerCommand();
+        Flowable<Integer> scanCommand = createScannerCommand();
         controller.scan(scanCommand);
 
         return this;
@@ -171,7 +169,7 @@ public class FlowBuilder {
     /**
      * Creates a flowable of motor speeds from joystick events
      */
-    private Flowable<Tuple2<Float, Float>> createJoystickDirCommand() {
+    private Flowable<Tuple2<Double, Double>> createJoystickDirCommand() {
         logger.debug("Creating joystick command ...");
         return joystick.readXY()
                 .map(FlowBuilder::speedFromAxis)
@@ -184,6 +182,7 @@ public class FlowBuilder {
      * Returns the flowable of motor commands
      */
     private Flowable<MotorCommand> createMotorCommand() {
+        /*
         return combineLatest(
                 interval(0, MOTOR_INTERVAL, TimeUnit.MILLISECONDS),
                 createJoystickDirCommand(),
@@ -193,19 +192,51 @@ public class FlowBuilder {
                 .filter(FlowBuilder::isMoving)
                 .map(x -> x.get(1))
                 .map(t -> MotorCommand.create(t._1, t._2));
+
+         */
+        return combineLatest(
+                interval(0, MOTOR_INTERVAL, TimeUnit.MILLISECONDS),
+                createJoystickDirCommand()
+                        .onBackpressureDrop()
+                        .buffer(2, 1)
+                        .filter(FlowBuilder::isMoving)
+                        .map(x -> x.get(1)),
+                (i, cmd) -> cmd)
+                .map(t -> MotorCommand.create(t._1, t._2))
+                .doOnNext(c -> logger.debug("createMotorCommand {}", c));
     }
 
     /**
      * Create the flow of scan command results
      */
-    private Flowable<Float> createScannerCommand() {
+    private Flowable<Integer> createScannerCommand() {
         //noinspection unchecked
-        return Flowable.mergeArray(
-                        joystick.readValues(RxJoystick.BUTTON_0),
-                        joystick.readValues(RxJoystick.BUTTON_1),
-                        joystick.readValues(RxJoystick.BUTTON_2),
-                        joystick.readValues(RxJoystick.BUTTON_3))
-                .filter(x -> x > 0f);
+        Flowable<Integer> povAngle = joystick.readValues(RxJoystick.POV)
+                .map(x -> {
+                    switch ((int) (x * 8)) {
+                        case 1:
+                            return -45;
+                        case 3:
+                            return 45;
+                        case 4:
+                            return 90;
+                        case 8:
+                            return -90;
+                        default:
+                            return 0;
+                    }
+                })
+                .distinctUntilChanged();
+        Flowable<Integer> povCommand = combineLatest(interval(500, TimeUnit.MILLISECONDS),
+                povAngle, (a, b) -> b);
+        Flowable<Integer> fullScann = mergeArray(
+                joystick.readValues(RxJoystick.BUTTON_0),
+                joystick.readValues(RxJoystick.BUTTON_1),
+                joystick.readValues(RxJoystick.BUTTON_2),
+                joystick.readValues(RxJoystick.BUTTON_3))
+                .filter(x -> x > 0f)
+                .concatMap(x -> just(-90, -60, -30, 0, 30, 60, 90, 0));
+        return merge(povCommand, fullScann);
     }
 
     /**

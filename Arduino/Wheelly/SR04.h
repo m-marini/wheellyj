@@ -21,7 +21,7 @@ class SR04 {
     SR04& noSamples(int noSamples);
 
     // Starts the sampling
-    SR04& start(void *context = NULL);
+    SR04& start();
 
     // Stops the sampling
     SR04& stop();
@@ -30,7 +30,7 @@ class SR04 {
     bool operator!() const {return _sampling;}
 
     // Sets the callback 
-    SR04& onSample(void (*callback)(void* context, int distance));
+    SR04& onSample(void (*callback)(void* context, int distance), void* context = NULL);
 
     // Polls the timer
     SR04& polling(unsigned long clockTime = millis());
@@ -40,12 +40,12 @@ class SR04 {
     unsigned long _inactivity;
     byte _triggerPin;
     byte _echoPin;
-    int _noSamples;
+    byte _noSamples;
     void (*_onSample)(void*, int);
 
     bool _sampling;
-    int _noMeasures;
-    int _noValidSamples;
+    byte _noMeasures;
+    byte _noValidSamples;
     unsigned long _totalDuration;
     void* _context;
     Timer _timer;

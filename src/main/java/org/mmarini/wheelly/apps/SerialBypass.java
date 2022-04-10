@@ -27,11 +27,12 @@
  *
  */
 
-package org.mmarini.wheelly.model;
+package org.mmarini.wheelly.apps;
 
 import jssc.SerialPort;
 import jssc.SerialPortException;
 import jssc.SerialPortList;
+import org.mmarini.wheelly.model.RxSerialPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

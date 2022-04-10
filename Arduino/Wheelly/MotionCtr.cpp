@@ -3,13 +3,14 @@
 //#define DEBUG
 #include "debug.h"
 
-#define MOTOR_SAFE_INTERVAL 1000ul
+#define MOTOR_SAFE_INTERVAL 10000ul
+#define MOTOR_CHECK_INTERVAL 300ul
 
-#define MOTOR_REACTION_TIME 10ul
+#define MOTOR_FILTER_TIME 0.1f
 
-#define MOTOR_FILTER_TIME 0.5f
+#define MAX_LIN_SPEED 0.280f
 
-#define MAX_LIN_SPEED 0.319f
+#define GAIN 0.3
 
 const float leftXCorrection[] = { -1,  -0.06055, 0, 0.02311, 1};
 const float leftYCorrection[] = { -1, -0.30432, 0, 0.12577, 1};
@@ -23,6 +24,24 @@ MotionCtrl::MotionCtrl(byte leftForwPin, byte leftBackPin, byte rightForwPin, by
   : _leftMotor(leftForwPin, leftBackPin),
     _rightMotor(rightForwPin, rightBackPin),
     _sensors(leftSensorPin, rightSensorPin) {
+
+  _sensors.setOnChange([](void*context, unsigned long clockTime, MotionSensor&) {
+    DEBUG_PRINTLN("// Motor sensors triggered");
+    ((MotionCtrl *)context)-> handleMotion(clockTime);
+  }, this);
+
+  _stopTimer.interval(MOTOR_SAFE_INTERVAL)
+  .onNext([](void *ctx, unsigned long) {
+    DEBUG_PRINTLN("// Motor timer triggered");
+    ((MotionCtrl*)ctx)->speed(0, 0);
+  }, this);
+
+  _checkTimer.interval(MOTOR_CHECK_INTERVAL)
+  .continuous(true)
+  .onNext([](void *ctx, unsigned long) {
+    DEBUG_PRINTLN("// Motor check timer triggered");
+    ((MotionCtrl*)ctx)->handleMotion(millis());
+  }, this);
 }
 
 /*
@@ -34,10 +53,7 @@ MotionCtrl& MotionCtrl::begin() {
   _sensors.begin();
 
   DEBUG_PRINTLN(F("// Motion controller begin"));
-  _stopTimer.interval(MOTOR_SAFE_INTERVAL).onNext([](void *ctx, unsigned long) {
-    DEBUG_PRINTLN("// Motor timer triggered");
-    ((MotionCtrl*)ctx)->speed(0, 0);
-  });
+
   speed(0, 0);
   return *this;
 }
@@ -54,20 +70,31 @@ MotionCtrl& MotionCtrl::reset() {
   Sets the motion speeds
 */
 MotionCtrl& MotionCtrl::speed(float left, float right) {
+  DEBUG_PRINT(F("// MotionCtrl::speed "));
+  DEBUG_PRINT(left);
+  DEBUG_PRINT(F(" "));
+  DEBUG_PRINT(right);
+  DEBUG_PRINTLN();
+
+  bool stopped = _left == 0 && _right == 0;
   _left = left;
   _right = right;
-
-  unsigned long now = millis();
-  if (_left != 0 && _right != 0) {
-    _stopTimer.start(this);
-    _prevTime = now;
-    _expectedYaw = _sensors.angle();
-    _expectedX = _sensors.x();
-    _expectedY = _sensors.y();
-  } else {
+  //power(_left, _right);
+  if (stopped) {
+    if (left != 0 || right != 0) {
+      _stopTimer.start();
+      _checkTimer.start();
+    }
+    power(_left, _right);
+  } else if (_left == 0 && _right == 0) {
+    // stop
+    power(0, 0);
     _stopTimer.stop();
+    _checkTimer.stop();
+  } else {
+    _stopTimer.restart();
+    handleMotion(millis());
   }
-  power(0, _left, _right);
 }
 
 /*
@@ -76,107 +103,62 @@ MotionCtrl& MotionCtrl::speed(float left, float right) {
 MotionCtrl& MotionCtrl::polling(unsigned long clockTime) {
   _sensors.polling(clockTime);
   _stopTimer.polling(clockTime);
-
-  // Computes exepected asset
-  if (_left != 0 && _right != 0) {
-    unsigned long dt = clockTime - _prevTime;
-    if (dt > MOTOR_REACTION_TIME) {
-      float ds = (_left + _right) * MAX_LIN_SPEED * dt / 2000;
-      _expectedX += ds * cosf(_expectedYaw);
-      _expectedY += ds * sinf(_expectedYaw);
-
-      float dyaw = (_left - _right) * MAX_LIN_SPEED * dt / 1000 / TRACK;
-      _expectedYaw = normAngle(_expectedYaw + dyaw);
-      DEBUG_PRINT(F("// dt:"));
-      DEBUG_PRINT(dt);
-      DEBUG_PRINT(F(" expX:"));
-      DEBUG_PRINT(_expectedX);
-      DEBUG_PRINT(F(" expY:"));
-      DEBUG_PRINT(_expectedY);
-      DEBUG_PRINT(F(" expYaw:"));
-      DEBUG_PRINT(_expectedYaw * 180 / PI);
-      DEBUG_PRINTLN();
-      computePower(dt);
-      _prevTime = clockTime;
-    }
-  }
+  _checkTimer.polling(clockTime);
 }
 
 /*
 
 */
-MotionCtrl& MotionCtrl::computePower(unsigned long dt) {
-  float dx = _expectedX - _sensors.x();
-  float dy = _expectedY - _sensors.y();
-  float alpha = _sensors.angle();
-  float dq = dx * cos(alpha) + dy * sin(alpha);
-  float dbeta = normAngle(_expectedYaw - alpha);
-  float l = 0, r = 0;
-  DEBUG_PRINT(F("// dx:"));
-  DEBUG_PRINT(dx);
-  DEBUG_PRINT(F(" dy:"));
-  DEBUG_PRINT(dy);
-  DEBUG_PRINT(F(" dq:"));
-  DEBUG_PRINT(dq);
-  DEBUG_PRINT(F(" alpha:"));
-  DEBUG_PRINT(_sensors.angle() * 180 / PI);
+MotionCtrl& MotionCtrl::handleMotion(unsigned long clockTime) {
+  unsigned long dt = clockTime - _prevTime;
+  DEBUG_PRINT(F("// MotionCtrl::handleMotion "));
+  DEBUG_PRINT(clockTime);
+  DEBUG_PRINT(F(", dt: "));
+  DEBUG_PRINT(dt);
+  DEBUG_PRINT(F(", left: "));
+  DEBUG_PRINT(_left);
+  DEBUG_PRINT(F(", right: "));
+  DEBUG_PRINT(_right);
   DEBUG_PRINTLN();
 
-  float sumLR = dq * 2000.0 / MAX_LIN_SPEED / dt;
-  float diffLR = dbeta * 1000.0 * TRACK / MAX_LIN_SPEED / dt;
+  if ((_left != 0 || _right != 0) && dt > 0) {
+    float lSpeed = _sensors.leftSpeed() / MAX_LIN_SPEED;
+    float dvl = _left - lSpeed;
+    float left = min(max(_leftSpeed + GAIN * dvl, -1), 1);
 
-  float expLeft = (sumLR + diffLR) / 2;
-  float expRight = (sumLR - diffLR) / 2;
+    float rSpeed = _sensors.rightSpeed() / MAX_LIN_SPEED;
+    float dvr = _right - rSpeed;
+    float right = min(max(_rightSpeed + GAIN * dvr, -1), 1);
 
-  float lambda = min(1, 1 / max(abs(expLeft), abs(expRight)));
-  l = expLeft * lambda;
-  r = expRight * lambda;
+    DEBUG_PRINT(F("// MotionCtrl::handleMotion lSpeed:"));
+    DEBUG_PRINT(lSpeed);
+    DEBUG_PRINT(F(", rSpeed:"));
+    DEBUG_PRINT(rSpeed);
+    DEBUG_PRINTLN();
 
-  DEBUG_PRINT(F("// beta:"));
-  DEBUG_PRINT(_expectedYaw * 180 / PI);
-  DEBUG_PRINT(F(" dbeta:"));
-  DEBUG_PRINT(dbeta * 180 / PI);
-  DEBUG_PRINT(F(" sumLR:"));
-  DEBUG_PRINT(sumLR);
-  DEBUG_PRINT(F(" diffLR:"));
-  DEBUG_PRINT(diffLR);
-  DEBUG_PRINT(F(" expL:"));
-  DEBUG_PRINT(expLeft);
-  DEBUG_PRINT(F(" expR:"));
-  DEBUG_PRINT(expRight);
-  DEBUG_PRINT(F(" lambda:"));
-  DEBUG_PRINT(lambda);
-  DEBUG_PRINTLN();
-
-  power(dt, l, r);
-  DEBUG_PRINT(F("// left:"));
-  DEBUG_PRINT(l);
-  DEBUG_PRINT(F(" right:"));
-  DEBUG_PRINT(r);
-  DEBUG_PRINTLN();
-  return *this;
-}
-
-/*
-
-*/
-MotionCtrl& MotionCtrl::power(unsigned long dt, float left, float right) {
-  /*
-    DEBUG_PRINT("// Power ");
-    DEBUG_PRINT(left);
-    DEBUG_PRINT(", ");
-    DEBUG_PRINTLN(right);
-  */
-
-  if (left == 0 && right == 0) {
-    _leftSpeed = _rightSpeed = 0;
-  } else {
     // Computes low frequence filtered speeds
     float alpha = min(dt * 1e-3 / MOTOR_FILTER_TIME, 1);
     float notAlpha = 1 - alpha;
-    _leftSpeed = _leftSpeed * notAlpha + left * alpha;
-    _rightSpeed = _rightSpeed * notAlpha + right * alpha;
+    left = _leftSpeed * notAlpha + left * alpha;
+    right = _rightSpeed * notAlpha + right * alpha;
+
+    power(left, right);
+    _prevTime = clockTime;
   }
+}
+
+/*
+
+*/
+MotionCtrl& MotionCtrl::power(float left, float right) {
+  DEBUG_PRINT("// MotionCtrl::power ");
+  DEBUG_PRINT(dt);
+  DEBUG_PRINT(", ");
+  DEBUG_PRINT(left);
+  DEBUG_PRINT(", ");
+  DEBUG_PRINTLN(right);
+  _leftSpeed = left;
+  _rightSpeed = right;
   _leftMotor.speed(_leftSpeed);
   _rightMotor.speed(_rightSpeed);
   _sensors.setDirection(_leftSpeed, _rightSpeed);

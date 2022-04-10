@@ -6,54 +6,64 @@
 #define MAX_INTERVALS 4
 
 /*
- * ASynchronous timer
- */
+   ASynchronous timer
+*/
 class Timer {
   public:
 
-    Timer();
+    Timer() {};
 
     // Sets a single interval
-    Timer& interval(unsigned long interval);
+    Timer& interval(unsigned long interval) {
+      _interval = interval;
+      return *this;
+    }
 
     // Sets true if continuos events
-    Timer& continuous(boolean cont);
+    Timer& continuous(boolean cont)  {
+      _continuous = cont;
+      return *this;
+    }
+
 
     // Starts the timer
-    Timer& start(void *context = NULL);
+    Timer& start();
 
     // Starts the timer
-    Timer& start(void *context, unsigned long timeout);
-
-    // Starts the timer
-    Timer& start(unsigned long timeout) {return start(NULL, timeout);};
+    Timer& start(unsigned long timeout);
 
     // Stops the timer
     Timer& stop();
-  
+
     // Restarts the timer
     Timer& restart();
-  
+
     // Returns true if timer is not expired (is timing)
-    bool isRunning() const {return _running;}
+    bool isRunning() const {
+      return _running;
+    }
 
     // Returns the interval
-    unsigned long interval() const {return _interval;}
+    unsigned long interval() const {
+      return _interval;
+    }
 
-    // Sets the callback 
-    Timer& onNext(void (*callback)(void* context, unsigned long counter));
+    // Sets the callback
+    Timer& onNext(void (*callback)(void* context, unsigned long counter), void* context = NULL);
 
     // Polls the timer
     Timer& polling(unsigned long clockTime = millis());
 
-    unsigned long next() const {return _next;}
+    unsigned long next() const {
+      return _next;
+    }
 
   private:
     bool _continuous;
     unsigned long _interval;
     void (*_onNext)(void*, unsigned long);
     void *_context;
-    
+
     unsigned long _next;
     unsigned long _counter;
     boolean _running;

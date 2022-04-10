@@ -6,26 +6,27 @@
 #include <Servo.h>
 
 /*
- * Multiplexer
- */
+   Multiplexer
+*/
 class AsyncServo {
   public:
     AsyncServo();
-    AsyncServo& attach(int pin);
-    AsyncServo& onReached(void (*callback)(void *context, int angle));
-    AsyncServo& angle(void* context, int value);
-    AsyncServo& angle(int value) {return angle(NULL, value);}
+    AsyncServo& attach(byte pin);
+    AsyncServo& onReached(void (*callback)(void *context, byte angle), void* context = NULL);
+    AsyncServo& angle(byte value);
     AsyncServo& polling(unsigned long clockTime = millis());
     AsyncServo& offset(const int value);
-    
 
-    int angle() const {return _angle;}
+
+    byte angle() const {
+      return _angle;
+    }
 
   private:
     Servo _servo;
     Timer _timer;
-    void (*_onReached)(void *context, int angle);
-    int _angle;
+    void (*_onReached)(void *context, byte angle);
+    byte _angle;
     void *_context;
     int _offset;
 

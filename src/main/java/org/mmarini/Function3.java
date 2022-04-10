@@ -27,37 +27,19 @@
  *
  */
 
-package org.mmarini.wheelly.model;
+package org.mmarini;
 
-import jssc.SerialPort;
-import jssc.SerialPortException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-public class WheellySerialSim {
-    private static final Logger logger = LoggerFactory.getLogger(WheellySerialSim.class);
-
-    public static void main(String[] args) throws SerialPortException {
-        logger.info("Wheely simulator started.");
-        RxSerialPort port = RxSerialPort.create("COM7", SerialPort.BAUDRATE_115200);
-        /*
-        Monitor serial port
-         */
-        port.getLines()
-                .doOnError(ex -> logger.error(ex.getMessage(), ex))
-                .doOnNext(line -> logger.debug("<--{}", line))
-                .doOnComplete(port::disconnect)
-                .subscribe();
-
-        /*
-        Manage clock sync
-         */
-
-
-        port.connect();
-
-
-        port.getLines().blockingSubscribe();
-        logger.info("Wheely completed.");
-    }
+/**
+ * @param <T1>
+ * @param <T2>
+ * @param <T3>
+ * @param <R>
+ */
+public interface Function3<T1, T2, T3, R> {
+    /**
+     * @param t1
+     * @param t2
+     * @param t3
+     */
+    R apply(T1 t1, T2 t2, T3 t3);
 }

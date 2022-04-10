@@ -3,48 +3,31 @@
 /*
 
 */
-Timer::Timer() {
-}
-
-/*
-
-*/
-Timer& Timer::continuous(bool cont) {
-  _continuous = cont;
-  return *this;
-}
-
-/*
-
-*/
-Timer& Timer::interval(unsigned long interval) {
-  _interval = interval;
-  return *this;
-}
-
-/*
-
-*/
-Timer& Timer::start(void *context) {
-  return start(context, millis() + _interval);
-}
-
-/*
-
-*/
-Timer& Timer::start(void *context, unsigned long timeout) {
+Timer& Timer::start(unsigned long timeout) {
   _counter = 0;
   _next = timeout;
-  _context = context;
   _running = true;
   return *this;
 }
 
+/*
+
+*/
+Timer& Timer::start() {
+  return start(millis() + _interval);
+}
+
+/*
+
+*/
 Timer& Timer::stop() {
   _running = false;
   return *this;
 }
 
+/*
+
+*/
 Timer& Timer::restart() {
   if (_running) {
     _next = millis() + _interval;
@@ -52,6 +35,9 @@ Timer& Timer::restart() {
   return *this;
 }
 
+/*
+
+*/
 Timer& Timer::polling(unsigned long clockTime) {
   if (_running) {
     if (clockTime >= _next) {
@@ -70,7 +56,11 @@ Timer& Timer::polling(unsigned long clockTime) {
   return *this;
 }
 
-Timer& Timer::onNext(void (*callback)(void*, unsigned long)) {
+/*
+
+*/
+Timer& Timer::onNext(void (*callback)(void*, unsigned long), void* context) {
   _onNext = callback;
+  _context = context;
   return *this;
 }

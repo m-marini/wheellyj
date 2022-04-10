@@ -49,12 +49,11 @@ import static java.lang.String.format;
  */
 public class Dashboard extends JPanel {
 
-    public static final float MAX_DISTANCE = 3f;
-    public static final float STOP_DISTANCE = 0.2f;
-    public static final float WARN_DISTANCE = 0.4f;
-    public static final float INFO_DISTANCE = 0.6f;
-    public static final float MIN_VOLTAGE = 7f;
-    public static final float FULL_VOLTAGE = 12.6f;
+    public static final double STOP_DISTANCE = 0.2;
+    public static final double WARN_DISTANCE = 0.4;
+    public static final double INFO_DISTANCE = 0.6;
+    public static final double MIN_VOLTAGE = 7;
+    public static final double FULL_VOLTAGE = 12.6;
 
     private final Led leftForwardMotor;
     private final Led leftBackwardMotor;
@@ -73,7 +72,6 @@ public class Dashboard extends JPanel {
     private final JLabel cps;
     private final Flowable<ActionEvent> resetFlow;
     private final JLabel elaps;
-    private final JLabel xSpeed;
     private final JButton reset;
     private final JLabel yaw;
     private final Compass compass;
@@ -100,7 +98,6 @@ public class Dashboard extends JPanel {
         this.rightPower = new JLabel();
         this.cps = new JLabel();
         this.elaps = new JLabel();
-        this.xSpeed = new JLabel();
         this.yaw = new JLabel();
         this.reset = new JButton("Reset");
         this.imuStatus = Led.create("/images/engine-off.png", "/images/engine-on.png");
@@ -109,7 +106,6 @@ public class Dashboard extends JPanel {
         this.resetFlow = SwingObservable.actions(reset).toFlowable(BackpressureStrategy.DROP);
         setCps(0);
         setElapsed(0);
-        setXSpeed(0);
         setYaw(0);
 
         setBackground(BLACK);
@@ -124,8 +120,6 @@ public class Dashboard extends JPanel {
         leftPower.setForeground(WHITE);
         rightPower.setBackground(BLACK);
         rightPower.setForeground(WHITE);
-        xSpeed.setBackground(BLACK);
-        xSpeed.setForeground(WHITE);
         yaw.setBackground(BLACK);
         yaw.setForeground(WHITE);
 
@@ -140,7 +134,13 @@ public class Dashboard extends JPanel {
      *
      */
     private JPanel createAssetPanel() {
-        JPanel container = new GridLayoutHelper<>(new JPanel()).modify("insets,2 at,0,0 weight,1,1 fill center").add(compass).modify("at,0,1 nofill noweight").add(yaw).modify("at,0,2").add(xSpeed).modify("at,0,3").add(imuStatus).modify("at,0,4").add(imuFailure).modify("at,0,5").add(reset).getContainer();
+        JPanel container = new GridLayoutHelper<>(new JPanel())
+                .modify("insets,2 at,0,0 weight,1,1 fill center").add(compass)
+                .modify("at,0,1 nofill noweight").add(yaw)
+                .modify("at,0,3").add(imuStatus)
+                .modify("at,0,4").add(imuFailure)
+                .modify("at,0,5").add(reset)
+                .getContainer();
         container.setBackground(BLACK);
         return container;
     }
@@ -212,7 +212,7 @@ public class Dashboard extends JPanel {
     }
      */
 
-    void setAngle(float angle) {
+    void setAngle(double angle) {
         compass.setAngle(angle);
         setYaw(angle);
     }
@@ -260,7 +260,7 @@ public class Dashboard extends JPanel {
      * @param left  left speed
      * @param right right speed
      */
-    public void setMotors(float left, float right) {
+    public void setMotors(double left, double right) {
         if (left > 0) {
             leftForwardMotor.setValue(1);
             leftBackwardMotor.setValue(0);
@@ -288,9 +288,9 @@ public class Dashboard extends JPanel {
     /**
      * @param distance the distance
      */
-    public void setObstacleDistance(float distance) {
+    public void setObstacleDistance(double distance) {
         if (distance > 0) {
-            int barValue = min(max(round(100 * (INFO_DISTANCE - distance) / INFO_DISTANCE), 0), 100);
+            int barValue = min(max((int) round(100 * (INFO_DISTANCE - distance) / INFO_DISTANCE), 0), 100);
             obstacleMeasureBar.setValue(barValue);
             obstacleMeasure.setText(format("%.0f cm", distance * 100));
             Color color = distance <= STOP_DISTANCE ? RED : distance <= WARN_DISTANCE ? YELLOW : distance <= INFO_DISTANCE ? GREEN : GRAY;
@@ -328,14 +328,10 @@ public class Dashboard extends JPanel {
         wifiLed.setValue(on ? 1 : 0);
     }
 
-    private void setXSpeed(float xSpeed) {
-        this.xSpeed.setText(format("%.2f m/s", xSpeed));
-    }
-
     /**
-     * @param yaw the yow (radians)
+     * @param yaw the yow in RAD
      */
-    private void setYaw(float yaw) {
+    private void setYaw(double yaw) {
         int deg = (int) round(toDegrees(yaw));
         while (deg < 0) {
             deg += 360;

@@ -91,7 +91,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>org.mmarini.wheelly.model.SerialBypass</mainClass>
+                            <mainClass>org.mmarini.wheelly.apps.SerialBypass</mainClass>
                             <addClasspath>true</addClasspath>
                         </manifest>
                     </archive>

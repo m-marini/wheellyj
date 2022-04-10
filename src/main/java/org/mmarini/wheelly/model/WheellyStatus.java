@@ -35,6 +35,7 @@ import org.mmarini.Tuple2;
 import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 
+import static java.lang.Double.parseDouble;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -60,35 +61,34 @@ public class WheellyStatus {
         }
 
         long sampleInstant = clock.fromRemote(Long.parseLong(params[1]));
-        float x = Float.parseFloat(params[2]);
-        float y = Float.parseFloat(params[3]);
+        double x = parseDouble(params[2]);
+        double y = parseDouble(params[3]);
         int angle = Integer.parseInt(params[4]);
         Timed<RobotAsset> asset = new Timed<>(RobotAsset.create(x, y, angle), sampleInstant, TimeUnit.MILLISECONDS);
 
-        float left = Float.parseFloat(params[5]);
-        float right = Float.parseFloat(params[6]);
-        Timed<Tuple2<Float, Float>> motors = new Timed<>(Tuple2.of(left, right), sampleInstant, TimeUnit.MILLISECONDS);
+        double left = parseDouble(params[5]);
+        double right = parseDouble(params[6]);
+        Timed<Tuple2<Double, Double>> motors = new Timed<>(Tuple2.of(left, right), sampleInstant, TimeUnit.MILLISECONDS);
 
         boolean moveForward = Integer.parseInt(params[7]) != 0;
         Timed<Boolean> canMoveForward = new Timed<>(moveForward, sampleInstant, TimeUnit.MILLISECONDS);
-        ;
 
         long voltageInstant = clock.fromRemote(Long.parseLong(params[8]));
-        float v = Float.parseFloat(params[9]);
-        Timed<Float> voltage = new Timed<>(v, voltageInstant, TimeUnit.MILLISECONDS);
+        double v = parseDouble(params[9]);
+        Timed<Double> voltage = new Timed<>(v, voltageInstant, TimeUnit.MILLISECONDS);
 
         long cpsInstant = clock.fromRemote(Long.parseLong(params[10]));
-        float cpsValue = Float.parseFloat(params[11]);
-        Timed<Float> cps = new Timed<>(cpsValue, cpsInstant, TimeUnit.MILLISECONDS);
+        double cpsValue = parseDouble(params[11]);
+        Timed<Double> cps = new Timed<>(cpsValue, cpsInstant, TimeUnit.MILLISECONDS);
 
         return new WheellyStatus(asset, motors, canMoveForward, voltage, cps);
     }
 
     public final Timed<RobotAsset> asset;
     public final Timed<Boolean> canMoveForward;
-    public final Timed<Float> cps;
-    public final Timed<Tuple2<Float, Float>> motors;
-    public final Timed<Float> voltage;
+    public final Timed<Double> cps;
+    public final Timed<Tuple2<Double, Double>> motors;
+    public final Timed<Double> voltage;
 
     /**
      * Creates the Wheelly status
@@ -99,7 +99,7 @@ public class WheellyStatus {
      * @param voltage        the voltage value
      * @param cps            the cycle per seconds
      */
-    protected WheellyStatus(Timed<RobotAsset> asset, Timed<Tuple2<Float, Float>> motors, Timed<Boolean> canMoveForward, Timed<Float> voltage, Timed<Float> cps) {
+    protected WheellyStatus(Timed<RobotAsset> asset, Timed<Tuple2<Double, Double>> motors, Timed<Boolean> canMoveForward, Timed<Double> voltage, Timed<Double> cps) {
         this.asset = requireNonNull(asset);
         this.motors = requireNonNull(motors);
         this.canMoveForward = canMoveForward;
@@ -110,7 +110,7 @@ public class WheellyStatus {
     /**
      * Returns the motor speeds
      */
-    public Timed<Tuple2<Float, Float>> getMotors() {
+    public Timed<Tuple2<Double, Double>> getMotors() {
         return motors;
     }
 
