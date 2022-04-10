@@ -36,6 +36,11 @@ class MotionCtrl {
       return _left > 0 || _right > 0;
     }
 
+    MotionCtrl& angle(float angle) {
+      _sensors.angle(angle);
+      return *this;
+    }
+
 
   private:
     MotorCtrl _leftMotor;

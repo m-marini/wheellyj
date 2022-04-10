@@ -8,7 +8,7 @@
 #include "AsyncServo.h"
 #include "I2Cdev.h"
 
-//#define WITH_IMU
+#define WITH_IMU
 
 #ifdef WITH_IMU
 #include "IMU.h"
@@ -303,6 +303,10 @@ void pollSerialPort() {
 */
 void handleImuData(void*, IMU& imu) {
   imuFailure = false;
+  float yaw = imu.ypr()[0];
+  DEBUG_PRINT("// handleImuData: yaw=");
+  DEBUG_PRINTLN(yaw);
+  motionController.angle(yaw);
 }
 
 /*
