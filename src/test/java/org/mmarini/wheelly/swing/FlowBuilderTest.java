@@ -177,7 +177,7 @@ class FlowBuilderTest {
             "0.5,-0.25,2,-1",
     })
     void speedFromAxis(float x, float y, int left, int right) {
-        Tuple2<Float, Float> result = FlowBuilder.speedFromAxis(Tuple2.of(x, y));
+        Tuple2<Double, Double> result = FlowBuilder.speedFromAxis(Tuple2.of(x, y));
         assertThat(result, equalTo(Tuple2.of(left, right)));
     }
 }

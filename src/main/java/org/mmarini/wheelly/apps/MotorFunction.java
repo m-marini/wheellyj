@@ -27,10 +27,11 @@
  *
  */
 
-package org.mmarini.wheelly.model;
+package org.mmarini.wheelly.apps;
 
 import io.reactivex.rxjava3.schedulers.Timed;
 import io.reactivex.rxjava3.subjects.CompletableSubject;
+import org.mmarini.wheelly.model.ReliableSocket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,15 +43,15 @@ import java.util.concurrent.TimeUnit;
 
 import static io.reactivex.rxjava3.core.Flowable.just;
 
-public class MotorFunctionCollector {
+public class MotorFunction {
     public static final String MOTOR_DATA = "data/motorData.csv";
     public static final String HOST = "192.168.1.11";
     private static final long NO_SAMPLES = 100;
-    private static final Logger logger = LoggerFactory.getLogger(MotorFunctionCollector.class);
+    private static final Logger logger = LoggerFactory.getLogger(MotorFunction.class);
 
     public static void main(String[] args) throws InterruptedException, IOException {
         logger.info("Started");
-        new MotorFunctionCollector().start().blockingAwait();
+        new MotorFunction().start().blockingAwait();
         logger.info("Completed");
     }
 
@@ -58,7 +59,7 @@ public class MotorFunctionCollector {
     private final PrintWriter outFile;
     private final CompletableSubject completed;
 
-    public MotorFunctionCollector() throws IOException {
+    public MotorFunction() throws IOException {
         this.socket = ReliableSocket.create(HOST, 22, 3000);
         this.outFile = new PrintWriter(new FileWriter(MOTOR_DATA));
         this.completed = CompletableSubject.create();

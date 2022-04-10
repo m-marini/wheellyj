@@ -4,3 +4,4 @@ target/*
 /.wheelly.yml
 KC/wheelly/wheelly-backups/*
 
+docs/sonar-map.dxf~

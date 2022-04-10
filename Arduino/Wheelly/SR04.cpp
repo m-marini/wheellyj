@@ -14,7 +14,7 @@ SR04::SR04(byte triggerPin, byte echoPin)
   _inactivity = INACTIVITY;
   _noSamples = 1;
   _sampling = false;
-  _timer.onNext(&_handleTimeout);
+  _timer.onNext(_handleTimeout, this);
 }
 
 SR04& SR04::begin() {
@@ -33,20 +33,20 @@ SR04& SR04::noSamples(int noSamples) {
   return *this;
 }
 
-SR04& SR04::onSample(void (*callback)(void* context, int distance)) {
+SR04& SR04::onSample(void (*callback)(void* context, int distance), void *context) {
   _onSample = callback;
+  _context = context;
   return *this;
 }
 
-SR04& SR04::start(void *context) {
-  _context = context;
+SR04& SR04::start() {
   _sampling = true;
   _timer.stop().interval(_inactivity);
   _noMeasures = 0;
   _noValidSamples = 0;
   _totalDuration = 0;
   _measure();
-  _timer.start(this);
+  _timer.start();
   return *this;
 }
 
@@ -95,6 +95,6 @@ SR04& SR04::_send() {
     }
   } else {
     _measure();
-    _timer.start(this);
+    _timer.start();
   }
 }

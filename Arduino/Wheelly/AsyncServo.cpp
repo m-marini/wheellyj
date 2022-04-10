@@ -1,19 +1,22 @@
 #include "AsyncServo.h"
 
-#define DEFAULT_INTERVAL (180 * 1000 / 400)
+//#define DEBUG
+#include "debug.h"
+#define MILLIS_PER_DEG  (180ul / 60)
+#define MIN_INTERVAL    1ul
 
-AsyncServo::AsyncServo(){
-  _timer.interval(DEFAULT_INTERVAL)
-    .onNext(_handleTimeout);
+AsyncServo::AsyncServo() {
+  _timer.onNext(_handleTimeout, this);
 }
 
-AsyncServo& AsyncServo::attach(int pin){
+AsyncServo& AsyncServo::attach(byte pin) {
   _servo.attach(pin);
-  return *this;      
+  return *this;
 }
 
-AsyncServo& AsyncServo::onReached(void (*callback)(void*, int)){
+AsyncServo& AsyncServo::onReached(void (*callback)(void*, byte), void* context) {
   _onReached = callback;
+  _context = context;
   return *this;
 }
 
@@ -22,12 +25,18 @@ AsyncServo& AsyncServo::offset(const int value) {
   return *this;
 }
 
-AsyncServo& AsyncServo::angle(void* context, int value){
+AsyncServo& AsyncServo::angle(byte value) {
   _timer.stop();
+  int da = abs((int) value - _angle);
   _angle = value;
-  _context = context;
-  _servo.write(value + _offset);
-  _timer.start(this);
+  if (da != 0) {
+    int wr = (int) value + _offset;
+    DEBUG_PRINT(F("// AsyncServo::angle "));
+    DEBUG_PRINT(wr);
+    DEBUG_PRINTLN();
+    _servo.write(wr);
+  }
+  _timer.interval(max(da * MILLIS_PER_DEG, MIN_INTERVAL)).start();
   return *this;
 }
 

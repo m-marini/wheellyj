@@ -38,10 +38,6 @@
 #define SERIAL_BPS  115200
 
 /*
-   Multiplexer outputs
-*/
-
-/*
    Distances
 */
 #define STOP_DISTANCE 20
@@ -58,10 +54,10 @@
 /*
    Scanner constants
 */
-#define NO_SAMPLES          5
-#define FRONT_SCAN_INDEX    (NO_SCAN_DIRECTIONS / 2)
-#define NO_SCAN_DIRECTIONS  (sizeof(scanDirections) / sizeof(scanDirections[0]))
+#define NO_SAMPLES          1
+#define NO_SCAN_DIRECTIONS  10
 #define SERVO_OFFSET        4
+#define FRONT_DIRECTION     90
 
 /*
    Command parser definitions
@@ -71,11 +67,12 @@
 /*
    Intervals
 */
-#define LED_INTERVAL          50ul
-#define OBSTACLE_INTERVAL     50ul
-#define STATS_INTERVAL        10000ul
-#define QUERIES_INTERVAL      1000ul
-#define MIN_QUERIES_INTERVAL  300ul
+#define LED_INTERVAL            50ul
+#define OBSTACLE_INTERVAL       50ul
+#define STATS_INTERVAL          10000ul
+#define QUERIES_INTERVAL        1000ul
+#define MIN_QUERIES_INTERVAL    300ul
+#define SCANNER_RESET_INTERVAL  1000ul
 
 /*
    Dividers
@@ -114,12 +111,13 @@ AsyncServo servo;
    Proximity distance scanner
 */
 SR04 sr04(TRIGGER_PIN, ECHO_PIN);
-const int scanDirections[] = {
-  0, 30, 60, 90, 120, 150, 180
-};
-bool isFullScanning;
-int scanIndex;  // Scan index
+byte scanDirections[NO_SCAN_DIRECTIONS];
+byte scanHead;
+byte scanTail;
+
 int frontDistance;
+byte noScansQueue;
+unsigned long resetTime;
 
 /*
    Movement motors
@@ -217,16 +215,17 @@ void setup() {
   */
   sr04.begin();
   sr04.noSamples(NO_SAMPLES).onSample(&handleSample);
-  scanIndex = FRONT_SCAN_INDEX;
   servo.attach(SERVO_PIN)
   .offset(SERVO_OFFSET)
-  .onReached([](void *, int angle) {
+  .onReached([](void *, byte angle) {
     // Handles position reached event from scan servo
-    DEBUG_PRINT(F("// handleReached: dir="));
-    DEBUG_PRINTLN(angle);
+    /*
+      DEBUG_PRINT(F("// handleReached: dir="));
+      DEBUG_PRINTLN(angle);
+    */
     sr04.start();
   })
-  .angle(scanDirections[scanIndex]);
+  .angle(FRONT_DIRECTION);
 
   obstacleTimer.onNext(handleObstacleTimer)
   .interval(OBSTACLE_INTERVAL)
@@ -272,20 +271,17 @@ void loop() {
   voltageTime = now;
   voltageValue = analogRead(VOLTAGE_PIN);
 
-  ledTimer.polling(now);
-
-  obstacleTimer.polling(now);
   servo.polling(now);
   sr04.polling(now);
 
+  ledTimer.polling(now);
+  obstacleTimer.polling(now);
   statsTimer.polling(now);
-
   queriesTimer.polling(now);
 
-  motionController
-  .polling(now);
-
   pollSerialPort();
+
+  motionController.polling(now);
 }
 
 /*
@@ -407,30 +403,68 @@ void handleStartQueries(const char* parms) {
 }
 
 /*
+    Handles sc command
+*/
+void handleScCommand(const char* parms) {
+  String args = parms;
+  int angle = args.toInt();
+  if (angle < -90 || angle > 90) {
+    Serial.println(F("!! Wrong arg[1]"));
+    return;
+  }
+  if (noScansQueue >= NO_SCAN_DIRECTIONS) {
+    Serial.println(F("!! Buffer full"));
+  }
+
+  angle = 90 - angle;
+  scanDirections[scanTail] = angle;
+  scanTail = (scanTail + 1) % NO_SCAN_DIRECTIONS;
+  noScansQueue++;
+  DEBUG_PRINT(F("// handleScCommand: buffer size="));
+  DEBUG_PRINT(noScansQueue);
+  DEBUG_PRINT(F(", head="));
+  DEBUG_PRINT(scanHead);
+  DEBUG_PRINT(F(", tail="));
+  DEBUG_PRINT(scanTail);
+  DEBUG_PRINTLN();
+}
+
+/*
    Handles sample event from distance sensor
 */
 void handleSample(void *, int dist) {
-
-  DEBUG_PRINT(F("// handleSample: dir="));
-  DEBUG_PRINT(scanDirections[scanIndex]);
-  DEBUG_PRINT(F(", distance="));
-  DEBUG_PRINTLN(dist);
-
-  if (scanIndex == FRONT_SCAN_INDEX) {
+  /*
+    DEBUG_PRINT(F("// handleSample: dir="));
+    DEBUG_PRINT(servo.angle());
+    DEBUG_PRINT(F(", distance="));
+    DEBUG_PRINTLN(dist);
+  */
+  if (servo.angle() == FRONT_DIRECTION) {
     frontDistance = dist;
     if (motionController.isForward() && !canMoveForward()) {
       motionController.speed(0, 0);
     }
   }
   sendSample(dist);
-  if (isFullScanning) {
-    scanIndex++;
-    if (scanIndex >= NO_SCAN_DIRECTIONS) {
-      scanIndex = FRONT_SCAN_INDEX;
-      isFullScanning = false;
-    }
+
+  byte nextDirection = servo.angle();
+  unsigned long now = millis();
+  if (noScansQueue > 0) {
+    // Request on queue
+    DEBUG_PRINT(F("// handleSample: scanHead"));
+    DEBUG_PRINT(scanHead);
+    DEBUG_PRINTLN();
+    nextDirection = scanDirections[scanHead];
+    noScansQueue--;
+    scanHead = (scanHead + 1) % NO_SCAN_DIRECTIONS;
+    resetTime = now + SCANNER_RESET_INTERVAL;
+  } else if (now >= resetTime) {
+    nextDirection = FRONT_DIRECTION;
   }
-  servo.angle(scanDirections[scanIndex]);
+  DEBUG_PRINT(F("// handleSample: nextDir="));
+  DEBUG_PRINT(nextDirection);
+  DEBUG_PRINTLN();
+  servo.angle(nextDirection);
 }
 
 /*
@@ -444,8 +478,8 @@ void processCommand(unsigned long time) {
     sendClock(line, time);
   } else if (strcmp(line, "rs") == 0) {
     resetWhelly();
-  } else if (strcmp(line, "sc") == 0) {
-    startFullScanning();
+  } else if (strncmp(line, "sc ", 3) == 0) {
+    handleScCommand(line + 3);
   } else if (strncmp(line, "sq ", 3) == 0) {
     handleStartQueries(line + 3);
   } else if (strncmp(line, "mt ", 3) == 0) {
@@ -473,7 +507,7 @@ void sendSample(int distance) {
   Serial.print(F("pr "));
   Serial.print(millis());
   Serial.print(F(" "));
-  Serial.print(scanDirections[scanIndex] - 90);
+  Serial.print(90 - servo.angle());
   Serial.print(F(" "));
   Serial.print(distance * 0.01, 2);
   Serial.print(F(" "));
@@ -544,19 +578,6 @@ bool canMoveForward() {
 
 int forwardBlockDistance() {
   return (frontDistance > 0 && frontDistance <= MAX_DISTANCE) ? frontDistance : MAX_DISTANCE;
-}
-
-/*
-
-*/
-void startFullScanning() {
-  sr04.stop();
-
-  DEBUG_PRINTLN(F("startFullScanning"));
-
-  isFullScanning = true;
-  scanIndex = 0;
-  servo.angle(scanDirections[scanIndex]);
 }
 
 /*

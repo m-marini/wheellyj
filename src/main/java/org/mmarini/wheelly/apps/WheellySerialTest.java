@@ -27,45 +27,38 @@
  *
  */
 
-package org.mmarini.wheelly.model;
+package org.mmarini.wheelly.apps;
 
-import javax.xml.bind.annotation.XmlRootElement;
+import jssc.SerialPort;
+import jssc.SerialPortException;
+import org.mmarini.wheelly.model.RxSerialPort;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/**
- * The clock body
- */
-@XmlRootElement
-public class ClockBody {
-    private String clock;
+public class WheellySerialTest {
+    private static final Logger logger = LoggerFactory.getLogger(WheellySerialTest.class);
 
-    /**
-     * Creates a clock body
-     *
-     * @param clock the clock string
-     */
-    public ClockBody(String clock) {
-        this.clock = clock;
-    }
+    public static void main(String[] args) throws SerialPortException {
+        logger.info("Wheely started.");
+        RxSerialPort port = RxSerialPort.create("COM4", SerialPort.BAUDRATE_115200);
+        port.getLines()
+                .doOnError(ex -> logger.error(ex.getMessage(), ex))
+                .doOnNext(line -> logger.debug("<--{}", line))
+                .take(4)
+                .doOnComplete(port::disconnect)
+                .subscribe();
 
-    /**
-     * Creates and empty clock body
-     */
-    public ClockBody() {
-    }
+        port.getLines()
+                .map(RxSerialPort.RowEvent::getData)
+                .filter("ha"::equals)
+                .firstElement()
+                .doOnSuccess(x -> port.write("sc"))
+                .subscribe();
 
-    /**
-     * Returns the clock string
-     */
-    public String getClock() {
-        return clock;
-    }
+        port.connect();
 
-    /**
-     * Sets the clock string
-     *
-     * @param clock the clock string
-     */
-    public void setClock(String clock) {
-        this.clock = clock;
+
+        port.getLines().blockingSubscribe();
+        logger.info("Wheely completed.");
     }
 }

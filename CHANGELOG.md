@@ -21,3 +21,4 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #18: Automatic send of status and asset
 - Issue #19: Speed sensor management
 - Issue #22: Change messaging
+- Issue #24: Create a proxy map by robot asset

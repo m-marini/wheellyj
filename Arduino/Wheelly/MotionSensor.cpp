@@ -1,31 +1,50 @@
 #include "MotionSensor.h"
 
 //#define DEBUG
-
 #include "debug.h"
 
-#define ANGLE_PER_PULSE     (DISTANCE_PER_PULSE / TRACK)
+#define ANGLE_PER_PULSE (DISTANCE_PER_PULSE / TRACK)
 
-MotionSensor::MotionSensor(byte leftPin, byte rightPin) {
-  _leftPin = leftPin;
-  _rightPin = rightPin;
-  _leftForward = true;
-  _rightForward = true;
+/*
+
+*/
+void handleLeftSensor(void* context, int dPulse, unsigned long, MotorSensor&) {
+  DEBUG_PRINT(F("// MotionSensor::handleLeftSensor "));
+  DEBUG_PRINT(dPulse);
+  DEBUG_PRINTLN();
+  ((MotionSensor*) context)->setLeftPulses(dPulse);
+}
+
+/*
+
+*/
+void handleRightSensor(void* context, int dPulse, unsigned long, MotorSensor&) {
+  DEBUG_PRINT(F("// MotionSensor::handleRightSensor "));
+  DEBUG_PRINT(dPulse);
+  DEBUG_PRINTLN();
+  ((MotionSensor*) context)->setRightPulses(dPulse);
+}
+
+/*
+
+*/
+MotionSensor::MotionSensor(byte leftPin, byte rightPin) :
+  _leftSensor(leftPin), _rightSensor(rightPin) {
+  _leftSensor.onSample(handleLeftSensor, this);
+  _rightSensor.onSample(handleRightSensor, this);
 }
 
 MotionSensor& MotionSensor::begin() {
-  pinMode(_leftPin, INPUT);
-  pinMode(_rightPin, INPUT);
+  _leftSensor.begin();
+  _rightSensor.begin();
   return *this;
 }
 
 MotionSensor& MotionSensor::reset() {
-  _leftForward = true;
-  _rightForward = true;
+  _leftSensor.reset();
+  _rightSensor.reset();
   _xPulses = 0;
   _yPulses = 0;
-  _leftPulses = 0;
-  _rightPulses = 0;
   _angle = 0;
   return *this;
 }
@@ -37,50 +56,32 @@ MotionSensor& MotionSensor::setDirection(float left, float right) {
   DEBUG_PRINT(right);
   DEBUG_PRINTLN();
 
-  if (left > 0) {
-    _leftForward = true;
-  } else if (left < 0) {
-    _leftForward = false;
-  }
-  if (right > 0) {
-    _rightForward = true;
-  } else if (right < 0) {
-    _rightForward = false;
-  }
+  _leftSensor.setDirection(left);
+  _rightSensor.setDirection(right);
   return *this;
 }
 
 MotionSensor& MotionSensor::polling(unsigned long clockTime) {
-  int left = digitalRead(_leftPin);
-  int right = digitalRead(_rightPin);
-  int dl = left != _left ?
-           _leftForward ? 1 : -1
-           : 0;
-  int dr = right != _right ?
-           _rightForward ? 1 : -1
-           : 0;
-  _left = left;
-  _right = right;
-  if (dl != 0 || dr != 0) {
-    update(dl, dr, clockTime);
+  _dl = _dr = 0;
+  _leftSensor.polling(clockTime);
+  _rightSensor.polling(clockTime);
+  if (_dl != 0 || _dr != 0) {
+    update(clockTime);
   }
   return *this;
 }
 
-MotionSensor& MotionSensor::update(int dl, int dr, unsigned long clockTime) {
+MotionSensor& MotionSensor::update(unsigned long clockTime) {
   DEBUG_PRINT(F("// MotionSensor::update "));
-  DEBUG_PRINT(dl);
+  DEBUG_PRINT(_dl);
   DEBUG_PRINT(F(" "));
-  DEBUG_PRINT(dr);
+  DEBUG_PRINT(_dr);
   DEBUG_PRINTLN();
-
-  _leftPulses += dl;
-  _rightPulses += dr;
 
   // Updates location
   float sa = sinf(_angle);
   float ca = cosf(_angle);
-  float ds = ((float)(dl + dr)) / 2;
+  float ds = ((float)(_dl + _dr)) / 2;
   _xPulses += ca * ds;
   _yPulses += sa * ds;
 
@@ -91,7 +92,7 @@ MotionSensor& MotionSensor::update(int dl, int dr, unsigned long clockTime) {
   DEBUG_PRINTLN();
 
   // Updates angle
-  _angle = normAngle(_angle + (dl - dr) * ANGLE_PER_PULSE);
+  _angle = normAngle(_angle + (_dl - _dr) * ANGLE_PER_PULSE);
 
   DEBUG_PRINT(F("// angle "));
   DEBUG_PRINT(_angle * 180 / PI);
@@ -102,9 +103,12 @@ MotionSensor& MotionSensor::update(int dl, int dr, unsigned long clockTime) {
   DEBUG_PRINT(F(", "));
   DEBUG_PRINT(y());
   DEBUG_PRINTLN();
+
+  if (_onChange != NULL) {
+    _onChange(_context, clockTime, *this);
+  }
   return *this;
 }
-
 
 /*
    Returns the normalized angle in range (-PI, PI)
@@ -117,4 +121,13 @@ float normAngle(float angle) {
     angle -= (PI + PI);
   }
   return angle;
+}
+
+/*
+ * 
+ */
+MotionSensor& MotionSensor::setOnChange(void (*callback)(void* context, unsigned long clockTime, MotionSensor& sensor), void* context = NULL){
+  _onChange = callback;
+  _context = context;
+  return *this;
 }

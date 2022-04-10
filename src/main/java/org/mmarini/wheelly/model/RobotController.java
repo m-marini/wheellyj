@@ -70,7 +70,7 @@ public interface RobotController {
     /**
      * @param commands
      */
-    RobotController scan(Flowable<?> commands);
+    RobotController scan(Flowable<Integer> commands);
 
     /**
      * Starts the controller

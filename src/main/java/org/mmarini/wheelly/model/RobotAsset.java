@@ -40,31 +40,32 @@ import static java.lang.Math.toRadians;
 public class RobotAsset {
 
     /**
-     * @param x         x coordinate
-     * @param y         y coordinate
+     * @param location  the robot location
      * @param direction direction (DEG)
      */
-    public static RobotAsset create(float x, float y, int direction) {
-        return new RobotAsset(x, y, direction);
+    public static RobotAsset create(Point2D location, int direction) {
+        return new RobotAsset(location, direction);
     }
-
-    public final int direction;
-    public final float x;
-    public final float y;
 
     /**
      * @param x         x coordinate
      * @param y         y coordinate
      * @param direction direction (DEG)
      */
-    protected RobotAsset(float x, float y, int direction) {
-        this.x = x;
-        this.y = y;
-        this.direction = direction;
+    public static RobotAsset create(double x, double y, int direction) {
+        return new RobotAsset(new Point2D.Double(x, y), direction);
     }
 
-    public float getAngle() {
-        return (float) toRadians(direction);
+    public final int direction;
+    public final Point2D location;
+
+    /**
+     * @param location  the robot location
+     * @param direction direction (DEG)
+     */
+    protected RobotAsset(Point2D location, int direction) {
+        this.location = location;
+        this.direction = direction;
     }
 
     public int getDirection() {
@@ -72,22 +73,17 @@ public class RobotAsset {
     }
 
     public Point2D getLocation() {
-        return new Point2D.Float(x, y);
+        return location;
     }
 
-    public float getX() {
-        return x;
-    }
-
-    public float getY() {
-        return y;
+    public double getRadDirection() {
+        return toRadians(direction);
     }
 
     @Override
     public String toString() {
         return new StringJoiner(", ", RobotAsset.class.getSimpleName() + "[", "]")
-                .add("x=" + x)
-                .add("y=" + y)
+                .add(String.valueOf(location))
                 .add("direction=" + direction)
                 .toString();
     }

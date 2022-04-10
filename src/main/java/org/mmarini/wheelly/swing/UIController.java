@@ -34,10 +34,7 @@ import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.BackpressureStrategy;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.schedulers.Timed;
-import org.mmarini.wheelly.model.ProxySample;
-import org.mmarini.wheelly.model.RawController;
-import org.mmarini.wheelly.model.RobotController;
-import org.mmarini.wheelly.model.WheellyStatus;
+import org.mmarini.wheelly.model.*;
 import org.mmarini.yaml.schema.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +45,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.List;
 
 import static org.mmarini.wheelly.swing.RxJoystick.NONE_CONTROLLER;
 import static org.mmarini.yaml.Utils.fromFile;
@@ -81,6 +79,7 @@ public class UIController {
     private Disposable elapsDisposable;
     private Disposable proxyDisposable;
     private int port;
+    private ScannerMap map;
 
     /**
      *
@@ -92,6 +91,7 @@ public class UIController {
         this.preferencesPane = new PreferencesPane();
         this.dashboard = frame.getDashboard();
         this.radar = frame.getRadar();
+        this.map = ScannerMap.create(List.of());
 
         this.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.frame.setSize(1024, 800);
@@ -173,15 +173,22 @@ public class UIController {
         if (value.relativeDirection == FORWARD_DIRECTION) {
             dashboard.setObstacleDistance(value.distance);
         }
-        //radar.setSamples(s.obstacles);
+        map = map.process(sample);
+        radar.setObstacles(map.obstacles);
     }
 
-    private void handleStatusMessage(WheellyStatus s) {
-        dashboard.setPower(s.voltage.value());
-        dashboard.setMotors(s.motors.value()._1, s.motors.value()._2);
-        dashboard.setCps(s.cps.value());
-        dashboard.setForwardBlock(!s.canMoveForward.value());
-        dashboard.setAngle(s.asset.value().getAngle());
+    /**
+     * Handles the status message
+     *
+     * @param status the status
+     */
+    private void handleStatusMessage(WheellyStatus status) {
+        dashboard.setPower(status.voltage.value());
+        dashboard.setMotors(status.motors.value()._1, status.motors.value()._2);
+        dashboard.setCps(status.cps.value());
+        dashboard.setForwardBlock(!status.canMoveForward.value());
+        dashboard.setAngle(status.asset.value().getRadDirection());
+        radar.setAsset(status.asset.value().getLocation(), status.asset.value().getRadDirection());
     }
 
     /**

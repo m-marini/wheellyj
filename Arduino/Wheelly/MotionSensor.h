@@ -2,12 +2,9 @@
 #define MotionSensor_h
 
 #include "Arduino.h"
+#include "MotorSensor.h"
 
-#define PULSES_PER_ROOT     40
-#define WHEEL_DIAMETER      0.067f
 #define TRACK               0.136f
-
-#define DISTANCE_PER_PULSE  (WHEEL_DIAMETER * PI / PULSES_PER_ROOT)
 
 /*
    Multiplexer
@@ -18,11 +15,23 @@ class MotionSensor {
     MotionSensor& begin();
     MotionSensor& polling(unsigned long clockTime);
     MotionSensor& setDirection(float leftForward, float rightForward);
+    MotionSensor& setOnChange(void (*callback)(void* context, unsigned long clockTime, MotionSensor& sensor), void* context = NULL);
+
     MotionSensor& angle(float angle) {
       _angle = angle;
       return *this;
     }
+
     MotionSensor& reset();
+
+    MotionSensor& setLeftPulses(int dPulse) {
+      _dl = dPulse;
+      return *this;
+    }
+    MotionSensor& setRightPulses(int dPulse) {
+      _dr = dPulse;
+      return *this;
+    }
 
     const float angle() const {
       return _angle;
@@ -37,11 +46,11 @@ class MotionSensor {
     }
 
     const long rightPulses() const {
-      return _rightPulses;
+      return _rightSensor.pulses();
     }
 
     const long leftPulses() const {
-      return _leftPulses;
+      return _leftSensor.pulses();
     }
 
     const float x() const {
@@ -51,20 +60,26 @@ class MotionSensor {
       return _yPulses * DISTANCE_PER_PULSE;
     }
 
+    const float leftSpeed() const {
+      return _leftSensor.speed();
+    }
+
+    const float rightSpeed() const {
+      return _rightSensor.speed();
+    }
+
   private:
-    byte _leftPin;
-    byte _rightPin;
-    byte _left;
-    byte _right;
-    bool _leftForward;
-    bool _rightForward;
+    MotorSensor _leftSensor;
+    MotorSensor _rightSensor;
     float _angle;
     float _xPulses;
     float _yPulses;
-    long  _leftPulses;
-    long  _rightPulses;
+    int _dl;
+    int _dr;
+    void (*_onChange)(void*, unsigned long, MotionSensor&);
+    void* _context;
 
-    MotionSensor& update(int dl, int dr, unsigned long clockTime);
+    MotionSensor& update(unsigned long clockTime);
 };
 
 float normAngle(float angle);
