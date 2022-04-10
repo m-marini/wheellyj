@@ -57,7 +57,7 @@ public class Radar extends JComponent {
     public static final Color GRID = new Color(31, 31, 31);
     public static final Color FOREGROUND = GREEN;
     public static final double PING_SIZE = 0.1f;
-    public static final double MAX_DISTANCE = 1f;
+    public static final double MAX_DISTANCE = 1.5f;
     private static final Logger logger = LoggerFactory.getLogger(Radar.class);
     private static final Color GRID1 = new Color(63, 63, 63);
     private static final double GRID_DISTANCE = 1f;
@@ -112,13 +112,6 @@ public class Radar extends JComponent {
                 .sorted(Comparator.comparing(Tuple2::getV1))
                 .map(t -> {
                     float bright = (float) ((t._1 * 0.8) + 0.2);
-/*
-        Color color =
-                distance <= STOP_DISTANCE ? Color.getHSBColor(0, 1f, bright)
-                        : distance <= WARN_DISTANCE ? Color.getHSBColor(0.15f, 1f, bright)
-                        : distance <= INFO_DISTANCE ? Color.getHSBColor(0.33f, 1f, bright)
-                        : Color.getHSBColor(0f, 0f, bright);
- */
                     Color c = Color.getHSBColor(0f, 0f, bright);
 
                     return t.setV1(c);
