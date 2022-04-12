@@ -1,5 +1,6 @@
 package org.mmarini.wheelly.swing;
 
+import io.reactivex.rxjava3.core.Completable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,6 +14,7 @@ import java.awt.event.WindowEvent;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -24,9 +26,11 @@ public class WheellyFrame extends JFrame {
     private static final DateTimeFormatter formatter = new DateTimeFormatterBuilder()
             .appendPattern("HH:mm:ss")
             .toFormatter();
+    public static final double RADAR_MAX_DISTANCE = 1;
     private final JMenuItem preferences;
     private final Dashboard dashboard;
     private final Radar radar;
+    private final GlobalMap globalMap;
     private final JLabel statusBar;
     private final JTextArea console;
 
@@ -38,9 +42,11 @@ public class WheellyFrame extends JFrame {
         this.preferences = new JMenuItem("Preferences");
         this.dashboard = new Dashboard();
         this.radar = new Radar();
+        this.globalMap = new GlobalMap();
         this.statusBar = new JLabel("Idle");
         this.console = new JTextArea();
 
+        radar.setMaxDistance(RADAR_MAX_DISTANCE);
         statusBar.setBorder(BorderFactory.createEmptyBorder(2, 10, 2, 10));
         console.setLineWrap(false);
         console.setForeground(Color.WHITE);
@@ -53,16 +59,22 @@ public class WheellyFrame extends JFrame {
         contentPane.setLayout(new BorderLayout());
 
         JComponent console = createConsole();
-        JSplitPane horizSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, radar, console);
-        horizSplit.setResizeWeight(0.5);
-        JSplitPane vertSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, horizSplit, dashboard);
+        JSplitPane horizSplit2 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, radar, console);
+        horizSplit2.setResizeWeight(0.5);
+        JSplitPane horizSplit1 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, globalMap, horizSplit2);
+        horizSplit1.setResizeWeight(0.67);
+        JSplitPane vertSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, horizSplit1, dashboard);
         contentPane.add(vertSplit, BorderLayout.CENTER);
         contentPane.add(statusBar, BorderLayout.SOUTH);
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowOpened(WindowEvent e) {
                 vertSplit.setDividerLocation(0.67);
-                horizSplit.setDividerLocation(0.5);
+                horizSplit1.setDividerLocation(0.33);
+                Completable.timer(1, TimeUnit.SECONDS)
+                        .doOnComplete(() -> {
+                            horizSplit2.setDividerLocation(0.5);
+                        }).subscribe();
             }
         });
 
@@ -93,6 +105,10 @@ public class WheellyFrame extends JFrame {
      */
     public Dashboard getDashboard() {
         return dashboard;
+    }
+
+    public GlobalMap getGlobalMap() {
+        return globalMap;
     }
 
     /**

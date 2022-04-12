@@ -32,8 +32,10 @@ package org.mmarini.wheelly.swing;
 import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.BackpressureStrategy;
+import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.schedulers.Timed;
+import org.mmarini.Tuple2;
 import org.mmarini.wheelly.model.*;
 import org.mmarini.yaml.schema.Locator;
 import org.slf4j.Logger;
@@ -46,7 +48,9 @@ import java.awt.event.WindowEvent;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
+import static io.reactivex.rxjava3.core.Flowable.*;
 import static org.mmarini.wheelly.swing.RxJoystick.NONE_CONTROLLER;
 import static org.mmarini.yaml.Utils.fromFile;
 
@@ -70,9 +74,9 @@ public class UIController {
     private final WheellyFrame frame;
     private final Dashboard dashboard;
     private final Radar radar;
+    private final GlobalMap globalMap;
     private String host;
     private String joystickPort;
-    private FlowBuilder flowBuilder;
     private Disposable statusDisposable;
     private Disposable connectionDisposable;
     private Disposable errorDisposable;
@@ -80,6 +84,7 @@ public class UIController {
     private Disposable proxyDisposable;
     private int port;
     private ScannerMap map;
+    private InferenceEngine engine;
 
     /**
      *
@@ -91,6 +96,7 @@ public class UIController {
         this.preferencesPane = new PreferencesPane();
         this.dashboard = frame.getDashboard();
         this.radar = frame.getRadar();
+        this.globalMap = frame.getGlobalMap();
         this.map = ScannerMap.create(List.of());
 
         this.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -144,8 +150,14 @@ public class UIController {
             proxyDisposable.dispose();
             proxyDisposable = null;
         }
-        flowBuilder.detach();
         return this;
+    }
+
+    /**
+     * Returns the inference engine
+     */
+    private InferenceEngine createEngine() {
+        return new ManualEngine(RxJoystickImpl.create(joystickPort));
     }
 
     /**
@@ -173,8 +185,6 @@ public class UIController {
         if (value.relativeDirection == FORWARD_DIRECTION) {
             dashboard.setObstacleDistance(value.distance);
         }
-        map = map.process(sample);
-        radar.setObstacles(map.obstacles);
     }
 
     /**
@@ -189,6 +199,7 @@ public class UIController {
         dashboard.setForwardBlock(!status.canMoveForward.value());
         dashboard.setAngle(status.asset.value().getRadDirection());
         radar.setAsset(status.asset.value().getLocation(), status.asset.value().getRadDirection());
+        globalMap.setAsset(status.asset.value().getLocation(), status.asset.value().getRadDirection());
     }
 
     /**
@@ -216,16 +227,15 @@ public class UIController {
     private void openConfig() {
         try {
             RobotController controller = RawController.create(host, port);
-            this.flowBuilder = FlowBuilder.create(controller, RxJoystickImpl.create(joystickPort)).build();
-            this.statusDisposable = controller.readStatus()
-                    .doOnNext(this::handleStatusMessage)
-                    .subscribe();
+            this.engine = createEngine();
+
             this.connectionDisposable = controller.readConnection()
                     .doOnNext(connected -> {
                         dashboard.setWifiLed(connected);
                         frame.log(connected ? "Connected" : "Disconnected");
                     })
                     .subscribe();
+
             this.errorDisposable = controller.readErrors()
                     .doOnNext(ex -> {
                         logger.error("Error on flow", ex);
@@ -236,11 +246,45 @@ public class UIController {
                         frame.log(ex.getMessage());
                     })
                     .subscribe();
-            this.proxyDisposable = controller.readProxy()
+
+            // Creates status flow
+            Flowable<WheellyStatus> statusFlow = controller.readStatus()
+                    .doOnNext(this::handleStatusMessage);
+
+            // Creates map flow
+            Flowable<ScannerMap> mapFlow = controller.readProxy()
                     .doOnNext(this::handleProxySample)
                     .doOnNext(dashboard::setProxy)
-                    .subscribe();
-            controller.start();
+                    .scanWith(() -> ScannerMap.create(List.of()),
+                            (map, sample) -> map.process(sample))
+                    .doOnNext(map -> {
+                        radar.setObstacles(map.obstacles);
+                        globalMap.setObstacles(map.obstacles);
+                    });
+
+            // Builds commands flow
+            Flowable<Tuple2<MotorCommand, Integer>> commands = combineLatest(statusFlow, mapFlow, Tuple2::of)
+                    .map(engine::process)
+                    .publish()
+                    .autoConnect();
+
+            // Splits the commands  flow in motor and scanner command flows
+            Flowable<MotorCommand> motorComandFlow = commands.map(Tuple2::getV1)
+                    .sample(100, TimeUnit.MILLISECONDS);
+
+            Flowable<Integer> scanCommand1Flow = commands.map(Tuple2::getV2)
+                    .distinctUntilChanged();
+            Flowable<Integer> scanCommandFlow = combineLatest(interval(100, TimeUnit.MILLISECONDS), scanCommand1Flow, (t, a) -> a)
+                    .buffer(2, 1)
+                    .filter(list -> !(list.get(0) == 0 && list.get(1) == 0))
+                    .concatMap(list -> list.get(1) == 0
+                            ? fromIterable(list)
+                            : just(list.get(0)))
+                    .doOnNext(a -> logger.debug("scan {}", a));
+
+            controller.activateMotors(motorComandFlow)
+                    .scan(scanCommandFlow)
+                    .start();
         } catch (Exception ex) {
             logger.error(ex.getMessage(), ex);
             frame.log(ex.getMessage());

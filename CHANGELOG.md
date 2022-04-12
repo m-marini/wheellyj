@@ -9,12 +9,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Added
 
-- Issue #1: Add missing connection management
 - Issue #2: Manage motor pulse in arduino
 - Issue #3: Add Led image
 - Issue #6: Remove shift latch
 - Issue #8: Add PWM motors control
-- Issue #9: Serialize comunication with API
 - Issue #11: Add gyroscope and accelerometer for motion traking
 - Issue #13: Add direct socket connection
 - Issue #16: Motion control through trim
@@ -23,3 +21,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #22: Change messaging
 - Issue #24: Create a proxy map by robot asset
 - Issue #27: Add the gyroscope data asset
+- Issue #31: Add map display with robot and obstacles, create base engine to manage different automa behavior
+
+## Fixed
+
+- Issue #1: Add missing connection management
+- Issue #9: Serialize comunication with API

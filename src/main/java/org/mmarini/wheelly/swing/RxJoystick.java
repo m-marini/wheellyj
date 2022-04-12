@@ -48,6 +48,10 @@ public interface RxJoystick {
     String BUTTON_2 = "2";
     String BUTTON_3 = "3";
     String POV = "pov";
+    String THUMB = "Thumb";
+    String THUMB_2 = "Thumb 2";
+    String TOP = "Top";
+    String TRIGGER = "Trigger";
 
     /**
      *
