@@ -38,10 +38,10 @@ import org.slf4j.LoggerFactory;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
-class FlowBuilderTest {
+public class ManualEngineTest {
 
     public static final int DURATION = 10;
-    private static final Logger logger = LoggerFactory.getLogger(FlowBuilderTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(ManualEngineTest.class);
 
     /*
     @Test
@@ -177,7 +177,7 @@ class FlowBuilderTest {
             "0.5,-0.25,2,-1",
     })
     void speedFromAxis(float x, float y, int left, int right) {
-        Tuple2<Double, Double> result = FlowBuilder.speedFromAxis(Tuple2.of(x, y));
+        Tuple2<Double, Double> result = ManualEngine.speedFromAxis(Tuple2.of(x, y));
         assertThat(result, equalTo(Tuple2.of(left, right)));
     }
 }

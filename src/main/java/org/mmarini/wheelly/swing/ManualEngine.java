@@ -1,38 +1,10 @@
-/*
- *
- * Copyright (c) )2022 Marco Marini, marco.marini@mmarini.org
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- *    END OF TERMS AND CONDITIONS
- *
- */
-
 package org.mmarini.wheelly.swing;
 
 import io.reactivex.rxjava3.core.Flowable;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.model.MotorCommand;
-import org.mmarini.wheelly.model.RobotController;
+import org.mmarini.wheelly.model.ScannerMap;
+import org.mmarini.wheelly.model.WheellyStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,25 +13,23 @@ import java.util.concurrent.TimeUnit;
 
 import static io.reactivex.rxjava3.core.Flowable.*;
 import static java.lang.Math.*;
-import static java.util.Objects.requireNonNull;
 
 /**
- * The builder of process flowables
+ * The manual engine manage the input of joystick and produce the commands
  */
-public class FlowBuilder {
+public class ManualEngine implements InferenceEngine {
     private static final long MOTOR_INTERVAL = 500;
-    private static final Logger logger = LoggerFactory.getLogger(FlowBuilder.class);
+    private static final Logger logger = LoggerFactory.getLogger(ManualEngine.class);
     private static final int NUM_MOTOR_SPEED = 11;
     private static final long MIN_MOTOR_INTERVAL = 200;
 
-    /**
-     * Returns a flow builder
-     *
-     * @param controller the controller
-     * @param joystick   the joystick
-     */
-    public static FlowBuilder create(RobotController controller, RxJoystick joystick) {
-        return new FlowBuilder(controller, joystick);
+    public static ManualEngine create(RxJoystick joystick) {
+        return new ManualEngine(joystick);
+    }
+
+    static <T> Flowable<T> intervalItems(long time, T... data) {
+        return intervalRange(0, data.length, 0, time, TimeUnit.MILLISECONDS)
+                .map(i -> data[i.intValue()]);
     }
 
     /**
@@ -136,74 +106,31 @@ public class FlowBuilder {
         return Tuple2.of(0d, 0d);
     }
 
-    private final RobotController controller;
     private final RxJoystick joystick;
+    private MotorCommand command;
+    private int scannerDirection;
 
-    /**
-     * Creates a flow builder
-     *
-     * @param controller the controller
-     * @param joystick   the joystick
-     */
-    protected FlowBuilder(RobotController controller, RxJoystick joystick) {
-        this.controller = requireNonNull(controller);
-        this.joystick = requireNonNull(joystick);
-    }
-
-    /**
-     * Returns this flow builder with the build flowables
-     */
-    public FlowBuilder build() {
-        // Motor command
-        Flowable<MotorCommand> moveToFlow = createMotorCommand()
-                .debounce(MIN_MOTOR_INTERVAL, TimeUnit.MILLISECONDS);
-        controller.activateMotors(moveToFlow);
-
-        // Scan command
-        Flowable<Integer> scanCommand = createScannerCommand();
-        controller.scan(scanCommand);
-
-        return this;
-    }
-
-    /**
-     * Creates a flowable of motor speeds from joystick events
-     */
-    private Flowable<Tuple2<Double, Double>> createJoystickDirCommand() {
-        logger.debug("Creating joystick command ...");
-        return joystick.readXY()
-                .map(FlowBuilder::speedFromAxis)
-                .buffer(2, 1)
-                .filter(FlowBuilder::isSpeedChanged)
-                .map(x -> x.get(1));
+    protected ManualEngine(RxJoystick joystick) {
+        this.joystick = joystick;
+        command = MotorCommand.create(0, 0);
+        scannerDirection = 0;
+        createScannerCommand()
+                .doOnNext(deg -> scannerDirection = deg)
+                .subscribe();
+        createMotorCommand()
+                .doOnNext(cmd -> this.command = cmd)
+                .subscribe();
     }
 
     /**
      * Returns the flowable of motor commands
      */
     private Flowable<MotorCommand> createMotorCommand() {
-        /*
-        return combineLatest(
-                interval(0, MOTOR_INTERVAL, TimeUnit.MILLISECONDS),
-                createJoystickDirCommand(),
-                (i, cmd) -> cmd)
+        logger.debug("Creating joystick command ...");
+        return joystick.readXY()
                 .onBackpressureDrop()
-                .buffer(2, 1)
-                .filter(FlowBuilder::isMoving)
-                .map(x -> x.get(1))
-                .map(t -> MotorCommand.create(t._1, t._2));
-
-         */
-        return combineLatest(
-                interval(0, MOTOR_INTERVAL, TimeUnit.MILLISECONDS),
-                createJoystickDirCommand()
-                        .onBackpressureDrop()
-                        .buffer(2, 1)
-                        .filter(FlowBuilder::isMoving)
-                        .map(x -> x.get(1)),
-                (i, cmd) -> cmd)
-                .map(t -> MotorCommand.create(t._1, t._2))
-                .doOnNext(c -> logger.debug("createMotorCommand {}", c));
+                .map(ManualEngine::speedFromAxis)
+                .map(MotorCommand::create);
     }
 
     /**
@@ -227,22 +154,23 @@ public class FlowBuilder {
                     }
                 })
                 .distinctUntilChanged();
-        Flowable<Integer> povCommand = combineLatest(interval(500, TimeUnit.MILLISECONDS),
-                povAngle, (a, b) -> b);
+
         Flowable<Integer> fullScann = mergeArray(
+                joystick.readValues(RxJoystick.THUMB),
+                joystick.readValues(RxJoystick.THUMB_2),
+                joystick.readValues(RxJoystick.TOP),
+                joystick.readValues(RxJoystick.TRIGGER),
                 joystick.readValues(RxJoystick.BUTTON_0),
                 joystick.readValues(RxJoystick.BUTTON_1),
                 joystick.readValues(RxJoystick.BUTTON_2),
                 joystick.readValues(RxJoystick.BUTTON_3))
                 .filter(x -> x > 0f)
-                .concatMap(x -> just(-90, -60, -30, 0, 30, 60, 90, 0));
-        return merge(povCommand, fullScann);
+                .concatMap(x -> intervalItems(500, -90, -60, -30, 0, 30, 60, 90, 0));
+        return merge(povAngle, fullScann);
     }
 
-    /**
-     * Returns this flow builder with detached flowables
-     */
-    public FlowBuilder detach() {
-        return this;
+    @Override
+    public Tuple2<MotorCommand, Integer> process(Tuple2<WheellyStatus, ScannerMap> data) {
+        return Tuple2.of(command, scannerDirection);
     }
 }

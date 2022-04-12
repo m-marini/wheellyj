@@ -29,12 +29,21 @@
 
 package org.mmarini.wheelly.model;
 
+import org.mmarini.Tuple2;
+
 import java.util.StringJoiner;
 
 /**
  *
  */
 public class MotorCommand {
+    /**
+     * @param power
+     */
+    public static MotorCommand create(Tuple2<Double, Double> power) {
+        return create(power._1, power._2);
+    }
+
     /**
      * @param leftPower
      * @param rightPower
