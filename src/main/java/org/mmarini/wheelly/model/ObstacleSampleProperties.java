@@ -29,10 +29,28 @@
 
 package org.mmarini.wheelly.model;
 
+import java.awt.geom.Point2D;
+import java.util.Optional;
+
+import static org.mmarini.wheelly.model.Utils.direction;
+import static org.mmarini.wheelly.model.Utils.normalizeAngle;
+
 /**
  * The properties related to an obstacle and a proxy sample
  */
 public class ObstacleSampleProperties {
+
+    public static ObstacleSampleProperties from(Obstacle obstacle, ProxySample sample) {
+        RobotAsset robotAsset = sample.robotAsset;
+        Point2D robotLocation = robotAsset.getLocation();
+        Optional<Point2D> sampleLocation = sample.getLocation();
+        double robotObstacleDistance = obstacle.getLocation().distance(robotLocation);
+        double sampleObstacleDistance = sampleLocation.map(obstacle.getLocation()::distance).orElse(Double.MAX_VALUE);
+        double obsDirection = direction(robotLocation, obstacle.getLocation());
+        double obstacleSensorDirection = normalizeAngle(obsDirection - sample.getSampleRad());
+        return new ObstacleSampleProperties(obstacle, robotObstacleDistance, sampleObstacleDistance, obstacleSensorDirection);
+    }
+
     /**
      * The obstacle
      */
@@ -40,7 +58,7 @@ public class ObstacleSampleProperties {
     /**
      * The direction of obstacle relative to the proximity sensor
      */
-    public final double obstacleSensorDirection;
+    public final double obstacleSensorRad;
     /**
      * The distance from sensor
      */
@@ -53,16 +71,16 @@ public class ObstacleSampleProperties {
     /**
      * Creates the properties
      *
-     * @param obstacle                the obstacle
-     * @param robotObstacleDistance   the distance from robot
-     * @param sampleObstacleDistance  the distance from proximity echo sample if any
-     * @param obstacleSensorDirection the direction of obstacle relative to the proximity sensor
+     * @param obstacle               the obstacle
+     * @param robotObstacleDistance  the distance from robot
+     * @param sampleObstacleDistance the distance from proximity echo sample if any
+     * @param obstacleSensorRad      the direction of obstacle relative to the proximity sensor
      */
-    public ObstacleSampleProperties(Obstacle obstacle, double robotObstacleDistance, double sampleObstacleDistance, double obstacleSensorDirection) {
+    public ObstacleSampleProperties(Obstacle obstacle, double robotObstacleDistance, double sampleObstacleDistance, double obstacleSensorRad) {
         this.obstacle = obstacle;
         this.robotObstacleDistance = robotObstacleDistance;
         this.sampleObstacleDistance = sampleObstacleDistance;
-        this.obstacleSensorDirection = obstacleSensorDirection;
+        this.obstacleSensorRad = obstacleSensorRad;
     }
 
     /**
@@ -75,8 +93,8 @@ public class ObstacleSampleProperties {
     /**
      * Returns the direction of obstacle relative to the proximity sensor
      */
-    public double getObstacleSensorDirection() {
-        return obstacleSensorDirection;
+    public double getObstacleSensorRad() {
+        return obstacleSensorRad;
     }
 
     /**

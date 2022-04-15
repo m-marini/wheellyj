@@ -15,6 +15,11 @@ import static java.util.Objects.requireNonNull;
  *
  */
 public class Yaml {
+    public static String engine(JsonNode root) {
+        requireNonNull(root);
+        return root.path("engine").asText();
+    }
+
     /**
      * @param root the root node
      */
@@ -28,16 +33,17 @@ public class Yaml {
      */
     public static Validator config() {
         return Validator.objectPropertiesRequired(Map.of(
-                        "joystickPort", Validator.string(),
+//                        "joystickPort", Validator.string(),
                         "host", Validator.string(),
-                        "port", Validator.positiveInteger()),
-                List.of("joystickPort", "host", "port")
+                        "port", Validator.positiveInteger(),
+                        "engine", Validator.string()),
+                List.of("host", "port", "engine")
         );
     }
 
     /**
      * @param joystickPort the joystick port name
-     * @param host      the base url
+     * @param host         the base url
      */
     public static JsonNode createConfig(String joystickPort, String host, int port) {
         requireNonNull(joystickPort);
@@ -67,7 +73,7 @@ public class Yaml {
     /**
      * @param file         the config filename
      * @param joystickPort the joystick port name
-     * @param host      the base url
+     * @param host         the base url
      * @param port
      * @throws IOException in case of errors
      */

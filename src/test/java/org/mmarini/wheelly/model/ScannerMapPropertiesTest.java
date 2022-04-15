@@ -46,7 +46,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mmarini.ArgumentsGenerator.*;
-import static org.mmarini.wheelly.model.ScannerMap.*;
+import static org.mmarini.wheelly.model.Utils.*;
 
 class ScannerMapPropertiesTest {
 
@@ -111,7 +111,7 @@ class ScannerMapPropertiesTest {
         /*
         When create the obstacle, sample properties
          */
-        ObstacleSampleProperties result = ScannerMap.createSampleProperties(obstacle, null, robotLocation, toRadians(sensorDirection));
+        ObstacleSampleProperties result = GridScannerMap.createSampleProperties(obstacle, null, robotLocation, toRadians(sensorDirection));
 
         /*
         Then should return the expected properties
@@ -120,7 +120,7 @@ class ScannerMapPropertiesTest {
         assertEquals(result.obstacle, obstacle);
         assertThat(result.sampleObstacleDistance, equalTo(Double.MAX_VALUE));
         assertThat(result.robotObstacleDistance, closeTo(obstacleDistance, 5e-4));
-        assertThat(result.obstacleSensorDirection, closeTo(sensorRelativeRadDirection, toRadians(0.5)));
+        assertThat(result.obstacleSensorRad, closeTo(sensorRelativeRadDirection, toRadians(0.5)));
     }
 
     @ParameterizedTest
@@ -152,7 +152,7 @@ class ScannerMapPropertiesTest {
         /*
         When create the obstacle, sample properties
          */
-        ObstacleSampleProperties result = ScannerMap.createSampleProperties(obstacle, sampleLocation, robotLocation, toRadians(sensorDirection));
+        ObstacleSampleProperties result = GridScannerMap.createSampleProperties(obstacle, sampleLocation, robotLocation, toRadians(sensorDirection));
 
         /*
         Then should return the expected properties
@@ -161,7 +161,7 @@ class ScannerMapPropertiesTest {
         assertEquals(result.obstacle, obstacle);
         assertThat(result.sampleObstacleDistance, closeTo(obstacleLocation.distance(sampleLocation), 5e-4));
         assertThat(result.robotObstacleDistance, closeTo(obstacleDistance, 5e-4));
-        assertThat(result.obstacleSensorDirection, closeTo(sensorRelativeRadDirection, toRadians(0.5)));
+        assertThat(result.obstacleSensorRad, closeTo(sensorRelativeRadDirection, toRadians(0.5)));
     }
 
     @ParameterizedTest
@@ -193,7 +193,7 @@ class ScannerMapPropertiesTest {
                 robotX + obstacleDistance * cos(obstacleRadDirection),
                 robotY + obstacleDistance * sin(obstacleRadDirection));
         Obstacle obstacle = Obstacle.create(obstacleLocation, sampleTimestamp, 1);
-        ScannerMap map = ScannerMap.create(List.of(obstacle));
+        GridScannerMap map = GridScannerMap.create(List.of(obstacle), AbstractScannerMap.THRESHOLD_DISTANCE);
 
         /*
         When create the obstacle, sample properties
@@ -210,7 +210,7 @@ class ScannerMapPropertiesTest {
         assertEquals(result1.obstacle, obstacle);
         assertThat(result1.sampleObstacleDistance, closeTo(obstacleLocation.distance(sampleLocation), 1e-3));
         assertThat(result1.robotObstacleDistance, closeTo(obstacleDistance, 5e-4));
-        double diffDeg = normalizeDegAngle(toDegrees(result1.obstacleSensorDirection) - obstacleRelativeDegDirection);
+        double diffDeg = normalizeDegAngle(toDegrees(result1.obstacleSensorRad) - obstacleRelativeDegDirection);
         assertThat(diffDeg, closeTo(0.0, 0.5));
     }
 }

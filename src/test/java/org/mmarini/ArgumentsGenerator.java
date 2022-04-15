@@ -64,6 +64,30 @@ public interface ArgumentsGenerator<T> {
         return createArgumentGenerator((i, random) -> mapper.apply(gen1.apply(i, random), gen2.apply(i, random), gen3.apply(i, random)));
     }
 
+    static <T1, T2, T3, T4, R> ArgumentsGenerator<R> combine(ArgumentsGenerator<T1> gen1,
+                                                             ArgumentsGenerator<T2> gen2,
+                                                             ArgumentsGenerator<T3> gen3,
+                                                             ArgumentsGenerator<T4> gen4,
+                                                             Function4<T1, T2, T3, T4, R> mapper) {
+        return createArgumentGenerator((i, random) -> mapper.apply(gen1.apply(i, random),
+                gen2.apply(i, random),
+                gen3.apply(i, random),
+                gen4.apply(i, random)));
+    }
+
+    static <T1, T2, T3, T4, T5, R> ArgumentsGenerator<R> combine(ArgumentsGenerator<T1> gen1,
+                                                                 ArgumentsGenerator<T2> gen2,
+                                                                 ArgumentsGenerator<T3> gen3,
+                                                                 ArgumentsGenerator<T4> gen4,
+                                                                 ArgumentsGenerator<T5> gen5,
+                                                                 Function5<T1, T2, T3, T4, T5, R> mapper) {
+        return createArgumentGenerator((i, random) -> mapper.apply(gen1.apply(i, random),
+                gen2.apply(i, random),
+                gen3.apply(i, random),
+                gen4.apply(i, random),
+                gen5.apply(i, random)));
+    }
+
     /**
      * @param generator
      */

@@ -41,6 +41,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -96,7 +97,7 @@ public class RxJoystickImpl implements RxJoystick {
         Controller[] controllers = ControllerEnvironment.getDefaultEnvironment().getControllers();
         return Arrays.stream(controllers).filter(x -> x.getName().equals(name))
                 .findAny()
-                .orElseThrow(IllegalArgumentException::new);
+                .orElseThrow(() -> new IllegalArgumentException(format("Joystick controller \"%s\" not found ", name)));
     }
 
     private final PublishProcessor<Event> publisher;

@@ -38,7 +38,7 @@ import java.util.concurrent.TimeUnit;
 import static java.lang.Double.parseDouble;
 import static java.lang.Integer.parseInt;
 import static java.lang.Math.*;
-import static org.mmarini.wheelly.model.ScannerMap.normalizeAngle;
+import static org.mmarini.wheelly.model.Utils.normalizeDegAngle;
 
 /**
  *
@@ -47,12 +47,12 @@ public class ProxySample {
     private static final int NO_PARAMS = 7;
 
     /**
-     * @param relativeDirection relative direction DEG
-     * @param distance          distance (m)
-     * @param asset             asset
+     * @param relativeDegDirection relative direction DEG
+     * @param distance             distance (m)
+     * @param robotAsset           asset
      */
-    public static ProxySample create(int relativeDirection, double distance, RobotAsset asset) {
-        return new ProxySample(relativeDirection, distance, asset);
+    public static ProxySample create(int relativeDegDirection, double distance, RobotAsset robotAsset) {
+        return new ProxySample(relativeDegDirection, distance, robotAsset);
     }
 
     /**
@@ -79,19 +79,23 @@ public class ProxySample {
                 instant, TimeUnit.MILLISECONDS);
     }
 
-    public final RobotAsset asset;
     public final double distance;
-    public final int relativeDirection;
+    public final RobotAsset robotAsset;
+    public final int sensorRelativeDeg;
 
     /**
-     * @param relativeDirection relative direction DEG
+     * @param sensorRelativeDeg relative direction DEG
      * @param distance          distance (m)
-     * @param asset             asset
+     * @param robotAsset        asset
      */
-    protected ProxySample(int relativeDirection, double distance, RobotAsset asset) {
-        this.relativeDirection = relativeDirection;
+    protected ProxySample(int sensorRelativeDeg, double distance, RobotAsset robotAsset) {
+        this.sensorRelativeDeg = sensorRelativeDeg;
         this.distance = distance;
-        this.asset = asset;
+        this.robotAsset = robotAsset;
+    }
+
+    public double getDistance() {
+        return distance;
     }
 
     /**
@@ -99,8 +103,8 @@ public class ProxySample {
      */
     public Optional<Point2D> getLocation() {
         if (distance > 0) {
-            Point2D location = asset.getLocation();
-            double angle = asset.getRadDirection() + toRadians(relativeDirection);
+            Point2D location = robotAsset.getLocation();
+            double angle = robotAsset.getDirectionRad() + toRadians(sensorRelativeDeg);
             double x = location.getX() + distance * cos(angle);
             double y = location.getY() + distance * sin(angle);
             return Optional.of(new Point2D.Double(x, y));
@@ -109,10 +113,25 @@ public class ProxySample {
         }
     }
 
+    public RobotAsset getRobotAsset() {
+        return robotAsset;
+    }
+
+    public double getSampleDeg() {
+        return normalizeDegAngle(robotAsset.directionDeg + sensorRelativeDeg);
+    }
+
     /**
      * Returns the sample direction in RAD
      */
-    public double getSampleDirection() {
-        return normalizeAngle(asset.getRadDirection() + toRadians(relativeDirection));
+    public double getSampleRad() {
+        return toRadians(getSampleDeg());
+    }
+
+    /**
+     *
+     */
+    public int getSensorRelativeDeg() {
+        return sensorRelativeDeg;
     }
 }
