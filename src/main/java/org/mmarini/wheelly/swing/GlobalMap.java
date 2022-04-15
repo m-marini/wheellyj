@@ -121,7 +121,7 @@ public class GlobalMap extends TopographicMap {
         gr.setColor(STOP_COLOR);
         gr.draw(
                 new Ellipse2D.Double(-STOP_DISTANCE + offset.getX(), -STOP_DISTANCE + offset.getY(),
-                        STOP_DISTANCE * 2 + offset.getY(), STOP_DISTANCE * 2)
+                        STOP_DISTANCE * 2, STOP_DISTANCE * 2)
         );
     }
 
