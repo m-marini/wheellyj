@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #31: Add map display with robot and obstacles, create base engine to manage different automa behavior
 - Issue #33: Arrange the obstacles in a grid
 
+## Changed
+
+- Issue #36: Optimized IMU
+
 ## Fixed
 
 - Issue #1: Add missing connection management
