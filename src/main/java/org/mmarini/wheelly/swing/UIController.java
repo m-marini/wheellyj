@@ -29,6 +29,7 @@
 
 package org.mmarini.wheelly.swing;
 
+import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.BackpressureStrategy;
@@ -47,10 +48,14 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static io.reactivex.rxjava3.core.Flowable.*;
+import static java.lang.String.format;
+import static org.mmarini.wheelly.model.AbstractScannerMap.THRESHOLD_DISTANCE;
 import static org.mmarini.wheelly.swing.RxJoystick.NONE_CONTROLLER;
 import static org.mmarini.yaml.Utils.fromFile;
 
@@ -83,8 +88,9 @@ public class UIController {
     private Disposable elapsDisposable;
     private Disposable proxyDisposable;
     private int port;
-    private ScannerMap map;
+    private final ScannerMap map;
     private InferenceEngine engine;
+    private JsonNode configNode;
 
     /**
      *
@@ -97,7 +103,7 @@ public class UIController {
         this.dashboard = frame.getDashboard();
         this.radar = frame.getRadar();
         this.globalMap = frame.getGlobalMap();
-        this.map = ScannerMap.create(List.of());
+        this.map = GridScannerMap.create(List.of(), THRESHOLD_DISTANCE);
 
         this.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.frame.setSize(1024, 800);
@@ -157,7 +163,29 @@ public class UIController {
      * Returns the inference engine
      */
     private InferenceEngine createEngine() {
-        return new ManualEngine(RxJoystickImpl.create(joystickPort));
+        String engineRef = Yaml.engine(configNode);
+        JsonPointer ptr = JsonPointer.valueOf(engineRef);
+        JsonNode engineNode = configNode.at(ptr);
+        if (engineNode.isMissingNode()) {
+            throw new IllegalArgumentException(format("Missing %s node", engineRef));
+        }
+        String className = engineNode.path("class").asText();
+        if (className.isEmpty()) {
+            throw new IllegalArgumentException(format("Missing %s/class node", engineRef));
+        }
+        try {
+            Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(className);
+            Method creator = clazz.getDeclaredMethod("create", JsonNode.class);
+            int modifiers = creator.getModifiers();
+            if (!Modifier.isStatic(modifiers)) {
+                throw new IllegalArgumentException(format("creator method is not static", engineRef));
+            }
+            Object result = creator.invoke(null, engineNode);
+            return (InferenceEngine) result;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+//        return new ManualEngine(RxJoystickImpl.create(joystickPort));
     }
 
     /**
@@ -182,7 +210,7 @@ public class UIController {
     private void handleProxySample(Timed<ProxySample> sample) {
         dashboard.setProxy(sample);
         ProxySample value = sample.value();
-        if (value.relativeDirection == FORWARD_DIRECTION) {
+        if (value.sensorRelativeDeg == FORWARD_DIRECTION) {
             dashboard.setObstacleDistance(value.distance);
         }
     }
@@ -197,9 +225,9 @@ public class UIController {
         dashboard.setMotors(status.motors.value()._1, status.motors.value()._2);
         dashboard.setCps(status.cps.value());
         dashboard.setForwardBlock(!status.canMoveForward.value());
-        dashboard.setAngle(status.asset.value().getRadDirection());
-        radar.setAsset(status.asset.value().getLocation(), status.asset.value().getRadDirection());
-        globalMap.setAsset(status.asset.value().getLocation(), status.asset.value().getRadDirection());
+        dashboard.setAngle(status.asset.value().getDirectionRad());
+        radar.setAsset(status.asset.value().getLocation(), status.asset.value().getDirectionRad());
+        globalMap.setAsset(status.asset.value().getLocation(), status.asset.value().getDirectionRad());
     }
 
     /**
@@ -214,11 +242,11 @@ public class UIController {
      * @throws IOException in case of error
      */
     private void loadConfig() throws IOException {
-        JsonNode node = fromFile(CONFIG_FILE);
-        Yaml.config().apply(Locator.root()).accept(node);
-        joystickPort = Yaml.joystickPort(node);
-        host = Yaml.host(node);
-        port = Yaml.port(node);
+        this.configNode = fromFile(CONFIG_FILE);
+        Yaml.config().apply(Locator.root()).accept(configNode);
+        //joystickPort = Yaml.joystickPort(node);
+        host = Yaml.host(configNode);
+        port = Yaml.port(configNode);
     }
 
     /**
@@ -255,11 +283,12 @@ public class UIController {
             Flowable<ScannerMap> mapFlow = controller.readProxy()
                     .doOnNext(this::handleProxySample)
                     .doOnNext(dashboard::setProxy)
-                    .scanWith(() -> ScannerMap.create(List.of()),
-                            (map, sample) -> map.process(sample))
+                    .scanWith(() -> GridScannerMap.create(List.of(), THRESHOLD_DISTANCE),
+                            ScannerMap::process)
+                    .cast(ScannerMap.class)
                     .doOnNext(map -> {
-                        radar.setObstacles(map.obstacles);
-                        globalMap.setObstacles(map.obstacles);
+                        radar.setObstacles(map.getObstacles());
+                        globalMap.setObstacles(map.getObstacles());
                     });
 
             // Builds commands flow

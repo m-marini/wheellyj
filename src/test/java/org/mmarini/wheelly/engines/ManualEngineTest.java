@@ -27,7 +27,7 @@
  *
  */
 
-package org.mmarini.wheelly.swing;
+package org.mmarini.wheelly.engines;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;

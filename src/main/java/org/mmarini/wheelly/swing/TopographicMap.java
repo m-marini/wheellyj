@@ -45,7 +45,8 @@ import java.util.stream.Collectors;
 import static java.awt.Color.GREEN;
 import static java.lang.Math.exp;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.model.ScannerMap.LIKELIHOOD_TAU;
+import static org.mmarini.wheelly.model.AbstractScannerMap.LIKELIHOOD_TAU;
+import static org.mmarini.wheelly.model.AbstractScannerMap.THRESHOLD_DISTANCE;
 import static org.mmarini.wheelly.swing.Dashboard.*;
 
 /**
@@ -89,9 +90,9 @@ public abstract class TopographicMap extends JComponent {
                 .filter(t -> t._2 <= maxDistance)
                 .map(t -> {
                     Obstacle o = t._1;
-                    double x = o.location.getX() - PING_SIZE / 2;
-                    double y = o.location.getY() - PING_SIZE / 2;
-                    Shape shape = new Ellipse2D.Double(x, y, PING_SIZE, PING_SIZE);
+                    double x = o.location.getX() - THRESHOLD_DISTANCE / 2;
+                    double y = o.location.getY() - THRESHOLD_DISTANCE / 2;
+                    Shape shape = new Rectangle.Double(x, y, THRESHOLD_DISTANCE, THRESHOLD_DISTANCE);
 
                     double dt = (now - o.timestamp) * 1e-3;
                     double value = o.likelihood * exp(-dt / LIKELIHOOD_TAU);

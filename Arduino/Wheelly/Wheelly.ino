@@ -111,9 +111,7 @@ AsyncServo servo;
    Proximity distance scanner
 */
 SR04 sr04(TRIGGER_PIN, ECHO_PIN);
-byte scanDirections[NO_SCAN_DIRECTIONS];
-byte scanHead;
-byte scanTail;
+byte nextScan;
 
 int frontDistance;
 byte noScansQueue;
@@ -304,7 +302,7 @@ void pollSerialPort() {
 void handleImuData(void*, IMU& imu) {
   imuFailure = false;
   float yaw = imu.ypr()[0];
-  DEBUG_PRINT("// handleImuData: yaw=");
+  DEBUG_PRINT(F("// handleImuData: yaw="));
   DEBUG_PRINTLN(yaw);
   motionController.angle(yaw);
 }
@@ -314,7 +312,7 @@ void handleImuData(void*, IMU& imu) {
 */
 void handleWatchDog(void*, IMU& imu) {
   imuFailure = true;
-  DEBUG_PRINT("!! Watch dog status: ");
+  DEBUG_PRINT(F("!! Watch dog status: "));
   DEBUG_PRINTLN(imu.status());
   imu.reset()
   .kickAt(micros() + 1000000ul);
@@ -420,17 +418,10 @@ void handleScCommand(const char* parms) {
     Serial.println(F("!! Buffer full"));
   }
 
-  angle = 90 - angle;
-  scanDirections[scanTail] = angle;
-  scanTail = (scanTail + 1) % NO_SCAN_DIRECTIONS;
-  noScansQueue++;
-  DEBUG_PRINT(F("// handleScCommand: buffer size="));
-  DEBUG_PRINT(noScansQueue);
-  DEBUG_PRINT(F(", head="));
-  DEBUG_PRINT(scanHead);
-  DEBUG_PRINT(F(", tail="));
-  DEBUG_PRINT(scanTail);
-  DEBUG_PRINTLN();
+  nextScan = 90 - angle;
+  resetTime = millis() + SCANNER_RESET_INTERVAL;
+  DEBUG_PRINT(F("// handleScCommand: next scan="));
+  DEBUG_PRINT(nextScan);
 }
 
 /*
@@ -451,24 +442,14 @@ void handleSample(void *, int dist) {
   }
   sendSample(dist);
 
-  byte nextDirection = servo.angle();
   unsigned long now = millis();
-  if (noScansQueue > 0) {
-    // Request on queue
-    DEBUG_PRINT(F("// handleSample: scanHead"));
-    DEBUG_PRINT(scanHead);
-    DEBUG_PRINTLN();
-    nextDirection = scanDirections[scanHead];
-    noScansQueue--;
-    scanHead = (scanHead + 1) % NO_SCAN_DIRECTIONS;
-    resetTime = now + SCANNER_RESET_INTERVAL;
-  } else if (now >= resetTime) {
-    nextDirection = FRONT_DIRECTION;
+  if (now >= resetTime) {
+    nextScan = FRONT_DIRECTION;
   }
   DEBUG_PRINT(F("// handleSample: nextDir="));
   DEBUG_PRINT(nextDirection);
   DEBUG_PRINTLN();
-  servo.angle(nextDirection);
+  servo.angle(nextScan);
 }
 
 /*

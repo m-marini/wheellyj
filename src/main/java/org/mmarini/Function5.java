@@ -27,25 +27,21 @@
  *
  */
 
-package org.mmarini.wheelly.model;
+package org.mmarini;
 
-import io.reactivex.rxjava3.schedulers.Timed;
-
-import java.util.List;
-
-import static java.lang.Math.toRadians;
-
-public interface ScannerMap {
-
+/**
+ * @param <T1>
+ * @param <T2>
+ * @param <T3>
+ * @param <R>
+ */
+public interface Function5<T1, T2, T3, T4, T5, R> {
     /**
-     * Returns the list of obstacles
+     * @param t1
+     * @param t2
+     * @param t3
+     * @param t4
+     * @param t5
      */
-    List<Obstacle> getObstacles();
-
-    /**
-     * Returns the scanner map updated by a proxy sample
-     *
-     * @param sample the sample
-     */
-    ScannerMap process(Timed<ProxySample> sample);
+    R apply(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5);
 }

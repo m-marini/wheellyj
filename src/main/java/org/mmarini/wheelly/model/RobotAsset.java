@@ -56,35 +56,35 @@ public class RobotAsset {
         return new RobotAsset(new Point2D.Double(x, y), direction);
     }
 
-    public final int direction;
+    public final int directionDeg;
     public final Point2D location;
 
     /**
      * @param location  the robot location
-     * @param direction direction (DEG)
+     * @param directionDeg direction (DEG)
      */
-    protected RobotAsset(Point2D location, int direction) {
+    protected RobotAsset(Point2D location, int directionDeg) {
         this.location = location;
-        this.direction = direction;
+        this.directionDeg = directionDeg;
     }
 
-    public int getDirection() {
-        return direction;
+    public int getDirectionDeg() {
+        return directionDeg;
     }
 
     public Point2D getLocation() {
         return location;
     }
 
-    public double getRadDirection() {
-        return toRadians(direction);
+    public double getDirectionRad() {
+        return toRadians(directionDeg);
     }
 
     @Override
     public String toString() {
         return new StringJoiner(", ", RobotAsset.class.getSimpleName() + "[", "]")
                 .add(String.valueOf(location))
-                .add("direction=" + direction)
+                .add("direction=" + directionDeg)
                 .toString();
     }
 }

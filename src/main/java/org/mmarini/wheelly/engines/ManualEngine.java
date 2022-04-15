@@ -1,14 +1,17 @@
-package org.mmarini.wheelly.swing;
+package org.mmarini.wheelly.engines;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Flowable;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.model.MotorCommand;
 import org.mmarini.wheelly.model.ScannerMap;
 import org.mmarini.wheelly.model.WheellyStatus;
+import org.mmarini.wheelly.swing.InferenceEngine;
+import org.mmarini.wheelly.swing.RxJoystick;
+import org.mmarini.wheelly.swing.RxJoystickImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static io.reactivex.rxjava3.core.Flowable.*;
@@ -27,31 +30,18 @@ public class ManualEngine implements InferenceEngine {
         return new ManualEngine(joystick);
     }
 
+    public static ManualEngine create(JsonNode config) {
+        String port = config.path("joystickPort").asText();
+        if (port.isEmpty()){
+            throw new IllegalArgumentException("Missing joystickPort");
+        }
+        RxJoystick joystick = RxJoystickImpl.create(port);
+        return new ManualEngine(joystick);
+    }
+
     static <T> Flowable<T> intervalItems(long time, T... data) {
         return intervalRange(0, data.length, 0, time, TimeUnit.MILLISECONDS)
                 .map(i -> data[i.intValue()]);
-    }
-
-    /**
-     * Returns true if Wheelly is moving
-     *
-     * @param tuples the tuple list with speeds
-     */
-    private static boolean isMoving(List<Tuple2<Double, Double>> tuples) {
-        Tuple2<Double, Double> m0 = tuples.get(0);
-        Tuple2<Double, Double> m1 = tuples.get(1);
-        return !(m0._1 == 0 && m0._2 == 0 && m1._1 == 0 && m1._2 == 0);
-    }
-
-    /**
-     * Returns true if the speed is changing
-     *
-     * @param tuples the tuple list with speeds
-     */
-    private static boolean isSpeedChanged(List<Tuple2<Double, Double>> tuples) {
-        Tuple2<Double, Double> m0 = tuples.get(0);
-        Tuple2<Double, Double> m1 = tuples.get(1);
-        return !m0.equals(m1);
     }
 
     static Tuple2<Double, Double> speedFromAxis(Tuple2<Float, Float> xy) {
@@ -166,7 +156,8 @@ public class ManualEngine implements InferenceEngine {
                 joystick.readValues(RxJoystick.BUTTON_3))
                 .filter(x -> x > 0f)
                 .concatMap(x -> intervalItems(500, -90, -60, -30, 0, 30, 60, 90, 0));
-        return merge(povAngle, fullScann);
+        return merge(povAngle, fullScann)
+                .doOnNext(x -> logger.debug("scan angle {}", x));
     }
 
     @Override

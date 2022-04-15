@@ -29,23 +29,47 @@
 
 package org.mmarini.wheelly.model;
 
-import io.reactivex.rxjava3.schedulers.Timed;
-
+import java.awt.geom.Point2D;
 import java.util.List;
 
-import static java.lang.Math.toRadians;
+import static java.lang.Math.round;
 
-public interface ScannerMap {
+public class GridScannerMap extends AbstractScannerMap {
 
     /**
-     * Returns the list of obstacles
+     * Returns an empty map
      */
-    List<Obstacle> getObstacles();
+    public static GridScannerMap create(List<Obstacle> obstacles, double gridSize) {
+        return new GridScannerMap(obstacles, gridSize);
+    }
+
+    private final double gridSize;
 
     /**
-     * Returns the scanner map updated by a proxy sample
+     * Creates a scanner map
      *
-     * @param sample the sample
+     * @param obstacles the list of obstacles
      */
-    ScannerMap process(Timed<ProxySample> sample);
+    protected GridScannerMap(List<Obstacle> obstacles, double gridSize) {
+        super(obstacles);
+        this.gridSize = gridSize;
+    }
+
+    @Override
+    protected Point2D arrangeLocation(Point2D location) {
+        return snapToGrid(location, gridSize);
+    }
+
+    static Point2D snapToGrid(Point2D location, double gridSize) {
+        double x = location.getX();
+        double y = location.getY();
+        long i = round(x / gridSize);
+        long j = round(y / gridSize);
+        return new Point2D.Double(i * gridSize, j * gridSize);
+    }
+
+    @Override
+    protected GridScannerMap newInstance(List<Obstacle> obstacles) {
+        return new GridScannerMap(obstacles, gridSize);
+    }
 }

@@ -22,8 +22,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #24: Create a proxy map by robot asset
 - Issue #27: Add the gyroscope data asset
 - Issue #31: Add map display with robot and obstacles, create base engine to manage different automa behavior
+- Issue #33: Arrange the obstacles in a grid
 
 ## Fixed
 
 - Issue #1: Add missing connection management
 - Issue #9: Serialize comunication with API
+- Issue #32: Scanner map should add obstacles at echo location

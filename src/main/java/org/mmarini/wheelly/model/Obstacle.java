@@ -105,7 +105,7 @@ public class Obstacle {
      * @param location the new location
      */
     public Obstacle setLocation(Point2D location) {
-        return setLocation((double) location.getX(), (double) location.getY());
+        return setLocation(location.getX(), location.getY());
     }
 
     /**
