@@ -30,6 +30,7 @@
 package org.mmarini.wheelly.model;
 
 import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.core.Maybe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,6 +45,10 @@ public interface AsyncConnectable {
      * Returns a flow that completes on connection of socket
      */
     AsyncConnectable connect();
+
+    default Maybe<Boolean> firstConnection() {
+        return readConnection().filter(x -> x).firstElement();
+    }
 
     /**
      * Returns the connection flow, true when connected

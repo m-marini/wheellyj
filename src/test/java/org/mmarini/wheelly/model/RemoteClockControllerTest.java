@@ -29,39 +29,44 @@
 
 package org.mmarini.wheelly.model;
 
-import io.reactivex.rxjava3.subscribers.TestSubscriber;
-import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
 
-class RemoteClockControllerTest {
-    @Test
-    void remoteClock() throws InterruptedException {
-        ReliableSocket socket = ReliableSocket.create("192.168.1.11", 22, 3000);
-        socket.connect();
-        RemoteClockController controller = RemoteClockController.create(socket, 10, 60000, 3000);
-        TestSubscriber<RemoteClock> test = controller.start().readRemoteClocks().test();
-        test.await(3000, TimeUnit.MILLISECONDS);
-        test.assertValueCount(1);
-        controller.close();
-        test.await(3000, TimeUnit.MILLISECONDS);
-        test.assertComplete();
-        socket.close();
-        socket.closed().blockingAwait();
-    }
+import static io.reactivex.rxjava3.core.Flowable.interval;
 
-    @Test
-    void remoteClock2() throws InterruptedException {
-        ReliableSocket socket = ReliableSocket.create("192.168.1.11", 22, 3000);
+class RemoteClockControllerTest {
+    public static final String HOST = "192.168.1.11";
+    public static final int PORT = 22;
+    private static final Logger logger = LoggerFactory.getLogger(RemoteClockControllerTest.class);
+
+    public static void main(String[] args) throws InterruptedException {
+        ReliableSocket socket = ReliableSocket.create(HOST, PORT, 3000, 3000, 1000);
+        RemoteClockController controller = RemoteClockController.create(socket, 3, 1000, 100);
+
+
+        socket.readConnection().subscribe(conn -> logger.debug("Connection {}", conn));
+        socket.readErrors().subscribe(ex -> logger.error("Error {}", ex.toString()));
+        controller.readRemoteClocks().subscribe(ck -> logger.debug("Clock {}", ck),
+                ex -> logger.error("Remote clock error", ex),
+                () -> logger.debug("Remote clock completed")
+        );
+        controller.readErrors()
+                .subscribe(ex -> logger.debug("Errors {}", ex.toString()),
+                        ex -> logger.error("Errors reading errors", ex),
+                        () -> logger.debug("Errors completed")
+                );
+
         socket.connect();
-        RemoteClockController controller = RemoteClockController.create(socket, 10, 5000, 3000);
-        TestSubscriber<RemoteClock> test = controller.start().readRemoteClocks().test();
-        test.await(9500, TimeUnit.MILLISECONDS);
-        test.assertValueCount(2);
+
+        socket.firstConnection()
+                .subscribe(x -> interval(10000, TimeUnit.MILLISECONDS)
+                        .subscribe(y -> controller.start())
+                );
+        Thread.sleep(60000);
         controller.close();
-        test.await(3000, TimeUnit.MILLISECONDS);
-        test.assertComplete();
         socket.close();
-        socket.closed().blockingAwait();
+        Thread.sleep(1000);
     }
 }

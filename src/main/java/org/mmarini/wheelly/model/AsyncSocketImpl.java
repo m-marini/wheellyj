@@ -35,6 +35,7 @@ import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.schedulers.Timed;
 import io.reactivex.rxjava3.subjects.CompletableSubject;
+import io.reactivex.rxjava3.subjects.MaybeSubject;
 import io.reactivex.rxjava3.subjects.SingleSubject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,89 +48,33 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
+import static java.net.StandardSocketOptions.SO_KEEPALIVE;
 import static java.util.Objects.requireNonNull;
 
 /**
  * The AsyncSocketImpl handle the asynchronous communication via socket
- * The read text lines is published as string flow via readLines method.
+ * The read text lines is published on string flow via readLines method.
  * The writing text lines is sent println method.
  * A closed completion flow can be used to get the notification of socket closure or any errors related the socket
  */
 public class AsyncSocketImpl implements AsyncSocket {
-    private static final int READ_BUFFER_SIZE = 1024;
-    private static final Logger logger = LoggerFactory.getLogger(AsyncSocketImpl.class);
-    private static final Logger dataLogger = LoggerFactory.getLogger(AsyncSocketImpl.class.getCanonicalName() + ".dataLog");
-    private static final String CRLF = "\r\n";
     private static final String LF = "\n";
     private static final String CRLF_PATTERN = "\\r?\\n";
+    private static final int READ_BUFFER_SIZE = 1024;
+    private static final Logger dataLogger = LoggerFactory.getLogger(AsyncSocketImpl.class.getCanonicalName() + ".dataLog");
+    private static final Logger logger = LoggerFactory.getLogger(AsyncSocketImpl.class);
 
     /**
-     * Returns a asynchronous socket
-     *
-     * @param host the host
-     * @param port the port
+     * @param host           the host
+     * @param port           the port
+     * @param connectTimeout the connection timeout in millis
+     * @param readTimeout    the read timeout in millis
      */
-    public static AsyncSocketImpl create(String host, int port) {
-        return new AsyncSocketImpl(host, port);
-    }
-
-    /**
-     * @param host the host
-     * @param port the port
-     */
-    private static Single<SocketChannel> createChannel(String host, int port) {
-        requireNonNull(host);
-        return Single.create(emitter -> {
-            try {
-                logger.debug("Opening socket ...");
-                InetSocketAddress socketAddress = new InetSocketAddress(host, port);
-                SocketChannel channel = SocketChannel.open();
-                //channel.setOption(SO_SNDBUF, 30);
-                //channel.setOption(SO_RCVBUF, 100);
-                //channel.setOption(SO_KEEPALIVE, true);
-                logger.debug("Connecting socket ...");
-                channel.connect(socketAddress);
-                emitter.onSuccess(channel);
-            } catch (Throwable ex) {
-                logger.error("Error connecting socket", ex);
-                emitter.onError(ex);
-            }
-        });
-    }
-
-    /**
-     * @param channel the channel
-     */
-    private static Flowable<Timed<String>> readLines(SocketChannel channel) {
-        return Flowable.create(emitter -> {
-            try {
-                ByteBuffer bfr = ByteBuffer.allocate(READ_BUFFER_SIZE);
-                for (; ; ) {
-                    int n = channel.read(bfr);
-                    if (n < 0) {
-                        // End of file
-                        break;
-                    } else if (n > 0) {
-                        bfr.flip();
-                        Stream<Timed<String>> lines = splitLines(bfr);
-                        lines.forEach(line -> {
-                            dataLogger.trace("{} <-- {}", channel, line.value());
-                            emitter.onNext(line);
-                        });
-                    }
-                }
-                emitter.onComplete();
-            } catch (Throwable ex) {
-                try {
-                    channel.close();
-                } catch (IOException e) {
-                    logger.error("Error closing socket", ex);
-                }
-                emitter.onError(ex);
-            }
-        }, BackpressureStrategy.BUFFER);
+    public static AsyncSocketImpl create(String host, int port, long connectTimeout, long readTimeout) {
+        return new AsyncSocketImpl(host, port, connectTimeout, readTimeout);
     }
 
     /**
@@ -148,89 +93,99 @@ public class AsyncSocketImpl implements AsyncSocket {
         return result;
     }
 
+    private final SingleSubject<SocketChannel> channel;
     private final String host;
     private final int port;
-    private final SingleSubject<SocketChannel> channel;
     private final PublishProcessor<Timed<String>> readFlow;
     private final PublishProcessor<String> writeFlow;
     private final Scheduler ioScheduler;
     private final CompletableSubject closed;
+    private final MaybeSubject<Throwable> errors;
+    private final CompletableSubject connectRequest;
+    private final long connectTimeout;
     private final BehaviorProcessor<Boolean> connected;
+    private final long readTimeout;
 
     /**
      * Creates an asynchronous socket
      *
-     * @param host the host
-     * @param port the port
+     * @param host           the host
+     * @param port           the port
+     * @param connectTimeout the connection timeout in millis
+     * @param readTimeout    the read timeout in millis
      */
-    protected AsyncSocketImpl(String host, int port) {
+    protected AsyncSocketImpl(String host, int port, long connectTimeout, long readTimeout) {
         this.host = requireNonNull(host);
         this.port = port;
+        this.connectTimeout = connectTimeout;
+        this.readTimeout = readTimeout;
         this.channel = SingleSubject.create();
+        this.closed = CompletableSubject.create();
+        this.connectRequest = CompletableSubject.create();
+        this.errors = MaybeSubject.create();
         this.readFlow = PublishProcessor.create();
         this.writeFlow = PublishProcessor.create();
-        this.closed = CompletableSubject.create();
-        this.connected = BehaviorProcessor.createDefault(false);
         this.ioScheduler = Schedulers.io();
+        this.connected = BehaviorProcessor.createDefault(false);
+        this.connectRequest.observeOn(ioScheduler)
+                .subscribe(this::createChannel);
+        channel.subscribe(this::readBody,
+                ex -> {
+                });
 
-        // Subscribe for data read
-        channel.toFlowable()
-                .observeOn(ioScheduler)
-                .doOnNext(ch -> logger.debug("Start reading socket {}", ch))
-                .concatMap(AsyncSocketImpl::readLines)
-                .subscribe(readFlow);
-
-        // Subscribe for data write
         channel.observeOn(ioScheduler)
-                .doOnSuccess(channel -> {
-                    logger.debug("Start writing socket {}", channel);
-                    write(channel, writeFlow)
-                            .doOnError(ex -> {
-                                channel.close();
-                                closed.onError(ex);
-                            })
-                            .doOnComplete(closed::onComplete)
-                            .subscribe();
-                }).ignoreElement()
-                .onErrorComplete()
-                .subscribe();
+                .subscribe(this::writeBody,
+                        ex -> {
+                        });
 
-        // Debugging
-        if (logger.isDebugEnabled()) {
-            channel.doOnSuccess(ch -> logger.debug("Debug: channel {}", ch)).subscribe();
-            readFlow.doOnNext(data -> logger.debug("Debug: readFlow {}", data)).subscribe();
-            writeFlow.doOnNext(data -> logger.debug("Debug: writeFLow {}", data)).subscribe();
-            closed.doOnComplete(() -> logger.debug("Debug: closed")).subscribe();
-        }
     }
 
-    @Override
     public AsyncSocketImpl close() {
-        channel.doOnSuccess(SocketChannel::close)
-                .ignoreElement()
-                .onErrorComplete()
-                .subscribe();
-        readFlow.onComplete();
-        connected.onNext(false);
-        connected.onComplete();
-        closed.onComplete();
-
+        channel.observeOn(ioScheduler)
+                .subscribe(channel -> {
+                            try {
+                                writeFlow.onComplete();
+                                channel.close();
+                                closed.onComplete();
+                            } catch (IOException ex) {
+                                errors.onSuccess(ex);
+                                closed.onError(ex);
+                            }
+                            this.connected.onNext(false);
+                            this.connected.onComplete();
+                        },
+                        ex -> closed.onComplete());
         return this;
     }
 
-    @Override
     public Completable closed() {
         return closed;
     }
 
-    @Override
-    public AsyncSocket connect() {
-        createChannel(host, port)
-                .subscribeOn(ioScheduler)
-                .doOnSuccess(x -> connected.onNext(true))
-                .doOnError(connected::onError)
-                .subscribe(channel);
+    public AsyncSocketImpl connect() {
+        connectRequest.onComplete();
         return this;
+    }
+
+    public Completable connected() {
+        return channel.ignoreElement();
+    }
+
+    private void createChannel() {
+        try {
+            logger.info("Creating channel ...");
+            InetSocketAddress socketAddress = new InetSocketAddress(host, port);
+            SocketChannel channel = SocketChannel.open();
+            channel.setOption(SO_KEEPALIVE, true);
+            channel.socket().connect(socketAddress, (int) connectTimeout);
+            this.channel.onSuccess(channel);
+            this.connected.onNext(true);
+        } catch (Throwable ex) {
+            errors.onSuccess(ex);
+            this.channel.onError(ex);
+            this.closed.onComplete();
+            this.connected.onComplete();
+        }
     }
 
     /**
@@ -238,12 +193,39 @@ public class AsyncSocketImpl implements AsyncSocket {
      */
     public Completable println(Flowable<String> lines) {
         CompletableSubject result = CompletableSubject.create();
-        channel.ignoreElement()
-                .concatWith(lines
-                        .doOnNext(writeFlow::onNext)
-                        .ignoreElements())
-                .subscribe(result);
+        connected().observeOn(ioScheduler)
+                .subscribe(() -> lines.subscribe(
+                                writeFlow::onNext,
+                                result::onError,
+                                result::onComplete),
+                        result::onError);
         return result;
+    }
+
+    /**
+     * @param line the line
+     */
+    public AsyncSocketImpl println(String line) {
+        writeFlow.onNext(line);
+        return this;
+    }
+
+    private void readBody(SocketChannel ch) {
+        readLines(ch).subscribeOn(ioScheduler)
+                .timeout(this.readTimeout, TimeUnit.MILLISECONDS)
+                .subscribe(
+                        readFlow::onNext,
+                        ex -> {
+                            if (ex instanceof TimeoutException) {
+                                ch.close();
+                            }
+                            errors.onSuccess(ex);
+                            readFlow.onError(ex);
+                            connected.onNext(false);
+                            connected.onComplete();
+                            closed.onComplete();
+                        },
+                        readFlow::onComplete);
     }
 
     @Override
@@ -251,44 +233,63 @@ public class AsyncSocketImpl implements AsyncSocket {
         return connected;
     }
 
-    @Override
-    public Flowable<Timed<String>> readLines() {
-        return readFlow;
+    public Maybe<Throwable> readErrors() {
+        return errors;
     }
 
     /**
      * @param channel the channel
-     * @param lines   the lines
      */
-    private Completable write(SocketChannel channel, Flowable<String> lines) {
-        CompletableSubject result = CompletableSubject.create();
-        logger.debug("Writing data to channel...");
-        lines.observeOn(ioScheduler)
-                .doOnNext(line -> {
-                            ByteBuffer buffer = ByteBuffer.wrap((line + LF).getBytes(StandardCharsets.UTF_8));
-                            try {
-                                while (buffer.remaining() > 0) {
-                                    channel.write(buffer);
-                                }
-                                dataLogger.trace("{} --> {}", channel, line);
-                            } catch (Throwable ex) {
-                                logger.error("Error writing socket", ex);
+    private Flowable<Timed<String>> readLines(SocketChannel channel) {
+        return Flowable.create(emitter -> {
+            try {
+                ByteBuffer bfr = ByteBuffer.allocate(READ_BUFFER_SIZE);
+                for (; channel.isConnected(); ) {
+                    int n = channel.read(bfr);
+                    if (n < 0) {
+                        // End of file
+                        break;
+                    } else if (n > 0) {
+                        bfr.flip();
+                        Stream<Timed<String>> lines = splitLines(bfr);
+                        lines.forEach(line -> {
+                            dataLogger.trace("{} <-- {}", channel, line.value());
+                            emitter.onNext(line);
+                        });
+                    }
+                }
+                emitter.onComplete();
+            } catch (Throwable ex) {
+                if (!emitter.isCancelled()) {
+                    emitter.onError(ex);
+                }
+            }
+        }, BackpressureStrategy.ERROR);
+    }
+
+    public Flowable<Timed<String>> readLines() {
+        return readFlow;
+    }
+
+    private void writeBody(SocketChannel ch) {
+        writeFlow.observeOn(ioScheduler)
+                .subscribe(line -> {
+                            if (ch.isConnected()) {
+                                ByteBuffer buffer = ByteBuffer.wrap((line + LF).getBytes(StandardCharsets.UTF_8));
                                 try {
-                                    channel.close();
-                                } catch (IOException ex1) {
-                                    logger.error("Error closing socket", ex1);
+                                    while (buffer.remaining() > 0) {
+                                        ch.write(buffer);
+                                    }
+                                    dataLogger.trace("{} --> {}", ch, line);
+                                } catch (Throwable ex) {
+                                    errors.onSuccess(ex);
+                                    closed.onComplete();
+                                    this.connected.onNext(false);
+                                    this.connected.onComplete();
                                 }
-                                throw ex;
                             }
-                        }
-                )
-                .doOnComplete(() -> {
-                    logger.debug("Write completed, closing channel");
-                    channel.close();
-                    result.onComplete();
-                })
-                .doOnError(result::onError)
-                .subscribe();
-        return result;
+                        },
+                        ex -> {
+                        });
     }
 }

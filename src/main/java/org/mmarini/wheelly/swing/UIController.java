@@ -33,10 +33,7 @@ import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.BackpressureStrategy;
-import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.schedulers.Timed;
-import org.mmarini.Tuple2;
 import org.mmarini.wheelly.model.*;
 import org.mmarini.yaml.schema.Locator;
 import org.slf4j.Logger;
@@ -46,16 +43,11 @@ import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 
-import static io.reactivex.rxjava3.core.Flowable.*;
 import static java.lang.String.format;
-import static org.mmarini.wheelly.model.AbstractScannerMap.THRESHOLD_DISTANCE;
 import static org.mmarini.wheelly.swing.RxJoystick.NONE_CONTROLLER;
 import static org.mmarini.yaml.Utils.fromFile;
 
@@ -63,7 +55,8 @@ import static org.mmarini.yaml.Utils.fromFile;
  *
  */
 public class UIController {
-    public static final String DEFAULT_BASE_URL = "http://192.168.1.10/api/v1/wheelly";
+    public static final long MOTOR_COMMAND_INTERVAL = 100;
+    public static final long SCAN_COMMAND_INTERVAL = 700;
     private static final String CONFIG_FILE = ".wheelly.yml";
     private static final Logger logger = LoggerFactory.getLogger(UIController.class);
     private static final int FORWARD_DIRECTION = 0;
@@ -80,30 +73,21 @@ public class UIController {
     private final Dashboard dashboard;
     private final Radar radar;
     private final GlobalMap globalMap;
-    private String host;
     private String joystickPort;
-    private Disposable statusDisposable;
-    private Disposable connectionDisposable;
-    private Disposable errorDisposable;
-    private Disposable elapsDisposable;
-    private Disposable proxyDisposable;
-    private int port;
-    private final ScannerMap map;
-    private InferenceEngine engine;
     private JsonNode configNode;
+    private BehaviorEngine behaviorEngine;
+    private ConfigParameters configParams;
 
     /**
      *
      */
     protected UIController() {
         this.joystickPort = NONE_CONTROLLER;
-        this.host = DEFAULT_BASE_URL;
         this.frame = new WheellyFrame();
         this.preferencesPane = new PreferencesPane();
         this.dashboard = frame.getDashboard();
         this.radar = frame.getRadar();
         this.globalMap = frame.getGlobalMap();
-        this.map = GridScannerMap.create(List.of(), THRESHOLD_DISTANCE);
 
         this.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.frame.setSize(1024, 800);
@@ -124,10 +108,8 @@ public class UIController {
                 .doOnNext(this::handlePreferences)
                 .subscribe();
         dashboard.getResetFlow()
-                .doOnNext(ev -> {
-                    closeConfig();
-                    openConfig();
-                })
+                .doOnNext(ev -> closeConfig()
+                        .openConfig())
                 .subscribe();
         return this;
     }
@@ -136,25 +118,9 @@ public class UIController {
      * Returns the UIController with current configuration closed
      */
     private UIController closeConfig() {
-        if (statusDisposable != null) {
-            statusDisposable.dispose();
-            statusDisposable = null;
-        }
-        if (errorDisposable != null) {
-            errorDisposable.dispose();
-            errorDisposable = null;
-        }
-        if (connectionDisposable != null) {
-            connectionDisposable.dispose();
-            connectionDisposable = null;
-        }
-        if (elapsDisposable != null) {
-            elapsDisposable.dispose();
-            elapsDisposable = null;
-        }
-        if (proxyDisposable != null) {
-            proxyDisposable.dispose();
-            proxyDisposable = null;
+        if (behaviorEngine != null) {
+            behaviorEngine.close();
+            behaviorEngine = null;
         }
         return this;
     }
@@ -178,14 +144,13 @@ public class UIController {
             Method creator = clazz.getDeclaredMethod("create", JsonNode.class);
             int modifiers = creator.getModifiers();
             if (!Modifier.isStatic(modifiers)) {
-                throw new IllegalArgumentException(format("creator method is not static", engineRef));
+                throw new IllegalArgumentException("creator method is not static");
             }
             Object result = creator.invoke(null, engineNode);
             return (InferenceEngine) result;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-//        return new ManualEngine(RxJoystickImpl.create(joystickPort));
     }
 
     /**
@@ -193,19 +158,17 @@ public class UIController {
      */
     private void handlePreferences(ActionEvent actionEvent) {
         preferencesPane.setJoystickPort(joystickPort)
-                .setBaseUrl(host);
+                .setBaseUrl("");
         int result = JOptionPane.showConfirmDialog(
                 frame, preferencesPane, "Preferences",
                 JOptionPane.OK_CANCEL_OPTION);
         if (result == JOptionPane.OK_OPTION) {
             joystickPort = preferencesPane.getJoystickPort();
-            host = preferencesPane.getBaseUrl();
-            saveConfig();
         }
     }
 
     /**
-     * @param sample
+     * @param sample the sample
      */
     private void handleProxySample(Timed<ProxySample> sample) {
         dashboard.setProxy(sample);
@@ -244,9 +207,7 @@ public class UIController {
     private void loadConfig() throws IOException {
         this.configNode = fromFile(CONFIG_FILE);
         Yaml.config().apply(Locator.root()).accept(configNode);
-        //joystickPort = Yaml.joystickPort(node);
-        host = Yaml.host(configNode);
-        port = Yaml.port(configNode);
+        configParams = Yaml.configParams(configNode);
     }
 
     /**
@@ -254,80 +215,41 @@ public class UIController {
      */
     private void openConfig() {
         try {
-            RobotController controller = RawController.create(host, port);
-            this.engine = createEngine();
+            logger.debug("openConfig");
+            RobotController controller = RawController.create(configParams);
+            InferenceEngine engine = createEngine();
 
-            this.connectionDisposable = controller.readConnection()
-                    .doOnNext(connected -> {
+            this.behaviorEngine = BehaviorEngine.create(controller, engine, MOTOR_COMMAND_INTERVAL, SCAN_COMMAND_INTERVAL);
+
+            behaviorEngine.readConnection()
+                    .subscribe(connected -> {
                         dashboard.setWifiLed(connected);
                         frame.log(connected ? "Connected" : "Disconnected");
-                    })
-                    .subscribe();
+                    });
 
-            this.errorDisposable = controller.readErrors()
-                    .doOnNext(ex -> {
+            behaviorEngine.readErrors()
+                    .subscribe(ex -> {
                         logger.error("Error on flow", ex);
                         frame.log(ex.getMessage());
-                    })
-                    .doOnError(ex -> {
-                        logger.error("Error reading errors", ex);
-                        frame.log(ex.getMessage());
-                    })
-                    .subscribe();
+                    });
 
             // Creates status flow
-            Flowable<WheellyStatus> statusFlow = controller.readStatus()
-                    .doOnNext(this::handleStatusMessage);
+            behaviorEngine.readStatus()
+                    .subscribe(this::handleStatusMessage);
 
-            // Creates map flow
-            Flowable<ScannerMap> mapFlow = controller.readProxy()
-                    .doOnNext(this::handleProxySample)
-                    .doOnNext(dashboard::setProxy)
-                    .scanWith(() -> GridScannerMap.create(List.of(), THRESHOLD_DISTANCE),
-                            ScannerMap::process)
-                    .cast(ScannerMap.class)
-                    .doOnNext(map -> {
+            behaviorEngine.readProxy()
+                    .subscribe(this::handleProxySample);
+
+            behaviorEngine.readMapFlow()
+                    .subscribe(map -> {
                         radar.setObstacles(map.getObstacles());
                         globalMap.setObstacles(map.getObstacles());
                     });
 
-            // Builds commands flow
-            Flowable<Tuple2<MotorCommand, Integer>> commands = combineLatest(statusFlow, mapFlow, Tuple2::of)
-                    .map(engine::process)
-                    .publish()
-                    .autoConnect();
-
-            // Splits the commands  flow in motor and scanner command flows
-            Flowable<MotorCommand> motorComandFlow = commands.map(Tuple2::getV1)
-                    .sample(100, TimeUnit.MILLISECONDS);
-
-            Flowable<Integer> scanCommand1Flow = commands.map(Tuple2::getV2)
-                    .distinctUntilChanged();
-            Flowable<Integer> scanCommandFlow = combineLatest(interval(100, TimeUnit.MILLISECONDS), scanCommand1Flow, (t, a) -> a)
-                    .buffer(2, 1)
-                    .filter(list -> !(list.get(0) == 0 && list.get(1) == 0))
-                    .concatMap(list -> list.get(1) == 0
-                            ? fromIterable(list)
-                            : just(list.get(0)))
-                    .doOnNext(a -> logger.debug("scan {}", a));
-
-            controller.activateMotors(motorComandFlow)
-                    .scan(scanCommandFlow)
-                    .start();
+            behaviorEngine.start();
         } catch (Exception ex) {
             logger.error(ex.getMessage(), ex);
             frame.log(ex.getMessage());
-        }
-    }
-
-    /**
-     *
-     */
-    private void saveConfig() {
-        try {
-            Yaml.saveConfig(CONFIG_FILE, joystickPort, host, port);
-        } catch (IOException ex) {
-            logger.error(ex.getMessage(), ex);
         }
     }
 
@@ -339,10 +261,9 @@ public class UIController {
     public void start() {
         try {
             loadConfig();
-        } catch (FileNotFoundException e) {
-            saveConfig();
         } catch (Throwable e) {
             logger.error(e.getMessage(), e);
+            System.exit(1);
         }
         buildFlow();
         frame.setVisible(true);

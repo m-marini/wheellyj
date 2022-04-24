@@ -60,7 +60,7 @@ public class MotorFunction {
     private final CompletableSubject completed;
 
     public MotorFunction() throws IOException {
-        this.socket = ReliableSocket.create(HOST, 22, 3000);
+        this.socket = ReliableSocket.create(HOST, 22, 3000, 3000, 3000);
         this.outFile = new PrintWriter(new FileWriter(MOTOR_DATA));
         this.completed = CompletableSubject.create();
         socket.readLines()

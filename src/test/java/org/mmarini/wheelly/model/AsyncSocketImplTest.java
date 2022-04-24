@@ -30,62 +30,88 @@
 package org.mmarini.wheelly.model;
 
 import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.observers.TestObserver;
-import io.reactivex.rxjava3.schedulers.Timed;
-import io.reactivex.rxjava3.subscribers.TestSubscriber;
-import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static io.reactivex.rxjava3.core.Flowable.interval;
 
 class AsyncSocketImplTest {
-    @Test
-    void close() throws InterruptedException {
-        AsyncSocketImpl socket = AsyncSocketImpl.create("192.168.1.11", 22);
-        TestSubscriber<Timed<String>> readTest = socket.readLines().test();
-        TestObserver<Void> closedTest = socket.closed().test();
-        TestSubscriber<Boolean> connectTest = socket.connect().readConnection().test();
+    public static final String HOST = "192.168.1.11";
+    public static final int PORT = 22;
+    static final Logger logger = LoggerFactory.getLogger(AsyncSocketImplTest.class);
 
-        connectTest.await(1, TimeUnit.SECONDS);
 
-        connectTest.assertNotComplete();
-        connectTest.assertValues(false,true);
+    public static void main(String[] args) throws InterruptedException {
+        AsyncSocketImpl s = AsyncSocketImpl.create(HOST, PORT, 1000, 1000);
+        Flowable<String> dataFlow = interval(500, TimeUnit.MILLISECONDS).map(x -> "sc 90");
 
-        TestObserver<Void> writeTest = socket.println(Flowable.just("qs")).test();
-        Thread.sleep(2000);
-        writeTest.assertComplete();
-        readTest.assertNotComplete();
+        s.connected()
+                .subscribe(
+                        () -> logger.debug("Connected 1"),
+                        ex -> logger.error("Error connecting 1 {}", ex.toString())
+                );
+        s.readErrors()
+                .subscribe(
+                        ex -> logger.debug("Error notification 1 {}",ex.toString()),
+                        ex -> logger.error("Error on error 1", ex),
+                        () -> logger.debug("no error 1"));
+        s.readLines()
+                .sample(1, TimeUnit.SECONDS)
+                .subscribe(
+                        data -> logger.debug("data 1 {}", data.value()),
+                        ex -> logger.error("Error on data 1 {}", ex.toString()),
+                        () -> logger.debug("data closed 1"));
+        s.closed()
+                .subscribe(
+                        () -> logger.debug("Closed 1"),
+                        ex -> logger.error("Error closing 1 {}", ex.toString())
+                );
+        s.readConnection()
+                .subscribe(
+                        cc -> logger.debug("Connection {}", cc),
+                        ex -> logger.error("Error reading connection"),
+                        () -> logger.debug("Connection completed")
+                );
 
-        List<Timed<String>> values = readTest.values();
-        assertThat(values, not(empty()));
 
-        socket.close();
-        readTest.await(1, TimeUnit.SECONDS);
-        readTest.assertComplete();
-        writeTest.assertComplete();
-        closedTest.assertComplete();
-        connectTest.assertValues(false,true,false);
-    }
+        s.connect();
 
-    @Test
-    void socketTest() throws InterruptedException {
-        AsyncSocketImpl socket = AsyncSocketImpl.create("192.168.1.11", 22);
-        TestSubscriber<Timed<String>> readTest = socket.readLines().test();
-        TestSubscriber<Boolean> connectTest = socket.connect().readConnection().test();
-        TestObserver<Void> writeTest = socket.println(Flowable.just("qs").concatWith(Flowable.never())).test();
+        s.println(dataFlow).subscribe(
+                () -> logger.debug("Write completed"),
+                ex -> logger.error("Error writing"));
 
-        connectTest.await(1, TimeUnit.SECONDS);
+        logger.debug("Waiting ...");
+        Thread.sleep(5000);
 
-        connectTest.assertValues(false, true);
-
+        s.connected()
+                .subscribe(
+                        () -> logger.debug("Connected 2"),
+                        ex -> logger.error("Error connecting 2")
+                );
+        s.readErrors()
+                .subscribe(
+                        ex -> logger.debug("Error notification 2 {}",ex.toString()),
+                        ex -> logger.error("Error on error 2", ex),
+                        () -> logger.debug("no error 2"));
+        s.readLines()
+                .sample(1, TimeUnit.SECONDS)
+                .subscribe(
+                        data -> logger.debug("data 2 {}", data.value()),
+                        ex -> logger.error("Error on data 2 {}", ex.getMessage()),
+                        () -> logger.debug("data closed 2"));
+        s.closed()
+                .subscribe(
+                        () -> logger.debug("Closed 2"),
+                        ex -> logger.error("Error closing 2")
+                );
+        logger.debug("Waiting ...");
+        Thread.sleep(10000);
+        s.close();
+        logger.debug("Waiting ...");
         Thread.sleep(1000);
-        writeTest.assertNotComplete();
-        readTest.assertNotComplete();
-        List<Timed<String>> values = readTest.values();
-        assertThat(values, not(empty()));
-        socket.close();
+        logger.debug("completed");
+
     }
 }

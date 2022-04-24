@@ -37,14 +37,12 @@ import io.reactivex.rxjava3.processors.BehaviorProcessor;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Timed;
 import io.reactivex.rxjava3.subjects.CompletableSubject;
-import org.mmarini.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import static io.reactivex.rxjava3.core.Flowable.empty;
 import static io.reactivex.rxjava3.core.Flowable.just;
 
 /**
@@ -56,17 +54,21 @@ public class ReliableSocket implements AsyncSocket {
     /**
      * Returns a reliable socket
      *
-     * @param host          the host
-     * @param port          the port
-     * @param retryInterval the retry interval
+     * @param host              the host
+     * @param port              the port
+     * @param connectionTimeout the connection timeout
+     * @param retryInterval     the retry interval
+     * @param readTimeout       the read timeout
      */
-    public static ReliableSocket create(String host, int port, long retryInterval) {
-        return new ReliableSocket(host, port, retryInterval);
+    public static ReliableSocket create(String host, int port, long connectionTimeout, long retryInterval, long readTimeout) {
+        return new ReliableSocket(host, port, connectionTimeout, retryInterval, readTimeout);
     }
 
     private final String host;
     private final int port;
     private final long retryInterval;
+    private final long connectionTimeout;
+    private final long readTimeout;
     private final BehaviorProcessor<Optional<AsyncSocketImpl>> sockets;
     private final PublishProcessor<Timed<String>> readLines;
     private final PublishProcessor<String> writeLines;
@@ -77,71 +79,27 @@ public class ReliableSocket implements AsyncSocket {
     /**
      * Creates a reliable socket
      *
-     * @param host          the host
-     * @param port          the port
-     * @param retryInterval the retry interval
+     * @param host              the host
+     * @param port              the port
+     * @param connectionTimeout the connection timeout
+     * @param retryInterval     the retry interval
+     * @param readTimeout       the read timeout
      */
-    protected ReliableSocket(String host, int port, long retryInterval) {
+    protected ReliableSocket(String host, int port, long connectionTimeout, long retryInterval, long readTimeout) {
         this.host = host;
         this.port = port;
+        this.connectionTimeout = connectionTimeout;
         this.retryInterval = retryInterval;
+        this.readTimeout = readTimeout;
         this.sockets = BehaviorProcessor.createDefault(Optional.empty());
         this.readLines = PublishProcessor.create();
         this.writeLines = PublishProcessor.create();
         this.errors = PublishProcessor.create();
         this.badSockets = PublishProcessor.create();
         this.closed = CompletableSubject.create();
-
-        // Attaches for reading each generated sockets and copies the lines from sockets to publisher
-        sockets.concatMap(Utils::optionalToFlow)
-                .concatMap(socket -> {
-                    logger.debug("Connected for read");
-                    return socket.readLines()
-                            .doOnNext(line -> logger.debug("Line read from socket {}", line))
-                            .onErrorResumeNext(ex -> {
-                                errors.onNext(ex);
-                                badSockets.onNext(socket);
-                                return empty();
-                            });
-                })
-                .doOnNext(line -> logger.debug("Line write to publisher {}", line))
-                .subscribe(readLines);
-
-        // Attaches for writing each generated sockets and copies the writing lines from internal publisher to sockets
-        sockets.concatMap(Utils::optionalToFlow)
-                .concatMap(socket -> {
-                    logger.debug("Connected for write");
-                    return socket.println(writeLines)
-                            .toFlowable()
-                            .onErrorResumeNext(ex -> {
-                                errors.onNext(ex);
-                                badSockets.onNext(socket);
-                                return empty();
-                            });
-                })
-                .subscribe();
-
         // Close bad socket and regenerate the socket after the retry interval
         badSockets.distinctUntilChanged()
-                .doOnNext(socket -> {
-                    socket.close();
-                    generateNewSocket();
-                })
-                .onErrorResumeNext(ex -> {
-                    logger.error("Error managing bad sockets", ex);
-                    return empty();
-                })
-                .subscribe();
-
-
-        if (logger.isDebugEnabled()) {
-            sockets.subscribe(x -> logger.debug("Debug: sockets {}", x));
-            readLines.subscribe(x -> logger.debug("Debug: readLines {}", x));
-            writeLines.subscribe(x -> logger.debug("Debug: writeLines {}", x));
-            errors.subscribe(x -> logger.debug("Debug: errors {}", x.getMessage()));
-            badSockets.subscribe(x -> logger.debug("Debug: badSockets {}", x));
-            closed.subscribe(() -> logger.debug("Debug: closed"));
-        }
+                .subscribe(socket -> retryConnection());
     }
 
     @Override
@@ -169,6 +127,7 @@ public class ReliableSocket implements AsyncSocket {
 
     @Override
     public ReliableSocket connect() {
+        logger.info("Connecting ...");
         return generateNewSocket();
     }
 
@@ -176,24 +135,30 @@ public class ReliableSocket implements AsyncSocket {
      * Generates a new socket
      */
     private ReliableSocket generateNewSocket() {
-        AsyncSocketImpl socket = AsyncSocketImpl.create(host, port);
-        logger.debug("Connecting");
+        AsyncSocketImpl socket = AsyncSocketImpl.create(host, port, connectionTimeout, readTimeout);
         socket.connect();
-        socket.readConnection()
-                .filter(connected -> connected)
-                .firstElement()
-                .ignoreElement()
-                .doOnComplete(() -> {
-                    logger.debug("Connected");
-                    sockets.onNext(Optional.of(socket));
-                })
-                .onErrorResumeNext(ex -> {
-                    logger.error("Error creating socket", ex);
-                    errors.onNext(ex);
-                    retryConnection();
-                    return Completable.complete();
-                })
-                .subscribe();
+        socket.connected()
+                .subscribe(() -> {
+                            logger.debug("Socket connected");
+                            // Attaches for writing each generated sockets and copies the writing lines from internal publisher to sockets
+                            socket.readErrors()
+                                    .subscribe(ex -> {
+                                        errors.onNext(ex);
+                                        sockets.onNext(Optional.empty());
+                                        badSockets.onNext(socket);
+                                    });
+                            socket.println(writeLines);
+                            socket.readLines().subscribe(
+                                    readLines::onNext,
+                                    ex -> {
+                                    });
+                            sockets.onNext(Optional.of(socket));
+                        },
+                        ex -> {
+                            logger.error("Error creating socket", ex);
+                            errors.onNext(ex);
+                            retryConnection();
+                        });
         return this;
     }
 
@@ -208,16 +173,16 @@ public class ReliableSocket implements AsyncSocket {
     public Completable println(Flowable<String> dataFlow) {
         CompletableSubject result = CompletableSubject.create();
         // Copies the data to internal publisher
-        dataFlow.doOnNext(writeLines::onNext)
-                .doOnComplete(result::onComplete)
-                .onErrorResumeNext(ex -> {
+        dataFlow.subscribe(
+                writeLines::onNext,
+                ex -> {
                     logger.error("Error writing data", ex);
                     // In case of errors signals the errors flow, error complete the result and resume with empty flow
                     errors.onNext(ex);
                     result.onError(ex);
-                    return empty();
-                })
-                .subscribe();
+                },
+                result::onComplete
+        );
         return result;
     }
 
@@ -243,8 +208,7 @@ public class ReliableSocket implements AsyncSocket {
      */
     private ReliableSocket retryConnection() {
         Completable.timer(retryInterval, TimeUnit.MILLISECONDS)
-                .doOnComplete(this::generateNewSocket)
-                .subscribe();
+                .subscribe(this::generateNewSocket);
         return this;
     }
 }
