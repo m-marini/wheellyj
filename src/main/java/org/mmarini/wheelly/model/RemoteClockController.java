@@ -38,14 +38,14 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
 
-import static io.reactivex.rxjava3.core.Flowable.*;
+import static io.reactivex.rxjava3.core.Flowable.just;
 import static java.time.Instant.now;
 import static java.util.Objects.requireNonNull;
 
 /**
  * The remote clock controller generate a flow of remote clock
  * by sending clock sync messages and measuring the remote clock offset.
- * The flow starts to emit remote clocks after <pre>start</pre> method invocation
+ * The clock offset will be sent by invoking start method
  */
 public class RemoteClockController {
     private static final Logger logger = LoggerFactory.getLogger(RemoteClockController.class);
@@ -55,42 +55,55 @@ public class RemoteClockController {
      *
      * @param socket          the socket
      * @param numClockSamples the number of clock sync samples to average
-     * @param clockInterval   the remote clock interval
      * @param clockTimeout    the clock timeout when reading response
+     * @param restartDelay    the restart delay to run a clock sync after reconnection
      */
-    public static RemoteClockController create(AsyncSocket socket, int numClockSamples, long clockInterval, long clockTimeout) {
-        return new RemoteClockController(socket, numClockSamples, clockInterval, clockTimeout);
+    public static RemoteClockController create(AsyncSocket socket, int numClockSamples, long clockTimeout, long restartDelay) {
+        return new RemoteClockController(socket, numClockSamples, clockTimeout, restartDelay);
     }
 
     private final AsyncSocket socket;
-    private final PublishProcessor<Throwable> errors;
     private final int numClockSamples;
-    private final long clockInterval;
     private final long clockTimeout;
     private final BehaviorProcessor<RemoteClock> remoteClocks;
+    private final PublishProcessor<Throwable> errors;
+    private final PublishProcessor<Object> trigger;
 
     /**
      * Creates the remote clock controller
      *
      * @param socket          the socket
      * @param numClockSamples the number of clock sync samples to average
-     * @param clockInterval   the remote clock interval
      * @param clockTimeout    the clock timeout when reading response
+     * @param restartDelay    the restart delay to run a clock sync after reconnection
      */
-    protected RemoteClockController(AsyncSocket socket, int numClockSamples, long clockInterval, long clockTimeout) {
+    protected RemoteClockController(AsyncSocket socket, int numClockSamples, long clockTimeout, long restartDelay) {
         this.socket = requireNonNull(socket);
         this.numClockSamples = numClockSamples;
-        this.clockInterval = clockInterval;
         this.clockTimeout = clockTimeout;
         remoteClocks = BehaviorProcessor.create();
-        this.errors = PublishProcessor.create();
+        errors = PublishProcessor.create();
+        this.trigger = PublishProcessor.create();
+        socket.readConnection().filter(x -> x)
+                .delay(restartDelay, TimeUnit.MILLISECONDS)
+                .subscribe(trigger::onNext);
+        this.trigger.subscribe(x ->
+                        readAveragedClock().subscribe(
+                                remoteClocks::onNext,
+                                errors::onNext),
+                ex -> logger.error("Unexpected error", ex),
+                () -> {
+                    remoteClocks.onComplete();
+                    errors.onComplete();
+                }
+        );
     }
 
     /**
      * Closes the controller
      */
     public RemoteClockController close() {
-        remoteClocks.onComplete();
+        this.trigger.onComplete();
         return this;
     }
 
@@ -99,7 +112,6 @@ public class RemoteClockController {
      */
     private Flowable<RemoteClock> readAveragedClock() {
         return Flowable.range(0, numClockSamples)
-                .doOnNext(i -> logger.debug("Clock sync measure {}", i))
                 .concatMap(i -> readClockSync())
                 .map(ClockSyncEvent::getRemoteOffset)
                 .reduce(Long::sum)
@@ -124,20 +136,15 @@ public class RemoteClockController {
      * Returns the clock sync event generating a clock sync command
      */
     private Flowable<ClockSyncEvent> readClockSync() {
-        return just(1)
-                .concatMap(n -> {
-                    long originateTimestamp = now().toEpochMilli();
-                    logger.debug("sending clock sync with timestamp {}", originateTimestamp);
-                    Flowable<Timed<String>> clockMsg = readClock(originateTimestamp);
-                    writeClock(originateTimestamp);
-                    return clockMsg;
-                }).map(data ->
+        long originateTimestamp = now().toEpochMilli();
+        logger.debug("sending clock sync with timestamp {}", originateTimestamp);
+        Flowable<ClockSyncEvent> clockMsg = readClock(originateTimestamp)
+                .map(data ->
                         ClockSyncEvent.from(data.value(), data.time(TimeUnit.MILLISECONDS)));
+        writeClock(originateTimestamp);
+        return clockMsg;
     }
 
-    /**
-     *
-     */
     public Flowable<Throwable> readErrors() {
         return errors;
     }
@@ -153,16 +160,7 @@ public class RemoteClockController {
      * Start the flow
      */
     public RemoteClockController start() {
-        // Wait for connection and start
-        socket.readConnection().filter(x -> x)
-                .firstElement()
-                .toFlowable()
-                .concatMap(x -> interval(0, clockInterval, TimeUnit.MILLISECONDS))
-                .concatMap(x -> readAveragedClock())
-                .doOnNext(remoteClocks::onNext)
-                .doOnError(errors::onNext)
-                .onErrorResumeWith(empty())
-                .subscribe();
+        trigger.onNext(true);
         return this;
     }
 

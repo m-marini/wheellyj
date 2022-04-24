@@ -2,6 +2,7 @@ package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.model.MotorCommand;
 import org.mmarini.wheelly.model.ScannerMap;
@@ -32,7 +33,7 @@ public class ManualEngine implements InferenceEngine {
 
     public static ManualEngine create(JsonNode config) {
         String port = config.path("joystickPort").asText();
-        if (port.isEmpty()){
+        if (port.isEmpty()) {
             throw new IllegalArgumentException("Missing joystickPort");
         }
         RxJoystick joystick = RxJoystickImpl.create(port);
@@ -99,24 +100,30 @@ public class ManualEngine implements InferenceEngine {
     private final RxJoystick joystick;
     private MotorCommand command;
     private int scannerDirection;
+    private Tuple2<MotorCommand, Integer> prevTuple;
 
     protected ManualEngine(RxJoystick joystick) {
         this.joystick = joystick;
         command = MotorCommand.create(0, 0);
         scannerDirection = 0;
         createScannerCommand()
-                .doOnNext(deg -> scannerDirection = deg)
-                .subscribe();
+                .observeOn(Schedulers.computation())
+                .subscribe(deg -> {
+                    scannerDirection = deg;
+                    logger.debug("scan angle {}", deg);
+                });
         createMotorCommand()
-                .doOnNext(cmd -> this.command = cmd)
-                .subscribe();
+                .observeOn(Schedulers.computation())
+                .subscribe(cmd -> {
+                    this.command = cmd;
+                    logger.debug("motor {}", cmd);
+                });
     }
 
     /**
      * Returns the flowable of motor commands
      */
     private Flowable<MotorCommand> createMotorCommand() {
-        logger.debug("Creating joystick command ...");
         return joystick.readXY()
                 .onBackpressureDrop()
                 .map(ManualEngine::speedFromAxis)
@@ -156,12 +163,16 @@ public class ManualEngine implements InferenceEngine {
                 joystick.readValues(RxJoystick.BUTTON_3))
                 .filter(x -> x > 0f)
                 .concatMap(x -> intervalItems(500, -90, -60, -30, 0, 30, 60, 90, 0));
-        return merge(povAngle, fullScann)
-                .doOnNext(x -> logger.debug("scan angle {}", x));
+        return merge(povAngle, fullScann);
     }
 
     @Override
     public Tuple2<MotorCommand, Integer> process(Tuple2<WheellyStatus, ScannerMap> data) {
-        return Tuple2.of(command, scannerDirection);
+        Tuple2<MotorCommand, Integer> tuple = Tuple2.of(command, scannerDirection);
+        if (!tuple.equals(prevTuple)) {
+            prevTuple = tuple;
+            logger.debug("Command {}", tuple);
+        }
+        return tuple;
     }
 }

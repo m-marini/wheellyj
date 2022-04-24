@@ -32,4 +32,5 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Issue #1: Add missing connection management
 - Issue #9: Serialize comunication with API
+- Issue #26: Fix comunication bugs due to loss of signal
 - Issue #32: Scanner map should add obstacles at echo location

@@ -1,11 +1,9 @@
 package org.mmarini.wheelly.swing;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.yaml.Utils;
+import org.mmarini.wheelly.model.ConfigParameters;
 import org.mmarini.yaml.schema.Validator;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -15,72 +13,51 @@ import static java.util.Objects.requireNonNull;
  *
  */
 public class Yaml {
-    public static String engine(JsonNode root) {
-        requireNonNull(root);
-        return root.path("engine").asText();
-    }
-
-    /**
-     * @param root the root node
-     */
-    public static String host(JsonNode root) {
-        requireNonNull(root);
-        return root.path("host").asText();
-    }
-
     /**
      *
      */
     public static Validator config() {
-        return Validator.objectPropertiesRequired(Map.of(
-//                        "joystickPort", Validator.string(),
-                        "host", Validator.string(),
-                        "port", Validator.positiveInteger(),
-                        "engine", Validator.string()),
-                List.of("host", "port", "engine")
+        return Validator.objectPropertiesRequired(
+                Map.ofEntries(
+                        Map.entry("host", Validator.string()),
+                        Map.entry("port", Validator.positiveInteger()),
+                        Map.entry("connectionTimeout", Validator.positiveInteger()),
+                        Map.entry("readTimeout", Validator.positiveInteger()),
+                        Map.entry("retryConnectionInterval", Validator.positiveInteger()),
+                        Map.entry("numClockSamples", Validator.positiveInteger()),
+                        Map.entry("clockTimeout", Validator.positiveInteger()),
+                        Map.entry("clockInterval", Validator.positiveInteger()),
+                        Map.entry("restartClockSyncDelay", Validator.positiveInteger()),
+                        Map.entry("statusInterval", Validator.positiveInteger()),
+                        Map.entry("startQueryDelay", Validator.positiveInteger()),
+                        Map.entry("engine", Validator.string())
+                ),
+                List.of("host", "port", "connectionTimeout", "readTimeout", "retryConnectionInterval",
+                        "numClockSamples", "clockTimeout", "clockInterval", "restartClockSyncDelay",
+                        "statusInterval", "startQueryDelay",
+                        "engine")
         );
     }
 
-    /**
-     * @param joystickPort the joystick port name
-     * @param host         the base url
-     */
-    public static JsonNode createConfig(String joystickPort, String host, int port) {
-        requireNonNull(joystickPort);
-        requireNonNull(host);
-        return Utils.objectMapper.createObjectNode()
-                .put("joystickPort", joystickPort)
-                .put("host", host)
-                .put("port", port);
-    }
-
-    /**
-     * @param root the root node
-     */
-    public static int port(JsonNode root) {
+    public static ConfigParameters configParams(JsonNode root) {
         requireNonNull(root);
-        return root.path("port").asInt();
+        return ConfigParameters.create(
+                root.path("host").asText(),
+                root.path("port").asInt(),
+                root.path("connectionTimeout").asLong(),
+                root.path("retryConnectionInterval").asLong(),
+                root.path("readTimeout").asLong(),
+                root.path("numClockSamples").asInt(),
+                root.path("clockInterval").asLong(),
+                root.path("clockTimeout").asLong(),
+                root.path("restartClockSyncDelay").asLong(),
+                root.path("statusInterval").asLong(),
+                root.path("startQueryDelay").asLong()
+        );
     }
 
-    /**
-     * @param root the root node
-     */
-    public static String joystickPort(JsonNode root) {
+    public static String engine(JsonNode root) {
         requireNonNull(root);
-        return root.path("joystickPort").asText();
-    }
-
-    /**
-     * @param file         the config filename
-     * @param joystickPort the joystick port name
-     * @param host         the base url
-     * @param port
-     * @throws IOException in case of errors
-     */
-    public static void saveConfig(String file, String joystickPort, String host, int port) throws IOException {
-        requireNonNull(file);
-        requireNonNull(joystickPort);
-        requireNonNull(host);
-        Utils.objectMapper.writeValue(new File(file), createConfig(joystickPort, host, port));
+        return root.path("engine").asText();
     }
 }

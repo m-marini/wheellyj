@@ -33,6 +33,7 @@ import io.reactivex.rxjava3.schedulers.Timed;
 
 import java.awt.geom.Point2D;
 import java.util.Optional;
+import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.Double.parseDouble;
@@ -126,6 +127,14 @@ public class ProxySample {
      */
     public double getSampleRad() {
         return toRadians(getSampleDeg());
+    }
+
+    @Override
+    public String toString() {
+        return new StringJoiner(", ", ProxySample.class.getSimpleName() + "[", "]")
+                .add("sensorDeg=" + sensorRelativeDeg)
+                .add("distance=" + distance)
+                .toString();
     }
 
     /**

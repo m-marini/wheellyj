@@ -178,7 +178,7 @@ public class SensorReliability {
         this.frame.getContentPane().add(createContent(), BorderLayout.CENTER);
 
 
-        this.socket = ReliableSocket.create(HOST, 22, 3000);
+        this.socket = ReliableSocket.create(HOST, 22, 3000, 3000, 3000);
         socket.readLines()
                 .doOnError(ex -> logger.error("Error reading socket", ex))
                 .map(Timed::value)
