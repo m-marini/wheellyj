@@ -17,53 +17,48 @@ SR04::SR04(byte triggerPin, byte echoPin)
   _timer.onNext(_handleTimeout, this);
 }
 
-SR04& SR04::begin() {
+void SR04::begin() {
   pinMode(_echoPin, INPUT);
   pinMode(_triggerPin, OUTPUT);
-  return *this;
 }
 
-SR04& SR04::inactivity(unsigned long inactivity) {
+void SR04::inactivity(unsigned long inactivity) {
   _inactivity = inactivity;
-  return *this;
 }
 
-SR04& SR04::noSamples(int noSamples) {
+void SR04::noSamples(int noSamples) {
   _noSamples = noSamples;
-  return *this;
 }
 
-SR04& SR04::onSample(void (*callback)(void* context, int distance), void *context) {
+void SR04::onSample(void (*callback)(void* context, int distance), void *context) {
   _onSample = callback;
   _context = context;
-  return *this;
 }
 
-SR04& SR04::start() {
+void SR04::start() {
   _sampling = true;
-  _timer.stop().interval(_inactivity);
+  _timer.stop();
+  _timer.interval(_inactivity);
   _noMeasures = 0;
   _noValidSamples = 0;
   _totalDuration = 0;
   _measure();
   _timer.start();
-  return *this;
 }
 
-SR04& SR04::stop() {
+void SR04::stop() {
   _timer.stop();
   _sampling = false;
-  return *this;
 }
 
-SR04& SR04::_measure() {
+void SR04::_measure() {
+  unsigned long to = _inactivity * 1000;
   digitalWrite(_triggerPin, LOW);
   delayMicroseconds(2);
   digitalWrite(_triggerPin, HIGH);
   delayMicroseconds(10);
   digitalWrite(_triggerPin, LOW);
   delayMicroseconds(2);
-  unsigned long to = _inactivity * 1000;
   long duration = pulseIn(_echoPin, HIGH, to);
   DEBUG_PRINT(F("// SR04::_measure to,duration: "));
   DEBUG_PRINT(to);
@@ -75,15 +70,13 @@ SR04& SR04::_measure() {
     _totalDuration += duration;
     _noValidSamples++;
   }
-  return *this;
 }
 
-SR04& SR04::polling(unsigned long clockTime) {
+void SR04::polling(unsigned long clockTime) {
   _timer.polling(clockTime);
-  return *this;
 }
 
-SR04& SR04::_send() {
+void SR04::_send() {
   if (_noMeasures >= _noSamples) {
     _sampling = false;
     long distance = 0;

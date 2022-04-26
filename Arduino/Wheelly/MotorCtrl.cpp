@@ -12,24 +12,22 @@ MotorCtrl::MotorCtrl(byte forwPin, byte backPin) {
   _x[4] = _y[4] = 1;
 }
 
-MotorCtrl& MotorCtrl::begin() {
+void MotorCtrl::begin() {
   pinMode(_forwPin, OUTPUT);
   pinMode(_backPin, OUTPUT);
-  return *this;
 }
 
-MotorCtrl& MotorCtrl::setCorrection(float *x, float *y) {
+void MotorCtrl::setCorrection(float *x, float *y) {
   for (int i = 0; i < NO_POINTS; i++) {
     _x[i] = x[i];
     _y[i] = y[i];
   }
-  return *this;
 }
 
 /*
    Set speed
 */
-MotorCtrl& MotorCtrl::speed(float value) {
+void MotorCtrl::speed(float value) {
   float pwd = func(value);
   if (value == 0) {
     analogWrite(_forwPin, 0);
@@ -43,7 +41,6 @@ MotorCtrl& MotorCtrl::speed(float value) {
     analogWrite(_forwPin, 0);
     analogWrite(_backPin, signal);
   }
-  return *this;
 }
 
 float MotorCtrl::func(float x) {

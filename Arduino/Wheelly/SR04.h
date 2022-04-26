@@ -12,29 +12,29 @@ class SR04 {
     SR04(byte triggerPin, byte echoPin);
 
     // Sets a single interval
-    SR04& begin();
+    void begin();
 
     // Sets a single interval
-    SR04& inactivity(unsigned long interval);
+    void inactivity(unsigned long interval);
 
     // Sets a single interval
-    SR04& noSamples(int noSamples);
+    void noSamples(int noSamples);
 
     // Starts the sampling
-    SR04& start();
+    void start();
 
     // Stops the sampling
-    SR04& stop();
+    void stop();
   
     // Returns true if timer is sampling
     bool operator!() const {return _sampling;}
 
     // Sets the callback 
-    SR04& onSample(void (*callback)(void* context, int distance), void* context = NULL);
+    void onSample(void (*callback)(void* context, int distance), void* context = NULL);
 
     // Polls the timer
-    SR04& polling(unsigned long clockTime = millis());
-    SR04& _send();
+    void polling(unsigned long clockTime = millis());
+    void _send();
 
   private:
     unsigned long _inactivity;
@@ -50,7 +50,7 @@ class SR04 {
     void* _context;
     Timer _timer;
 
-    SR04& _measure();
+    void _measure();
 };
 
 #endif
