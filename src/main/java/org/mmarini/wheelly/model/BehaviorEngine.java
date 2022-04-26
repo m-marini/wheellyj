@@ -34,7 +34,6 @@ import io.reactivex.rxjava3.processors.BehaviorProcessor;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.swing.InferenceEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,10 +41,12 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static io.reactivex.rxjava3.core.Flowable.*;
+import static java.lang.Math.round;
 import static org.mmarini.wheelly.model.AbstractScannerMap.THRESHOLD_DISTANCE;
 
 public class BehaviorEngine {
     private static final Logger logger = LoggerFactory.getLogger(BehaviorEngine.class);
+    private static final double MOTOR_SCALE = 0.1;
 
     /**
      * Returns the behavior engine
@@ -57,6 +58,15 @@ public class BehaviorEngine {
      */
     public static BehaviorEngine create(RobotController controller, InferenceEngine engine, long motorCommandInterval, long scanCommandInterval) {
         return new BehaviorEngine(controller, engine, motorCommandInterval, scanCommandInterval);
+    }
+
+    /**
+     * @param configParams
+     * @param engine       the inference engine
+     */
+    public static BehaviorEngine create(ConfigParameters configParams, InferenceEngine engine) {
+        RobotController controller = RawController.create(configParams);
+        return create(controller, engine, configParams.motorCommandInterval, configParams.scanCommandInterval);
     }
 
     private final RobotController controller;
@@ -71,51 +81,63 @@ public class BehaviorEngine {
      * @param scanCommandInterval  the interval between scan commands
      */
     protected BehaviorEngine(RobotController controller, InferenceEngine engine, long motorCommandInterval, long scanCommandInterval) {
+        logger.debug("Created");
         this.controller = controller;
         this.mapFlow = BehaviorProcessor.create();
 
 
         // Creates status flow
-        Flowable<WheellyStatus> statusFlow = controller.readStatus();
+        Flowable<Timed<WheellyStatus>> statusFlow = controller.readStatus();
 
         // Creates map flow
-        controller.readProxy()
+        controller.readStatus()
                 .observeOn(Schedulers.computation())
+                .map(x -> new Timed<>(x.value().sample, x.time(), x.unit()))
                 .scanWith(() -> GridScannerMap.create(List.of(), THRESHOLD_DISTANCE),
                         ScannerMap::process)
                 .subscribe(mapFlow);
 
         // Builds command flow by applying inference engine
-        Flowable<Tuple2<MotorCommand, Integer>> commands = combineLatest(statusFlow, mapFlow, Tuple2::of)
+        Flowable<Tuple2<MotionComand, Integer>> commands = combineLatest(statusFlow, mapFlow, Tuple2::of)
                 .observeOn(Schedulers.computation())
                 .map(engine::process)
                 .publish()
                 .autoConnect();
 
         // Splits the commands  flow in motor and scanner command flows
-        // The motor command are sample every 100 msec
-        Flowable<MotorCommand> motorCommandFlow = commands.map(Tuple2::getV1)
+        // The motor command are sample every motorCommandInterval msec
+        Flowable<MotionComand> motorCommandFlow = commands.map(Tuple2::getV1)
+                .map(cmd -> {
+                    if (cmd instanceof MoveCommand) {
+                        MoveCommand moveCommand = (MoveCommand) cmd;
+                        double speed = round(moveCommand.speed / MOTOR_SCALE) * MOTOR_SCALE;
+                        return MoveCommand.create(moveCommand.direction, speed);
+                    } else {
+                        return cmd;
+                    }
+                })
                 .sample(motorCommandInterval, TimeUnit.MILLISECONDS);
 
         // the distinct scan command
-        Flowable<Integer> scanCommand1Flow = commands.map(Tuple2::getV2)
+        Flowable<Integer> directionFlow = commands.map(Tuple2::getV2)
                 .distinctUntilChanged();
 
         // the scan command every 100 msec filtered out for 0 deg commands
-        Flowable<Integer> scanCommandFlow = combineLatest(interval(scanCommandInterval, TimeUnit.MILLISECONDS),
-                scanCommand1Flow,
+        Flowable<ScanCommand> scanCommandFlow = combineLatest(interval(scanCommandInterval, TimeUnit.MILLISECONDS),
+                directionFlow,
                 (t, a) -> a)
                 .buffer(2, 1)
                 .concatMap(list -> list.get(1) != 0 ? just(list.get(1))
-                        : list.get(0) != 0 ? just(0) : empty());
+                        : list.get(0) != 0 ? just(0) : empty())
+                .map(ScanCommand::create);
 
         // Start the controller
-        controller.activateMotors(motorCommandFlow)
-                .scan(scanCommandFlow);
+        controller.action(scanCommandFlow);
+        controller.action(motorCommandFlow);
     }
 
-    public RobotController activateMotors(Flowable<MotorCommand> commands) {
-        return controller.activateMotors(commands);
+    public RobotController action(Flowable<? extends WheellyCommand> commands) {
+        return controller.action(commands);
     }
 
     public RobotController close() {
@@ -124,6 +146,10 @@ public class BehaviorEngine {
 
     public Flowable<Boolean> readConnection() {
         return controller.readConnection();
+    }
+
+    public Flowable<Timed<Integer>> readCps() {
+        return controller.readCps();
     }
 
     public Flowable<Throwable> readErrors() {
@@ -137,23 +163,14 @@ public class BehaviorEngine {
         return mapFlow;
     }
 
-    public Flowable<Timed<ProxySample>> readProxy() {
-        return controller.readProxy();
-    }
-
-    public Flowable<WheellyStatus> readStatus() {
+    public Flowable<Timed<WheellyStatus>> readStatus() {
         return controller.readStatus();
-    }
-
-    public RobotController scan(Flowable<Integer> commands) {
-        return controller.scan(commands);
     }
 
     /**
      * Starts the engine
      */
     public BehaviorEngine start() {
-        logger.debug("openConfig");
         controller.start();
         return this;
     }

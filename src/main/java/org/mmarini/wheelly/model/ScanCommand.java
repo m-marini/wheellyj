@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) )2022 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022 Marco Marini, marco.marini@mmarini.org
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -29,43 +29,34 @@
 
 package org.mmarini.wheelly.model;
 
-import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.schedulers.Timed;
+import java.util.StringJoiner;
 
-/**
- *
- */
-public interface RobotController {
+public class ScanCommand implements WheellyCommand {
+    /**
+     * @param direction the DEG direction of sensor relative to robot
+     */
+    public static ScanCommand create(int direction) {
+        return new ScanCommand(direction);
+    }
 
-    RobotController action(Flowable<? extends WheellyCommand> commands);
+    public final int direction;
 
     /**
-     *
+     * @param direction the DEG direction of sensor relative to robot
      */
-    RobotController close();
+    protected ScanCommand(int direction) {
+        this.direction = direction;
+    }
 
-    /**
-     *
-     */
-    Flowable<Boolean> readConnection();
+    @Override
+    public String getString() {
+        return "sc " + direction;
+    }
 
-    /**
-     *
-     */
-    Flowable<Timed<Integer>> readCps();
-
-    /**
-     *
-     */
-    Flowable<Throwable> readErrors();
-
-    /**
-     *
-     */
-    Flowable<Timed<WheellyStatus>> readStatus();
-
-    /**
-     * Starts the controller
-     */
-    RobotController start();
+    @Override
+    public String toString() {
+        return new StringJoiner(", ", ScanCommand.class.getSimpleName() + "[", "]")
+                .add("direction=" + direction)
+                .toString();
+    }
 }

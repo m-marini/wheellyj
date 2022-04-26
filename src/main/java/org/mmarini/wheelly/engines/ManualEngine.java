@@ -3,11 +3,9 @@ package org.mmarini.wheelly.engines;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
+import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.model.MotorCommand;
-import org.mmarini.wheelly.model.ScannerMap;
-import org.mmarini.wheelly.model.WheellyStatus;
-import org.mmarini.wheelly.swing.InferenceEngine;
+import org.mmarini.wheelly.model.*;
 import org.mmarini.wheelly.swing.RxJoystick;
 import org.mmarini.wheelly.swing.RxJoystickImpl;
 import org.slf4j.Logger;
@@ -17,15 +15,14 @@ import java.util.concurrent.TimeUnit;
 
 import static io.reactivex.rxjava3.core.Flowable.*;
 import static java.lang.Math.*;
+import static org.mmarini.wheelly.model.Utils.normalizeAngle;
 
 /**
  * The manual engine manage the input of joystick and produce the commands
  */
 public class ManualEngine implements InferenceEngine {
-    private static final long MOTOR_INTERVAL = 500;
     private static final Logger logger = LoggerFactory.getLogger(ManualEngine.class);
-    private static final int NUM_MOTOR_SPEED = 11;
-    private static final long MIN_MOTOR_INTERVAL = 200;
+    private static final double MAX_ROT_SPEED = 2 * PI / 2;
 
     public static ManualEngine create(RxJoystick joystick) {
         return new ManualEngine(joystick);
@@ -40,71 +37,21 @@ public class ManualEngine implements InferenceEngine {
         return new ManualEngine(joystick);
     }
 
+    @SafeVarargs
     static <T> Flowable<T> intervalItems(long time, T... data) {
         return intervalRange(0, data.length, 0, time, TimeUnit.MILLISECONDS)
                 .map(i -> data[i.intValue()]);
     }
 
-    static Tuple2<Double, Double> speedFromAxis(Tuple2<Float, Float> xy) {
-        double x = (double) round(xy._1 * (NUM_MOTOR_SPEED - 1)) / (NUM_MOTOR_SPEED - 1);
-        double y = (double) round(xy._2 * (NUM_MOTOR_SPEED - 1)) / (NUM_MOTOR_SPEED - 1);
-        double ax = abs(x);
-        double ay = abs(y);
-        double value = max(ax, ay);
-        if (value > 0) {
-            if (ay >= ax) {
-                if (y < 0) {
-                    if (x >= 0) {
-                        // y < 0, x >= 0 |y| >= |x|
-                        // NNE
-                        return Tuple2.of(-y, -y - x);
-                    } else {
-                        // y < 0, x < 0 |y| >= |x|
-                        // NNW
-                        return Tuple2.of(-y + x, -y);
-                    }
-                } else if (x >= 0) {
-                    // y > 0, x >= 0 |y| >= |x|
-                    // SSE
-                    return Tuple2.of(x - y, -y);
-                } else {
-                    // y > 0, x < 0 |y| >= |x|
-                    // SSW
-                    return Tuple2.of(-y, -y - x);
-                }
-            } else if (x > 0) {
-                if (y <= 0) {
-                    // x > 0, y <= 0 |x| >= |y|
-                    // ENE
-                    return Tuple2.of(x, -x - y);
-                } else {
-                    // x > 0, y > 0 |x| >= |y|
-                    // ESE
-                    return Tuple2.of(x - y, -x);
-                }
-            } else {
-                if (y <= 0) {
-                    // x < 0, y <= 0 |x| >= |y|
-                    // WNW
-                    return Tuple2.of(x - y, -x);
-                } else {
-                    // x < 0, y > 0 |x| >= |y|
-                    // WSW
-                    return Tuple2.of(x, -x - y);
-                }
-            }
-        }
-        return Tuple2.of(0d, 0d);
-    }
-
     private final RxJoystick joystick;
-    private MotorCommand command;
+    private double direction;
+    private double speed;
     private int scannerDirection;
-    private Tuple2<MotorCommand, Integer> prevTuple;
+    private boolean alt;
 
     protected ManualEngine(RxJoystick joystick) {
         this.joystick = joystick;
-        command = MotorCommand.create(0, 0);
+        alt = true;
         scannerDirection = 0;
         createScannerCommand()
                 .observeOn(Schedulers.computation())
@@ -112,29 +59,29 @@ public class ManualEngine implements InferenceEngine {
                     scannerDirection = deg;
                     logger.debug("scan angle {}", deg);
                 });
-        createMotorCommand()
+        createJoystickFlow()
                 .observeOn(Schedulers.computation())
-                .subscribe(cmd -> {
-                    this.command = cmd;
-                    logger.debug("motor {}", cmd);
-                });
+                .subscribe(this::handleJoystickEvent);
     }
 
     /**
      * Returns the flowable of motor commands
+     *
+     * @return
      */
-    private Flowable<MotorCommand> createMotorCommand() {
-        return joystick.readXY()
+    private Flowable<Timed<Tuple2<Float, Float>>> createJoystickFlow() {
+        return combineLatest(
+                interval(100, TimeUnit.MILLISECONDS),
+                joystick.readXY(),
+                (i, xy) -> xy)
                 .onBackpressureDrop()
-                .map(ManualEngine::speedFromAxis)
-                .map(MotorCommand::create);
+                .timeInterval();
     }
 
     /**
      * Create the flow of scan command results
      */
     private Flowable<Integer> createScannerCommand() {
-        //noinspection unchecked
         Flowable<Integer> povAngle = joystick.readValues(RxJoystick.POV)
                 .map(x -> {
                     switch ((int) (x * 8)) {
@@ -152,7 +99,7 @@ public class ManualEngine implements InferenceEngine {
                 })
                 .distinctUntilChanged();
 
-        Flowable<Integer> fullScann = mergeArray(
+        @SuppressWarnings("unchecked") Flowable<Integer> fullScann = mergeArray(
                 joystick.readValues(RxJoystick.THUMB),
                 joystick.readValues(RxJoystick.THUMB_2),
                 joystick.readValues(RxJoystick.TOP),
@@ -166,13 +113,25 @@ public class ManualEngine implements InferenceEngine {
         return merge(povAngle, fullScann);
     }
 
-    @Override
-    public Tuple2<MotorCommand, Integer> process(Tuple2<WheellyStatus, ScannerMap> data) {
-        Tuple2<MotorCommand, Integer> tuple = Tuple2.of(command, scannerDirection);
-        if (!tuple.equals(prevTuple)) {
-            prevTuple = tuple;
-            logger.debug("Command {}", tuple);
+    private void handleJoystickEvent(Timed<Tuple2<Float, Float>> event) {
+        long dt = event.time(TimeUnit.MILLISECONDS);
+        double x = event.value()._1;
+        double y = event.value()._2;
+        logger.debug("event {}", event);
+        if (x == 0 && y == 0) {
+            alt = true;
+        } else {
+            alt = false;
+            speed = -y;
+            double da = x * MAX_ROT_SPEED * dt / 1000;
+            direction = normalizeAngle(direction + da);
+            logger.debug("speed: {}, da: {}, directionRad {}, directionDeg{} ", speed, da, direction, toDegrees(direction));
         }
-        return tuple;
+    }
+
+    @Override
+    public Tuple2<MotionComand, Integer> process(Tuple2<Timed<WheellyStatus>, ScannerMap> data) {
+        MotionComand cmd = alt ? AltCommand.create() : MoveCommand.create((int) round(toDegrees(direction)), speed);
+        return Tuple2.of(cmd, scannerDirection);
     }
 }

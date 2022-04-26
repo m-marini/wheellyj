@@ -55,8 +55,6 @@ import static org.mmarini.yaml.Utils.fromFile;
  *
  */
 public class UIController {
-    public static final long MOTOR_COMMAND_INTERVAL = 100;
-    public static final long SCAN_COMMAND_INTERVAL = 700;
     private static final String CONFIG_FILE = ".wheelly.yml";
     private static final Logger logger = LoggerFactory.getLogger(UIController.class);
     private static final int FORWARD_DIRECTION = 0;
@@ -153,6 +151,15 @@ public class UIController {
         }
     }
 
+    private void handleCps(Timed<Integer> cps) {
+        dashboard.setCps(cps.value());
+    }
+
+    private void handleMapMessage(ScannerMap map) {
+        radar.setObstacles(map.getObstacles());
+        globalMap.setObstacles(map.getObstacles());
+    }
+
     /**
      * @param actionEvent the event
      */
@@ -168,29 +175,25 @@ public class UIController {
     }
 
     /**
-     * @param sample the sample
-     */
-    private void handleProxySample(Timed<ProxySample> sample) {
-        dashboard.setProxy(sample);
-        ProxySample value = sample.value();
-        if (value.sensorRelativeDeg == FORWARD_DIRECTION) {
-            dashboard.setObstacleDistance(value.distance);
-        }
-    }
-
-    /**
      * Handles the status message
      *
-     * @param status the status
+     * @param tStatus the status
      */
-    private void handleStatusMessage(WheellyStatus status) {
-        dashboard.setPower(status.voltage.value());
-        dashboard.setMotors(status.motors.value()._1, status.motors.value()._2);
-        dashboard.setCps(status.cps.value());
-        dashboard.setForwardBlock(!status.canMoveForward.value());
-        dashboard.setAngle(status.asset.value().getDirectionRad());
-        radar.setAsset(status.asset.value().getLocation(), status.asset.value().getDirectionRad());
-        globalMap.setAsset(status.asset.value().getLocation(), status.asset.value().getDirectionRad());
+    private void handleStatusMessage(Timed<WheellyStatus> tStatus) {
+        WheellyStatus status = tStatus.value();
+        ProxySample sample = status.sample;
+        if (sample.sensorRelativeDeg == FORWARD_DIRECTION) {
+            dashboard.setObstacleDistance(sample.distance);
+        }
+        dashboard.setPower(status.voltage);
+        dashboard.setMotors(status.motors._1, status.motors._2);
+        dashboard.setForwardBlock(!status.canMoveForward);
+        RobotAsset robotAsset = sample.robotAsset;
+        dashboard.setAngle(robotAsset.getDirectionRad());
+        dashboard.setRobotLocation(robotAsset.location);
+        radar.setAsset(robotAsset.location, status.sample.robotAsset.getDirectionRad());
+        globalMap.setAsset(robotAsset.location, robotAsset.getDirectionRad());
+        dashboard.setImuFailure(status.imuFailure ? 1 : 0);
     }
 
     /**
@@ -216,10 +219,8 @@ public class UIController {
     private void openConfig() {
         try {
             logger.debug("openConfig");
-            RobotController controller = RawController.create(configParams);
             InferenceEngine engine = createEngine();
-
-            this.behaviorEngine = BehaviorEngine.create(controller, engine, MOTOR_COMMAND_INTERVAL, SCAN_COMMAND_INTERVAL);
+            this.behaviorEngine = BehaviorEngine.create(configParams, engine);
 
             behaviorEngine.readConnection()
                     .subscribe(connected -> {
@@ -237,14 +238,11 @@ public class UIController {
             behaviorEngine.readStatus()
                     .subscribe(this::handleStatusMessage);
 
-            behaviorEngine.readProxy()
-                    .subscribe(this::handleProxySample);
-
             behaviorEngine.readMapFlow()
-                    .subscribe(map -> {
-                        radar.setObstacles(map.getObstacles());
-                        globalMap.setObstacles(map.getObstacles());
-                    });
+                    .subscribe(this::handleMapMessage);
+
+            behaviorEngine.readCps()
+                    .subscribe(this::handleCps);
 
             behaviorEngine.start();
         } catch (Exception ex) {

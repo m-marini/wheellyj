@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) )2022 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022 Marco Marini, marco.marini@mmarini.org
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -29,43 +29,17 @@
 
 package org.mmarini.wheelly.model;
 
-import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.schedulers.Timed;
+import org.mmarini.Tuple2;
 
 /**
- *
+ * The inference engine processes the robot sensors and produces the command to the actuators.
  */
-public interface RobotController {
-
-    RobotController action(Flowable<? extends WheellyCommand> commands);
-
+public interface InferenceEngine {
     /**
+     * Returns the tuple with motor command and scanner direction
      *
+     * @param data the data of robot
      */
-    RobotController close();
-
-    /**
-     *
-     */
-    Flowable<Boolean> readConnection();
-
-    /**
-     *
-     */
-    Flowable<Timed<Integer>> readCps();
-
-    /**
-     *
-     */
-    Flowable<Throwable> readErrors();
-
-    /**
-     *
-     */
-    Flowable<Timed<WheellyStatus>> readStatus();
-
-    /**
-     * Starts the controller
-     */
-    RobotController start();
+    Tuple2<MotionComand, Integer> process(Tuple2<Timed<WheellyStatus>, ScannerMap> data);
 }

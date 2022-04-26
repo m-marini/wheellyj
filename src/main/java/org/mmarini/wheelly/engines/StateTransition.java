@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) )2022 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022 Marco Marini, marco.marini@mmarini.org
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -27,45 +27,33 @@
  *
  */
 
-package org.mmarini.wheelly.model;
+package org.mmarini.wheelly.engines;
 
-import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.schedulers.Timed;
+import org.mmarini.Tuple2;
+import org.mmarini.wheelly.model.MotionComand;
 
-/**
- *
- */
-public interface RobotController {
+public class StateTransition {
+    /**
+     * @param exit
+     * @param context
+     * @param commands
+     */
+    public static StateTransition create(String exit, StateMachineContext context, Tuple2<MotionComand, Integer> commands) {
+        return new StateTransition(exit, context, commands);
+    }
 
-    RobotController action(Flowable<? extends WheellyCommand> commands);
+    public final Tuple2<MotionComand, Integer> commands;
+    public final StateMachineContext context;
+    public final String exit;
 
     /**
-     *
+     * @param exit
+     * @param context
+     * @param commands
      */
-    RobotController close();
-
-    /**
-     *
-     */
-    Flowable<Boolean> readConnection();
-
-    /**
-     *
-     */
-    Flowable<Timed<Integer>> readCps();
-
-    /**
-     *
-     */
-    Flowable<Throwable> readErrors();
-
-    /**
-     *
-     */
-    Flowable<Timed<WheellyStatus>> readStatus();
-
-    /**
-     * Starts the controller
-     */
-    RobotController start();
+    protected StateTransition(String exit, StateMachineContext context, Tuple2<MotionComand, Integer> commands) {
+        this.commands = commands;
+        this.context = context;
+        this.exit = exit;
+    }
 }

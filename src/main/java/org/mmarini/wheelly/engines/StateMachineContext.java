@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) )2022 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022 Marco Marini, marco.marini@mmarini.org
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -27,45 +27,54 @@
  *
  */
 
-package org.mmarini.wheelly.model;
+package org.mmarini.wheelly.engines;
 
-import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.schedulers.Timed;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
-/**
- *
- */
-public interface RobotController {
+import static java.util.Objects.requireNonNull;
 
-    RobotController action(Flowable<? extends WheellyCommand> commands);
+public class StateMachineContext {
+    /**
+     * @return
+     */
+    public static StateMachineContext create() {
+        return new StateMachineContext(new HashMap<>());
+    }
+
+    private Map<String, Object> values;
 
     /**
-     *
+     * @param values
      */
-    RobotController close();
+    protected StateMachineContext(Map<String, Object> values) {
+        this.values = requireNonNull(values);
+    }
 
     /**
-     *
+     * @param key
+     * @param <T>
      */
-    Flowable<Boolean> readConnection();
+    public <T> Optional<T> get(String key) {
+        return Optional.ofNullable((T) values.get(key));
+    }
 
     /**
-     *
+     * @param key
+     * @param value
+     * @param <T>
      */
-    Flowable<Timed<Integer>> readCps();
+    public <T> StateMachineContext put(String key, T value) {
+        values.put(key, value);
+        return this;
+    }
 
     /**
-     *
+     * @param key
      */
-    Flowable<Throwable> readErrors();
-
-    /**
-     *
-     */
-    Flowable<Timed<WheellyStatus>> readStatus();
-
-    /**
-     * Starts the controller
-     */
-    RobotController start();
+    public StateMachineContext remove(String key) {
+        values.remove(key);
+        return this;
+    }
 }

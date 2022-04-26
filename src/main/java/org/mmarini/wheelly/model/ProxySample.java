@@ -56,30 +56,6 @@ public class ProxySample {
         return new ProxySample(relativeDegDirection, distance, robotAsset);
     }
 
-    /**
-     * The string status is formatted as:
-     * <pre>
-     *     sa [sampleTime] [direction] [distance] [x location] [y location] [angle]
-     * </pre>
-     *
-     * @param msg   the asset message
-     * @param clock the remote clock
-     */
-    public static Timed<ProxySample> from(String msg, RemoteClock clock) {
-        String[] params = msg.split(" ");
-        if (params.length != NO_PARAMS) {
-            throw new IllegalArgumentException("Missing status parameters");
-        }
-        long instant = clock.fromRemote(Long.parseLong(params[1]));
-        int relDirection = parseInt(params[2]);
-        double distance = parseDouble(params[3]);
-        double x = parseDouble(params[4]);
-        double y = parseDouble(params[5]);
-        int direction = parseInt(params[6]);
-        return new Timed<>(new ProxySample(relDirection, distance, RobotAsset.create(x, y, direction)),
-                instant, TimeUnit.MILLISECONDS);
-    }
-
     public final double distance;
     public final RobotAsset robotAsset;
     public final int sensorRelativeDeg;

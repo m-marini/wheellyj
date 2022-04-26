@@ -32,13 +32,12 @@ package org.mmarini.wheelly.swing;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.BackpressureStrategy;
 import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.swing.GridLayoutHelper;
-import org.mmarini.wheelly.model.ProxySample;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.geom.Point2D;
 
 import static java.awt.Color.*;
 import static java.lang.Math.*;
@@ -74,6 +73,7 @@ public class Dashboard extends JPanel {
     private final JLabel elaps;
     private final JButton reset;
     private final JLabel yaw;
+    private final JLabel robotLocation;
     private final Compass compass;
     private final Led imuStatus;
     private final Led imuFailure;
@@ -99,6 +99,7 @@ public class Dashboard extends JPanel {
         this.cps = new JLabel();
         this.elaps = new JLabel();
         this.yaw = new JLabel();
+        this.robotLocation = new JLabel();
         this.reset = new JButton("Reset");
         this.imuStatus = Led.create("/images/engine-off.png", "/images/engine-on.png");
         this.imuFailure = Led.create("/images/gyro-off.png", "/images/gyro-on.png");
@@ -107,6 +108,8 @@ public class Dashboard extends JPanel {
         setCps(0);
         setElapsed(0);
         setYaw(0);
+        setRobotLocation(new Point2D.Double());
+        setImuStatus(0);
 
         setBackground(BLACK);
 
@@ -122,6 +125,8 @@ public class Dashboard extends JPanel {
         rightPower.setForeground(WHITE);
         yaw.setBackground(BLACK);
         yaw.setForeground(WHITE);
+        robotLocation.setBackground(BLACK);
+        robotLocation.setForeground(WHITE);
 
         new GridLayoutHelper<>(this).modify("weight,1,1 fill at,0,0").add(createConnectionPanel()).modify("at,1,0").add(createMotorsPanel()).modify("at,2,0").add(createObstaclePanel()).modify("at,3,0").add(createPowerPanel()).modify("at,4,0").add(createAssetPanel());
 
@@ -137,9 +142,10 @@ public class Dashboard extends JPanel {
         JPanel container = new GridLayoutHelper<>(new JPanel())
                 .modify("insets,2 at,0,0 weight,1,1 fill center").add(compass)
                 .modify("at,0,1 nofill noweight").add(yaw)
-                .modify("at,0,3").add(imuStatus)
-                .modify("at,0,4").add(imuFailure)
-                .modify("at,0,5").add(reset)
+                .modify("at,0,2 nofill noweight").add(robotLocation)
+                .modify("at,0,4").add(imuStatus)
+                .modify("at,0,5").add(imuFailure)
+                .modify("at,0,6").add(reset)
                 .getContainer();
         container.setBackground(BLACK);
         return container;
@@ -220,8 +226,8 @@ public class Dashboard extends JPanel {
     /**
      * @param cps the transitions per second
      */
-    public void setCps(double cps) {
-        this.cps.setText(format("%.1f CPS", cps));
+    public void setCps(int cps) {
+        this.cps.setText(format("%d CPS", cps));
     }
 
     /**
@@ -245,7 +251,7 @@ public class Dashboard extends JPanel {
     /**
      * @param failure the failure status
      */
-    private void setImuFailure(int failure) {
+    public void setImuFailure(int failure) {
         imuFailure.setValue(failure != 0 ? 0 : 1);
     }
 
@@ -318,7 +324,8 @@ public class Dashboard extends JPanel {
         powerMeasureBar.setForeground(color);
     }
 
-    public void setProxy(Timed<ProxySample> sa) {
+    public void setRobotLocation(Point2D location) {
+        robotLocation.setText(format("%.1f, %.1f m", location.getX(), location.getY()));
     }
 
     /**

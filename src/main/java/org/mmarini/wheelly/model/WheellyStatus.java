@@ -36,6 +36,7 @@ import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.Double.parseDouble;
+import static java.lang.Integer.parseInt;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -43,18 +44,18 @@ import static java.util.Objects.requireNonNull;
  */
 public class WheellyStatus {
 
-    public static final int NO_STATUS_PARAMS = 12;
+    public static final int NO_STATUS_PARAMS = 13;
 
     /**
      * Returns the Wheelly status from status string
      * The string status is formatted as:
      * <pre>
-     *     st [sampleTime] [xLocation] [yLocation] [angle] [leftMotor] [rightMotor] [canMoveForward] [voltageTime] [voltage] [cpsTime] [cps]
+     *     st [sampleTime] [xLocation] [yLocation] [yaw] [sensorDirection] [distance] [leftMotor] [rightMotor] [canMoveForward] [voltage] [cpsTime] [cps] [imuFailure] [alt]
      * </pre>
      *
      * @param statusString the status string
      */
-    public static WheellyStatus from(String statusString, RemoteClock clock) {
+    public static Timed<WheellyStatus> from(String statusString, RemoteClock clock) {
         String[] params = statusString.split(" ");
         if (params.length != NO_STATUS_PARAMS) {
             throw new IllegalArgumentException("Missing status parameters");
@@ -64,63 +65,65 @@ public class WheellyStatus {
         double x = parseDouble(params[2]);
         double y = parseDouble(params[3]);
         int angle = Integer.parseInt(params[4]);
-        Timed<RobotAsset> asset = new Timed<>(RobotAsset.create(x, y, angle), sampleInstant, TimeUnit.MILLISECONDS);
+        RobotAsset asset = RobotAsset.create(x, y, angle);
 
-        double left = parseDouble(params[5]);
-        double right = parseDouble(params[6]);
-        Timed<Tuple2<Double, Double>> motors = new Timed<>(Tuple2.of(left, right), sampleInstant, TimeUnit.MILLISECONDS);
+        int sensorDirection = parseInt(params[5]);
+        double distance = parseDouble(params[6]);
+        ProxySample sample = ProxySample.create(sensorDirection, distance, asset);
 
-        boolean moveForward = Integer.parseInt(params[7]) != 0;
-        Timed<Boolean> canMoveForward = new Timed<>(moveForward, sampleInstant, TimeUnit.MILLISECONDS);
+        double left = parseDouble(params[7]);
+        double right = parseDouble(params[8]);
+        Tuple2<Double, Double> motors = Tuple2.of(left, right);
 
-        long voltageInstant = clock.fromRemote(Long.parseLong(params[8]));
-        double v = parseDouble(params[9]);
-        Timed<Double> voltage = new Timed<>(v, voltageInstant, TimeUnit.MILLISECONDS);
+        boolean canMoveForward = Integer.parseInt(params[9]) != 0;
+        double voltage = parseDouble(params[10]);
+        boolean imuFailure = Integer.parseInt(params[11]) != 0;
+        boolean alt = Integer.parseInt(params[12]) != 0;
 
-        long cpsInstant = clock.fromRemote(Long.parseLong(params[10]));
-        double cpsValue = parseDouble(params[11]);
-        Timed<Double> cps = new Timed<>(cpsValue, cpsInstant, TimeUnit.MILLISECONDS);
-
-        return new WheellyStatus(asset, motors, canMoveForward, voltage, cps);
+        return new Timed<>(
+                new WheellyStatus(sample, motors, canMoveForward, voltage, imuFailure, alt),
+                sampleInstant, TimeUnit.MILLISECONDS);
     }
 
-    public final Timed<RobotAsset> asset;
-    public final Timed<Boolean> canMoveForward;
-    public final Timed<Double> cps;
-    public final Timed<Tuple2<Double, Double>> motors;
-    public final Timed<Double> voltage;
+    public final boolean alt;
+    public final boolean canMoveForward;
+    public final boolean imuFailure;
+    public final Tuple2<Double, Double> motors;
+    public final ProxySample sample;
+    public final double voltage;
 
     /**
      * Creates the Wheelly status
      *
-     * @param asset          robot asset
+     * @param sample         robot asset
      * @param motors         the motor speed
      * @param canMoveForward true if robot can move forward
      * @param voltage        the voltage value
-     * @param cps            the cycle per seconds
+     * @param imuFailure     true if imu failure
+     * @param alt            true if alt status
      */
-    protected WheellyStatus(Timed<RobotAsset> asset, Timed<Tuple2<Double, Double>> motors, Timed<Boolean> canMoveForward, Timed<Double> voltage, Timed<Double> cps) {
-        this.asset = requireNonNull(asset);
+    protected WheellyStatus(ProxySample sample, Tuple2<Double, Double> motors, boolean canMoveForward, double voltage, boolean imuFailure, boolean alt) {
+        this.sample = requireNonNull(sample);
         this.motors = requireNonNull(motors);
         this.canMoveForward = canMoveForward;
-        this.voltage = requireNonNull(voltage);
-        this.cps = requireNonNull(cps);
+        this.voltage = voltage;
+        this.imuFailure = imuFailure;
+        this.alt = alt;
     }
 
-    /**
-     * Returns the motor speeds
-     */
-    public Timed<Tuple2<Double, Double>> getMotors() {
-        return motors;
+    public ProxySample getSample() {
+        return sample;
     }
 
     @Override
     public String toString() {
         return new StringJoiner(", ", WheellyStatus.class.getSimpleName() + "[", "]")
-                .add("asset=" + asset)
+                .add("sample=" + sample)
                 .add("motors=" + motors)
                 .add("voltage=" + voltage)
-                .add("cps=" + cps)
+                .add("alt=" + alt)
+                .add("canMoveForward=" + canMoveForward)
+                .add("imuFailure=" + imuFailure)
                 .toString();
     }
 }

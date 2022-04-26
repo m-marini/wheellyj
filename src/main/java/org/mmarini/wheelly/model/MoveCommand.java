@@ -29,74 +29,46 @@
 
 package org.mmarini.wheelly.model;
 
-import org.mmarini.Tuple2;
-
 import java.util.StringJoiner;
 
 /**
  *
  */
-public class MotorCommand {
+public class MoveCommand implements MotionComand {
     /**
-     * @param power
-     */
-    public static MotorCommand create(Tuple2<Double, Double> power) {
-        return create(power._1, power._2);
-    }
-
-    /**
-     * @param leftPower
-     * @param rightPower
-     */
-    public static MotorCommand create(double leftPower, double rightPower) {
-        return new MotorCommand(leftPower, rightPower);
-    }
-
-    public final double leftPower;
-    public final double rightPower;
-
-    /**
-     * @param leftPower
-     * @param rightPower
-     */
-    protected MotorCommand(double leftPower, double rightPower) {
-        this.leftPower = leftPower;
-        this.rightPower = rightPower;
-    }
-
-    /**
+     * Returns move command
      *
+     * @param direction the direction DEG
+     * @param speed     the speed in range -1, 1
      */
-    public double getLeftPower() {
-        return leftPower;
+    public static MoveCommand create(int direction, double speed) {
+        return new MoveCommand(direction, speed);
     }
 
-    /**
-     * @param leftPower
-     */
-    public MotorCommand setLeftPower(double leftPower) {
-        return new MotorCommand(leftPower, rightPower);
-    }
+    public final int direction;
+    public final double speed;
 
     /**
+     * Creates move command
      *
+     * @param direction the direction DEG
+     * @param speed     the speed in range -1, 1
      */
-    public double getRightPower() {
-        return rightPower;
+    protected MoveCommand(int direction, double speed) {
+        this.direction = direction;
+        this.speed = speed;
     }
 
-    /**
-     * @param rightPower
-     */
-    public MotorCommand setRightPower(double rightPower) {
-        return new MotorCommand(leftPower, rightPower);
+    @Override
+    public String getString() {
+        return "mv " + direction + " " + speed;
     }
 
     @Override
     public String toString() {
-        return new StringJoiner(", ", MotorCommand.class.getSimpleName() + "[", "]")
-                .add("leftPower=" + leftPower)
-                .add("rightPower=" + rightPower)
+        return new StringJoiner(", ", MoveCommand.class.getSimpleName() + "[", "]")
+                .add("direction=" + direction)
+                .add("speed=" + speed)
                 .toString();
     }
 }
