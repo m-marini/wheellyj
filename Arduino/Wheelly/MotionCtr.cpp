@@ -2,6 +2,8 @@
 
 //#define DEBUG
 #include "debug.h"
+#include "Utils.h"
+#include "Fuzzy.h"
 
 #define MOTOR_SAFE_INTERVAL 1000ul
 #define MOTOR_CHECK_INTERVAL 300ul
@@ -11,6 +13,9 @@
 #define MAX_LIN_SPEED 0.280f
 
 #define GAIN 0.3
+
+#define ON_DIRECTION_RAD  (90 * PI / 180)
+#define LINEAR_DIRECTION_RAD  (30 * PI / 180)
 
 const float leftXCorrection[] = { -1,  -0.06055, 0, 0.02311, 1};
 const float leftYCorrection[] = { -1, -0.30432, 0, 0.12577, 1};
@@ -33,7 +38,7 @@ MotionCtrl::MotionCtrl(byte leftForwPin, byte leftBackPin, byte rightForwPin, by
   _stopTimer.interval(MOTOR_SAFE_INTERVAL);
   _stopTimer.onNext([](void *ctx, unsigned long) {
     DEBUG_PRINTLN(F("// Motor timer triggered"));
-    ((MotionCtrl*)ctx)->speed(0, 0);
+    ((MotionCtrl*)ctx)->alt();
   }, this);
 
   _checkTimer.interval(MOTOR_CHECK_INTERVAL);
@@ -56,47 +61,49 @@ void MotionCtrl::begin() {
 
   DEBUG_PRINTLN(F("// Motion controller begin"));
 
-  speed(0, 0);
+  alt();
 }
 
 /*
   Resets the controller
 */
 void MotionCtrl::reset() {
+  DEBUG_PRINTLN(F("// MotionCtrl::reset"));
   _sensors.reset();
 }
 
 /*
-  Sets the motion speeds
-*/
-void MotionCtrl::speed(float left, float right) {
-  DEBUG_PRINT(F("// MotionCtrl::speed "));
-  DEBUG_PRINT(left);
-  DEBUG_PRINT(F(" "));
-  DEBUG_PRINT(right);
-  DEBUG_PRINTLN();
 
-  bool stopped = _left == 0 && _right == 0;
-  _left = left;
-  _right = right;
-  //power(_left, _right);
-  if (stopped) {
-    if (left != 0 || right != 0) {
-      _stopTimer.start();
-      _checkTimer.start();
-    }
-    power(_left, _right);
-  } else if (_left == 0 && _right == 0) {
-    // stop
-    power(0, 0);
-    _stopTimer.stop();
-    _checkTimer.stop();
+*/
+void MotionCtrl::alt() {
+  DEBUG_PRINTLN(F("// MotionCtrl::alt"));
+  _speed = 0;
+  _alt = true;
+  power(0, 0);
+  _stopTimer.stop();
+  _checkTimer.stop();
+}
+
+/*
+
+*/
+void MotionCtrl::move(float direction, float speed) {
+  DEBUG_PRINT(F("// MotionCtrl::move "));
+  DEBUG_PRINTF(direction * 180 / PI, 0);
+  DEBUG_PRINT(F(" "));
+  DEBUG_PRINT(speed);
+  DEBUG_PRINTLN();
+  _direction = direction;
+  _speed = speed;
+  if (_alt) {
+    _alt = false;
+    _stopTimer.start();
+    _checkTimer.start();
   } else {
     _stopTimer.restart();
     handleMotion(millis());
   }
 }
-
 /*
 
 */
@@ -104,6 +111,14 @@ void MotionCtrl::polling(unsigned long clockTime) {
   _sensors.polling(clockTime);
   _stopTimer.polling(clockTime);
   _checkTimer.polling(clockTime);
+}
+
+
+/*
+
+*/
+const boolean MotionCtrl::isForward() const {
+  return _speed > 0 || _left > 0 || _right > 0;
 }
 
 /*
@@ -120,30 +135,61 @@ void MotionCtrl::handleMotion(unsigned long clockTime) {
   DEBUG_PRINT(F(", right: "));
   DEBUG_PRINT(_right);
   DEBUG_PRINTLN();
+  if (!_alt && dt > 0) {
+    // Compute motor power
+    float dir = angle();
+    float toDir = _direction;
+    float turn = normalRad(toDir - dir);
 
-  if ((_left != 0 || _right != 0) && dt > 0) {
-    float lSpeed = _sensors.leftSpeed() / MAX_LIN_SPEED;
-    float dvl = _left - lSpeed;
-    float left = min(max(_leftSpeed + GAIN * dvl, -1), 1);
-
-    float rSpeed = _sensors.rightSpeed() / MAX_LIN_SPEED;
-    float dvr = _right - rSpeed;
-    float right = min(max(_rightSpeed + GAIN * dvr, -1), 1);
-
-    DEBUG_PRINT(F("// MotionCtrl::handleMotion lSpeed:"));
-    DEBUG_PRINT(lSpeed);
-    DEBUG_PRINT(F(", rSpeed:"));
-    DEBUG_PRINT(rSpeed);
+    DEBUG_PRINT(F("//   dir: "));
+    DEBUG_PRINTF(dir * 180 / 2, 0);
+    DEBUG_PRINT(F(", to: "));
+    DEBUG_PRINTF(toDir * 180 / 2, 0);
+    DEBUG_PRINT(F(", turn: "));
+    DEBUG_PRINTF(turn * 180 / 2, 0);
     DEBUG_PRINTLN();
 
-    // Computes low frequence filtered speeds
-    float alpha = min(dt * 1e-3 / MOTOR_FILTER_TIME, 1);
-    float notAlpha = 1 - alpha;
-    left = _leftSpeed * notAlpha + left * alpha;
-    right = _rightSpeed * notAlpha + right * alpha;
+    float isCw = fuzzyPositive(turn, ON_DIRECTION_RAD);
+    float isCcw = fuzzyPositive(-turn, ON_DIRECTION_RAD);
+    float isLin = 1 - fuzzyPositive(abs(turn), LINEAR_DIRECTION_RAD);
+    Fuzzy fuzzy;
 
+    fuzzy.add(1, isCw);
+    fuzzy.add(-1, isCcw);
+    fuzzy.add(0, 1 - max(isCw, isCcw));
+    float cwSpeed = fuzzy.defuzzy();
+
+    fuzzy.reset();
+    fuzzy.add(_speed, isLin);
+    fuzzy.add(0, 1 - isLin);
+    float linSpeed = fuzzy.defuzzy();
+
+    DEBUG_PRINT(F("//    isCw: "));
+    DEBUG_PRINT(isCw);
+    DEBUG_PRINT(F(", isCcw: "));
+    DEBUG_PRINT(isCcw);
+    DEBUG_PRINT(F(", isLin: "));
+    DEBUG_PRINT(isLin);
+    DEBUG_PRINT(F(", cwSpeed: "));
+    DEBUG_PRINT(cwSpeed);
+    DEBUG_PRINT(F(", linSpeed: "));
+    DEBUG_PRINT(linSpeed);
+    DEBUG_PRINTLN();
+
+    float left = linSpeed + cwSpeed;
+    float right = linSpeed - cwSpeed;
+
+    float mx = max(max(abs(left), abs(right)), 1);
+
+    left /= mx;
+    right /= mx;
+
+    DEBUG_PRINT(F("// motors: "));
+    DEBUG_PRINT(left);
+    DEBUG_PRINT(F(", "));
+    DEBUG_PRINT(right);
+    DEBUG_PRINTLN();
     power(left, right);
-    _prevTime = clockTime;
   }
 }
 
@@ -155,9 +201,9 @@ void MotionCtrl::power(float left, float right) {
   DEBUG_PRINT(left);
   DEBUG_PRINT(F(", "));
   DEBUG_PRINTLN(right);
-  _leftSpeed = left;
-  _rightSpeed = right;
-  _leftMotor.speed(_leftSpeed);
-  _rightMotor.speed(_rightSpeed);
-  _sensors.setDirection(_leftSpeed, _rightSpeed);
+  _left = left;
+  _right = right;
+  _leftMotor.speed(_left);
+  _rightMotor.speed(_right);
+  _sensors.setDirection(_left, _right);
 }

@@ -39,7 +39,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
 
-import static io.reactivex.rxjava3.core.Flowable.*;
+import static io.reactivex.rxjava3.core.Flowable.interval;
+import static java.lang.Integer.parseInt;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -85,7 +86,8 @@ public class RawController implements RobotController {
                 configParams.statusInterval, configParams.startQueryDelay);
     }
 
-    private final PublishProcessor<WheellyStatus> states;
+    private final PublishProcessor<Timed<WheellyStatus>> states;
+    private final PublishProcessor<Timed<Integer>> cps;
     private final PublishProcessor<Timed<ProxySample>> proxy;
     private final PublishProcessor<Throwable> localErrors;
     private final RemoteClockController clockController;
@@ -113,24 +115,10 @@ public class RawController implements RobotController {
         this.socket = ReliableSocket.create(host, port, connectionTimeout, retryConnectionInterval, readTimeout);
         this.proxy = PublishProcessor.create();
         this.states = PublishProcessor.create();
+        this.cps = PublishProcessor.create();
         this.localErrors = PublishProcessor.create();
         this.clockController = RemoteClockController.create(socket, numClockSamples, clockTimeout, restartClockSyncDelay);
 
-        // Transforms the received line into proxy sample
-        socket.readLines()
-                .map(Timed::value)
-                .filter(line -> line.startsWith("pr "))
-                .withLatestFrom(readRemoteClock(), Tuple2::of)
-                .subscribe(t -> {
-                            try {
-                                Timed<ProxySample> sample = ProxySample.from(t._1, t._2);
-                                proxy.onNext(sample);
-                            } catch (Throwable ex) {
-                                this.localErrors.onNext(ex);
-                            }
-                        },
-                        proxy::onError,
-                        proxy::onComplete);
 
         // Transforms the received line into assets
         socket.readLines()
@@ -139,7 +127,7 @@ public class RawController implements RobotController {
                 .withLatestFrom(readRemoteClock(), Tuple2::of)
                 .subscribe(t -> {
                             try {
-                                WheellyStatus status = WheellyStatus.from(t._1, t._2);
+                                Timed<WheellyStatus> status = WheellyStatus.from(t._1, t._2);
                                 states.onNext(status);
                             } catch (Throwable ex) {
                                 this.localErrors.onNext(ex);
@@ -148,19 +136,29 @@ public class RawController implements RobotController {
                         states::onError,
                         states::onComplete);
 
-        // Reset robot at start
-        socket.firstConnection()
-                .subscribe(x -> {
-                    logger.info("Reset robot");
-                    sendCommands(just("rs"));
-                });
+        socket.readLines()
+                .map(Timed::value)
+                .filter(line -> line.startsWith("cs "))
+                .withLatestFrom(readRemoteClock(), Tuple2::of)
+                .subscribe(t -> {
+                            try {
+                                String line = t._1;
+                                String[] params = line.split(" ");
+                                if (params.length != 3) {
+                                    throw new IllegalArgumentException("Missing cps parameters");
+                                }
 
-        // Send start query when activate new connection
-        socket.readConnection()
-                .filter(x -> x)
-                .delay(this.startQueryDelay, TimeUnit.MILLISECONDS)
-                .subscribe(y -> sendCommands(timer(500, TimeUnit.MILLISECONDS)
-                        .map(x -> "sq " + statusInterval)));
+                                long sampleInstant = t._2.fromRemote(Long.parseLong(params[1]));
+                                int cps = parseInt(params[2]);
+
+                                this.cps.onNext(new Timed<>(cps, sampleInstant, TimeUnit.MILLISECONDS));
+                            } catch (Throwable ex) {
+                                this.localErrors.onNext(ex);
+                            }
+                        },
+                        cps::onError,
+                        cps::onComplete);
+
 
         // Start the clock controller sync
         socket.firstConnection()
@@ -178,8 +176,8 @@ public class RawController implements RobotController {
     }
 
     @Override
-    public RawController activateMotors(Flowable<MotorCommand> data) {
-        return sendCommands(data.map(cmd -> "mt " + cmd.leftPower + " " + cmd.rightPower));
+    public RobotController action(Flowable<? extends WheellyCommand> data) {
+        return sendCommands(data.map(WheellyCommand::getString));
     }
 
     @Override
@@ -199,15 +197,15 @@ public class RawController implements RobotController {
         return socket.readConnection();
     }
 
+    @Override
+    public Flowable<Timed<Integer>> readCps() {
+        return cps;
+    }
+
 
     @Override
     public Flowable<Throwable> readErrors() {
         return socket.readErrors().mergeWith(localErrors).mergeWith(clockController.readErrors());
-    }
-
-    @Override
-    public Flowable<Timed<ProxySample>> readProxy() {
-        return this.proxy;
     }
 
     /**
@@ -218,13 +216,8 @@ public class RawController implements RobotController {
     }
 
     @Override
-    public Flowable<WheellyStatus> readStatus() {
+    public Flowable<Timed<WheellyStatus>> readStatus() {
         return states;
-    }
-
-    @Override
-    public RawController scan(Flowable<Integer> commands) {
-        return sendCommands(commands.map(x -> "sc " + x));
     }
 
     /**

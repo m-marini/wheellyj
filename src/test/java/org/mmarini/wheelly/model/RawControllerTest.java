@@ -50,10 +50,10 @@ class RawControllerTest {
     public static final int CLOCK_INTERVAL = 30000;
     public static final int CLOCK_TIMEOUT = 1000;
     public static final int QUERIES_INTERVAL = 300;
-    static final Logger logger = LoggerFactory.getLogger(RawControllerTest.class);
-    private static final long READ_TIMEOUT = 1000;
     public static final int RESTART_CLOCK_SYNC_DELAY = 100;
     public static final int START_QUERY_DELAY = 150;
+    static final Logger logger = LoggerFactory.getLogger(RawControllerTest.class);
+    private static final long READ_TIMEOUT = 1000;
 
     public static void main(String[] args) throws InterruptedException {
         RawController controller = RawController.create(HOST, PORT,
@@ -63,21 +63,15 @@ class RawControllerTest {
                 READ_TIMEOUT, CLOCK_INTERVAL,
                 CLOCK_TIMEOUT,
                 RESTART_CLOCK_SYNC_DELAY, QUERIES_INTERVAL, START_QUERY_DELAY);
-        controller.readProxy()
-                .sample(1000, TimeUnit.MILLISECONDS)
-                .subscribe(data -> logger.debug("Proxy {}", data.value()),
-                        ex -> logger.error("Error on proxy", ex),
-                        () -> logger.debug("Proxy completed"));
         controller.readStatus()
                 .subscribe(data -> logger.info("Status {}", data),
                         ex -> logger.error("Error on status", ex),
                         () -> logger.debug("Status completed"));
+        controller.readCps()
+                .subscribe(data -> logger.info("Cps {}", data),
+                        ex -> logger.error("Error on cps", ex),
+                        () -> logger.debug("Cps completed"));
 
-        controller.readProxy()
-                .sample(1000, TimeUnit.MILLISECONDS)
-                .subscribe(data -> logger.debug("Proxy2 {}", data.value()),
-                        ex -> logger.error("Error on proxy2", ex),
-                        () -> logger.debug("Proxy2 completed"));
         controller.readStatus()
                 .subscribe(data -> logger.info("Status2 {}", data),
                         ex -> logger.error("Error on status2", ex),
@@ -96,11 +90,11 @@ class RawControllerTest {
         List<Integer> angles = IntStream.range(0, 13).map(i -> i * 15 - 90).boxed().collect(Collectors.toList());
         Collections.shuffle(angles);
 
-        Flowable<Integer> data = interval(2000, 500, TimeUnit.MILLISECONDS).map(i -> {
+        Flowable<ScanCommand> data = interval(2000, 500, TimeUnit.MILLISECONDS).map(i -> {
             int idx = (i.intValue() / 6) % angles.size();
-            return angles.get(idx);
+            return ScanCommand.create(angles.get(idx));
         });
-        controller.scan(data);
+        controller.action(data);
 
         Thread.sleep(60000);
 

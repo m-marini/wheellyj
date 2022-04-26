@@ -30,11 +30,14 @@ public class Yaml {
                         Map.entry("restartClockSyncDelay", Validator.positiveInteger()),
                         Map.entry("statusInterval", Validator.positiveInteger()),
                         Map.entry("startQueryDelay", Validator.positiveInteger()),
+                        Map.entry("motorCommandInterval", Validator.positiveInteger()),
+                        Map.entry("scanCommandInterval", Validator.positiveInteger()),
                         Map.entry("engine", Validator.string())
                 ),
                 List.of("host", "port", "connectionTimeout", "readTimeout", "retryConnectionInterval",
                         "numClockSamples", "clockTimeout", "clockInterval", "restartClockSyncDelay",
                         "statusInterval", "startQueryDelay",
+                        "motorCommandInterval", "scanCommandInterval",
                         "engine")
         );
     }
@@ -52,8 +55,9 @@ public class Yaml {
                 root.path("clockTimeout").asLong(),
                 root.path("restartClockSyncDelay").asLong(),
                 root.path("statusInterval").asLong(),
-                root.path("startQueryDelay").asLong()
-        );
+                root.path("startQueryDelay").asLong(),
+                root.path("motorCommandInterval").asLong(),
+                root.path("scanCommandInterval").asLong());
     }
 
     public static String engine(JsonNode root) {

@@ -13,9 +13,10 @@ class MotionCtrl {
     MotionCtrl(byte leftForwPin, byte leftBackPin, byte rightForwPin, byte rightBackPin, byte leftSensorPin, byte rightSensorPin);
     void begin();
     void polling(unsigned long clockTime = millis());
-    void speed(float left, float right);
     void reset();
     void handleMotion(unsigned long clockTime);
+    void move(float direction, float speed);
+    void alt();
 
     const float x() const {
       return _sensors.x();
@@ -32,15 +33,15 @@ class MotionCtrl {
     const float right() const {
       return _right;
     }
-    const boolean isForward() const {
-      return _left > 0 || _right > 0;
+    const boolean isForward() const;
+
+    const boolean isAlt() const {
+      return _alt;
     }
 
     void angle(float angle) {
       _sensors.angle(angle);
-      return *this;
     }
-
 
   private:
     MotorCtrl _leftMotor;
@@ -48,10 +49,13 @@ class MotionCtrl {
     MotionSensor _sensors;
     Timer _stopTimer;
     Timer _checkTimer;
+
+    float _direction;
+    float _speed;
+    boolean _alt;
+
     float _left;
     float _right;
-    float _leftSpeed;
-    float _rightSpeed;
     unsigned long _prevTime;
 
     void power(float left, float right);

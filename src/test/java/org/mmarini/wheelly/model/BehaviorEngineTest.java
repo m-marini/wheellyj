@@ -29,8 +29,8 @@
 
 package org.mmarini.wheelly.model;
 
+import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.swing.InferenceEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,20 +62,19 @@ class BehaviorEngineTest {
                 CLOCK_TIMEOUT,
                 RESTART_CLOCK_SYNC_DELAY, QUERIES_INTERVAL, START_QUERY_DELAY);
         Random random = new Random();
-        MotorCommand motorCommand = MotorCommand.create(0, 0);
 
         InferenceEngine inferenceEngine = new InferenceEngine() {
             long timeout;
             int angle;
 
             @Override
-            public Tuple2<MotorCommand, Integer> process(Tuple2<WheellyStatus, ScannerMap> data) {
+            public Tuple2<MotionComand, Integer> process(Tuple2<Timed<WheellyStatus>, ScannerMap> data) {
                 long now = System.currentTimeMillis();
                 if (now > timeout) {
                     angle = random.nextInt(180) - 90;
                     timeout = now + 2000;
                 }
-                return Tuple2.of(motorCommand, angle);
+                return Tuple2.of(AltCommand.create(), angle);
             }
         };
         BehaviorEngine engine = BehaviorEngine.create(controller, inferenceEngine, MOTOR_COMMAND_INTERVAL, SCAN_COMMAND_INTERVAL);
@@ -100,10 +99,10 @@ class BehaviorEngineTest {
                 ex -> logger.error("Error on status", ex),
                 () -> logger.debug("Status closed"));
 
-        engine.readProxy().sample(1, TimeUnit.SECONDS).subscribe(
-                data -> logger.debug("Proxy {}", data),
-                ex -> logger.error("Error on Proxy", ex),
-                () -> logger.debug("Proxy closed"));
+        engine.readCps().sample(1, TimeUnit.SECONDS).subscribe(
+                data -> logger.debug("CPS {}", data),
+                ex -> logger.error("Error on cps", ex),
+                () -> logger.debug("Cps closed"));
 
         engine.start();
 

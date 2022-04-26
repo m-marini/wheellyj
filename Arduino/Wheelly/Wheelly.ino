@@ -15,6 +15,7 @@
 #endif
 
 #include "MotionCtrl.h"
+#include "Utils.h"
 
 /*
    Pins
@@ -98,7 +99,6 @@ char line[LINE_SIZE];
 Timer ledTimer;
 Timer obstacleTimer;
 Timer statsTimer;
-Timer queriesTimer;
 
 /*
    Proximity sensor servo
@@ -129,12 +129,6 @@ long counter;
 unsigned long started;
 unsigned long statsTime;
 unsigned long tps;
-
-/*
-   Voltage sensor
-*/
-unsigned long voltageTime;
-int voltageValue;
 
 /*
    Gyrosc
@@ -241,12 +235,6 @@ void setup() {
   statsTimer.continuous(true);
   statsTimer.start();
 
-  /*
-     Init queries timer
-  */
-  queriesTimer.onNext(handleQuery);
-  queriesTimer.continuous(true);
-
   // Final setup
   Serial.println(F("ha"));
 #ifdef WITH_IMU
@@ -261,21 +249,18 @@ void setup() {
 void loop() {
   unsigned long now = millis();
 
+  counter++;
+
+  motionController.polling(now);
 #ifdef WITH_IMU
   imu.polling(now);
 #endif
-  counter++;
-  voltageTime = now;
-  voltageValue = analogRead(VOLTAGE_PIN);
-
-  motionController.polling(now);
   servo.polling(now);
   sr04.polling(now);
 
   ledTimer.polling(now);
   obstacleTimer.polling(now);
   statsTimer.polling(now);
-  queriesTimer.polling(now);
   pollSerialPort();
 }
 
@@ -321,18 +306,11 @@ void handleWatchDog(void*) {
 */
 void handleStatsTimer(void *context, unsigned long) {
   statsTime = millis();
-  tps = counter * 1000 / (statsTime - started);
+  unsigned long dt = (statsTime - started);
+  tps = counter * 1000 / dt;
   started = statsTime;
   counter = 0;
-  DEBUG_PRINT(F("// Stats: "));
-  DEBUG_PRINTLN(tps);
-}
-
-/*
-   Handles query
-*/
-void handleQuery(void *, unsigned long) {
-  sendStatus();
+  sendCps();
 }
 
 /*
@@ -372,33 +350,20 @@ void handleObstacleTimer(void *, unsigned long i) {
 }
 
 /*
-    Handles mt command
+    Handles mv command
 */
-void handleMtCommand(const char* parms) {
+void handleMvCommand(const char* parms) {
   String args = parms;
   int s1 = args.indexOf(' ');
   if (s1 <= 0) {
     Serial.println(F("!! Wrong arg[1]"));
     return;
   }
-  float left = min(max(-1.0, args.substring(0 , s1).toFloat()), 1.0);
-  float right = min(max(-1.0, args.substring(s1 + 1).toFloat()), 1.0);
-  if (isForward(left, right) && !canMoveForward()) {
-    left = right = 0;
-  }
-  motionController.speed(left, right);
-}
-
-/*
-    Handles start queries
-*/
-void handleStartQueries(const char* parms) {
-  String args = parms;
-  long interval = args.toInt();
-  queriesTimer.stop();
-  if (interval > 0) {
-    queriesTimer.interval(max(interval, MIN_QUERIES_INTERVAL));
-    queriesTimer.start();
+  float direction = normalRad(args.substring(0 , s1).toInt() * PI / 180);
+  float speed = min(max(args.substring(s1 + 1).toFloat(), -1.0), 1.0);
+  motionController.move(direction, speed);
+  if (motionController.isForward() && !canMoveForward()) {
+    motionController.alt();
   }
 }
 
@@ -435,10 +400,10 @@ void handleSample(void *, int dist) {
   if (servo.angle() == FRONT_DIRECTION) {
     frontDistance = dist;
     if (motionController.isForward() && !canMoveForward()) {
-      motionController.speed(0, 0);
+      motionController.alt();
     }
   }
-  sendSample(dist);
+  sendStatus(dist);
 
   unsigned long now = millis();
   if (now >= resetTime) {
@@ -463,10 +428,10 @@ void processCommand(unsigned long time) {
     resetWhelly();
   } else if (strncmp(line, "sc ", 3) == 0) {
     handleScCommand(line + 3);
-  } else if (strncmp(line, "sq ", 3) == 0) {
-    handleStartQueries(line + 3);
-  } else if (strncmp(line, "mt ", 3) == 0) {
-    handleMtCommand(line + 3);
+  } else if (strncmp(line, "mv ", 3) == 0) {
+    handleMvCommand(line + 3);
+  } else if (strcmp(line, "al") == 0) {
+    motionController.alt();
   } else if (strncmp(line, "//", 2) == 0
              || strncmp(line, "!!", 2) == 0
              || strlen(line) == 0) {
@@ -480,39 +445,56 @@ void processCommand(unsigned long time) {
    Reset Wheelly
 */
 void resetWhelly() {
-  motionController.speed(0, 0);
+  motionController.alt();
   motionController.reset();
 }
 
-/*
-
-*/
-void sendSample(int distance) {
-  Serial.print(F("pr "));
-  Serial.print(millis());
+void sendCps() {
+  Serial.print(F("cs "));
+  Serial.print(statsTime);
   Serial.print(F(" "));
-  Serial.print(90 - servo.angle());
-  Serial.print(F(" "));
-  Serial.print(distance * 0.01, 2);
-  Serial.print(F(" "));
-  Serial.print(motionController.x(), 3);
-  Serial.print(F(" "));
-  Serial.print(motionController.y(), 3);
-  Serial.print(F(" "));
-  Serial.print(motionController.angle() * 180 / PI, 0);
+  Serial.print(tps);
   Serial.println();
 }
 
 /*
 
 */
-void printVect(float* vect) {
-  Serial.print(*vect++);
-  Serial.print(F(" "));
-  Serial.print(*vect++);
-  Serial.print(F(" "));
-  Serial.print(*vect++);
+void sendStatus(int distance) {
+    Serial.print(F("st "));
+    Serial.print(millis());
+    Serial.print(F(" "));
+    Serial.print(motionController.x(), 3);
+    Serial.print(F(" "));
+    Serial.print(motionController.y(), 3);
+    Serial.print(F(" "));
+    Serial.print(motionController.angle() * 180 / PI, 0);
+    Serial.print(F(" "));
+    Serial.print(90 - servo.angle());
+    Serial.print(F(" "));
+    Serial.print(distance * 0.01, 2);
+    Serial.print(F(" "));
+    Serial.print(motionController.left(), 3);
+    Serial.print(F(" "));
+    Serial.print(motionController.right(), 3);
+    Serial.print(F(" "));
+    Serial.print(canMoveForward());
+    Serial.print(F(" "));
+    int voltageValue = analogRead(VOLTAGE_PIN);
+    Serial.print(VOLTAGE_SCALE * voltageValue);
+    Serial.print(F(" "));
+    Serial.print(imuFailure);
+    Serial.print(F(" "));
+    Serial.print(motionController.isAlt());
+    Serial.println();
 }
+
+
+
+
+
+
+
 
 /*
 
@@ -562,35 +544,6 @@ bool canMoveForward() {
 
 int forwardBlockDistance() {
   return (frontDistance > 0 && frontDistance <= MAX_DISTANCE) ? frontDistance : MAX_DISTANCE;
-}
-
-/*
-
-*/
-void sendStatus() {
-  Serial.print(F("st "));
-  Serial.print(millis());
-  Serial.print(F(" "));
-  Serial.print(motionController.x(), 3);
-  Serial.print(F(" "));
-  Serial.print(motionController.y(), 3);
-  Serial.print(F(" "));
-  Serial.print(motionController.angle() * 180 / PI, 0);
-  Serial.print(F(" "));
-  Serial.print(motionController.left(), 3);
-  Serial.print(F(" "));
-  Serial.print(motionController.right(), 3);
-  Serial.print(F(" "));
-  Serial.print(canMoveForward());
-  Serial.print(F(" "));
-  Serial.print(voltageTime);
-  Serial.print(F(" "));
-  Serial.print(VOLTAGE_SCALE * voltageValue);
-  Serial.print(F(" "));
-  Serial.print(statsTime);
-  Serial.print(F(" "));
-  Serial.print(tps);
-  Serial.println();
 }
 
 /*

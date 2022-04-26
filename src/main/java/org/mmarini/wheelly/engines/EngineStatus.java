@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) )2022 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022 Marco Marini, marco.marini@mmarini.org
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -27,45 +27,20 @@
  *
  */
 
-package org.mmarini.wheelly.model;
+package org.mmarini.wheelly.engines;
 
-import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.schedulers.Timed;
+import org.mmarini.Tuple2;
+import org.mmarini.wheelly.model.ScannerMap;
+import org.mmarini.wheelly.model.WheellyStatus;
 
-/**
- *
- */
-public interface RobotController {
+public interface EngineStatus {
 
-    RobotController action(Flowable<? extends WheellyCommand> commands);
+    String STAY_EXIT = "StayExit";
 
-    /**
-     *
-     */
-    RobotController close();
+    default EngineStatus activate(StateMachineContext context) {
+        return this;
+    }
 
-    /**
-     *
-     */
-    Flowable<Boolean> readConnection();
-
-    /**
-     *
-     */
-    Flowable<Timed<Integer>> readCps();
-
-    /**
-     *
-     */
-    Flowable<Throwable> readErrors();
-
-    /**
-     *
-     */
-    Flowable<Timed<WheellyStatus>> readStatus();
-
-    /**
-     * Starts the controller
-     */
-    RobotController start();
+    StateTransition process(Tuple2<Timed<WheellyStatus>, ScannerMap> data, StateMachineContext context);
 }

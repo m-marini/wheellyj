@@ -22,11 +22,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #24: Create a proxy map by robot asset
 - Issue #27: Add the gyroscope data asset
 - Issue #31: Add map display with robot and obstacles, create base engine to manage different automa behavior
+- Issue #29  Create automa behavior
 - Issue #33: Arrange the obstacles in a grid
+- Issue #39: Merge pr event and st event
+- Issue #41: Move the motion control in Wheelly
 
 ## Changed
 
 - Issue #36: Optimized IMU
+- Issue #39: Merge pr event and st events
 
 ## Fixed
 

@@ -48,28 +48,34 @@ public class ConfigParameters {
      * @param restartClockSyncDelay
      * @param statusInterval
      * @param startQueryDelay
+     * @param motorCommandInterval
+     * @param scanCommandInterval
      */
     public static ConfigParameters create(String host, int port,
                                           long connectionTimeout, long retryConnectionInterval, long readTimeout,
                                           int numClockSample, long clockInterval, long clockTimeout, long restartClockSyncDelay,
-                                          long statusInterval, long startQueryDelay) {
+                                          long statusInterval, long startQueryDelay,
+                                          long motorCommandInterval, long scanCommandInterval) {
         return new ConfigParameters(host, port,
                 connectionTimeout, retryConnectionInterval, readTimeout,
                 numClockSample, clockInterval, clockTimeout, restartClockSyncDelay,
-                statusInterval, startQueryDelay);
+                statusInterval, startQueryDelay,
+                motorCommandInterval, scanCommandInterval);
     }
 
     public final long clockInterval;
     public final long clockTimeout;
     public final long connectionTimeout;
     public final String host;
+    public final long motorCommandInterval;
     public final int numClockSample;
     public final int port;
-    public final long statusInterval;
     public final long readTimeout;
     public final long restartClockSyncDelay;
     public final long retryConnectionInterval;
+    public final long scanCommandInterval;
     public final long startQueryDelay;
+    public final long statusInterval;
 
     /**
      * Creates configuration parameters
@@ -85,11 +91,14 @@ public class ConfigParameters {
      * @param restartClockSyncDelay
      * @param statusInterval
      * @param startQueryDelay
+     * @param motorCommandInterval
+     * @param scanCommandInterval
      */
     protected ConfigParameters(String host, int port,
                                long connectionTimeout, long retryConnectionInterval, long readTimeout,
                                int numClockSample, long clockInterval, long clockTimeout, long restartClockSyncDelay,
-                               long statusInterval, long startQueryDelay) {
+                               long statusInterval, long startQueryDelay,
+                               long motorCommandInterval, long scanCommandInterval) {
         this.clockInterval = clockInterval;
         this.clockTimeout = clockTimeout;
         this.connectionTimeout = connectionTimeout;
@@ -101,5 +110,7 @@ public class ConfigParameters {
         this.restartClockSyncDelay = restartClockSyncDelay;
         this.retryConnectionInterval = retryConnectionInterval;
         this.startQueryDelay = startQueryDelay;
+        this.motorCommandInterval = motorCommandInterval;
+        this.scanCommandInterval = scanCommandInterval;
     }
 }
