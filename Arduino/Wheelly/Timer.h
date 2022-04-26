@@ -14,29 +14,27 @@ class Timer {
     Timer() {};
 
     // Sets a single interval
-    Timer& interval(unsigned long interval) {
+    void interval(unsigned long interval) {
       _interval = interval;
-      return *this;
     }
 
     // Sets true if continuos events
-    Timer& continuous(boolean cont)  {
+    void continuous(boolean cont)  {
       _continuous = cont;
-      return *this;
     }
 
 
     // Starts the timer
-    Timer& start();
+    void start();
 
     // Starts the timer
-    Timer& start(unsigned long timeout);
+    void start(unsigned long timeout);
 
     // Stops the timer
-    Timer& stop();
+    void stop();
 
     // Restarts the timer
-    Timer& restart();
+    void restart();
 
     // Returns true if timer is not expired (is timing)
     bool isRunning() const {
@@ -49,10 +47,10 @@ class Timer {
     }
 
     // Sets the callback
-    Timer& onNext(void (*callback)(void* context, unsigned long counter), void* context = NULL);
+    void onNext(void (*callback)(void* context, unsigned long counter), void* context = NULL);
 
     // Polls the timer
-    Timer& polling(unsigned long clockTime = millis());
+    void polling(unsigned long clockTime = millis());
 
     unsigned long next() const {
       return _next;

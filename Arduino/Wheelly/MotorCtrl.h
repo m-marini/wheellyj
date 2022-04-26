@@ -11,9 +11,9 @@
 class MotorCtrl {
   public:
     MotorCtrl(byte forwPin, byte backPin);
-    MotorCtrl& begin();
-    MotorCtrl& speed(float value);
-    MotorCtrl& setCorrection(float *x, float *y);
+    void begin();
+    void speed(float value);
+    void setCorrection(float *x, float *y);
     
   private:
     byte _forwPin;

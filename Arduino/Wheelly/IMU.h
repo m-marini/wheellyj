@@ -13,30 +13,25 @@ class IMU {
   public:
     IMU(MPU6050& mpu);
     void begin();
-    IMU& calibrate(int steps = 6);
-    IMU& enableDMP();
+    void calibrate(int steps = 6);
+    void enableDMP();
     void polling(unsigned long clockMillis = millis(), unsigned long clockMicros = micros());
-    IMU& reset();
-    IMU& kickAt(unsigned long time) {
+    void reset();
+    void kickAt(unsigned long time) {
       _watchDogTime = time;
-      return *this;
     }
-    IMU& kick() {
+    void kick() {
       _watchDogTime = micros() + _watchDogInterval;
-      return *this;
     }
 
-    IMU& onData(void (*callback)(void* context, IMU & imu)) {
+    void onData(void (*callback)(void* context)) {
       _onData = callback;
-      return *this;
     }
-    IMU& onWatchDog(void (*callback)(void* context, IMU & imu)) {
+    void onWatchDog(void (*callback)(void* context)) {
       _onWatchDog = callback;
-      return *this;
     }
-    IMU& context(void * ctx) {
+    void context(void * ctx) {
       _context = ctx;
-      return *this;
     }
     MPU6050& mpu() const {
       return _mpu;
@@ -60,8 +55,9 @@ class IMU {
     float _dt;
     float _ypr[3];
 
-    void (*_onData)(void*, IMU & imu);
-    void (*_onWatchDog)(void*, IMU & imu);
+    void (*_onData)(void*);
+    void (*_onWatchDog)(void*);
+    boolean _readFifo(unsigned long, unsigned long);
 };
 
 #endif

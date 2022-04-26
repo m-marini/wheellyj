@@ -34,22 +34,20 @@ MotionSensor::MotionSensor(byte leftPin, byte rightPin) :
   _rightSensor.onSample(handleRightSensor, this);
 }
 
-MotionSensor& MotionSensor::begin() {
+void MotionSensor::begin() {
   _leftSensor.begin();
   _rightSensor.begin();
-  return *this;
 }
 
-MotionSensor& MotionSensor::reset() {
+void MotionSensor::reset() {
   _leftSensor.reset();
   _rightSensor.reset();
   _xPulses = 0;
   _yPulses = 0;
   _angle = 0;
-  return *this;
 }
 
-MotionSensor& MotionSensor::setDirection(float left, float right) {
+void MotionSensor::setDirection(float left, float right) {
   DEBUG_PRINT(F("// MotionSensor::setDirection "));
   DEBUG_PRINT(left);
   DEBUG_PRINT(F(" "));
@@ -58,20 +56,18 @@ MotionSensor& MotionSensor::setDirection(float left, float right) {
 
   _leftSensor.setDirection(left);
   _rightSensor.setDirection(right);
-  return *this;
 }
 
-MotionSensor& MotionSensor::polling(unsigned long clockTime) {
+void MotionSensor::polling(unsigned long clockTime) {
   _dl = _dr = 0;
   _leftSensor.polling(clockTime);
   _rightSensor.polling(clockTime);
   if (_dl != 0 || _dr != 0) {
     update(clockTime);
   }
-  return *this;
 }
 
-MotionSensor& MotionSensor::update(unsigned long clockTime) {
+void MotionSensor::update(unsigned long clockTime) {
   DEBUG_PRINT(F("// MotionSensor::update "));
   DEBUG_PRINT(_dl);
   DEBUG_PRINT(F(" "));
@@ -107,7 +103,6 @@ MotionSensor& MotionSensor::update(unsigned long clockTime) {
   if (_onChange != NULL) {
     _onChange(_context, clockTime, *this);
   }
-  return *this;
 }
 
 /*
@@ -126,8 +121,7 @@ float normAngle(float angle) {
 /*
  * 
  */
-MotionSensor& MotionSensor::setOnChange(void (*callback)(void* context, unsigned long clockTime, MotionSensor& sensor), void* context = NULL){
+void MotionSensor::setOnChange(void (*callback)(void* context, unsigned long clockTime, MotionSensor& sensor), void* context = NULL){
   _onChange = callback;
   _context = context;
-  return *this;
 }

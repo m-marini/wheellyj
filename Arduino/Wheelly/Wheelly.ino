@@ -98,7 +98,6 @@ char line[LINE_SIZE];
 Timer ledTimer;
 Timer obstacleTimer;
 Timer statsTimer;
-Timer motorsTimer;
 Timer queriesTimer;
 
 /*
@@ -183,12 +182,11 @@ void setup() {
   */
   imuFailure = true;
   imu.begin();
-  imu
-  .onData(handleImuData)
-  .onWatchDog(handleWatchDog)
-  .calibrate()
-  .enableDMP()
-  .reset();
+  imu.onData(handleImuData);
+  imu.onWatchDog(handleWatchDog);
+  imu.calibrate();
+  imu.enableDMP();
+  imu.reset();
 #endif
 
   Serial.println();
@@ -203,32 +201,33 @@ void setup() {
     delay(50);
     digitalWrite(LED_BUILTIN, LOW);
   }
-  ledTimer.onNext(handleLedTimer)
-  .interval(LED_INTERVAL)
-  .continuous(true)
-  .start();
+  ledTimer.onNext(handleLedTimer);
+  ledTimer.interval(LED_INTERVAL);
+  ledTimer.continuous(true);
+  ledTimer.start();
 
   /*
     Init servo and scanner
   */
   sr04.begin();
-  sr04.noSamples(NO_SAMPLES).onSample(&handleSample);
-  servo.attach(SERVO_PIN)
-  .offset(SERVO_OFFSET)
-  .onReached([](void *, byte angle) {
+  sr04.noSamples(NO_SAMPLES);
+  sr04.onSample(&handleSample);
+  servo.attach(SERVO_PIN);
+  servo.offset(SERVO_OFFSET);
+  servo.onReached([](void *, byte angle) {
     // Handles position reached event from scan servo
     /*
       DEBUG_PRINT(F("// handleReached: dir="));
       DEBUG_PRINTLN(angle);
     */
     sr04.start();
-  })
-  .angle(FRONT_DIRECTION);
+  });
+  servo.angle(FRONT_DIRECTION);
 
-  obstacleTimer.onNext(handleObstacleTimer)
-  .interval(OBSTACLE_INTERVAL)
-  .continuous(true)
-  .start();
+  obstacleTimer.onNext(handleObstacleTimer);
+  obstacleTimer.interval(OBSTACLE_INTERVAL);
+  obstacleTimer.continuous(true);
+  obstacleTimer.start();
 
   /*
      Init motor controllers
@@ -237,15 +236,16 @@ void setup() {
 
   // Init staqstistics time
   started = millis();
-  statsTimer.onNext(handleStatsTimer)
-  .interval(STATS_INTERVAL)
-  .continuous(true)
-  .start();
+  statsTimer.onNext(handleStatsTimer);
+  statsTimer.interval(STATS_INTERVAL);
+  statsTimer.continuous(true);
+  statsTimer.start();
 
   /*
      Init queries timer
   */
-  queriesTimer.onNext(handleQuery).continuous(true);
+  queriesTimer.onNext(handleQuery);
+  queriesTimer.continuous(true);
 
   // Final setup
   Serial.println(F("ha"));
@@ -264,11 +264,11 @@ void loop() {
 #ifdef WITH_IMU
   imu.polling(now);
 #endif
-
   counter++;
   voltageTime = now;
   voltageValue = analogRead(VOLTAGE_PIN);
 
+  motionController.polling(now);
   servo.polling(now);
   sr04.polling(now);
 
@@ -276,10 +276,7 @@ void loop() {
   obstacleTimer.polling(now);
   statsTimer.polling(now);
   queriesTimer.polling(now);
-
   pollSerialPort();
-
-  motionController.polling(now);
 }
 
 /*
@@ -299,7 +296,7 @@ void pollSerialPort() {
 /*
 
 */
-void handleImuData(void*, IMU& imu) {
+void handleImuData(void*) {
   imuFailure = false;
   float yaw = imu.ypr()[0];
   DEBUG_PRINT(F("// handleImuData: yaw="));
@@ -310,12 +307,12 @@ void handleImuData(void*, IMU& imu) {
 /*
 
 */
-void handleWatchDog(void*, IMU& imu) {
+void handleWatchDog(void*) {
   imuFailure = true;
   DEBUG_PRINT(F("!! Watch dog status: "));
   DEBUG_PRINTLN(imu.status());
-  imu.reset()
-  .kickAt(micros() + 1000000ul);
+  imu.reset();
+  imu.kickAt(micros() + 1000000ul);
 }
 #endif
 
@@ -400,7 +397,8 @@ void handleStartQueries(const char* parms) {
   long interval = args.toInt();
   queriesTimer.stop();
   if (interval > 0) {
-    queriesTimer.interval(max(interval, MIN_QUERIES_INTERVAL)).start();
+    queriesTimer.interval(max(interval, MIN_QUERIES_INTERVAL));
+    queriesTimer.start();
   }
 }
 
@@ -482,6 +480,7 @@ void processCommand(unsigned long time) {
    Reset Wheelly
 */
 void resetWhelly() {
+  motionController.speed(0, 0);
   motionController.reset();
 }
 

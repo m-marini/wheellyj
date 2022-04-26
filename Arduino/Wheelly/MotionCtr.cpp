@@ -3,7 +3,7 @@
 //#define DEBUG
 #include "debug.h"
 
-#define MOTOR_SAFE_INTERVAL 10000ul
+#define MOTOR_SAFE_INTERVAL 1000ul
 #define MOTOR_CHECK_INTERVAL 300ul
 
 #define MOTOR_FILTER_TIME 0.1f
@@ -26,19 +26,19 @@ MotionCtrl::MotionCtrl(byte leftForwPin, byte leftBackPin, byte rightForwPin, by
     _sensors(leftSensorPin, rightSensorPin) {
 
   _sensors.setOnChange([](void*context, unsigned long clockTime, MotionSensor&) {
-    DEBUG_PRINTLN("// Motor sensors triggered");
+    DEBUG_PRINTLN(F("// Motor sensors triggered"));
     ((MotionCtrl *)context)-> handleMotion(clockTime);
   }, this);
 
-  _stopTimer.interval(MOTOR_SAFE_INTERVAL)
-  .onNext([](void *ctx, unsigned long) {
-    DEBUG_PRINTLN("// Motor timer triggered");
+  _stopTimer.interval(MOTOR_SAFE_INTERVAL);
+  _stopTimer.onNext([](void *ctx, unsigned long) {
+    DEBUG_PRINTLN(F("// Motor timer triggered"));
     ((MotionCtrl*)ctx)->speed(0, 0);
   }, this);
 
-  _checkTimer.interval(MOTOR_CHECK_INTERVAL)
-  .continuous(true)
-  .onNext([](void *ctx, unsigned long) {
+  _checkTimer.interval(MOTOR_CHECK_INTERVAL);
+  _checkTimer.continuous(true);
+  _checkTimer.onNext([](void *ctx, unsigned long) {
     DEBUG_PRINTLN("// Motor check timer triggered");
     ((MotionCtrl*)ctx)->handleMotion(millis());
   }, this);
@@ -47,29 +47,29 @@ MotionCtrl::MotionCtrl(byte leftForwPin, byte leftBackPin, byte rightForwPin, by
 /*
   Initializes the motion controller
 */
-MotionCtrl& MotionCtrl::begin() {
-  _leftMotor.begin().setCorrection(leftXCorrection, leftYCorrection);
-  _rightMotor.begin().setCorrection(rightXCorrection, rightYCorrection);
+void MotionCtrl::begin() {
+  _leftMotor.begin();
+  _leftMotor.setCorrection(leftXCorrection, leftYCorrection);
+  _rightMotor.begin();
+  _rightMotor.setCorrection(rightXCorrection, rightYCorrection);
   _sensors.begin();
 
   DEBUG_PRINTLN(F("// Motion controller begin"));
 
   speed(0, 0);
-  return *this;
 }
 
 /*
   Resets the controller
 */
-MotionCtrl& MotionCtrl::reset() {
+void MotionCtrl::reset() {
   _sensors.reset();
-  return *this;
 }
 
 /*
   Sets the motion speeds
 */
-MotionCtrl& MotionCtrl::speed(float left, float right) {
+void MotionCtrl::speed(float left, float right) {
   DEBUG_PRINT(F("// MotionCtrl::speed "));
   DEBUG_PRINT(left);
   DEBUG_PRINT(F(" "));
@@ -100,7 +100,7 @@ MotionCtrl& MotionCtrl::speed(float left, float right) {
 /*
 
 */
-MotionCtrl& MotionCtrl::polling(unsigned long clockTime) {
+void MotionCtrl::polling(unsigned long clockTime) {
   _sensors.polling(clockTime);
   _stopTimer.polling(clockTime);
   _checkTimer.polling(clockTime);
@@ -109,7 +109,7 @@ MotionCtrl& MotionCtrl::polling(unsigned long clockTime) {
 /*
 
 */
-MotionCtrl& MotionCtrl::handleMotion(unsigned long clockTime) {
+void MotionCtrl::handleMotion(unsigned long clockTime) {
   unsigned long dt = clockTime - _prevTime;
   DEBUG_PRINT(F("// MotionCtrl::handleMotion "));
   DEBUG_PRINT(clockTime);
@@ -150,12 +150,10 @@ MotionCtrl& MotionCtrl::handleMotion(unsigned long clockTime) {
 /*
 
 */
-MotionCtrl& MotionCtrl::power(float left, float right) {
-  DEBUG_PRINT("// MotionCtrl::power ");
-  DEBUG_PRINT(dt);
-  DEBUG_PRINT(", ");
+void MotionCtrl::power(float left, float right) {
+  DEBUG_PRINT(F("// MotionCtrl::power "));
   DEBUG_PRINT(left);
-  DEBUG_PRINT(", ");
+  DEBUG_PRINT(F(", "));
   DEBUG_PRINTLN(right);
   _leftSpeed = left;
   _rightSpeed = right;

@@ -12,25 +12,22 @@
 class MotionSensor {
   public:
     MotionSensor(byte leftPin, byte rightPin);
-    MotionSensor& begin();
-    MotionSensor& polling(unsigned long clockTime);
-    MotionSensor& setDirection(float leftForward, float rightForward);
-    MotionSensor& setOnChange(void (*callback)(void* context, unsigned long clockTime, MotionSensor& sensor), void* context = NULL);
+    void begin();
+    void polling(unsigned long clockTime);
+    void setDirection(float leftForward, float rightForward);
+    void setOnChange(void (*callback)(void* context, unsigned long clockTime, MotionSensor& sensor), void* context = NULL);
 
-    MotionSensor& angle(float angle) {
+    void angle(float angle) {
       _angle = angle;
-      return *this;
     }
 
-    MotionSensor& reset();
+    void reset();
 
-    MotionSensor& setLeftPulses(int dPulse) {
+    void setLeftPulses(int dPulse) {
       _dl = dPulse;
-      return *this;
     }
-    MotionSensor& setRightPulses(int dPulse) {
+    void setRightPulses(int dPulse) {
       _dr = dPulse;
-      return *this;
     }
 
     const float angle() const {
@@ -79,7 +76,7 @@ class MotionSensor {
     void (*_onChange)(void*, unsigned long, MotionSensor&);
     void* _context;
 
-    MotionSensor& update(unsigned long clockTime);
+    void update(unsigned long clockTime);
 };
 
 float normAngle(float angle);

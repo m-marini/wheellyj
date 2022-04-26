@@ -9,23 +9,20 @@ AsyncServo::AsyncServo() {
   _timer.onNext(_handleTimeout, this);
 }
 
-AsyncServo& AsyncServo::attach(byte pin) {
+void AsyncServo::attach(byte pin) {
   _servo.attach(pin);
-  return *this;
 }
 
-AsyncServo& AsyncServo::onReached(void (*callback)(void*, byte), void* context) {
+void AsyncServo::onReached(void (*callback)(void*, byte), void* context) {
   _onReached = callback;
   _context = context;
-  return *this;
 }
 
-AsyncServo& AsyncServo::offset(const int value) {
+void AsyncServo::offset(const int value) {
   _offset = value;
-  return *this;
 }
 
-AsyncServo& AsyncServo::angle(byte value) {
+void AsyncServo::angle(byte value) {
   _timer.stop();
   int da = abs((int) value - _angle);
   _angle = value;
@@ -36,8 +33,8 @@ AsyncServo& AsyncServo::angle(byte value) {
     DEBUG_PRINTLN();
     _servo.write(wr);
   }
-  _timer.interval(max(da * MILLIS_PER_DEG, MIN_INTERVAL)).start();
-  return *this;
+  _timer.interval(max(da * MILLIS_PER_DEG, MIN_INTERVAL));
+  _timer.start();
 }
 
 void AsyncServo::_handleTimeout(void * context, unsigned long) {
@@ -47,7 +44,6 @@ void AsyncServo::_handleTimeout(void * context, unsigned long) {
   }
 }
 
-AsyncServo& AsyncServo::polling(unsigned long clockTime) {
+void AsyncServo::polling(unsigned long clockTime) {
   _timer.polling(clockTime);
-  return *this;
 }

@@ -11,11 +11,11 @@
 class AsyncServo {
   public:
     AsyncServo();
-    AsyncServo& attach(byte pin);
-    AsyncServo& onReached(void (*callback)(void *context, byte angle), void* context = NULL);
-    AsyncServo& angle(byte value);
-    AsyncServo& polling(unsigned long clockTime = millis());
-    AsyncServo& offset(const int value);
+    void attach(byte pin);
+    void onReached(void (*callback)(void *context, byte angle), void* context = NULL);
+    void angle(byte value);
+    void polling(unsigned long clockTime = millis());
+    void offset(const int value);
 
 
     byte angle() const {

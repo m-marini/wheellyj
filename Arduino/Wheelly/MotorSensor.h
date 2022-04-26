@@ -16,15 +16,14 @@
 class MotorSensor {
   public:
     MotorSensor(byte sensorPin);
-    MotorSensor& begin();
-    MotorSensor& polling(unsigned long clockTime);
-    MotorSensor& setDirection(float speed);
-    MotorSensor& reset();
+    void begin();
+    void polling(unsigned long clockTime);
+    void setDirection(float speed);
+    void reset();
     // Sets the callback
-    MotorSensor& onSample(void (*callback)(void* context, int dPulse, unsigned long clockTime, MotorSensor& sensor), void* context = NULL) {
+    void onSample(void (*callback)(void* context, int dPulse, unsigned long clockTime, MotorSensor& sensor), void* context = NULL) {
       _onSample = callback;
       _context = context;
-      return *this;
     }
 
     const long pulses() const {
@@ -55,7 +54,7 @@ class MotorSensor {
     unsigned long _timestamp[SPEED_BUFFER_SIZE];
     long _pulsesBuf[SPEED_BUFFER_SIZE];
 
-    MotorSensor& update(int dPulse, unsigned long clockTime);
+    void update(int dPulse, unsigned long clockTime);
 };
 
 #endif

@@ -16,28 +16,26 @@ MotorSensor::MotorSensor(byte sensorPin) {
 /*
 
 */
-MotorSensor& MotorSensor::begin() {
+void MotorSensor::begin() {
   pinMode(_sensorPin, INPUT);
   _prevTime = millis();
-  return *this;
 }
 
 /*
 
 */
-MotorSensor& MotorSensor::reset() {
+void MotorSensor::reset() {
   _forward = true;
   _pulses = 0;
   _noSamples = 0;
   _index = 0;
   _prevTime = millis();
-  return *this;
 }
 
 /*
 
 */
-MotorSensor& MotorSensor::setDirection(float speed) {
+void MotorSensor::setDirection(float speed) {
   DEBUG_PRINT(F("// MotorSensor::setDirection "));
   DEBUG_PRINT(speed);
   DEBUG_PRINTLN();
@@ -47,13 +45,12 @@ MotorSensor& MotorSensor::setDirection(float speed) {
   } else if (speed < 0) {
     _forward = false;
   }
-  return *this;
 }
 
 /*
 
 */
-MotorSensor& MotorSensor::polling(unsigned long clockTime) {
+void MotorSensor::polling(unsigned long clockTime) {
   int pulse = digitalRead(_sensorPin);
   int dPulse = pulse != _pulse ? _forward ? 1 : -1 : 0;
 
@@ -66,13 +63,12 @@ MotorSensor& MotorSensor::polling(unsigned long clockTime) {
     _index = 0;
     _prevTime = clockTime;
   }
-  return *this;
 }
 
 /*
 
 */
-MotorSensor& MotorSensor::update(int dPulse, unsigned long clockTime) {
+void MotorSensor::update(int dPulse, unsigned long clockTime) {
   _pulses += dPulse;
 
   DEBUG_PRINT(F("// MotorSensor::update dPulse:"));
@@ -95,7 +91,6 @@ MotorSensor& MotorSensor::update(int dPulse, unsigned long clockTime) {
   if (_onSample != NULL) {
     _onSample(_context, dPulse, clockTime, *this);
   }
-  return *this;
 }
 
 /*
