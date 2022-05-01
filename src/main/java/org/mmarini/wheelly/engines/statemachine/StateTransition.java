@@ -27,54 +27,33 @@
  *
  */
 
-package org.mmarini.wheelly.engines;
+package org.mmarini.wheelly.engines.statemachine;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import org.mmarini.Tuple2;
+import org.mmarini.wheelly.model.MotionComand;
 
-import static java.util.Objects.requireNonNull;
-
-public class StateMachineContext {
+public class StateTransition {
     /**
-     * @return
+     * @param exit
+     * @param context
+     * @param commands
      */
-    public static StateMachineContext create() {
-        return new StateMachineContext(new HashMap<>());
+    public static StateTransition create(String exit, StateMachineContext context, Tuple2<MotionComand, Integer> commands) {
+        return new StateTransition(exit, context, commands);
     }
 
-    private Map<String, Object> values;
+    public final Tuple2<MotionComand, Integer> commands;
+    public final StateMachineContext context;
+    public final String exit;
 
     /**
-     * @param values
+     * @param exit
+     * @param context
+     * @param commands
      */
-    protected StateMachineContext(Map<String, Object> values) {
-        this.values = requireNonNull(values);
-    }
-
-    /**
-     * @param key
-     * @param <T>
-     */
-    public <T> Optional<T> get(String key) {
-        return Optional.ofNullable((T) values.get(key));
-    }
-
-    /**
-     * @param key
-     * @param value
-     * @param <T>
-     */
-    public <T> StateMachineContext put(String key, T value) {
-        values.put(key, value);
-        return this;
-    }
-
-    /**
-     * @param key
-     */
-    public StateMachineContext remove(String key) {
-        values.remove(key);
-        return this;
+    protected StateTransition(String exit, StateMachineContext context, Tuple2<MotionComand, Integer> commands) {
+        this.commands = commands;
+        this.context = context;
+        this.exit = exit;
     }
 }

@@ -1,5 +1,8 @@
 #include <EEPROM.h>
 
+//#define DEBUG
+#include "debug.h"
+
 #include <ArduinoJson.h>
 #include "FS.h"
 #include <LittleFS.h>
@@ -57,14 +60,14 @@ void setup(void) {
   Serial.begin(115200);
   Serial.setTimeout(SERIAL_TIMEOUT);
   Serial.println();
-  Serial.println("// Mounting FS...");
+  DEBUG_PRINTLN(F("// Mounting FS..."));
 
   if (!LittleFS.begin()) {
-    Serial.println("!! Failed to mount file system");
+    DEBUG_PRINTLN(F("!! Failed to mount file system"));
     while (1) ;
   }
 
-  Serial.println("// Mounted FS");
+  DEBUG_PRINTLN(F("// Mounted FS"));
 
   bool loaded = loadConfig();
 
@@ -80,21 +83,21 @@ void setup(void) {
   }
 
   if (MDNS.begin("esp8266")) {
-    Serial.println(F("// MDNS responder started"));
+    DEBUG_PRINTLN(F("// MDNS responder started"));
   }
-  ledTimer.interval(LED_LIGHT_INTERVAL)
-  .continuous(true)
-  .onNext(handleLed)
-  .start();
+  ledTimer.interval(LED_LIGHT_INTERVAL);
+  ledTimer.continuous(true);
+  ledTimer.onNext(handleLed);
+  ledTimer.start();
 
   server.begin();
 
-  webServer.on("/api/v1/wheelly/networks", handleNetworkList);
-  webServer.on("/api/v1/wheelly/networks/network", handleNetworkConnection);
+  webServer.on(F("/api/v1/wheelly/networks"), handleNetworkList);
+  webServer.on(F("/api/v1/wheelly/networks/network"), handleNetworkConnection);
   webServer.onNotFound(handleNotFound);
 
   webServer.begin();
-  Serial.println(F("// Server started"));
+  DEBUG_PRINTLN(F("// Server started"));
 }
 
 /*
@@ -110,20 +113,7 @@ void loop(void) {
   }
   if (hasClient) {
     if (client && client.connected()) {
-      boolean comunicating = false;
-      while (client.available() > 0) {
-        comunicating = true;
-        char c = client.read();
-        Serial.write(c);
-      }
-      while (Serial.available()) {
-        comunicating = true;
-        char ch = Serial.read();
-        client.write(ch);
-      }
-      if (comunicating) {
-        setActivity();
-      }
+      handleClient();
     } else {
       client.stop();
       hasClient = false;
@@ -138,10 +128,27 @@ void loop(void) {
   ledTimer.polling();
 }
 
+void handleClient() {
+  boolean comunicating = false;
+  while (client.available() > 0) {
+    comunicating = true;
+    char c = client.read();
+    Serial.write(c);
+  }
+  while (Serial.available()) {
+    comunicating = true;
+    char ch = Serial.read();
+    client.write(ch);
+  }
+  if (comunicating) {
+    setActivity();
+  }
+}
+
 /**
 
 */
-void handleLed(void *, int, long i) {
+void handleLed(void *, unsigned long i) {
   unsigned long numPulses = activity ? ACTIVITY_NUM_PULSES
                             : hasClient ? FAST_NUM_PULSES
                             : NUM_PULSES;
@@ -239,15 +246,15 @@ void setActivity() {
    Return true if able to load configuration
 */
 bool loadConfig() {
-  File configFile = LittleFS.open("/config.json", "r");
+  File configFile = LittleFS.open(F("/config.json"), "r");
   if (!configFile) {
-    Serial.println("!! Failed to open config file");
+    DEBUG_PRINTLN(F("!! Failed to open config file"));
     return false;
   }
 
   size_t size = configFile.size();
   if (size > 1024) {
-    Serial.println("!! Config file size is too large");
+    DEBUG_PRINTLN(F("!! Config file size is too large"));
     return false;
   }
 
@@ -262,29 +269,29 @@ bool loadConfig() {
   StaticJsonDocument<200> doc;
   auto error = deserializeJson(doc, buf.get());
   if (error) {
-    Serial.println("!! Failed to parse config file");
+    DEBUG_PRINTLN(F("!! Failed to parse config file"));
     return false;
   }
 
-  if (!doc.containsKey("version")
-      || !doc.containsKey("active")
-      || !doc.containsKey("ssid")
-      || !doc.containsKey("password")) {
-    Serial.println("!! Wrong config file");
+  if (!doc.containsKey(F("version"))
+      || !doc.containsKey(F("active"))
+      || !doc.containsKey(F("ssid"))
+      || !doc.containsKey(F("password"))) {
+    DEBUG_PRINTLN(F("!! Wrong config file"));
     return false;
   }
 
-  wifiData.version = doc["version"];
-  wifiData.active = doc["active"];
-  strncpy(wifiData.ssid, doc["ssid"].as<const char *>(), sizeof(wifiData.ssid));
-  strncpy(wifiData.password, doc["password"].as<const char *>(), sizeof(wifiData.password));
+  wifiData.version = doc[F("version")];
+  wifiData.active = doc[F("active")];
+  strncpy(wifiData.ssid, doc[F("ssid")].as<const char *>(), sizeof(wifiData.ssid));
+  strncpy(wifiData.password, doc[F("password")].as<const char *>(), sizeof(wifiData.password));
 
-  Serial.print("// version: ");
-  Serial.println(wifiData.version);
-  Serial.print("// active:  ");
-  Serial.println(wifiData.active);
-  Serial.print("// ssid:    ");
-  Serial.println(wifiData.ssid);
+  DEBUG_PRINT(F("// version: "));
+  DEBUG_PRINTLN(wifiData.version);
+  DEBUG_PRINT(F("// active:  "));
+  DEBUG_PRINTLN(wifiData.active);
+  DEBUG_PRINT(F("// ssid:    "));
+  DEBUG_PRINTLN(wifiData.ssid);
   return true;
 }
 
@@ -292,20 +299,20 @@ bool loadConfig() {
    Returns the wifi status after connecting WiFi network
 */
 wl_status_t connectWiFi() {
-  Serial.print(F("// Connecting to "));
-  Serial.print(wifiData.ssid);
-  Serial.println(F(" ..."));
+  DEBUG_PRINT(F("// Connecting to "));
+  DEBUG_PRINT(wifiData.ssid);
+  DEBUG_PRINTLN(F(" ..."));
 
   WiFi.begin(wifiData.ssid, wifiData.password);
   wl_status_t status = waitForConnection();
   if (status == WL_CONNECTED) {
-    Serial.print(F("// Connected to "));
-    Serial.println(wifiData.ssid);
-    Serial.print(F("// IP address "));
-    Serial.println(WiFi.localIP());
+    DEBUG_PRINT(F("// Connected to "));
+    DEBUG_PRINTLN(wifiData.ssid);
+    DEBUG_PRINT(F("// IP address "));
+    DEBUG_PRINTLN(WiFi.localIP());
   } else {
-    Serial.print(F("!! Failed with status: "));
-    Serial.println(status);
+    DEBUG_PRINT(F("!! Failed with status: "));
+    DEBUG_PRINTLN(status);
   }
   return status;
 }
@@ -314,16 +321,16 @@ wl_status_t connectWiFi() {
    Returns the wifi status after createing WiFi access point
 */
 wl_status_t createAccessPoint() {
-  Serial.print(F("// Creating access point "));
-  Serial.print(defSSID);
-  Serial.println(F(" ..."));
+  DEBUG_PRINT(F("// Creating access point "));
+  DEBUG_PRINT(defSSID);
+  DEBUG_PRINTLN(F(" ..."));
 
   WiFi.softAP(defSSID, "");
 
-  Serial.print(F("// Access point "));
-  Serial.println(defSSID);
-  Serial.print(F("// IP address "));
-  Serial.println(WiFi.softAPIP());
+  DEBUG_PRINT(F("// Access point "));
+  DEBUG_PRINTLN(defSSID);
+  DEBUG_PRINT(F("// IP address "));
+  DEBUG_PRINTLN(WiFi.softAPIP());
 
   return WiFi.status();
 }
@@ -352,14 +359,14 @@ wl_status_t waitForConnection() {
 */
 bool saveConfig() {
   StaticJsonDocument<200> doc;
-  doc["version"] = CURRENT_VERSION;
-  doc["active"] = wifiData.active;
-  doc["ssid"] = wifiData.ssid;
-  doc["password"] = wifiData.password;
+  doc[F("version")] = CURRENT_VERSION;
+  doc[F("active")] = wifiData.active;
+  doc[F("ssid")] = wifiData.ssid;
+  doc[F("password")] = wifiData.password;
 
-  File configFile = LittleFS.open("/config.json", "w");
+  File configFile = LittleFS.open(F("/config.json"), "w");
   if (!configFile) {
-    Serial.println("Failed to open config file for writing");
+    DEBUG_PRINTLN(F("!! Failed to open config file for writing"));
     return false;
   }
 
@@ -372,10 +379,10 @@ bool saveConfig() {
 */
 String methodName() {
   switch (webServer.method()) {
-    case HTTP_GET: return "GET";
-    case HTTP_POST: return "POST";
-    case HTTP_DELETE: return "DELETE";
-    default: return "UNKNOWN";
+    case HTTP_GET: return F("GET");
+    case HTTP_POST: return F("POST");
+    case HTTP_DELETE: return F("DELETE");
+    default: return F("UNKNOWN");
   }
 }
 

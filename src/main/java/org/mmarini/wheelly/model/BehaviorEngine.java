@@ -43,6 +43,7 @@ import java.util.concurrent.TimeUnit;
 import static io.reactivex.rxjava3.core.Flowable.*;
 import static java.lang.Math.round;
 import static org.mmarini.wheelly.model.AbstractScannerMap.THRESHOLD_DISTANCE;
+import static org.mmarini.wheelly.model.AltCommand.ALT_COMMAND;
 
 public class BehaviorEngine {
     private static final Logger logger = LoggerFactory.getLogger(BehaviorEngine.class);
@@ -85,55 +86,8 @@ public class BehaviorEngine {
         this.controller = controller;
         this.mapFlow = BehaviorProcessor.create();
 
-
-        // Creates status flow
-        Flowable<Timed<WheellyStatus>> statusFlow = controller.readStatus();
-
-        // Creates map flow
-        controller.readStatus()
-                .observeOn(Schedulers.computation())
-                .map(x -> new Timed<>(x.value().sample, x.time(), x.unit()))
-                .scanWith(() -> GridScannerMap.create(List.of(), THRESHOLD_DISTANCE),
-                        ScannerMap::process)
-                .subscribe(mapFlow);
-
-        // Builds command flow by applying inference engine
-        Flowable<Tuple2<MotionComand, Integer>> commands = combineLatest(statusFlow, mapFlow, Tuple2::of)
-                .observeOn(Schedulers.computation())
-                .map(engine::process)
-                .publish()
-                .autoConnect();
-
-        // Splits the commands  flow in motor and scanner command flows
-        // The motor command are sample every motorCommandInterval msec
-        Flowable<MotionComand> motorCommandFlow = commands.map(Tuple2::getV1)
-                .map(cmd -> {
-                    if (cmd instanceof MoveCommand) {
-                        MoveCommand moveCommand = (MoveCommand) cmd;
-                        double speed = round(moveCommand.speed / MOTOR_SCALE) * MOTOR_SCALE;
-                        return MoveCommand.create(moveCommand.direction, speed);
-                    } else {
-                        return cmd;
-                    }
-                })
-                .sample(motorCommandInterval, TimeUnit.MILLISECONDS);
-
-        // the distinct scan command
-        Flowable<Integer> directionFlow = commands.map(Tuple2::getV2)
-                .distinctUntilChanged();
-
-        // the scan command every 100 msec filtered out for 0 deg commands
-        Flowable<ScanCommand> scanCommandFlow = combineLatest(interval(scanCommandInterval, TimeUnit.MILLISECONDS),
-                directionFlow,
-                (t, a) -> a)
-                .buffer(2, 1)
-                .concatMap(list -> list.get(1) != 0 ? just(list.get(1))
-                        : list.get(0) != 0 ? just(0) : empty())
-                .map(ScanCommand::create);
-
-        // Start the controller
-        controller.action(scanCommandFlow);
-        controller.action(motorCommandFlow);
+        createMapFlow();
+        createActionFlow(engine, motorCommandInterval, scanCommandInterval);
     }
 
     public RobotController action(Flowable<? extends WheellyCommand> commands) {
@@ -142,6 +96,76 @@ public class BehaviorEngine {
 
     public RobotController close() {
         return controller.close();
+    }
+
+    private void createActionFlow(InferenceEngine engine, long motorCommandInterval, long scanCommandInterval) {
+        Flowable<Tuple2<MotionComand, Integer>> commands = createCommandFlow(engine);
+        // Splits the commands  flow in motor and scanner command flows
+        createMotionFlow(commands.map(Tuple2::getV1), motorCommandInterval);
+        createScanFlow(commands.map(Tuple2::getV2), scanCommandInterval);
+    }
+
+    private Flowable<Tuple2<MotionComand, Integer>> createCommandFlow(InferenceEngine engine) {
+        // Creates status flow
+        Flowable<Timed<WheellyStatus>> statusFlow = controller.readStatus();
+        // Builds command flow by applying inference engine
+        return combineLatest(statusFlow, mapFlow, Tuple2::of)
+                .observeOn(Schedulers.computation())
+                .map(engine::process)
+                .publish()
+                .autoConnect();
+    }
+
+    private void createMapFlow() {
+        // Creates map flow
+        controller.readStatus()
+                .observeOn(Schedulers.computation())
+                .map(x -> new Timed<>(x.value().sample, x.time(), x.unit()))
+                .scanWith(() -> GridScannerMap.create(List.of(), THRESHOLD_DISTANCE),
+                        ScannerMap::process)
+                .subscribe(mapFlow);
+    }
+
+    private void createMotionFlow(Flowable<MotionComand> commands, long motorCommandInterval) {
+        // The motor command are sample every motorCommandInterval msec
+        Flowable<MotionComand> motorCommandFlow1 = commands.map(cmd -> {
+                    if (cmd instanceof MoveCommand) {
+                        MoveCommand moveCommand = (MoveCommand) cmd;
+                        double speed = round(moveCommand.speed / MOTOR_SCALE) * MOTOR_SCALE;
+                        return MoveCommand.create(moveCommand.direction, speed);
+                    } else {
+                        return cmd;
+                    }
+                })
+                .distinctUntilChanged();
+        Flowable<MotionComand> motorCommandFlow = combineLatest(interval(motorCommandInterval, TimeUnit.MILLISECONDS),
+                motorCommandFlow1,
+                Tuple2::of)
+                .distinctUntilChanged()
+                .map(Tuple2::getV2)
+                .buffer(2, 1)
+                .filter(cmds -> !(cmds.get(0) == ALT_COMMAND
+                        && cmds.get(1) == ALT_COMMAND))
+                .map(cmds -> cmds.get(1))
+                .throttleLatest(100, TimeUnit.MILLISECONDS);
+
+        controller.action(motorCommandFlow);
+    }
+
+    private void createScanFlow(Flowable<Integer> commands, long scanCommandInterval) {
+        // the distinct scan command
+        Flowable<ScanCommand> scanCommandFlow = Flowable.combineLatest(
+                        interval(scanCommandInterval, TimeUnit.MILLISECONDS),
+                        commands.distinctUntilChanged(),
+                        Tuple2::of)
+                .distinctUntilChanged()
+                .map(Tuple2::getV2)
+                .buffer(2, 1)
+                .filter((list) -> !(list.get(0) == 0 && list.get(1) == 0))
+                .map(list -> list.get(1))
+                .throttleLatest(50, TimeUnit.MILLISECONDS)
+                .map(ScanCommand::create);
+        controller.action(scanCommandFlow);
     }
 
     public Flowable<Boolean> readConnection() {

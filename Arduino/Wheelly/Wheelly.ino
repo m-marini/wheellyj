@@ -55,7 +55,6 @@
 /*
    Scanner constants
 */
-#define NO_SAMPLES          1
 #define NO_SCAN_DIRECTIONS  10
 #define SERVO_OFFSET        4
 #define FRONT_DIRECTION     90
@@ -111,9 +110,7 @@ AsyncServo servo;
 */
 SR04 sr04(TRIGGER_PIN, ECHO_PIN);
 byte nextScan;
-
-int frontDistance;
-byte noScansQueue;
+int distance;
 unsigned long resetTime;
 
 /*
@@ -204,7 +201,7 @@ void setup() {
     Init servo and scanner
   */
   sr04.begin();
-  sr04.noSamples(NO_SAMPLES);
+//  sr04.noSamples(NO_SAMPLES);
   sr04.onSample(&handleSample);
   servo.attach(SERVO_PIN);
   servo.offset(SERVO_OFFSET);
@@ -331,13 +328,13 @@ void handleLedTimer(void *, unsigned long n) {
 */
 void handleObstacleTimer(void *, unsigned long i) {
   static unsigned long last = 0;
-  if (frontDistance == 0 || frontDistance > WARN_DISTANCE) {
+  if (distance == 0 || distance > WARN_DISTANCE) {
     digitalWrite(PROXY_LED_PIN, LOW);
-  } else if (frontDistance <= STOP_DISTANCE) {
+  } else if (distance <= STOP_DISTANCE) {
     digitalWrite(PROXY_LED_PIN, HIGH);
     last = i;
   } else {
-    int n = map(frontDistance,
+    int n = map(distance,
                 STOP_DISTANCE, WARN_DISTANCE,
                 MIN_OBSTACLE_PULSES, MAX_OBSTACLE_PULSES);
     if (i >= last + n) {
@@ -372,14 +369,7 @@ void handleMvCommand(const char* parms) {
 */
 void handleScCommand(const char* parms) {
   String args = parms;
-  int angle = args.toInt();
-  if (angle < -90 || angle > 90) {
-    Serial.println(F("!! Wrong arg[1]"));
-    return;
-  }
-  if (noScansQueue >= NO_SCAN_DIRECTIONS) {
-    Serial.println(F("!! Buffer full"));
-  }
+  int angle = min(max(args.toInt(), -90), 90);
 
   nextScan = 90 - angle;
   resetTime = millis() + SCANNER_RESET_INTERVAL;
@@ -397,11 +387,9 @@ void handleSample(void *, int dist) {
     DEBUG_PRINT(F(", distance="));
     DEBUG_PRINTLN(dist);
   */
-  if (servo.angle() == FRONT_DIRECTION) {
-    frontDistance = dist;
-    if (motionController.isForward() && !canMoveForward()) {
-      motionController.alt();
-    }
+  distance = dist;
+  if (motionController.isForward() && !canMoveForward()) {
+    motionController.alt();
   }
   sendStatus(dist);
 
@@ -489,13 +477,6 @@ void sendStatus(int distance) {
     Serial.println();
 }
 
-
-
-
-
-
-
-
 /*
 
 */
@@ -543,7 +524,7 @@ bool canMoveForward() {
 }
 
 int forwardBlockDistance() {
-  return (frontDistance > 0 && frontDistance <= MAX_DISTANCE) ? frontDistance : MAX_DISTANCE;
+  return (distance > 0 && distance <= MAX_DISTANCE) ? distance : MAX_DISTANCE;
 }
 
 /*

@@ -46,6 +46,8 @@ import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static java.lang.String.format;
 import static org.mmarini.wheelly.swing.RxJoystick.NONE_CONTROLLER;
@@ -133,16 +135,22 @@ public class UIController {
         if (engineNode.isMissingNode()) {
             throw new IllegalArgumentException(format("Missing %s node", engineRef));
         }
-        String className = engineNode.path("class").asText();
-        if (className.isEmpty()) {
-            throw new IllegalArgumentException(format("Missing %s/class node", engineRef));
+        String builder = engineNode.path("builder").asText();
+        if (builder.isEmpty()) {
+            throw new IllegalArgumentException(format("Missing %s/builder node", engineRef));
         }
+        Matcher m = Pattern.compile("^([a-zA-Z_]\\w*\\.)+([a-zA-Z_]\\w*)$").matcher(builder);
+        if (!m.matches()) {
+            throw new IllegalArgumentException(format("builder %s does not match the format", builder));
+        }
+        String methodName = m.group(2);
+        String className = builder.substring(0, builder.length() - methodName.length() - 1);
         try {
             Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(className);
-            Method creator = clazz.getDeclaredMethod("create", JsonNode.class);
+            Method creator = clazz.getDeclaredMethod(methodName, JsonNode.class);
             int modifiers = creator.getModifiers();
             if (!Modifier.isStatic(modifiers)) {
-                throw new IllegalArgumentException("creator method is not static");
+                throw new IllegalArgumentException(format("builder %s is not static", builder));
             }
             Object result = creator.invoke(null, engineNode);
             return (InferenceEngine) result;

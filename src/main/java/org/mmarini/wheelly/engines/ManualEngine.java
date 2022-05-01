@@ -28,15 +28,6 @@ public class ManualEngine implements InferenceEngine {
         return new ManualEngine(joystick);
     }
 
-    public static ManualEngine create(JsonNode config) {
-        String port = config.path("joystickPort").asText();
-        if (port.isEmpty()) {
-            throw new IllegalArgumentException("Missing joystickPort");
-        }
-        RxJoystick joystick = RxJoystickImpl.create(port);
-        return new ManualEngine(joystick);
-    }
-
     @SafeVarargs
     static <T> Flowable<T> intervalItems(long time, T... data) {
         return intervalRange(0, data.length, 0, time, TimeUnit.MILLISECONDS)

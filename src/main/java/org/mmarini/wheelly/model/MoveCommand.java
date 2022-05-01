@@ -29,7 +29,11 @@
 
 package org.mmarini.wheelly.model;
 
+import java.util.Locale;
+import java.util.Objects;
 import java.util.StringJoiner;
+
+import static java.lang.String.format;
 
 /**
  *
@@ -60,8 +64,21 @@ public class MoveCommand implements MotionComand {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        MoveCommand that = (MoveCommand) o;
+        return direction == that.direction && Double.compare(that.speed, speed) == 0;
+    }
+
+    @Override
     public String getString() {
-        return "mv " + direction + " " + speed;
+        return format(Locale.ENGLISH, "mv %d %.2f", direction, speed);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(direction, speed);
     }
 
     @Override

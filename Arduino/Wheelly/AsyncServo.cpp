@@ -37,7 +37,7 @@ void AsyncServo::angle(byte value) {
   _timer.start();
 }
 
-void AsyncServo::_handleTimeout(void * context, unsigned long) {
+static void AsyncServo::_handleTimeout(void * context, unsigned long) {
   AsyncServo* servo = (AsyncServo*) context;
   if (servo->_onReached != NULL) {
     servo->_onReached(servo->_context, servo->_angle);

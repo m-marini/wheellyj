@@ -6,59 +6,65 @@
 #define MAX_INTERVALS 4
 
 /*
- * ASynchronous timer
- */
+   ASynchronous timer
+*/
 class Timer {
   public:
 
-    Timer();
-
-    // Sets the intervals sequence
-    Timer& intervals(int noIntervals, unsigned long *intervals);
+    Timer() {};
 
     // Sets a single interval
-    Timer& interval(unsigned long interval);
+    void interval(unsigned long interval) {
+      _interval = interval;
+    }
 
     // Sets true if continuos events
-    Timer& continuous(boolean cont);
+    void continuous(boolean cont)  {
+      _continuous = cont;
+    }
+
 
     // Starts the timer
-    Timer& start(void *context = NULL);
+    void start();
 
     // Starts the timer
-    Timer& start(void *context, unsigned long timeout);
-
-    // Starts the timer
-    Timer& start(unsigned long timeout) {return start(NULL, timeout);};
+    void start(unsigned long timeout);
 
     // Stops the timer
-    Timer& stop();
-  
-    // Restarts the timer
-    Timer& restart();
-  
-    // Returns true if timer is not expired (is timing)
-    bool isRunning() const {return _running;}
+    void stop();
 
-    // Sets the callback 
-    Timer& onNext(void (*callback)(void* context, int interval, long cycles));
+    // Restarts the timer
+    void restart();
+
+    // Returns true if timer is not expired (is timing)
+    bool isRunning() const {
+      return _running;
+    }
+
+    // Returns the interval
+    unsigned long interval() const {
+      return _interval;
+    }
+
+    // Sets the callback
+    void onNext(void (*callback)(void* context, unsigned long counter), void* context = NULL);
 
     // Polls the timer
-    Timer& polling();
+    void polling(unsigned long clockTime = millis());
 
-    unsigned long next() const {return _next;}
+    unsigned long next() const {
+      return _next;
+    }
 
   private:
     bool _continuous;
-    int _noIntervals;
-    unsigned long _intervals[MAX_INTERVALS];
-    void (*_onNext)(void* context, int interval, long cycles);
-    
-    unsigned long _next;
-    int _interval;
-    long _cycles;
-    boolean _running;
+    unsigned long _interval;
+    void (*_onNext)(void*, unsigned long);
     void *_context;
+
+    unsigned long _next;
+    unsigned long _counter;
+    boolean _running;
 };
 
 #endif

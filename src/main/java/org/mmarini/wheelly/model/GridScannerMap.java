@@ -29,12 +29,21 @@
 
 package org.mmarini.wheelly.model;
 
+import java.awt.*;
 import java.awt.geom.Point2D;
 import java.util.List;
 
 import static java.lang.Math.round;
 
 public class GridScannerMap extends AbstractScannerMap {
+
+    public static Point cell(Point2D location, double gridSize) {
+        double x = location.getX();
+        double y = location.getY();
+        long i = round(x / gridSize);
+        long j = round(y / gridSize);
+        return new Point((int) i, (int) j);
+    }
 
     /**
      * Returns an empty map
@@ -43,7 +52,12 @@ public class GridScannerMap extends AbstractScannerMap {
         return new GridScannerMap(obstacles, gridSize);
     }
 
-    private final double gridSize;
+    public static Point2D snapToGrid(Point2D location, double gridSize) {
+        Point cell = cell(location, gridSize);
+        return new Point2D.Double(cell.x * gridSize, cell.y * gridSize);
+    }
+
+    public final double gridSize;
 
     /**
      * Creates a scanner map
@@ -60,16 +74,16 @@ public class GridScannerMap extends AbstractScannerMap {
         return snapToGrid(location, gridSize);
     }
 
-    static Point2D snapToGrid(Point2D location, double gridSize) {
-        double x = location.getX();
-        double y = location.getY();
-        long i = round(x / gridSize);
-        long j = round(y / gridSize);
-        return new Point2D.Double(i * gridSize, j * gridSize);
-    }
-
     @Override
     protected GridScannerMap newInstance(List<Obstacle> obstacles) {
         return new GridScannerMap(obstacles, gridSize);
+    }
+
+    public Point cell(Point2D location) {
+        return cell(location, gridSize);
+    }
+
+    public Point2D toPoint(Point cell) {
+        return new Point2D.Double(cell.x * gridSize, cell.y * gridSize);
     }
 }
