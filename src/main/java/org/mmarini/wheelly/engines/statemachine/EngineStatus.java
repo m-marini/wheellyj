@@ -27,33 +27,26 @@
  *
  */
 
-package org.mmarini.wheelly.engines;
+package org.mmarini.wheelly.engines.statemachine;
 
+import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Tuple2;
+import org.mmarini.wheelly.model.AltCommand;
 import org.mmarini.wheelly.model.MotionComand;
+import org.mmarini.wheelly.model.ScannerMap;
+import org.mmarini.wheelly.model.WheellyStatus;
 
-public class StateTransition {
-    /**
-     * @param exit
-     * @param context
-     * @param commands
-     */
-    public static StateTransition create(String exit, StateMachineContext context, Tuple2<MotionComand, Integer> commands) {
-        return new StateTransition(exit, context, commands);
+public interface EngineStatus {
+
+    String STAY_EXIT = "StayExit";
+    String STATUS_NAME_KEY = "EngineStatus.name";
+    String ENTRY_TIME_KEY = "EngineStatus.entryTime";
+
+    Tuple2<MotionComand, Integer> ALT_COMMAND = Tuple2.of(AltCommand.create(), 0);
+
+    default EngineStatus activate(StateMachineContext context) {
+        return this;
     }
 
-    public final Tuple2<MotionComand, Integer> commands;
-    public final StateMachineContext context;
-    public final String exit;
-
-    /**
-     * @param exit
-     * @param context
-     * @param commands
-     */
-    protected StateTransition(String exit, StateMachineContext context, Tuple2<MotionComand, Integer> commands) {
-        this.commands = commands;
-        this.context = context;
-        this.exit = exit;
-    }
+    StateTransition process(Tuple2<Timed<WheellyStatus>, ScannerMap> data, StateMachineContext context);
 }

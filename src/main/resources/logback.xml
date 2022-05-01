@@ -29,6 +29,10 @@
     </logger>
     <logger name="org.mmarini.wheelly.model.RawController" level="INFO">
     </logger>
+    <logger name="org.mmarini.wheelly.engines.statemachine.GotoStatus" level="INFO">
+    </logger>
+    <logger name="org.mmarini.wheelly.engines.statemachine.NextSequenceStatus" level="INFO">
+    </logger>
 
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>

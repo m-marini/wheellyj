@@ -27,20 +27,26 @@
  *
  */
 
-package org.mmarini.wheelly.engines;
+package org.mmarini.wheelly.engines.statemachine;
 
-import io.reactivex.rxjava3.schedulers.Timed;
-import org.mmarini.Tuple2;
-import org.mmarini.wheelly.model.ScannerMap;
-import org.mmarini.wheelly.model.WheellyStatus;
+import java.util.function.UnaryOperator;
 
-public interface EngineStatus {
-
-    String STAY_EXIT = "StayExit";
-
-    default EngineStatus activate(StateMachineContext context) {
-        return this;
+public interface ContextOperator extends UnaryOperator<StateMachineContext> {
+    static ContextOperator assign(String leftExp, String rightExp) {
+        return ctx -> ctx.get(rightExp).map(exp -> ctx.put(leftExp, exp))
+                .orElseGet(() -> ctx.remove(leftExp));
     }
 
-    StateTransition process(Tuple2<Timed<WheellyStatus>, ScannerMap> data, StateMachineContext context);
+    static ContextOperator sequence(ContextOperator... handlers) {
+        return ctx -> {
+            for (ContextOperator handler : handlers) {
+                ctx = handler.apply(ctx);
+            }
+            return ctx;
+        };
+    }
+
+    static ContextOperator remove(String key) {
+        return ctx -> ctx.remove(key);
+    }
 }

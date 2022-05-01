@@ -27,49 +27,53 @@
  *
  */
 
-package org.mmarini.wheelly.engines;
+package org.mmarini.wheelly.engines.statemachine;
 
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.model.AltCommand;
-import org.mmarini.wheelly.model.MotionComand;
 import org.mmarini.wheelly.model.ScannerMap;
 import org.mmarini.wheelly.model.WheellyStatus;
 
+import java.util.Optional;
+
 public class StopStatus implements EngineStatus {
     public static final String TIMEOUT_EXIT = "TimeoutExit";
-    public static final Tuple2<MotionComand, Integer> STOP_COMMAND = Tuple2.of(AltCommand.create(), 0);
+    public static final String TIMEOUT_KEY = "StopStatus.timeout";
+    public static final String TIMER_KEY = "StopStatus.timer";
+    private static final StopStatus SINGLETON = new StopStatus();
+    private static final StopStatus FINAL_STATUS = new StopStatus() {
+        @Override
+        public EngineStatus activate(StateMachineContext context) {
+            context.remove(TIMER_KEY);
+            return this;
+        }
+    };
 
-    private static final StopStatus finalStop = new StopStatus(0);
-
-    public static StopStatus create(long timeout) {
-        return new StopStatus(timeout);
+    public static StopStatus create() {
+        return SINGLETON;
     }
 
-    public static StopStatus finalStop() {
-        return finalStop;
+    public static StopStatus finalStatus() {
+        return FINAL_STATUS;
     }
 
-    private final long timeout;
+    protected StopStatus() {
 
-    protected StopStatus(long timeout) {
-        this.timeout = timeout;
     }
 
     @Override
     public EngineStatus activate(StateMachineContext context) {
-        if (timeout > 0) {
-            context.put("timeout", System.currentTimeMillis() + timeout);
-        } else {
-            context.remove("timeout");
-        }
+        Optional<Number> timeoutOpt = context.get(TIMEOUT_KEY);
+        timeoutOpt.ifPresentOrElse(
+                timeout -> context.put(TIMER_KEY, System.currentTimeMillis() + timeout.longValue()),
+                () -> context.remove(TIMER_KEY));
         return this;
     }
 
     @Override
     public StateTransition process(Tuple2<Timed<WheellyStatus>, ScannerMap> data, StateMachineContext context) {
-        return (context.<Long>get("timeout").filter(x -> System.currentTimeMillis() >= x).isPresent())
-                ? StateTransition.create(TIMEOUT_EXIT, context, STOP_COMMAND)
-                : StateTransition.create(STAY_EXIT, context, STOP_COMMAND);
+        return (context.<Number>get(TIMER_KEY).filter(timer -> System.currentTimeMillis() >= timer.longValue()).isPresent())
+                ? StateTransition.create(TIMEOUT_EXIT, context, ALT_COMMAND)
+                : StateTransition.create(STAY_EXIT, context, ALT_COMMAND);
     }
 }

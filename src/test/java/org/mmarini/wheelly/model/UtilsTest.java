@@ -29,16 +29,21 @@
 
 package org.mmarini.wheelly.model;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.awt.geom.Point2D;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static java.lang.Math.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
+import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mmarini.ArgumentsGenerator.*;
 import static org.mmarini.wheelly.model.Utils.direction;
 import static org.mmarini.wheelly.model.Utils.normalizeAngle;
@@ -56,6 +61,21 @@ class UtilsTest {
                 exponential(MIN_DIST, MAX_DIST),
                 uniform(-180, 179)
         );
+    }
+
+    @Test
+    void regex() {
+        String className = Utils.class.getCanonicalName();
+        String method = "method";
+        String string = className + "." + method;
+        String regex = "^([a-zA-Z_]\\w*\\.)+([a-zA-Z_]\\w*)$";
+        Matcher m = Pattern.compile(regex).matcher(string);
+        String className1 = string.substring(0, string.length() - method.length()-1);
+
+        assertTrue(m.matches());
+        assertThat(m.groupCount(), equalTo(2));
+        assertThat(m.group(2), equalTo(method));
+        assertThat(className1, equalTo(className));
     }
 
     @ParameterizedTest

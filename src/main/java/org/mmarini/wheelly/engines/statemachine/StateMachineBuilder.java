@@ -27,7 +27,7 @@
  *
  */
 
-package org.mmarini.wheelly.engines;
+package org.mmarini.wheelly.engines.statemachine;
 
 import org.mmarini.Tuple2;
 
@@ -37,11 +37,12 @@ import java.util.function.UnaryOperator;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.engines.StateMachineEngine.END_STATUS;
+import static org.mmarini.wheelly.engines.statemachine.StateMachineEngine.END_STATUS;
 
 public class StateMachineBuilder {
+
     private static StateMachineBuilder builder = new StateMachineBuilder(
-            Map.of(END_STATUS, StopStatus.finalStop()),
+            Map.of(END_STATUS, StopStatus.finalStatus()),
             Map.of());
 
     /**
@@ -53,10 +54,12 @@ public class StateMachineBuilder {
 
     private final Map<String, EngineStatus> states;
     private final Map<Tuple2<String, String>, Tuple2<String, UnaryOperator<StateMachineContext>>> transitions;
+    private StateMachineContext context;
 
     private StateMachineBuilder(Map<String, EngineStatus> states, Map<Tuple2<String, String>, Tuple2<String, UnaryOperator<StateMachineContext>>> transitions) {
         this.states = requireNonNull(states);
         this.transitions = requireNonNull(transitions);
+        this.context = StateMachineContext.create();
     }
 
     /**
@@ -118,6 +121,16 @@ public class StateMachineBuilder {
             throw new IllegalArgumentException(format("Status %s undefined", initialStatus));
         }
 
-        return new StateMachineEngine(states, transitions, initialStatus);
+        return new StateMachineEngine(states, transitions, initialStatus, context);
+    }
+
+    public StateMachineBuilder setInitialContext(StateMachineContext context) {
+        this.context = requireNonNull(context);
+        return this;
+    }
+
+    public <T> StateMachineBuilder setParams(String key, T value) {
+        context.put(key, value);
+        return this;
     }
 }
