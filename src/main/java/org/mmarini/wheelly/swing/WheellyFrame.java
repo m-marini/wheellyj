@@ -1,6 +1,9 @@
 package org.mmarini.wheelly.swing;
 
+import hu.akarnokd.rxjava3.swing.SwingObservable;
+import io.reactivex.rxjava3.core.BackpressureStrategy;
 import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Flowable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,6 +12,7 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultCaret;
 import javax.swing.text.Document;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.time.LocalDateTime;
@@ -20,19 +24,26 @@ import java.util.concurrent.TimeUnit;
  *
  */
 public class WheellyFrame extends JFrame {
+    public static final double RADAR_MAX_DISTANCE = 1;
     private final static Logger logger = LoggerFactory.getLogger(WheellyFrame.class);
     private static final int HIGH_WATER = 100;
     private static final int LOW_WATER = 50;
     private static final DateTimeFormatter formatter = new DateTimeFormatterBuilder()
             .appendPattern("HH:mm:ss")
             .toFormatter();
-    public static final double RADAR_MAX_DISTANCE = 1;
     private final JMenuItem preferences;
     private final Dashboard dashboard;
     private final Radar radar;
     private final GlobalMap globalMap;
     private final JLabel statusBar;
     private final JTextArea console;
+    private final JToolBar toolBar;
+    private final JToggleButton scannerView;
+    private final JToggleButton contourView;
+    private final JToggleButton prohibitedView;
+    private final Flowable<ActionEvent> scannerViewFlow;
+    private final Flowable<ActionEvent> contourViewFlow;
+    private final Flowable<ActionEvent> prohibitedViewFlow;
 
     /**
      *
@@ -45,6 +56,15 @@ public class WheellyFrame extends JFrame {
         this.globalMap = new GlobalMap();
         this.statusBar = new JLabel("Idle");
         this.console = new JTextArea();
+        this.toolBar = new JToolBar();
+        this.scannerView = new JToggleButton("Scanner view");
+        this.prohibitedView = new JToggleButton("Prohibited view");
+        this.contourView = new JToggleButton("Contour view");
+        this.scannerViewFlow = SwingObservable.actions(scannerView).toFlowable(BackpressureStrategy.DROP);
+        this.contourViewFlow = SwingObservable.actions(contourView).toFlowable(BackpressureStrategy.DROP);
+        this.prohibitedViewFlow = SwingObservable.actions(prohibitedView).toFlowable(BackpressureStrategy.DROP);
+
+        this.scannerView.setSelected(true);
 
         radar.setMaxDistance(RADAR_MAX_DISTANCE);
         statusBar.setBorder(BorderFactory.createEmptyBorder(2, 10, 2, 10));
@@ -55,6 +75,8 @@ public class WheellyFrame extends JFrame {
         console.setEditable(false);
         DefaultCaret caret = (DefaultCaret) console.getCaret();
         caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+
+        // Create content
         Container contentPane = getContentPane();
         contentPane.setLayout(new BorderLayout());
 
@@ -64,6 +86,10 @@ public class WheellyFrame extends JFrame {
         JSplitPane horizSplit1 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, globalMap, horizSplit2);
         horizSplit1.setResizeWeight(0.67);
         JSplitPane vertSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, horizSplit1, dashboard);
+
+        createToolbar();
+
+        contentPane.add(toolBar, BorderLayout.NORTH);
         contentPane.add(vertSplit, BorderLayout.CENTER);
         contentPane.add(statusBar, BorderLayout.SOUTH);
         addWindowListener(new WindowAdapter() {
@@ -77,8 +103,8 @@ public class WheellyFrame extends JFrame {
                         }).subscribe();
             }
         });
-
         setJMenuBar(createMenuBar());
+
     }
 
     /**
@@ -100,6 +126,21 @@ public class WheellyFrame extends JFrame {
         return jMenuBar;
     }
 
+    private void createToolbar() {
+        ButtonGroup group = new ButtonGroup();
+        group.add(scannerView);
+        group.add(prohibitedView);
+        group.add(contourView);
+
+        toolBar.add(scannerView);
+        toolBar.add(prohibitedView);
+        toolBar.add(contourView);
+    }
+
+    public Flowable<ActionEvent> getContourViewFlow() {
+        return contourViewFlow;
+    }
+
     /**
      *
      */
@@ -118,11 +159,19 @@ public class WheellyFrame extends JFrame {
         return preferences;
     }
 
+    public Flowable<ActionEvent> getProhibitedViewFlow() {
+        return prohibitedViewFlow;
+    }
+
     /**
      *
      */
     public Radar getRadar() {
         return radar;
+    }
+
+    public Flowable<ActionEvent> getScannerViewFlow() {
+        return scannerViewFlow;
     }
 
     /**

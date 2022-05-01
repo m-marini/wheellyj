@@ -31,22 +31,18 @@ package org.mmarini.wheelly.engines.statemachine;
 
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.model.AltCommand;
-import org.mmarini.wheelly.model.MotionComand;
-import org.mmarini.wheelly.model.ScannerMap;
-import org.mmarini.wheelly.model.WheellyStatus;
+import org.mmarini.wheelly.model.*;
 
 public interface EngineStatus {
 
-    String STAY_EXIT = "StayExit";
-    String STATUS_NAME_KEY = "EngineStatus.name";
-    String ENTRY_TIME_KEY = "EngineStatus.entryTime";
-
     Tuple2<MotionComand, Integer> ALT_COMMAND = Tuple2.of(AltCommand.create(), 0);
+    String STAY_EXIT = "Stay";
+    String TIMEOUT_EXIT = "Timeout";
+    String COMPLETED_EXIT = "Completed";
 
-    default EngineStatus activate(StateMachineContext context) {
+    default EngineStatus activate(StateMachineContext context, InferenceMonitor monitor) {
         return this;
     }
 
-    StateTransition process(Tuple2<Timed<WheellyStatus>, ScannerMap> data, StateMachineContext context);
+    StateTransition process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, StateMachineContext context, InferenceMonitor monitor);
 }

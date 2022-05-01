@@ -1,13 +1,11 @@
 package org.mmarini.wheelly.engines;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.model.*;
 import org.mmarini.wheelly.swing.RxJoystick;
-import org.mmarini.wheelly.swing.RxJoystickImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -121,7 +119,12 @@ public class ManualEngine implements InferenceEngine {
     }
 
     @Override
-    public Tuple2<MotionComand, Integer> process(Tuple2<Timed<WheellyStatus>, ScannerMap> data) {
+    public InferenceEngine init(InferenceMonitor monitor) {
+        return this;
+    }
+
+    @Override
+    public Tuple2<MotionComand, Integer> process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, InferenceMonitor monitor) {
         MotionComand cmd = alt ? AltCommand.create() : MoveCommand.create((int) round(toDegrees(direction)), speed);
         return Tuple2.of(cmd, scannerDirection);
     }

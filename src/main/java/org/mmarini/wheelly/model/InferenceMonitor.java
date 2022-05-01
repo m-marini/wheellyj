@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) )2022 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022 Marco Marini, marco.marini@mmarini.org
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -27,53 +27,12 @@
  *
  */
 
-package org.mmarini.wheelly.swing;
+package org.mmarini.wheelly.model;
 
-import io.reactivex.rxjava3.core.Flowable;
-import net.java.games.input.Event;
-import org.mmarini.Tuple2;
+public interface InferenceMonitor {
+    <T> InferenceMonitor put(String key, T value);
 
-/**
- *
- */
-public interface RxJoystick {
-    String NONE_CONTROLLER = "None";
-    String X = "x";
-    String Y = "y";
-    String Z = "z";
-    String BUTTON_0 = "0";
-    String BUTTON_1 = "1";
-    String BUTTON_2 = "2";
-    String BUTTON_3 = "3";
-    String POV = "pov";
-    String THUMB = "Thumb";
-    String THUMB_2 = "Thumb 2";
-    String TOP = "Top";
-    String TRIGGER = "Trigger";
+    InferenceMonitor remove(String key);
 
-    /**
-     *
-     */
-    void close();
-
-    /**
-     *
-     */
-    Flowable<Event> readEvents();
-
-    /**
-     * @param id
-     */
-    default Flowable<Float> readValues(String id) {
-        return readEvents().filter(ev -> id.equals(ev.getComponent().getIdentifier().getName()))
-                .map(Event::getValue)
-                .startWithItem(0f);
-    }
-
-    /**
-     * @return
-     */
-    default Flowable<Tuple2<Float, Float>> readXY() {
-        return Flowable.combineLatest(readValues(X), readValues(Y), Tuple2::of);
-    }
+    InferenceMonitor show(String text, Object... parms);
 }

@@ -89,7 +89,7 @@ public class Compass extends JComponent {
         // Draw needle
         double sa = sin(angle);
         double ca = cos(angle);
-        int x3 =  (int) round(xc + innerRadius * sa);
+        int x3 = (int) round(xc + innerRadius * sa);
         int y3 = (int) round(yc - innerRadius * ca);
         g.setColor(NEEDLE_COLOR);
 
@@ -97,7 +97,6 @@ public class Compass extends JComponent {
     }
 
     /**
-     *
      * @param angle the angle in RAD
      */
     public void setAngle(double angle) {

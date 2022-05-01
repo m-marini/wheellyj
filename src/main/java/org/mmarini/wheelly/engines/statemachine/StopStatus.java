@@ -31,20 +31,16 @@ package org.mmarini.wheelly.engines.statemachine;
 
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Tuple2;
+import org.mmarini.wheelly.model.InferenceMonitor;
 import org.mmarini.wheelly.model.ScannerMap;
 import org.mmarini.wheelly.model.WheellyStatus;
 
-import java.util.Optional;
-
 public class StopStatus implements EngineStatus {
-    public static final String TIMEOUT_EXIT = "TimeoutExit";
-    public static final String TIMEOUT_KEY = "StopStatus.timeout";
-    public static final String TIMER_KEY = "StopStatus.timer";
     private static final StopStatus SINGLETON = new StopStatus();
     private static final StopStatus FINAL_STATUS = new StopStatus() {
         @Override
-        public EngineStatus activate(StateMachineContext context) {
-            context.remove(TIMER_KEY);
+        public StopStatus activate(StateMachineContext context, InferenceMonitor monitor) {
+            context.clearTimer();
             return this;
         }
     };
@@ -62,17 +58,14 @@ public class StopStatus implements EngineStatus {
     }
 
     @Override
-    public EngineStatus activate(StateMachineContext context) {
-        Optional<Number> timeoutOpt = context.get(TIMEOUT_KEY);
-        timeoutOpt.ifPresentOrElse(
-                timeout -> context.put(TIMER_KEY, System.currentTimeMillis() + timeout.longValue()),
-                () -> context.remove(TIMER_KEY));
+    public StopStatus activate(StateMachineContext context, InferenceMonitor monitor) {
+        context.startTimer();
         return this;
     }
 
     @Override
-    public StateTransition process(Tuple2<Timed<WheellyStatus>, ScannerMap> data, StateMachineContext context) {
-        return (context.<Number>get(TIMER_KEY).filter(timer -> System.currentTimeMillis() >= timer.longValue()).isPresent())
+    public StateTransition process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, StateMachineContext context, InferenceMonitor monitor) {
+        return context.isTimerExpired()
                 ? StateTransition.create(TIMEOUT_EXIT, context, ALT_COMMAND)
                 : StateTransition.create(STAY_EXIT, context, ALT_COMMAND);
     }

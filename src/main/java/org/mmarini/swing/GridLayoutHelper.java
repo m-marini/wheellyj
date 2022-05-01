@@ -45,7 +45,6 @@ import java.util.function.BiFunction;
 
 /**
  * @author us00852
- *
  */
 public class GridLayoutHelper<T extends Container> {
 
@@ -54,7 +53,6 @@ public class GridLayoutHelper<T extends Container> {
     private static final Map<String, Modifier> MODIFIERS = new HashMap<String, Modifier>();
 
     /**
-     *
      * @param c
      * @return
      */
@@ -75,6 +73,10 @@ public class GridLayoutHelper<T extends Container> {
         }
         return n;
     }
+    private final ResourceBundle bundle;
+    private final T container;
+    private final GridBagLayout layout;
+    private GridBagConstraints constraints;
 
     {
         MODIFIERS.put("at", new Modifier() {
@@ -448,12 +450,7 @@ public class GridLayoutHelper<T extends Container> {
         });
     }
 
-    private final ResourceBundle bundle;
-    private final T container;
-    private final GridBagLayout layout;
-    private GridBagConstraints constraints;
     /**
-     *
      * @param bundle
      * @param container
      */
@@ -473,7 +470,6 @@ public class GridLayoutHelper<T extends Container> {
     }
 
     /**
-     *
      * @param args
      */
     public GridLayoutHelper<T> add(final Object... args) {
@@ -511,7 +507,6 @@ public class GridLayoutHelper<T extends Container> {
     }
 
     /**
-     *
      * @param key
      * @return
      */
@@ -527,7 +522,6 @@ public class GridLayoutHelper<T extends Container> {
     }
 
     /**
-     *
      * @param mods
      * @return
      */

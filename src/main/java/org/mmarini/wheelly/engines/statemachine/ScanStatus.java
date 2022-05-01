@@ -32,6 +32,7 @@ package org.mmarini.wheelly.engines.statemachine;
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.model.AltCommand;
+import org.mmarini.wheelly.model.InferenceMonitor;
 import org.mmarini.wheelly.model.ScannerMap;
 import org.mmarini.wheelly.model.WheellyStatus;
 import org.slf4j.Logger;
@@ -40,14 +41,13 @@ import org.slf4j.LoggerFactory;
 import java.util.Optional;
 
 public class ScanStatus implements EngineStatus {
-    public static final String COMPLETED_EXIT = "completed";
     public static final String INDEX_KEY = "ScanStatus.index";
     public static final String INTERVAL_KEY = "ScanStatus.interval";
     public static final String TIMER_KEY = "ScanStatus.timer";
     public static final int DEFAULT_INTERVAL = 200;
     private static final double RANGE = 15;
     private static final int[] DIRECTIONS = {
-             -30, -60, -90, -75, -45, -15, 15, 45, 75, 90, 60, 30
+            -30, -60, -90, -75, -45, -15, 15, 45, 75, 90, 60, 30
     };
     private static final Logger logger = LoggerFactory.getLogger(NextSequenceStatus.class);
     private static final ScanStatus SINGLETON = new ScanStatus();
@@ -59,13 +59,15 @@ public class ScanStatus implements EngineStatus {
         return SINGLETON;
     }
 
+
     @Override
-    public ScanStatus activate(StateMachineContext context) {
+    public EngineStatus activate(StateMachineContext context, InferenceMonitor monitor) {
         return scan(context, 0);
     }
 
+
     @Override
-    public StateTransition process(Tuple2<Timed<WheellyStatus>, ScannerMap> data, StateMachineContext context) {
+    public StateTransition process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, StateMachineContext context, InferenceMonitor monitor) {
         logger.debug("{}", context);
         int index = context.<Number>get(INDEX_KEY).orElse(0).intValue();
         Optional<Number> timer = context.get(TIMER_KEY);

@@ -74,13 +74,13 @@ public class GridScannerMap extends AbstractScannerMap {
         return snapToGrid(location, gridSize);
     }
 
+    public Point cell(Point2D location) {
+        return cell(location, gridSize);
+    }
+
     @Override
     protected GridScannerMap newInstance(List<Obstacle> obstacles) {
         return new GridScannerMap(obstacles, gridSize);
-    }
-
-    public Point cell(Point2D location) {
-        return cell(location, gridSize);
     }
 
     public Point2D toPoint(Point cell) {

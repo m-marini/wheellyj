@@ -23,11 +23,11 @@
     <logger name="org.mmarini.wheelly.model.AsyncSocketImpl.dataLog" level="INFO">
         <appender-ref ref="DATA_FILE"/>
     </logger>
-<!--
-logger name="org.mmarini.wheelly.model.AsyncSocketImpl" level="INFO">
-        <appender-ref ref="STDOUT"/>
-    </logger>
-    -->
+    <!--
+    logger name="org.mmarini.wheelly.model.AsyncSocketImpl" level="INFO">
+            <appender-ref ref="STDOUT"/>
+        </logger>
+        -->
 
     <root level="debug">
         <appender-ref ref="STDOUT"/>

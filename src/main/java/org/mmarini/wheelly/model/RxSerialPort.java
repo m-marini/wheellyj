@@ -46,6 +46,18 @@ public class RxSerialPort {
     private static final Logger logger = LoggerFactory.getLogger(RxSerialPort.class);
 
     /**
+     * @param port
+     * @param bps
+     */
+    public static RxSerialPort create(String port, int bps) {
+        return new RxSerialPort(port, bps);
+    }
+
+    public static <T> RowEvent createEvent(long time, T data) {
+        return new RowEvent(time, data);
+    }
+
+    /**
      * @param builder the dtring builder
      * @param buffer  the buffer
      */
@@ -66,19 +78,6 @@ public class RxSerialPort {
         }
         return result.toArray(String[]::new);
     }
-
-    /**
-     * @param port
-     * @param bps
-     */
-    public static RxSerialPort create(String port, int bps) {
-        return new RxSerialPort(port, bps);
-    }
-
-    public static <T> RowEvent createEvent(long time, T data) {
-        return new RowEvent(time, data);
-    }
-
     private final String name;
     private final SerialPort port;
     private final int bps;
@@ -89,68 +88,6 @@ public class RxSerialPort {
         this.port = new SerialPort(name);
         this.bps = bps;
         this.dataEvents = PublishProcessor.create();
-    }
-
-    /**
-     * @param cmd
-     * @throws SerialPortException
-     */
-    public RxSerialPort write(String cmd) throws SerialPortException {
-        logger.debug("--> {}", cmd);
-        port.writeString(cmd);
-        port.writeString("\n");
-        return this;
-    }
-
-    /**
-     *
-     */
-    public Flowable<RowEvent<byte[]>> getDataEvents() {
-        return dataEvents;
-    }
-
-    /**
-     *
-     */
-    public RxSerialPort disconnect() throws SerialPortException {
-        logger.debug("Device {} disconnecting ...", name);
-        try {
-            port.removeEventListener();
-            port.closePort();
-            dataEvents.onComplete();
-        } catch (SerialPortException e) {
-            dataEvents.onError(e);
-            throw e;
-        }
-        return this;
-    }
-
-    /**
-     *
-     */
-    public Flowable<RowEvent<String>> getLines() {
-        StringBuilder builder = new StringBuilder();
-        return dataEvents
-                .flatMap(event -> {
-                    String[] data = parseForLines(builder, event.data);
-                    return Flowable.fromArray(data).<RowEvent<String>>map(line ->
-                            createEvent(event.time, line)
-                    );
-                });
-    }
-
-    /**
-     *
-     */
-    public String getName() {
-        return name;
-    }
-
-    /**
-     *
-     */
-    public int getBps() {
-        return bps;
     }
 
     /**
@@ -179,6 +116,68 @@ public class RxSerialPort {
     }
 
     /**
+     *
+     */
+    public RxSerialPort disconnect() throws SerialPortException {
+        logger.debug("Device {} disconnecting ...", name);
+        try {
+            port.removeEventListener();
+            port.closePort();
+            dataEvents.onComplete();
+        } catch (SerialPortException e) {
+            dataEvents.onError(e);
+            throw e;
+        }
+        return this;
+    }
+
+    /**
+     *
+     */
+    public int getBps() {
+        return bps;
+    }
+
+    /**
+     *
+     */
+    public Flowable<RowEvent<byte[]>> getDataEvents() {
+        return dataEvents;
+    }
+
+    /**
+     *
+     */
+    public Flowable<RowEvent<String>> getLines() {
+        StringBuilder builder = new StringBuilder();
+        return dataEvents
+                .flatMap(event -> {
+                    String[] data = parseForLines(builder, event.data);
+                    return Flowable.fromArray(data).<RowEvent<String>>map(line ->
+                            createEvent(event.time, line)
+                    );
+                });
+    }
+
+    /**
+     *
+     */
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * @param cmd
+     * @throws SerialPortException
+     */
+    public RxSerialPort write(String cmd) throws SerialPortException {
+        logger.debug("--> {}", cmd);
+        port.writeString(cmd);
+        port.writeString("\n");
+        return this;
+    }
+
+    /**
      * @param data
      * @
      */
@@ -191,20 +190,20 @@ public class RxSerialPort {
      * @param <T>
      */
     public static class RowEvent<T> {
-        public final long time;
         public final T data;
+        public final long time;
 
         protected RowEvent(long time, T data) {
             this.time = time;
             this.data = data;
         }
 
-        public long getTime() {
-            return time;
-        }
-
         public T getData() {
             return data;
+        }
+
+        public long getTime() {
+            return time;
         }
 
         @Override

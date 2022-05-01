@@ -33,8 +33,6 @@ import io.reactivex.rxjava3.schedulers.Timed;
 
 import java.util.List;
 
-import static java.lang.Math.toRadians;
-
 public interface ScannerMap {
 
     /**

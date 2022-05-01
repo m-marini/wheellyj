@@ -60,7 +60,7 @@ public class RobotAsset {
     public final Point2D location;
 
     /**
-     * @param location  the robot location
+     * @param location     the robot location
      * @param directionDeg direction (DEG)
      */
     protected RobotAsset(Point2D location, int directionDeg) {
@@ -72,12 +72,12 @@ public class RobotAsset {
         return directionDeg;
     }
 
-    public Point2D getLocation() {
-        return location;
-    }
-
     public double getDirectionRad() {
         return toRadians(directionDeg);
+    }
+
+    public Point2D getLocation() {
+        return location;
     }
 
     @Override

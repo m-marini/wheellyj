@@ -57,6 +57,9 @@ public class AStar<T> {
         requireNonNull(prohibited);
         double maxDistanceSqr = start.distanceSq(goal) + extensionDistance * extensionDistance;
         logger.debug("Start {}, Goal{}, Max distance {}", start, goal, sqrt(maxDistanceSqr));
+        if (prohibited.contains(goal)) {
+            return List.of();
+        }
         Predicate<Point> isProhibited = cell -> {
             return prohibited.contains(cell)
                     || cell.distanceSq(start) > maxDistanceSqr

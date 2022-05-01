@@ -98,11 +98,6 @@ public interface GridScannerTest {
                 echoDistance + MAX_DISTANCE);
     }
 
-    static ArgumentsGenerator<Integer> extrnalDegAngleGen() {
-        return uniform(-NO_SENSITIVITY_DEG, NO_SENSITIVITY_DEG + 1)
-                .map(x -> (int) normalizeDegAngle(180 - x));
-    }
-
     static Stream<TestSet> echoTestSet(
             DoubleBinaryOperator obstacleRelDistanceFunc,
             ArgumentsGenerator<Integer> obstacleRelDeGen
@@ -150,6 +145,23 @@ public interface GridScannerTest {
         });
     }
 
+    static ArgumentsGenerator<Integer> extrnalDegAngleGen() {
+        return uniform(-NO_SENSITIVITY_DEG, NO_SENSITIVITY_DEG + 1)
+                .map(x -> (int) normalizeDegAngle(180 - x));
+    }
+
+    static ArgumentsGenerator<Integer> innerDegAngle() {
+        return uniform(-NO_SENSITIVITY_DEG + 1, NO_SENSITIVITY_DEG - 1);
+    }
+
+    static ArgumentsGenerator<Integer> lateralDegAngleGen() {
+        return uniform(-LATERAL_DEG + 1, LATERAL_DEG - 2) // (-14, ..., -1, 0, ..., 13
+                .map(i -> i < 0
+                        ? i - MAX_SENSITIVITY_DEG
+                        : i + MAX_SENSITIVITY_DEG + 1);
+        // (-44, ..., -31, 31, ..., 44)
+    }
+
     static Stream<TestSet> noEchoTestSet(
             ArgumentsGenerator<Integer> obstacleRelDeGen
     ) {
@@ -194,19 +206,7 @@ public interface GridScannerTest {
         });
     }
 
-    static ArgumentsGenerator<Integer> innerDegAngle() {
-        return uniform(-NO_SENSITIVITY_DEG + 1, NO_SENSITIVITY_DEG - 1);
-    }
-
-    static ArgumentsGenerator<Integer> lateralDegAngleGen() {
-        return uniform(-LATERAL_DEG + 1, LATERAL_DEG - 2) // (-14, ..., -1, 0, ..., 13
-                .map(i -> i < 0
-                        ? i - MAX_SENSITIVITY_DEG
-                        : i + MAX_SENSITIVITY_DEG + 1);
-        // (-44, ..., -31, 31, ..., 44)
-    }
-
-    static class TestSet {
+    class TestSet {
         public final Obstacle obstacle;
         public final Timed<ProxySample> proxySample;
         private final double obstacleSensorDistance;

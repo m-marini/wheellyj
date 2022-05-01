@@ -36,10 +36,10 @@ import org.mmarini.Tuple2;
  * The inference engine processes the robot sensors and produces the command to the actuators.
  */
 public interface InferenceEngine {
+    InferenceEngine init(InferenceMonitor monitor);
+
     /**
      * Returns the tuple with motor command and scanner direction
-     *
-     * @param data the data of robot
      */
-    Tuple2<MotionComand, Integer> process(Tuple2<Timed<WheellyStatus>, ScannerMap> data);
+    Tuple2<MotionComand, Integer> process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, InferenceMonitor monitor);
 }

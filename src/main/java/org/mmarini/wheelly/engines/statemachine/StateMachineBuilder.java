@@ -41,15 +41,15 @@ import static org.mmarini.wheelly.engines.statemachine.StateMachineEngine.END_ST
 
 public class StateMachineBuilder {
 
-    private static StateMachineBuilder builder = new StateMachineBuilder(
+    public static final StateMachineBuilder SINGLETON = new StateMachineBuilder(
             Map.of(END_STATUS, StopStatus.finalStatus()),
             Map.of());
 
     /**
-     * @return
+     *
      */
     public static StateMachineBuilder create() {
-        return builder;
+        return SINGLETON;
     }
 
     private final Map<String, EngineStatus> states;
@@ -96,7 +96,7 @@ public class StateMachineBuilder {
         }
         Tuple2<String, String> key = Tuple2.of(from, exit);
         if (transitions.containsKey(key)) {
-            throw new IllegalArgumentException(format("StateTransition %s, s already defined", from, exit));
+            throw new IllegalArgumentException(format("StateTransition %s, %s already defined", from, exit));
         }
         Tuple2<String, UnaryOperator<StateMachineContext>> value = Tuple2.of(to, contextChanger);
         Map<Tuple2<String, String>, Tuple2<String, UnaryOperator<StateMachineContext>>> newMap = new HashMap<>(transitions);
