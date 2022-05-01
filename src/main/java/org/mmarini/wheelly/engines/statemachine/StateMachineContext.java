@@ -36,6 +36,11 @@ import java.util.Optional;
 import static java.util.Objects.requireNonNull;
 
 public class StateMachineContext {
+    public static final String TIMEOUT_KEY = "timeout";
+    public static final String TIMER_KEY = "timer";
+    public static final String STATUS_NAME_KEY = "name";
+    public static final String ENTRY_TIME_KEY = "entryTime";
+
     /**
      * @return
      */
@@ -43,13 +48,18 @@ public class StateMachineContext {
         return new StateMachineContext(new HashMap<>());
     }
 
-    private Map<String, Object> values;
+    private final Map<String, Object> values;
 
     /**
      * @param values
      */
     protected StateMachineContext(Map<String, Object> values) {
         this.values = requireNonNull(values);
+    }
+
+    public StateMachineContext clearTimer() {
+        remove(TIMER_KEY);
+        return this;
     }
 
     /**
@@ -60,26 +70,39 @@ public class StateMachineContext {
         return Optional.ofNullable((T) values.get(key));
     }
 
-    public Optional<Long> getElapsedTime() {
-        return getEntryTime().map(entryTime -> System.currentTimeMillis() - entryTime);
+    public Optional<Number> getElapsedTime() {
+        return getEntryTime().map(entryTime -> System.currentTimeMillis() - entryTime.longValue());
     }
 
-    public Optional<Long> getEntryTime() {
-        return Optional.ofNullable((Long) values.get(EngineStatus.ENTRY_TIME_KEY));
+    public Optional<Number> getEntryTime() {
+        return get(ENTRY_TIME_KEY);
     }
 
     public StateMachineContext setEntryTime(long entryTime) {
-        values.put(EngineStatus.ENTRY_TIME_KEY, entryTime);
+        values.put(ENTRY_TIME_KEY, entryTime);
         return this;
     }
 
     public Optional<String> getStatusName() {
-        return Optional.ofNullable((String) values.get(EngineStatus.STATUS_NAME_KEY));
+        return get(STATUS_NAME_KEY);
     }
 
     public StateMachineContext setStatusName(String name) {
-        values.put(EngineStatus.STATUS_NAME_KEY, requireNonNull(name));
+        values.put(STATUS_NAME_KEY, requireNonNull(name));
         return this;
+    }
+
+    public Optional<Number> getTimeout() {
+        return get(TIMEOUT_KEY);
+    }
+
+    public StateMachineContext setTimeout(long timeout) {
+        values.put(TIMEOUT_KEY, timeout);
+        return this;
+    }
+
+    public boolean isTimerExpired() {
+        return this.<Long>get(TIMER_KEY).filter(timer -> System.currentTimeMillis() >= timer).isPresent();
     }
 
     /**
@@ -97,6 +120,13 @@ public class StateMachineContext {
      */
     public StateMachineContext remove(String key) {
         values.remove(key);
+        return this;
+    }
+
+    public StateMachineContext startTimer() {
+        getTimeout().ifPresentOrElse(
+                timeout -> put(TIMER_KEY, System.currentTimeMillis() + timeout.longValue()),
+                () -> remove(TIMER_KEY));
         return this;
     }
 

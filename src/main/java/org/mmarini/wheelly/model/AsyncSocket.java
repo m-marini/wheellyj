@@ -29,7 +29,5 @@
 
 package org.mmarini.wheelly.model;
 
-import io.reactivex.rxjava3.core.Flowable;
-
 public interface AsyncSocket extends AsyncChannel, AsyncConnectable {
 }

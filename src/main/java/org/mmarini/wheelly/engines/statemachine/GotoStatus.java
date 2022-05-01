@@ -31,10 +31,7 @@ package org.mmarini.wheelly.engines.statemachine;
 
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.model.MoveCommand;
-import org.mmarini.wheelly.model.RobotAsset;
-import org.mmarini.wheelly.model.ScannerMap;
-import org.mmarini.wheelly.model.WheellyStatus;
+import org.mmarini.wheelly.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,14 +43,11 @@ import static org.mmarini.wheelly.model.FuzzyFunctions.*;
 import static org.mmarini.wheelly.model.Utils.direction;
 
 public class GotoStatus implements EngineStatus {
-    public static final String TIMEOUT_EXIT = "Timeout";
     public static final String TARGET_REACHED_EXIT = "TargetReached";
     public static final String OBSTACLE_EXIT = "Obstacle";
 
     public static final String TARGET_KEY = "GotoStatus.target";
     public static final String DISTANCE_KEY = "GotoStatus.distance";
-    public static final String TIMEOUT_KEY = "GotoStatus.timeout";
-    public static final String TIMER_KEY = "GotoStatus.timer";
     public static final String SCAN_INTERVAL_KEY = "GotoStatus.scanInterval";
 
     public static final double DEFAULT_OBSTACLE_DISTANCE = 0.2;
@@ -69,7 +63,7 @@ public class GotoStatus implements EngineStatus {
     public static final long SCANNING_TIME = 100;
 
     private static final Logger logger = LoggerFactory.getLogger(GotoStatus.class);
-    private static GotoStatus SINGLETON = new GotoStatus();
+    private static final GotoStatus SINGLETON = new GotoStatus();
 
     public static GotoStatus create() {
         return SINGLETON;
@@ -79,13 +73,8 @@ public class GotoStatus implements EngineStatus {
     }
 
     @Override
-    public EngineStatus activate(StateMachineContext context) {
-        long timeout = context.<Long>get(TIMEOUT_KEY).orElse(0l);
-        if (timeout > 0) {
-            context.put(TIMER_KEY, System.currentTimeMillis() + timeout);
-        } else {
-            context.remove(TIMER_KEY);
-        }
+    public EngineStatus activate(StateMachineContext context, InferenceMonitor monitor) {
+        context.startTimer();
         context.<Point2D>get(TARGET_KEY).ifPresentOrElse(
                 target -> logger.info("Goto {}", target),
                 () -> logger.warn("Missing target")
@@ -93,12 +82,12 @@ public class GotoStatus implements EngineStatus {
         return this;
     }
 
-    private int computeScaneDir(StateMachineContext context) {
+    private int computeScanDir(StateMachineContext context) {
         long scanInterval = max(context.<Number>get(SCAN_INTERVAL_KEY)
                         .orElse(DEFAULT_SCAN_INTERVAL)
                         .longValue(),
                 SCANNING_TIME * 2);
-        long elaps = context.getElapsedTime().orElse(0l);
+        long elaps = context.getElapsedTime().orElse(0l).longValue();
         long scanFrameTime = elaps % scanInterval;
         if (scanFrameTime > SCANNING_TIME) {
             return 0;
@@ -110,7 +99,7 @@ public class GotoStatus implements EngineStatus {
     }
 
     @Override
-    public StateTransition process(Tuple2<Timed<WheellyStatus>, ScannerMap> data, StateMachineContext context) {
+    public StateTransition process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, StateMachineContext context, InferenceMonitor monitor) {
         Optional<Point2D> targetOpt = context.get(TARGET_KEY);
         return targetOpt.map(
                         target -> {
@@ -131,13 +120,12 @@ public class GotoStatus implements EngineStatus {
                                 logger.debug("Obstacle in the path");
                                 return StateTransition.create(OBSTACLE_EXIT, context, ALT_COMMAND);
                             }
-                            Optional<Number> timerOpt = context.<Number>get(TIMER_KEY);
-                            if (timerOpt.filter(timer -> System.currentTimeMillis() >= timer.longValue()).isPresent()) {
+                            if (context.isTimerExpired()) {
                                 logger.debug("target not reached in the available time");
                                 return StateTransition.create(TIMEOUT_EXIT, context, ALT_COMMAND);
                             }
                             context.getElapsedTime().
-                                    filter(elaps -> (elaps % 1000) < 100)
+                                    filter(elaps -> (elaps.longValue() % 1000) < 100)
                                     .ifPresent(x ->
                                             logger.info("Robot: {}, {} m, {} DEG",
                                                     robot.location.getX(),
@@ -163,7 +151,7 @@ public class GotoStatus implements EngineStatus {
                                     APPROACH_SPEED, isApproach,
                                     0, not(or(isFinal, isApproach)));
 
-                            int dir = computeScaneDir(context);
+                            int dir = computeScanDir(context);
                             logger.debug("speed: {}, dir: {}", speed, dir);
                             return StateTransition.create(STAY_EXIT, context, Tuple2.of(MoveCommand.create(dirDeg, speed), dir));
                         })

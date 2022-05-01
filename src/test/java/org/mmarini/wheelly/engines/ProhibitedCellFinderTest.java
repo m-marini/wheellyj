@@ -48,6 +48,7 @@ class ProhibitedCellFinderTest {
     public static final double GRID_SIZE = 1;
     public static final double SAFE_DISTANCE = 1;
     public static final double SAFE_DISTANCE2 = 2;
+    public static final int LIKELIHOOD_THRESHOLD = 0;
     private static final double SAFE_DISTANCE3 = 3;
 
     @Test
@@ -57,7 +58,7 @@ class ProhibitedCellFinderTest {
                 Obstacle.create(10, 10, 0, 1)
         );
         GridScannerMap map = GridScannerMap.create(obstacles, GRID_SIZE);
-        Set<Point> result = ProhibitedCellFinder.create(map, SAFE_DISTANCE, likelihoodThreshold1).find();
+        Set<Point> result = ProhibitedCellFinder.create(map, SAFE_DISTANCE, LIKELIHOOD_THRESHOLD).find();
 
         assertNotNull(result);
 
@@ -82,7 +83,7 @@ class ProhibitedCellFinderTest {
                 Obstacle.create(10, 10, 0, 1)
         );
         GridScannerMap map = GridScannerMap.create(obstacles, GRID_SIZE);
-        Set<Point> result = ProhibitedCellFinder.create(map, SAFE_DISTANCE2, likelihoodThreshold1).find();
+        Set<Point> result = ProhibitedCellFinder.create(map, SAFE_DISTANCE2, LIKELIHOOD_THRESHOLD).find();
 
         assertNotNull(result);
 
@@ -128,7 +129,7 @@ class ProhibitedCellFinderTest {
     void findBigCircle() {
         List<Obstacle> obstacles = List.of(Obstacle.create(0, 0, 0, 1));
         GridScannerMap map = GridScannerMap.create(obstacles, GRID_SIZE);
-        Set<Point> result = ProhibitedCellFinder.create(map, SAFE_DISTANCE3, likelihoodThreshold1).find();
+        Set<Point> result = ProhibitedCellFinder.create(map, SAFE_DISTANCE3, LIKELIHOOD_THRESHOLD).find();
 
         assertNotNull(result);
 
@@ -178,7 +179,7 @@ class ProhibitedCellFinderTest {
                 Obstacle.create(2, 0, 0, 1)
         );
         GridScannerMap map = GridScannerMap.create(obstacles, GRID_SIZE);
-        Set<Point> result = ProhibitedCellFinder.findContour(ProhibitedCellFinder.create(map, SAFE_DISTANCE, likelihoodThreshold1).find());
+        Set<Point> result = ProhibitedCellFinder.findContour(ProhibitedCellFinder.create(map, SAFE_DISTANCE, LIKELIHOOD_THRESHOLD).find());
 
         assertNotNull(result);
 
@@ -218,7 +219,7 @@ class ProhibitedCellFinderTest {
                 Obstacle.create(2, 0, 0, 1)
         );
         GridScannerMap map = GridScannerMap.create(obstacles, GRID_SIZE);
-        Set<Point> result = ProhibitedCellFinder.create(map, SAFE_DISTANCE, likelihoodThreshold1).find();
+        Set<Point> result = ProhibitedCellFinder.create(map, SAFE_DISTANCE, LIKELIHOOD_THRESHOLD).find();
 
         assertNotNull(result);
 

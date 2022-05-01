@@ -29,15 +29,11 @@
 
 package org.mmarini.wheelly.swing;
 
-import org.mmarini.Tuple2;
-
 import java.awt.*;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
-import java.util.List;
 
-import static java.awt.Color.*;
 import static java.lang.Math.*;
 import static org.mmarini.wheelly.swing.Dashboard.*;
 
@@ -90,7 +86,7 @@ public class Radar extends TopographicMap {
     @Override
     protected void paintGrid(Graphics2D gr) {
         gr.setColor(GRID);
-        gr.setStroke(new BasicStroke(0));
+        gr.setStroke(BASIC_STROKE);
         double maxDistance = getMaxDistance();
         gr.draw(
                 new Ellipse2D.Double(-maxDistance, -maxDistance, maxDistance * 2, maxDistance * 2)

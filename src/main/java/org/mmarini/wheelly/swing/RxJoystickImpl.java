@@ -35,7 +35,6 @@ import io.reactivex.rxjava3.schedulers.Schedulers;
 import net.java.games.input.Controller;
 import net.java.games.input.ControllerEnvironment;
 import net.java.games.input.Event;
-import org.mmarini.Tuple2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

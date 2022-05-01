@@ -54,7 +54,7 @@ class AsyncSocketImplTest {
                 );
         s.readErrors()
                 .subscribe(
-                        ex -> logger.debug("Error notification 1 {}",ex.toString()),
+                        ex -> logger.debug("Error notification 1 {}", ex.toString()),
                         ex -> logger.error("Error on error 1", ex),
                         () -> logger.debug("no error 1"));
         s.readLines()
@@ -92,7 +92,7 @@ class AsyncSocketImplTest {
                 );
         s.readErrors()
                 .subscribe(
-                        ex -> logger.debug("Error notification 2 {}",ex.toString()),
+                        ex -> logger.debug("Error notification 2 {}", ex.toString()),
                         ex -> logger.error("Error on error 2", ex),
                         () -> logger.debug("no error 2"));
         s.readLines()

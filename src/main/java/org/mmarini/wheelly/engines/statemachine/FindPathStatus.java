@@ -32,6 +32,7 @@ package org.mmarini.wheelly.engines.statemachine;
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.model.GridScannerMap;
+import org.mmarini.wheelly.model.InferenceMonitor;
 import org.mmarini.wheelly.model.ScannerMap;
 import org.mmarini.wheelly.model.WheellyStatus;
 import org.slf4j.Logger;
@@ -55,10 +56,10 @@ public class FindPathStatus implements EngineStatus {
     public static final String PATH_KEY = "FindPathStatus.path";
     public static final String SAFE_DISTANCE_KEY = "FindPathStatus.safeDistance";
     public static final String LIKELIHOOD_THRESHOLD_KEY = "FindPathStatus.lilelihoodThreshold";
-    private static final double DEFAULT_SAFE_DISTANCE = 0.4;
+    public static final double DEFAULT_SAFE_DISTANCE = 1;
+    public static final double DEFAULT_LIKELIHOOD_THRESHOLD = 0.2;
     private static final Logger logger = LoggerFactory.getLogger(FindPathStatus.class);
     private static final FindPathStatus SINGLETON = new FindPathStatus();
-    private static final Number DEFAULT_LIKELIHOOD_THRESHOLD = 0.2;
     private static final double DEFAULT_EXTENSION_DISTANCE = 1;
 
     public static FindPathStatus create() {
@@ -69,7 +70,7 @@ public class FindPathStatus implements EngineStatus {
     }
 
     @Override
-    public StateTransition process(Tuple2<Timed<WheellyStatus>, ScannerMap> data, StateMachineContext context) {
+    public StateTransition process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, StateMachineContext context, InferenceMonitor monitor) {
         WheellyStatus wheelly = data._1.value();
         GridScannerMap map = (GridScannerMap) data._2;
         Optional<Point2D> targetOpt = context.get(TARGET_KEY);
@@ -100,6 +101,7 @@ public class FindPathStatus implements EngineStatus {
                     path.add(target);
                     context.put(PATH_KEY, path);
                     logger.debug("Path: {}", path);
+                    monitor.put(PATH_KEY, path);
                     return StateTransition.create(PATH_EXIT, context, ALT_COMMAND);
                 }
         ).orElseGet(() -> {

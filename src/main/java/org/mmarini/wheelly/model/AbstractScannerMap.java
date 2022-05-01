@@ -163,7 +163,7 @@ public abstract class AbstractScannerMap implements ScannerMap {
     }
 
     @Override
-    public AbstractScannerMap process(Timed<ProxySample> sample) {
+    public GridScannerMap process(Timed<ProxySample> sample) {
         requireNonNull(sample);
         // Filter out the older obstacle and poor likelihood
         long holdTimestamp = sample.time(TimeUnit.MILLISECONDS) - HOLD_DURATION;
@@ -171,7 +171,7 @@ public abstract class AbstractScannerMap implements ScannerMap {
                 .filter(o -> o.timestamp >= holdTimestamp)
                 .filter(o -> o.getLikelihood() >= THRESHOLD_LIKELIHOOD)
                 .collect(Collectors.toList());
-        return newInstance(resultingList);
+        return (GridScannerMap) newInstance(resultingList);
     }
 
     /**

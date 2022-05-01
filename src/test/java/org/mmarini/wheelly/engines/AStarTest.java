@@ -44,6 +44,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class AStarTest {
 
 
+    public static final int EXTENSION_DISTANCE = 1;
+
     @Test
     void findPath1() {
         Point start = new Point();
@@ -51,7 +53,7 @@ class AStarTest {
         Set<Point> prohibited = Set.of(
                 new Point(1, 1)
         );
-        List<Point> path = AStar.findPath(start, goal, prohibited, overrangeDistance);
+        List<Point> path = AStar.findPath(start, goal, prohibited, EXTENSION_DISTANCE);
         assertNotNull(path);
         assertThat(path,
                 anyOf(
@@ -78,7 +80,7 @@ class AStarTest {
                 new Point(1, 1),
                 new Point(1, 0)
         );
-        List<Point> path = AStar.findPath(start, goal, prohibited, overrangeDistance);
+        List<Point> path = AStar.findPath(start, goal, prohibited, EXTENSION_DISTANCE);
         assertNotNull(path);
         assertThat(path,
                 contains(

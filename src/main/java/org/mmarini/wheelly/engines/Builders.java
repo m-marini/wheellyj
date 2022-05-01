@@ -84,7 +84,7 @@ public interface Builders {
                 .addTransition("goto", GotoStatus.OBSTACLE_EXIT, "avoid")
                 .addTransition("avoid", AvoidObstacleStatus.COMPLETED_EXIT, "scan")
                 .setParams(FindPathStatus.TARGET_KEY, targets.get(0))
-                .setParams(StopStatus.TIMEOUT_KEY, 4000)
+                .setParams(StateMachineContext.TIMEOUT_KEY, 4000)
                 .build("initial");
     }
 
@@ -113,7 +113,7 @@ public interface Builders {
                 .addState("goto", GotoStatus.create())
                 .addTransition("initial", StopStatus.TIMEOUT_EXIT, "goto")
                 .setParams(GotoStatus.TARGET_KEY, targets.get(0))
-                .setParams(StopStatus.TIMEOUT_KEY, 4000)
+                .setParams(StateMachineContext.TIMEOUT_KEY, 4000)
                 .build("initial");
     }
 

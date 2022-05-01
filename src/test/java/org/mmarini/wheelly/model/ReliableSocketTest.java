@@ -108,8 +108,8 @@ class ReliableSocketTest {
         s.println(dataFlow)
                 .observeOn(Schedulers.io())
                 .subscribe(
-                () -> logger.debug("Write completed"),
-                ex -> logger.error("Error writing"));
+                        () -> logger.debug("Write completed"),
+                        ex -> logger.error("Error writing"));
 
         logger.debug("Waiting ...");
         Thread.sleep(5000);

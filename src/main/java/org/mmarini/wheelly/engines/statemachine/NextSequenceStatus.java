@@ -31,6 +31,7 @@ package org.mmarini.wheelly.engines.statemachine;
 
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Tuple2;
+import org.mmarini.wheelly.model.InferenceMonitor;
 import org.mmarini.wheelly.model.ScannerMap;
 import org.mmarini.wheelly.model.WheellyStatus;
 import org.slf4j.Logger;
@@ -41,7 +42,6 @@ import java.util.List;
 
 public class NextSequenceStatus implements EngineStatus {
     public static final String TARGET_SELECTED_EXIT = "TargetSelected";
-    public static final String COMPLETED_EXIT = "Completed";
     public static final String TARGET_KEY = "NextSequenceStatus.target";
     public static final String INDEX_KEY = "NextSequenceStatus.index";
     public static final String LIST_KEY = "NextSequenceStatus.list";
@@ -60,7 +60,7 @@ public class NextSequenceStatus implements EngineStatus {
     }
 
     @Override
-    public StateTransition process(Tuple2<Timed<WheellyStatus>, ScannerMap> data, StateMachineContext context) {
+    public StateTransition process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, StateMachineContext context, InferenceMonitor monitor) {
         List<Point2D> list = context.<List<Point2D>>get(LIST_KEY).orElseGet(List::of);
         if (list.isEmpty()) {
             logger.warn("Target list empty");

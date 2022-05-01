@@ -31,6 +31,7 @@ package org.mmarini.wheelly.model;
 
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.BehaviorProcessor;
+import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Tuple2;
@@ -38,15 +39,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static io.reactivex.rxjava3.core.Flowable.*;
 import static java.lang.Math.round;
+import static java.lang.String.format;
 import static org.mmarini.wheelly.model.AbstractScannerMap.THRESHOLD_DISTANCE;
 import static org.mmarini.wheelly.model.AltCommand.ALT_COMMAND;
 
-public class BehaviorEngine {
-    private static final Logger logger = LoggerFactory.getLogger(BehaviorEngine.class);
+public class RobotAgent implements InferenceMonitor {
+    private static final Logger logger = LoggerFactory.getLogger(RobotAgent.class);
     private static final double MOTOR_SCALE = 0.1;
 
     /**
@@ -57,21 +60,24 @@ public class BehaviorEngine {
      * @param motorCommandInterval the interval between motor commands
      * @param scanCommandInterval  the interval between scan commands
      */
-    public static BehaviorEngine create(RobotController controller, InferenceEngine engine, long motorCommandInterval, long scanCommandInterval) {
-        return new BehaviorEngine(controller, engine, motorCommandInterval, scanCommandInterval);
+    public static RobotAgent create(RobotController controller, InferenceEngine engine, long motorCommandInterval, long scanCommandInterval) {
+        return new RobotAgent(controller, engine, motorCommandInterval, scanCommandInterval);
     }
 
     /**
      * @param configParams
      * @param engine       the inference engine
      */
-    public static BehaviorEngine create(ConfigParameters configParams, InferenceEngine engine) {
+    public static RobotAgent create(ConfigParameters configParams, InferenceEngine engine) {
         RobotController controller = RawController.create(configParams);
         return create(controller, engine, configParams.motorCommandInterval, configParams.scanCommandInterval);
     }
 
     private final RobotController controller;
-    private final BehaviorProcessor<ScannerMap> mapFlow;
+    private final BehaviorProcessor<Tuple2<Timed<WheellyStatus>, ? extends ScannerMap>> mapFlow;
+    private final PublishProcessor<String> inferenceMessages;
+    private final PublishProcessor<Tuple2<String, Optional<?>>> inferenceData;
+    private final InferenceEngine engine;
 
     /**
      * Creates the behavior engine
@@ -81,13 +87,15 @@ public class BehaviorEngine {
      * @param motorCommandInterval the interval between motor commands
      * @param scanCommandInterval  the interval between scan commands
      */
-    protected BehaviorEngine(RobotController controller, InferenceEngine engine, long motorCommandInterval, long scanCommandInterval) {
+    protected RobotAgent(RobotController controller, InferenceEngine engine, long motorCommandInterval, long scanCommandInterval) {
         logger.debug("Created");
         this.controller = controller;
         this.mapFlow = BehaviorProcessor.create();
-
+        this.inferenceData = PublishProcessor.create();
+        this.inferenceMessages = PublishProcessor.create();
+        this.engine = engine;
         createMapFlow();
-        createActionFlow(engine, motorCommandInterval, scanCommandInterval);
+        createActionFlow(motorCommandInterval, scanCommandInterval);
     }
 
     public RobotController action(Flowable<? extends WheellyCommand> commands) {
@@ -98,20 +106,17 @@ public class BehaviorEngine {
         return controller.close();
     }
 
-    private void createActionFlow(InferenceEngine engine, long motorCommandInterval, long scanCommandInterval) {
-        Flowable<Tuple2<MotionComand, Integer>> commands = createCommandFlow(engine);
+    private void createActionFlow(long motorCommandInterval, long scanCommandInterval) {
+        Flowable<Tuple2<MotionComand, Integer>> commands = createCommandFlow();
         // Splits the commands  flow in motor and scanner command flows
         createMotionFlow(commands.map(Tuple2::getV1), motorCommandInterval);
         createScanFlow(commands.map(Tuple2::getV2), scanCommandInterval);
     }
 
-    private Flowable<Tuple2<MotionComand, Integer>> createCommandFlow(InferenceEngine engine) {
-        // Creates status flow
-        Flowable<Timed<WheellyStatus>> statusFlow = controller.readStatus();
+    private Flowable<Tuple2<MotionComand, Integer>> createCommandFlow() {
         // Builds command flow by applying inference engine
-        return combineLatest(statusFlow, mapFlow, Tuple2::of)
-                .observeOn(Schedulers.computation())
-                .map(engine::process)
+        return mapFlow.observeOn(Schedulers.computation())
+                .map(t -> engine.process(t, this))
                 .publish()
                 .autoConnect();
     }
@@ -120,9 +125,13 @@ public class BehaviorEngine {
         // Creates map flow
         controller.readStatus()
                 .observeOn(Schedulers.computation())
-                .map(x -> new Timed<>(x.value().sample, x.time(), x.unit()))
-                .scanWith(() -> GridScannerMap.create(List.of(), THRESHOLD_DISTANCE),
-                        ScannerMap::process)
+                .scanWith(() -> Tuple2.of(Optional.<Timed<WheellyStatus>>empty(), GridScannerMap.create(List.of(), THRESHOLD_DISTANCE)),
+                        (t, status) -> {
+                            Timed<ProxySample> px = new Timed<>(status.value().sample, status.time(), status.unit());
+                            return Tuple2.of(Optional.of(status), t._2.process(px));
+                        })
+                .concatMap(t -> t._1.map(tt -> just(Tuple2.of(tt, t._2)))
+                        .orElse(empty()))
                 .subscribe(mapFlow);
     }
 
@@ -168,6 +177,12 @@ public class BehaviorEngine {
         controller.action(scanCommandFlow);
     }
 
+    @Override
+    public <T> InferenceMonitor put(String key, T value) {
+        inferenceData.onNext(Tuple2.of(key, Optional.of(value)));
+        return this;
+    }
+
     public Flowable<Boolean> readConnection() {
         return controller.readConnection();
     }
@@ -180,10 +195,18 @@ public class BehaviorEngine {
         return controller.readErrors();
     }
 
+    public Flowable<Tuple2<String, Optional<?>>> readInferenceData() {
+        return inferenceData;
+    }
+
+    public Flowable<String> readInferenceMessages() {
+        return inferenceMessages;
+    }
+
     /**
      * Returns the map flow
      */
-    public Flowable<ScannerMap> readMapFlow() {
+    public BehaviorProcessor<Tuple2<Timed<WheellyStatus>, ? extends ScannerMap>> readMapFlow() {
         return mapFlow;
     }
 
@@ -191,10 +214,23 @@ public class BehaviorEngine {
         return controller.readStatus();
     }
 
+    @Override
+    public InferenceMonitor remove(String key) {
+        inferenceData.onNext(Tuple2.of(key, Optional.empty()));
+        return this;
+    }
+
+    @Override
+    public InferenceMonitor show(String text, Object... parms) {
+        inferenceMessages.onNext(format(text, parms));
+        return this;
+    }
+
     /**
-     * Starts the engine
+     * Starts the agent
      */
-    public BehaviorEngine start() {
+    public RobotAgent start() {
+        engine.init(this);
         controller.start();
         return this;
     }

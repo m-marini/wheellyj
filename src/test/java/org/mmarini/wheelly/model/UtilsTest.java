@@ -70,7 +70,7 @@ class UtilsTest {
         String string = className + "." + method;
         String regex = "^([a-zA-Z_]\\w*\\.)+([a-zA-Z_]\\w*)$";
         Matcher m = Pattern.compile(regex).matcher(string);
-        String className1 = string.substring(0, string.length() - method.length()-1);
+        String className1 = string.substring(0, string.length() - method.length() - 1);
 
         assertTrue(m.matches());
         assertThat(m.groupCount(), equalTo(2));
@@ -90,6 +90,6 @@ class UtilsTest {
 
         double dir = direction(offset, location);
 
-        assertThat(normalizeAngle(dir - rad), closeTo(0, 1e-3));
+        assertThat(normalizeAngle(dir - rad), closeTo(0, 1e-2));
     }
 }

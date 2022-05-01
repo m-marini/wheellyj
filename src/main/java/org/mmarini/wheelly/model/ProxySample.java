@@ -29,15 +29,10 @@
 
 package org.mmarini.wheelly.model;
 
-import io.reactivex.rxjava3.schedulers.Timed;
-
 import java.awt.geom.Point2D;
 import java.util.Optional;
 import java.util.StringJoiner;
-import java.util.concurrent.TimeUnit;
 
-import static java.lang.Double.parseDouble;
-import static java.lang.Integer.parseInt;
 import static java.lang.Math.*;
 import static org.mmarini.wheelly.model.Utils.normalizeDegAngle;
 
@@ -105,18 +100,18 @@ public class ProxySample {
         return toRadians(getSampleDeg());
     }
 
+    /**
+     *
+     */
+    public int getSensorRelativeDeg() {
+        return sensorRelativeDeg;
+    }
+
     @Override
     public String toString() {
         return new StringJoiner(", ", ProxySample.class.getSimpleName() + "[", "]")
                 .add("sensorDeg=" + sensorRelativeDeg)
                 .add("distance=" + distance)
                 .toString();
-    }
-
-    /**
-     *
-     */
-    public int getSensorRelativeDeg() {
-        return sensorRelativeDeg;
     }
 }

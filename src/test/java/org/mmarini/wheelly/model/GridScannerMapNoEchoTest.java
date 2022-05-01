@@ -35,17 +35,13 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.awt.geom.Point2D;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static java.lang.Math.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.mmarini.wheelly.model.AbstractScannerMap.*;
-import static org.mmarini.wheelly.model.GridScannerMap.snapToGrid;
-import static org.mmarini.wheelly.model.Utils.linear;
+import static org.mmarini.wheelly.model.AbstractScannerMap.THRESHOLD_DISTANCE;
 
 /**
  * See tests enumeration figure

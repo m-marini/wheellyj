@@ -31,10 +31,7 @@ package org.mmarini.wheelly.engines.statemachine;
 
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.model.InferenceEngine;
-import org.mmarini.wheelly.model.MotionComand;
-import org.mmarini.wheelly.model.ScannerMap;
-import org.mmarini.wheelly.model.WheellyStatus;
+import org.mmarini.wheelly.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,32 +55,38 @@ public class StateMachineEngine implements InferenceEngine {
         this.transitions = requireNonNull(transitions);
         this.status = requireNonNull(initialStatus);
         this.context = requireNonNull(context);
-        states.get(status).activate(this.context);
+        logger.debug("State machine created");
     }
 
     @Override
-    public Tuple2<MotionComand, Integer> process(Tuple2<Timed<WheellyStatus>, ScannerMap> data) {
+    public InferenceEngine init(InferenceMonitor monitor) {
+        states.get(status).activate(this.context, monitor);
+        return this;
+    }
 
-        StateTransition result = states.get(status).process(data, context);
+    @Override
+    public Tuple2<MotionComand, Integer> process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, InferenceMonitor monitor) {
+        StateTransition result = states.get(status).process(data, context, monitor);
         this.context = result.context;
 
         if (!STAY_EXIT.equals(result.exit)) {
             Tuple2<String, String> key = Tuple2.of(status, result.exit);
             Tuple2<String, UnaryOperator<StateMachineContext>> tx = transitions.get(key);
             if (tx == null) {
-                logger.warn("Missing transition {}: {}", result.exit, status);
-                logger.info("transition {}: {} -> {}", result.exit, status, END_STATUS);
+                monitor.show("Missing transition %s: %s", result.exit, status);
+                monitor.show("%s: %s -> %s", result.exit, status, END_STATUS);
                 status = END_STATUS;
             } else {
                 Tuple2<String, UnaryOperator<StateMachineContext>> next = transitions.get(key);
-                logger.info("transition {}: {} -> {}", result.exit, status, next._1);
+                monitor.show("%s: %s -> %s", result.exit, status, next._1);
                 status = next._1;
                 context = next._2.apply(context);
             }
             context.setStatusName(status);
             context.setEntryTime(System.currentTimeMillis());
-            states.get(status).activate(context);
+            states.get(status).activate(context, monitor);
         }
         return result.commands;
     }
+
 }

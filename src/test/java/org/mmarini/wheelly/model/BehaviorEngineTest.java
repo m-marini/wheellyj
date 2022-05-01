@@ -68,7 +68,12 @@ class BehaviorEngineTest {
             int angle;
 
             @Override
-            public Tuple2<MotionComand, Integer> process(Tuple2<Timed<WheellyStatus>, ScannerMap> data) {
+            public InferenceEngine init(InferenceMonitor monitor) {
+                return this;
+            }
+
+            @Override
+            public Tuple2<MotionComand, Integer> process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, InferenceMonitor monitor) {
                 long now = System.currentTimeMillis();
                 if (now > timeout) {
                     angle = random.nextInt(180) - 90;
@@ -77,7 +82,7 @@ class BehaviorEngineTest {
                 return Tuple2.of(AltCommand.create(), angle);
             }
         };
-        BehaviorEngine engine = BehaviorEngine.create(controller, inferenceEngine, MOTOR_COMMAND_INTERVAL, SCAN_COMMAND_INTERVAL);
+        RobotAgent engine = RobotAgent.create(controller, inferenceEngine, MOTOR_COMMAND_INTERVAL, SCAN_COMMAND_INTERVAL);
 
         engine.readConnection().subscribe(
                 data -> logger.debug("Connection {}", data),

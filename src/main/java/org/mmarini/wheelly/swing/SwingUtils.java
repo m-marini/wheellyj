@@ -29,13 +29,9 @@
 package org.mmarini.wheelly.swing;
 
 import javax.swing.*;
-import java.awt.*;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-
-import static java.lang.Math.max;
-import static java.lang.Math.min;
 
 /**
  * Various functionalities used in the user interface.

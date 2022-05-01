@@ -47,13 +47,6 @@ public class RemoteClock {
 
     public final long offset;
 
-    @Override
-    public String toString() {
-        return new StringJoiner(", ", RemoteClock.class.getSimpleName() + "[", "]")
-                .add("offset=" + offset)
-                .toString();
-    }
-
     /**
      * Creates a remote clock
      *
@@ -79,5 +72,12 @@ public class RemoteClock {
      */
     public long toRemote(long instant) {
         return instant - offset;
+    }
+
+    @Override
+    public String toString() {
+        return new StringJoiner(", ", RemoteClock.class.getSimpleName() + "[", "]")
+                .add("offset=" + offset)
+                .toString();
     }
 }
