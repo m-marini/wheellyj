@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #33: Arrange the obstacles in a grid
 - Issue #39: Merge pr event and st event
 - Issue #41: Move the motion control in Wheelly
+- Issue #43: Compute best path
 
 ## Changed
 
