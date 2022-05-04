@@ -34,6 +34,8 @@ import java.awt.geom.*;
 
 import static java.lang.Math.PI;
 import static java.lang.Math.min;
+import static org.mmarini.wheelly.model.RobotController.STOP_DISTANCE;
+import static org.mmarini.wheelly.model.RobotController.WARN_DISTANCE;
 import static org.mmarini.wheelly.swing.Dashboard.*;
 
 /**

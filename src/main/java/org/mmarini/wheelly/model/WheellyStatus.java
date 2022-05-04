@@ -37,6 +37,7 @@ import java.util.concurrent.TimeUnit;
 
 import static java.lang.Double.parseDouble;
 import static java.lang.Integer.parseInt;
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -50,7 +51,7 @@ public class WheellyStatus {
      * Returns the Wheelly status from status string
      * The string status is formatted as:
      * <pre>
-     *     st [sampleTime] [xLocation] [yLocation] [yaw] [sensorDirection] [distance] [leftMotor] [rightMotor] [canMoveForward] [voltage] [cpsTime] [cps] [imuFailure] [alt]
+     *     st [sampleTime] [xLocation] [yLocation] [yaw] [sensorDirection] [distance] [leftMotor] [rightMotor] [canMoveForward] [voltage] [imuFailure] [alt]
      * </pre>
      *
      * @param statusString the status string
@@ -58,7 +59,7 @@ public class WheellyStatus {
     public static Timed<WheellyStatus> from(String statusString, RemoteClock clock) {
         String[] params = statusString.split(" ");
         if (params.length != NO_STATUS_PARAMS) {
-            throw new IllegalArgumentException("Missing status parameters");
+            throw new IllegalArgumentException(format("Missing status parameters \"%s\"", statusString));
         }
 
         long sampleInstant = clock.fromRemote(Long.parseLong(params[1]));

@@ -29,6 +29,7 @@
 
 package org.mmarini.wheelly.engines.statemachine;
 
+import java.awt.geom.Point2D;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -40,6 +41,7 @@ public class StateMachineContext {
     public static final String TIMER_KEY = "timer";
     public static final String STATUS_NAME_KEY = "name";
     public static final String ENTRY_TIME_KEY = "entryTime";
+    public static final String OBSTACLE_KEY = "obstacle";
 
     /**
      * @return
@@ -55,6 +57,11 @@ public class StateMachineContext {
      */
     protected StateMachineContext(Map<String, Object> values) {
         this.values = requireNonNull(values);
+    }
+
+    public StateMachineContext clearObstacle() {
+        remove(OBSTACLE_KEY);
+        return this;
     }
 
     public StateMachineContext clearTimer() {
@@ -81,6 +88,14 @@ public class StateMachineContext {
     public StateMachineContext setEntryTime(long entryTime) {
         values.put(ENTRY_TIME_KEY, entryTime);
         return this;
+    }
+
+    public Optional<Point2D> getObstacle() {
+        return get(OBSTACLE_KEY);
+    }
+
+    public StateMachineContext setObstacle(Point2D location) {
+        return put(OBSTACLE_KEY, requireNonNull(location));
     }
 
     public Optional<String> getStatusName() {

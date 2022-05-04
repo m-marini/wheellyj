@@ -64,7 +64,7 @@ public class WheellyFrame extends JFrame {
         this.contourViewFlow = SwingObservable.actions(contourView).toFlowable(BackpressureStrategy.DROP);
         this.prohibitedViewFlow = SwingObservable.actions(prohibitedView).toFlowable(BackpressureStrategy.DROP);
 
-        this.scannerView.setSelected(true);
+        this.prohibitedView.setSelected(true);
 
         radar.setMaxDistance(RADAR_MAX_DISTANCE);
         statusBar.setBorder(BorderFactory.createEmptyBorder(2, 10, 2, 10));

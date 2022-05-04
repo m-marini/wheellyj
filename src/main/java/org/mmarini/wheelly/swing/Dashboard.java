@@ -42,15 +42,15 @@ import java.awt.geom.Point2D;
 import static java.awt.Color.*;
 import static java.lang.Math.*;
 import static java.lang.String.format;
+import static org.mmarini.wheelly.model.RobotController.STOP_DISTANCE;
+import static org.mmarini.wheelly.model.RobotController.WARN_DISTANCE;
 
 /**
  *
  */
 public class Dashboard extends JPanel {
 
-    public static final double STOP_DISTANCE = 0.2;
-    public static final double WARN_DISTANCE = 0.4;
-    public static final double INFO_DISTANCE = 0.6;
+    public static final double INFO_DISTANCE = WARN_DISTANCE + 0.2;
     public static final double MIN_VOLTAGE = 7;
     public static final double FULL_VOLTAGE = 12.6;
 
@@ -203,20 +203,6 @@ public class Dashboard extends JPanel {
     public Flowable<ActionEvent> getResetFlow() {
         return resetFlow;
     }
-
-    /**
-     * @param angle
-     */
-    /*
-    public void setAsset(Timed<RobotAsset> asset) {
-        RobotAsset value = asset.value();
-        setXSpeed(value.xSpeed);
-        setYaw(value.yaw);
-        setImuStatus(value.status);
-        setImuFailure(value.failure);
-        compass.setAngle(value.yaw);
-    }
-     */
 
     void setAngle(double angle) {
         compass.setAngle(angle);

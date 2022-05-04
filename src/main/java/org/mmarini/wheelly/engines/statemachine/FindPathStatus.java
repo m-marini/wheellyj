@@ -40,12 +40,14 @@ import org.slf4j.LoggerFactory;
 
 import java.awt.*;
 import java.awt.geom.Point2D;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.lang.Math.ceil;
+import static org.mmarini.wheelly.model.RobotController.STOP_DISTANCE;
 
 public class FindPathStatus implements EngineStatus {
     public static final String PATH_EXIT = "Path";
@@ -56,8 +58,8 @@ public class FindPathStatus implements EngineStatus {
     public static final String PATH_KEY = "FindPathStatus.path";
     public static final String SAFE_DISTANCE_KEY = "FindPathStatus.safeDistance";
     public static final String LIKELIHOOD_THRESHOLD_KEY = "FindPathStatus.lilelihoodThreshold";
-    public static final double DEFAULT_SAFE_DISTANCE = 1;
-    public static final double DEFAULT_LIKELIHOOD_THRESHOLD = 0.2;
+    public static final double DEFAULT_SAFE_DISTANCE = 1.5 * STOP_DISTANCE;
+    public static final double DEFAULT_LIKELIHOOD_THRESHOLD = 0;
     private static final Logger logger = LoggerFactory.getLogger(FindPathStatus.class);
     private static final FindPathStatus SINGLETON = new FindPathStatus();
     private static final double DEFAULT_EXTENSION_DISTANCE = 1;
@@ -96,9 +98,11 @@ public class FindPathStatus implements EngineStatus {
                     List<Point2D> path = gridPath.stream()
                             .map(map::toPoint)
                             .collect(Collectors.toList());
-                    path.remove(0);
-                    path.remove(path.size() - 1);
-                    path.add(target);
+                    path.set(0, wheelly.sample.robotAsset.location);
+                    path.set(path.size() - 1, target);
+
+                    path = new ArrayList<>(ProhibitedCellFinder.optimizePath(path, map.gridSize, prohibited::contains));
+//                    path.remove(0);
                     context.put(PATH_KEY, path);
                     logger.debug("Path: {}", path);
                     monitor.put(PATH_KEY, path);
