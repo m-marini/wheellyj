@@ -30,17 +30,20 @@
 package org.mmarini.wheelly.engines;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.mmarini.Tuple2;
 import org.mmarini.wheelly.engines.statemachine.ProhibitedCellFinder;
 import org.mmarini.wheelly.model.GridScannerMap;
 import org.mmarini.wheelly.model.Obstacle;
 
 import java.awt.*;
+import java.awt.geom.Point2D;
 import java.util.List;
 import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasItems;
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class ProhibitedCellFinderTest {
@@ -49,7 +52,35 @@ class ProhibitedCellFinderTest {
     public static final double SAFE_DISTANCE = 1;
     public static final double SAFE_DISTANCE2 = 2;
     public static final int LIKELIHOOD_THRESHOLD = 0;
+    public static final int GRID_SIZE1 = 2;
+    public static final double GRID_SIZE2 = 0.1;
     private static final double SAFE_DISTANCE3 = 3;
+
+    private void commonTest(double sx, double sy, double tx, double ty, int i, int j, int expi, int expj, double expx, double expy) {
+        Point2D start = new Point2D.Double(sx, sy);
+        Point2D to = new Point2D.Double(tx, ty);
+        Point cell = new Point(i, j);
+
+        Tuple2<Point2D, Point> result = ProhibitedCellFinder.findAdjacent(cell, start, to);
+
+        assertThat(result._1.getX(), closeTo(expx, 1e-3));
+        assertThat(result._1.getY(), closeTo(expy, 1e-3));
+        assertThat(result._2.x, equalTo(expi));
+        assertThat(result._2.y, equalTo(expj));
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            "0,0, 0,1, 0,0, 0,1, 0,0.5",
+            "0,0, 0,-1, 0,0, 0,-1, 0,-0.5",
+            "0,0, 1,2, 0,0, 0,1, 0.25,0.5",
+            "0,0, -1,2, 0,0, 0,1, -0.25,0.5",
+            "0,0, 1,-2, 0,0, 0,-1, 0.25,-0.5",
+            "0,0, -1,-2, 0,0, 0,-1, -0.25,-0.5",
+    })
+    void diagonal(double sx, double sy, double tx, double ty, int i, int j, int expi, int expj, double expx, double expy) {
+        commonTest(sx, sy, tx, ty, i, j, expi, expj, expx, expy);
+    }
 
     @Test
     void find1() {
@@ -239,5 +270,184 @@ class ProhibitedCellFinderTest {
         assertThat(result, hasItems(new Point(3, 0)));
 
         assertThat(result, hasItems(new Point(2, 1)));
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            // from == to
+            "0,0, 0,0, 0,0, 0,0, 0,0",
+    })
+    void fromEqTo(double sx, double sy, double tx, double ty, int i, int j, int expi, int expj, double expx, double expy) {
+        commonTest(sx, sy, tx, ty, i, j, expi, expj, expx, expy);
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            "0,0, 1,0, 0,0, 1,0, 0.5,0",
+            "0,0, -1,0, 0,0, -1,0, -0.5,0",
+            "0,0, 2,1, 0,0, 1,0, 0.5,0.25",
+            "0,0, -2,1, 0,0, -1,0, -0.5,0.25",
+            "0,0, 2,-1, 0,0, 1,0, 0.5,-0.25",
+            "0,0, -2,-1, 0,0, -1,0, -0.5,-0.25",
+    })
+    void horizontal(double sx, double sy, double tx, double ty, int i, int j, int expi, int expj, double expx, double expy) {
+        commonTest(sx, sy, tx, ty, i, j, expi, expj, expx, expy);
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            "0,0, 8,8, 0,0, false",
+            "0,0, 8,8, 2,2, false",
+            "0,0, 8,8, 4,4, false",
+
+            "0,0, -8,-8, 0,0, false",
+            "0,0, -8,-8, -2,-2, false",
+            "0,0, -8,-8, -4,-4, false",
+
+            "0,0, -8,8, 0,0, false",
+            "0,0, -8,8, -2,2, false",
+            "0,0, -8,8, -4,4, false",
+
+            "0,0, 8,4, 0,0, false",
+            "0,0, 8,4, 2,1, false",
+            "0,0, 8,4, 3,2, false",
+
+            "0,0, 8,8, 5,5, true",
+    })
+    void isValid(double fromx, double fromy, double tox, double toy, int i, int j, boolean isValid) {
+        Point2D from = new Point2D.Double(fromx, fromy);
+        Point2D to = new Point2D.Double(tox, toy);
+        Point avoidCell = new Point(i, j);
+        boolean result = ProhibitedCellFinder.isValid(from, to, GRID_SIZE1, c -> c.equals(avoidCell));
+        assertThat(result, equalTo(isValid));
+    }
+
+    @Test
+    void optimizePath2to2() {
+        List<Point2D> path = List.of(
+                new Point2D.Double(0, 0),
+                new Point2D.Double(4, 4)
+        );
+        List<Point2D> result = ProhibitedCellFinder.optimizePath(path, GRID_SIZE1, c -> false);
+
+        assertThat(result, sameInstance(path));
+    }
+
+    @Test
+    void optimizePath3to2() {
+        List<Point2D> path = List.of(
+                new Point2D.Double(0, 0),
+                new Point2D.Double(2, 2),
+                new Point2D.Double(4, 4)
+        );
+        List<Point2D> result = ProhibitedCellFinder.optimizePath(path, GRID_SIZE1, c -> false);
+
+        assertThat(result, hasSize(2));
+        assertThat(result, contains(
+                path.get(0),
+                path.get(2)
+        ));
+    }
+
+    @Test
+    void optimizePath3to3() {
+        List<Point2D> path = List.of(
+                new Point2D.Double(0, 0),
+                new Point2D.Double(2, 2),
+                new Point2D.Double(4, 4)
+        );
+        List<Point2D> result = ProhibitedCellFinder.optimizePath(path, GRID_SIZE1, c -> true);
+
+        assertThat(result, hasSize(3));
+        assertThat(result, contains(
+                path.get(0),
+                path.get(1),
+                path.get(2)
+        ));
+    }
+
+    @Test
+    void optimizePath5to2() {
+        List<Point2D> path = List.of(
+                new Point2D.Double(0, 0),
+                new Point2D.Double(2, 2),
+                new Point2D.Double(4, 4),
+                new Point2D.Double(6, 6),
+                new Point2D.Double(8, 8)
+        );
+        List<Point2D> result = ProhibitedCellFinder.optimizePath(path, GRID_SIZE1, c -> false);
+
+        assertThat(result, hasSize(2));
+        assertThat(result, contains(
+                path.get(0),
+                path.get(4)
+        ));
+    }
+
+    @Test
+    void optimizePath5to3() {
+        List<Point2D> path = List.of(
+                new Point2D.Double(0, 0),
+                new Point2D.Double(1, 0),
+                new Point2D.Double(2, 1),
+                new Point2D.Double(3, 0),
+                new Point2D.Double(4, 0)
+        );
+        Set<Point> avoid = Set.of(GridScannerMap.cell(new Point2D.Double(2, 0), GRID_SIZE2));
+        List<Point2D> result = ProhibitedCellFinder.optimizePath(path, GRID_SIZE2, avoid::contains);
+
+        assertThat(result, hasSize(3));
+        assertThat(result, contains(
+                path.get(0),
+                path.get(2),
+                path.get(4)
+        ));
+    }
+
+    @Test
+    void optimizePath5to4() {
+        List<Point2D> path = List.of(
+                new Point2D.Double(0, 0),
+                new Point2D.Double(1, 1),
+                new Point2D.Double(2, 0),
+                new Point2D.Double(3, 0),
+                new Point2D.Double(3, 1)
+        );
+        Set<Point> avoid = Set.of(
+                GridScannerMap.cell(new Point2D.Double(1, 0), GRID_SIZE2),
+                GridScannerMap.cell(new Point2D.Double(2, 1), GRID_SIZE2),
+                GridScannerMap.cell(new Point2D.Double(2.5, 0.5), GRID_SIZE2)
+        );
+        List<Point2D> result = ProhibitedCellFinder.optimizePath(path, GRID_SIZE2, avoid::contains);
+
+        assertThat(result, hasSize(4));
+        assertThat(result, contains(
+                path.get(0),
+                path.get(2),
+                path.get(3),
+                path.get(4)
+        ));
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            "0,0, 0.1,0.0, 0,0, 0,0, 0.1,0",
+            "0,0, -0.1,0.0, 0,0, 0,0, -0.1,0",
+            "0,0, 0,0.1, 0,0, 0,0, 0,0.1",
+            "0,0, 0,-0.1, 0,0, 0,0, 0,-0.1",
+    })
+    void toInCell(double sx, double sy, double tx, double ty, int i, int j, int expi, int expj, double expx, double expy) {
+        commonTest(sx, sy, tx, ty, i, j, expi, expj, expx, expy);
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            "0,0, 1,1, 0,0, 1,1, 0.5,0.5",
+            "0,0, 1,-1, 0,0, 1,-1, 0.5,-0.5",
+            "0,0, -1,1, 0,0, -1,1, -0.5,0.5",
+            "0,0, -1,-1, 0,0, -1,-1, -0.5,-0.5",
+    })
+    void vertical(double sx, double sy, double tx, double ty, int i, int j, int expi, int expj, double expx, double expy) {
+        commonTest(sx, sy, tx, ty, i, j, expi, expj, expx, expy);
     }
 }

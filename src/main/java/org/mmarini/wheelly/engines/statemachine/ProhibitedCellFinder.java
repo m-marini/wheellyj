@@ -34,18 +34,72 @@ import org.mmarini.wheelly.model.GridScannerMap;
 import org.mmarini.wheelly.model.Obstacle;
 
 import java.awt.*;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Optional;
-import java.util.Set;
+import java.awt.geom.Point2D;
+import java.util.List;
+import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static java.lang.Math.ceil;
+import static java.lang.Math.*;
 
 public class ProhibitedCellFinder {
+
     public static ProhibitedCellFinder create(GridScannerMap map, double safeDistance, double likelihoodThreshold) {
         return new ProhibitedCellFinder(map, safeDistance, likelihoodThreshold);
+    }
+
+    /**
+     * Returns the adjacent cell and the intersection point for a direct line from a point to another.
+     *
+     * @param cell the starting cell
+     * @param from the starting point within starting cell
+     * @param to   the destination point
+     *             e
+     */
+    public static Tuple2<Point2D, Point> findAdjacent(Point cell, Point2D from, Point2D to) {
+        double dxt = to.getX() - from.getX();
+        double dyt = to.getY() - from.getY();
+        double xc = cell.getX() + signum(dxt) * 0.5;
+        double yc = cell.getY() + signum(dyt) * 0.5;
+        double dxc = xc - from.getX();
+        double dyc = yc - from.getY();
+        int ic = cell.x + (int) signum(dxt);
+        int jc = cell.y + (int) signum(dyt);
+
+        if (abs(dxc) > abs(dxt) || abs(dyc) > abs(dyt)) {
+            // target in the cell
+            return Tuple2.of(to, cell);
+        }
+
+        if (dxt == 0) {
+            // vertical intersection
+            return Tuple2.of(new Point2D.Double(from.getX(), yc),
+                    new Point(cell.x, jc));
+        }
+        if (dyt == 0) {
+            // horizontal intersection
+            return Tuple2.of(new Point2D.Double(xc, from.getY()),
+                    new Point(ic, cell.y));
+        }
+
+        double dyi = dxc * dyt / dxt;
+        double dxi = dyc * dxt / dyt;
+
+        if (abs(dyi) < abs(dyc)) {
+            // horizontal intersection
+            return Tuple2.of(new Point2D.Double(xc, from.getY() + dyi),
+                    new Point(ic, cell.y));
+        }
+        if (abs(dyi) > abs(dyc)) {
+            // vertical intersection
+            return Tuple2.of(new Point2D.Double(from.getX() + dxi, yc),
+                    new Point(cell.x, jc));
+
+        }
+        // diagonal intersection
+        return Tuple2.of(new Point2D.Double(xc, yc),
+                new Point(ic, jc));
     }
 
     public static Set<Point> findContour(Set<Point> prohibited) {
@@ -66,14 +120,56 @@ public class ProhibitedCellFinder {
                 }).collect(Collectors.toSet());
     }
 
-    public static Optional<Tuple2<Point, Double>> nearestCell(Point neighbour, Collection<Point> cells) {
+    public static boolean isValid(Point2D from, Point2D to, double gridSize, Predicate<Point> prohibited) {
+        Point2D cellFrom = new Point2D.Double(from.getX() / gridSize, from.getY() / gridSize);
+        Point2D cellTo = new Point2D.Double(to.getX() / gridSize, to.getY() / gridSize);
+        Point cell0 = GridScannerMap.cell(from, gridSize);
+
+        for (; ; ) {
+            if (prohibited.test(cell0)) {
+                return false;
+            }
+            if (cellFrom.equals(cellTo)) {
+                return true;
+            }
+            Tuple2<Point2D, Point> next = findAdjacent(cell0, cellFrom, cellTo);
+            cellFrom = next._1;
+            cell0 = next._2;
+        }
+    }
+
+    /**
+     * Returns the nearest cell and the related distance square
+     *
+     * @param neighbour the cell
+     * @param cells     the cell list
+     */
+    private static Optional<Tuple2<Point, Double>> nearestCell(Point neighbour, Collection<Point> cells) {
         return cells.stream()
                 .map(c -> Tuple2.of(c, c.distanceSq(neighbour)))
                 .min(Comparator.comparingDouble(Tuple2::getV2));
     }
 
-    private final GridScannerMap map;
+    public static List<Point2D> optimizePath(List<Point2D> path, double gridSize, Predicate<Point> prohibited) {
+        int n = path.size();
+        if (n <= 2) {
+            return path;
+        }
+        int lastIndex = n - 1;
+        if (isValid(path.get(0), path.get(lastIndex), gridSize, prohibited)) {
+            return List.of(path.get(0), path.get(lastIndex));
+        }
+        //divide
+        int mid = path.size() / 2;
+        List<Point2D> left = optimizePath(path.subList(0, mid + 1), gridSize, prohibited);
+        List<Point2D> right = optimizePath(path.subList(mid, path.size()), gridSize, prohibited);
+        List<Point2D> result = new ArrayList<>(left);
+        result.remove(result.size() - 1);
+        result.addAll(right);
+        return result;
+    }
 
+    private final GridScannerMap map;
     private final double safeDistance;
     private final double likelihoodThreshold;
 
@@ -93,8 +189,9 @@ public class ProhibitedCellFinder {
     }
 
     private Set<Point> findNeighbour(Set<Point> cells) {
-        int saveIndexDistance = (int) ceil(safeDistance / map.gridSize);
-        double safeDistanceSq = safeDistance * safeDistance;
+        double safeCellDistance = safeDistance / map.gridSize;
+        int saveIndexDistance = (int) ceil(safeCellDistance);
+        double safeCellDistanceSq = safeCellDistance * safeCellDistance;
         Stream<Point> fringe = cells.stream().flatMap(cell -> {
             Stream.Builder<Point> builder = Stream.builder();
             // Create near cells
@@ -105,7 +202,7 @@ public class ProhibitedCellFinder {
                         // Filter the cells within safe distance
                         nearestCell(neighbour, cells)
                                 .map(Tuple2::getV2)
-                                .filter(distSqr -> distSqr <= safeDistanceSq)
+                                .filter(distSqr -> distSqr <= safeCellDistanceSq)
                                 .ifPresent(
                                         x -> builder.add(neighbour)
                                 );

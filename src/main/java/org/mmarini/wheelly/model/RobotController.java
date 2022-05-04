@@ -36,6 +36,8 @@ import io.reactivex.rxjava3.schedulers.Timed;
  *
  */
 public interface RobotController {
+    double STOP_DISTANCE = 0.2;
+    double WARN_DISTANCE = 0.6;
 
     RobotController action(Flowable<? extends WheellyCommand> commands);
 

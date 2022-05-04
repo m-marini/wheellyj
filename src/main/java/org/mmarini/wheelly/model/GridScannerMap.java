@@ -32,6 +32,7 @@ package org.mmarini.wheelly.model;
 import java.awt.*;
 import java.awt.geom.Point2D;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static java.lang.Math.round;
 
@@ -76,6 +77,12 @@ public class GridScannerMap extends AbstractScannerMap {
 
     public Point cell(Point2D location) {
         return cell(location, gridSize);
+    }
+
+    public Stream<Point> getCells() {
+        return obstacles.stream()
+                .map(Obstacle::getLocation)
+                .map(this::cell);
     }
 
     @Override

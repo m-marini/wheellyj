@@ -27,6 +27,8 @@
     </logger>
     <logger name="org.mmarini.wheelly.model.ReliableSocket" level="INFO">
     </logger>
+    <logger name="org.mmarini.wheelly.engines.statemachine.AStar" level="INFO">
+    </logger>
     <logger name="org.mmarini.wheelly.model.RawController" level="INFO">
     </logger>
     <logger name="org.mmarini.wheelly.engines.statemachine.GotoStatus" level="INFO">

@@ -63,14 +63,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static java.awt.Color.WHITE;
 import static java.lang.Math.exp;
 import static java.lang.String.format;
 import static java.util.stream.IntStream.range;
 import static org.mmarini.wheelly.engines.statemachine.FindPathStatus.DEFAULT_LIKELIHOOD_THRESHOLD;
 import static org.mmarini.wheelly.engines.statemachine.FindPathStatus.DEFAULT_SAFE_DISTANCE;
 import static org.mmarini.wheelly.model.AbstractScannerMap.LIKELIHOOD_TAU;
-import static org.mmarini.wheelly.swing.Dashboard.*;
+import static org.mmarini.wheelly.model.RobotController.STOP_DISTANCE;
+import static org.mmarini.wheelly.model.RobotController.WARN_DISTANCE;
+import static org.mmarini.wheelly.swing.Dashboard.INFO_DISTANCE;
 import static org.mmarini.wheelly.swing.RxJoystick.NONE_CONTROLLER;
 import static org.mmarini.wheelly.swing.TopographicMap.DEFAULT_MAX_DISTANCE;
 import static org.mmarini.yaml.Utils.fromFile;
@@ -80,9 +81,12 @@ import static org.mmarini.yaml.Utils.fromFile;
  */
 public class UIController {
     public static final long FRAME_INTERVAL = 1000L / 60;
+    public static final Color PROHIBITED_COLOR = new Color(0x4f432c);// new Color(0x7c4422);
     private static final String CONFIG_FILE = ".wheelly.yml";
     private static final Logger logger = LoggerFactory.getLogger(UIController.class);
     private static final int FORWARD_DIRECTION = 0;
+    private static final Color CONTOUR_COLOR = new Color(0x008800);
+    ;
 
     /**
      *
@@ -104,22 +108,26 @@ public class UIController {
                 .filter(t -> t._2 <= maxDistance)
                 .map(center -> {
                     Shape shape = createCellShape(center._1, map.gridSize);
-                    return Tuple2.of(WHITE, shape);
+                    return Tuple2.of(CONTOUR_COLOR, shape);
                 })
                 .collect(Collectors.toList());
     }
 
     private static List<Tuple2<Color, Shape>> createProhibitedShapes(GridScannerMap map, Point2D offset, double maxDistance) {
         Set<Point> cells = ProhibitedCellFinder.create(map, DEFAULT_SAFE_DISTANCE, DEFAULT_LIKELIHOOD_THRESHOLD).find();
-        return cells.stream()
+        Set<Point> mapCells = map.getCells().collect(Collectors.toSet());
+        cells.removeAll(mapCells);
+        List<Tuple2<Color, Shape>> result = cells.stream()
                 .map(map::toPoint)
                 .map(o -> Tuple2.of(o, o.distance(offset)))
                 .filter(t -> t._2 <= maxDistance)
                 .map(center -> {
                     Shape shape = createCellShape(center._1, map.gridSize);
-                    return Tuple2.of(WHITE, shape);
+                    return Tuple2.of(PROHIBITED_COLOR, shape);
                 })
                 .collect(Collectors.toList());
+        result.addAll(createScannerMapShapes(map, offset, maxDistance));
+        return result;
     }
 
     private static List<Tuple2<Color, Shape>> createScannerMapShapes(GridScannerMap map, Point2D offset, double maxDistance) {
@@ -179,7 +187,7 @@ public class UIController {
         this.dashboard = frame.getDashboard();
         this.radar = frame.getRadar();
         this.globalMap = frame.getGlobalMap();
-        this.shapeBuilder = UIController::createScannerMapShapes;
+        this.shapeBuilder = UIController::createProhibitedShapes;
 
         this.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.frame.setSize(1024, 800);

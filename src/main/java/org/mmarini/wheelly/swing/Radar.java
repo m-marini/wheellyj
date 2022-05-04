@@ -35,6 +35,8 @@ import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 
 import static java.lang.Math.*;
+import static org.mmarini.wheelly.model.RobotController.STOP_DISTANCE;
+import static org.mmarini.wheelly.model.RobotController.WARN_DISTANCE;
 import static org.mmarini.wheelly.swing.Dashboard.*;
 
 /**

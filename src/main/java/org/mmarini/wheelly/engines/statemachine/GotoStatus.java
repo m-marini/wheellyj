@@ -40,17 +40,17 @@ import java.util.Optional;
 
 import static java.lang.Math.*;
 import static org.mmarini.wheelly.model.FuzzyFunctions.*;
+import static org.mmarini.wheelly.model.RobotController.STOP_DISTANCE;
 import static org.mmarini.wheelly.model.Utils.direction;
 
 public class GotoStatus implements EngineStatus {
     public static final String TARGET_REACHED_EXIT = "TargetReached";
-    public static final String OBSTACLE_EXIT = "Obstacle";
+    public static final String UNREACHABLE_EXIT = "Unreachable";
 
     public static final String TARGET_KEY = "GotoStatus.target";
     public static final String DISTANCE_KEY = "GotoStatus.distance";
     public static final String SCAN_INTERVAL_KEY = "GotoStatus.scanInterval";
 
-    public static final double DEFAULT_OBSTACLE_DISTANCE = 0.2;
     public static final double APPROACH_DISTANCE = 0.5;
     public static final double FINAL_DISTANCE = 0.2;
 
@@ -61,8 +61,8 @@ public class GotoStatus implements EngineStatus {
 
     public static final long DEFAULT_SCAN_INTERVAL = 1000;
     public static final long SCANNING_TIME = 100;
-
     private static final Logger logger = LoggerFactory.getLogger(GotoStatus.class);
+
     private static final GotoStatus SINGLETON = new GotoStatus();
 
     public static GotoStatus create() {
@@ -87,7 +87,7 @@ public class GotoStatus implements EngineStatus {
                         .orElse(DEFAULT_SCAN_INTERVAL)
                         .longValue(),
                 SCANNING_TIME * 2);
-        long elaps = context.getElapsedTime().orElse(0l).longValue();
+        long elaps = context.getElapsedTime().orElse(0L).longValue();
         long scanFrameTime = elaps % scanInterval;
         if (scanFrameTime > SCANNING_TIME) {
             return 0;
@@ -101,60 +101,73 @@ public class GotoStatus implements EngineStatus {
     @Override
     public StateTransition process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, StateMachineContext context, InferenceMonitor monitor) {
         Optional<Point2D> targetOpt = context.get(TARGET_KEY);
-        return targetOpt.map(
-                        target -> {
-                            double thresholdDistance = context.<Number>get(DISTANCE_KEY).orElse(FINAL_DISTANCE).doubleValue();
-                            WheellyStatus wheellyStatus = data._1.value();
-                            RobotAsset robot = wheellyStatus.sample.robotAsset;
-                            double distance = robot.location.distance(target);
-                            if (distance <= thresholdDistance) {
-                                logger.debug("Target reached");
-                                return StateTransition.create(TARGET_REACHED_EXIT, context, ALT_COMMAND);
-                            }
-                            // Check for targetOpt reached
-                            boolean canMove = wheellyStatus.canMoveForward;
-                            // Check for obstacles
-                            boolean isObstacle = wheellyStatus.sample.distance > 0 && wheellyStatus.sample.distance <= DEFAULT_OBSTACLE_DISTANCE;
-                            logger.debug("sensor distance: {}", wheellyStatus.sample.distance);
-                            if (!canMove || isObstacle) {
-                                logger.debug("Obstacle in the path");
-                                return StateTransition.create(OBSTACLE_EXIT, context, ALT_COMMAND);
-                            }
-                            if (context.isTimerExpired()) {
-                                logger.debug("target not reached in the available time");
-                                return StateTransition.create(TIMEOUT_EXIT, context, ALT_COMMAND);
-                            }
-                            context.getElapsedTime().
-                                    filter(elaps -> (elaps.longValue() % 1000) < 100)
-                                    .ifPresent(x ->
-                                            logger.info("Robot: {}, {} m, {} DEG",
-                                                    robot.location.getX(),
-                                                    robot.location.getY(),
-                                                    robot.getDirectionDeg())
-                                    );
-                            // Check for movement
-                            int dirDeg = (int) round(toDegrees(direction(robot.location, target)));
-                            logger.debug("Robot: {}, {} m, {} DEG",
-                                    robot.location.getX(),
-                                    robot.location.getY(),
-                                    robot.getDirectionDeg());
-                            logger.debug("Motor: {}", wheellyStatus.motors);
-                            logger.debug("targetOpt at: {} m, {} DEG", distance, dirDeg);
+        return targetOpt.map(target -> {
+                    double thresholdDistance = context.<Number>get(DISTANCE_KEY).orElse(FINAL_DISTANCE).doubleValue();
+                    WheellyStatus wheellyStatus = data._1.value();
+                    ProxySample sample = wheellyStatus.sample;
+                    RobotAsset robot = sample.robotAsset;
+                    double distance = robot.location.distance(target);
+                    if (distance <= thresholdDistance) {
+                        logger.debug("Target reached");
+                        return StateTransition.create(TARGET_REACHED_EXIT, context, ALT_COMMAND);
+                    }
+                    // Check for targetOpt reached
+                    boolean canMove = wheellyStatus.canMoveForward;
+                    // Check for obstacles
+                    logger.debug("sensor distance: {}", sample.distance);
+                    boolean isNearObstacle = sample.distance > 0 && sample.distance <= STOP_DISTANCE;
+                    if (!canMove || isNearObstacle) {
+                        sample.getLocation()
+                                .ifPresent(context::setObstacle);
+                        logger.debug("Obstacle in the path {}", sample.getLocation());
+                        return StateTransition.create(OBSTACLE_EXIT, context,
+                                Tuple2.of(AltCommand.create(), sample.sensorRelativeDeg));
+                    }
+                    boolean isObstacle = sample.distance > 0
+                            && sample.sensorRelativeDeg == 0
+                            && sample.distance <= distance;
+                    if (isObstacle) {
+                        sample.getLocation()
+                                .ifPresent(context::setObstacle);
+                        logger.debug("Obstacle in the path {}", sample.getLocation());
+                        return StateTransition.create(UNREACHABLE_EXIT, context,
+                                Tuple2.of(AltCommand.create(), sample.sensorRelativeDeg));
+                    }
+                    if (context.isTimerExpired()) {
+                        logger.debug("target not reached in the available time");
+                        return StateTransition.create(TIMEOUT_EXIT, context, ALT_COMMAND);
+                    }
+                    context.getElapsedTime().
+                            filter(elaps -> (elaps.longValue() % 1000) < 100)
+                            .ifPresent(x ->
+                                    logger.info("Robot: {}, {} m, {} DEG",
+                                            robot.location.getX(),
+                                            robot.location.getY(),
+                                            robot.getDirectionDeg())
+                            );
+                    // Check for movement
+                    int dirDeg = (int) round(toDegrees(direction(robot.location, target)));
+                    logger.debug("Robot: {}, {} m, {} DEG",
+                            robot.location.getX(),
+                            robot.location.getY(),
+                            robot.getDirectionDeg());
+                    logger.debug("Motor: {}", wheellyStatus.motors);
+                    logger.debug("targetOpt at: {} m, {} DEG", distance, dirDeg);
 
-                            // Check for distance
-                            double isApproach = positive(distance, APPROACH_DISTANCE);
-                            double isFinal = and(positive(distance, FINAL_DISTANCE), not(isApproach));
-                            logger.debug("isApproaching: {}, isFinal: {}", isApproach, isFinal);
+                    // Check for distance
+                    double isApproach = positive(distance, APPROACH_DISTANCE);
+                    double isFinal = and(positive(distance, FINAL_DISTANCE), not(isApproach));
+                    logger.debug("isApproaching: {}, isFinal: {}", isApproach, isFinal);
 
-                            double speed = defuzzy(
-                                    FINAL_SPEED, isFinal,
-                                    APPROACH_SPEED, isApproach,
-                                    0, not(or(isFinal, isApproach)));
+                    double speed = defuzzy(
+                            FINAL_SPEED, isFinal,
+                            APPROACH_SPEED, isApproach,
+                            0, not(or(isFinal, isApproach)));
 
-                            int dir = computeScanDir(context);
-                            logger.debug("speed: {}, dir: {}", speed, dir);
-                            return StateTransition.create(STAY_EXIT, context, Tuple2.of(MoveCommand.create(dirDeg, speed), dir));
-                        })
+                    int dir = computeScanDir(context);
+                    logger.debug("speed: {}, dir: {}", speed, dir);
+                    return StateTransition.create(STAY_EXIT, context, Tuple2.of(MoveCommand.create(dirDeg, speed), dir));
+                })
                 .orElseGet(() -> {
                     // Missing target
                     logger.debug("Missing target location");

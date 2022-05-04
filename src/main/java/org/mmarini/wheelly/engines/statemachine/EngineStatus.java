@@ -39,6 +39,7 @@ public interface EngineStatus {
     String STAY_EXIT = "Stay";
     String TIMEOUT_EXIT = "Timeout";
     String COMPLETED_EXIT = "Completed";
+    String OBSTACLE_EXIT = "Obstacle";
 
     default EngineStatus activate(StateMachineContext context, InferenceMonitor monitor) {
         return this;

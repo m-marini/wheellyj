@@ -31,23 +31,24 @@ package org.mmarini.wheelly.engines.statemachine;
 
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.model.AltCommand;
-import org.mmarini.wheelly.model.InferenceMonitor;
-import org.mmarini.wheelly.model.ScannerMap;
-import org.mmarini.wheelly.model.WheellyStatus;
+import org.mmarini.wheelly.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 
+import static org.mmarini.wheelly.model.RobotController.STOP_DISTANCE;
+
+/**
+ * Status where the robot scan and check for obstacles
+ */
 public class ScanStatus implements EngineStatus {
     public static final String INDEX_KEY = "ScanStatus.index";
     public static final String INTERVAL_KEY = "ScanStatus.interval";
     public static final String TIMER_KEY = "ScanStatus.timer";
-    public static final int DEFAULT_INTERVAL = 200;
-    private static final double RANGE = 15;
+    public static final long DEFAULT_INTERVAL = 100;
     private static final int[] DIRECTIONS = {
-            -30, -60, -90, -75, -45, -15, 15, 45, 75, 90, 60, 30
+            -30, -60, -90, -45, 30, 60, 90, 45, 0
     };
     private static final Logger logger = LoggerFactory.getLogger(NextSequenceStatus.class);
     private static final ScanStatus SINGLETON = new ScanStatus();
@@ -68,7 +69,20 @@ public class ScanStatus implements EngineStatus {
 
     @Override
     public StateTransition process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, StateMachineContext context, InferenceMonitor monitor) {
-        logger.debug("{}", context);
+        WheellyStatus wheellyStatus = data._1.value();
+        ProxySample sample = wheellyStatus.sample;
+        // Check for targetOpt reached
+        boolean canMove = wheellyStatus.canMoveForward;
+        // Check for obstacles
+        logger.debug("sensor distance: {}", sample.distance);
+        boolean isNearObstacle = sample.distance > 0 && sample.distance <= STOP_DISTANCE;
+        if (!canMove || isNearObstacle) {
+            sample.getLocation()
+                    .ifPresent(context::setObstacle);
+            logger.debug("Obstacle in the path {}", sample.getLocation());
+            return StateTransition.create(OBSTACLE_EXIT, context,
+                    Tuple2.of(AltCommand.create(), sample.sensorRelativeDeg));
+        }
         int index = context.<Number>get(INDEX_KEY).orElse(0).intValue();
         Optional<Number> timer = context.get(TIMER_KEY);
         if (timer.filter(t -> System.currentTimeMillis() >= t.longValue()).isPresent()) {
@@ -77,6 +91,7 @@ public class ScanStatus implements EngineStatus {
                 logger.debug("Scan completed");
                 context.remove(INDEX_KEY);
                 context.remove(TIMER_KEY);
+                context.clearObstacle();
                 return StateTransition.create(COMPLETED_EXIT, context, ALT_COMMAND);
             } else {
                 scan(context, index + 1);

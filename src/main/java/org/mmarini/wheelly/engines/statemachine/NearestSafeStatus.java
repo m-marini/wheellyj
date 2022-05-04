@@ -31,52 +31,42 @@ package org.mmarini.wheelly.engines.statemachine;
 
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Tuple2;
+import org.mmarini.wheelly.model.GridScannerMap;
 import org.mmarini.wheelly.model.InferenceMonitor;
 import org.mmarini.wheelly.model.ScannerMap;
 import org.mmarini.wheelly.model.WheellyStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import java.awt.*;
 import java.awt.geom.Point2D;
-import java.util.List;
+import java.util.Comparator;
+import java.util.Set;
 
-public class NextSequenceStatus implements EngineStatus {
-    public static final String TARGET_SELECTED_EXIT = "TargetSelected";
-    public static final String MISSING_TARGET_EXIT = "MissingTarget";
-    public static final String TARGET_KEY = "NextSequenceStatus.target";
-    public static final String INDEX_KEY = "NextSequenceStatus.index";
-    public static final String LIST_KEY = "NextSequenceStatus.list";
-    private static final Logger logger = LoggerFactory.getLogger(NextSequenceStatus.class);
-    private static final NextSequenceStatus SINGLETON = new NextSequenceStatus();
+import static org.mmarini.wheelly.model.RobotController.STOP_DISTANCE;
 
-    /**
-     *
-     */
-    public static EngineStatus create() {
+public class NearestSafeStatus implements EngineStatus {
+    public static final String SAFE_DISTANCE_KEY = "NearestSafeStatus.safeDistance";
+    public static final String LIKELIHOOD_THRESHOLD_KEY = "NearestSafeStatus.lilelihoodThreshold";
+    public static final String TARGET_KEY = "NearestSafeStatus.target";
+    public static final double DEFAULT_SAFE_DISTANCE = 1.5 * STOP_DISTANCE;
+    public static final double DEFAULT_LIKELIHOOD_THRESHOLD = 0;
+    private static final NearestSafeStatus SINGLETON = new NearestSafeStatus();
+
+    public static NearestSafeStatus create() {
         return SINGLETON;
-    }
-
-    protected NextSequenceStatus() {
     }
 
     @Override
     public StateTransition process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, StateMachineContext context, InferenceMonitor monitor) {
-        List<Point2D> list = context.<List<Point2D>>get(LIST_KEY).orElseGet(List::of);
-        if (list.isEmpty()) {
-            logger.warn("Target list empty");
-            context.remove(TARGET_KEY);
-            context.remove(INDEX_KEY);
-            return StateTransition.create(MISSING_TARGET_EXIT, context, ALT_COMMAND);
-        }
-        int nextIndex = context.<Number>get(INDEX_KEY).orElse(-1).intValue() + 1;
-        if (nextIndex >= list.size()) {
-            context.remove(INDEX_KEY);
-            return StateTransition.create(COMPLETED_EXIT, context, ALT_COMMAND);
-        }
-        Point2D target = list.get(nextIndex);
-        context.put(INDEX_KEY, nextIndex);
+        GridScannerMap map = (GridScannerMap) data._2;
+        double safeDistance = context.<Number>get(SAFE_DISTANCE_KEY).orElse(DEFAULT_SAFE_DISTANCE).doubleValue();
+        double likelihoodThreshold = context.<Number>get(LIKELIHOOD_THRESHOLD_KEY).orElse(DEFAULT_LIKELIHOOD_THRESHOLD).doubleValue();
+        Set<Point> prohibited = ProhibitedCellFinder.create(map, safeDistance, likelihoodThreshold).find();
+        Point2D robotLocation = data._1.value().sample.robotAsset.location;
+        Point2D target = ProhibitedCellFinder.findContour(prohibited).stream()
+                .map(map::toPoint)
+                .min(Comparator.comparingDouble(a -> a.distance(robotLocation)))
+                .orElse(robotLocation);
         context.put(TARGET_KEY, target);
-        logger.debug("Selected target {} {}", nextIndex, target);
-        return StateTransition.create(TARGET_SELECTED_EXIT, context, ALT_COMMAND);
+        return StateTransition.create(COMPLETED_EXIT, context, ALT_COMMAND);
     }
 }
