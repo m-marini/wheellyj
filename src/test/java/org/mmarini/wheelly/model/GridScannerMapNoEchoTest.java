@@ -41,7 +41,7 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.mmarini.wheelly.model.AbstractScannerMap.THRESHOLD_DISTANCE;
+import static org.mmarini.wheelly.model.GridScannerMap.THRESHOLD_DISTANCE;
 
 /**
  * See tests enumeration figure

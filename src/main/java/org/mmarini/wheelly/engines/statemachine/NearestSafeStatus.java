@@ -58,8 +58,8 @@ public class NearestSafeStatus implements EngineStatus {
     @Override
     public StateTransition process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, StateMachineContext context, InferenceMonitor monitor) {
         GridScannerMap map = (GridScannerMap) data._2;
-        double safeDistance = context.<Number>get(SAFE_DISTANCE_KEY).orElse(DEFAULT_SAFE_DISTANCE).doubleValue();
-        double likelihoodThreshold = context.<Number>get(LIKELIHOOD_THRESHOLD_KEY).orElse(DEFAULT_LIKELIHOOD_THRESHOLD).doubleValue();
+        double safeDistance = context.getDouble(SAFE_DISTANCE_KEY, DEFAULT_SAFE_DISTANCE);
+        double likelihoodThreshold = context.getDouble(LIKELIHOOD_THRESHOLD_KEY, DEFAULT_LIKELIHOOD_THRESHOLD);
         Set<Point> prohibited = ProhibitedCellFinder.create(map, safeDistance, likelihoodThreshold).find();
         Point2D robotLocation = data._1.value().sample.robotAsset.location;
         Point2D target = ProhibitedCellFinder.findContour(prohibited).stream()
@@ -67,6 +67,6 @@ public class NearestSafeStatus implements EngineStatus {
                 .min(Comparator.comparingDouble(a -> a.distance(robotLocation)))
                 .orElse(robotLocation);
         context.put(TARGET_KEY, target);
-        return StateTransition.create(COMPLETED_EXIT, context, ALT_COMMAND);
+        return StateTransition.create(COMPLETED_EXIT, context, HALT_COMMAND);
     }
 }

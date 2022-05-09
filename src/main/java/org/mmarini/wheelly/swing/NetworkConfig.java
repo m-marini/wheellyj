@@ -27,38 +27,54 @@
  *
  */
 
-package org.mmarini.wheelly.engines.statemachine;
+package org.mmarini.wheelly.swing;
 
-import io.reactivex.rxjava3.schedulers.Timed;
-import org.mmarini.Tuple2;
-import org.mmarini.wheelly.model.InferenceMonitor;
-import org.mmarini.wheelly.model.ScannerMap;
-import org.mmarini.wheelly.model.WheellyStatus;
+import java.util.StringJoiner;
 
-public class StopStatus implements EngineStatus {
-    private static final StopStatus SINGLETON = new StopStatus();
-    private static final StopStatus FINAL_STATUS = new StopStatus() {
-        public StateTransition process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, StateMachineContext context, InferenceMonitor monitor) {
-            return StateTransition.create(STAY_EXIT, context, HALT_COMMAND);
-        }
-    };
+public class NetworkConfig {
+    private boolean active;
+    private String ssid;
+    private String password;
 
-    public static StopStatus create() {
-        return SINGLETON;
-    }
-
-    public static StopStatus finalStatus() {
-        return FINAL_STATUS;
-    }
-
-    protected StopStatus() {
-
+    public NetworkConfig() {
     }
 
     @Override
-    public StateTransition process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, StateMachineContext context, InferenceMonitor monitor) {
-        return context.isTimerExpired()
-                ? StateTransition.create(TIMEOUT_EXIT, context, HALT_COMMAND)
-                : StateTransition.create(STAY_EXIT, context, HALT_COMMAND);
+    public String toString() {
+        return new StringJoiner(", ", NetworkConfig.class.getSimpleName() + "[", "]")
+                .add("active=" + active)
+                .add("ssid='" + ssid + "'")
+                .add("password='" + password + "'")
+                .toString();
+    }
+
+    public NetworkConfig(boolean active, String ssid, String password) {
+        this.active = active;
+        this.ssid = ssid;
+        this.password = password;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getSsid() {
+        return ssid;
+    }
+
+    public void setSsid(String ssid) {
+        this.ssid = ssid;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 }

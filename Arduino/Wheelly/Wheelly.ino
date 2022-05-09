@@ -31,6 +31,7 @@
 #define RIGHT_PIN       10
 #define LEFT_FORW_PIN   11
 #define PROXY_LED_PIN   12
+#define CONTACTS_PIN    A2
 #define VOLTAGE_PIN     A3
 
 /*
@@ -87,6 +88,13 @@
 #define VOLTAGE_SCALE (4.75 * 3 / 1023)
 
 /*
+   Voltage scale
+*/
+#define MAX_CONTACT_LEVEL 511
+#define FRONT_SIGNAL_MASK 0xc
+#define REAR_SIGNAL_MASK 0x3
+
+/*
    Command parser
 */
 char line[LINE_SIZE];
@@ -135,6 +143,28 @@ MPU6050 mpu;
 IMU imu(mpu);
 bool imuFailure;
 #endif
+
+/*
+   Contact signals
+   0 -> 20
+   1 -> 118
+   2 -> 210
+   3 -> 275
+   4 -> 360
+   5 -> 405
+   6 -> 448
+   7 -> 484
+   8 -> 525
+   9 -> 550
+   10 -> 577
+   11 -> 600
+   12 -> 625
+   13 -> 640
+   14 -> 660
+   15 -> 674
+*/
+int contactSignals;
+const int contactLevels[] PROGMEM = {69, 164, 243, 318, 383, 427, 466, 505, 538, 564, 589, 613, 633, 650, 667};
 
 /*
    Set up
@@ -201,7 +231,7 @@ void setup() {
     Init servo and scanner
   */
   sr04.begin();
-//  sr04.noSamples(NO_SAMPLES);
+  //  sr04.noSamples(NO_SAMPLES);
   sr04.onSample(&handleSample);
   servo.attach(SERVO_PIN);
   servo.offset(SERVO_OFFSET);
@@ -252,6 +282,7 @@ void loop() {
 #ifdef WITH_IMU
   imu.polling(now);
 #endif
+  pollContactSensors();
   servo.polling(now);
   sr04.polling(now);
 
@@ -271,6 +302,34 @@ void pollSerialPort() {
     line[n] = 0;
     processCommand(time);
   }
+}
+
+void pollContactSensors() {
+  //  int contactSensors = analogRead(CONTACTS_PIN);
+  int value = analogRead(CONTACTS_PIN);
+  contactSignals = 0;
+  while (contactSignals < sizeof(contactLevels) / sizeof(contactLevels[0])) {
+    int threshold = pgm_read_word_near(&contactLevels[contactSignals]);
+    DEBUG_PRINT(F("// threshold: "));
+    DEBUG_PRINT(threshold);
+    DEBUG_PRINT(F(", value: "));
+    DEBUG_PRINT(value);
+    DEBUG_PRINTLN();
+    DEBUG_PRINT(threshold);
+    //int threshold = contactLevels[contactSignals];
+    if (value <= threshold) {
+      break;
+    }
+    contactSignals++;
+  }
+}
+
+bool isFrontContact() {
+  return (contactSignals & FRONT_SIGNAL_MASK) != 0;
+}
+
+bool isRearContact() {
+  return (contactSignals & REAR_SIGNAL_MASK) != 0;
 }
 
 #ifdef WITH_IMU
@@ -320,7 +379,8 @@ void handleLedTimer(void *, unsigned long n) {
   unsigned long ledDivider = LED_PULSE_DIVIDER;
 #endif
   digitalWrite(LED_BUILTIN, (n % ledDivider) == 0 ? HIGH : LOW);
-  digitalWrite(BLOCK_LED_PIN, !canMoveForward() &&  (n % BLOCK_PULSE_DIVIDER) == 0 ? HIGH : LOW);
+  digitalWrite(BLOCK_LED_PIN, !(canMoveForward() && canMoveBackward())
+               &&  (n % BLOCK_PULSE_DIVIDER) == 0 ? HIGH : LOW);
 }
 
 /*
@@ -359,7 +419,8 @@ void handleMvCommand(const char* parms) {
   float direction = normalRad(args.substring(0 , s1).toInt() * PI / 180);
   float speed = min(max(args.substring(s1 + 1).toFloat(), -1.0), 1.0);
   motionController.move(direction, speed);
-  if (motionController.isForward() && !canMoveForward()) {
+  if (motionController.isForward() && !canMoveForward()
+      || motionController.isBackward() && !canMoveBackward()) {
     motionController.alt();
   }
 }
@@ -381,14 +442,13 @@ void handleScCommand(const char* parms) {
    Handles sample event from distance sensor
 */
 void handleSample(void *, int dist) {
-  /*
-    DEBUG_PRINT(F("// handleSample: dir="));
-    DEBUG_PRINT(servo.angle());
-    DEBUG_PRINT(F(", distance="));
-    DEBUG_PRINTLN(dist);
-  */
+  DEBUG_PRINT(F("// handleSample: dir="));
+  DEBUG_PRINT(servo.angle());
+  DEBUG_PRINT(F(", distance="));
+  DEBUG_PRINTLN(dist);
   distance = dist;
-  if (motionController.isForward() && !canMoveForward()) {
+  if (motionController.isForward() && !canMoveForward()
+      || motionController.isBackward() && !canMoveBackward()) {
     motionController.alt();
   }
   sendStatus(dist);
@@ -398,7 +458,7 @@ void handleSample(void *, int dist) {
     nextScan = FRONT_DIRECTION;
   }
   DEBUG_PRINT(F("// handleSample: nextDir="));
-  DEBUG_PRINT(nextDirection);
+  DEBUG_PRINT(nextScan);
   DEBUG_PRINTLN();
   servo.angle(nextScan);
 }
@@ -449,32 +509,36 @@ void sendCps() {
 
 */
 void sendStatus(int distance) {
-    Serial.print(F("st "));
-    Serial.print(millis());
-    Serial.print(F(" "));
-    Serial.print(motionController.x(), 3);
-    Serial.print(F(" "));
-    Serial.print(motionController.y(), 3);
-    Serial.print(F(" "));
-    Serial.print(motionController.angle() * 180 / PI, 0);
-    Serial.print(F(" "));
-    Serial.print(90 - servo.angle());
-    Serial.print(F(" "));
-    Serial.print(distance * 0.01, 2);
-    Serial.print(F(" "));
-    Serial.print(motionController.left(), 3);
-    Serial.print(F(" "));
-    Serial.print(motionController.right(), 3);
-    Serial.print(F(" "));
-    Serial.print(canMoveForward());
-    Serial.print(F(" "));
-    int voltageValue = analogRead(VOLTAGE_PIN);
-    Serial.print(VOLTAGE_SCALE * voltageValue);
-    Serial.print(F(" "));
-    Serial.print(imuFailure);
-    Serial.print(F(" "));
-    Serial.print(motionController.isAlt());
-    Serial.println();
+  Serial.print(F("st "));
+  Serial.print(millis());
+  Serial.print(F(" "));
+  Serial.print(motionController.x(), 3);
+  Serial.print(F(" "));
+  Serial.print(motionController.y(), 3);
+  Serial.print(F(" "));
+  Serial.print(motionController.angle() * 180 / PI, 0);
+  Serial.print(F(" "));
+  Serial.print(90 - servo.angle());
+  Serial.print(F(" "));
+  Serial.print(distance * 0.01, 2);
+  Serial.print(F(" "));
+  Serial.print(motionController.left(), 3);
+  Serial.print(F(" "));
+  Serial.print(motionController.right(), 3);
+  Serial.print(F(" "));
+  Serial.print(contactSignals);
+  Serial.print(F(" "));
+  int voltageValue = analogRead(VOLTAGE_PIN);
+  Serial.print(VOLTAGE_SCALE * voltageValue);
+  Serial.print(F(" "));
+  Serial.print(canMoveForward());
+  Serial.print(F(" "));
+  Serial.print(canMoveBackward());
+  Serial.print(F(" "));
+  Serial.print(imuFailure);
+  Serial.print(F(" "));
+  Serial.print(motionController.isAlt());
+  Serial.println();
 }
 
 /*
@@ -520,7 +584,11 @@ bool isForward(float left, float right) {
    Returns true if can move forward
 */
 bool canMoveForward() {
-  return forwardBlockDistance() > STOP_DISTANCE;
+  return forwardBlockDistance() > STOP_DISTANCE && !isFrontContact();
+}
+
+bool canMoveBackward() {
+  return !isRearContact();
 }
 
 int forwardBlockDistance() {

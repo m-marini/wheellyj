@@ -45,13 +45,27 @@ import static java.util.Objects.requireNonNull;
  */
 public class WheellyStatus {
 
-    public static final int NO_STATUS_PARAMS = 13;
+    public static final int NO_STATUS_PARAMS = 15;
 
     /**
      * Returns the Wheelly status from status string
      * The string status is formatted as:
      * <pre>
-     *     st [sampleTime] [xLocation] [yLocation] [yaw] [sensorDirection] [distance] [leftMotor] [rightMotor] [canMoveForward] [voltage] [imuFailure] [alt]
+     *     st
+     *     [sampleTime]
+     *     [xLocation]
+     *     [yLocation]
+     *     [yaw]
+     *     [sensorDirection]
+     *     [distance]
+     *     [leftMotor]
+     *     [rightMotor]
+     *     [contactSignals]
+     *     [voltage]
+     *     [canMoveForward]
+     *     [canMoveBackward]
+     *     [imuFailure]
+     *     [halt]
      * </pre>
      *
      * @param statusString the status string
@@ -59,7 +73,7 @@ public class WheellyStatus {
     public static Timed<WheellyStatus> from(String statusString, RemoteClock clock) {
         String[] params = statusString.split(" ");
         if (params.length != NO_STATUS_PARAMS) {
-            throw new IllegalArgumentException(format("Missing status parameters \"%s\"", statusString));
+            throw new IllegalArgumentException(format("Wrong status message \"%s\"", statusString));
         }
 
         long sampleInstant = clock.fromRemote(Long.parseLong(params[1]));
@@ -70,24 +84,26 @@ public class WheellyStatus {
 
         int sensorDirection = parseInt(params[5]);
         double distance = parseDouble(params[6]);
-        ProxySample sample = ProxySample.create(sensorDirection, distance, asset);
+        int contactSensors = parseInt(params[9]);
+        double voltage = parseDouble(params[10]);
+
+        boolean canMoveForward = Integer.parseInt(params[11]) != 0;
+        boolean canMoveBackward = Integer.parseInt(params[12]) != 0;
+        ProxySample sample = ProxySample.create(sensorDirection, distance, asset, contactSensors, canMoveBackward, canMoveForward);
 
         double left = parseDouble(params[7]);
         double right = parseDouble(params[8]);
         Tuple2<Double, Double> motors = Tuple2.of(left, right);
 
-        boolean canMoveForward = Integer.parseInt(params[9]) != 0;
-        double voltage = parseDouble(params[10]);
-        boolean imuFailure = Integer.parseInt(params[11]) != 0;
-        boolean alt = Integer.parseInt(params[12]) != 0;
+        boolean imuFailure = Integer.parseInt(params[13]) != 0;
+        boolean alt = Integer.parseInt(params[14]) != 0;
 
         return new Timed<>(
-                new WheellyStatus(sample, motors, canMoveForward, voltage, imuFailure, alt),
+                new WheellyStatus(sample, motors, voltage, imuFailure, alt),
                 sampleInstant, TimeUnit.MILLISECONDS);
     }
 
     public final boolean alt;
-    public final boolean canMoveForward;
     public final boolean imuFailure;
     public final Tuple2<Double, Double> motors;
     public final ProxySample sample;
@@ -96,17 +112,15 @@ public class WheellyStatus {
     /**
      * Creates the Wheelly status
      *
-     * @param sample         robot asset
-     * @param motors         the motor speed
-     * @param canMoveForward true if robot can move forward
-     * @param voltage        the voltage value
-     * @param imuFailure     true if imu failure
-     * @param alt            true if alt status
+     * @param sample     robot asset
+     * @param motors     the motor speed
+     * @param voltage    the voltage value
+     * @param imuFailure true if imu failure
+     * @param alt        true if alt status
      */
-    protected WheellyStatus(ProxySample sample, Tuple2<Double, Double> motors, boolean canMoveForward, double voltage, boolean imuFailure, boolean alt) {
+    protected WheellyStatus(ProxySample sample, Tuple2<Double, Double> motors, double voltage, boolean imuFailure, boolean alt) {
         this.sample = requireNonNull(sample);
         this.motors = requireNonNull(motors);
-        this.canMoveForward = canMoveForward;
         this.voltage = voltage;
         this.imuFailure = imuFailure;
         this.alt = alt;
@@ -123,7 +137,6 @@ public class WheellyStatus {
                 .add("motors=" + motors)
                 .add("voltage=" + voltage)
                 .add("alt=" + alt)
-                .add("canMoveForward=" + canMoveForward)
                 .add("imuFailure=" + imuFailure)
                 .toString();
     }

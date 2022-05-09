@@ -50,19 +50,17 @@ public class GotoStatus implements EngineStatus {
     public static final String TARGET_KEY = "GotoStatus.target";
     public static final String DISTANCE_KEY = "GotoStatus.distance";
     public static final String SCAN_INTERVAL_KEY = "GotoStatus.scanInterval";
+    public static final String MIN_UNREACHABLE_DISTANCE_KEY = "GotoStatus.minUnreachableDistance";
 
     public static final double APPROACH_DISTANCE = 0.5;
     public static final double FINAL_DISTANCE = 0.2;
-
     public static final double FINAL_SPEED = 0.5;
     public static final double APPROACH_SPEED = 1;
-
     public static final int SCAN_ANGLE = 45;
-
     public static final long DEFAULT_SCAN_INTERVAL = 1000;
     public static final long SCANNING_TIME = 100;
+    public static final double DEFAULT_MIN_UNREACHABLE_DISTANCE = 0.5;
     private static final Logger logger = LoggerFactory.getLogger(GotoStatus.class);
-
     private static final GotoStatus SINGLETON = new GotoStatus();
 
     public static GotoStatus create() {
@@ -74,7 +72,6 @@ public class GotoStatus implements EngineStatus {
 
     @Override
     public EngineStatus activate(StateMachineContext context, InferenceMonitor monitor) {
-        context.startTimer();
         context.<Point2D>get(TARGET_KEY).ifPresentOrElse(
                 target -> logger.info("Goto {}", target),
                 () -> logger.warn("Missing target")
@@ -83,11 +80,9 @@ public class GotoStatus implements EngineStatus {
     }
 
     private int computeScanDir(StateMachineContext context) {
-        long scanInterval = max(context.<Number>get(SCAN_INTERVAL_KEY)
-                        .orElse(DEFAULT_SCAN_INTERVAL)
-                        .longValue(),
+        long scanInterval = max(context.getLong(SCAN_INTERVAL_KEY, DEFAULT_SCAN_INTERVAL),
                 SCANNING_TIME * 2);
-        long elaps = context.getElapsedTime().orElse(0L).longValue();
+        long elaps = context.getElapsedTime(0);
         long scanFrameTime = elaps % scanInterval;
         if (scanFrameTime > SCANNING_TIME) {
             return 0;
@@ -102,31 +97,34 @@ public class GotoStatus implements EngineStatus {
     public StateTransition process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, StateMachineContext context, InferenceMonitor monitor) {
         Optional<Point2D> targetOpt = context.get(TARGET_KEY);
         return targetOpt.map(target -> {
-                    double thresholdDistance = context.<Number>get(DISTANCE_KEY).orElse(FINAL_DISTANCE).doubleValue();
+                    double thresholdDistance = context.getDouble(DISTANCE_KEY, FINAL_DISTANCE);
                     WheellyStatus wheellyStatus = data._1.value();
                     ProxySample sample = wheellyStatus.sample;
                     RobotAsset robot = sample.robotAsset;
                     double distance = robot.location.distance(target);
+                    // Check for targetOpt reached
                     if (distance <= thresholdDistance) {
                         logger.debug("Target reached");
-                        return StateTransition.create(TARGET_REACHED_EXIT, context, ALT_COMMAND);
+                        return StateTransition.create(TARGET_REACHED_EXIT, context, HALT_COMMAND);
                     }
-                    // Check for targetOpt reached
-                    boolean canMove = wheellyStatus.canMoveForward;
                     // Check for obstacles
+                    boolean canMove = sample.canMoveForward;
                     logger.debug("sensor distance: {}", sample.distance);
                     boolean isNearObstacle = sample.distance > 0 && sample.distance <= STOP_DISTANCE;
                     if (!canMove || isNearObstacle) {
                         sample.getLocation()
                                 .ifPresent(context::setObstacle);
-                        logger.debug("Obstacle in the path {}", sample.getLocation());
+                        logger.debug("Obstacle {}", sample.getLocation());
                         return StateTransition.create(OBSTACLE_EXIT, context,
                                 Tuple2.of(AltCommand.create(), sample.sensorRelativeDeg));
                     }
-                    boolean isObstacle = sample.distance > 0
+                    double minUnreachableDistance = context.getDouble(MIN_UNREACHABLE_DISTANCE_KEY,
+                            DEFAULT_MIN_UNREACHABLE_DISTANCE);
+                    boolean isUnreachable = distance >= minUnreachableDistance
+                            && sample.distance > 0
                             && sample.sensorRelativeDeg == 0
                             && sample.distance <= distance;
-                    if (isObstacle) {
+                    if (isUnreachable) {
                         sample.getLocation()
                                 .ifPresent(context::setObstacle);
                         logger.debug("Obstacle in the path {}", sample.getLocation());
@@ -135,24 +133,10 @@ public class GotoStatus implements EngineStatus {
                     }
                     if (context.isTimerExpired()) {
                         logger.debug("target not reached in the available time");
-                        return StateTransition.create(TIMEOUT_EXIT, context, ALT_COMMAND);
+                        return StateTransition.create(TIMEOUT_EXIT, context, HALT_COMMAND);
                     }
-                    context.getElapsedTime().
-                            filter(elaps -> (elaps.longValue() % 1000) < 100)
-                            .ifPresent(x ->
-                                    logger.info("Robot: {}, {} m, {} DEG",
-                                            robot.location.getX(),
-                                            robot.location.getY(),
-                                            robot.getDirectionDeg())
-                            );
                     // Check for movement
                     int dirDeg = (int) round(toDegrees(direction(robot.location, target)));
-                    logger.debug("Robot: {}, {} m, {} DEG",
-                            robot.location.getX(),
-                            robot.location.getY(),
-                            robot.getDirectionDeg());
-                    logger.debug("Motor: {}", wheellyStatus.motors);
-                    logger.debug("targetOpt at: {} m, {} DEG", distance, dirDeg);
 
                     // Check for distance
                     double isApproach = positive(distance, APPROACH_DISTANCE);
@@ -171,7 +155,7 @@ public class GotoStatus implements EngineStatus {
                 .orElseGet(() -> {
                     // Missing target
                     logger.debug("Missing target location");
-                    return StateTransition.create(TARGET_REACHED_EXIT, context, ALT_COMMAND);
+                    return StateTransition.create(TARGET_REACHED_EXIT, context, HALT_COMMAND);
                 });
     }
 }

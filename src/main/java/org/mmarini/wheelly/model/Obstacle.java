@@ -30,6 +30,7 @@
 package org.mmarini.wheelly.model;
 
 import java.awt.geom.Point2D;
+import java.util.Objects;
 import java.util.StringJoiner;
 
 /**
@@ -58,11 +59,9 @@ public class Obstacle {
     public static Obstacle create(Point2D location, long timestamp, double likelihood) {
         return new Obstacle(location, timestamp, likelihood);
     }
-
     public final double likelihood;
     public final Point2D location;
     public final long timestamp;
-
     /**
      * Creates an obstacle
      *
@@ -74,6 +73,14 @@ public class Obstacle {
         this.location = location;
         this.likelihood = likelihood;
         this.timestamp = timestamp;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Obstacle obstacle = (Obstacle) o;
+        return location.equals(obstacle.location);
     }
 
     /**
@@ -122,6 +129,11 @@ public class Obstacle {
      */
     public Obstacle setTimestamp(long timestamp) {
         return new Obstacle(location, timestamp, likelihood);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(location);
     }
 
     /**

@@ -34,6 +34,7 @@ class MotionCtrl {
       return _right;
     }
     const boolean isForward() const;
+    const boolean isBackward() const;
 
     const boolean isAlt() const {
       return _alt;

@@ -45,7 +45,7 @@ import java.util.concurrent.TimeUnit;
 import static io.reactivex.rxjava3.core.Flowable.*;
 import static java.lang.Math.round;
 import static java.lang.String.format;
-import static org.mmarini.wheelly.model.AbstractScannerMap.THRESHOLD_DISTANCE;
+import static org.mmarini.wheelly.model.GridScannerMap.THRESHOLD_DISTANCE;
 import static org.mmarini.wheelly.model.AltCommand.ALT_COMMAND;
 
 public class RobotAgent implements InferenceMonitor {

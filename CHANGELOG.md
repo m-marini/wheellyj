@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #43: Compute best path
 - Issue #44: Optimize best path
 - Issue #47: Add map mode view
+- Issue #49: Add contact sensors
 - Issue #51: Add select nearest safe location
 
 ## Changed
@@ -42,3 +43,4 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #9: Serialize comunication with API
 - Issue #26: Fix comunication bugs due to loss of signal
 - Issue #32: Scanner map should add obstacles at echo location
+- Issue #45: Wheelly crash bug

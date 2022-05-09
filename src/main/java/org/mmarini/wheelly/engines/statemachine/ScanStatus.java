@@ -35,7 +35,7 @@ import org.mmarini.wheelly.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Optional;
+import java.util.OptionalLong;
 
 import static org.mmarini.wheelly.model.RobotController.STOP_DISTANCE;
 
@@ -72,7 +72,7 @@ public class ScanStatus implements EngineStatus {
         WheellyStatus wheellyStatus = data._1.value();
         ProxySample sample = wheellyStatus.sample;
         // Check for targetOpt reached
-        boolean canMove = wheellyStatus.canMoveForward;
+        boolean canMove = sample.canMoveForward;
         // Check for obstacles
         logger.debug("sensor distance: {}", sample.distance);
         boolean isNearObstacle = sample.distance > 0 && sample.distance <= STOP_DISTANCE;
@@ -83,16 +83,16 @@ public class ScanStatus implements EngineStatus {
             return StateTransition.create(OBSTACLE_EXIT, context,
                     Tuple2.of(AltCommand.create(), sample.sensorRelativeDeg));
         }
-        int index = context.<Number>get(INDEX_KEY).orElse(0).intValue();
-        Optional<Number> timer = context.get(TIMER_KEY);
-        if (timer.filter(t -> System.currentTimeMillis() >= t.longValue()).isPresent()) {
+        int index = context.getInt(INDEX_KEY, 0);
+        OptionalLong timer = context.getLong(TIMER_KEY);
+        if (timer.isPresent() && System.currentTimeMillis() >= timer.getAsLong()) {
             if (index >= DIRECTIONS.length - 1) {
                 // Exit
                 logger.debug("Scan completed");
                 context.remove(INDEX_KEY);
                 context.remove(TIMER_KEY);
                 context.clearObstacle();
-                return StateTransition.create(COMPLETED_EXIT, context, ALT_COMMAND);
+                return StateTransition.create(COMPLETED_EXIT, context, HALT_COMMAND);
             } else {
                 scan(context, index + 1);
             }
@@ -101,7 +101,7 @@ public class ScanStatus implements EngineStatus {
     }
 
     private ScanStatus scan(StateMachineContext context, int i) {
-        long interval = context.<Number>get(INTERVAL_KEY).orElse(DEFAULT_INTERVAL).longValue();
+        long interval = context.getLong(INTERVAL_KEY, DEFAULT_INTERVAL);
         long timer = System.currentTimeMillis() + interval;
         context.put(INDEX_KEY, i)
                 .put(TIMER_KEY, timer);

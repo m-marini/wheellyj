@@ -35,6 +35,8 @@ import org.mmarini.wheelly.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.OptionalLong;
+
 import static java.lang.Math.*;
 import static org.mmarini.wheelly.model.RobotController.STOP_DISTANCE;
 import static org.mmarini.wheelly.model.Utils.*;
@@ -55,58 +57,49 @@ public class AvoidObstacleStatus implements EngineStatus {
         return SINGLETON;
     }
 
-    {
-    }
-
     protected AvoidObstacleStatus() {
     }
 
     @Override
-    public AvoidObstacleStatus activate(StateMachineContext context, InferenceMonitor monitor) {
-        context.startTimer();
-        return this;
-    }
-
-    @Override
     public StateTransition process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, StateMachineContext context, InferenceMonitor monitor) {
-        long minTime = context.<Number>get(MIN_AVOID_TIME_KEY).orElse(DEFAULT_MIN_AVOID_TIME).longValue();
         WheellyStatus wheellyStatus = data._1.value();
-        RobotAsset robot = wheellyStatus.sample.robotAsset;
+        ProxySample sample = wheellyStatus.sample;
+        RobotAsset robot = sample.robotAsset;
+        if (!sample.canMoveBackward) {
+            context.setObstacle(sample.getRelativeContact(ProxySample.Direction.S));
+            return StateTransition.create(OBSTACLE_EXIT, context, HALT_COMMAND);
+        }
         // Compute the next robot direction and sensor direction
         int nextDeg = context.getObstacle()
                 .map(obs -> {
                     int obsDirDeg = (int) round(toNormalDeg(direction(robot.location, obs)));
-                    int sensorDirDeg = min(max((int) normalizeDegAngle(obsDirDeg - robot.directionDeg), -90), 90);
-                    return sensorDirDeg;
+                    return min(max((int) normalizeDegAngle(obsDirDeg - robot.directionDeg), -90), 90);
                 })
-                .orElse(wheellyStatus.sample.sensorRelativeDeg);
+                .orElse(sample.sensorRelativeDeg);
+
 
         // Check for minimum backward movement time
-        if (context.getElapsedTime().filter(elaps -> elaps.longValue() <= minTime).isPresent()) {
-            return StateTransition.create(STAY_EXIT,
-                    context,
-                    Tuple2.of(
-                            MoveCommand.create(robot.directionDeg, -1),
-                            nextDeg));
-        } else {
-            double distance = context.<Number>get(DISTANCE_KEY).orElse(DEFAULT_DISTANCE).doubleValue();
+        long minTime = context.getLong(MIN_AVOID_TIME_KEY, DEFAULT_MIN_AVOID_TIME);
+        OptionalLong elapsed = context.getElapsedTime();
+        if (elapsed.isPresent() && elapsed.getAsLong() >= minTime) {
+            double distance = context.getDouble(DISTANCE_KEY,DEFAULT_DISTANCE);
 
             // Check for obstacle avoid
-            boolean canMove = wheellyStatus.canMoveForward;
-            if (canMove && wheellyStatus.sample.distance > distance) {
-                return StateTransition.create(COMPLETED_EXIT, context, ALT_COMMAND);
+            boolean canMove = sample.canMoveForward;
+            if (canMove && sample.distance > distance) {
+                return StateTransition.create(COMPLETED_EXIT, context, HALT_COMMAND);
             }
             // Check for timeout
             if (context.isTimerExpired()) {
                 logger.debug("obstacle not avoid in the available time");
-                return StateTransition.create(TIMEOUT_EXIT, context, ALT_COMMAND);
+                return StateTransition.create(TIMEOUT_EXIT, context, HALT_COMMAND);
             }
             // Check for obstacles
-            return StateTransition.create(STAY_EXIT,
-                    context,
-                    Tuple2.of(
-                            MoveCommand.create(robot.directionDeg, -1),
-                            nextDeg));
         }
+        return StateTransition.create(STAY_EXIT,
+                context,
+                Tuple2.of(
+                        MoveCommand.create(robot.directionDeg, -1),
+                        nextDeg));
     }
 }

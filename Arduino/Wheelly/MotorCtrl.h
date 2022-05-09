@@ -18,7 +18,7 @@ class MotorCtrl {
   private:
     byte _forwPin;
     byte _backPin;
-    float _x[NO_POINTS],_y[NO_POINTS];
+    float *_x, *_y;
     float func(float x);
 };
 

@@ -68,7 +68,7 @@ import static java.lang.String.format;
 import static java.util.stream.IntStream.range;
 import static org.mmarini.wheelly.engines.statemachine.FindPathStatus.DEFAULT_LIKELIHOOD_THRESHOLD;
 import static org.mmarini.wheelly.engines.statemachine.FindPathStatus.DEFAULT_SAFE_DISTANCE;
-import static org.mmarini.wheelly.model.AbstractScannerMap.LIKELIHOOD_TAU;
+import static org.mmarini.wheelly.model.GridScannerMap.LIKELIHOOD_TAU;
 import static org.mmarini.wheelly.model.RobotController.STOP_DISTANCE;
 import static org.mmarini.wheelly.model.RobotController.WARN_DISTANCE;
 import static org.mmarini.wheelly.swing.Dashboard.INFO_DISTANCE;
@@ -296,7 +296,7 @@ public class UIController {
         }
         dashboard.setPower(status.voltage);
         dashboard.setMotors(status.motors._1, status.motors._2);
-        dashboard.setForwardBlock(!status.canMoveForward);
+        dashboard.setForwardBlock(!sample.canMoveForward);
         RobotAsset robotAsset = sample.robotAsset;
         dashboard.setAngle(robotAsset.getDirectionRad());
         dashboard.setRobotLocation(robotAsset.location);
