@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #44: Optimize best path
 - Issue #47: Add map mode view
 - Issue #49: Add contact sensors
+- Issue #50: Select random target
 - Issue #51: Add select nearest safe location
 
 ## Changed
