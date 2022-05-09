@@ -30,15 +30,12 @@
 package org.mmarini.wheelly.engines.statemachine;
 
 import java.awt.geom.Point2D;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 import static java.util.Objects.requireNonNull;
 
 public class StateMachineContext {
     public static final String TIMEOUT_KEY = "timeout";
-    public static final String TIMER_KEY = "timer";
     public static final String STATUS_NAME_KEY = "name";
     public static final String ENTRY_TIME_KEY = "entryTime";
     public static final String OBSTACLE_KEY = "obstacle";
@@ -64,11 +61,6 @@ public class StateMachineContext {
         return this;
     }
 
-    public StateMachineContext clearTimer() {
-        remove(TIMER_KEY);
-        return this;
-    }
-
     /**
      * @param key
      * @param <T>
@@ -77,17 +69,50 @@ public class StateMachineContext {
         return Optional.ofNullable((T) values.get(key));
     }
 
-    public Optional<Number> getElapsedTime() {
-        return getEntryTime().map(entryTime -> System.currentTimeMillis() - entryTime.longValue());
+    public OptionalDouble getDouble(String key) {
+        Number value = (Number) values.get(key);
+        return value == null ? OptionalDouble.empty() : OptionalDouble.of(value.doubleValue());
     }
 
-    public Optional<Number> getEntryTime() {
-        return get(ENTRY_TIME_KEY);
+    public double getDouble(String key, double defaultValue) {
+        return getDouble(key).orElse(defaultValue);
+    }
+
+    public OptionalLong getElapsedTime() {
+        return getEntryTime()
+                .stream().map(entryTime -> System.currentTimeMillis() - entryTime)
+                .findAny();
+    }
+
+    public long getElapsedTime(long defaultValue) {
+        return getElapsedTime().orElse(defaultValue);
+    }
+
+    public OptionalLong getEntryTime() {
+        return getLong(ENTRY_TIME_KEY);
     }
 
     public StateMachineContext setEntryTime(long entryTime) {
         values.put(ENTRY_TIME_KEY, entryTime);
         return this;
+    }
+
+    public OptionalInt getInt(String key) {
+        Number value = (Number) values.get(key);
+        return value == null ? OptionalInt.empty() : OptionalInt.of(value.intValue());
+    }
+
+    public int getInt(String key, int defaultValue) {
+        return getInt(key).orElse(defaultValue);
+    }
+
+    public OptionalLong getLong(String key) {
+        Number value = (Number) values.get(key);
+        return value == null ? OptionalLong.empty() : OptionalLong.of(value.longValue());
+    }
+
+    public long getLong(String key, long defaultValue) {
+        return getLong(key).orElse(defaultValue);
     }
 
     public Optional<Point2D> getObstacle() {
@@ -107,8 +132,8 @@ public class StateMachineContext {
         return this;
     }
 
-    public Optional<Number> getTimeout() {
-        return get(TIMEOUT_KEY);
+    public OptionalLong getTimeout() {
+        return getLong(TIMEOUT_KEY);
     }
 
     public StateMachineContext setTimeout(long timeout) {
@@ -117,7 +142,9 @@ public class StateMachineContext {
     }
 
     public boolean isTimerExpired() {
-        return this.<Long>get(TIMER_KEY).filter(timer -> System.currentTimeMillis() >= timer).isPresent();
+        OptionalLong timeout = getTimeout();
+        OptionalLong elapsed = getElapsedTime();
+        return timeout.isPresent() && elapsed.isPresent() && elapsed.getAsLong() >= timeout.getAsLong();
     }
 
     /**
@@ -135,13 +162,6 @@ public class StateMachineContext {
      */
     public StateMachineContext remove(String key) {
         values.remove(key);
-        return this;
-    }
-
-    public StateMachineContext startTimer() {
-        getTimeout().ifPresentOrElse(
-                timeout -> put(TIMER_KEY, System.currentTimeMillis() + timeout.longValue()),
-                () -> remove(TIMER_KEY));
         return this;
     }
 

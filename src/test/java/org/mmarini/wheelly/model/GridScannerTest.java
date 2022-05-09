@@ -39,7 +39,7 @@ import java.util.stream.Stream;
 
 import static java.lang.Math.*;
 import static org.mmarini.ArgumentsGenerator.*;
-import static org.mmarini.wheelly.model.AbstractScannerMap.*;
+import static org.mmarini.wheelly.model.GridScannerMap.*;
 import static org.mmarini.wheelly.model.GridScannerMap.snapToGrid;
 import static org.mmarini.wheelly.model.Utils.*;
 
@@ -125,7 +125,7 @@ public interface GridScannerTest {
 
             int sensorDegDirection = ((Number) ary[3]).intValue();
             double echoDistance = ((Number) ary[4]).doubleValue();
-            ProxySample proxySample = ProxySample.create(sensorDegDirection, echoDistance, asset);
+            ProxySample proxySample = ProxySample.create(sensorDegDirection, echoDistance, asset, 0, false, false);
             Timed<ProxySample> timedSample = new Timed<>(proxySample, sampleTimestamp, TimeUnit.MILLISECONDS);
 
             double obstacleDistance = obstacleRelDistanceFunc.applyAsDouble(((Number) ary[5]).doubleValue(), echoDistance);
@@ -186,7 +186,7 @@ public interface GridScannerTest {
             RobotAsset asset = RobotAsset.create(robotX, robotY, robotDegDirection);
 
             int sensorDegDirection = ((Number) ary[3]).intValue();
-            ProxySample proxySample = ProxySample.create(sensorDegDirection, 0, asset);
+            ProxySample proxySample = ProxySample.create(sensorDegDirection, 0, asset, 0, false, false);
             Timed<ProxySample> timedSample = new Timed<>(proxySample, sampleTimestamp, TimeUnit.MILLISECONDS);
 
             double obstacleDistance = ((Number) ary[4]).doubleValue();

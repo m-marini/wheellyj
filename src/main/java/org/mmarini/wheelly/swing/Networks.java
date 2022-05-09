@@ -27,23 +27,16 @@
  *
  */
 
-package org.mmarini.wheelly.engines.statemachine;
+package org.mmarini.wheelly.swing;
 
-import io.reactivex.rxjava3.schedulers.Timed;
-import org.mmarini.Tuple2;
-import org.mmarini.wheelly.model.*;
+public class Networks {
+    private String[] networks;
 
-public interface EngineStatus {
-
-    Tuple2<MotionComand, Integer> HALT_COMMAND = Tuple2.of(AltCommand.create(), 0);
-    String STAY_EXIT = "Stay";
-    String TIMEOUT_EXIT = "Timeout";
-    String COMPLETED_EXIT = "Completed";
-    String OBSTACLE_EXIT = "Obstacle";
-
-    default EngineStatus activate(StateMachineContext context, InferenceMonitor monitor) {
-        return this;
+    public String[] getNetworks() {
+        return networks;
     }
 
-    StateTransition process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, StateMachineContext context, InferenceMonitor monitor);
+    public void setNetworks(String[] networks) {
+        this.networks = networks;
+    }
 }

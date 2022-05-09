@@ -41,6 +41,7 @@ import java.util.concurrent.TimeUnit;
 
 import static io.reactivex.rxjava3.core.Flowable.interval;
 import static java.lang.Integer.parseInt;
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -145,7 +146,7 @@ public class RawController implements RobotController {
                                 String line = t._1;
                                 String[] params = line.split(" ");
                                 if (params.length != 3) {
-                                    throw new IllegalArgumentException("Missing cps parameters");
+                                    throw new IllegalArgumentException(format("Wrong cps command \"%d\"", line));
                                 }
 
                                 long sampleInstant = t._2.fromRemote(Long.parseLong(params[1]));

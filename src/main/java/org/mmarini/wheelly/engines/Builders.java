@@ -43,6 +43,7 @@ import static org.mmarini.Utils.stream;
 import static org.mmarini.wheelly.engines.statemachine.ContextOperator.assign;
 import static org.mmarini.wheelly.engines.statemachine.ContextOperator.remove;
 import static org.mmarini.wheelly.engines.statemachine.EngineStatus.*;
+import static org.mmarini.wheelly.engines.statemachine.GotoStatus.UNREACHABLE_EXIT;
 import static org.mmarini.wheelly.engines.statemachine.StateMachineContext.TIMEOUT_KEY;
 
 public interface Builders {
@@ -58,6 +59,7 @@ public interface Builders {
                 .addTransition("safest", COMPLETED_EXIT, "goto",
                         ContextOperator.assign(GotoStatus.TARGET_KEY, NearestSafeStatus.TARGET_KEY))
                 .addTransition("goto", OBSTACLE_EXIT, "avoid")
+                .addTransition("goto", UNREACHABLE_EXIT, "safest")
                 .build("scan");
     }
 
@@ -101,13 +103,13 @@ public interface Builders {
                         assign(GotoStatus.TARGET_KEY, NextSequenceStatus.TARGET_KEY))
                 .addTransition("goto", GotoStatus.TARGET_REACHED_EXIT, "next")
                 .addTransition("goto", OBSTACLE_EXIT, "avoid")
-                .addTransition("goto", GotoStatus.UNREACHABLE_EXIT, "avoid")
+                .addTransition("goto", UNREACHABLE_EXIT, "findPath")
                 .addTransition("avoid", COMPLETED_EXIT, "safe")
                 .addTransition("safe", COMPLETED_EXIT, "gotoSafe",
                         assign(GotoStatus.TARGET_KEY, NearestSafeStatus.TARGET_KEY))
                 .addTransition("gotoSafe", GotoStatus.TARGET_REACHED_EXIT, "scan")
                 .addTransition("gotoSafe", OBSTACLE_EXIT, "avoid")
-                .addTransition("gotoSafe", GotoStatus.UNREACHABLE_EXIT, "safe")
+                .addTransition("gotoSafe", UNREACHABLE_EXIT, "safe")
                 .setParams(FindPathStatus.TARGET_KEY, targets.get(0))
                 .setParams(TIMEOUT_KEY, 2000)
                 .build("initial");

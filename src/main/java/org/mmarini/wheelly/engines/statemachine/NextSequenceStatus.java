@@ -66,17 +66,17 @@ public class NextSequenceStatus implements EngineStatus {
             logger.warn("Target list empty");
             context.remove(TARGET_KEY);
             context.remove(INDEX_KEY);
-            return StateTransition.create(MISSING_TARGET_EXIT, context, ALT_COMMAND);
+            return StateTransition.create(MISSING_TARGET_EXIT, context, HALT_COMMAND);
         }
-        int nextIndex = context.<Number>get(INDEX_KEY).orElse(-1).intValue() + 1;
+        int nextIndex = context.getInt(INDEX_KEY, -1) + 1;
         if (nextIndex >= list.size()) {
             context.remove(INDEX_KEY);
-            return StateTransition.create(COMPLETED_EXIT, context, ALT_COMMAND);
+            return StateTransition.create(COMPLETED_EXIT, context, HALT_COMMAND);
         }
         Point2D target = list.get(nextIndex);
         context.put(INDEX_KEY, nextIndex);
         context.put(TARGET_KEY, target);
         logger.debug("Selected target {} {}", nextIndex, target);
-        return StateTransition.create(TARGET_SELECTED_EXIT, context, ALT_COMMAND);
+        return StateTransition.create(TARGET_SELECTED_EXIT, context, HALT_COMMAND);
     }
 }

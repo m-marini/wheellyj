@@ -17,10 +17,10 @@
 #define ON_DIRECTION_RAD  (90 * PI / 180)
 #define LINEAR_DIRECTION_RAD  (30 * PI / 180)
 
-const float leftXCorrection[] = { -1,  -0.06055, 0, 0.02311, 1};
-const float leftYCorrection[] = { -1, -0.30432, 0, 0.12577, 1};
-const float rightXCorrection[] = { -1, -0.03759, 0, 0.02041, 1};
-const float rightYCorrection[] = { -1, -0.2667, 0, 0.12648, 1};
+const float leftXCorrection[] PROGMEM = { -1,  -0.06055, 0, 0.02311, 1};
+const float leftYCorrection[] PROGMEM = { -1, -0.30432, 0, 0.12577, 1};
+const float rightXCorrection[] PROGMEM = { -1, -0.03759, 0, 0.02041, 1};
+const float rightYCorrection[] PROGMEM = { -1, -0.2667, 0, 0.12648, 1};
 
 /*
   Creates the motion controller
@@ -113,12 +113,18 @@ void MotionCtrl::polling(unsigned long clockTime) {
   _checkTimer.polling(clockTime);
 }
 
-
 /*
 
 */
 const boolean MotionCtrl::isForward() const {
   return _speed > 0 || _left > 0 || _right > 0;
+}
+
+/*
+
+*/
+const boolean MotionCtrl::isBackward() const {
+  return _speed < 0 || _left < 0 || _right < 0;
 }
 
 /*

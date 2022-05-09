@@ -28,8 +28,8 @@ void SR04::start() {
   _noMeasures = 0;
   _noValidSamples = 0;
   _totalDuration = 0;
-  _measure();
   _timer.start();
+  _measure();
 }
 
 void SR04::stop() {
@@ -70,8 +70,8 @@ void SR04::_send() {
       _onSample(_context, distance);
     }
   } else {
-    _measure();
     _timer.start();
+    _measure();
   }
 }
 

@@ -62,7 +62,8 @@ public class FindPathStatus implements EngineStatus {
     public static final double DEFAULT_LIKELIHOOD_THRESHOLD = 0;
     private static final Logger logger = LoggerFactory.getLogger(FindPathStatus.class);
     private static final FindPathStatus SINGLETON = new FindPathStatus();
-    private static final double DEFAULT_EXTENSION_DISTANCE = 1;
+    private static final double DEFAULT_EXTENSION_DISTANCE = 3;
+    private static final String EXTENSION_DISTANCE_KEY = "FindPathStatus.extensionDistance";
 
     public static FindPathStatus create() {
         return SINGLETON;
@@ -79,40 +80,40 @@ public class FindPathStatus implements EngineStatus {
         return targetOpt.map(target -> {
                     Point start = map.cell(wheelly.sample.robotAsset.location);
                     Point goal = map.cell(target);
-                    double safeDistance = context.<Number>get(SAFE_DISTANCE_KEY).orElse(DEFAULT_SAFE_DISTANCE).doubleValue();
-                    double likelihoodThreshold = context.<Number>get(LIKELIHOOD_THRESHOLD_KEY).orElse(DEFAULT_LIKELIHOOD_THRESHOLD).doubleValue();
+                    double extensionDistance = context.getDouble(EXTENSION_DISTANCE_KEY, DEFAULT_EXTENSION_DISTANCE);
+                    double safeDistance = context.getDouble(SAFE_DISTANCE_KEY, DEFAULT_SAFE_DISTANCE);
+                    double likelihoodThreshold = context.getDouble(LIKELIHOOD_THRESHOLD_KEY, DEFAULT_LIKELIHOOD_THRESHOLD);
                     Set<Point> prohibited = ProhibitedCellFinder.create(map, safeDistance, likelihoodThreshold).find();
                     logger.debug("Finding path ...");
-                    List<Point> gridPath = AStar.findPath(start, goal, prohibited, ceil(DEFAULT_EXTENSION_DISTANCE / map.gridSize));
+                    List<Point> gridPath = AStar.findPath(start, goal, prohibited, ceil(extensionDistance / map.gridSize));
                     logger.debug("Path found grid: {}", gridPath);
                     if (gridPath.isEmpty()) {
                         context.remove(PATH_KEY);
                         logger.warn("Path not found");
-                        return StateTransition.create(NO_PATH_EXIT, context, ALT_COMMAND);
+                        return StateTransition.create(NO_PATH_EXIT, context, HALT_COMMAND);
                     }
                     if (gridPath.size() == 1) {
                         context.remove(PATH_KEY);
                         logger.warn("Target reached");
-                        return StateTransition.create(TARGET_REACHED_EXIT, context, ALT_COMMAND);
+                        return StateTransition.create(TARGET_REACHED_EXIT, context, HALT_COMMAND);
                     }
+                    // Remove origin
+                    gridPath.remove(0);
                     List<Point2D> path = gridPath.stream()
                             .map(map::toPoint)
                             .collect(Collectors.toList());
-                    path.set(0, wheelly.sample.robotAsset.location);
                     path.set(path.size() - 1, target);
-
                     path = new ArrayList<>(ProhibitedCellFinder.optimizePath(path, map.gridSize, prohibited::contains));
-//                    path.remove(0);
                     context.put(PATH_KEY, path);
                     logger.debug("Path: {}", path);
                     monitor.put(PATH_KEY, path);
-                    return StateTransition.create(PATH_EXIT, context, ALT_COMMAND);
+                    return StateTransition.create(PATH_EXIT, context, HALT_COMMAND);
                 }
         ).orElseGet(() -> {
             // No target
             logger.warn("Target not found");
             context.remove(PATH_KEY);
-            return StateTransition.create(NO_PATH_EXIT, context, ALT_COMMAND);
+            return StateTransition.create(NO_PATH_EXIT, context, HALT_COMMAND);
         });
     }
 }

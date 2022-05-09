@@ -60,6 +60,7 @@ public class StateMachineEngine implements InferenceEngine {
 
     @Override
     public InferenceEngine init(InferenceMonitor monitor) {
+        this.context.setEntryTime(System.currentTimeMillis());
         states.get(status).activate(this.context, monitor);
         return this;
     }

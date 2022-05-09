@@ -1,7 +1,6 @@
 .idea/*
 target/*
 /*.log
-/.wheelly.yml
 KC/wheelly/wheelly-backups/*
 
 docs/sonar-map.dxf~

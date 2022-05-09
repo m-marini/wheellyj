@@ -29,6 +29,8 @@
 
 package org.mmarini.wheelly.model;
 
+import static java.lang.String.format;
+
 /**
  * The clock sync event
  */
@@ -54,7 +56,7 @@ public class ClockSyncEvent {
     public static ClockSyncEvent from(String data, long destinationTimestamp) {
         String[] fields = data.split(" ");
         if (fields.length != 4) {
-            throw new IllegalArgumentException("Wrong number of clock fields");
+            throw new IllegalArgumentException(format("Wrong clock message \"%d\"", data));
         }
         long originateTimestamp = Long.parseLong(fields[1]);
         long receiveTimestamp = Long.parseLong(fields[2]);

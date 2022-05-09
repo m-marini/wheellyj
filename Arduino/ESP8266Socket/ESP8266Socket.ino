@@ -119,6 +119,8 @@ void loop(void) {
       hasClient = false;
       activity = false;
     }
+  } else {
+    flushSerial();
   }
   MDNS.update();
   if (activity && now >= clearActivityTime) {
@@ -126,6 +128,12 @@ void loop(void) {
   }
   webServer.handleClient();
   ledTimer.polling();
+}
+
+void flushSerial() {
+  while (Serial.available()) {
+    Serial.read();
+  }
 }
 
 void handleClient() {
