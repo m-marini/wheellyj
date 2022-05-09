@@ -50,14 +50,13 @@ import static java.lang.Math.ceil;
 import static org.mmarini.wheelly.model.RobotController.STOP_DISTANCE;
 
 public class FindPathStatus implements EngineStatus {
-    public static final String PATH_EXIT = "Path";
     public static final String NO_PATH_EXIT = "NoPath";
     public static final String TARGET_REACHED_EXIT = "TargetReached";
 
     public static final String TARGET_KEY = "FindPathStatus.target";
     public static final String PATH_KEY = "FindPathStatus.path";
     public static final String SAFE_DISTANCE_KEY = "FindPathStatus.safeDistance";
-    public static final String LIKELIHOOD_THRESHOLD_KEY = "FindPathStatus.lilelihoodThreshold";
+    public static final String LIKELIHOOD_THRESHOLD_KEY = "FindPathStatus.likelihoodThreshold";
     public static final double DEFAULT_SAFE_DISTANCE = 1.5 * STOP_DISTANCE;
     public static final double DEFAULT_LIKELIHOOD_THRESHOLD = 0;
     private static final Logger logger = LoggerFactory.getLogger(FindPathStatus.class);
@@ -107,7 +106,7 @@ public class FindPathStatus implements EngineStatus {
                     context.put(PATH_KEY, path);
                     logger.debug("Path: {}", path);
                     monitor.put(PATH_KEY, path);
-                    return StateTransition.create(PATH_EXIT, context, HALT_COMMAND);
+                    return StateTransition.create(COMPLETED_EXIT, context, HALT_COMMAND);
                 }
         ).orElseGet(() -> {
             // No target

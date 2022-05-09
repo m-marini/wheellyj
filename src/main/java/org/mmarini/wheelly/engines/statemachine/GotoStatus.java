@@ -44,7 +44,6 @@ import static org.mmarini.wheelly.model.RobotController.STOP_DISTANCE;
 import static org.mmarini.wheelly.model.Utils.direction;
 
 public class GotoStatus implements EngineStatus {
-    public static final String TARGET_REACHED_EXIT = "TargetReached";
     public static final String UNREACHABLE_EXIT = "Unreachable";
 
     public static final String TARGET_KEY = "GotoStatus.target";
@@ -105,7 +104,7 @@ public class GotoStatus implements EngineStatus {
                     // Check for targetOpt reached
                     if (distance <= thresholdDistance) {
                         logger.debug("Target reached");
-                        return StateTransition.create(TARGET_REACHED_EXIT, context, HALT_COMMAND);
+                        return StateTransition.create(COMPLETED_EXIT, context, HALT_COMMAND);
                     }
                     // Check for obstacles
                     boolean canMove = sample.canMoveForward;
@@ -155,7 +154,7 @@ public class GotoStatus implements EngineStatus {
                 .orElseGet(() -> {
                     // Missing target
                     logger.debug("Missing target location");
-                    return StateTransition.create(TARGET_REACHED_EXIT, context, HALT_COMMAND);
+                    return StateTransition.create(COMPLETED_EXIT, context, HALT_COMMAND);
                 });
     }
 }

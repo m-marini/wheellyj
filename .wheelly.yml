@@ -13,7 +13,7 @@ startQueryDelay: 150
 motorCommandInterval: 700
 scanCommandInterval: 700
 
-engine: /engines/sala
+engine: /engines/random
 
 engines:
   manual:
@@ -27,34 +27,27 @@ engines:
   sequence:
     builder: org.mmarini.wheelly.engines.Builders.sequence
     targets:
-      - x: 0
-        y: 0
-      - x: 1
-        y: 1
-      - x: 1
-        y: 0
+    - [0, 0]
+    - [1, 1]
+    - [1, 0]
     thresholdDistance: 0.1
+  random:
+    builder: org.mmarini.wheelly.engines.Builders.randomPath
+    maxDistance: 2
+#    center: [0, 0]
   sala:
     builder: org.mmarini.wheelly.engines.Builders.findPath
-    targets:
-      - x: 2.3
-        y: 3
-      - x: 0
-        y: 0
+    target: [2.3, 3]
     thresholdDistance: 0.1
     safeDistance: 0.3
   lab:
     builder: org.mmarini.wheelly.engines.Builders.findPath
-    targets:
-      - x: 0.8
-        y: 0
+    target: [0.8, 0]
     thresholdDistance: 0.1
     safeDistance: 0.3
   gotoTest:
     builder: org.mmarini.wheelly.engines.Builders.gotoTest
-    targets:
-      - x: 1
-        y: 0
+    target: [1, 0]
     thresholdDistance: 0.1
     safeDistance: 0.3
   avoid:
