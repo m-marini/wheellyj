@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #18: Automatic send of status and asset
 - Issue #19: Speed sensor management
 - Issue #22: Change messaging
+- Issue #25: Adjust increasing reliability of movement algorithm
 - Issue #24: Create a proxy map by robot asset
 - Issue #27: Add the gyroscope data asset
 - Issue #31: Add map display with robot and obstacles, create base engine to manage different automa behavior
@@ -32,6 +33,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #49: Add contact sensors
 - Issue #50: Select random target
 - Issue #51: Add select nearest safe location
+- Issue #53: Add speed feedback to motor controller
 
 ## Changed
 
