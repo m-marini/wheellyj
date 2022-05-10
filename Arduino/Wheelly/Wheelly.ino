@@ -31,8 +31,10 @@
 #define RIGHT_PIN       10
 #define LEFT_FORW_PIN   11
 #define PROXY_LED_PIN   12
-#define CONTACTS_PIN    A2
-#define VOLTAGE_PIN     A3
+
+#define FRONT_CONTACTS_PIN  A1
+#define REAR_CONTACTS_PIN   A2
+#define VOLTAGE_PIN         A3
 
 /*
    Serial config
@@ -85,7 +87,7 @@
 /*
    Voltage scale
 */
-#define VOLTAGE_SCALE (4.75 * 3 / 1023)
+#define VOLTAGE_SCALE 15.22e-3
 
 /*
    Voltage scale
@@ -146,25 +148,15 @@ bool imuFailure;
 
 /*
    Contact signals
-   0 -> 20
-   1 -> 118
-   2 -> 210
-   3 -> 275
-   4 -> 360
-   5 -> 405
-   6 -> 448
-   7 -> 484
-   8 -> 525
-   9 -> 550
-   10 -> 577
-   11 -> 600
-   12 -> 625
-   13 -> 640
-   14 -> 660
-   15 -> 674
+   0 -> 0
+   1 -> 340
+   2 -> 509
+   3 -> 610
 */
-int contactSignals;
-const int contactLevels[] PROGMEM = {69, 164, 243, 318, 383, 427, 466, 505, 538, 564, 589, 613, 633, 650, 667};
+int frontSignals;
+int rearSignals;
+byte contactSignals;
+const int contactLevels[] PROGMEM = {170, 424, 560};
 
 /*
    Set up
@@ -306,9 +298,16 @@ void pollSerialPort() {
 
 void pollContactSensors() {
   //  int contactSensors = analogRead(CONTACTS_PIN);
-  int value = analogRead(CONTACTS_PIN);
-  contactSignals = 0;
-  while (contactSignals < sizeof(contactLevels) / sizeof(contactLevels[0])) {
+  frontSignals = analogRead(FRONT_CONTACTS_PIN);
+  rearSignals = analogRead(REAR_CONTACTS_PIN);
+  contactSignals = decodeContactSignals(frontSignals) * 4
+                   + decodeContactSignals(rearSignals);
+}
+#define NO_LEVELS (sizeof(contactLevels) / sizeof(contactLevels[0]))
+
+int decodeContactSignals(int value) {
+  int contactSignals = 0;
+  while (contactSignals < NO_LEVELS) {
     int threshold = pgm_read_word_near(&contactLevels[contactSignals]);
     DEBUG_PRINT(F("// threshold: "));
     DEBUG_PRINT(threshold);
@@ -316,12 +315,12 @@ void pollContactSensors() {
     DEBUG_PRINT(value);
     DEBUG_PRINTLN();
     DEBUG_PRINT(threshold);
-    //int threshold = contactLevels[contactSignals];
     if (value <= threshold) {
       break;
     }
     contactSignals++;
   }
+  return contactSignals;
 }
 
 bool isFrontContact() {
