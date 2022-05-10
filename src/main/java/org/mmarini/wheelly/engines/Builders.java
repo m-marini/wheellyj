@@ -36,6 +36,8 @@ import org.mmarini.wheelly.swing.RxJoystick;
 import org.mmarini.wheelly.swing.RxJoystickImpl;
 import org.mmarini.wheelly.swing.Yaml;
 import org.mmarini.yaml.schema.Locator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
 import java.util.List;
@@ -51,6 +53,8 @@ import static org.mmarini.wheelly.swing.Yaml.point;
 import static org.mmarini.wheelly.swing.Yaml.points;
 
 public interface Builders {
+
+     Logger logger = LoggerFactory.getLogger(Builders.class);
 
     static InferenceEngine avoidObstacle(JsonNode config) {
         return StateMachineBuilder.create()
@@ -70,6 +74,9 @@ public interface Builders {
     static InferenceEngine findPath(JsonNode config) {
         point().apply(Locator.root().path("target")).accept(config);
         Point2D target = point(config.path("target")).orElseThrow();
+        double safeDistance = config.path("safeDistance").asDouble(FindPathStatus.DEFAULT_SAFE_DISTANCE);
+        double thresholdDistance = config.path("thresholdDistance").asDouble(GotoStatus.FINAL_DISTANCE);
+        logger.debug("Target: {}", target);
         return StateMachineBuilder.create()
                 .addState("initial", StopStatus.create())
                 .addState("scan", ScanStatus.create())
@@ -100,6 +107,8 @@ public interface Builders {
                 .addTransition("gotoSafe", UNREACHABLE_EXIT, "safe")
                 .setParams(FindPathStatus.TARGET_KEY, target)
                 .setParams(TIMEOUT_KEY, 2000)
+                .setParams(GotoStatus.DISTANCE_KEY,thresholdDistance)
+                .setParams(FindPathStatus.SAFE_DISTANCE_KEY, safeDistance)
                 .build("initial");
     }
 

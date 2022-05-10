@@ -1,12 +1,30 @@
 #ifndef MotionCtrl_h
 #define MotionCtrl_h
 
-#include "MotorCtrl.h"
 #include "MotionSensor.h"
 #include "Timer.h"
 
+#define NO_POINTS 5
+
 /*
-   Multiplexer
+ * Motor ontroller
+ */
+class MotorCtrl {
+  public:
+    MotorCtrl(byte forwPin, byte backPin);
+    void begin();
+    void speed(float value);
+    void setCorrection(float *x, float *y);
+    
+  private:
+    byte _forwPin;
+    byte _backPin;
+    float *_x, *_y;
+    float func(float x);
+};
+
+/*
+   Motion controller
 */
 class MotionCtrl {
   public:

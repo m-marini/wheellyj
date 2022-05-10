@@ -56,7 +56,7 @@ public class GridScannerMap implements ScannerMap {
     public static final double NO_SENSITIVITY_ANGLE = toRadians(45);
     public static final double THRESHOLD_LIKELIHOOD = 10e-3;
     public static final long HOLD_DURATION = 60000;
-    public static final double LIKELIHOOD_TAU = HOLD_DURATION / 5000.;
+    public static final double LIKELIHOOD_TAU = HOLD_DURATION / 2000.;
 
     public static Point cell(Point2D location, double gridSize) {
         double x = location.getX();

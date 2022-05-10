@@ -1,9 +1,13 @@
 #include "MotionSensor.h"
 
+
 //#define DEBUG
 #include "debug.h"
 
+#include "Utils.h"
+
 #define ANGLE_PER_PULSE (DISTANCE_PER_PULSE / TRACK)
+#define FILTER_DECAY  (1.0 / 200.0)
 
 /*
 
@@ -88,7 +92,7 @@ void MotionSensor::update(unsigned long clockTime) {
   DEBUG_PRINTLN();
 
   // Updates angle
-  _angle = normAngle(_angle + (_dl - _dr) * ANGLE_PER_PULSE);
+  _angle = normalRad(_angle + (_dl - _dr) * ANGLE_PER_PULSE);
 
   DEBUG_PRINT(F("// angle "));
   DEBUG_PRINT(_angle * 180 / PI);
@@ -100,28 +104,153 @@ void MotionSensor::update(unsigned long clockTime) {
   DEBUG_PRINT(y());
   DEBUG_PRINTLN();
 
+  DEBUG_PRINT(F("// pps "));
+  DEBUG_PRINT(leftPps());
+  DEBUG_PRINT(F(", "));
+  DEBUG_PRINT(rightPps());
+  DEBUG_PRINTLN();
+
   if (_onChange != NULL) {
     _onChange(_context, clockTime, *this);
   }
 }
 
 /*
-   Returns the normalized angle in range (-PI, PI)
+
 */
-float normAngle(float angle) {
-  while (angle <= PI) {
-    angle += (PI + PI);
-  }
-  while (angle > PI) {
-    angle -= (PI + PI);
-  }
-  return angle;
+void MotionSensor::setOnChange(void (*callback)(void* context, unsigned long clockTime, MotionSensor& sensor), void* context = NULL) {
+  _onChange = callback;
+  _context = context;
+}
+
+
+/*
+
+*/
+MotorSensor::MotorSensor(byte sensorPin) {
+  _sensorPin = sensorPin;
+  _forward = true;
 }
 
 /*
- * 
- */
-void MotionSensor::setOnChange(void (*callback)(void* context, unsigned long clockTime, MotionSensor& sensor), void* context = NULL){
-  _onChange = callback;
-  _context = context;
+
+*/
+void MotorSensor::begin() {
+  pinMode(_sensorPin, INPUT);
+  _speedometer.reset();
+  _filter.reset(millis());
+}
+
+/*
+
+*/
+void MotorSensor::reset() {
+  _forward = true;
+  _pulses = 0;
+  _speedometer.reset();
+  _filter.reset(millis());
+}
+
+/*
+
+*/
+void MotorSensor::setDirection(float speed) {
+  DEBUG_PRINT(F("// MotorSensor::setDirection "));
+  DEBUG_PRINT(speed);
+  DEBUG_PRINTLN();
+
+  if (speed > 0) {
+    _forward = true;
+  } else if (speed < 0) {
+    _forward = false;
+  } else {
+    _speedometer.reset();
+    _filter.reset(millis());
+  }
+}
+
+/*
+
+*/
+void MotorSensor::polling(unsigned long clockTime) {
+  int pulse = digitalRead(_sensorPin);
+  int dPulse = pulse != _pulse ? _forward ? 1 : -1 : 0;
+
+  _pulse = pulse;
+  if (dPulse != 0) {
+    update(dPulse, clockTime);
+  }
+  _filter.value(_speedometer.pps(clockTime), clockTime);
+}
+
+/*
+
+*/
+void MotorSensor::update(int dPulse, unsigned long clockTime) {
+  _pulses += dPulse;
+
+  DEBUG_PRINT(F("// MotorSensor::update dPulse:"));
+  DEBUG_PRINT(dPulse);
+  DEBUG_PRINT(F(", _pulses "));
+  DEBUG_PRINT(_pulses);
+  DEBUG_PRINTLN();
+
+  if (dPulse < 0) {
+    _speedometer.backward(clockTime);
+  } else if (dPulse > 0) {
+    _speedometer.forward(clockTime);
+  }
+  if (_onSample != NULL) {
+    _onSample(_context, dPulse, clockTime, *this);
+  }
+}
+
+/*
+   Speedometer section
+*/
+
+void Speedometer::forward(unsigned long clockTime) {
+  unsigned long dt = clockTime - _prevTime;
+  if (dt > 0) {
+    _pps = 1000.0 / dt;
+    _prevTime = clockTime;
+  }
+}
+
+void Speedometer::backward(unsigned long clockTime) {
+  unsigned long dt = clockTime - _prevTime;
+  if (dt > 0) {
+    _pps = -1000.0 / dt;
+    _prevTime = clockTime;
+  }
+}
+
+const float Speedometer::pps(unsigned long clockTime) const {
+  unsigned long dt = clockTime - _prevTime;
+  if (dt > 0 && _pps != 0) {
+    float pps = (_pps < 0 ? -1000.0 : 1000.0) / dt;
+    return abs(pps) <= abs(_pps) ? pps : _pps;
+  } else {
+    return _pps;
+  }
+}
+
+void Speedometer::reset() {
+  _pps = 0;
+  _prevTime = millis();
+}
+
+/*
+   Low pass filter section
+*/
+
+void LowPassFilter::value(float value, unsigned long clockTime) {
+  float x = min((clockTime - _prevTime) * FILTER_DECAY, 1);
+  _value -= (_value + value) * x;
+  _prevTime = clockTime;
+}
+
+void LowPassFilter::reset(unsigned long clockTime) {
+  _value = 0;
+  _prevTime = clockTime;
 }

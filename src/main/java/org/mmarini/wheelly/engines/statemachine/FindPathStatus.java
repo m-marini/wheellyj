@@ -76,6 +76,8 @@ public class FindPathStatus implements EngineStatus {
         WheellyStatus wheelly = data._1.value();
         GridScannerMap map = (GridScannerMap) data._2;
         Optional<Point2D> targetOpt = context.get(TARGET_KEY);
+        context.remove(PATH_KEY);
+        monitor.remove(PATH_KEY);
         return targetOpt.map(target -> {
                     Point start = map.cell(wheelly.sample.robotAsset.location);
                     Point goal = map.cell(target);
@@ -83,16 +85,12 @@ public class FindPathStatus implements EngineStatus {
                     double safeDistance = context.getDouble(SAFE_DISTANCE_KEY, DEFAULT_SAFE_DISTANCE);
                     double likelihoodThreshold = context.getDouble(LIKELIHOOD_THRESHOLD_KEY, DEFAULT_LIKELIHOOD_THRESHOLD);
                     Set<Point> prohibited = ProhibitedCellFinder.create(map, safeDistance, likelihoodThreshold).find();
-                    logger.debug("Finding path ...");
                     List<Point> gridPath = AStar.findPath(start, goal, prohibited, ceil(extensionDistance / map.gridSize));
-                    logger.debug("Path found grid: {}", gridPath);
                     if (gridPath.isEmpty()) {
-                        context.remove(PATH_KEY);
                         logger.warn("Path not found");
                         return StateTransition.create(NO_PATH_EXIT, context, HALT_COMMAND);
                     }
                     if (gridPath.size() == 1) {
-                        context.remove(PATH_KEY);
                         logger.warn("Target reached");
                         return StateTransition.create(TARGET_REACHED_EXIT, context, HALT_COMMAND);
                     }
@@ -111,7 +109,6 @@ public class FindPathStatus implements EngineStatus {
         ).orElseGet(() -> {
             // No target
             logger.warn("Target not found");
-            context.remove(PATH_KEY);
             return StateTransition.create(NO_PATH_EXIT, context, HALT_COMMAND);
         });
     }

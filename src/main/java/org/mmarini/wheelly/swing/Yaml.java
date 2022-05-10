@@ -85,8 +85,8 @@ public class Yaml {
         requireNonNull(root);
         return root.isMissingNode() ? Optional.empty()
                 : Optional.of(new Point2D.Double(
-                root.path("0").asDouble(),
-                root.path("1").asDouble()));
+                root.get(0).asDouble(),
+                root.get(1).asDouble()));
     }
 
     public static List<Point2D> points(JsonNode root) {
