@@ -58,7 +58,7 @@ public class GridScannerMapNoEchoTest implements GridScannerTest {
     @MethodSource("test1ArgSet")
     void test1(TestSet args) {
         List<Obstacle> obstacles = List.of(args.obstacle);
-        GridScannerMap map = GridScannerMap.create(obstacles, THRESHOLD_DISTANCE);
+        GridScannerMap map = GridScannerMap.create(obstacles, THRESHOLD_DISTANCE, THRESHOLD_DISTANCE, 0);
 
         /*
         When create the new map from sample

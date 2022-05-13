@@ -40,9 +40,9 @@ import java.util.function.UnaryOperator;
 
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.engines.statemachine.EngineStatus.STAY_EXIT;
+import static org.mmarini.wheelly.engines.statemachine.StopStatus.END_STATUS;
 
 public class StateMachineEngine implements InferenceEngine {
-    public static final String END_STATUS = "End";
     private static final Logger logger = LoggerFactory.getLogger(StateMachineEngine.class);
 
     private final Map<String, EngineStatus> states;
@@ -60,15 +60,13 @@ public class StateMachineEngine implements InferenceEngine {
 
     @Override
     public InferenceEngine init(InferenceMonitor monitor) {
-        this.context.setEntryTime(System.currentTimeMillis());
         states.get(status).activate(this.context, monitor);
         return this;
     }
 
     @Override
-    public Tuple2<MotionComand, Integer> process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, InferenceMonitor monitor) {
+    public Tuple2<MotionComand, Integer> process(Timed<MapStatus> data, InferenceMonitor monitor) {
         StateTransition result = states.get(status).process(data, context, monitor);
-        this.context = result.context;
 
         if (!STAY_EXIT.equals(result.exit)) {
             Tuple2<String, String> key = Tuple2.of(status, result.exit);
@@ -84,7 +82,6 @@ public class StateMachineEngine implements InferenceEngine {
                 context = next._2.apply(context);
             }
             context.setStatusName(status);
-            context.setEntryTime(System.currentTimeMillis());
             states.get(status).activate(context, monitor);
         }
         return result.commands;

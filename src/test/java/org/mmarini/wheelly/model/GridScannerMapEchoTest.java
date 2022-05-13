@@ -125,13 +125,13 @@ public class GridScannerMapEchoTest implements GridScannerTest {
     @MethodSource("test1ArgSet")
     void test1(TestSet args) {
         List<Obstacle> obstacles = List.of(args.obstacle);
-        GridScannerMap map = GridScannerMap.create(obstacles, THRESHOLD_DISTANCE);
+        GridScannerMap map = GridScannerMap.create(obstacles, THRESHOLD_DISTANCE, THRESHOLD_DISTANCE, 0);
 
         /*
         When create the new map from sample
          */
         Point2D obstacleLocation = args.obstacle.location;
-        Optional<Point2D> echoLocation = args.proxySample.value().getLocation();
+        Optional<Point2D> echoLocation = args.proxySample.value().getSampleLocation();
         Point2D echoSnapLocation = echoLocation.map(l -> snapToGrid(l, THRESHOLD_DISTANCE)).orElseThrow();
         long timestamp = args.proxySample.time(TimeUnit.MILLISECONDS);
         List<Obstacle> result = map.createObstacles(args.proxySample).collect(Collectors.toList());
@@ -156,12 +156,12 @@ public class GridScannerMapEchoTest implements GridScannerTest {
     @MethodSource("test10ArgSet")
     void test10(TestSet args) {
         List<Obstacle> obstacles = List.of(args.obstacle);
-        GridScannerMap map = GridScannerMap.create(obstacles, THRESHOLD_DISTANCE);
+        GridScannerMap map = GridScannerMap.create(obstacles, THRESHOLD_DISTANCE, THRESHOLD_DISTANCE, 0);
 
         /*
         When create the new map from sample
          */
-        Optional<Point2D> echoLocation = args.proxySample.value().getLocation();
+        Optional<Point2D> echoLocation = args.proxySample.value().getSampleLocation();
         Point2D echoSnapLocation = echoLocation.map(l -> snapToGrid(l, THRESHOLD_DISTANCE)).orElseThrow();
         long timestamp = args.proxySample.time(TimeUnit.MILLISECONDS);
         List<Obstacle> result = map.createObstacles(args.proxySample).collect(Collectors.toList());
@@ -184,13 +184,13 @@ public class GridScannerMapEchoTest implements GridScannerTest {
     @MethodSource("test2ArgSet")
     void test2(TestSet args) {
         List<Obstacle> obstacles = List.of(args.obstacle);
-        GridScannerMap map = GridScannerMap.create(obstacles, THRESHOLD_DISTANCE);
+        GridScannerMap map = GridScannerMap.create(obstacles, THRESHOLD_DISTANCE, THRESHOLD_DISTANCE, 0);
 
         /*
         When create the new map from sample
          */
         Point2D obstacleLocation = args.obstacle.location;
-        Optional<Point2D> echoLocation = args.proxySample.value().getLocation();
+        Optional<Point2D> echoLocation = args.proxySample.value().getSampleLocation();
         Point2D echoSnapLocation = echoLocation.map(l -> snapToGrid(l, THRESHOLD_DISTANCE)).orElseThrow();
         long timestamp = args.proxySample.time(TimeUnit.MILLISECONDS);
         List<Obstacle> result = map.createObstacles(args.proxySample).collect(Collectors.toList());
@@ -198,7 +198,7 @@ public class GridScannerMapEchoTest implements GridScannerTest {
         /*
         Then should return an empty map (the obstacle should be removed
          */
-        double echoDistance = args.proxySample.value().distance;
+        double echoDistance = args.proxySample.value().getSampleDistance();
         double reinforce = min(max(
                 linear(args.getObstacleSensorDistance(),
                         echoDistance - THRESHOLD_DISTANCE - FUZZY_THRESHOLD_DISTANCE, echoDistance - THRESHOLD_DISTANCE,
@@ -231,13 +231,13 @@ public class GridScannerMapEchoTest implements GridScannerTest {
     @MethodSource("test3ArgSet")
     void test3(TestSet args) {
         List<Obstacle> obstacles = List.of(args.obstacle);
-        GridScannerMap map = GridScannerMap.create(obstacles, THRESHOLD_DISTANCE);
+        GridScannerMap map = GridScannerMap.create(obstacles, THRESHOLD_DISTANCE, THRESHOLD_DISTANCE, 0);
 
         /*
         When create the new map from sample
          */
         Point2D obstacleLocation = args.obstacle.location;
-        Optional<Point2D> echoLocation = args.proxySample.value().getLocation();
+        Optional<Point2D> echoLocation = args.proxySample.value().getSampleLocation();
         Point2D echoSnapLocation = echoLocation.map(l -> snapToGrid(l, THRESHOLD_DISTANCE)).orElseThrow();
         boolean isTarget = echoSnapLocation.equals(obstacleLocation);
         long timestamp = args.proxySample.time(TimeUnit.MILLISECONDS);
@@ -270,13 +270,13 @@ public class GridScannerMapEchoTest implements GridScannerTest {
     @MethodSource("test4ArgSet")
     void test4(TestSet args) {
         List<Obstacle> obstacles = List.of(args.obstacle);
-        GridScannerMap map = GridScannerMap.create(obstacles, THRESHOLD_DISTANCE);
+        GridScannerMap map = GridScannerMap.create(obstacles, THRESHOLD_DISTANCE, THRESHOLD_DISTANCE, 0);
 
         /*
         When create the new map from sample
          */
         Point2D obstacleLocation = args.obstacle.location;
-        Optional<Point2D> echoLocation = args.proxySample.value().getLocation();
+        Optional<Point2D> echoLocation = args.proxySample.value().getSampleLocation();
         Point2D echoSnapLocation = echoLocation.map(l -> snapToGrid(l, THRESHOLD_DISTANCE)).orElseThrow();
         boolean isTarget = echoSnapLocation.equals(obstacleLocation);
         long timestamp = args.proxySample.time(TimeUnit.MILLISECONDS);
@@ -285,7 +285,7 @@ public class GridScannerMapEchoTest implements GridScannerTest {
         /*
         Then should return an empty map (the obstacle should be removed
          */
-        double echoDistance = args.proxySample.value().distance;
+        double echoDistance = args.proxySample.value().getSampleDistance();
         double reinforce = linear(args.getObstacleSensorDistance(), echoDistance + THRESHOLD_DISTANCE, echoDistance + THRESHOLD_DISTANCE + FUZZY_THRESHOLD_DISTANCE, 1, 0);
         long dt = timestamp - args.obstacle.timestamp;
         double obsTimeLike = args.obstacle.likelihood * exp(-dt / 1000d / LIKELIHOOD_TAU);
@@ -314,13 +314,13 @@ public class GridScannerMapEchoTest implements GridScannerTest {
     @MethodSource("test5ArgSet")
     void test5(TestSet args) {
         List<Obstacle> obstacles = List.of(args.obstacle);
-        GridScannerMap map = GridScannerMap.create(obstacles, THRESHOLD_DISTANCE);
+        GridScannerMap map = GridScannerMap.create(obstacles, THRESHOLD_DISTANCE, THRESHOLD_DISTANCE, 0);
 
         /*
         When create the new map from sample
          */
         Point2D obstacleLocation = args.obstacle.location;
-        Optional<Point2D> echoLocation = args.proxySample.value().getLocation();
+        Optional<Point2D> echoLocation = args.proxySample.value().getSampleLocation();
         Point2D echoSnapLocation = echoLocation.map(l -> snapToGrid(l, THRESHOLD_DISTANCE)).orElseThrow();
         long timestamp = args.proxySample.time(TimeUnit.MILLISECONDS);
         List<Obstacle> result = map.createObstacles(args.proxySample).collect(Collectors.toList());
@@ -350,18 +350,18 @@ public class GridScannerMapEchoTest implements GridScannerTest {
     @MethodSource("test6ArgSet")
     void test6(TestSet args) {
         List<Obstacle> obstacles = List.of(args.obstacle);
-        GridScannerMap map = GridScannerMap.create(obstacles, THRESHOLD_DISTANCE);
+        GridScannerMap map = GridScannerMap.create(obstacles, THRESHOLD_DISTANCE, THRESHOLD_DISTANCE, 0);
 
         /*
         When create the new map from sample
          */
         Point2D obstacleLocation = args.obstacle.location;
-        Optional<Point2D> echoLocation = args.proxySample.value().getLocation();
+        Optional<Point2D> echoLocation = args.proxySample.value().getSampleLocation();
         Point2D echoSnapLocation = echoLocation.map(l -> snapToGrid(l, THRESHOLD_DISTANCE)).orElseThrow();
         long timestamp = args.proxySample.time(TimeUnit.MILLISECONDS);
         List<Obstacle> result = map.createObstacles(args.proxySample).collect(Collectors.toList());
 
-        double echoDistance = args.proxySample.value().distance;
+        double echoDistance = args.proxySample.value().getSampleDistance();
         double isOnDirection = min(max(
                 linear(abs(args.getObstacleSensorDeg()), 45, 30, 0, 1),
                 0), 1);
@@ -398,13 +398,13 @@ public class GridScannerMapEchoTest implements GridScannerTest {
     @MethodSource("test7ArgSet")
     void test7(TestSet args) {
         List<Obstacle> obstacles = List.of(args.obstacle);
-        GridScannerMap map = GridScannerMap.create(obstacles, THRESHOLD_DISTANCE);
+        GridScannerMap map = GridScannerMap.create(obstacles, THRESHOLD_DISTANCE, THRESHOLD_DISTANCE, 0);
 
         /*
         When create the new map from sample
          */
         Point2D obstacleLocation = args.obstacle.location;
-        Optional<Point2D> echoLocation = args.proxySample.value().getLocation();
+        Optional<Point2D> echoLocation = args.proxySample.value().getSampleLocation();
         Point2D echoSnapLocation = echoLocation.map(l -> snapToGrid(l, THRESHOLD_DISTANCE)).orElseThrow();
         long timestamp = args.proxySample.time(TimeUnit.MILLISECONDS);
         List<Obstacle> result = map.createObstacles(args.proxySample).collect(Collectors.toList());
@@ -434,18 +434,18 @@ public class GridScannerMapEchoTest implements GridScannerTest {
     @MethodSource("test8ArgSet")
     void test8(TestSet args) {
         List<Obstacle> obstacles = List.of(args.obstacle);
-        GridScannerMap map = GridScannerMap.create(obstacles, THRESHOLD_DISTANCE);
+        GridScannerMap map = GridScannerMap.create(obstacles, THRESHOLD_DISTANCE, THRESHOLD_DISTANCE, 0);
 
         /*
         When create the new map from sample
          */
         Point2D obstacleLocation = args.obstacle.location;
-        Optional<Point2D> echoLocation = args.proxySample.value().getLocation();
+        Optional<Point2D> echoLocation = args.proxySample.value().getSampleLocation();
         Point2D echoSnapLocation = echoLocation.map(l -> snapToGrid(l, THRESHOLD_DISTANCE)).orElseThrow();
         long timestamp = args.proxySample.time(TimeUnit.MILLISECONDS);
         List<Obstacle> result = map.createObstacles(args.proxySample).collect(Collectors.toList());
 
-        double echoDistance = args.proxySample.value().distance;
+        double echoDistance = args.proxySample.value().getSampleDistance();
         double distanceReinforce = linear(args.getObstacleSensorDistance(), echoDistance + THRESHOLD_DISTANCE, echoDistance + THRESHOLD_DISTANCE + FUZZY_THRESHOLD_DISTANCE, 1, 0);
         double directionReinforce = min(max(linear(abs(args.getObstacleSensorDeg()), NO_SENSITIVITY_DEG, MAX_SENSITIVITY_DEG, 0, 1), 0), 1);
         double reinforce = min(distanceReinforce, directionReinforce);
@@ -473,12 +473,12 @@ public class GridScannerMapEchoTest implements GridScannerTest {
     @MethodSource("test9ArgSet")
     void test9(TestSet args) {
         List<Obstacle> obstacles = List.of(args.obstacle);
-        GridScannerMap map = GridScannerMap.create(obstacles, THRESHOLD_DISTANCE);
+        GridScannerMap map = GridScannerMap.create(obstacles, THRESHOLD_DISTANCE, THRESHOLD_DISTANCE, 0);
 
         /*
         When create the new map from sample
          */
-        Optional<Point2D> echoLocation = args.proxySample.value().getLocation();
+        Optional<Point2D> echoLocation = args.proxySample.value().getSampleLocation();
         Point2D echoSnapLocation = echoLocation.map(l -> snapToGrid(l, THRESHOLD_DISTANCE)).orElseThrow();
         long timestamp = args.proxySample.time(TimeUnit.MILLISECONDS);
         List<Obstacle> result = map.createObstacles(args.proxySample).collect(Collectors.toList());

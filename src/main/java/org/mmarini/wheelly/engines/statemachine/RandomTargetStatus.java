@@ -30,11 +30,10 @@
 package org.mmarini.wheelly.engines.statemachine;
 
 import io.reactivex.rxjava3.schedulers.Timed;
-import org.mmarini.Tuple2;
 import org.mmarini.wheelly.model.GridScannerMap;
 import org.mmarini.wheelly.model.InferenceMonitor;
-import org.mmarini.wheelly.model.ScannerMap;
-import org.mmarini.wheelly.model.WheellyStatus;
+import org.mmarini.wheelly.model.MapStatus;
+import org.mmarini.wheelly.model.ProhibitedCellFinder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,41 +42,55 @@ import java.awt.geom.Point2D;
 import java.util.Random;
 import java.util.Set;
 
+import static org.mmarini.wheelly.engines.statemachine.StateMachineContext.TARGET_KEY;
+import static org.mmarini.wheelly.engines.statemachine.StateTransition.COMPLETED_TRANSITION;
 import static org.mmarini.wheelly.model.RobotController.STOP_DISTANCE;
 
-public class RandomTargetStatus implements EngineStatus {
+public class RandomTargetStatus extends AbstractEngineStatus {
     public static final String NOT_FOUND_EXIT = "NotFound";
-    public static final String SAFE_DISTANCE_KEY = "RandomTargetStatus.safeDistance";
-    public static final String LIKELIHOOD_THRESHOLD_KEY = "RandomTargetStatus.likelihoodThreshold";
-    public static final String TARGET_KEY = "RandomTargetStatus.target";
-    public static final String MAX_DISTANCE_KEY = "RandomTargetStatus.maxDistance";
-    public static final String CENTER_KEY = "RandomTargetStatus.center";
+    public static final StateTransition NOT_FOUND_TRANSTION = StateTransition.create(NOT_FOUND_EXIT, HALT_COMMAND);
+    public static final String SAFE_DISTANCE_KEY = "safeDistance";
+    public static final String LIKELIHOOD_THRESHOLD_KEY = "likelihoodThreshold";
+    public static final String MAX_DISTANCE_KEY = "maxDistance";
+    public static final String CENTER_KEY = "center";
     public static final double DEFAULT_SAFE_DISTANCE = 1.5 * STOP_DISTANCE;
     public static final double DEFAULT_LIKELIHOOD_THRESHOLD = 0;
     public static final double DEFAULT_MAX_DISTANCE = 3;
     public static final int NUM_TRY = 100;
-    private static final RandomTargetStatus SINGLETON = new RandomTargetStatus(new Random());
+
     private static final Logger logger = LoggerFactory.getLogger(RandomTargetStatus.class);
 
-    public static RandomTargetStatus create() {
-        return SINGLETON;
+    public static RandomTargetStatus create(String name, Random random) {
+        return new RandomTargetStatus(name, random);
     }
 
     private final Random random;
+    private double safeDistance;
+    private double likelihoodThreshold;
+    private double maxDistance;
+    private Point2D center;
 
-    protected RandomTargetStatus(Random random) {
+    protected RandomTargetStatus(String name, Random random) {
+        super(name);
         this.random = random;
     }
 
     @Override
-    public StateTransition process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, StateMachineContext context, InferenceMonitor monitor) {
-        GridScannerMap map = (GridScannerMap) data._2;
-        double safeDistance = context.getDouble(SAFE_DISTANCE_KEY, DEFAULT_SAFE_DISTANCE);
-        double likelihoodThreshold = context.getDouble(LIKELIHOOD_THRESHOLD_KEY, DEFAULT_LIKELIHOOD_THRESHOLD);
+    public EngineStatus activate(StateMachineContext context, InferenceMonitor monitor) {
+        super.activate(context, monitor);
+        this.safeDistance = context.getDouble(SAFE_DISTANCE_KEY, DEFAULT_SAFE_DISTANCE);
+        this.likelihoodThreshold = context.getDouble(LIKELIHOOD_THRESHOLD_KEY, DEFAULT_LIKELIHOOD_THRESHOLD);
+        this.maxDistance = context.getDouble(MAX_DISTANCE_KEY, DEFAULT_MAX_DISTANCE);
+        this.center = context.<Point2D>get(CENTER_KEY).orElse(new Point2D.Double());
+        context.remove(TARGET_KEY);
+        return this;
+    }
+
+    @Override
+    public StateTransition process(Timed<MapStatus> data, StateMachineContext context, InferenceMonitor monitor) {
+        GridScannerMap map = data.value().getMap();
         Set<Point> prohibited = ProhibitedCellFinder.create(map, safeDistance, likelihoodThreshold).find();
-        Point2D robotLocation = data._1.value().sample.robotAsset.location;
-        double maxDistance = context.getDouble(MAX_DISTANCE_KEY, DEFAULT_MAX_DISTANCE);
-        Point2D center = context.<Point2D>get(CENTER_KEY).orElse(new Point2D.Double());
+        Point2D robotLocation = data.value().getWheelly().getRobotLocation();
 
         for (int i = 0; i < NUM_TRY; i++) {
             Point2D target = new Point2D.Double(
@@ -86,12 +99,11 @@ public class RandomTargetStatus implements EngineStatus {
             Point cell = map.cell(target);
             if (target.distance(robotLocation) > safeDistance && !prohibited.contains(cell)) {
                 logger.debug("Target {}", target);
-                context.put(TARGET_KEY, target);
-                return StateTransition.create(COMPLETED_EXIT, context, HALT_COMMAND);
+                context.setTarget(target);
+                return COMPLETED_TRANSITION;
             }
         }
         logger.warn("Target not found");
-        context.remove(TARGET_KEY);
-        return StateTransition.create(NOT_FOUND_EXIT, context, HALT_COMMAND);
+        return NOT_FOUND_TRANSTION;
     }
 }

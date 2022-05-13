@@ -31,7 +31,10 @@ package org.mmarini.wheelly.engines.statemachine;
 
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.model.*;
+import org.mmarini.wheelly.model.AltCommand;
+import org.mmarini.wheelly.model.InferenceMonitor;
+import org.mmarini.wheelly.model.MapStatus;
+import org.mmarini.wheelly.model.MotionComand;
 
 public interface EngineStatus {
 
@@ -40,10 +43,13 @@ public interface EngineStatus {
     String TIMEOUT_EXIT = "Timeout";
     String COMPLETED_EXIT = "Completed";
     String OBSTACLE_EXIT = "Obstacle";
+    String BLOCKED_EXIT = "Blocked";
 
     default EngineStatus activate(StateMachineContext context, InferenceMonitor monitor) {
         return this;
     }
 
-    StateTransition process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, StateMachineContext context, InferenceMonitor monitor);
+    String getName();
+
+    StateTransition process(Timed<MapStatus> data, StateMachineContext context, InferenceMonitor monitor);
 }

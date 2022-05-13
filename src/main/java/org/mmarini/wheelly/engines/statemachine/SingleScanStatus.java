@@ -30,65 +30,72 @@
 package org.mmarini.wheelly.engines.statemachine;
 
 import io.reactivex.rxjava3.schedulers.Timed;
+import org.mmarini.Tuple2;
+import org.mmarini.wheelly.model.AltCommand;
 import org.mmarini.wheelly.model.InferenceMonitor;
 import org.mmarini.wheelly.model.MapStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.geom.Point2D;
-import java.util.List;
-
-import static org.mmarini.wheelly.engines.statemachine.StateMachineContext.TARGET_KEY;
 import static org.mmarini.wheelly.engines.statemachine.StateTransition.COMPLETED_TRANSITION;
 
-public class NextSequenceStatus extends AbstractEngineStatus {
-    public static final String TARGET_SELECTED_EXIT = "TargetSelected";
-    public static final StateTransition TARGET_SELECTED_TRANSITION = StateTransition.create(TARGET_SELECTED_EXIT, HALT_COMMAND);
-    public static final String MISSING_LIST_EXIT = "MissingList";
-    public static final StateTransition MISSING_LIST_TRANSITION = StateTransition.create(MISSING_LIST_EXIT, HALT_COMMAND);
-    public static final String INDEX_KEY = "index";
-    public static final String LIST_KEY = "list";
+/**
+ * Status where the robot scan and check for obstacles
+ */
+public class SingleScanStatus extends AbstractEngineStatus {
+    public static final String INTERVAL_KEY = "interval";
+    public static final long DEFAULT_INTERVAL = 100;
+    private static final int[] DIRECTIONS = {
+            -30, -60, -90, -45, 30, 60, 90, 45, 0
+    };
     private static final Logger logger = LoggerFactory.getLogger(NextSequenceStatus.class);
 
     /**
      *
      */
-    public static EngineStatus create(String name) {
-        return new NextSequenceStatus(name);
+    public static SingleScanStatus create(String name) {
+        return new SingleScanStatus(name);
     }
 
-    private List<Point2D> list;
+    private long interval;
     private int index;
+    private long timer;
 
-    protected NextSequenceStatus(String name) {
+    /**
+     * Creates named engine status
+     *
+     * @param name the name
+     */
+    protected SingleScanStatus(String name) {
         super(name);
     }
+
 
     @Override
     public EngineStatus activate(StateMachineContext context, InferenceMonitor monitor) {
         super.activate(context, monitor);
-        context.remove(TARGET_KEY);
-        context.getInt(name + "." + INDEX_KEY).ifPresent(i -> {
-            this.index = i;
-            context.remove(name + "." + INDEX_KEY);
-        });
-        list = context.<List<Point2D>>get(name + "." + LIST_KEY).orElseGet(List::of);
+        this.interval = context.getLong(name + "." + INTERVAL_KEY, DEFAULT_INTERVAL);
+        this.index = 0;
+        this.timer = System.currentTimeMillis() + interval;
         return this;
     }
 
+
     @Override
     public StateTransition process(Timed<MapStatus> data, StateMachineContext context, InferenceMonitor monitor) {
-        if (list.isEmpty()) {
-            logger.warn("Target list empty");
-            return MISSING_LIST_TRANSITION;
-        }
-        if (index >= list.size()) {
-            return COMPLETED_TRANSITION;
-        }
-        Point2D target = list.get(index);
-        context.setTarget(target);
-        logger.debug("Selected target {} {}", index, target);
-        index++;
-        return TARGET_SELECTED_TRANSITION;
+        return safetyCheck(data, context, monitor).orElseGet(() -> {
+            if (System.currentTimeMillis() >= timer) {
+                if (index >= DIRECTIONS.length - 1) {
+                    // Exit
+                    logger.debug("Scan completed");
+                    context.clearObstacle();
+                    return COMPLETED_TRANSITION;
+                } else {
+                    this.timer = System.currentTimeMillis() + interval;
+                    index++;
+                }
+            }
+            return StateTransition.create(STAY_EXIT, Tuple2.of(AltCommand.create(), DIRECTIONS[index]));
+        });
     }
 }

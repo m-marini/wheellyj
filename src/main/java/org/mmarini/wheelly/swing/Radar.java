@@ -88,7 +88,7 @@ public class Radar extends TopographicMap {
     @Override
     protected void paintGrid(Graphics2D gr) {
         gr.setColor(GRID);
-        gr.setStroke(BASIC_STROKE);
+        gr.setStroke(THIN_STROKE);
         double maxDistance = getMaxDistance();
         gr.draw(
                 new Ellipse2D.Double(-maxDistance, -maxDistance, maxDistance * 2, maxDistance * 2)

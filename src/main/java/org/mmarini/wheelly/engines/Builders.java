@@ -34,93 +34,106 @@ import org.mmarini.wheelly.engines.statemachine.*;
 import org.mmarini.wheelly.model.InferenceEngine;
 import org.mmarini.wheelly.swing.RxJoystick;
 import org.mmarini.wheelly.swing.RxJoystickImpl;
-import org.mmarini.wheelly.swing.Yaml;
 import org.mmarini.yaml.schema.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
 import java.util.List;
+import java.util.Random;
 
-import static org.mmarini.wheelly.engines.statemachine.ContextOperator.assign;
-import static org.mmarini.wheelly.engines.statemachine.ContextOperator.remove;
+import static org.mmarini.wheelly.engines.statemachine.ContextOperator.*;
 import static org.mmarini.wheelly.engines.statemachine.EngineStatus.*;
-import static org.mmarini.wheelly.engines.statemachine.FindPathStatus.NO_PATH_EXIT;
-import static org.mmarini.wheelly.engines.statemachine.FindPathStatus.TARGET_REACHED_EXIT;
+import static org.mmarini.wheelly.engines.statemachine.FindPathStatus.*;
 import static org.mmarini.wheelly.engines.statemachine.GotoStatus.UNREACHABLE_EXIT;
+import static org.mmarini.wheelly.engines.statemachine.NextSequenceStatus.TARGET_SELECTED_EXIT;
+import static org.mmarini.wheelly.engines.statemachine.StateMachineContext.TARGET_KEY;
 import static org.mmarini.wheelly.engines.statemachine.StateMachineContext.TIMEOUT_KEY;
-import static org.mmarini.wheelly.swing.Yaml.point;
-import static org.mmarini.wheelly.swing.Yaml.points;
+import static org.mmarini.wheelly.engines.statemachine.Yaml.*;
 
 public interface Builders {
 
-     Logger logger = LoggerFactory.getLogger(Builders.class);
+    Logger logger = LoggerFactory.getLogger(Builders.class);
 
     static InferenceEngine avoidObstacle(JsonNode config) {
         return StateMachineBuilder.create()
-                .addState("scan", ScanStatus.create())
-                .addState("avoid", AvoidObstacleStatus.create())
-                .addState("safest", NearestSafeStatus.create())
-                .addState("goto", GotoStatus.create())
+                .setParams("init.timeout", 2000)
+//                .setParams("scan.interval", 100)
+                .addState(StopStatus.create("init"))
+                .addState(RandomScanStatus.create("scan"))
+                .addState(SecureStatus.create("avoid"))
+                .addState(WaitForUnblockedStatus.create("unblock"))
+                .addTransition("init", TIMEOUT_EXIT, "scan")
                 .addTransition("scan", OBSTACLE_EXIT, "avoid")
-                .addTransition("avoid", COMPLETED_EXIT, "safest")
-                .addTransition("safest", COMPLETED_EXIT, "goto",
-                        ContextOperator.assign(GotoStatus.TARGET_KEY, NearestSafeStatus.TARGET_KEY))
-                .addTransition("goto", OBSTACLE_EXIT, "avoid")
-                .addTransition("goto", UNREACHABLE_EXIT, "safest")
-                .build("scan");
+                .addTransition("scan", COMPLETED_EXIT, "avoid")
+                .addTransition("avoid", COMPLETED_EXIT, "scan")
+                .addTransition("avoid", BLOCKED_EXIT, "unblock")
+                .addTransition("unblock", COMPLETED_EXIT, "scan")
+
+                .build("init");
     }
 
     static InferenceEngine findPath(JsonNode config) {
-        point().apply(Locator.root().path("target")).accept(config);
-        Point2D target = point(config.path("target")).orElseThrow();
+        pathEngine().apply(Locator.root()).accept(config);
+        List<Point2D> targets = points(config.path("targets"));
         double safeDistance = config.path("safeDistance").asDouble(FindPathStatus.DEFAULT_SAFE_DISTANCE);
-        double thresholdDistance = config.path("thresholdDistance").asDouble(GotoStatus.FINAL_DISTANCE);
-        logger.debug("Target: {}", target);
+        double thresholdDistance = config.path("thresholdDistance").asDouble(GotoStatus.DEFAULT_FINAL_DISTANCE);
         return StateMachineBuilder.create()
-                .addState("initial", StopStatus.create())
-                .addState("scan", ScanStatus.create())
-                .addState("findPath", FindPathStatus.create())
-                .addState("next", NextSequenceStatus.create())
-                .addState("goto", GotoStatus.create())
-                .addState("avoid", AvoidObstacleStatus.create())
-                .addState("safe", NearestSafeStatus.create())
-                .addState("gotoSafe", GotoStatus.create())
-                .addTransition("initial", TIMEOUT_EXIT, "scan",
-                        ContextOperator.assignValue(TIMEOUT_KEY, 10000))
-                .addTransition("scan", COMPLETED_EXIT, "findPath")
-                .addTransition("scan", OBSTACLE_EXIT, "avoid")
-                .addTransition("findPath", COMPLETED_EXIT, "next",
+                .setParams("initial.timeout", 2000)
+                .setParams("nextTarget.list", targets)
+                .setParams("findPath.safeDistance", safeDistance)
+                .setParams("goto.distance", thresholdDistance)
+                .setParams("goto.timeout", 30000)
+                .addState(StopStatus.create("initial"))
+                .addState(NextSequenceStatus.create("nextTarget"))
+                .addState(SingleScanStatus.create("scan"))
+                .addState(FindPathStatus.create("findPath"))
+                .addState(NextSequenceStatus.create("nextPoint"))
+                .addState(GotoStatus.create("goto"))
+
+                .addState(SecureStatus.create("initialAvoid"))
+
+                .addState(SecureStatus.create("avoid"))
+
+                .addTransition("initial", TIMEOUT_EXIT, "nextTarget")
+                .addTransition("nextTarget", TARGET_SELECTED_EXIT, "scan",
+                        assign("nextTarget.target", TARGET_KEY))
+                .addTransition("scan", COMPLETED_EXIT, "findPath",
+                        assign("findPath.target", "nextTarget.target"))
+                .addTransition("findPath", COMPLETED_EXIT, "nextPoint",
                         ContextOperator.sequence(
-                                assign(NextSequenceStatus.LIST_KEY, FindPathStatus.PATH_KEY),
-                                remove(NextSequenceStatus.INDEX_KEY)))
-                .addTransition("next", NextSequenceStatus.TARGET_SELECTED_EXIT, "goto",
-                        assign(GotoStatus.TARGET_KEY, NextSequenceStatus.TARGET_KEY))
-                .addTransition("goto", COMPLETED_EXIT, "next")
+                                assign("nextPoint.list", PATH_KEY),
+                                assignValue("nextPoint.index", 0)
+                        ))
+                .addTransition("nextPoint", TARGET_SELECTED_EXIT, "goto")
+                .addTransition("goto", COMPLETED_EXIT, "nextPoint")
+
+                .addTransition("scan", OBSTACLE_EXIT, "initialAvoid")
+                .addTransition("initialAvoid", COMPLETED_EXIT, "scan")
+
+                .addTransition("findPath", TARGET_REACHED_EXIT, "nextTarget")
+                .addTransition("findPath", NO_PATH_EXIT, "nextTarget")
+
+                .addTransition("nextPoint", COMPLETED_EXIT, "nextTarget")
+
                 .addTransition("goto", OBSTACLE_EXIT, "avoid")
-                .addTransition("goto", UNREACHABLE_EXIT, "findPath")
-                .addTransition("avoid", COMPLETED_EXIT, "safe")
-                .addTransition("safe", COMPLETED_EXIT, "gotoSafe",
-                        assign(GotoStatus.TARGET_KEY, NearestSafeStatus.TARGET_KEY))
-                .addTransition("gotoSafe", COMPLETED_EXIT, "scan")
-                .addTransition("gotoSafe", OBSTACLE_EXIT, "avoid")
-                .addTransition("gotoSafe", UNREACHABLE_EXIT, "safe")
-                .setParams(FindPathStatus.TARGET_KEY, target)
-                .setParams(TIMEOUT_KEY, 2000)
-                .setParams(GotoStatus.DISTANCE_KEY,thresholdDistance)
-                .setParams(FindPathStatus.SAFE_DISTANCE_KEY, safeDistance)
+                .addTransition("avoid", COMPLETED_EXIT, "scan")
+
+                .addTransition("goto", UNREACHABLE_EXIT, "scan")
+
                 .build("initial");
+//        throw new Error("Not implemented");
     }
 
     static InferenceEngine gotoTest(JsonNode config) {
         point().apply(Locator.root().path("target")).accept(config);
         Point2D target = point(config.path("target")).orElseThrow();
         return StateMachineBuilder.create()
-                .addState("initial", StopStatus.create())
-                .addState("goto", GotoStatus.create())
+                .setParams(TARGET_KEY, target)
+                .setParams("initial.timeout", 2000)
+                .addState(StopStatus.create("initial"))
+                .addState(GotoStatus.create("goto"))
                 .addTransition("initial", TIMEOUT_EXIT, "goto")
-                .setParams(GotoStatus.TARGET_KEY, target)
-                .setParams(TIMEOUT_KEY, 4000)
                 .build("initial");
     }
 
@@ -137,35 +150,25 @@ public interface Builders {
         Yaml.randomPath().apply(Locator.root()).accept(config);
 
         StateMachineBuilder builder1 = StateMachineBuilder.create()
-                .addState("initial", StopStatus.create())
-                .addState("scanForTarget", ScanStatus.create())
-                .addState("avoid1", AvoidObstacleStatus.create())
-                .addState("safe1", NearestSafeStatus.create())
-                .addState("gotoSafe1", GotoStatus.create())
-                .addState("random", RandomTargetStatus.create())
-                .addState("findPath", FindPathStatus.create())
-                .addState("next", NextSequenceStatus.create())
-                .addState("goto", GotoStatus.create())
-                .addState("avoid2", AvoidObstacleStatus.create())
-                .addState("safe2", NearestSafeStatus.create())
-                .addState("gotoSafe2", GotoStatus.create())
-                .addState("scanForPath", ScanStatus.create())
+                .addState(StopStatus.create("initial"))
+                .addState(SingleScanStatus.create("scanForTarget"))
+                .addState(SecureStatus.create("avoid1"))
+                .addState(RandomTargetStatus.create("random", new Random()))
+                .addState(FindPathStatus.create("findPath"))
+                .addState(NextSequenceStatus.create("next"))
+                .addState(GotoStatus.create("goto"))
+                .addState(SecureStatus.create("avoid2"))
+                .addState(SingleScanStatus.create("scanForPath"))
 
                 .addTransition("initial", TIMEOUT_EXIT, "scanForTarget",
-                        ContextOperator.assignValue(TIMEOUT_KEY, 10000))
+                        assignValue(TIMEOUT_KEY, 10000))
 
                 .addTransition("scanForTarget", COMPLETED_EXIT, "random")
                 .addTransition("scanForTarget", OBSTACLE_EXIT, "avoid1")
 
-                .addTransition("avoid1", COMPLETED_EXIT, "safe1")
-                .addTransition("safe1", COMPLETED_EXIT, "gotoSafe1",
-                        assign(GotoStatus.TARGET_KEY, NearestSafeStatus.TARGET_KEY))
-                .addTransition("gotoSafe1", COMPLETED_EXIT, "scanForPath")
-                .addTransition("gotoSafe1", OBSTACLE_EXIT, "avoid1")
-                .addTransition("gotoSafe1", UNREACHABLE_EXIT, "safe1")
+                .addTransition("avoid1", COMPLETED_EXIT, "scanForPath")
 
-                .addTransition("random", COMPLETED_EXIT, "findPath",
-                        assign(FindPathStatus.TARGET_KEY, RandomTargetStatus.TARGET_KEY))
+                .addTransition("random", COMPLETED_EXIT, "findPath")
 
                 .addTransition("findPath", COMPLETED_EXIT, "next",
                         ContextOperator.sequence(
@@ -174,21 +177,14 @@ public interface Builders {
                 .addTransition("findPath", NO_PATH_EXIT, "random")
                 .addTransition("findPath", TARGET_REACHED_EXIT, "random")
 
-                .addTransition("next", NextSequenceStatus.TARGET_SELECTED_EXIT, "goto",
-                        assign(GotoStatus.TARGET_KEY, NextSequenceStatus.TARGET_KEY))
+                .addTransition("next", TARGET_SELECTED_EXIT, "goto")
                 .addTransition("next", COMPLETED_EXIT, "scanForTarget")
 
                 .addTransition("goto", COMPLETED_EXIT, "next")
                 .addTransition("goto", OBSTACLE_EXIT, "avoid2")
                 .addTransition("goto", UNREACHABLE_EXIT, "findPath")
 
-                .addTransition("avoid2", COMPLETED_EXIT, "safe2")
-
-                .addTransition("safe2", COMPLETED_EXIT, "gotoSafe2",
-                        assign(GotoStatus.TARGET_KEY, NearestSafeStatus.TARGET_KEY))
-                .addTransition("gotoSafe2", COMPLETED_EXIT, "scanForPath")
-                .addTransition("gotoSafe2", OBSTACLE_EXIT, "avoid2")
-                .addTransition("gotoSafe2", UNREACHABLE_EXIT, "safe2")
+                .addTransition("avoid2", COMPLETED_EXIT, "scanForPath")
 
                 .addTransition("scanForPath", COMPLETED_EXIT, "findPath")
                 .addTransition("scanForPath", OBSTACLE_EXIT, "avoid2")
@@ -209,23 +205,20 @@ public interface Builders {
         points().apply(Locator.root().path("targets")).accept(config);
         List<Point2D> targets = points(config.path("targets"));
         return StateMachineBuilder.create()
-                .addState("nextTarget", NextSequenceStatus.create())
-                .addState("goto", GotoStatus.create())
-                .addState("scan", ScanStatus.create())
-                .addTransition("scan", COMPLETED_EXIT, "nextTarget")
-                .addTransition("nextTarget", NextSequenceStatus.TARGET_SELECTED_EXIT, "goto",
-                        assign(GotoStatus.TARGET_KEY, NextSequenceStatus.TARGET_KEY))
-                .addTransition("goto", COMPLETED_EXIT, "nextTarget")
-                .addTransition("goto", OBSTACLE_EXIT, "scan")
                 .setParams(NextSequenceStatus.LIST_KEY, targets)
+                .addState(SingleScanStatus.create("scan"))
+                .addState(NextSequenceStatus.create("nextTarget"))
+                .addState(GotoStatus.create("goto"))
+                .addTransition("scan", COMPLETED_EXIT, "nextTarget")
+                .addTransition("nextTarget", TARGET_SELECTED_EXIT, "goto")
+                .addTransition("goto", COMPLETED_EXIT, "nextTarget")
                 .build("goto");
 
     }
 
     static InferenceEngine stop(JsonNode config) {
         return StateMachineBuilder.create()
-                .addState("stop", StopStatus.finalStatus())
+                .addState(StopStatus.finalStatus())
                 .build("stop");
-
     }
 }

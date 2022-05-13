@@ -39,9 +39,10 @@ public class StateMachineContext {
     public static final String STATUS_NAME_KEY = "name";
     public static final String ENTRY_TIME_KEY = "entryTime";
     public static final String OBSTACLE_KEY = "obstacle";
+    public static final String TARGET_KEY = "target";
 
     /**
-     * @return
+     *
      */
     public static StateMachineContext create() {
         return new StateMachineContext(new HashMap<>());
@@ -76,25 +77,6 @@ public class StateMachineContext {
 
     public double getDouble(String key, double defaultValue) {
         return getDouble(key).orElse(defaultValue);
-    }
-
-    public OptionalLong getElapsedTime() {
-        return getEntryTime()
-                .stream().map(entryTime -> System.currentTimeMillis() - entryTime)
-                .findAny();
-    }
-
-    public long getElapsedTime(long defaultValue) {
-        return getElapsedTime().orElse(defaultValue);
-    }
-
-    public OptionalLong getEntryTime() {
-        return getLong(ENTRY_TIME_KEY);
-    }
-
-    public StateMachineContext setEntryTime(long entryTime) {
-        values.put(ENTRY_TIME_KEY, entryTime);
-        return this;
     }
 
     public OptionalInt getInt(String key) {
@@ -132,19 +114,12 @@ public class StateMachineContext {
         return this;
     }
 
-    public OptionalLong getTimeout() {
-        return getLong(TIMEOUT_KEY);
+    public Optional<Point2D> getTarget() {
+        return get(TARGET_KEY);
     }
 
-    public StateMachineContext setTimeout(long timeout) {
-        values.put(TIMEOUT_KEY, timeout);
-        return this;
-    }
-
-    public boolean isTimerExpired() {
-        OptionalLong timeout = getTimeout();
-        OptionalLong elapsed = getElapsedTime();
-        return timeout.isPresent() && elapsed.isPresent() && elapsed.getAsLong() >= timeout.getAsLong();
+    public StateMachineContext setTarget(Point2D location) {
+        return put(TARGET_KEY, requireNonNull(location));
     }
 
     /**

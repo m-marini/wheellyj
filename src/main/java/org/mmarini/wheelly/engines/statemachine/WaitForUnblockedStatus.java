@@ -27,19 +27,42 @@
  *
  */
 
-package org.mmarini.wheelly.model;
+package org.mmarini.wheelly.engines.statemachine;
 
 import io.reactivex.rxjava3.schedulers.Timed;
-import org.mmarini.Tuple2;
+import org.mmarini.wheelly.model.InferenceMonitor;
+import org.mmarini.wheelly.model.MapStatus;
+import org.mmarini.wheelly.model.WheellyStatus;
 
-/**
- * The inference engine processes the robot sensors and produces the command to the actuators.
- */
-public interface InferenceEngine {
-    InferenceEngine init(InferenceMonitor monitor);
+import static org.mmarini.wheelly.engines.statemachine.StateTransition.COMPLETED_TRANSITION;
+import static org.mmarini.wheelly.engines.statemachine.StateTransition.TIMEOUT_TRANSITION;
+
+public class WaitForUnblockedStatus extends AbstractEngineStatus {
+
+    public static final StateTransition STAY_TRANSITION = StateTransition.create(STAY_EXIT, HALT_COMMAND);
 
     /**
-     * Returns the tuple with motor command and scanner direction
+     * Returns named enegine status
+     *
+     * @param name the name
      */
-    Tuple2<MotionComand, Integer> process(Timed<MapStatus> data, InferenceMonitor monitor);
+    public static WaitForUnblockedStatus create(String name) {
+        return new WaitForUnblockedStatus(name);
+    }
+
+    /**
+     * Creates named enegine status
+     *
+     * @param name the name
+     */
+    protected WaitForUnblockedStatus(String name) {
+        super(name);
+    }
+
+    @Override
+    public StateTransition process(Timed<MapStatus> data, StateMachineContext context, InferenceMonitor monitor) {
+        WheellyStatus sample = data.value().getWheelly();
+        return !sample.isBlocked() ? COMPLETED_TRANSITION
+                : isExpired() ? TIMEOUT_TRANSITION : STAY_TRANSITION;
+    }
 }

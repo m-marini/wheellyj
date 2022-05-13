@@ -30,14 +30,13 @@
 package org.mmarini.wheelly.model;
 
 import io.reactivex.rxjava3.schedulers.Timed;
+import org.mmarini.LazyValue;
 import org.mmarini.Utils;
 
 import java.awt.*;
 import java.awt.geom.Point2D;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -52,8 +51,8 @@ public class GridScannerMap implements ScannerMap {
     public static final double MAX_DISTANCE = 3;
     public static final double THRESHOLD_DISTANCE = 0.2;
     public static final double FUZZY_THRESHOLD_DISTANCE = 0.01;
-    public static final double MAX_SENSITIVITY_ANGLE = toRadians(30);
-    public static final double NO_SENSITIVITY_ANGLE = toRadians(45);
+    public static final double MAX_SENSITIVITY_ANGLE = toRadians(30 / 2);
+    public static final double NO_SENSITIVITY_ANGLE = toRadians(60 / 2);
     public static final double THRESHOLD_LIKELIHOOD = 10e-3;
     public static final long HOLD_DURATION = 60000;
     public static final double LIKELIHOOD_TAU = HOLD_DURATION / 2000.;
@@ -69,8 +68,8 @@ public class GridScannerMap implements ScannerMap {
     /**
      * Returns an empty map
      */
-    public static GridScannerMap create(List<Obstacle> obstacles, double gridSize) {
-        return new GridScannerMap(obstacles, gridSize);
+    public static GridScannerMap create(List<Obstacle> obstacles, double gridSize, double safeDistance, double likelihoodThreshold) {
+        return new GridScannerMap(obstacles, gridSize, safeDistance, likelihoodThreshold);
     }
 
     public static Point2D snapToGrid(Point2D location, double gridSize) {
@@ -80,15 +79,29 @@ public class GridScannerMap implements ScannerMap {
 
     public final double gridSize;
     public final List<Obstacle> obstacles;
+    private final double safeDistance;
+    private final double likelihoodThreshold;
+    private final LazyValue<Set<Point>> prohibited;
+    private final LazyValue<Set<Point>> contours;
 
     /**
      * Creates a scanner map
      *
-     * @param obstacles the list of obstacles
+     * @param obstacles           the list of obstacles
+     * @param safeDistance        the safe distance m
+     * @param likelihoodThreshold the likelihood threshold
      */
-    protected GridScannerMap(List<Obstacle> obstacles, double gridSize) {
+    protected GridScannerMap(List<Obstacle> obstacles, double gridSize, double safeDistance, double likelihoodThreshold) {
         this.obstacles = requireNonNull(obstacles);
         this.gridSize = gridSize;
+        this.safeDistance = safeDistance;
+        this.likelihoodThreshold = likelihoodThreshold;
+        this.prohibited = new LazyValue<>(() ->
+                ProhibitedCellFinder.create(this, this.safeDistance, this.likelihoodThreshold).find()
+        );
+        this.contours = new LazyValue<>(() ->
+                ProhibitedCellFinder.findContour(getProhibited())
+        );
     }
 
     protected Point2D arrangeLocation(Point2D location) {
@@ -102,10 +115,10 @@ public class GridScannerMap implements ScannerMap {
     /**
      * @param sample the sample
      */
-    Stream<Obstacle> createObstacles(Timed<ProxySample> sample) {
+    Stream<Obstacle> createObstacles(Timed<? extends ProxySample> sample) {
         requireNonNull(sample);
         Stream<ObstacleSampleProperties> obsProps = obstacleSampleProperties(sample);
-        double sampleDistance = sample.value().distance;
+        double sampleDistance = sample.value().getSampleDistance();
         // Split the eligible obstacles
         Map<Boolean, List<ObstacleSampleProperties>> split = obsProps.collect(Collectors.groupingBy(op ->
                 abs(op.obstacleSensorRad) <= NO_SENSITIVITY_ANGLE
@@ -116,7 +129,7 @@ public class GridScannerMap implements ScannerMap {
         List<ObstacleSampleProperties> eligibles = org.mmarini.Utils.getValue(split, true).orElseGet(List::of);
         List<ObstacleSampleProperties> notEligibles = Utils.getValue(split, false).orElseGet(List::of);
 
-        Optional<Point2D> arrangedLocation = sample.value().getLocation().map(this::arrangeLocation);
+        Optional<Point2D> arrangedLocation = sample.value().getSampleLocation().map(this::arrangeLocation);
         boolean hasTarget = arrangedLocation.stream().anyMatch(location ->
                 eligibles.stream()
                         .map(ObstacleSampleProperties::getObstacle)
@@ -126,7 +139,7 @@ public class GridScannerMap implements ScannerMap {
 
         long sampleTimestamp = sample.time(TimeUnit.MILLISECONDS);
 
-        List<Obstacle> newObstacles = sample.value().getLocation().map(sampleLocation -> {
+        List<Obstacle> newObstacles = sample.value().getSampleLocation().map(sampleLocation -> {
             // sample present: reinforce the obstacles near the sample location and weakening the obstacles before the sample location
             List<Obstacle> obs = eligibles.stream()
                     .map(reinforcedObstacle(sampleTimestamp, sampleDistance))
@@ -156,13 +169,25 @@ public class GridScannerMap implements ScannerMap {
                 .map(this::cell);
     }
 
+    public Set<Point> getContours() {
+        return contours.get();
+    }
+
     @Override
     public List<Obstacle> getObstacles() {
         return obstacles;
     }
 
+    public Set<Point> getProhibited() {
+        return prohibited.get();
+    }
+
+    public boolean isProhibited(Point2D robotLocation) {
+        return getProhibited().contains(cell(robotLocation));
+    }
+
     protected GridScannerMap newInstance(List<Obstacle> obstacles) {
-        return new GridScannerMap(obstacles, gridSize);
+        return new GridScannerMap(obstacles, gridSize, safeDistance, likelihoodThreshold);
     }
 
     /**
@@ -170,14 +195,14 @@ public class GridScannerMap implements ScannerMap {
      *
      * @param sample the sample
      */
-    Stream<ObstacleSampleProperties> obstacleSampleProperties(Timed<ProxySample> sample) {
+    Stream<ObstacleSampleProperties> obstacleSampleProperties(Timed<? extends ProxySample> sample) {
         ProxySample value = sample.value();
         return obstacles.stream()
                 .map(o -> ObstacleSampleProperties.from(o, value));
     }
 
     @Override
-    public GridScannerMap process(Timed<ProxySample> sample) {
+    public GridScannerMap process(Timed<? extends WheellyStatus> sample) {
         requireNonNull(sample);
         // Filter out the older obstacle and poor likelihood
         long holdTimestamp = sample.time(TimeUnit.MILLISECONDS) - HOLD_DURATION;
@@ -223,6 +248,14 @@ public class GridScannerMap implements ScannerMap {
                     0, weakening);
             return Obstacle.create(o.obstacle.location, sampleTimestamp, likelihood);
         };
+    }
+
+    public GridScannerMap setLikelihoodThreshold(double likelihoodThreshold) {
+        return this.likelihoodThreshold != likelihoodThreshold ? new GridScannerMap(obstacles, gridSize, safeDistance, likelihoodThreshold) : this;
+    }
+
+    public GridScannerMap setSafeDistance(double safeDistance) {
+        return this.safeDistance != safeDistance ? new GridScannerMap(obstacles, gridSize, safeDistance, likelihoodThreshold) : this;
     }
 
     public Point2D toPoint(Point cell) {

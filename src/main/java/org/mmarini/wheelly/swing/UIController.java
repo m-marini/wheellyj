@@ -33,11 +33,11 @@ import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.BackpressureStrategy;
+import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Function3;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.engines.statemachine.FindPathStatus;
-import org.mmarini.wheelly.engines.statemachine.ProhibitedCellFinder;
 import org.mmarini.wheelly.model.*;
 import org.mmarini.yaml.schema.Locator;
 import org.slf4j.Logger;
@@ -54,21 +54,21 @@ import java.awt.geom.Rectangle2D;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static java.awt.Color.*;
 import static java.lang.Math.exp;
 import static java.lang.String.format;
 import static java.util.stream.IntStream.range;
-import static org.mmarini.wheelly.engines.statemachine.FindPathStatus.DEFAULT_LIKELIHOOD_THRESHOLD;
-import static org.mmarini.wheelly.engines.statemachine.FindPathStatus.DEFAULT_SAFE_DISTANCE;
+import static org.mmarini.wheelly.engines.statemachine.StateMachineContext.OBSTACLE_KEY;
+import static org.mmarini.wheelly.engines.statemachine.StateMachineContext.TARGET_KEY;
 import static org.mmarini.wheelly.model.GridScannerMap.LIKELIHOOD_TAU;
+import static org.mmarini.wheelly.model.GridScannerMap.THRESHOLD_DISTANCE;
 import static org.mmarini.wheelly.model.RobotController.STOP_DISTANCE;
 import static org.mmarini.wheelly.model.RobotController.WARN_DISTANCE;
 import static org.mmarini.wheelly.swing.Dashboard.INFO_DISTANCE;
@@ -82,11 +82,12 @@ import static org.mmarini.yaml.Utils.fromFile;
 public class UIController {
     public static final long FRAME_INTERVAL = 1000L / 60;
     public static final Color PROHIBITED_COLOR = new Color(0x4f432c);// new Color(0x7c4422);
+    public static final Color PATH_COLOR = WHITE;
     private static final String CONFIG_FILE = ".wheelly.yml";
     private static final Logger logger = LoggerFactory.getLogger(UIController.class);
-    private static final int FORWARD_DIRECTION = 0;
     private static final Color CONTOUR_COLOR = new Color(0x008800);
-    ;
+    private static final Color OBSTACLE_COLOR = YELLOW;
+    private static final Color TARGET_COLOR = GREEN;
 
     /**
      *
@@ -100,9 +101,7 @@ public class UIController {
     }
 
     private static List<Tuple2<Color, Shape>> createContourShapes(GridScannerMap map, Point2D offset, double maxDistance) {
-        Set<Point> cells = ProhibitedCellFinder.findContour(
-                ProhibitedCellFinder.create(map, DEFAULT_SAFE_DISTANCE, DEFAULT_LIKELIHOOD_THRESHOLD).find());
-        return cells.stream()
+        return map.getContours().stream()
                 .map(map::toPoint)
                 .map(o -> Tuple2.of(o, o.distance(offset)))
                 .filter(t -> t._2 <= maxDistance)
@@ -113,8 +112,33 @@ public class UIController {
                 .collect(Collectors.toList());
     }
 
+    private static List<Tuple2<Color, Line2D>> createCross(Point2D point, Color color, double size) {
+        double x0 = point.getX();
+        double y0 = point.getY();
+        return List.of(Tuple2.of(color,
+                        new Line2D.Double(x0 - size / 2,
+                                y0 - size / 2,
+                                x0 + size / 2,
+                                y0 + size / 2)),
+                Tuple2.of(color,
+                        new Line2D.Double(x0 + size / 2,
+                                y0 - size / 2,
+                                x0 - size / 2,
+                                y0 + size / 2)
+                ));
+    }
+
+    private static List<Tuple2<Color, Line2D>> createPathLines(List<Point2D> points, Color color) {
+        return range(0, points.size() - 1).mapToObj(i -> {
+                    Point2D pa = points.get(i);
+                    Point2D pb = points.get(i + 1);
+                    return Tuple2.of(color, (Line2D) new Line2D.Double(pa, pb));
+                })
+                .collect(Collectors.toList());
+    }
+
     private static List<Tuple2<Color, Shape>> createProhibitedShapes(GridScannerMap map, Point2D offset, double maxDistance) {
-        Set<Point> cells = ProhibitedCellFinder.create(map, DEFAULT_SAFE_DISTANCE, DEFAULT_LIKELIHOOD_THRESHOLD).find();
+        Set<Point> cells = map.getProhibited();
         Set<Point> mapCells = map.getCells().collect(Collectors.toSet());
         cells.removeAll(mapCells);
         List<Tuple2<Color, Shape>> result = cells.stream()
@@ -169,6 +193,7 @@ public class UIController {
     private final Dashboard dashboard;
     private final Radar radar;
     private final GlobalMap globalMap;
+    private final List<Disposable> configDisposables;
     private String joystickPort;
     private JsonNode configNode;
     private RobotAgent robotAgent;
@@ -176,6 +201,9 @@ public class UIController {
     private Function3<
             GridScannerMap, Point2D, Double,
             List<Tuple2<Color, Shape>>> shapeBuilder;
+    private List<Tuple2<Color, Line2D>> path;
+    private List<Tuple2<Color, Line2D>> obstacleCross;
+    private List<Tuple2<Color, Line2D>> targetCross;
 
     /**
      *
@@ -188,9 +216,12 @@ public class UIController {
         this.radar = frame.getRadar();
         this.globalMap = frame.getGlobalMap();
         this.shapeBuilder = UIController::createProhibitedShapes;
+        this.configDisposables = new ArrayList<>();
+        obstacleCross = targetCross = path = List.of();
 
         this.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        this.frame.setSize(1024, 800);
+        Dimension size = Toolkit.getDefaultToolkit().getScreenSize();
+        this.frame.setSize(size);
         this.frame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowOpened(WindowEvent e) {
@@ -221,6 +252,8 @@ public class UIController {
      * Returns the UIController with current configuration closed
      */
     private UIController closeConfig() {
+        configDisposables.forEach(Disposable::dispose);
+        configDisposables.clear();
         if (robotAgent != null) {
             robotAgent.close();
             robotAgent = null;
@@ -267,19 +300,23 @@ public class UIController {
     }
 
     private void handleInferenceData(Tuple2<String, Optional<?>> data) {
-        if (data._1.equals(FindPathStatus.PATH_KEY)) {
-            List<Line2D> path = data._2.map(pts -> {
-                List<Point2D> points = (List<Point2D>) pts;
-                List<Line2D> x = range(0, points.size() - 1).mapToObj(i -> {
-                            Point2D pa = points.get(i);
-                            Point2D pb = points.get(i + 1);
-                            return new Line2D.Double(pa, pb);
-                        })
-                        .collect(Collectors.toList());
-                return x;
-            }).orElse(List.of());
-            radar.setPath(path);
-            globalMap.setPath(path);
+        String key = data._1;
+        switch (key) {
+            case FindPathStatus.PATH_KEY:
+                this.path = data._2.map(pts ->
+                        createPathLines((List<Point2D>) pts, PATH_COLOR)).orElse(List.of());
+                setLines();
+                break;
+            case OBSTACLE_KEY:
+                this.obstacleCross = data._2.map(pt ->
+                        createCross((Point2D) pt, OBSTACLE_COLOR, THRESHOLD_DISTANCE)).orElse(List.of());
+                setLines();
+                break;
+            case TARGET_KEY:
+                this.targetCross = data._2.map(pt ->
+                        createCross((Point2D) pt, TARGET_COLOR, THRESHOLD_DISTANCE)).orElse(List.of());
+                setLines();
+                break;
         }
     }
 
@@ -288,23 +325,19 @@ public class UIController {
         frame.log(text);
     }
 
-    private void handleMapMessage(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> tuple) {
-        WheellyStatus status = tuple._1.value();
-        ProxySample sample = status.sample;
-        if (sample.sensorRelativeDeg == FORWARD_DIRECTION) {
-            dashboard.setObstacleDistance(sample.distance);
-        }
-        dashboard.setPower(status.voltage);
-        dashboard.setMotors(status.motors._1, status.motors._2);
-        dashboard.setForwardBlock(!sample.canMoveForward);
-        RobotAsset robotAsset = sample.robotAsset;
-        dashboard.setAngle(robotAsset.getDirectionRad());
-        dashboard.setRobotLocation(robotAsset.location);
-        radar.setAsset(robotAsset.location, status.sample.robotAsset.getDirectionRad());
-        globalMap.setAsset(robotAsset.location, robotAsset.getDirectionRad());
-        dashboard.setImuFailure(status.imuFailure ? 1 : 0);
+    private void handleMapMessage(Timed<MapStatus> mapStatus) {
+        WheellyStatus status = mapStatus.value().getWheelly();
+        dashboard.setObstacleDistance(status.getSampleDistance());
+        dashboard.setPower(status.getVoltage());
+        dashboard.setMotors(status.getLeftMotors(), status.getRightMotors());
+        dashboard.setForwardBlock(!status.getCanMoveForward());
+        dashboard.setAngle(status.getRobotRad());
+        dashboard.setRobotLocation(status.getRobotLocation());
+        radar.setAsset(status.getRobotLocation(), status.getRobotRad());
+        globalMap.setAsset(status.getRobotLocation(), status.getRobotRad());
+        dashboard.setImuFailure(status.isImuFailure() ? 1 : 0);
 
-        List<Tuple2<Color, Shape>> shapes = shapeBuilder.apply((GridScannerMap) tuple._2, robotAsset.location, DEFAULT_MAX_DISTANCE);
+        List<Tuple2<Color, Shape>> shapes = shapeBuilder.apply(mapStatus.value().getMap(), status.getRobotLocation(), DEFAULT_MAX_DISTANCE);
 
         radar.setShapes(shapes);
         globalMap.setShapes(shapes);
@@ -350,35 +383,43 @@ public class UIController {
             logger.debug("openConfig");
             InferenceEngine engine = createEngine();
             this.robotAgent = RobotAgent.create(configParams, engine);
-
-            robotAgent.readConnection()
+            configDisposables.clear();
+            configDisposables.add(robotAgent.readConnection()
                     .subscribe(connected -> {
                         dashboard.setWifiLed(connected);
                         frame.log(connected ? "Connected" : "Disconnected");
-                    });
+                    }));
 
-            robotAgent.readErrors()
+            configDisposables.add(robotAgent.readErrors()
                     .subscribe(ex -> {
                         logger.error("Error on flow", ex);
                         frame.log(ex.getMessage());
-                    });
+                    }));
 
-            robotAgent.readMapFlow()
+            configDisposables.add(robotAgent.readMapFlow()
                     .throttleLatest(FRAME_INTERVAL, TimeUnit.MILLISECONDS)
-                    .subscribe(this::handleMapMessage);
+                    .subscribe(this::handleMapMessage));
 
-            robotAgent.readCps()
-                    .subscribe(this::handleCps);
+            configDisposables.add(robotAgent.readCps()
+                    .subscribe(this::handleCps));
 
-            robotAgent.readInferenceData().subscribe(this::handleInferenceData);
+            configDisposables.add(robotAgent.readInferenceData().subscribe(this::handleInferenceData));
 
-            robotAgent.readInferenceMessages().subscribe(this::handleInferenceMessage);
+            configDisposables.add(robotAgent.readInferenceMessages().subscribe(this::handleInferenceMessage));
 
             robotAgent.start();
         } catch (Exception ex) {
             logger.error(ex.getMessage(), ex);
             frame.log(ex.getMessage());
         }
+    }
+
+    private void setLines() {
+        List<Tuple2<Color, Line2D>> lines = new ArrayList<>(path);
+        lines.addAll(this.obstacleCross);
+        lines.addAll(this.targetCross);
+        radar.setLines(lines);
+        globalMap.setLines(lines);
     }
 
     /**

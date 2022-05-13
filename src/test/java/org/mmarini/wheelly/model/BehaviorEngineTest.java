@@ -55,12 +55,10 @@ class BehaviorEngineTest {
 
     public static void main(String[] args) throws InterruptedException {
         RawController controller = RawController.create(HOST, PORT,
-                NUM_SAMPLES,
                 CONNECTION_TIMEOUT,
                 RETRY_CONNECTION_INTERVAL,
-                READ_TIMEOUT, CLOCK_INTERVAL,
-                CLOCK_TIMEOUT,
-                RESTART_CLOCK_SYNC_DELAY, QUERIES_INTERVAL, START_QUERY_DELAY);
+                READ_TIMEOUT
+        );
         Random random = new Random();
 
         InferenceEngine inferenceEngine = new InferenceEngine() {
@@ -73,7 +71,7 @@ class BehaviorEngineTest {
             }
 
             @Override
-            public Tuple2<MotionComand, Integer> process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, InferenceMonitor monitor) {
+            public Tuple2<MotionComand, Integer> process(Timed<MapStatus> data, InferenceMonitor monitor) {
                 long now = System.currentTimeMillis();
                 if (now > timeout) {
                     angle = random.nextInt(180) - 90;

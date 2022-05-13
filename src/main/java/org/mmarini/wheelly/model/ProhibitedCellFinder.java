@@ -27,11 +27,9 @@
  *
  */
 
-package org.mmarini.wheelly.engines.statemachine;
+package org.mmarini.wheelly.model;
 
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.model.GridScannerMap;
-import org.mmarini.wheelly.model.Obstacle;
 
 import java.awt.*;
 import java.awt.geom.Point2D;

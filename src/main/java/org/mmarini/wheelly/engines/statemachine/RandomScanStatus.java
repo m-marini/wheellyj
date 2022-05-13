@@ -30,65 +30,77 @@
 package org.mmarini.wheelly.engines.statemachine;
 
 import io.reactivex.rxjava3.schedulers.Timed;
+import org.mmarini.Tuple2;
+import org.mmarini.wheelly.model.AltCommand;
 import org.mmarini.wheelly.model.InferenceMonitor;
 import org.mmarini.wheelly.model.MapStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.geom.Point2D;
-import java.util.List;
+import java.util.Random;
 
-import static org.mmarini.wheelly.engines.statemachine.StateMachineContext.TARGET_KEY;
-import static org.mmarini.wheelly.engines.statemachine.StateTransition.COMPLETED_TRANSITION;
-
-public class NextSequenceStatus extends AbstractEngineStatus {
-    public static final String TARGET_SELECTED_EXIT = "TargetSelected";
-    public static final StateTransition TARGET_SELECTED_TRANSITION = StateTransition.create(TARGET_SELECTED_EXIT, HALT_COMMAND);
-    public static final String MISSING_LIST_EXIT = "MissingList";
-    public static final StateTransition MISSING_LIST_TRANSITION = StateTransition.create(MISSING_LIST_EXIT, HALT_COMMAND);
-    public static final String INDEX_KEY = "index";
-    public static final String LIST_KEY = "list";
+/**
+ * Status where the robot scan and check for obstacles
+ */
+public class RandomScanStatus extends AbstractEngineStatus {
+    public static final String INTERVAL_KEY = "interval";
+    public static final String SCAN_TIME_KEY = "scanTime";
+    public static final long DEFAULT_INTERVAL = 5000;
+    public static final long DEFAULT_SCAN_TIME = 1000;
     private static final Logger logger = LoggerFactory.getLogger(NextSequenceStatus.class);
 
     /**
      *
      */
-    public static EngineStatus create(String name) {
-        return new NextSequenceStatus(name);
+    public static RandomScanStatus create(String name) {
+        return new RandomScanStatus(name, new Random());
     }
 
-    private List<Point2D> list;
-    private int index;
+    public static RandomScanStatus create(String name, Random random) {
+        return new RandomScanStatus(name, random);
+    }
 
-    protected NextSequenceStatus(String name) {
+    private final Random random;
+    private long interval;
+    private long timer;
+    private int direction;
+    private long scanTime;
+
+    /**
+     * Creates named engine status
+     *
+     * @param name   the name
+     * @param random the random generator
+     */
+    protected RandomScanStatus(String name, Random random) {
         super(name);
+        this.random = random;
     }
+
 
     @Override
     public EngineStatus activate(StateMachineContext context, InferenceMonitor monitor) {
         super.activate(context, monitor);
-        context.remove(TARGET_KEY);
-        context.getInt(name + "." + INDEX_KEY).ifPresent(i -> {
-            this.index = i;
-            context.remove(name + "." + INDEX_KEY);
-        });
-        list = context.<List<Point2D>>get(name + "." + LIST_KEY).orElseGet(List::of);
+        this.interval = context.getLong(name + "." + INTERVAL_KEY, DEFAULT_INTERVAL);
+        this.scanTime = context.getLong(name + "." + SCAN_TIME_KEY, DEFAULT_SCAN_TIME);
+        this.timer = System.currentTimeMillis() + interval;
+        this.direction = 0;
         return this;
     }
 
+
     @Override
     public StateTransition process(Timed<MapStatus> data, StateMachineContext context, InferenceMonitor monitor) {
-        if (list.isEmpty()) {
-            logger.warn("Target list empty");
-            return MISSING_LIST_TRANSITION;
-        }
-        if (index >= list.size()) {
-            return COMPLETED_TRANSITION;
-        }
-        Point2D target = list.get(index);
-        context.setTarget(target);
-        logger.debug("Selected target {} {}", index, target);
-        index++;
-        return TARGET_SELECTED_TRANSITION;
+        return this.safetyCheck(data, context, monitor).orElseGet(() -> {
+            if (System.currentTimeMillis() >= timer) {
+                direction = random.nextInt(181) - 90;
+                this.timer = System.currentTimeMillis() + interval;
+            }
+
+            long elapsedTime = getElapsedTime();
+            long scanFrameTime = elapsedTime % interval;
+            int dir = scanFrameTime > scanTime ? 0 : direction;
+            return StateTransition.create(STAY_EXIT, Tuple2.of(AltCommand.create(), dir));
+        });
     }
 }

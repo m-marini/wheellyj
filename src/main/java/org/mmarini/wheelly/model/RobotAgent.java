@@ -45,8 +45,8 @@ import java.util.concurrent.TimeUnit;
 import static io.reactivex.rxjava3.core.Flowable.*;
 import static java.lang.Math.round;
 import static java.lang.String.format;
-import static org.mmarini.wheelly.model.GridScannerMap.THRESHOLD_DISTANCE;
 import static org.mmarini.wheelly.model.AltCommand.ALT_COMMAND;
+import static org.mmarini.wheelly.model.GridScannerMap.THRESHOLD_DISTANCE;
 
 public class RobotAgent implements InferenceMonitor {
     private static final Logger logger = LoggerFactory.getLogger(RobotAgent.class);
@@ -65,7 +65,7 @@ public class RobotAgent implements InferenceMonitor {
     }
 
     /**
-     * @param configParams
+     * @param configParams the configuration parameters
      * @param engine       the inference engine
      */
     public static RobotAgent create(ConfigParameters configParams, InferenceEngine engine) {
@@ -74,7 +74,7 @@ public class RobotAgent implements InferenceMonitor {
     }
 
     private final RobotController controller;
-    private final BehaviorProcessor<Tuple2<Timed<WheellyStatus>, ? extends ScannerMap>> mapFlow;
+    private final BehaviorProcessor<Timed<MapStatus>> mapFlow;
     private final PublishProcessor<String> inferenceMessages;
     private final PublishProcessor<Tuple2<String, Optional<?>>> inferenceData;
     private final InferenceEngine engine;
@@ -125,12 +125,11 @@ public class RobotAgent implements InferenceMonitor {
         // Creates map flow
         controller.readStatus()
                 .observeOn(Schedulers.computation())
-                .scanWith(() -> Tuple2.of(Optional.<Timed<WheellyStatus>>empty(), GridScannerMap.create(List.of(), THRESHOLD_DISTANCE)),
-                        (t, status) -> {
-                            Timed<ProxySample> px = new Timed<>(status.value().sample, status.time(), status.unit());
-                            return Tuple2.of(Optional.of(status), t._2.process(px));
-                        })
-                .concatMap(t -> t._1.map(tt -> just(Tuple2.of(tt, t._2)))
+                .scanWith(() -> Tuple2.of(Optional.<Timed<WheellyStatus>>empty(), GridScannerMap.create(List.of(), THRESHOLD_DISTANCE, THRESHOLD_DISTANCE, 0)),
+                        (t, status) -> Tuple2.of(Optional.of(status), t._2.process(status)))
+                .concatMap(t -> t._1.map(tt -> just(
+                                new Timed<>(MapStatus.create(tt.value(), t._2), tt.time(), tt.unit())
+                        ))
                         .orElse(empty()))
                 .subscribe(mapFlow);
     }
@@ -206,7 +205,7 @@ public class RobotAgent implements InferenceMonitor {
     /**
      * Returns the map flow
      */
-    public BehaviorProcessor<Tuple2<Timed<WheellyStatus>, ? extends ScannerMap>> readMapFlow() {
+    public BehaviorProcessor<Timed<MapStatus>> readMapFlow() {
         return mapFlow;
     }
 
@@ -221,8 +220,8 @@ public class RobotAgent implements InferenceMonitor {
     }
 
     @Override
-    public InferenceMonitor show(String text, Object... parms) {
-        inferenceMessages.onNext(format(text, parms));
+    public InferenceMonitor show(String text, Object... params) {
+        inferenceMessages.onNext(format(text, params));
         return this;
     }
 

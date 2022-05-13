@@ -33,7 +33,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.engines.statemachine.ProhibitedCellFinder;
+import org.mmarini.wheelly.model.ProhibitedCellFinder;
 import org.mmarini.wheelly.model.GridScannerMap;
 import org.mmarini.wheelly.model.Obstacle;
 
@@ -88,7 +88,7 @@ class ProhibitedCellFinderTest {
                 Obstacle.create(0, 0, 0, 1),
                 Obstacle.create(10, 10, 0, 1)
         );
-        GridScannerMap map = GridScannerMap.create(obstacles, GRID_SIZE);
+        GridScannerMap map = GridScannerMap.create(obstacles, GRID_SIZE, GRID_SIZE, 0);
         Set<Point> result = ProhibitedCellFinder.create(map, SAFE_DISTANCE, LIKELIHOOD_THRESHOLD).find();
 
         assertNotNull(result);
@@ -113,7 +113,7 @@ class ProhibitedCellFinderTest {
                 Obstacle.create(0, 0, 0, 1),
                 Obstacle.create(10, 10, 0, 1)
         );
-        GridScannerMap map = GridScannerMap.create(obstacles, GRID_SIZE);
+        GridScannerMap map = GridScannerMap.create(obstacles, GRID_SIZE, GRID_SIZE, 0);
         Set<Point> result = ProhibitedCellFinder.create(map, SAFE_DISTANCE2, LIKELIHOOD_THRESHOLD).find();
 
         assertNotNull(result);
@@ -159,7 +159,7 @@ class ProhibitedCellFinderTest {
 
     void findBigCircle() {
         List<Obstacle> obstacles = List.of(Obstacle.create(0, 0, 0, 1));
-        GridScannerMap map = GridScannerMap.create(obstacles, GRID_SIZE);
+        GridScannerMap map = GridScannerMap.create(obstacles, GRID_SIZE, GRID_SIZE, 0);
         Set<Point> result = ProhibitedCellFinder.create(map, SAFE_DISTANCE3, LIKELIHOOD_THRESHOLD).find();
 
         assertNotNull(result);
@@ -209,7 +209,7 @@ class ProhibitedCellFinderTest {
                 Obstacle.create(0, 0, 0, 1),
                 Obstacle.create(2, 0, 0, 1)
         );
-        GridScannerMap map = GridScannerMap.create(obstacles, GRID_SIZE);
+        GridScannerMap map = GridScannerMap.create(obstacles, GRID_SIZE, GRID_SIZE, 0);
         Set<Point> result = ProhibitedCellFinder.findContour(ProhibitedCellFinder.create(map, SAFE_DISTANCE, LIKELIHOOD_THRESHOLD).find());
 
         assertNotNull(result);
@@ -249,7 +249,7 @@ class ProhibitedCellFinderTest {
                 Obstacle.create(0, 0, 0, 1),
                 Obstacle.create(2, 0, 0, 1)
         );
-        GridScannerMap map = GridScannerMap.create(obstacles, GRID_SIZE);
+        GridScannerMap map = GridScannerMap.create(obstacles, GRID_SIZE, GRID_SIZE, 0);
         Set<Point> result = ProhibitedCellFinder.create(map, SAFE_DISTANCE, LIKELIHOOD_THRESHOLD).find();
 
         assertNotNull(result);

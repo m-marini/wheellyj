@@ -40,14 +40,14 @@ import java.awt.geom.Point2D;
 import java.util.List;
 
 import static java.awt.Color.GREEN;
-import static java.awt.Color.WHITE;
 import static java.util.Objects.requireNonNull;
 
 /**
  * The topographic map shows the locations of obstacles
  */
 public abstract class TopographicMap extends JComponent {
-    public static final BasicStroke BASIC_STROKE = new BasicStroke(0);
+    public static final BasicStroke THIN_STROKE = new BasicStroke(0f);
+    public static final BasicStroke THICK_STROKE = new BasicStroke(20e-3f);
     public static final Color BACKGROUND = Color.BLACK;
     public static final Color FOREGROUND = GREEN;
     public static final Color WARN_COLOR = new Color(128, 128, 0);
@@ -56,13 +56,12 @@ public abstract class TopographicMap extends JComponent {
     public static final Color INFO_COLOR = new Color(0, 128, 0);
     public static final Color GRID = new Color(63, 63, 63);
     public static final double DEFAULT_MAX_DISTANCE = 3;
-    public static final Color PATH_COLOR = WHITE;
 
     private List<Tuple2<Color, Shape>> shapes;
     private Point2D offset;
     private double direction;
     private double maxDistance;
-    private List<Line2D> lines;
+    private List<Tuple2<Color, Line2D>> lines;
 
     /**
      * Creates a topographic map
@@ -120,10 +119,10 @@ public abstract class TopographicMap extends JComponent {
             }
         }
         if (lines != null) {
-            gr.setColor(PATH_COLOR);
-            gr.setStroke(BASIC_STROKE);
-            for (Line2D line : lines) {
-                gr.draw(line);
+            gr.setStroke(THICK_STROKE);
+            for (Tuple2<Color, Line2D> t : lines) {
+                gr.setColor(t._1);
+                gr.draw(t._2);
             }
         }
     }
@@ -139,7 +138,7 @@ public abstract class TopographicMap extends JComponent {
         return this;
     }
 
-    public TopographicMap setPath(List<Line2D> lines) {
+    public TopographicMap setLines(List<Tuple2<Color, Line2D>> lines) {
         this.lines = requireNonNull(lines);
         repaint();
         return this;

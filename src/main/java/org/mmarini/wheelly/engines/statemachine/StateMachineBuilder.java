@@ -31,19 +31,21 @@ package org.mmarini.wheelly.engines.statemachine;
 
 import org.mmarini.Tuple2;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.engines.statemachine.StateMachineEngine.END_STATUS;
 
 public class StateMachineBuilder {
 
     public static final StateMachineBuilder SINGLETON = new StateMachineBuilder(
-            Map.of(END_STATUS, StopStatus.finalStatus()),
-            Map.of());
+            List.of(StopStatus.finalStatus()),
+            Map.of(), StateMachineContext.create());
 
     /**
      *
@@ -52,29 +54,27 @@ public class StateMachineBuilder {
         return SINGLETON;
     }
 
-    private final Map<String, EngineStatus> states;
+    private final List<EngineStatus> states;
     private final Map<Tuple2<String, String>, Tuple2<String, UnaryOperator<StateMachineContext>>> transitions;
-    private StateMachineContext context;
+    private final StateMachineContext context;
 
-    private StateMachineBuilder(Map<String, EngineStatus> states, Map<Tuple2<String, String>, Tuple2<String, UnaryOperator<StateMachineContext>>> transitions) {
+    private StateMachineBuilder(List<EngineStatus> states, Map<Tuple2<String, String>, Tuple2<String, UnaryOperator<StateMachineContext>>> transitions, StateMachineContext context) {
         this.states = requireNonNull(states);
         this.transitions = requireNonNull(transitions);
-        this.context = StateMachineContext.create();
+        this.context = context;
     }
 
     /**
-     * @param name
      * @param status
      */
-    public StateMachineBuilder addState(String name, EngineStatus status) {
-        requireNonNull(name);
+    public StateMachineBuilder addState(EngineStatus status) {
         requireNonNull(status);
-        if (states.containsKey(name)) {
-            throw new IllegalArgumentException(format("Status %s already defined", name));
+        if (containsStatus(status)) {
+            throw new IllegalArgumentException(format("Status %s already defined", status.getName()));
         }
-        Map<String, EngineStatus> newMap = new HashMap<>(states);
-        newMap.put(name, status);
-        return new StateMachineBuilder(newMap, transitions);
+        List<EngineStatus> newList = new ArrayList<>(states);
+        newList.add(status);
+        return new StateMachineBuilder(newList, transitions, context);
     }
 
     /**
@@ -88,10 +88,10 @@ public class StateMachineBuilder {
         requireNonNull(exit);
         requireNonNull(to);
         requireNonNull(contextChanger);
-        if (!states.containsKey(from)) {
+        if (!containsStatus(from)) {
             throw new IllegalArgumentException(format("Status %s undefined", from));
         }
-        if (!states.containsKey(to)) {
+        if (!containsStatus(to)) {
             throw new IllegalArgumentException(format("Status %s undefined", to));
         }
         Tuple2<String, String> key = Tuple2.of(from, exit);
@@ -101,7 +101,7 @@ public class StateMachineBuilder {
         Tuple2<String, UnaryOperator<StateMachineContext>> value = Tuple2.of(to, contextChanger);
         Map<Tuple2<String, String>, Tuple2<String, UnaryOperator<StateMachineContext>>> newMap = new HashMap<>(transitions);
         newMap.put(key, value);
-        return new StateMachineBuilder(states, newMap);
+        return new StateMachineBuilder(states, newMap, context);
     }
 
     /**
@@ -117,19 +117,32 @@ public class StateMachineBuilder {
      * Returns the state machine
      */
     public StateMachineEngine build(String initialStatus) {
-        if (!states.containsKey(initialStatus)) {
+        if (!containsStatus(initialStatus)) {
             throw new IllegalArgumentException(format("Status %s undefined", initialStatus));
         }
+        Map<String, EngineStatus> namedStatus = states.stream().collect(Collectors.toMap(
+                EngineStatus::getName,
+                x -> x
+        ));
+        return new StateMachineEngine(namedStatus, transitions, initialStatus, context);
+    }
 
-        return new StateMachineEngine(states, transitions, initialStatus, context);
+    private boolean containsStatus(EngineStatus status) {
+        return containsStatus(status.getName());
+    }
+
+    private boolean containsStatus(String name) {
+        return states.stream().map(EngineStatus::getName)
+                .anyMatch(name::equals);
     }
 
     public StateMachineBuilder setInitialContext(StateMachineContext context) {
-        this.context = requireNonNull(context);
-        return this;
+        return new StateMachineBuilder(states, transitions, context);
     }
 
     public <T> StateMachineBuilder setParams(String key, T value) {
+        requireNonNull(key);
+        requireNonNull(value);
         context.put(key, value);
         return this;
     }

@@ -4,54 +4,49 @@ port: 22
 connectionTimeout: 1000
 readTimeout: 3000
 retryConnectionInterval: 3000
-numClockSamples: 3
-clockInterval: 300000
-clockTimeout: 1000
-restartClockSyncDelay: 100
-statusInterval: 20
 startQueryDelay: 150
 motorCommandInterval: 700
 scanCommandInterval: 700
 
-engine: /engines/sala
+engine: /engines/avoid
 
 engines:
   manual:
     builder: org.mmarini.wheelly.engines.Builders.manual
-# Linux
-#    joystickPort: "Mega World USB Game Controllers"
-# Windows
-#    joystickPort: "USB Game Controllers"
+  # Linux
+  #    joystickPort: "Mega World USB Game Controllers"
+  # Windows
+  #    joystickPort: "USB Game Controllers"
   stop:
     builder: org.mmarini.wheelly.engines.Builders.stop
   sequence:
     builder: org.mmarini.wheelly.engines.Builders.sequence
     targets:
-    - [0, 0]
-    - [1, 1]
-    - [1, 0]
+      - [ 0, 0 ]
+      - [ 1, 1 ]
+      - [ 1, 0 ]
     thresholdDistance: 0.1
   random:
     builder: org.mmarini.wheelly.engines.Builders.randomPath
     maxDistance: 2
-#    center: [0, 0]
+  #    center: [0, 0]
   sala:
     builder: org.mmarini.wheelly.engines.Builders.findPath
-#    target: [0, 0]
-#    target: [2.3, 3]
-    target: [2, 0]
+    targets:
+      - [ 2.3, 3 ]
+      - [ 2, 0 ]
+      - [ 0, 0 ]
     thresholdDistance: 0.1
     safeDistance: 0.3
   lab:
     builder: org.mmarini.wheelly.engines.Builders.findPath
-    target: [0.8, 0]
+    target: [ 0.8, 0 ]
     thresholdDistance: 0.1
     safeDistance: 0.3
   gotoTest:
     builder: org.mmarini.wheelly.engines.Builders.gotoTest
-    target: [1, 0]
+    target: [ 1, 0 ]
     thresholdDistance: 0.1
     safeDistance: 0.3
   avoid:
     builder: org.mmarini.wheelly.engines.Builders.avoidObstacle
-

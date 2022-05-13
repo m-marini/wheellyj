@@ -30,61 +30,57 @@
 package org.mmarini.wheelly.model;
 
 import java.awt.geom.Point2D;
-import java.util.StringJoiner;
 
-import static java.lang.Math.toRadians;
+import static java.lang.Math.*;
+import static org.mmarini.wheelly.model.Utils.direction;
+import static org.mmarini.wheelly.model.Utils.normalizeDegAngle;
 
 /**
  *
  */
-public class RobotAsset {
+public interface RobotAsset {
 
     /**
-     * @param location  the robot location
-     * @param direction direction (DEG)
+     * Returns the direction of robot DEG
      */
-    public static RobotAsset create(Point2D location, int direction) {
-        return new RobotAsset(location, direction);
+    int getRobotDeg();
+
+    /**
+     * Returns the direction of location from the robot DEG
+     *
+     * @param location the location
+     */
+    default int getRobotDeg(Point2D location) {
+        return (int) round(toDegrees(direction(getRobotLocation(), location)));
     }
 
     /**
-     * @param x         x coordinate
-     * @param y         y coordinate
-     * @param direction direction (DEG)
+     * Returns the distance of a location from the robot
+     *
+     * @param location the location
      */
-    public static RobotAsset create(double x, double y, int direction) {
-        return new RobotAsset(new Point2D.Double(x, y), direction);
+    default double getRobotDistance(Point2D location) {
+        return getRobotLocation().distance(location);
     }
-
-    public final int directionDeg;
-    public final Point2D location;
 
     /**
-     * @param location     the robot location
-     * @param directionDeg direction (DEG)
+     * Returns the robot location
      */
-    protected RobotAsset(Point2D location, int directionDeg) {
-        this.location = location;
-        this.directionDeg = directionDeg;
+    Point2D getRobotLocation();
+
+    /**
+     * Returns the direction of robot RAD
+     */
+    default double getRobotRad() {
+        return toRadians(getRobotDeg());
     }
 
-    public int getDirectionDeg() {
-        return directionDeg;
-    }
-
-    public double getDirectionRad() {
-        return toRadians(directionDeg);
-    }
-
-    public Point2D getLocation() {
-        return location;
-    }
-
-    @Override
-    public String toString() {
-        return new StringJoiner(", ", RobotAsset.class.getSimpleName() + "[", "]")
-                .add(String.valueOf(location))
-                .add("direction=" + directionDeg)
-                .toString();
+    /**
+     * Returns the direction of a location relative to head of robot DEG
+     *
+     * @param location the location
+     */
+    default int getRobotRelativeDeg(Point2D location) {
+        return normalizeDegAngle(getRobotDeg(location) - getRobotDeg());
     }
 }

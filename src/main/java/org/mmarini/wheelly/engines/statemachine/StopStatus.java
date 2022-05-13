@@ -30,35 +30,34 @@
 package org.mmarini.wheelly.engines.statemachine;
 
 import io.reactivex.rxjava3.schedulers.Timed;
-import org.mmarini.Tuple2;
 import org.mmarini.wheelly.model.InferenceMonitor;
-import org.mmarini.wheelly.model.ScannerMap;
-import org.mmarini.wheelly.model.WheellyStatus;
+import org.mmarini.wheelly.model.MapStatus;
 
-public class StopStatus implements EngineStatus {
-    private static final StopStatus SINGLETON = new StopStatus();
-    private static final StopStatus FINAL_STATUS = new StopStatus() {
-        public StateTransition process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, StateMachineContext context, InferenceMonitor monitor) {
-            return StateTransition.create(STAY_EXIT, context, HALT_COMMAND);
+import static org.mmarini.wheelly.engines.statemachine.StateTransition.TIMEOUT_TRANSITION;
+
+public class StopStatus extends AbstractEngineStatus {
+    public static final String END_STATUS = "End";
+    public static final StateTransition STAY_TRANSITION = StateTransition.create(STAY_EXIT, HALT_COMMAND);
+    private static final StopStatus FINAL_STATUS = new StopStatus(END_STATUS) {
+        public StateTransition process(Timed<MapStatus> data, StateMachineContext context, InferenceMonitor monitor) {
+            return STAY_TRANSITION;
         }
     };
 
-    public static StopStatus create() {
-        return SINGLETON;
+    public static StopStatus create(String name) {
+        return new StopStatus(name);
     }
 
     public static StopStatus finalStatus() {
         return FINAL_STATUS;
     }
 
-    protected StopStatus() {
-
+    protected StopStatus(String name) {
+        super(name);
     }
 
     @Override
-    public StateTransition process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, StateMachineContext context, InferenceMonitor monitor) {
-        return context.isTimerExpired()
-                ? StateTransition.create(TIMEOUT_EXIT, context, HALT_COMMAND)
-                : StateTransition.create(STAY_EXIT, context, HALT_COMMAND);
+    public StateTransition process(Timed<MapStatus> data, StateMachineContext context, InferenceMonitor monitor) {
+        return isExpired() ? TIMEOUT_TRANSITION : STAY_TRANSITION;
     }
 }

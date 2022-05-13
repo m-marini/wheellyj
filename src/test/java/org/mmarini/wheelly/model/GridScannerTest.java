@@ -40,7 +40,6 @@ import java.util.stream.Stream;
 import static java.lang.Math.*;
 import static org.mmarini.ArgumentsGenerator.*;
 import static org.mmarini.wheelly.model.GridScannerMap.*;
-import static org.mmarini.wheelly.model.GridScannerMap.snapToGrid;
 import static org.mmarini.wheelly.model.Utils.*;
 
 /**
@@ -121,11 +120,10 @@ public interface GridScannerTest {
             double robotX = ((Number) ary[0]).doubleValue();
             double robotY = ((Number) ary[1]).doubleValue();
             int robotDegDirection = ((Number) ary[2]).intValue();
-            RobotAsset asset = RobotAsset.create(robotX, robotY, robotDegDirection);
 
             int sensorDegDirection = ((Number) ary[3]).intValue();
             double echoDistance = ((Number) ary[4]).doubleValue();
-            ProxySample proxySample = ProxySample.create(sensorDegDirection, echoDistance, asset, 0, false, false);
+            MockProxySample proxySample = new MockProxySample(new Point2D.Double(robotX, robotY), robotDegDirection, sensorDegDirection, echoDistance);
             Timed<ProxySample> timedSample = new Timed<>(proxySample, sampleTimestamp, TimeUnit.MILLISECONDS);
 
             double obstacleDistance = obstacleRelDistanceFunc.applyAsDouble(((Number) ary[5]).doubleValue(), echoDistance);
@@ -134,11 +132,11 @@ public interface GridScannerTest {
             double likelihood = ((Number) ary[8]).doubleValue();
 
             long timestamp = timedSample.time(TimeUnit.MILLISECONDS);
-            double obstacleRadDirection = toNormalRadians(asset.directionDeg + proxySample.sensorRelativeDeg + obstacleRelDeg);
+            double obstacleRadDirection = toNormalRadians(proxySample.getRobotDeg() + proxySample.getSensorRelativeDeg() + obstacleRelDeg);
 
             Point2D obstacleLocation = snapToGrid(new Point2D.Double(
-                            asset.location.getX() + obstacleDistance * cos(obstacleRadDirection),
-                            asset.location.getY() + obstacleDistance * sin(obstacleRadDirection)),
+                            proxySample.getRobotLocation().getX() + obstacleDistance * cos(obstacleRadDirection),
+                            proxySample.getRobotLocation().getY() + obstacleDistance * sin(obstacleRadDirection)),
                     THRESHOLD_DISTANCE);
             Obstacle obstacle = Obstacle.create(obstacleLocation, timestamp - dt, (float) likelihood);
             return new TestSet(timedSample, obstacle);
@@ -183,10 +181,10 @@ public interface GridScannerTest {
             double robotX = ((Number) ary[0]).doubleValue();
             double robotY = ((Number) ary[1]).doubleValue();
             int robotDegDirection = ((Number) ary[2]).intValue();
-            RobotAsset asset = RobotAsset.create(robotX, robotY, robotDegDirection);
 
             int sensorDegDirection = ((Number) ary[3]).intValue();
-            ProxySample proxySample = ProxySample.create(sensorDegDirection, 0, asset, 0, false, false);
+            double echoDistance = ((Number) ary[4]).doubleValue();
+            MockProxySample proxySample = new MockProxySample(new Point2D.Double(robotX, robotY), robotDegDirection, sensorDegDirection, echoDistance);
             Timed<ProxySample> timedSample = new Timed<>(proxySample, sampleTimestamp, TimeUnit.MILLISECONDS);
 
             double obstacleDistance = ((Number) ary[4]).doubleValue();
@@ -195,11 +193,11 @@ public interface GridScannerTest {
             double likelihood = ((Number) ary[7]).doubleValue();
 
             long timestamp = timedSample.time(TimeUnit.MILLISECONDS);
-            double obstacleRadDirection = toNormalRadians(asset.directionDeg + proxySample.sensorRelativeDeg + obstacleRelDeg);
+            double obstacleRadDirection = toNormalRadians(proxySample.getRobotDeg()+ proxySample.getSensorRelativeDeg() + obstacleRelDeg);
 
             Point2D obstacleLocation = snapToGrid(new Point2D.Double(
-                            asset.location.getX() + obstacleDistance * cos(obstacleRadDirection),
-                            asset.location.getY() + obstacleDistance * sin(obstacleRadDirection)),
+                            proxySample.getRobotLocation().getX() + obstacleDistance * cos(obstacleRadDirection),
+                            proxySample.getRobotLocation().getY() + obstacleDistance * sin(obstacleRadDirection)),
                     THRESHOLD_DISTANCE);
             Obstacle obstacle = Obstacle.create(obstacleLocation, timestamp - dt, (float) likelihood);
             return new TestSet(timedSample, obstacle);
@@ -211,19 +209,18 @@ public interface GridScannerTest {
         public final Timed<ProxySample> proxySample;
         private final double obstacleSensorDistance;
         private final double obstacleSensorRad;
-        private final double obstacleSensorDeg;
+        private final int obstacleSensorDeg;
         private final double obstacleRad;
-        private final double obstacleDeg;
+        private final int obstacleDeg;
 
         TestSet(Timed<ProxySample> proxySample, Obstacle obstacle) {
             this.proxySample = proxySample;
             this.obstacle = obstacle;
             ProxySample sample = proxySample.value();
-            RobotAsset robot = sample.robotAsset;
-            this.obstacleSensorDistance = obstacle.location.distance(robot.location);
-            this.obstacleRad = direction(robot.location, obstacle.location);
-            this.obstacleDeg = toDegrees(obstacleRad);
-            this.obstacleSensorDeg = normalizeDegAngle(obstacleDeg - sample.getSampleDeg());
+            this.obstacleSensorDistance = sample.getRobotDistance(obstacle.location);
+            this.obstacleRad = direction(sample.getRobotLocation(), obstacle.location);
+            this.obstacleDeg = sample.getRobotDeg(obstacle.location);
+            this.obstacleSensorDeg = sample.getSensorRelativeDeg(obstacle.location);
             this.obstacleSensorRad = toRadians(obstacleSensorDeg);
         }
 
@@ -252,25 +249,25 @@ public interface GridScannerTest {
         }
 
         public boolean isDistance1() {
-            return obstacleSensorDistance - proxySample.value().distance < -THRESHOLD_DISTANCE - FUZZY_THRESHOLD_DISTANCE;
+            return obstacleSensorDistance - proxySample.value().getSampleDistance() < -THRESHOLD_DISTANCE - FUZZY_THRESHOLD_DISTANCE;
         }
 
         public boolean isDistance2() {
-            double dist = obstacleSensorDistance - proxySample.value().distance;
+            double dist = obstacleSensorDistance - proxySample.value().getSampleDistance();
             return dist > -THRESHOLD_DISTANCE - FUZZY_THRESHOLD_DISTANCE && dist < -THRESHOLD_DISTANCE;
         }
 
         public boolean isDistance3() {
-            return abs(obstacleSensorDistance - proxySample.value().distance) < THRESHOLD_DISTANCE;
+            return abs(obstacleSensorDistance - proxySample.value().getSampleDistance()) < THRESHOLD_DISTANCE;
         }
 
         public boolean isDistance4() {
-            double dist = obstacleSensorDistance - proxySample.value().distance;
+            double dist = obstacleSensorDistance - proxySample.value().getSampleDistance();
             return dist < THRESHOLD_DISTANCE + FUZZY_THRESHOLD_DISTANCE && dist > THRESHOLD_DISTANCE;
         }
 
         public boolean isDistance9() {
-            double dist = obstacleSensorDistance - proxySample.value().distance;
+            double dist = obstacleSensorDistance - proxySample.value().getSampleDistance();
             return dist > THRESHOLD_DISTANCE + FUZZY_THRESHOLD_DISTANCE + D_EPSILON;
         }
 

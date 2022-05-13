@@ -41,13 +41,12 @@ import static org.mmarini.wheelly.model.Utils.normalizeAngle;
 public class ObstacleSampleProperties {
 
     public static ObstacleSampleProperties from(Obstacle obstacle, ProxySample sample) {
-        RobotAsset robotAsset = sample.robotAsset;
-        Point2D robotLocation = robotAsset.getLocation();
-        Optional<Point2D> sampleLocation = sample.getLocation();
+        Point2D robotLocation = sample.getRobotLocation();
+        Optional<Point2D> sampleLocation = sample.getSampleLocation();
         double robotObstacleDistance = obstacle.getLocation().distance(robotLocation);
         double sampleObstacleDistance = sampleLocation.map(obstacle.getLocation()::distance).orElse(Double.MAX_VALUE);
         double obsDirection = direction(robotLocation, obstacle.getLocation());
-        double obstacleSensorDirection = normalizeAngle(obsDirection - sample.getSampleRad());
+        double obstacleSensorDirection = normalizeAngle(obsDirection - sample.getSensorRad());
         return new ObstacleSampleProperties(obstacle, robotObstacleDistance, sampleObstacleDistance, obstacleSensorDirection);
     }
 

@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #50: Select random target
 - Issue #51: Add select nearest safe location
 - Issue #53: Add speed feedback to motor controller
+- Issue #57: Add behavior to follow a defined path
+- Issue #58: Let avoid to behave disengaging and moving to safe location
+- Issue #59: Add random scan
 
 ## Changed
 

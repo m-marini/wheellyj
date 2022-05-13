@@ -29,23 +29,51 @@
 
 package org.mmarini.wheelly.model;
 
-import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Tuple2;
 
+import java.awt.geom.Point2D;
 import java.util.StringJoiner;
-import java.util.concurrent.TimeUnit;
 
 import static java.lang.Double.parseDouble;
 import static java.lang.Integer.parseInt;
 import static java.lang.String.format;
-import static java.util.Objects.requireNonNull;
 
 /**
  * The Wheelly status contain the sensor value of Wheelly
  */
-public class WheellyStatus {
+public class WheellyStatus implements ProxySample, ContactSensors {
 
     public static final int NO_STATUS_PARAMS = 15;
+
+    /**
+     * Returns wheelly status
+     *
+     * @param robotLocation     the robot location
+     * @param robotDeg          the robot direction DEG
+     * @param sensorRelativeDeg the sensor relative direction DEG
+     * @param sampleDistance    the sample distance
+     * @param leftMotors        the left motor speed
+     * @param rightMotors       the right motor speed
+     * @param contactSensors    the contact sensors
+     * @param voltage           the supply voltage
+     * @param canMoveForward    true if can move forward
+     * @param canMoveBackward   true if can move backward
+     * @param imuFailure        true if imu failure
+     * @param halt              true if halt
+     */
+    public static WheellyStatus create(Point2D robotLocation, int robotDeg,
+                                       int sensorRelativeDeg, double sampleDistance,
+                                       double leftMotors, double rightMotors,
+                                       int contactSensors, double voltage,
+                                       boolean canMoveForward, boolean canMoveBackward,
+                                       boolean imuFailure, boolean halt) {
+        return new WheellyStatus(robotLocation, robotDeg,
+                sensorRelativeDeg, sampleDistance,
+                leftMotors, rightMotors,
+                contactSensors, voltage,
+                canMoveForward, canMoveBackward,
+                imuFailure, halt);
+    }
 
     /**
      * Returns the Wheelly status from status string
@@ -70,17 +98,16 @@ public class WheellyStatus {
      *
      * @param statusString the status string
      */
-    public static Timed<WheellyStatus> from(String statusString, RemoteClock clock) {
+    public static WheellyStatus from(String statusString) {
         String[] params = statusString.split(" ");
         if (params.length != NO_STATUS_PARAMS) {
             throw new IllegalArgumentException(format("Wrong status message \"%s\"", statusString));
         }
 
-        long sampleInstant = clock.fromRemote(Long.parseLong(params[1]));
         double x = parseDouble(params[2]);
         double y = parseDouble(params[3]);
-        int angle = Integer.parseInt(params[4]);
-        RobotAsset asset = RobotAsset.create(x, y, angle);
+        int robotDeg = Integer.parseInt(params[4]);
+        Point2D robotLocation = new Point2D.Double(x, y);
 
         int sensorDirection = parseInt(params[5]);
         double distance = parseDouble(params[6]);
@@ -89,55 +116,144 @@ public class WheellyStatus {
 
         boolean canMoveForward = Integer.parseInt(params[11]) != 0;
         boolean canMoveBackward = Integer.parseInt(params[12]) != 0;
-        ProxySample sample = ProxySample.create(sensorDirection, distance, asset, contactSensors, canMoveBackward, canMoveForward);
 
         double left = parseDouble(params[7]);
         double right = parseDouble(params[8]);
-        Tuple2<Double, Double> motors = Tuple2.of(left, right);
 
         boolean imuFailure = Integer.parseInt(params[13]) != 0;
-        boolean alt = Integer.parseInt(params[14]) != 0;
+        boolean halt = Integer.parseInt(params[14]) != 0;
 
-        return new Timed<>(
-                new WheellyStatus(sample, motors, voltage, imuFailure, alt),
-                sampleInstant, TimeUnit.MILLISECONDS);
+        return new WheellyStatus(robotLocation, robotDeg,
+                sensorDirection, distance,
+                left, right,
+                contactSensors, voltage,
+                canMoveForward, canMoveBackward,
+                imuFailure, halt);
     }
 
-    public final boolean alt;
-    public final boolean imuFailure;
-    public final Tuple2<Double, Double> motors;
-    public final ProxySample sample;
-    public final double voltage;
+    private final Point2D robotLocation;
+    private final int robotDeg;
+    private final int sensorRelativeDeg;
+    private final double sampleDistance;
+    private final double leftMotors;
+    private final double rightMotors;
+    private final int contactSensors;
+    private final double voltage;
+    private final boolean canMoveBackward;
+    private final boolean canMoveForward;
+    private final boolean imuFailure;
+    private final boolean halt;
 
     /**
-     * Creates the Wheelly status
+     * Creates wheelly status
      *
-     * @param sample     robot asset
-     * @param motors     the motor speed
-     * @param voltage    the voltage value
-     * @param imuFailure true if imu failure
-     * @param alt        true if alt status
+     * @param robotLocation     the robot location
+     * @param robotDeg          the robot direction DEG
+     * @param sensorRelativeDeg the sensor relative direction DEG
+     * @param sampleDistance    the sample distance
+     * @param leftMotors        the left motor speed
+     * @param rightMotors       the right motor speed
+     * @param contactSensors    the contact sensors
+     * @param voltage           the supply voltage
+     * @param canMoveForward    true if can move forward
+     * @param canMoveBackward   true if can move backward
+     * @param imuFailure        true if imu failure
+     * @param halt              true if halt
      */
-    protected WheellyStatus(ProxySample sample, Tuple2<Double, Double> motors, double voltage, boolean imuFailure, boolean alt) {
-        this.sample = requireNonNull(sample);
-        this.motors = requireNonNull(motors);
+    protected WheellyStatus(Point2D robotLocation, int robotDeg,
+                            int sensorRelativeDeg, double sampleDistance,
+                            double leftMotors, double rightMotors,
+                            int contactSensors, double voltage,
+                            boolean canMoveForward, boolean canMoveBackward,
+                            boolean imuFailure, boolean halt) {
+        this.robotLocation = robotLocation;
+        this.robotDeg = robotDeg;
+        this.sensorRelativeDeg = sensorRelativeDeg;
+        this.sampleDistance = sampleDistance;
+        this.leftMotors = leftMotors;
+        this.rightMotors = rightMotors;
+        this.contactSensors = contactSensors;
         this.voltage = voltage;
+        this.canMoveBackward = canMoveBackward;
+        this.canMoveForward = canMoveForward;
         this.imuFailure = imuFailure;
-        this.alt = alt;
+        this.halt = halt;
     }
 
-    public ProxySample getSample() {
-        return sample;
+    public double getLeftMotors() {
+        return leftMotors;
+    }
+
+    public double getRightMotors() {
+        return rightMotors;
+    }
+
+    @Override
+    public boolean getCanMoveBackward() {
+        return canMoveBackward;
+    }
+
+    @Override
+    public boolean getCanMoveForward() {
+        return canMoveForward;
+    }
+
+    @Override
+    public int getContactSensors() {
+        return contactSensors;
+    }
+
+    public Tuple2<Double, Double> getMotors() {
+        return Tuple2.of(leftMotors, rightMotors);
+    }
+
+    @Override
+    public int getRobotDeg() {
+        return robotDeg;
+    }
+
+    @Override
+    public Point2D getRobotLocation() {
+        return robotLocation;
+    }
+
+    @Override
+    public double getSampleDistance() {
+        return sampleDistance;
+    }
+
+    @Override
+    public int getSensorRelativeDeg() {
+        return sensorRelativeDeg;
+    }
+
+    public double getVoltage() {
+        return voltage;
+    }
+
+    public boolean isHalt() {
+        return halt;
+    }
+
+    public boolean isImuFailure() {
+        return imuFailure;
     }
 
     @Override
     public String toString() {
         return new StringJoiner(", ", WheellyStatus.class.getSimpleName() + "[", "]")
-                .add("sample=" + sample)
-                .add("motors=" + motors)
+                .add("robotLocation=" + robotLocation)
+                .add("robotDeg=" + robotDeg)
+                .add("sensorRelativeDeg=" + sensorRelativeDeg)
+                .add("sampleDistance=" + sampleDistance)
+                .add("leftMotors=" + leftMotors)
+                .add("rightMotors=" + rightMotors)
+                .add("contactSensors=" + contactSensors)
                 .add("voltage=" + voltage)
-                .add("alt=" + alt)
+                .add("canMoveBackward=" + canMoveBackward)
+                .add("canMoveForward=" + canMoveForward)
                 .add("imuFailure=" + imuFailure)
+                .add("halt=" + halt)
                 .toString();
     }
 }
