@@ -57,12 +57,10 @@ class RawControllerTest {
 
     public static void main(String[] args) throws InterruptedException {
         RawController controller = RawController.create(HOST, PORT,
-                NUM_SAMPLES,
                 CONNECTION_TIMEOUT,
                 RETRY_CONNECTION_INTERVAL,
-                READ_TIMEOUT, CLOCK_INTERVAL,
-                CLOCK_TIMEOUT,
-                RESTART_CLOCK_SYNC_DELAY, QUERIES_INTERVAL, START_QUERY_DELAY);
+                READ_TIMEOUT
+        );
         controller.readStatus()
                 .subscribe(data -> logger.info("Status {}", data),
                         ex -> logger.error("Error on status", ex),

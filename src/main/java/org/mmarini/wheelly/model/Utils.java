@@ -53,6 +53,16 @@ public interface Utils {
         return x;
     }
 
+    static int normalizeDegAngle(int x) {
+        while (x < -180) {
+            x += 360;
+        }
+        while (x >= 180) {
+            x -= 360;
+        }
+        return x;
+    }
+
     static double toNormalDeg(double x) {
         return normalizeDegAngle(toDegrees(x));
     }

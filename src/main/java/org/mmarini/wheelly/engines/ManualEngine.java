@@ -55,8 +55,6 @@ public class ManualEngine implements InferenceEngine {
 
     /**
      * Returns the flowable of motor commands
-     *
-     * @return
      */
     private Flowable<Timed<Tuple2<Float, Float>>> createJoystickFlow() {
         return combineLatest(
@@ -124,7 +122,7 @@ public class ManualEngine implements InferenceEngine {
     }
 
     @Override
-    public Tuple2<MotionComand, Integer> process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, InferenceMonitor monitor) {
+    public Tuple2<MotionComand, Integer> process(Timed<MapStatus> data, InferenceMonitor monitor) {
         MotionComand cmd = alt ? AltCommand.create() : MoveCommand.create((int) round(toDegrees(direction)), speed);
         return Tuple2.of(cmd, scannerDirection);
     }

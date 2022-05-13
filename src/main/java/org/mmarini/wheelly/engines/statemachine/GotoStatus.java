@@ -38,123 +38,135 @@ import org.slf4j.LoggerFactory;
 import java.awt.geom.Point2D;
 import java.util.Optional;
 
-import static java.lang.Math.*;
+import static java.lang.Math.abs;
+import static org.mmarini.wheelly.engines.statemachine.StateMachineContext.TARGET_KEY;
+import static org.mmarini.wheelly.engines.statemachine.StateTransition.COMPLETED_TRANSITION;
 import static org.mmarini.wheelly.model.FuzzyFunctions.*;
-import static org.mmarini.wheelly.model.RobotController.STOP_DISTANCE;
-import static org.mmarini.wheelly.model.Utils.direction;
 
-public class GotoStatus implements EngineStatus {
+public class GotoStatus extends AbstractEngineStatus {
     public static final String UNREACHABLE_EXIT = "Unreachable";
 
-    public static final String TARGET_KEY = "GotoStatus.target";
     public static final String DISTANCE_KEY = "GotoStatus.distance";
     public static final String SCAN_INTERVAL_KEY = "GotoStatus.scanInterval";
     public static final String MIN_UNREACHABLE_DISTANCE_KEY = "GotoStatus.minUnreachableDistance";
 
-    public static final double APPROACH_DISTANCE = 0.5;
-    public static final double FINAL_DISTANCE = 0.2;
-    public static final double FINAL_SPEED = 0.5;
-    public static final double APPROACH_SPEED = 1;
-    public static final int SCAN_ANGLE = 45;
+    public static final double DEFAULT_APPROACH_DISTANCE = 0.6;
+    public static final double DEFAULT_FINAL_DISTANCE = 0.4;
+    public static final double DEFAULT_FINAL_SPEED = 0.5;
+    public static final double DEFAULT_APPROACH_SPEED = 1;
+    public static final int DEFAULT_SCAN_ANGLE = 45;
     public static final long DEFAULT_SCAN_INTERVAL = 1000;
-    public static final long SCANNING_TIME = 100;
+    public static final long DEFAULT_SCANNING_TIME = 100;
     public static final double DEFAULT_MIN_UNREACHABLE_DISTANCE = 0.5;
     private static final Logger logger = LoggerFactory.getLogger(GotoStatus.class);
-    private static final GotoStatus SINGLETON = new GotoStatus();
+    private static final int DEFAULT_TOLERANCE_SENSOR_ANGLE = 5;
 
-    public static GotoStatus create() {
-        return SINGLETON;
+    public static GotoStatus create(String name) {
+        return new GotoStatus(name);
     }
 
-    protected GotoStatus() {
+    private long scanInterval;
+    private Point2D target;
+    private double thresholdDistance;
+    private double minUnreachableDistance;
+    private int toleranceSensorAngle;
+    private double finalDistance;
+    private double approachDistance;
+    private double approachSpeed;
+    private double finalSpeed;
+    private long scanTime;
+    private int scanAngle;
+
+    protected GotoStatus(String name) {
+        super(name);
     }
 
     @Override
     public EngineStatus activate(StateMachineContext context, InferenceMonitor monitor) {
-        context.<Point2D>get(TARGET_KEY).ifPresentOrElse(
-                target -> logger.info("Goto {}", target),
-                () -> logger.warn("Missing target")
-        );
+        super.activate(context, monitor);
+        this.scanInterval = context.getLong(name + "." + SCAN_INTERVAL_KEY,
+                DEFAULT_SCAN_INTERVAL);
+        this.thresholdDistance = context.getDouble(name + "." + DISTANCE_KEY,
+                DEFAULT_FINAL_DISTANCE);
+        this.minUnreachableDistance = context.getDouble(name + "." + MIN_UNREACHABLE_DISTANCE_KEY,
+                DEFAULT_MIN_UNREACHABLE_DISTANCE);
+        this.toleranceSensorAngle = DEFAULT_TOLERANCE_SENSOR_ANGLE;
+        this.finalDistance = DEFAULT_FINAL_DISTANCE;
+        this.approachDistance = DEFAULT_APPROACH_DISTANCE;
+        this.finalSpeed = DEFAULT_FINAL_SPEED;
+        this.approachSpeed = DEFAULT_APPROACH_SPEED;
+        this.scanTime = DEFAULT_SCANNING_TIME;
+        this.scanAngle = DEFAULT_SCAN_ANGLE;
+
+
+        Optional<Point2D> target1 = context.getTarget();
+        this.target = target1.orElse(null);
+        target1.ifPresentOrElse(
+                t -> monitor.put(TARGET_KEY, t),
+                () -> monitor.remove(TARGET_KEY));
         return this;
     }
 
-    private int computeScanDir(StateMachineContext context) {
-        long scanInterval = max(context.getLong(SCAN_INTERVAL_KEY, DEFAULT_SCAN_INTERVAL),
-                SCANNING_TIME * 2);
-        long elaps = context.getElapsedTime(0);
-        long scanFrameTime = elaps % scanInterval;
-        if (scanFrameTime > SCANNING_TIME) {
+    private int computeScanDir() {
+        long elapsedTime = getElapsedTime();
+        long scanFrameTime = elapsedTime % scanInterval;
+        if (scanFrameTime > scanTime) {
             return 0;
-        } else if ((elaps / scanInterval) % 2 == 0) {
-            return SCAN_ANGLE;
+        } else if ((elapsedTime / scanInterval) % 2 == 0) {
+            return scanAngle;
         } else {
-            return -SCAN_ANGLE;
+            return -scanAngle;
         }
     }
 
     @Override
-    public StateTransition process(Tuple2<Timed<WheellyStatus>, ? extends ScannerMap> data, StateMachineContext context, InferenceMonitor monitor) {
-        Optional<Point2D> targetOpt = context.get(TARGET_KEY);
-        return targetOpt.map(target -> {
-                    double thresholdDistance = context.getDouble(DISTANCE_KEY, FINAL_DISTANCE);
-                    WheellyStatus wheellyStatus = data._1.value();
-                    ProxySample sample = wheellyStatus.sample;
-                    RobotAsset robot = sample.robotAsset;
-                    double distance = robot.location.distance(target);
-                    // Check for targetOpt reached
-                    if (distance <= thresholdDistance) {
-                        logger.debug("Target reached");
-                        return StateTransition.create(COMPLETED_EXIT, context, HALT_COMMAND);
-                    }
-                    // Check for obstacles
-                    boolean canMove = sample.canMoveForward;
-                    logger.debug("sensor distance: {}", sample.distance);
-                    boolean isNearObstacle = sample.distance > 0 && sample.distance <= STOP_DISTANCE;
-                    if (!canMove || isNearObstacle) {
-                        sample.getLocation()
-                                .ifPresent(context::setObstacle);
-                        logger.debug("Obstacle {}", sample.getLocation());
-                        return StateTransition.create(OBSTACLE_EXIT, context,
-                                Tuple2.of(AltCommand.create(), sample.sensorRelativeDeg));
-                    }
-                    double minUnreachableDistance = context.getDouble(MIN_UNREACHABLE_DISTANCE_KEY,
-                            DEFAULT_MIN_UNREACHABLE_DISTANCE);
-                    boolean isUnreachable = distance >= minUnreachableDistance
-                            && sample.distance > 0
-                            && sample.sensorRelativeDeg == 0
-                            && sample.distance <= distance;
-                    if (isUnreachable) {
-                        sample.getLocation()
-                                .ifPresent(context::setObstacle);
-                        logger.debug("Obstacle in the path {}", sample.getLocation());
-                        return StateTransition.create(UNREACHABLE_EXIT, context,
-                                Tuple2.of(AltCommand.create(), sample.sensorRelativeDeg));
-                    }
-                    if (context.isTimerExpired()) {
-                        logger.debug("target not reached in the available time");
-                        return StateTransition.create(TIMEOUT_EXIT, context, HALT_COMMAND);
-                    }
-                    // Check for movement
-                    int dirDeg = (int) round(toDegrees(direction(robot.location, target)));
+    public StateTransition process(Timed<MapStatus> data, StateMachineContext context, InferenceMonitor monitor) {
+        return safetyCheck(data, context, monitor).orElseGet(() -> {
+            WheellyStatus status = data.value().getWheelly();
+            if (target == null) {
+                logger.debug("Missing target location");
+                return COMPLETED_TRANSITION;
+            }
+            double distance = status.getRobotDistance(target);
+            // Check for targetOpt reached
+            if (distance <= thresholdDistance) {
+                logger.debug("Target reached");
+                return COMPLETED_TRANSITION;
+            }
+            Optional<Point2D> obstacle = status.getSampleLocation();
+            // Check for obstacle in the direct path
+            double sampleDistance = status.getSampleDistance();
+            boolean isUnreachable =
+                    // Check sensor directed to target
+                    abs(status.getSensorRelativeDeg(target)) <= toleranceSensorAngle
+                            // Check obstacle distance
+                            && distance >= minUnreachableDistance
+                            // Check sensor distance detected
+                            && sampleDistance > 0
+                            && sampleDistance <= distance;
+            if (isUnreachable) {
+                // Obstacle in direct path
+                obstacle.ifPresent(context::setObstacle);
+                logger.debug("Obstacle in the path {}", obstacle);
+                return StateTransition.create(UNREACHABLE_EXIT,
+                        Tuple2.of(AltCommand.create(), status.getSensorRelativeDeg()));
+            }
+            // Check for movement
+            int dirDeg = status.getRobotDeg(target);
 
-                    // Check for distance
-                    double isApproach = positive(distance, APPROACH_DISTANCE);
-                    double isFinal = and(positive(distance, FINAL_DISTANCE), not(isApproach));
-                    logger.debug("isApproaching: {}, isFinal: {}", isApproach, isFinal);
+            // Check for distance
+            double isApproach = positive(distance, approachDistance);
+            double isFinal = and(positive(distance, finalDistance), not(isApproach));
+            logger.debug("isApproaching: {}, isFinal: {}", isApproach, isFinal);
 
-                    double speed = defuzzy(
-                            FINAL_SPEED, isFinal,
-                            APPROACH_SPEED, isApproach,
-                            0, not(or(isFinal, isApproach)));
+            double speed = defuzzy(
+                    finalSpeed, isFinal,
+                    approachSpeed, isApproach,
+                    0, not(or(isFinal, isApproach)));
 
-                    int dir = computeScanDir(context);
-                    logger.debug("speed: {}, dir: {}", speed, dir);
-                    return StateTransition.create(STAY_EXIT, context, Tuple2.of(MoveCommand.create(dirDeg, speed), dir));
-                })
-                .orElseGet(() -> {
-                    // Missing target
-                    logger.debug("Missing target location");
-                    return StateTransition.create(COMPLETED_EXIT, context, HALT_COMMAND);
-                });
+            int dir = computeScanDir();
+            logger.debug("speed: {}, dir: {}", speed, dir);
+            return StateTransition.create(STAY_EXIT, Tuple2.of(MoveCommand.create(dirDeg, speed), dir));
+        });
     }
 }

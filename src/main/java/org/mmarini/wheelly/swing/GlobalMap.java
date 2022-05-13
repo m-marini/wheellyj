@@ -93,7 +93,7 @@ public class GlobalMap extends TopographicMap {
     @Override
     protected void paintGrid(Graphics2D gr) {
         gr.setColor(GRID);
-        gr.setStroke(new BasicStroke(0));
+        gr.setStroke(THIN_STROKE);
         Point2D offset = getOffset();
         double maxDistance = getMaxDistance();
         double minX = offset.getX() - maxDistance;

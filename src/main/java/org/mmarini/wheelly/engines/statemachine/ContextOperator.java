@@ -37,7 +37,7 @@ public interface ContextOperator extends UnaryOperator<StateMachineContext> {
                 .orElseGet(() -> ctx.remove(leftExp));
     }
 
-    static <T> UnaryOperator<StateMachineContext> assignValue(String key, T value) {
+    static <T> ContextOperator assignValue(String key, T value) {
         return ctx -> ctx.put(key, value);
     }
 

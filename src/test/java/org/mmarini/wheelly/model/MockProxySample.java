@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) )2022 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022 Marco Marini, marco.marini@mmarini.org
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -29,55 +29,38 @@
 
 package org.mmarini.wheelly.model;
 
-import java.util.StringJoiner;
+import java.awt.geom.Point2D;
 
-/**
- * The remote clock map the local clock to the remote clock ticks
- */
-public class RemoteClock {
+public class MockProxySample implements ProxySample {
+    private final Point2D robotLocation;
+    private final int robotDeg;
+    private final int sensorRelativeDeg;
+    private final double sampleDistance;
 
-    /**
-     * Returns a remote clock
-     *
-     * @param offset the local offset of remote clock
-     */
-    public static RemoteClock create(long offset) {
-        return new RemoteClock(offset);
-    }
-
-    public final long offset;
-
-    /**
-     * Creates a remote clock
-     *
-     * @param offset the local offset of remote clock
-     */
-    protected RemoteClock(long offset) {
-        this.offset = offset;
-    }
-
-    /**
-     * Returns the local instant of a remote clock ticks
-     *
-     * @param millis the remote clock ticks
-     */
-    public long fromRemote(long millis) {
-        return offset + millis;
-    }
-
-    /**
-     * Returns the remote clock ticks of a local instant
-     *
-     * @param instant the local instant
-     */
-    public long toRemote(long instant) {
-        return instant - offset;
+    public MockProxySample(Point2D robotLocation, int robotDeg, int sensorRelativeDeg, double sampleDistance) {
+        this.robotLocation = robotLocation;
+        this.robotDeg = robotDeg;
+        this.sensorRelativeDeg = sensorRelativeDeg;
+        this.sampleDistance = sampleDistance;
     }
 
     @Override
-    public String toString() {
-        return new StringJoiner(", ", RemoteClock.class.getSimpleName() + "[", "]")
-                .add("offset=" + offset)
-                .toString();
+    public int getRobotDeg() {
+        return robotDeg;
+    }
+
+    @Override
+    public Point2D getRobotLocation() {
+        return robotLocation;
+    }
+
+    @Override
+    public double getSampleDistance() {
+        return sampleDistance;
+    }
+
+    @Override
+    public int getSensorRelativeDeg() {
+        return sensorRelativeDeg;
     }
 }

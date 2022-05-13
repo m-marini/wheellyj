@@ -29,17 +29,34 @@
 
 package org.mmarini.wheelly.model;
 
-import io.reactivex.rxjava3.schedulers.Timed;
-import org.mmarini.Tuple2;
+import java.util.StringJoiner;
 
-/**
- * The inference engine processes the robot sensors and produces the command to the actuators.
- */
-public interface InferenceEngine {
-    InferenceEngine init(InferenceMonitor monitor);
+public class MapStatus {
+    public static MapStatus create(WheellyStatus wheelly, GridScannerMap map) {
+        return new MapStatus(wheelly, map);
+    }
 
-    /**
-     * Returns the tuple with motor command and scanner direction
-     */
-    Tuple2<MotionComand, Integer> process(Timed<MapStatus> data, InferenceMonitor monitor);
+    private final GridScannerMap map;
+    private final WheellyStatus wheelly;
+
+    protected MapStatus(WheellyStatus wheelly, GridScannerMap map) {
+        this.map = map;
+        this.wheelly = wheelly;
+    }
+
+    public GridScannerMap getMap() {
+        return map;
+    }
+
+    public WheellyStatus getWheelly() {
+        return wheelly;
+    }
+
+    @Override
+    public String toString() {
+        return new StringJoiner(", ", MapStatus.class.getSimpleName() + "[", "]")
+                .add("wheelly=" + wheelly)
+                .add("map=" + map)
+                .toString();
+    }
 }

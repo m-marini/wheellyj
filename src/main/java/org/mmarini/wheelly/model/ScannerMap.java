@@ -45,5 +45,5 @@ public interface ScannerMap {
      *
      * @param sample the sample
      */
-    ScannerMap process(Timed<ProxySample> sample);
+    ScannerMap process(Timed<? extends WheellyStatus> sample);
 }

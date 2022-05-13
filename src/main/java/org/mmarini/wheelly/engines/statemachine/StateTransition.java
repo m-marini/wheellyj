@@ -32,28 +32,31 @@ package org.mmarini.wheelly.engines.statemachine;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.model.MotionComand;
 
+import static org.mmarini.wheelly.engines.statemachine.EngineStatus.*;
+
 public class StateTransition {
+    public final static StateTransition OBSTACLE_TRANSITION = create(OBSTACLE_EXIT, HALT_COMMAND);
+    public final static StateTransition BLOCKED_TRANSITION = create(BLOCKED_EXIT, HALT_COMMAND);
+    public final static StateTransition COMPLETED_TRANSITION = create(COMPLETED_EXIT, HALT_COMMAND);
+    public final static StateTransition TIMEOUT_TRANSITION = create(TIMEOUT_EXIT, HALT_COMMAND);
+
     /**
      * @param exit
-     * @param context
      * @param commands
      */
-    public static StateTransition create(String exit, StateMachineContext context, Tuple2<MotionComand, Integer> commands) {
-        return new StateTransition(exit, context, commands);
+    public static StateTransition create(String exit, Tuple2<MotionComand, Integer> commands) {
+        return new StateTransition(exit, commands);
     }
 
     public final Tuple2<MotionComand, Integer> commands;
-    public final StateMachineContext context;
     public final String exit;
 
     /**
      * @param exit
-     * @param context
      * @param commands
      */
-    protected StateTransition(String exit, StateMachineContext context, Tuple2<MotionComand, Integer> commands) {
+    protected StateTransition(String exit, Tuple2<MotionComand, Integer> commands) {
         this.commands = commands;
-        this.context = context;
         this.exit = exit;
     }
 }
