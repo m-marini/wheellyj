@@ -22,7 +22,7 @@
 */
 #define LEFT_PIN        2
 #define RIGHT_FORW_PIN  3
-#define BLOCK_LED_PIN   4
+#define RED_LED_PIN     4
 #define RIGHT_BACK_PIN  5
 #define LEFT_BACK_PIN   6
 #define ECHO_PIN        7
@@ -30,7 +30,8 @@
 #define SERVO_PIN       9
 #define RIGHT_PIN       10
 #define LEFT_FORW_PIN   11
-#define PROXY_LED_PIN   12
+#define GREEN_LED_PIN   12
+#define BLUE_LED_PIN    LED_BUILTIN
 
 #define FRONT_CONTACTS_PIN  A1
 #define REAR_CONTACTS_PIN   A2
@@ -80,9 +81,8 @@
 /*
    Dividers
 */
-#define LED_PULSE_DIVIDER  31
-#define LED_FAST_PULSE_DIVIDER  7
-#define BLOCK_PULSE_DIVIDER  11
+#define FAST_LED_PULSE_DIVIDER  13
+#define LED_PULSE_DIVIDER       23
 
 /*
    Voltage scale
@@ -97,6 +97,19 @@
 #define REAR_SIGNAL_MASK 0x3
 
 /*
+   LED colors
+*/
+
+#define BLACK   0
+#define RED     1
+#define GREEN   2
+#define YELLOW  3
+#define BLUE    4
+#define MAGENTA 5
+#define CYAN    6
+#define WHITE   7
+
+/*
    Command parser
 */
 char line[LINE_SIZE];
@@ -106,7 +119,6 @@ char line[LINE_SIZE];
 */
 
 Timer ledTimer;
-Timer obstacleTimer;
 Timer statsTimer;
 
 /*
@@ -157,6 +169,7 @@ int frontSignals;
 int rearSignals;
 byte contactSignals;
 const int contactLevels[] PROGMEM = {170, 424, 560};
+#define NO_LEVELS (sizeof(contactLevels) / sizeof(contactLevels[0]))
 
 /*
    Set up
@@ -173,21 +186,31 @@ void setup() {
   Serial.begin(SERIAL_BPS);
   Serial.println();
 
-  pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(PROXY_LED_PIN, OUTPUT);
-  pinMode(BLOCK_LED_PIN, OUTPUT);
+  pinMode(BLUE_LED_PIN, OUTPUT);
+  pinMode(GREEN_LED_PIN, OUTPUT);
+  pinMode(RED_LED_PIN, OUTPUT);
   pinMode(LEFT_FORW_PIN, OUTPUT);
   pinMode(LEFT_BACK_PIN, OUTPUT);
   pinMode(RIGHT_FORW_PIN, OUTPUT);
   pinMode(RIGHT_BACK_PIN, OUTPUT);
 
-  digitalWrite(LED_BUILTIN, LOW);
-  digitalWrite(PROXY_LED_PIN, LOW);
-  digitalWrite(BLOCK_LED_PIN, LOW);
+  writeLedColor(BLACK);
   digitalWrite(LEFT_FORW_PIN, LOW);
   digitalWrite(LEFT_BACK_PIN, LOW);
   digitalWrite(RIGHT_FORW_PIN, LOW);
   digitalWrite(RIGHT_BACK_PIN, LOW);
+
+  /*
+    Init led
+  */
+  writeLedColor(BLACK);
+  for (int i = 1; i < 3; i++) {
+    delay(100);
+    writeLedColor(RED);
+    delay(50);
+    writeLedColor(BLACK);
+  }
+  Serial.println();
 
 #ifdef WITH_IMU
   /*
@@ -202,18 +225,7 @@ void setup() {
   imu.reset();
 #endif
 
-  Serial.println();
 
-  /*
-    Init led
-  */
-  digitalWrite(LED_BUILTIN, LOW);
-  for (int i = 0; i < 3; i++) {
-    delay(100);
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(50);
-    digitalWrite(LED_BUILTIN, LOW);
-  }
   ledTimer.onNext(handleLedTimer);
   ledTimer.interval(LED_INTERVAL);
   ledTimer.continuous(true);
@@ -237,11 +249,6 @@ void setup() {
   });
   servo.angle(FRONT_DIRECTION);
 
-  obstacleTimer.onNext(handleObstacleTimer);
-  obstacleTimer.interval(OBSTACLE_INTERVAL);
-  obstacleTimer.continuous(true);
-  obstacleTimer.start();
-
   /*
      Init motor controllers
   */
@@ -255,10 +262,18 @@ void setup() {
   statsTimer.start();
 
   // Final setup
-  Serial.println(F("ha"));
 #ifdef WITH_IMU
   imu.reset();
 #endif
+
+  for (int i = 1; i < 3; i++) {
+    delay(100);
+    writeLedColor(YELLOW);
+    delay(50);
+    writeLedColor(BLACK);
+  }
+
+  Serial.println(F("ha"));
   serialFlush();
 }
 
@@ -279,7 +294,6 @@ void loop() {
   sr04.polling(now);
 
   ledTimer.polling(now);
-  obstacleTimer.polling(now);
   statsTimer.polling(now);
   pollSerialPort();
 }
@@ -297,13 +311,11 @@ void pollSerialPort() {
 }
 
 void pollContactSensors() {
-  //  int contactSensors = analogRead(CONTACTS_PIN);
   frontSignals = analogRead(FRONT_CONTACTS_PIN);
   rearSignals = analogRead(REAR_CONTACTS_PIN);
   contactSignals = decodeContactSignals(frontSignals) * 4
                    + decodeContactSignals(rearSignals);
 }
-#define NO_LEVELS (sizeof(contactLevels) / sizeof(contactLevels[0]))
 
 int decodeContactSignals(int value) {
   int contactSignals = 0;
@@ -344,6 +356,11 @@ void handleImuData(void*) {
   motionController.angle(yaw);
 }
 
+void writeLedColor(byte color) {
+  digitalWrite(RED_LED_PIN, color & 1 ? HIGH : LOW);
+  digitalWrite(GREEN_LED_PIN, color & 2 ? HIGH : LOW);
+  digitalWrite(BLUE_LED_PIN, color & 4 ? HIGH : LOW);
+}
 /*
 
 */
@@ -372,37 +389,33 @@ void handleStatsTimer(void *context, unsigned long) {
    Handles the led timer
 */
 void handleLedTimer(void *, unsigned long n) {
-#ifdef WITH_IMU
-  unsigned long ledDivider = imuFailure ? LED_FAST_PULSE_DIVIDER : LED_PULSE_DIVIDER;
-#else
-  unsigned long ledDivider = LED_PULSE_DIVIDER;
-#endif
-  digitalWrite(LED_BUILTIN, (n % ledDivider) == 0 ? HIGH : LOW);
-  digitalWrite(BLOCK_LED_PIN, !(canMoveForward() && canMoveBackward())
-               &&  (n % BLOCK_PULSE_DIVIDER) == 0 ? HIGH : LOW);
+  byte color = decodeFlashing(n) ? decodeColor() : BLACK;
+  writeLedColor(color);
 }
 
-/*
-   Handles obstacle timer
-*/
-void handleObstacleTimer(void *, unsigned long i) {
-  static unsigned long last = 0;
-  if (distance == 0 || distance > WARN_DISTANCE) {
-    digitalWrite(PROXY_LED_PIN, LOW);
-  } else if (distance <= STOP_DISTANCE) {
-    digitalWrite(PROXY_LED_PIN, HIGH);
-    last = i;
-  } else {
-    int n = map(distance,
-                STOP_DISTANCE, WARN_DISTANCE,
-                MIN_OBSTACLE_PULSES, MAX_OBSTACLE_PULSES);
-    if (i >= last + n) {
-      digitalWrite(PROXY_LED_PIN, HIGH);
-      last = i;
-    } else {
-      digitalWrite(PROXY_LED_PIN, LOW);
-    }
+byte decodeColor() {
+  boolean forward = canMoveForward();
+  boolean backward = canMoveBackward();
+  if (!forward && !backward)
+    return RED;
+  if (forward && !backward)
+    return GREEN;
+  if (!forward && backward)
+    return YELLOW;
+  if (distance > 0 && distance <= ((WARN_DISTANCE + STOP_DISTANCE) / 2)) {
+    return MAGENTA;
   }
+  if (distance > 0 && distance <= WARN_DISTANCE) {
+    return CYAN;
+  }
+  return motionController.isHalt() ? BLUE : WHITE;
+}
+
+bool decodeFlashing(unsigned long n) {
+  boolean alert = !canMoveForward() || !canMoveBackward() || imuFailure;
+  unsigned long divider = alert ? FAST_LED_PULSE_DIVIDER : LED_PULSE_DIVIDER;
+  unsigned long frame = n % divider;
+  return frame == 0 || (imuFailure && frame == 3);
 }
 
 /*
@@ -420,7 +433,7 @@ void handleMvCommand(const char* parms) {
   motionController.move(direction, speed);
   if (motionController.isForward() && !canMoveForward()
       || motionController.isBackward() && !canMoveBackward()) {
-    motionController.alt();
+    motionController.halt();
   }
 }
 
@@ -448,7 +461,7 @@ void handleSample(void *, int dist) {
   distance = dist;
   if (motionController.isForward() && !canMoveForward()
       || motionController.isBackward() && !canMoveBackward()) {
-    motionController.alt();
+    motionController.halt();
   }
   sendStatus(dist);
 
@@ -478,7 +491,7 @@ void processCommand(unsigned long time) {
   } else if (strncmp(line, "mv ", 3) == 0) {
     handleMvCommand(line + 3);
   } else if (strcmp(line, "al") == 0) {
-    motionController.alt();
+    motionController.halt();
   } else if (strncmp(line, "//", 2) == 0
              || strncmp(line, "!!", 2) == 0
              || strlen(line) == 0) {
@@ -492,7 +505,7 @@ void processCommand(unsigned long time) {
    Reset Wheelly
 */
 void resetWhelly() {
-  motionController.alt();
+  motionController.halt();
   motionController.reset();
 }
 
@@ -536,7 +549,7 @@ void sendStatus(int distance) {
   Serial.print(F(" "));
   Serial.print(imuFailure);
   Serial.print(F(" "));
-  Serial.print(motionController.isAlt());
+  Serial.print(motionController.isHalt());
   Serial.println();
 }
 

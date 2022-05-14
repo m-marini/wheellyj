@@ -38,7 +38,7 @@ MotionCtrl::MotionCtrl(byte leftForwPin, byte leftBackPin, byte rightForwPin, by
   _stopTimer.interval(MOTOR_SAFE_INTERVAL);
   _stopTimer.onNext([](void *ctx, unsigned long) {
     DEBUG_PRINTLN(F("// Motor timer triggered"));
-    ((MotionCtrl*)ctx)->alt();
+    ((MotionCtrl*)ctx)->halt();
   }, this);
 
   _checkTimer.interval(MOTOR_CHECK_INTERVAL);
@@ -61,7 +61,7 @@ void MotionCtrl::begin() {
 
   DEBUG_PRINTLN(F("// Motion controller begin"));
 
-  alt();
+  halt();
 }
 
 /*
@@ -75,10 +75,10 @@ void MotionCtrl::reset() {
 /*
 
 */
-void MotionCtrl::alt() {
+void MotionCtrl::halt() {
   DEBUG_PRINTLN(F("// MotionCtrl::alt"));
   _speed = 0;
-  _alt = true;
+  _halt = true;
   power(0, 0);
   _stopTimer.stop();
   _checkTimer.stop();
@@ -95,8 +95,8 @@ void MotionCtrl::move(float direction, float speed) {
   DEBUG_PRINTLN();
   _direction = direction;
   _speed = speed;
-  if (_alt) {
-    _alt = false;
+  if (_halt) {
+    _halt = false;
     _stopTimer.start();
     _checkTimer.start();
   } else {
@@ -141,7 +141,7 @@ void MotionCtrl::handleMotion(unsigned long clockTime) {
   DEBUG_PRINT(F(", right: "));
   DEBUG_PRINT(_right);
   DEBUG_PRINTLN();
-  if (!_alt && dt > 0) {
+  if (!_halt && dt > 0) {
     // Compute motor power
     float dir = angle();
     float toDir = _direction;

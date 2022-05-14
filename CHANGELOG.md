@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## Changed
+
+ - Issue #61: Change status LEDs with multicolor LED
+
 ## [0.1.0] 2022-05-14
 
 ## Added
