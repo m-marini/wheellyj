@@ -34,7 +34,7 @@ class MotionCtrl {
     void reset();
     void handleMotion(unsigned long clockTime);
     void move(float direction, float speed);
-    void alt();
+    void halt();
 
     const float x() const {
       return _sensors.x();
@@ -54,8 +54,8 @@ class MotionCtrl {
     const boolean isForward() const;
     const boolean isBackward() const;
 
-    const boolean isAlt() const {
-      return _alt;
+    const boolean isHalt() const {
+      return _halt;
     }
 
     void angle(float angle) {
@@ -71,7 +71,7 @@ class MotionCtrl {
 
     float _direction;
     float _speed;
-    boolean _alt;
+    boolean _halt;
 
     float _left;
     float _right;
