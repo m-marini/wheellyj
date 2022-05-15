@@ -15,8 +15,7 @@ public interface Utils {
     static double direction(Point2D from, Point2D to) {
         double dx = to.getX() - from.getX();
         double dy = to.getY() - from.getY();
-        double angle = atan2(dy, dx);
-        return angle;
+        return atan2(dy, dx);
     }
 
     static double linear(double x, double xmin, double xmax, double ymin, double ymax) {

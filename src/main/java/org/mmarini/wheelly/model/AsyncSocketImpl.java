@@ -42,7 +42,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
@@ -245,7 +244,7 @@ public class AsyncSocketImpl implements AsyncSocket {
         return Flowable.create(emitter -> {
             try {
                 ByteBuffer bfr = ByteBuffer.allocate(READ_BUFFER_SIZE);
-                for (; channel.isConnected(); ) {
+                while (channel.isConnected()) {
                     int n = channel.read(bfr);
                     if (n < 0) {
                         // End of file

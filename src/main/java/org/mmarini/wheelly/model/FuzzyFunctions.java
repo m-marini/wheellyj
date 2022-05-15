@@ -40,7 +40,9 @@ import static java.util.Objects.requireNonNull;
  */
 public class FuzzyFunctions {
     /**
-     * @param values
+     * Returns the intersaction of values
+     *
+     * @param values the values
      */
     public static double and(double... values) {
         double result = 1;
@@ -69,7 +71,9 @@ public class FuzzyFunctions {
     }
 
     /**
-     * @param values
+     * Returns the defuzzy value of weighted values
+     *
+     * @param values the pairs of value and weight
      */
     public static double defuzzy(double... values) {
         requireNonNull(values);
@@ -106,14 +110,18 @@ public class FuzzyFunctions {
     }
 
     /**
-     * @param x
+     * Returns the negated value
+     *
+     * @param value the value
      */
-    public static double not(double x) {
-        return 1 - x;
+    public static double not(double value) {
+        return 1 - value;
     }
 
     /**
-     * @param values
+     * Returns the union of values
+     *
+     * @param values the values
      */
     public static double or(double... values) {
         double result = 0;

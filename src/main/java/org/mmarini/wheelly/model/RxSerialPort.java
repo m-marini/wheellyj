@@ -46,19 +46,21 @@ public class RxSerialPort {
     private static final Logger logger = LoggerFactory.getLogger(RxSerialPort.class);
 
     /**
-     * @param port
-     * @param bps
+     * Returns a serial port handler
+     *
+     * @param port the port
+     * @param bps  the communication rate (bits/sec)
      */
     public static RxSerialPort create(String port, int bps) {
         return new RxSerialPort(port, bps);
     }
 
-    public static <T> RowEvent createEvent(long time, T data) {
-        return new RowEvent(time, data);
+    public static <T> RowEvent<T> createEvent(long time, T data) {
+        return new RowEvent<>(time, data);
     }
 
     /**
-     * @param builder the dtring builder
+     * @param builder the string builder
      * @param buffer  the buffer
      */
     private static String[] parseForLines(StringBuilder builder, byte[] buffer) {
@@ -78,6 +80,7 @@ public class RxSerialPort {
         }
         return result.toArray(String[]::new);
     }
+
     private final String name;
     private final SerialPort port;
     private final int bps;
@@ -91,7 +94,7 @@ public class RxSerialPort {
     }
 
     /**
-     * @return
+     *
      */
     public RxSerialPort connect() throws SerialPortException {
         port.openPort();
@@ -153,7 +156,7 @@ public class RxSerialPort {
         return dataEvents
                 .flatMap(event -> {
                     String[] data = parseForLines(builder, event.data);
-                    return Flowable.fromArray(data).<RowEvent<String>>map(line ->
+                    return Flowable.fromArray(data).map(line ->
                             createEvent(event.time, line)
                     );
                 });
@@ -167,8 +170,8 @@ public class RxSerialPort {
     }
 
     /**
-     * @param cmd
-     * @throws SerialPortException
+     * @param cmd the command
+     * @throws SerialPortException in case of error
      */
     public RxSerialPort write(String cmd) throws SerialPortException {
         logger.debug("--> {}", cmd);

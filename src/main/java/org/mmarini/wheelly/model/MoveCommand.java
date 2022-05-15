@@ -38,7 +38,7 @@ import static java.lang.String.format;
 /**
  *
  */
-public class MoveCommand implements MotionComand {
+public class MoveCommand implements MotionCommand {
     /**
      * Returns move command
      *

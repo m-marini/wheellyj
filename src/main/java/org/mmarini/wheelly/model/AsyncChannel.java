@@ -36,7 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
+ * Aasynchronously manages the channel
  */
 public interface AsyncChannel {
     Logger logger = LoggerFactory.getLogger(AsyncChannel.class);
@@ -47,17 +47,19 @@ public interface AsyncChannel {
     AsyncChannel close();
 
     /**
-     *
+     * Returns completed when closed
      */
     Completable closed();
 
     /**
+     * Returns completed when printed all data
+     *
      * @param dataFlow the data flow
      */
     Completable println(Flowable<String> dataFlow);
 
     /**
-     *
+     * Returns thee received data text lines
      */
     Flowable<Timed<String>> readLines();
 }

@@ -68,11 +68,11 @@ public class NextSequenceStatus extends AbstractEngineStatus {
     public EngineStatus activate(StateMachineContext context, InferenceMonitor monitor) {
         super.activate(context, monitor);
         context.remove(TARGET_KEY);
-        context.getInt(name + "." + INDEX_KEY).ifPresent(i -> {
+        getInt(context, INDEX_KEY).ifPresent(i -> {
             this.index = i;
             context.remove(name + "." + INDEX_KEY);
         });
-        list = context.<List<Point2D>>get(name + "." + LIST_KEY).orElseGet(List::of);
+        list = this.<List<Point2D>>get(context, LIST_KEY).orElseGet(List::of);
         return this;
     }
 

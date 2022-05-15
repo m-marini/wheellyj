@@ -81,4 +81,8 @@ public interface ProxySample extends RobotAsset {
     default int getSensorRelativeDeg(Point2D location) {
         return normalizeDegAngle(getRobotDeg(location) - getRobotDeg() - getSensorRelativeDeg());
     }
+
+    default boolean isPointingTo(Point2D location, int epsilon) {
+        return abs(getSensorRelativeDeg(location)) <= epsilon;
+    }
 }

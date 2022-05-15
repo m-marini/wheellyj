@@ -78,9 +78,9 @@ public class FindPathStatus extends AbstractEngineStatus {
     @Override
     public EngineStatus activate(StateMachineContext context, InferenceMonitor monitor) {
         super.activate(context, monitor);
-        this.extensionDistance = context.getDouble(name + "." + EXTENSION_DISTANCE_KEY, DEFAULT_EXTENSION_DISTANCE);
-        this.safeDistance = context.getDouble(name + "." + SAFE_DISTANCE_KEY, DEFAULT_SAFE_DISTANCE);
-        this.likelihoodThreshold = context.getDouble(name + "." + LIKELIHOOD_THRESHOLD_KEY, DEFAULT_LIKELIHOOD_THRESHOLD);
+        this.extensionDistance = getDouble(context, EXTENSION_DISTANCE_KEY, DEFAULT_EXTENSION_DISTANCE);
+        this.safeDistance = getDouble(context, SAFE_DISTANCE_KEY, DEFAULT_SAFE_DISTANCE);
+        this.likelihoodThreshold = getDouble(context, LIKELIHOOD_THRESHOLD_KEY, DEFAULT_LIKELIHOOD_THRESHOLD);
         this.target = context.getTarget().orElse(null);
         context.remove(PATH_KEY);
         if (target != null) {

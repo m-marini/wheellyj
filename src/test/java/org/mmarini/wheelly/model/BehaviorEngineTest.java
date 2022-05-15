@@ -71,13 +71,13 @@ class BehaviorEngineTest {
             }
 
             @Override
-            public Tuple2<MotionComand, Integer> process(Timed<MapStatus> data, InferenceMonitor monitor) {
+            public Tuple2<MotionCommand, Integer> process(Timed<MapStatus> data, InferenceMonitor monitor) {
                 long now = System.currentTimeMillis();
                 if (now > timeout) {
                     angle = random.nextInt(180) - 90;
                     timeout = now + 2000;
                 }
-                return Tuple2.of(AltCommand.create(), angle);
+                return Tuple2.of(HaltCommand.create(), angle);
             }
         };
         RobotAgent engine = RobotAgent.create(controller, inferenceEngine, MOTOR_COMMAND_INTERVAL, SCAN_COMMAND_INTERVAL);

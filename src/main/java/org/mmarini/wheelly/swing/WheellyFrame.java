@@ -98,9 +98,8 @@ public class WheellyFrame extends JFrame {
                 vertSplit.setDividerLocation(0.67);
                 horizSplit1.setDividerLocation(0.33);
                 Completable.timer(1, TimeUnit.SECONDS)
-                        .doOnComplete(() -> {
-                            horizSplit2.setDividerLocation(0.5);
-                        }).subscribe();
+                        .doOnComplete(() -> horizSplit2.setDividerLocation(0.5))
+                        .subscribe();
             }
         });
         setJMenuBar(createMenuBar());
@@ -108,11 +107,10 @@ public class WheellyFrame extends JFrame {
     }
 
     /**
-     * @return
+     *
      */
     private JComponent createConsole() {
-        JScrollPane sp = new JScrollPane(console);
-        return sp;
+        return new JScrollPane(console);
     }
 
     /**
@@ -175,7 +173,7 @@ public class WheellyFrame extends JFrame {
     }
 
     /**
-     * @param text
+     * @param text the text
      */
     public void log(String text) {
         console.append(formatter.format(LocalDateTime.now()));
@@ -194,7 +192,7 @@ public class WheellyFrame extends JFrame {
     }
 
     /**
-     * @param text
+     * @param text the text
      */
     public WheellyFrame setInfo(String text) {
         statusBar.setText(text);

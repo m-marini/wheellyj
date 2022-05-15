@@ -58,7 +58,6 @@ public interface Builders {
     static InferenceEngine avoidObstacle(JsonNode config) {
         return StateMachineBuilder.create()
                 .setParams("init.timeout", 2000)
-//                .setParams("scan.interval", 100)
                 .addState(StopStatus.create("init"))
                 .addState(RandomScanStatus.create("scan"))
                 .addState(SecureStatus.create("avoid"))
@@ -77,7 +76,7 @@ public interface Builders {
         pathEngine().apply(Locator.root()).accept(config);
         List<Point2D> targets = points(config.path("targets"));
         double safeDistance = config.path("safeDistance").asDouble(FindPathStatus.DEFAULT_SAFE_DISTANCE);
-        double thresholdDistance = config.path("thresholdDistance").asDouble(GotoStatus.DEFAULT_FINAL_DISTANCE);
+        double thresholdDistance = config.path("thresholdDistance").asDouble(GotoStatus.DEFAULT_DISTANCE);
         return StateMachineBuilder.create()
                 .setParams("initial.timeout", 2000)
                 .setParams("nextTarget.list", targets)
@@ -123,6 +122,37 @@ public interface Builders {
 
                 .build("initial");
 //        throw new Error("Not implemented");
+    }
+
+    static InferenceEngine follow(JsonNode config) {
+        return StateMachineBuilder.create()
+                .setParams("init.timeout", 2000)
+                .addState(StopStatus.create("init"))
+                .addState(SingleScanStatus.create("scan"))
+                .addState(NearestObstacleStatus.create("nearest"))
+                .addState(FollowStatus.create("follow"))
+
+                .addState(SecureStatus.create("secure"))
+
+                .addState(WaitForUnblockedStatus.create("unblock"))
+
+                .addTransition("init", TIMEOUT_EXIT, "scan")
+                .addTransition("scan", COMPLETED_EXIT, "nearest")
+                .addTransition("nearest", COMPLETED_EXIT, "follow")
+
+                .addTransition("scan", BLOCKED_EXIT, "unblock")
+
+                .addTransition("scan", OBSTACLE_EXIT, "secure")
+                .addTransition("secure", COMPLETED_EXIT, "nearest")
+
+                .addTransition("follow", BLOCKED_EXIT, "unblock")
+                .addTransition("follow", OBSTACLE_EXIT, "secure")
+
+                .addTransition("secure", BLOCKED_EXIT, "unblock")
+
+                .addTransition("unblock", COMPLETED_EXIT, "scan")
+
+                .build("init");
     }
 
     static InferenceEngine gotoTest(JsonNode config) {

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## Added
+- Issue #63: Add follower behaviour
+
 ## Changed
 
  - Issue #61: Change status LEDs with multicolor LED

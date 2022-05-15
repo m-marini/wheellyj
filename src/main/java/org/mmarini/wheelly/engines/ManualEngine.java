@@ -122,8 +122,8 @@ public class ManualEngine implements InferenceEngine {
     }
 
     @Override
-    public Tuple2<MotionComand, Integer> process(Timed<MapStatus> data, InferenceMonitor monitor) {
-        MotionComand cmd = alt ? AltCommand.create() : MoveCommand.create((int) round(toDegrees(direction)), speed);
+    public Tuple2<MotionCommand, Integer> process(Timed<MapStatus> data, InferenceMonitor monitor) {
+        MotionCommand cmd = alt ? HaltCommand.create() : MoveCommand.create((int) round(toDegrees(direction)), speed);
         return Tuple2.of(cmd, scannerDirection);
     }
 }

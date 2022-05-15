@@ -31,14 +31,14 @@ package org.mmarini.wheelly.engines.statemachine;
 
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.model.AltCommand;
+import org.mmarini.wheelly.model.HaltCommand;
 import org.mmarini.wheelly.model.InferenceMonitor;
 import org.mmarini.wheelly.model.MapStatus;
-import org.mmarini.wheelly.model.MotionComand;
+import org.mmarini.wheelly.model.MotionCommand;
 
 public interface EngineStatus {
 
-    Tuple2<MotionComand, Integer> HALT_COMMAND = Tuple2.of(AltCommand.create(), 0);
+    Tuple2<MotionCommand, Integer> HALT_COMMAND = Tuple2.of(HaltCommand.create(), 0);
     String STAY_EXIT = "Stay";
     String TIMEOUT_EXIT = "Timeout";
     String COMPLETED_EXIT = "Completed";

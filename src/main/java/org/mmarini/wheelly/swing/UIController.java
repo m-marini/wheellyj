@@ -330,7 +330,7 @@ public class UIController {
         dashboard.setObstacleDistance(status.getSampleDistance());
         dashboard.setPower(status.getVoltage());
         dashboard.setMotors(status.getLeftMotors(), status.getRightMotors());
-        dashboard.setForwardBlock(!status.getCanMoveForward());
+        dashboard.setForwardBlock(status.getCannotMoveForward());
         dashboard.setAngle(status.getRobotRad());
         dashboard.setRobotLocation(status.getRobotLocation());
         radar.setAsset(status.getRobotLocation(), status.getRobotRad());

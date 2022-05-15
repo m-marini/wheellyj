@@ -8,7 +8,7 @@ startQueryDelay: 150
 motorCommandInterval: 700
 scanCommandInterval: 700
 
-engine: /engines/avoid
+engine: /engines/follow
 
 engines:
   manual:
@@ -50,3 +50,5 @@ engines:
     safeDistance: 0.3
   avoid:
     builder: org.mmarini.wheelly.engines.Builders.avoidObstacle
+  follow:
+    builder: org.mmarini.wheelly.engines.Builders.follow

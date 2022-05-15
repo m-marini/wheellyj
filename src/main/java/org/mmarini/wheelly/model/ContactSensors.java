@@ -64,9 +64,9 @@ public interface ContactSensors extends RobotAsset {
             new Point2D.Double(X_FRONT, Y_LEFT),  // NW
     };
 
-    boolean getCanMoveBackward();
+    boolean getCannotMoveBackward();
 
-    boolean getCanMoveForward();
+    boolean getCannotMoveForward();
 
     default List<Point2D> getContactObstacles() {
         List<Point2D> result = new ArrayList<>();
@@ -94,7 +94,7 @@ public interface ContactSensors extends RobotAsset {
     }
 
     default boolean isBlocked() {
-        return !getCanMoveBackward() && !getCanMoveForward();
+        return getCannotMoveBackward() && getCannotMoveForward();
     }
 
     default boolean isContact(int mask) {
