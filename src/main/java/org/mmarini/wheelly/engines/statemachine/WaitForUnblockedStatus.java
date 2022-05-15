@@ -42,7 +42,7 @@ public class WaitForUnblockedStatus extends AbstractEngineStatus {
     public static final StateTransition STAY_TRANSITION = StateTransition.create(STAY_EXIT, HALT_COMMAND);
 
     /**
-     * Returns named enegine status
+     * Returns named engine status
      *
      * @param name the name
      */
@@ -51,7 +51,7 @@ public class WaitForUnblockedStatus extends AbstractEngineStatus {
     }
 
     /**
-     * Creates named enegine status
+     * Creates named engine status
      *
      * @param name the name
      */

@@ -31,7 +31,10 @@ package org.mmarini.wheelly.engines.statemachine;
 
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.model.*;
+import org.mmarini.wheelly.model.InferenceEngine;
+import org.mmarini.wheelly.model.InferenceMonitor;
+import org.mmarini.wheelly.model.MapStatus;
+import org.mmarini.wheelly.model.MotionCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,7 +68,7 @@ public class StateMachineEngine implements InferenceEngine {
     }
 
     @Override
-    public Tuple2<MotionComand, Integer> process(Timed<MapStatus> data, InferenceMonitor monitor) {
+    public Tuple2<MotionCommand, Integer> process(Timed<MapStatus> data, InferenceMonitor monitor) {
         StateTransition result = states.get(status).process(data, context, monitor);
 
         if (!STAY_EXIT.equals(result.exit)) {

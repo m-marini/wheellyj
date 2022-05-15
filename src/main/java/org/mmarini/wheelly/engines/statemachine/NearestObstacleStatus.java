@@ -30,70 +30,57 @@
 package org.mmarini.wheelly.engines.statemachine;
 
 import io.reactivex.rxjava3.schedulers.Timed;
-import org.mmarini.wheelly.model.InferenceMonitor;
-import org.mmarini.wheelly.model.MapStatus;
+import org.mmarini.wheelly.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.geom.Point2D;
+import java.util.Comparator;
+import java.util.Optional;
+
 import static org.mmarini.wheelly.engines.statemachine.StateTransition.COMPLETED_TRANSITION;
+import static org.mmarini.wheelly.model.RobotController.STOP_DISTANCE;
 
 /**
- * Status where the robot scan and check for obstacles
+ * Drivers the robot in safe position
  */
-public class SingleScanStatus extends AbstractEngineStatus {
-    public static final String INTERVAL_KEY = "interval";
-    public static final long DEFAULT_INTERVAL = 100;
-    private static final int[] DIRECTIONS = {
-            -30, -60, -90, -45, 30, 60, 90, 45, 0
-    };
-    private static final Logger logger = LoggerFactory.getLogger(NextSequenceStatus.class);
+public class NearestObstacleStatus extends AbstractEngineStatus {
+    public static final String MIN_DISTANCE_KEY = "minDistance";
 
-    /**
-     *
-     */
-    public static SingleScanStatus create(String name) {
-        return new SingleScanStatus(name);
+    public static final double DEFAULT_MIN_DISTANCE = STOP_DISTANCE;
+    private static final String NO_TARGET_EXIT = "NoTarget";
+    public static final StateTransition NO_TARGET_FOUND_TRANSITION = StateTransition.create(NO_TARGET_EXIT, HALT_COMMAND);
+    private static final Logger logger = LoggerFactory.getLogger(NearestObstacleStatus.class);
+
+    public static NearestObstacleStatus create(String name) {
+        return new NearestObstacleStatus(name);
     }
 
-    private long interval;
-    private int index;
-    private long timer;
+    private double minDistance;
 
-    /**
-     * Creates named engine status
-     *
-     * @param name the name
-     */
-    protected SingleScanStatus(String name) {
+    protected NearestObstacleStatus(String name) {
         super(name);
     }
-
 
     @Override
     public EngineStatus activate(StateMachineContext context, InferenceMonitor monitor) {
         super.activate(context, monitor);
-        this.interval = getLong(context, INTERVAL_KEY, DEFAULT_INTERVAL);
-        this.index = 0;
-        this.timer = System.currentTimeMillis() + interval;
+        minDistance = getDouble(context, MIN_DISTANCE_KEY, DEFAULT_MIN_DISTANCE);
         return this;
     }
 
-
     @Override
     public StateTransition process(Timed<MapStatus> data, StateMachineContext context, InferenceMonitor monitor) {
-        return safetyCheck(data, context, monitor).orElseGet(() -> {
-            if (System.currentTimeMillis() >= timer) {
-                if (index >= DIRECTIONS.length - 1) {
-                    // Exit
-                    logger.debug("Scan completed");
-                    context.clearObstacle();
-                    return COMPLETED_TRANSITION;
-                } else {
-                    this.timer = System.currentTimeMillis() + interval;
-                    index++;
-                }
-            }
-            return StateTransition.createHalt(STAY_EXIT, DIRECTIONS[index]);
-        });
+        GridScannerMap map = data.value().getMap();
+        WheellyStatus wheelly = data.value().getWheelly();
+        Optional<Point2D> target = map.getObstacles().stream()
+                .map(o -> ObstacleSampleProperties.from(o, wheelly))
+                .filter(op -> op.robotObstacleDistance >= minDistance)
+                .min(Comparator.comparingDouble(ObstacleSampleProperties::getRobotObstacleDistance))
+                .map(ObstacleSampleProperties::getObstacle)
+                .map(Obstacle::getLocation);
+        context.setTarget(target);
+        logger.debug("Find nearest obstacle at {}", target);
+        return target.map(x -> COMPLETED_TRANSITION).orElse(NO_TARGET_FOUND_TRANSITION);
     }
 }

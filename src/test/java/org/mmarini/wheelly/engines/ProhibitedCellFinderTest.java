@@ -33,9 +33,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.model.ProhibitedCellFinder;
 import org.mmarini.wheelly.model.GridScannerMap;
 import org.mmarini.wheelly.model.Obstacle;
+import org.mmarini.wheelly.model.ProhibitedCellFinder;
 
 import java.awt.*;
 import java.awt.geom.Point2D;

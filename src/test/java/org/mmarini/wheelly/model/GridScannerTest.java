@@ -145,7 +145,7 @@ public interface GridScannerTest {
 
     static ArgumentsGenerator<Integer> extrnalDegAngleGen() {
         return uniform(-NO_SENSITIVITY_DEG, NO_SENSITIVITY_DEG + 1)
-                .map(x -> (int) normalizeDegAngle(180 - x));
+                .map(x -> normalizeDegAngle(180 - x));
     }
 
     static ArgumentsGenerator<Integer> innerDegAngle() {
@@ -193,7 +193,7 @@ public interface GridScannerTest {
             double likelihood = ((Number) ary[7]).doubleValue();
 
             long timestamp = timedSample.time(TimeUnit.MILLISECONDS);
-            double obstacleRadDirection = toNormalRadians(proxySample.getRobotDeg()+ proxySample.getSensorRelativeDeg() + obstacleRelDeg);
+            double obstacleRadDirection = toNormalRadians(proxySample.getRobotDeg() + proxySample.getSensorRelativeDeg() + obstacleRelDeg);
 
             Point2D obstacleLocation = snapToGrid(new Point2D.Double(
                             proxySample.getRobotLocation().getX() + obstacleDistance * cos(obstacleRadDirection),

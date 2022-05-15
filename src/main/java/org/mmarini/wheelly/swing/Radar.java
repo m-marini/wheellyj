@@ -37,7 +37,7 @@ import java.awt.geom.Point2D;
 import static java.lang.Math.*;
 import static org.mmarini.wheelly.model.RobotController.STOP_DISTANCE;
 import static org.mmarini.wheelly.model.RobotController.WARN_DISTANCE;
-import static org.mmarini.wheelly.swing.Dashboard.*;
+import static org.mmarini.wheelly.swing.Dashboard.INFO_DISTANCE;
 
 /**
  * The radar component shows the locations of obstacles relative to the robot asset

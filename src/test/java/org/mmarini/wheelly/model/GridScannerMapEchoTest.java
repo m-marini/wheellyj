@@ -44,7 +44,6 @@ import static java.lang.Math.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.mmarini.wheelly.model.GridScannerMap.*;
-import static org.mmarini.wheelly.model.GridScannerMap.snapToGrid;
 import static org.mmarini.wheelly.model.Utils.linear;
 
 /**

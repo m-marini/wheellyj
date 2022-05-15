@@ -29,5 +29,8 @@
 
 package org.mmarini.wheelly.model;
 
+/**
+ * Asynchronously manages a socket
+ */
 public interface AsyncSocket extends AsyncChannel, AsyncConnectable {
 }

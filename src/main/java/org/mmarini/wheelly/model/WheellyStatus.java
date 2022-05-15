@@ -180,22 +180,14 @@ public class WheellyStatus implements ProxySample, ContactSensors {
         this.halt = halt;
     }
 
-    public double getLeftMotors() {
-        return leftMotors;
-    }
-
-    public double getRightMotors() {
-        return rightMotors;
+    @Override
+    public boolean getCannotMoveBackward() {
+        return !canMoveBackward;
     }
 
     @Override
-    public boolean getCanMoveBackward() {
-        return canMoveBackward;
-    }
-
-    @Override
-    public boolean getCanMoveForward() {
-        return canMoveForward;
+    public boolean getCannotMoveForward() {
+        return !canMoveForward;
     }
 
     @Override
@@ -203,8 +195,16 @@ public class WheellyStatus implements ProxySample, ContactSensors {
         return contactSensors;
     }
 
+    public double getLeftMotors() {
+        return leftMotors;
+    }
+
     public Tuple2<Double, Double> getMotors() {
         return Tuple2.of(leftMotors, rightMotors);
+    }
+
+    public double getRightMotors() {
+        return rightMotors;
     }
 
     @Override

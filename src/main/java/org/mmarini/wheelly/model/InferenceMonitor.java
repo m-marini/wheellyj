@@ -29,8 +29,12 @@
 
 package org.mmarini.wheelly.model;
 
+import java.util.Optional;
+
 public interface InferenceMonitor {
     <T> InferenceMonitor put(String key, T value);
+
+    <T> InferenceMonitor put(String key, Optional<T> value);
 
     InferenceMonitor remove(String key);
 

@@ -29,10 +29,5 @@
 
 package org.mmarini.wheelly.model;
 
-public interface AltCommand extends MotionComand {
-    AltCommand ALT_COMMAND = () -> "al";
-
-    static AltCommand create() {
-        return ALT_COMMAND;
-    }
+public interface MotionCommand extends WheellyCommand {
 }

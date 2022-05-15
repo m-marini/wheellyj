@@ -39,15 +39,6 @@ public class NetworkConfig {
     public NetworkConfig() {
     }
 
-    @Override
-    public String toString() {
-        return new StringJoiner(", ", NetworkConfig.class.getSimpleName() + "[", "]")
-                .add("active=" + active)
-                .add("ssid='" + ssid + "'")
-                .add("password='" + password + "'")
-                .toString();
-    }
-
     public NetworkConfig(boolean active, String ssid, String password) {
         this.active = active;
         this.ssid = ssid;
@@ -76,5 +67,14 @@ public class NetworkConfig {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    @Override
+    public String toString() {
+        return new StringJoiner(", ", NetworkConfig.class.getSimpleName() + "[", "]")
+                .add("active=" + active)
+                .add("ssid='" + ssid + "'")
+                .add("password='" + password + "'")
+                .toString();
     }
 }

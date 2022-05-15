@@ -36,6 +36,9 @@ import org.mmarini.wheelly.model.MapStatus;
 import org.mmarini.wheelly.model.WheellyStatus;
 
 import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 
 import static org.mmarini.wheelly.engines.statemachine.StateMachineContext.TIMEOUT_KEY;
 import static org.mmarini.wheelly.engines.statemachine.StateTransition.*;
@@ -65,12 +68,40 @@ public abstract class AbstractEngineStatus implements EngineStatus {
         return this;
     }
 
+    public <T> Optional<T> get(StateMachineContext context, String key) {
+        return context.get(name + "." + key);
+    }
+
+    public OptionalDouble getDouble(StateMachineContext context, String key) {
+        return context.getDouble(name + "." + key);
+    }
+
+    public double getDouble(StateMachineContext context, String key, double defaultValue) {
+        return context.getDouble(name + "." + key, defaultValue);
+    }
+
     public long getElapsedTime() {
         return System.currentTimeMillis() - entryTime;
     }
 
     public long getEntryTime() {
         return entryTime;
+    }
+
+    public OptionalInt getInt(StateMachineContext context, String key) {
+        return context.getInt(name + "." + key);
+    }
+
+    public int getInt(StateMachineContext context, String key, int defaultValue) {
+        return context.getInt(name + "." + key, defaultValue);
+    }
+
+    public OptionalLong getLong(StateMachineContext context, String key) {
+        return context.getLong(name + "." + key);
+    }
+
+    public long getLong(StateMachineContext context, String key, long defaultValue) {
+        return context.getLong(name + "." + key, defaultValue);
     }
 
     public String getName() {
@@ -95,17 +126,17 @@ public abstract class AbstractEngineStatus implements EngineStatus {
         if (status.isBlocked()) {
             return Optional.of(BLOCKED_TRANSITION);
         }
-        if (!status.getCanMoveForward()) {
+        if (status.getCannotMoveForward()) {
+            context.setObstacle(status.getRelativeContact(ContactSensors.Direction.NORTH));
             return Optional.of(OBSTACLE_TRANSITION);
         }
-        if (!status.getCanMoveBackward()) {
+        if (status.getCannotMoveBackward()) {
             context.setObstacle(status.getRelativeContact(ContactSensors.Direction.SOUTH));
             return Optional.of(OBSTACLE_TRANSITION);
         }
         boolean isNearObstacle = status.getSampleDistance() > 0 && status.getSampleDistance() <= STOP_DISTANCE;
         if (isNearObstacle) {
-            status.getSampleLocation()
-                    .ifPresent(context::setObstacle);
+            context.setTarget(status.getSampleLocation());
             return Optional.of(OBSTACLE_TRANSITION);
         }
         if (isExpired()) {

@@ -37,13 +37,13 @@ public class ConfigParameters {
     /**
      * Creates configuration parameters
      *
-     * @param host
-     * @param port
-     * @param connectionTimeout
-     * @param retryConnectionInterval
-     * @param readTimeout
-     * @param motorCommandInterval
-     * @param scanCommandInterval
+     * @param host                    the host name
+     * @param port                    the port
+     * @param connectionTimeout       the connection timeout (ms)
+     * @param retryConnectionInterval the retry connection interval (ms)
+     * @param readTimeout             the read timeout (ms)
+     * @param motorCommandInterval    the interval of motor command (ms)
+     * @param scanCommandInterval     the interval of scanner command (ms)
      */
     public static ConfigParameters create(String host, int port,
                                           long connectionTimeout, long retryConnectionInterval, long readTimeout,
@@ -64,13 +64,13 @@ public class ConfigParameters {
     /**
      * Creates configuration parameters
      *
-     * @param host
-     * @param port
-     * @param connectionTimeout
-     * @param retryConnectionInterval
-     * @param readTimeout
-     * @param motorCommandInterval
-     * @param scanCommandInterval
+     * @param host                    the host name
+     * @param port                    the port
+     * @param connectionTimeout       the connection timeout (ms)
+     * @param retryConnectionInterval the retry connection interval (ms)
+     * @param readTimeout             the read timeout (ms)
+     * @param motorCommandInterval    the interval of motor command (ms)
+     * @param scanCommandInterval     the interval of scanner command (ms)
      */
     protected ConfigParameters(String host, int port,
                                long connectionTimeout, long retryConnectionInterval, long readTimeout,

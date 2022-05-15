@@ -83,4 +83,8 @@ public interface RobotAsset {
     default int getRobotRelativeDeg(Point2D location) {
         return normalizeDegAngle(getRobotDeg(location) - getRobotDeg());
     }
+
+    default boolean isHeadingTo(Point2D location, int epsilon) {
+        return abs(getRobotRelativeDeg(location)) <= epsilon;
+    }
 }

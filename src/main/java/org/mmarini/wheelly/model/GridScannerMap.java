@@ -51,8 +51,8 @@ public class GridScannerMap implements ScannerMap {
     public static final double MAX_DISTANCE = 3;
     public static final double THRESHOLD_DISTANCE = 0.2;
     public static final double FUZZY_THRESHOLD_DISTANCE = 0.01;
-    public static final double MAX_SENSITIVITY_ANGLE = toRadians(30 / 2);
-    public static final double NO_SENSITIVITY_ANGLE = toRadians(60 / 2);
+    public static final double MAX_SENSITIVITY_ANGLE = toRadians(30d / 2);
+    public static final double NO_SENSITIVITY_ANGLE = toRadians(60d / 2);
     public static final double THRESHOLD_LIKELIHOOD = 10e-3;
     public static final long HOLD_DURATION = 60000;
     public static final double LIKELIHOOD_TAU = HOLD_DURATION / 2000.;
@@ -126,7 +126,7 @@ public class GridScannerMap implements ScannerMap {
                         ? op.robotObstacleDistance < sampleDistance + THRESHOLD_DISTANCE + FUZZY_THRESHOLD_DISTANCE
                         : op.robotObstacleDistance < MAX_DISTANCE)
         ));
-        List<ObstacleSampleProperties> eligibles = org.mmarini.Utils.getValue(split, true).orElseGet(List::of);
+        List<ObstacleSampleProperties> eligibles = Utils.getValue(split, true).orElseGet(List::of);
         List<ObstacleSampleProperties> notEligibles = Utils.getValue(split, false).orElseGet(List::of);
 
         Optional<Point2D> arrangedLocation = sample.value().getSampleLocation().map(this::arrangeLocation);
@@ -180,6 +180,14 @@ public class GridScannerMap implements ScannerMap {
 
     public Set<Point> getProhibited() {
         return prohibited.get();
+    }
+
+    public boolean isObstacleAt(Point2D target) {
+        Point cell = cell(target);
+        return obstacles.stream()
+                .map(Obstacle::getLocation)
+                .map(this::cell)
+                .anyMatch(cell::equals);
     }
 
     public boolean isProhibited(Point2D robotLocation) {

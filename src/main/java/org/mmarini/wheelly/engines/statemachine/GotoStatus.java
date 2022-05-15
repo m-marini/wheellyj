@@ -30,15 +30,15 @@
 package org.mmarini.wheelly.engines.statemachine;
 
 import io.reactivex.rxjava3.schedulers.Timed;
-import org.mmarini.Tuple2;
-import org.mmarini.wheelly.model.*;
+import org.mmarini.wheelly.model.InferenceMonitor;
+import org.mmarini.wheelly.model.MapStatus;
+import org.mmarini.wheelly.model.WheellyStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
 import java.util.Optional;
 
-import static java.lang.Math.abs;
 import static org.mmarini.wheelly.engines.statemachine.StateMachineContext.TARGET_KEY;
 import static org.mmarini.wheelly.engines.statemachine.StateTransition.COMPLETED_TRANSITION;
 import static org.mmarini.wheelly.model.FuzzyFunctions.*;
@@ -46,20 +46,23 @@ import static org.mmarini.wheelly.model.FuzzyFunctions.*;
 public class GotoStatus extends AbstractEngineStatus {
     public static final String UNREACHABLE_EXIT = "Unreachable";
 
-    public static final String DISTANCE_KEY = "GotoStatus.distance";
-    public static final String SCAN_INTERVAL_KEY = "GotoStatus.scanInterval";
-    public static final String MIN_UNREACHABLE_DISTANCE_KEY = "GotoStatus.minUnreachableDistance";
-
-    public static final double DEFAULT_APPROACH_DISTANCE = 0.6;
-    public static final double DEFAULT_FINAL_DISTANCE = 0.4;
-    public static final double DEFAULT_FINAL_SPEED = 0.5;
-    public static final double DEFAULT_APPROACH_SPEED = 1;
+    public static final String DISTANCE_KEY = "distance";
+    public static final String APPROACH_DISTANCE_KEY = "approachDistance";
+    public static final String SCAN_INTERVAL_KEY = "scanInterval";
+    public static final String MIN_UNREACHABLE_DISTANCE_KEY = "minUnreachableDistance";
+    public static final String TOLERANCE_SENSOR_ANGLE_KEY = "toleranceSensorAngle";
+    public static final String SPEED_KEY = "speed";
+    public static final String SCAN_ANGLE_KEY = "scanAngle";
+    public static final String SCAN_TIME_KEY = "scanTime";
+    public static final double DEFAULT_APPROACH_DISTANCE = 1;
+    public static final double DEFAULT_DISTANCE = 0.2;
     public static final int DEFAULT_SCAN_ANGLE = 45;
     public static final long DEFAULT_SCAN_INTERVAL = 1000;
     public static final long DEFAULT_SCANNING_TIME = 100;
     public static final double DEFAULT_MIN_UNREACHABLE_DISTANCE = 0.5;
+    public static final int DEFAULT_TOLERANCE_SENSOR_ANGLE = 5;
+    public static final double DEFAULT_SPEED = 1;
     private static final Logger logger = LoggerFactory.getLogger(GotoStatus.class);
-    private static final int DEFAULT_TOLERANCE_SENSOR_ANGLE = 5;
 
     public static GotoStatus create(String name) {
         return new GotoStatus(name);
@@ -67,15 +70,13 @@ public class GotoStatus extends AbstractEngineStatus {
 
     private long scanInterval;
     private Point2D target;
-    private double thresholdDistance;
+    private double distance;
     private double minUnreachableDistance;
     private int toleranceSensorAngle;
-    private double finalDistance;
     private double approachDistance;
-    private double approachSpeed;
-    private double finalSpeed;
     private long scanTime;
     private int scanAngle;
+    private double speed;
 
     protected GotoStatus(String name) {
         super(name);
@@ -84,20 +85,14 @@ public class GotoStatus extends AbstractEngineStatus {
     @Override
     public EngineStatus activate(StateMachineContext context, InferenceMonitor monitor) {
         super.activate(context, monitor);
-        this.scanInterval = context.getLong(name + "." + SCAN_INTERVAL_KEY,
-                DEFAULT_SCAN_INTERVAL);
-        this.thresholdDistance = context.getDouble(name + "." + DISTANCE_KEY,
-                DEFAULT_FINAL_DISTANCE);
-        this.minUnreachableDistance = context.getDouble(name + "." + MIN_UNREACHABLE_DISTANCE_KEY,
-                DEFAULT_MIN_UNREACHABLE_DISTANCE);
-        this.toleranceSensorAngle = DEFAULT_TOLERANCE_SENSOR_ANGLE;
-        this.finalDistance = DEFAULT_FINAL_DISTANCE;
-        this.approachDistance = DEFAULT_APPROACH_DISTANCE;
-        this.finalSpeed = DEFAULT_FINAL_SPEED;
-        this.approachSpeed = DEFAULT_APPROACH_SPEED;
-        this.scanTime = DEFAULT_SCANNING_TIME;
-        this.scanAngle = DEFAULT_SCAN_ANGLE;
-
+        this.scanInterval = getLong(context, SCAN_INTERVAL_KEY, DEFAULT_SCAN_INTERVAL);
+        this.distance = getDouble(context, DISTANCE_KEY, DEFAULT_DISTANCE);
+        this.minUnreachableDistance = getDouble(context, MIN_UNREACHABLE_DISTANCE_KEY, DEFAULT_MIN_UNREACHABLE_DISTANCE);
+        this.speed = getDouble(context, SPEED_KEY, DEFAULT_SPEED);
+        this.approachDistance = getDouble(context, APPROACH_DISTANCE_KEY, DEFAULT_APPROACH_DISTANCE);
+        this.scanTime = getLong(context, SCAN_TIME_KEY, DEFAULT_SCANNING_TIME);
+        this.toleranceSensorAngle = getInt(context, TOLERANCE_SENSOR_ANGLE_KEY, DEFAULT_TOLERANCE_SENSOR_ANGLE);
+        this.scanAngle = getInt(context, SCAN_ANGLE_KEY, DEFAULT_SCAN_ANGLE);
 
         Optional<Point2D> target1 = context.getTarget();
         this.target = target1.orElse(null);
@@ -129,7 +124,7 @@ public class GotoStatus extends AbstractEngineStatus {
             }
             double distance = status.getRobotDistance(target);
             // Check for targetOpt reached
-            if (distance <= thresholdDistance) {
+            if (distance <= this.distance) {
                 logger.debug("Target reached");
                 return COMPLETED_TRANSITION;
             }
@@ -138,7 +133,7 @@ public class GotoStatus extends AbstractEngineStatus {
             double sampleDistance = status.getSampleDistance();
             boolean isUnreachable =
                     // Check sensor directed to target
-                    abs(status.getSensorRelativeDeg(target)) <= toleranceSensorAngle
+                    status.isPointingTo(target, toleranceSensorAngle)
                             // Check obstacle distance
                             && distance >= minUnreachableDistance
                             // Check sensor distance detected
@@ -146,27 +141,20 @@ public class GotoStatus extends AbstractEngineStatus {
                             && sampleDistance <= distance;
             if (isUnreachable) {
                 // Obstacle in direct path
-                obstacle.ifPresent(context::setObstacle);
+                context.setObstacle(obstacle);
                 logger.debug("Obstacle in the path {}", obstacle);
-                return StateTransition.create(UNREACHABLE_EXIT,
-                        Tuple2.of(AltCommand.create(), status.getSensorRelativeDeg()));
+                return StateTransition.createHalt(UNREACHABLE_EXIT, status, target);
             }
-            // Check for movement
-            int dirDeg = status.getRobotDeg(target);
 
-            // Check for distance
-            double isApproach = positive(distance, approachDistance);
-            double isFinal = and(positive(distance, finalDistance), not(isApproach));
-            logger.debug("isApproaching: {}, isFinal: {}", isApproach, isFinal);
-
+            double approach = not(positive(distance, approachDistance));
+            logger.debug("isApproaching: {}", approach);
             double speed = defuzzy(
-                    finalSpeed, isFinal,
-                    approachSpeed, isApproach,
-                    0, not(or(isFinal, isApproach)));
+                    0, approach,
+                    this.speed, not(or(approach)));
 
             int dir = computeScanDir();
             logger.debug("speed: {}, dir: {}", speed, dir);
-            return StateTransition.create(STAY_EXIT, Tuple2.of(MoveCommand.create(dirDeg, speed), dir));
+            return StateTransition.createMove(STAY_EXIT, status.getRobotDeg(target), speed, dir);
         });
     }
 }

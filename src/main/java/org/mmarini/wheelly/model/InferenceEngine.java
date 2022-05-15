@@ -41,5 +41,5 @@ public interface InferenceEngine {
     /**
      * Returns the tuple with motor command and scanner direction
      */
-    Tuple2<MotionComand, Integer> process(Timed<MapStatus> data, InferenceMonitor monitor);
+    Tuple2<MotionCommand, Integer> process(Timed<MapStatus> data, InferenceMonitor monitor);
 }

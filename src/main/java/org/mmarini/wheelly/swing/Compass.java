@@ -42,7 +42,7 @@ public class Compass extends JComponent {
     private static final Color COMPASS_BACKGROUND = BLACK;
     private static final int MINOR_DEG_STEP = 5;
     private static final int MAJOR_DEG_STEP = 10;
-    private static final int MAJOR_STEP_LENGHT = 5;
+    private static final int MAJOR_STEP_LENGTH = 5;
     private static final int MINOR_STEP_LENGTH = 2;
     private static final Color PROTRACTOR_COLOR = WHITE;
     private static final Color ROSE_COLOR = GRAY;
@@ -68,8 +68,8 @@ public class Compass extends JComponent {
             g.fillOval(x0, y0, radius * 2, radius * 2);
         }
         // Paint protractor
-        int innerRadius = radius - MAJOR_STEP_LENGHT;
-        int middleRadius = radius - MAJOR_STEP_LENGHT + MINOR_STEP_LENGTH;
+        int innerRadius = radius - MAJOR_STEP_LENGTH;
+        int middleRadius = radius - MAJOR_STEP_LENGTH + MINOR_STEP_LENGTH;
         g.setColor(ROSE_COLOR);
         g.drawLine(xc, y0, xc, y0 + radius * 2);
         g.drawLine(x0, yc, x0 + radius * 2, yc);

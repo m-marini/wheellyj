@@ -59,9 +59,11 @@ public class Obstacle {
     public static Obstacle create(Point2D location, long timestamp, double likelihood) {
         return new Obstacle(location, timestamp, likelihood);
     }
+
     public final double likelihood;
     public final Point2D location;
     public final long timestamp;
+
     /**
      * Creates an obstacle
      *
@@ -143,7 +145,7 @@ public class Obstacle {
      * @param y the y coordinate
      */
     public Obstacle setLocation(double x, double y) {
-        return new Obstacle(location, timestamp, likelihood);
+        return new Obstacle(new Point2D.Double(x, y), timestamp, likelihood);
     }
 
     @Override

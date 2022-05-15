@@ -30,8 +30,6 @@
 package org.mmarini.wheelly.engines.statemachine;
 
 import io.reactivex.rxjava3.schedulers.Timed;
-import org.mmarini.Tuple2;
-import org.mmarini.wheelly.model.AltCommand;
 import org.mmarini.wheelly.model.InferenceMonitor;
 import org.mmarini.wheelly.model.MapStatus;
 import org.slf4j.Logger;
@@ -81,8 +79,8 @@ public class RandomScanStatus extends AbstractEngineStatus {
     @Override
     public EngineStatus activate(StateMachineContext context, InferenceMonitor monitor) {
         super.activate(context, monitor);
-        this.interval = context.getLong(name + "." + INTERVAL_KEY, DEFAULT_INTERVAL);
-        this.scanTime = context.getLong(name + "." + SCAN_TIME_KEY, DEFAULT_SCAN_TIME);
+        this.interval = getLong(context, INTERVAL_KEY, DEFAULT_INTERVAL);
+        this.scanTime = getLong(context, SCAN_TIME_KEY, DEFAULT_SCAN_TIME);
         this.timer = System.currentTimeMillis() + interval;
         this.direction = 0;
         return this;
@@ -100,7 +98,7 @@ public class RandomScanStatus extends AbstractEngineStatus {
             long elapsedTime = getElapsedTime();
             long scanFrameTime = elapsedTime % interval;
             int dir = scanFrameTime > scanTime ? 0 : direction;
-            return StateTransition.create(STAY_EXIT, Tuple2.of(AltCommand.create(), dir));
+            return StateTransition.createHalt(STAY_EXIT, dir);
         });
     }
 }

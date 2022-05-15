@@ -30,7 +30,6 @@
 package org.mmarini.wheelly.engines.statemachine;
 
 import io.reactivex.rxjava3.schedulers.Timed;
-import org.mmarini.Tuple2;
 import org.mmarini.wheelly.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,10 +37,11 @@ import org.slf4j.LoggerFactory;
 import java.awt.geom.Point2D;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
-import static java.lang.Math.*;
+import static java.lang.Math.abs;
 import static org.mmarini.wheelly.engines.statemachine.StateMachineContext.OBSTACLE_KEY;
 import static org.mmarini.wheelly.engines.statemachine.StateMachineContext.TARGET_KEY;
 import static org.mmarini.wheelly.engines.statemachine.StateTransition.*;
@@ -73,7 +73,7 @@ public class SecureStatus extends AbstractEngineStatus {
     private double safeDistance;
     private Point2D obstacle;
     private double disengagedSpeed;
-    private double toleranceSensorAngle;
+    private int toleranceSensorAngle;
     private double likelihoodThreshold;
     private List<Point2D> contours;
     private int currentTargetIdx;
@@ -91,10 +91,10 @@ public class SecureStatus extends AbstractEngineStatus {
     @Override
     public EngineStatus activate(StateMachineContext context, InferenceMonitor monitor) {
         super.activate(context, monitor);
-        this.safeDistance = context.getDouble(name + "." + SAFE_DISTANCE_KEY, DEFAULT_SAFE_DISTANCE);
-        this.distance = context.getDouble(name + "." + DISTANCE_KEY, DEFAULT_DISTANCE);
-        this.minSafeDistance = context.getDouble(name + "." + MIN_SAFE_DISTANCE_KEY, DEFAULT_MIN_SAFE_DISTANCE);
-        this.likelihoodThreshold = context.getDouble(name + "." + LIKELIHOOD_THRESHOLD_KEY, DEFAULT_LIKELIHOOD_THRESHOLD);
+        this.safeDistance = getDouble(context, SAFE_DISTANCE_KEY, DEFAULT_SAFE_DISTANCE);
+        this.distance = getDouble(context, DISTANCE_KEY, DEFAULT_DISTANCE);
+        this.minSafeDistance = getDouble(context, MIN_SAFE_DISTANCE_KEY, DEFAULT_MIN_SAFE_DISTANCE);
+        this.likelihoodThreshold = getDouble(context, LIKELIHOOD_THRESHOLD_KEY, DEFAULT_LIKELIHOOD_THRESHOLD);
         this.disengagedSpeed = DEFAULT_DISENGAGE_SPEED;
         this.toleranceSensorAngle = DEFAULT_TOLERANCE_SENSOR_ANGLE;
         this.obstacle = context.getObstacle().orElse(null);
@@ -120,20 +120,19 @@ public class SecureStatus extends AbstractEngineStatus {
         }
 
         // Check for contacts
-        if (!status.getCanMoveForward()) {
+        if (status.getCannotMoveForward()) {
             // Disengaging
             logger.debug("moveAway");
             obstacle = status.getRelativeContact(ContactSensors.Direction.NORTH);
             setStatus(this::moveAway);
-            return StateTransition.create(STAY_EXIT, Tuple2.of(MoveCommand.create(status.getRobotDeg(), -disengagedSpeed), 0));
-
+            return StateTransition.createMove(STAY_EXIT, status, obstacle, -disengagedSpeed);
         }
-        if (!status.getCanMoveBackward()) {
+        if (status.getCannotMoveBackward()) {
             // Disengaging
             logger.debug("moveAway");
             obstacle = status.getRelativeContact(ContactSensors.Direction.SOUTH);
             setStatus(this::moveAway);
-            return StateTransition.create(STAY_EXIT, Tuple2.of(MoveCommand.create(status.getRobotDeg(), disengagedSpeed), 0));
+            return StateTransition.createMove(STAY_EXIT, status.getRobotDeg(), disengagedSpeed, 0);
         }
         return null;
     }
@@ -143,25 +142,20 @@ public class SecureStatus extends AbstractEngineStatus {
         if (obstacle != null) {
             // Check for obstacle distance
             double obsDistance = status.getRobotDistance(obstacle);
-            int obsDeg = status.getRobotDeg(obstacle);
-            int sensorTargetDeg = status.getRobotRelativeDeg(obstacle);
             if (obsDistance <= safeDistance) {
                 // Obstacle still near robot
-                return StateTransition.create(STAY_EXIT, Tuple2.of(
-                        MoveCommand.create(obsDeg, -disengagedSpeed),
-                        min(max(sensorTargetDeg, -90), 90)));
+                return StateTransition.createMove(STAY_EXIT, status, obstacle, -disengagedSpeed);
             }
 
-            if (abs(sensorTargetDeg) <= 90) {
+            if (status.isHeadingTo(obstacle, 89)) {
                 // obstacle in front of robot, verify for sensor direction and distance
                 double sampleDistance = status.getSampleDistance();
-                if (abs(status.getSensorRelativeDeg(obstacle)) > toleranceSensorAngle
+                if (!status.isPointingTo(obstacle, toleranceSensorAngle)
                         || (sampleDistance > 0
                         && sampleDistance <= safeDistance)) {
+                    // obstacle too near or sensor is not pointing obstacle
                     status.getSampleLocation().ifPresent(x -> obstacle = x);
-                    return StateTransition.create(STAY_EXIT, Tuple2.of(
-                            MoveCommand.create(obsDeg, -disengagedSpeed),
-                            sensorTargetDeg));
+                    return StateTransition.createMove(STAY_EXIT, status, obstacle, -disengagedSpeed);
                 }
             }
             // Obstacle disengaged and robot moved away
@@ -170,7 +164,7 @@ public class SecureStatus extends AbstractEngineStatus {
         // Check if robot location is at safe location
         if (!map.isProhibited(status.getRobotLocation())) {
             logger.debug("Safe location reached {}", status.getRobotLocation());
-            return StateTransition.create(COMPLETED_EXIT, HALT_COMMAND);
+            return COMPLETED_TRANSITION;
         }
         // Next step search for safe location
         contours = null;
@@ -185,13 +179,7 @@ public class SecureStatus extends AbstractEngineStatus {
             logger.debug("Safe location reached {}", wheellyStatus.getRobotLocation());
             return COMPLETED_TRANSITION;
         }
-        int direction = wheellyStatus.getRobotDeg(safeLocation);
-        return StateTransition.create(STAY_EXIT, Tuple2.of(
-                MoveCommand.create(
-                        direction,
-                        disengagedSpeed
-                ),
-                min(max(wheellyStatus.getRobotRelativeDeg(safeLocation), -90), 90)));
+        return StateTransition.createMove(STAY_EXIT, wheellyStatus, safeLocation, disengagedSpeed);
     }
 
     @Override
@@ -203,12 +191,8 @@ public class SecureStatus extends AbstractEngineStatus {
             tx = disengage(status);
             tx = tx != null ? tx : fProcess.apply(status, map);
         }
-        if (obstacle != null) {
-            monitor.put(OBSTACLE_KEY, obstacle);
-        }
-        if (safeLocation != null) {
-            monitor.put(TARGET_KEY, safeLocation);
-        }
+        monitor.put(OBSTACLE_KEY, Optional.ofNullable(obstacle));
+        monitor.put(TARGET_KEY, Optional.ofNullable(safeLocation));
         if (!tx.exit.equals(STAY_EXIT)) {
             monitor.remove(OBSTACLE_KEY);
             monitor.remove(TARGET_KEY);
@@ -224,19 +208,21 @@ public class SecureStatus extends AbstractEngineStatus {
 
         int robotDeg = wheellyStatus.getRobotDeg();
         if (rotateDeg == null) {
-            rotateDeg = normalizeDegAngle(robotDeg + 180);
+            int dir = obstacle != null ? wheellyStatus.getRobotDeg(obstacle)
+                    : wheellyStatus.getRobotDeg();
+            rotateDeg = normalizeDegAngle(dir + 180);
         }
 
         // Check for rotation
         if (abs(normalizeDegAngle(robotDeg - rotateDeg)) > 5) {
             logger.debug("Rotating to {} DEG", rotateDeg);
-            return StateTransition.create(STAY_EXIT,
-                    Tuple2.of(MoveCommand.create(rotateDeg, 0), 0));
+            return StateTransition.createMove(STAY_EXIT, rotateDeg, 0, 0);
         }
 
         logger.debug("Rotated to {} DEG", robotDeg);
         logger.debug("startScanForSafeLocation");
         setStatus(this::startScanForSafeLocation);
+        rotated = true;
         return null;
     }
 
@@ -247,7 +233,6 @@ public class SecureStatus extends AbstractEngineStatus {
      * @param map    the map
      */
     private StateTransition scanForSafeLocation(WheellyStatus status, GridScannerMap map) {
-        Point2D robotLocation = status.getRobotLocation();
         if (currentTargetIdx >= contours.size()) {
             // No target found
             logger.warn("No safe location found");
@@ -258,21 +243,18 @@ public class SecureStatus extends AbstractEngineStatus {
         Point2D target = contours.get(currentTargetIdx);
         int robotRelativeTargetDir = status.getRobotRelativeDeg(target);
         double targetDistance = status.getRobotDistance(target);
-        if (abs(robotRelativeTargetDir) <= 90 && targetDistance > minSafeDistance) {
+        if (status.isHeadingTo(target, 89) && targetDistance > minSafeDistance) {
             // Target in front of robot and at a distance greater than threshold
-            int sensorRelativeTargetDeg = status.getSensorRelativeDeg(target);
-            if (abs(sensorRelativeTargetDeg) > toleranceSensorAngle) {
+            if (!status.isPointingTo(target, toleranceSensorAngle)) {
                 // Sensor is not pointing to the obstacle
                 // Pointing sensor
                 logger.debug("Pointing sensor to {} DEG / {} DEG",
                         robotRelativeTargetDir, status.getSensorRelativeDeg());
-                return StateTransition.create(STAY_EXIT, Tuple2.of(
-                        AltCommand.create(),
-                        robotRelativeTargetDir));
+                return StateTransition.createHalt(STAY_EXIT, status, target);
             }
 
-            if (status.getSampleDistance() == 0
-                    || status.getSampleDistance() > target.distance(robotLocation)) {
+            double sampleDistance = status.getSampleDistance();
+            if (sampleDistance == 0 || sampleDistance > status.getRobotDistance(target)) {
                 this.safeLocation = target;
                 logger.debug("Find safe location {}", safeLocation);
                 logger.debug("moveSafe");

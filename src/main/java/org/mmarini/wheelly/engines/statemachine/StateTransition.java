@@ -30,8 +30,15 @@
 package org.mmarini.wheelly.engines.statemachine;
 
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.model.MotionComand;
+import org.mmarini.wheelly.model.HaltCommand;
+import org.mmarini.wheelly.model.MotionCommand;
+import org.mmarini.wheelly.model.MoveCommand;
+import org.mmarini.wheelly.model.WheellyStatus;
 
+import java.awt.geom.Point2D;
+
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static org.mmarini.wheelly.engines.statemachine.EngineStatus.*;
 
 public class StateTransition {
@@ -41,21 +48,41 @@ public class StateTransition {
     public final static StateTransition TIMEOUT_TRANSITION = create(TIMEOUT_EXIT, HALT_COMMAND);
 
     /**
-     * @param exit
-     * @param commands
+     * @param exit     exit code
+     * @param commands commands
      */
-    public static StateTransition create(String exit, Tuple2<MotionComand, Integer> commands) {
+    public static StateTransition create(String exit, Tuple2<MotionCommand, Integer> commands) {
         return new StateTransition(exit, commands);
     }
 
-    public final Tuple2<MotionComand, Integer> commands;
+    public static StateTransition createHalt(String exit, int sensor) {
+        return StateTransition.create(exit, Tuple2.of(HaltCommand.create(), sensor));
+    }
+
+    public static StateTransition createHalt(String exit, WheellyStatus status, Point2D target) {
+        int direction = min(max(status.getRobotRelativeDeg(target), -90), 90);
+        return StateTransition.create(exit, Tuple2.of(HaltCommand.create(), direction));
+    }
+
+    public static StateTransition createMove(String exit, WheellyStatus status, Point2D target, double speed) {
+        int direction = status.getRobotDeg(target);
+        int sensor = min(max(status.getRobotRelativeDeg(target), -90), 90);
+
+        return StateTransition.create(exit, Tuple2.of(MoveCommand.create(direction, speed), sensor));
+    }
+
+    public static StateTransition createMove(String exit, int direction, double speed, int sensor) {
+        return StateTransition.create(exit, Tuple2.of(MoveCommand.create(direction, speed), sensor));
+    }
+
+    public final Tuple2<MotionCommand, Integer> commands;
     public final String exit;
 
     /**
-     * @param exit
-     * @param commands
+     * @param exit     exit code
+     * @param commands commands
      */
-    protected StateTransition(String exit, Tuple2<MotionComand, Integer> commands) {
+    protected StateTransition(String exit, Tuple2<MotionCommand, Integer> commands) {
         this.commands = commands;
         this.exit = exit;
     }

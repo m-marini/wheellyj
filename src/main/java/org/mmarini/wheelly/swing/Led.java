@@ -33,6 +33,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.Objects;
 
 import static java.awt.Color.BLACK;
 import static java.lang.Math.max;
@@ -69,7 +70,7 @@ public class Led extends JComponent {
         setBackground(BLACK);
         setBorder(BorderFactory.createEmptyBorder());
         Dimension size = Arrays.stream(icons)
-                .filter(x -> x != null)
+                .filter(Objects::nonNull)
                 .map(icon -> new Dimension(icon.getIconWidth(), icon.getIconHeight()))
                 .reduce((a, b) -> new Dimension(max(a.width, b.width), max(a.height, b.height)))
                 .orElseGet(() -> new Dimension(DEFAULT_SIZE, DEFAULT_SIZE));

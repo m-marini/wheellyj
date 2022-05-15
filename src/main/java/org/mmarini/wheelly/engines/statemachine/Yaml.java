@@ -1,7 +1,6 @@
 package org.mmarini.wheelly.engines.statemachine;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.model.ConfigParameters;
 import org.mmarini.yaml.schema.Validator;
 
 import java.awt.geom.Point2D;

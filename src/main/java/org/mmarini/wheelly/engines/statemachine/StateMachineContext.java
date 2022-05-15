@@ -62,6 +62,10 @@ public class StateMachineContext {
         return this;
     }
 
+    public StateMachineContext clearTarget() {
+        return remove(TARGET_KEY);
+    }
+
     /**
      * @param key
      * @param <T>
@@ -102,6 +106,11 @@ public class StateMachineContext {
     }
 
     public StateMachineContext setObstacle(Point2D location) {
+        values.put(OBSTACLE_KEY, requireNonNull(location));
+        return this;
+    }
+
+    public StateMachineContext setObstacle(Optional<Point2D> location) {
         return put(OBSTACLE_KEY, requireNonNull(location));
     }
 
@@ -119,6 +128,11 @@ public class StateMachineContext {
     }
 
     public StateMachineContext setTarget(Point2D location) {
+        values.put(TARGET_KEY, requireNonNull(location));
+        return this;
+    }
+
+    public StateMachineContext setTarget(Optional<Point2D> location) {
         return put(TARGET_KEY, requireNonNull(location));
     }
 
@@ -129,6 +143,18 @@ public class StateMachineContext {
      */
     public <T> StateMachineContext put(String key, T value) {
         values.put(key, value);
+        return this;
+    }
+
+    /**
+     * @param key
+     * @param value
+     * @param <T>
+     */
+    public <T> StateMachineContext put(String key, Optional<T> value) {
+        value.ifPresentOrElse(
+                v -> this.values.put(key, v),
+                () -> values.remove(key));
         return this;
     }
 

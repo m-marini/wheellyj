@@ -42,7 +42,6 @@ import java.awt.geom.Point2D;
 import java.util.Random;
 import java.util.Set;
 
-import static org.mmarini.wheelly.engines.statemachine.StateMachineContext.TARGET_KEY;
 import static org.mmarini.wheelly.engines.statemachine.StateTransition.COMPLETED_TRANSITION;
 import static org.mmarini.wheelly.model.RobotController.STOP_DISTANCE;
 
@@ -78,11 +77,11 @@ public class RandomTargetStatus extends AbstractEngineStatus {
     @Override
     public EngineStatus activate(StateMachineContext context, InferenceMonitor monitor) {
         super.activate(context, monitor);
-        this.safeDistance = context.getDouble(SAFE_DISTANCE_KEY, DEFAULT_SAFE_DISTANCE);
-        this.likelihoodThreshold = context.getDouble(LIKELIHOOD_THRESHOLD_KEY, DEFAULT_LIKELIHOOD_THRESHOLD);
-        this.maxDistance = context.getDouble(MAX_DISTANCE_KEY, DEFAULT_MAX_DISTANCE);
-        this.center = context.<Point2D>get(CENTER_KEY).orElse(new Point2D.Double());
-        context.remove(TARGET_KEY);
+        this.safeDistance = getDouble(context, SAFE_DISTANCE_KEY, DEFAULT_SAFE_DISTANCE);
+        this.likelihoodThreshold = getDouble(context, LIKELIHOOD_THRESHOLD_KEY, DEFAULT_LIKELIHOOD_THRESHOLD);
+        this.maxDistance = getDouble(context, MAX_DISTANCE_KEY, DEFAULT_MAX_DISTANCE);
+        this.center = this.<Point2D>get(context, CENTER_KEY).orElse(new Point2D.Double());
+        context.clearTarget();
         return this;
     }
 

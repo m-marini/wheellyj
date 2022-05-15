@@ -35,7 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
+ * Asyncronus connection
  */
 public interface AsyncConnectable {
     Logger logger = LoggerFactory.getLogger(AsyncConnectable.class);

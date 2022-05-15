@@ -73,6 +73,7 @@ public class GridLayoutHelper<T extends Container> {
         }
         return n;
     }
+
     private final ResourceBundle bundle;
     private final T container;
     private final GridBagLayout layout;

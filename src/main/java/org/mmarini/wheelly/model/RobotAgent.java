@@ -45,8 +45,8 @@ import java.util.concurrent.TimeUnit;
 import static io.reactivex.rxjava3.core.Flowable.*;
 import static java.lang.Math.round;
 import static java.lang.String.format;
-import static org.mmarini.wheelly.model.AltCommand.ALT_COMMAND;
 import static org.mmarini.wheelly.model.GridScannerMap.THRESHOLD_DISTANCE;
+import static org.mmarini.wheelly.model.HaltCommand.ALT_COMMAND;
 
 public class RobotAgent implements InferenceMonitor {
     private static final Logger logger = LoggerFactory.getLogger(RobotAgent.class);
@@ -107,13 +107,13 @@ public class RobotAgent implements InferenceMonitor {
     }
 
     private void createActionFlow(long motorCommandInterval, long scanCommandInterval) {
-        Flowable<Tuple2<MotionComand, Integer>> commands = createCommandFlow();
+        Flowable<Tuple2<MotionCommand, Integer>> commands = createCommandFlow();
         // Splits the commands  flow in motor and scanner command flows
         createMotionFlow(commands.map(Tuple2::getV1), motorCommandInterval);
         createScanFlow(commands.map(Tuple2::getV2), scanCommandInterval);
     }
 
-    private Flowable<Tuple2<MotionComand, Integer>> createCommandFlow() {
+    private Flowable<Tuple2<MotionCommand, Integer>> createCommandFlow() {
         // Builds command flow by applying inference engine
         return mapFlow.observeOn(Schedulers.computation())
                 .map(t -> engine.process(t, this))
@@ -134,9 +134,9 @@ public class RobotAgent implements InferenceMonitor {
                 .subscribe(mapFlow);
     }
 
-    private void createMotionFlow(Flowable<MotionComand> commands, long motorCommandInterval) {
+    private void createMotionFlow(Flowable<MotionCommand> commands, long motorCommandInterval) {
         // The motor command are sample every motorCommandInterval msec
-        Flowable<MotionComand> motorCommandFlow1 = commands.map(cmd -> {
+        Flowable<MotionCommand> motorCommandFlow1 = commands.map(cmd -> {
                     if (cmd instanceof MoveCommand) {
                         MoveCommand moveCommand = (MoveCommand) cmd;
                         double speed = round(moveCommand.speed / MOTOR_SCALE) * MOTOR_SCALE;
@@ -146,7 +146,7 @@ public class RobotAgent implements InferenceMonitor {
                     }
                 })
                 .distinctUntilChanged();
-        Flowable<MotionComand> motorCommandFlow = combineLatest(interval(motorCommandInterval, TimeUnit.MILLISECONDS),
+        Flowable<MotionCommand> motorCommandFlow = combineLatest(interval(motorCommandInterval, TimeUnit.MILLISECONDS),
                 motorCommandFlow1,
                 Tuple2::of)
                 .distinctUntilChanged()
@@ -179,6 +179,12 @@ public class RobotAgent implements InferenceMonitor {
     @Override
     public <T> InferenceMonitor put(String key, T value) {
         inferenceData.onNext(Tuple2.of(key, Optional.of(value)));
+        return this;
+    }
+
+    @Override
+    public <T> InferenceMonitor put(String key, Optional<T> value) {
+        inferenceData.onNext(Tuple2.of(key, value));
         return this;
     }
 
