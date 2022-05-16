@@ -7,16 +7,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-## Added
+## [0.1.1] 2022-05-16
+
+### Added
+
 - Issue #63: Add follower behaviour
 
-## Changed
+### Changed
 
  - Issue #61: Change status LEDs with multicolor LED
 
 ## [0.1.0] 2022-05-14
 
-## Added
+### Added
 
 - Issue #2: Manage motor pulse in arduino
 - Issue #3: Add Led image
@@ -47,12 +50,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #58: Let avoid to behave disengaging and moving to safe location
 - Issue #59: Add random scan
 
-## Changed
+### Changed
 
 - Issue #36: Optimized IMU
 - Issue #39: Merge pr event and st events
 
-## Fixed
+### Fixed
 
 - Issue #1: Add missing connection management
 - Issue #9: Serialize comunication with API
