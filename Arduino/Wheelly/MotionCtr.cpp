@@ -12,7 +12,8 @@
 
 #define MAX_LIN_SPEED 0.280f
 
-#define ON_DIRECTION_RAD  (90 * PI / 180)
+#define MIN_SPEED_DIRECTION_RAD  (3 * PI / 180)
+#define MAX_SPEED_DIRECTION_RAD  (10 * PI / 180)
 #define LINEAR_DIRECTION_RAD  (30 * PI / 180)
 
 #define FEEDBACK_GAIN 2
@@ -155,8 +156,10 @@ void MotionCtrl::handleMotion(unsigned long clockTime) {
     DEBUG_PRINTF(turn * 180 / 2, 0);
     DEBUG_PRINTLN();
 
-    float isCw = fuzzyPositive(turn, ON_DIRECTION_RAD);
-    float isCcw = fuzzyPositive(-turn, ON_DIRECTION_RAD);
+    float isCw = fuzzyPositive(turn - MIN_SPEED_DIRECTION_RAD,
+                               MAX_SPEED_DIRECTION_RAD - MIN_SPEED_DIRECTION_RAD);
+    float isCcw = fuzzyPositive(-turn - MIN_SPEED_DIRECTION_RAD,
+                                MAX_SPEED_DIRECTION_RAD - MIN_SPEED_DIRECTION_RAD);
     float isLin = 1 - fuzzyPositive(abs(turn), LINEAR_DIRECTION_RAD);
     Fuzzy fuzzy;
 

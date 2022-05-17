@@ -70,6 +70,10 @@ class MotorSensor {
       return _filter.value();
     }
 
+    const float speed() const {
+      return _filter.value() * DISTANCE_PER_PULSE;
+    }
+
   private:
     byte _sensorPin;
     byte _pulse;
@@ -138,6 +142,13 @@ class MotionSensor {
     }
     const float rightPps() const {
       return _rightSensor.pps();
+    }
+
+    const float leftSpeed() const {
+      return _leftSensor.speed();
+    }
+    const float rightSpeed() const {
+      return _rightSensor.speed();
     }
 
   private:

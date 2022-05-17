@@ -86,8 +86,8 @@ public class UIController {
     private static final String CONFIG_FILE = ".wheelly.yml";
     private static final Logger logger = LoggerFactory.getLogger(UIController.class);
     private static final Color CONTOUR_COLOR = new Color(0x008800);
-    private static final Color OBSTACLE_COLOR = YELLOW;
-    private static final Color TARGET_COLOR = GREEN;
+    private static final Color OBSTACLE_COLOR = GRAY;
+    private static final Color TARGET_COLOR = BLUE;
 
     /**
      *
@@ -329,7 +329,7 @@ public class UIController {
         WheellyStatus status = mapStatus.value().getWheelly();
         dashboard.setObstacleDistance(status.getSampleDistance());
         dashboard.setPower(status.getVoltage());
-        dashboard.setMotors(status.getLeftMotors(), status.getRightMotors());
+        dashboard.setSpeed(status.getLeftSpeed(), status.getRightSpeed());
         dashboard.setForwardBlock(status.getCannotMoveForward());
         dashboard.setAngle(status.getRobotRad());
         dashboard.setRobotLocation(status.getRobotLocation());
