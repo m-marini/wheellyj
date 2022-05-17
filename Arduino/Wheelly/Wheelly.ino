@@ -534,9 +534,9 @@ void sendStatus(int distance) {
   Serial.print(F(" "));
   Serial.print(distance * 0.01, 2);
   Serial.print(F(" "));
-  Serial.print(motionController.left(), 3);
+  Serial.print(motionController.leftSpeed(), 3);
   Serial.print(F(" "));
-  Serial.print(motionController.right(), 3);
+  Serial.print(motionController.rightSpeed(), 3);
   Serial.print(F(" "));
   Serial.print(contactSignals);
   Serial.print(F(" "));
@@ -550,6 +550,12 @@ void sendStatus(int distance) {
   Serial.print(imuFailure);
   Serial.print(F(" "));
   Serial.print(motionController.isHalt());
+  Serial.print(F(" "));
+  Serial.print(motionController.direction() * 180 / PI, 0);
+  Serial.print(F(" "));
+  Serial.print(motionController.speed(), 2);
+  Serial.print(F(" "));
+  Serial.print(90 - nextScan);
   Serial.println();
 }
 

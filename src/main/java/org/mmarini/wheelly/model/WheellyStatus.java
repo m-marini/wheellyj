@@ -43,7 +43,7 @@ import static java.lang.String.format;
  */
 public class WheellyStatus implements ProxySample, ContactSensors {
 
-    public static final int NO_STATUS_PARAMS = 15;
+    public static final int NO_STATUS_PARAMS = 18;
 
     /**
      * Returns wheelly status
@@ -60,19 +60,22 @@ public class WheellyStatus implements ProxySample, ContactSensors {
      * @param canMoveBackward   true if can move backward
      * @param imuFailure        true if imu failure
      * @param halt              true if halt
+     * @param moveDeg           move direction DEG
+     * @param moveSpeed         move speed 0-1
+     * @param nextSensorDeg     next sensor DEG
      */
     public static WheellyStatus create(Point2D robotLocation, int robotDeg,
                                        int sensorRelativeDeg, double sampleDistance,
                                        double leftMotors, double rightMotors,
                                        int contactSensors, double voltage,
                                        boolean canMoveForward, boolean canMoveBackward,
-                                       boolean imuFailure, boolean halt) {
+                                       boolean imuFailure, boolean halt, int moveDeg, double moveSpeed, double nextSensorDeg) {
         return new WheellyStatus(robotLocation, robotDeg,
                 sensorRelativeDeg, sampleDistance,
                 leftMotors, rightMotors,
                 contactSensors, voltage,
                 canMoveForward, canMoveBackward,
-                imuFailure, halt);
+                imuFailure, halt, moveDeg, moveSpeed, nextSensorDeg);
     }
 
     /**
@@ -86,14 +89,17 @@ public class WheellyStatus implements ProxySample, ContactSensors {
      *     [yaw]
      *     [sensorDirection]
      *     [distance]
-     *     [leftMotor]
-     *     [rightMotor]
+     *     [leftSpeed]
+     *     [rightSpeed]
      *     [contactSignals]
      *     [voltage]
      *     [canMoveForward]
      *     [canMoveBackward]
      *     [imuFailure]
      *     [halt]
+     *     [move direction]
+     *     [move speed]
+     *     [next sensor direction]
      * </pre>
      *
      * @param statusString the status string
@@ -122,27 +128,33 @@ public class WheellyStatus implements ProxySample, ContactSensors {
 
         boolean imuFailure = Integer.parseInt(params[13]) != 0;
         boolean halt = Integer.parseInt(params[14]) != 0;
+        int moveDeg = Integer.parseInt(params[15]);
+        double moveSpeed = parseDouble(params[16]);
+        int nextSensorDeg = Integer.parseInt(params[17]);
 
         return new WheellyStatus(robotLocation, robotDeg,
                 sensorDirection, distance,
                 left, right,
                 contactSensors, voltage,
                 canMoveForward, canMoveBackward,
-                imuFailure, halt);
+                imuFailure, halt, moveDeg, moveSpeed, nextSensorDeg);
     }
 
     private final Point2D robotLocation;
     private final int robotDeg;
     private final int sensorRelativeDeg;
     private final double sampleDistance;
-    private final double leftMotors;
-    private final double rightMotors;
+    private final double leftSpeed;
+    private final double rightSpeed;
     private final int contactSensors;
     private final double voltage;
     private final boolean canMoveBackward;
     private final boolean canMoveForward;
     private final boolean imuFailure;
     private final boolean halt;
+    private final int moveDeg;
+    private final double moveSpeed;
+    private final double nextSensorDeg;
 
     /**
      * Creates wheelly status
@@ -151,33 +163,39 @@ public class WheellyStatus implements ProxySample, ContactSensors {
      * @param robotDeg          the robot direction DEG
      * @param sensorRelativeDeg the sensor relative direction DEG
      * @param sampleDistance    the sample distance
-     * @param leftMotors        the left motor speed
-     * @param rightMotors       the right motor speed
+     * @param leftSpeed         the left motor speed
+     * @param rightSpeed        the right motor speed
      * @param contactSensors    the contact sensors
      * @param voltage           the supply voltage
      * @param canMoveForward    true if can move forward
      * @param canMoveBackward   true if can move backward
      * @param imuFailure        true if imu failure
      * @param halt              true if halt
+     * @param moveDeg           move direction DEG
+     * @param moveSpeed         move speed 0-1
+     * @param nextSensorDeg     next sensor DEG
      */
     protected WheellyStatus(Point2D robotLocation, int robotDeg,
                             int sensorRelativeDeg, double sampleDistance,
-                            double leftMotors, double rightMotors,
+                            double leftSpeed, double rightSpeed,
                             int contactSensors, double voltage,
                             boolean canMoveForward, boolean canMoveBackward,
-                            boolean imuFailure, boolean halt) {
+                            boolean imuFailure, boolean halt, int moveDeg, double moveSpeed, double nextSensorDeg) {
         this.robotLocation = robotLocation;
         this.robotDeg = robotDeg;
         this.sensorRelativeDeg = sensorRelativeDeg;
         this.sampleDistance = sampleDistance;
-        this.leftMotors = leftMotors;
-        this.rightMotors = rightMotors;
+        this.leftSpeed = leftSpeed;
+        this.rightSpeed = rightSpeed;
         this.contactSensors = contactSensors;
         this.voltage = voltage;
         this.canMoveBackward = canMoveBackward;
         this.canMoveForward = canMoveForward;
         this.imuFailure = imuFailure;
         this.halt = halt;
+        this.moveDeg = moveDeg;
+        this.moveSpeed = moveSpeed;
+        this.nextSensorDeg = nextSensorDeg;
     }
 
     @Override
@@ -195,16 +213,28 @@ public class WheellyStatus implements ProxySample, ContactSensors {
         return contactSensors;
     }
 
-    public double getLeftMotors() {
-        return leftMotors;
+    public double getLeftSpeed() {
+        return leftSpeed;
     }
 
     public Tuple2<Double, Double> getMotors() {
-        return Tuple2.of(leftMotors, rightMotors);
+        return Tuple2.of(leftSpeed, rightSpeed);
     }
 
-    public double getRightMotors() {
-        return rightMotors;
+    public int getMoveDeg() {
+        return moveDeg;
+    }
+
+    public double getMoveSpeed() {
+        return moveSpeed;
+    }
+
+    public double getNextSensorDeg() {
+        return nextSensorDeg;
+    }
+
+    public double getRightSpeed() {
+        return rightSpeed;
     }
 
     @Override
@@ -246,8 +276,8 @@ public class WheellyStatus implements ProxySample, ContactSensors {
                 .add("robotDeg=" + robotDeg)
                 .add("sensorRelativeDeg=" + sensorRelativeDeg)
                 .add("sampleDistance=" + sampleDistance)
-                .add("leftMotors=" + leftMotors)
-                .add("rightMotors=" + rightMotors)
+                .add("leftMotors=" + leftSpeed)
+                .add("rightMotors=" + rightSpeed)
                 .add("contactSensors=" + contactSensors)
                 .add("voltage=" + voltage)
                 .add("canMoveBackward=" + canMoveBackward)

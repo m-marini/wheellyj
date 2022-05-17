@@ -7,15 +7,15 @@
 #define NO_POINTS 5
 
 /*
- * Motor ontroller
- */
+   Motor ontroller
+*/
 class MotorCtrl {
   public:
     MotorCtrl(byte forwPin, byte backPin);
     void begin();
     void speed(float value);
     void setCorrection(float *x, float *y);
-    
+
   private:
     byte _forwPin;
     byte _backPin;
@@ -51,6 +51,12 @@ class MotionCtrl {
     const float right() const {
       return _right;
     }
+    const float leftSpeed() const {
+      return _sensors.leftSpeed();
+    }
+    const float rightSpeed() const {
+      return _sensors.rightSpeed();
+    }
     const boolean isForward() const;
     const boolean isBackward() const;
 
@@ -60,6 +66,12 @@ class MotionCtrl {
 
     void angle(float angle) {
       _sensors.angle(angle);
+    }
+    const float speed() const {
+      return _speed;
+    }
+    const float direction() const {
+      return _direction;
     }
 
   private:

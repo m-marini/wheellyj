@@ -59,8 +59,8 @@ public class Dashboard extends JPanel {
     private final Led rightForwardMotor;
     private final Led rightBackwardMotor;
     private final Led forwardBlock;
-    private final JLabel leftPower;
-    private final JLabel rightPower;
+    private final JLabel leftSpeed;
+    private final JLabel rightSpeed;
     private final JProgressBar obstacleMeasureBar;
     private final Led obstacleLed;
     private final JLabel obstacleMeasure;
@@ -94,8 +94,8 @@ public class Dashboard extends JPanel {
         this.powerMeasureBar = new JProgressBar(JProgressBar.VERTICAL);
         this.powerLed = Led.create("/images/red-charge.png", "/images/yellow-charge.png", "/images/green-charge.png");
         this.powerMeasure = new JLabel();
-        this.leftPower = new JLabel();
-        this.rightPower = new JLabel();
+        this.leftSpeed = new JLabel();
+        this.rightSpeed = new JLabel();
         this.cps = new JLabel();
         this.elaps = new JLabel();
         this.yaw = new JLabel();
@@ -119,10 +119,10 @@ public class Dashboard extends JPanel {
         cps.setForeground(WHITE);
         elaps.setBackground(BLACK);
         elaps.setForeground(WHITE);
-        leftPower.setBackground(BLACK);
-        leftPower.setForeground(WHITE);
-        rightPower.setBackground(BLACK);
-        rightPower.setForeground(WHITE);
+        leftSpeed.setBackground(BLACK);
+        leftSpeed.setForeground(WHITE);
+        rightSpeed.setBackground(BLACK);
+        rightSpeed.setForeground(WHITE);
         yaw.setBackground(BLACK);
         yaw.setForeground(WHITE);
         robotLocation.setBackground(BLACK);
@@ -132,7 +132,7 @@ public class Dashboard extends JPanel {
 
         setObstacleDistance(0);
         setPower(0);
-        setMotors(0, 0);
+        setSpeed(0, 0);
     }
 
     /**
@@ -164,7 +164,7 @@ public class Dashboard extends JPanel {
      *
      */
     private JPanel createMotorsPanel() {
-        JPanel container = new GridLayoutHelper<>(new JPanel()).modify("insets,2 at,0,0 span,2,1").add(forwardBlock).modify("at,0,1 weight,1,1 span,1,1 center").add(leftForwardMotor).modify("at,1,1").add(rightForwardMotor).modify("at,0,2").add(leftPower).modify("at,1,2").add(rightPower).modify("at,0,3").add(leftBackwardMotor).modify("at,1,3").add(rightBackwardMotor).getContainer();
+        JPanel container = new GridLayoutHelper<>(new JPanel()).modify("insets,2 at,0,0 span,2,1").add(forwardBlock).modify("at,0,1 weight,1,1 span,1,1 center").add(leftForwardMotor).modify("at,1,1").add(rightForwardMotor).modify("at,0,2").add(leftSpeed).modify("at,1,2").add(rightSpeed).modify("at,0,3").add(leftBackwardMotor).modify("at,1,3").add(rightBackwardMotor).getContainer();
         container.setBackground(BLACK);
         return container;
     }
@@ -249,35 +249,6 @@ public class Dashboard extends JPanel {
     }
 
     /**
-     * @param left  left speed
-     * @param right right speed
-     */
-    public void setMotors(double left, double right) {
-        if (left > 0) {
-            leftForwardMotor.setValue(1);
-            leftBackwardMotor.setValue(0);
-        } else if (left < 0) {
-            leftForwardMotor.setValue(0);
-            leftBackwardMotor.setValue(1);
-        } else {
-            leftForwardMotor.setValue(0);
-            leftBackwardMotor.setValue(0);
-        }
-        if (right > 0) {
-            rightForwardMotor.setValue(1);
-            rightBackwardMotor.setValue(0);
-        } else if (right < 0) {
-            rightForwardMotor.setValue(0);
-            rightBackwardMotor.setValue(1);
-        } else {
-            rightForwardMotor.setValue(0);
-            rightBackwardMotor.setValue(0);
-        }
-        leftPower.setText(format("%d%%", round(abs(left * 100f))));
-        rightPower.setText(format("%d%%", round(abs(right * 100f))));
-    }
-
-    /**
      * @param distance the distance
      */
     public void setObstacleDistance(double distance) {
@@ -312,6 +283,35 @@ public class Dashboard extends JPanel {
 
     public void setRobotLocation(Point2D location) {
         robotLocation.setText(format("%.1f, %.1f m", location.getX(), location.getY()));
+    }
+
+    /**
+     * @param left  left speed
+     * @param right right speed
+     */
+    public void setSpeed(double left, double right) {
+        if (left > 0) {
+            leftForwardMotor.setValue(1);
+            leftBackwardMotor.setValue(0);
+        } else if (left < 0) {
+            leftForwardMotor.setValue(0);
+            leftBackwardMotor.setValue(1);
+        } else {
+            leftForwardMotor.setValue(0);
+            leftBackwardMotor.setValue(0);
+        }
+        if (right > 0) {
+            rightForwardMotor.setValue(1);
+            rightBackwardMotor.setValue(0);
+        } else if (right < 0) {
+            rightForwardMotor.setValue(0);
+            rightBackwardMotor.setValue(1);
+        } else {
+            rightForwardMotor.setValue(0);
+            rightBackwardMotor.setValue(0);
+        }
+        leftSpeed.setText(format("%.3f m/s", abs(left)));
+        rightSpeed.setText(format("%.3f m/s", abs(right)));
     }
 
     /**

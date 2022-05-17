@@ -7,7 +7,7 @@
 #include "Utils.h"
 
 #define ANGLE_PER_PULSE (DISTANCE_PER_PULSE / TRACK)
-#define FILTER_DECAY  (1.0 / 200.0)
+#define FILTER_DECAY  (1.0 / 300.0)
 
 /*
 
@@ -181,6 +181,9 @@ void MotorSensor::polling(unsigned long clockTime) {
     update(dPulse, clockTime);
   }
   _filter.value(_speedometer.pps(clockTime), clockTime);
+  DEBUG_PRINT(F("// MotorSensor::polling "));
+  DEBUG_PRINT(_filter.value());
+  DEBUG_PRINTLN();
 }
 
 /*
@@ -214,6 +217,9 @@ void Speedometer::forward(unsigned long clockTime) {
   if (dt > 0) {
     _pps = 1000.0 / dt;
     _prevTime = clockTime;
+    DEBUG_PRINT(F("// Speedometer::forward speed "));
+    DEBUG_PRINTF(_pps, 3);
+    DEBUG_PRINTLN();
   }
 }
 
@@ -222,6 +228,9 @@ void Speedometer::backward(unsigned long clockTime) {
   if (dt > 0) {
     _pps = -1000.0 / dt;
     _prevTime = clockTime;
+    DEBUG_PRINT(F("// Speedometer::backward speed "));
+    DEBUG_PRINTF(_pps, 3);
+    DEBUG_PRINTLN();
   }
 }
 
@@ -245,8 +254,9 @@ void Speedometer::reset() {
 */
 
 void LowPassFilter::value(float value, unsigned long clockTime) {
-  float x = min((clockTime - _prevTime) * FILTER_DECAY, 1);
-  _value -= (_value + value) * x;
+  float alpha = min((clockTime - _prevTime) * FILTER_DECAY, 1);
+  _value = _value *(1-alpha) + value * alpha;
+  _value += (-_value + value) * alpha;
   _prevTime = clockTime;
 }
 
