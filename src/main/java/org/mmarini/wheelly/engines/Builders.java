@@ -55,7 +55,7 @@ public interface Builders {
 
     Logger logger = LoggerFactory.getLogger(Builders.class);
 
-    static InferenceEngine avoidObstacle(JsonNode config) {
+    static InferenceEngine avoidObstacle(JsonNode config, Locator locator) {
         return StateMachineBuilder.create()
                 .setParams("init.timeout", 2000)
                 .addState(StopStatus.create("init"))
@@ -72,8 +72,8 @@ public interface Builders {
                 .build("init");
     }
 
-    static InferenceEngine findPath(JsonNode config) {
-        pathEngine().apply(Locator.root()).accept(config);
+    static InferenceEngine findPath(JsonNode config, Locator locator) {
+        pathEngine().apply(locator).accept(config);
         List<Point2D> targets = points(config.path("targets"));
         double safeDistance = config.path("safeDistance").asDouble(FindPathStatus.DEFAULT_SAFE_DISTANCE);
         double thresholdDistance = config.path("thresholdDistance").asDouble(GotoStatus.DEFAULT_DISTANCE);
@@ -124,7 +124,7 @@ public interface Builders {
 //        throw new Error("Not implemented");
     }
 
-    static InferenceEngine follow(JsonNode config) {
+    static InferenceEngine follow(JsonNode config, Locator locator) {
         return StateMachineBuilder.create()
                 .setParams("init.timeout", 2000)
                 .addState(StopStatus.create("init"))
@@ -155,8 +155,8 @@ public interface Builders {
                 .build("init");
     }
 
-    static InferenceEngine gotoTest(JsonNode config) {
-        point().apply(Locator.root().path("target")).accept(config);
+    static InferenceEngine gotoTest(JsonNode config, Locator locator) {
+        point().apply(locator.path("target")).accept(config);
         Point2D target = point(config.path("target")).orElseThrow();
         return StateMachineBuilder.create()
                 .setParams(TARGET_KEY, target)
@@ -167,7 +167,7 @@ public interface Builders {
                 .build("initial");
     }
 
-    static InferenceEngine manual(JsonNode config) {
+    static InferenceEngine manual(JsonNode config, Locator locator) {
         String port = config.path("joystickPort").asText();
         if (port.isEmpty()) {
             throw new IllegalArgumentException("Missing joystickPort");
@@ -176,8 +176,8 @@ public interface Builders {
         return new ManualEngine(joystick);
     }
 
-    static InferenceEngine randomPath(JsonNode config) {
-        Yaml.randomPath().apply(Locator.root()).accept(config);
+    static InferenceEngine randomPath(JsonNode config, Locator locator) {
+        Yaml.randomPath().apply(locator).accept(config);
 
         StateMachineBuilder builder1 = StateMachineBuilder.create()
                 .addState(StopStatus.create("initial"))
@@ -231,8 +231,8 @@ public interface Builders {
         return builder3.build("initial");
     }
 
-    static InferenceEngine sequence(JsonNode config) {
-        points().apply(Locator.root().path("targets")).accept(config);
+    static InferenceEngine sequence(JsonNode config, Locator locator) {
+        points().apply(locator.path("targets")).accept(config);
         List<Point2D> targets = points(config.path("targets"));
         return StateMachineBuilder.create()
                 .setParams(NextSequenceStatus.LIST_KEY, targets)
@@ -246,7 +246,7 @@ public interface Builders {
 
     }
 
-    static InferenceEngine stop(JsonNode config) {
+    static InferenceEngine stop(JsonNode config, Locator locator) {
         return StateMachineBuilder.create()
                 .addState(StopStatus.finalStatus())
                 .build("stop");

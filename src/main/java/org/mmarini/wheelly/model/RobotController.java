@@ -67,6 +67,11 @@ public interface RobotController {
     Flowable<Timed<WheellyStatus>> readStatus();
 
     /**
+     *
+     */
+    Flowable<Timed<String>> readLog();
+
+    /**
      * Starts the controller
      */
     RobotController start();

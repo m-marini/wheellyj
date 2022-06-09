@@ -11,18 +11,6 @@
         </encoder>
     </appender>
 
-    <appender name="DATA_FILE" class="ch.qos.logback.core.FileAppender">
-        <append>false</append>
-        <file>data.log</file>
-
-        <encoder>
-            <pattern>%d{HH:mm:ss.SSS} - %msg%n</pattern>
-        </encoder>
-    </appender>
-
-    <logger name="org.mmarini.wheelly.model.AsyncSocketImpl.dataLog" level="TRACE">
-        <appender-ref ref="DATA_FILE"/>
-    </logger>
     <logger name="org.mmarini.wheelly.model.AsyncSocketImpl" level="INFO">
     </logger>
     <logger name="org.mmarini.wheelly.model.ReliableSocket" level="INFO">

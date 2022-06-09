@@ -1,16 +1,55 @@
 ---
+version: "0.1"
 host: "192.168.1.11"
 port: 22
 connectionTimeout: 1000
 readTimeout: 3000
 retryConnectionInterval: 3000
-startQueryDelay: 150
+responseTime: 300
 motorCommandInterval: 700
 scanCommandInterval: 700
+dumpFile: dump-2022-06-04-23-31.dat
+robotLogFile: data.log
 
-engine: /engines/follow
+engine: engines/deepl
 
 engines:
+  deepl:
+    builder: org.mmarini.wheelly.engines.deepl.RLEngine.fromJson
+    avgReward: 0.2
+    rewardDecay: 300
+    valueDecay: 30
+    rewardRange: [ -5, 2 ]
+    averageReward: -3.5
+    stateEncoder:
+      type: SimpleStatus
+    actors:
+      - type: DiscreteActor
+        noValues: 2
+        outputRange: [0, 1]
+        alpha: 3
+        alphaDecay: 100
+        preferenceRange: [-2.4, 2.4]
+      - type: DiscreteActor
+        noValues: 24
+        outputRange: [-180, 165]
+        alpha: 3
+        alphaDecay: 100
+        preferenceRange: [-2.4, 2.4]
+      - type: DiscreteActor
+        noValues: 21
+        outputRange: [-1, 1]
+        alpha: 3
+        alphaDecay: 100
+        preferenceRange: [-2.4, 2.4]
+      - type: DiscreteActor
+        noValues: 9
+        outputRange: [-90, 90]
+        alpha: 3
+        alphaDecay: 10
+        preferenceRange: [-2.4, 2.4]
+    agentFile: model-simple.zip
+    saveFile: model-simple-1.1-online.zip
   manual:
     builder: org.mmarini.wheelly.engines.Builders.manual
   # Linux

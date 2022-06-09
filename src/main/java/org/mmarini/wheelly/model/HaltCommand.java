@@ -30,9 +30,9 @@
 package org.mmarini.wheelly.model;
 
 public interface HaltCommand extends MotionCommand {
-    HaltCommand ALT_COMMAND = () -> "al";
+    HaltCommand HALT_COMMAND = () -> "al";
 
     static HaltCommand create() {
-        return ALT_COMMAND;
+        return HALT_COMMAND;
     }
 }

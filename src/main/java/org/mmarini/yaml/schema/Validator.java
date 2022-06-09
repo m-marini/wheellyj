@@ -67,6 +67,11 @@ public interface Validator extends Function<Locator, Consumer<JsonNode>> {
         JsonNode node = locator.getNode(root);
         assertFor(node.isNumber(), locator, "must be a number (%s)", node.getNodeType());
     };
+    Validator BOOLEAN = locator -> root -> {
+        JsonNode node = locator.getNode(root);
+        assertFor(node.isBoolean(), locator, "must be boolean (%s)", node.getNodeType());
+    };
+
     Validator POSITIVE_NUMBER = number(exclusiveMinimum(0d));
     Validator NEGATIVE_NUMBER = number(exclusiveMaximum(0d));
     Validator NON_POSITIVE_NUMBER = number(maximum(0d));
@@ -183,6 +188,10 @@ public interface Validator extends Function<Locator, Consumer<JsonNode>> {
      */
     static void assertFor(boolean valid, Locator locator, String pattern, Object... args) {
         assertFor(valid, locator.pointer, pattern, args);
+    }
+
+    static Validator booleanValue() {
+        return BOOLEAN;
     }
 
     /**

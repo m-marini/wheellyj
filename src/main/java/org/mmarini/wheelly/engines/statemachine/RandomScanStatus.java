@@ -32,6 +32,7 @@ package org.mmarini.wheelly.engines.statemachine;
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.wheelly.model.InferenceMonitor;
 import org.mmarini.wheelly.model.MapStatus;
+import org.mmarini.wheelly.model.WheellyStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,9 +43,7 @@ import java.util.Random;
  */
 public class RandomScanStatus extends AbstractEngineStatus {
     public static final String INTERVAL_KEY = "interval";
-    public static final String SCAN_TIME_KEY = "scanTime";
     public static final long DEFAULT_INTERVAL = 5000;
-    public static final long DEFAULT_SCAN_TIME = 1000;
     private static final Logger logger = LoggerFactory.getLogger(NextSequenceStatus.class);
 
     /**
@@ -62,7 +61,6 @@ public class RandomScanStatus extends AbstractEngineStatus {
     private long interval;
     private long timer;
     private int direction;
-    private long scanTime;
 
     /**
      * Creates named engine status
@@ -80,9 +78,8 @@ public class RandomScanStatus extends AbstractEngineStatus {
     public EngineStatus activate(StateMachineContext context, InferenceMonitor monitor) {
         super.activate(context, monitor);
         this.interval = getLong(context, INTERVAL_KEY, DEFAULT_INTERVAL);
-        this.scanTime = getLong(context, SCAN_TIME_KEY, DEFAULT_SCAN_TIME);
         this.timer = System.currentTimeMillis() + interval;
-        this.direction = 0;
+        direction = random.nextInt(181) - 90;
         return this;
     }
 
@@ -90,15 +87,16 @@ public class RandomScanStatus extends AbstractEngineStatus {
     @Override
     public StateTransition process(Timed<MapStatus> data, StateMachineContext context, InferenceMonitor monitor) {
         return this.safetyCheck(data, context, monitor).orElseGet(() -> {
-            if (System.currentTimeMillis() >= timer) {
+            WheellyStatus wheelly = data.value().getWheelly();
+            if (System.currentTimeMillis() < timer) {
+                return StateTransition.createHalt(STAY_EXIT, 0);
+            }
+            if (wheelly.getSensorRelativeDeg() == direction) {
                 direction = random.nextInt(181) - 90;
                 this.timer = System.currentTimeMillis() + interval;
+                return StateTransition.createHalt(STAY_EXIT, 0);
             }
-
-            long elapsedTime = getElapsedTime();
-            long scanFrameTime = elapsedTime % interval;
-            int dir = scanFrameTime > scanTime ? 0 : direction;
-            return StateTransition.createHalt(STAY_EXIT, dir);
+            return StateTransition.createHalt(STAY_EXIT, direction);
         });
     }
 }

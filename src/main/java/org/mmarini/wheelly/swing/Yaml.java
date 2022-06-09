@@ -30,7 +30,7 @@
 package org.mmarini.wheelly.swing;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.model.ConfigParameters;
+import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 
 import java.util.List;
@@ -49,35 +49,30 @@ public class Yaml {
     public static Validator config() {
         return Validator.objectPropertiesRequired(
                 Map.ofEntries(
+                        Map.entry("version", Validator.string(Validator.values("0.1"))),
                         Map.entry("host", Validator.string()),
                         Map.entry("port", Validator.positiveInteger()),
                         Map.entry("connectionTimeout", Validator.positiveInteger()),
                         Map.entry("readTimeout", Validator.positiveInteger()),
                         Map.entry("retryConnectionInterval", Validator.positiveInteger()),
+                        Map.entry("responseTime", Validator.positiveInteger()),
                         Map.entry("motorCommandInterval", Validator.positiveInteger()),
                         Map.entry("scanCommandInterval", Validator.positiveInteger()),
-                        Map.entry("engine", Validator.string())
+                        Map.entry("engine", Validator.string()),
+                        Map.entry("dumpFile", Validator.string()),
+                        Map.entry("robotLogFile", Validator.string()),
+                        Map.entry("netMonitor", Validator.booleanValue())
                 ),
-                List.of("host", "port", "connectionTimeout", "readTimeout", "retryConnectionInterval",
-                        "motorCommandInterval", "scanCommandInterval",
+                List.of("version", "host", "port", "connectionTimeout", "readTimeout", "retryConnectionInterval",
+                        "responseTime", "motorCommandInterval", "scanCommandInterval",
                         "engine")
         );
     }
 
-    public static ConfigParameters configParams(JsonNode root) {
+    public static Locator engine(JsonNode root, Locator locator) {
         requireNonNull(root);
-        return ConfigParameters.create(
-                root.path("host").asText(),
-                root.path("port").asInt(),
-                root.path("connectionTimeout").asLong(),
-                root.path("retryConnectionInterval").asLong(),
-                root.path("readTimeout").asLong(),
-                root.path("motorCommandInterval").asLong(),
-                root.path("scanCommandInterval").asLong());
-    }
-
-    public static String engine(JsonNode root) {
         requireNonNull(root);
-        return root.path("engine").asText();
+        Locator engineLocator = locator.path("engine");
+        return Locator.root().path(engineLocator.getNode(root).asText());
     }
 }

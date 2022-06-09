@@ -62,4 +62,6 @@ public interface AsyncChannel {
      * Returns thee received data text lines
      */
     Flowable<Timed<String>> readLines();
+
+    Flowable<Timed<String>> readLog();
 }

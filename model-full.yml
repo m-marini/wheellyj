@@ -1,0 +1,24 @@
+---
+version: "0.1"
+learningRate: 30e-3
+numInputs: 5292
+activation: RELU
+numOutputs:
+  - 1
+  - 2
+  - 24
+  - 21
+  - 9
+numHiddens:
+  - 64
+  - 64
+  - 64
+shortcuts:
+  - [1, 4]
+updater: Sgd
+maxAbsGradient: 100
+maxAbsParameters: 10e3
+dropOut: 0.8
+file: model-full-0.0.zip
+
+---
