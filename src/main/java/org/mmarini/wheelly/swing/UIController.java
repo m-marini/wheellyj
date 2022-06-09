@@ -29,17 +29,24 @@
 
 package org.mmarini.wheelly.swing;
 
-import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.BackpressureStrategy;
+import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.disposables.Disposable;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.schedulers.Timed;
+import org.deeplearning4j.ui.api.UIServer;
+import org.deeplearning4j.ui.model.stats.StatsListener;
+import org.deeplearning4j.ui.model.storage.InMemoryStatsStorage;
 import org.mmarini.Function3;
 import org.mmarini.Tuple2;
+import org.mmarini.wheelly.engines.deepl.RLEngine;
 import org.mmarini.wheelly.engines.statemachine.FindPathStatus;
 import org.mmarini.wheelly.model.*;
 import org.mmarini.yaml.schema.Locator;
+import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.indexing.conditions.Conditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +58,10 @@ import java.awt.event.WindowEvent;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.List;
@@ -65,6 +75,7 @@ import static java.awt.Color.*;
 import static java.lang.Math.exp;
 import static java.lang.String.format;
 import static java.util.stream.IntStream.range;
+import static org.mmarini.wheelly.engines.deepl.RLEngine.PERFORMANCE_KEY;
 import static org.mmarini.wheelly.engines.statemachine.StateMachineContext.OBSTACLE_KEY;
 import static org.mmarini.wheelly.engines.statemachine.StateMachineContext.TARGET_KEY;
 import static org.mmarini.wheelly.model.GridScannerMap.LIKELIHOOD_TAU;
@@ -75,6 +86,7 @@ import static org.mmarini.wheelly.swing.Dashboard.INFO_DISTANCE;
 import static org.mmarini.wheelly.swing.RxJoystick.NONE_CONTROLLER;
 import static org.mmarini.wheelly.swing.TopographicMap.DEFAULT_MAX_DISTANCE;
 import static org.mmarini.yaml.Utils.fromFile;
+import static org.nd4j.linalg.factory.Nd4j.vstack;
 
 /**
  *
@@ -83,11 +95,23 @@ public class UIController {
     public static final long FRAME_INTERVAL = 1000L / 60;
     public static final Color PROHIBITED_COLOR = new Color(0x4f432c);// new Color(0x7c4422);
     public static final Color PATH_COLOR = WHITE;
+    public static final int FLUSH_INTERVAL = 1000;
+    public static final int PERFORMANCE_WINDOW = 30;
+    public static final int PERFORMANCE_SKIP = 10;
     private static final String CONFIG_FILE = ".wheelly.yml";
     private static final Logger logger = LoggerFactory.getLogger(UIController.class);
     private static final Color CONTOUR_COLOR = new Color(0x008800);
     private static final Color OBSTACLE_COLOR = GRAY;
     private static final Color TARGET_COLOR = BLUE;
+    private static final int MIN_PERFORMANCE_WINDOW_SIZE = 10;
+
+    public static int[] computeC(INDArray j0, INDArray j1) {
+        INDArray j09 = j0.mul(0.9);
+        int c0 = j1.sub(j0).scan(Conditions.greaterThan(0)).intValue();
+        int c2 = j1.sub(j09).scan(Conditions.lessThan(0)).intValue();
+        int c1 = (int) (j0.size(0) - c0 - c2);
+        return new int[]{c0, c1, c2};
+    }
 
     /**
      *
@@ -191,6 +215,7 @@ public class UIController {
     private final PreferencesPane preferencesPane;
     private final WheellyFrame frame;
     private final Dashboard dashboard;
+    private final RLMonitor monitor;
     private final Radar radar;
     private final GlobalMap globalMap;
     private final List<Disposable> configDisposables;
@@ -204,6 +229,8 @@ public class UIController {
     private List<Tuple2<Color, Line2D>> path;
     private List<Tuple2<Color, Line2D>> obstacleCross;
     private List<Tuple2<Color, Line2D>> targetCross;
+    private UIServer uiServer;
+    private InMemoryStatsStorage statsStorage;
 
     /**
      *
@@ -214,6 +241,7 @@ public class UIController {
         this.preferencesPane = new PreferencesPane();
         this.dashboard = frame.getDashboard();
         this.radar = frame.getRadar();
+        this.monitor = frame.getMonitor();
         this.globalMap = frame.getGlobalMap();
         this.shapeBuilder = UIController::createProhibitedShapes;
         this.configDisposables = new ArrayList<>();
@@ -265,15 +293,14 @@ public class UIController {
      * Returns the inference engine
      */
     private InferenceEngine createEngine() {
-        String engineRef = Yaml.engine(configNode);
-        JsonPointer ptr = JsonPointer.valueOf(engineRef);
-        JsonNode engineNode = configNode.at(ptr);
+        Locator engineRef = Yaml.engine(configNode, Locator.root());
+        JsonNode engineNode = engineRef.getNode(configNode);
         if (engineNode.isMissingNode()) {
-            throw new IllegalArgumentException(format("Missing %s node", engineRef));
+            throw new IllegalArgumentException(format("Missing %s node", engineRef.pointer));
         }
         String builder = engineNode.path("builder").asText();
         if (builder.isEmpty()) {
-            throw new IllegalArgumentException(format("Missing %s/builder node", engineRef));
+            throw new IllegalArgumentException(format("Missing %s/builder node", engineRef.pointer));
         }
         Matcher m = Pattern.compile("^([a-zA-Z_]\\w*\\.)+([a-zA-Z_]\\w*)$").matcher(builder);
         if (!m.matches()) {
@@ -283,12 +310,12 @@ public class UIController {
         String className = builder.substring(0, builder.length() - methodName.length() - 1);
         try {
             Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(className);
-            Method creator = clazz.getDeclaredMethod(methodName, JsonNode.class);
+            Method creator = clazz.getDeclaredMethod(methodName, JsonNode.class, Locator.class);
             int modifiers = creator.getModifiers();
             if (!Modifier.isStatic(modifiers)) {
                 throw new IllegalArgumentException(format("builder %s is not static", builder));
             }
-            Object result = creator.invoke(null, engineNode);
+            Object result = creator.invoke(null, configNode, engineRef);
             return (InferenceEngine) result;
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -344,6 +371,22 @@ public class UIController {
 
     }
 
+    private void handlePerformance(INDArray data) {
+        long n = data.shape()[0];
+        double avg = data.getDouble(n - 1, 4);
+        double haltAlpha = data.getDouble(n - 1, 7);
+        double directionAlpha = data.getDouble(n - 1, 8);
+        double speedAlpha = data.getDouble(n - 1, 9);
+        double sensorAlpha = data.getDouble(n - 1, 10);
+        int[] c = computeC(data.getColumn(5), data.getColumn(6));
+        monitor.setC(c[0], c[1], c[2]);
+        monitor.setAverageReward(avg);
+        monitor.setHaltAlpha(haltAlpha);
+        monitor.setDirectionAlpha(directionAlpha);
+        monitor.setSpeedAlpha(speedAlpha);
+        monitor.setSensorAlpha(sensorAlpha);
+    }
+
     /**
      * @param actionEvent the event
      */
@@ -372,7 +415,7 @@ public class UIController {
     private void loadConfig() throws IOException {
         this.configNode = fromFile(CONFIG_FILE);
         Yaml.config().apply(Locator.root()).accept(configNode);
-        configParams = Yaml.configParams(configNode);
+        configParams = ConfigParameters.fromJson(configNode, Locator.root());
     }
 
     /**
@@ -380,9 +423,44 @@ public class UIController {
      */
     private void openConfig() {
         try {
-            logger.debug("openConfig");
             InferenceEngine engine = createEngine();
+            if (uiServer != null && engine instanceof RLEngine) {
+                ((RLEngine) engine).getAgent().getAgentModel().setListeners(new StatsListener(statsStorage));
+            }
             this.robotAgent = RobotAgent.create(configParams, engine);
+            if (configParams.robotLogFile != null) {
+                File file = new File(configParams.robotLogFile);
+                if (file.canWrite() || !file.exists()) {
+                    file.delete();
+                    robotAgent.readLog().observeOn(Schedulers.io())
+                            .map(v -> format("%d %s", v.time(TimeUnit.MILLISECONDS), v.value()))
+                            .buffer(FLUSH_INTERVAL, TimeUnit.MILLISECONDS)
+                            .subscribe(data -> {
+                                try (FileWriter fw = new FileWriter(file, true)) {
+                                    try (PrintWriter out = new PrintWriter(fw)) {
+                                        data.forEach(out::println);
+                                    }
+                                } catch (IOException ex) {
+                                    logger.error(ex.getMessage(), ex);
+                                }
+                            });
+                }
+            }
+            if (configParams.dumpFile != null) {
+                File file = new File(configParams.dumpFile);
+                if (file.canWrite() || !file.exists()) {
+                    file.delete();
+                    robotAgent.readDump().observeOn(Schedulers.io()).subscribe(data -> {
+                        try (FileWriter fw = new FileWriter(file, true)) {
+                            try (PrintWriter out = new PrintWriter(fw)) {
+                                out.println(data);
+                            }
+                        } catch (IOException ex) {
+                            logger.error(ex.getMessage(), ex);
+                        }
+                    });
+                }
+            }
             configDisposables.clear();
             configDisposables.add(robotAgent.readConnection()
                     .subscribe(connected -> {
@@ -405,6 +483,9 @@ public class UIController {
 
             configDisposables.add(robotAgent.readInferenceData().subscribe(this::handleInferenceData));
 
+            configDisposables.add(readPerformaceWindow(PERFORMANCE_WINDOW, PERFORMANCE_SKIP)
+                    .subscribe(this::handlePerformance));
+
             configDisposables.add(robotAgent.readInferenceMessages().subscribe(this::handleInferenceMessage));
 
             robotAgent.start();
@@ -412,6 +493,16 @@ public class UIController {
             logger.error(ex.getMessage(), ex);
             frame.log(ex.getMessage());
         }
+    }
+
+    private Flowable<INDArray> readPerformaceWindow(int size, int skip) {
+        return robotAgent.readInferenceData()
+                .filter(t -> PERFORMANCE_KEY.equals(t.getV1()))
+                .concatMap(t -> t._2.map(Flowable::just).orElse(Flowable.empty()))
+                .cast(INDArray.class)
+                .buffer(size, skip)
+                .filter(list -> list.size() >= MIN_PERFORMANCE_WINDOW_SIZE)
+                .map(list -> vstack(list.stream().toArray(INDArray[]::new)));
     }
 
     private void setLines() {
@@ -430,6 +521,11 @@ public class UIController {
     public void start() {
         try {
             loadConfig();
+            if (configParams.netMonitor) {
+                this.uiServer = UIServer.getInstance();
+                this.statsStorage = new InMemoryStatsStorage();         //Alternative: new FileStatsStorage(File), for saving and loading later
+                uiServer.attach(statsStorage);
+            }
         } catch (Throwable e) {
             logger.error(e.getMessage(), e);
             System.exit(1);

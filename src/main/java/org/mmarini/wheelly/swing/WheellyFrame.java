@@ -33,6 +33,7 @@ public class WheellyFrame extends JFrame {
             .toFormatter();
     private final JMenuItem preferences;
     private final Dashboard dashboard;
+    private final RLMonitor monitor;
     private final Radar radar;
     private final GlobalMap globalMap;
     private final JLabel statusBar;
@@ -53,6 +54,7 @@ public class WheellyFrame extends JFrame {
         this.preferences = new JMenuItem("Preferences");
         this.dashboard = new Dashboard();
         this.radar = new Radar();
+        this.monitor = new RLMonitor();
         this.globalMap = new GlobalMap();
         this.statusBar = new JLabel("Idle");
         this.console = new JTextArea();
@@ -85,7 +87,9 @@ public class WheellyFrame extends JFrame {
         horizSplit2.setResizeWeight(0.5);
         JSplitPane horizSplit1 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, globalMap, horizSplit2);
         horizSplit1.setResizeWeight(0.67);
-        JSplitPane vertSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, horizSplit1, dashboard);
+        JSplitPane horizSplit3 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, dashboard, monitor);
+        horizSplit3.setResizeWeight(0.5);
+        JSplitPane vertSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, horizSplit1, horizSplit3);
 
         createToolbar();
 
@@ -148,6 +152,10 @@ public class WheellyFrame extends JFrame {
 
     public GlobalMap getGlobalMap() {
         return globalMap;
+    }
+
+    public RLMonitor getMonitor() {
+        return monitor;
     }
 
     /**

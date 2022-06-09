@@ -52,6 +52,7 @@ class BehaviorEngineTest {
     public static final int RESTART_CLOCK_SYNC_DELAY = 100;
     static final Logger logger = LoggerFactory.getLogger(BehaviorEngineTest.class);
     private static final long READ_TIMEOUT = 1000;
+    public static final int RESPONSE_TIME = 300;
 
     public static void main(String[] args) throws InterruptedException {
         RawController controller = RawController.create(HOST, PORT,
@@ -80,7 +81,7 @@ class BehaviorEngineTest {
                 return Tuple2.of(HaltCommand.create(), angle);
             }
         };
-        RobotAgent engine = RobotAgent.create(controller, inferenceEngine, MOTOR_COMMAND_INTERVAL, SCAN_COMMAND_INTERVAL);
+        RobotAgent engine = RobotAgent.create(controller, inferenceEngine, MOTOR_COMMAND_INTERVAL, SCAN_COMMAND_INTERVAL, RESPONSE_TIME);
 
         engine.readConnection().subscribe(
                 data -> logger.debug("Connection {}", data),

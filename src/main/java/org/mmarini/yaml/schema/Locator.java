@@ -32,6 +32,7 @@ package org.mmarini.yaml.schema;
 import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.JsonNode;
 
+import java.util.StringJoiner;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -145,4 +146,8 @@ public class Locator {
         return getNode(root).size();
     }
 
+    @Override
+    public String toString() {
+        return pointer.toString();
+    }
 }

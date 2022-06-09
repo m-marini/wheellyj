@@ -71,6 +71,7 @@ public class ReliableSocket implements AsyncSocket {
     private final long readTimeout;
     private final BehaviorProcessor<Optional<AsyncSocketImpl>> sockets;
     private final PublishProcessor<Timed<String>> readLines;
+    private final PublishProcessor<Timed<String>> readLog;
     private final PublishProcessor<String> writeLines;
     private final PublishProcessor<Throwable> errors;
     private final PublishProcessor<AsyncSocketImpl> badSockets;
@@ -93,6 +94,7 @@ public class ReliableSocket implements AsyncSocket {
         this.readTimeout = readTimeout;
         this.sockets = BehaviorProcessor.createDefault(Optional.empty());
         this.readLines = PublishProcessor.create();
+        this.readLog = PublishProcessor.create();
         this.writeLines = PublishProcessor.create();
         this.errors = PublishProcessor.create();
         this.badSockets = PublishProcessor.create();
@@ -117,6 +119,7 @@ public class ReliableSocket implements AsyncSocket {
         writeLines.onComplete();
         badSockets.onComplete();
         errors.onComplete();
+        readLog.onComplete();
         return this;
     }
 
@@ -141,6 +144,7 @@ public class ReliableSocket implements AsyncSocket {
                 .subscribe(() -> {
                             logger.debug("Socket connected");
                             // Attaches for writing each generated sockets and copies the writing lines from internal publisher to sockets
+                            socket.readLog().subscribe(readLog::onNext);
                             socket.readErrors()
                                     .subscribe(ex -> {
                                         errors.onNext(ex);
@@ -201,6 +205,11 @@ public class ReliableSocket implements AsyncSocket {
     @Override
     public Flowable<Timed<String>> readLines() {
         return readLines;
+    }
+
+    @Override
+    public Flowable<Timed<String>> readLog() {
+        return readLog;
     }
 
     /**

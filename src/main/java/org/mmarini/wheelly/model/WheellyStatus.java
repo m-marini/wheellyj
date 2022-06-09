@@ -69,7 +69,8 @@ public class WheellyStatus implements ProxySample, ContactSensors {
                                        double leftMotors, double rightMotors,
                                        int contactSensors, double voltage,
                                        boolean canMoveForward, boolean canMoveBackward,
-                                       boolean imuFailure, boolean halt, int moveDeg, double moveSpeed, double nextSensorDeg) {
+                                       boolean imuFailure, boolean halt, int moveDeg, double moveSpeed,
+                                       int nextSensorDeg) {
         return new WheellyStatus(robotLocation, robotDeg,
                 sensorRelativeDeg, sampleDistance,
                 leftMotors, rightMotors,
@@ -154,7 +155,7 @@ public class WheellyStatus implements ProxySample, ContactSensors {
     private final boolean halt;
     private final int moveDeg;
     private final double moveSpeed;
-    private final double nextSensorDeg;
+    private final int nextSensorDeg;
 
     /**
      * Creates wheelly status
@@ -180,7 +181,8 @@ public class WheellyStatus implements ProxySample, ContactSensors {
                             double leftSpeed, double rightSpeed,
                             int contactSensors, double voltage,
                             boolean canMoveForward, boolean canMoveBackward,
-                            boolean imuFailure, boolean halt, int moveDeg, double moveSpeed, double nextSensorDeg) {
+                            boolean imuFailure, boolean halt,
+                            int moveDeg, double moveSpeed, int nextSensorDeg) {
         this.robotLocation = robotLocation;
         this.robotDeg = robotDeg;
         this.sensorRelativeDeg = sensorRelativeDeg;
@@ -229,7 +231,7 @@ public class WheellyStatus implements ProxySample, ContactSensors {
         return moveSpeed;
     }
 
-    public double getNextSensorDeg() {
+    public int getNextSensorDeg() {
         return nextSensorDeg;
     }
 

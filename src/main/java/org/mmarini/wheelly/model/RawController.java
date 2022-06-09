@@ -167,6 +167,11 @@ public class RawController implements RobotController {
     }
 
     @Override
+    public Flowable<Timed<String>> readLog() {
+        return socket.readLog();
+    }
+
+    @Override
     public Flowable<Timed<WheellyStatus>> readStatus() {
         return states;
     }

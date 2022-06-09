@@ -51,6 +51,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static java.net.StandardSocketOptions.SO_KEEPALIVE;
 import static java.util.Objects.requireNonNull;
 
@@ -64,7 +65,6 @@ public class AsyncSocketImpl implements AsyncSocket {
     private static final String LF = "\n";
     private static final String CRLF_PATTERN = "\\r?\\n";
     private static final int READ_BUFFER_SIZE = 1024;
-    private static final Logger dataLogger = LoggerFactory.getLogger(AsyncSocketImpl.class.getCanonicalName() + ".dataLog");
     private static final Logger logger = LoggerFactory.getLogger(AsyncSocketImpl.class);
 
     /**
@@ -105,6 +105,7 @@ public class AsyncSocketImpl implements AsyncSocket {
     private final long connectTimeout;
     private final BehaviorProcessor<Boolean> connected;
     private final long readTimeout;
+    private final PublishProcessor<Timed<String>> logFlow;
 
     /**
      * Creates an asynchronous socket
@@ -125,6 +126,7 @@ public class AsyncSocketImpl implements AsyncSocket {
         this.errors = MaybeSubject.create();
         this.readFlow = PublishProcessor.create();
         this.writeFlow = PublishProcessor.create();
+        this.logFlow = PublishProcessor.create();
         this.ioScheduler = Schedulers.io();
         this.connected = BehaviorProcessor.createDefault(false);
         this.connectRequest.observeOn(ioScheduler)
@@ -137,7 +139,6 @@ public class AsyncSocketImpl implements AsyncSocket {
                 .subscribe(this::writeBody,
                         ex -> {
                         });
-
     }
 
     public AsyncSocketImpl close() {
@@ -153,6 +154,7 @@ public class AsyncSocketImpl implements AsyncSocket {
                             }
                             this.connected.onNext(false);
                             this.connected.onComplete();
+                            this.logFlow.onComplete();
                         },
                         ex -> closed.onComplete());
         return this;
@@ -253,7 +255,7 @@ public class AsyncSocketImpl implements AsyncSocket {
                         bfr.flip();
                         Stream<Timed<String>> lines = splitLines(bfr);
                         lines.forEach(line -> {
-                            dataLogger.trace("{} <-- {}", channel, line.value());
+                            logFlow.onNext(new Timed<>(format("< %s", line.value()), System.currentTimeMillis(), TimeUnit.MILLISECONDS));
                             emitter.onNext(line);
                         });
                     }
@@ -271,6 +273,11 @@ public class AsyncSocketImpl implements AsyncSocket {
         return readFlow;
     }
 
+    @Override
+    public Flowable<Timed<String>> readLog() {
+        return logFlow;
+    }
+
     private void writeBody(SocketChannel ch) {
         writeFlow.observeOn(ioScheduler)
                 .subscribe(line -> {
@@ -280,7 +287,7 @@ public class AsyncSocketImpl implements AsyncSocket {
                                     while (buffer.remaining() > 0) {
                                         ch.write(buffer);
                                     }
-                                    dataLogger.trace("{} --> {}", ch, line);
+                                    logFlow.onNext(new Timed<>(format("> %s", line), System.currentTimeMillis(), TimeUnit.MILLISECONDS));
                                 } catch (Throwable ex) {
                                     errors.onSuccess(ex);
                                     closed.onComplete();

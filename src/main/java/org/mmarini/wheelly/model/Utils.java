@@ -1,10 +1,15 @@
 package org.mmarini.wheelly.model;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.awt.geom.Point2D;
 
 import static java.lang.Math.*;
 
 public interface Utils {
+
+    Logger logger = LoggerFactory.getLogger(Utils.class);
 
     /**
      * Returns the direction of to point relative to from point
@@ -69,4 +74,5 @@ public interface Utils {
     static double toNormalRadians(double x) {
         return normalizeAngle(toRadians(x));
     }
+
 }

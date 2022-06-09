@@ -32,6 +32,7 @@ package org.mmarini.wheelly.engines.statemachine;
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.wheelly.model.InferenceMonitor;
 import org.mmarini.wheelly.model.MapStatus;
+import org.mmarini.wheelly.model.WheellyStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,8 +42,6 @@ import static org.mmarini.wheelly.engines.statemachine.StateTransition.COMPLETED
  * Status where the robot scan and check for obstacles
  */
 public class SingleScanStatus extends AbstractEngineStatus {
-    public static final String INTERVAL_KEY = "interval";
-    public static final long DEFAULT_INTERVAL = 100;
     private static final int[] DIRECTIONS = {
             -30, -60, -90, -45, 30, 60, 90, 45, 0
     };
@@ -55,9 +54,7 @@ public class SingleScanStatus extends AbstractEngineStatus {
         return new SingleScanStatus(name);
     }
 
-    private long interval;
     private int index;
-    private long timer;
 
     /**
      * Creates named engine status
@@ -72,28 +69,27 @@ public class SingleScanStatus extends AbstractEngineStatus {
     @Override
     public EngineStatus activate(StateMachineContext context, InferenceMonitor monitor) {
         super.activate(context, monitor);
-        this.interval = getLong(context, INTERVAL_KEY, DEFAULT_INTERVAL);
         this.index = 0;
-        this.timer = System.currentTimeMillis() + interval;
         return this;
     }
 
 
     @Override
     public StateTransition process(Timed<MapStatus> data, StateMachineContext context, InferenceMonitor monitor) {
-        return safetyCheck(data, context, monitor).orElseGet(() -> {
-            if (System.currentTimeMillis() >= timer) {
-                if (index >= DIRECTIONS.length - 1) {
-                    // Exit
-                    logger.debug("Scan completed");
-                    context.clearObstacle();
-                    return COMPLETED_TRANSITION;
-                } else {
-                    this.timer = System.currentTimeMillis() + interval;
-                    index++;
-                }
+        return this.safetyCheck(data, context, monitor).orElseGet(() -> {
+            WheellyStatus wheelly = data.value().getWheelly();
+            int dir = DIRECTIONS[index];
+            if (wheelly.getSensorRelativeDeg() == dir) {
+                index++;
             }
-            return StateTransition.createHalt(STAY_EXIT, DIRECTIONS[index]);
+            if (index >= DIRECTIONS.length - 1) {
+                // Exit
+                logger.debug("Scan completed");
+                context.clearObstacle();
+                return COMPLETED_TRANSITION;
+            } else {
+                return StateTransition.createHalt(STAY_EXIT, DIRECTIONS[index]);
+            }
         });
     }
 }

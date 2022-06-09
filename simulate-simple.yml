@@ -1,0 +1,42 @@
+---
+version: "0.1"
+inputFile: in.dat
+outputFile: dataset-simple.csv
+kpiFile: kpi-simple.csv
+numEpochs: 1
+agent:
+  builder: org.mmarini.wheelly.engines.deepl.RLEngine.fromJson
+  avgReward: 0.2
+  rewardDecay: 300
+  valueDecay: 30
+  rewardRange: [ -5, 2 ]
+  averageReward: -3.5
+  stateEncoder:
+    type: SimpleStatus
+  actors:
+    - type: DiscreteActor
+      noValues: 2
+      outputRange: [ 0, 1 ]
+      alpha: 30
+      alphaDecay: 30
+      preferenceRange: [ -2.4, 2.4 ]
+    - type: DiscreteActor
+      noValues: 24
+      outputRange: [ -180, 165 ]
+      alpha: 10
+      alphaDecay: 30
+      preferenceRange: [ -2.4, 2.4 ]
+    - type: DiscreteActor
+      noValues: 21
+      outputRange: [ -1, 1 ]
+      alpha: 10
+      alphaDecay: 30
+      preferenceRange: [ -2.4, 2.4 ]
+    - type: DiscreteActor
+      noValues: 9
+      outputRange: [ -90, 90 ]
+      alpha: 10
+      alphaDecay: 30
+      preferenceRange: [ -2.4, 2.4 ]
+  agentFile: model-simple.zip
+  saveFile: model-simple-0.1.zip

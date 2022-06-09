@@ -155,7 +155,12 @@ public class Dashboard extends JPanel {
      *
      */
     private JPanel createConnectionPanel() {
-        JPanel container = new GridLayoutHelper<>(new JPanel()).modify("insets,2 at,0,0 weight,1,1").add(wifiLed).modify("at,0,1 center").add(cps).modify("at,0,2").add(elaps).getContainer();
+        JPanel container = new GridLayoutHelper<>(new JPanel())
+                .insets(2)
+                .at(0, 0).weight(1, 1).add(wifiLed)
+                .at(0, 1).center().add(cps)
+                .at(0, 2).add(elaps)
+                .getContainer();
         container.setBackground(BLACK);
         return container;
     }
@@ -164,7 +169,16 @@ public class Dashboard extends JPanel {
      *
      */
     private JPanel createMotorsPanel() {
-        JPanel container = new GridLayoutHelper<>(new JPanel()).modify("insets,2 at,0,0 span,2,1").add(forwardBlock).modify("at,0,1 weight,1,1 span,1,1 center").add(leftForwardMotor).modify("at,1,1").add(rightForwardMotor).modify("at,0,2").add(leftSpeed).modify("at,1,2").add(rightSpeed).modify("at,0,3").add(leftBackwardMotor).modify("at,1,3").add(rightBackwardMotor).getContainer();
+        JPanel container = new GridLayoutHelper<>(new JPanel())
+                .insets(2)
+                .at(0, 0).span(2, 1).add(forwardBlock)
+                .at(0, 1).weight(1, 1).nospan().center().add(leftForwardMotor)
+                .at(1, 1).add(rightForwardMotor)
+                .at(0, 2).add(leftSpeed)
+                .at(1, 2).add(rightSpeed)
+                .at(0, 3).add(leftBackwardMotor)
+                .at(1, 3).add(rightBackwardMotor)
+                .getContainer();
         container.setBackground(BLACK);
         return container;
     }
@@ -178,7 +192,12 @@ public class Dashboard extends JPanel {
         obstacleMeasureBar.setBackground(BLACK);
         obstacleMeasureBar.setBorderPainted(false);
         obstacleMeasure.setForeground(WHITE);
-        JPanel container = new GridLayoutHelper<>(new JPanel()).modify("insets,2 at,0,0").add(label).modify("below").add(obstacleMeasureBar).add(obstacleMeasure).add(obstacleLed).getContainer();
+        JPanel container = new GridLayoutHelper<>(new JPanel()).insets(2)
+                .at(0, 0).add(label)
+                .at(0, 1).add(obstacleMeasureBar)
+                .at(0, 2).add(obstacleMeasure)
+                .at(0, 3).add(obstacleLed)
+                .getContainer();
         container.setBackground(BLACK);
         return container;
     }
@@ -192,7 +211,12 @@ public class Dashboard extends JPanel {
         powerMeasureBar.setBackground(BLACK);
         powerMeasureBar.setBorderPainted(false);
         powerMeasure.setForeground(WHITE);
-        JPanel container = new GridLayoutHelper<>(new JPanel()).modify("insets,2 at,0,0").add(label1).modify("below").add(powerMeasureBar).add(powerMeasure).add(powerLed).getContainer();
+        JPanel container = new GridLayoutHelper<>(new JPanel())
+                .insets(2)
+                .at(0, 0).add(label1)
+                .at(0, 1).add(powerMeasureBar)
+                .at(0, 2).add(powerMeasure)
+                .at(0, 3).add(powerLed).getContainer();
         container.setBackground(BLACK);
         return container;
     }

@@ -15,12 +15,12 @@ import static org.mmarini.Utils.stream;
 /**
  *
  */
-public class Yaml {
+public interface Yaml {
 
     /**
      *
      */
-    public static Validator pathEngine() {
+    static Validator pathEngine() {
         return Validator.objectPropertiesRequired(Map.of(
                         "targets", points(),
                         "safeDistance", Validator.positiveNumber(),
@@ -32,7 +32,7 @@ public class Yaml {
     /**
      *
      */
-    public static Validator point() {
+    static Validator point() {
         return Validator.array(
                 Validator.arrayItems(Validator.number()),
                 Validator.minItems(2),
@@ -40,7 +40,7 @@ public class Yaml {
         );
     }
 
-    public static Optional<Point2D> point(JsonNode root) {
+    static Optional<Point2D> point(JsonNode root) {
         requireNonNull(root);
         return root.isMissingNode() ? Optional.empty()
                 : Optional.of(new Point2D.Double(
@@ -48,7 +48,7 @@ public class Yaml {
                 root.get(1).asDouble()));
     }
 
-    public static List<Point2D> points(JsonNode root) {
+    static List<Point2D> points(JsonNode root) {
         requireNonNull(root);
         return stream(root.elements()).flatMap(node -> point(node).stream())
                 .collect(Collectors.toList());
@@ -57,11 +57,11 @@ public class Yaml {
     /**
      *
      */
-    public static Validator points() {
+    static Validator points() {
         return Validator.arrayItems(point());
     }
 
-    public static Validator randomPath() {
+    static Validator randomPath() {
         return Validator.objectProperties(
                 Map.of("center", point(),
                         "maxDistance", Validator.positiveNumber()

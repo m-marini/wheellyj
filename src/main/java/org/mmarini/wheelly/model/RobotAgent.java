@@ -46,7 +46,7 @@ import static io.reactivex.rxjava3.core.Flowable.*;
 import static java.lang.Math.round;
 import static java.lang.String.format;
 import static org.mmarini.wheelly.model.GridScannerMap.THRESHOLD_DISTANCE;
-import static org.mmarini.wheelly.model.HaltCommand.ALT_COMMAND;
+import static org.mmarini.wheelly.model.HaltCommand.HALT_COMMAND;
 
 public class RobotAgent implements InferenceMonitor {
     private static final Logger logger = LoggerFactory.getLogger(RobotAgent.class);
@@ -57,11 +57,12 @@ public class RobotAgent implements InferenceMonitor {
      *
      * @param controller           the roboto controller
      * @param engine               the inference engine
-     * @param motorCommandInterval the interval between motor commands
-     * @param scanCommandInterval  the interval between scan commands
+     * @param motorCommandInterval the interval between motor commands (ms)
+     * @param scanCommandInterval  the interval between scan commands (ms)
+     * @param responseTime         the response time of inference engine (ms)
      */
-    public static RobotAgent create(RobotController controller, InferenceEngine engine, long motorCommandInterval, long scanCommandInterval) {
-        return new RobotAgent(controller, engine, motorCommandInterval, scanCommandInterval);
+    public static RobotAgent create(RobotController controller, InferenceEngine engine, long motorCommandInterval, long scanCommandInterval, long responseTime) {
+        return new RobotAgent(controller, engine, motorCommandInterval, scanCommandInterval, responseTime);
     }
 
     /**
@@ -70,7 +71,7 @@ public class RobotAgent implements InferenceMonitor {
      */
     public static RobotAgent create(ConfigParameters configParams, InferenceEngine engine) {
         RobotController controller = RawController.create(configParams);
-        return create(controller, engine, configParams.motorCommandInterval, configParams.scanCommandInterval);
+        return create(controller, engine, configParams.motorCommandInterval, configParams.scanCommandInterval, configParams.responseTime);
     }
 
     private final RobotController controller;
@@ -78,22 +79,28 @@ public class RobotAgent implements InferenceMonitor {
     private final PublishProcessor<String> inferenceMessages;
     private final PublishProcessor<Tuple2<String, Optional<?>>> inferenceData;
     private final InferenceEngine engine;
+    private final Flowable<Tuple2<Timed<MapStatus>, Tuple2<MotionCommand, Integer>>> commands;
+    private final long responseTime;
 
     /**
      * Creates the behavior engine
      *
      * @param controller           the roboto controller
      * @param engine               the inference engine
-     * @param motorCommandInterval the interval between motor commands
-     * @param scanCommandInterval  the interval between scan commands
+     * @param motorCommandInterval the interval between motor commands (ms)
+     * @param scanCommandInterval  the interval between scan commands (ms)
+     * @param responseTime         the response time of inference engine (ms)
      */
-    protected RobotAgent(RobotController controller, InferenceEngine engine, long motorCommandInterval, long scanCommandInterval) {
+    protected RobotAgent(RobotController controller, InferenceEngine engine, long motorCommandInterval, long scanCommandInterval, long responseTime) {
+        this.responseTime = responseTime;
         logger.debug("Created");
         this.controller = controller;
         this.mapFlow = BehaviorProcessor.create();
         this.inferenceData = PublishProcessor.create();
         this.inferenceMessages = PublishProcessor.create();
         this.engine = engine;
+        this.commands = createCommandFlow();
+
         createMapFlow();
         createActionFlow(motorCommandInterval, scanCommandInterval);
     }
@@ -107,16 +114,16 @@ public class RobotAgent implements InferenceMonitor {
     }
 
     private void createActionFlow(long motorCommandInterval, long scanCommandInterval) {
-        Flowable<Tuple2<MotionCommand, Integer>> commands = createCommandFlow();
         // Splits the commands  flow in motor and scanner command flows
-        createMotionFlow(commands.map(Tuple2::getV1), motorCommandInterval);
-        createScanFlow(commands.map(Tuple2::getV2), scanCommandInterval);
+        createMotionFlow(commands.map(Tuple2::getV2).map(Tuple2::getV1), motorCommandInterval);
+        createScanFlow(commands.map(Tuple2::getV2).map(Tuple2::getV2), scanCommandInterval);
     }
 
-    private Flowable<Tuple2<MotionCommand, Integer>> createCommandFlow() {
+    private Flowable<Tuple2<Timed<MapStatus>, Tuple2<MotionCommand, Integer>>> createCommandFlow() {
         // Builds command flow by applying inference engine
         return mapFlow.observeOn(Schedulers.computation())
-                .map(t -> engine.process(t, this))
+                .throttleLatest(responseTime, TimeUnit.MILLISECONDS)
+                .map(this::handleTransition)
                 .publish()
                 .autoConnect();
     }
@@ -135,7 +142,7 @@ public class RobotAgent implements InferenceMonitor {
     }
 
     private void createMotionFlow(Flowable<MotionCommand> commands, long motorCommandInterval) {
-        // The motor command are sample every motorCommandInterval msec
+        // The motor command are sample every motorCommandInterval (ms)
         Flowable<MotionCommand> motorCommandFlow1 = commands.map(cmd -> {
                     if (cmd instanceof MoveCommand) {
                         MoveCommand moveCommand = (MoveCommand) cmd;
@@ -152,10 +159,9 @@ public class RobotAgent implements InferenceMonitor {
                 .distinctUntilChanged()
                 .map(Tuple2::getV2)
                 .buffer(2, 1)
-                .filter(cmds -> !(cmds.get(0) == ALT_COMMAND
-                        && cmds.get(1) == ALT_COMMAND))
-                .map(cmds -> cmds.get(1))
-                .throttleLatest(100, TimeUnit.MILLISECONDS);
+                .filter(cmds -> !(cmds.get(0) == HALT_COMMAND
+                        && cmds.get(1) == HALT_COMMAND))
+                .map(cmds -> cmds.get(1));
 
         controller.action(motorCommandFlow);
     }
@@ -171,9 +177,14 @@ public class RobotAgent implements InferenceMonitor {
                 .buffer(2, 1)
                 .filter((list) -> !(list.get(0) == 0 && list.get(1) == 0))
                 .map(list -> list.get(1))
-                .throttleLatest(50, TimeUnit.MILLISECONDS)
+//                .throttleLatest(50, TimeUnit.MILLISECONDS)
                 .map(ScanCommand::create);
         controller.action(scanCommandFlow);
+    }
+
+    private Tuple2<Timed<MapStatus>, Tuple2<MotionCommand, Integer>> handleTransition(Timed<MapStatus> status) {
+        Tuple2<MotionCommand, Integer> command = engine.process(status, this);
+        return Tuple2.of(status, command);
     }
 
     @Override
@@ -196,6 +207,10 @@ public class RobotAgent implements InferenceMonitor {
         return controller.readCps();
     }
 
+    public Flowable<String> readDump() {
+        return commands.map(FileFunctions::toString);
+    }
+
     public Flowable<Throwable> readErrors() {
         return controller.readErrors();
     }
@@ -206,6 +221,10 @@ public class RobotAgent implements InferenceMonitor {
 
     public Flowable<String> readInferenceMessages() {
         return inferenceMessages;
+    }
+
+    public Flowable<Timed<String>> readLog() {
+        return controller.readLog();
     }
 
     /**
