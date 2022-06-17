@@ -59,11 +59,14 @@ public class SimpleFeaturesSignalEncoder implements SignalEncoder {
     public static final int DISTANCE_NUM_SIGNALS = 30;
     public static final int CONTACT_NUM_SIGNALS = 16;
     public static final int BLOCK_NUM_SIGNALS = 4;
+    public static final int SPEED_NUM_LEVELS = 5;
+    public static final int SPEED_NUM_SIGNALS = SPEED_NUM_LEVELS * SPEED_NUM_LEVELS;
 
     public static final int DIRECTION_OFFSET = 0;
     public static final int SENSOR_OFFSET = DIRECTION_OFFSET + DIRECTION_NUM_SIGNALS;
     public static final int DISTANCE_OFFSET = SENSOR_OFFSET + SENSOR_NUM_SIGNALS;
-    public static final int CONTACTS_OFFSET = DISTANCE_OFFSET + DISTANCE_NUM_SIGNALS;
+    public static final int SPEED_OFFSET = DISTANCE_OFFSET + DISTANCE_NUM_SIGNALS;
+    public static final int CONTACTS_OFFSET = SPEED_OFFSET + SPEED_NUM_SIGNALS;
     public static final int BLOCK_OFFSET = CONTACTS_OFFSET + CONTACT_NUM_SIGNALS;
     public static final int IMU_FAILURE_OFFSET = BLOCK_OFFSET + BLOCK_NUM_SIGNALS;
     public static final int NUM_SIGNALS = IMU_FAILURE_OFFSET + 1;
@@ -73,6 +76,8 @@ public class SimpleFeaturesSignalEncoder implements SignalEncoder {
     public static final double DISTANCE_SENSITIVITY = 0.1;
 
     private static final SimpleFeaturesSignalEncoder SINGLETON = new SimpleFeaturesSignalEncoder();
+    public static final double MAX_SPEED = 0.330;
+    private static final double SPEED_SENSITIVITY = MAX_SPEED * 2 / SPEED_NUM_LEVELS;
 
     public static SimpleFeaturesSignalEncoder create() {
         return SINGLETON;
@@ -96,6 +101,14 @@ public class SimpleFeaturesSignalEncoder implements SignalEncoder {
         return min(max((int) floor(distance / DISTANCE_SENSITIVITY), 0), DISTANCE_NUM_SIGNALS - 1);
     }
 
+    static int encodeSpeed(double speed) {
+        return min(max((int) floor((speed + MAX_SPEED) / SPEED_SENSITIVITY), 0), SPEED_NUM_SIGNALS - 1);
+    }
+
+    static int encodeSpeeds(double left, double right) {
+        return encodeSpeed(left) + encodeSpeed(right) * SPEED_NUM_LEVELS;
+    }
+
     /**
      * Returns the encoded sensor direction (0-8)
      *
@@ -117,10 +130,12 @@ public class SimpleFeaturesSignalEncoder implements SignalEncoder {
         int block = (wheelly.getCannotMoveForward() ? 1 : 0)
                 + (wheelly.getCannotMoveBackward() ? 2 : 0);
         boolean imuFailure = wheelly.isImuFailure();
+        int speeds = encodeSpeeds(wheelly.getLeftSpeed(), wheelly.getRightSpeed());
 
         result.putScalar(0, direction + DIRECTION_OFFSET, 1d);
         result.putScalar(0, sensor + SENSOR_OFFSET, 1d);
         result.putScalar(0, distance + DISTANCE_OFFSET, 1d);
+        result.putScalar(0, speeds + SPEED_OFFSET, 1d);
         result.putScalar(0, contacts + CONTACTS_OFFSET, 1d);
         result.putScalar(0, block + BLOCK_OFFSET, 1d);
         if (imuFailure) {

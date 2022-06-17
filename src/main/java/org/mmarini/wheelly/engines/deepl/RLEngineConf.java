@@ -45,7 +45,7 @@ public class RLEngineConf {
     public static RLEngineConf fromJson(JsonNode root, Locator locator) {
         Yaml.engineConf().apply(locator).accept(root);
         SignalEncoder encoder = Yaml.stateEncoder(root, locator.path("stateEncoder"));
-        ToDoubleBiFunction<Timed<MapStatus>, Timed<MapStatus>> rewardFunc = FunctionBuilder::testReward;
+        ToDoubleBiFunction<Timed<MapStatus>, Timed<MapStatus>> rewardFunc = FunctionBuilder::haltReward;
         return new RLEngineConf(encoder, rewardFunc);
     }
 

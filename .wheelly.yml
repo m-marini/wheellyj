@@ -8,9 +8,8 @@ retryConnectionInterval: 3000
 responseTime: 300
 motorCommandInterval: 700
 scanCommandInterval: 700
-dumpFile: dump-2022-06-04-23-31.dat
+dumpFile: dump.dat
 robotLogFile: data.log
-
 engine: engines/deepl
 
 engines:
@@ -49,7 +48,7 @@ engines:
         alphaDecay: 10
         preferenceRange: [-2.4, 2.4]
     agentFile: model-simple.zip
-    saveFile: model-simple-1.1-online.zip
+    saveFile: model-simple-online.zip
   manual:
     builder: org.mmarini.wheelly.engines.Builders.manual
   # Linux
