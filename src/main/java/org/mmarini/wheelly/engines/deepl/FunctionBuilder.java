@@ -220,7 +220,7 @@ public interface FunctionBuilder {
         return cdfRandomInt(cdf(x));
     }
 
-   static double testReward(Timed<MapStatus> s0, Timed<MapStatus> s1) {
+    static double testReward(Timed<MapStatus> s0, Timed<MapStatus> s1) {
         WheellyStatus w = s1.value().getWheelly();
         if (w.isBlocked()
                 || w.getCannotMoveForward()
@@ -237,5 +237,15 @@ public interface FunctionBuilder {
         } else {
             return -1;
         }
+    }
+
+    static double haltReward(Timed<MapStatus> s0, Timed<MapStatus> s1) {
+        WheellyStatus w = s1.value().getWheelly();
+        return w.getCannotMoveForward()
+                || w.getCannotMoveBackward()
+                || w.getSensorRelativeDeg() != 0
+                || w.getRightSpeed() != 0
+                || w.getLeftSpeed() != 0
+                ? -1 : 1;
     }
 }

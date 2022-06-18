@@ -117,7 +117,7 @@ class FullFeaturesSignalEncoderTest {
             "2.901,29",
             "3,29",
     })
-    void encodeSensor(double distance, int expected) {
+    void encodeDistance(double distance, int expected) {
         assertThat(FullFeaturesSignalEncoder.encodeDistance(distance), equalTo(expected));
     }
 

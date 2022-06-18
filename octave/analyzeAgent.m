@@ -2,6 +2,14 @@ function analyzeAgent(
   J0,J1,                  # the J0 and J1
   REWARDS,                # rewards
   DELTA,                  # delta
+  HALT_ALPHA,             # halt alpha
+  HALT_DH,                # halt dh
+  DIR_ALPHA,              # direction alpha
+  DIR_DH,                 # direction dh
+  SPEED_ALPHA,            # Apha
+  SPEED_DH,               # speed dh
+  SENS_ALPHA,             # sensor alpha
+  SENS_DH,                # sensor dh
   EPSH = 0.24,            # the optimal range of h to be considered
   K0 = 0.7,               # the K threshold for C1 class
   EPS = 100e-6,           # the minimu J value to be considered
@@ -12,19 +20,6 @@ function analyzeAgent(
   )
 
   # Indices constants
-  IV0 = 1;
-  IVStar = 2;
-  IV1 = 3;
-  IRPi = 4;
-  IAlphaDir = 7;
-  IHDir = [8 : 15];
-  IHDirStar = [16 : 23];
-  IAlphaH = 32;
-  IHH = [33 : 35];
-  IHHStar = [36 : 38];
-  IAlphaZ = 42;
-  IHZ = [43 : 47];
-  IHZStar = [48 : 52];
   NA = 4;
 
   # Number of steps, number of values
@@ -51,8 +46,44 @@ function analyzeAgent(
   [TDX TD TDTREND TDMODE] = meanchart(DELTA .^ 2, NPOINTS, LENGTH);
   [RPIX RPI RTREND RMODE] = meanchart(REWARDS, NPOINTS, LENGTH);
 
-  NR = 2;             # number of rows
+  NR = 3;             # number of rows
   NC = 2 + NA;
+
+  HALT_DH2 = HALT_DH .^ 2;
+  HALT_DH2M = mean(HALT_DH2, 2);
+  ALPHA = HALT_ALPHA(1);
+  # Compute alpha for percetile
+  PCH = prctile(sqrt(HALT_DH2M), PRC);
+  HALT_DIST = EPSH ./ PCH * ALPHA;
+  # Compute mean
+  HALT_DIST_TREND = ones(size(PRC, 1), 1) * EPSH ./ sqrt(mean(HALT_DH2M)) * ALPHA;
+
+  DIR_DH2 = DIR_DH .^ 2;
+  DIR_DH2M = mean(DIR_DH2, 2);
+  ALPHA = DIR_ALPHA(1);
+  # Compute alpha for percetile
+  PCH = prctile(sqrt(DIR_DH2M), PRC);
+  DIR_DIST = EPSH ./ PCH * ALPHA;
+  # Compute mean
+  DIR_DIST_TREND = ones(size(PRC, 1), 1) * EPSH ./ sqrt(mean(DIR_DH2M)) * ALPHA;
+
+  SPEED_DH2 = SPEED_DH .^ 2;
+  SPEED_DH2M = mean(SPEED_DH2, 2);
+  ALPHA = SPEED_ALPHA(1);
+  # Compute alpha for percetile
+  PCH = prctile(sqrt(SPEED_DH2M), PRC);
+  SPEED_DIST = EPSH ./ PCH * ALPHA;
+  # Compute mean
+  SPEED_DIST_TREND = ones(size(PRC, 1), 1) * EPSH ./ sqrt(mean(SPEED_DH2M)) * ALPHA;
+
+  SENS_DH2 = SENS_DH .^ 2;
+  SENS_DH2M = mean(SENS_DH2, 2);
+  ALPHA = SENS_ALPHA(1);
+  # Compute alpha for percetile
+  PCH = prctile(sqrt(SENS_DH2M), PRC);
+  SENS_DIST = EPSH ./ PCH * ALPHA;
+  # Compute mean
+  SENS_DIST_TREND = ones(size(PRC, 1), 1) * EPSH ./ sqrt(mean(SENS_DH2M)) * ALPHA;
 
   clf;
 
@@ -82,28 +113,106 @@ function analyzeAgent(
   xlabel("K");
   ylabel("# samples");
 
-  for actor = 0 : NA - 1
-    col = actor + 3;
-    subplot(NR, NC, col);
-    #autoplot(PRC, [hChart{actor + 1, 2}, hChart{actor + 1, 3}]);
-    grid on;
-    grid minor on;
-    title(sprintf("alpha %d", actor));
-    xlabel("% corrected samples");
-    ylabel(sprintf("alpha %d", actor));
+  subplot(NR, NC, 3);
+  autoplot(PRC, [HALT_DIST, HALT_DIST_TREND]);
+  grid on;
+  grid minor on;
+  title(sprintf("Halt alpha"));
+  xlabel("% corrected samples");
+  ylabel(sprintf("Halt alpha"));
 
-    subplot(NR, NC, col + NC);
-    #hist(hChart{actor + 1, 1}, BINS);
-    grid on;
-    title(sprintf("J %d distribution", actor));
-    xlabel(sprintf("J %d distribution", actor));
-    ylabel("# samples");
-  endfor
+  subplot(NR, NC, 3 + NC);
+  hist(HALT_DH2M, BINS);
+  grid on;
+  title(sprintf("Halt J distribution"));
+  xlabel(sprintf("Halt J distribution"));
+  ylabel("# samples");
+
+  subplot(NR, NC, 3 + 2 * NC);
+  autoplot(HALT_ALPHA);
+  grid on;
+  title(sprintf("Halt alpha"));
+  xlabel(sprintf("Alpha"));
+  ylabel("# samples");
+  
+  subplot(NR, NC, 4);
+  autoplot(PRC, [DIR_DIST, DIR_DIST_TREND]);
+  grid on;
+  grid minor on;
+  title(sprintf("Direction alpha"));
+  xlabel("% corrected samples");
+  ylabel(sprintf("Direction alpha"));
+
+  subplot(NR, NC, 4 + NC);
+  hist(DIR_DH2M, BINS);
+  grid on;
+  title(sprintf("Direction J distribution"));
+  xlabel(sprintf("Direction J distribution"));
+  ylabel("# samples");
+
+  subplot(NR, NC, 4 + 2 * NC);
+  autoplot(DIR_ALPHA);
+  grid on;
+  title(sprintf("Direction alpha"));
+  xlabel(sprintf("Alpha"));
+  ylabel("# samples");
+  
+  subplot(NR, NC, 5);
+  autoplot(PRC, [SPEED_DIST, SPEED_DIST_TREND]);
+  grid on;
+  grid minor on;
+  title(sprintf("Speed alpha"));
+  xlabel("% corrected samples");
+  ylabel(sprintf("Speed alpha"));
+
+  subplot(NR, NC, 5 + NC);
+  hist(SPEED_DH2M, BINS);
+  grid on;
+  title(sprintf("Speed J distribution"));
+  xlabel(sprintf("Speed J distribution"));
+  ylabel("# samples");
+ 
+  subplot(NR, NC, 5 + 2 * NC);
+  autoplot(SPEED_ALPHA);
+  grid on;
+  title(sprintf("Speed alpha"));
+  xlabel(sprintf("Alpha"));
+  ylabel("# samples");
+
+  subplot(NR, NC, 6);
+  autoplot(PRC, [SENS_DIST, SENS_DIST_TREND]);
+  grid on;
+  grid minor on;
+  title(sprintf("Sensor alpha"));
+  xlabel("% corrected samples");
+  ylabel(sprintf("Sensor alpha"));
+
+  subplot(NR, NC, 6 + NC);
+  hist(SENS_DH2M, BINS);
+  grid on;
+  title(sprintf("Sensor J distribution"));
+  xlabel(sprintf("Sensor J distribution"));
+  ylabel("# samples");
+
+  subplot(NR, NC, 6 + 2 * NC);
+  autoplot(SENS_ALPHA);
+  grid on;
+  title(sprintf("Sensor alpha"));
+  xlabel(sprintf("Alpha"));
+  ylabel("# samples");
+
 
   printf("ANN\n");
   printf("%s rewards trend from %.1f to %.1f\n", RMODE, RTREND(1), RTREND(end));
   printf("%.0f%% red class\n", RED * 100);
   printf("%.0f%% yellow class\n", YELLOW * 100);
   printf("%.0f%% green class\n", GREEN * 100);
+
+  printf("\n");
+
+  printf("Optimal halt alpha:     %.1f\n", HALT_DIST_TREND(1));
+  printf("Optimal directin alpha: %.1f\n", DIR_DIST_TREND(1));
+  printf("Optimal speed alpha:    %.1f\n", SPEED_DIST_TREND(1));
+  printf("Optimal sensor alpha:   %.1f\n", SENS_DIST_TREND(1));
 
 endfunction

@@ -84,7 +84,7 @@ public interface FileFunctions {
                 distance,
                 left, right,
                 contacts, 0,
-                cannotMoveForward, cannotMoveBackward,
+                !cannotMoveForward, !cannotMoveBackward,
                 imuFailure,
                 halt,
                 moveDeg, moveSpeed,
@@ -140,7 +140,7 @@ public interface FileFunctions {
                     } catch (IOException ex) {
                         emitter.onError(ex);
                     }
-                }, BackpressureStrategy.ERROR)
+                }, BackpressureStrategy.BUFFER)
                 .subscribeOn(Schedulers.io());
     }
 

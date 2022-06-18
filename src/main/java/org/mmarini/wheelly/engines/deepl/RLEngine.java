@@ -94,8 +94,8 @@ public class RLEngine implements InferenceEngine {
         INDArray j1 = (INDArray) map.get("J1");
         INDArray alphas = (INDArray) map.get("alpha*");
         INDArray h = hstack((INDArray[]) map.get("h"));
-        //INDArray hStar = hstack((INDArray[]) map.get("h*"));
-        return hstack(Nd4j.create(new float[]{(float) reward}, 1, 1),
+        INDArray hStar = hstack((INDArray[]) map.get("h*"));
+        return hstack(scalar((float)reward).reshape(1, 1),
                 score.reshape(1, 1),
                 v0Star.reshape(1, 1),
                 delta.reshape(1, 1),
@@ -103,7 +103,8 @@ public class RLEngine implements InferenceEngine {
                 j0.reshape(1, 1),
                 j1.reshape(1, 1),
                 alphas.reshape(1, alphas.length()),
-                h);
+                h,
+                hStar);
     }
 
     /**
