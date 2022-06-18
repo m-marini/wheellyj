@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Issue #71: Halt goal behaviour
 
+## Removed
+
+- Issue #73: KC folder moved to wheellino repo
+
 ## [0.2.0]
 
 ### Added
