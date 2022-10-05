@@ -32,6 +32,7 @@ package org.mmarini.wheelly.engines.deepl;
 import org.hamcrest.CustomMatcher;
 import org.hamcrest.Matcher;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.factory.Nd4j;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -48,5 +49,12 @@ public interface TestFunctions {
                         && ((INDArray) o).equalsWithEps(exp, epsilon);
             }
         };
+    }
+
+    static Matcher<INDArray> matrixCloseTo(float[][] exp, double epsilon) {
+        return matrixCloseTo(Nd4j.create(exp), epsilon);
+    }
+    static String text(String... lines) {
+        return String.join("\n", lines) + "\n";
     }
 }

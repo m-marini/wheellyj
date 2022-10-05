@@ -58,6 +58,14 @@ public interface Yaml {
         );
     }
 
+    static Validator baseConfig() {
+        return objectPropertiesRequired(Map.of(
+                "version", string(values("0.2")),
+                "active", string(),
+                "configurations", object()
+        ), List.of("version", "active", "configurations"));
+    }
+
     static Validator createFile() {
         return objectPropertiesRequired(Map.of(
                         "version", string(values("0.1")),
