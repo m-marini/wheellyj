@@ -1,0 +1,144 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) 2022 Marco Marini
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ */
+
+package org.mmarini.wheelly.agents;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import org.junit.jupiter.api.Test;
+import org.mmarini.rltd.TDNetwork;
+import org.mmarini.wheelly.envs.*;
+import org.mmarini.wheelly.rx.RXFunc;
+import org.mmarini.yaml.Utils;
+import org.mmarini.yaml.schema.Locator;
+import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.api.rng.Random;
+import org.nd4j.linalg.factory.Nd4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.mmarini.wheelly.engines.deepl.TestFunctions.text;
+
+class TDAgentTrainKpiTest {
+    public static final float REWARD_ALPHA = 1e-3f;
+    public static final long AGENT_SEED = 1234L;
+    public static final Map<String, SignalSpec> STATE_SPEC = Map.of("input", new FloatSignalSpec(new long[]{3}, 0, 1));
+    public static final Map<String, SignalSpec> ACTIONS_SPEC = Map.of("output", new IntSignalSpec(new long[]{1}, 3));
+    public static final int NUM_EPISODES = 100;
+    private static final Logger logger = LoggerFactory.getLogger(TDAgentTrainKpiTest.class);
+    private static final String POLICY_YAML = text("---",
+            "alpha: 10e-3",
+            "lambda: 0",
+            "layers:",
+            "- name: layer1",
+            "  type: dense",
+            "  inputSize: 3",
+            "  outputSize: 3",
+            "- name: layer2",
+            "  type: tanh",
+            "- name: output",
+            "  type: softmax",
+            "  temperature: 0.5",
+            "inputs:",
+            "  layer1: [input]",
+            "  layer2: [layer1]",
+            "  output: [layer2]"
+    );
+    private static final String CRITIC_YAML = text("---",
+            "alpha: 10e-3",
+            "lambda: 0",
+            "layers:",
+            "- name: layer1",
+            "  type: dense",
+            "  inputSize: 3",
+            "  outputSize: 1",
+            "- name: output",
+            "  type: tanh",
+            "inputs:",
+            "  layer1: [input]",
+            "  output: [layer1]"
+    );
+
+    static TDAgent createAgent() throws IOException {
+        JsonNode policySpec = Utils.fromText(POLICY_YAML);
+        Random random = Nd4j.getRandom();
+        random.setSeed(AGENT_SEED);
+        TDNetwork policy = TDNetwork.create(policySpec, Locator.root(), "", Map.of(), random);
+        JsonNode criticSpec = Utils.fromText(CRITIC_YAML);
+        TDNetwork critic = TDNetwork.create(criticSpec, Locator.root(), "", Map.of(), random);
+        return new TDAgent(STATE_SPEC, ACTIONS_SPEC,
+                1f, REWARD_ALPHA, policy, critic, random);
+    }
+
+    @Test
+    void train() throws IOException {
+        DataCollectorSubscriber data = new DataCollectorSubscriber();
+        try (SequenceEnv env = new SequenceEnv(3)) {
+            TDAgent agent = createAgent();
+            agent.getIndicators()
+                    .concatMap(RXFunc.getProperty("reward"))
+                    .cast(Float.class)
+                    .map(RXFunc.float2INDArray())
+                    .subscribe(data);
+            agent.getIndicators()
+                    .concatMap(RXFunc.getProperty("delta"))
+                    .cast(Float.class)
+                    .map(RXFunc.float2INDArray())
+                    .subscribe(new CSVSubscriber(new File("delta.csv")));
+            Map<String, Signal> s0 = Map.of("input", ArraySignal.create(1, 0, 0));
+            Map<String, Signal> s1 = Map.of("input", ArraySignal.create(0, 1, 0));
+            INDArray pis00 = agent.pisFromSignals(s0).get("output");
+            INDArray pis01 = agent.pisFromSignals(s1).get("output");
+
+            for (int i = 0; i < NUM_EPISODES; i++) {
+                Map<String, Signal> state = env.reset();
+                for (; ; ) {
+                    Map<String, Signal> action = agent.act(state);
+                    Environment.ExecutionResult result = env.execute(action);
+                    agent.observe(result);
+                    if (result.terminal) {
+                        break;
+                    }
+                    state = result.state;
+                }
+            }
+
+            INDArray pis10 = agent.pisFromSignals(s0).get("output");
+            INDArray pis11 = agent.pisFromSignals(s1).get("output");
+
+            assertThat(pis10.getFloat(0, 0), greaterThan(pis00.getFloat(0, 0)));
+            assertThat(pis11.getFloat(0, 1), greaterThan(pis01.getFloat(0, 1)));
+            agent.close();
+            agent.getIndicators().blockingSubscribe();
+        }
+        //data.toCsv("data/reward.csv");
+        assertThat(data.getKpi().linPoly[1], greaterThan(0f));
+    }
+}

@@ -34,7 +34,7 @@ import java.util.ResourceBundle;
  * @author marco.marini@mmarini.org
  */
 public class Messages {
-    private static final String BUNDLE_NAME = "org.mmarini.routes.swing.messages"; //$NON-NLS-1$
+    private static final String BUNDLE_NAME = "resources"; //$NON-NLS-1$
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle(BUNDLE_NAME);
 

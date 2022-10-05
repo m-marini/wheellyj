@@ -1,0 +1,13 @@
+---
+version: "0.2"
+active: simRobot
+
+configurations:
+  simRobot:
+    class: org.mmarini.wheelly.apis.SimRobot
+    robotSeed: 1234
+    mapSeed: 1234
+    numObstacles: 10
+  realRobot:
+    class: org.mmarini.wheelly.apis.Robot
+    host: "192.168.1.11"

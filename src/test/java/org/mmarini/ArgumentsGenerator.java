@@ -166,7 +166,6 @@ public interface ArgumentsGenerator<T> {
         return createStreamFromGenerator(DEFAULT_NUM_TESTS, seed, generator);
     }
 
-
     /**
      * @param min
      * @param max
@@ -177,9 +176,20 @@ public interface ArgumentsGenerator<T> {
         return createArgumentGenerator(random -> Math.exp(random.nextDouble() * Math.log(max / min)) * min, min, max, sqrt(min * max));
     }
 
+    static ArgumentsGenerator<Float> exponential(float min, float max) {
+        assert min > 0;
+        assert max >= min;
+        return createArgumentGenerator(random -> (float) (Math.exp(random.nextDouble() * Math.log(max / min)) * min), min, max, (float) sqrt(min * max));
+    }
+
     static ArgumentsGenerator<Double> gaussian(double mean, double sigma) {
         assert sigma >= 0;
         return createArgumentGenerator(random -> random.nextGaussian() * sigma + mean, mean, mean - sigma, mean + sigma);
+    }
+
+    static ArgumentsGenerator<Float> gaussian(float mean, float sigma) {
+        assert sigma >= 0;
+        return createArgumentGenerator(random -> (float) random.nextGaussian() * sigma + mean, mean, mean - sigma, mean + sigma);
     }
 
     static ArgumentsGenerator<Boolean> probability(double p) {
@@ -193,6 +203,15 @@ public interface ArgumentsGenerator<T> {
     static ArgumentsGenerator<Integer> uniform(int min, int max) {
         assert max >= min;
         return createArgumentGenerator(random -> random.nextInt(max - min) + min, min, max, (min + max) / 2);
+    }
+
+    /**
+     * @param min
+     * @param max
+     */
+    static ArgumentsGenerator<Float> uniform(float min, float max) {
+        assert max >= min;
+        return createArgumentGenerator(random -> (float) random.nextDouble() * (max - min) + min, min, max, (min + max) / 2);
     }
 
     /**

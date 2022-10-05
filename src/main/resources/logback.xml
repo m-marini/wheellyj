@@ -23,6 +23,8 @@
     </logger>
     <logger name="org.mmarini.wheelly.engines.statemachine.NextSequenceStatus" level="INFO">
     </logger>
+    <logger name="org.mmarini.wheelly.apis.RobotSocket" level="INFO">
+    </logger>
 
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>

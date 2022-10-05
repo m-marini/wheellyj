@@ -73,20 +73,32 @@ public class FuzzyFunctions {
     /**
      * Returns the defuzzy value of weighted values
      *
-     * @param values the pairs of value and weight
+     * @param defaultValue the default value
+     * @param keys         the pairs of value and weight
      */
-    public static double defuzzy(double... values) {
-        requireNonNull(values);
-        if (values.length < 2 || (values.length % 2) != 0) {
+    public static double defuzzy(double defaultValue, double... keys) {
+        requireNonNull(keys);
+        if (keys.length < 2 || (keys.length % 2) != 0) {
             throw new IllegalArgumentException();
         }
-        double result = 0;
-        double norm = 0;
-        for (int i = 0; i < values.length; i += 2) {
-            result += values[i] * values[i + 1];
-            norm += values[i + 1];
+
+        double weightSum = 0;
+        double weightValueSum = 0;
+        double maxWeight = 0;
+        for (int i = 0; i < keys.length; i += 2) {
+            double w = keys[i + 1];
+            weightSum += w;
+            weightValueSum += keys[i] * w;
+            if (w > maxWeight) {
+                maxWeight = w;
+            }
         }
-        return result / norm;
+
+        double defaultWeight = 1 - maxWeight;
+        double totWeight = defaultWeight + weightSum;
+
+        double x = defaultWeight * defaultValue + weightValueSum;
+        return x / totWeight;
     }
 
     /**

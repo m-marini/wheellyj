@@ -1,0 +1,8 @@
+---
+version: "0.2"
+active: randomAgent
+
+configurations:
+  randomAgent:
+    class: org.mmarini.wheelly.agents.RandomAgent
+    seed: 1234
