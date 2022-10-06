@@ -10,7 +10,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 - Issue #76: Java TD environment porting from python
-
+- Issue #79: Agent spec transpiller
+- 
 ### Changed
 
 - Issue #71: Halt goal behaviour
