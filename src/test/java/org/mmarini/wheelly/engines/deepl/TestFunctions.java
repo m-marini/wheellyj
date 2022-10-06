@@ -54,6 +54,7 @@ public interface TestFunctions {
     static Matcher<INDArray> matrixCloseTo(float[][] exp, double epsilon) {
         return matrixCloseTo(Nd4j.create(exp), epsilon);
     }
+
     static String text(String... lines) {
         return String.join("\n", lines) + "\n";
     }

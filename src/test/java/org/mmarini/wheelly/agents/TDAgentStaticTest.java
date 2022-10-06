@@ -87,9 +87,9 @@ class TDAgentStaticTest {
         Random random = Nd4j.getRandom();
         Map<String, Signal> actions = TDAgent.chooseActions(pis, random);
 
-        assertEquals(0, ((IntSignal) actions.get("a")).getInt(0));
-        assertEquals(1, ((IntSignal) actions.get("b")).getInt(0));
-        assertEquals(2, ((IntSignal) actions.get("c")).getInt(0));
+        assertEquals(0, actions.get("a").getInt(0));
+        assertEquals(1, actions.get("b").getInt(0));
+        assertEquals(2, actions.get("c").getInt(0));
     }
 
     @Test

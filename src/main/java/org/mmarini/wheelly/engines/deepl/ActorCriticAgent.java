@@ -139,7 +139,7 @@ public class ActorCriticAgent {
 
         // Merge critic and actors labels
         INDArray[] labels = Stream.concat(
-                        Stream.of(criticLabel.reshape(1,1)),
+                        Stream.of(criticLabel.reshape(1, 1)),
                         actorLabels)
                 .toArray(INDArray[]::new);
 

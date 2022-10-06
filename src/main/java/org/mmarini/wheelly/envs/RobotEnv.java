@@ -69,6 +69,13 @@ public class RobotEnv implements Environment {
             "direction", new FloatSignalSpec(new long[]{1}, MIN_DIRECTION_ACTION, MAX_DIRECTION_ACTION),
             "speed", new FloatSignalSpec(new long[]{1}, MIN_SPEED, MAX_SPEED),
             "sensorAction", new FloatSignalSpec(new long[]{1}, MIN_SENSOR_DIR, MAX_SENSOR_DIR));
+    private static final Validator ROBOT_ENV_SPEC = objectPropertiesRequired(Map.of(
+                    "objective", object(),
+                    "interval", positiveInteger(),
+                    "reactionInterval", positiveInteger(),
+                    "commandInterval", positiveInteger()
+            ),
+            List.of("objective"));
 
     /**
      * Returns a robot environment
@@ -81,23 +88,13 @@ public class RobotEnv implements Environment {
     }
 
     public static RobotEnv create(JsonNode root, Locator locator, RobotApi robot) {
-        validator().apply(locator).accept(root);
+        ROBOT_ENV_SPEC.apply(locator).accept(root);
 
         FloatFunction<WheellyStatus> reward = Utils.createObject(root, locator.path("objective"), new Object[0], new Class[0]);
         long interval = locator.path("interval").getNode(root).asLong(DEFAULT_INTERVAL);
         long reactionInterval = locator.path("reactionInterval").getNode(root).asLong(DEFAULT_REACTION_INTERVAL);
         long commandInterval = locator.path("commandInterval").getNode(root).asLong(DEFAULT_COMMAND_INTERVAL);
         return new RobotEnv(robot, reward, interval, reactionInterval, commandInterval);
-    }
-
-    private static Validator validator() {
-        return objectPropertiesRequired(Map.of(
-                        "objective", object(),
-                        "interval", positiveInteger(),
-                        "reactionInterval", positiveInteger(),
-                        "commandInterval", positiveInteger()
-                ),
-                List.of("objective"));
     }
 
     private final RobotApi robot;

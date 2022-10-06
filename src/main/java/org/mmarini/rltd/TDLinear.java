@@ -41,6 +41,14 @@ import static org.mmarini.yaml.schema.Validator.*;
  * The dense layer performs a linear transformation between the input and outputs.
  */
 public class TDLinear extends TDLayer {
+    public static final Validator LINEAR_SPEC = objectPropertiesRequired(Map.of(
+            "name", string(),
+            "b", number(),
+            "w", number()
+    ), List.of(
+            "name", "b", "w"
+    ));
+
     /**
      * Returns a linear layer from json doc
      *
@@ -48,21 +56,11 @@ public class TDLinear extends TDLayer {
      * @param locator the locator of layer node
      */
     public static TDLinear create(JsonNode root, Locator locator) {
-        validator().apply(locator).accept(root);
+        LINEAR_SPEC.apply(locator).accept(root);
         String name = locator.path("node").getNode(root).asText();
         float b = (float) locator.path("b").getNode(root).asDouble();
         float w = (float) locator.path("w").getNode(root).asDouble();
         return new TDLinear(name, b, w);
-    }
-
-    public static Validator validator() {
-        return objectPropertiesRequired(Map.of(
-                "name", string(),
-                "b", number(),
-                "w", number()
-        ), List.of(
-                "name", "b", "w"
-        ));
     }
 
     private final float b;

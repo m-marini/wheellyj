@@ -41,20 +41,17 @@ import static org.mmarini.yaml.schema.Validator.*;
  */
 public class IntSignalSpec extends SignalSpec {
 
+    public static final Validator INT_SIGNAL_SPEC = objectPropertiesRequired(Map.of(
+            "numValues", integer(minimum(1))
+    ), List.of(
+            "numValues"
+    ));
+
     public static IntSignalSpec create(JsonNode node, Locator locator) {
-        validator().apply(locator).accept(node);
+        INT_SIGNAL_SPEC.apply(locator).accept(node);
         long[] shape = SignalSpec.createShape(node, locator);
         int numValues = locator.path("numValues").getNode(node).asInt();
         return new IntSignalSpec(shape, numValues);
-    }
-
-
-    public static Validator validator() {
-        return objectPropertiesRequired(Map.of(
-                "numValues", integer(minimum(1))
-        ), List.of(
-                "numValues"
-        ));
     }
 
     private final int numValues;

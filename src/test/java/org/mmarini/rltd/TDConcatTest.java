@@ -105,7 +105,7 @@ class TDConcatTest {
                 grad0, grad1
         }}, EPSILON));
         assertThat(post_grads[1], matrixCloseTo(new float[][]{{
-                grad2, grad3,grad4
+                grad2, grad3, grad4
         }}, EPSILON));
     }
 }

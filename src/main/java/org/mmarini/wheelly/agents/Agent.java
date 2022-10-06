@@ -27,11 +27,11 @@ package org.mmarini.wheelly.agents;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.envs.Environment;
-import org.mmarini.wheelly.envs.MapSignalSpec;
 import org.mmarini.wheelly.envs.Signal;
 import org.mmarini.wheelly.envs.SignalSpec;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
@@ -75,5 +75,5 @@ public interface Agent extends Closeable {
      * @param path the path
      * @throws IOException in case of error
      */
-    void save(String path) throws IOException;
+    void save(File path) throws IOException;
 }

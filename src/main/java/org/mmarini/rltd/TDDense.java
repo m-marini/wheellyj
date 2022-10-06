@@ -46,6 +46,14 @@ import static org.mmarini.yaml.schema.Validator.*;
  * The dense layer performs a linear transformation between the input and outputs.
  */
 public class TDDense extends TDLayer {
+    public static final Validator DENSE_SPEC = objectPropertiesRequired(Map.of(
+            "name", string(),
+            "inputSize", positiveInteger(),
+            "outputSize", positiveInteger()
+    ), List.of(
+            "name", "inputSize", "outputSize"
+    ));
+
     /**
      * Returns the layer from spec
      *
@@ -56,7 +64,7 @@ public class TDDense extends TDLayer {
      * @param random  the random number gernerator
      */
     public static TDDense create(JsonNode root, Locator locator, String prefix, Map<String, INDArray> data, Random random) {
-        validator().apply(locator).accept(root);
+        DENSE_SPEC.apply(locator).accept(root);
         String name = locator.path("name").getNode(root).asText();
         int inpSize = locator.path("inputSize").getNode(root).asInt();
         int outSize = locator.path("outputSize").getNode(root).asInt();
@@ -70,14 +78,13 @@ public class TDDense extends TDLayer {
         return new TDDense(name, eb, ew, b, w);
     }
 
-    public static Validator validator() {
-        return objectPropertiesRequired(Map.of(
-                "name", string(),
-                "inputSize", positiveInteger(),
-                "outputSize", positiveInteger()
-        ), List.of(
-                "name", "inputSize", "outputSize"
-        ));
+    public static TDDense create(String id, long inpSize, long outSize, Random random) {
+        INDArray eb = Nd4j.zeros(1, outSize);
+        INDArray ew = Nd4j.zeros(inpSize, outSize);
+        INDArray b = Nd4j.zeros(1, outSize);
+        // Xavier initialization
+        INDArray w = random.nextGaussian(new long[]{inpSize, outSize}).divi((inpSize + outSize));
+        return new TDDense(id, eb, ew, b, w);
     }
 
     private final INDArray eb;

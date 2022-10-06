@@ -56,7 +56,8 @@ import java.util.Map;
 
 import static org.mmarini.wheelly.apps.Yaml.analysis;
 import static org.mmarini.wheelly.engines.deepl.RLEngine.createKpi;
-import static org.mmarini.wheelly.model.FileFunctions.*;
+import static org.mmarini.wheelly.model.FileFunctions.readDumpFile;
+import static org.mmarini.wheelly.model.FileFunctions.writeFiles;
 import static org.nd4j.linalg.factory.Nd4j.hstack;
 import static org.nd4j.linalg.factory.Nd4j.zeros;
 
