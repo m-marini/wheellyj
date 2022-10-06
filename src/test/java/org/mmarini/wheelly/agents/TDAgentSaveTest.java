@@ -37,6 +37,7 @@ import org.mmarini.yaml.schema.Locator;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
@@ -139,7 +140,7 @@ class TDAgentSaveTest {
     @Test
     void save() throws IOException {
         try (TDAgent agent = createAgent()) {
-            agent.save("models/test");
+            agent.save(new File("models/test"));
 
             Random random = Nd4j.getRandom();
             random.setSeed(1234);

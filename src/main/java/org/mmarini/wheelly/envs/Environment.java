@@ -47,12 +47,12 @@ public interface Environment extends Closeable {
     /**
      * Returns the actions specification
      */
-    Map<String,SignalSpec> getActions();
+    Map<String, SignalSpec> getActions();
 
     /**
      * Returns the state specification
      */
-    Map<String,SignalSpec> getState();
+    Map<String, SignalSpec> getState();
 
     /**
      * Returns the initial state of an episode

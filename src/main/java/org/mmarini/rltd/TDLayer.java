@@ -41,6 +41,12 @@ import static org.mmarini.yaml.schema.Validator.*;
  * The network layer performs the forward and backward processes to predict and train.
  */
 public abstract class TDLayer {
+    public static final Validator LAYER_SPEC = objectPropertiesRequired(Map.of(
+            "name", string(),
+            "type", string(values("dense", "relu", "tanh", "linear", "softmax", "sum", "concat"))
+    ), List.of(
+            "name", "type"
+    ));
 
     /**
      * Returns the layer by spec
@@ -52,7 +58,7 @@ public abstract class TDLayer {
      * @param random  the random number generator
      */
     public static TDLayer create(JsonNode root, Locator locator, String prefix, Map<String, INDArray> data, Random random) {
-        validator().apply(locator).accept(root);
+        LAYER_SPEC.apply(locator).accept(root);
         String type = locator.path("type").getNode(root).asText();
         String name = locator.path("name").getNode(root).asText();
         switch (type) {
@@ -75,14 +81,6 @@ public abstract class TDLayer {
         }
     }
 
-    public static Validator validator() {
-        return objectPropertiesRequired(Map.of(
-                "name", string(),
-                "type", string(values("dense", "relu", "tanh", "linear", "softmax", "sum", "concat"))
-        ), List.of(
-                "name", "type"
-        ));
-    }
 
     private final String name;
 

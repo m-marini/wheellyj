@@ -33,23 +33,30 @@ import org.mmarini.wheelly.envs.SignalSpec;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 
+import java.io.File;
 import java.util.Map;
 import java.util.Random;
+
+import static org.mmarini.yaml.schema.Validator.objectProperties;
 
 /**
  * Agent that produces a random behavior
  */
 public class RandomAgent implements Agent {
+    private static final Validator RANDOM_AGENT_SPEC = objectProperties(Map.of("seed", Validator.positiveInteger()));
 
+    /**
+     * Returns the  random agent from spec
+     *
+     * @param root    the spec document
+     * @param locator the agent spec locator
+     * @param env     the environment
+     */
     public static RandomAgent create(JsonNode root, Locator locator, Environment env) {
-        validator().apply(locator).accept(root);
+        RANDOM_AGENT_SPEC.apply(locator).accept(root);
         long seed = locator.path("seed").getNode(root).asLong(0);
         Random random = seed > 0 ? new Random(seed) : new Random();
         return new RandomAgent(env.getState(), env.getActions(), random);
-    }
-
-    private static Validator validator() {
-        return Validator.objectProperties(Map.of("seed", Validator.positiveInteger()));
     }
 
     private final Random random;
@@ -103,7 +110,7 @@ public class RandomAgent implements Agent {
     }
 
     @Override
-    public void save(String path) {
+    public void save(File path) {
         throw new RuntimeException("Not implemented");
     }
 }

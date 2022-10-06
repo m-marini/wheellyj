@@ -43,18 +43,16 @@ import static org.mmarini.yaml.schema.Validator.*;
  * The dense layer performs a linear transformation between the input and outputs.
  */
 public class TDSoftmax extends TDLayer {
+    public static Validator SOFTMAX_SPEC = objectPropertiesRequired(Map.of(
+            "name", string(),
+            "temperature", positiveNumber()
+    ), List.of("name", "temperature"));
+
     public static TDSoftmax create(JsonNode root, Locator locator) {
-        validator().apply(locator).accept(root);
+        SOFTMAX_SPEC.apply(locator).accept(root);
         String name = locator.path("name").getNode(root).asText();
         float temperature = (float) locator.path("temperature").getNode(root).asDouble();
         return new TDSoftmax(name, temperature);
-    }
-
-    public static Validator validator() {
-        return objectPropertiesRequired(Map.of(
-                "name", string(),
-                "temperature", positiveNumber()
-        ), List.of("name", "temperature"));
     }
 
     private final float temperature;

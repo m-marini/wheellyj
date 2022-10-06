@@ -29,10 +29,6 @@
 
 package org.mmarini.wheelly.engines.deepl;
 
-import io.reactivex.rxjava3.schedulers.Timed;
-import org.mmarini.Tuple2;
-import org.mmarini.wheelly.model.MapStatus;
-import org.mmarini.wheelly.model.MotionCommand;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
 import java.util.Objects;

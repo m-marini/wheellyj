@@ -27,7 +27,6 @@ package org.mmarini.wheelly.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
-import org.mmarini.wheelly.agents.TDAgent;
 import org.mmarini.yaml.schema.Locator;
 
 import java.io.IOException;
@@ -58,17 +57,17 @@ class SignalSpecTest {
     void load() throws IOException {
         JsonNode node = fromText(YAML);
 
-        Map<String, SignalSpec> spec = TDAgent.createSignalSpecMap(node, Locator.root());
+        Map<String, SignalSpec> spec = SignalSpec.createSignalSpecMap(node, Locator.root());
 
         SignalSpec a = spec.get("a");
         assertThat(a, isA(IntSignalSpec.class));
         assertEquals(2, ((IntSignalSpec) a).getNumValues());
-        assertArrayEquals(new long[]{1, 2}, ((IntSignalSpec) a).getShape());
+        assertArrayEquals(new long[]{1, 2}, a.getShape());
 
         SignalSpec b = spec.get("b");
         assertThat(b, isA(FloatSignalSpec.class));
         assertEquals(0f, ((FloatSignalSpec) b).getMinValue());
         assertEquals(1f, ((FloatSignalSpec) b).getMaxValue());
-        assertArrayEquals(new long[]{2, 1}, ((FloatSignalSpec) b).getShape());
+        assertArrayEquals(new long[]{2, 1}, b.getShape());
     }
 }

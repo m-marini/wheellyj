@@ -113,7 +113,7 @@ public class MapFeaturesSignalEncoder implements SignalEncoder {
      * @param x the liner coordinate
      */
     static int encodeLinear(double x) {
-        return min(max((int) round((x + 5) / LOCATION_SENSITIVITY), 0), LINEAR_lOCATION_NUM_SIGNALS-1);
+        return min(max((int) round((x + 5) / LOCATION_SENSITIVITY), 0), LINEAR_lOCATION_NUM_SIGNALS - 1);
     }
 
     /**

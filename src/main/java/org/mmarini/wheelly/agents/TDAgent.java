@@ -47,13 +47,29 @@ import java.util.*;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.Utils.stream;
 import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * Agent based on Temporal Difference Actor-Critic
  */
 public class TDAgent implements Agent {
+
+    public static final Validator SERDE_AGENT_SPEC = objectPropertiesRequired(Map.of(
+            "rewardAlpha", positiveNumber(),
+            "state", SignalSpec.SIGNAL_MAP_SPEC,
+            "actions", SignalSpec.SIGNAL_MAP_SPEC,
+            "policy", TDNetwork.NETWORK_SPEC,
+            "critic", TDNetwork.NETWORK_SPEC
+    ), List.of(
+            "rewardAlpha", "state", "actions", "policy", "critic"
+    ));
+    public static final Validator AGENT_SPEC = objectPropertiesRequired(Map.of(
+            "modelPath", string(),
+            "seed", positiveInteger(),
+            "agent", AgentTraspiller.AGENT_VALIDATOR
+    ), List.of(
+            "modelPath"
+    ));
 
     /**
      * Returns a random action depending on probability distribution
@@ -86,10 +102,18 @@ public class TDAgent implements Agent {
                 .collect(Tuple2.toMap());
     }
 
+    /**
+     * Create an agent from spec
+     *
+     * @param spec    the specification
+     * @param locator the locator of agent spec
+     * @param props   the properties to initialize the agent
+     * @param random  the random number generator
+     */
     public static TDAgent create(JsonNode spec, Locator locator, Map<String, INDArray> props, Random random) {
-        validator().apply(locator).accept(spec);
-        Map<String, SignalSpec> state = createSignalSpecMap(spec, locator.path("state"));
-        Map<String, SignalSpec> actions = createSignalSpecMap(spec, locator.path("actions"));
+        SERDE_AGENT_SPEC.apply(locator).accept(spec);
+        Map<String, SignalSpec> state = SignalSpec.createSignalSpecMap(spec, locator.path("state"));
+        Map<String, SignalSpec> actions = SignalSpec.createSignalSpecMap(spec, locator.path("actions"));
         float avgReward = Optional.ofNullable(props.get("avgReward"))
                 .map(x -> x.getFloat(0))
                 .orElse(0f);
@@ -99,11 +123,38 @@ public class TDAgent implements Agent {
         return new TDAgent(state, actions, avgReward, rewardAlpha, policy, critic, random);
     }
 
-    public static Map<String, SignalSpec> createSignalSpecMap(JsonNode node, Locator locator) {
-        signalSpecMapValidator().apply(locator).accept(node);
-        return stream(locator.getNode(node).fieldNames())
-                .map(name -> Tuple2.of(name, SignalSpec.create(node, locator.path(name))))
-                .collect(Tuple2.toMap());
+    /**
+     * Returns the agent from spec
+     *
+     * @param root    the spec document
+     * @param locator the agent spec locator
+     * @param env     the environment
+     */
+    public static TDAgent create(JsonNode root, Locator locator, Environment env) {
+        AGENT_SPEC.apply(locator).accept(root);
+        File path = new File(locator.path("modelPath").getNode(root).asText());
+        Random random = Nd4j.getRandom();
+        long seed = locator.path("seed").getNode(root).asLong(0);
+        if (seed > 0) {
+            random.setSeed(seed);
+        }
+        if (path.exists()) {
+            // Load agent
+            try {
+                TDAgent agent = TDAgent.load(path, random);
+                // Validate agent against env
+                SignalSpec.validateEqualsSpec(agent.getState(), env.getState(), "agent state", "environment state");
+                SignalSpec.validateEqualsSpec(agent.getState(), env.getState(), "agent actions", "environment actions");
+                return agent;
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            // init agent
+            return new AgentTraspiller(root, locator.path("agent"),
+                    env.getState(), env.getActions(), random)
+                    .build();
+        }
     }
 
     static Map<String, Long> getActionSizes(Map<String, SignalSpec> actions) {
@@ -201,37 +252,12 @@ public class TDAgent implements Agent {
         return load(new File(path), random);
     }
 
-    private static Validator signalSpecMapValidator() {
-        return objectAdditionalProperties(SignalSpec.validator());
-    }
-
     static JsonNode specFromSignalMap(Map<String, SignalSpec> actions) {
         ObjectNode node = Utils.objectMapper.createObjectNode();
         for (Map.Entry<String, SignalSpec> entry : actions.entrySet()) {
             node.set(entry.getKey(), entry.getValue().json());
         }
         return node;
-    }
-
-    private static void validateSinks(TDNetwork net, Map<String, Long> state, String netId) {
-        for (String label : net.getSourceLabels()) {
-            if (!state.containsKey(label)) {
-                throw new IllegalArgumentException(format("Missing state \"%s\" in %s network",
-                        label, netId));
-            }
-        }
-    }
-
-    public static Validator validator() {
-        return objectPropertiesRequired(Map.of(
-                "rewardAlpha", positiveNumber(),
-                "state", signalSpecMapValidator(),
-                "actions", signalSpecMapValidator(),
-                "policy", TDNetwork.validator(),
-                "critic", TDNetwork.validator()
-        ), List.of(
-                "rewardAlpha", "state", "actions", "policy", "critic"
-        ));
     }
 
     private final Map<String, SignalSpec> state;
@@ -408,11 +434,10 @@ public class TDAgent implements Agent {
     }
 
     @Override
-    public void save(String path) throws IOException {
-        File pathFile = new File(path);
+    public void save(File pathFile) throws IOException {
         if (!pathFile.exists()) {
             if (!pathFile.mkdirs()) {
-                throw new IOException(format("Unable to create path %s", path));
+                throw new IOException(format("Unable to create path %s", pathFile.getCanonicalPath()));
             }
         }
         JsonNode spec = getSpec();

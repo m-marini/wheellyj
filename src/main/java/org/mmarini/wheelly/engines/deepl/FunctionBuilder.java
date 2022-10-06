@@ -34,7 +34,6 @@ import org.mmarini.wheelly.model.MapStatus;
 import org.mmarini.wheelly.model.WheellyStatus;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
-import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.ops.transforms.Transforms;
 
 import java.util.function.IntFunction;

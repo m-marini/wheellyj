@@ -95,7 +95,7 @@ public class RLEngine implements InferenceEngine {
         INDArray alphas = (INDArray) map.get("alpha*");
         INDArray h = hstack((INDArray[]) map.get("h"));
         INDArray hStar = hstack((INDArray[]) map.get("h*"));
-        return hstack(scalar((float)reward).reshape(1, 1),
+        return hstack(scalar((float) reward).reshape(1, 1),
                 score.reshape(1, 1),
                 v0Star.reshape(1, 1),
                 delta.reshape(1, 1),

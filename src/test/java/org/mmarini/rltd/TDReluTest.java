@@ -39,9 +39,8 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayWithSize;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mmarini.ArgumentsGenerator.*;
+import static org.mmarini.ArgumentsGenerator.createArgumentGenerator;
+import static org.mmarini.ArgumentsGenerator.createStream;
 import static org.mmarini.wheelly.engines.deepl.TestFunctions.matrixCloseTo;
 
 class TDReluTest {

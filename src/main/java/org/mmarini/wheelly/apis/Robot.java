@@ -53,6 +53,13 @@ public class Robot implements RobotApi {
     public static final long DEFAULT_CONNECTION_TIMEOUT = 10000;
     public static final long DEFAULT_READ_TIMEOUT = 3000;
     private static final Logger logger = LoggerFactory.getLogger(Robot.class);
+    private static final Validator ROBOT_SPEC = objectPropertiesRequired(Map.of(
+                    "host", string(),
+                    "port", integer(minimum(1), maximum(32768)),
+                    "connectionTimeout", positiveInteger(),
+                    "readTimeout", positiveInteger()
+            ),
+            List.of("host"));
 
     /**
      * Returns an interface to the robot
@@ -65,7 +72,7 @@ public class Robot implements RobotApi {
     }
 
     public static Robot create(JsonNode root, Locator locator) {
-        validator().apply(locator).accept(root);
+        ROBOT_SPEC.apply(locator).accept(root);
         String host = locator.path("host").getNode(root).asText();
         int port = locator.path("port").getNode(root).asInt(DEFAULT_PORT);
         long connectionTimeout = locator.path("connectionTimeout").getNode(root).asLong(DEFAULT_CONNECTION_TIMEOUT);
@@ -84,16 +91,6 @@ public class Robot implements RobotApi {
     public static Robot create(String robotHost, int port, long connectionTimeout, long readTimeout) {
         RobotSocket socket = new RobotSocket(robotHost, port, connectionTimeout, readTimeout);
         return new Robot(socket);
-    }
-
-    private static Validator validator() {
-        return objectPropertiesRequired(Map.of(
-                        "host", string(),
-                        "port", integer(minimum(1), maximum(32768)),
-                        "connectionTimeout", positiveInteger(),
-                        "readTimeout", positiveInteger()
-                ),
-                List.of("host"));
     }
 
     private final RobotSocket socket;

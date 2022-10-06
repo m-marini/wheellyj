@@ -45,6 +45,15 @@ import static java.util.Objects.requireNonNull;
 import static org.mmarini.yaml.schema.Validator.*;
 
 public class TDNetwork {
+    public static final Validator NETWORK_SPEC = objectPropertiesRequired(Map.of(
+            "alpha", positiveNumber(),
+            "lambda", number(minimum(0.0), maximum(1.0)),
+            "layers", arrayItems(TDLayer.LAYER_SPEC),
+            "inputs", objectAdditionalProperties(arrayItems(string()))
+    ), List.of(
+            "alpha", "lambda", "layers", "inputs"
+    ));
+
     /**
      * Returns the network from spec and props data
      *
@@ -55,7 +64,7 @@ public class TDNetwork {
      * @param random  the random number generator
      */
     public static TDNetwork create(JsonNode spec, Locator locator, String prefix, Map<String, INDArray> props, Random random) {
-        validator().apply(locator).accept(spec);
+        NETWORK_SPEC.apply(locator).accept(spec);
         float alpha1 = (float) locator.path("alpha").getNode(spec).asDouble();
         float lambda1 = (float) locator.path("lambda").getNode(spec).asDouble();
         List<TDLayer> layerNodes = locator.path("layers").elements(spec)
@@ -75,17 +84,6 @@ public class TDNetwork {
                 })
                 .collect(Tuple2.toMap());
         return new TDNetwork(alpha1, lambda1, layers1, forward, inputs1);
-    }
-
-    public static Validator validator() {
-        return objectPropertiesRequired(Map.of(
-                "alpha", positiveNumber(),
-                "lambda", number(minimum(0.0), maximum(1.0)),
-                "layers", arrayItems(TDLayer.validator()),
-                "inputs", objectAdditionalProperties(arrayItems(string()))
-        ), List.of(
-                "alpha", "lambda", "layers", "inputs"
-        ));
     }
 
     private final float alpha;
@@ -312,8 +310,8 @@ public class TDNetwork {
             long outSize = entry.getValue();
             if (!(layerSizes.get(key)[1] == outSize)) {
                 throw new IllegalArgumentException(format(
-                        "output %s size must be %d (%d)",
-                        key, layerSizes.get(key)[1], outSize
+                        "layer \"%s\" size must be %d (%d)",
+                        key, outSize, layerSizes.get(key)[1]
                 ));
             }
         }

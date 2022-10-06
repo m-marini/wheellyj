@@ -59,7 +59,7 @@ public class MapSignalSpec {
                 "type", string(values("map"))
         ), List.of(
                 "type"
-        ), SignalSpec.validator());
+        ), SignalSpec.SIGNAL_SPEC);
     }
 
     private final Map<String, SignalSpec> components;

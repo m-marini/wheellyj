@@ -100,9 +100,17 @@ public class SimRobot implements RobotApi {
             {-ROBOT_LENGTH / 2 - SENSOR_GAP, -ROBOT_WIDTH / 2 - SENSOR_GAP},
             {-ROBOT_LENGTH / 2 - SENSOR_GAP, -SENSOR_GAP}
     };
+    private static final Validator ROBOT_SPEC = objectProperties(Map.of(
+                    "robotSeed", positiveInteger(),
+                    "mapSeed", positiveInteger(),
+                    "errSigma", nonNegativeNumber(),
+                    "errSensor", nonNegativeNumber(),
+                    "numObstacles", nonNegativeInteger()
+            )
+    );
 
     public static SimRobot create(JsonNode root, Locator locator) {
-        validator().apply(locator).accept(root);
+        ROBOT_SPEC.apply(locator).accept(root);
         long mapSeed = locator.path("mapSeed").getNode(root).asLong(0);
         long robotSeed = locator.path("robotSeed").getNode(root).asLong(0);
         int numObstacles = locator.path("numObstacles").getNode(root).asInt(0);
@@ -135,17 +143,6 @@ public class SimRobot implements RobotApi {
         def.shape = shape;
         def.isSensor = true;
         return parentBody.createFixture(def);
-    }
-
-    private static Validator validator() {
-        return objectProperties(Map.of(
-                        "robotSeed", positiveInteger(),
-                        "mapSeed", positiveInteger(),
-                        "errSigma", nonNegativeNumber(),
-                        "errSensor", nonNegativeNumber(),
-                        "numObstacles", nonNegativeInteger()
-                )
-        );
     }
 
     private final World world;
