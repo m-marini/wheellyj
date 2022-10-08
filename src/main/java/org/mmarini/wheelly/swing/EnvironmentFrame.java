@@ -136,6 +136,7 @@ public class EnvironmentFrame extends JFrame {
      * @param robot the robot
      */
     public void setRobot(RobotApi robot) {
+        envPanel.setRobotLocation(robot.getRobotPos());
         envPanel.setRobotDirection(robot.getRobotDir());
         envPanel.setSensorDirection(robot.getSensorDir());
         envPanel.setObstacleLocation(robot.getSensorObstacle().orElse(null));

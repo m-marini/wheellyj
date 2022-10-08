@@ -93,7 +93,7 @@ class TDReluTest {
         INDArray out = layer.forward(in, null);
         float post_grad0 = in0 > 0 ? grad0 : 0;
         float post_grad1 = in1 > 0 ? grad1 : 0;
-        INDArray[] post_grads = layer.train(in, out, grad, null, null);
+        INDArray[] post_grads = layer.train(in, out, grad, null, 0);
 
         assertThat(post_grads, arrayWithSize(1));
         assertThat(post_grads[0], matrixCloseTo(new float[][]{{

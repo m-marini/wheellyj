@@ -1,8 +1,176 @@
 ---
 version: "0.2"
-active: randomAgent
+active: agent1
 
 configurations:
   randomAgent:
     class: org.mmarini.wheelly.agents.RandomAgent
     seed: 1234
+  constantAgent:
+    class: org.mmarini.wheelly.agents.ConstantAgent
+    actions:
+      halt: 0
+      direction: 15
+      sensorAction: 3
+      speed: 8
+  agent1:
+    class: org.mmarini.wheelly.agents.TDAgent
+    seed: 1234
+    modelPath: models/agent1
+    savingIntervalSteps: 1000
+    rewardAlpha: 5e-3
+    policyAlpha: 30e-3
+    criticAlpha: 30e-3
+    lambda: 0.5
+    policy:
+      sensorNorm:
+        input: sensor
+        layers:
+          - type: linear
+            b: 0
+            w: 11.111111e-3
+      distanceNorm:
+        input: distance
+        layers:
+          - type: linear
+            b: 0
+            w: 333.33333e-3
+      contactsNorm:
+        input: contacts
+        layers:
+          - type: linear
+            b: 0
+            w: 62.4e-3
+      layer0:
+        inputs:
+          type: concat
+          inputs:
+            - sensorNorm
+            - distanceNorm
+            - canMoveForward
+            - contactsNorm
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden0:
+        input: layer0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden1:
+        inputs:
+          type: sum
+          inputs:
+            - layer0
+            - hidden0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden2:
+        inputs:
+          type: sum
+          inputs:
+            - hidden0
+            - hidden1
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      halt:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 2
+          - type: tanh
+          - type: softmax
+            temperature: 0.8
+      direction:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 25
+          - type: tanh
+          - type: softmax
+            temperature: 0.8
+      speed:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 9
+          - type: tanh
+          - type: softmax
+            temperature: 0.8
+      sensorAction:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 7
+          - type: tanh
+          - type: softmax
+            temperature: 0.8
+    critic:
+      sensorNorm:
+        input: sensor
+        layers:
+          - type: linear
+            b: 0
+            w: 11.111111e-3
+      distanceNorm:
+        input: distance
+        layers:
+          - type: linear
+            b: 0
+            w: 333.33333e-3
+      contactsNorm:
+        input: contacts
+        layers:
+          - type: linear
+            b: 0
+            w: 62.4e-3
+      layer0:
+        inputs:
+          type: concat
+          inputs:
+            - sensorNorm
+            - distanceNorm
+            - canMoveForward
+            - contactsNorm
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden0:
+        input: layer0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden1:
+        inputs:
+          type: sum
+          inputs:
+            - layer0
+            - hidden0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden2:
+        inputs:
+          type: sum
+          inputs:
+            - hidden0
+            - hidden1
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      output:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 1
+          - type: tanh

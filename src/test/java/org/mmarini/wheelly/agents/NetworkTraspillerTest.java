@@ -38,7 +38,6 @@ import java.util.Map;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.wheelly.engines.deepl.TestFunctions.text;
 import static org.mmarini.yaml.Utils.fromText;
 
@@ -46,121 +45,91 @@ class NetworkTraspillerTest {
     public static final int SEED = 1234;
     private static final String MULTIDENSE_YAML = text(
             "---",
-            "alpha: 1e-3",
-            "lambda: 0.8",
-            "network:",
-            "  output:",
-            "    layers:",
-            "    - type: dense",
-            "      outputSize: 4",
-            "    - type: dense",
-            "      outputSize: 2"
+            "output:",
+            "  layers:",
+            "  - type: dense",
+            "    outputSize: 4",
+            "  - type: dense",
+            "    outputSize: 2"
     );
     private static final String MULTI_SEQ_YAML = text(
             "---",
-            "alpha: 1e-3",
-            "lambda: 0.8",
-            "network:",
-            "  hidden:",
-            "    layers:",
-            "      - type: dense",
-            "        outputSize: 2",
-            "  output.a:",
-            "    input: hidden",
-            "    layers:",
-            "      - type: tanh",
-            "  output.b:",
-            "    input: hidden",
-            "    layers:",
-            "      - type: relu"
+            "hidden:",
+            "  layers:",
+            "    - type: dense",
+            "      outputSize: 2",
+            "output.a:",
+            "  input: hidden",
+            "  layers:",
+            "    - type: tanh",
+            "output.b:",
+            "  input: hidden",
+            "  layers:",
+            "    - type: relu"
     );
     private static final String CONCAT_YAML = text(
             "---",
-            "alpha: 1e-3",
-            "lambda: 0.8",
-            "network:",
-            "  output:",
-            "    inputs: ",
-            "      type: concat",
-            "      inputs: [input, input]",
-            "    layers: []"
+            "output:",
+            "  inputs: ",
+            "    type: concat",
+            "    inputs: [input, input]",
+            "  layers: []"
     );
     private static final String RESNET_MULTILAYER_YAML = text(
             "---",
-            "alpha: 1e-3",
-            "lambda: 0.8",
-            "network:",
-            "  hidden:",
-            "    layers:",
-            "      - type: dense",
-            "        outputSize: 2",
-            "  output:",
-            "    inputs: ",
-            "      type: sum",
-            "      inputs: [hidden, input]",
-            "    layers:",
-            "      - type: relu",
-            "      - type: tanh"
+            "hidden:",
+            "  layers:",
+            "    - type: dense",
+            "      outputSize: 2",
+            "output:",
+            "  inputs: ",
+            "    type: sum",
+            "    inputs: [hidden, input]",
+            "  layers:",
+            "    - type: relu",
+            "    - type: tanh"
     );
     private static final String SUM_YAML = text(
             "---",
-            "alpha: 1e-3",
-            "lambda: 0.8",
-            "network:",
-            "  output:",
-            "    inputs: ",
-            "      type: sum",
-            "      inputs: [input, input]",
-            "    layers: []"
+            "output:",
+            "  inputs: ",
+            "    type: sum",
+            "    inputs: [input, input]",
+            "  layers: []"
     );
     private static final String LINEAR_YAML = text(
             "---",
-            "alpha: 1e-3",
-            "lambda: 0.8",
-            "network:",
-            "  output:",
-            "    layers:",
-            "    - type: linear",
-            "      b: 2",
-            "      w: 3"
+            "output:",
+            "  layers:",
+            "  - type: linear",
+            "    b: 2",
+            "    w: 3"
     );
     private static final String DENSE_YAML = text(
             "---",
-            "alpha: 1e-3",
-            "lambda: 0.8",
-            "network:",
-            "  output:",
-            "    layers:",
-            "    - type: dense",
-            "      outputSize: 3"
+            "output:",
+            "  layers:",
+            "  - type: dense",
+            "    outputSize: 3"
     );
     private static final String RELU_YAML = text(
             "---",
-            "alpha: 1e-3",
-            "lambda: 0.8",
-            "network:",
-            "  output:",
-            "    layers:",
-            "    - type: relu"
+            "output:",
+            "  layers:",
+            "  - type: relu"
     );
     private static final String TANH_YAML = text(
             "---",
-            "alpha: 1e-3",
-            "lambda: 0.8",
-            "network:",
-            "  output:",
-            "    layers:",
-            "    - type: tanh"
+            "output:",
+            "  layers:",
+            "  - type: tanh"
     );
     private static final String SOFTMAX_YAML = text(
             "---",
-            "alpha: 1e-3",
-            "lambda: 0.8",
-            "network:",
-            "  output:",
-            "    layers:",
-            "    - type: softmax",
-            "      temperature: 1.2"
+            "output:",
+            "  layers:",
+            "  - type: softmax",
+            "    temperature: 1.2"
     );
 
     @Test
@@ -169,8 +138,6 @@ class NetworkTraspillerTest {
 
         TDNetwork net = tr.build();
 
-        assertEquals(1e-3f, net.getAlpha());
-        assertEquals(0.8f, net.getLambda());
         assertThat(net.getLayers(), hasEntry(
                 equalTo("output"),
                 isA(TDTanh.class)

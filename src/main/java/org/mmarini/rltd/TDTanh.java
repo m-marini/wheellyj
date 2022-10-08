@@ -59,7 +59,7 @@ public class TDTanh extends TDLayer {
     }
 
     @Override
-    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, TDNetwork net) {
+    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda) {
         return new INDArray[]{
                 grad.mul(output.mul(output).subi(1)).negi()
         };

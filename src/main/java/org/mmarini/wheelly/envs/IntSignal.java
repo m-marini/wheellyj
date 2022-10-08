@@ -25,6 +25,7 @@
 
 package org.mmarini.wheelly.envs;
 
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
@@ -116,7 +117,7 @@ public class IntSignal implements Signal {
 
     @Override
     public INDArray toINDArray() {
-        return Nd4j.createFromArray(data).reshape(shape);
+        return Nd4j.createFromArray(data).reshape(shape).castTo(DataType.FLOAT);
     }
 
     @Override

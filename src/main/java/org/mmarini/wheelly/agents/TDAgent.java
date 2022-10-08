@@ -40,6 +40,8 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.ops.impl.transforms.custom.CumSum;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,23 +55,26 @@ import static org.mmarini.yaml.schema.Validator.*;
  * Agent based on Temporal Difference Actor-Critic
  */
 public class TDAgent implements Agent {
-
     public static final Validator SERDE_AGENT_SPEC = objectPropertiesRequired(Map.of(
             "rewardAlpha", positiveNumber(),
+            "policyAlpha", positiveNumber(),
+            "criticAlpha", positiveNumber(),
+            "lambda", nonNegativeNumber(),
             "state", SignalSpec.SIGNAL_MAP_SPEC,
             "actions", SignalSpec.SIGNAL_MAP_SPEC,
             "policy", TDNetwork.NETWORK_SPEC,
             "critic", TDNetwork.NETWORK_SPEC
     ), List.of(
-            "rewardAlpha", "state", "actions", "policy", "critic"
+            "rewardAlpha", "policyAlpha", "criticAlpha", "lambda", "state", "actions", "policy", "critic"
     ));
     public static final Validator AGENT_SPEC = objectPropertiesRequired(Map.of(
             "modelPath", string(),
-            "seed", positiveInteger(),
-            "agent", AgentTraspiller.AGENT_VALIDATOR
+            "savingIntervalSteps", positiveInteger(),
+            "seed", positiveInteger()
     ), List.of(
             "modelPath"
     ));
+    private static final Logger logger = LoggerFactory.getLogger(TDAgent.class);
 
     /**
      * Returns a random action depending on probability distribution
@@ -105,12 +110,14 @@ public class TDAgent implements Agent {
     /**
      * Create an agent from spec
      *
-     * @param spec    the specification
-     * @param locator the locator of agent spec
-     * @param props   the properties to initialize the agent
-     * @param random  the random number generator
+     * @param spec                the specification
+     * @param locator             the locator of agent spec
+     * @param props               the properties to initialize the agent
+     * @param path                the saving path
+     * @param savingIntervalSteps the number of setps between each model saveing
+     * @param random              the random number generator
      */
-    public static TDAgent create(JsonNode spec, Locator locator, Map<String, INDArray> props, Random random) {
+    public static TDAgent create(JsonNode spec, Locator locator, Map<String, INDArray> props, File path, int savingIntervalSteps, Random random) {
         SERDE_AGENT_SPEC.apply(locator).accept(spec);
         Map<String, SignalSpec> state = SignalSpec.createSignalSpecMap(spec, locator.path("state"));
         Map<String, SignalSpec> actions = SignalSpec.createSignalSpecMap(spec, locator.path("actions"));
@@ -118,9 +125,12 @@ public class TDAgent implements Agent {
                 .map(x -> x.getFloat(0))
                 .orElse(0f);
         float rewardAlpha = (float) locator.path("rewardAlpha").getNode(spec).asDouble();
+        float policyAlpha1 = (float) locator.path("policyAlpha").getNode(spec).asDouble();
+        float criticAlpha1 = (float) locator.path("criticAlpha").getNode(spec).asDouble();
+        float lambda1 = (float) locator.path("lambda").getNode(spec).asDouble();
         TDNetwork policy = TDNetwork.create(spec, locator.path("policy"), "policy", props, random);
         TDNetwork critic = TDNetwork.create(spec, locator.path("critic"), "critic", props, random);
-        return new TDAgent(state, actions, avgReward, rewardAlpha, policy, critic, random);
+        return new TDAgent(state, actions, avgReward, rewardAlpha, policyAlpha1, criticAlpha1, lambda1, policy, critic, random, path, savingIntervalSteps);
     }
 
     /**
@@ -133,6 +143,7 @@ public class TDAgent implements Agent {
     public static TDAgent create(JsonNode root, Locator locator, Environment env) {
         AGENT_SPEC.apply(locator).accept(root);
         File path = new File(locator.path("modelPath").getNode(root).asText());
+        int savingIntervalStep = locator.path("savingIntervalSteps").getNode(root).asInt(Integer.MAX_VALUE);
         Random random = Nd4j.getRandom();
         long seed = locator.path("seed").getNode(root).asLong(0);
         if (seed > 0) {
@@ -141,7 +152,7 @@ public class TDAgent implements Agent {
         if (path.exists()) {
             // Load agent
             try {
-                TDAgent agent = TDAgent.load(path, random);
+                TDAgent agent = TDAgent.load(path, savingIntervalStep, random);
                 // Validate agent against env
                 SignalSpec.validateEqualsSpec(agent.getState(), env.getState(), "agent state", "environment state");
                 SignalSpec.validateEqualsSpec(agent.getState(), env.getState(), "agent actions", "environment actions");
@@ -151,7 +162,7 @@ public class TDAgent implements Agent {
             }
         } else {
             // init agent
-            return new AgentTraspiller(root, locator.path("agent"),
+            return new AgentTraspiller(root, locator, path, savingIntervalStep,
                     env.getState(), env.getActions(), random)
                     .build();
         }
@@ -179,7 +190,7 @@ public class TDAgent implements Agent {
     static Map<String, INDArray> getInput(Map<String, Signal> state) {
         return Tuple2.stream(state)
                 .map(t -> {
-                    INDArray value = ((ArraySignal) t._2).getValue();
+                    INDArray value = t._2.toINDArray();
                     // Reshape value
                     long[] shape = value.shape();
                     long[] newShape = new long[shape.length + 1];
@@ -231,25 +242,15 @@ public class TDAgent implements Agent {
     /**
      * Loads the agent from path
      *
-     * @param path   the path
-     * @param random the random number generator
+     * @param path                the path
+     * @param savingIntervalSteps the number of steps between each model saving
+     * @param random              the random number generator
      * @throws IOException in case of error
      */
-    public static TDAgent load(File path, Random random) throws IOException {
+    public static TDAgent load(File path, int savingIntervalSteps, Random random) throws IOException {
         JsonNode spec = Utils.fromFile(new File(path, "agent.yml"));
         Map<String, INDArray> props = Serde.deserialize(new File(path, "agent.bin"));
-        return create(spec, Locator.root(), props, random);
-    }
-
-    /**
-     * Loads the agent from path
-     *
-     * @param path   the path
-     * @param random the random number generator
-     * @throws IOException in case of error
-     */
-    public static TDAgent load(String path, Random random) throws IOException {
-        return load(new File(path), random);
+        return create(spec, Locator.root(), props, path, savingIntervalSteps, random);
     }
 
     static JsonNode specFromSignalMap(Map<String, SignalSpec> actions) {
@@ -268,24 +269,36 @@ public class TDAgent implements Agent {
     private final Random random;
     private final PublishProcessor<Map<String, Object>> indicatorsPub;
     private final Flowable<Map<String, Object>> indicators;
+    private final float lambda;
+    private final float policyAlpha;
+    private final float criticAlpha;
+    private final File modelPath;
+    private final int savingIntervalSteps;
     private float avgReward;
     private Map<String, Signal> lastActions;
     private Map<String, INDArray> lastInputs;
     private Map<String, INDArray> lastPolicy;
+    private int savingStepCounter;
 
     /**
      * Creates a random behavior agent
      *
-     * @param state       the states
-     * @param actions     the actions
-     * @param avgReward   the average reward
-     * @param rewardAlpha the reward alpha parameter
-     * @param policy      the policy network
-     * @param critic      the critic network
-     * @param random      the random generator
+     * @param state               the states
+     * @param actions             the actions
+     * @param avgReward           the average reward
+     * @param rewardAlpha         the reward alpha parameter
+     * @param policyAlpha         the policy alpha parameter
+     * @param criticAlpha         the critic alpha parameter
+     * @param lambda              the TD lambda factor
+     * @param policy              the policy network
+     * @param critic              the critic network
+     * @param random              the random generator
+     * @param modelPath           the model saving path
+     * @param savingIntervalSteps the number of steps between each model saving
      */
     public TDAgent(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
-                   float avgReward, float rewardAlpha, TDNetwork policy, TDNetwork critic, Random random) {
+                   float avgReward, float rewardAlpha, float policyAlpha, float criticAlpha, float lambda,
+                   TDNetwork policy, TDNetwork critic, Random random, File modelPath, int savingIntervalSteps) {
         this.state = requireNonNull(state);
         this.actions = requireNonNull(actions);
         this.rewardAlpha = rewardAlpha;
@@ -293,9 +306,13 @@ public class TDAgent implements Agent {
         this.critic = requireNonNull(critic);
         this.random = requireNonNull(random);
         this.avgReward = avgReward;
+        this.modelPath = modelPath;
+        this.savingIntervalSteps = savingIntervalSteps;
         this.indicatorsPub = PublishProcessor.create();
         this.indicators = indicatorsPub.observeOn(Schedulers.io());
-
+        this.lambda = lambda;
+        this.policyAlpha = policyAlpha;
+        this.criticAlpha = criticAlpha;
         Map<String, Long> stateSizes = getStateSizes(state);
         Map<String, Long> actionSizes = getActionSizes(actions);
 
@@ -315,9 +332,21 @@ public class TDAgent implements Agent {
         return flattenActions;
     }
 
+    private void autosave() {
+        if (modelPath != null) {
+            try {
+                save(modelPath);
+                logger.info("Saved model into \"{}\"", modelPath);
+            } catch (IOException e) {
+                logger.error(e.getMessage(), e);
+            }
+        }
+    }
+
     @Override
     public void close() {
         indicatorsPub.onComplete();
+        autosave();
     }
 
     float criticValueFromSignals(Map<String, Signal> state) {
@@ -335,6 +364,10 @@ public class TDAgent implements Agent {
 
     public TDNetwork getCritic() {
         return critic;
+    }
+
+    public float getCriticAlpha() {
+        return criticAlpha;
     }
 
     float getCriticValue(Map<String, INDArray> state) {
@@ -370,8 +403,16 @@ public class TDAgent implements Agent {
         return indicators;
     }
 
+    public float getLambda() {
+        return lambda;
+    }
+
     public TDNetwork getPolicy() {
         return policy;
+    }
+
+    public float getPolicyAlpha() {
+        return policyAlpha;
     }
 
     public Map<String, INDArray> getProps() {
@@ -387,9 +428,11 @@ public class TDAgent implements Agent {
 
     @Override
     public JsonNode getSpec() {
-        ObjectNode spec = Utils.objectMapper.createObjectNode();
-        spec.put("rewardAlpha", rewardAlpha);
-
+        ObjectNode spec = Utils.objectMapper.createObjectNode()
+                .put("rewardAlpha", rewardAlpha)
+                .put("policyAlpha", policyAlpha)
+                .put("criticAlpha", criticAlpha)
+                .put("lambda", lambda);
         spec.set("state", specFromSignalMap(state));
         spec.set("actions", specFromSignalMap(actions));
         spec.set("policy", policy.getSpec());
@@ -472,9 +515,8 @@ public class TDAgent implements Agent {
 
         float avgReward0 = avgReward;
         avgReward += delta * rewardAlpha;
-        INDArray deltaArray = Nd4j.createFromArray(delta);
-        Map<String, INDArray> gradCritic = critic.train(c0, dc, deltaArray);
-        Map<String, INDArray> gradPolicy = policy.train(pi, dp, deltaArray);
+        Map<String, INDArray> gradCritic = critic.train(c0, dc, Nd4j.createFromArray(delta * criticAlpha), lambda);
+        Map<String, INDArray> gradPolicy = policy.train(pi, dp, Nd4j.createFromArray(delta * policyAlpha), lambda);
 
         Map<String, INDArray> trainedC0 = critic.forward(s0);
         Map<String, INDArray> trainedPi = policy.forward(s0);
@@ -499,5 +541,9 @@ public class TDAgent implements Agent {
         );
 
         indicatorsPub.onNext(kpi);
+        if (++savingStepCounter >= savingIntervalSteps) {
+            savingStepCounter = 0;
+            autosave();
+        }
     }
 }

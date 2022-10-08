@@ -148,7 +148,7 @@ class TDNetworkTest {
                 "layer7", List.of("layer6"),
                 "layer8", List.of("layer6")
         );
-        return new TDNetwork(alpha, lambda, layers, forward, inputs);
+        return new TDNetwork(layers, forward, inputs);
     }
 
     @ParameterizedTest
@@ -489,8 +489,6 @@ class TDNetworkTest {
                 b7, w7,
                 temperature).getSpec();
 
-        assertThat((float) (spec.path("alpha").asDouble()), equalTo(alpha));
-        assertThat((float) (spec.path("lambda").asDouble()), equalTo(lambda));
         JsonNode layers = spec.path("layers");
         assertTrue(layers.isArray());
         assertThat(layers.size(), equalTo(8));
@@ -630,8 +628,6 @@ class TDNetworkTest {
         float l51 = l31 + l41;
         float l60 = (float) tanh(l50);
         float l61 = (float) tanh(l51);
-        float l70 = l60 * w7 + b7;
-        float l71 = l61 * w7 + b7;
         double ez80 = exp(l60 / temperature);
         double ez81 = exp(l61 / temperature);
         double ez8 = ez80 + ez81;
@@ -733,7 +729,7 @@ class TDNetworkTest {
         INDArray grad7Org = grad7.dup();
         INDArray grad8Org = grad8.dup();
 
-        Map<String, INDArray> ctx = net.train(out, grads, delta);
+        Map<String, INDArray> ctx = net.train(out, grads, delta.mul(alpha), lambda);
 
         assertEquals(out.get("input0"), outInput0Org);
         assertEquals(out.get("input1"), outInput1Org);

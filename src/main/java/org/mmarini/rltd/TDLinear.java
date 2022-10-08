@@ -34,6 +34,7 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 
 import java.util.List;
 import java.util.Map;
+import java.util.StringJoiner;
 
 import static org.mmarini.yaml.schema.Validator.*;
 
@@ -57,7 +58,7 @@ public class TDLinear extends TDLayer {
      */
     public static TDLinear create(JsonNode root, Locator locator) {
         LINEAR_SPEC.apply(locator).accept(root);
-        String name = locator.path("node").getNode(root).asText();
+        String name = locator.path("name").getNode(root).asText();
         float b = (float) locator.path("b").getNode(root).asDouble();
         float w = (float) locator.path("w").getNode(root).asDouble();
         return new TDLinear(name, b, w);
@@ -103,7 +104,16 @@ public class TDLinear extends TDLayer {
     }
 
     @Override
-    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, TDNetwork net) {
+    public String toString() {
+        return new StringJoiner(", ", TDLinear.class.getSimpleName() + "[", "]")
+                .add("name='" + name + "'")
+                .add("b=" + b)
+                .add("w=" + w)
+                .toString();
+    }
+
+    @Override
+    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda) {
         return new INDArray[]{grad.mul(w)};
     }
 }

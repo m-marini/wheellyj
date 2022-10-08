@@ -48,6 +48,9 @@ class TDAgentCreateTest {
     private static final float EPSILON = 1e-6f;
     private static final String AGENT_YAML = text("---",
             "rewardAlpha: 0.001",
+            "policyAlpha: 1e-3",
+            "criticAlpha: 1e-3",
+            "lambda: 0.5",
             "state:",
             "  input:",
             "    type: float",
@@ -104,9 +107,12 @@ class TDAgentCreateTest {
         Map<String, INDArray> props = Map.of();
         Random random = Nd4j.getRandom();
         random.setSeed(AGENT_SEED);
-        TDAgent agent = TDAgent.create(spec, Locator.root(), props, random);
+        TDAgent agent = TDAgent.create(spec, Locator.root(), props, null, Integer.MAX_VALUE, random);
         assertEquals(0.001f, agent.getRewardAlpha());
         assertEquals(0f, agent.getAvgReward());
+        assertEquals(1e-3f, agent.getPolicyAlpha());
+        assertEquals(1e-3f, agent.getCriticAlpha());
+        assertEquals(0.5f, agent.getLambda());
     }
 
     @Test
@@ -118,9 +124,12 @@ class TDAgentCreateTest {
         );
         Random random = Nd4j.getRandom();
         random.setSeed(AGENT_SEED);
-        TDAgent agent = TDAgent.create(spec, Locator.root(), props, random);
+        TDAgent agent = TDAgent.create(spec, Locator.root(), props, null, Integer.MAX_VALUE, random);
         assertEquals(0.001f, agent.getRewardAlpha());
         assertEquals(0.2f, agent.getAvgReward());
+        assertEquals(1e-3f, agent.getPolicyAlpha());
+        assertEquals(1e-3f, agent.getCriticAlpha());
+        assertEquals(0.5f, agent.getLambda());
         assertThat(((TDDense) agent.getCritic().getLayers().get("layer1")).getB(),
                 matrixCloseTo(new float[][]{
                         {0.5f}

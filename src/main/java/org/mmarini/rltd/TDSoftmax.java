@@ -87,7 +87,7 @@ public class TDSoftmax extends TDLayer {
     }
 
     @Override
-    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, TDNetwork net) {
+    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda) {
         INDArray lo = grad.mul(output).divi(temperature);
         long n = output.shape()[1];
         INDArray yit = Nd4j.eye(n).subi(output);

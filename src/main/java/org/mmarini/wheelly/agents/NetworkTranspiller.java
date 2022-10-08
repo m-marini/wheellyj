@@ -65,20 +65,14 @@ public class NetworkTranspiller {
                     "inputs", arrayItems(string())
             ),
             List.of("type", "inputs"));
-    private static final Validator LAYER_SEQ_SPEC = objectPropertiesRequired(Map.of(
+    public static final Validator LAYER_SEQ_SPEC = objectPropertiesRequired(Map.of(
             "layers", arrayItems(LAYER_SPEC),
             "inputs", COMPOSER_SPEC,
             "input", string()
     ), List.of(
             "layers"
     ));
-    public static final Validator NETWORK_SPEC = objectPropertiesRequired(Map.of(
-            "alpha", positiveNumber(),
-            "lambda", nonNegativeNumber(),
-            "network", objectAdditionalProperties(LAYER_SEQ_SPEC)
-    ), List.of(
-            "alpha", "lambda", "network"
-    ));
+    public static final Validator NETWORK_SPEC = objectAdditionalProperties(LAYER_SEQ_SPEC);
     final HashMap<String, Long> layerSizes;
     private final JsonNode spec;
     private final Locator locator;
@@ -88,8 +82,6 @@ public class NetworkTranspiller {
     Map<String, List<String>> inputsDef;
     List<String> sorted;
     List<TDLayer> layers;
-    private float alpha;
-    private float lambda;
 
     public NetworkTranspiller(JsonNode spec, Locator locator, Map<String, Long> stateSizes, Random random) {
         this.spec = spec;
@@ -106,7 +98,7 @@ public class NetworkTranspiller {
         Map<String, TDLayer> layerMap = layers.stream()
                 .map(l -> Tuple2.of(l.getName(), l))
                 .collect(Tuple2.toMap());
-        return new TDNetwork(alpha, lambda, layerMap, this.sorted, this.inputsDef);
+        return new TDNetwork(layerMap, this.sorted, this.inputsDef);
     }
 
     /**
@@ -129,14 +121,11 @@ public class NetworkTranspiller {
      */
     void parse() {
         NETWORK_SPEC.apply(locator).accept(spec);
-        this.alpha = (float) locator.path("alpha").getNode(spec).asDouble();
-        this.lambda = (float) locator.path("lambda").getNode(spec).asDouble();
         parseNetwork();
     }
 
     /**
-     * @param id
-     * @return
+     * @param id the layer id
      */
     private TDLayer parseLayer(String id) {
         Locator locator = layerDef.get(id);
@@ -227,7 +216,7 @@ public class NetworkTranspiller {
      * Parse the network definition
      */
     private void parseNetwork() {
-        locator.path("network").propertyNames(spec)
+        locator.propertyNames(spec)
                 .forEachOrdered(t -> parseLayerSeq(t._1, t._2));
         // Sort for size definition
         sortLayer();

@@ -54,9 +54,9 @@ class TDAgentSaveTest {
             "output.a", new IntSignalSpec(new long[]{1}, 2),
             "output.b", new IntSignalSpec(new long[]{1}, 2)
     );
+    public static final float ALPHA = 1e-3f;
+    public static final float LAMBDA = 0.5f;
     private static final String POLICY_YAML = text("---",
-            "alpha: 1e-3",
-            "lambda: 0.5",
             "layers:",
             "- name: layer1",
             "  type: dense",
@@ -92,27 +92,7 @@ class TDAgentSaveTest {
             "  layer6: [layer5]",
             "  output.b: [layer6]"
     );
-    private static final String POLICY_YAML0 = text("---",
-            "alpha: 1e-3",
-            "lambda: 0.5",
-            "layers:",
-            "- name: layer1",
-            "  type: dense",
-            "  inputSize: 2",
-            "  outputSize: 2",
-            "- name: layer2",
-            "  type: tanh",
-            "- name: output",
-            "  type: softmax",
-            "  temperature: 0.8",
-            "inputs:",
-            "  layer1: [input]",
-            "  layer2: [layer1]",
-            "  output: [layer2]"
-    );
     private static final String CRITIC_YAML = text("---",
-            "alpha: 1e-6",
-            "lambda: 0.5",
             "layers:",
             "- name: layer1",
             "  type: dense",
@@ -134,17 +114,19 @@ class TDAgentSaveTest {
         JsonNode criticSpec = Utils.fromText(CRITIC_YAML);
         TDNetwork critic = TDNetwork.create(criticSpec, Locator.root(), "", Map.of(), random);
         return new TDAgent(STATE_SPEC, ACTIONS_SPEC,
-                0, REWARD_ALPHA, policy, critic, random);
+                0, REWARD_ALPHA, ALPHA, ALPHA, LAMBDA,
+                policy, critic, random, null, Integer.MAX_VALUE);
     }
 
     @Test
     void save() throws IOException {
         try (TDAgent agent = createAgent()) {
-            agent.save(new File("models/test"));
+            File pathFile = new File("models/test");
+            agent.save(pathFile);
 
             Random random = Nd4j.getRandom();
             random.setSeed(1234);
-            TDAgent newAgent = TDAgent.load("models/test", random);
+            TDAgent newAgent = TDAgent.load(pathFile, Integer.MAX_VALUE, random);
             assertEquals(newAgent.getAvgReward(), agent.getAvgReward());
             assertEquals(newAgent.getRewardAlpha(), agent.getRewardAlpha());
             assertEquals(((TDDense) newAgent.getCritic().getLayers().get("layer1")).getW(),

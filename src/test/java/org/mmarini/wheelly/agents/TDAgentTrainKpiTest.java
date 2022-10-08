@@ -52,10 +52,10 @@ class TDAgentTrainKpiTest {
     public static final Map<String, SignalSpec> STATE_SPEC = Map.of("input", new FloatSignalSpec(new long[]{3}, 0, 1));
     public static final Map<String, SignalSpec> ACTIONS_SPEC = Map.of("output", new IntSignalSpec(new long[]{1}, 3));
     public static final int NUM_EPISODES = 100;
+    public static final float ALPHA = 10e-3f;
+    public static final float LAMBDA = 0f;
     private static final Logger logger = LoggerFactory.getLogger(TDAgentTrainKpiTest.class);
     private static final String POLICY_YAML = text("---",
-            "alpha: 10e-3",
-            "lambda: 0",
             "layers:",
             "- name: layer1",
             "  type: dense",
@@ -72,8 +72,6 @@ class TDAgentTrainKpiTest {
             "  output: [layer2]"
     );
     private static final String CRITIC_YAML = text("---",
-            "alpha: 10e-3",
-            "lambda: 0",
             "layers:",
             "- name: layer1",
             "  type: dense",
@@ -94,7 +92,7 @@ class TDAgentTrainKpiTest {
         JsonNode criticSpec = Utils.fromText(CRITIC_YAML);
         TDNetwork critic = TDNetwork.create(criticSpec, Locator.root(), "", Map.of(), random);
         return new TDAgent(STATE_SPEC, ACTIONS_SPEC,
-                1f, REWARD_ALPHA, policy, critic, random);
+                1f, REWARD_ALPHA, ALPHA, ALPHA, LAMBDA, policy, critic, random, null, Integer.MAX_VALUE);
     }
 
     @Test
