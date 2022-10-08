@@ -54,7 +54,7 @@ import static org.mmarini.yaml.schema.Validator.*;
  * Simulated robot
  */
 public class SimRobot implements RobotApi {
-    public static final float GRID_SIZE = 0.2f;
+    public static final float GRID_SIZE = 0.2F;
     public static final float WORLD_SIZE = 10;
     public static final float X_CENTER = 0;
     public static final float Y_CENTER = 0;
@@ -67,19 +67,20 @@ public class SimRobot implements RobotApi {
     private static final int POSITION_ITER = 10;
     private static final float RAD_10 = (float) toRadians(10);
     private static final float RAD_30 = (float) toRadians(30);
-    private static final float ROBOT_WIDTH = 0.18f;
-    private static final float ROBOT_LENGTH = 0.26f;
-    private static final float ROBOT_TRACK = 0.136f;
-    private static final float ROBOT_MASS = 0.78f;
+    private static final float ROBOT_WIDTH = 0.18F;
+    private static final float ROBOT_LENGTH = 0.26F;
+    private static final float ROBOT_TRACK = 0.136F;
+    private static final float ROBOT_MASS = 0.78F;
     private static final float ROBOT_DENSITY = ROBOT_MASS / ROBOT_LENGTH / ROBOT_WIDTH;
     private static final float ROBOT_FRICTION = 1;
     private static final float ROBOT_RESTITUTION = 0;
-    private static final float SAFE_DISTANCE = 0.2f;
-    private static final float MAX_VELOCITY = 0.280f;
+    private static final float SAFE_DISTANCE = 0.2F;
+    private static final float MAX_VELOCITY = 0.280F;
     private static final float MAX_ACC = 1;
     private static final float MAX_FORCE = MAX_ACC * ROBOT_MASS;
+    private static final float MAX_TORQUE = 0.7F;
     private static final float MAX_DISTANCE = 3;
-    private static final float SENSOR_GAP = 0.01f;
+    private static final float SENSOR_GAP = 0.01F;
     private static final float[][] FRONT_LEFT_VERTICES = {
             {SENSOR_GAP, ROBOT_WIDTH / 2 + SENSOR_GAP},
             {ROBOT_LENGTH / 2 + SENSOR_GAP, ROBOT_WIDTH / 2 + SENSOR_GAP},
@@ -244,38 +245,54 @@ public class SimRobot implements RobotApi {
      * @param dt the time interval
      */
     private void controller(float dt) {
-        float delta_angle = (float) normalizeAngle(toRadians(90 - direction) - robot.getAngle());
-        float angular_velocity = clip(linear(delta_angle, -RAD_10, RAD_10, -1, 1), -1, 1);
-        float linear_velocity = speed * clip(linear(abs(delta_angle), 0, RAD_30, 1, 0), 0, 1);
+        // Direction difference
+        float dAngle = (float) normalizeAngle(toRadians(90 - direction) - robot.getAngle());
+        // Relative angular speed to fix the direction
+        float angularVelocity = clip(linear(dAngle, -RAD_10, RAD_10, -1, 1), -1, 1);
+        // Relative linear speed to fix the speed
+        float linearVelocity = speed * clip(linear(abs(dAngle), 0, RAD_30, 1, 0), 0, 1);
 
-        left = clip((linear_velocity - angular_velocity) / 2, -1, 1);
-        right = clip((linear_velocity + angular_velocity) / 2, -1, 1);
+        // Relative left-right motor speeds
+        left = clip((linearVelocity - angularVelocity) / 2, -1, 1);
+        right = clip((linearVelocity + angularVelocity) / 2, -1, 1);
 
+        // Real left-right motor speeds
         left = left * MAX_VELOCITY;
         right = right * MAX_VELOCITY;
 
-        float forward_velocity = (left + right) / 2 * MAX_VELOCITY;
-        angular_velocity = (right - left) * MAX_VELOCITY / ROBOT_TRACK;
-        Vec2 target_velocity = robot.getWorldVector(Utils.vec2(0, forward_velocity));
-        Vec2 dv = target_velocity.sub(robot.getLinearVelocity());
+        // Real forward velocity
+        float forwardVelocity = (left + right) / 2;
+
+        // target real speed
+        Vec2 targetVelocity = robot.getWorldVector(Utils.vec2(forwardVelocity, 0));
+        // Difference of speed
+        Vec2 dv = targetVelocity.sub(robot.getLinearVelocity());
+        // Impulse to fix the speed
         Vec2 dq = dv.mul(robot.getMass());
+        // Force to fix the speed
         Vec2 force = dq.mul(1 / dt);
+        // Robot relative force
         Vec2 localForce = robot.getLocalVector(force);
+        // add a random factor to force
         localForce = localForce.mul((float) (1 + random.nextGaussian() * errSensor));
-        if (localForce.x > MAX_FORCE) {
-            localForce.x = MAX_FORCE;
-            force = robot.getWorldVector(localForce);
-        } else if (localForce.x < -MAX_FORCE) {
-            localForce.x = -MAX_FORCE;
-            force = robot.getWorldVector(localForce);
-        }
 
-        float angularImpulse = (angular_velocity - robot.getAngularVelocity()) * robot.getInertia();
-        angularImpulse *= (1 + random.nextGaussian() * errSigma);
+        // Clip the local force to physic contraints
+        localForce.x = clip(localForce.x, -MAX_FORCE, MAX_FORCE);
+        force = robot.getWorldVector(localForce);
 
+        // Angle rotation due to differential motor speeds
+        angularVelocity = (right - left) / ROBOT_TRACK;
+        // Angular impule to fix direction
+        float robotAngularVelocity = robot.getAngularVelocity();
+        float angularTorque = (angularVelocity - robotAngularVelocity) * robot.getInertia() / dt;
+        // Add a random factor to angulare impulse
+        angularTorque *= (1 + random.nextGaussian() * errSigma);
+        // Clip the angular torque
+        angularTorque = clip(angularTorque, -MAX_TORQUE, MAX_TORQUE);
         world.clearForces();
         robot.applyForceToCenter(force);
-        robot.applyAngularImpulse(angularImpulse);
+        robot.applyTorque(angularTorque);
+        world.step(dt, VELOCITY_ITER, POSITION_ITER);
     }
 
     private int decodeContact(Contact contact) {
@@ -321,7 +338,7 @@ public class SimRobot implements RobotApi {
 
     @Override
     public int getRobotDir() {
-        return (int) round(toDegrees(normalizeAngle(-robot.getAngle())));
+        return (int) round(toDegrees(normalizeAngle(PI / 2 - robot.getAngle())));
     }
 
     @Override
@@ -401,9 +418,7 @@ public class SimRobot implements RobotApi {
 
     @Override
     public void tick(long dt) {
-        float dtf = dt * 1e-3f;
-        controller(dtf);
-        world.step(dtf, VELOCITY_ITER, POSITION_ITER);
+        controller(dt * 1e-3F);
         time += dt;
 
         int sensorDeg = normalizeDegAngle(90 - getRobotDir() - sensor);

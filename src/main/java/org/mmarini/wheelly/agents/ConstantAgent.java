@@ -33,18 +33,22 @@ import org.mmarini.yaml.schema.Validator;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.yaml.schema.Validator.objectProperties;
+import static org.mmarini.yaml.schema.Validator.objectAdditionalProperties;
+import static org.mmarini.yaml.schema.Validator.objectPropertiesRequired;
 
 /**
  * Agent that produces a random behavior
  */
-public class RandomAgent implements Agent {
-    private static final Validator RANDOM_AGENT_SPEC = objectProperties(Map.of("seed", Validator.positiveInteger()));
+public class ConstantAgent implements Agent {
+    public static final Validator AGENT_SPEC = objectPropertiesRequired(Map.of(
+            "actions", objectAdditionalProperties(
+                    Validator.nonNegativeInteger()
+            )), List.of("actions"));
 
     /**
      * Returns the  random agent from spec
@@ -53,28 +57,29 @@ public class RandomAgent implements Agent {
      * @param locator the agent spec locator
      * @param env     the environment
      */
-    public static RandomAgent create(JsonNode root, Locator locator, Environment env) {
-        RANDOM_AGENT_SPEC.apply(locator).accept(root);
-        long seed = locator.path("seed").getNode(root).asLong(0);
-        Random random = seed > 0 ? new Random(seed) : new Random();
-        return new RandomAgent(env.getState(), env.getActions(), random);
+    public static ConstantAgent create(JsonNode root, Locator locator, Environment env) {
+        AGENT_SPEC.apply(locator).accept(root);
+        Map<String, Signal> actions = locator.path("actions").propertyNames(root)
+                .map(t -> t.setV2((Signal) IntSignal.create(t._2.getNode(root).asInt())))
+                .collect(Tuple2.toMap());
+        return new ConstantAgent(env.getState(), env.getActions(), actions);
     }
 
-    private final Random random;
     private final Map<String, SignalSpec> state;
     private final Map<String, SignalSpec> actions;
+    private final Map<String, Signal> action;
 
     /**
      * Creates a random behavior agent
      *
-     * @param state   the states
-     * @param actions the actions
-     * @param random  the random generator
+     * @param state   the states spec
+     * @param actions the actions spec
+     * @param action  the action
      */
-    public RandomAgent(Map<String, SignalSpec> state, Map<String, SignalSpec> actions, Random random) {
-        this.random = requireNonNull(random);
+    public ConstantAgent(Map<String, SignalSpec> state, Map<String, SignalSpec> actions, Map<String, Signal> action) {
         this.state = requireNonNull(state);
         this.actions = requireNonNull(actions);
+        this.action = action;
         for (Map.Entry<String, SignalSpec> entry : actions.entrySet()) {
             String key = entry.getKey();
             SignalSpec spec = entry.getValue();
@@ -96,11 +101,7 @@ public class RandomAgent implements Agent {
 
     @Override
     public Map<String, Signal> act(Map<String, Signal> state) {
-        return Tuple2.stream(actions).map(t -> {
-            IntSignalSpec spec = ((IntSignalSpec) t._2);
-            int action = random.nextInt(spec.getNumValues());
-            return Tuple2.of(t._1, (Signal) IntSignal.create(action));
-        }).collect(Tuple2.toMap());
+        return action;
     }
 
     @Override

@@ -127,8 +127,20 @@ public class ObstacleMap {
         return topology;
     }
 
+    /**
+     * Returns the index of nearest obstacle from point to a direction range
+     *
+     * @param x              the x point coordinate
+     * @param y              the y point coordinate
+     * @param direction      the direction in RAD
+     * @param directionRange the direction range in RAD
+     * @return
+     */
     public int indexOfNearest(float x, float y, float direction, float directionRange) {
         int n = getSize();
+        if (n == 0) {
+            return -1;
+        }
         INDArray point = Nd4j.createFromArray(x, y).reshape(1, 2);
         INDArray vect = coordinates.sub(point);
         INDArray n1 = vect.norm2(1).reshape(vect.shape()[0], 1);

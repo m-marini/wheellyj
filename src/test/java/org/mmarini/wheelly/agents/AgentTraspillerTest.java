@@ -52,28 +52,25 @@ class AgentTraspillerTest {
     private static final String YAML = text(
             "---",
             "version: \"0.1\"",
+            "policyAlpha: 1e-3",
+            "criticAlpha: 1e-3",
+            "lambda: 0.8",
             "rewardAlpha: 0.1",
             "critic:",
-            "  alpha: 1e-3",
-            "  lambda: 0.8",
-            "  network:",
-            "    output:",
-            "      layers:",
-            "      - type: dense",
-            "        outputSize: 1",
-            "      - type: relu",
-            "      - type: tanh",
+            "  output:",
+            "    layers:",
+            "    - type: dense",
+            "      outputSize: 1",
+            "    - type: relu",
+            "    - type: tanh",
             "policy:",
-            "  alpha: 1e-3",
-            "  lambda: 0.8",
-            "  network:",
-            "    output:",
-            "      layers:",
-            "        - type: dense",
-            "          outputSize: 3",
-            "        - type: tanh",
-            "        - type: softmax",
-            "          temperature: 0.8"
+            "  output:",
+            "    layers:",
+            "    - type: dense",
+            "      outputSize: 3",
+            "    - type: tanh",
+            "    - type: softmax",
+            "      temperature: 0.8"
     );
 
     @Test
@@ -87,7 +84,7 @@ class AgentTraspillerTest {
         );
         Random random = Nd4j.getRandom();
         random.setSeed(1234);
-        AgentTraspiller tr = new AgentTraspiller(agentSpec, Locator.root(), stateSpec, actionSpec, random);
+        AgentTraspiller tr = new AgentTraspiller(agentSpec, Locator.root(), null, Integer.MAX_VALUE, stateSpec, actionSpec, random);
 
         TDAgent agent = tr.build();
 

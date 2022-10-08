@@ -46,12 +46,10 @@ import static org.mmarini.yaml.schema.Validator.*;
 
 public class TDNetwork {
     public static final Validator NETWORK_SPEC = objectPropertiesRequired(Map.of(
-            "alpha", positiveNumber(),
-            "lambda", number(minimum(0.0), maximum(1.0)),
             "layers", arrayItems(TDLayer.LAYER_SPEC),
             "inputs", objectAdditionalProperties(arrayItems(string()))
     ), List.of(
-            "alpha", "lambda", "layers", "inputs"
+            "layers", "inputs"
     ));
 
     /**
@@ -65,8 +63,6 @@ public class TDNetwork {
      */
     public static TDNetwork create(JsonNode spec, Locator locator, String prefix, Map<String, INDArray> props, Random random) {
         NETWORK_SPEC.apply(locator).accept(spec);
-        float alpha1 = (float) locator.path("alpha").getNode(spec).asDouble();
-        float lambda1 = (float) locator.path("lambda").getNode(spec).asDouble();
         List<TDLayer> layerNodes = locator.path("layers").elements(spec)
                 .map(layerLocator -> TDLayer.create(spec, layerLocator, prefix, props, random))
                 .collect(Collectors.toList());
@@ -83,11 +79,9 @@ public class TDNetwork {
                     return Tuple2.of(name, layerList);
                 })
                 .collect(Tuple2.toMap());
-        return new TDNetwork(alpha1, lambda1, layers1, forward, inputs1);
+        return new TDNetwork(layers1, forward, inputs1);
     }
 
-    private final float alpha;
-    private final float lambda;
     private final Map<String, TDLayer> layers;
     private final List<String> forwardSeq;
     private final Map<String, List<String>> inputs;
@@ -99,15 +93,11 @@ public class TDNetwork {
     /**
      * Creates the network
      *
-     * @param alpha      the alpha learning parameter
-     * @param lambda     the lambda td parameter
      * @param layers     the map of layers
      * @param forwardSeq the forward sequence
      * @param inputs     the map of inputs
      */
-    public TDNetwork(float alpha, float lambda, Map<String, TDLayer> layers, List<String> forwardSeq, Map<String, List<String>> inputs) {
-        this.alpha = alpha;
-        this.lambda = lambda;
+    public TDNetwork(Map<String, TDLayer> layers, List<String> forwardSeq, Map<String, List<String>> inputs) {
         this.layers = requireNonNull(layers);
         this.forwardSeq = requireNonNull(forwardSeq);
         this.inputs = requireNonNull(inputs);
@@ -188,10 +178,6 @@ public class TDNetwork {
         return outs;
     }
 
-    public float getAlpha() {
-        return alpha;
-    }
-
     public List<String> getBackwardSeq() {
         return backwardSeq;
     }
@@ -202,10 +188,6 @@ public class TDNetwork {
 
     public Map<String, List<String>> getInputs() {
         return inputs;
-    }
-
-    public float getLambda() {
-        return lambda;
     }
 
     public Map<String, TDLayer> getLayers() {
@@ -245,9 +227,7 @@ public class TDNetwork {
      * Return json node of the network specification
      */
     public JsonNode getSpec() {
-        ObjectNode node = org.mmarini.yaml.Utils.objectMapper.createObjectNode()
-                .put("alpha", alpha)
-                .put("lambda", lambda);
+        ObjectNode node = org.mmarini.yaml.Utils.objectMapper.createObjectNode();
         ArrayNode layers1 = org.mmarini.yaml.Utils.objectMapper.createArrayNode();
         forwardSeq.stream()
                 .map(layers::get)
@@ -270,10 +250,11 @@ public class TDNetwork {
      *
      * @param outputs the layer outputs
      * @param grad    the network output gradient
-     * @param delta   the delta parameter
+     * @param delta   the delta parameter (error scaled by alpha factor)
+     * @param lambda  the TD lambda factor
      */
     public Map<String, INDArray> train(Map<String, INDArray> outputs, Map<String, INDArray> grad, INDArray
-            delta) {
+            delta, float lambda) {
         Map<String, INDArray> grads = new HashMap<>(grad);
         for (String id : backwardSeq) {
             TDLayer node = layers.get(id);
@@ -281,7 +262,7 @@ public class TDNetwork {
             INDArray[] inputs = inputNames.stream().map(outputs::get).toArray(INDArray[]::new);
             INDArray output = outputs.get(id);
             INDArray outGrad = grads.get(id);
-            INDArray[] inGrad = node.train(inputs, output, outGrad, delta, this);
+            INDArray[] inGrad = node.train(inputs, output, outGrad, delta, lambda);
             for (int i = 0; i < inputNames.size(); i++) {
                 String name = inputNames.get(i);
                 INDArray value = inGrad[i];

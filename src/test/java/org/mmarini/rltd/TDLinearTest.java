@@ -120,7 +120,7 @@ class TDLinearTest {
         INDArray out = layer.forward(in, null);
         float post_grad0 = w * grad0;
         float post_grad1 = w * grad1;
-        INDArray[] post_grads = layer.train(in, out, grad, Nd4j.zeros(1), null);
+        INDArray[] post_grads = layer.train(in, out, grad, Nd4j.zeros(1), 0);
 
         assertThat(post_grads, arrayWithSize(1));
         assertThat(post_grads[0], matrixCloseTo(new float[][]{{

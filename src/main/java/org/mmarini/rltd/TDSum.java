@@ -61,7 +61,7 @@ public class TDSum extends TDLayer {
     }
 
     @Override
-    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, TDNetwork net) {
+    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda) {
         return IntStream.range(0, inputs.length).mapToObj(i -> grad).toArray(INDArray[]::new);
     }
 }

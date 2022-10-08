@@ -81,8 +81,7 @@ public abstract class TDLayer {
         }
     }
 
-
-    private final String name;
+    protected final String name;
 
     /**
      * Create an abstract layer
@@ -129,12 +128,12 @@ public abstract class TDLayer {
      * @param output the output
      * @param grad   gradient at output
      * @param delta  the error
-     * @param net    the network
+     * @param lambda the TD lambda factor
      */
     public abstract INDArray[] train(INDArray[] inputs,
                                      INDArray output,
                                      INDArray grad,
                                      INDArray delta,
-                                     TDNetwork net);
+                                     float lambda);
 
 }

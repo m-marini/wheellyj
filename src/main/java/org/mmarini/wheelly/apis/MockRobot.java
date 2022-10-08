@@ -25,15 +25,40 @@
 
 package org.mmarini.wheelly.apis;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.model.WheellyStatus;
+import org.mmarini.yaml.schema.Locator;
+import org.mmarini.yaml.schema.Validator;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;
+import java.util.Map;
 import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.yaml.schema.Validator.*;
 
 public class MockRobot implements RobotApi {
+    public static final Validator ROBOT_SPEC = objectProperties(Map.of(
+            "x", number(),
+            "y", number(),
+            "direction", integer(minimum(-180), maximum(180)),
+            "sensor", integer(minimum(-90), maximum(90)),
+            "distance", nonNegativeNumber()
+    ));
+
+    public static MockRobot create(JsonNode root, Locator locator) {
+        ROBOT_SPEC.apply(locator).accept(root);
+        float x = (float) locator.path("x").getNode(root).asDouble(0);
+        float y = (float) locator.path("y").getNode(root).asDouble(0);
+        Point2D robotPos1 = new Point2D.Float(x, y);
+        int robotDir1 = locator.path("direction").getNode(root).asInt(0);
+        int sensorDir1 = locator.path("sensor").getNode(root).asInt(0);
+        float sensorDistance1 = (float) locator.path("distance").getNode(root).asDouble(0);
+        return new MockRobot(robotPos1, robotDir1, sensorDir1, sensorDistance1);
+    }
+
+
     private long time;
     private long resetTime;
     private Point2D robotPos;

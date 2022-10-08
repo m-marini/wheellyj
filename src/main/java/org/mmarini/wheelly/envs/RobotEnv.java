@@ -41,39 +41,44 @@ import java.util.Map;
 
 import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.model.Utils.linear;
 import static org.mmarini.yaml.schema.Validator.*;
 
 public class RobotEnv implements Environment {
-    public static final int MIN_SENSOR_DIR = -90;
-    public static final int MAX_SENSOR_DIR = 90;
+
     public static final float MIN_DISTANCE = 0f;
     public static final float MAX_DISTANCE = 10f;
-
     public static final int NUM_CONTACT_VALUES = 16;
 
     public static final int MIN_DIRECTION_ACTION = -180;
     public static final int MAX_DIRECTION_ACTION = 180;
     public static final float MIN_SPEED = -1f;
     public static final float MAX_SPEED = 1f;
+    public static final int MIN_SENSOR_DIR = -90;
+    public static final int MAX_SENSOR_DIR = 90;
+
     public static final int DEFAULT_INTERVAL = 10;
     public static final int DEFAULT_REACTION_INTERVAL = 300;
     public static final int DEFAULT_COMMAND_INTERVAL = 900;
+
+    public static final int DEFAULT_NUM_DIRECTION_VALUES = 25;
+    public static final int DEFAULT_NUM_SENSOR_VALUES = 7;
+    public static final int DEFAULT_NUM_SPEED_VALUES = 9;
 
     private static final Map<String, SignalSpec> STATE_SPEC = Map.of(
             "sensor", new FloatSignalSpec(new long[]{1}, MIN_SENSOR_DIR, MAX_SENSOR_DIR),
             "distance", new FloatSignalSpec(new long[]{1}, MIN_DISTANCE, MAX_DISTANCE),
             "canMoveForward", new IntSignalSpec(new long[]{1}, 2),
             "contacts", new IntSignalSpec(new long[]{1}, NUM_CONTACT_VALUES));
-    private static final Map<String, SignalSpec> ACTIONS_SPEC = Map.of(
-            "halt", new IntSignalSpec(new long[]{1}, 2),
-            "direction", new FloatSignalSpec(new long[]{1}, MIN_DIRECTION_ACTION, MAX_DIRECTION_ACTION),
-            "speed", new FloatSignalSpec(new long[]{1}, MIN_SPEED, MAX_SPEED),
-            "sensorAction", new FloatSignalSpec(new long[]{1}, MIN_SENSOR_DIR, MAX_SENSOR_DIR));
+
     private static final Validator ROBOT_ENV_SPEC = objectPropertiesRequired(Map.of(
                     "objective", object(),
                     "interval", positiveInteger(),
                     "reactionInterval", positiveInteger(),
-                    "commandInterval", positiveInteger()
+                    "commandInterval", positiveInteger(),
+                    "numDirectionValues", integer(minimum(2)),
+                    "numSensorValues", integer(minimum(2)),
+                    "numSpeedValues", integer(minimum(2))
             ),
             List.of("objective"));
 
@@ -84,9 +89,18 @@ public class RobotEnv implements Environment {
      * @param rewardFunction the reward function
      */
     public static RobotEnv create(RobotApi robot, FloatFunction<WheellyStatus> rewardFunction) {
-        return new RobotEnv(robot, rewardFunction, DEFAULT_INTERVAL, DEFAULT_REACTION_INTERVAL, DEFAULT_COMMAND_INTERVAL);
+        return new RobotEnv(robot, rewardFunction,
+                DEFAULT_INTERVAL, DEFAULT_REACTION_INTERVAL, DEFAULT_COMMAND_INTERVAL,
+                DEFAULT_NUM_DIRECTION_VALUES, DEFAULT_NUM_SENSOR_VALUES, DEFAULT_NUM_SPEED_VALUES);
     }
 
+    /**
+     * Returns the environment from json node spec
+     *
+     * @param root    the json node
+     * @param locator the locator of environment
+     * @param robot   the robot interface
+     */
     public static RobotEnv create(JsonNode root, Locator locator, RobotApi robot) {
         ROBOT_ENV_SPEC.apply(locator).accept(root);
 
@@ -94,7 +108,13 @@ public class RobotEnv implements Environment {
         long interval = locator.path("interval").getNode(root).asLong(DEFAULT_INTERVAL);
         long reactionInterval = locator.path("reactionInterval").getNode(root).asLong(DEFAULT_REACTION_INTERVAL);
         long commandInterval = locator.path("commandInterval").getNode(root).asLong(DEFAULT_COMMAND_INTERVAL);
-        return new RobotEnv(robot, reward, interval, reactionInterval, commandInterval);
+        int numDirectionValues = locator.path("numDirectionValues").getNode(root).asInt(DEFAULT_NUM_DIRECTION_VALUES);
+        int numSensorValues = locator.path("numSensorValues").getNode(root).asInt(DEFAULT_NUM_SENSOR_VALUES);
+        int numSpeedValues = locator.path("numSpeedValues").getNode(root).asInt(DEFAULT_NUM_SPEED_VALUES);
+
+        return new RobotEnv(robot, reward,
+                interval, reactionInterval, commandInterval,
+                numDirectionValues, numSensorValues, numSpeedValues);
     }
 
     private final RobotApi robot;
@@ -102,6 +122,7 @@ public class RobotEnv implements Environment {
     private final long interval;
     private final long reactionInterval;
     private final long commandInterval;
+    private final Map<String, SignalSpec> actions;
     private int prevSensor;
     private long lastScanTimestamp;
     private long lastMoveTimestamp;
@@ -117,18 +138,30 @@ public class RobotEnv implements Environment {
     /**
      * Creates the robot environment
      *
-     * @param robot            the robot api
-     * @param reward           the reward function
-     * @param interval         the interval
-     * @param reactionInterval the reaction interval
-     * @param commandInterval  the command interval
+     * @param robot              the robot api
+     * @param reward             the reward function
+     * @param interval           the interval
+     * @param reactionInterval   the reaction interval
+     * @param commandInterval    the command interval
+     * @param numDirectionValues number of direction values
+     * @param numSensorValues    number of sensor direction values
+     * @param numSpeedValues     number of speed values
      */
-    public RobotEnv(RobotApi robot, FloatFunction<WheellyStatus> reward, long interval, long reactionInterval, long commandInterval) {
+    public RobotEnv(RobotApi robot, FloatFunction<WheellyStatus> reward,
+                    long interval, long reactionInterval, long commandInterval,
+                    int numDirectionValues, int numSensorValues, int numSpeedValues) {
         this.robot = requireNonNull(robot);
         this.reward = requireNonNull(reward);
         this.interval = interval;
         this.reactionInterval = reactionInterval;
         this.commandInterval = commandInterval;
+
+        this.actions = Map.of(
+                "halt", new IntSignalSpec(new long[]{1}, 2),
+                "direction", new IntSignalSpec(new long[]{1}, numDirectionValues),
+                "speed", new IntSignalSpec(new long[]{1}, numSpeedValues),
+                "sensorAction", new IntSignalSpec(new long[]{1}, numSensorValues)
+        );
 
         this.started = false;
 
@@ -151,33 +184,46 @@ public class RobotEnv implements Environment {
         }
     }
 
+    /**
+     * Returns the delta direction in DEG
+     *
+     * @param actions the actions
+     */
+    int deltaDir(Map<String, Signal> actions) {
+        int action = actions.get("direction").getInt(0);
+        int n = ((IntSignalSpec) getActions().get("direction")).getNumValues();
+        return round(linear(action,
+                0, n - 1,
+                MIN_DIRECTION_ACTION, MAX_DIRECTION_ACTION));
+    }
+
     @Override
     public ExecutionResult execute(Map<String, Signal> actions) {
         requireNonNull(actions);
         processAction(actions);
         WheellyStatus status = readStatus(reactionInterval);
         float reward = this.reward.floatValueOf(status);
-        Map<String, Signal> observation = get_obs();
+        Map<String, Signal> observation = getObservation();
         return new ExecutionResult(observation, reward, false);
     }
 
     @Override
     public Map<String, SignalSpec> getActions() {
-        return ACTIONS_SPEC;
+        return this.actions;
     }
 
-    @Override
-    public Map<String, SignalSpec> getState() {
-        return STATE_SPEC;
-    }
-
-    private Map<String, Signal> get_obs() {
+    private Map<String, Signal> getObservation() {
         return Map.of(
                 "sensor", new ArraySignal(sensor),
                 "distance", new ArraySignal(distance),
                 "canMoveForward", new ArraySignal(canMoveForward),
                 "contacts", new ArraySignal(contacts)
         );
+    }
+
+    @Override
+    public Map<String, SignalSpec> getState() {
+        return STATE_SPEC;
     }
 
     /**
@@ -187,10 +233,11 @@ public class RobotEnv implements Environment {
      */
     private void processAction(Map<String, Signal> actions) {
         long now = robot.getTime();
-        int direction = ((ArraySignal) actions.get("direction")).getValue().getInt(0);
-        int dir = round(robotDir.getFloat(0)) + direction;
-        float speed1 = ((ArraySignal) actions.get("speed")).getValue().getFloat(0);
-        float speed = round(speed1 * DEFAULT_INTERVAL) * 0.1f;
+
+        int dDir = deltaDir(actions);
+        int dir = round(robotDir.getFloat(0)) + dDir;
+        float speed1 = speed(actions);
+        float speed = round(speed1 * 10f) * 0.1f;
         boolean isHalt = actions.get("halt").getInt(0) == 1;
         if (isHalt != prevHalt) {
             prevHalt = isHalt;
@@ -204,7 +251,7 @@ public class RobotEnv implements Environment {
             robot.move(dir, speed);
             lastMoveTimestamp = now;
         }
-        int sensor = round(((ArraySignal) actions.get("sensorAction")).getValue().getFloat(0));
+        int sensor = sensorDir(actions);
         if (prevSensor != sensor) {
             robot.scan(sensor);
             prevSensor = sensor;
@@ -240,7 +287,33 @@ public class RobotEnv implements Environment {
         }
         robot.reset();
         readStatus(0);
-        return get_obs();
+        return getObservation();
+    }
+
+    /**
+     * Returns the sensor direction in DEG from actions
+     *
+     * @param actions the actions
+     */
+    int sensorDir(Map<String, Signal> actions) {
+        int action = actions.get("sensorAction").getInt(0);
+        int n = ((IntSignalSpec) getActions().get("sensorAction")).getNumValues();
+        return round(linear(action,
+                0, n - 1,
+                MIN_SENSOR_DIR, MAX_SENSOR_DIR));
+    }
+
+    /**
+     * Returns the speed from actions
+     *
+     * @param actions the actions
+     */
+    float speed(Map<String, Signal> actions) {
+        int action = actions.get("speed").getInt(0);
+        int n = ((IntSignalSpec) getActions().get("speed")).getNumValues();
+        return round(linear(action,
+                0, n - 1,
+                MIN_SPEED, MAX_SPEED));
     }
 
     /**
@@ -252,7 +325,7 @@ public class RobotEnv implements Environment {
         robotDir = Nd4j.createFromArray((float) status.getRobotDeg());
         sensor = Nd4j.createFromArray((float) status.getSensorRelativeDeg());
         distance = Nd4j.createFromArray((float) status.getSampleDistance());
-        canMoveForward = Nd4j.createFromArray(status.getCannotMoveForward() ? 0 : 1);
-        contacts = Nd4j.createFromArray(status.getContactSensors());
+        canMoveForward = Nd4j.createFromArray(status.getCannotMoveForward() ? 0F : 1F);
+        contacts = Nd4j.createFromArray((float) status.getContactSensors());
     }
 }

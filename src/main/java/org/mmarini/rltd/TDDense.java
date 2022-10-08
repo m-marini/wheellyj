@@ -172,10 +172,7 @@ public class TDDense extends TDLayer {
     }
 
     @Override
-    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, TDNetwork net) {
-        float lambda = net.getLambda();
-        float alpha = net.getAlpha();
-
+    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda) {
         INDArray gradIn = grad.mmul(w.transpose());
 
         eb.muli(lambda).addi(grad);
@@ -185,10 +182,9 @@ public class TDDense extends TDLayer {
         INDArray grad_dw = bin.mul(bgrad);
         ew.muli(lambda).addi(grad_dw);
 
-        INDArray delta_alpha = delta.mul(alpha);
-        INDArray db = eb.mul(delta_alpha);
+        INDArray db = eb.mul(delta);
         b.addi(db);
-        INDArray dw = ew.mul(delta_alpha);
+        INDArray dw = ew.mul(delta);
         w.addi(dw);
         return new INDArray[]{
                 gradIn

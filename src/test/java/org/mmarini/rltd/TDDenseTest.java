@@ -37,7 +37,6 @@ import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -236,7 +235,8 @@ class TDDenseTest {
         INDArray out = layer.forward(in, null);
         float post_grad0 = w00 * grad0 + w01 * grad1 + w02 * grad2;
         float post_grad1 = w10 * grad0 + w11 * grad1 + w12 * grad2;
-        INDArray[] post_grads = layer.train(in, out, grad, delta, new TDNetwork(alpha, lambda, Map.of(), List.of(), Map.of()));
+
+        INDArray[] post_grads = layer.train(in, out, grad, delta.mul(alpha), lambda);
 
         assertThat(post_grads, arrayWithSize(1));
         assertThat(post_grads[0], matrixCloseTo(new float[][]{{

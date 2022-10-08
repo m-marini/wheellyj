@@ -32,6 +32,7 @@ import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 import org.nd4j.linalg.api.rng.Random;
 
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 
@@ -44,41 +45,59 @@ public class AgentTraspiller {
     public static final Validator AGENT_VALIDATOR = objectPropertiesRequired(Map.of(
             "version", string(values("0.1")),
             "rewardAlpha", positiveNumber(),
+            "policyAlpha", positiveNumber(),
+            "criticAlpha", positiveNumber(),
+            "lambda", nonNegativeNumber(),
             "policy", NetworkTranspiller.NETWORK_SPEC,
             "critic", NetworkTranspiller.NETWORK_SPEC
     ), List.of(
-            "rewardAlpha", "policy", "critic"
+            "rewardAlpha", "policyAlpha", "criticAlpha", "lambda", "policy", "critic"
     ));
 
     private final JsonNode spec;
     private final Map<String, SignalSpec> stateSpec;
     private final Map<String, SignalSpec> actionsSpec;
     private final Locator locator;
-    private float rewardAlpha;
     private final Random random;
+    private final File path;
+    private final int savingIntervalStep;
+    private float rewardAlpha;
     private TDNetwork policy;
     private TDNetwork critic;
+    private float policyAlpha;
+    private float criticAlpha;
+    private float lambda;
 
     public AgentTraspiller(JsonNode spec,
                            Locator locator,
+                           File path,
+                           int savingIntervalStep,
                            Map<String, SignalSpec> stateSpec,
                            Map<String, SignalSpec> actionsSpec,
                            Random random) {
         this.spec = spec;
         this.stateSpec = stateSpec;
         this.actionsSpec = actionsSpec;
+        this.path = path;
+        this.savingIntervalStep = savingIntervalStep;
         this.locator = locator;
         this.random = random;
     }
 
+
     public TDAgent build() {
         parse();
-        return new TDAgent(stateSpec, actionsSpec, 0, rewardAlpha, policy, critic, random);
+        return new TDAgent(stateSpec, actionsSpec, 0,
+                rewardAlpha, policyAlpha, criticAlpha, lambda,
+                policy, critic, random, path, savingIntervalStep);
     }
 
     void parse() {
         AGENT_VALIDATOR.apply(locator).accept(spec);
         this.rewardAlpha = (float) locator.path("rewardAlpha").getNode(spec).asDouble();
+        this.policyAlpha = (float) locator.path("policyAlpha").getNode(spec).asDouble();
+        this.criticAlpha = (float) locator.path("criticAlpha").getNode(spec).asDouble();
+        this.lambda = (float) locator.path("lambda").getNode(spec).asDouble();
         Map<String, Long> stateSizes = TDAgent.getStateSizes(stateSpec);
         this.policy = new NetworkTranspiller(spec, locator.path("policy"), stateSizes, random).build();
         this.critic = new NetworkTranspiller(spec, locator.path("critic"), stateSizes, random).build();

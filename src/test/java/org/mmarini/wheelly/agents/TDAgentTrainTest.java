@@ -52,9 +52,9 @@ class TDAgentTrainTest {
             "input", new FloatSignalSpec(new long[]{2}, -1, 1));
     public static final Map<String, SignalSpec> ACTIONS_SPEC0 = Map.of(
             "output", new IntSignalSpec(new long[]{1}, 2));
+    public static final float ALPHA = 1e-3f;
+    public static final float LAMBDA = 0.5f;
     private static final String POLICY_YAML0 = text("---",
-            "alpha: 1e-3",
-            "lambda: 0.5",
             "layers:",
             "- name: layer1",
             "  type: dense",
@@ -71,8 +71,6 @@ class TDAgentTrainTest {
             "  output: [layer2]"
     );
     private static final String CRITIC_YAML = text("---",
-            "alpha: 1e-6",
-            "lambda: 0.5",
             "layers:",
             "- name: layer1",
             "  type: dense",
@@ -94,7 +92,8 @@ class TDAgentTrainTest {
         JsonNode criticSpec = Utils.fromText(CRITIC_YAML);
         TDNetwork critic = TDNetwork.create(criticSpec, Locator.root(), "", Map.of(), random);
         return new TDAgent(STATE_SPEC, ACTIONS_SPEC0,
-                0, REWARD_ALPHA, policy, critic, random);
+                0, REWARD_ALPHA, ALPHA, ALPHA, LAMBDA,
+                policy, critic, random, null, Integer.MAX_VALUE);
     }
 
     /**

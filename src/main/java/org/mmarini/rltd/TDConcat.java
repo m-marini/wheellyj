@@ -38,7 +38,6 @@ import java.util.stream.IntStream;
  * The dense layer performs a linear transformation between the input and outputs.
  */
 public class TDConcat extends TDLayer {
-
     /**
      * Creates a relu layer
      *
@@ -62,7 +61,7 @@ public class TDConcat extends TDLayer {
     }
 
     @Override
-    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, TDNetwork net) {
+    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda) {
         long[] indices = new long[inputs.length + 1];
         for (int i = 1; i < indices.length; i++) {
             indices[i] = indices[i - 1] + inputs[i - 1].shape()[1];
