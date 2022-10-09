@@ -31,15 +31,27 @@ environment.
 The agent is based on Temporal Difference (TD) actor-critic algorithms with eligibility trace, the critic component use
 the  residual advantage state value to evaluate the policy of actor.
 
-After compiling the java code with maven run the command:
+### Maven build
+
+To build the server run
+
+```
+mvn assembly:assembly -DskipTests
+```
+
+In `target` folder you will find an installation zip file
+
+### Run the server
+
+After installed the application run the command:
 
 ```bash
-java Wheelly [options]
+java -classpath lib/wheelly-0.3.0.jar org.mmarini.wheelly.apps.Wheelly
 ```
 
 the options are 
 ```bash
-> java Wheelly -h
+> java -classpath lib/wheelly-0.3.0.jar org.mmarini.wheelly.apps.Wheelly -h
 
 usage: Wheelly [-h] [-v] [-r ROBOT] [-e ENV] [-a AGENT] [-k KPIS]
                [-l LABELS] [-s] [-t TIME]
@@ -65,7 +77,6 @@ named arguments:
   -t TIME, --time TIME   specify number  of  seconds  of  session  duration
                          (default: 43200)
 ```
-
 
 ## Release 0.2.0
 
