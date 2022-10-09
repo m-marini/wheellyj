@@ -46,6 +46,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -168,6 +169,28 @@ public class TDAgent implements Agent {
         }
     }
 
+    private static Stream<Tuple2<String, INDArray>> flat(Tuple2<String, Object> kpi) {
+        String key = kpi._1;
+        Object obj = kpi._2;
+        if (obj instanceof Number) {
+            return Stream.of(kpi.setV2(Nd4j.create(new float[][]{{((Number) obj).floatValue()}})));
+        } else if (obj instanceof INDArray) {
+            return Stream.of(kpi.setV2((INDArray) kpi.getV2()));
+        } else if (obj instanceof Map) {
+            Map<String, Object> map = (Map<String, Object>) obj;
+            return Tuple2.stream(map)
+                    .flatMap(t -> flat(Tuple2.of(key + "." + t._1, t._2)));
+        } else {
+            return Stream.empty();
+        }
+    }
+
+    private static Map<String, INDArray> flatKpis(Map<String, Object> kpis) {
+        return Tuple2.stream(kpis)
+                .flatMap(TDAgent::flat)
+                .collect(Tuple2.toMap());
+    }
+
     static Map<String, Long> getActionSizes(Map<String, SignalSpec> actions) {
         return Tuple2.stream(actions)
                 .map(t -> {
@@ -268,7 +291,7 @@ public class TDAgent implements Agent {
     private final TDNetwork critic;
     private final Random random;
     private final PublishProcessor<Map<String, Object>> indicatorsPub;
-    private final Flowable<Map<String, Object>> indicators;
+    private final Flowable<Map<String, INDArray>> indicators;
     private final float lambda;
     private final float policyAlpha;
     private final float criticAlpha;
@@ -309,7 +332,10 @@ public class TDAgent implements Agent {
         this.modelPath = modelPath;
         this.savingIntervalSteps = savingIntervalSteps;
         this.indicatorsPub = PublishProcessor.create();
-        this.indicators = indicatorsPub.observeOn(Schedulers.io());
+        indicators = indicatorsPub.observeOn(Schedulers.io())
+                .map(TDAgent::flatKpis)
+                .publish()
+                .autoConnect();
         this.lambda = lambda;
         this.policyAlpha = policyAlpha;
         this.criticAlpha = criticAlpha;
@@ -373,34 +399,6 @@ public class TDAgent implements Agent {
     float getCriticValue(Map<String, INDArray> state) {
         Map<String, INDArray> criticState = critic.forward(state);
         return criticState.get("output").getFloat(0, 0);
-    }
-
-    /**
-     * Returns the performance indicators.
-     * <pre>
-     * <code>
-     *
-     *     s0 - Map<String, INDArray>
-     *     s1 - Map<String, INDArray>
-     *     actions - Map<String, INDArray>
-     *     reward - Float
-     *     terminal - Boolean
-     *     avgReward - Float
-     *     trainedAvgReward - Float
-     *     v0 - Float
-     *     v1 - Float
-     *     delta - Float
-     *     critic - Map<String, INDArray>
-     *     trainedCritic - Map<String, INDArray>
-     *     policy - Map<String, INDArray>
-     *     trainedPolicy -Map<String, INDArray>
-     *     gradCritic - Map<String, INDArray>
-     *     gradPolicy - Map<String, INDArray>
-     * </code>
-     * </pre>
-     */
-    public Flowable<Map<String, Object>> getIndicators() {
-        return indicators;
     }
 
     public float getLambda() {
@@ -476,6 +474,35 @@ public class TDAgent implements Agent {
                 .collect(Tuple2.toMap());
     }
 
+    /**
+     * Returns the performance indicators.
+     * <pre>
+     * <code>
+     *
+     *     s0 - Map<String, INDArray>
+     *     s1 - Map<String, INDArray>
+     *     actions - Map<String, INDArray>
+     *     reward - Float
+     *     terminal - Boolean
+     *     avgReward - Float
+     *     trainedAvgReward - Float
+     *     v0 - Float
+     *     v1 - Float
+     *     delta - Float
+     *     critic - Map<String, INDArray>
+     *     trainedCritic - Map<String, INDArray>
+     *     policy - Map<String, INDArray>
+     *     trainedPolicy -Map<String, INDArray>
+     *     gradCritic - Map<String, INDArray>
+     *     gradPolicy - Map<String, INDArray>
+     * </code>
+     * </pre>
+     */
+    @Override
+    public Flowable<Map<String, INDArray>> readKpis() {
+        return indicators;
+    }
+
     @Override
     public void save(File pathFile) throws IOException {
         if (!pathFile.exists()) {
@@ -546,4 +573,5 @@ public class TDAgent implements Agent {
             autosave();
         }
     }
+
 }

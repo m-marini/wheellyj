@@ -26,15 +26,12 @@
 package org.mmarini.wheelly.agents;
 
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.factory.Nd4j;
-import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
 
 /**
  * The data collector consumer accumulates data and returns the kpi of data
@@ -42,56 +39,47 @@ import java.io.IOException;
 public class CSVSubscriber implements Subscriber<INDArray> {
     private static final Logger logger = LoggerFactory.getLogger(CSVSubscriber.class);
     private static final int BUFFER_SIZE = 1000;
-    private final File file;
-    private INDArray buffer;
-    private int size;
+
+    /**
+     * Returns the csv subscriber that writes csv file
+     * Creates the shape file [file]_shape.csv
+     * and the data file [file]_data.csv
+     *
+     * @param file the base file name
+     */
+    public static CSVSubscriber create(File file) {
+        return new CSVSubscriber(CSVConsumer.create(file));
+    }
+
+    private CSVConsumer consumer;
     private Subscription subscription;
 
     /**
      *
      */
-    public CSVSubscriber(File file) {
-        this.file = file;
-    }
-
-    private void flush() {
-        if (size > 0) {
-            try {
-                Serde.toCsv(file, buffer.get(NDArrayIndex.interval(0, size), NDArrayIndex.all()), true);
-            } catch (IOException e) {
-                logger.error(e.getMessage(), e);
-            }
-        }
-        size = 0;
+    public CSVSubscriber(CSVConsumer consumer) {
+        this.consumer = consumer;
     }
 
     @Override
     public void onComplete() {
-        flush();
+        consumer.close();
     }
 
     @Override
     public void onError(Throwable throwable) {
-        flush();
+        consumer.close();
     }
 
     @Override
     public void onNext(INDArray indArray) {
-        if (buffer == null) {
-            long length = indArray.length();
-            buffer = Nd4j.zeros(BUFFER_SIZE, length);
-        }
-        buffer.getRow(size++).assign(Nd4j.toFlattened(indArray));
-        if (size >= buffer.shape()[0]) {
-            flush();
-        }
+        consumer.accept(indArray);
         subscription.request(1);
     }
 
     @Override
     public void onSubscribe(Subscription subscription) {
         this.subscription = subscription;
-        file.delete();
         subscription.request(1);
     }
 }

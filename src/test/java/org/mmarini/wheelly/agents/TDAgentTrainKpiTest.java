@@ -100,16 +100,11 @@ class TDAgentTrainKpiTest {
         DataCollectorSubscriber data = new DataCollectorSubscriber();
         try (SequenceEnv env = new SequenceEnv(3)) {
             TDAgent agent = createAgent();
-            agent.getIndicators()
+            agent.readKpis()
                     .concatMap(RXFunc.getProperty("reward"))
-                    .cast(Float.class)
-                    .map(RXFunc.float2INDArray())
                     .subscribe(data);
-            agent.getIndicators()
-                    .concatMap(RXFunc.getProperty("delta"))
-                    .cast(Float.class)
-                    .map(RXFunc.float2INDArray())
-                    .subscribe(new CSVSubscriber(new File("delta.csv")));
+            agent.readKpis()
+                    .subscribe(KpiCSVSubscriber.create(new File("data/test")));
             Map<String, Signal> s0 = Map.of("input", ArraySignal.create(1, 0, 0));
             Map<String, Signal> s1 = Map.of("input", ArraySignal.create(0, 1, 0));
             INDArray pis00 = agent.pisFromSignals(s0).get("output");
@@ -134,7 +129,7 @@ class TDAgentTrainKpiTest {
             assertThat(pis10.getFloat(0, 0), greaterThan(pis00.getFloat(0, 0)));
             assertThat(pis11.getFloat(0, 1), greaterThan(pis01.getFloat(0, 1)));
             agent.close();
-            agent.getIndicators().blockingSubscribe();
+            agent.readKpis().blockingSubscribe();
         }
         //data.toCsv("data/reward.csv");
         assertThat(data.getKpi().linPoly[1], greaterThan(0f));

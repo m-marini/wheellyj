@@ -37,7 +37,7 @@ public interface RXFunc {
         return Nd4j::createFromArray;
     }
 
-    static <T> Function<Map<String, T>, Flowable<T>> getProperty(String key) {
+    static Function<Map<String, INDArray>, Flowable<INDArray>> getProperty(String key) {
         return map ->
                 map.containsKey(key) ? Flowable.just(map.get(key)) : Flowable.empty();
     }

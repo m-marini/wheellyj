@@ -26,9 +26,11 @@
 package org.mmarini.wheelly.agents;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.reactivex.rxjava3.core.Flowable;
 import org.mmarini.wheelly.envs.Environment;
 import org.mmarini.wheelly.envs.Signal;
 import org.mmarini.wheelly.envs.SignalSpec;
+import org.nd4j.linalg.api.ndarray.INDArray;
 
 import java.io.Closeable;
 import java.io.File;
@@ -68,6 +70,11 @@ public interface Agent extends Closeable {
      * @param result the execution result
      */
     void observe(Environment.ExecutionResult result);
+
+    /**
+     * Returns the flowable of kpis
+     */
+    Flowable<Map<String, INDArray>> readKpis();
 
     /**
      * Save the model

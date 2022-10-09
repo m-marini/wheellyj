@@ -5,5 +5,5 @@ models/*
 docs/sonar-map.dxf~
 /*.zip
 /*.dat
-/*.csv
+/**/*.csv
 /*.bin
