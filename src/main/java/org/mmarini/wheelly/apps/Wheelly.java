@@ -32,6 +32,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.wheelly.agents.Agent;
+import org.mmarini.wheelly.agents.KpiCSVSubscriber;
 import org.mmarini.wheelly.apis.ObstacleMap;
 import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.envs.Environment;
@@ -45,6 +46,7 @@ import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
@@ -57,6 +59,20 @@ import static org.mmarini.wheelly.apps.Yaml.baseConfig;
 public class Wheelly {
     public static final float DEFAULT_DISCOUNT = (float) exp(-1 / 29.7);
     private static final Logger logger = LoggerFactory.getLogger(Wheelly.class);
+
+    /**
+     * Creates kpis process
+     *
+     * @param agent  the agent
+     * @param file   the path of kpis
+     * @param labels the key labels to filter
+     */
+    private static void createKpis(Agent agent, File file, String labels) {
+        KpiCSVSubscriber sub = labels.length() != 0
+                ? KpiCSVSubscriber.create(file, labels.split(","))
+                : KpiCSVSubscriber.create(file);
+        agent.readKpis().subscribe(sub);
+    }
 
     /**
      * Returns an object instance from configuration file
@@ -132,6 +148,10 @@ public class Wheelly {
                 logger.info("Creating agent");
                 try (Agent agent = createAgent(env)) {
                     logger.info("Starting session ...");
+                    String kpis = args.getString("kpis");
+                    if (kpis.length() != 0) {
+                        createKpis(agent, new File(kpis), args.getString("labels"));
+                    }
                     Map<String, Signal> state = env.reset();
                     frame.setObstacleMap(robot.getObstaclesMap()
                             .map(ObstacleMap::getPoints)
@@ -178,6 +198,12 @@ public class Wheelly {
         parser.addArgument("-a", "--agent")
                 .setDefault("agent.yml")
                 .help("specify agent yaml configuration file");
+        parser.addArgument("-k", "--kpis")
+                .setDefault("")
+                .help("specify kpis path");
+        parser.addArgument("-l", "--labels")
+                .setDefault("")
+                .help("specify kpi labels comma separated");
         parser.addArgument("-s", "--silent")
                 .action(Arguments.storeTrue())
                 .help("specify silent closing (no window messages)");

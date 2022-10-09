@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #76: Java TD environment porting from python
 - Issue #79: Agent spec transpiller
 - Issue #80: Robot environment with discrete actions
+- Issue #84: Generate kpis
 
 ### Changed
 

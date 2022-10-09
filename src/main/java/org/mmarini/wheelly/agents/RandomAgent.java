@@ -26,10 +26,12 @@
 package org.mmarini.wheelly.agents;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.reactivex.rxjava3.core.Flowable;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.envs.*;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
+import org.nd4j.linalg.api.ndarray.INDArray;
 
 import java.io.File;
 import java.util.Arrays;
@@ -124,6 +126,11 @@ public class RandomAgent implements Agent {
 
     @Override
     public void observe(Environment.ExecutionResult result) {
+    }
+
+    @Override
+    public Flowable<Map<String, INDArray>> readKpis() {
+        return Flowable.empty();
     }
 
     @Override
