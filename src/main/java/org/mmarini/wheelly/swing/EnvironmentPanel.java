@@ -28,9 +28,9 @@ package org.mmarini.wheelly.swing;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.AffineTransform;
-import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 import java.util.List;
 
 import static java.lang.Math.toRadians;
@@ -74,7 +74,7 @@ public class EnvironmentPanel extends JComponent {
     };
     private static final Shape SENSOR_SHAPE = createShape(SENSOR_POINTS);
     private static final Shape GRID_SHAPE = createGridShape();
-    private static final Shape OBSTACLE_SHAPE = new Ellipse2D.Float(
+    private static final Shape OBSTACLE_SHAPE = new Rectangle2D.Float(
             -OBSTACLE_SIZE / 2, -OBSTACLE_SIZE / 2,
             OBSTACLE_SIZE, OBSTACLE_SIZE);
     private static final int HUD_WIDTH = 200;

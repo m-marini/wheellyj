@@ -30,6 +30,7 @@
 package org.mmarini.wheelly.swing;
 
 import org.mmarini.swing.GridLayoutHelper;
+import org.mmarini.wheelly.apis.NetworkConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
