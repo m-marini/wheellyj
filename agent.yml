@@ -21,7 +21,7 @@ configurations:
     rewardAlpha: 5e-3
     policyAlpha: 30e-3
     criticAlpha: 30e-3
-    lambda: 0.5
+    lambda: 0
     policy:
       sensorNorm:
         input: sensor
@@ -51,13 +51,13 @@ configurations:
             - contactsNorm
         layers:
           - type: dense
-            outputSize: 100
+            outputSize: 300
           - type: relu
       hidden0:
         input: layer0
         layers:
           - type: dense
-            outputSize: 100
+            outputSize: 300
           - type: relu
       hidden1:
         inputs:
@@ -67,7 +67,7 @@ configurations:
             - hidden0
         layers:
           - type: dense
-            outputSize: 100
+            outputSize: 300
           - type: relu
       hidden2:
         inputs:
@@ -77,7 +77,7 @@ configurations:
             - hidden1
         layers:
           - type: dense
-            outputSize: 100
+            outputSize: 300
           - type: relu
       halt:
         input: hidden2
@@ -140,13 +140,13 @@ configurations:
             - contactsNorm
         layers:
           - type: dense
-            outputSize: 100
+            outputSize: 300
           - type: relu
       hidden0:
         input: layer0
         layers:
           - type: dense
-            outputSize: 100
+            outputSize: 300
           - type: relu
       hidden1:
         inputs:
@@ -156,7 +156,7 @@ configurations:
             - hidden0
         layers:
           - type: dense
-            outputSize: 100
+            outputSize: 300
           - type: relu
       hidden2:
         inputs:
@@ -166,7 +166,7 @@ configurations:
             - hidden1
         layers:
           - type: dense
-            outputSize: 100
+            outputSize: 300
           - type: relu
       output:
         input: hidden2

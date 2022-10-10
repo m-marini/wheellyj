@@ -31,6 +31,7 @@ import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
+import org.jetbrains.annotations.NotNull;
 import org.mmarini.wheelly.agents.Agent;
 import org.mmarini.wheelly.agents.KpiCSVSubscriber;
 import org.mmarini.wheelly.apis.ObstacleMap;
@@ -72,6 +73,40 @@ public class Wheelly {
                 ? KpiCSVSubscriber.create(file, labels.split(","))
                 : KpiCSVSubscriber.create(file);
         agent.readKpis().subscribe(sub);
+    }
+
+    @NotNull
+    private static ArgumentParser createParser() {
+        ArgumentParser parser = ArgumentParsers.newFor(Wheelly.class.getName()).build()
+                .defaultHelp(true)
+                .version(Messages.getString("Wheelly.title"))
+                .description("Run a session of interaction between robot and environment.");
+        parser.addArgument("-v", "--version")
+                .action(Arguments.version())
+                .help("show current version");
+        parser.addArgument("-r", "--robot")
+                .setDefault("robot.yml")
+                .help("specify robot yaml configuration file");
+        parser.addArgument("-e", "--env")
+                .setDefault("env.yml")
+                .help("specify environment yaml configuration file");
+        parser.addArgument("-a", "--agent")
+                .setDefault("agent.yml")
+                .help("specify agent yaml configuration file");
+        parser.addArgument("-k", "--kpis")
+                .setDefault("")
+                .help("specify kpis path");
+        parser.addArgument("-l", "--labels")
+                .setDefault("")
+                .help("specify kpi labels comma separated");
+        parser.addArgument("-s", "--silent")
+                .action(Arguments.storeTrue())
+                .help("specify silent closing (no window messages)");
+        parser.addArgument("-t", "--time")
+                .setDefault(43200)
+                .type(Long.class)
+                .help("specify number of seconds of session duration");
+        return parser;
     }
 
     /**
@@ -182,35 +217,7 @@ public class Wheelly {
     }
 
     protected void start(String[] args) {
-        ArgumentParser parser = ArgumentParsers.newFor("Wheelly").build()
-                .defaultHelp(true)
-                .version(Messages.getString("Wheelly.title"))
-                .description("Run a session of interaction between robot and environment.");
-        parser.addArgument("-v", "--version")
-                .action(Arguments.version())
-                .help("show current version");
-        parser.addArgument("-r", "--robot")
-                .setDefault("robot.yml")
-                .help("specify robot yaml configuration file");
-        parser.addArgument("-e", "--env")
-                .setDefault("env.yml")
-                .help("specify environment yaml configuration file");
-        parser.addArgument("-a", "--agent")
-                .setDefault("agent.yml")
-                .help("specify agent yaml configuration file");
-        parser.addArgument("-k", "--kpis")
-                .setDefault("")
-                .help("specify kpis path");
-        parser.addArgument("-l", "--labels")
-                .setDefault("")
-                .help("specify kpi labels comma separated");
-        parser.addArgument("-s", "--silent")
-                .action(Arguments.storeTrue())
-                .help("specify silent closing (no window messages)");
-        parser.addArgument("-t", "--time")
-                .setDefault(43200)
-                .type(Long.class)
-                .help("specify number of seconds of session duration");
+        ArgumentParser parser = createParser();
         try {
             this.args = parser.parseArgs(args);
             frame.setSilent(this.args.getBoolean("silent"));
