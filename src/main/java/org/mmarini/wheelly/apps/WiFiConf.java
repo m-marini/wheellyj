@@ -35,6 +35,7 @@ import org.jetbrains.annotations.NotNull;
 import org.mmarini.wheelly.apis.NetworkConfig;
 import org.mmarini.wheelly.apis.RestApi;
 import org.mmarini.wheelly.swing.Messages;
+import org.mmarini.wheelly.swing.WiFiFrame;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,12 +44,12 @@ import java.util.List;
 
 import static java.lang.String.format;
 
-public class WifiConf {
-    private static final Logger logger = LoggerFactory.getLogger(WifiConf.class);
+public class WiFiConf {
+    private static final Logger logger = LoggerFactory.getLogger(WiFiConf.class);
 
     @NotNull
     private static ArgumentParser createParser() {
-        ArgumentParser parser = ArgumentParsers.newFor(WifiConf.class.getName()).build()
+        ArgumentParser parser = ArgumentParsers.newFor(WiFiConf.class.getName()).build()
                 .defaultHelp(true)
                 .version(Messages.getString("Wheelly.title"))
                 .description("Configure wifi.");
@@ -63,15 +64,14 @@ public class WifiConf {
         parser.addArgument("-p", "--password")
                 .help("specify the network pass phrase");
         parser.addArgument("action")
-                .required(true)
-                .choices("list", "show", "act", "inact")
+                .choices("list", "show", "act", "inact", "win")
                 .help("specify the action");
 
         return parser;
     }
 
     public static void main(String[] args) {
-        new WifiConf().run(args);
+        new WiFiConf().run(args);
     }
 
     private Namespace args;
@@ -86,7 +86,7 @@ public class WifiConf {
             throw new IllegalArgumentException("Missing pass phrase");
         }
         NetworkConfig conf = RestApi.postConfig(args.get("address"), true, ssid, password);
-        System.out.println(format("Activated network: \"%s\"", conf.getSsid()));
+        System.out.printf("Activated network: \"%s\"%n", conf.getSsid());
         System.out.println("Wheelly restart required to reload new configuration.");
     }
 
@@ -100,13 +100,13 @@ public class WifiConf {
             throw new IllegalArgumentException("Missing pass phrase");
         }
         NetworkConfig conf = RestApi.postConfig(args.get("address"), false, ssid, password);
-        System.out.println(format("Inactivated network: \"%s\"", conf.getSsid()));
+        System.out.printf("Inactivated network: \"%s\"%n", conf.getSsid());
         System.out.println("Wheelly restart required to reload new configuration.");
-        System.out.println("Wheelly will act as access point for the \"Wheelly\" network without pass phrase.");
+        System.out.println("Wheelly will act as access point for the \"Wheelly\" network without pass phrase at default address 192.168.4.1.");
     }
 
     private void list() throws IOException {
-        List<String> netList = RestApi.getNetworkList(args.getString("address"));
+        List<String> netList = RestApi.getNetworks(args.getString("address"));
         System.out.println("Networks");
         for (String network : netList) {
             System.out.println("  " + network);
@@ -131,6 +131,9 @@ public class WifiConf {
                 case "inact":
                     inact();
                     break;
+                case "win":
+                    win();
+                    break;
                 default:
                     throw new IllegalArgumentException(format("Wrong action \"%s\"", action));
             }
@@ -146,8 +149,12 @@ public class WifiConf {
     private void show() throws IOException {
         NetworkConfig conf = RestApi.getNetworkConfig(args.getString("address"));
         System.out.println("Configuration:");
-        System.out.println(format(" Status: %s", conf.isActive() ? "active" : "inactive"));
-        System.out.println(format(" Network SSID: \"%s\"", conf.getSsid()));
+        System.out.printf(" Status: %s%n", conf.isActive() ? "active" : "inactive");
+        System.out.printf(" Network SSID: \"%s\"%n", conf.getSsid());
         System.out.println(" Password: ***");
+    }
+
+    private void win() throws IOException {
+        new WiFiFrame().start(args.getString("address"));
     }
 }

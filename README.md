@@ -41,6 +41,38 @@ mvn assembly:assembly -DskipTests
 
 In `target` folder you will find an installation zip file
 
+### Configure Robot Wifi connection 
+
+After installed the application run the command:
+
+```bash
+java -classpath lib/wheelly-0.3.0.jar org.mmarini.wheelly.apps.WiFiConf win
+```
+or by CLP (Command Line Processor)
+```bash
+>java -classpath lib/wheelly-0.3.0.jar org.mmarini.wheelly.apps.WiFiConf -h
+
+usage: org.mmarini.wheelly.apps.WiFiConf
+       [-h] [-v] [-s SSID] [-a ADDRESS] [-p PASSWORD]
+       {list,show,act,inact,win}
+
+Configure wifi.
+
+positional arguments:
+  {list,show,act,inact,win}
+                         specify the action
+
+named arguments:
+  -h, --help             show this help message and exit
+  -v, --version          show current version
+  -s SSID, --ssid SSID   specify the SSID (network identification)
+  -a ADDRESS, --address ADDRESS
+                         specify   the   host    api    address   (default:
+                         192.168.4.1)
+  -p PASSWORD, --password PASSWORD
+                         specify the network pass phrase
+```
+
 ### Run the server
 
 After installed the application run the command:

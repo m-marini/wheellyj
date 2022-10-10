@@ -53,6 +53,12 @@ public class RestApi {
             "networks", arrayItems(string())
     ), List.of("networks"));
 
+    /**
+     * Returns the network configuration
+     *
+     * @param address the robot address
+     * @throws IOException in case of error
+     */
     public static NetworkConfig getNetworkConfig(String address) throws IOException {
         requireNonNull(address);
         String apiUrl = format("http://%s/api/v1/wheelly/networks/network", address);
@@ -66,7 +72,13 @@ public class RestApi {
         return response.readEntity(NetworkConfig.class);
     }
 
-    public static List<String> getNetworkList(String address) throws IOException {
+    /**
+     * Returns the networks list
+     *
+     * @param address the robot address
+     * @throws IOException in case of error
+     */
+    public static List<String> getNetworks(String address) throws IOException {
         requireNonNull(address);
         String apiUrl = format("http://%s/api/v1/wheelly/networks", address);
         logger.info("GET {}", apiUrl);
@@ -85,12 +97,22 @@ public class RestApi {
                 .collect(Collectors.toList());
     }
 
-    public static NetworkConfig postConfig(Object address, boolean b, String ssid, String password) throws IOException {
+    /**
+     * Changes the configuration and returns the new configuration
+     *
+     * @param address  the robot address
+     * @param active   true if activated configuration
+     * @param ssid     the network ssid
+     * @param password the pass phrase of network
+     * @throws IOException in case of error
+     */
+    public static NetworkConfig postConfig(Object address, boolean active, String ssid, String password) throws IOException {
         requireNonNull(address);
         requireNonNull(ssid);
         requireNonNull(password);
         String apiUrl = format("http://%s/api/v1/wheelly/networks/network", address);
-        NetworkConfig body = new NetworkConfig(b, ssid, password);
+        NetworkConfig body = new NetworkConfig(active, ssid, password);
+        logger.info("POST {}", apiUrl);
         Client client = ClientBuilder.newClient();
         WebTarget target = client.target(apiUrl);
         Response response = target.request(MediaType.APPLICATION_JSON)
