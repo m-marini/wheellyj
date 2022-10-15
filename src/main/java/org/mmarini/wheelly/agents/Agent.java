@@ -57,7 +57,7 @@ public interface Agent extends Closeable {
     /**
      * Returns the agent specification json node
      */
-    JsonNode getSpec();
+    JsonNode getJson();
 
     /**
      * Returns the state specification

@@ -39,9 +39,9 @@ import java.util.Map;
 import static org.mmarini.yaml.schema.Validator.*;
 
 /**
- * Transpiller of simplified agent specification to internal agent specification
+ * Transpiler of simplified agent specification to internal agent specification
  */
-public class AgentTraspiller {
+public class AgentTranspiler {
     public static final Validator AGENT_VALIDATOR = objectPropertiesRequired(Map.of(
             "version", string(values("0.1")),
             "rewardAlpha", positiveNumber(),
@@ -49,7 +49,8 @@ public class AgentTraspiller {
             "criticAlpha", positiveNumber(),
             "lambda", nonNegativeNumber(),
             "policy", NetworkTranspiller.NETWORK_SPEC,
-            "critic", NetworkTranspiller.NETWORK_SPEC
+            "critic", NetworkTranspiller.NETWORK_SPEC,
+            "inputProcess", InputProcessor.PROCESSOR_LIST
     ), List.of(
             "rewardAlpha", "policyAlpha", "criticAlpha", "lambda", "policy", "critic"
     ));
@@ -67,8 +68,9 @@ public class AgentTraspiller {
     private float policyAlpha;
     private float criticAlpha;
     private float lambda;
+    private InputProcessor processor;
 
-    public AgentTraspiller(JsonNode spec,
+    public AgentTranspiler(JsonNode spec,
                            Locator locator,
                            File path,
                            int savingIntervalStep,
@@ -89,7 +91,8 @@ public class AgentTraspiller {
         parse();
         return new TDAgent(stateSpec, actionsSpec, 0,
                 rewardAlpha, policyAlpha, criticAlpha, lambda,
-                policy, critic, random, path, savingIntervalStep);
+                policy, critic, processor,
+                random, path, savingIntervalStep);
     }
 
     void parse() {
@@ -98,7 +101,11 @@ public class AgentTraspiller {
         this.policyAlpha = (float) locator.path("policyAlpha").getNode(spec).asDouble();
         this.criticAlpha = (float) locator.path("criticAlpha").getNode(spec).asDouble();
         this.lambda = (float) locator.path("lambda").getNode(spec).asDouble();
-        Map<String, Long> stateSizes = TDAgent.getStateSizes(stateSpec);
+        this.processor = !locator.path("inputProcess").getNode(spec).isMissingNode()
+                ? InputProcessor.create(spec, locator.path("inputProcess"), this.stateSpec)
+                : null;
+        Map<String, SignalSpec> postProcSpec = processor != null ? processor.getSpec() : stateSpec;
+        Map<String, Long> stateSizes = TDAgent.getStateSizes(postProcSpec);
         this.policy = new NetworkTranspiller(spec, locator.path("policy"), stateSizes, random).build();
         this.critic = new NetworkTranspiller(spec, locator.path("critic"), stateSizes, random).build();
     }

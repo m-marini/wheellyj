@@ -109,8 +109,9 @@ public abstract class SignalSpec {
             }
             if (!(spec2.get(key).equals(spec))) {
                 throw new IllegalArgumentException(format(
-                        "Entry \"%s\" in %s must be equal to %s ",
-                        key, description1, description2
+                        "Entry \"%s\" in %s (%s) must be equal to %s (%s)",
+                        key, description1, spec2.get(key),
+                        description2, spec
                 ));
             }
         }
@@ -145,5 +146,12 @@ public abstract class SignalSpec {
     /**
      * Returns the json node of spec
      */
-    public abstract JsonNode json();
+    public abstract JsonNode getJson();
+
+    /**
+     * Returns the number of elements
+     */
+    public long getSize() {
+        return Arrays.stream(shape).reduce(1, (a, b) -> a * b);
+    }
 }

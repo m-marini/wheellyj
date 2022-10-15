@@ -48,7 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.wheelly.engines.deepl.TestFunctions.text;
 import static org.mmarini.yaml.Utils.fromText;
 
-class AgentTraspillerTest {
+class AgentTranspilerTest {
     private static final String YAML = text(
             "---",
             "version: \"0.1\"",
@@ -72,6 +72,36 @@ class AgentTraspillerTest {
             "    - type: softmax",
             "      temperature: 0.8"
     );
+    private static final String YAML1 = text(
+            "---",
+            "version: \"0.1\"",
+            "policyAlpha: 1e-3",
+            "criticAlpha: 1e-3",
+            "lambda: 0.8",
+            "rewardAlpha: 0.1",
+            "critic:",
+            "  output:",
+            "    input: tiles",
+            "    layers:",
+            "    - type: dense",
+            "      outputSize: 1",
+            "    - type: relu",
+            "    - type: tanh",
+            "policy:",
+            "  output:",
+            "    input: tiles",
+            "    layers:",
+            "    - type: dense",
+            "      outputSize: 3",
+            "    - type: tanh",
+            "    - type: softmax",
+            "      temperature: 0.8",
+            "inputProcess:",
+            "  - class: org.mmarini.wheelly.agents.TilesProcessor",
+            "    name: tiles",
+            "    inputs:",
+            "      input: 3"
+    );
 
     @Test
     void build() throws IOException {
@@ -84,7 +114,7 @@ class AgentTraspillerTest {
         );
         Random random = Nd4j.getRandom();
         random.setSeed(1234);
-        AgentTraspiller tr = new AgentTraspiller(agentSpec, Locator.root(), null, Integer.MAX_VALUE, stateSpec, actionSpec, random);
+        AgentTranspiler tr = new AgentTranspiler(agentSpec, Locator.root(), null, Integer.MAX_VALUE, stateSpec, actionSpec, random);
 
         TDAgent agent = tr.build();
 
@@ -129,6 +159,65 @@ class AgentTraspillerTest {
                 isA(TDTanh.class)));
 
         assertArrayEquals(new long[]{2, 1},
+                ((TDDense) agent.getCritic().getLayers().get("output[0]")).getW().shape());
+    }
+
+    @Test
+    void build1() throws IOException {
+        JsonNode agentSpec = fromText(YAML1);
+        Map<String, SignalSpec> stateSpec = Map.of(
+                "input", new FloatSignalSpec(new long[]{2}, 0, 1)
+        );
+        Map<String, SignalSpec> actionSpec = Map.of(
+                "output", new IntSignalSpec(new long[]{1}, 3)
+        );
+        Random random = Nd4j.getRandom();
+        random.setSeed(1234);
+        AgentTranspiler tr = new AgentTranspiler(agentSpec, Locator.root(), null, Integer.MAX_VALUE, stateSpec, actionSpec, random);
+
+        TDAgent agent = tr.build();
+
+        assertEquals(0.1f, agent.getRewardAlpha());
+
+        assertThat(agent.getPolicy().getForwardSeq(), contains(
+                "output[0]",
+                "output[1]",
+                "output"
+        ));
+
+        assertEquals(0.1f, agent.getRewardAlpha());
+        assertThat(agent.getPolicy().getLayers(), hasEntry(
+                equalTo("output[0]"),
+                isA(TDDense.class)));
+        assertThat(agent.getPolicy().getLayers(), hasEntry(
+                equalTo("output[1]"),
+                isA(TDTanh.class)));
+        assertThat(agent.getPolicy().getLayers(), hasEntry(
+                equalTo("output"),
+                isA(TDSoftmax.class)));
+
+        assertArrayEquals(new long[]{64, 3},
+                ((TDDense) agent.getPolicy().getLayers().get("output[0]")).getW().shape());
+        assertEquals(0.8f,
+                ((TDSoftmax) agent.getPolicy().getLayers().get("output")).getTemperature());
+
+        assertThat(agent.getCritic().getForwardSeq(), contains(
+                "output[0]",
+                "output[1]",
+                "output"
+        ));
+
+        assertThat(agent.getCritic().getLayers(), hasEntry(
+                equalTo("output[0]"),
+                isA(TDDense.class)));
+        assertThat(agent.getCritic().getLayers(), hasEntry(
+                equalTo("output[1]"),
+                isA(TDRelu.class)));
+        assertThat(agent.getCritic().getLayers(), hasEntry(
+                equalTo("output"),
+                isA(TDTanh.class)));
+
+        assertArrayEquals(new long[]{64, 1},
                 ((TDDense) agent.getCritic().getLayers().get("output[0]")).getW().shape());
     }
 }

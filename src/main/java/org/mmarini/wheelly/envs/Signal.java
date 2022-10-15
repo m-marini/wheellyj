@@ -44,4 +44,6 @@ public interface Signal {
      * @return
      */
     INDArray toINDArray();
+
+    long getSize();
 }

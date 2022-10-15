@@ -64,7 +64,8 @@ public class TDAgent implements Agent {
             "state", SignalSpec.SIGNAL_MAP_SPEC,
             "actions", SignalSpec.SIGNAL_MAP_SPEC,
             "policy", TDNetwork.NETWORK_SPEC,
-            "critic", TDNetwork.NETWORK_SPEC
+            "critic", TDNetwork.NETWORK_SPEC,
+            "inputProcess", InputProcessor.PROCESSOR_LIST
     ), List.of(
             "rewardAlpha", "policyAlpha", "criticAlpha", "lambda", "state", "actions", "policy", "critic"
     ));
@@ -131,7 +132,12 @@ public class TDAgent implements Agent {
         float lambda1 = (float) locator.path("lambda").getNode(spec).asDouble();
         TDNetwork policy = TDNetwork.create(spec, locator.path("policy"), "policy", props, random);
         TDNetwork critic = TDNetwork.create(spec, locator.path("critic"), "critic", props, random);
-        return new TDAgent(state, actions, avgReward, rewardAlpha, policyAlpha1, criticAlpha1, lambda1, policy, critic, random, path, savingIntervalSteps);
+        InputProcessor processor1 = !locator.path("inputProcess").getNode(spec).isMissingNode()
+                ? InputProcessor.create(spec, locator.path("inputProcess"), state)
+                : null;
+
+        return new TDAgent(state, actions, avgReward, rewardAlpha, policyAlpha1, criticAlpha1, lambda1,
+                policy, critic, processor1, random, path, savingIntervalSteps);
     }
 
     /**
@@ -163,7 +169,7 @@ public class TDAgent implements Agent {
             }
         } else {
             // init agent
-            return new AgentTraspiller(root, locator, path, savingIntervalStep,
+            return new AgentTranspiler(root, locator, path, savingIntervalStep,
                     env.getState(), env.getActions(), random)
                     .build();
         }
@@ -279,7 +285,7 @@ public class TDAgent implements Agent {
     static JsonNode specFromSignalMap(Map<String, SignalSpec> actions) {
         ObjectNode node = Utils.objectMapper.createObjectNode();
         for (Map.Entry<String, SignalSpec> entry : actions.entrySet()) {
-            node.set(entry.getKey(), entry.getValue().json());
+            node.set(entry.getKey(), entry.getValue().getJson());
         }
         return node;
     }
@@ -297,6 +303,8 @@ public class TDAgent implements Agent {
     private final float criticAlpha;
     private final File modelPath;
     private final int savingIntervalSteps;
+    private final InputProcessor processor;
+    private final Map<String, SignalSpec> processedState;
     private float avgReward;
     private Map<String, Signal> lastActions;
     private Map<String, INDArray> lastInputs;
@@ -315,31 +323,35 @@ public class TDAgent implements Agent {
      * @param lambda              the TD lambda factor
      * @param policy              the policy network
      * @param critic              the critic network
+     * @param processor           the input state processor
      * @param random              the random generator
      * @param modelPath           the model saving path
      * @param savingIntervalSteps the number of steps between each model saving
      */
     public TDAgent(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
                    float avgReward, float rewardAlpha, float policyAlpha, float criticAlpha, float lambda,
-                   TDNetwork policy, TDNetwork critic, Random random, File modelPath, int savingIntervalSteps) {
+                   TDNetwork policy, TDNetwork critic, InputProcessor processor,
+                   Random random, File modelPath, int savingIntervalSteps) {
         this.state = requireNonNull(state);
         this.actions = requireNonNull(actions);
         this.rewardAlpha = rewardAlpha;
         this.policy = requireNonNull(policy);
         this.critic = requireNonNull(critic);
+        this.processor = processor;
         this.random = requireNonNull(random);
+        this.lambda = lambda;
+        this.policyAlpha = policyAlpha;
+        this.criticAlpha = criticAlpha;
         this.avgReward = avgReward;
         this.modelPath = modelPath;
+        this.processedState = processor != null ? processor.getSpec() : state;
         this.savingIntervalSteps = savingIntervalSteps;
         this.indicatorsPub = PublishProcessor.create();
         indicators = indicatorsPub.observeOn(Schedulers.io())
                 .map(TDAgent::flatKpis)
                 .publish()
                 .autoConnect();
-        this.lambda = lambda;
-        this.policyAlpha = policyAlpha;
-        this.criticAlpha = criticAlpha;
-        Map<String, Long> stateSizes = getStateSizes(state);
+        Map<String, Long> stateSizes = getStateSizes(processedState);
         Map<String, Long> actionSizes = getActionSizes(actions);
 
         policy.validate(stateSizes, actionSizes);
@@ -348,7 +360,8 @@ public class TDAgent implements Agent {
 
     @Override
     public Map<String, Signal> act(Map<String, Signal> state) {
-        Map<String, INDArray> inputs = getInput(state);
+        Map<String, Signal> procState = processState(state);
+        Map<String, INDArray> inputs = getInput(procState);
         Map<String, INDArray> policyStatus = policy.forward(inputs);
         Map<String, INDArray> pis = this.pis(policyStatus);
         Map<String, Signal> flattenActions = chooseActions(pis, random);
@@ -401,6 +414,23 @@ public class TDAgent implements Agent {
         return criticState.get("output").getFloat(0, 0);
     }
 
+    @Override
+    public JsonNode getJson() {
+        ObjectNode spec = Utils.objectMapper.createObjectNode()
+                .put("rewardAlpha", rewardAlpha)
+                .put("policyAlpha", policyAlpha)
+                .put("criticAlpha", criticAlpha)
+                .put("lambda", lambda);
+        spec.set("state", specFromSignalMap(state));
+        spec.set("actions", specFromSignalMap(actions));
+        spec.set("policy", policy.getSpec());
+        spec.set("critic", critic.getSpec());
+        if (processor != null) {
+            spec.set("inputProcess", processor.getJson());
+        }
+        return spec;
+    }
+
     public float getLambda() {
         return lambda;
     }
@@ -422,20 +452,6 @@ public class TDAgent implements Agent {
 
     public float getRewardAlpha() {
         return rewardAlpha;
-    }
-
-    @Override
-    public JsonNode getSpec() {
-        ObjectNode spec = Utils.objectMapper.createObjectNode()
-                .put("rewardAlpha", rewardAlpha)
-                .put("policyAlpha", policyAlpha)
-                .put("criticAlpha", criticAlpha)
-                .put("lambda", lambda);
-        spec.set("state", specFromSignalMap(state));
-        spec.set("actions", specFromSignalMap(actions));
-        spec.set("policy", policy.getSpec());
-        spec.set("critic", critic.getSpec());
-        return spec;
     }
 
     @Override
@@ -474,6 +490,10 @@ public class TDAgent implements Agent {
                 .collect(Tuple2.toMap());
     }
 
+    private Map<String, Signal> processState(Map<String, Signal> state) {
+        return processor != null ? processor.apply(state) : state;
+    }
+
     /**
      * Returns the performance indicators.
      * <pre>
@@ -510,7 +530,7 @@ public class TDAgent implements Agent {
                 throw new IOException(format("Unable to create path %s", pathFile.getCanonicalPath()));
             }
         }
-        JsonNode spec = getSpec();
+        JsonNode spec = getJson();
         Utils.objectMapper.writerWithDefaultPrettyPrinter().writeValue(new File(pathFile, "agent.yml"), spec);
         Map<String, INDArray> props = getProps();
         Serde.serizalize(new File(pathFile, "agent.bin"), props);
@@ -525,7 +545,8 @@ public class TDAgent implements Agent {
     void train(Map<String, Signal> actions, Environment.ExecutionResult result) {
         Map<String, INDArray> s0 = lastInputs;
         float reward = result.reward;
-        Map<String, INDArray> s1 = getInput(result.state);
+        Map<String, Signal> procState = processState(result.state);
+        Map<String, INDArray> s1 = getInput(procState);
         Map<String, INDArray> c0 = critic.forward(s0);
         float v0 = c0.get("output").getFloat(0, 0);
         float v1 = getCriticValue(s1);
@@ -573,5 +594,4 @@ public class TDAgent implements Agent {
             autosave();
         }
     }
-
 }

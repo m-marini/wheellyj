@@ -52,7 +52,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import static java.lang.Math.exp;
-import static org.mmarini.wheelly.apps.Yaml.baseConfig;
+import static org.mmarini.wheelly.apps.Yaml.BASE_CONFIG;
 
 /**
  * Run a test to check for robot environment with random behavior agent
@@ -103,7 +103,7 @@ public class Wheelly {
                 .action(Arguments.storeTrue())
                 .help("specify silent closing (no window messages)");
         parser.addArgument("-t", "--time")
-                .setDefault(43200)
+                .setDefault(43200L)
                 .type(Long.class)
                 .help("specify number of seconds of session duration");
         return parser;
@@ -120,7 +120,7 @@ public class Wheelly {
     protected static <T> T fromConfig(String file, Object[] args, Class<?>[] argClasses) {
         try {
             JsonNode config = Utils.fromFile(file);
-            baseConfig().apply(Locator.root()).accept(config);
+            BASE_CONFIG.apply(Locator.root()).accept(config);
             String active = Locator.locate("active").getNode(config).asText();
             Locator baseLocator = Locator.locate("configurations").path(active);
             return Utils.createObject(config, baseLocator, args, argClasses);
@@ -187,12 +187,13 @@ public class Wheelly {
                     if (kpis.length() != 0) {
                         createKpis(agent, new File(kpis), args.getString("labels"));
                     }
+                    long start = System.currentTimeMillis();
                     Map<String, Signal> state = env.reset();
                     frame.setObstacleMap(robot.getObstaclesMap()
                             .map(ObstacleMap::getPoints)
                             .orElse(null));
                     frame.setRobot(robot);
-                    long sessionDuration = args.getInt("time");
+                    long sessionDuration = args.getLong("time");
                     logger.info("Session are running for {} sec...", sessionDuration);
                     sessionDuration *= 1000;
                     float avgRewards = 0;
@@ -204,6 +205,7 @@ public class Wheelly {
                         avgRewards = DEFAULT_DISCOUNT * (avgRewards - reward) + reward;
                         frame.setRobot(robot);
                         frame.setReward(avgRewards);
+                        frame.setTimeRatio((float) robot.getTime() / (System.currentTimeMillis() - start));
                         running = robot.getElapsed() <= sessionDuration &&
                                 frame.isVisible();
                     }

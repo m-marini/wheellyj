@@ -39,6 +39,7 @@ import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mmarini.wheelly.engines.deepl.TestFunctions.matrixCloseTo;
 import static org.mmarini.wheelly.engines.deepl.TestFunctions.text;
 
@@ -113,6 +114,9 @@ class TDAgentCreateTest {
         assertEquals(1e-3f, agent.getPolicyAlpha());
         assertEquals(1e-3f, agent.getCriticAlpha());
         assertEquals(0.5f, agent.getLambda());
+
+        JsonNode json = agent.getJson();
+        assertTrue(json.path("inputProcess").isMissingNode());
     }
 
     @Test

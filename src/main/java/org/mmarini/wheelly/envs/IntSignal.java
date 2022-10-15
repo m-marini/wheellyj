@@ -57,9 +57,9 @@ public class IntSignal implements Signal {
     public IntSignal(int[] data, int[] shape) {
         this.data = requireNonNull(data);
         this.shape = requireNonNull(shape);
-        if (data.length != size()) {
+        if (data.length != getSize()) {
             throw new IllegalArgumentException(format("data size must be equal to shape size (%d) != (%d)",
-                    data.length, size()));
+                    data.length, getSize()));
         }
     }
 
@@ -108,10 +108,9 @@ public class IntSignal implements Signal {
         return shape;
     }
 
-    /**
-     * Returns the size of signals
-     */
-    public int size() {
+
+    @Override
+    public long getSize() {
         return Arrays.stream(shape).reduce(1, (a, b) -> a * b);
     }
 

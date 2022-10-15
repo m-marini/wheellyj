@@ -115,7 +115,7 @@ public class RandomAgent implements Agent {
     }
 
     @Override
-    public JsonNode getSpec() {
+    public JsonNode getJson() {
         return null;
     }
 

@@ -178,6 +178,7 @@ public class EnvironmentPanel extends JComponent {
     private boolean canMoveForward;
     private boolean canMoveBacward;
     private long time;
+    private float timeRatio;
 
     public EnvironmentPanel() {
         setBackground(Color.BLACK);
@@ -215,7 +216,7 @@ public class EnvironmentPanel extends JComponent {
         FontMetrics fm = getFontMetrics(getFont());
         g.fillRect(0, 0, HUD_WIDTH, 6 * fm.getHeight());
         g.setColor(getForeground());
-        drawLine(g, format("Time     %s", strDate(time)), 0, Color.GREEN);
+        drawLine(g, format("Time     %s %.1fx", strDate(time), timeRatio), 0, Color.GREEN);
         drawLine(g, format("Reward   %.2f", reward), 1, Color.GREEN);
         drawLine(g, format("Distance %.2f m", distance), 2, Color.GREEN);
         drawLine(g, format("Contacts %x", contacts), 3, Color.GREEN);
@@ -225,6 +226,10 @@ public class EnvironmentPanel extends JComponent {
         if (!canMoveBacward) {
             drawLine(g, "BACKWARD STOP", 5, Color.RED);
         }
+    }
+
+    public void setTimeRatio(float timeRatio) {
+        this.timeRatio = timeRatio;
     }
 
     private void drawLine(Graphics g, String text, int row, Color color) {

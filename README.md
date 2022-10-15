@@ -41,7 +41,7 @@ mvn assembly:assembly -DskipTests
 
 In `target` folder you will find an installation zip file
 
-### Configure Robot Wifi connection 
+### Configure robot Wifi connection 
 
 After installed the application run the command:
 

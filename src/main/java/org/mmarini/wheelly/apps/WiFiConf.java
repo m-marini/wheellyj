@@ -64,7 +64,7 @@ public class WiFiConf {
         parser.addArgument("-p", "--password")
                 .help("specify the network pass phrase");
         parser.addArgument("action")
-                .choices("list", "show", "act", "inact", "win")
+                .choices("list", "show", "act", "inact", "ui")
                 .help("specify the action");
 
         return parser;
@@ -131,8 +131,8 @@ public class WiFiConf {
                 case "inact":
                     inact();
                     break;
-                case "win":
-                    win();
+                case "ui":
+                    ui();
                     break;
                 default:
                     throw new IllegalArgumentException(format("Wrong action \"%s\"", action));
@@ -154,7 +154,7 @@ public class WiFiConf {
         System.out.println(" Password: ***");
     }
 
-    private void win() throws IOException {
+    private void ui() throws IOException {
         new WiFiFrame().start(args.getString("address"));
     }
 }

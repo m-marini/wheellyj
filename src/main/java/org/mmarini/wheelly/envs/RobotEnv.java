@@ -69,6 +69,7 @@ public class RobotEnv implements Environment {
             "sensor", new FloatSignalSpec(new long[]{1}, MIN_SENSOR_DIR, MAX_SENSOR_DIR),
             "distance", new FloatSignalSpec(new long[]{1}, MIN_DISTANCE, MAX_DISTANCE),
             "canMoveForward", new IntSignalSpec(new long[]{1}, 2),
+            "canMoveBackward", new IntSignalSpec(new long[]{1}, 2),
             "contacts", new IntSignalSpec(new long[]{1}, NUM_CONTACT_VALUES));
 
     private static final Validator ROBOT_ENV_SPEC = objectPropertiesRequired(Map.of(
@@ -89,7 +90,7 @@ public class RobotEnv implements Environment {
      * @param rewardFunction the reward function
      */
     public static RobotEnv create(RobotApi robot, FloatFunction<WheellyStatus> rewardFunction) {
-        return new RobotEnv(robot, rewardFunction,
+        return RobotEnv.create(robot, rewardFunction,
                 DEFAULT_INTERVAL, DEFAULT_REACTION_INTERVAL, DEFAULT_COMMAND_INTERVAL,
                 DEFAULT_NUM_DIRECTION_VALUES, DEFAULT_NUM_SENSOR_VALUES, DEFAULT_NUM_SPEED_VALUES);
     }
@@ -112,9 +113,34 @@ public class RobotEnv implements Environment {
         int numSensorValues = locator.path("numSensorValues").getNode(root).asInt(DEFAULT_NUM_SENSOR_VALUES);
         int numSpeedValues = locator.path("numSpeedValues").getNode(root).asInt(DEFAULT_NUM_SPEED_VALUES);
 
-        return new RobotEnv(robot, reward,
+        return RobotEnv.create(robot, reward,
                 interval, reactionInterval, commandInterval,
                 numDirectionValues, numSensorValues, numSpeedValues);
+    }
+
+    /**
+     * Returns the robot environment
+     *
+     * @param robot              the robot api
+     * @param reward             the reward function
+     * @param interval           the interval
+     * @param reactionInterval   the reaction interval
+     * @param commandInterval    the command interval
+     * @param numDirectionValues number of direction values
+     * @param numSensorValues    number of sensor direction values
+     * @param numSpeedValues     number of speed values
+     */
+    public static RobotEnv create(RobotApi robot, FloatFunction<WheellyStatus> reward,
+                                  long interval, long reactionInterval, long commandInterval,
+                                  int numDirectionValues, int numSensorValues, int numSpeedValues) {
+        Map<String, SignalSpec> actions1 = Map.of(
+                "halt", new IntSignalSpec(new long[]{1}, 2),
+                "direction", new IntSignalSpec(new long[]{1}, numDirectionValues),
+                "speed", new IntSignalSpec(new long[]{1}, numSpeedValues),
+                "sensorAction", new IntSignalSpec(new long[]{1}, numSensorValues)
+        );
+
+        return new RobotEnv(robot, reward, interval, reactionInterval, commandInterval, actions1);
     }
 
     private final RobotApi robot;
@@ -133,35 +159,27 @@ public class RobotEnv implements Environment {
     private INDArray robotDir;
     private INDArray sensor;
     private boolean started;
-
+    private INDArray canMoveBackward;
 
     /**
      * Creates the robot environment
      *
-     * @param robot              the robot api
-     * @param reward             the reward function
-     * @param interval           the interval
-     * @param reactionInterval   the reaction interval
-     * @param commandInterval    the command interval
-     * @param numDirectionValues number of direction values
-     * @param numSensorValues    number of sensor direction values
-     * @param numSpeedValues     number of speed values
+     * @param robot            the robot api
+     * @param reward           the reward function
+     * @param interval         the interval
+     * @param reactionInterval the reaction interval
+     * @param commandInterval  the command interval
+     * @param actions          the actions spec
      */
     public RobotEnv(RobotApi robot, FloatFunction<WheellyStatus> reward,
                     long interval, long reactionInterval, long commandInterval,
-                    int numDirectionValues, int numSensorValues, int numSpeedValues) {
+                    Map<String, SignalSpec> actions) {
         this.robot = requireNonNull(robot);
         this.reward = requireNonNull(reward);
         this.interval = interval;
         this.reactionInterval = reactionInterval;
         this.commandInterval = commandInterval;
-
-        this.actions = Map.of(
-                "halt", new IntSignalSpec(new long[]{1}, 2),
-                "direction", new IntSignalSpec(new long[]{1}, numDirectionValues),
-                "speed", new IntSignalSpec(new long[]{1}, numSpeedValues),
-                "sensorAction", new IntSignalSpec(new long[]{1}, numSensorValues)
-        );
+        this.actions = requireNonNull(actions);
 
         this.started = false;
 
@@ -217,6 +235,7 @@ public class RobotEnv implements Environment {
                 "sensor", new ArraySignal(sensor),
                 "distance", new ArraySignal(distance),
                 "canMoveForward", new ArraySignal(canMoveForward),
+                "canMoveBackward", new ArraySignal(canMoveBackward),
                 "contacts", new ArraySignal(contacts)
         );
     }
@@ -326,6 +345,7 @@ public class RobotEnv implements Environment {
         sensor = Nd4j.createFromArray((float) status.getSensorRelativeDeg());
         distance = Nd4j.createFromArray((float) status.getSampleDistance());
         canMoveForward = Nd4j.createFromArray(status.getCannotMoveForward() ? 0F : 1F);
+        canMoveBackward = Nd4j.createFromArray(status.getCannotMoveBackward() ? 0F : 1F);
         contacts = Nd4j.createFromArray((float) status.getContactSensors());
     }
 }
