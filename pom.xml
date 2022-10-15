@@ -92,7 +92,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>org.mmarini.wheelly.apps.SerialBypass</mainClass>
+                            <mainClass>org.mmarini.wheelly.apps.Wheelly</mainClass>
                             <addClasspath>true</addClasspath>
                         </manifest>
                     </archive>

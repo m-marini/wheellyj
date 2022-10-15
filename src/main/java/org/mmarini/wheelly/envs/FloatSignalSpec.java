@@ -102,7 +102,7 @@ public class FloatSignalSpec extends SignalSpec {
     }
 
     @Override
-    public JsonNode json() {
+    public JsonNode getJson() {
         ObjectNode spec = Utils.objectMapper.createObjectNode();
         spec.put("type", "float");
         spec.put("minValue", minValue);

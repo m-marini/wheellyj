@@ -105,7 +105,7 @@ public class MapSignalSpec {
         ObjectNode spec = Utils.objectMapper.createObjectNode();
         spec.put("type", "map");
         for (Map.Entry<String, SignalSpec> entry : components.entrySet()) {
-            spec.set(entry.getKey(), entry.getValue().json());
+            spec.set(entry.getKey(), entry.getValue().getJson());
         }
         return spec;
 

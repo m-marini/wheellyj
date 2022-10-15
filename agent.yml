@@ -1,6 +1,6 @@
 ---
 version: "0.2"
-active: agent1
+active: tilesAgent
 
 configurations:
   randomAgent:
@@ -13,14 +13,17 @@ configurations:
       direction: 15
       sensorAction: 3
       speed: 8
-  agent1:
+  ######################################
+  # Base agent
+  ######################################
+  baseAgent:
     class: org.mmarini.wheelly.agents.TDAgent
     seed: 1234
-    modelPath: models/agent1
+    modelPath: models/baseAgent
     savingIntervalSteps: 1000
     rewardAlpha: 5e-3
-    policyAlpha: 30e-3
-    criticAlpha: 30e-3
+    policyAlpha: 100e-3
+    criticAlpha: 100e-3
     lambda: 0
     policy:
       sensorNorm:
@@ -48,6 +51,7 @@ configurations:
             - sensorNorm
             - distanceNorm
             - canMoveForward
+            - canMoveBackward
             - contactsNorm
         layers:
           - type: dense
@@ -86,7 +90,7 @@ configurations:
             outputSize: 2
           - type: tanh
           - type: softmax
-            temperature: 0.8
+            temperature: 0.6
       direction:
         input: hidden2
         layers:
@@ -94,7 +98,7 @@ configurations:
             outputSize: 25
           - type: tanh
           - type: softmax
-            temperature: 0.8
+            temperature: 0.6
       speed:
         input: hidden2
         layers:
@@ -102,7 +106,7 @@ configurations:
             outputSize: 9
           - type: tanh
           - type: softmax
-            temperature: 0.8
+            temperature: 0.6
       sensorAction:
         input: hidden2
         layers:
@@ -110,7 +114,7 @@ configurations:
             outputSize: 7
           - type: tanh
           - type: softmax
-            temperature: 0.8
+            temperature: 0.6
     critic:
       sensorNorm:
         input: sensor
@@ -137,6 +141,7 @@ configurations:
             - sensorNorm
             - distanceNorm
             - canMoveForward
+            - canMoveBackward
             - contactsNorm
         layers:
           - type: dense
@@ -167,6 +172,138 @@ configurations:
         layers:
           - type: dense
             outputSize: 300
+          - type: relu
+      output:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 1
+          - type: tanh
+######################################
+# Tiles agent
+######################################
+  tilesAgent:
+    class: org.mmarini.wheelly.agents.TDAgent
+    seed: 1234
+    modelPath: models/tilesAgent
+    savingIntervalSteps: 1000
+    rewardAlpha: 5e-3
+    policyAlpha: 100e-3
+    criticAlpha: 100e-3
+    lambda: 0
+    inputProcess:
+      - name: tiles
+        class: org.mmarini.wheelly.agents.TilesProcessor
+        inputs:
+          sensor: 7
+          distance: 30
+    policy:
+      layer0:
+        inputs:
+          type: concat
+          inputs:
+            - tiles
+            - canMoveForward
+            - canMoveBackward
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden0:
+        input: layer0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden1:
+        inputs:
+          type: sum
+          inputs:
+            - layer0
+            - hidden0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden2:
+        inputs:
+          type: sum
+          inputs:
+            - hidden0
+            - hidden1
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      halt:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 2
+          - type: tanh
+          - type: softmax
+            temperature: 0.6
+      direction:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 25
+          - type: tanh
+          - type: softmax
+            temperature: 0.6
+      speed:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 9
+          - type: tanh
+          - type: softmax
+            temperature: 0.6
+      sensorAction:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 7
+          - type: tanh
+          - type: softmax
+            temperature: 0.6
+    critic:
+      layer0:
+        inputs:
+          type: concat
+          inputs:
+            - tiles
+            - canMoveForward
+            - canMoveBackward
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden0:
+        input: layer0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden1:
+        inputs:
+          type: sum
+          inputs:
+            - layer0
+            - hidden0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden2:
+        inputs:
+          type: sum
+          inputs:
+            - hidden0
+            - hidden1
+        layers:
+          - type: dense
+            outputSize: 100
           - type: relu
       output:
         input: hidden2

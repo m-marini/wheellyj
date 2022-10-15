@@ -99,6 +99,10 @@ public interface Environment extends Closeable {
             return state;
         }
 
+        public ExecutionResult setState(Map<String, Signal> state) {
+            return new ExecutionResult(state, reward, terminal);
+        }
+
         @Override
         public int hashCode() {
             return Objects.hash(reward, state, terminal);

@@ -119,7 +119,6 @@ public class TDNetwork {
                 .filter(t -> t.getValue().isEmpty())
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toSet());
-
     }
 
     Map<String, long[]> createLayerSizes(Map<String, Long> inputSizes) {

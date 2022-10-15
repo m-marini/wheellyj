@@ -182,10 +182,9 @@ public class TDDense extends TDLayer {
         INDArray grad_dw = bin.mul(bgrad);
         ew.muli(lambda).addi(grad_dw);
 
-        INDArray db = eb.mul(delta);
-        b.addi(db);
-        INDArray dw = ew.mul(delta);
-        w.addi(dw);
+        b.addi(eb.mul(delta));
+        w.addi(ew.mul(delta));
+
         return new INDArray[]{
                 gradIn
         };

@@ -41,7 +41,6 @@ import static org.mmarini.wheelly.engines.deepl.TestFunctions.text;
 
 class TDAgentEnvCreateTest {
 
-    private static final float EPSILON = 1e-6f;
     private static final String YAML_LOAD = text(
             "---",
             "modelPath: models/test",
@@ -78,8 +77,7 @@ class TDAgentEnvCreateTest {
     );
     static final Environment MOCK_ENV = new Environment() {
         @Override
-        public void close() throws IOException {
-
+        public void close() {
         }
 
         @Override

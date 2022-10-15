@@ -39,26 +39,34 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
+import static org.mmarini.yaml.schema.Validator.objectPropertiesRequired;
+import static org.mmarini.yaml.schema.Validator.string;
 
 public class Utils {
 
     public static final ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
 
+    public static final Validator DYNAMIC_OBJECT = objectPropertiesRequired(Map.of(
+            "class", string()
+    ), List.of("class"));
+
     public static <T> T createObject(JsonNode root, Locator locator, Object[] args, Class<?>[] argClasses) {
         try {
-            Locator typeLocator = locator.path("class");
-            String type = typeLocator.getNode(root).asText(null);
-            Validator.assertFor(type != null, typeLocator, "missing");
-            Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(type);
+            DYNAMIC_OBJECT.apply(locator).accept(root);
+            Locator classLocator = locator.path("class");
+            String className = classLocator.getNode(root).asText();
+            Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(className);
             Class[] argsType = Stream.concat(Stream.of(JsonNode.class, Locator.class),
                             Arrays.stream(argClasses))
                     .toArray(Class[]::new);
             Method creator = clazz.getDeclaredMethod("create", argsType);
             if (!Modifier.isStatic(creator.getModifiers())) {
-                throw new IllegalArgumentException(format("Method %s.create is not static", type));
+                throw new IllegalArgumentException(format("Method %s.create is not static", className));
             }
             Object[] builderArgs = Stream.concat(Stream.of(root, locator),
                             Arrays.stream(args))

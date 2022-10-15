@@ -89,7 +89,7 @@ public class IntSignalSpec extends SignalSpec {
     }
 
     @Override
-    public JsonNode json() {
+    public JsonNode getJson() {
         ObjectNode spec = Utils.objectMapper.createObjectNode();
         spec.put("type", "int");
         spec.put("numValues", numValues);

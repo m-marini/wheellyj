@@ -107,6 +107,11 @@ public class ArraySignal implements Signal {
     }
 
     @Override
+    public long getSize() {
+        return value.length();
+    }
+
+    @Override
     public String toString() {
         return String.valueOf(value);
     }

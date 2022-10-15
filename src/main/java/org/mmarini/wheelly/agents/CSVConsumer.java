@@ -36,9 +36,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.function.Consumer;
 
+import static java.lang.Math.max;
+
 public class CSVConsumer implements Closeable, Consumer<INDArray> {
     private static final Logger logger = LoggerFactory.getLogger(CSVConsumer.class);
-    private static final int BUFFER_SIZE = 1000;
+    private static final int BUFFER_SIZE = 10000;
 
     /**
      * Returns the csv consumer that writes csv file
@@ -71,7 +73,8 @@ public class CSVConsumer implements Closeable, Consumer<INDArray> {
             shapeFile.getParentFile().mkdirs();
             dataFile.getParentFile().mkdirs();
             long length = data.length();
-            buffer = Nd4j.zeros(BUFFER_SIZE, length);
+            long numRows = max(BUFFER_SIZE / length, 1);
+            buffer = Nd4j.zeros(numRows, length);
             try {
                 INDArray shape = Nd4j.create(new long[][]{data.shape()});
                 Serde.toCsv(shapeFile, shape, false);

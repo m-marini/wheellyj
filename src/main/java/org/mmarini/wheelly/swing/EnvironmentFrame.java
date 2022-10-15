@@ -148,6 +148,10 @@ public class EnvironmentFrame extends JFrame {
         //envPanel.setObstacleMap(robot.getObstaclesMap().map(ObstacleMap::getPoints).orElse(null));
     }
 
+    public void setTimeRatio(float timeRatio) {
+        envPanel.setTimeRatio(timeRatio);
+    }
+
     /**
      * Run the windows
      */

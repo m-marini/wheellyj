@@ -115,7 +115,8 @@ class TDAgentSaveTest {
         TDNetwork critic = TDNetwork.create(criticSpec, Locator.root(), "", Map.of(), random);
         return new TDAgent(STATE_SPEC, ACTIONS_SPEC,
                 0, REWARD_ALPHA, ALPHA, ALPHA, LAMBDA,
-                policy, critic, random, null, Integer.MAX_VALUE);
+                policy, critic, null,
+                random, null, Integer.MAX_VALUE);
     }
 
     @Test

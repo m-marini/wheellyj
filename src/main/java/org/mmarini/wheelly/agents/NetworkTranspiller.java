@@ -112,7 +112,7 @@ public class NetworkTranspiller {
         } else if (stateSizes.containsKey(id)) {
             return stateSizes.get(id);
         } else {
-            throw new IllegalArgumentException(format("Undefined size of \"%s\"", id));
+            throw new IllegalArgumentException(format("Undefined signal \"%s\"", id));
         }
     }
 

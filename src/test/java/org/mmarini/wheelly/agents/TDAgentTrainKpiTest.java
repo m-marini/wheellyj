@@ -92,7 +92,9 @@ class TDAgentTrainKpiTest {
         JsonNode criticSpec = Utils.fromText(CRITIC_YAML);
         TDNetwork critic = TDNetwork.create(criticSpec, Locator.root(), "", Map.of(), random);
         return new TDAgent(STATE_SPEC, ACTIONS_SPEC,
-                1f, REWARD_ALPHA, ALPHA, ALPHA, LAMBDA, policy, critic, random, null, Integer.MAX_VALUE);
+                1f, REWARD_ALPHA, ALPHA, ALPHA, LAMBDA,
+                policy, critic, null,
+                random, null, Integer.MAX_VALUE);
     }
 
     @Test

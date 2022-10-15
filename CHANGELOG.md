@@ -14,7 +14,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #80: Robot environment with discrete actions
 - Issue #84: Generate kpis
 - Issue #85: Add WiFi configuration
-
+- Issue #89: Add state tiles coding
+- 
 ### Changed
 
 - Issue #71: Halt goal behaviour
