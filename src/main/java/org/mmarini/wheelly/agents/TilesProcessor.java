@@ -235,7 +235,7 @@ public interface TilesProcessor {
         float min = spec.getMinValue();
         float max = spec.getMaxValue();
         float scale = 1 / (max - min);
-        return x -> x.sub(min).mul(scale);
+        return x -> Transforms.min(Transforms.max(x, min), max).sub(min).mul(scale);
     }
 
     /**

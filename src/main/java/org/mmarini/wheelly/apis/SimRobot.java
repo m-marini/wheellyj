@@ -60,6 +60,8 @@ public class SimRobot implements RobotApi {
     public static final float Y_CENTER = 0;
     public static final double DEFAULT_ERR_SIGMA = 0.05;
     public static final double DEFAULT_ERR_SENSOR = 0.05;
+    public static final float ROBOT_WIDTH = 0.18F;
+    public static final float ROBOT_LENGTH = 0.26F;
     private static final float MIN_OBSTACLE_DISTANCE = 1;
     private static final float MAX_OBSTACLE_DISTANCE = 3;
     private static final Vec2 GRAVITY = new Vec2();
@@ -67,8 +69,6 @@ public class SimRobot implements RobotApi {
     private static final int POSITION_ITER = 10;
     private static final float RAD_10 = (float) toRadians(10);
     private static final float RAD_30 = (float) toRadians(30);
-    private static final float ROBOT_WIDTH = 0.18F;
-    private static final float ROBOT_LENGTH = 0.26F;
     private static final float ROBOT_TRACK = 0.136F;
     private static final float ROBOT_MASS = 0.78F;
     private static final float ROBOT_DENSITY = ROBOT_MASS / ROBOT_LENGTH / ROBOT_WIDTH;
@@ -128,6 +128,22 @@ public class SimRobot implements RobotApi {
                 robotRandom,
                 errSigma,
                 errSensor);
+    }
+
+    protected static void createObstacle(World world, Point2D location) {
+        PolygonShape obsShape = new PolygonShape();
+        obsShape.setAsBox(OBSTACLE_SIZE / 2, OBSTACLE_SIZE / 2);
+
+        FixtureDef obsFixDef = new FixtureDef();
+        obsFixDef.shape = obsShape;
+
+        BodyDef obsDef = new BodyDef();
+        obsDef.type = BodyType.STATIC;
+
+        obsDef.position.x = (float) location.getX();
+        obsDef.position.y = (float) location.getY();
+        Body obs = world.createBody(obsDef);
+        obs.createFixture(obsFixDef);
     }
 
     /**
@@ -225,14 +241,19 @@ public class SimRobot implements RobotApi {
         this.frSensor = createSensor(robot, FRONT_RIGHT_VERTICES);
         this.rlSensor = createSensor(robot, REAR_LEFT_VERTICES);
         this.rrSensor = createSensor(robot, REAR_RIGHT_VERTICES);
+
+        // Create obstacle fixture
+        for (Point2D point : obstacleMap.getPoints()) {
+            createObstacle(world, point);
+        }
     }
 
     /**
      *
      */
     private void checkForSpeed() {
-        if ((speed > 0 && left > 0 && right > 0 && !canMoveForward)
-                || (speed < 0 && left < 0 && right < 0 && !canMoveBackward)) {
+        if (((speed > 0 || left > 0 || right > 0) && !canMoveForward)
+                || ((speed < 0 || left < 0 || right < 0) && !canMoveBackward)) {
             halt();
         }
     }
@@ -341,6 +362,15 @@ public class SimRobot implements RobotApi {
         return (int) round(toDegrees(normalizeAngle(PI / 2 - robot.getAngle())));
     }
 
+    /**
+     * Sets the robot direction
+     *
+     * @param direction the direction in DEG
+     */
+    public void setRobotDir(int direction) {
+        robot.setTransform(robot.getPosition(), (float) toNormalRadians(90 - direction));
+    }
+
     @Override
     public Point2D getRobotPos() {
         Vec2 pos = robot.getPosition();
@@ -410,6 +440,17 @@ public class SimRobot implements RobotApi {
     @Override
     public void scan(int dir) {
         sensor = dir;
+    }
+
+    /**
+     * @param x
+     * @param y
+     */
+    public void setRobotPos(float x, float y) {
+        Vec2 pos = new Vec2();
+        pos.x = x;
+        pos.y = y;
+        robot.setTransform(pos, robot.getAngle());
     }
 
     @Override
