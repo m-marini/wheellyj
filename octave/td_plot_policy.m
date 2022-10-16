@@ -12,18 +12,18 @@ MODE = {"mean", "min", "max", "lin", "exp"};
 LEN = max(round(N / 100), 1);
 STRIDE = max((LEN / 2), 1);
 
-subplot(141);
+subplot(221);
 plot_trend(HALT, LEN, STRIDE, MODE);
 title("Halt max prob.");
 
-subplot(142);
+subplot(222);
 plot_trend(DIR, LEN, STRIDE, MODE);
 title("Direction max prob");
 
-subplot(143);
+subplot(223);
 plot_trend(SPEED, LEN, STRIDE, MODE);
 title("Speed max prob");
 
-subplot(144);
+subplot(224);
 plot_trend(SENS, LEN, STRIDE, MODE);
 title("Sensor max prob");

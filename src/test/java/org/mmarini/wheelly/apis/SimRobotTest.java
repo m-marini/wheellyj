@@ -34,7 +34,7 @@ import static java.lang.Math.PI;
 import static java.lang.Math.round;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 class SimRobotTest {
 
@@ -60,6 +60,7 @@ class SimRobotTest {
     @Test
     void moveFrom0To0By1() {
         SimRobot robot = createRobot();
+        robot.tick(100);
 
         robot.move(0, 1);
         robot.tick(100);
@@ -74,6 +75,7 @@ class SimRobotTest {
     @Test
     void moveFrom0To0By_1() {
         SimRobot robot = createRobot();
+        robot.tick(100);
 
         robot.move(0, -1);
         robot.tick(100);
@@ -88,6 +90,7 @@ class SimRobotTest {
     @Test
     void rotateFrom0To5() {
         SimRobot robot = createRobot();
+        robot.tick(100);
 
         robot.move(5, 0);
         robot.tick(100);
@@ -124,5 +127,4 @@ class SimRobotTest {
         assertEquals(0, robot.getSensorDir());
         assertEquals(0f, robot.getSensorDistance());
     }
-
 }
