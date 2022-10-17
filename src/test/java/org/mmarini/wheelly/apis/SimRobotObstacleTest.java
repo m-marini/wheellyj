@@ -69,6 +69,35 @@ class SimRobotObstacleTest {
     }
 
     @Test
+    void contactFrontMoveBack() {
+        SimRobot robot = createRobot();
+        float x0 = XO - HALF_LENGTH - HALF_SIZE;
+        robot.setRobotPos(x0, 0);
+        robot.setRobotDir(90);
+        robot.halt();
+        robot.tick(300);
+
+        assertThat(robot.getRobotPos().getX(), closeTo(x0, DISTANCE_EPSILON));
+        assertThat(robot.getRobotPos().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat((double) robot.getSensorDistance(), closeTo(140e-3, DISTANCE_EPSILON));
+        assertEquals(12, robot.getContacts());
+        assertTrue(robot.getCanMoveBackward());
+        assertFalse(robot.getCanMoveForward());
+
+        robot.move(90, -1);
+        for (int i = 0; i < 10; i++) {
+            robot.tick(30);
+        }
+
+        assertThat(robot.getRobotPos().getX(), closeTo(x0 - 33.2e-3, DISTANCE_EPSILON));
+        assertThat(robot.getRobotPos().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat((double) robot.getSensorDistance(), closeTo(140e-3 + 33.2e-3, DISTANCE_EPSILON));
+        assertEquals(0, robot.getContacts());
+        assertTrue(robot.getCanMoveBackward());
+        assertFalse(robot.getCanMoveForward());
+    }
+
+    @Test
     void contactRear() {
         SimRobot robot = createRobot();
         float x0 = XO - HALF_LENGTH - HALF_SIZE + 1e-3F;
@@ -92,6 +121,35 @@ class SimRobotObstacleTest {
         assertThat((double) robot.getSensorDistance(), closeTo(0, DISTANCE_EPSILON));
         assertEquals(3, robot.getContacts());
         assertFalse(robot.getCanMoveBackward());
+        assertTrue(robot.getCanMoveForward());
+    }
+
+    @Test
+    void contactRearMoveForward() {
+        SimRobot robot = createRobot();
+        float x0 = XO - HALF_LENGTH - HALF_SIZE;
+        robot.setRobotPos(x0, 0);
+        robot.setRobotDir(-90);
+        robot.halt();
+        robot.tick(300);
+
+        assertThat(robot.getRobotPos().getX(), closeTo(x0, DISTANCE_EPSILON));
+        assertThat(robot.getRobotPos().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat((double) robot.getSensorDistance(), closeTo(0, DISTANCE_EPSILON));
+        assertEquals(3, robot.getContacts());
+        assertFalse(robot.getCanMoveBackward());
+        assertTrue(robot.getCanMoveForward());
+
+        robot.move(-90, 1);
+        for (int i = 0; i < 10; i++) {
+            robot.tick(30);
+        }
+
+        assertThat(robot.getRobotPos().getX(), closeTo(x0 - 33.2e-3F, DISTANCE_EPSILON));
+        assertThat(robot.getRobotPos().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat((double) robot.getSensorDistance(), closeTo(0, DISTANCE_EPSILON));
+        assertEquals(0, robot.getContacts());
+        assertTrue(robot.getCanMoveBackward());
         assertTrue(robot.getCanMoveForward());
     }
 

@@ -25,9 +25,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #73: KC folder moved to wheellino repo
 
 ## Fixed
-- 
+
 - Issue #87: Robot out of area
- 
+- Issue #93: Check for forward move
+
 ## [0.2.0]
 
 ### Added

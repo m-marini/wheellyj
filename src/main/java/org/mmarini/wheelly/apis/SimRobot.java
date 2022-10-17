@@ -278,8 +278,8 @@ public class SimRobot implements RobotApi {
         right = clip((linearVelocity + angularVelocity) / 2, -1, 1);
 
         // Real left-right motor speeds
-        left = left * MAX_VELOCITY;
-        right = right * MAX_VELOCITY;
+        left = round(left * 10F) / 10F * MAX_VELOCITY;
+        right = round(right * 10) / 10F * MAX_VELOCITY;
 
         // Real forward velocity
         float forwardVelocity = (left + right) / 2;

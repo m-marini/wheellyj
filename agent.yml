@@ -190,7 +190,7 @@ configurations:
     rewardAlpha: 5e-3
     policyAlpha: 100e-3
     criticAlpha: 100e-3
-    lambda: 0
+    lambda: 0.5
     inputProcess:
       - name: tiles
         class: org.mmarini.wheelly.agents.TilesProcessor
