@@ -100,7 +100,8 @@ class AgentTranspilerTest {
             "  - class: org.mmarini.wheelly.agents.TilesProcessor",
             "    name: tiles",
             "    inputs:",
-            "      input: 3"
+            "      - name: input",
+            "        numTiles: 2"
     );
 
     @Test
@@ -196,7 +197,7 @@ class AgentTranspilerTest {
                 equalTo("output"),
                 isA(TDSoftmax.class)));
 
-        assertArrayEquals(new long[]{64, 3},
+        assertArrayEquals(new long[]{3 * 3 * 8, 3},
                 ((TDDense) agent.getPolicy().getLayers().get("output[0]")).getW().shape());
         assertEquals(0.8f,
                 ((TDSoftmax) agent.getPolicy().getLayers().get("output")).getTemperature());
@@ -217,7 +218,7 @@ class AgentTranspilerTest {
                 equalTo("output"),
                 isA(TDTanh.class)));
 
-        assertArrayEquals(new long[]{64, 1},
+        assertArrayEquals(new long[]{3 * 3 * 8, 1},
                 ((TDDense) agent.getCritic().getLayers().get("output[0]")).getW().shape());
     }
 }
