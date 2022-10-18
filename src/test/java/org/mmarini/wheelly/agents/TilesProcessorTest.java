@@ -52,7 +52,8 @@ class TilesProcessorTest {
             "---",
             "name: tiles",
             "inputs:",
-            "  a: 2"
+            "  - name: a",
+            "    numTiles: 2"
     );
     private static final Map<String, SignalSpec> INPUT_SPEC = Map.of(
             "a", new FloatSignalSpec(new long[]{1}, -1, 1)
@@ -94,9 +95,7 @@ class TilesProcessorTest {
     void computeSpec1d() {
         Map<String, SignalSpec> spec1 = TilesProcessor.createSpec(Map.of(
                 "a", new FloatSignalSpec(new long[]{1}, 0, 1)
-        ), "tiles", Map.of(
-                "a", 2
-        ));
+        ), "tiles", new long[]{2});
         assertThat(spec1, hasKey("a"));
         assertThat(spec1, hasEntry(
                 equalTo("tiles"),
@@ -110,14 +109,12 @@ class TilesProcessorTest {
     void computeSpec2d() {
         Map<String, SignalSpec> spec1 = TilesProcessor.createSpec(Map.of(
                 "a", new FloatSignalSpec(new long[]{2}, 0, 1)
-        ), "tiles", Map.of(
-                "a", 2
-        ));
+        ), "tiles", new long[]{2, 2});
         assertThat(spec1, hasKey("a"));
         assertThat(spec1, hasEntry(
                 equalTo("tiles"),
                 isA(FloatSignalSpec.class)));
-        assertArrayEquals(new long[]{2 * (2 + 1) * 8}, spec1.get("tiles").getShape());
+        assertArrayEquals(new long[]{(2 + 1) * (2 + 1) * 8}, spec1.get("tiles").getShape());
         assertEquals(0F, ((FloatSignalSpec) spec1.get("tiles")).getMinValue());
         assertEquals(1F, ((FloatSignalSpec) spec1.get("tiles")).getMaxValue());
     }
@@ -127,15 +124,13 @@ class TilesProcessorTest {
         Map<String, SignalSpec> spec1 = TilesProcessor.createSpec(Map.of(
                 "a", new FloatSignalSpec(new long[]{1}, 0, 1),
                 "b", new FloatSignalSpec(new long[]{2}, 0, 1)
-        ), "tiles", Map.of(
-                "a", 2,
-                "b", 3
-        ));
+        ), "tiles", new long[]{2, 3, 3});
         assertThat(spec1, hasKey("a"));
+        assertThat(spec1, hasKey("b"));
         assertThat(spec1, hasEntry(
                 equalTo("tiles"),
                 isA(FloatSignalSpec.class)));
-        assertArrayEquals(new long[]{(2 + 1) * 2 * (3 + 1) * 16}, spec1.get("tiles").getShape());
+        assertArrayEquals(new long[]{(2 + 1) * (3 + 1) * (3 + 1) * 16}, spec1.get("tiles").getShape());
         assertEquals(0F, ((FloatSignalSpec) spec1.get("tiles")).getMinValue());
         assertEquals(1F, ((FloatSignalSpec) spec1.get("tiles")).getMaxValue());
     }
@@ -192,8 +187,8 @@ class TilesProcessorTest {
 
     @Test
     void tileEncoder1d() {
-        UnaryOperator<INDArray> f = TilesProcessor.createTileEncoder(new long[]{3});
-        INDArray result = f.apply(Nd4j.zeros(1, 1));
+        UnaryOperator<INDArray> f = TilesProcessor.createTileEncoder(new long[]{2});
+        INDArray result = f.apply(Nd4j.zeros(1));
         assertArrayEquals(new long[]{12}, result.shape());
         assertThat(result, matrixCloseTo(new float[]{
                 1, 0, 0,
@@ -202,7 +197,7 @@ class TilesProcessorTest {
                 1, 0, 0
         }, EPSILON));
 
-        result = f.apply(Nd4j.createFromArray(1F).reshape(new long[]{1, 1}));
+        result = f.apply(Nd4j.createFromArray(2F));
         assertArrayEquals(new long[]{12}, result.shape());
         assertThat(result, matrixCloseTo(new float[]{
                 0, 0, 1,
@@ -211,7 +206,7 @@ class TilesProcessorTest {
                 0, 0, 1
         }, EPSILON));
 
-        result = f.apply(Nd4j.createFromArray(1F / 8).reshape(new long[]{1, 1}));
+        result = f.apply(Nd4j.createFromArray(1F / 4).reshape(new long[]{1, 1}));
         assertArrayEquals(new long[]{12}, result.shape());
         assertThat(result, matrixCloseTo(new float[]{
                 1, 0, 0,
@@ -220,7 +215,7 @@ class TilesProcessorTest {
                 0, 1, 0
         }, EPSILON));
 
-        result = f.apply(Nd4j.createFromArray(2F / 8).reshape(new long[]{1, 1}));
+        result = f.apply(Nd4j.createFromArray(2F / 4).reshape(new long[]{1, 1}));
         assertArrayEquals(new long[]{12}, result.shape());
         assertThat(result, matrixCloseTo(new float[]{
                 1, 0, 0,
@@ -229,7 +224,7 @@ class TilesProcessorTest {
                 0, 1, 0
         }, EPSILON));
 
-        result = f.apply(Nd4j.createFromArray(3F / 8).reshape(new long[]{1, 1}));
+        result = f.apply(Nd4j.createFromArray(3F / 4).reshape(new long[]{1, 1}));
         assertArrayEquals(new long[]{12}, result.shape());
         assertThat(result, matrixCloseTo(new float[]{
                 1, 0, 0,
@@ -238,7 +233,7 @@ class TilesProcessorTest {
                 0, 1, 0
         }, EPSILON));
 
-        result = f.apply(Nd4j.createFromArray(4F / 8).reshape(new long[]{1, 1}));
+        result = f.apply(Nd4j.createFromArray(1F).reshape(new long[]{1, 1}));
         assertArrayEquals(new long[]{12}, result.shape());
         assertThat(result, matrixCloseTo(new float[]{
                 0, 1, 0,
@@ -250,8 +245,8 @@ class TilesProcessorTest {
 
     @Test
     void tileEncoder2d() {
-        UnaryOperator<INDArray> f = TilesProcessor.createTileEncoder(new long[]{3, 3});
-        INDArray result = f.apply(Nd4j.zeros(1, 2));
+        UnaryOperator<INDArray> f = TilesProcessor.createTileEncoder(new long[]{2, 2});
+        INDArray result = f.apply(Nd4j.zeros(2));
         assertArrayEquals(new long[]{3 * 3 * 8}, result.shape());
         assertThat(result, matrixCloseTo(new float[]{
                 1, 0, 0,
@@ -287,7 +282,7 @@ class TilesProcessorTest {
                 0, 0, 0
         }, EPSILON));
 
-        result = f.apply(Nd4j.ones(1, 2));
+        result = f.apply(Nd4j.ones(2).muli(2));
         assertArrayEquals(new long[]{3 * 3 * 8}, result.shape());
         assertThat(result, matrixCloseTo(new float[]{
                 0, 0, 0,
@@ -322,6 +317,42 @@ class TilesProcessorTest {
                 0, 0, 0,
                 0, 0, 1
         }, EPSILON));
+
+        result = f.apply(Nd4j.ones(2));
+        assertArrayEquals(new long[]{3 * 3 * 8}, result.shape());
+        assertThat(result, matrixCloseTo(new float[]{
+                0, 0, 0,
+                0, 1, 0,
+                0, 0, 0,
+
+                0, 0, 0,
+                0, 1, 0,
+                0, 0, 0,
+
+                0, 0, 0,
+                0, 1, 0,
+                0, 0, 0,
+
+                0, 0, 0,
+                0, 1, 0,
+                0, 0, 0,
+
+                0, 0, 0,
+                0, 1, 0,
+                0, 0, 0,
+
+                0, 0, 0,
+                0, 1, 0,
+                0, 0, 0,
+
+                0, 0, 0,
+                0, 1, 0,
+                0, 0, 0,
+
+                0, 0, 0,
+                0, 1, 0,
+                0, 0, 0
+        }, EPSILON));
     }
 
     @Test
@@ -337,8 +368,8 @@ class TilesProcessorTest {
         assertEquals(0F, spec.getMinValue());
         assertEquals(1F, spec.getMaxValue());
 
-        Map<String, Signal> signal_1 = Map.of("a", ArraySignal.create(-1));
-        Map<String, Signal> s1_1 = p.apply(signal_1);
+        Map<String, Signal> s1_1 = p.apply(Map.of("a", ArraySignal.create(-1)));
+
         assertThat(s1_1, hasEntry(
                 equalTo("tiles"),
                 isA(ArraySignal.class)));
@@ -350,13 +381,11 @@ class TilesProcessorTest {
                 1F, 0, 0
         }, EPSILON));
 
-        s1_1 = p.apply(Map.of(
-                "a", ArraySignal.create(0)
-        ));
+        s1_1 = p.apply(Map.of("a", ArraySignal.create(0)));
+
         assertThat(s1_1, hasEntry(
                 equalTo("tiles"),
                 isA(ArraySignal.class)));
-
         assertThat(s1_1.get("tiles").toINDArray(), matrixCloseTo(new float[]{
                 0, 1F, 0,
                 0, 1F, 0,
@@ -364,9 +393,31 @@ class TilesProcessorTest {
                 0, 1F, 0
         }, EPSILON));
 
-        s1_1 = p.apply(Map.of(
-                "a", ArraySignal.create(0.5F)
-        ));
+        s1_1 = p.apply(Map.of("a", ArraySignal.create(1)));
+
+        assertThat(s1_1, hasEntry(
+                equalTo("tiles"),
+                isA(ArraySignal.class)));
+        assertThat(s1_1.get("tiles").toINDArray(), matrixCloseTo(new float[]{
+                0, 0, 1,
+                0, 0, 1,
+                0, 0, 1,
+                0, 0, 1
+        }, EPSILON));
+
+        s1_1 = p.apply(Map.of("a", ArraySignal.create(2)));
+
+        assertThat(s1_1, hasEntry(
+                equalTo("tiles"),
+                isA(ArraySignal.class)));
+        assertThat(s1_1.get("tiles").toINDArray(), matrixCloseTo(new float[]{
+                0, 0, 1,
+                0, 0, 1,
+                0, 0, 1,
+                0, 0, 1
+        }, EPSILON));
+
+        s1_1 = p.apply(Map.of("a", ArraySignal.create(0.5F)));
         assertThat(s1_1, hasEntry(
                 equalTo("tiles"),
                 isA(ArraySignal.class)));
