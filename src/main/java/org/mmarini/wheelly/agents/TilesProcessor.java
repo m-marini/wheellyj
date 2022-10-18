@@ -77,6 +77,8 @@ public interface TilesProcessor {
         validateTiles(inSpec, tilesInfo);
         // Creates processor json spec
         ObjectNode jsonNode = createJsonNode(outName, tilesInfo);
+        jsonNode.put("class", TilesProcessor.class.
+                getName());
 
         // Creates processor json spec
         long[] numTilesByDim = computeNumTilesByDim(inSpec, tilesInfo);

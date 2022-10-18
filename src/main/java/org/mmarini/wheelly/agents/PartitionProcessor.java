@@ -30,10 +30,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jetbrains.annotations.NotNull;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.envs.ArraySignal;
-import org.mmarini.wheelly.envs.FloatSignalSpec;
-import org.mmarini.wheelly.envs.Signal;
-import org.mmarini.wheelly.envs.SignalSpec;
+import org.mmarini.wheelly.envs.*;
 import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
@@ -99,6 +96,8 @@ public interface PartitionProcessor {
 
         // Creates processor json spec
         ObjectNode jsonNode = createJsonNode(outName, tilesInfo);
+        jsonNode.put("class", PartitionProcessor.class.
+                getName());
 
         long[] numTilesByDim = computeNumTilesByDim(inSpec, tilesInfo);
 
@@ -137,9 +136,6 @@ public interface PartitionProcessor {
 
     static ObjectNode createJsonNode(String outName, List<Tuple2<String, Long>> tilesInfo) {
         ObjectNode jsonNode = Utils.objectMapper.createObjectNode();
-        jsonNode.put("class", PartitionProcessor.class.
-
-                getName());
         jsonNode.put("name", outName);
         ArrayNode inputsNode = Utils.objectMapper.createArrayNode();
         for (
@@ -157,7 +153,7 @@ public interface PartitionProcessor {
     static List<Tuple2<String, UnaryOperator<INDArray>>> createNormalizers(Map<String, SignalSpec> inSpec, List<Tuple2<String, Long>> numTiles) {
         return numTiles.stream()
                 .map(t -> {
-                    UnaryOperator<INDArray> fn = normalize((FloatSignalSpec) inSpec.get(t._1), t._2);
+                    UnaryOperator<INDArray> fn = normalize(inSpec.get(t._1), t._2);
                     return t.setV2(fn);
                 }).collect(Collectors.toList());
     }
@@ -203,11 +199,17 @@ public interface PartitionProcessor {
      * @param inSpec    the input specification
      * @param numValues the number of output value
      */
-    static UnaryOperator<INDArray> normalize(FloatSignalSpec inSpec, long numValues) {
-        float minValue = inSpec.getMinValue();
-        float scale = (inSpec.getMaxValue() - minValue) / (numValues - 1);
-        return x ->
-                x.sub(minValue).mul(scale);
+    static UnaryOperator<INDArray> normalize(SignalSpec inSpec, long numValues) {
+        if (inSpec instanceof FloatSignalSpec) {
+            float minValue = ((FloatSignalSpec) inSpec).getMinValue();
+            float scale = (((FloatSignalSpec) inSpec).getMaxValue() - minValue) / (numValues - 1);
+            return x ->
+                    x.sub(minValue).mul(scale);
+        } else {
+            float scale = (((IntSignalSpec) inSpec).getNumValues() - 1) / (numValues - 1);
+            return x ->
+                    x.mul(scale);
+        }
     }
 
     static void validateTiles(Map<String, SignalSpec> inSpec, List<Tuple2<String, Long>> inputs) {
@@ -218,11 +220,6 @@ public interface PartitionProcessor {
             if (spec == null) {
                 throw new IllegalArgumentException(format(
                         "Input \"%s\" undefined", name
-                ));
-            }
-            if (!(spec instanceof FloatSignalSpec)) {
-                throw new IllegalArgumentException(format(
-                        "Input %s must be %s (%s)", name, FloatSignalSpec.class.getName(), spec.getClass().getName()
                 ));
             }
         }

@@ -195,16 +195,24 @@ configurations:
       - name: tiles
         class: org.mmarini.wheelly.agents.TilesProcessor
         inputs:
-          sensor: 7
-          distance: 30
+          - name: sensor
+            numTiles: 7
+          - name: distance
+            numTiles: 30
+      - name: canMoveFeatures
+        class: org.mmarini.wheelly.agents.PartitionProcessor
+        inputs:
+          - name: canMoveForward
+            numTiles: 2
+          - name: canMoveBackward
+            numTiles: 2
     policy:
       layer0:
         inputs:
           type: concat
           inputs:
             - tiles
-            - canMoveForward
-            - canMoveBackward
+            - canMoveFeatures
         layers:
           - type: dense
             outputSize: 100
@@ -273,8 +281,7 @@ configurations:
           type: concat
           inputs:
             - tiles
-            - canMoveForward
-            - canMoveBackward
+            - canMoveFeatures
         layers:
           - type: dense
             outputSize: 100
