@@ -304,7 +304,6 @@ public class TDAgent implements Agent {
     private final File modelPath;
     private final int savingIntervalSteps;
     private final InputProcessor processor;
-    private final Map<String, SignalSpec> processedState;
     private float avgReward;
     private Map<String, Signal> lastActions;
     private Map<String, INDArray> lastInputs;
@@ -344,7 +343,7 @@ public class TDAgent implements Agent {
         this.criticAlpha = criticAlpha;
         this.avgReward = avgReward;
         this.modelPath = modelPath;
-        this.processedState = processor != null ? processor.getSpec() : state;
+        Map<String, SignalSpec> processedState = processor != null ? processor.getSpec() : state;
         this.savingIntervalSteps = savingIntervalSteps;
         this.indicatorsPub = PublishProcessor.create();
         indicators = indicatorsPub.observeOn(Schedulers.io())
@@ -563,30 +562,31 @@ public class TDAgent implements Agent {
 
         float avgReward0 = avgReward;
         avgReward += delta * rewardAlpha;
-        Map<String, INDArray> gradCritic = critic.train(c0, dc, Nd4j.createFromArray(delta * criticAlpha), lambda);
-        Map<String, INDArray> gradPolicy = policy.train(pi, dp, Nd4j.createFromArray(delta * policyAlpha), lambda);
+        Map<String, Object> kpi = new HashMap<>();
+        Map<String, INDArray> gradCritic = critic.train(c0, dc, Nd4j.createFromArray(delta * criticAlpha), lambda,
+                t -> kpi.put("critic." + t._1, t._2));
+        Map<String, INDArray> gradPolicy = policy.train(pi, dp, Nd4j.createFromArray(delta * policyAlpha), lambda,
+                t -> kpi.put("policy." + t._1, t._2));
 
         Map<String, INDArray> trainedC0 = critic.forward(s0);
         Map<String, INDArray> trainedPi = policy.forward(s0);
 
-        Map<String, Object> kpi = Map.ofEntries(
-                Map.entry("s0", s0),
-                Map.entry("reward", reward),
-                Map.entry("terminal", result.terminal),
-                Map.entry("actions", actions),
-                Map.entry("s1", s1),
-                Map.entry("avgReward", avgReward0),
-                Map.entry("trainedAvgReward", avgReward),
-                Map.entry("critic", c0),
-                Map.entry("v0", v0),
-                Map.entry("v1", v1),
-                Map.entry("delta", delta),
-                Map.entry("policy", pi),
-                Map.entry("gradCritic", gradCritic),
-                Map.entry("gradPolicy", gradPolicy),
-                Map.entry("trainedCritic", trainedC0),
-                Map.entry("trainedPolicy", trainedPi)
-        );
+        kpi.put("s0", s0);
+        kpi.put("reward", reward);
+        kpi.put("terminal", result.terminal);
+        kpi.put("actions", actions);
+        kpi.put("s1", s1);
+        kpi.put("avgReward", avgReward0);
+        kpi.put("trainedAvgReward", avgReward);
+        kpi.put("critic", c0);
+        kpi.put("v0", v0);
+        kpi.put("v1", v1);
+        kpi.put("delta", delta);
+        kpi.put("policy", pi);
+        kpi.put("gradCritic", gradCritic);
+        kpi.put("gradPolicy", gradPolicy);
+        kpi.put("trainedCritic", trainedC0);
+        kpi.put("trainedPolicy", trainedPi);
 
         indicatorsPub.onNext(kpi);
         if (++savingStepCounter >= savingIntervalSteps) {

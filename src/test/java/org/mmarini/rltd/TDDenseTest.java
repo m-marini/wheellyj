@@ -236,7 +236,7 @@ class TDDenseTest {
         float post_grad0 = w00 * grad0 + w01 * grad1 + w02 * grad2;
         float post_grad1 = w10 * grad0 + w11 * grad1 + w12 * grad2;
 
-        INDArray[] post_grads = layer.train(in, out, grad, delta.mul(alpha), lambda);
+        INDArray[] post_grads = layer.train(in, out, grad, delta.mul(alpha), lambda, null);
 
         assertThat(post_grads, arrayWithSize(1));
         assertThat(post_grads[0], matrixCloseTo(new float[][]{{

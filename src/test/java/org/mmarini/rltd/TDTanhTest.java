@@ -96,7 +96,7 @@ class TDTanhTest {
         INDArray out = layer.forward(in, null);
         float post_grad0 = (1 - out0 * out0) * grad0;
         float post_grad1 = (1 - out1 * out1) * grad1;
-        INDArray[] post_grads = layer.train(in, out, grad, null, 0);
+        INDArray[] post_grads = layer.train(in, out, grad, null, 0, null);
 
         assertThat(post_grads, arrayWithSize(1));
         assertThat(post_grads[0], matrixCloseTo(new float[][]{{

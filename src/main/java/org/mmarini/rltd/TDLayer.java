@@ -26,6 +26,7 @@
 package org.mmarini.rltd;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.Tuple2;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -33,6 +34,7 @@ import org.nd4j.linalg.api.rng.Random;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import static java.lang.String.format;
 import static org.mmarini.yaml.schema.Validator.*;
@@ -124,16 +126,17 @@ public abstract class TDLayer {
     /**
      * Performs a backward pass of layer returning the gradients at inputs
      *
-     * @param inputs the list of inputs
-     * @param output the output
-     * @param grad   gradient at output
-     * @param delta  the error
-     * @param lambda the TD lambda factor
+     * @param inputs      the list of inputs
+     * @param output      the output
+     * @param grad        gradient at output
+     * @param delta       the error
+     * @param lambda      the TD lambda factor
+     * @param kpiCallback
      */
     public abstract INDArray[] train(INDArray[] inputs,
                                      INDArray output,
                                      INDArray grad,
                                      INDArray delta,
-                                     float lambda);
+                                     float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback);
 
 }

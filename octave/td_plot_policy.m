@@ -1,5 +1,5 @@
 clear all;
-PATH = "../data/agent-30e-3";
+PATH = default_path();
 HALT = max(tensor_read([PATH "/policy.halt"]), [], 2);
 DIR = max(tensor_read([PATH "/policy.direction"]), [], 2);
 SENS = max(tensor_read([PATH "/policy.sensorAction"]), [], 2);

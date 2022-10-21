@@ -27,9 +27,12 @@ package org.mmarini.rltd;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.mmarini.Tuple2;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.ops.transforms.Transforms;
+
+import java.util.function.Consumer;
 
 /**
  * The dense layer performs a linear transformation between the input and outputs.
@@ -59,7 +62,7 @@ public class TDRelu extends TDLayer {
     }
 
     @Override
-    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda) {
+    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
         return new INDArray[]{
                 grad.mul(inputs[0].gt(0))
         };

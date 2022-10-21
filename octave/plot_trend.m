@@ -3,11 +3,11 @@ function plot_trend(Y, LENGTH=1, STRIDE=1, MODE={"mean"})
   N = size(Y)(1);
   X = [0 : N - 1]';
 
-  Z = [];  
+  Z = [];
   LEGEND={};
   YM = sample(Y, LENGTH, STRIDE, @mean);
   XM = sample(X, LENGTH, STRIDE, @mean);
-  
+
   for I = [1 : length(MODE)]
     V = MODE{I};
     if strcmp(V, "mean")
@@ -33,13 +33,14 @@ function plot_trend(Y, LENGTH=1, STRIDE=1, MODE={"mean"})
     elseif strcmp(V, "exp") & min(Y) > 0
       EXP_POLY = polyfit(X, log(Y), 1);
       EXP_Y = exp(polyval(EXP_POLY, XM));
-      Z = [ Z EXP_Y ];    
+      Z = [ Z EXP_Y ];
       LEGEND = [LEGEND, {"Exponential"}];
     endif
   endfor
 
   plot(XM, Z);
   grid on;
+  legend("location", "northwest");
   legend(LEGEND);
 
 endfunction

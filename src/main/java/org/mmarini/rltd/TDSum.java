@@ -27,10 +27,12 @@ package org.mmarini.rltd;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.mmarini.Tuple2;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
+import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 /**
@@ -61,7 +63,7 @@ public class TDSum extends TDLayer {
     }
 
     @Override
-    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda) {
+    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
         return IntStream.range(0, inputs.length).mapToObj(i -> grad).toArray(INDArray[]::new);
     }
 }

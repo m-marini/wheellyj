@@ -36,6 +36,7 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
@@ -247,13 +248,14 @@ public class TDNetwork {
     /**
      * Returns the gradients at inputs and trains network
      *
-     * @param outputs the layer outputs
-     * @param grad    the network output gradient
-     * @param delta   the delta parameter (error scaled by alpha factor)
-     * @param lambda  the TD lambda factor
+     * @param outputs     the layer outputs
+     * @param grad        the network output gradient
+     * @param delta       the delta parameter (error scaled by alpha factor)
+     * @param lambda      the TD lambda factor
+     * @param kpiCallback call bak function for kpi
      */
     public Map<String, INDArray> train(Map<String, INDArray> outputs, Map<String, INDArray> grad, INDArray
-            delta, float lambda) {
+            delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
         Map<String, INDArray> grads = new HashMap<>(grad);
         for (String id : backwardSeq) {
             TDLayer node = layers.get(id);
@@ -261,7 +263,7 @@ public class TDNetwork {
             INDArray[] inputs = inputNames.stream().map(outputs::get).toArray(INDArray[]::new);
             INDArray output = outputs.get(id);
             INDArray outGrad = grads.get(id);
-            INDArray[] inGrad = node.train(inputs, output, outGrad, delta, lambda);
+            INDArray[] inGrad = node.train(inputs, output, outGrad, delta, lambda, kpiCallback);
             for (int i = 0; i < inputNames.size(); i++) {
                 String name = inputNames.get(i);
                 INDArray value = inGrad[i];

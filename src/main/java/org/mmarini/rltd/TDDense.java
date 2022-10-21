@@ -27,6 +27,7 @@ package org.mmarini.rltd;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.mmarini.Tuple2;
 import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
@@ -37,6 +38,7 @@ import org.nd4j.linalg.factory.Nd4j;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -172,7 +174,7 @@ public class TDDense extends TDLayer {
     }
 
     @Override
-    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda) {
+    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
         INDArray gradIn = grad.mmul(w.transpose());
 
         eb.muli(lambda).addi(grad);
@@ -182,9 +184,16 @@ public class TDDense extends TDLayer {
         INDArray grad_dw = bin.mul(bgrad);
         ew.muli(lambda).addi(grad_dw);
 
-        b.addi(eb.mul(delta));
-        w.addi(ew.mul(delta));
+        INDArray db = eb.mul(delta);
+        INDArray dw = ew.mul(delta);
 
+        b.addi(db);
+        w.addi(dw);
+
+        if (kpiCallback != null) {
+            kpiCallback.accept(Tuple2.of(format("%s_db", getName()), db));
+            kpiCallback.accept(Tuple2.of(format("%s_dw", getName()), dw));
+        }
         return new INDArray[]{
                 gradIn
         };

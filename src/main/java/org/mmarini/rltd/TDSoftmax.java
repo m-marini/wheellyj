@@ -27,6 +27,7 @@ package org.mmarini.rltd;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.mmarini.Tuple2;
 import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
@@ -36,6 +37,7 @@ import org.nd4j.linalg.ops.transforms.Transforms;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import static org.mmarini.yaml.schema.Validator.*;
 
@@ -87,7 +89,7 @@ public class TDSoftmax extends TDLayer {
     }
 
     @Override
-    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda) {
+    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
         INDArray lo = grad.mul(output).divi(temperature);
         long n = output.shape()[1];
         INDArray yit = Nd4j.eye(n).subi(output);

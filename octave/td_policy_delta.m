@@ -1,5 +1,5 @@
 #clear all;
-PATH = "../data/agent-30e-3";
+PATH = default_path();
 HALT = tensor_read([PATH "/policy.halt"]);
 DIR = tensor_read([PATH "/policy.direction"]);
 SENS = tensor_read([PATH "/policy.sensorAction"]);
@@ -10,10 +10,10 @@ DIR1 = tensor_read([PATH "/trainedPolicy.direction"]);
 SENS1 = tensor_read([PATH "/trainedPolicy.sensorAction"]);
 SPEED1 = tensor_read([PATH "/trainedPolicy.speed"]);
 
-D_HALT = max(abs(HALT1 - HALT) ./ HALT, [], 2);
-D_DIR = max(abs(DIR1 - DIR) ./ DIR, [], 2);
-D_SPEED = max(abs(SPEED1 - SPEED) ./ SPEED, [], 2);
-D_SENS = max(abs(SENS1 - SENS) ./ SENS, [], 2);
+D_HALT = max(abs(HALT1 - HALT), [], 2);
+D_DIR = max(abs(DIR1 - DIR), [], 2);
+D_SPEED = max(abs(SPEED1 - SPEED), [], 2);
+D_SENS = max(abs(SENS1 - SENS), [], 2);
 
 N = size(HALT)(1);
 
