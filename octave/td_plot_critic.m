@@ -3,7 +3,7 @@
 #
 
 clear all;
-PATH = "../data/agent-30e-3";
+PATH = default_path();
 V0 = tensor_read([PATH "/v0"]);
 
 N = size(V0)(1);

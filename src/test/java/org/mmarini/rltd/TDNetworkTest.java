@@ -729,7 +729,7 @@ class TDNetworkTest {
         INDArray grad7Org = grad7.dup();
         INDArray grad8Org = grad8.dup();
 
-        Map<String, INDArray> ctx = net.train(out, grads, delta.mul(alpha), lambda);
+        Map<String, INDArray> ctx = net.train(out, grads, delta.mul(alpha), lambda, null);
 
         assertEquals(out.get("input0"), outInput0Org);
         assertEquals(out.get("input1"), outInput1Org);

@@ -27,6 +27,7 @@ package org.mmarini.rltd;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.mmarini.Tuple2;
 import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
@@ -35,6 +36,7 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
+import java.util.function.Consumer;
 
 import static org.mmarini.yaml.schema.Validator.*;
 
@@ -113,7 +115,7 @@ public class TDLinear extends TDLayer {
     }
 
     @Override
-    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda) {
+    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
         return new INDArray[]{grad.mul(w)};
     }
 }

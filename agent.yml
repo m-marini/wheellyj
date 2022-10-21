@@ -188,8 +188,8 @@ configurations:
     modelPath: models/tilesAgent
     savingIntervalSteps: 1000
     rewardAlpha: 5e-3
-    policyAlpha: 100e-3
-    criticAlpha: 100e-3
+    policyAlpha: 3e-3
+    criticAlpha: 3e-3
     lambda: 0.5
     inputProcess:
       - name: tiles

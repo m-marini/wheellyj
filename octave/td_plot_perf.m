@@ -3,7 +3,7 @@
 #
 
 clear all;
-PATH = "../data/agent-30e-3";
+PATH = default_path();
 REWARDS = tensor_read([PATH "/reward"]);
 DELTA = tensor_read([PATH "/delta"]);
 HALT = max(tensor_read([PATH "/policy.halt"]), [], 2);
