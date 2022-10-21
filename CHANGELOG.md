@@ -16,7 +16,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #85: Add WiFi configuration
 - Issue #89: Add state tiles coding
 - Issue #91: Add partition processor
-
+- Issue #98: Add weight's changes kpi
+ 
 ### Changed
 
 - Issue #71: Halt goal behaviour
