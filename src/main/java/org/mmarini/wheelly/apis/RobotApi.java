@@ -1,7 +1,5 @@
 package org.mmarini.wheelly.apis;
 
-import org.mmarini.wheelly.model.WheellyStatus;
-
 import java.awt.geom.Point2D;
 import java.io.Closeable;
 import java.util.Optional;

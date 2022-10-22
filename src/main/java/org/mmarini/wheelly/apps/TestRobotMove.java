@@ -1,7 +1,7 @@
 package org.mmarini.wheelly.apps;
 
 import org.mmarini.wheelly.apis.Robot;
-import org.mmarini.wheelly.model.WheellyStatus;
+import org.mmarini.wheelly.apis.WheellyStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

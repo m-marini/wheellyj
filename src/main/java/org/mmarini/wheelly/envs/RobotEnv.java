@@ -28,7 +28,7 @@ package org.mmarini.wheelly.envs;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.eclipse.collections.api.block.function.primitive.FloatFunction;
 import org.mmarini.wheelly.apis.RobotApi;
-import org.mmarini.wheelly.model.WheellyStatus;
+import org.mmarini.wheelly.apis.WheellyStatus;
 import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
@@ -41,7 +41,7 @@ import java.util.Map;
 
 import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.model.Utils.linear;
+import static org.mmarini.wheelly.apis.Utils.linear;
 import static org.mmarini.yaml.schema.Validator.*;
 
 public class RobotEnv implements Environment {

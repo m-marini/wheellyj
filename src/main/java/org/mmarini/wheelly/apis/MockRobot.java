@@ -26,7 +26,6 @@
 package org.mmarini.wheelly.apis;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.model.WheellyStatus;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 
@@ -146,7 +145,7 @@ public class MockRobot implements RobotApi {
     public WheellyStatus getStatus() {
         return WheellyStatus.create(robotPos, robotDir, sensorDir, sensorDistance, 0,
                 0, 0, 0, false, false, false,
-                false, 0, 0, 0);
+                false);
     }
 
     @Override

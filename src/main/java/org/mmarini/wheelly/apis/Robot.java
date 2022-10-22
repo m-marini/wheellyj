@@ -27,8 +27,6 @@ package org.mmarini.wheelly.apis;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.schedulers.Timed;
-import org.mmarini.wheelly.model.ClockSyncEvent;
-import org.mmarini.wheelly.model.WheellyStatus;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 import org.slf4j.Logger;

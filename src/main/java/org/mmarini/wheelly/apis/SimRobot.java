@@ -34,8 +34,6 @@ import org.jbox2d.collision.shapes.PolygonShape;
 import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.*;
 import org.jbox2d.dynamics.contacts.Contact;
-import org.mmarini.wheelly.model.Utils;
-import org.mmarini.wheelly.model.WheellyStatus;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 
@@ -47,7 +45,7 @@ import java.util.Random;
 
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.model.Utils.*;
+import static org.mmarini.wheelly.apis.Utils.*;
 import static org.mmarini.yaml.schema.Validator.*;
 
 /**
@@ -392,7 +390,7 @@ public class SimRobot implements RobotApi {
         return WheellyStatus.create(getRobotPos(),
                 getRobotDir(), sensor, getSensorDistance(), left, right, contacts, 0,
                 canMoveForward, canMoveBackward, false,
-                left == 0 && right == 0, direction, speed, sensor
+                left == 0 && right == 0
         );
     }
 

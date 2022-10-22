@@ -41,7 +41,7 @@ import static org.hamcrest.Matchers.arrayWithSize;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mmarini.ArgumentsGenerator.createArgumentGenerator;
 import static org.mmarini.ArgumentsGenerator.createStream;
-import static org.mmarini.wheelly.engines.deepl.TestFunctions.matrixCloseTo;
+import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 
 class TDReluTest {
 

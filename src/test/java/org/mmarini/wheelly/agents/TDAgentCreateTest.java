@@ -40,8 +40,8 @@ import java.util.Map;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mmarini.wheelly.engines.deepl.TestFunctions.matrixCloseTo;
-import static org.mmarini.wheelly.engines.deepl.TestFunctions.text;
+import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
+import static org.mmarini.wheelly.TestFunctions.text;
 
 class TDAgentCreateTest {
 

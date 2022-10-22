@@ -42,6 +42,7 @@ import org.mmarini.wheelly.swing.EnvironmentFrame;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.schema.Locator;
+import org.mmarini.yaml.schema.Validator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
@@ -49,10 +50,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 import static java.lang.Math.exp;
-import static org.mmarini.wheelly.apps.Yaml.BASE_CONFIG;
+import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * Run a test to check for robot environment with random behavior agent
@@ -60,6 +62,12 @@ import static org.mmarini.wheelly.apps.Yaml.BASE_CONFIG;
 public class Wheelly {
     public static final float DEFAULT_DISCOUNT = (float) exp(-1 / 29.7);
     private static final Logger logger = LoggerFactory.getLogger(Wheelly.class);
+    private static final Validator BASE_CONFIG = objectPropertiesRequired(Map.of(
+            "version", string(values("0.2")),
+            "active", string(),
+            "configurations", object()
+    ), List.of("version", "active", "configurations"));
+
 
     /**
      * Creates kpis process

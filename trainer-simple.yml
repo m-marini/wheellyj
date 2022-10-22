@@ -1,7 +1,0 @@
----
-version: "0.1"
-inputFile: dataset-simple.csv
-modelFile: model-simple.zip
-numEpochs: 10
-batchSize: 32
-inputSize: 109
