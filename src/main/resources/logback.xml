@@ -11,18 +11,6 @@
         </encoder>
     </appender>
 
-    <logger name="org.mmarini.wheelly.model.AsyncSocketImpl" level="INFO">
-    </logger>
-    <logger name="org.mmarini.wheelly.model.ReliableSocket" level="INFO">
-    </logger>
-    <logger name="org.mmarini.wheelly.engines.statemachine.AStar" level="INFO">
-    </logger>
-    <logger name="org.mmarini.wheelly.model.RawController" level="INFO">
-    </logger>
-    <logger name="org.mmarini.wheelly.engines.statemachine.GotoStatus" level="INFO">
-    </logger>
-    <logger name="org.mmarini.wheelly.engines.statemachine.NextSequenceStatus" level="INFO">
-    </logger>
     <logger name="org.mmarini.wheelly.apis.RobotSocket" level="INFO">
     </logger>
 

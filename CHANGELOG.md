@@ -22,11 +22,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Issue #71: Halt goal behaviour
 
-## Removed
+### Removed
 
 - Issue #73: KC folder moved to wheellino repo
+- Issue #100: remove deepl impl
 
-## Fixed
+### Fixed
 
 - Issue #87: Robot out of area
 - Issue #93: Check for forward move

@@ -42,7 +42,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mmarini.wheelly.engines.deepl.TestFunctions.text;
+import static org.mmarini.wheelly.TestFunctions.text;
 
 class TDAgentSaveTest {
 

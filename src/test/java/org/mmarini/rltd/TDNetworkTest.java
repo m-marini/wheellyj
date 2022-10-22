@@ -49,8 +49,8 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mmarini.ArgumentsGenerator.*;
-import static org.mmarini.wheelly.engines.deepl.TestFunctions.matrixCloseTo;
-import static org.mmarini.wheelly.engines.deepl.TestFunctions.text;
+import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
+import static org.mmarini.wheelly.TestFunctions.text;
 
 
 class TDNetworkTest {

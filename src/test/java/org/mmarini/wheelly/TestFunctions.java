@@ -23,18 +23,39 @@
  *
  */
 
-package org.mmarini.wheelly.rx;
+package org.mmarini.wheelly;
 
-import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.functions.Function;
+import org.hamcrest.CustomMatcher;
+import org.hamcrest.Matcher;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
-import java.util.Map;
+import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
-public interface RXFunc {
-    static Function<Map<String, INDArray>, Flowable<INDArray>> getProperty(String key) {
-        return map ->
-                map.containsKey(key) ? Flowable.just(map.get(key)) : Flowable.empty();
+public interface TestFunctions {
+    static Matcher<INDArray> matrixCloseTo(INDArray exp, double epsilon) {
+        requireNonNull(exp);
+        return new CustomMatcher<INDArray>(format("INDArray close to %s within +- %f",
+                exp,
+                epsilon)) {
+            @Override
+            public boolean matches(Object o) {
+                return o instanceof INDArray
+                        && ((INDArray) o).equalsWithEps(exp, epsilon);
+            }
+        };
+    }
+
+    static Matcher<INDArray> matrixCloseTo(float[][] exp, double epsilon) {
+        return matrixCloseTo(Nd4j.create(exp), epsilon);
+    }
+
+    static Matcher<INDArray> matrixCloseTo(float[] exp, double epsilon) {
+        return matrixCloseTo(Nd4j.create(exp), epsilon);
+    }
+
+    static String text(String... lines) {
+        return String.join("\n", lines) + "\n";
     }
 }

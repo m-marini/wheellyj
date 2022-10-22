@@ -45,8 +45,8 @@ import static org.hamcrest.Matchers.arrayWithSize;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.ArgumentsGenerator.*;
-import static org.mmarini.wheelly.engines.deepl.TestFunctions.matrixCloseTo;
-import static org.mmarini.wheelly.engines.deepl.TestFunctions.text;
+import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
+import static org.mmarini.wheelly.TestFunctions.text;
 
 class TDDenseTest {
 

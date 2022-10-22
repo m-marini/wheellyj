@@ -36,7 +36,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.isA;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mmarini.wheelly.engines.deepl.TestFunctions.text;
+import static org.mmarini.wheelly.TestFunctions.text;
 import static org.mmarini.yaml.Utils.fromText;
 
 class SignalSpecTest {

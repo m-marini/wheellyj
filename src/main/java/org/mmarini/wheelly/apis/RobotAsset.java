@@ -23,18 +23,32 @@
  *
  */
 
-package org.mmarini.wheelly.rx;
+package org.mmarini.wheelly.apis;
 
-import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.functions.Function;
-import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.factory.Nd4j;
+import java.awt.geom.Point2D;
 
-import java.util.Map;
+import static java.lang.Math.toRadians;
 
-public interface RXFunc {
-    static Function<Map<String, INDArray>, Flowable<INDArray>> getProperty(String key) {
-        return map ->
-                map.containsKey(key) ? Flowable.just(map.get(key)) : Flowable.empty();
+/**
+ *
+ */
+public interface RobotAsset {
+
+    /**
+     * Returns the direction of robot DEG
+     */
+    int getRobotDeg();
+
+    /**
+     * Returns the robot location
+     */
+    Point2D getRobotLocation();
+
+    /**
+     * Returns the direction of robot RAD
+     */
+    default double getRobotRad() {
+        return toRadians(getRobotDeg());
     }
+
 }
