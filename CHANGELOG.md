@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.3.0] 2022-10-23
+
 ### Added
 
 - Issue #76: Java TD environment porting from python
@@ -32,7 +34,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #87: Robot out of area
 - Issue #93: Check for forward move
 
-## [0.2.0]
+## [0.2.0] 2022-06-09
 
 ### Added
 
