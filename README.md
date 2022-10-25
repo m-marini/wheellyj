@@ -110,6 +110,43 @@ named arguments:
                          (default: 43200)
 ```
 
+### Analysis tools
+
+The analysis tools are located in `octave` folder.
+To collect the kpis the `-k <kpi_folder>` command option is required during agent training.
+
+The `default_path.m` must be adjust to set the kpi folder before running the plotting programs.
+
+For information about performance analysis please refer to `docs/Analisys.md` file.
+
+### Agent performance
+
+The reward and reinforcement error $\delta$ are ploted with `td_plot_perf.m` octave program.
+
+### Policy
+
+The policy results are ploted with `td_plot_policy.m` octave program.
+
+### Delta Policy 
+
+The policy changes are ploted with `td_policy_delta.m` octave program.
+
+### Policy gradients
+
+The policy gradients are ploted with `td_grad_policy.m` octave program.
+
+### Critic
+
+The critic estimations is ploted with `td_plot_critic.m` octave program.
+
+### Dynamic behaviors
+
+The dynamic behaviors are ploted with `td_dyna.m` octave program.
+
+### Delta weights
+
+The weight changes are ploted with `td_delta_weights.m` octave program.
+
 ## Release 0.2.0
 
 The remote server is Java software running in JVM that allow to drive the robot running different inference engine
