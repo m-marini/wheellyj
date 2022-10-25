@@ -7,6 +7,17 @@ function plot_trend(Y, LENGTH=1, STRIDE=1, MODE={"mean"})
   LEGEND={};
   YM = sample(Y, LENGTH, STRIDE, @mean);
   XM = sample(X, LENGTH, STRIDE, @mean);
+  yMin = min(Y);
+  expTrend = false;
+  linPoly = polyfit(X, Y, 1);
+  if yMin > 0
+    linY = polyval(linPoly, X);
+    linErr = mean((Y - linY) .^ 2);
+    expPoly = polyfit(X, log(Y), 1);
+    expY = exp(polyval(expPoly, X));
+    expErr = mean((Y - expY) .^ 2);
+    expTrend = expErr < linErr;
+  endif
 
   for I = [1 : length(MODE)]
     V = MODE{I};
@@ -25,20 +36,23 @@ function plot_trend(Y, LENGTH=1, STRIDE=1, MODE={"mean"})
     elseif strcmp(V, "max")
       Z = [Z, sample(Y, LENGTH, STRIDE, @max)];
       LEGEND = [ LEGEND, {"Max"}];
-    elseif strcmp(V, "lin")
-      LIN_POLY = polyfit(X, Y, 1);
-      LIN_Y = polyval(LIN_POLY, XM);
-      Z = [Z, LIN_Y];
+    elseif strcmp(V, "lin") && !expTrend
+      Z = [Z, polyval(linPoly, XM) ];
       LEGEND = [ LEGEND, {"Linear"}];
-    elseif strcmp(V, "exp") & min(Y) > 0
-      EXP_POLY = polyfit(X, log(Y), 1);
-      EXP_Y = exp(polyval(EXP_POLY, XM));
-      Z = [ Z EXP_Y ];
+    elseif strcmp(V, "exp") && expTrend
+      Z = [ Z exp(polyval(expPoly, XM)) ];
       LEGEND = [LEGEND, {"Exponential"}];
     endif
   endfor
 
-  plot(XM, Z);
+  zmin=min(min(Z));
+  zmax=min(min(Z));
+
+  if expTrend && zmax > 10 * zmin
+    semilogy(XM, Z);
+  else
+    plot(XM, Z);
+  endif
   grid on;
   legend("location", "northwest");
   legend(LEGEND);
