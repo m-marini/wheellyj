@@ -346,7 +346,7 @@ public class TDAgent implements Agent {
         Map<String, SignalSpec> processedState = processor != null ? processor.getSpec() : state;
         this.savingIntervalSteps = savingIntervalSteps;
         this.indicatorsPub = PublishProcessor.create();
-        indicators = indicatorsPub.observeOn(Schedulers.io())
+        indicators = indicatorsPub
                 .map(TDAgent::flatKpis)
                 .publish()
                 .autoConnect();

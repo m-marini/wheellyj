@@ -29,6 +29,8 @@ import org.mmarini.Tuple2;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.Arrays;
@@ -45,6 +47,8 @@ import static java.util.Objects.requireNonNull;
  * The data collector consumer accumulates data and returns the kpi of data
  */
 public class KpiCSVSubscriber implements Subscriber<Map<String, INDArray>> {
+
+    private static final Logger logger = LoggerFactory.getLogger(KpiCSVSubscriber.class);
 
     public static KpiCSVSubscriber create(File path) {
         return new KpiCSVSubscriber(path, List.of(x -> true));
@@ -87,6 +91,7 @@ public class KpiCSVSubscriber implements Subscriber<Map<String, INDArray>> {
 
     @Override
     public void onError(Throwable throwable) {
+        logger.error(throwable.getMessage(), throwable);
         flush();
     }
 

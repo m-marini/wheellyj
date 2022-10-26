@@ -25,6 +25,7 @@
 
 package org.mmarini.wheelly.agents;
 
+import io.reactivex.schedulers.Schedulers;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
@@ -52,6 +53,10 @@ public class CSVConsumer implements Closeable, Consumer<INDArray> {
     public static CSVConsumer create(File file) {
         File shapeFile = new File(file.getParentFile(), file.getName() + "_shape.csv");
         File dataFile = new File(file.getParentFile(), file.getName() + "_data.csv");
+        dataFile.delete();
+        shapeFile.delete();
+        shapeFile.getParentFile().mkdirs();
+        dataFile.getParentFile().mkdirs();
         return new CSVConsumer(shapeFile, dataFile);
     }
 
@@ -68,10 +73,6 @@ public class CSVConsumer implements Closeable, Consumer<INDArray> {
     @Override
     public void accept(INDArray data) {
         if (buffer == null) {
-            dataFile.delete();
-            shapeFile.delete();
-            shapeFile.getParentFile().mkdirs();
-            dataFile.getParentFile().mkdirs();
             long length = data.length();
             long numRows = max(BUFFER_SIZE / length, 1);
             buffer = Nd4j.zeros(numRows, length);
@@ -95,11 +96,14 @@ public class CSVConsumer implements Closeable, Consumer<INDArray> {
 
     private void flush() {
         if (size > 0) {
-            try {
-                Serde.toCsv(dataFile, buffer.get(NDArrayIndex.interval(0, size), NDArrayIndex.all()), true);
-            } catch (IOException e) {
-                logger.error(e.getMessage(), e);
-            }
+            INDArray data = buffer.get(NDArrayIndex.interval(0, size), NDArrayIndex.all()).dup();
+            Schedulers.io().scheduleDirect(() -> {
+                try {
+                    Serde.toCsv(dataFile, data, true);
+                } catch (IOException e) {
+                    logger.error(e.getMessage(), e);
+                }
+            });
         }
         size = 0;
     }
