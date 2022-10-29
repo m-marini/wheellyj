@@ -139,9 +139,8 @@ public class Wheelly {
 
     /**
      * @param args command line arguments
-     * @throws IOException in case of error
      */
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         new Wheelly().start(args);
     }
 
@@ -190,21 +189,21 @@ public class Wheelly {
             try (Environment env = createEnvironment(robot)) {
                 logger.info("Creating agent");
                 try (Agent agent = createAgent(env)) {
+                    long sessionDuration = args.getLong("time");
                     logger.info("Starting session ...");
+                    logger.info("Session are running for {} sec...", sessionDuration);
+                    sessionDuration *= 1000;
                     String kpis = args.getString("kpis");
                     if (kpis.length() != 0) {
                         createKpis(agent, new File(kpis), args.getString("labels"));
                     }
                     long start = System.currentTimeMillis();
+                    float avgRewards = 0;
                     Map<String, Signal> state = env.reset();
                     frame.setObstacleMap(robot.getObstaclesMap()
                             .map(ObstacleMap::getPoints)
                             .orElse(null));
                     frame.setRobot(robot);
-                    long sessionDuration = args.getLong("time");
-                    logger.info("Session are running for {} sec...", sessionDuration);
-                    sessionDuration *= 1000;
-                    float avgRewards = 0;
                     for (boolean running = true; running; ) {
                         Map<String, Signal> actions = agent.act(state);
                         Environment.ExecutionResult result = env.execute(actions);
@@ -213,7 +212,7 @@ public class Wheelly {
                         avgRewards = DEFAULT_DISCOUNT * (avgRewards - reward) + reward;
                         frame.setRobot(robot);
                         frame.setReward(avgRewards);
-                        frame.setTimeRatio((float) robot.getTime() / (System.currentTimeMillis() - start));
+                        frame.setTimeRatio((float) robot.getElapsed() / (System.currentTimeMillis() - start));
                         running = robot.getElapsed() <= sessionDuration &&
                                 frame.isVisible();
                     }

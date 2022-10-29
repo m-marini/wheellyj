@@ -178,6 +178,7 @@ public class Robot implements RobotApi {
 
     @Override
     public void reset() {
+        time = System.currentTimeMillis();
         resetTime = time;
         status = null;
     }

@@ -65,7 +65,17 @@ __Too high values weighs more on past events, obscuring the short-term effects._
 
 The `td_plot_policy.m` octave program plots the maximum probability of actions during the training session.
 
-If agent discover a deterministic best behavior the max probability should increase to the value 1.
+If agent discover a deterministic best behavior the max probability should increase to the max value.
+
+The max value depends on the final softmax layer temperature $T$ and the number of possible values $n$.
+
+$P(max) = \frac{e^{\frac{1}{T}}}{e^{\frac{1}{T}}+(n-1)e^{-\frac{1}{T}}}$
+
+$T = \frac{2}{\log(\frac{P(max)(n-1)}{1 - P(max)})}$
+
+The ratio between the maximum and minimun probability is
+
+$\frac{P(max)}{P(min)} = e^{\frac{2}{T}}$
 
 __Gradually lower values ​​indicate instead that the agent has not found a deterministic behavior that maximizes the reward and therefore randomly selects the actions.__
 

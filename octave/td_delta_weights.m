@@ -1,4 +1,5 @@
-clear all;
+#clear all;
+1;
 
 function files = readKpiFiles(path)
   filenames = readdir(path);
@@ -31,12 +32,17 @@ function [kpis, layers] = extractNames(files)
   layers = unique(layers);
 endfunction
 
-function y = loadData(path, files, fn)
+function y = loadData(hProgress, path, files, fn)
+  n = length(files);
+  waitbar(0 / n, hProgress,  sprintf("Loading 0 / %d ...", n));
   y = csvread([path "/" files{1}]);
   for i = 2 : size(files, 1)
     file = [path "/" files{i}];
-    y = [y csvread(file)];
+    waitbar((i - 1) / n, hProgress,  sprintf("Loading %d / %d ...", i - 1, n));
+    y1 = csvread(file);
+    y = [y y1];
   endfor
+  waitbar(1, hProgress,  sprintf("Loaded %d / %d", n, n));
   y = fn(y);
 endfunction
 
@@ -111,9 +117,9 @@ function handlePlot(h, ev)
     hFunction = data.hFunction;
     hs = get(hFunction, "selectedobject");
     fn = get(hs, "userdata");
-    h = waitbar(0, "Loading ...");
-    y = loadData(data.path, files, fn);
-    delete(h);
+    hProgress = waitbar(0, "Loading ...");
+    y = loadData(hProgress, data.path, files, fn);
+    delete(hProgress);
     hChart = data.hChart;
     if !(hChart && ishghandle(hChart))
       data.hChart = figure("position", centerPosition(800, 600));
@@ -125,8 +131,9 @@ function handlePlot(h, ev)
     len = max(round(n / 100), 1);
     stride = max((len/ 2), 1);
 
-    plot_trend(y, len, stride, mode);
     name = get(hs, "string");
+    printf("\n## %s delta weights \n", name);
+    plot_trend(y, len, stride, mode);
     title(sprintf("%s \\Delta weights", name));
   endif
 endfunction
@@ -143,7 +150,7 @@ function pos = centerPosition(width, height)
   screenSize = get(hgr, "screenSize");
   screenWidth = screenSize(3);
   screenHeight = screenSize(4);
-  pos = [(screenWidth - width) / 2 + 1, (screenHeight - height) / 2 + 1, width, height]
+  pos = [(screenWidth - width) / 2 + 1, (screenHeight - height) / 2 + 1, width, height];
 endfunction
 
 

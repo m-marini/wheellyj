@@ -13,17 +13,17 @@ LEN = max(round(N / 100), 1);
 STRIDE = max((LEN / 2), 1);
 
 subplot(221);
-plot_trend(HALT, LEN, STRIDE, MODE);
+plot_trend(HALT, LEN, STRIDE, MODE, "Halt max probability");
 title("Halt max prob.");
 
 subplot(222);
-plot_trend(DIR, LEN, STRIDE, MODE);
+plot_trend(DIR, LEN, STRIDE, MODE, "Direction max probability");
 title("Direction max prob");
 
 subplot(223);
-plot_trend(SPEED, LEN, STRIDE, MODE);
+plot_trend(SPEED, LEN, STRIDE, MODE, "Speed max probability");
 title("Speed max prob");
 
 subplot(224);
-plot_trend(SENS, LEN, STRIDE, MODE);
+plot_trend(SENS, LEN, STRIDE, MODE, "Sensor direction max probability");
 title("Sensor max prob");

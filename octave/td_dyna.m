@@ -12,6 +12,7 @@ LEN = max(round(N / 100), 1);
 STRIDE = max((LEN / 2), 1);
 
 subplot(121);
+printf("\n## Discount (%.3g) rewards \n", GAMMA);
 plot_trend(DISCOUNT, LEN, STRIDE, MODE);
 text(1, MR, sprintf("median %0.2g", MR));
 title("Discount rewards");
