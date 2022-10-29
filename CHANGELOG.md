@@ -14,12 +14,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 
 - Issue #104: Missing kpi on backpressure
+- Issue #106: Clock time error
 
 ## [0.3.0] 2022-10-23
 
 ### Added
 
-- Issue #76: Java TD environment porting from python
+- Issue #76: Java TD envir
+onment porting from python
 - Issue #79: Agent spec transpiller
 - Issue #80: Robot environment with discrete actions
 - Issue #84: Generate kpis
