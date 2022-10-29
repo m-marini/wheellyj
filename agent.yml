@@ -188,8 +188,8 @@ configurations:
     modelPath: models/tilesAgent
     savingIntervalSteps: 1000
     rewardAlpha: 5e-3
-    policyAlpha: 3e-3
-    criticAlpha: 3e-3
+    policyAlpha: 300e-3
+    criticAlpha: 300e-3
     lambda: 0.5
     inputProcess:
       - name: tiles
@@ -250,7 +250,7 @@ configurations:
             outputSize: 2
           - type: tanh
           - type: softmax
-            temperature: 0.6
+            temperature: 0.91
       direction:
         input: hidden2
         layers:
@@ -258,7 +258,7 @@ configurations:
             outputSize: 25
           - type: tanh
           - type: softmax
-            temperature: 0.6
+            temperature: 0.372
       speed:
         input: hidden2
         layers:
@@ -266,7 +266,7 @@ configurations:
             outputSize: 9
           - type: tanh
           - type: softmax
-            temperature: 0.6
+            temperature: 0.4677
       sensorAction:
         input: hidden2
         layers:
@@ -274,7 +274,7 @@ configurations:
             outputSize: 7
           - type: tanh
           - type: softmax
-            temperature: 0.6
+            temperature: 0.501
     critic:
       layer0:
         inputs:

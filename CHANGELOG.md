@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 
 - Issue #104: Missing kpi on backpressure
+- Issue #106: Clock time error
 
 ## [0.3.0] 2022-10-23
 

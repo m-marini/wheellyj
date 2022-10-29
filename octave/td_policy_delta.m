@@ -23,17 +23,17 @@ LEN = max(round(N / 100), 1);
 STRIDE = max((LEN / 2), 1);
 
 subplot(221);
-plot_trend(D_HALT, LEN, STRIDE, MODE);
+plot_trend(D_HALT, LEN, STRIDE, MODE, "Delta halt probability");
 title("\Delta Halt prob. (%)");
 
 subplot(222);
-plot_trend(D_DIR, LEN, STRIDE, MODE);
+plot_trend(D_DIR, LEN, STRIDE, MODE, "Delta direction probability");
 title("\Delta direction prob. (%)");
 
 subplot(223);
-plot_trend(D_SPEED, LEN, STRIDE, MODE);
+plot_trend(D_SPEED, LEN, STRIDE, MODE, "Delta speed probability");
 title("\Delta speed prob. (%)");
 
 subplot(224);
-plot_trend(D_SENS, LEN, STRIDE, MODE);
+plot_trend(D_SENS, LEN, STRIDE, MODE, "Delta sensor direction probability");
 title("\Delta sensor prob. (%)");

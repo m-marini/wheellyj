@@ -17,10 +17,10 @@ LEN = max(round(N / 100), 1);
 STRIDE = max((LEN / 2), 1);
 
 subplot(121);
-plot_trend(REWARDS, LEN, STRIDE, MODE);
+plot_trend(REWARDS, LEN, STRIDE, MODE, "Rewards");
 title("Reward");
 
 subplot(122);
-plot_trend(abs(DELTA), LEN, STRIDE, MODE);
+plot_trend(abs(DELTA), LEN, STRIDE, MODE, "Delta");
 title("DELTA");
 

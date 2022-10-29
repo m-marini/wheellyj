@@ -140,7 +140,7 @@ public class EnvironmentFrame extends JFrame {
         envPanel.setRobotDirection(robot.getRobotDir());
         envPanel.setSensorDirection(robot.getSensorDir());
         envPanel.setObstacleLocation(robot.getSensorObstacle().orElse(null));
-        envPanel.setTime(robot.getTime());
+        envPanel.setTime(robot.getElapsed());
         envPanel.setDistance(robot.getSensorDistance());
         envPanel.setContacts(robot.getContacts());
         envPanel.setCanMoveForward(robot.getCanMoveForward());
