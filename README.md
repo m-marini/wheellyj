@@ -115,33 +115,12 @@ named arguments:
 The analysis tools are located in `octave` folder.
 To collect the kpis the `-k <kpi_folder>` command option is required during agent training.
 
-The `default_path.m` must be adjust to set the kpi folder before running the plotting programs.
-
 For information about performance analysis please refer to `docs/Analisys.md` file.
 
 ### Agent performance
 
-The reward and reinforcement error $\delta$ are ploted with `td_plot_perf.m` octave program.
-
-### Policy
-
-The policy results are ploted with `td_plot_policy.m` octave program.
-
-### Delta Policy 
-
-The policy changes are ploted with `td_policy_delta.m` octave program.
-
-### Policy gradients
-
-The policy gradients are ploted with `td_grad_policy.m` octave program.
-
-### Critic
-
-The critic estimations is ploted with `td_plot_critic.m` octave program.
-
-### Dynamic behaviors
-
-The dynamic behaviors are ploted with `td_dyna.m` octave program.
+The octave program `td_report` generates the agent performance report.
+The kpi folder and the report folder should be selected.
 
 ### Delta weights
 
