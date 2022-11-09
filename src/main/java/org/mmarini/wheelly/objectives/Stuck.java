@@ -35,6 +35,7 @@ import java.util.Map;
 
 import static java.lang.Math.abs;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.*;
+import static org.mmarini.wheelly.apis.SimRobot.MAX_DISTANCE;
 import static org.mmarini.yaml.schema.Validator.nonNegativeInteger;
 import static org.mmarini.yaml.schema.Validator.positiveNumber;
 
@@ -49,6 +50,14 @@ public class Stuck {
     public static final float DEFAULT_DISTANCE3 = 2;
     public static final int DEFAULT_SENSOR_RANGE = 90;
 
+    private static final Validator VALIDATOR = Validator.objectProperties(Map.of(
+            "distance0", positiveNumber(),
+            "distance1", positiveNumber(),
+            "distance2", positiveNumber(),
+            "distance3", positiveNumber(),
+            "sensorRange", nonNegativeInteger()
+    ));
+
     /**
      * Returns the reward function from configuration
      *
@@ -56,7 +65,7 @@ public class Stuck {
      * @param locator the locator
      */
     public static FloatFunction<WheellyStatus> create(JsonNode root, Locator locator) {
-        validator().apply(locator).accept(root);
+        VALIDATOR.apply(locator).accept(root);
         float distance0 = (float) locator.path("distance0").getNode(root).asDouble(DEFAULT_DISTANCE0);
         float distance1 = (float) locator.path("distance1").getNode(root).asDouble(DEFAULT_DISTANCE1);
         float distance2 = (float) locator.path("distance2").getNode(root).asDouble(DEFAULT_DISTANCE2);
@@ -66,7 +75,7 @@ public class Stuck {
     }
 
     /**
-     * Returns the function that fuzzy rewards a stuck to obstacle begavior
+     * Returns the function that fuzzy rewards a stuck to obstacle behavior
      *
      * @param x1          minimum distance for 0 reward
      * @param x2          minimum distance for 1 reward
@@ -77,7 +86,7 @@ public class Stuck {
     public static FloatFunction<WheellyStatus> stuck(float x1, float x2, float x3, float x4, int sensorRange) {
         return status -> {
             float dist = (float) status.getSampleDistance();
-            if (status.getCannotMoveBackward() || status.getCannotMoveForward() || dist == 0) {
+            if (status.getCannotMoveBackward() || status.getCannotMoveForward() || dist == 0 || dist >= MAX_DISTANCE) {
                 return -1;
             } else {
                 int sensor = status.getSensorRelativeDeg();
@@ -88,15 +97,4 @@ public class Stuck {
             }
         };
     }
-
-    private static Validator validator() {
-        return Validator.objectProperties(Map.of(
-                "distance0", positiveNumber(),
-                "distance1", positiveNumber(),
-                "distance2", positiveNumber(),
-                "distance3", positiveNumber(),
-                "sensorRange", nonNegativeInteger()
-        ));
-    }
-
 }

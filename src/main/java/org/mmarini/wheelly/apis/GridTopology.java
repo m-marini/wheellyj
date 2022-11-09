@@ -86,7 +86,7 @@ public class GridTopology {
     }
 
     /**
-     * Returns the world coordinate
+     * Returns the world coordinate (the center point of the grid cell)
      *
      * @param x x grid coordinate
      * @param y y grid coordinate

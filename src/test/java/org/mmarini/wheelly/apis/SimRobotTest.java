@@ -54,7 +54,7 @@ class SimRobotTest {
     private SimRobot createRobot() {
         Random random = new Random(SEED);
         return new SimRobot(new MapBuilder(new GridTopology(0.2f)).build(),
-                random, 0, 0);
+                random, 0, 0, null, 0, 0);
     }
 
     @Test

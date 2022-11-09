@@ -137,6 +137,11 @@ public class MockRobot implements RobotApi {
         return sensorDistance;
     }
 
+    @Override
+    public RadarMap getRadarMap() {
+        return null;
+    }
+
     public void setSensorDistance(float sensorDistance) {
         this.sensorDistance = sensorDistance;
     }

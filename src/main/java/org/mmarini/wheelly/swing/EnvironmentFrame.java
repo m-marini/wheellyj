@@ -145,6 +145,7 @@ public class EnvironmentFrame extends JFrame {
         envPanel.setContacts(robot.getContacts());
         envPanel.setCanMoveForward(robot.getCanMoveForward());
         envPanel.setCanMoveBacward(robot.getCanMoveBackward());
+        envPanel.setRadarMap(robot.getRadarMap());
         //envPanel.setObstacleMap(robot.getObstaclesMap().map(ObstacleMap::getPoints).orElse(null));
     }
 

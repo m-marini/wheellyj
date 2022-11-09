@@ -25,13 +25,19 @@
 
 package org.mmarini.wheelly.swing;
 
+import org.mmarini.Tuple2;
+import org.mmarini.wheelly.apis.MapSector;
+import org.mmarini.wheelly.apis.RadarMap;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static java.lang.Math.toRadians;
 import static java.lang.String.format;
@@ -58,6 +64,8 @@ public class EnvironmentPanel extends JComponent {
     private static final Color OBSTACLE_PHANTOM_COLOR = new Color(128, 128, 128);
     private static final Color HUD_BACKGROUND_COLOR = new Color(32, 32, 32);
     private static final Color SENSOR_COLOR = new Color(200, 0, 0);
+    private static final Color EMPTY_COLOR = new Color(64, 64, 64, 128);
+    private static final Color FILLED_COLOR = new Color(200, 0, 0, 128);
 
     private static final float[][] ROBOT_POINTS = {
             {ROBOT_WIDTH / 2 - ROBOT_W_BEVEL, ROBOT_LENGTH / 2},
@@ -179,6 +187,7 @@ public class EnvironmentPanel extends JComponent {
     private boolean canMoveBacward;
     private long time;
     private float timeRatio;
+    private List<Tuple2<Point2D, Color>> radarMap;
 
     public EnvironmentPanel() {
         setBackground(Color.BLACK);
@@ -228,10 +237,6 @@ public class EnvironmentPanel extends JComponent {
         }
     }
 
-    public void setTimeRatio(float timeRatio) {
-        this.timeRatio = timeRatio;
-    }
-
     private void drawLine(Graphics g, String text, int row, Color color) {
         FontMetrics fm = getFontMetrics(getFont());
         int y = fm.getHeight() * (row + 1);
@@ -268,6 +273,17 @@ public class EnvironmentPanel extends JComponent {
             gr.setColor(color);
             gr.setStroke(BORDER_STROKE);
             gr.fill(OBSTACLE_SHAPE);
+        }
+    }
+
+    private void drawRadarMap(Graphics2D gr) {
+        if (radarMap != null) {
+            AffineTransform base = gr.getTransform();
+            gr.setStroke(BORDER_STROKE);
+            for (Tuple2<Point2D, Color> t : radarMap) {
+                gr.setTransform(base);
+                drawObstacle(gr, t._1, t._2);
+            }
         }
     }
 
@@ -316,6 +332,9 @@ public class EnvironmentPanel extends JComponent {
         drawObstacle(gr, obstacleLocation, OBSTACLE_COLOR);
 
         gr.setTransform(base);
+        drawRadarMap(gr);
+
+        gr.setTransform(base);
         drawRobot(gr);
 
         drawHUD(g);
@@ -356,6 +375,18 @@ public class EnvironmentPanel extends JComponent {
         repaint();
     }
 
+    public void setRadarMap(RadarMap radarMap) {
+        if (radarMap != null) {
+            this.radarMap = Arrays.stream(radarMap.getMap())
+                    .filter(MapSector::isKnown)
+                    .map(sector -> Tuple2.of(sector.getLocation(),
+                            sector.isFilled() ? FILLED_COLOR : EMPTY_COLOR))
+                    .collect(Collectors.toList());
+        } else {
+            this.radarMap = null;
+        }
+    }
+
     public void setReward(float reward) {
         this.reward = reward;
         repaint();
@@ -384,5 +415,9 @@ public class EnvironmentPanel extends JComponent {
     public void setTime(long time) {
         this.time = time;
         repaint();
+    }
+
+    public void setTimeRatio(float timeRatio) {
+        this.timeRatio = timeRatio;
     }
 }

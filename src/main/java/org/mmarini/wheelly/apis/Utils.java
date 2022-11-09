@@ -46,7 +46,7 @@ public interface Utils {
     }
 
     /**
-     * Returns the direction of to point relative to other point (compass direction)
+     * Returns the direction (RAD) of to point relative to other point (compass direction)
      *
      * @param from the start point
      * @param to   the end point

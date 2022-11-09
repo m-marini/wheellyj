@@ -23,17 +23,10 @@
  *
  */
 
-package org.mmarini.wheelly.rx;
+package org.mmarini.wheelly.envs;
 
-import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.functions.Function;
-import org.nd4j.linalg.api.ndarray.INDArray;
+import org.mmarini.wheelly.apis.RadarMap;
 
-import java.util.Map;
-
-public interface RXFunc {
-    static Function<Map<String, INDArray>, Flowable<INDArray>> getProperty(String key) {
-        return map ->
-                map.containsKey(key) ? Flowable.just(map.get(key)) : Flowable.empty();
-    }
+public interface RadarMapApi {
+    RadarMap getRadarMap();
 }

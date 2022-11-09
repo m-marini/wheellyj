@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.4.0] 2022-11-09
+
+### Added
+
+- Issue #78: Add radar map
+
 ## [0.3.1] 2022-11-09
 
 ### Added
