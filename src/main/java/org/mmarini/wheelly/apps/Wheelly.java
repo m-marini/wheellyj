@@ -37,9 +37,11 @@ import org.mmarini.wheelly.agents.KpiCSVSubscriber;
 import org.mmarini.wheelly.apis.ObstacleMap;
 import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.envs.Environment;
+import org.mmarini.wheelly.envs.RadarMapApi;
 import org.mmarini.wheelly.envs.Signal;
 import org.mmarini.wheelly.swing.EnvironmentFrame;
 import org.mmarini.wheelly.swing.Messages;
+import org.mmarini.wheelly.swing.RadarFrame;
 import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
@@ -189,6 +191,10 @@ public class Wheelly {
             try (Environment env = createEnvironment(robot)) {
                 logger.info("Creating agent");
                 try (Agent agent = createAgent(env)) {
+                    RadarFrame radarFrame = null;
+                    if (env instanceof RadarMapApi) {
+                        radarFrame = new RadarFrame();
+                    }
                     long sessionDuration = args.getLong("time");
                     logger.info("Starting session ...");
                     logger.info("Session are running for {} sec...", sessionDuration);
@@ -213,8 +219,14 @@ public class Wheelly {
                         frame.setRobot(robot);
                         frame.setReward(avgRewards);
                         frame.setTimeRatio((float) robot.getElapsed() / (System.currentTimeMillis() - start));
+                        if (radarFrame != null) {
+                            radarFrame.setRadar(((RadarMapApi) env).getRadarMap());
+                        }
                         running = robot.getElapsed() <= sessionDuration &&
                                 frame.isVisible();
+                    }
+                    if (radarFrame != null) {
+                        radarFrame.dispose();
                     }
                     logger.info("Cleaning up ...");
                 }

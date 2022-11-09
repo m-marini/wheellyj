@@ -22,6 +22,11 @@ commands.
 
 The code of Arduino controller is at [Wheellino project](https://github.com/m-marini/wheellino)
 
+## Release 0.4.0
+
+Added the radar map component that processes the proxy sensor signals creating a map of obstacles.
+The map feeds the neural network as environment state signals.
+
 ## Release 0.3.0
 
 The remote server is Java software running in JVM that implements the interaction between environment and agent.
@@ -29,7 +34,7 @@ The environment can collect and drive the remote robot by Wi-Fi connection or si
 environment.
 
 The agent is based on Temporal Difference (TD) actor-critic algorithms with eligibility trace, the critic component use
-the  residual advantage state value to evaluate the policy of actor.
+the residual advantage state value to evaluate the policy of actor.
 
 ### Maven build
 
@@ -41,14 +46,16 @@ mvn assembly:assembly -DskipTests
 
 In `target` folder you will find an installation zip file
 
-### Configure robot Wifi connection 
+### Configure robot Wifi connection
 
 After installed the application run the command:
 
 ```bash
 java -classpath lib/wheelly-0.3.0.jar org.mmarini.wheelly.apps.WiFiConf win
 ```
+
 or by CLP (Command Line Processor)
+
 ```bash
 >java -classpath lib/wheelly-0.3.0.jar org.mmarini.wheelly.apps.WiFiConf -h
 
@@ -81,7 +88,8 @@ After installed the application run the command:
 java -classpath lib/wheelly-0.3.0.jar org.mmarini.wheelly.apps.Wheelly
 ```
 
-the options are 
+the options are
+
 ```bash
 > java -classpath lib/wheelly-0.3.0.jar org.mmarini.wheelly.apps.Wheelly -h
 

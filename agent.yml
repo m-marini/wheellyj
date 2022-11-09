@@ -1,6 +1,6 @@
 ---
 version: "0.2"
-active: tilesAgent
+active: radarAgent
 
 configurations:
 ######################################
@@ -314,6 +314,287 @@ configurations:
         layers:
           - type: dense
             outputSize: 300
+          - type: relu
+      output:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 1
+          - type: tanh
+          - type: linear
+            b: 0
+            w: 3
+######################################
+# Tiles agent
+######################################
+  tilesAgent:
+    class: org.mmarini.wheelly.agents.TDAgent
+    seed: 1234
+    modelPath: models/tilesAgent
+    savingIntervalSteps: 1000
+    rewardAlpha: 5e-3
+    policyAlpha: 300e-3
+    criticAlpha: 300e-3
+    lambda: 0.5
+    inputProcess:
+      - name: tiles
+        class: org.mmarini.wheelly.agents.TilesProcessor
+        inputs:
+          - name: sensor
+            numTiles: 7
+          - name: distance
+            numTiles: 30
+      - name: canMoveFeatures
+        class: org.mmarini.wheelly.agents.PartitionProcessor
+        inputs:
+          - name: canMoveForward
+            numTiles: 2
+          - name: canMoveBackward
+            numTiles: 2
+    policy:
+      layer0:
+        inputs:
+          type: concat
+          inputs:
+            - tiles
+            - canMoveFeatures
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden0:
+        input: layer0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden1:
+        inputs:
+          type: sum
+          inputs:
+            - layer0
+            - hidden0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden2:
+        inputs:
+          type: sum
+          inputs:
+            - hidden0
+            - hidden1
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      halt:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 2
+          - type: tanh
+          - type: softmax
+            temperature: 0.91
+      direction:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 25
+          - type: tanh
+          - type: softmax
+            temperature: 0.372
+      speed:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 9
+          - type: tanh
+          - type: softmax
+            temperature: 0.4677
+      sensorAction:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 7
+          - type: tanh
+          - type: softmax
+            temperature: 0.501
+    critic:
+      layer0:
+        inputs:
+          type: concat
+          inputs:
+            - tiles
+            - canMoveFeatures
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden0:
+        input: layer0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden1:
+        inputs:
+          type: sum
+          inputs:
+            - layer0
+            - hidden0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden2:
+        inputs:
+          type: sum
+          inputs:
+            - hidden0
+            - hidden1
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      output:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 1
+          - type: tanh
+          - type: linear
+            b: 0
+            w: 3
+  ######################################
+  # Radar agent
+  ######################################
+  radarAgent:
+    class: org.mmarini.wheelly.agents.TDAgent
+    seed: 1234
+    modelPath: models/radarAgent
+    savingIntervalSteps: 1000
+    rewardAlpha: 5e-3
+    policyAlpha: 300e-3
+    criticAlpha: 300e-3
+    lambda: 0.5
+    inputProcess:
+      - name: radarFeatures
+        class: org.mmarini.wheelly.agents.FeatureVectorProcessor
+        inputs:
+          - radar
+      - name: canMoveFeatures
+        class: org.mmarini.wheelly.agents.PartitionProcessor
+        inputs:
+          - name: canMoveForward
+            numTiles: 2
+          - name: canMoveBackward
+            numTiles: 2
+    policy:
+      layer0:
+        inputs:
+          type: concat
+          inputs:
+            - radarFeatures
+            - canMoveFeatures
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden0:
+        input: layer0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden1:
+        inputs:
+          type: sum
+          inputs:
+            - layer0
+            - hidden0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden2:
+        inputs:
+          type: sum
+          inputs:
+            - hidden0
+            - hidden1
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      halt:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 2
+          - type: tanh
+          - type: softmax
+            temperature: 0.91
+      direction:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 25
+          - type: tanh
+          - type: softmax
+            temperature: 0.372
+      speed:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 9
+          - type: tanh
+          - type: softmax
+            temperature: 0.4677
+      sensorAction:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 7
+          - type: tanh
+          - type: softmax
+            temperature: 0.501
+    critic:
+      layer0:
+        inputs:
+          type: concat
+          inputs:
+            - radarFeatures
+            - canMoveFeatures
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden0:
+        input: layer0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden1:
+        inputs:
+          type: sum
+          inputs:
+            - layer0
+            - hidden0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden2:
+        inputs:
+          type: sum
+          inputs:
+            - hidden0
+            - hidden1
+        layers:
+          - type: dense
+            outputSize: 100
           - type: relu
       output:
         input: hidden2

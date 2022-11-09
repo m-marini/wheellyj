@@ -45,6 +45,7 @@ import java.util.Random;
 
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.Robot.*;
 import static org.mmarini.wheelly.apis.Utils.*;
 import static org.mmarini.yaml.schema.Validator.*;
 
@@ -61,7 +62,7 @@ public class SimRobot implements RobotApi {
     public static final float ROBOT_WIDTH = 0.18F;
     public static final float ROBOT_LENGTH = 0.26F;
     private static final float MIN_OBSTACLE_DISTANCE = 1;
-    private static final float MAX_OBSTACLE_DISTANCE = 3;
+    public static final float MAX_OBSTACLE_DISTANCE = 3;
     private static final Vec2 GRAVITY = new Vec2();
     private static final int VELOCITY_ITER = 10;
     private static final int POSITION_ITER = 10;
@@ -77,7 +78,7 @@ public class SimRobot implements RobotApi {
     private static final float MAX_ACC = 1;
     private static final float MAX_FORCE = MAX_ACC * ROBOT_MASS;
     private static final float MAX_TORQUE = 0.7F;
-    private static final float MAX_DISTANCE = 3;
+    public static final float MAX_DISTANCE = 3;
     private static final float SENSOR_GAP = 0.01F;
     private static final float[][] FRONT_LEFT_VERTICES = {
             {SENSOR_GAP, ROBOT_WIDTH / 2 + SENSOR_GAP},
@@ -104,7 +105,12 @@ public class SimRobot implements RobotApi {
                     "mapSeed", positiveInteger(),
                     "errSigma", nonNegativeNumber(),
                     "errSensor", nonNegativeNumber(),
-                    "numObstacles", nonNegativeInteger()
+                    "numObstacles", nonNegativeInteger(),
+                    "radarWidth", positiveInteger(),
+                    "radarHeight", positiveInteger(),
+                    "radarGrid", positiveNumber(),
+                    "radarCleanInterval", positiveInteger(),
+                    "radarPersistence", positiveInteger()
             )
     );
 
@@ -122,10 +128,16 @@ public class SimRobot implements RobotApi {
                 .build();
         float errSigma = (float) locator.path("errSigma").getNode(root).asDouble(DEFAULT_ERR_SIGMA);
         float errSensor = (float) locator.path("errSensor").getNode(root).asDouble(DEFAULT_ERR_SENSOR);
+        int radarWidth = locator.path("radarWidth").getNode(root).asInt(DEFAULT_RADAR_WIDTH);
+        int radarHeight = locator.path("radarHeight").getNode(root).asInt(DEFAULT_RADAR_HEIGHT);
+        float radarGrid = (float) locator.path("radarGrid").getNode(root).asDouble(DEFAULT_RADAR_GRID);
+        long radarCleanInterval = locator.path("radarCleanInterval").getNode(root).asLong(DEFAULT_RADAR_CLEAN);
+        long radarPersistence = locator.path("radarPersistence").getNode(root).asLong(DEFAULT_RADAR_PERSISTENCE);
+        RadarMap radarMap = RadarMap.create(radarWidth, radarHeight, new Point2D.Float(), radarGrid);
         return new SimRobot(obstacleMap,
                 robotRandom,
                 errSigma,
-                errSensor);
+                errSensor, radarMap, radarPersistence, radarCleanInterval);
     }
 
     protected static void createObstacle(World world, Point2D location) {
@@ -170,6 +182,9 @@ public class SimRobot implements RobotApi {
     private final Fixture frSensor;
     private final Fixture rlSensor;
     private final Fixture rrSensor;
+    private final RadarMap radarMap;
+    private final long radarPersistence;
+    private final long cleanInterval;
     private float speed;
     private float left;
     private float right;
@@ -181,20 +196,27 @@ public class SimRobot implements RobotApi {
     private boolean canMoveBackward;
     private long time;
     private long resetTime;
+    private long cleanTimeout;
 
     /**
      * Creates a simulated robot
      *
-     * @param obstacleMap the obstacle map
-     * @param random      the random generator
-     * @param errSigma    sigma of errors in physic simulation
-     * @param errSensor   sensor error in meters
+     * @param obstacleMap      the obstacle map
+     * @param random           the random generator
+     * @param errSigma         sigma of errors in physic simulation
+     * @param errSensor        sensor error in meters
+     * @param radarMap         the radar map
+     * @param radarPersistence
+     * @param cleanInterval
      */
-    public SimRobot(ObstacleMap obstacleMap, Random random, float errSigma, float errSensor) {
+    public SimRobot(ObstacleMap obstacleMap, Random random, float errSigma, float errSensor, RadarMap radarMap, long radarPersistence, long cleanInterval) {
         this.random = requireNonNull(random);
         this.errSigma = errSigma;
         this.errSensor = errSensor;
         this.obstacleMap = obstacleMap;
+        this.radarMap = radarMap;
+        this.radarPersistence = radarPersistence;
+        this.cleanInterval = cleanInterval;
 
         // Creates the jbox2 physic world
         this.world = new World(GRAVITY);
@@ -356,6 +378,11 @@ public class SimRobot implements RobotApi {
     }
 
     @Override
+    public RadarMap getRadarMap() {
+        return radarMap;
+    }
+
+    @Override
     public int getRobotDir() {
         return (int) round(toDegrees(normalizeAngle(PI / 2 - robot.getAngle())));
     }
@@ -480,5 +507,13 @@ public class SimRobot implements RobotApi {
         canMoveForward = (distance == 0 || distance > SAFE_DISTANCE) && (contacts & 0xc) == 0;
         canMoveBackward = (contacts & 0x3) == 0;
         checkForSpeed();
+        if (radarMap != null) {
+            RadarMap.SensorSignal signal = new RadarMap.SensorSignal(this.getRobotPos(), normalizeDegAngle(getRobotDir() + getSensorDir()), distance, time);
+            radarMap.update(signal);
+            if (time >= cleanTimeout) {
+                radarMap.clean(time - radarPersistence);
+                cleanTimeout = time + cleanInterval;
+            }
+        }
     }
 }

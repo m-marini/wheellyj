@@ -23,17 +23,29 @@
  *
  */
 
-package org.mmarini.wheelly.rx;
+package org.mmarini.wheelly.swing;
 
-import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.functions.Function;
-import org.nd4j.linalg.api.ndarray.INDArray;
+import org.mmarini.wheelly.apis.RadarMap;
 
-import java.util.Map;
+import javax.swing.*;
+import java.awt.*;
 
-public interface RXFunc {
-    static Function<Map<String, INDArray>, Flowable<INDArray>> getProperty(String key) {
-        return map ->
-                map.containsKey(key) ? Flowable.just(map.get(key)) : Flowable.empty();
+public class RadarFrame extends JFrame {
+    private final RadarPanel radarPanel;
+
+    public RadarFrame() throws HeadlessException {
+        super("Radar");
+        radarPanel = new RadarPanel();
+        setSize(400, 400);
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        setResizable(false);
+        Container content = getContentPane();
+        content.setLayout(new BorderLayout());
+        content.add(radarPanel, BorderLayout.CENTER);
+        setVisible(true);
+    }
+
+    public void setRadar(RadarMap radarMap) {
+        radarPanel.setRadarMap(radarMap);
     }
 }

@@ -25,12 +25,6 @@
 
 package org.mmarini.wheelly.apis;
 
-import java.awt.geom.Point2D;
-import java.util.Optional;
-
-import static java.lang.Math.*;
-import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
-
 /**
  *
  */

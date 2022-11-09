@@ -8,6 +8,11 @@ configurations:
     robotSeed: 1234
     mapSeed: 1234
     numObstacles: 10
+    #radarPersistence: 10000
+    #radarCleanInterval: 2000
+    #radarGrid: 0.2
+    #radarWidth: 11
+    #radarHeight: 11
   realRobot:
     class: org.mmarini.wheelly.apis.Robot
     host: "192.168.1.11"

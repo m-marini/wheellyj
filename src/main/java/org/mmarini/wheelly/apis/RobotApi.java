@@ -58,6 +58,11 @@ public interface RobotApi extends Closeable {
     float getSensorDistance();
 
     /**
+     * Returns the rarad map
+     */
+    RadarMap getRadarMap();
+
+    /**
      * Returns the obstacle location
      */
     default Optional<Point2D> getSensorObstacle() {

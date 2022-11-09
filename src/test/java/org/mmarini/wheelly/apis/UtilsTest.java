@@ -25,6 +25,7 @@
 
 package org.mmarini.wheelly.apis;
 
+import org.jbox2d.common.Vec2;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -40,6 +41,7 @@ import static java.lang.Math.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mmarini.ArgumentsGenerator.*;
 import static org.mmarini.wheelly.apis.Utils.direction;
@@ -58,6 +60,95 @@ class UtilsTest {
                 exponential(MIN_DIST, MAX_DIST),
                 uniform(-180, 179)
         );
+    }
+
+    static Stream<Arguments> normalAngleSet() {
+        return Stream.of(
+                Arguments.of(0D, 0D),
+                Arguments.of(PI, -PI),
+                Arguments.of(-PI, -PI),
+                Arguments.of(PI * 3 / 2, -PI / 2),
+                Arguments.of(-PI * 3 / 2, PI / 2),
+                Arguments.of(PI * 5 / 2, PI / 2),
+                Arguments.of(-PI * 5 / 2, -PI / 2)
+        );
+    }
+
+    static Stream<Arguments> vect2dArgs() {
+        return createStream(1234,
+                uniform(-MAX_COORD, MAX_COORD),
+                uniform(-MAX_COORD, MAX_COORD)
+        );
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            "0,0",
+            "0.5,0.5",
+            "1,1",
+            "2,1",
+            "-0.5,-0.5",
+            "-1,-1",
+            "-2,-1"
+    })
+    void clipFloat(float value, float expected) {
+        assertEquals(expected, Utils.clip(value, -1F, 1F));
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            "0,0,-1,1,-10,10",
+            "5,0.5,-1,1,-10,10",
+            "10,1,-1,1,-10,10",
+            "20,2,-1,1,-10,10",
+            "-5,-0.5,-1,1,-10,10",
+            "-10,-1,-1,1,-10,10",
+            "-20,-2,-1,1,-10,10"
+    })
+    void linear(double expected, double value, double minX, double maxX, double minY, double maxY) {
+        assertEquals(expected, Utils.linear(value, minX, maxX, minY, maxY));
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            "0,0,-1,1,-10,10",
+            "5,0.5,-1,1,-10,10",
+            "10,1,-1,1,-10,10",
+            "20,2,-1,1,-10,10",
+            "-5,-0.5,-1,1,-10,10",
+            "-10,-1,-1,1,-10,10",
+            "-20,-2,-1,1,-10,10"
+    })
+    void linearFloat(float expected, float value, float minX, float maxX, float minY, float maxY) {
+        assertEquals(expected, Utils.linear(value, minX, maxX, minY, maxY));
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            "0,0",
+            "179,179",
+            "-179,-179",
+            "450,90",
+            "-450,-90",
+            "270,-90",
+            "-270,90",
+    })
+    void normalizeDegAngle(int angle, int expected) {
+        assertEquals(expected, Utils.normalizeDegAngle(angle));
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            "0,0",
+            "179,179",
+            "-179,-179",
+            "450,90",
+            "-450,-90",
+            "270,-90",
+            "-270,90",
+    })
+    void normalizeDegAngleDouble(double angle, double expected) {
+        assertEquals(expected, Utils.normalizeDegAngle(angle));
     }
 
     @Test
@@ -108,5 +199,19 @@ class UtilsTest {
         double dir = toDegrees(direction(offset, location));
 
         assertThat(dir, closeTo(deg, 1e-2));
+    }
+
+    @ParameterizedTest
+    @MethodSource("normalAngleSet")
+    void testNormalizeAngle(double angle, double expected) {
+        assertEquals(expected, Utils.normalizeAngle(angle));
+    }
+
+    @ParameterizedTest
+    @MethodSource("vect2dArgs")
+    void vect2d(double x, double y) {
+        Vec2 expected = new Vec2((float) x, (float) y);
+        assertEquals(expected, Utils.vec2((float) x, (float) y));
+        assertEquals(expected, Utils.vec2(new float[]{(float) x, (float) y}));
     }
 }
