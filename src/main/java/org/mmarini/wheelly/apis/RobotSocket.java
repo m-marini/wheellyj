@@ -77,7 +77,9 @@ public class RobotSocket implements Closeable {
 
     @Override
     public void close() throws IOException {
-        channel.close();
+        if (channel != null) {
+            channel.close();
+        }
     }
 
     /**
