@@ -25,19 +25,12 @@
 
 package org.mmarini.wheelly.swing;
 
-import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.MapSector;
-import org.mmarini.wheelly.apis.RadarMap;
-
-import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static java.lang.Math.toRadians;
 import static java.lang.String.format;
@@ -46,11 +39,10 @@ import static java.util.Objects.requireNonNull;
 /**
  * The canvas with environment display
  */
-public class EnvironmentPanel extends JComponent {
+public class EnvironmentPanel extends RadarPanel {
     public static final BasicStroke BORDER_STROKE = new BasicStroke(0);
     private static final float DEFAULT_WORLD_SIZE = 11;
     private static final float DEFAULT_SCALE = 800 / DEFAULT_WORLD_SIZE;
-    private static final float GRID_SIZE = 1f;
     private static final float ROBOT_WIDTH = 0.18f;
     private static final float ROBOT_LENGTH = 0.26f;
     private static final float ROBOT_W_BEVEL = 0.06f;
@@ -59,13 +51,10 @@ public class EnvironmentPanel extends JComponent {
     private static final float SENSOR_LENGTH = 3f;
 
     private static final Color ROBOT_COLOR = new Color(255, 255, 0);
-    private static final Color GRID_COLOR = new Color(50, 50, 50);
     private static final Color OBSTACLE_COLOR = new Color(255, 0, 0);
     private static final Color OBSTACLE_PHANTOM_COLOR = new Color(128, 128, 128);
     private static final Color HUD_BACKGROUND_COLOR = new Color(32, 32, 32);
     private static final Color SENSOR_COLOR = new Color(200, 0, 0);
-    private static final Color EMPTY_COLOR = new Color(64, 64, 64, 128);
-    private static final Color FILLED_COLOR = new Color(200, 0, 0, 128);
 
     private static final float[][] ROBOT_POINTS = {
             {ROBOT_WIDTH / 2 - ROBOT_W_BEVEL, ROBOT_LENGTH / 2},
@@ -81,20 +70,7 @@ public class EnvironmentPanel extends JComponent {
             {0, SENSOR_LENGTH}
     };
     private static final Shape SENSOR_SHAPE = createShape(SENSOR_POINTS);
-    private static final Shape GRID_SHAPE = createGridShape();
-    private static final Shape OBSTACLE_SHAPE = new Rectangle2D.Float(
-            -OBSTACLE_SIZE / 2, -OBSTACLE_SIZE / 2,
-            OBSTACLE_SIZE, OBSTACLE_SIZE);
     private static final int HUD_WIDTH = 200;
-
-    /**
-     * Returns the transformation to draw in a world location
-     *
-     * @param location location in world coordinate
-     */
-    private static AffineTransform at(Point2D location) {
-        return AffineTransform.getTranslateInstance(location.getX(), location.getY());
-    }
 
     /**
      * Returns the transformation to draw the CW rotated shape in a world location
@@ -116,25 +92,6 @@ public class EnvironmentPanel extends JComponent {
      */
     private static AffineTransform at(Point2D location, int direction) {
         return at(location, toRadians(direction));
-    }
-
-    private static Shape createGridShape() {
-        Path2D.Float shape = new Path2D.Float();
-        shape.moveTo(0, -DEFAULT_WORLD_SIZE);
-        shape.lineTo(0, DEFAULT_WORLD_SIZE);
-        shape.moveTo(-DEFAULT_WORLD_SIZE, 0);
-        shape.lineTo(DEFAULT_WORLD_SIZE, 0);
-        for (float s = GRID_SIZE; s <= DEFAULT_WORLD_SIZE; s += GRID_SIZE) {
-            shape.moveTo(s, -DEFAULT_WORLD_SIZE);
-            shape.lineTo(s, DEFAULT_WORLD_SIZE);
-            shape.moveTo(-s, -DEFAULT_WORLD_SIZE);
-            shape.lineTo(-s, DEFAULT_WORLD_SIZE);
-            shape.moveTo(-DEFAULT_WORLD_SIZE, s);
-            shape.lineTo(DEFAULT_WORLD_SIZE, s);
-            shape.moveTo(-DEFAULT_WORLD_SIZE, -s);
-            shape.lineTo(DEFAULT_WORLD_SIZE, -s);
-        }
-        return shape;
     }
 
     private static Shape createShape(float[][] points) {
@@ -173,29 +130,25 @@ public class EnvironmentPanel extends JComponent {
         return result.toString();
     }
 
+    private Shape obstacleShape;
     private Point2D robotLocation;
     private int robotDirection;
     private int sensorDirection;
-    private Point2D centerLocation;
-    private float scale;
     private Point2D obstacleLocation;
     private List<Point2D> obstacleMap;
     private int contacts;
     private float distance;
     private float reward;
     private boolean canMoveForward;
-    private boolean canMoveBacward;
+    private boolean canMoveBackward;
     private long time;
     private float timeRatio;
-    private List<Tuple2<Point2D, Color>> radarMap;
 
     public EnvironmentPanel() {
-        setBackground(Color.BLACK);
-        setForeground(Color.WHITE);
         setFont(Font.decode("Monospaced"));
+        setScale(DEFAULT_SCALE);
         robotLocation = new Point2D.Float();
-        scale = DEFAULT_SCALE;
-        centerLocation = new Point2D.Float();
+        setObstacleSize(OBSTACLE_SIZE);
     }
 
     /**
@@ -204,20 +157,11 @@ public class EnvironmentPanel extends JComponent {
     AffineTransform createBaseTransform() {
         Dimension size = getSize();
         AffineTransform result = AffineTransform.getTranslateInstance((float) size.width / 2, (float) size.height / 2);
+        float scale = getScale();
         result.scale(scale, -scale);
+        Point2D centerLocation = getCenterLocation();
         result.translate(-centerLocation.getX(), -centerLocation.getY());
         return result;
-    }
-
-    /**
-     * Draws the grid
-     *
-     * @param gr the graphic context
-     */
-    private void drawGrid(Graphics2D gr) {
-        gr.setStroke(BORDER_STROKE);
-        gr.setColor(GRID_COLOR);
-        gr.draw(GRID_SHAPE);
     }
 
     private void drawHUD(Graphics g) {
@@ -232,7 +176,7 @@ public class EnvironmentPanel extends JComponent {
         if (!canMoveForward) {
             drawLine(g, "FORWARD  STOP", 4, Color.RED);
         }
-        if (!canMoveBacward) {
+        if (!canMoveBackward) {
             drawLine(g, "BACKWARD STOP", 5, Color.RED);
         }
     }
@@ -272,18 +216,7 @@ public class EnvironmentPanel extends JComponent {
             gr.transform(at(location));
             gr.setColor(color);
             gr.setStroke(BORDER_STROKE);
-            gr.fill(OBSTACLE_SHAPE);
-        }
-    }
-
-    private void drawRadarMap(Graphics2D gr) {
-        if (radarMap != null) {
-            AffineTransform base = gr.getTransform();
-            gr.setStroke(BORDER_STROKE);
-            for (Tuple2<Point2D, Color> t : radarMap) {
-                gr.setTransform(base);
-                drawObstacle(gr, t._1, t._2);
-            }
+            gr.fill(obstacleShape);
         }
     }
 
@@ -340,18 +273,13 @@ public class EnvironmentPanel extends JComponent {
         drawHUD(g);
     }
 
-    public void setCanMoveBacward(boolean canMoveBacward) {
-        this.canMoveBacward = canMoveBacward;
+    public void setCanMoveBackward(boolean canMoveBackward) {
+        this.canMoveBackward = canMoveBackward;
         repaint();
     }
 
     public void setCanMoveForward(boolean canMoveForward) {
         this.canMoveForward = canMoveForward;
-        repaint();
-    }
-
-    public void setCenterLocation(Point2D centerLocation) {
-        this.centerLocation = requireNonNull(centerLocation);
         repaint();
     }
 
@@ -375,16 +303,11 @@ public class EnvironmentPanel extends JComponent {
         repaint();
     }
 
-    public void setRadarMap(RadarMap radarMap) {
-        if (radarMap != null) {
-            this.radarMap = Arrays.stream(radarMap.getMap())
-                    .filter(MapSector::isKnown)
-                    .map(sector -> Tuple2.of(sector.getLocation(),
-                            sector.isFilled() ? FILLED_COLOR : EMPTY_COLOR))
-                    .collect(Collectors.toList());
-        } else {
-            this.radarMap = null;
-        }
+    public void setObstacleSize(float obstacleSize) {
+        this.obstacleShape = new Rectangle2D.Float(
+                -obstacleSize / 2, -obstacleSize / 2,
+                obstacleSize, obstacleSize);
+
     }
 
     public void setReward(float reward) {
@@ -399,11 +322,6 @@ public class EnvironmentPanel extends JComponent {
 
     void setRobotLocation(Point2D location) {
         this.robotLocation = requireNonNull(location);
-        repaint();
-    }
-
-    public void setScale(float scale) {
-        this.scale = scale;
         repaint();
     }
 

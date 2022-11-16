@@ -44,14 +44,14 @@ import java.util.stream.Collectors;
  */
 public class RadarPanel extends JComponent {
     public static final BasicStroke BORDER_STROKE = new BasicStroke(0);
-    private static final float DEFAULT_WORLD_SIZE = 11;
-    private static final float DEFAULT_SCALE = 400 / DEFAULT_WORLD_SIZE;
-    private static final float GRID_SIZE = 1f;
+    static final float DEFAULT_WORLD_SIZE = 11;
+    static final float DEFAULT_SCALE = 400 / DEFAULT_WORLD_SIZE;
+    static final float GRID_SIZE = 1f;
 
-    private static final Color GRID_COLOR = new Color(50, 50, 50);
-    private static final Color EMPTY_COLOR = new Color(64, 64, 64, 128);
-    private static final Color FILLED_COLOR = new Color(200, 0, 0, 128);
-    private static final Shape GRID_SHAPE = createGridShape();
+    static final Color GRID_COLOR = new Color(50, 50, 50);
+    static final Color EMPTY_COLOR = new Color(64, 64, 64, 128);
+    static final Color FILLED_COLOR = new Color(200, 0, 0, 128);
+    static final Shape GRID_SHAPE = createGridShape();
 
     /**
      * Returns the transformation to draw in a world location
@@ -82,7 +82,7 @@ public class RadarPanel extends JComponent {
     }
 
     private final Point2D centerLocation;
-    private final float scale;
+    private float scale;
     private List<Tuple2<Point2D, Color>> radarMap;
     private Shape sectorShape;
 
@@ -110,10 +110,21 @@ public class RadarPanel extends JComponent {
      *
      * @param gr the graphic context
      */
-    private void drawGrid(Graphics2D gr) {
+    void drawGrid(Graphics2D gr) {
         gr.setStroke(BORDER_STROKE);
         gr.setColor(GRID_COLOR);
         gr.draw(GRID_SHAPE);
+    }
+
+    void drawRadarMap(Graphics2D gr) {
+        if (radarMap != null) {
+            AffineTransform base = gr.getTransform();
+            gr.setStroke(BORDER_STROKE);
+            for (Tuple2<Point2D, Color> t : radarMap) {
+                gr.setTransform(base);
+                drawSector(gr, t._1, t._2);
+            }
+        }
     }
 
     /**
@@ -123,7 +134,7 @@ public class RadarPanel extends JComponent {
      * @param location the location
      * @param color    the color
      */
-    private void drawObstacle(Graphics2D gr, Point2D location, Color color) {
+    void drawSector(Graphics2D gr, Point2D location, Color color) {
         if (location != null) {
             gr.transform(at(location));
             gr.setColor(color);
@@ -132,15 +143,19 @@ public class RadarPanel extends JComponent {
         }
     }
 
-    private void drawRadarMap(Graphics2D gr) {
-        if (radarMap != null) {
-            AffineTransform base = gr.getTransform();
-            gr.setStroke(BORDER_STROKE);
-            for (Tuple2<Point2D, Color> t : radarMap) {
-                gr.setTransform(base);
-                drawObstacle(gr, t._1, t._2);
-            }
-        }
+    /**
+     * Returns the location of center map
+     */
+    public Point2D getCenterLocation() {
+        return centerLocation;
+    }
+
+    public float getScale() {
+        return scale;
+    }
+
+    public void setScale(float scale) {
+        this.scale = scale;
     }
 
     @Override

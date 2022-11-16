@@ -132,26 +132,26 @@ public abstract class SignalSpec {
     }
 
     /**
+     * Returns the json node of spec
+     */
+    public abstract JsonNode getJson();
+
+    /**
      * Returns the shape of signal
      */
     public long[] getShape() {
         return this.shape;
     }
 
-    @Override
-    public int hashCode() {
-        return Arrays.hashCode(shape);
-    }
-
-    /**
-     * Returns the json node of spec
-     */
-    public abstract JsonNode getJson();
-
     /**
      * Returns the number of elements
      */
     public long getSize() {
         return Arrays.stream(shape).reduce(1, (a, b) -> a * b);
+    }
+
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(shape);
     }
 }

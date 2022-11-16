@@ -126,6 +126,10 @@ public class EnvironmentFrame extends JFrame {
         envPanel.setObstacleMap(map);
     }
 
+    public void setObstacleSize(float obstacleSize) {
+        this.envPanel.setObstacleSize(obstacleSize);
+    }
+
     public void setReward(float reward) {
         envPanel.setReward(reward);
     }
@@ -144,7 +148,7 @@ public class EnvironmentFrame extends JFrame {
         envPanel.setDistance(robot.getSensorDistance());
         envPanel.setContacts(robot.getContacts());
         envPanel.setCanMoveForward(robot.getCanMoveForward());
-        envPanel.setCanMoveBacward(robot.getCanMoveBackward());
+        envPanel.setCanMoveBackward(robot.getCanMoveBackward());
         envPanel.setRadarMap(robot.getRadarMap());
         //envPanel.setObstacleMap(robot.getObstaclesMap().map(ObstacleMap::getPoints).orElse(null));
     }

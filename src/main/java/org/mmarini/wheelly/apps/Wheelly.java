@@ -34,6 +34,7 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
 import org.mmarini.wheelly.agents.Agent;
 import org.mmarini.wheelly.agents.KpiCSVSubscriber;
+import org.mmarini.wheelly.apis.GridTopology;
 import org.mmarini.wheelly.apis.ObstacleMap;
 import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.envs.Environment;
@@ -206,9 +207,13 @@ public class Wheelly {
                     long start = System.currentTimeMillis();
                     float avgRewards = 0;
                     Map<String, Signal> state = env.reset();
-                    frame.setObstacleMap(robot.getObstaclesMap()
+                    robot.getObstaclesMap()
                             .map(ObstacleMap::getPoints)
-                            .orElse(null));
+                            .ifPresent(frame::setObstacleMap);
+                    robot.getObstaclesMap()
+                            .map(ObstacleMap::getTopology)
+                            .map(GridTopology::getGridSize)
+                            .ifPresent(frame::setObstacleSize);
                     frame.setRobot(robot);
                     for (boolean running = true; running; ) {
                         Map<String, Signal> actions = agent.act(state);

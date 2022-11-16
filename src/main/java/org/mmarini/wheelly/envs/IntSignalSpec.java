@@ -76,18 +76,6 @@ public class IntSignalSpec extends SignalSpec {
         return numValues == that.numValues;
     }
 
-    /**
-     * Returns the number of values
-     */
-    public int getNumValues() {
-        return numValues;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(super.hashCode(), numValues);
-    }
-
     @Override
     public JsonNode getJson() {
         ObjectNode spec = Utils.objectMapper.createObjectNode();
@@ -99,6 +87,18 @@ public class IntSignalSpec extends SignalSpec {
         }
         spec.set("shape", shapeNode);
         return spec;
+    }
+
+    /**
+     * Returns the number of values
+     */
+    public int getNumValues() {
+        return numValues;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), numValues);
     }
 
     @Override

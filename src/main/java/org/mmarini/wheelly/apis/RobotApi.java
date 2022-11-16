@@ -38,6 +38,11 @@ public interface RobotApi extends Closeable {
     Optional<ObstacleMap> getObstaclesMap();
 
     /**
+     * Returns the rarad map
+     */
+    RadarMap getRadarMap();
+
+    /**
      * Returns the robot direction
      */
     int getRobotDir();
@@ -56,11 +61,6 @@ public interface RobotApi extends Closeable {
      * Returns the sensor distance
      */
     float getSensorDistance();
-
-    /**
-     * Returns the rarad map
-     */
-    RadarMap getRadarMap();
 
     /**
      * Returns the obstacle location
