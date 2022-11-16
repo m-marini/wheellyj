@@ -224,6 +224,14 @@ public class WheellyStatus implements ProxySample, ContactSensors {
         return halt;
     }
 
+    public double getVoltage() {
+        return voltage;
+    }
+
+    public boolean isImuFailure() {
+        return imuFailure;
+    }
+
     @Override
     public String toString() {
         return new StringJoiner(", ", WheellyStatus.class.getSimpleName() + "[", "]")
