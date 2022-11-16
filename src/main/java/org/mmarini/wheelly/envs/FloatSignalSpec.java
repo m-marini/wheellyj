@@ -82,6 +82,20 @@ public class FloatSignalSpec extends SignalSpec {
         return Float.compare(that.minValue, minValue) == 0 && Float.compare(that.maxValue, maxValue) == 0;
     }
 
+    @Override
+    public JsonNode getJson() {
+        ObjectNode spec = Utils.objectMapper.createObjectNode();
+        spec.put("type", "float");
+        spec.put("minValue", minValue);
+        spec.put("maxValue", maxValue);
+        ArrayNode shapeNode = Utils.objectMapper.createArrayNode();
+        for (long i : getShape()) {
+            shapeNode.add(i);
+        }
+        spec.set("shape", shapeNode);
+        return spec;
+    }
+
     /**
      * Returns the maximum values
      */
@@ -99,20 +113,6 @@ public class FloatSignalSpec extends SignalSpec {
     @Override
     public int hashCode() {
         return Objects.hash(super.hashCode(), minValue, maxValue);
-    }
-
-    @Override
-    public JsonNode getJson() {
-        ObjectNode spec = Utils.objectMapper.createObjectNode();
-        spec.put("type", "float");
-        spec.put("minValue", minValue);
-        spec.put("maxValue", maxValue);
-        ArrayNode shapeNode = Utils.objectMapper.createArrayNode();
-        for (long i : getShape()) {
-            shapeNode.add(i);
-        }
-        spec.set("shape", shapeNode);
-        return spec;
     }
 
     @Override

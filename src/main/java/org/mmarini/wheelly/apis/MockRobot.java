@@ -106,6 +106,11 @@ public class MockRobot implements RobotApi {
     }
 
     @Override
+    public RadarMap getRadarMap() {
+        return null;
+    }
+
+    @Override
     public int getRobotDir() {
         return robotDir;
     }
@@ -135,11 +140,6 @@ public class MockRobot implements RobotApi {
     @Override
     public float getSensorDistance() {
         return sensorDistance;
-    }
-
-    @Override
-    public RadarMap getRadarMap() {
-        return null;
     }
 
     public void setSensorDistance(float sensorDistance) {

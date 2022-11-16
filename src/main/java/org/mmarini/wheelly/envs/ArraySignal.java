@@ -80,6 +80,11 @@ public class ArraySignal implements Signal {
         return value.getInt(indices);
     }
 
+    @Override
+    public long getSize() {
+        return value.length();
+    }
+
     /**
      * Returns the value of signal
      */
@@ -104,11 +109,6 @@ public class ArraySignal implements Signal {
     @Override
     public INDArray toINDArray() {
         return value;
-    }
-
-    @Override
-    public long getSize() {
-        return value.length();
     }
 
     @Override

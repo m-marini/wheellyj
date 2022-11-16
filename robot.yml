@@ -10,7 +10,7 @@ configurations:
     numObstacles: 10
     #radarPersistence: 10000
     #radarCleanInterval: 2000
-    #radarGrid: 0.2
+    radarGrid: 0.14
     #radarWidth: 11
     #radarHeight: 11
   realRobot:

@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Issue #108: Add complete mechanical test
 
+### Fixed
+
+- Issue #112: Sector overlap on radar view bug
+
 ## [0.4.0] 2022-11-09
 
 ### Added

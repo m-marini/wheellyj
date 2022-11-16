@@ -149,6 +149,7 @@ public class RadarRobotEnv implements Environment, RadarMapApi {
     private final long commandInterval;
     private final Map<String, SignalSpec> actions;
     private final Map<String, SignalSpec> states;
+    private final RadarMap radarMap;
     private int prevSensor;
     private long lastScanTimestamp;
     private long lastMoveTimestamp;
@@ -160,7 +161,6 @@ public class RadarRobotEnv implements Environment, RadarMapApi {
     private INDArray sensor;
     private boolean started;
     private INDArray canMoveBackward;
-    private final RadarMap radarMap;
     private INDArray radarSignals;
 
     /**

@@ -38,12 +38,12 @@ public interface Signal {
     /**
      */
 
+    long getSize();
+
     /**
      * Returns the value as INDArray
      *
      * @return
      */
     INDArray toINDArray();
-
-    long getSize();
 }

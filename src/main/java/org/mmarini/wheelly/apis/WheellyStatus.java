@@ -220,12 +220,12 @@ public class WheellyStatus implements ProxySample, ContactSensors {
         return sensorRelativeDeg;
     }
 
-    public boolean isHalt() {
-        return halt;
-    }
-
     public double getVoltage() {
         return voltage;
+    }
+
+    public boolean isHalt() {
+        return halt;
     }
 
     public boolean isImuFailure() {

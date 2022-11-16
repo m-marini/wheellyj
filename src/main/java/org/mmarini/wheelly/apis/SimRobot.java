@@ -61,8 +61,9 @@ public class SimRobot implements RobotApi {
     public static final double DEFAULT_ERR_SENSOR = 0.05;
     public static final float ROBOT_WIDTH = 0.18F;
     public static final float ROBOT_LENGTH = 0.26F;
-    private static final float MIN_OBSTACLE_DISTANCE = 1;
     public static final float MAX_OBSTACLE_DISTANCE = 3;
+    public static final float MAX_DISTANCE = 3;
+    private static final float MIN_OBSTACLE_DISTANCE = 1;
     private static final Vec2 GRAVITY = new Vec2();
     private static final int VELOCITY_ITER = 10;
     private static final int POSITION_ITER = 10;
@@ -78,7 +79,6 @@ public class SimRobot implements RobotApi {
     private static final float MAX_ACC = 1;
     private static final float MAX_FORCE = MAX_ACC * ROBOT_MASS;
     private static final float MAX_TORQUE = 0.7F;
-    public static final float MAX_DISTANCE = 3;
     private static final float SENSOR_GAP = 0.01F;
     private static final float[][] FRONT_LEFT_VERTICES = {
             {SENSOR_GAP, ROBOT_WIDTH / 2 + SENSOR_GAP},
