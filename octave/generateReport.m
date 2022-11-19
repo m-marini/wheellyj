@@ -21,6 +21,7 @@ function generateReport(dataPath, reportPath, gamma)
   sens1 = csvread([dataPath "trainedPolicy.sensorAction_data.csv"]);
   speed1 = csvread([dataPath "trainedPolicy.speed_data.csv"]);
   v0 = csvread([dataPath "v0_data.csv"]);
+  v01 = csvread([dataPath "trainedCritic.output_data.csv"]);
   haltGrad = maxabs(csvread([dataPath "gradPolicy.halt_data.csv"]));
   dirGrad = maxabs(csvread([dataPath "gradPolicy.direction_data.csv"]));
   sensGrad = maxabs(csvread([dataPath "gradPolicy.sensorAction_data.csv"]));
@@ -35,6 +36,7 @@ function generateReport(dataPath, reportPath, gamma)
   dSpeed = maxabs(speed1 - speed);
   dSens = maxabs(sens1 - sens);
   discount = discount(rewards, gamma);
+  dv0 = v01 - v0;
 
   n = size(rewards, 1);
 
@@ -60,6 +62,7 @@ function generateReport(dataPath, reportPath, gamma)
   generateKpiReport(hFile, reportPath, "dspeed", "Delta speed prob.", mode, dSpeed, len, stride);
   generateKpiReport(hFile, reportPath, "dsens", "Delta sensor direction prob.", mode, dSens, len, stride);
   generateKpiReport(hFile, reportPath, "critic", "Advantage residual estimation (critic)", mode, v0, len, stride);
+  generateKpiReport(hFile, reportPath, "dcritic", "Delta Advantage residual estimation (critic)", mode, dv0, len, stride);
   generateKpiReport(hFile, reportPath, "avgreward", "Avg Rewards", mode, avgRewards, len, stride);
   generateKpiReport(hFile, reportPath, "haltgrad", "Halt gradient", mode, haltGrad, len, stride);
   generateKpiReport(hFile, reportPath, "dirgrad", "Direction gradient", mode, dirGrad, len, stride);

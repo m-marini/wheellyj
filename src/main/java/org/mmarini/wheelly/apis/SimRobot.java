@@ -47,6 +47,7 @@ import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.Robot.*;
 import static org.mmarini.wheelly.apis.Utils.*;
+import static org.mmarini.wheelly.apis.WheellyStatus.OBSTACLE_SIZE;
 import static org.mmarini.yaml.schema.Validator.*;
 
 /**
@@ -63,11 +64,15 @@ public class SimRobot implements RobotApi {
     public static final float ROBOT_LENGTH = 0.26F;
     public static final float MAX_OBSTACLE_DISTANCE = 3;
     public static final float MAX_DISTANCE = 3;
+    public static final int FORWARD_PROXIMITY_MASK = 0xc;
+    public static final int BACKWARD_PROXIMITY_MASK = 0x3;
+    public static final float MAX_VELOCITY = 0.280F;
     private static final float MIN_OBSTACLE_DISTANCE = 1;
     private static final Vec2 GRAVITY = new Vec2();
     private static final int VELOCITY_ITER = 10;
     private static final int POSITION_ITER = 10;
     private static final float RAD_10 = (float) toRadians(10);
+    private static final float RAD_15 = (float) toRadians(15);
     private static final float RAD_30 = (float) toRadians(30);
     private static final float ROBOT_TRACK = 0.136F;
     private static final float ROBOT_MASS = 0.78F;
@@ -75,7 +80,6 @@ public class SimRobot implements RobotApi {
     private static final float ROBOT_FRICTION = 1;
     private static final float ROBOT_RESTITUTION = 0;
     private static final float SAFE_DISTANCE = 0.2F;
-    private static final float MAX_VELOCITY = 0.280F;
     private static final float MAX_ACC = 1;
     private static final float MAX_FORCE = MAX_ACC * ROBOT_MASS;
     private static final float MAX_TORQUE = 0.7F;
@@ -182,20 +186,12 @@ public class SimRobot implements RobotApi {
     private final Fixture frSensor;
     private final Fixture rlSensor;
     private final Fixture rrSensor;
-    private final RadarMap radarMap;
     private final long radarPersistence;
     private final long cleanInterval;
+    private final WheellyStatus status;
     private float speed;
-    private float left;
-    private float right;
     private int direction;
     private int sensor;
-    private float distance;
-    private int contacts;
-    private boolean canMoveForward;
-    private boolean canMoveBackward;
-    private long time;
-    private long resetTime;
     private long cleanTimeout;
 
     /**
@@ -206,15 +202,16 @@ public class SimRobot implements RobotApi {
      * @param errSigma         sigma of errors in physic simulation
      * @param errSensor        sensor error in meters
      * @param radarMap         the radar map
-     * @param radarPersistence
-     * @param cleanInterval
+     * @param radarPersistence the radar persistence map
+     * @param cleanInterval    the radar clean interval
      */
     public SimRobot(ObstacleMap obstacleMap, Random random, float errSigma, float errSensor, RadarMap radarMap, long radarPersistence, long cleanInterval) {
         this.random = requireNonNull(random);
         this.errSigma = errSigma;
         this.errSensor = errSensor;
         this.obstacleMap = obstacleMap;
-        this.radarMap = radarMap;
+        this.status = WheellyStatus.create();
+        status.setRadarMap(radarMap);
         this.radarPersistence = radarPersistence;
         this.cleanInterval = cleanInterval;
 
@@ -272,8 +269,10 @@ public class SimRobot implements RobotApi {
      *
      */
     private void checkForSpeed() {
-        if (((speed > 0 || left > 0 || right > 0) && !canMoveForward)
-                || ((speed < 0 || left < 0 || right < 0) && !canMoveBackward)) {
+        double left = status.getLeftSpeed();
+        double right = status.getRightSpeed();
+        if (((speed > 0 || left > 0 || right > 0) && !status.getCanMoveForward())
+                || ((speed < 0 || left < 0 || right < 0) && !status.getCanMoveBackward())) {
             halt();
         }
     }
@@ -294,8 +293,8 @@ public class SimRobot implements RobotApi {
         float linearVelocity = speed * clip(linear(abs(dAngle), 0, RAD_30, 1, 0), 0, 1);
 
         // Relative left-right motor speeds
-        left = clip((linearVelocity - angularVelocity) / 2, -1, 1);
-        right = clip((linearVelocity + angularVelocity) / 2, -1, 1);
+        float left = clip((linearVelocity - angularVelocity) / 2, -1, 1);
+        float right = clip((linearVelocity + angularVelocity) / 2, -1, 1);
 
         // Real left-right motor speeds
         left = round(left * 10F) / 10F * MAX_VELOCITY;
@@ -317,16 +316,16 @@ public class SimRobot implements RobotApi {
         // add a random factor to force
         localForce = localForce.mul((float) (1 + random.nextGaussian() * errSensor));
 
-        // Clip the local force to physic contraints
+        // Clip the local force to physic constraints
         localForce.x = clip(localForce.x, -MAX_FORCE, MAX_FORCE);
         force = robot.getWorldVector(localForce);
 
         // Angle rotation due to differential motor speeds
         angularVelocity = (right - left) / ROBOT_TRACK;
-        // Angular impule to fix direction
+        // Angular impulse to fix direction
         float robotAngularVelocity = robot.getAngularVelocity();
         float angularTorque = (angularVelocity - robotAngularVelocity) * robot.getInertia() / dt;
-        // Add a random factor to angulare impulse
+        // Add a random factor to angular impulse
         angularTorque *= (1 + random.nextGaussian() * errSigma);
         // Clip the angular torque
         angularTorque = clip(angularTorque, -MAX_TORQUE, MAX_TORQUE);
@@ -334,6 +333,15 @@ public class SimRobot implements RobotApi {
         robot.applyForceToCenter(force);
         robot.applyTorque(angularTorque);
         world.step(dt, VELOCITY_ITER, POSITION_ITER);
+
+        // Update robot status
+        Vec2 pos = robot.getPosition();
+        Point2D.Float location = new Point2D.Float(pos.x, pos.y);
+        status.setLocation(location);
+        int direction = normalizeDegAngle((int) round(90 - toDegrees(robot.getAngle())));
+        status.setDirection(direction);
+        status.setLeftSpeed(left);
+        status.setRightSpeed(right);
     }
 
     private int decodeContact(Contact contact) {
@@ -352,39 +360,65 @@ public class SimRobot implements RobotApi {
         }
     }
 
-    @Override
-    public boolean getCanMoveBackward() {
-        return canMoveBackward;
-    }
-
-    @Override
-    public boolean getCanMoveForward() {
-        return canMoveForward;
-    }
-
-    @Override
-    public int getContacts() {
-        return contacts;
-    }
-
-    @Override
-    public long getElapsed() {
-        return time - resetTime;
-    }
-
-    @Override
     public Optional<ObstacleMap> getObstaclesMap() {
         return Optional.ofNullable(obstacleMap);
     }
 
     @Override
-    public RadarMap getRadarMap() {
-        return radarMap;
+    public WheellyStatus getStatus() {
+        return status;
     }
 
     @Override
-    public int getRobotDir() {
-        return (int) round(toDegrees(normalizeAngle(PI / 2 - robot.getAngle())));
+    public void halt() {
+        speed = 0;
+        status.setLeftSpeed(0);
+        status.setRightSpeed(0);
+    }
+
+    private void handleBeginContact(Contact contact) {
+        status.setProximity(status.getProximity() | decodeContact(contact));
+    }
+
+    private void handleEndContact(Contact contact) {
+        status.setProximity(status.getProximity() & ~decodeContact(contact));
+    }
+
+    @Override
+    public void move(int dir, float speed) {
+        this.direction = dir;
+        this.speed = speed;
+        checkForSpeed();
+    }
+
+    @Override
+    public void reset() {
+        speed = 0f;
+        direction = 0;
+        sensor = 0;
+
+        status.setResetTime(status.getTime());
+        status.setLocation(new Point2D.Float());
+        status.setDirection(0);
+        status.setSensorDirection(0);
+        status.setSampleDistance(0);
+        status.setProximity(0);
+        status.setLeftSpeed(0);
+        status.setRightSpeed(0);
+        status.setCanMoveForward(true);
+        status.setCanMoveBackward(true);
+        status.setHalt(true);
+        status.setImuFailure(false);
+
+        robot.setLinearVelocity(new Vec2());
+        robot.setTransform(new Vec2(), (float) (PI / 2));
+        robot.setAngularVelocity(0f);
+    }
+
+    @Override
+    public void scan(int dir) {
+        this.sensor = dir;
+        status.setSensorDirection(dir);
     }
 
     /**
@@ -393,89 +427,20 @@ public class SimRobot implements RobotApi {
      * @param direction the direction in DEG
      */
     public void setRobotDir(int direction) {
+        this.direction = direction;
         robot.setTransform(robot.getPosition(), (float) toNormalRadians(90 - direction));
     }
 
-    @Override
-    public Point2D getRobotPos() {
-        Vec2 pos = robot.getPosition();
-        return new Point2D.Float(pos.x, pos.y);
-    }
-
-    @Override
-    public int getSensorDir() {
-        return sensor;
-    }
-
-    @Override
-    public float getSensorDistance() {
-        return distance;
-    }
-
-    @Override
-    public WheellyStatus getStatus() {
-        return WheellyStatus.create(getRobotPos(),
-                getRobotDir(), sensor, getSensorDistance(), left, right, contacts, 0,
-                canMoveForward, canMoveBackward, false,
-                left == 0 && right == 0
-        );
-    }
-
-    @Override
-    public long getTime() {
-        return time;
-    }
-
-    @Override
-    public void halt() {
-        direction = getRobotDir();
-        speed = 0;
-    }
-
-    private void handleBeginContact(Contact contact) {
-        int value = decodeContact(contact);
-        contacts |= value;
-    }
-
-    private void handleEndContact(Contact contact) {
-        int value = decodeContact(contact);
-        contacts &= ~value;
-    }
-
-    @Override
-    public void move(int dir, float speed) {
-        direction = dir;
-        this.speed = speed;
-        checkForSpeed();
-    }
-
-    @Override
-    public void reset() {
-        speed = left = right = 0f;
-        direction = sensor = 0;
-        distance = 0f;
-        contacts = 0;
-        canMoveForward = canMoveBackward = true;
-        resetTime = time;
-        robot.setLinearVelocity(new Vec2());
-        robot.setTransform(new Vec2(), (float) (PI / 2));
-        robot.setAngularVelocity(0f);
-    }
-
-    @Override
-    public void scan(int dir) {
-        sensor = dir;
-    }
-
     /**
-     * @param x
-     * @param y
+     * @param x the x coordinate
+     * @param y the y coordinate
      */
     public void setRobotPos(float x, float y) {
         Vec2 pos = new Vec2();
         pos.x = x;
         pos.y = y;
         robot.setTransform(pos, robot.getAngle());
+        status.setLocation(new Point2D.Float(x, y));
     }
 
     @Override
@@ -485,15 +450,16 @@ public class SimRobot implements RobotApi {
     @Override
     public void tick(long dt) {
         controller(dt * 1e-3F);
-        time += dt;
+        status.setTime(status.getTime() + dt);
 
-        int sensorDeg = normalizeDegAngle(90 - getRobotDir() - sensor);
-        float sensorRad = (float) toRadians(sensorDeg);
-        Point2D position = getRobotPos();
-
+        // Check for sensor
+        Point2D position = status.getLocation();
         float x = (float) position.getX();
         float y = (float) position.getY();
-        int obsIdx = obstacleMap.indexOfNearest(x, y, sensorRad, RAD_30);
+        int sensorDeg = normalizeDegAngle(90 - status.getDirection() - sensor);
+        float sensorRad = (float) toRadians(sensorDeg);
+        float distance = 0;
+        int obsIdx = obstacleMap.indexOfNearest(x, y, sensorRad, RAD_15);
         if (obsIdx >= 0) {
             Point2D obs = obstacleMap.getPoint(obsIdx);
             float dist = (float) obs.distance(position);
@@ -501,19 +467,27 @@ public class SimRobot implements RobotApi {
             distance = dist < MAX_DISTANCE
                     ? clip(dist + (float) random.nextGaussian() * errSensor, 0, MAX_DISTANCE)
                     : 0;
-        } else {
-            distance = 0;
         }
-        canMoveForward = (distance == 0 || distance > SAFE_DISTANCE) && (contacts & 0xc) == 0;
-        canMoveBackward = (contacts & 0x3) == 0;
+        status.setSampleDistance(distance);
+
+        // Check for movement constraints
+        boolean canMoveForward = (distance == 0 || distance > SAFE_DISTANCE) && (status.getProximity() & FORWARD_PROXIMITY_MASK) == 0;
+        status.setCanMoveForward(canMoveForward);
+        boolean canMoveBackward = (status.getProximity() & BACKWARD_PROXIMITY_MASK) == 0;
+        status.setCanMoveBackward(canMoveBackward);
         checkForSpeed();
+
+        // Check for radar map
+        RadarMap radarMap = status.getRadarMap();
         if (radarMap != null) {
-            RadarMap.SensorSignal signal = new RadarMap.SensorSignal(this.getRobotPos(), normalizeDegAngle(getRobotDir() + getSensorDir()), distance, time);
+            long time = status.getTime();
+            RadarMap.SensorSignal signal = new RadarMap.SensorSignal(status.getLocation(), normalizeDegAngle(status.getDirection() + status.getSensorDirection()), distance, time);
             radarMap.update(signal);
             if (time >= cleanTimeout) {
                 radarMap.clean(time - radarPersistence);
                 cleanTimeout = time + cleanInterval;
             }
+            status.setRadarMap(radarMap);
         }
     }
 }

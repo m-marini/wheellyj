@@ -274,7 +274,7 @@ public class RadarRobotEnv implements Environment, RadarMapApi {
      * @param actions the action from agent
      */
     private void processAction(Map<String, Signal> actions) {
-        long now = robot.getTime();
+        long now = robot.getStatus().getTime();
 
         int dDir = deltaDir(actions);
         int dir = round(robotDir.getFloat(UNKNOWN_SECTOR_VALUE)) + dDir;
@@ -311,14 +311,14 @@ public class RadarRobotEnv implements Environment, RadarMapApi {
      * @param time the time interval in millis
      */
     private WheellyStatus readStatus(long time) {
-        long timeout = robot.getTime() + time;
-        WheellyStatus status;
+        WheellyStatus status = robot.getStatus();
+        long timeout = status.getTime() + time;
         do {
             robot.tick(interval);
             status = robot.getStatus();
-        } while (!(status != null && robot.getTime() >= timeout));
+        } while (!(status != null && status.getTime() >= timeout));
         storeStatus(status);
-        radarMap.update(robot.getRadarMap(), robot.getRobotPos(), robot.getRobotDir());
+        radarMap.update(status.getRadarMap(), status.getLocation(), status.getDirection());
         int[] radarAry = Arrays.stream(radarMap.getMap()).mapToInt(
                         s -> !s.isKnown() ? UNKNOWN_SECTOR_VALUE
                                 : s.isFilled() ? FILLED_SECTOR_VALUE : EMPTY_SECTOR_VALUE)
@@ -370,11 +370,11 @@ public class RadarRobotEnv implements Environment, RadarMapApi {
      * @param status the status from robot
      */
     private void storeStatus(WheellyStatus status) {
-        robotDir = Nd4j.createFromArray((float) status.getRobotDeg());
-        sensor = Nd4j.createFromArray((float) status.getSensorRelativeDeg());
+        robotDir = Nd4j.createFromArray((float) status.getDirection());
+        sensor = Nd4j.createFromArray((float) status.getSensorDirection());
         distance = Nd4j.createFromArray((float) status.getSampleDistance());
-        canMoveForward = Nd4j.createFromArray(status.getCannotMoveForward() ? 0F : 1F);
-        canMoveBackward = Nd4j.createFromArray(status.getCannotMoveBackward() ? 0F : 1F);
-        contacts = Nd4j.createFromArray((float) status.getContactSensors());
+        canMoveForward = Nd4j.createFromArray(status.getCanMoveForward() ? 1F : 0F);
+        canMoveBackward = Nd4j.createFromArray(status.getCanMoveBackward() ? 1F : 0F);
+        contacts = Nd4j.createFromArray((float) status.getProximity());
     }
 }

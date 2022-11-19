@@ -124,8 +124,9 @@ public class RobotCheckUp {
 
     private MovementResult checkMove(int direction, float speed) {
         logger.info("Checking movement to {} DEG, speed {} ...", direction, speed);
-        long time = robot.getTime();
-        Point2D startLocation = robot.getRobotPos();
+        WheellyStatus status = robot.getStatus();
+        long time = status.getTime();
+        Point2D startLocation = status.getLocation();
         long movementStart = time;
         long commandTimeout = 0;
         long testTimeout = time + this.movementDuration;
@@ -135,12 +136,14 @@ public class RobotCheckUp {
                 commandTimeout = time + commandInterval;
             }
             robot.tick(interval);
-            time = robot.getTime();
+            status = robot.getStatus();
+            time = status.getTime();
         }
         robot.halt();
         robot.tick(interval);
-        time = robot.getTime();
-        Point2D pos = robot.getRobotPos();
+        status = robot.getStatus();
+        time = status.getTime();
+        Point2D pos = status.getLocation();
         double distance = pos.distance(startLocation);
         Point2D targetLocation = new Point2D.Float(
                 (float) (startLocation.getX() + distance * sin(toRadians(direction))),
@@ -165,21 +168,22 @@ public class RobotCheckUp {
      */
     private RotateResult checkRotate(int targetDir) {
         logger.info("Checking rotation to {} DEG ...", targetDir);
-        long time = robot.getTime();
-        Point2D startLocation = robot.getRobotPos();
+        WheellyStatus status = robot.getStatus();
+        long time = status.getTime();
+        Point2D startLocation = status.getLocation();
         long startDirection = time;
         long commandTimeout = 0;
         long testTimeout = time + rotationDuration;
         long haltTime = 0;
-        int startAngle = robot.getRobotDir();
+        int startAngle = status.getDirection();
         while (time < testTimeout) {
             if (time > commandTimeout) {
                 robot.move(targetDir, 0);
                 commandTimeout = time + commandInterval;
             }
             robot.tick(interval);
-            time = robot.getTime();
-            WheellyStatus status = robot.getStatus();
+            status = robot.getStatus();
+            time = status.getTime();
             if (status.getLeftSpeed() == 0 && status.getRightSpeed() == 0) {
                 if (haltTime == 0) {
                     haltTime = time;
@@ -193,11 +197,12 @@ public class RobotCheckUp {
         }
         robot.halt();
         robot.tick(interval);
-        time = robot.getTime();
-        int dir = robot.getRobotDir();
+        status = robot.getStatus();
+        time = status.getTime();
+        int dir = status.getDirection();
         int directionError = abs(normalizeDegAngle(dir - targetDir));
         int rotationAngle = normalizeDegAngle(dir - startAngle);
-        float distanceError = (float) robot.getRobotPos().distance(startLocation);
+        float distanceError = (float) status.getLocation().distance(startLocation);
         robot.halt();
         return new RotateResult(time - startDirection, targetDir, directionError, distanceError, rotationAngle, robot.getStatus().isImuFailure());
     }
@@ -210,7 +215,8 @@ public class RobotCheckUp {
     private List<ScannerResult> checkScanner() {
         robot.halt();
         robot.tick(this.interval);
-        long time = robot.getTime();
+        WheellyStatus status = robot.getStatus();
+        long time = status.getTime();
         int sensDir = -90;
         long commandTimeout = time + commandInterval;
         long measureTimeout = time + scannerCheckDuration;
@@ -224,15 +230,16 @@ public class RobotCheckUp {
         List<ScannerResult> results = new ArrayList<>();
         for (; ; ) {
             robot.tick(this.interval);
-            time = robot.getTime();
+            status = robot.getStatus();
+            time = status.getTime();
 
-            int dir = robot.getSensorDir();
+            int dir = status.getSensorDirection();
             if (dir == sensDir) {
                 sampleCount++;
                 if (scannerMoveTime == 0) {
                     scannerMoveTime = time - measureStart;
                 }
-                float sensorDistance = robot.getSensorDistance();
+                float sensorDistance = (float) status.getSampleDistance();
                 if (sensorDistance > 0) {
                     totDistance += sensorDistance;
                     measureCount++;

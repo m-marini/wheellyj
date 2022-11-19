@@ -45,6 +45,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -115,7 +116,7 @@ public class TDAgent implements Agent {
      * @param locator             the locator of agent spec
      * @param props               the properties to initialize the agent
      * @param path                the saving path
-     * @param savingIntervalSteps the number of setps between each model saveing
+     * @param savingIntervalSteps the number of steps between each model saving
      * @param random              the random number generator
      */
     public static TDAgent create(JsonNode spec, Locator locator, Map<String, INDArray> props, File path, int savingIntervalSteps, Random random) {
@@ -295,19 +296,20 @@ public class TDAgent implements Agent {
     private final TDNetwork policy;
     private final TDNetwork critic;
     private final Random random;
-    private final PublishProcessor<Map<String, Object>> indicatorsPub;
-    private final Flowable<Map<String, INDArray>> indicators;
     private final float lambda;
     private final float policyAlpha;
     private final float criticAlpha;
     private final File modelPath;
     private final int savingIntervalSteps;
     private final InputProcessor processor;
+    private PublishProcessor<Map<String, Object>> indicatorsPub;
+    private Flowable<Map<String, INDArray>> indicators;
     private float avgReward;
     private Map<String, Signal> lastActions;
     private Map<String, INDArray> lastInputs;
     private Map<String, INDArray> lastPolicy;
     private int savingStepCounter;
+    private Consumer<Map<String, Object>> kpiListener;
 
     /**
      * Creates a random behavior agent
@@ -344,11 +346,6 @@ public class TDAgent implements Agent {
         this.modelPath = modelPath;
         Map<String, SignalSpec> processedState = processor != null ? processor.getSpec() : state;
         this.savingIntervalSteps = savingIntervalSteps;
-        this.indicatorsPub = PublishProcessor.create();
-        indicators = indicatorsPub
-                .map(TDAgent::flatKpis)
-                .publish()
-                .autoConnect();
         Map<String, Long> stateSizes = getStateSizes(processedState);
         Map<String, Long> actionSizes = getActionSizes(actions);
 
@@ -382,8 +379,19 @@ public class TDAgent implements Agent {
 
     @Override
     public void close() {
-        indicatorsPub.onComplete();
+        if (indicatorsPub != null) {
+            indicatorsPub.onComplete();
+        }
         autosave();
+    }
+
+    private void createKpiFlowable() {
+        indicatorsPub = PublishProcessor.create();
+        indicators = indicatorsPub
+                .map(TDAgent::flatKpis)
+                .publish()
+                .autoConnect();
+        kpiListener = indicatorsPub::onNext;
     }
 
     float criticValueFromSignals(Map<String, Signal> state) {
@@ -518,6 +526,9 @@ public class TDAgent implements Agent {
      */
     @Override
     public Flowable<Map<String, INDArray>> readKpis() {
+        if (indicators == null) {
+            createKpiFlowable();
+        }
         return indicators;
     }
 
@@ -561,33 +572,40 @@ public class TDAgent implements Agent {
 
         float avgReward0 = avgReward;
         avgReward += delta * rewardAlpha;
-        Map<String, Object> kpi = new HashMap<>();
+
+        Map<String, Object> kpi = kpiListener != null ? new HashMap<>() : null;
+        Consumer<Tuple2<String, INDArray>> criticKpiCallback = kpiListener != null ? t -> kpi.put("weights.critic." + t._1, t._2) : null;
+        Consumer<Tuple2<String, INDArray>> policyKpiCallback = kpiListener != null ? t -> kpi.put("weights.policy." + t._1, t._2) : null;
+
         Map<String, INDArray> gradCritic = critic.train(c0, dc, Nd4j.createFromArray(delta * criticAlpha), lambda,
-                t -> kpi.put("critic." + t._1, t._2));
+                criticKpiCallback);
         Map<String, INDArray> gradPolicy = policy.train(pi, dp, Nd4j.createFromArray(delta * policyAlpha), lambda,
-                t -> kpi.put("policy." + t._1, t._2));
+                policyKpiCallback);
 
-        Map<String, INDArray> trainedC0 = critic.forward(s0);
-        Map<String, INDArray> trainedPi = policy.forward(s0);
 
-        kpi.put("s0", s0);
-        kpi.put("reward", reward);
-        kpi.put("terminal", result.terminal);
-        kpi.put("actions", actions);
-        kpi.put("s1", s1);
-        kpi.put("avgReward", avgReward0);
-        kpi.put("trainedAvgReward", avgReward);
-        kpi.put("critic", c0);
-        kpi.put("v0", v0);
-        kpi.put("v1", v1);
-        kpi.put("delta", delta);
-        kpi.put("policy", pi);
-        kpi.put("gradCritic", gradCritic);
-        kpi.put("gradPolicy", gradPolicy);
-        kpi.put("trainedCritic", trainedC0);
-        kpi.put("trainedPolicy", trainedPi);
+        if (this.kpiListener != null) {
+            Map<String, INDArray> trainedC0 = critic.forward(s0);
+            Map<String, INDArray> trainedPi = policy.forward(s0);
+            kpi.put("s0", s0);
+            kpi.put("reward", reward);
+            kpi.put("terminal", result.terminal);
+            kpi.put("actions", actions);
+            kpi.put("s1", s1);
+            kpi.put("avgReward", avgReward0);
+            kpi.put("trainedAvgReward", avgReward);
+            kpi.put("critic", c0);
+            kpi.put("v0", v0);
+            kpi.put("v1", v1);
+            kpi.put("delta", delta);
+            kpi.put("policy", pi);
+            kpi.put("gradCritic", gradCritic);
+            kpi.put("gradPolicy", gradPolicy);
+            kpi.put("trainedCritic", trainedC0);
+            kpi.put("trainedPolicy", trainedPi);
+            kpiListener.accept(kpi);
+            indicatorsPub.onNext(kpi);
+        }
 
-        indicatorsPub.onNext(kpi);
         if (++savingStepCounter >= savingIntervalSteps) {
             savingStepCounter = 0;
             autosave();

@@ -25,59 +25,50 @@
 
 package org.mmarini.wheelly.objectives;
 
-
 import com.fasterxml.jackson.databind.JsonNode;
 import org.eclipse.collections.api.block.function.primitive.FloatFunction;
+import org.mmarini.wheelly.apis.MapSector;
 import org.mmarini.wheelly.apis.WheellyStatus;
 import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
 
-import java.util.Map;
+import java.util.Arrays;
 
-import static java.lang.Math.abs;
-import static org.mmarini.yaml.schema.Validator.nonNegativeNumber;
+import static org.mmarini.wheelly.apis.FuzzyFunctions.and;
+import static org.mmarini.wheelly.apis.FuzzyFunctions.defuzzy;
+import static org.mmarini.wheelly.apis.SimRobot.MAX_VELOCITY;
+import static org.mmarini.wheelly.apis.Utils.clip;
 
 /**
- * A set of reward function
+ * Explore objective
  */
-public interface NoMove {
-    float DEFAULT_VELOCITY_THRESHOLD = 0.01f;
-    FloatFunction<WheellyStatus> NO_MOVE = noMove(DEFAULT_VELOCITY_THRESHOLD);
-    Validator VALIDATOR = Validator.objectProperties(Map.of(
-            "velocityThreshold", nonNegativeNumber()
-    ));
-
+public interface Explore {
     /**
-     * Returns the reward function from configuration
+     * Returns the function that fuzzy rewards explore behavior from configuration
      *
      * @param root    the root json document
      * @param locator the locator
      */
     static FloatFunction<WheellyStatus> create(JsonNode root, Locator locator) {
-        VALIDATOR.apply(locator).accept(root);
-        float velocityThreshold = (float) locator.path("velocityThreshold").getNode(root).asDouble(DEFAULT_VELOCITY_THRESHOLD);
-        return noMove(velocityThreshold);
+        return Explore::explore;
     }
 
     /**
-     * Returns the function that rewards the no move behavior
-     */
-    static FloatFunction<WheellyStatus> noMove() {
-        return NO_MOVE;
-    }
-
-    /**
-     * Returns the function that rewards the no move behavior
+     * Returns the function that fuzzy rewards explore behavior from configuration
      *
-     * @param velocityThreshold the velocity threshold
+     * @param status the status
      */
-    static FloatFunction<WheellyStatus> noMove(float velocityThreshold) {
-        return status -> !status.getCanMoveForward() || !status.getCanMoveBackward()
-                ? -1
-                : (abs(status.getLeftSpeed()) < velocityThreshold
-                && abs(status.getRightSpeed()) < velocityThreshold
-                && status.getSensorDirection() == 0) ? 1
-                : 0;
-
+    static float explore(WheellyStatus status) {
+        if (!status.getCanMoveBackward() || !status.getCanMoveForward()) {
+            // Avoid contacts
+            return -1;
+        }
+        MapSector[] map = status.getRadarMap().getMap();
+        long knownSectorsNumber = Arrays.stream(map).filter(MapSector::isKnown).count();
+        // encourages the exploration of unfamiliar areas
+        double isKnown = ((double) knownSectorsNumber) / map.length;
+        // encourages the linear speed
+        double linSpeed = (status.getRightSpeed() + status.getLeftSpeed()) / MAX_VELOCITY / 2;
+        double isLinearSpeed = clip(linSpeed, 0, 1);
+        return (float) defuzzy(0, 1, and(isLinearSpeed, isKnown));
     }
 }

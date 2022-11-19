@@ -34,12 +34,11 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
 import org.mmarini.wheelly.agents.Agent;
 import org.mmarini.wheelly.agents.KpiCSVSubscriber;
-import org.mmarini.wheelly.apis.GridTopology;
-import org.mmarini.wheelly.apis.ObstacleMap;
-import org.mmarini.wheelly.apis.RobotApi;
+import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.envs.Environment;
 import org.mmarini.wheelly.envs.RadarMapApi;
 import org.mmarini.wheelly.envs.Signal;
+import org.mmarini.wheelly.envs.SignalSpec;
 import org.mmarini.wheelly.swing.EnvironmentFrame;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.wheelly.swing.RadarFrame;
@@ -55,6 +54,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.Math.exp;
 import static org.mmarini.yaml.schema.Validator.*;
@@ -64,6 +65,13 @@ import static org.mmarini.yaml.schema.Validator.*;
  */
 public class Wheelly {
     public static final float DEFAULT_DISCOUNT = (float) exp(-1 / 29.7);
+    public static final String[] DEFAULT_KPIS = {
+            "^reward$",
+            "^avgReward$",
+            "^delta$",
+            "^v0$",
+            "^trainedCritic.output$",
+    };
     private static final Logger logger = LoggerFactory.getLogger(Wheelly.class);
     private static final Validator BASE_CONFIG = objectPropertiesRequired(Map.of(
             "version", string(values("0.2")),
@@ -71,18 +79,32 @@ public class Wheelly {
             "configurations", object()
     ), List.of("version", "active", "configurations"));
 
-
     /**
      * Creates kpis process
      *
-     * @param agent  the agent
-     * @param file   the path of kpis
-     * @param labels the key labels to filter
+     * @param agent   the agent
+     * @param actions the action spec
+     * @param file    the path of kpis
+     * @param labels  the key labels to filter
      */
-    private static void createKpis(Agent agent, File file, String labels) {
-        KpiCSVSubscriber sub = labels.length() != 0
-                ? KpiCSVSubscriber.create(file, labels.split(","))
-                : KpiCSVSubscriber.create(file);
+    private static void createKpis(Agent agent, Map<String, SignalSpec> actions, File file, String labels) {
+        KpiCSVSubscriber sub;
+
+        if (labels.length() == 0) {
+            // Default kpis
+            String[] labs = Stream.concat(Stream.of(DEFAULT_KPIS),
+                    actions.keySet().stream()
+                            .flatMap(n -> Stream.of("^policy", "^trainedPolicy", "^gradPolicy").map(k -> k + "." + n + "$")
+                            )
+            ).toArray(String[]::new);
+            sub = KpiCSVSubscriber.create(file, labs);
+        } else if ("all".equals(labels)) {
+            // full kpis
+            sub = KpiCSVSubscriber.create(file);
+        } else {
+            // filtered kpis
+            sub = KpiCSVSubscriber.create(file, labels.split(","));
+        }
         agent.readKpis().subscribe(sub);
     }
 
@@ -109,7 +131,7 @@ public class Wheelly {
                 .help("specify kpis path");
         parser.addArgument("-l", "--labels")
                 .setDefault("")
-                .help("specify kpi labels comma separated");
+                .help("specify kpi labels comma separated (all for all kpi)");
         parser.addArgument("-s", "--silent")
                 .action(Arguments.storeTrue())
                 .help("specify silent closing (no window messages)");
@@ -202,32 +224,34 @@ public class Wheelly {
                     sessionDuration *= 1000;
                     String kpis = args.getString("kpis");
                     if (kpis.length() != 0) {
-                        createKpis(agent, new File(kpis), args.getString("labels"));
+                        createKpis(agent, env.getActions(), new File(kpis), args.getString("labels"));
                     }
                     long start = System.currentTimeMillis();
                     float avgRewards = 0;
                     Map<String, Signal> state = env.reset();
-                    robot.getObstaclesMap()
-                            .map(ObstacleMap::getPoints)
-                            .ifPresent(frame::setObstacleMap);
-                    robot.getObstaclesMap()
-                            .map(ObstacleMap::getTopology)
-                            .map(GridTopology::getGridSize)
-                            .ifPresent(frame::setObstacleSize);
-                    frame.setRobot(robot);
+                    WheellyStatus status = robot.getStatus();
+                    if (robot instanceof SimRobot) {
+                        Optional<ObstacleMap> obstaclesMap = ((SimRobot) robot).getObstaclesMap();
+                        obstaclesMap.map(ObstacleMap::getPoints)
+                                .ifPresent(frame::setObstacleMap);
+                        obstaclesMap.map(ObstacleMap::getTopology)
+                                .map(GridTopology::getGridSize)
+                                .ifPresent(frame::setObstacleSize);
+                    }
+                    frame.setRobotStatus(status);
                     for (boolean running = true; running; ) {
                         Map<String, Signal> actions = agent.act(state);
                         Environment.ExecutionResult result = env.execute(actions);
                         agent.observe(result);
                         float reward = result.getReward();
                         avgRewards = DEFAULT_DISCOUNT * (avgRewards - reward) + reward;
-                        frame.setRobot(robot);
+                        frame.setRobotStatus(status);
                         frame.setReward(avgRewards);
-                        frame.setTimeRatio((float) robot.getElapsed() / (System.currentTimeMillis() - start));
+                        frame.setTimeRatio((float) status.getElapsed() / (System.currentTimeMillis() - start));
                         if (radarFrame != null) {
                             radarFrame.setRadar(((RadarMapApi) env).getRadarMap());
                         }
-                        running = robot.getElapsed() <= sessionDuration &&
+                        running = status.getElapsed() <= sessionDuration &&
                                 frame.isVisible();
                     }
                     if (radarFrame != null) {

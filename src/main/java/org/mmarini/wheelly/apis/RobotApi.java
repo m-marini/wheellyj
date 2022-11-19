@@ -1,93 +1,42 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) 2022 Marco Marini
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ */
+
 package org.mmarini.wheelly.apis;
 
-import java.awt.geom.Point2D;
 import java.io.Closeable;
-import java.util.Optional;
-
-import static java.lang.Math.*;
 
 /**
  * API Interface for robot
  */
 public interface RobotApi extends Closeable {
-    float OBSTACLE_SIZE = 0.2f;
-
-    /**
-     * Returns the move backward sensors
-     */
-    boolean getCanMoveBackward();
-
-    /**
-     * Returns the move forward sensors
-     */
-    boolean getCanMoveForward();
-
-    /**
-     * Returns the contact sensors
-     */
-    int getContacts();
-
-    /**
-     * Returns the time since last reset in millis
-     */
-    long getElapsed();
-
-    /**
-     * Returns the obstacle map if any
-     */
-    Optional<ObstacleMap> getObstaclesMap();
-
-    /**
-     * Returns the rarad map
-     */
-    RadarMap getRadarMap();
-
-    /**
-     * Returns the robot direction
-     */
-    int getRobotDir();
-
-    /**
-     * Returns the robot position
-     */
-    Point2D getRobotPos();
-
-    /**
-     * Returns the sensor direction in DEG
-     */
-    int getSensorDir();
-
-    /**
-     * Returns the sensor distance
-     */
-    float getSensorDistance();
-
-    /**
-     * Returns the obstacle location
-     */
-    default Optional<Point2D> getSensorObstacle() {
-        float dist = getSensorDistance();
-        if (dist > 0) {
-            float d = dist + OBSTACLE_SIZE / 2;
-            double angle = toRadians(90 - getRobotDir() - getSensorDir());
-            Point2D pos = getRobotPos();
-            float x = (float) (d * cos(angle) + pos.getX());
-            float y = (float) (d * sin(angle) + pos.getY());
-            return Optional.of(new Point2D.Float(x, y));
-        } else {
-            return Optional.empty();
-        }
-    }
 
     /**
      * Returns the robot status
      */
     WheellyStatus getStatus();
 
-    /**
-     * Returns the robot time in millis
-     */
-    long getTime();
 
     /**
      * Halts the robot
