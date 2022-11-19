@@ -32,7 +32,6 @@ import org.mmarini.yaml.schema.Validator;
 import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.util.Map;
-import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.yaml.schema.Validator.*;
@@ -81,81 +80,14 @@ public class MockRobot implements RobotApi {
     }
 
     @Override
-    public boolean getCanMoveBackward() {
-        return false;
-    }
-
-    @Override
-    public boolean getCanMoveForward() {
-        return false;
-    }
-
-    @Override
-    public int getContacts() {
-        return 0;
-    }
-
-    @Override
-    public long getElapsed() {
-        return time - resetTime;
-    }
-
-    @Override
-    public Optional<ObstacleMap> getObstaclesMap() {
-        return Optional.empty();
-    }
-
-    @Override
-    public RadarMap getRadarMap() {
-        return null;
-    }
-
-    @Override
-    public int getRobotDir() {
-        return robotDir;
-    }
-
-    public void setRobotDir(int robotDir) {
-        this.robotDir = robotDir;
-    }
-
-    @Override
-    public Point2D getRobotPos() {
-        return robotPos;
-    }
-
-    public void setRobotPos(Point2D robotPos) {
-        this.robotPos = robotPos;
-    }
-
-    @Override
-    public int getSensorDir() {
-        return sensorDir;
-    }
-
-    public void setSensorDir(int sensorDir) {
-        this.sensorDir = sensorDir;
-    }
-
-    @Override
-    public float getSensorDistance() {
-        return sensorDistance;
-    }
-
-    public void setSensorDistance(float sensorDistance) {
-        this.sensorDistance = sensorDistance;
-    }
-
-    @Override
     public WheellyStatus getStatus() {
-        return WheellyStatus.create(robotPos, robotDir, sensorDir, sensorDistance, 0,
-                0, 0, 0, false, false, false,
-                false);
-    }
-
-    @Override
-    public long getTime() {
-        return time;
+        return new WheellyStatus(time, robotPos, robotDir,
+                sensorDir, sensorDistance,
+                0, 0,
+                0, 0,
+                false, false,
+                false, false,
+                resetTime, null);
     }
 
     @Override
@@ -173,6 +105,22 @@ public class MockRobot implements RobotApi {
 
     @Override
     public void scan(int dir) {
+    }
+
+    public void setRobotDir(int robotDir) {
+        this.robotDir = robotDir;
+    }
+
+    public void setRobotPos(Point2D robotPos) {
+        this.robotPos = robotPos;
+    }
+
+    public void setSensorDir(int sensorDir) {
+        this.sensorDir = sensorDir;
+    }
+
+    public void setSensorDistance(float sensorDistance) {
+        this.sensorDistance = sensorDistance;
     }
 
     @Override

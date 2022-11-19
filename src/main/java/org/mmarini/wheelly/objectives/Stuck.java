@@ -42,15 +42,15 @@ import static org.mmarini.yaml.schema.Validator.positiveNumber;
 /**
  * A set of reward function
  */
-public class Stuck {
+public interface Stuck {
 
-    public static final float DEFAULT_DISTANCE0 = 0.1f;
-    public static final float DEFAULT_DISTANCE1 = 0.3f;
-    public static final float DEFAULT_DISTANCE2 = 0.7f;
-    public static final float DEFAULT_DISTANCE3 = 2;
-    public static final int DEFAULT_SENSOR_RANGE = 90;
+    float DEFAULT_DISTANCE0 = 0.1f;
+    float DEFAULT_DISTANCE1 = 0.3f;
+    float DEFAULT_DISTANCE2 = 0.7f;
+    float DEFAULT_DISTANCE3 = 2;
+    int DEFAULT_SENSOR_RANGE = 90;
 
-    private static final Validator VALIDATOR = Validator.objectProperties(Map.of(
+    Validator VALIDATOR = Validator.objectProperties(Map.of(
             "distance0", positiveNumber(),
             "distance1", positiveNumber(),
             "distance2", positiveNumber(),
@@ -64,7 +64,7 @@ public class Stuck {
      * @param root    the root json document
      * @param locator the locator
      */
-    public static FloatFunction<WheellyStatus> create(JsonNode root, Locator locator) {
+    static FloatFunction<WheellyStatus> create(JsonNode root, Locator locator) {
         VALIDATOR.apply(locator).accept(root);
         float distance0 = (float) locator.path("distance0").getNode(root).asDouble(DEFAULT_DISTANCE0);
         float distance1 = (float) locator.path("distance1").getNode(root).asDouble(DEFAULT_DISTANCE1);
@@ -83,13 +83,13 @@ public class Stuck {
      * @param x4          maximum distance for 0 reward
      * @param sensorRange tolerance of sensor front position in DEG
      */
-    public static FloatFunction<WheellyStatus> stuck(float x1, float x2, float x3, float x4, int sensorRange) {
+    static FloatFunction<WheellyStatus> stuck(float x1, float x2, float x3, float x4, int sensorRange) {
         return status -> {
             float dist = (float) status.getSampleDistance();
-            if (status.getCannotMoveBackward() || status.getCannotMoveForward() || dist == 0 || dist >= MAX_DISTANCE) {
+            if (!status.getCanMoveBackward() || !status.getCanMoveForward() || dist == 0 || dist >= MAX_DISTANCE) {
                 return -1;
             } else {
-                int sensor = status.getSensorRelativeDeg();
+                int sensor = status.getSensorDirection();
                 double isInRange = between(dist, x1, x2, x3, x4);
                 double isInDirection = not(positive(abs(sensor), sensorRange));
                 double isTarget = and(isInRange, isInDirection);

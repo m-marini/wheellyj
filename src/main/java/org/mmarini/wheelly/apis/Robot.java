@@ -37,7 +37,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
@@ -77,8 +76,8 @@ public class Robot implements RobotApi {
      * @param robotHost        the robot host
      * @param port             the robot port
      * @param radarMap         the radar map
-     * @param radarPersistence
-     * @param cleanInterval
+     * @param radarPersistence the radar persistence duration (ms)
+     * @param cleanInterval    the radar clean interval (ms)
      */
     public static Robot create(String robotHost, int port, RadarMap radarMap, long radarPersistence, long cleanInterval) {
         return Robot.create(robotHost, port, DEFAULT_CONNECTION_TIMEOUT, DEFAULT_READ_TIMEOUT, radarMap, radarPersistence, cleanInterval);
@@ -107,8 +106,8 @@ public class Robot implements RobotApi {
      * @param connectionTimeout the connection timeout in millis
      * @param readTimeout       the read timeout in millis
      * @param radarMap          the radar map
-     * @param radarPersistence
-     * @param cleanInterval
+     * @param radarPersistence  the radar persistence duration (ms)
+     * @param cleanInterval     the radar clean interval (ms)
      */
     public static Robot create(String robotHost, int port, long connectionTimeout, long readTimeout, RadarMap radarMap, long radarPersistence, long cleanInterval) {
         RobotSocket socket = new RobotSocket(robotHost, port, connectionTimeout, readTimeout);
@@ -116,12 +115,9 @@ public class Robot implements RobotApi {
     }
 
     private final RobotSocket socket;
-    private final RadarMap radarMap;
     private final long radarPersistence;
     private final long cleanInterval;
     private Long timestampOffset;
-    private long time;
-    private long resetTime;
     private WheellyStatus status;
     private long cleanTimeout;
 
@@ -129,13 +125,14 @@ public class Robot implements RobotApi {
      * Create a Robot interface
      *
      * @param socket           the robot socket
-     * @param radarMap
-     * @param radarPersistence
-     * @param cleanInterval
+     * @param radarMap         the radar map
+     * @param radarPersistence the radar persistence duration (ms)
+     * @param cleanInterval    the radar clean interval (ms)
      */
     public Robot(RobotSocket socket, RadarMap radarMap, long radarPersistence, long cleanInterval) {
         this.socket = socket;
-        this.radarMap = radarMap;
+        status = WheellyStatus.create();
+        status.setRadarMap(radarMap);
         this.radarPersistence = radarPersistence;
         this.cleanInterval = cleanInterval;
     }
@@ -146,63 +143,8 @@ public class Robot implements RobotApi {
     }
 
     @Override
-    public boolean getCanMoveBackward() {
-        return status != null && !status.getCannotMoveBackward();
-    }
-
-    @Override
-    public boolean getCanMoveForward() {
-        return status != null && !status.getCannotMoveForward();
-    }
-
-    @Override
-    public int getContacts() {
-        return status != null ? status.getContactSensors() : 0;
-    }
-
-    @Override
-    public long getElapsed() {
-        return time - resetTime;
-    }
-
-    @Override
-    public Optional<ObstacleMap> getObstaclesMap() {
-        return Optional.empty();
-    }
-
-    @Override
-    public RadarMap getRadarMap() {
-        return radarMap;
-    }
-
-    @Override
-    public int getRobotDir() {
-        return status != null ? status.getRobotDeg() : 0;
-    }
-
-    @Override
-    public Point2D getRobotPos() {
-        return status != null ? status.getRobotLocation() : new Point2D.Float();
-    }
-
-    @Override
-    public int getSensorDir() {
-        return status != null ? status.getSensorRelativeDeg() : 0;
-    }
-
-    @Override
-    public float getSensorDistance() {
-        return status != null ? (float) status.getSampleDistance() : 0;
-    }
-
-    @Override
     public WheellyStatus getStatus() {
         return status;
-    }
-
-    @Override
-    public long getTime() {
-        return time;
     }
 
     @Override
@@ -217,9 +159,9 @@ public class Robot implements RobotApi {
 
     @Override
     public void reset() {
-        time = System.currentTimeMillis();
-        resetTime = time;
-        status = null;
+        long time = System.currentTimeMillis();
+        status.setTime(time);
+        status.setResetTime(time);
     }
 
     @Override
@@ -266,25 +208,27 @@ public class Robot implements RobotApi {
         if (timestampOffset == null) {
             sync();
         }
+        long time = status.getTime();
         long timeout = time + dt;
         try {
             while (time < timeout) {
-                status = null;
                 time = System.currentTimeMillis();
                 Timed<String> line = socket.readLine();
                 if (line != null) {
                     try {
-                        status = WheellyStatus.from(line.value());
-                        time = line.time(TimeUnit.MILLISECONDS);
+                        WheellyStatus newStatus = status.updateFromString(line);
+                        // TODO maybe move to status
+                        RadarMap radarMap = newStatus.getRadarMap();
                         if (radarMap != null) {
-                            RadarMap.SensorSignal signal = new RadarMap.SensorSignal(this.getRobotPos(),
-                                    normalizeDegAngle(getRobotDir() + getSensorDir()),
+                            RadarMap.SensorSignal signal = new RadarMap.SensorSignal(status.getLocation(),
+                                    normalizeDegAngle(status.getDirection() + status.getSensorDirection()),
                                     (float) status.getSampleDistance(), time);
-                            radarMap.update(signal);
+                            this.status.getRadarMap().update(signal);
                             if (time >= this.cleanTimeout) {
                                 radarMap.clean(time - this.radarPersistence);
                                 cleanTimeout = time + cleanInterval;
                             }
+                            this.status = newStatus;
                         }
                     } catch (Throwable ignored) {
                     }

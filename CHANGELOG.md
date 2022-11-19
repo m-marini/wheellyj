@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 - Issue #108: Add complete mechanical test
+- Issue #113: Add delta critic kpi
+- Issue #116: Add explore objective
 
 ### Fixed
 

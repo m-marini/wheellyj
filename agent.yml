@@ -3,26 +3,23 @@ version: "0.2"
 active: radarAgent
 
 configurations:
-######################################
-# Tiles agent
-######################################
-  tilesAgent:
+  ######################################
+  # Radar agent 1 (critic +-1, tanh insted of relu0)
+  ######################################
+  radarAgent1:
     class: org.mmarini.wheelly.agents.TDAgent
     seed: 1234
-    modelPath: models/tilesAgent
+    modelPath: models/radarAgent
     savingIntervalSteps: 1000
     rewardAlpha: 5e-3
     policyAlpha: 10e-3
-    criticAlpha: 10e-3
+    criticAlpha: 1e-3
     lambda: 0.5
     inputProcess:
-      - name: tiles
-        class: org.mmarini.wheelly.agents.TilesProcessor
+      - name: radarFeatures
+        class: org.mmarini.wheelly.agents.FeatureVectorProcessor
         inputs:
-          - name: sensor
-            numTiles: 7
-          - name: distance
-            numTiles: 30
+          - radar
       - name: canMoveFeatures
         class: org.mmarini.wheelly.agents.PartitionProcessor
         inputs:
@@ -35,7 +32,146 @@ configurations:
         inputs:
           type: concat
           inputs:
-            - tiles
+            - radarFeatures
+            - canMoveFeatures
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: tanh
+      hidden0:
+        input: layer0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: tanh
+      hidden1:
+        inputs:
+          type: sum
+          inputs:
+            - layer0
+            - hidden0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: tanh
+      hidden2:
+        inputs:
+          type: sum
+          inputs:
+            - hidden0
+            - hidden1
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: tanh
+      halt:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 2
+          - type: tanh
+          - type: softmax
+            temperature: 0.91
+      direction:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 25
+          - type: tanh
+          - type: softmax
+            temperature: 0.372
+      speed:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 9
+          - type: tanh
+          - type: softmax
+            temperature: 0.4677
+      sensorAction:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 7
+          - type: tanh
+          - type: softmax
+            temperature: 0.501
+    critic:
+      layer0:
+        inputs:
+          type: concat
+          inputs:
+            - radarFeatures
+            - canMoveFeatures
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: tanh
+      hidden0:
+        input: layer0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: tanh
+      hidden1:
+        inputs:
+          type: sum
+          inputs:
+            - layer0
+            - hidden0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: tanh
+      hidden2:
+        inputs:
+          type: sum
+          inputs:
+            - hidden0
+            - hidden1
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: tanh
+      output:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 1
+          - type: tanh
+          - type: linear
+            b: 0
+            w: 10
+  ######################################
+  # Radar agent
+  ######################################
+  radarAgent:
+    class: org.mmarini.wheelly.agents.TDAgent
+    seed: 1234
+    modelPath: models/radarAgent
+    savingIntervalSteps: 1000
+    rewardAlpha: 5e-3
+    policyAlpha: 10e-3
+    criticAlpha: 100e-6
+    lambda: 0.5
+    inputProcess:
+      - name: radarFeatures
+        class: org.mmarini.wheelly.agents.FeatureVectorProcessor
+        inputs:
+          - radar
+      - name: canMoveFeatures
+        class: org.mmarini.wheelly.agents.PartitionProcessor
+        inputs:
+          - name: canMoveForward
+            numTiles: 2
+          - name: canMoveBackward
+            numTiles: 2
+    policy:
+      layer0:
+        inputs:
+          type: concat
+          inputs:
+            - radarFeatures
             - canMoveFeatures
         layers:
           - type: dense
@@ -104,7 +240,7 @@ configurations:
         inputs:
           type: concat
           inputs:
-            - tiles
+            - radarFeatures
             - canMoveFeatures
         layers:
           - type: dense
@@ -426,145 +562,6 @@ configurations:
           type: concat
           inputs:
             - tiles
-            - canMoveFeatures
-        layers:
-          - type: dense
-            outputSize: 100
-          - type: relu
-      hidden0:
-        input: layer0
-        layers:
-          - type: dense
-            outputSize: 100
-          - type: relu
-      hidden1:
-        inputs:
-          type: sum
-          inputs:
-            - layer0
-            - hidden0
-        layers:
-          - type: dense
-            outputSize: 100
-          - type: relu
-      hidden2:
-        inputs:
-          type: sum
-          inputs:
-            - hidden0
-            - hidden1
-        layers:
-          - type: dense
-            outputSize: 100
-          - type: relu
-      output:
-        input: hidden2
-        layers:
-          - type: dense
-            outputSize: 1
-          - type: tanh
-          - type: linear
-            b: 0
-            w: 3
-  ######################################
-  # Radar agent
-  ######################################
-  radarAgent:
-    class: org.mmarini.wheelly.agents.TDAgent
-    seed: 1234
-    modelPath: models/radarAgent
-    savingIntervalSteps: 1000
-    rewardAlpha: 5e-3
-    policyAlpha: 300e-3
-    criticAlpha: 300e-3
-    lambda: 0.5
-    inputProcess:
-      - name: radarFeatures
-        class: org.mmarini.wheelly.agents.FeatureVectorProcessor
-        inputs:
-          - radar
-      - name: canMoveFeatures
-        class: org.mmarini.wheelly.agents.PartitionProcessor
-        inputs:
-          - name: canMoveForward
-            numTiles: 2
-          - name: canMoveBackward
-            numTiles: 2
-    policy:
-      layer0:
-        inputs:
-          type: concat
-          inputs:
-            - radarFeatures
-            - canMoveFeatures
-        layers:
-          - type: dense
-            outputSize: 100
-          - type: relu
-      hidden0:
-        input: layer0
-        layers:
-          - type: dense
-            outputSize: 100
-          - type: relu
-      hidden1:
-        inputs:
-          type: sum
-          inputs:
-            - layer0
-            - hidden0
-        layers:
-          - type: dense
-            outputSize: 100
-          - type: relu
-      hidden2:
-        inputs:
-          type: sum
-          inputs:
-            - hidden0
-            - hidden1
-        layers:
-          - type: dense
-            outputSize: 100
-          - type: relu
-      halt:
-        input: hidden2
-        layers:
-          - type: dense
-            outputSize: 2
-          - type: tanh
-          - type: softmax
-            temperature: 0.91
-      direction:
-        input: hidden2
-        layers:
-          - type: dense
-            outputSize: 25
-          - type: tanh
-          - type: softmax
-            temperature: 0.372
-      speed:
-        input: hidden2
-        layers:
-          - type: dense
-            outputSize: 9
-          - type: tanh
-          - type: softmax
-            temperature: 0.4677
-      sensorAction:
-        input: hidden2
-        layers:
-          - type: dense
-            outputSize: 7
-          - type: tanh
-          - type: softmax
-            temperature: 0.501
-    critic:
-      layer0:
-        inputs:
-          type: concat
-          inputs:
-            - radarFeatures
             - canMoveFeatures
         layers:
           - type: dense

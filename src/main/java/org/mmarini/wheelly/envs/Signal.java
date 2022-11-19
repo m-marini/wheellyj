@@ -36,6 +36,7 @@ public interface Signal {
     int getInt(int... indices);
 
     /**
+     *
      */
 
     long getSize();

@@ -30,7 +30,6 @@ import java.awt.geom.Point2D;
 import java.util.Optional;
 
 import static java.lang.Math.toRadians;
-import static org.mmarini.wheelly.apis.MapSector.MAX_SIGNAL_DISTANCE;
 
 /**
  * The RadarMap keeps the obstacle signal results of the space round the center
@@ -189,7 +188,7 @@ public class RadarMap {
          * Returns true if signal is an echo
          */
         public boolean isEcho() {
-            return distance > 0 && distance < MAX_SIGNAL_DISTANCE;
+            return distance > 0 && distance < MapSector.MAX_SIGNAL_DISTANCE;
         }
     }
 }

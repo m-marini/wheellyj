@@ -41,6 +41,16 @@ class SimRobotObstacleTest {
     private static final float HALF_SIZE = 100e-3F;
     private static final float HALF_LENGTH = 140e-3F;
 
+    /**
+     * Given a space with an obstacle at X0,0
+     * and robot directed to 90 DEG at distance of 239 mm from obstacle (-1 mm border distance obstacle - robot)
+     * When halt the robot and after 300ms
+     * Then the robot should remain stoped
+     * and the distance sensor should signal 140mm
+     * and the proximity sould signal 12 (front contacts)
+     * and the forward block should be active
+     * and the backward block should be inactive
+     */
     @Test
     void contactFront() {
         SimRobot robot = createRobot();
@@ -48,24 +58,26 @@ class SimRobotObstacleTest {
         robot.setRobotPos(x0, 0);
         robot.setRobotDir(90);
         robot.halt();
-        robot.tick(300);
 
-        assertThat(robot.getRobotPos().getX(), closeTo(x0, DISTANCE_EPSILON));
-        assertThat(robot.getRobotPos().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertThat((double) robot.getSensorDistance(), closeTo(140e-3, DISTANCE_EPSILON));
-        assertEquals(12, robot.getContacts());
-        assertTrue(robot.getCanMoveBackward());
-        assertFalse(robot.getCanMoveForward());
+        robot.tick(300);
+        WheellyStatus status = robot.getStatus();
+
+        assertThat(status.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
+        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat(status.getSampleDistance(), closeTo(140e-3, DISTANCE_EPSILON));
+        assertEquals(12, status.getProximity());
+        assertTrue(status.getCanMoveBackward());
+        assertFalse(status.getCanMoveForward());
 
         robot.move(90, 1);
         robot.tick(300);
 
-        assertThat(robot.getRobotPos().getX(), closeTo(x0, DISTANCE_EPSILON));
-        assertThat(robot.getRobotPos().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertThat((double) robot.getSensorDistance(), closeTo(140e-3, DISTANCE_EPSILON));
-        assertEquals(12, robot.getContacts());
-        assertTrue(robot.getCanMoveBackward());
-        assertFalse(robot.getCanMoveForward());
+        assertThat(status.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
+        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat(status.getSampleDistance(), closeTo(140e-3, DISTANCE_EPSILON));
+        assertEquals(12, status.getProximity());
+        assertTrue(status.getCanMoveBackward());
+        assertFalse(status.getCanMoveForward());
     }
 
     @Test
@@ -76,25 +88,26 @@ class SimRobotObstacleTest {
         robot.setRobotDir(90);
         robot.halt();
         robot.tick(300);
-
-        assertThat(robot.getRobotPos().getX(), closeTo(x0, DISTANCE_EPSILON));
-        assertThat(robot.getRobotPos().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertThat((double) robot.getSensorDistance(), closeTo(140e-3, DISTANCE_EPSILON));
-        assertEquals(12, robot.getContacts());
-        assertTrue(robot.getCanMoveBackward());
-        assertFalse(robot.getCanMoveForward());
+        WheellyStatus status = robot.getStatus();
+        assertThat(status.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
+        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat(status.getSampleDistance(), closeTo(140e-3, DISTANCE_EPSILON));
+        assertEquals(12, status.getProximity());
+        assertTrue(status.getCanMoveBackward());
+        assertFalse(status.getCanMoveForward());
 
         robot.move(90, -1);
         for (int i = 0; i < 10; i++) {
             robot.tick(30);
         }
+        status = robot.getStatus();
 
-        assertThat(robot.getRobotPos().getX(), closeTo(x0 - 33.2e-3, DISTANCE_EPSILON));
-        assertThat(robot.getRobotPos().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertThat((double) robot.getSensorDistance(), closeTo(140e-3 + 33.2e-3, DISTANCE_EPSILON));
-        assertEquals(0, robot.getContacts());
-        assertTrue(robot.getCanMoveBackward());
-        assertFalse(robot.getCanMoveForward());
+        assertThat(status.getLocation().getX(), closeTo(x0 - 33.2e-3, DISTANCE_EPSILON));
+        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat(status.getSampleDistance(), closeTo(140e-3 + 33.2e-3, DISTANCE_EPSILON));
+        assertEquals(0, status.getProximity());
+        assertTrue(status.getCanMoveBackward());
+        assertFalse(status.getCanMoveForward());
     }
 
     @Test
@@ -105,23 +118,25 @@ class SimRobotObstacleTest {
         robot.setRobotDir(-90);
         robot.halt();
         robot.tick(300);
+        WheellyStatus status = robot.getStatus();
 
-        assertThat(robot.getRobotPos().getX(), closeTo(x0, DISTANCE_EPSILON));
-        assertThat(robot.getRobotPos().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertThat((double) robot.getSensorDistance(), closeTo(0, DISTANCE_EPSILON));
-        assertEquals(3, robot.getContacts());
-        assertFalse(robot.getCanMoveBackward());
-        assertTrue(robot.getCanMoveForward());
+        assertThat(status.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
+        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat(status.getSampleDistance(), closeTo(0, DISTANCE_EPSILON));
+        assertEquals(3, status.getProximity());
+        assertFalse(status.getCanMoveBackward());
+        assertTrue(status.getCanMoveForward());
 
         robot.move(-90, -1);
         robot.tick(300);
+        status = robot.getStatus();
 
-        assertThat(robot.getRobotPos().getX(), closeTo(x0, DISTANCE_EPSILON));
-        assertThat(robot.getRobotPos().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertThat((double) robot.getSensorDistance(), closeTo(0, DISTANCE_EPSILON));
-        assertEquals(3, robot.getContacts());
-        assertFalse(robot.getCanMoveBackward());
-        assertTrue(robot.getCanMoveForward());
+        assertThat(status.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
+        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat(status.getSampleDistance(), closeTo(0, DISTANCE_EPSILON));
+        assertEquals(3, status.getProximity());
+        assertFalse(status.getCanMoveBackward());
+        assertTrue(status.getCanMoveForward());
     }
 
     @Test
@@ -132,25 +147,27 @@ class SimRobotObstacleTest {
         robot.setRobotDir(-90);
         robot.halt();
         robot.tick(300);
+        WheellyStatus status = robot.getStatus();
 
-        assertThat(robot.getRobotPos().getX(), closeTo(x0, DISTANCE_EPSILON));
-        assertThat(robot.getRobotPos().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertThat((double) robot.getSensorDistance(), closeTo(0, DISTANCE_EPSILON));
-        assertEquals(3, robot.getContacts());
-        assertFalse(robot.getCanMoveBackward());
-        assertTrue(robot.getCanMoveForward());
+        assertThat(status.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
+        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat(status.getSampleDistance(), closeTo(0, DISTANCE_EPSILON));
+        assertEquals(3, status.getProximity());
+        assertFalse(status.getCanMoveBackward());
+        assertTrue(status.getCanMoveForward());
 
         robot.move(-90, 1);
         for (int i = 0; i < 10; i++) {
             robot.tick(30);
         }
+        status = robot.getStatus();
 
-        assertThat(robot.getRobotPos().getX(), closeTo(x0 - 33.2e-3F, DISTANCE_EPSILON));
-        assertThat(robot.getRobotPos().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertThat((double) robot.getSensorDistance(), closeTo(0, DISTANCE_EPSILON));
-        assertEquals(0, robot.getContacts());
-        assertTrue(robot.getCanMoveBackward());
-        assertTrue(robot.getCanMoveForward());
+        assertThat(status.getLocation().getX(), closeTo(x0 - 33.2e-3F, DISTANCE_EPSILON));
+        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat(status.getSampleDistance(), closeTo(0, DISTANCE_EPSILON));
+        assertEquals(0, status.getProximity());
+        assertTrue(status.getCanMoveBackward());
+        assertTrue(status.getCanMoveForward());
     }
 
     private SimRobot createRobot() {
@@ -167,23 +184,24 @@ class SimRobotObstacleTest {
         robot.setRobotDir(90);
         robot.halt();
         robot.tick(300);
+        WheellyStatus status = robot.getStatus();
 
-        assertThat(robot.getRobotPos().getX(), closeTo(x0, DISTANCE_EPSILON));
-        assertThat(robot.getRobotPos().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertThat((double) robot.getSensorDistance(), closeTo(XO - x0 - HALF_SIZE, DISTANCE_EPSILON));
-        assertEquals(0, robot.getContacts());
-        assertTrue(robot.getCanMoveBackward());
-        assertFalse(robot.getCanMoveForward());
+        assertThat(status.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
+        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat(status.getSampleDistance(), closeTo(XO - x0 - HALF_SIZE, DISTANCE_EPSILON));
+        assertEquals(0, status.getProximity());
+        assertTrue(status.getCanMoveBackward());
+        assertFalse(status.getCanMoveForward());
 
         robot.move(90, 1);
         robot.tick(300);
 
-        assertThat(robot.getRobotPos().getX(), closeTo(x0, DISTANCE_EPSILON));
-        assertThat(robot.getRobotPos().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertThat((double) robot.getSensorDistance(), closeTo(XO - x0 - HALF_SIZE, DISTANCE_EPSILON));
-        assertEquals(0, robot.getContacts());
-        assertTrue(robot.getCanMoveBackward());
-        assertFalse(robot.getCanMoveForward());
+        assertThat(status.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
+        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat(status.getSampleDistance(), closeTo(XO - x0 - HALF_SIZE, DISTANCE_EPSILON));
+        assertEquals(0, status.getProximity());
+        assertTrue(status.getCanMoveBackward());
+        assertFalse(status.getCanMoveForward());
     }
 
     @Test
@@ -194,24 +212,26 @@ class SimRobotObstacleTest {
         robot.setRobotDir(-90);
         robot.halt();
         robot.tick(300);
+        WheellyStatus status = robot.getStatus();
 
-        assertThat(robot.getRobotPos().getX(), closeTo(x0, DISTANCE_EPSILON));
-        assertThat(robot.getRobotPos().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertThat((double) robot.getSensorDistance(), closeTo(0, DISTANCE_EPSILON));
-        assertEquals(0, robot.getContacts());
-        assertTrue(robot.getCanMoveBackward());
-        assertTrue(robot.getCanMoveForward());
+        assertThat(status.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
+        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat(status.getSampleDistance(), closeTo(0, DISTANCE_EPSILON));
+        assertEquals(0, status.getProximity());
+        assertTrue(status.getCanMoveBackward());
+        assertTrue(status.getCanMoveForward());
 
         robot.move(-90, -1);
         for (int i = 0; i < 100; i++) {
             robot.tick(3);
         }
-        assertThat(robot.getRobotPos().getX(), closeTo(XO - HALF_LENGTH - HALF_SIZE, 20e-3));
-        assertThat(robot.getRobotPos().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertThat((double) robot.getSensorDistance(), closeTo(0, DISTANCE_EPSILON));
-        assertEquals(3, robot.getContacts());
-        assertFalse(robot.getCanMoveBackward());
-        assertTrue(robot.getCanMoveForward());
+        status = robot.getStatus();
+        assertThat(status.getLocation().getX(), closeTo(XO - HALF_LENGTH - HALF_SIZE, 20e-3));
+        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat(status.getSampleDistance(), closeTo(0, DISTANCE_EPSILON));
+        assertEquals(3, status.getProximity());
+        assertFalse(status.getCanMoveBackward());
+        assertTrue(status.getCanMoveForward());
     }
 
 }

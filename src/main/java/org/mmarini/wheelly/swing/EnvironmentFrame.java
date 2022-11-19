@@ -27,7 +27,7 @@ package org.mmarini.wheelly.swing;
 
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
-import org.mmarini.wheelly.apis.RobotApi;
+import org.mmarini.wheelly.apis.WheellyStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -135,21 +135,21 @@ public class EnvironmentFrame extends JFrame {
     }
 
     /**
-     * Set the robot to draw
+     * Set the robot status to draw
      *
-     * @param robot the robot
+     * @param status the robot status
      */
-    public void setRobot(RobotApi robot) {
-        envPanel.setRobotLocation(robot.getRobotPos());
-        envPanel.setRobotDirection(robot.getRobotDir());
-        envPanel.setSensorDirection(robot.getSensorDir());
-        envPanel.setObstacleLocation(robot.getSensorObstacle().orElse(null));
-        envPanel.setTime(robot.getElapsed());
-        envPanel.setDistance(robot.getSensorDistance());
-        envPanel.setContacts(robot.getContacts());
-        envPanel.setCanMoveForward(robot.getCanMoveForward());
-        envPanel.setCanMoveBackward(robot.getCanMoveBackward());
-        envPanel.setRadarMap(robot.getRadarMap());
+    public void setRobotStatus(WheellyStatus status) {
+        envPanel.setRobotLocation(status.getLocation());
+        envPanel.setRobotDirection(status.getDirection());
+        envPanel.setSensorDirection(status.getSensorDirection());
+        envPanel.setObstacleLocation(status.getSensorObstacle().orElse(null));
+        envPanel.setTime(status.getElapsed());
+        envPanel.setDistance((float) status.getSampleDistance());
+        envPanel.setContacts(status.getProximity());
+        envPanel.setCanMoveForward(status.getCanMoveForward());
+        envPanel.setCanMoveBackward(status.getCanMoveBackward());
+        envPanel.setRadarMap(status.getRadarMap());
         //envPanel.setObstacleMap(robot.getObstaclesMap().map(ObstacleMap::getPoints).orElse(null));
     }
 
