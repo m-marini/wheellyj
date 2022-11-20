@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #108: Add complete mechanical test
 - Issue #113: Add delta critic kpi
 - Issue #116: Add explore objective
+- Issue #119: Add sensor direction in explore objective
 
 ### Fixed
 
