@@ -45,7 +45,7 @@ import static org.mmarini.wheelly.apis.SimRobot.MAX_VELOCITY;
 
 class ExploreTest {
 
-    static WheellyStatus createStatus(double leftSpeed, double rightSpeed, int known, boolean canMoveForward, boolean canMoveBackward) {
+    static WheellyStatus createStatus(int sensorDir, double leftSpeed, double rightSpeed, int known, boolean canMoveForward, boolean canMoveBackward) {
         RadarMap radarMap = RadarMap.create(10, 10, new Point2D.Float(), 0.2F);
         MapSector[] map = radarMap.getMap();
         long timestamp = System.currentTimeMillis();
@@ -54,7 +54,7 @@ class ExploreTest {
         }
 
         return new WheellyStatus(0, new Point2D.Float(), 0,
-                0, 0,
+                sensorDir, 0,
                 leftSpeed * MAX_VELOCITY, rightSpeed * MAX_VELOCITY, 0, 0,
                 canMoveForward, canMoveBackward, false, false,
                 0, radarMap);
@@ -62,29 +62,33 @@ class ExploreTest {
 
     @ParameterizedTest
     @CsvSource({
-            "-1,0,0,0,0,1",
-            "-1,0,0,0,1,0",
-            "-1,0,0,0,0,0",
-            "0,0,0,0,1,1",
-            "0,0,0,100,1,1",
-            "0,-1,1,100,1,1",
-            "0,1,-1,100,1,1",
-            "1,1,1,100,1,1",
-            "0,-1,-1,100,1,1",
-            "0.5,1,1,50,1,1",
-            "0.5,1,0,100,1,1",
-            "0.5,0,1,100,1,1",
-            "0,0,-1,100,1,1",
+            "-1,0,0,0,0,0,1",
+            "-1,0,0,0,0,1,0",
+            "-1,0,0,0,0,0,0",
+            "0,0,0,0,0,1,1",
+            "0,0,0,0,100,1,1",
+            "0,0,-1,1,100,1,1",
+            "0,0,1,-1,100,1,1",
+            "1,0,1,1,100,1,1",
+            "0,0,-1,-1,100,1,1",
+            "0.5,0,1,1,50,1,1",
+            "0.5,0,1,0,100,1,1",
+            "0.5,0,0,1,100,1,1",
+            "0,0,0,-1,100,1,1",
+            "0,60,1,1,100,1,1",
+            "0.5,30,1,1,100,1,1",
     })
     void create(float expected,
+                int sensorDir,
                 double leftSpeed,
                 double rightSpeed,
                 int knownCount,
                 int canMoveForward,
                 int canMoveBackward) throws IOException {
-        JsonNode root = Utils.fromText(TestFunctions.text("---"));
+        JsonNode root = Utils.fromText(TestFunctions.text("---",
+                "sensorRange: 60"));
         FloatFunction<WheellyStatus> f = Explore.create(root, Locator.root());
-        WheellyStatus status = createStatus(leftSpeed, rightSpeed, knownCount, canMoveForward != 0, canMoveBackward != 0);
+        WheellyStatus status = createStatus(sensorDir, leftSpeed, rightSpeed, knownCount, canMoveForward != 0, canMoveBackward != 0);
         float result = f.floatValueOf(status);
         assertThat((double) result, closeTo(expected, 1e-6));
     }

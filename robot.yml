@@ -11,8 +11,8 @@ configurations:
     #radarPersistence: 10000
     #radarCleanInterval: 2000
     radarGrid: 0.14
-    #radarWidth: 11
-    #radarHeight: 11
+    radarWidth: 71
+    radarHeight: 71
   realRobot:
     class: org.mmarini.wheelly.apis.Robot
     host: "192.168.1.11"
