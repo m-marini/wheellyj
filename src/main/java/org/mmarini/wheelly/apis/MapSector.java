@@ -73,6 +73,10 @@ public class MapSector {
         this.timestamp = timestamp;
     }
 
+    public boolean hasObstacle() {
+        return isKnown() && filled;
+    }
+
     public boolean isFilled() {
         return filled;
     }

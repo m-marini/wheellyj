@@ -32,16 +32,19 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
-import org.mmarini.wheelly.agents.Agent;
-import org.mmarini.wheelly.agents.KpiCSVSubscriber;
+import org.mmarini.rl.agents.Agent;
+import org.mmarini.rl.agents.KpiCSVSubscriber;
+import org.mmarini.rl.envs.Environment;
+import org.mmarini.rl.envs.FloatSignalSpec;
+import org.mmarini.rl.envs.Signal;
+import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.wheelly.apis.*;
-import org.mmarini.wheelly.envs.Environment;
-import org.mmarini.wheelly.envs.RadarMapApi;
-import org.mmarini.wheelly.envs.Signal;
-import org.mmarini.wheelly.envs.SignalSpec;
+import org.mmarini.wheelly.envs.PolarRobotEnv;
+import org.mmarini.wheelly.envs.RadarRobotEnv;
 import org.mmarini.wheelly.swing.EnvironmentFrame;
 import org.mmarini.wheelly.swing.Messages;
-import org.mmarini.wheelly.swing.RadarFrame;
+import org.mmarini.wheelly.swing.PolarPanel;
+import org.mmarini.wheelly.swing.RadarPanel;
 import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
@@ -50,6 +53,8 @@ import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.swing.*;
+import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -142,6 +147,18 @@ public class Wheelly {
         return parser;
     }
 
+    static JFrame createRadarFrame(JComponent panel) {
+        JFrame frame = new JFrame("Radar");
+        frame.setSize(400, 400);
+        frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        frame.setResizable(false);
+        Container content = frame.getContentPane();
+        content.setLayout(new BorderLayout());
+        content.add(panel, BorderLayout.CENTER);
+        frame.setVisible(true);
+        return frame;
+    }
+
     /**
      * Returns an object instance from configuration file
      *
@@ -214,9 +231,17 @@ public class Wheelly {
             try (Environment env = createEnvironment(robot)) {
                 logger.info("Creating agent");
                 try (Agent agent = createAgent(env)) {
-                    RadarFrame radarFrame = null;
-                    if (env instanceof RadarMapApi) {
-                        radarFrame = new RadarFrame();
+                    JFrame radarFrame = null;
+                    RadarPanel radarPanel = null;
+                    PolarPanel polarPanel = null;
+                    if (env instanceof RadarRobotEnv) {
+                        radarPanel = new RadarPanel();
+                        radarFrame = createRadarFrame(radarPanel);
+                    } else if (env instanceof PolarRobotEnv) {
+                        polarPanel = new PolarPanel();
+                        float radarMaxDistance = ((FloatSignalSpec) env.getState().get("sectorDistances")).getMaxValue();
+                        polarPanel.setRadarMaxDistance(radarMaxDistance);
+                        radarFrame = createRadarFrame(polarPanel);
                     }
                     long sessionDuration = args.getLong("time");
                     logger.info("Starting session ...");
@@ -248,8 +273,11 @@ public class Wheelly {
                         frame.setRobotStatus(status);
                         frame.setReward(avgRewards);
                         frame.setTimeRatio((float) status.getElapsed() / (System.currentTimeMillis() - start));
-                        if (radarFrame != null) {
-                            radarFrame.setRadar(((RadarMapApi) env).getRadarMap());
+                        if (radarPanel != null) {
+                            radarPanel.setRadarMap(((RadarRobotEnv) env).getRadarMap());
+                        }
+                        if (polarPanel != null) {
+                            polarPanel.setPolarMap(((PolarRobotEnv) env).getPolarMap());
                         }
                         running = status.getElapsed() <= sessionDuration &&
                                 frame.isVisible();

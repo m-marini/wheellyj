@@ -46,12 +46,12 @@ class RadarMapTest {
     void cleanNoTimeout() {
         RadarMap map = RadarMap.create(WIDTH, HEIGHT, new Point2D.Float(), 0.2F);
         long timestamp = System.currentTimeMillis();
-        Arrays.stream(map.getMap()).skip(10).limit(10)
+        Arrays.stream(map.getSectors()).skip(10).limit(10)
                 .forEach(sector -> sector.setTimestamp(timestamp));
 
         map.clean(timestamp - 1);
 
-        assertEquals(10L, Arrays.stream(map.getMap())
+        assertEquals(10L, Arrays.stream(map.getSectors())
                 .filter(MapSector::isKnown)
                 .count());
     }
@@ -60,10 +60,10 @@ class RadarMapTest {
     void cleanTimeout() {
         RadarMap map = RadarMap.create(WIDTH, HEIGHT, new Point2D.Float(), 0.2F);
         long timestamp = System.currentTimeMillis();
-        Arrays.stream(map.getMap()).skip(10).limit(10)
+        Arrays.stream(map.getSectors()).skip(10).limit(10)
                 .forEach(sector -> sector.setTimestamp(timestamp));
         map.clean(timestamp);
-        assertTrue(Arrays.stream(map.getMap())
+        assertTrue(Arrays.stream(map.getSectors())
                 .allMatch(Predicate.not(MapSector::isKnown)));
     }
 
@@ -71,21 +71,21 @@ class RadarMapTest {
     void create() {
         RadarMap map = RadarMap.create(WIDTH, HEIGHT, new Point2D.Float(), 0.2F);
         assertEquals(GRID_SIZE, map.getTopology().getGridSize());
-        assertThat(map.getMap()[0], allOf(
+        assertThat(map.getSectors()[0], allOf(
                 hasProperty("location", equalTo(
                         new Point2D.Float(-1, -1))
                 ),
                 hasProperty("timestamp", equalTo(0L)),
                 hasProperty("filled", equalTo(false))
         ));
-        assertThat(map.getMap()[HEIGHT * WIDTH - 1], allOf(
+        assertThat(map.getSectors()[HEIGHT * WIDTH - 1], allOf(
                 hasProperty("location", equalTo(
                         new Point2D.Float(1, 1))
                 ),
                 hasProperty("timestamp", equalTo(0L)),
                 hasProperty("filled", equalTo(false))
         ));
-        assertThat(map.getMap()[HEIGHT * WIDTH / 2], allOf(
+        assertThat(map.getSectors()[HEIGHT * WIDTH / 2], allOf(
                 hasProperty("location", equalTo(
                         new Point2D.Float(0, 0))
                 ),
@@ -169,7 +169,7 @@ class RadarMapTest {
         RadarMap newMap = RadarMap.create(WIDTH, HEIGHT, new Point2D.Float(), map.getTopology().getGridSize());
         newMap.update(map, new Point2D.Float(-0.4F, 0.4F), 30);
 
-        long np = Arrays.stream(newMap.getMap())
+        long np = Arrays.stream(newMap.getSectors())
                 .filter(MapSector::isKnown)
                 .filter(MapSector::isFilled)
                 .count();
@@ -193,7 +193,7 @@ class RadarMapTest {
         RadarMap newMap = RadarMap.create(WIDTH, HEIGHT, new Point2D.Float(), map.getTopology().getGridSize());
         newMap.update(map, new Point2D.Float(-0.4F, 0.4F), 90);
 
-        long np = Arrays.stream(newMap.getMap())
+        long np = Arrays.stream(newMap.getSectors())
                 .filter(MapSector::isKnown)
                 .filter(MapSector::isFilled)
                 .count();
@@ -217,7 +217,7 @@ class RadarMapTest {
         RadarMap newMap = RadarMap.create(WIDTH, HEIGHT, new Point2D.Float(), map.getTopology().getGridSize());
         newMap.update(map, new Point2D.Float(-0.4F, 0.4F), -90);
 
-        long np = Arrays.stream(newMap.getMap())
+        long np = Arrays.stream(newMap.getSectors())
                 .filter(MapSector::isKnown)
                 .filter(MapSector::isFilled)
                 .count();

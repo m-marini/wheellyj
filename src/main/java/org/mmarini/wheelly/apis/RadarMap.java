@@ -63,19 +63,19 @@ public class RadarMap {
     }
 
     private final GridTopology topology;
-    private final MapSector[] map;
+    private final MapSector[] sectors;
     private final int stride;
 
     /**
      * Creates the radar map
      *
      * @param topology the topology
-     * @param map      the map sectors
+     * @param sectors  the map sectors
      * @param stride   the stride (width)
      */
-    public RadarMap(GridTopology topology, MapSector[] map, int stride) {
+    public RadarMap(GridTopology topology, MapSector[] sectors, int stride) {
         this.topology = topology;
-        this.map = map;
+        this.sectors = sectors;
         this.stride = stride;
     }
 
@@ -85,19 +85,15 @@ public class RadarMap {
      * @param timeout the timeout instant
      */
     public void clean(long timeout) {
-        for (MapSector mapSector : map) {
+        for (MapSector mapSector : sectors) {
             mapSector.clean(timeout);
         }
     }
 
     private void clean() {
-        for (MapSector mapSector : map) {
+        for (MapSector mapSector : sectors) {
             mapSector.setTimestamp(0L);
         }
-    }
-
-    public MapSector[] getMap() {
-        return map;
     }
 
     /**
@@ -108,7 +104,7 @@ public class RadarMap {
      */
     public Optional<MapSector> getSector(float x, float y) {
         int idx = indexOf(x, y);
-        return idx >= 0 ? Optional.of(map[idx]) : Optional.empty();
+        return idx >= 0 ? Optional.of(sectors[idx]) : Optional.empty();
     }
 
     /**
@@ -118,6 +114,10 @@ public class RadarMap {
      */
     public Optional<MapSector> getSector(Point2D point) {
         return getSector((float) point.getX(), (float) point.getY());
+    }
+
+    public MapSector[] getSectors() {
+        return sectors;
     }
 
     public GridTopology getTopology() {
@@ -131,13 +131,13 @@ public class RadarMap {
      * @param y y coordinate of point
      */
     public int indexOf(float x, float y) {
-        Point2D offset = map[0].getLocation();
+        Point2D offset = sectors[0].getLocation();
         int[] indices = topology.toGridCoords((float) (x - offset.getX()), (float) (y - offset.getY()));
         if (indices[0] < 0 || indices[0] >= stride || indices[1] < 0) {
             return -1;
         }
         int idx = indices[0] + indices[1] * stride;
-        return idx < map.length ? idx : -1;
+        return idx < sectors.length ? idx : -1;
     }
 
     /**
@@ -146,7 +146,7 @@ public class RadarMap {
      * @param signal the sensor signal
      */
     public void update(SensorSignal signal) {
-        for (MapSector sector : map) {
+        for (MapSector sector : sectors) {
             sector.update(signal, topology.getGridSize());
         }
     }
@@ -163,7 +163,7 @@ public class RadarMap {
         tr.translate(-position.getX(), -position.getY());
         Point2D targetPt = new Point2D.Float();
         clean();
-        for (MapSector sourceSector : sourceMap.getMap()) {
+        for (MapSector sourceSector : sourceMap.getSectors()) {
             if (sourceSector.isKnown()) {
                 targetPt = tr.transform(sourceSector.getLocation(), targetPt);
                 getSector(targetPt).ifPresent(sect -> sect.union(sourceSector));
@@ -171,7 +171,7 @@ public class RadarMap {
         }
     }
 
-    static class SensorSignal {
+    public static class SensorSignal {
         public final float distance;
         public final int sensorDirection;
         public final Point2D sensorLocation;

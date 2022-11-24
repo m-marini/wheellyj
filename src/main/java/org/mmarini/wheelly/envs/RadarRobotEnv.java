@@ -27,6 +27,7 @@ package org.mmarini.wheelly.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.eclipse.collections.api.block.function.primitive.FloatFunction;
+import org.mmarini.rl.envs.*;
 import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.WheellyStatus;
@@ -50,7 +51,7 @@ import static org.mmarini.wheelly.apis.Utils.linear;
 import static org.mmarini.yaml.schema.Validator.*;
 
 
-public class RadarRobotEnv implements Environment, RadarMapApi {
+public class RadarRobotEnv implements Environment {
 
     public static final float MIN_DISTANCE = 0f;
     public static final float MAX_DISTANCE = 10f;
@@ -79,9 +80,9 @@ public class RadarRobotEnv implements Environment, RadarMapApi {
                     "interval", positiveInteger(),
                     "reactionInterval", positiveInteger(),
                     "commandInterval", positiveInteger(),
-                    "numDirectionValues", integer(minimum(FILLED_SECTOR_VALUE)),
-                    "numSensorValues", integer(minimum(FILLED_SECTOR_VALUE)),
-                    "numSpeedValues", integer(minimum(FILLED_SECTOR_VALUE)),
+                    "numDirectionValues", integer(minimum(2)),
+                    "numSensorValues", integer(minimum(2)),
+                    "numSpeedValues", integer(minimum(2)),
                     "radarWidth", positiveInteger(),
                     "radarHeight", positiveInteger(),
                     "radarGrid", positiveNumber()
@@ -99,7 +100,7 @@ public class RadarRobotEnv implements Environment, RadarMapApi {
     public static RadarRobotEnv create(JsonNode root, Locator locator, RobotApi robot) {
         ROBOT_ENV_SPEC.apply(locator).accept(root);
 
-        FloatFunction<WheellyStatus> reward = Utils.createObject(root, locator.path("objective"), new Object[UNKNOWN_SECTOR_VALUE], new Class[UNKNOWN_SECTOR_VALUE]);
+        FloatFunction<WheellyStatus> reward = Utils.createObject(root, locator.path("objective"), new Object[0], new Class[0]);
         long interval = locator.path("interval").getNode(root).asLong(DEFAULT_INTERVAL);
         long reactionInterval = locator.path("reactionInterval").getNode(root).asLong(DEFAULT_REACTION_INTERVAL);
         long commandInterval = locator.path("commandInterval").getNode(root).asLong(DEFAULT_COMMAND_INTERVAL);
@@ -133,10 +134,10 @@ public class RadarRobotEnv implements Environment, RadarMapApi {
                                        long interval, long reactionInterval, long commandInterval,
                                        int numDirectionValues, int numSensorValues, int numSpeedValues, RadarMap radarMap) {
         Map<String, SignalSpec> actions1 = Map.of(
-                "halt", new IntSignalSpec(new long[]{EMPTY_SECTOR_VALUE}, FILLED_SECTOR_VALUE),
-                "direction", new IntSignalSpec(new long[]{EMPTY_SECTOR_VALUE}, numDirectionValues),
-                "speed", new IntSignalSpec(new long[]{EMPTY_SECTOR_VALUE}, numSpeedValues),
-                "sensorAction", new IntSignalSpec(new long[]{EMPTY_SECTOR_VALUE}, numSensorValues)
+                "halt", new IntSignalSpec(new long[]{1}, 2),
+                "direction", new IntSignalSpec(new long[]{1}, numDirectionValues),
+                "speed", new IntSignalSpec(new long[]{1}, numSpeedValues),
+                "sensorAction", new IntSignalSpec(new long[]{1}, numSensorValues)
         );
 
         return new RadarRobotEnv(robot, reward, interval, reactionInterval, commandInterval, actions1, radarMap);
@@ -185,26 +186,26 @@ public class RadarRobotEnv implements Environment, RadarMapApi {
         this.commandInterval = commandInterval;
         this.actions = requireNonNull(actions);
         this.radarMap = requireNonNull(radarMap);
-        int n = radarMap.getMap().length;
+        int n = radarMap.getSectors().length;
         this.states = Map.of(
-                "sensor", new FloatSignalSpec(new long[]{EMPTY_SECTOR_VALUE}, MIN_SENSOR_DIR, MAX_SENSOR_DIR),
-                "distance", new FloatSignalSpec(new long[]{EMPTY_SECTOR_VALUE}, MIN_DISTANCE, MAX_DISTANCE),
-                "canMoveForward", new IntSignalSpec(new long[]{EMPTY_SECTOR_VALUE}, FILLED_SECTOR_VALUE),
-                "canMoveBackward", new IntSignalSpec(new long[]{EMPTY_SECTOR_VALUE}, FILLED_SECTOR_VALUE),
-                "contacts", new IntSignalSpec(new long[]{EMPTY_SECTOR_VALUE}, NUM_CONTACT_VALUES),
+                "sensor", new FloatSignalSpec(new long[]{1}, MIN_SENSOR_DIR, MAX_SENSOR_DIR),
+                "distance", new FloatSignalSpec(new long[]{1}, MIN_DISTANCE, MAX_DISTANCE),
+                "canMoveForward", new IntSignalSpec(new long[]{1}, 2),
+                "canMoveBackward", new IntSignalSpec(new long[]{1}, 2),
+                "contacts", new IntSignalSpec(new long[]{1}, NUM_CONTACT_VALUES),
                 "radar", new IntSignalSpec(new long[]{n}, NUM_RADAR_VALUES)
         );
 
         this.started = false;
 
-        this.robotDir = Nd4j.zeros(EMPTY_SECTOR_VALUE);
-        this.sensor = Nd4j.zeros(EMPTY_SECTOR_VALUE);
+        this.robotDir = Nd4j.zeros(1);
+        this.sensor = Nd4j.zeros(1);
         this.distance = Nd4j.createFromArray(MAX_DISTANCE);
-        this.canMoveForward = Nd4j.zeros(EMPTY_SECTOR_VALUE);
-        this.contacts = Nd4j.zeros(EMPTY_SECTOR_VALUE);
+        this.canMoveForward = Nd4j.zeros(1);
+        this.contacts = Nd4j.zeros(1);
 
         this.prevHalt = true;
-        this.prevSensor = UNKNOWN_SECTOR_VALUE;
+        this.prevSensor = 0;
         this.lastMoveTimestamp = 0L;
         this.lastScanTimestamp = 0L;
     }
@@ -222,10 +223,10 @@ public class RadarRobotEnv implements Environment, RadarMapApi {
      * @param actions the actions
      */
     int deltaDir(Map<String, Signal> actions) {
-        int action = actions.get("direction").getInt(UNKNOWN_SECTOR_VALUE);
+        int action = actions.get("direction").getInt(0);
         int n = ((IntSignalSpec) getActions().get("direction")).getNumValues();
         return round(linear(action,
-                UNKNOWN_SECTOR_VALUE, n - EMPTY_SECTOR_VALUE,
+                0, n - 1,
                 MIN_DIRECTION_ACTION, MAX_DIRECTION_ACTION));
     }
 
@@ -258,7 +259,6 @@ public class RadarRobotEnv implements Environment, RadarMapApi {
     /**
      * Returns the radar map
      */
-    @Override
     public RadarMap getRadarMap() {
         return radarMap;
     }
@@ -277,10 +277,10 @@ public class RadarRobotEnv implements Environment, RadarMapApi {
         long now = robot.getStatus().getTime();
 
         int dDir = deltaDir(actions);
-        int dir = round(robotDir.getFloat(UNKNOWN_SECTOR_VALUE)) + dDir;
+        int dir = round(robotDir.getFloat(0)) + dDir;
         float speed1 = speed(actions);
         float speed = round(speed1 * 10f) * 0.1f;
-        boolean isHalt = actions.get("halt").getInt(UNKNOWN_SECTOR_VALUE) == EMPTY_SECTOR_VALUE;
+        boolean isHalt = actions.get("halt").getInt(0) == 1;
         if (isHalt != prevHalt) {
             prevHalt = isHalt;
             if (isHalt) {
@@ -298,7 +298,7 @@ public class RadarRobotEnv implements Environment, RadarMapApi {
             robot.scan(sensor);
             prevSensor = sensor;
             lastScanTimestamp = now;
-        } else if (sensor != UNKNOWN_SECTOR_VALUE && now >= lastScanTimestamp + commandInterval) {
+        } else if (sensor != 0 && now >= lastScanTimestamp + commandInterval) {
             robot.scan(sensor);
             prevSensor = sensor;
             lastScanTimestamp = now;
@@ -319,7 +319,7 @@ public class RadarRobotEnv implements Environment, RadarMapApi {
         } while (!(status != null && status.getTime() >= timeout));
         storeStatus(status);
         radarMap.update(status.getRadarMap(), status.getLocation(), status.getDirection());
-        int[] radarAry = Arrays.stream(radarMap.getMap()).mapToInt(
+        int[] radarAry = Arrays.stream(radarMap.getSectors()).mapToInt(
                         s -> !s.isKnown() ? UNKNOWN_SECTOR_VALUE
                                 : s.isFilled() ? FILLED_SECTOR_VALUE : EMPTY_SECTOR_VALUE)
                 .toArray();
@@ -334,7 +334,7 @@ public class RadarRobotEnv implements Environment, RadarMapApi {
             started = true;
         }
         robot.reset();
-        readStatus(UNKNOWN_SECTOR_VALUE);
+        readStatus(0);
         return getObservation();
     }
 
@@ -344,10 +344,10 @@ public class RadarRobotEnv implements Environment, RadarMapApi {
      * @param actions the actions
      */
     int sensorDir(Map<String, Signal> actions) {
-        int action = actions.get("sensorAction").getInt(UNKNOWN_SECTOR_VALUE);
+        int action = actions.get("sensorAction").getInt(0);
         int n = ((IntSignalSpec) getActions().get("sensorAction")).getNumValues();
         return round(linear(action,
-                UNKNOWN_SECTOR_VALUE, n - EMPTY_SECTOR_VALUE,
+                0, n - 1,
                 MIN_SENSOR_DIR, MAX_SENSOR_DIR));
     }
 
@@ -357,10 +357,10 @@ public class RadarRobotEnv implements Environment, RadarMapApi {
      * @param actions the actions
      */
     float speed(Map<String, Signal> actions) {
-        int action = actions.get("speed").getInt(UNKNOWN_SECTOR_VALUE);
+        int action = actions.get("speed").getInt(0);
         int n = ((IntSignalSpec) getActions().get("speed")).getNumValues();
         return round(linear(action,
-                UNKNOWN_SECTOR_VALUE, n - EMPTY_SECTOR_VALUE,
+                0, n - 1,
                 MIN_SPEED, MAX_SPEED));
     }
 
