@@ -462,11 +462,9 @@ public class SimRobot implements RobotApi {
         int obsIdx = obstacleMap.indexOfNearest(x, y, sensorRad, RAD_15);
         if (obsIdx >= 0) {
             Point2D obs = obstacleMap.getPoint(obsIdx);
-            float dist = (float) obs.distance(position);
-            dist = clip(dist - obstacleMap.getTopology().getGridSize() / 2, 0, 3);
-            distance = dist < MAX_DISTANCE
-                    ? clip(dist + (float) random.nextGaussian() * errSensor, 0, MAX_DISTANCE)
-                    : 0;
+            float dist = (float) (obs.distance(position) - obstacleMap.getTopology().getGridSize() / 2
+                    + random.nextGaussian() * errSensor);
+            distance = dist > 0 && dist < MAX_DISTANCE ? dist : 0;
         }
         status.setSampleDistance(distance);
 

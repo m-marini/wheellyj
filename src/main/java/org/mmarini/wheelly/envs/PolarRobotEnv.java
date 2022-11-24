@@ -134,7 +134,6 @@ public class PolarRobotEnv implements Environment {
         return new PolarRobotEnv(robot, reward, interval, reactionInterval, commandInterval, actions1,
                 PolarMap.create(numRadarSectors), maxRadarDistance);
     }
-
     private final RobotApi robot;
     private final FloatFunction<WheellyStatus> reward;
     private final long interval;
@@ -145,6 +144,7 @@ public class PolarRobotEnv implements Environment {
     private final PolarMap polarMap;
     private final INDArray sectorDistances;
     private final INDArray knownSectors;
+    private final float maxRadarDistance;
     private int prevSensor;
     private long lastScanTimestamp;
     private long lastMoveTimestamp;
@@ -156,7 +156,6 @@ public class PolarRobotEnv implements Environment {
     private INDArray sensor;
     private boolean started;
     private INDArray canMoveBackward;
-
     /**
      * Creates the robot environment
      *
@@ -180,6 +179,7 @@ public class PolarRobotEnv implements Environment {
         this.commandInterval = commandInterval;
         this.actions = requireNonNull(actions);
         this.polarMap = requireNonNull(polarMap);
+        this.maxRadarDistance = maxRadarDistance;
         int n = polarMap.getSectors().length;
         this.states = Map.of(
                 "sensor", new FloatSignalSpec(new long[]{1}, MIN_SENSOR_DIR, MAX_SENSOR_DIR),
@@ -239,6 +239,10 @@ public class PolarRobotEnv implements Environment {
     @Override
     public Map<String, SignalSpec> getActions() {
         return this.actions;
+    }
+
+    public float getMaxRadarDistance() {
+        return maxRadarDistance;
     }
 
     private Map<String, Signal> getObservation() {
@@ -313,7 +317,7 @@ public class PolarRobotEnv implements Environment {
         } while (!(status != null && status.getTime() >= timeout));
         storeStatus(status);
 
-        polarMap.update(status.getRadarMap(), status.getLocation(), status.getDirection());
+        polarMap.update(status.getRadarMap(), status.getLocation(), status.getDirection(), maxRadarDistance);
         float maxDistance = ((FloatSignalSpec) states.get("sectorDistances")).getMaxValue();
         for (int i = 0; i < polarMap.getSectors().length; i++) {
             CircularSector sector = polarMap.getSectors()[i];

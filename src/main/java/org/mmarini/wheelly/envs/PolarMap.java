@@ -122,12 +122,12 @@ public class PolarMap {
 
     /**
      * Updates the status of polar map from radar map
-     *
-     * @param map       the radar map
+     *  @param map       the radar map
      * @param center    the center of polar map
      * @param direction the direction of polar map (DEG)
+     * @param maxDistance
      */
-    public void update(RadarMap map, Point2D center, int direction) {
+    public void update(RadarMap map, Point2D center, int direction, double maxDistance) {
         clear();
         float gridSize = map.getTopology().getGridSize();
         double sectorGamma = getSectorAngle() / 2;
@@ -135,7 +135,7 @@ public class PolarMap {
         for (MapSector radarSector : map.getSectors()) {
             if (radarSector.isKnown()) {
                 double distance = radarSector.getLocation().distance(center) - gridSize / 2;
-                if (distance > 0) {
+                if (distance > 0 && distance < maxDistance) {
                     double obsDirection = Utils.direction(center, radarSector.getLocation());
                     double obstacleGamma = atan2(gridSize, distance);
                     double leftAlpha = obsDirection - obstacleGamma;

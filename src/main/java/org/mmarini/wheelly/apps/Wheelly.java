@@ -35,7 +35,6 @@ import org.jetbrains.annotations.NotNull;
 import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.KpiCSVSubscriber;
 import org.mmarini.rl.envs.Environment;
-import org.mmarini.rl.envs.FloatSignalSpec;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.wheelly.apis.*;
@@ -239,7 +238,7 @@ public class Wheelly {
                         radarFrame = createRadarFrame(radarPanel);
                     } else if (env instanceof PolarRobotEnv) {
                         polarPanel = new PolarPanel();
-                        float radarMaxDistance = ((FloatSignalSpec) env.getState().get("sectorDistances")).getMaxValue();
+                        float radarMaxDistance = ((PolarRobotEnv) env).getMaxRadarDistance();
                         polarPanel.setRadarMaxDistance(radarMaxDistance);
                         radarFrame = createRadarFrame(polarPanel);
                     }

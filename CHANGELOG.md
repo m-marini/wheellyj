@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 
 - Issue #112: Sector overlap on radar view bug
+- Issue #123: Set distance limit to polar map
 
 ## [0.4.0] 2022-11-09
 

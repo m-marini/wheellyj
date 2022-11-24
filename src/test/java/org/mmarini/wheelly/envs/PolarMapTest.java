@@ -109,7 +109,7 @@ class PolarMapTest {
 
         PolarMap polarMap = PolarMap.create(4);
 
-        polarMap.update(radarMap, center, mapDir);
+        polarMap.update(radarMap, center, mapDir, 3);
         assertEquals(obsAt0 != 0, polarMap.getSector(0).hasObstacle());
         assertEquals(obsAt90 != 0, polarMap.getSector(90).hasObstacle());
         assertEquals(obsAt180 != 0, polarMap.getSector(180).hasObstacle());
