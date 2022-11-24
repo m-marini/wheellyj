@@ -26,6 +26,8 @@
 package org.mmarini.wheelly.envs;
 
 import org.junit.jupiter.api.Test;
+import org.mmarini.rl.envs.IntSignal;
+import org.mmarini.rl.envs.Signal;
 import org.mmarini.wheelly.apis.MockRobot;
 
 import java.util.Map;

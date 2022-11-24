@@ -47,7 +47,7 @@ class ExploreTest {
 
     static WheellyStatus createStatus(int sensorDir, double leftSpeed, double rightSpeed, int known, boolean canMoveForward, boolean canMoveBackward) {
         RadarMap radarMap = RadarMap.create(10, 10, new Point2D.Float(), 0.2F);
-        MapSector[] map = radarMap.getMap();
+        MapSector[] map = radarMap.getSectors();
         long timestamp = System.currentTimeMillis();
         for (int i = 0; i < known; i++) {
             map[i].setTimestamp(timestamp);

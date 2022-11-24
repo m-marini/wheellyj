@@ -1,0 +1,263 @@
+---
+rewardAlpha: 0.005
+policyAlpha: 0.001
+criticAlpha: 1.0E-4
+lambda: 0.5
+state:
+  radar:
+    type: "int"
+    numValues: 3
+    shape:
+    - 625
+  contacts:
+    type: "int"
+    numValues: 16
+    shape:
+    - 1
+  canMoveForward:
+    type: "int"
+    numValues: 2
+    shape:
+    - 1
+  distance:
+    type: "float"
+    minValue: 0.0
+    maxValue: 10.0
+    shape:
+    - 1
+  canMoveBackward:
+    type: "int"
+    numValues: 2
+    shape:
+    - 1
+  sensor:
+    type: "float"
+    minValue: -90.0
+    maxValue: 90.0
+    shape:
+    - 1
+actions:
+  direction:
+    type: "int"
+    numValues: 25
+    shape:
+    - 1
+  speed:
+    type: "int"
+    numValues: 9
+    shape:
+    - 1
+  halt:
+    type: "int"
+    numValues: 2
+    shape:
+    - 1
+  sensorAction:
+    type: "int"
+    numValues: 7
+    shape:
+    - 1
+policy:
+  layers:
+  - name: "layer0[0]"
+    type: "concat"
+  - name: "layer0[1]"
+    type: "dense"
+    inputSize: 1879
+    outputSize: 100
+  - name: "layer0"
+    type: "relu"
+  - name: "hidden0[0]"
+    type: "dense"
+    inputSize: 100
+    outputSize: 100
+  - name: "hidden0"
+    type: "relu"
+  - name: "hidden1[0]"
+    type: "sum"
+  - name: "hidden1[1]"
+    type: "dense"
+    inputSize: 100
+    outputSize: 100
+  - name: "hidden1"
+    type: "relu"
+  - name: "hidden2[0]"
+    type: "sum"
+  - name: "hidden2[1]"
+    type: "dense"
+    inputSize: 100
+    outputSize: 100
+  - name: "hidden2"
+    type: "relu"
+  - name: "direction[0]"
+    type: "dense"
+    inputSize: 100
+    outputSize: 25
+  - name: "direction[1]"
+    type: "tanh"
+  - name: "sensorAction[0]"
+    type: "dense"
+    inputSize: 100
+    outputSize: 7
+  - name: "sensorAction[1]"
+    type: "tanh"
+  - name: "sensorAction"
+    type: "softmax"
+    temperature: 0.313
+  - name: "speed[0]"
+    type: "dense"
+    inputSize: 100
+    outputSize: 9
+  - name: "speed[1]"
+    type: "tanh"
+  - name: "speed"
+    type: "softmax"
+    temperature: 0.3
+  - name: "halt[0]"
+    type: "dense"
+    inputSize: 100
+    outputSize: 2
+  - name: "halt[1]"
+    type: "tanh"
+  - name: "halt"
+    type: "softmax"
+    temperature: 0.435
+  - name: "direction"
+    type: "softmax"
+    temperature: 0.257
+  inputs:
+    direction[0]:
+    - "hidden2"
+    direction[1]:
+    - "direction[0]"
+    sensorAction:
+    - "sensorAction[1]"
+    hidden1:
+    - "hidden1[1]"
+    hidden0:
+    - "hidden0[0]"
+    layer0:
+    - "layer0[1]"
+    hidden0[0]:
+    - "layer0"
+    hidden1[0]:
+    - "layer0"
+    - "hidden0"
+    hidden1[1]:
+    - "hidden1[0]"
+    hidden2[0]:
+    - "hidden0"
+    - "hidden1"
+    hidden2:
+    - "hidden2[1]"
+    speed:
+    - "speed[1]"
+    layer0[0]:
+    - "radarFeatures"
+    - "canMoveFeatures"
+    halt[1]:
+    - "halt[0]"
+    layer0[1]:
+    - "layer0[0]"
+    halt[0]:
+    - "hidden2"
+    halt:
+    - "halt[1]"
+    hidden2[1]:
+    - "hidden2[0]"
+    sensorAction[0]:
+    - "hidden2"
+    speed[1]:
+    - "speed[0]"
+    speed[0]:
+    - "hidden2"
+    sensorAction[1]:
+    - "sensorAction[0]"
+    direction:
+    - "direction[1]"
+critic:
+  layers:
+  - name: "layer0[0]"
+    type: "concat"
+  - name: "layer0[1]"
+    type: "dense"
+    inputSize: 1879
+    outputSize: 100
+  - name: "layer0"
+    type: "relu"
+  - name: "hidden0[0]"
+    type: "dense"
+    inputSize: 100
+    outputSize: 100
+  - name: "hidden0"
+    type: "relu"
+  - name: "hidden1[0]"
+    type: "sum"
+  - name: "hidden1[1]"
+    type: "dense"
+    inputSize: 100
+    outputSize: 100
+  - name: "hidden1"
+    type: "relu"
+  - name: "hidden2[0]"
+    type: "sum"
+  - name: "hidden2[1]"
+    type: "dense"
+    inputSize: 100
+    outputSize: 100
+  - name: "hidden2"
+    type: "relu"
+  - name: "output[0]"
+    type: "dense"
+    inputSize: 100
+    outputSize: 1
+  - name: "output[1]"
+    type: "tanh"
+  - name: "output"
+    type: "linear"
+    b: 0.0
+    w: 3.0
+  inputs:
+    hidden1:
+    - "hidden1[1]"
+    hidden0:
+    - "hidden0[0]"
+    layer0:
+    - "layer0[1]"
+    hidden0[0]:
+    - "layer0"
+    output[1]:
+    - "output[0]"
+    output[0]:
+    - "hidden2"
+    hidden1[0]:
+    - "layer0"
+    - "hidden0"
+    hidden1[1]:
+    - "hidden1[0]"
+    hidden2[0]:
+    - "hidden0"
+    - "hidden1"
+    hidden2:
+    - "hidden2[1]"
+    layer0[0]:
+    - "radarFeatures"
+    - "canMoveFeatures"
+    output:
+    - "output[1]"
+    layer0[1]:
+    - "layer0[0]"
+    hidden2[1]:
+    - "hidden2[0]"
+inputProcess:
+- name: "radarFeatures"
+  class: "FeatureVectorProcessor"
+  inputs:
+  - "radar"
+- name: "canMoveFeatures"
+  inputs:
+  - name: "canMoveForward"
+    numTiles: 2
+  - name: "canMoveBackward"
+    numTiles: 2
+  class: "PartitionProcessor"

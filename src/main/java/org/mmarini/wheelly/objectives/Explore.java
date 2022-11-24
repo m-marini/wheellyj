@@ -70,7 +70,7 @@ public interface Explore {
                 // Avoid contacts
                 return -1;
             }
-            MapSector[] map = status.getRadarMap().getMap();
+            MapSector[] map = status.getRadarMap().getSectors();
             long knownSectorsNumber = Arrays.stream(map).filter(MapSector::isKnown).count();
             // encourages the exploration of unfamiliar areas
             double isKnown = ((double) knownSectorsNumber) / map.length;

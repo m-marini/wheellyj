@@ -174,7 +174,7 @@ public class RadarPanel extends JComponent {
 
     public void setRadarMap(RadarMap radarMap) {
         if (radarMap != null) {
-            this.radarMap = Arrays.stream(radarMap.getMap())
+            this.radarMap = Arrays.stream(radarMap.getSectors())
                     .filter(MapSector::isKnown)
                     .map(sector -> Tuple2.of(sector.getLocation(),
                             sector.isFilled() ? FILLED_COLOR : EMPTY_COLOR))
