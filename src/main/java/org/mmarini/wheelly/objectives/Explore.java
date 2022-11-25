@@ -46,8 +46,6 @@ import static org.mmarini.yaml.schema.Validator.nonNegativeInteger;
  * Explore objective
  */
 public interface Explore {
-    int DEFAULT_SENSOR_RANGE = 90;
-
     Validator VALIDATOR = Validator.objectPropertiesRequired(Map.of(
             "sensorRange", nonNegativeInteger()
     ), List.of("sensorRange"));
@@ -82,11 +80,4 @@ public interface Explore {
             return (float) defuzzy(0, 1, and(isLinearSpeed, isKnown, isFrontSensor));
         };
     }
-
-    /**
-     * Returns the function that fuzzy rewards explore behavior from configuration
-     *
-     * @param status      the status
-     * @param sensorRange sensor range (DEG)
-     */
 }

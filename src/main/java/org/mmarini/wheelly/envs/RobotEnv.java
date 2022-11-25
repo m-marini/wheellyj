@@ -82,7 +82,14 @@ public class RobotEnv implements Environment {
                     "numSensorValues", integer(minimum(2)),
                     "numSpeedValues", integer(minimum(2))
             ),
-            List.of("objective"));
+            List.of("objective",
+                    "interval",
+                    "reactionInterval",
+                    "commandInterval",
+                    "numDirectionValues",
+                    "numSensorValues",
+                    "numSpeedValues"
+            ));
 
     /**
      * Returns a robot environment
@@ -107,12 +114,12 @@ public class RobotEnv implements Environment {
         ROBOT_ENV_SPEC.apply(locator).accept(root);
 
         FloatFunction<WheellyStatus> reward = Utils.createObject(root, locator.path("objective"), new Object[0], new Class[0]);
-        long interval = locator.path("interval").getNode(root).asLong(DEFAULT_INTERVAL);
-        long reactionInterval = locator.path("reactionInterval").getNode(root).asLong(DEFAULT_REACTION_INTERVAL);
-        long commandInterval = locator.path("commandInterval").getNode(root).asLong(DEFAULT_COMMAND_INTERVAL);
-        int numDirectionValues = locator.path("numDirectionValues").getNode(root).asInt(DEFAULT_NUM_DIRECTION_VALUES);
-        int numSensorValues = locator.path("numSensorValues").getNode(root).asInt(DEFAULT_NUM_SENSOR_VALUES);
-        int numSpeedValues = locator.path("numSpeedValues").getNode(root).asInt(DEFAULT_NUM_SPEED_VALUES);
+        long interval = locator.path("interval").getNode(root).asLong();
+        long reactionInterval = locator.path("reactionInterval").getNode(root).asLong();
+        long commandInterval = locator.path("commandInterval").getNode(root).asLong();
+        int numDirectionValues = locator.path("numDirectionValues").getNode(root).asInt();
+        int numSensorValues = locator.path("numSensorValues").getNode(root).asInt();
+        int numSpeedValues = locator.path("numSpeedValues").getNode(root).asInt();
 
         return RobotEnv.create(robot, reward,
                 interval, reactionInterval, commandInterval,

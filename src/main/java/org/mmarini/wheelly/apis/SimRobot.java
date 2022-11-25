@@ -38,14 +38,10 @@ import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 
 import java.awt.geom.Point2D;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.apis.Robot.*;
 import static org.mmarini.wheelly.apis.Utils.*;
 import static org.mmarini.wheelly.apis.WheellyStatus.OBSTACLE_SIZE;
 import static org.mmarini.yaml.schema.Validator.*;
@@ -58,8 +54,6 @@ public class SimRobot implements RobotApi {
     public static final float WORLD_SIZE = 10;
     public static final float X_CENTER = 0;
     public static final float Y_CENTER = 0;
-    public static final double DEFAULT_ERR_SIGMA = 0.05;
-    public static final double DEFAULT_ERR_SENSOR = 0.05;
     public static final float ROBOT_WIDTH = 0.18F;
     public static final float ROBOT_LENGTH = 0.26F;
     public static final float MAX_OBSTACLE_DISTANCE = 3;
@@ -104,7 +98,7 @@ public class SimRobot implements RobotApi {
             {-ROBOT_LENGTH / 2 - SENSOR_GAP, -ROBOT_WIDTH / 2 - SENSOR_GAP},
             {-ROBOT_LENGTH / 2 - SENSOR_GAP, -SENSOR_GAP}
     };
-    private static final Validator ROBOT_SPEC = objectProperties(Map.of(
+    private static final Validator ROBOT_SPEC = objectPropertiesRequired(Map.of(
                     "robotSeed", positiveInteger(),
                     "mapSeed", positiveInteger(),
                     "errSigma", nonNegativeNumber(),
@@ -115,6 +109,15 @@ public class SimRobot implements RobotApi {
                     "radarGrid", positiveNumber(),
                     "radarCleanInterval", positiveInteger(),
                     "radarPersistence", positiveInteger()
+            ), List.of(
+                    "errSigma",
+                    "errSensor",
+                    "numObstacles",
+                    "radarWidth",
+                    "radarHeight",
+                    "radarGrid",
+                    "radarCleanInterval",
+                    "radarPersistence"
             )
     );
 
@@ -122,7 +125,7 @@ public class SimRobot implements RobotApi {
         ROBOT_SPEC.apply(locator).accept(root);
         long mapSeed = locator.path("mapSeed").getNode(root).asLong(0);
         long robotSeed = locator.path("robotSeed").getNode(root).asLong(0);
-        int numObstacles = locator.path("numObstacles").getNode(root).asInt(0);
+        int numObstacles = locator.path("numObstacles").getNode(root).asInt();
         Random mapRandom = mapSeed > 0L ? new Random(mapSeed) : new Random();
         Random robotRandom = robotSeed > 0L ? new Random(robotSeed) : new Random();
         ObstacleMap obstacleMap = MapBuilder.create(GRID_SIZE)
@@ -130,13 +133,13 @@ public class SimRobot implements RobotApi {
                         -WORLD_SIZE / 2, WORLD_SIZE / 2, WORLD_SIZE / 2)
                 .rand(numObstacles, X_CENTER, Y_CENTER, MIN_OBSTACLE_DISTANCE, MAX_OBSTACLE_DISTANCE, mapRandom)
                 .build();
-        float errSigma = (float) locator.path("errSigma").getNode(root).asDouble(DEFAULT_ERR_SIGMA);
-        float errSensor = (float) locator.path("errSensor").getNode(root).asDouble(DEFAULT_ERR_SENSOR);
-        int radarWidth = locator.path("radarWidth").getNode(root).asInt(DEFAULT_RADAR_WIDTH);
-        int radarHeight = locator.path("radarHeight").getNode(root).asInt(DEFAULT_RADAR_HEIGHT);
-        float radarGrid = (float) locator.path("radarGrid").getNode(root).asDouble(DEFAULT_RADAR_GRID);
-        long radarCleanInterval = locator.path("radarCleanInterval").getNode(root).asLong(DEFAULT_RADAR_CLEAN);
-        long radarPersistence = locator.path("radarPersistence").getNode(root).asLong(DEFAULT_RADAR_PERSISTENCE);
+        float errSigma = (float) locator.path("errSigma").getNode(root).asDouble();
+        float errSensor = (float) locator.path("errSensor").getNode(root).asDouble();
+        int radarWidth = locator.path("radarWidth").getNode(root).asInt();
+        int radarHeight = locator.path("radarHeight").getNode(root).asInt();
+        float radarGrid = (float) locator.path("radarGrid").getNode(root).asDouble();
+        long radarCleanInterval = locator.path("radarCleanInterval").getNode(root).asLong();
+        long radarPersistence = locator.path("radarPersistence").getNode(root).asLong();
         RadarMap radarMap = RadarMap.create(radarWidth, radarHeight, new Point2D.Float(), radarGrid);
         return new SimRobot(obstacleMap,
                 robotRandom,

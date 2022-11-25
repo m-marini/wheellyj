@@ -6,10 +6,152 @@ configurations:
   ######################################
   # Polar radar agent
   ######################################
+  polarRadarAnalogAgent:
+    class: org.mmarini.rl.agents.TDAgent
+    seed: 1234
+    modelPath: models/polarRadarAnalogAgent
+    savingIntervalSteps: 1000
+    rewardAlpha: 5e-3
+    policyAlpha: 1e-3
+    criticAlpha: 100e-6
+    lambda: 0.5
+    inputProcess:
+      - name: canMoveFeatures
+        class: org.mmarini.rl.processors.PartitionProcessor
+        inputs:
+          - name: canMoveForward
+            numTiles: 2
+          - name: canMoveBackward
+            numTiles: 2
+      - name: emptySectors
+        class: org.mmarini.rl.processors.NotProcessor
+        input: sectorDistances
+    policy:
+      layer0:
+        inputs:
+          type: concat
+          inputs:
+            - canMoveFeatures
+            - knownSectors
+            - emptySectors
+            - sectorDistances
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden0:
+        input: layer0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden1:
+        inputs:
+          type: sum
+          inputs:
+            - layer0
+            - hidden0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden2:
+        inputs:
+          type: sum
+          inputs:
+            - hidden0
+            - hidden1
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      halt:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 2
+          - type: tanh
+          - type: softmax
+            temperature: 0.435
+      direction:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 25
+          - type: tanh
+          - type: softmax
+            temperature: 0.257
+      speed:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 9
+          - type: tanh
+          - type: softmax
+            temperature: 0.3
+      sensorAction:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 7
+          - type: tanh
+          - type: softmax
+            temperature: 0.313
+    critic:
+      layer0:
+        inputs:
+          type: concat
+          inputs:
+            - canMoveFeatures
+            - knownSectors
+            - emptySectors
+            - sectorDistances
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden0:
+        input: layer0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden1:
+        inputs:
+          type: sum
+          inputs:
+            - layer0
+            - hidden0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden2:
+        inputs:
+          type: sum
+          inputs:
+            - hidden0
+            - hidden1
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      output:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 1
+          - type: tanh
+          - type: linear
+            b: 0
+            w: 3
+  ######################################
+  # Polar radar agent
+  ######################################
   polarRadarAgent:
     class: org.mmarini.rl.agents.TDAgent
     seed: 1234
-    modelPath: models/polarRadarAgent
+    modelPath: models/polarRadarAgentTiles
     savingIntervalSteps: 1000
     rewardAlpha: 5e-3
     policyAlpha: 1e-3

@@ -53,8 +53,6 @@ public class Robot implements RobotApi {
     public static final int DEFAULT_RADAR_WIDTH = 50;
     public static final int DEFAULT_RADAR_HEIGHT = 50;
     public static final float DEFAULT_RADAR_GRID = 0.2F;
-    public static final long DEFAULT_RADAR_PERSISTENCE = 300000L;
-    public static final long DEFAULT_RADAR_CLEAN = 30000L;
 
     private static final Logger logger = LoggerFactory.getLogger(Robot.class);
     private static final Validator ROBOT_SPEC = objectPropertiesRequired(Map.of(
@@ -68,7 +66,15 @@ public class Robot implements RobotApi {
                     "radarCleanInterval", positiveInteger(),
                     "radarPersistence", positiveInteger()
             ),
-            List.of("host"));
+            List.of("host",
+                    "connectionTimeout",
+                    "readTimeout",
+                    "radarWidth",
+                    "radarHeight",
+                    "radarGrid",
+                    "radarCleanInterval",
+                    "radarPersistence"
+            ));
 
     /**
      * Returns an interface to the robot
@@ -87,13 +93,13 @@ public class Robot implements RobotApi {
         ROBOT_SPEC.apply(locator).accept(root);
         String host = locator.path("host").getNode(root).asText();
         int port = locator.path("port").getNode(root).asInt(DEFAULT_PORT);
-        long connectionTimeout = locator.path("connectionTimeout").getNode(root).asLong(DEFAULT_CONNECTION_TIMEOUT);
-        long readTimeout = locator.path("readTimeout").getNode(root).asLong(Robot.DEFAULT_READ_TIMEOUT);
-        int radarWidth = locator.path("radarWidth").getNode(root).asInt(DEFAULT_RADAR_WIDTH);
-        int radarHeight = locator.path("radarHeight").getNode(root).asInt(DEFAULT_RADAR_HEIGHT);
-        float radarGrid = (float) locator.path("radarGrid").getNode(root).asDouble(DEFAULT_RADAR_GRID);
-        long radarCleanInterval = locator.path("radarCleanInterval").getNode(root).asLong(DEFAULT_RADAR_CLEAN);
-        long radarPersistence = locator.path("radarPersistence").getNode(root).asLong(DEFAULT_RADAR_PERSISTENCE);
+        long connectionTimeout = locator.path("connectionTimeout").getNode(root).asLong();
+        long readTimeout = locator.path("readTimeout").getNode(root).asLong();
+        int radarWidth = locator.path("radarWidth").getNode(root).asInt();
+        int radarHeight = locator.path("radarHeight").getNode(root).asInt();
+        float radarGrid = (float) locator.path("radarGrid").getNode(root).asDouble();
+        long radarCleanInterval = locator.path("radarCleanInterval").getNode(root).asLong();
+        long radarPersistence = locator.path("radarPersistence").getNode(root).asLong();
         RadarMap radarMap = RadarMap.create(radarWidth, radarHeight, new Point2D.Float(), radarGrid);
         return Robot.create(host, port, connectionTimeout, readTimeout, radarMap, radarPersistence, radarCleanInterval);
     }
