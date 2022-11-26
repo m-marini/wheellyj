@@ -1,0 +1,34 @@
+---
+version: "0.2"
+active: simRobot
+
+configurations:
+  simRobot:
+    class: org.mmarini.wheelly.apis.SimRobot
+    robotSeed: 1234
+    mapSeed: 1234
+    numObstacles: 10
+    errSigma: 0.05
+    errSensor: 0.05
+    radarGrid: 0.14
+    radarWidth: 71
+    radarHeight: 71
+    radarPersistence: 300000
+    radarCleanInterval: 30000
+  realRobot:
+    class: org.mmarini.wheelly.apis.Robot
+    host: "192.168.1.11"
+    connectionTimeout: 10000
+    readTimeout: 3000
+    radarGrid: 0.14
+    radarWidth: 71
+    radarHeight: 71
+    radarPersistence: 300000
+    radarCleanInterval: 30000
+  constantRobot:
+    class: org.mmarini.wheelly.apis.MockRobot
+    x: 2
+    y: -1
+    direction: 135
+    sensor: -45
+    distance: 1.2

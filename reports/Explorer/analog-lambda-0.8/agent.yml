@@ -14,7 +14,7 @@ configurations:
     rewardAlpha: 5e-3
     policyAlpha: 1e-3
     criticAlpha: 100e-6
-    lambda: 0.9
+    lambda: 0.8
     inputProcess:
       - name: canMoveFeatures
         class: org.mmarini.rl.processors.PartitionProcessor
