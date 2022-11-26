@@ -122,9 +122,10 @@ public class PolarMap {
 
     /**
      * Updates the status of polar map from radar map
-     *  @param map       the radar map
-     * @param center    the center of polar map
-     * @param direction the direction of polar map (DEG)
+     *
+     * @param map         the radar map
+     * @param center      the center of polar map
+     * @param direction   the direction of polar map (DEG)
      * @param maxDistance
      */
     public void update(RadarMap map, Point2D center, int direction, double maxDistance) {

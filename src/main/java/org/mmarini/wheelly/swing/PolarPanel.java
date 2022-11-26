@@ -155,7 +155,7 @@ public class PolarPanel extends JComponent {
                 if (distance == 0) {
                     emptyShapes.add(createPie((float) (angle - sectorAngle / 2), (float) sectorAngle, radarMaxDistance + SECTOR_SIZE));
                 } else {
-                    Shape outerPie = createPie((float) (angle - sectorAngle / 2), (float) sectorAngle, (float) (radarMaxDistance + SECTOR_SIZE));
+                    Shape outerPie = createPie((float) (angle - sectorAngle / 2), (float) sectorAngle, radarMaxDistance + SECTOR_SIZE);
                     Shape innerPie = createPie((float) (angle - sectorAngle / 2), (float) sectorAngle, (float) distance);
                     emptyShapes.add(innerPie);
                     Area outerSector = new Area(outerPie);
