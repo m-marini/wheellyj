@@ -22,6 +22,12 @@ commands.
 
 The code of Arduino controller is at [Wheellino project](https://github.com/m-marini/wheellino)
 
+## Release 0.4.1
+
+Added the polar radar map component.
+Added the esplorer objective.
+Changed the yaml version to 0.4.
+
 ## Release 0.4.0
 
 Added the radar map component that processes the proxy sensor signals creating a map of obstacles.
