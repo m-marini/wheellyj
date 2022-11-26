@@ -143,6 +143,8 @@ public class EnvironmentPanel extends RadarPanel {
     private boolean canMoveBackward;
     private long time;
     private float timeRatio;
+    private boolean hudAtRight;
+    private boolean hudAtBottom;
 
     public EnvironmentPanel() {
         setFont(Font.decode("Monospaced"));
@@ -165,20 +167,32 @@ public class EnvironmentPanel extends RadarPanel {
     }
 
     private void drawHUD(Graphics g) {
-        g.setColor(HUD_BACKGROUND_COLOR);
+        Graphics2D g1 = (Graphics2D) g;
+        AffineTransform tr = g1.getTransform();
+
         FontMetrics fm = getFontMetrics(getFont());
-        g.fillRect(0, 0, HUD_WIDTH, 6 * fm.getHeight());
-        g.setColor(getForeground());
-        drawLine(g, format("Time     %s %.1fx", strDate(time), timeRatio), 0, Color.GREEN);
-        drawLine(g, format("Reward   %.2f", reward), 1, Color.GREEN);
-        drawLine(g, format("Distance %.2f m", distance), 2, Color.GREEN);
-        drawLine(g, format("Contacts %x", contacts), 3, Color.GREEN);
+        int hudHeight = 6 * fm.getHeight();
+
+        Dimension size = getSize();
+
+        int xHud = hudAtRight ? size.width - HUD_WIDTH : 0;
+        int yHud = hudAtBottom ? size.height - hudHeight : 0;
+
+        g1.translate(xHud, yHud);
+        g1.setColor(HUD_BACKGROUND_COLOR);
+        g1.fillRect(0, 0, HUD_WIDTH, hudHeight);
+        g1.setColor(getForeground());
+        drawLine(g1, format("Time     %s %.1fx", strDate(time), timeRatio), 0, Color.GREEN);
+        drawLine(g1, format("Reward   %.2f", reward), 1, Color.GREEN);
+        drawLine(g1, format("Distance %.2f m", distance), 2, Color.GREEN);
+        drawLine(g1, format("Contacts %x", contacts), 3, Color.GREEN);
         if (!canMoveForward) {
-            drawLine(g, "FORWARD  STOP", 4, Color.RED);
+            drawLine(g1, "FORWARD  STOP", 4, Color.RED);
         }
         if (!canMoveBackward) {
-            drawLine(g, "BACKWARD STOP", 5, Color.RED);
+            drawLine(g1, "BACKWARD STOP", 5, Color.RED);
         }
+        g1.setTransform(tr);
     }
 
     private void drawLine(Graphics g, String text, int row, Color color) {
@@ -322,6 +336,10 @@ public class EnvironmentPanel extends RadarPanel {
 
     void setRobotLocation(Point2D location) {
         this.robotLocation = requireNonNull(location);
+        // compute hud position
+        hudAtBottom = !hudAtBottom && robotLocation.getY() > DEFAULT_WORLD_SIZE / 6 || (!hudAtBottom || !(robotLocation.getY() < -DEFAULT_WORLD_SIZE / 6)) && hudAtBottom;
+        hudAtRight = !hudAtRight && robotLocation.getX() < -DEFAULT_WORLD_SIZE / 6 || (!hudAtRight || !(robotLocation.getY() > DEFAULT_WORLD_SIZE / 6)) && hudAtRight;
+
         repaint();
     }
 
