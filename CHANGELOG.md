@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #119: Add sensor direction in explore objective
 - Issue #121: Add radar polar map
 
+### Removed:
+
+- Issue #126: Remove default values in yaml
+
 ### Fixed
 
 - Issue #112: Sector overlap on radar view bug

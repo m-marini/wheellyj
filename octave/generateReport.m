@@ -5,6 +5,7 @@ function generateReport(dataPath, reportPath, gamma)
   fprintf(hFile, "\n");
   fprintf(hFile, "%s\n", strftime ("%e %B %Y, %R", localtime(time ())));
   fprintf(hFile, "Data folder `%s`\n", dataPath);
+  fprintf(hFile, "Report folder `%s`\n", reportPath);
 
   fprintf(hFile, "\n");
   fprintf(hFile, "[TOC]\n");

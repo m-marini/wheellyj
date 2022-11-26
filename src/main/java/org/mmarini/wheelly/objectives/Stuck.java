@@ -31,6 +31,7 @@ import org.mmarini.wheelly.apis.WheellyStatus;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 
+import java.util.List;
 import java.util.Map;
 
 import static java.lang.Math.abs;
@@ -50,12 +51,18 @@ public interface Stuck {
     float DEFAULT_DISTANCE3 = 2;
     int DEFAULT_SENSOR_RANGE = 90;
 
-    Validator VALIDATOR = Validator.objectProperties(Map.of(
+    Validator VALIDATOR = Validator.objectPropertiesRequired(Map.of(
             "distance0", positiveNumber(),
             "distance1", positiveNumber(),
             "distance2", positiveNumber(),
             "distance3", positiveNumber(),
             "sensorRange", nonNegativeInteger()
+    ), List.of(
+            "distance0",
+            "distance1",
+            "distance2",
+            "distance3",
+            "sensorRange"
     ));
 
     /**
@@ -66,11 +73,11 @@ public interface Stuck {
      */
     static FloatFunction<WheellyStatus> create(JsonNode root, Locator locator) {
         VALIDATOR.apply(locator).accept(root);
-        float distance0 = (float) locator.path("distance0").getNode(root).asDouble(DEFAULT_DISTANCE0);
-        float distance1 = (float) locator.path("distance1").getNode(root).asDouble(DEFAULT_DISTANCE1);
-        float distance2 = (float) locator.path("distance2").getNode(root).asDouble(DEFAULT_DISTANCE2);
-        float distance3 = (float) locator.path("distance3").getNode(root).asDouble(DEFAULT_DISTANCE3);
-        int sensorRange = locator.path("sensorRange").getNode(root).asInt(DEFAULT_SENSOR_RANGE);
+        float distance0 = (float) locator.path("distance0").getNode(root).asDouble();
+        float distance1 = (float) locator.path("distance1").getNode(root).asDouble();
+        float distance2 = (float) locator.path("distance2").getNode(root).asDouble();
+        float distance3 = (float) locator.path("distance3").getNode(root).asDouble();
+        int sensorRange = locator.path("sensorRange").getNode(root).asInt();
         return stuck(distance0, distance1, distance2, distance3, sensorRange);
     }
 

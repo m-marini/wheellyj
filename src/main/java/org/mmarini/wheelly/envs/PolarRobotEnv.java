@@ -60,14 +60,6 @@ public class PolarRobotEnv implements Environment {
     public static final int MIN_SENSOR_DIR = -90;
     public static final int MAX_SENSOR_DIR = 90;
 
-    public static final int DEFAULT_INTERVAL = 10;
-    public static final int DEFAULT_REACTION_INTERVAL = 300;
-    public static final int DEFAULT_COMMAND_INTERVAL = 900;
-
-    public static final int DEFAULT_NUM_DIRECTION_VALUES = 25;
-    public static final int DEFAULT_NUM_SENSOR_VALUES = 7;
-    public static final int DEFAULT_NUM_SPEED_VALUES = 9;
-
     private static final Validator ROBOT_ENV_SPEC = objectPropertiesRequired(Map.of(
                     "objective", object(),
                     "interval", positiveInteger(),
@@ -79,7 +71,16 @@ public class PolarRobotEnv implements Environment {
                     "numRadarSectors", integer(minimum(2)),
                     "maxRadarDistance", positiveNumber()
             ),
-            List.of("objective", "numRadarSectors", "maxRadarDistance"));
+            List.of("objective",
+                    "interval",
+                    "reactionInterval",
+                    "commandInterval",
+                    "numDirectionValues",
+                    "numSensorValues",
+                    "numSpeedValues",
+                    "numRadarSectors",
+                    "maxRadarDistance"
+            ));
 
     /**
      * Returns the environment from json node spec
@@ -92,12 +93,12 @@ public class PolarRobotEnv implements Environment {
         ROBOT_ENV_SPEC.apply(locator).accept(root);
 
         FloatFunction<WheellyStatus> reward = Utils.createObject(root, locator.path("objective"), new Object[0], new Class[0]);
-        long interval = locator.path("interval").getNode(root).asLong(DEFAULT_INTERVAL);
-        long reactionInterval = locator.path("reactionInterval").getNode(root).asLong(DEFAULT_REACTION_INTERVAL);
-        long commandInterval = locator.path("commandInterval").getNode(root).asLong(DEFAULT_COMMAND_INTERVAL);
-        int numDirectionValues = locator.path("numDirectionValues").getNode(root).asInt(DEFAULT_NUM_DIRECTION_VALUES);
-        int numSensorValues = locator.path("numSensorValues").getNode(root).asInt(DEFAULT_NUM_SENSOR_VALUES);
-        int numSpeedValues = locator.path("numSpeedValues").getNode(root).asInt(DEFAULT_NUM_SPEED_VALUES);
+        long interval = locator.path("interval").getNode(root).asLong();
+        long reactionInterval = locator.path("reactionInterval").getNode(root).asLong();
+        long commandInterval = locator.path("commandInterval").getNode(root).asLong();
+        int numDirectionValues = locator.path("numDirectionValues").getNode(root).asInt();
+        int numSensorValues = locator.path("numSensorValues").getNode(root).asInt();
+        int numSpeedValues = locator.path("numSpeedValues").getNode(root).asInt();
         int numRadarSectors = locator.path("numRadarSectors").getNode(root).asInt();
         float maxRadarDistance = (float) locator.path("maxRadarDistance").getNode(root).asDouble();
 
@@ -134,6 +135,7 @@ public class PolarRobotEnv implements Environment {
         return new PolarRobotEnv(robot, reward, interval, reactionInterval, commandInterval, actions1,
                 PolarMap.create(numRadarSectors), maxRadarDistance);
     }
+
     private final RobotApi robot;
     private final FloatFunction<WheellyStatus> reward;
     private final long interval;
@@ -156,6 +158,7 @@ public class PolarRobotEnv implements Environment {
     private INDArray sensor;
     private boolean started;
     private INDArray canMoveBackward;
+
     /**
      * Creates the robot environment
      *

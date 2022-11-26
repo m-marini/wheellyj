@@ -46,7 +46,6 @@ import java.util.Map;
 
 import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.apis.Robot.*;
 import static org.mmarini.wheelly.apis.Utils.linear;
 import static org.mmarini.yaml.schema.Validator.*;
 
@@ -64,14 +63,6 @@ public class RadarRobotEnv implements Environment {
     public static final int MIN_SENSOR_DIR = -90;
     public static final int MAX_SENSOR_DIR = 90;
 
-    public static final int DEFAULT_INTERVAL = 10;
-    public static final int DEFAULT_REACTION_INTERVAL = 300;
-    public static final int DEFAULT_COMMAND_INTERVAL = 900;
-
-    public static final int DEFAULT_NUM_DIRECTION_VALUES = 25;
-    public static final int DEFAULT_NUM_SENSOR_VALUES = 7;
-    public static final int DEFAULT_NUM_SPEED_VALUES = 9;
-
     public static final int FILLED_SECTOR_VALUE = 2;
     public static final int UNKNOWN_SECTOR_VALUE = 0;
     public static final int EMPTY_SECTOR_VALUE = 1;
@@ -87,7 +78,17 @@ public class RadarRobotEnv implements Environment {
                     "radarHeight", positiveInteger(),
                     "radarGrid", positiveNumber()
             ),
-            List.of("objective"));
+            List.of("objective",
+                    "interval",
+                    "reactionInterval",
+                    "commandInterval",
+                    "numDirectionValues",
+                    "numSensorValues",
+                    "numSpeedValues",
+                    "radarWidth",
+                    "radarHeight",
+                    "radarGrid"
+            ));
     private static final int NUM_RADAR_VALUES = 3;
 
     /**
@@ -101,15 +102,15 @@ public class RadarRobotEnv implements Environment {
         ROBOT_ENV_SPEC.apply(locator).accept(root);
 
         FloatFunction<WheellyStatus> reward = Utils.createObject(root, locator.path("objective"), new Object[0], new Class[0]);
-        long interval = locator.path("interval").getNode(root).asLong(DEFAULT_INTERVAL);
-        long reactionInterval = locator.path("reactionInterval").getNode(root).asLong(DEFAULT_REACTION_INTERVAL);
-        long commandInterval = locator.path("commandInterval").getNode(root).asLong(DEFAULT_COMMAND_INTERVAL);
-        int numDirectionValues = locator.path("numDirectionValues").getNode(root).asInt(DEFAULT_NUM_DIRECTION_VALUES);
-        int numSensorValues = locator.path("numSensorValues").getNode(root).asInt(DEFAULT_NUM_SENSOR_VALUES);
-        int numSpeedValues = locator.path("numSpeedValues").getNode(root).asInt(DEFAULT_NUM_SPEED_VALUES);
-        int radarWidth = locator.path("radarWidth").getNode(root).asInt(DEFAULT_RADAR_WIDTH);
-        int radarHeight = locator.path("radarHeight").getNode(root).asInt(DEFAULT_RADAR_HEIGHT);
-        float radarGrid = (float) locator.path("radarGrid").getNode(root).asDouble(DEFAULT_RADAR_GRID);
+        long interval = locator.path("interval").getNode(root).asLong();
+        long reactionInterval = locator.path("reactionInterval").getNode(root).asLong();
+        long commandInterval = locator.path("commandInterval").getNode(root).asLong();
+        int numDirectionValues = locator.path("numDirectionValues").getNode(root).asInt();
+        int numSensorValues = locator.path("numSensorValues").getNode(root).asInt();
+        int numSpeedValues = locator.path("numSpeedValues").getNode(root).asInt();
+        int radarWidth = locator.path("radarWidth").getNode(root).asInt();
+        int radarHeight = locator.path("radarHeight").getNode(root).asInt();
+        float radarGrid = (float) locator.path("radarGrid").getNode(root).asDouble();
 
         RadarMap radarMap = RadarMap.create(radarWidth, radarHeight, new Point2D.Float(), radarGrid);
         return RadarRobotEnv.create(robot, reward,

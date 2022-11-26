@@ -1,20 +1,20 @@
 ---
 version: "0.2"
-active: polarRadarAnalogAgent
+active: polarRadarAgent1
 
 configurations:
   ######################################
   # Polar radar agent
   ######################################
-  polarRadarAnalogAgent:
+  polarRadarAgent1:
     class: org.mmarini.rl.agents.TDAgent
     seed: 1234
-    modelPath: models/polarRadarAnalogAgent
+    modelPath: models/polarRadarAgent1
     savingIntervalSteps: 1000
     rewardAlpha: 5e-3
     policyAlpha: 1e-3
     criticAlpha: 100e-6
-    lambda: 0.9
+    lambda: 0.5
     inputProcess:
       - name: canMoveFeatures
         class: org.mmarini.rl.processors.PartitionProcessor
@@ -151,7 +151,7 @@ configurations:
   polarRadarAgent:
     class: org.mmarini.rl.agents.TDAgent
     seed: 1234
-    modelPath: models/polarRadarAgentTiles
+    modelPath: models/polarRadarAgent
     savingIntervalSteps: 1000
     rewardAlpha: 5e-3
     policyAlpha: 1e-3

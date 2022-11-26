@@ -68,7 +68,14 @@ public class TDAgent implements Agent {
             "critic", TDNetwork.NETWORK_SPEC,
             "inputProcess", InputProcessor.PROCESSOR_LIST
     ), List.of(
-            "rewardAlpha", "policyAlpha", "criticAlpha", "lambda", "state", "actions", "policy", "critic"
+            "rewardAlpha",
+            "policyAlpha",
+            "criticAlpha",
+            "lambda",
+            "state",
+            "actions",
+            "policy",
+            "critic"
     ));
     public static final Validator AGENT_SPEC = objectPropertiesRequired(Map.of(
             "modelPath", string(),

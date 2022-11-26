@@ -63,6 +63,7 @@ function generateKpiReport(hFile, reportPath, id, kpiTitle, mode, y, len=1, stri
   fprintf(hFile, "\n");
   fprintf(hFile, "| KPI    |             |\n");
   fprintf(hFile, "|--------|------------:|\n");
+  fprintf(hFile, "| Steps  | %11d |\n", n);
   fprintf(hFile, "| Mean   | %11.3g |\n", mean(y));
   fprintf(hFile, "| Sigma  | %11.3g |\n", std(y));
   fprintf(hFile, "| RMS    | %11.3g |\n", rms(y));
