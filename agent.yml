@@ -1,5 +1,5 @@
 ---
-version: "0.3"
+version: "0.4"
 active: polarRadarAnalogAgent
 
 configurations:
@@ -27,6 +27,12 @@ configurations:
         class: org.mmarini.rl.processors.NotProcessor
         input: sectorDistances
     policy:
+      normalizedDistances:
+        input: sectorDistances
+        inputs:
+          type: linear
+          b: -1
+          w: 0.667
       layer0:
         inputs:
           type: concat
@@ -34,7 +40,7 @@ configurations:
             - canMoveFeatures
             - knownSectors
             - emptySectors
-            - sectorDistances
+            - normalizedDistances
         layers:
           - type: dense
             outputSize: 100
@@ -98,6 +104,12 @@ configurations:
           - type: softmax
             temperature: 0.313
     critic:
+      normalizedDistances:
+        input: sectorDistances
+        inputs:
+          type: linear
+          b: -1
+          w: 0.667
       layer0:
         inputs:
           type: concat
@@ -105,7 +117,7 @@ configurations:
             - canMoveFeatures
             - knownSectors
             - emptySectors
-            - sectorDistances
+            - normalizedDistances
         layers:
           - type: dense
             outputSize: 100

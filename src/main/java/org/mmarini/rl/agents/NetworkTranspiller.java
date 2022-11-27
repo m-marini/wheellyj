@@ -40,7 +40,8 @@ import static org.mmarini.yaml.schema.Validator.*;
 
 public class NetworkTranspiller {
     private static final Validator DENSE_SPEC = objectPropertiesRequired(Map.of(
-            "outputSize", positiveInteger()
+            "outputSize", positiveInteger(),
+            "maxAbsWeights", positiveNumber()
     ), List.of(
             "outputSize"
     ));
@@ -138,8 +139,10 @@ public class NetworkTranspiller {
             case "dense":
                 DENSE_SPEC.apply(locator).accept(spec);
                 long outSize = locator.path("outputSize").getNode(spec).asLong();
+                float maxAbsWeights = (float) locator.path("maxAbsWeights").getNode(spec).asDouble(Float.MAX_VALUE);
                 layerSizes.put(id, outSize);
-                return TDDense.create(id, inSizes[0], outSize, random);
+                // TODO fix maxAbsWeights
+                return TDDense.create(id, inSizes[0], outSize, maxAbsWeights, random);
             case "relu":
                 layerSizes.put(id, inSizes[0]);
                 return new TDRelu(id);

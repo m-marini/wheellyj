@@ -117,9 +117,9 @@ class TDNetworkTest {
                                float temperature) {
         Map<String, TDLayer> layers = Stream.of(
                 new TDConcat("layer1"),
-                new TDDense("layer2", eb2, ew2, b2, w2),
+                new TDDense("layer2", eb2, ew2, b2, w2, Float.MAX_VALUE),
                 new TDRelu("layer3"),
-                new TDDense("layer4", eb4, ew4, b4, w4),
+                new TDDense("layer4", eb4, ew4, b4, w4, Float.MAX_VALUE),
                 new TDSum("layer5"),
                 new TDTanh("layer6"),
                 new TDLinear("layer7", b7, w7),
