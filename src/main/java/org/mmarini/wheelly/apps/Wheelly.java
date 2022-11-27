@@ -78,7 +78,7 @@ public class Wheelly {
     };
     private static final Logger logger = LoggerFactory.getLogger(Wheelly.class);
     private static final Validator BASE_CONFIG = objectPropertiesRequired(Map.of(
-            "version", string(values("0.3")),
+            "version", string(values("0.4")),
             "active", string(),
             "configurations", object()
     ), List.of("version", "active", "configurations"));

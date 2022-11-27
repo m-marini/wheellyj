@@ -58,7 +58,8 @@ class TDDenseTest {
             "type: dense",
             "inputSize: 2",
             "outputSize: 3",
-            "inputs: [input]"
+            "inputs: [input]",
+            "maxAbsWeights: 0.5"
     );
 
     static Stream<Arguments> cases() {
@@ -84,6 +85,7 @@ class TDDenseTest {
         Random random = Nd4j.getRandom();
         random.setSeed(1234);
         TDDense layer = TDDense.create(root, locator, "", Map.of(), random);
+        assertEquals(0.5F, layer.getMaxAbsWeights());
         assertEquals("name", layer.getName());
         assertThat(layer.getEb(), matrixCloseTo(new float[][]{
                 {0, 0, 0}
@@ -121,7 +123,7 @@ class TDDenseTest {
                  float lambda,
                  INDArray delta,
                  INDArray grad) {
-        TDDense layer = new TDDense("name", eb, ew, b, w);
+        TDDense layer = new TDDense("name", eb, ew, b, w, Float.MAX_VALUE);
         float in0 = inputs.getFloat(0, 0);
         float in1 = inputs.getFloat(0, 1);
         float b0 = b.getFloat(0, 0);
@@ -171,12 +173,13 @@ class TDDenseTest {
         TDDense layer = new TDDense("name", Nd4j.zeros(1, 3),
                 Nd4j.zeros(2, 3),
                 Nd4j.zeros(1, 3),
-                Nd4j.zeros(2, 3));
+                Nd4j.zeros(2, 3), 10F);
         JsonNode node = layer.getSpec();
         assertThat(node.path("name").asText(), equalTo("name"));
         assertThat(node.path("type").asText(), equalTo("dense"));
         assertThat(node.path("inputSize").asInt(), equalTo(2));
         assertThat(node.path("outputSize").asInt(), equalTo(3));
+        assertEquals(10D, node.path("maxAbsWeight").asDouble());
     }
 
     @ParameterizedTest
@@ -187,7 +190,7 @@ class TDDenseTest {
                float lambda,
                INDArray delta,
                INDArray grad) {
-        TDDense layer = new TDDense("name", eb, ew, b, w);
+        TDDense layer = new TDDense("name", eb, ew, b, w, Float.MAX_VALUE);
         float in0 = inputs.getFloat(0, 0);
         float in1 = inputs.getFloat(0, 1);
         float b0 = b.getFloat(0, 0);
@@ -255,6 +258,160 @@ class TDDenseTest {
         assertThat(layer.getW(), matrixCloseTo(new float[][]{
                 {post_w00, post_w01, post_w02},
                 {post_w10, post_w11, post_w12}
+        }, EPSILON));
+    }
+
+    @Test
+    void trainNegLimit() {
+        INDArray inputs = Nd4j.ones(1, 2);
+        INDArray eb = Nd4j.zeros(1, 3);
+        INDArray ew = Nd4j.zeros(2, 3);
+        INDArray b = Nd4j.createFromArray(-1F, 0F, 1F).reshape(1, 3);
+        INDArray w = Nd4j.ones(2, 3).negi();
+        float alpha = 100e-3F;
+        float lambda = 0F;
+        INDArray delta = Nd4j.ones(1);
+        INDArray grad = Nd4j.ones(1, 3);
+        float maxAbsWeights = 0.9F;
+        TDDense layer = new TDDense("name", eb, ew, b, w, maxAbsWeights);
+        float in0 = inputs.getFloat(0, 0);
+        float in1 = inputs.getFloat(0, 1);
+        float b0 = b.getFloat(0, 0);
+        float b1 = b.getFloat(0, 1);
+        float b2 = b.getFloat(0, 2);
+        float w00 = w.getFloat(0, 0);
+        float w01 = w.getFloat(0, 1);
+        float w02 = w.getFloat(0, 2);
+        float w10 = w.getFloat(1, 0);
+        float w11 = w.getFloat(1, 1);
+        float w12 = w.getFloat(1, 2);
+        float eb0 = eb.getFloat(0, 0);
+        float eb1 = eb.getFloat(0, 1);
+        float eb2 = eb.getFloat(0, 2);
+        float ew00 = ew.getFloat(0, 0);
+        float ew01 = ew.getFloat(0, 1);
+        float ew02 = ew.getFloat(0, 2);
+        float ew10 = ew.getFloat(1, 0);
+        float ew11 = ew.getFloat(1, 1);
+        float ew12 = ew.getFloat(1, 2);
+        float grad0 = grad.getFloat(0, 0);
+        float grad1 = grad.getFloat(0, 1);
+        float grad2 = grad.getFloat(0, 2);
+        float post_eb0 = eb0 * lambda + grad0;
+        float post_eb1 = eb1 * lambda + grad1;
+        float post_eb2 = eb2 * lambda + grad2;
+        float post_ew00 = ew00 * lambda + in0 * grad0;
+        float post_ew01 = ew01 * lambda + in0 * grad1;
+        float post_ew02 = ew02 * lambda + in0 * grad2;
+        float post_ew10 = ew10 * lambda + in1 * grad0;
+        float post_ew11 = ew11 * lambda + in1 * grad1;
+        float post_ew12 = ew12 * lambda + in1 * grad2;
+        float fdelta = delta.getFloat(0, 0);
+        float post_b0 = b0 + fdelta * alpha * post_eb0;
+        float post_b1 = b1 + fdelta * alpha * post_eb1;
+        float post_b2 = b2 + fdelta * alpha * post_eb2;
+
+        INDArray[] in = new INDArray[]{inputs};
+        INDArray out = layer.forward(in, null);
+        float post_grad0 = w00 * grad0 + w01 * grad1 + w02 * grad2;
+        float post_grad1 = w10 * grad0 + w11 * grad1 + w12 * grad2;
+
+        INDArray[] post_grads = layer.train(in, out, grad, delta.mul(alpha), lambda, null);
+
+        assertThat(post_grads, arrayWithSize(1));
+        assertThat(post_grads[0], matrixCloseTo(new float[][]{{
+                post_grad0, post_grad1
+        }}, EPSILON));
+        assertThat(layer.getEb(), matrixCloseTo(new float[][]{{
+                post_eb0, post_eb1, post_eb2
+        }}, EPSILON));
+        assertThat(layer.getB(), matrixCloseTo(new float[][]{{
+                post_b0, post_b1, post_b2
+        }}, EPSILON));
+        assertThat(layer.getEw(), matrixCloseTo(new float[][]{
+                {post_ew00, post_ew01, post_ew02},
+                {post_ew10, post_ew11, post_ew12}
+        }, EPSILON));
+        assertThat(layer.getW(), matrixCloseTo(new float[][]{
+                {-maxAbsWeights, -maxAbsWeights, -maxAbsWeights},
+                {-maxAbsWeights, -maxAbsWeights, -maxAbsWeights}
+        }, EPSILON));
+    }
+
+    @Test
+    void trainPosLimit() {
+        INDArray inputs = Nd4j.ones(1, 2);
+        INDArray eb = Nd4j.zeros(1, 3);
+        INDArray ew = Nd4j.zeros(2, 3);
+        INDArray b = Nd4j.createFromArray(-1F, 0F, 1F).reshape(1, 3);
+        INDArray w = Nd4j.ones(2, 3);
+        float alpha = 100e-3F;
+        float lambda = 0F;
+        INDArray delta = Nd4j.ones(1);
+        INDArray grad = Nd4j.ones(1, 3);
+        float maxAbsWeights = 0.9F;
+        TDDense layer = new TDDense("name", eb, ew, b, w, maxAbsWeights);
+        float in0 = inputs.getFloat(0, 0);
+        float in1 = inputs.getFloat(0, 1);
+        float b0 = b.getFloat(0, 0);
+        float b1 = b.getFloat(0, 1);
+        float b2 = b.getFloat(0, 2);
+        float w00 = w.getFloat(0, 0);
+        float w01 = w.getFloat(0, 1);
+        float w02 = w.getFloat(0, 2);
+        float w10 = w.getFloat(1, 0);
+        float w11 = w.getFloat(1, 1);
+        float w12 = w.getFloat(1, 2);
+        float eb0 = eb.getFloat(0, 0);
+        float eb1 = eb.getFloat(0, 1);
+        float eb2 = eb.getFloat(0, 2);
+        float ew00 = ew.getFloat(0, 0);
+        float ew01 = ew.getFloat(0, 1);
+        float ew02 = ew.getFloat(0, 2);
+        float ew10 = ew.getFloat(1, 0);
+        float ew11 = ew.getFloat(1, 1);
+        float ew12 = ew.getFloat(1, 2);
+        float grad0 = grad.getFloat(0, 0);
+        float grad1 = grad.getFloat(0, 1);
+        float grad2 = grad.getFloat(0, 2);
+        float post_eb0 = eb0 * lambda + grad0;
+        float post_eb1 = eb1 * lambda + grad1;
+        float post_eb2 = eb2 * lambda + grad2;
+        float post_ew00 = ew00 * lambda + in0 * grad0;
+        float post_ew01 = ew01 * lambda + in0 * grad1;
+        float post_ew02 = ew02 * lambda + in0 * grad2;
+        float post_ew10 = ew10 * lambda + in1 * grad0;
+        float post_ew11 = ew11 * lambda + in1 * grad1;
+        float post_ew12 = ew12 * lambda + in1 * grad2;
+        float fdelta = delta.getFloat(0, 0);
+        float post_b0 = b0 + fdelta * alpha * post_eb0;
+        float post_b1 = b1 + fdelta * alpha * post_eb1;
+        float post_b2 = b2 + fdelta * alpha * post_eb2;
+
+        INDArray[] in = new INDArray[]{inputs};
+        INDArray out = layer.forward(in, null);
+        float post_grad0 = w00 * grad0 + w01 * grad1 + w02 * grad2;
+        float post_grad1 = w10 * grad0 + w11 * grad1 + w12 * grad2;
+
+        INDArray[] post_grads = layer.train(in, out, grad, delta.mul(alpha), lambda, null);
+
+        assertThat(post_grads, arrayWithSize(1));
+        assertThat(post_grads[0], matrixCloseTo(new float[][]{{
+                post_grad0, post_grad1
+        }}, EPSILON));
+        assertThat(layer.getEb(), matrixCloseTo(new float[][]{{
+                post_eb0, post_eb1, post_eb2
+        }}, EPSILON));
+        assertThat(layer.getB(), matrixCloseTo(new float[][]{{
+                post_b0, post_b1, post_b2
+        }}, EPSILON));
+        assertThat(layer.getEw(), matrixCloseTo(new float[][]{
+                {post_ew00, post_ew01, post_ew02},
+                {post_ew10, post_ew11, post_ew12}
+        }, EPSILON));
+        assertThat(layer.getW(), matrixCloseTo(new float[][]{
+                {maxAbsWeights, maxAbsWeights, maxAbsWeights},
+                {maxAbsWeights, maxAbsWeights, maxAbsWeights}
         }, EPSILON));
     }
 }

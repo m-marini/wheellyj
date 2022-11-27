@@ -34,6 +34,7 @@ import org.mmarini.yaml.schema.Validator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.ops.transforms.Transforms;
 
 import java.util.Arrays;
 import java.util.List;
@@ -51,7 +52,8 @@ public class TDDense extends TDLayer {
     public static final Validator DENSE_SPEC = objectPropertiesRequired(Map.of(
             "name", string(),
             "inputSize", positiveInteger(),
-            "outputSize", positiveInteger()
+            "outputSize", positiveInteger(),
+            "maxAbsWeights", positiveNumber()
     ), List.of(
             "name", "inputSize", "outputSize"
     ));
@@ -70,6 +72,7 @@ public class TDDense extends TDLayer {
         String name = locator.path("name").getNode(root).asText();
         int inpSize = locator.path("inputSize").getNode(root).asInt();
         int outSize = locator.path("outputSize").getNode(root).asInt();
+        float maxAbsWeights = (float) locator.path("maxAbsWeights").getNode(root).asDouble(Float.MAX_VALUE);
         INDArray eb = Nd4j.zeros(1, outSize);
         INDArray ew = Nd4j.zeros(inpSize, outSize);
         String baseDataId = prefix + "." + name;
@@ -77,38 +80,41 @@ public class TDDense extends TDLayer {
         INDArray w = data.getOrDefault(baseDataId + ".w",
                 // Xavier initialization
                 random.nextGaussian(new int[]{inpSize, outSize}).divi((inpSize + outSize)));
-        return new TDDense(name, eb, ew, b, w);
+        return new TDDense(name, eb, ew, b, w, maxAbsWeights);
     }
 
-    public static TDDense create(String id, long inpSize, long outSize, Random random) {
+    public static TDDense create(String id, long inpSize, long outSize, float maxAbsWeights, Random random) {
         INDArray eb = Nd4j.zeros(1, outSize);
         INDArray ew = Nd4j.zeros(inpSize, outSize);
         INDArray b = Nd4j.zeros(1, outSize);
         // Xavier initialization
         INDArray w = random.nextGaussian(new long[]{inpSize, outSize}).divi((inpSize + outSize));
-        return new TDDense(id, eb, ew, b, w);
+        return new TDDense(id, eb, ew, b, w, maxAbsWeights);
     }
 
     private final INDArray eb;
     private final INDArray ew;
     private final INDArray b;
     private final INDArray w;
+    private final float maxAbsWeights;
 
     /**
      * Creates a dense layer
      *
-     * @param name the name of layer
-     * @param eb   the eligible trace vector of bias
-     * @param ew   the eligible trace vector of weights
-     * @param b    the bias vector
-     * @param w    the weights matrix
+     * @param name          the name of layer
+     * @param eb            the eligible trace vector of bias
+     * @param ew            the eligible trace vector of weights
+     * @param b             the bias vector
+     * @param w             the weights matrix
+     * @param maxAbsWeights maximum absolute weight value
      */
-    public TDDense(String name, INDArray eb, INDArray ew, INDArray b, INDArray w) {
+    public TDDense(String name, INDArray eb, INDArray ew, INDArray b, INDArray w, float maxAbsWeights) {
         super(name);
         this.eb = requireNonNull(eb);
         this.ew = requireNonNull(ew);
         this.b = requireNonNull(b);
         this.w = requireNonNull(w);
+        this.maxAbsWeights = maxAbsWeights;
         if (!(eb.shape().length == 2)) {
             throw new IllegalArgumentException(format("eb rank should be 2 (%d)", eb.shape().length));
         }
@@ -152,6 +158,13 @@ public class TDDense extends TDLayer {
         return ew;
     }
 
+    /**
+     * Returns the max absolute weights
+     */
+    public float getMaxAbsWeights() {
+        return maxAbsWeights;
+    }
+
     @Override
     public JsonNode getSpec() {
         ObjectNode node = Utils.objectMapper.createObjectNode();
@@ -159,6 +172,7 @@ public class TDDense extends TDLayer {
         node.put("type", "dense");
         node.put("inputSize", w.shape()[0]);
         node.put("outputSize", w.shape()[1]);
+        node.put("maxAbsWeight", maxAbsWeights);
         return node;
     }
 
@@ -189,6 +203,7 @@ public class TDDense extends TDLayer {
 
         b.addi(db);
         w.addi(dw);
+        w.assign(Transforms.min(Transforms.max(w, -maxAbsWeights), maxAbsWeights));
 
         if (kpiCallback != null) {
             kpiCallback.accept(Tuple2.of(format("%s_db", getName()), db));

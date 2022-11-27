@@ -22,26 +22,6 @@ commands.
 
 The code of Arduino controller is at [Wheellino project](https://github.com/m-marini/wheellino)
 
-## Release 0.4.1
-
-Added the polar radar map component.
-Added the esplorer objective.
-Changed the yaml version to 0.4.
-
-## Release 0.4.0
-
-Added the radar map component that processes the proxy sensor signals creating a map of obstacles.
-The map feeds the neural network as environment state signals.
-
-## Release 0.3.0
-
-The remote server is Java software running in JVM that implements the interaction between environment and agent.
-The environment can collect and drive the remote robot by Wi-Fi connection or simulate the robot in a virtual
-environment.
-
-The agent is based on Temporal Difference (TD) actor-critic algorithms with eligibility trace, the critic component use
-the residual advantage state value to evaluate the policy of actor.
-
 ### Maven build
 
 To build the server run
@@ -98,9 +78,9 @@ the options are
 
 ```bash
 > java -classpath lib/wheelly-0.3.0.jar org.mmarini.wheelly.apps.Wheelly -h
-
-usage: Wheelly [-h] [-v] [-r ROBOT] [-e ENV] [-a AGENT] [-k KPIS]
-               [-l LABELS] [-s] [-t TIME]
+usage: org.mmarini.wheelly.apps.Wheelly
+       [-h] [-v] [-r ROBOT] [-e ENV] [-a AGENT] [-k KPIS] [-l LABELS]
+       [-s] [-t TIME]
 
 Run a session of interaction between robot and environment.
 
@@ -117,11 +97,39 @@ named arguments:
                          agent.yml)
   -k KPIS, --kpis KPIS   specify kpis path (default: )
   -l LABELS, --labels LABELS
-                         specify kpi labels comma separated (default: )
+                         specify kpi labels  comma  separated  (all for all
+                         kpi) (default: )
   -s, --silent           specify  silent  closing   (no   window  messages)
                          (default: false)
   -t TIME, --time TIME   specify number  of  seconds  of  session  duration
                          (default: 43200)
+```
+
+### Run agent info
+
+After installed the application run the command:
+
+```bash
+java -classpath lib/wheelly-0.3.0.jar org.mmarini.wheelly.apps.WeightsStats
+```
+
+the options are
+
+```bash
+> java -classpath lib/wheelly-0.3.0.jar org.mmarini.wheelly.apps.WeightsStats -h
+
+usage: org.mmarini.wheelly.apps.WeightsStats
+       [-h] [-v] modelPath
+
+Dump the weights statistic
+
+positional arguments:
+  modelPath              specify the model path
+
+named arguments:
+  -h, --help             show this help message and exit
+  -v, --version          show current version
+
 ```
 
 ### Analysis tools
@@ -139,6 +147,27 @@ The kpi folder and the report folder should be selected.
 ### Delta weights
 
 The weight changes are ploted with `td_delta_weights.m` octave program.
+
+
+## Release 0.4.1
+
+Added the polar radar map component.
+Added the esplorer objective.
+Changed the yaml version to 0.4.
+
+## Release 0.4.0
+
+Added the radar map component that processes the proxy sensor signals creating a map of obstacles.
+The map feeds the neural network as environment state signals.
+
+## Release 0.3.0
+
+The remote server is Java software running in JVM that implements the interaction between environment and agent.
+The environment can collect and drive the remote robot by Wi-Fi connection or simulate the robot in a virtual
+environment.
+
+The agent is based on Temporal Difference (TD) actor-critic algorithms with eligibility trace, the critic component use
+the residual advantage state value to evaluate the policy of actor.
 
 ## Release 0.2.0
 

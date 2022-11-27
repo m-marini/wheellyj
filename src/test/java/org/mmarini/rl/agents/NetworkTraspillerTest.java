@@ -112,6 +112,14 @@ class NetworkTraspillerTest {
             "  - type: dense",
             "    outputSize: 3"
     );
+    private static final String DENSE_YAML1 = text(
+            "---",
+            "output:",
+            "  layers:",
+            "  - type: dense",
+            "    outputSize: 3",
+            "    maxAbsWeights: 10"
+    );
     private static final String RELU_YAML = text(
             "---",
             "output:",
@@ -198,6 +206,35 @@ class NetworkTraspillerTest {
                 hasProperty("name", equalTo("output")),
                 isA(TDDense.class)
         )));
+        assertThat(tr.layers, contains(
+                hasProperty("maxAbsWeights", equalTo(Float.MAX_VALUE))
+        ));
+        assertArrayEquals(new long[]{2, 3},
+                ((TDDense) tr.layers.get(0)).getW().shape()
+        );
+    }
+
+    @Test
+    void parseDense1() throws IOException {
+        NetworkTranspiller tr = create(DENSE_YAML1);
+        tr.parse();
+        assertThat(tr.layerDef, hasKey("output"));
+        assertThat(tr.inputsDef, hasEntry(
+                equalTo("output"),
+                containsInAnyOrder("input")
+        ));
+        assertThat(tr.sorted, contains("output"));
+        assertThat(tr.layerSizes, hasEntry(
+                equalTo("output"),
+                equalTo(3L)
+        ));
+        assertThat(tr.layers, contains(allOf(
+                hasProperty("name", equalTo("output")),
+                isA(TDDense.class)
+        )));
+        assertThat(tr.layers, contains(
+                hasProperty("maxAbsWeights", equalTo(10F))
+        ));
         assertArrayEquals(new long[]{2, 3},
                 ((TDDense) tr.layers.get(0)).getW().shape()
         );
