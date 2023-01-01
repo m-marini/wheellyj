@@ -25,7 +25,7 @@ configurations:
         exploring:
           class: org.mmarini.wheelly.engines.ExploringState
           scanInterval: 1000
-          minSensorDir: -40
+          minSensorDir: -45
           maxSensorDir: 45
           sensorDirNumber: 5
           minMoveDistance: 0.5
