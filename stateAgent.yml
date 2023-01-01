@@ -1,0 +1,75 @@
+---
+version: "0.4"
+active: explorerAgent
+
+configurations:
+  ######################################
+  # Explorer agent
+  ######################################
+  explorerAgent:
+    class: org.mmarini.wheelly.engines.StateMachineAgent
+    interval: 10
+    commandInterval: 600
+    reactionInterval: 300
+    radarWidth: 25
+    radarHeight: 25
+    radarGrid: 0.6
+    numRadarSectors: 24
+    maxRadarDistance: 3
+    flow:
+      entry: start
+      states:
+        start:
+          class: org.mmarini.wheelly.engines.HaltState
+          timeout: 2000
+        exploring:
+          class: org.mmarini.wheelly.engines.ExploringState
+          scanInterval: 1000
+          minSensorDir: -45
+          maxSensorDir: 45
+          sensorDirNumber: 5
+          minMoveDistance: 0.5
+          maxMoveDirection: 30
+        avoiding:
+          class: org.mmarini.wheelly.engines.AvoidingState
+      transitions:
+        - from: start
+          to: exploring
+          trigger: timeout
+        - from: exploring
+          to: avoiding
+          trigger: blocked
+        - from: avoiding
+          to: exploring
+          trigger: completed
+  ######################################
+  # Idle agent
+  ######################################
+  idleAgent:
+    class: org.mmarini.wheelly.engines.StateMachineAgent
+    interval: 10
+    commandInterval: 600
+    reactionInterval: 300
+    radarWidth: 25
+    radarHeight: 25
+    radarGrid: 0.6
+    numRadarSectors: 24
+    maxRadarDistance: 3
+    flow:
+      entry: idle
+      states:
+        idle:
+          class: org.mmarini.wheelly.engines.HaltState
+          scanInterval: 1000
+          minSensorDir: -90
+          maxSensorDir: 90
+          sensorDirNumber: 9
+        avoid:
+          class: org.mmarini.wheelly.engines.AvoidingState
+      transitions:
+        - from: idle
+          to: avoid
+          trigger: blocked
+        - from: avoid
+          to: idle
+          trigger: completed

@@ -40,7 +40,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
-import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 import static org.mmarini.yaml.schema.Validator.*;
 
 /**
@@ -217,29 +216,28 @@ public class Robot implements RobotApi {
         long time = status.getTime();
         long timeout = time + dt;
         try {
+            // Repeat until interval timeout
             while (time < timeout) {
                 time = System.currentTimeMillis();
+                // Read the robot status
                 Timed<String> line = socket.readLine();
                 if (line != null) {
+                    logger.debug(">>> {}", line.value());
                     try {
-                        WheellyStatus newStatus = status.updateFromString(line);
-                        // TODO maybe move to status
-                        RadarMap radarMap = newStatus.getRadarMap();
+                        // Create the new status
+                        status = status.updateFromString(line);
+                        RadarMap radarMap = status.getRadarMap();
                         if (radarMap != null) {
-                            RadarMap.SensorSignal signal = new RadarMap.SensorSignal(status.getLocation(),
-                                    normalizeDegAngle(status.getDirection() + status.getSensorDirection()),
-                                    (float) status.getSampleDistance(), time);
-                            this.status.getRadarMap().update(signal);
                             if (time >= this.cleanTimeout) {
                                 radarMap.clean(time - this.radarPersistence);
                                 cleanTimeout = time + cleanInterval;
                             }
-                            this.status = newStatus;
                         }
                     } catch (Throwable ignored) {
                     }
                 }
             }
+            logger.debug(">>> {}", status);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

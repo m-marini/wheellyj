@@ -116,7 +116,7 @@ public class RadarPanel extends JComponent {
         gr.draw(GRID_SHAPE);
     }
 
-    void drawRadarMap(Graphics2D gr) {
+    void drawRadarMap(Graphics2D gr, List<Tuple2<Point2D, Color>> radatMap) {
         if (radarMap != null) {
             AffineTransform base = gr.getTransform();
             gr.setStroke(BORDER_STROKE);
@@ -150,6 +150,27 @@ public class RadarPanel extends JComponent {
         return centerLocation;
     }
 
+    public List<Tuple2<Point2D, Color>> getRadarMap() {
+        return radarMap;
+    }
+
+    public void setRadarMap(RadarMap radarMap) {
+        if (radarMap != null) {
+            this.radarMap = Arrays.stream(radarMap.getSectors())
+                    .filter(MapSector::isKnown)
+                    .map(sector -> Tuple2.of(sector.getLocation(),
+                            sector.isFilled() ? FILLED_COLOR : EMPTY_COLOR))
+                    .collect(Collectors.toList());
+            float size = radarMap.getTopology().getGridSize();
+            sectorShape = new Rectangle2D.Float(
+                    -size / 2, -size / 2,
+                    size, size);
+        } else {
+            this.radarMap = null;
+        }
+        repaint();
+    }
+
     public float getScale() {
         return scale;
     }
@@ -169,23 +190,6 @@ public class RadarPanel extends JComponent {
         drawGrid(gr);
 
         gr.setTransform(base);
-        drawRadarMap(gr);
-    }
-
-    public void setRadarMap(RadarMap radarMap) {
-        if (radarMap != null) {
-            this.radarMap = Arrays.stream(radarMap.getSectors())
-                    .filter(MapSector::isKnown)
-                    .map(sector -> Tuple2.of(sector.getLocation(),
-                            sector.isFilled() ? FILLED_COLOR : EMPTY_COLOR))
-                    .collect(Collectors.toList());
-            float size = radarMap.getTopology().getGridSize();
-            sectorShape = new Rectangle2D.Float(
-                    -size / 2, -size / 2,
-                    size, size);
-        } else {
-            this.radarMap = null;
-        }
-        repaint();
+        drawRadarMap(gr, radarMap);
     }
 }

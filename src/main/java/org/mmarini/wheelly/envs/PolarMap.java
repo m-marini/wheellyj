@@ -30,6 +30,8 @@ import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.Utils;
 
 import java.awt.geom.Point2D;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
 import java.util.stream.IntStream;
 
 import static java.lang.Math.*;
@@ -107,6 +109,33 @@ public class PolarMap {
         return normalizeAngle(i * getSectorAngle());
     }
 
+
+    /**
+     * Returns the direction of sector (RAD)
+     *
+     * @param sector the sector
+     */
+    public OptionalDouble sectorDirection(CircularSector sector) {
+        OptionalInt idx = sectorIndex(sector);
+        return idx.isPresent()
+                ? OptionalDouble.of(sectorDirection(idx.getAsInt()))
+                : OptionalDouble.empty();
+    }
+
+    /**
+     * Retruns the sector index of a given sector
+     *
+     * @param sector the sector
+     */
+    OptionalInt sectorIndex(CircularSector sector) {
+        for (int i = 0; i < sectors.length; i++) {
+            if (sectors[i].equals(sector)) {
+                return OptionalInt.of(i);
+            }
+        }
+        return OptionalInt.empty();
+    }
+
     /**
      * Returns the index of sector in a given direction
      *
@@ -126,7 +155,7 @@ public class PolarMap {
      * @param map         the radar map
      * @param center      the center of polar map
      * @param direction   the direction of polar map (DEG)
-     * @param maxDistance
+     * @param maxDistance the max distance
      */
     public void update(RadarMap map, Point2D center, int direction, double maxDistance) {
         clear();

@@ -150,7 +150,6 @@ public class EnvironmentFrame extends JFrame {
         envPanel.setCanMoveForward(status.getCanMoveForward());
         envPanel.setCanMoveBackward(status.getCanMoveBackward());
         envPanel.setRadarMap(status.getRadarMap());
-        //envPanel.setObstacleMap(robot.getObstaclesMap().map(ObstacleMap::getPoints).orElse(null));
     }
 
     public void setTimeRatio(float timeRatio) {

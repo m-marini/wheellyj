@@ -47,6 +47,7 @@ import java.util.Map;
 import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.Utils.linear;
+import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 import static org.mmarini.yaml.schema.Validator.*;
 
 
@@ -164,6 +165,11 @@ public class RadarRobotEnv implements Environment {
     private boolean started;
     private INDArray canMoveBackward;
     private INDArray radarSignals;
+    private float currentSpeed;
+    private boolean currentHalted;
+    private int currentSensor;
+    private int currentDirection;
+
 
     /**
      * Creates the robot environment
@@ -209,6 +215,10 @@ public class RadarRobotEnv implements Environment {
         this.prevSensor = 0;
         this.lastMoveTimestamp = 0L;
         this.lastScanTimestamp = 0L;
+        this.currentHalted = true;
+        this.currentSensor = 0;
+        this.currentDirection = 0;
+        this.currentSpeed = 0;
     }
 
     @Override
@@ -275,35 +285,12 @@ public class RadarRobotEnv implements Environment {
      * @param actions the action from agent
      */
     private void processAction(Map<String, Signal> actions) {
-        long now = robot.getStatus().getTime();
-
-        int dDir = deltaDir(actions);
-        int dir = round(robotDir.getFloat(0)) + dDir;
+        currentHalted = actions.get("halt").getInt(0) == 1;
         float speed1 = speed(actions);
-        float speed = round(speed1 * 10f) * 0.1f;
-        boolean isHalt = actions.get("halt").getInt(0) == 1;
-        if (isHalt != prevHalt) {
-            prevHalt = isHalt;
-            if (isHalt) {
-                robot.halt();
-            } else {
-                robot.move(dir, speed);
-            }
-            lastMoveTimestamp = now;
-        } else if (!isHalt && now > lastMoveTimestamp + commandInterval) {
-            robot.move(dir, speed);
-            lastMoveTimestamp = now;
-        }
-        int sensor = sensorDir(actions);
-        if (prevSensor != sensor) {
-            robot.scan(sensor);
-            prevSensor = sensor;
-            lastScanTimestamp = now;
-        } else if (sensor != 0 && now >= lastScanTimestamp + commandInterval) {
-            robot.scan(sensor);
-            prevSensor = sensor;
-            lastScanTimestamp = now;
-        }
+        currentSpeed = round(speed1 * 10f) * 0.1f;
+        currentSensor = sensorDir(actions);
+        int dDir = deltaDir(actions);
+        currentDirection = normalizeDegAngle(round(robotDir.getFloat(0)) + dDir);
     }
 
     /**
@@ -316,6 +303,7 @@ public class RadarRobotEnv implements Environment {
         long timeout = status.getTime() + time;
         do {
             robot.tick(interval);
+            sendCommand();
             status = robot.getStatus();
         } while (!(status != null && status.getTime() >= timeout));
         storeStatus(status);
@@ -337,6 +325,31 @@ public class RadarRobotEnv implements Environment {
         robot.reset();
         readStatus(0);
         return getObservation();
+    }
+
+    private void sendCommand() {
+        long now = robot.getStatus().getTime();
+        if (currentHalted != prevHalt) {
+            prevHalt = currentHalted;
+            if (currentHalted) {
+                robot.halt();
+            } else {
+                robot.move(currentDirection, currentSpeed);
+            }
+            lastMoveTimestamp = now;
+        } else if (!currentHalted && now > lastMoveTimestamp + commandInterval) {
+            robot.move(currentDirection, currentSpeed);
+            lastMoveTimestamp = now;
+        }
+        if (prevSensor != currentSensor) {
+            robot.scan(currentSensor);
+            prevSensor = currentSensor;
+            lastScanTimestamp = now;
+        } else if (currentSensor != 0 && now >= lastScanTimestamp + commandInterval) {
+            robot.scan(currentSensor);
+            prevSensor = currentSensor;
+            lastScanTimestamp = now;
+        }
     }
 
     /**
