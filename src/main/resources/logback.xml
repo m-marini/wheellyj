@@ -14,6 +14,12 @@
     <logger name="org.mmarini.wheelly.apis.RobotSocket" level="INFO">
     </logger>
 
+    <logger name="org.mmarini.wheelly.apis.Robot" level="INFO">
+    </logger>
+
+    <logger name="org.mmarini.wheelly.engines.AbstractStateNode" level="INFO">
+    </logger>
+
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>
     </root>

@@ -225,12 +225,12 @@ public class Wheelly {
         try (INDArray ignored = Nd4j.zeros(1)) {
         }
         logger.info("Creating api");
+        JFrame radarFrame = null;
         try (RobotApi robot = createRobot()) {
             logger.info("Creating environment");
             try (Environment env = createEnvironment(robot)) {
                 logger.info("Creating agent");
                 try (Agent agent = createAgent(env)) {
-                    JFrame radarFrame = null;
                     RadarPanel radarPanel = null;
                     PolarPanel polarPanel = null;
                     if (env instanceof RadarRobotEnv) {
@@ -269,6 +269,7 @@ public class Wheelly {
                         agent.observe(result);
                         float reward = result.getReward();
                         avgRewards = DEFAULT_DISCOUNT * (avgRewards - reward) + reward;
+                        status = robot.getStatus();
                         frame.setRobotStatus(status);
                         frame.setReward(avgRewards);
                         frame.setTimeRatio((float) status.getElapsed() / (System.currentTimeMillis() - start));
@@ -281,14 +282,15 @@ public class Wheelly {
                         running = status.getElapsed() <= sessionDuration &&
                                 frame.isVisible();
                     }
-                    if (radarFrame != null) {
-                        radarFrame.dispose();
-                    }
                     logger.info("Cleaning up ...");
                 }
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
+        } finally {
+            if (radarFrame != null) {
+                radarFrame.dispose();
+            }
         }
         logger.info("Cleaned up.");
     }

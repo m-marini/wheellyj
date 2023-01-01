@@ -107,7 +107,7 @@ public class PolarPanel extends JComponent {
         gridShapes.forEach(gr::draw);
     }
 
-    private void drawMap(Graphics2D gr) {
+    private void drawMap(Graphics2D gr, List<Shape> emptyShapes, List<Shape> filledShapes) {
         gr.setStroke(BORDER_STROKE);
         gr.setColor(EMPTY_COLOR);
         emptyShapes.forEach(gr::fill);
@@ -126,7 +126,7 @@ public class PolarPanel extends JComponent {
 
         gr.setTransform(base);
         drawGrid(gr);
-        drawMap(gr);
+        drawMap(gr, emptyShapes, filledShapes);
     }
 
     public void setPolarMap(PolarMap polarMap) {

@@ -121,6 +121,11 @@ public class RobotSocket implements Closeable {
         }
     }
 
+    /**
+     * Returns the read line from socket or null if no line available
+     *
+     * @throws IOException in caso of error
+     */
     public Timed<String> readLine() throws IOException {
         if (!hasLines()) {
             long timeout = System.currentTimeMillis() + readTimeout;

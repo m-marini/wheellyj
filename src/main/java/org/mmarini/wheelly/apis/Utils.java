@@ -33,15 +33,19 @@ import java.awt.geom.Point2D;
 
 import static java.lang.Math.*;
 
-public interface Utils {
+public class Utils {
 
-    Logger logger = LoggerFactory.getLogger(Utils.class);
+    private static final Logger logger = LoggerFactory.getLogger(Utils.class);
 
-    static double clip(double value, double min, double max) {
+    public static double clip(double value, double min, double max) {
         return Math.min(Math.max(value, min), max);
     }
 
-    static float clip(float value, float min, float max) {
+    public static float clip(float value, float min, float max) {
+        return Math.min(Math.max(value, min), max);
+    }
+
+    public static int clip(int value, int min, int max) {
         return Math.min(Math.max(value, min), max);
     }
 
@@ -51,17 +55,17 @@ public interface Utils {
      * @param from the start point
      * @param to   the end point
      */
-    static double direction(Point2D from, Point2D to) {
+    public static double direction(Point2D from, Point2D to) {
         double dx = to.getX() - from.getX();
         double dy = to.getY() - from.getY();
         return atan2(dx, dy);
     }
 
-    static double linear(double x, double xmin, double xmax, double ymin, double ymax) {
+    public static double linear(double x, double xmin, double xmax, double ymin, double ymax) {
         return (x - xmin) * (ymax - ymin) / (xmax - xmin) + ymin;
     }
 
-    static float linear(float x, float xmin, float xmax, float ymin, float ymax) {
+    public static float linear(float x, float xmin, float xmax, float ymin, float ymax) {
         return (x - xmin) * (ymax - ymin) / (xmax - xmin) + ymin;
     }
 
@@ -70,7 +74,7 @@ public interface Utils {
      *
      * @param x the angle
      */
-    static double normalizeAngle(double x) {
+    public static double normalizeAngle(double x) {
         while (x < -PI) {
             x += 2 * PI;
         }
@@ -85,7 +89,7 @@ public interface Utils {
      *
      * @param x the angle
      */
-    static double normalizeDegAngle(double x) {
+    public static double normalizeDegAngle(double x) {
         while (x < -180) {
             x += 360;
         }
@@ -95,7 +99,7 @@ public interface Utils {
         return x;
     }
 
-    static int normalizeDegAngle(int x) {
+    public static int normalizeDegAngle(int x) {
         while (x < -180) {
             x += 360;
         }
@@ -105,22 +109,22 @@ public interface Utils {
         return x;
     }
 
-    static double toNormalDeg(double x) {
+    public static double toNormalDeg(double x) {
         return normalizeDegAngle(toDegrees(x));
     }
 
-    static double toNormalRadians(double x) {
+    public static double toNormalRadians(double x) {
         return normalizeAngle(toRadians(x));
     }
 
-    static Vec2 vec2(float x, float y) {
+    public static Vec2 vec2(float x, float y) {
         Vec2 vec2 = new Vec2();
         vec2.x = x;
         vec2.y = y;
         return vec2;
     }
 
-    static Vec2 vec2(float[] x) {
+    public static Vec2 vec2(float[] x) {
         return vec2(x[0], x[1]);
     }
 }

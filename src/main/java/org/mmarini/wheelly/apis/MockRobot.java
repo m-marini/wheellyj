@@ -107,6 +107,10 @@ public class MockRobot implements RobotApi {
     public void scan(int dir) {
     }
 
+    public void setResetTime(long resetTime) {
+        this.resetTime = resetTime;
+    }
+
     public void setRobotDir(int robotDir) {
         this.robotDir = robotDir;
     }
@@ -121,6 +125,10 @@ public class MockRobot implements RobotApi {
 
     public void setSensorDistance(float sensorDistance) {
         this.sensorDistance = sensorDistance;
+    }
+
+    public void setTime(long time) {
+        this.time = time;
     }
 
     @Override

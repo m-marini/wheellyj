@@ -25,6 +25,8 @@
 
 package org.mmarini.wheelly.swing;
 
+import org.mmarini.Tuple2;
+
 import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Path2D;
@@ -207,7 +209,7 @@ public class EnvironmentPanel extends RadarPanel {
      *
      * @param gr the graphic context
      */
-    private void drawMap(Graphics2D gr) {
+    private void drawMap(Graphics2D gr, List<Point2D> obstacleMap) {
         if (obstacleMap != null) {
             AffineTransform base = gr.getTransform();
             gr.setStroke(BORDER_STROKE);
@@ -239,7 +241,7 @@ public class EnvironmentPanel extends RadarPanel {
      *
      * @param gr the graphic context
      */
-    private void drawRobot(Graphics2D gr) {
+    private void drawRobot(Graphics2D gr, Point2D robotLocation, int robotDirection) {
         gr.transform(at(robotLocation, robotDirection));
         gr.setColor(ROBOT_COLOR);
         gr.setStroke(BORDER_STROKE);
@@ -251,9 +253,9 @@ public class EnvironmentPanel extends RadarPanel {
      *
      * @param gr the graphic context
      */
-    private void drawSensor(Graphics2D gr) {
+    private void drawSensor(Graphics2D gr, Point2D location, int robotDirection, int sensorDirection) {
         int angle = robotDirection + sensorDirection;
-        gr.transform(at(robotLocation, angle));
+        gr.transform(at(location, angle));
         gr.setColor(SENSOR_COLOR);
         gr.setStroke(BORDER_STROKE);
         gr.draw(SENSOR_SHAPE);
@@ -261,6 +263,11 @@ public class EnvironmentPanel extends RadarPanel {
 
     @Override
     protected void paintComponent(Graphics g) {
+        Point2D location = robotLocation;
+        int robotDir = robotDirection;
+        int sensDir = sensorDirection;
+        List<Point2D> obsMap = obstacleMap;
+        List<Tuple2<Point2D, Color>> radarMap1 = getRadarMap();
         Dimension size = getSize();
         g.setColor(getBackground());
         g.fillRect(0, 0, size.width, size.height);
@@ -270,19 +277,19 @@ public class EnvironmentPanel extends RadarPanel {
         drawGrid(gr);
 
         gr.setTransform(base);
-        drawMap(gr);
+        drawMap(gr, obsMap);
 
         gr.setTransform(base);
-        drawSensor(gr);
+        drawSensor(gr, location, robotDir, sensDir);
 
         gr.setTransform(base);
         drawObstacle(gr, obstacleLocation, OBSTACLE_COLOR);
 
         gr.setTransform(base);
-        drawRadarMap(gr);
+        drawRadarMap(gr, radarMap1);
 
         gr.setTransform(base);
-        drawRobot(gr);
+        drawRobot(gr, location, robotDir);
 
         drawHUD(g);
     }
@@ -335,7 +342,7 @@ public class EnvironmentPanel extends RadarPanel {
     }
 
     void setRobotLocation(Point2D location) {
-        this.robotLocation = requireNonNull(location);
+        this.robotLocation = (Point2D) requireNonNull(location).clone();
         // compute hud position
         hudAtBottom = !hudAtBottom && robotLocation.getY() > DEFAULT_WORLD_SIZE / 6 || (!hudAtBottom || !(robotLocation.getY() < -DEFAULT_WORLD_SIZE / 6)) && hudAtBottom;
         hudAtRight = !hudAtRight && robotLocation.getX() < -DEFAULT_WORLD_SIZE / 6 || (!hudAtRight || !(robotLocation.getY() > DEFAULT_WORLD_SIZE / 6)) && hudAtRight;

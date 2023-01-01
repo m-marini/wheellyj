@@ -36,6 +36,7 @@ import static java.lang.Double.parseDouble;
 import static java.lang.Integer.parseInt;
 import static java.lang.Math.*;
 import static java.lang.String.format;
+import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 
 /**
  * The Wheelly status contain the sensor value of Wheelly
@@ -255,18 +256,18 @@ public class WheellyStatus {
     @Override
     public String toString() {
         return new StringJoiner(", ", WheellyStatus.class.getSimpleName() + "[", "]")
-                .add("robotLocation=" + location)
-                .add("robotDeg=" + direction)
-                .add("sensorRelativeDeg=" + sensorDirection)
-                .add("sampleDistance=" + sampleDistance)
+                .add(format("location=%.2f, %.2f", location.getX(), location.getY()))
+                .add("dir=" + direction)
+                .add("sensordir=" + sensorDirection)
+                .add("distance=" + sampleDistance)
+                .add("halt=" + halt)
                 .add("leftMotors=" + leftSpeed)
                 .add("rightMotors=" + rightSpeed)
-                .add("contactSensors=" + proximity)
-                .add("voltage=" + voltage)
+                .add("contacts=" + proximity)
+                .add("V=" + voltage)
                 .add("canMoveBackward=" + canMoveBackward)
                 .add("canMoveForward=" + canMoveForward)
                 .add("imuFailure=" + imuFailure)
-                .add("halt=" + halt)
                 .toString();
     }
 
@@ -321,6 +322,14 @@ public class WheellyStatus {
 
         boolean imuFailure = Integer.parseInt(params[13]) != 0;
         boolean halt = Integer.parseInt(params[14]) != 0;
+
+        if (radarMap != null) {
+            // Updates the radar map
+            RadarMap.SensorSignal signal = new RadarMap.SensorSignal(robotLocation,
+                    normalizeDegAngle(robotDeg + sensorDirection),
+                    (float) distance, time);
+            radarMap.update(signal);
+        }
 
         return new WheellyStatus(time, robotLocation, robotDeg,
                 sensorDirection, distance,
