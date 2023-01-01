@@ -411,7 +411,7 @@ public class SimRobot implements RobotApi {
         status.setCanMoveForward(true);
         status.setCanMoveBackward(true);
         status.setHalt(true);
-        status.setImuFailure(false);
+        status.setImuFailure(0);
 
         robot.setLinearVelocity(new Vec2());
         robot.setTransform(new Vec2(), (float) (PI / 2));

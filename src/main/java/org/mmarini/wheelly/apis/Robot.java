@@ -223,6 +223,9 @@ public class Robot implements RobotApi {
                 Timed<String> line = socket.readLine();
                 if (line != null) {
                     logger.debug(">>> {}", line.value());
+                    if (line.value().startsWith("!!")) {
+                        logger.error(">>> {}", line.value());
+                    }
                     try {
                         // Create the new status
                         status = status.updateFromString(line);

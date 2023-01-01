@@ -114,7 +114,7 @@ public class RobotSocket implements Closeable {
         if (channel != null && channel.isConnected()) {
             int n = channel.read(buffer);
             if (n > 0) {
-                logger.debug("Read {} bytes", n);
+                //logger.debug("Read {} bytes", n);
                 buffer.flip();
                 splitLines();
             }
@@ -153,7 +153,7 @@ public class RobotSocket implements Closeable {
         this.lines = Arrays.stream(fragments).limit(fragments.length - 1)
                 .map(line -> new Timed<>(line, timestamp, TimeUnit.MILLISECONDS))
                 .collect(Collectors.toList());
-        logger.debug("Read {} lines", this.lines.size());
+        //logger.debug("Read {} lines", this.lines.size());
         this.readPosition = 0;
     }
 
@@ -164,7 +164,7 @@ public class RobotSocket implements Closeable {
      * @param cmd the command
      */
     public void writeCommand(String cmd) throws IOException {
-        logger.debug("Writing command {}", cmd);
+        //logger.debug("Writing command {}", cmd);
         if (channel != null && channel.isConnected()) {
             ByteBuffer buffer = ByteBuffer.wrap((cmd + LF).getBytes(StandardCharsets.UTF_8));
             while (buffer.remaining() > 0) {

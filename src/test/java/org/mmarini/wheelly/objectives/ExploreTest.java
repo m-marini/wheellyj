@@ -56,7 +56,7 @@ class ExploreTest {
         return new WheellyStatus(0, new Point2D.Float(), 0,
                 sensorDir, 0,
                 leftSpeed * MAX_VELOCITY, rightSpeed * MAX_VELOCITY, 0, 0,
-                canMoveForward, canMoveBackward, false, false,
+                canMoveForward, canMoveBackward, 0, false,
                 0, radarMap);
     }
 

@@ -52,7 +52,7 @@ public class WheellyStatus {
                 0, 0,
                 0, 0,
                 false, false,
-                false, true,
+                0, true,
                 0, null);
     }
 
@@ -67,7 +67,7 @@ public class WheellyStatus {
     private double voltage;
     private boolean canMoveBackward;
     private boolean canMoveForward;
-    private boolean imuFailure;
+    private int imuFailure;
     private boolean halt;
     private RadarMap radarMap;
     private long resetTime;
@@ -96,7 +96,7 @@ public class WheellyStatus {
                          double leftSpeed, double rightSpeed,
                          int proximity, double voltage,
                          boolean canMoveForward, boolean canMoveBackward,
-                         boolean imuFailure, boolean halt, long resetTime, RadarMap radarMap) {
+                         int imuFailure, boolean halt, long resetTime, RadarMap radarMap) {
         this.time = time;
         this.location = location;
         this.direction = direction;
@@ -245,11 +245,11 @@ public class WheellyStatus {
         this.halt = halt;
     }
 
-    public boolean isImuFailure() {
+    public int getImuFailure() {
         return imuFailure;
     }
 
-    public void setImuFailure(boolean imuFailure) {
+    public void setImuFailure(int imuFailure) {
         this.imuFailure = imuFailure;
     }
 
@@ -293,6 +293,7 @@ public class WheellyStatus {
      *     [move direction]
      *     [move speed]
      *     [next sensor direction]
+     *     [error]
      * </pre>
      *
      * @param line the status string
@@ -320,7 +321,7 @@ public class WheellyStatus {
         double left = parseDouble(params[7]);
         double right = parseDouble(params[8]);
 
-        boolean imuFailure = Integer.parseInt(params[13]) != 0;
+        int imuFailure = Integer.parseInt(params[13]);
         boolean halt = Integer.parseInt(params[14]) != 0;
 
         if (radarMap != null) {

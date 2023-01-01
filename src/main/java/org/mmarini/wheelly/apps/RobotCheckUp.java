@@ -158,7 +158,7 @@ public class RobotCheckUp {
                 (float) distance,
                 (float) distanceError,
                 abs(directionError),
-                robot.getStatus().isImuFailure());
+                robot.getStatus().getImuFailure());
     }
 
     /**
@@ -204,7 +204,7 @@ public class RobotCheckUp {
         int rotationAngle = normalizeDegAngle(dir - startAngle);
         float distanceError = (float) status.getLocation().distance(startLocation);
         robot.halt();
-        return new RotateResult(time - startDirection, targetDir, directionError, distanceError, rotationAngle, robot.getStatus().isImuFailure());
+        return new RotateResult(time - startDirection, targetDir, directionError, distanceError, rotationAngle, robot.getStatus().getImuFailure());
     }
 
     /**
@@ -251,7 +251,7 @@ public class RobotCheckUp {
                         time - measureStart,
                         sampleCount > 0, scannerMoveTime,
                         measureCount > 0 ? totDistance / measureCount : 0,
-                        robot.getStatus().isImuFailure()));
+                        robot.getStatus().getImuFailure()));
                 sensDir += SENSOR_STEP;
                 if (sensDir > 90) {
                     break;
@@ -340,9 +340,9 @@ public class RobotCheckUp {
      * @param averageSupply  the supply voltage result
      */
     private void printSummary(List<ScannerResult> scannerResults, List<RotateResult> rotateResults, List<MovementResult> moveResults, double averageSupply) {
-        long imuFailure = scannerResults.stream().filter(r -> r.imuFailure).count() +
-                rotateResults.stream().filter(r -> r.imuFailure).count() +
-                moveResults.stream().filter(r -> r.imuFailure).count();
+        long imuFailure = scannerResults.stream().filter(r -> r.imuFailure != 0).count() +
+                rotateResults.stream().filter(r -> r.imuFailure != 0).count() +
+                moveResults.stream().filter(r -> r.imuFailure != 0).count();
 
         logger.info("");
         logger.info("Check summary");
@@ -392,12 +392,12 @@ public class RobotCheckUp {
                     maxDistance, maxDistanceDirection));
         }
 
-        long numRotationFailure = rotateResults.stream().filter(result -> result.directionError > ROTATION_TOLERANCE || result.imuFailure).count();
+        long numRotationFailure = rotateResults.stream().filter(result -> result.directionError > ROTATION_TOLERANCE || result.imuFailure != 0).count();
         int maxDirectionError = 0;
         float maxLocationError = 0;
         float maxRotationSpeed = 0;
         for (RotateResult r : rotateResults) {
-            if (!r.imuFailure) {
+            if (r.imuFailure == 0) {
                 if (r.directionError > maxDirectionError) {
                     maxDirectionError = r.directionError;
                 }
@@ -415,13 +415,13 @@ public class RobotCheckUp {
 
         long numMovementFailure = moveResults.stream().filter(result -> result.directionError > ROTATION_TOLERANCE
                 || result.distanceError > DISTANCE_TOLERANCE
-                || result.imuFailure).count();
+                || result.imuFailure != 0).count();
         int maxMoveDirectionError = 0;
         float maxMoveDistanceError = 0;
         float maxSpeed = 0;
         float maxMoveDistance = 0;
         for (MovementResult r : moveResults) {
-            if (!r.imuFailure) {
+            if (r.imuFailure == 0) {
                 if (r.distance > maxMoveDistance) {
                     maxMoveDistance = r.distance;
                 }
@@ -525,11 +525,11 @@ public class RobotCheckUp {
         public final int directionError;
         public final float distance;
         public final float distanceError;
-        public final boolean imuFailure;
+        public final int imuFailure;
         public final float speed;
         public final long testDuration;
 
-        MovementResult(int direction, float speed, long testDuration, float distance, float distanceError, int directionError, boolean imuFailure) {
+        MovementResult(int direction, float speed, long testDuration, float distance, float distanceError, int directionError, int imuFailure) {
             this.direction = direction;
             this.directionError = directionError;
             this.distance = distance;
@@ -545,14 +545,14 @@ public class RobotCheckUp {
      */
     static class RotateResult {
         public final int directionError;
-        public final boolean imuFailure;
+        public final int imuFailure;
         public final float locationError;
         public final int rotationAngle;
         public final int targetDir;
         public final long testDuration;
 
 
-        RotateResult(long testDuration, int targetDir, int directionError, float distanceError, int rotationAngle, boolean imuFailure) {
+        RotateResult(long testDuration, int targetDir, int directionError, float distanceError, int rotationAngle, int imuFailure) {
             this.testDuration = testDuration;
             this.targetDir = targetDir;
             this.directionError = directionError;
@@ -568,12 +568,12 @@ public class RobotCheckUp {
     static class ScannerResult {
         public final float averageDistance;
         public final int direction;
-        public final boolean imuFailure;
+        public final int imuFailure;
         public final long moveTime;
         public final long testDuration;
         public final boolean valid;
 
-        ScannerResult(int direction, long testDuration, boolean valid, long moveTime, float averageDistance, boolean imuFailure) {
+        ScannerResult(int direction, long testDuration, boolean valid, long moveTime, float averageDistance, int imuFailure) {
             this.direction = direction;
             this.valid = valid;
             this.averageDistance = averageDistance;

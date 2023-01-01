@@ -86,7 +86,7 @@ public class MockRobot implements RobotApi {
                 0, 0,
                 0, 0,
                 false, false,
-                false, false,
+                0, false,
                 resetTime, null);
     }
 
