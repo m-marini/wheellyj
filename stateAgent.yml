@@ -27,8 +27,8 @@ configurations:
           scanInterval: 1000
           minSensorDir: -45
           maxSensorDir: 45
-          sensorDirNumber: 5
-          minMoveDistance: 0.5
+          sensorDirNumber: 7
+          minMoveDistance: 0.4
           maxMoveDirection: 30
         avoiding:
           class: org.mmarini.wheelly.engines.AvoidingState

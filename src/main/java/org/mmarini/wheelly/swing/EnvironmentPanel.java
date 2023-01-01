@@ -147,6 +147,7 @@ public class EnvironmentPanel extends RadarPanel {
     private float timeRatio;
     private boolean hudAtRight;
     private boolean hudAtBottom;
+    private int imuFailure;
 
     public EnvironmentPanel() {
         setFont(Font.decode("Monospaced"));
@@ -173,7 +174,7 @@ public class EnvironmentPanel extends RadarPanel {
         AffineTransform tr = g1.getTransform();
 
         FontMetrics fm = getFontMetrics(getFont());
-        int hudHeight = 6 * fm.getHeight();
+        int hudHeight = 7 * fm.getHeight();
 
         Dimension size = getSize();
 
@@ -187,14 +188,21 @@ public class EnvironmentPanel extends RadarPanel {
         drawLine(g1, format("Time     %s %.1fx", strDate(time), timeRatio), 0, Color.GREEN);
         drawLine(g1, format("Reward   %.2f", reward), 1, Color.GREEN);
         drawLine(g1, format("Distance %.2f m", distance), 2, Color.GREEN);
-        drawLine(g1, format("Contacts %x", contacts), 3, Color.GREEN);
+        drawLine(g1, format("Contacts 0x%x", contacts), 3, Color.GREEN);
         if (!canMoveForward) {
             drawLine(g1, "FORWARD  STOP", 4, Color.RED);
         }
         if (!canMoveBackward) {
             drawLine(g1, "BACKWARD STOP", 5, Color.RED);
         }
+        if (imuFailure != 0) {
+            drawLine(g1, format("Imu failure: 0x%x", imuFailure), 6, Color.RED);
+        }
         g1.setTransform(tr);
+    }
+
+    public void setImuFailure(int imuFailure) {
+        this.imuFailure = imuFailure;
     }
 
     private void drawLine(Graphics g, String text, int row, Color color) {

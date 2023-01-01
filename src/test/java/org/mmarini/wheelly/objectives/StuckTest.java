@@ -46,7 +46,7 @@ class StuckTest {
         return new WheellyStatus(0, new Point2D.Float(), 0,
                 sensorDir, distance,
                 0, 0, 0, 0,
-                canMoveForward, canMoveBackward, false, false,
+                canMoveForward, canMoveBackward, 0, false,
                 0, null);
     }
 
