@@ -142,6 +142,14 @@ public class WheellyStatus {
         return time - resetTime;
     }
 
+    public int getImuFailure() {
+        return imuFailure;
+    }
+
+    public void setImuFailure(int imuFailure) {
+        this.imuFailure = imuFailure;
+    }
+
     public double getLeftSpeed() {
         return leftSpeed;
     }
@@ -245,14 +253,6 @@ public class WheellyStatus {
         this.halt = halt;
     }
 
-    public int getImuFailure() {
-        return imuFailure;
-    }
-
-    public void setImuFailure(int imuFailure) {
-        this.imuFailure = imuFailure;
-    }
-
     @Override
     public String toString() {
         return new StringJoiner(", ", WheellyStatus.class.getSimpleName() + "[", "]")
@@ -296,9 +296,10 @@ public class WheellyStatus {
      *     [error]
      * </pre>
      *
-     * @param line the status string
+     * @param line                   the status string
+     * @param radarReceptiveDistance the radar receptive distance
      */
-    public WheellyStatus updateFromString(Timed<String> line) {
+    public WheellyStatus updateFromString(Timed<String> line, float radarReceptiveDistance) {
         long time = line.time(TimeUnit.MILLISECONDS);
         String[] params = line.value().split(" ");
         if (params.length != NO_STATUS_PARAMS) {
@@ -329,7 +330,7 @@ public class WheellyStatus {
             RadarMap.SensorSignal signal = new RadarMap.SensorSignal(robotLocation,
                     normalizeDegAngle(robotDeg + sensorDirection),
                     (float) distance, time);
-            radarMap.update(signal);
+            radarMap.update(signal, radarReceptiveDistance);
         }
 
         return new WheellyStatus(time, robotLocation, robotDeg,
