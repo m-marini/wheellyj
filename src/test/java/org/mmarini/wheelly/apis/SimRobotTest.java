@@ -41,6 +41,7 @@ class SimRobotTest {
     public static final int SEED = 1234;
     public static final double DISTANCE_EPSILON = 1e-3;
     public static final float MAX_ANGULAR_VELOCITY = (float) (0.280 / 0.136 * 180 / PI);
+    public static final float RECEPTIVE_DISTANCE = 0.1F;
 
     @Test
     void create() {
@@ -55,7 +56,7 @@ class SimRobotTest {
     private SimRobot createRobot() {
         Random random = new Random(SEED);
         return new SimRobot(new MapBuilder(new GridTopology(0.2f)).build(),
-                random, 0, 0, null, 0, 0);
+                random, 0, 0, null, 0, 0, RECEPTIVE_DISTANCE);
     }
 
     @Test

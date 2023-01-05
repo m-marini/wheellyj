@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #130: Add weights constraint
 - Issue #137: Robot executor
 - Issue #139: Imu failure report
+- Issue #141: Add radar sensitivity distance
 
 ## [0.4.1] 2022-11-26
 

@@ -41,6 +41,7 @@ class RadarMapTest {
     public static final float GRID_SIZE = 0.2F;
     public static final int WIDTH = 11;
     public static final int HEIGHT = 11;
+    public static final float RECEPTIVE_DISTANCE = 0.1F;
 
     @Test
     void cleanNoTimeout() {
@@ -238,7 +239,7 @@ class RadarMapTest {
         long timestamp = System.currentTimeMillis();
         RadarMap.SensorSignal signal = new RadarMap.SensorSignal(sensor, direction, distance, timestamp);
 
-        map.update(signal);
+        map.update(signal, RECEPTIVE_DISTANCE);
 
         Optional<MapSector> sectorOpt = map.getSector(0, 0);
 

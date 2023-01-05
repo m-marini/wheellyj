@@ -45,7 +45,7 @@ public class MapSector {
     /**
      * Creates the MapSector
      *
-     * @param location  the location
+     * @param location  the location of sector
      * @param timestamp the timestamp of filled info (0 if unknown)
      * @param filled    true if sector is filled
      */
@@ -97,25 +97,32 @@ public class MapSector {
     }
 
     /**
-     * Updates the map sector with the result of a sensor signal
+     * Updates the map sector with the result of a sensor signal.
+     * <p>
+     * The condition to update the status of a sector is that the distance of the signal is in range (> minDistance && < MAX_SIGNAL_DISTANCE)
+     * And the signal direction is in range of sector (direction within the direction of sector edge)
+     * And the sensor signal >= sector distance - receptive distance<br>
+     * The status of sector is set to empty if no echo signal is detected or the sensor distance > sector distance + sector size / 2 - threshold
+     * otherwise is set to filled
+     * <p>
      *
-     * @param signal the sensor signal
-     * @param size   the sector size
+     * @param signal            the sensor signal
+     * @param receptiveDistance the receptive sector distance (distance from signal to set sector filled)
      */
-    public void update(RadarMap.SensorSignal signal, float size) {
+    public void update(RadarMap.SensorSignal signal, float minDistance, float receptiveDistance) {
         float sectorDistance = (float) signal.sensorLocation.distance(location);
-        boolean inRange = sectorDistance >= size * 2 && sectorDistance <= MAX_SIGNAL_DISTANCE;
+        boolean inRange = sectorDistance >= minDistance && sectorDistance <= MAX_SIGNAL_DISTANCE;
         if (inRange) {
             double sectorDirection = direction(signal.sensorLocation, location);
             double sectorDirFromSens = normalizeDegAngle(signal.sensorDirection - toDegrees(sectorDirection));
-            int a0 = (int) round(toDegrees(atan2(size, 2 * sectorDistance)));
+            //int a0 = (int) round(toDegrees(atan2(receptiveDistance, sectorDistance)));
+            int a0 = (int) round(toDegrees(asin(receptiveDistance / sectorDistance)));
             boolean inDirection = abs(sectorDirFromSens) <= a0;
             if (inDirection) {
                 if (signal.isEcho()) {
-                    float sectorSensDistance = sectorDistance - signal.distance;
-                    if (sectorSensDistance <= THRESHOLD_SIGNAL_DISTANCE) {
+                    if (signal.distance >= sectorDistance - receptiveDistance) {
                         timestamp = signal.timestamp;
-                        filled = sectorSensDistance >= -THRESHOLD_SIGNAL_DISTANCE;
+                        filled = signal.distance <= sectorDistance + receptiveDistance;
                     }
                 } else {
                     timestamp = signal.timestamp;

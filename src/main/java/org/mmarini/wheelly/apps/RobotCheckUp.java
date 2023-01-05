@@ -471,7 +471,7 @@ public class RobotCheckUp {
         logger.info("Robot check started.");
         try (Robot robot = Robot.create(parseArgs.getString("robotHost"),
                 parseArgs.getInt("port"),
-                null, 10000, 1000)) {
+                null, 10000, 1000, 0)) {
             this.robot = robot;
             robot.start();
 

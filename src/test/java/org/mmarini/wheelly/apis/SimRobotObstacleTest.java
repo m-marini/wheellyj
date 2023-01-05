@@ -40,6 +40,7 @@ class SimRobotObstacleTest {
     private static final float XO = 1F;
     private static final float HALF_SIZE = 100e-3F;
     private static final float HALF_LENGTH = 140e-3F;
+    public static final float RECEPTIVE_DISTANCE = 0.1F;
 
     /**
      * Given a space with an obstacle at X0,0
@@ -173,7 +174,7 @@ class SimRobotObstacleTest {
     private SimRobot createRobot() {
         Random random = new Random(SEED);
         return new SimRobot(new MapBuilder(new GridTopology(0.2f)).add(XO, 0).build(),
-                random, 0, 0, null, 0, 0);
+                random, 0, 0, null, 0, 0, RECEPTIVE_DISTANCE);
     }
 
     @Test

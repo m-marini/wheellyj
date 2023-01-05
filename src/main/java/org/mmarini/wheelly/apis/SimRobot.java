@@ -98,17 +98,19 @@ public class SimRobot implements RobotApi {
             {-ROBOT_LENGTH / 2 - SENSOR_GAP, -ROBOT_WIDTH / 2 - SENSOR_GAP},
             {-ROBOT_LENGTH / 2 - SENSOR_GAP, -SENSOR_GAP}
     };
-    private static final Validator ROBOT_SPEC = objectPropertiesRequired(Map.of(
-                    "robotSeed", positiveInteger(),
-                    "mapSeed", positiveInteger(),
-                    "errSigma", nonNegativeNumber(),
-                    "errSensor", nonNegativeNumber(),
-                    "numObstacles", nonNegativeInteger(),
-                    "radarWidth", positiveInteger(),
-                    "radarHeight", positiveInteger(),
-                    "radarGrid", positiveNumber(),
-                    "radarCleanInterval", positiveInteger(),
-                    "radarPersistence", positiveInteger()
+    private static final Validator ROBOT_SPEC = objectPropertiesRequired(
+            Map.ofEntries(
+                    Map.entry("robotSeed", positiveInteger()),
+                    Map.entry("mapSeed", positiveInteger()),
+                    Map.entry("errSigma", nonNegativeNumber()),
+                    Map.entry("errSensor", nonNegativeNumber()),
+                    Map.entry("numObstacles", nonNegativeInteger()),
+                    Map.entry("radarWidth", positiveInteger()),
+                    Map.entry("radarHeight", positiveInteger()),
+                    Map.entry("radarGrid", positiveNumber()),
+                    Map.entry("radarReceptiveDistance", positiveNumber()),
+                    Map.entry("radarCleanInterval", positiveInteger()),
+                    Map.entry("radarPersistence", positiveInteger())
             ), List.of(
                     "errSigma",
                     "errSensor",
@@ -116,6 +118,7 @@ public class SimRobot implements RobotApi {
                     "radarWidth",
                     "radarHeight",
                     "radarGrid",
+                    "radarReceptiveDistance",
                     "radarCleanInterval",
                     "radarPersistence"
             )
@@ -141,12 +144,19 @@ public class SimRobot implements RobotApi {
         long radarCleanInterval = locator.path("radarCleanInterval").getNode(root).asLong();
         long radarPersistence = locator.path("radarPersistence").getNode(root).asLong();
         RadarMap radarMap = RadarMap.create(radarWidth, radarHeight, new Point2D.Float(), radarGrid);
+        float radarReceptiveDistance = (float) locator.path("radarReceptiveDistance").getNode(root).asDouble();
         return new SimRobot(obstacleMap,
                 robotRandom,
-                errSigma,
-                errSensor, radarMap, radarPersistence, radarCleanInterval);
+                errSigma, errSensor,
+                radarMap, radarPersistence, radarCleanInterval, radarReceptiveDistance);
     }
 
+    /**
+     * Creates obstacle in the world
+     *
+     * @param world    thr world
+     * @param location the obstacle location
+     */
     protected static void createObstacle(World world, Point2D location) {
         PolygonShape obsShape = new PolygonShape();
         obsShape.setAsBox(OBSTACLE_SIZE / 2, OBSTACLE_SIZE / 2);
@@ -192,6 +202,7 @@ public class SimRobot implements RobotApi {
     private final long radarPersistence;
     private final long cleanInterval;
     private final WheellyStatus status;
+    private final float radarReceptiveDistance;
     private float speed;
     private int direction;
     private int sensor;
@@ -200,19 +211,21 @@ public class SimRobot implements RobotApi {
     /**
      * Creates a simulated robot
      *
-     * @param obstacleMap      the obstacle map
-     * @param random           the random generator
-     * @param errSigma         sigma of errors in physic simulation
-     * @param errSensor        sensor error in meters
-     * @param radarMap         the radar map
-     * @param radarPersistence the radar persistence map
-     * @param cleanInterval    the radar clean interval
+     * @param obstacleMap            the obstacle map
+     * @param random                 the random generator
+     * @param errSigma               sigma of errors in physic simulation (U)
+     * @param errSensor              sensor error (m)
+     * @param radarMap               the radar map
+     * @param radarPersistence       the radar persistence map
+     * @param cleanInterval          the radar clean interval (ms)
+     * @param radarReceptiveDistance the radar threshold distance (m)
      */
-    public SimRobot(ObstacleMap obstacleMap, Random random, float errSigma, float errSensor, RadarMap radarMap, long radarPersistence, long cleanInterval) {
+    public SimRobot(ObstacleMap obstacleMap, Random random, float errSigma, float errSensor, RadarMap radarMap, long radarPersistence, long cleanInterval, float radarReceptiveDistance) {
         this.random = requireNonNull(random);
         this.errSigma = errSigma;
         this.errSensor = errSensor;
         this.obstacleMap = obstacleMap;
+        this.radarReceptiveDistance = radarReceptiveDistance;
         this.status = WheellyStatus.create();
         status.setRadarMap(radarMap);
         this.radarPersistence = radarPersistence;
@@ -483,7 +496,7 @@ public class SimRobot implements RobotApi {
         if (radarMap != null) {
             long time = status.getTime();
             RadarMap.SensorSignal signal = new RadarMap.SensorSignal(status.getLocation(), normalizeDegAngle(status.getDirection() + status.getSensorDirection()), distance, time);
-            radarMap.update(signal);
+            radarMap.update(signal, radarReceptiveDistance);
             if (time >= cleanTimeout) {
                 radarMap.clean(time - radarPersistence);
                 cleanTimeout = time + cleanInterval;

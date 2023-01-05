@@ -37,7 +37,7 @@ import static java.lang.Math.toRadians;
 public class RadarMap {
 
     /**
-     * Create an empty RadarMap
+     * Returns the empty radar map
      *
      * @param width    the number of horizontal sector
      * @param height   the number of vertical sector
@@ -48,6 +48,14 @@ public class RadarMap {
         return create(width, height, center, new GridTopology(gridSize));
     }
 
+    /**
+     * Returns the empty radar map
+     *
+     * @param width    the width of map
+     * @param height   the height of map
+     * @param center   the center of map
+     * @param topology the topology
+     */
     private static RadarMap create(int width, int height, Point2D center, GridTopology topology) {
         MapSector[] map1 = new MapSector[width * height];
         float x0 = (float) (center.getX() - (width - 1) * topology.getGridSize() / 2);
@@ -80,7 +88,7 @@ public class RadarMap {
     }
 
     /**
-     * Clean up the map for timeout
+     * Cleans up the map for timeout
      *
      * @param timeout the timeout instant
      */
@@ -90,6 +98,9 @@ public class RadarMap {
         }
     }
 
+    /**
+     * Cleans up the map
+     */
     private void clean() {
         for (MapSector mapSector : sectors) {
             mapSector.setTimestamp(0L);
@@ -143,16 +154,17 @@ public class RadarMap {
     /**
      * Updates the map with a sensor signal
      *
-     * @param signal the sensor signal
+     * @param signal            the sensor signal
+     * @param receptiveDistance the receptive distance of sector
      */
-    public void update(SensorSignal signal) {
+    public void update(SensorSignal signal, float receptiveDistance) {
         for (MapSector sector : sectors) {
-            sector.update(signal, topology.getGridSize());
+            sector.update(signal, topology.getGridSize() * 2, receptiveDistance);
         }
     }
 
     /**
-     * Updates the map from other map unsing a new origin position and direction
+     * Updates the map from other map using a new origin position and direction
      *
      * @param sourceMap the source map
      * @param position  the origin position in the source space
@@ -171,12 +183,23 @@ public class RadarMap {
         }
     }
 
+    /**
+     * Stores the sensor location, the echo signal distance, the sensor direction, the time stamp of signal
+     */
     public static class SensorSignal {
         public final float distance;
         public final int sensorDirection;
         public final Point2D sensorLocation;
         public final long timestamp;
 
+        /**
+         * Creates the sensor signal
+         *
+         * @param sensorLocation  the location of sensor
+         * @param sensorDirection the absolute direction of sensor (DEG)
+         * @param distance        the distance of echo (m)
+         * @param timestamp       the timestamp (ms)
+         */
         public SensorSignal(Point2D sensorLocation, int sensorDirection, float distance, long timestamp) {
             this.distance = distance;
             this.sensorDirection = sensorDirection;

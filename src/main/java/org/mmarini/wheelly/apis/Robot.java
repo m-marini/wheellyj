@@ -49,9 +49,6 @@ public class Robot implements RobotApi {
     public static final int DEFAULT_PORT = 22;
     public static final long DEFAULT_CONNECTION_TIMEOUT = 10000;
     public static final long DEFAULT_READ_TIMEOUT = 3000;
-    public static final int DEFAULT_RADAR_WIDTH = 50;
-    public static final int DEFAULT_RADAR_HEIGHT = 50;
-    public static final float DEFAULT_RADAR_GRID = 0.2F;
 
     private static final Logger logger = LoggerFactory.getLogger(Robot.class);
     private static final Validator ROBOT_SPEC = objectPropertiesRequired(Map.of(
@@ -62,6 +59,7 @@ public class Robot implements RobotApi {
                     "radarWidth", positiveInteger(),
                     "radarHeight", positiveInteger(),
                     "radarGrid", positiveNumber(),
+                    "radarReceptiveDistance", positiveNumber(),
                     "radarCleanInterval", positiveInteger(),
                     "radarPersistence", positiveInteger()
             ),
@@ -71,6 +69,7 @@ public class Robot implements RobotApi {
                     "radarWidth",
                     "radarHeight",
                     "radarGrid",
+                    "radarReceptiveDistance",
                     "radarCleanInterval",
                     "radarPersistence"
             ));
@@ -78,16 +77,23 @@ public class Robot implements RobotApi {
     /**
      * Returns an interface to the robot
      *
-     * @param robotHost        the robot host
-     * @param port             the robot port
-     * @param radarMap         the radar map
-     * @param radarPersistence the radar persistence duration (ms)
-     * @param cleanInterval    the radar clean interval (ms)
+     * @param robotHost              the robot host
+     * @param port                   the robot port
+     * @param radarMap               the radar map
+     * @param radarPersistence       the radar persistence duration (ms)
+     * @param cleanInterval          the radar clean interval (ms)
+     * @param radarReceptiveDistance the radar receptive distance (m)
      */
-    public static Robot create(String robotHost, int port, RadarMap radarMap, long radarPersistence, long cleanInterval) {
-        return Robot.create(robotHost, port, DEFAULT_CONNECTION_TIMEOUT, DEFAULT_READ_TIMEOUT, radarMap, radarPersistence, cleanInterval);
+    public static Robot create(String robotHost, int port, RadarMap radarMap, long radarPersistence, long cleanInterval, float radarReceptiveDistance) {
+        return Robot.create(robotHost, port, DEFAULT_CONNECTION_TIMEOUT, DEFAULT_READ_TIMEOUT, radarMap, radarPersistence, cleanInterval, radarReceptiveDistance);
     }
 
+    /**
+     * Returns the robot from configuration
+     *
+     * @param root    the configuratin document
+     * @param locator the locator of robot spec
+     */
     public static Robot create(JsonNode root, Locator locator) {
         ROBOT_SPEC.apply(locator).accept(root);
         String host = locator.path("host").getNode(root).asText();
@@ -99,29 +105,32 @@ public class Robot implements RobotApi {
         float radarGrid = (float) locator.path("radarGrid").getNode(root).asDouble();
         long radarCleanInterval = locator.path("radarCleanInterval").getNode(root).asLong();
         long radarPersistence = locator.path("radarPersistence").getNode(root).asLong();
+        float radarReceptiveDistance = (float) locator.path("radarReceptiveDistance").getNode(root).asDouble();
         RadarMap radarMap = RadarMap.create(radarWidth, radarHeight, new Point2D.Float(), radarGrid);
-        return Robot.create(host, port, connectionTimeout, readTimeout, radarMap, radarPersistence, radarCleanInterval);
+        return Robot.create(host, port, connectionTimeout, readTimeout, radarMap, radarPersistence, radarCleanInterval, radarReceptiveDistance);
     }
 
     /**
      * Returns an interface to the robot
      *
-     * @param robotHost         the robot host
-     * @param port              the robot port
-     * @param connectionTimeout the connection timeout in millis
-     * @param readTimeout       the read timeout in millis
-     * @param radarMap          the radar map
-     * @param radarPersistence  the radar persistence duration (ms)
-     * @param cleanInterval     the radar clean interval (ms)
+     * @param robotHost              the robot host
+     * @param port                   the robot port
+     * @param connectionTimeout      the connection timeout (ms)
+     * @param readTimeout            the read timeout (ms))
+     * @param radarMap               the radar map
+     * @param radarPersistence       the radar persistence duration (ms)
+     * @param cleanInterval          the radar clean interval (ms)
+     * @param radarReceptiveDistance the radar receptive distance (m)
      */
-    public static Robot create(String robotHost, int port, long connectionTimeout, long readTimeout, RadarMap radarMap, long radarPersistence, long cleanInterval) {
+    public static Robot create(String robotHost, int port, long connectionTimeout, long readTimeout, RadarMap radarMap, long radarPersistence, long cleanInterval, float radarReceptiveDistance) {
         RobotSocket socket = new RobotSocket(robotHost, port, connectionTimeout, readTimeout);
-        return new Robot(socket, radarMap, radarPersistence, cleanInterval);
+        return new Robot(socket, radarMap, radarPersistence, cleanInterval, radarReceptiveDistance);
     }
 
     private final RobotSocket socket;
     private final long radarPersistence;
     private final long cleanInterval;
+    private final float radarReceptiveDistance;
     private Long timestampOffset;
     private WheellyStatus status;
     private long cleanTimeout;
@@ -129,13 +138,15 @@ public class Robot implements RobotApi {
     /**
      * Create a Robot interface
      *
-     * @param socket           the robot socket
-     * @param radarMap         the radar map
-     * @param radarPersistence the radar persistence duration (ms)
-     * @param cleanInterval    the radar clean interval (ms)
+     * @param socket                 the robot socket
+     * @param radarMap               the radar map
+     * @param radarPersistence       the radar persistence duration (ms)
+     * @param cleanInterval          the radar clean interval (ms)
+     * @param radarReceptiveDistance the radar threshold distance (m)
      */
-    public Robot(RobotSocket socket, RadarMap radarMap, long radarPersistence, long cleanInterval) {
+    public Robot(RobotSocket socket, RadarMap radarMap, long radarPersistence, long cleanInterval, float radarReceptiveDistance) {
         this.socket = socket;
+        this.radarReceptiveDistance = radarReceptiveDistance;
         status = WheellyStatus.create();
         status.setRadarMap(radarMap);
         this.radarPersistence = radarPersistence;
@@ -228,7 +239,7 @@ public class Robot implements RobotApi {
                     }
                     try {
                         // Create the new status
-                        status = status.updateFromString(line);
+                        status = status.updateFromString(line, radarReceptiveDistance);
                         RadarMap radarMap = status.getRadarMap();
                         if (radarMap != null) {
                             if (time >= this.cleanTimeout) {
