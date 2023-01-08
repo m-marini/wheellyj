@@ -257,7 +257,6 @@ Parameter are:
 ### Exploring state `org.mmarini.wheelly.engines.ExploringState`
 
 The exploring state moves the robot round the environment to explore the unknwon zones.
-During the exploration the sensor may be moved automatically.
 
 The `timeout` signal is generated whenever the timeout interval has elapsed from state entry instant.
 The `blocked` signal is generated when robot has obstacle contacts.
@@ -265,10 +264,6 @@ The `blocked` signal is generated when robot has obstacle contacts.
 Parameter are:
 
 - `timeout` timeout interval (ms)
-- `scanInterval` interval between scanner sensor movement (ms)
-- `minSensorDir` minimum scanner direction (DEG)
-- `maxSensorDir` maximum scanner direction (DEG)
-- `sensorDirNumber` number of directions to scan
 - `minMoveDistance` minimum distance from obstacles to move the robot (m)
 - `maxMoveDirection`: maximum direction change to move the robot (DEG), beyond which the robot only turns 
 
