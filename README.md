@@ -20,7 +20,7 @@ relative the initial state, drive the proximity sensor direction, drive the robo
 feeding back from gyroscope and speed sensors and communicate with remote server via Wi-Fi sending status and receiving
 commands.
 
-The code of Arduino controller is at [Wheellino project](https://github.com/m-marini/wheellino)
+The code of Arduino controller is at [Wheellino project](https://github.com/m-marini/wheellino).
 
 ### Maven build
 
@@ -302,6 +302,20 @@ onInit:
   - put
 ```
 
+## Release 0.5.0
+
+Compatible with Wheellino 0.3.x
+
+## Release 0.4.2
+
+Added the polar radar map component.
+Added the esplorer objective.
+Changed the yaml version to 0.4.
+
+Added robot executor.
+Added IMU failure report
+Add radar sensitivity distance in yaml
+
 ## Release 0.4.1
 
 Added the polar radar map component.
@@ -312,6 +326,8 @@ Changed the yaml version to 0.4.
 
 Added the radar map component that processes the proxy sensor signals creating a map of obstacles.
 The map feeds the neural network as environment state signals.
+
+Compatible with Wheellino 0.2.x 
 
 ## Release 0.3.0
 

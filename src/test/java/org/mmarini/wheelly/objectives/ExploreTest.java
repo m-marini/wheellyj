@@ -53,11 +53,10 @@ class ExploreTest {
             map[i].setTimestamp(timestamp);
         }
 
-        return new WheellyStatus(0, new Point2D.Float(), 0,
-                sensorDir, 0,
-                leftSpeed * MAX_VELOCITY, rightSpeed * MAX_VELOCITY, 0, 0,
-                canMoveForward, canMoveBackward, 0, false,
-                0, radarMap);
+        return new WheellyStatus(0, 0, 0, 0,
+                sensorDir, 0, leftSpeed * MAX_VELOCITY, rightSpeed * MAX_VELOCITY,
+                0, 0, 0, canMoveForward,
+                canMoveBackward, 0, false, 0, radarMap);
     }
 
     @ParameterizedTest

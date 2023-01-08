@@ -74,8 +74,8 @@ public interface NoMove {
     static FloatFunction<WheellyStatus> noMove(float velocityThreshold) {
         return status -> !status.getCanMoveForward() || !status.getCanMoveBackward()
                 ? -1
-                : (abs(status.getLeftSpeed()) < velocityThreshold
-                && abs(status.getRightSpeed()) < velocityThreshold
+                : (abs(status.getLeftPps()) < velocityThreshold
+                && abs(status.getRightPps()) < velocityThreshold
                 && status.getSensorDirection() == 0) ? 1
                 : 0;
 

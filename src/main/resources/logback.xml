@@ -11,7 +11,7 @@
         </encoder>
     </appender>
 
-    <logger name="org.mmarini.wheelly.apis.RobotSocket" level="INFO">
+    <logger name="org.mmarini.wheelly.apis.RobotSocket" level="DEBUG">
     </logger>
 
     <logger name="org.mmarini.wheelly.apis.Robot" level="INFO">

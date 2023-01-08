@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 
 import static java.lang.Double.parseDouble;
 import static java.lang.Integer.parseInt;
+import static java.lang.Long.parseLong;
 import static java.lang.Math.*;
 import static java.lang.String.format;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
@@ -44,46 +45,83 @@ import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 public class WheellyStatus {
     public static final float OBSTACLE_SIZE = 0.2f;
 
-    public static final int NO_STATUS_PARAMS = 18;
+    public static final int NO_STATUS_PARAMS = 19;
+    public static final float VOLTAGE_SCALE = 13.96E-3F;
+    public static final float DISTANCE_SCALE = 1F / 5882;
+    public static final int[] CONTACT_THRESHOLDS = new int[]{205, 512, 677};
+    public static final int PULSES_PER_ROOT = 40;
+    public static final double WHEEL_DIAMETER = 0.067;
+
+    public static final double DISTANCE_PER_PULSE = WHEEL_DIAMETER * PI / PULSES_PER_ROOT;
+
 
     public static WheellyStatus create() {
-        return new WheellyStatus(0, new Point2D.Float(), 0,
+        return new WheellyStatus(0, 0, 0,
+                0,
                 0, 0,
                 0, 0,
                 0, 0,
-                false, false,
-                0, true,
-                0, null);
+                0, false,
+                false, 0, true, 0, null);
+    }
+
+    private static int decodeContacts(int frontSensors, int rearSensors) {
+        return decodeContacts(frontSensors) * 4 + decodeContacts(rearSensors);
+    }
+
+    private static int decodeContacts(int signal) {
+        for (int i = 0; i < CONTACT_THRESHOLDS.length; i++) {
+            if (signal < CONTACT_THRESHOLDS[i]) {
+                return i;
+            }
+        }
+        return CONTACT_THRESHOLDS.length;
+    }
+
+    private static int encodeContacts(int contacts) {
+        if (contacts == 0) {
+            return 0;
+        }
+        return CONTACT_THRESHOLDS[contacts - 1];
+    }
+
+    public static Point2D pulses2Location(double xPulses, double yPulses) {
+        return new Point2D.Double(xPulses * DISTANCE_PER_PULSE, yPulses * DISTANCE_PER_PULSE);
     }
 
     private long time;
-    private Point2D location;
+    private double xPulses;
+    private double yPulses;
     private int direction;
     private int sensorDirection;
-    private double sampleDistance;
-    private double leftSpeed;
-    private double rightSpeed;
-    private int proximity;
-    private double voltage;
+    private long echoTime;
+    private double leftPps;
+    private double rightPps;
+    private int supplySensor;
     private boolean canMoveBackward;
     private boolean canMoveForward;
     private int imuFailure;
     private boolean halt;
     private RadarMap radarMap;
     private long resetTime;
+    private int frontSensors;
+    private int rearSensors;
+    private Point2D location;
 
     /**
      * Creates wheelly status
      *
      * @param time            the status time
-     * @param location        the robot location
+     * @param xPulses         the x robot location pulses
+     * @param yPulses         the y robot location pulses
      * @param direction       the robot direction DEG
      * @param sensorDirection the sensor relative direction DEG
-     * @param sampleDistance  the sample distance
-     * @param leftSpeed       the left motor speed
-     * @param rightSpeed      the right motor speed
-     * @param proximity       the proximity signals
-     * @param voltage         the supply voltage
+     * @param echoTime        the echo time
+     * @param leftPps         the left motor speed (pulse per seconds)
+     * @param rightPps        the right motor speed (pulse per seconds)
+     * @param frontSensors    the front sensors signals
+     * @param rearSensors     the rear sensors signals
+     * @param supplySensor    the supply voltage
      * @param canMoveForward  true if it can move forward
      * @param canMoveBackward true if it can move backward
      * @param imuFailure      true if imu failure
@@ -91,21 +129,24 @@ public class WheellyStatus {
      * @param resetTime       the reset time
      * @param radarMap        the radar map
      */
-    public WheellyStatus(long time, Point2D location, int direction,
-                         int sensorDirection, double sampleDistance,
-                         double leftSpeed, double rightSpeed,
-                         int proximity, double voltage,
+    public WheellyStatus(long time, double xPulses, double yPulses, int direction,
+                         int sensorDirection, long echoTime,
+                         double leftPps, double rightPps,
+                         int frontSensors, int rearSensors, int supplySensor,
                          boolean canMoveForward, boolean canMoveBackward,
                          int imuFailure, boolean halt, long resetTime, RadarMap radarMap) {
         this.time = time;
-        this.location = location;
+        this.xPulses = xPulses;
+        this.yPulses = yPulses;
+        this.location = pulses2Location(xPulses, yPulses);
         this.direction = direction;
         this.sensorDirection = sensorDirection;
-        this.sampleDistance = sampleDistance;
-        this.leftSpeed = leftSpeed;
-        this.rightSpeed = rightSpeed;
-        this.proximity = proximity;
-        this.voltage = voltage;
+        this.echoTime = echoTime;
+        this.leftPps = leftPps;
+        this.rightPps = rightPps;
+        this.frontSensors = frontSensors;
+        this.rearSensors = rearSensors;
+        this.supplySensor = supplySensor;
         this.canMoveBackward = canMoveBackward;
         this.canMoveForward = canMoveForward;
         this.imuFailure = imuFailure;
@@ -138,8 +179,24 @@ public class WheellyStatus {
         this.direction = direction;
     }
 
+    public long getEchoTime() {
+        return echoTime;
+    }
+
+    public void setEchoTime(long echoTime) {
+        this.echoTime = echoTime;
+    }
+
     public long getElapsed() {
         return time - resetTime;
+    }
+
+    public int getFrontSensors() {
+        return frontSensors;
+    }
+
+    public void setFrontSensors(int frontSensors) {
+        this.frontSensors = frontSensors;
     }
 
     public int getImuFailure() {
@@ -150,12 +207,12 @@ public class WheellyStatus {
         this.imuFailure = imuFailure;
     }
 
-    public double getLeftSpeed() {
-        return leftSpeed;
+    public double getLeftPps() {
+        return leftPps;
     }
 
-    public void setLeftSpeed(double leftSpeed) {
-        this.leftSpeed = leftSpeed;
+    public void setLeftPps(double leftPps) {
+        this.leftPps = leftPps;
     }
 
     public Point2D getLocation() {
@@ -163,15 +220,16 @@ public class WheellyStatus {
     }
 
     public void setLocation(Point2D location) {
-        this.location = location;
+        setLocationPulses(location.getX() / DISTANCE_PER_PULSE, location.getY() / DISTANCE_PER_PULSE);
     }
 
     public int getProximity() {
-        return proximity;
+        return decodeContacts(frontSensors, rearSensors);
     }
 
-    public void setProximity(int proximity) {
-        this.proximity = proximity;
+    public void setProximity(int contacts) {
+        frontSensors = encodeContacts((contacts / 4) % 4);
+        rearSensors = encodeContacts(contacts % 4);
     }
 
     public RadarMap getRadarMap() {
@@ -182,6 +240,14 @@ public class WheellyStatus {
         this.radarMap = radarMap;
     }
 
+    public int getRearSensors() {
+        return rearSensors;
+    }
+
+    public void setRearSensors(int rearSensors) {
+        this.rearSensors = rearSensors;
+    }
+
     public long getResetTime() {
         return resetTime;
     }
@@ -190,20 +256,20 @@ public class WheellyStatus {
         this.resetTime = resetTime;
     }
 
-    public double getRightSpeed() {
-        return rightSpeed;
+    public double getRightPps() {
+        return rightPps;
     }
 
-    public void setRightSpeed(double rightSpeed) {
-        this.rightSpeed = rightSpeed;
+    public void setRightPps(double rightPps) {
+        this.rightPps = rightPps;
     }
 
     public double getSampleDistance() {
-        return sampleDistance;
+        return echoTime * DISTANCE_SCALE;
     }
 
-    public void setSampleDistance(double sampleDistance) {
-        this.sampleDistance = sampleDistance;
+    public void setSampleDistance(double distance) {
+        this.echoTime = round(distance / DISTANCE_SCALE);
     }
 
     public int getSensorDirection() {
@@ -218,6 +284,7 @@ public class WheellyStatus {
      * Returns the obstacle location
      */
     public Optional<Point2D> getSensorObstacle() {
+        double sampleDistance = getSampleDistance();
         if (sampleDistance > 0) {
             float d = (float) (sampleDistance + OBSTACLE_SIZE / 2);
             double angle = toRadians(90 - direction - sensorDirection);
@@ -229,6 +296,14 @@ public class WheellyStatus {
         }
     }
 
+    public int getSupplySensor() {
+        return supplySensor;
+    }
+
+    public void setSupplySensor(int supplySensor) {
+        this.supplySensor = supplySensor;
+    }
+
     public long getTime() {
         return time;
     }
@@ -238,11 +313,15 @@ public class WheellyStatus {
     }
 
     public double getVoltage() {
-        return voltage;
+        return supplySensor * VOLTAGE_SCALE;
     }
 
-    public void setVoltage(double voltage) {
-        this.voltage = voltage;
+    public double getXPulses() {
+        return xPulses;
+    }
+
+    public double getYPulses() {
+        return yPulses;
     }
 
     public boolean isHalt() {
@@ -253,18 +332,24 @@ public class WheellyStatus {
         this.halt = halt;
     }
 
+    public void setLocationPulses(double xPulses, double yPulses) {
+        this.xPulses = xPulses;
+        this.yPulses = yPulses;
+        this.location = pulses2Location(xPulses, yPulses);
+    }
+
     @Override
     public String toString() {
         return new StringJoiner(", ", WheellyStatus.class.getSimpleName() + "[", "]")
                 .add(format("location=%.2f, %.2f", location.getX(), location.getY()))
                 .add("dir=" + direction)
                 .add("sensordir=" + sensorDirection)
-                .add("distance=" + sampleDistance)
+                .add("distance=" + getSampleDistance())
                 .add("halt=" + halt)
-                .add("leftMotors=" + leftSpeed)
-                .add("rightMotors=" + rightSpeed)
-                .add("contacts=" + proximity)
-                .add("V=" + voltage)
+                .add("leftMotors=" + leftPps)
+                .add("rightMotors=" + rightPps)
+                .add("contacts=" + getProximity())
+                .add("V=" + getVoltage())
                 .add("canMoveBackward=" + canMoveBackward)
                 .add("canMoveForward=" + canMoveForward)
                 .add("imuFailure=" + imuFailure)
@@ -281,11 +366,12 @@ public class WheellyStatus {
      *     [yLocation]
      *     [yaw]
      *     [sensorDirection]
-     *     [distance]
+     *     [distanceTime (us)]
      *     [leftSpeed]
      *     [rightSpeed]
-     *     [contactSignals]
-     *     [voltage]
+     *     [frontSignals]
+     *     [rearSignals]
+     *     [voltage (U)]
      *     [canMoveForward]
      *     [canMoveBackward]
      *     [imuFailure]
@@ -293,7 +379,6 @@ public class WheellyStatus {
      *     [move direction]
      *     [move speed]
      *     [next sensor direction]
-     *     [error]
      * </pre>
      *
      * @param line                   the status string
@@ -308,36 +393,38 @@ public class WheellyStatus {
 
         double x = parseDouble(params[2]);
         double y = parseDouble(params[3]);
-        int robotDeg = Integer.parseInt(params[4]);
-        Point2D robotLocation = new Point2D.Double(x, y);
+        int robotDeg = parseInt(params[4]);
 
         int sensorDirection = parseInt(params[5]);
-        double distance = parseDouble(params[6]);
-        int contactSensors = parseInt(params[9]);
-        double voltage = parseDouble(params[10]);
+        long echoTime = parseLong(params[6]);
+        int frontSensors = parseInt(params[9]);
+        int rearSensors = parseInt(params[10]);
+        int supplySensor = parseInt(params[11]);
+        int contactSensors = decodeContacts(frontSensors, rearSensors);
 
-        boolean canMoveForward = Integer.parseInt(params[11]) != 0;
-        boolean canMoveBackward = Integer.parseInt(params[12]) != 0;
+        boolean canMoveForward = Integer.parseInt(params[12]) != 0;
+        boolean canMoveBackward = Integer.parseInt(params[13]) != 0;
 
         double left = parseDouble(params[7]);
         double right = parseDouble(params[8]);
 
-        int imuFailure = Integer.parseInt(params[13]);
-        boolean halt = Integer.parseInt(params[14]) != 0;
+        int imuFailure = Integer.parseInt(params[14]);
+        boolean halt = Integer.parseInt(params[15]) != 0;
 
         if (radarMap != null) {
             // Updates the radar map
-            RadarMap.SensorSignal signal = new RadarMap.SensorSignal(robotLocation,
+            double distance = getSampleDistance();
+            RadarMap.SensorSignal signal = new RadarMap.SensorSignal(new Point2D.Double(x * DISTANCE_PER_PULSE, y * DISTANCE_PER_PULSE),
                     normalizeDegAngle(robotDeg + sensorDirection),
                     (float) distance, time);
             radarMap.update(signal, radarReceptiveDistance);
         }
 
-        return new WheellyStatus(time, robotLocation, robotDeg,
-                sensorDirection, distance,
+        return new WheellyStatus(time, x, y,
+                robotDeg,
+                sensorDirection, echoTime,
                 left, right,
-                contactSensors, voltage,
-                canMoveForward, canMoveBackward,
-                imuFailure, halt, resetTime, radarMap);
+                frontSensors, rearSensors,
+                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt, resetTime, radarMap);
     }
 }

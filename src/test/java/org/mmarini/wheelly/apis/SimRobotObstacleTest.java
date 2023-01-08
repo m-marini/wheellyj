@@ -37,10 +37,10 @@ class SimRobotObstacleTest {
 
     public static final int SEED = 1234;
     public static final double DISTANCE_EPSILON = 1e-3;
+    public static final float RECEPTIVE_DISTANCE = 0.1F;
     private static final float XO = 1F;
     private static final float HALF_SIZE = 100e-3F;
     private static final float HALF_LENGTH = 140e-3F;
-    public static final float RECEPTIVE_DISTANCE = 0.1F;
 
     /**
      * Given a space with an obstacle at X0,0

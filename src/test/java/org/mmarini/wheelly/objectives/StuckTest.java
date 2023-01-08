@@ -43,11 +43,13 @@ import static org.hamcrest.Matchers.closeTo;
 class StuckTest {
 
     static WheellyStatus createStatus(int sensorDir, double distance, boolean canMoveForward, boolean canMoveBackward) {
-        return new WheellyStatus(0, new Point2D.Float(), 0,
-                sensorDir, distance,
-                0, 0, 0, 0,
-                canMoveForward, canMoveBackward, 0, false,
-                0, null);
+        WheellyStatus wheellyStatus = new WheellyStatus(0, 0, 0,
+                0,
+                sensorDir, 0, 0, 0,
+                0, 0, 0, canMoveForward,
+                canMoveBackward, 0, false, 0, null);
+        wheellyStatus.setSampleDistance(distance);
+        return wheellyStatus;
     }
 
     @ParameterizedTest
