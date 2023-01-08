@@ -20,7 +20,7 @@ relative the initial state, drive the proximity sensor direction, drive the robo
 feeding back from gyroscope and speed sensors and communicate with remote server via Wi-Fi sending status and receiving
 commands.
 
-The code of Arduino controller is at [Wheellino project](https://github.com/m-marini/wheellino)
+The code of Arduino controller is at [Wheellino project](https://github.com/m-marini/wheellino).
 
 ### Maven build
 
@@ -257,7 +257,6 @@ Parameter are:
 ### Exploring state `org.mmarini.wheelly.engines.ExploringState`
 
 The exploring state moves the robot round the environment to explore the unknwon zones.
-During the exploration the sensor may be moved automatically.
 
 The `timeout` signal is generated whenever the timeout interval has elapsed from state entry instant.
 The `blocked` signal is generated when robot has obstacle contacts.
@@ -265,10 +264,6 @@ The `blocked` signal is generated when robot has obstacle contacts.
 Parameter are:
 
 - `timeout` timeout interval (ms)
-- `scanInterval` interval between scanner sensor movement (ms)
-- `minSensorDir` minimum scanner direction (DEG)
-- `maxSensorDir` maximum scanner direction (DEG)
-- `sensorDirNumber` number of directions to scan
 - `minMoveDistance` minimum distance from obstacles to move the robot (m)
 - `maxMoveDirection`: maximum direction change to move the robot (DEG), beyond which the robot only turns 
 
@@ -302,6 +297,20 @@ onInit:
   - put
 ```
 
+## Release 0.5.0
+
+Compatible with Wheellino 0.3.x
+
+## Release 0.4.2
+
+Added the polar radar map component.
+Added the esplorer objective.
+Changed the yaml version to 0.4.
+
+Added robot executor.
+Added IMU failure report
+Add radar sensitivity distance in yaml
+
 ## Release 0.4.1
 
 Added the polar radar map component.
@@ -312,6 +321,8 @@ Changed the yaml version to 0.4.
 
 Added the radar map component that processes the proxy sensor signals creating a map of obstacles.
 The map feeds the neural network as environment state signals.
+
+Compatible with Wheellino 0.2.x 
 
 ## Release 0.3.0
 

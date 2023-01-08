@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- Issue #143: Add sensors check and wheellino 0.3.0 messaging
+
 ## [0.4.2] 2023-01-08
 
 ### Added

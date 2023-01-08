@@ -73,7 +73,7 @@ public interface Explore {
             // encourages the exploration of unfamiliar areas
             double isKnown = ((double) knownSectorsNumber) / map.length;
             // encourages the linear speed
-            double linSpeed = (status.getRightSpeed() + status.getLeftSpeed()) / MAX_VELOCITY / 2;
+            double linSpeed = (status.getRightPps() + status.getLeftPps()) / MAX_VELOCITY / 2;
             double isLinearSpeed = clip(linSpeed, 0, 1);
             int sensor = status.getSensorDirection();
             double isFrontSensor = not(positive(abs(sensor), sensorRange));

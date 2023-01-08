@@ -201,10 +201,6 @@ public class EnvironmentPanel extends RadarPanel {
         g1.setTransform(tr);
     }
 
-    public void setImuFailure(int imuFailure) {
-        this.imuFailure = imuFailure;
-    }
-
     private void drawLine(Graphics g, String text, int row, Color color) {
         FontMetrics fm = getFontMetrics(getFont());
         int y = fm.getHeight() * (row + 1);
@@ -320,6 +316,10 @@ public class EnvironmentPanel extends RadarPanel {
     public void setDistance(float distance) {
         this.distance = distance;
         repaint();
+    }
+
+    public void setImuFailure(int imuFailure) {
+        this.imuFailure = imuFailure;
     }
 
     public void setObstacleLocation(Point2D obstacleLocation) {

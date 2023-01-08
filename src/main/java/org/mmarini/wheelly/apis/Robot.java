@@ -39,6 +39,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import static java.lang.Math.round;
 import static java.lang.String.format;
 import static org.mmarini.yaml.schema.Validator.*;
 
@@ -49,6 +50,8 @@ public class Robot implements RobotApi {
     public static final int DEFAULT_PORT = 22;
     public static final long DEFAULT_CONNECTION_TIMEOUT = 10000;
     public static final long DEFAULT_READ_TIMEOUT = 3000;
+
+    public static final int[] MOTOR_CONFIG = new int[]{-15, -78, 6, 32, -10, -68, 5, 32};
 
     private static final Logger logger = LoggerFactory.getLogger(Robot.class);
     private static final Validator ROBOT_SPEC = objectPropertiesRequired(Map.of(
@@ -73,6 +76,7 @@ public class Robot implements RobotApi {
                     "radarCleanInterval",
                     "radarPersistence"
             ));
+    private static final int MAX_SPEED_VALUE = 4;
 
     /**
      * Returns an interface to the robot
@@ -170,7 +174,7 @@ public class Robot implements RobotApi {
 
     @Override
     public void move(int dir, float speed) {
-        writeCommand(format(Locale.ENGLISH, "mv %d %.2f", dir, speed));
+        writeCommand(format(Locale.ENGLISH, "mv %d %d", dir, round(speed * MAX_SPEED_VALUE)));
     }
 
     @Override

@@ -285,8 +285,8 @@ public class SimRobot implements RobotApi {
      *
      */
     private void checkForSpeed() {
-        double left = status.getLeftSpeed();
-        double right = status.getRightSpeed();
+        double left = status.getLeftPps();
+        double right = status.getRightPps();
         if (((speed > 0 || left > 0 || right > 0) && !status.getCanMoveForward())
                 || ((speed < 0 || left < 0 || right < 0) && !status.getCanMoveBackward())) {
             halt();
@@ -356,8 +356,8 @@ public class SimRobot implements RobotApi {
         status.setLocation(location);
         int direction = normalizeDegAngle((int) round(90 - toDegrees(robot.getAngle())));
         status.setDirection(direction);
-        status.setLeftSpeed(left);
-        status.setRightSpeed(right);
+        status.setLeftPps(left);
+        status.setRightPps(right);
     }
 
     private int decodeContact(Contact contact) {
@@ -388,8 +388,8 @@ public class SimRobot implements RobotApi {
     @Override
     public void halt() {
         speed = 0;
-        status.setLeftSpeed(0);
-        status.setRightSpeed(0);
+        status.setLeftPps(0);
+        status.setRightPps(0);
     }
 
     private void handleBeginContact(Contact contact) {
@@ -419,8 +419,8 @@ public class SimRobot implements RobotApi {
         status.setSensorDirection(0);
         status.setSampleDistance(0);
         status.setProximity(0);
-        status.setLeftSpeed(0);
-        status.setRightSpeed(0);
+        status.setLeftPps(0);
+        status.setRightPps(0);
         status.setCanMoveForward(true);
         status.setCanMoveBackward(true);
         status.setHalt(true);
