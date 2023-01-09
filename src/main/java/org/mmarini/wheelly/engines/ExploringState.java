@@ -47,9 +47,10 @@ import static org.mmarini.yaml.schema.Validator.*;
 /**
  * Generates the behavior to explore environment.
  * <p>
- * Turns the robot toward the unknown sectors or moves the robot to the furthest obstacle.
+ * Turns the sensor toward the unknown sectors if in front
+ * or turns the robot toward the unknown sectors
+ * or moves the robot to the furthest obstacle.
  * The front sector is prioritized on the other sectors.
- * Auto scan mey be activated.<br>
  * <code>blocked</code> is generated at contact sensors signals.<br>
  * <code>timeout</code> is generated at timeout.
  * </p>
@@ -75,7 +76,6 @@ public class ExploringState extends AbstractStateNode {
         int maxMoveDirection = locator.path("maxMoveDirection").getNode(root).asInt();
         ProcessorCommand onInit = ProcessorCommand.concat(
                 loadTimeout(root, locator, id),
-                loadAutoScanOnInit(root, locator, id),
                 ProcessorCommand.setProperties(Map.of(
                         id + ".minMoveDistance", minMoveDistance,
                         id + ".maxMoveDirection", maxMoveDirection
@@ -189,14 +189,7 @@ public class ExploringState extends AbstractStateNode {
     }
 
     @Override
-    public void entry(ProcessorContext context) {
-        super.entry(context);
-        entryAutoScan(context);
-    }
-
-    @Override
     public String step(ProcessorContext context) {
-        tickAutoScan(context);
         if (isBlocked(context)) {
             // Halt robot and move forward the sensor at block
             context.haltRobot();
@@ -215,14 +208,21 @@ public class ExploringState extends AbstractStateNode {
         int sectorIndex = findSectorTarget(polarMap, minMoveDistance);
         CircularSector[] sectors = polarMap.getSectors();
         CircularSector sector = sectors[sectorIndex];
-        int maxMoveDirection = getInt(context, "maxMoveDirection");
-        // Compute speed
-        int dDirection = (int) round(toDegrees(polarMap.sectorDirection(sectorIndex)));
+        int sectorDirection = (int) round(toDegrees(polarMap.sectorDirection(sectorIndex)));
+        if (!sector.isKnown() && abs(sectorDirection) <= 90) {
+            // scan to the sectorDirection
+            logger.debug("{}: scan {} DEG", getId(), sectorDirection);
+            context.moveSensor(sectorDirection);
+            context.haltRobot();
+            return null;
+        }
         double distance = sector.getDistance();
-        float speed = abs(dDirection) < maxMoveDirection && (distance == 0 || distance >= minMoveDistance)
+        int maxMoveDirection = getInt(context, "maxMoveDirection");
+        float speed = abs(sectorDirection) < maxMoveDirection && (distance == 0 || distance >= minMoveDistance)
                 ? 1 : 0;
+        // Compute speed
         int robotDir = context.getRobotStatus().getDirection();
-        int dir = normalizeDegAngle(robotDir + dDirection);
+        int dir = normalizeDegAngle(robotDir + sectorDirection);
         String sectorAttribute;
         if (!sector.isKnown()) {
             sectorAttribute = "unknown";
@@ -236,6 +236,7 @@ public class ExploringState extends AbstractStateNode {
         } else {
             logger.debug("{}: move to {} sector {} DEG, {}", getId(), sectorAttribute, dir, speed);
         }
+        context.moveSensor(0);
         context.moveRobot(dir, speed);
         return null;
     }
