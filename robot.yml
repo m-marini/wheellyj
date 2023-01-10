@@ -12,7 +12,7 @@ configurations:
     errSigma: 0.05
     errSensor: 0.05
     radarGrid: 0.14
-    radarReceptiveDistance: 0.1
+    radarReceptiveDistance: 0.2
     radarWidth: 71
     radarHeight: 71
     radarPersistence: 300000
@@ -23,7 +23,7 @@ configurations:
     connectionTimeout: 10000
     readTimeout: 3000
     radarGrid: 0.14
-    radarReceptiveDistance: 0.1
+    radarReceptiveDistance: 0.2
     radarWidth: 71
     radarHeight: 71
     radarPersistence: 300000

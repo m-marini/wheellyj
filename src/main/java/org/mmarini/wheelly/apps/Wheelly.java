@@ -253,7 +253,7 @@ public class Wheelly {
                     long start = System.currentTimeMillis();
                     float avgRewards = 0;
                     Map<String, Signal> state = env.reset();
-                    WheellyStatus status = robot.getStatus();
+                    RobotStatus status = robot.getStatus();
                     if (robot instanceof SimRobot) {
                         Optional<ObstacleMap> obstaclesMap = ((SimRobot) robot).getObstaclesMap();
                         obstaclesMap.map(ObstacleMap::getPoints)

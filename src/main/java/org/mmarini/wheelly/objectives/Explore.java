@@ -26,19 +26,19 @@
 package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.eclipse.collections.api.block.function.primitive.FloatFunction;
+import org.eclipse.collections.api.block.function.primitive.DoubleFunction;
 import org.mmarini.wheelly.apis.MapSector;
-import org.mmarini.wheelly.apis.WheellyStatus;
+import org.mmarini.wheelly.apis.RadarMap;
+import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 import static java.lang.Math.abs;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.*;
-import static org.mmarini.wheelly.apis.SimRobot.MAX_VELOCITY;
+import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
 import static org.mmarini.wheelly.apis.Utils.clip;
 import static org.mmarini.yaml.schema.Validator.nonNegativeInteger;
 
@@ -56,28 +56,30 @@ public interface Explore {
      * @param root    the root json document
      * @param locator the locator
      */
-    static FloatFunction<WheellyStatus> create(JsonNode root, Locator locator) {
+    static DoubleFunction<RobotStatus> create(JsonNode root, Locator locator) {
         VALIDATOR.apply(locator).accept(root);
         double sensorRange = locator.path("sensorRange").getNode(root).asDouble();
         return explore(sensorRange);
     }
 
-    static FloatFunction<WheellyStatus> explore(double sensorRange) {
+    static DoubleFunction<RobotStatus> explore(double sensorRange) {
         return status -> {
-            if (!status.getCanMoveBackward() || !status.getCanMoveForward()) {
+            if (!status.canMoveBackward() || !status.canMoveForward()) {
                 // Avoid contacts
                 return -1;
             }
-            MapSector[] map = status.getRadarMap().getSectors();
-            long knownSectorsNumber = Arrays.stream(map).filter(MapSector::isKnown).count();
+            RadarMap radarMap = status.getRadarMap();
+            long knownSectorsNumber = radarMap.getSectorsStream()
+                    .filter(MapSector::isKnown)
+                    .count();
             // encourages the exploration of unfamiliar areas
-            double isKnown = ((double) knownSectorsNumber) / map.length;
+            double isKnown = ((double) knownSectorsNumber) / radarMap.getSectorsNumber();
             // encourages the linear speed
-            double linSpeed = (status.getRightPps() + status.getLeftPps()) / MAX_VELOCITY / 2;
+            double linSpeed = (status.getRightPps() + status.getLeftPps()) / MAX_PPS / 2;
             double isLinearSpeed = clip(linSpeed, 0, 1);
             int sensor = status.getSensorDirection();
             double isFrontSensor = not(positive(abs(sensor), sensorRange));
-            return (float) defuzzy(0, 1, and(isLinearSpeed, isKnown, isFrontSensor));
+            return defuzzy(0, 1, and(isLinearSpeed, isKnown, isFrontSensor));
         };
     }
 }

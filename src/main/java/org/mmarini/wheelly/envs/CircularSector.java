@@ -28,71 +28,98 @@ package org.mmarini.wheelly.envs;
 /**
  * Circular sector is a space area that keeps the distance of nearest obstacle in the area and if it has been scanned
  */
-public class CircularSector {
-    private double distance;
-    private long timestamp;
+public interface CircularSector {
+
+    CircularSector UNKNOWN = new CircularSector() {
+        @Override
+        public double getDistance() {
+            return 0;
+        }
+
+        @Override
+        public long getTimestamp() {
+            return 0;
+        }
+
+        @Override
+        public boolean hasObstacle() {
+            return false;
+        }
+
+        @Override
+        public boolean isKnown() {
+            return false;
+        }
+    };
 
     /**
-     * Creates a sector without measure
-     */
-    public CircularSector() {
-        this(0, 0);
-    }
-
-    /**
-     * Creates a sector
+     * Returns a hindered sector with obstacle at specific distance
      *
-     * @param timestamp the timestamp of measure (ms)
-     * @param distance  the distance (m)
+     * @param timestamp the sector status timastamp
+     * @param distance  the obstacle
      */
-    public CircularSector(long timestamp, double distance) {
-        this.distance = distance;
-        this.timestamp = timestamp;
+    static CircularSector create(long timestamp, double distance) {
+        return new CircularSector() {
+            @Override
+            public double getDistance() {
+                return distance;
+            }
+
+            @Override
+            public long getTimestamp() {
+                return timestamp;
+            }
+
+            @Override
+            public boolean hasObstacle() {
+                return distance > 0;
+            }
+
+            @Override
+            public boolean isKnown() {
+                return true;
+            }
+        };
     }
 
     /**
-     * Returns the distance of obstacle
-     */
-    public double getDistance() {
-        return distance;
-    }
-
-    /**
-     * Sets the distance of obstacle
+     * Returns an empty sector
      *
-     * @param distance the distance (m)
+     * @param timestamp the sector status timastamp
      */
-    public void setDistance(double distance) {
-        this.distance = distance;
+    static CircularSector empty(long timestamp) {
+        return new CircularSector() {
+            @Override
+            public double getDistance() {
+                return 0;
+            }
+
+            @Override
+            public long getTimestamp() {
+                return timestamp;
+            }
+
+            @Override
+            public boolean hasObstacle() {
+                return false;
+            }
+
+            @Override
+            public boolean isKnown() {
+                return true;
+            }
+        };
     }
 
-    /**
-     * Returns the timestamp of measure (0 if none)
-     */
-    public long getTimestamp() {
-        return timestamp;
+    static CircularSector unknown() {
+        return UNKNOWN;
     }
 
-    /**
-     * Sets the timestamp of measure
-     *
-     * @param timestamp the timestamp (ms) 0 if none
-     */
-    public void setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
-    }
+    double getDistance();
 
-    /**
-     * Returns true if the sector contains an obstacle
-     */
-    public boolean hasObstacle() {
-        return timestamp > 0 && distance > 0;
-    }
+    long getTimestamp();
 
-    /**
-     * Returns true is the sector has been scanned
-     */
-    public boolean isKnown() {
-        return timestamp > 0;
-    }
+    boolean hasObstacle();
+
+    boolean isKnown();
 }

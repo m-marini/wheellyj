@@ -33,7 +33,6 @@ import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.util.Map;
 
-import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.yaml.schema.Validator.*;
 
@@ -81,16 +80,15 @@ public class MockRobot implements RobotApi {
     }
 
     @Override
-    public WheellyStatus getStatus() {
-        WheellyStatus wheellyStatus = new WheellyStatus(time, 0, 0,
-                robotDir,
-                sensorDir, round(sensorDistance / WheellyStatus.DISTANCE_SCALE),
-                0, 0,
-                0, 0,
-                0, false,
-                false, 0, false, resetTime, null);
-        wheellyStatus.setLocation(robotPos);
-        return wheellyStatus;
+    public RobotStatus getStatus() {
+
+        return RobotStatus.create()
+                .setTime(time)
+                .setDirection(robotDir)
+                .setSensorDirection(sensorDir)
+                .setEchoDistance(sensorDistance)
+                .setResetTime(resetTime)
+                .setLocation(robotPos);
     }
 
     @Override
@@ -98,7 +96,7 @@ public class MockRobot implements RobotApi {
     }
 
     @Override
-    public void move(int dir, float speed) {
+    public void move(int dir, double speed) {
     }
 
     @Override

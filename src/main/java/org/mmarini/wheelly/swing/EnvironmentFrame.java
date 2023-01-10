@@ -27,7 +27,7 @@ package org.mmarini.wheelly.swing;
 
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
-import org.mmarini.wheelly.apis.WheellyStatus;
+import org.mmarini.wheelly.apis.RobotStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -126,7 +126,7 @@ public class EnvironmentFrame extends JFrame {
         envPanel.setObstacleMap(map);
     }
 
-    public void setObstacleSize(float obstacleSize) {
+    public void setObstacleSize(double obstacleSize) {
         this.envPanel.setObstacleSize(obstacleSize);
     }
 
@@ -139,18 +139,8 @@ public class EnvironmentFrame extends JFrame {
      *
      * @param status the robot status
      */
-    public void setRobotStatus(WheellyStatus status) {
-        envPanel.setRobotLocation(status.getLocation());
-        envPanel.setRobotDirection(status.getDirection());
-        envPanel.setSensorDirection(status.getSensorDirection());
-        envPanel.setObstacleLocation(status.getSensorObstacle().orElse(null));
-        envPanel.setTime(status.getElapsed());
-        envPanel.setDistance((float) status.getSampleDistance());
-        envPanel.setContacts(status.getProximity());
-        envPanel.setCanMoveForward(status.getCanMoveForward());
-        envPanel.setCanMoveBackward(status.getCanMoveBackward());
-        envPanel.setRadarMap(status.getRadarMap());
-        envPanel.setImuFailure(status.getImuFailure());
+    public void setRobotStatus(RobotStatus status) {
+        envPanel.setRobotStatus(status);
     }
 
     public void setTimeRatio(float timeRatio) {

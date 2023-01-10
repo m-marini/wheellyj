@@ -33,21 +33,21 @@ import static java.lang.Math.round;
  * The grid topology
  */
 public class GridTopology {
-    private final float gridSize;
+    private final double gridSize;
 
     /**
      * Create the grid topology
      *
-     * @param gridSize
+     * @param gridSize the grid size
      */
-    public GridTopology(float gridSize) {
+    public GridTopology(double gridSize) {
         this.gridSize = gridSize;
     }
 
     /**
      * Returns the grid size
      */
-    public float getGridSize() {
+    public double getGridSize() {
         return gridSize;
     }
 
@@ -57,7 +57,7 @@ public class GridTopology {
      * @param x the x coordinate
      * @param y the y coordinate
      */
-    public float[] snap(float x, float y) {
+    public double[] snap(double x, double y) {
         int[] grid = toGridCoords(x, y);
         return toWorldCoords(grid);
     }
@@ -68,10 +68,10 @@ public class GridTopology {
      * @param x x world coordinate
      * @param y y world coordinate
      */
-    public int[] toGridCoords(float x, float y) {
+    public int[] toGridCoords(double x, double y) {
         return new int[]{
-                round(x / gridSize),
-                round(y / gridSize)};
+                (int) round(x / gridSize),
+                (int) round(y / gridSize)};
     }
 
     /**
@@ -80,7 +80,7 @@ public class GridTopology {
      * @param x x world coordinate
      * @param y y world coordinate
      */
-    public Point toGridPoint(float x, float y) {
+    public Point toGridPoint(double x, double y) {
         int[] grid = toGridCoords(x, y);
         return new Point(grid[0], grid[1]);
     }
@@ -91,8 +91,8 @@ public class GridTopology {
      * @param x x grid coordinate
      * @param y y grid coordinate
      */
-    public float[] toWorldCoords(int x, int y) {
-        return new float[]{x * gridSize, y * gridSize};
+    public double[] toWorldCoords(int x, int y) {
+        return new double[]{x * gridSize, y * gridSize};
     }
 
     /**
@@ -100,7 +100,7 @@ public class GridTopology {
      *
      * @param coords the grid coordinate
      */
-    public float[] toWorldCoords(int[] coords) {
+    public double[] toWorldCoords(int[] coords) {
         return toWorldCoords(coords[0], coords[1]);
     }
 
@@ -109,7 +109,7 @@ public class GridTopology {
      *
      * @param location the grid location
      */
-    public float[] toWorldCoords(Point location) {
+    public double[] toWorldCoords(Point location) {
         return toWorldCoords(location.x, location.y);
     }
 }

@@ -172,7 +172,7 @@ public class RobotExecutor {
                 long start = System.currentTimeMillis();
                 float avgRewards = 0;
                 agent.init();
-                WheellyStatus status = robot.getStatus();
+                RobotStatus status = robot.getStatus();
                 if (robot instanceof SimRobot) {
                     Optional<ObstacleMap> obstaclesMap = ((SimRobot) robot).getObstaclesMap();
                     obstaclesMap.map(ObstacleMap::getPoints)

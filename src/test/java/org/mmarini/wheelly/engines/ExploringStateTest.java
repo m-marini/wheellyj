@@ -46,8 +46,8 @@ class ExploringStateTest {
 
         CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i ->
                 (i == 1 || i >= 10 && i <= 12)
-                        ? new CircularSector(1, 0)
-                        : new CircularSector(1, 1)
+                        ? CircularSector.empty(1)
+                        : CircularSector.create(1, 1)
         ).toArray(CircularSector[]::new);
 
         int result = ExploringState.findSectorTarget(createPolarMap(sectors), 0);
@@ -59,8 +59,8 @@ class ExploringStateTest {
     void findLargerIntervalFirst() {
         CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i ->
                 i <= 1
-                        ? new CircularSector(1, 0)
-                        : new CircularSector(1, 1)
+                        ? CircularSector.empty(1)
+                        : CircularSector.create(1, 1)
         ).toArray(CircularSector[]::new);
 
         int result = ExploringState.findSectorTarget(createPolarMap(sectors), 0);
@@ -71,7 +71,7 @@ class ExploringStateTest {
     @Test
     void findLargerIntervalFull() {
         CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i ->
-                new CircularSector(1, 0)
+                CircularSector.empty(1)
         ).toArray(CircularSector[]::new);
 
         int result = ExploringState.findSectorTarget(createPolarMap(sectors), 0);
@@ -83,8 +83,8 @@ class ExploringStateTest {
     void findLargerIntervalLast() {
         CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i ->
                 i >= 22
-                        ? new CircularSector(1, 0)
-                        : new CircularSector(1, 1)
+                        ? CircularSector.empty(1)
+                        : CircularSector.create(1, 1)
         ).toArray(CircularSector[]::new);
 
         int result = ExploringState.findSectorTarget(createPolarMap(sectors), 0);
@@ -96,8 +96,8 @@ class ExploringStateTest {
     void findLargerIntervalNone() {
         CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i ->
                 i == 3 || i == 13
-                        ? new CircularSector(1, 1 + i / 10D)
-                        : new CircularSector(1, 1)
+                        ? CircularSector.create(1, 1 + i / 10D)
+                        : CircularSector.create(1, 1)
         ).toArray(CircularSector[]::new);
 
         int result = ExploringState.findSectorTarget(createPolarMap(sectors), 0);
@@ -109,8 +109,8 @@ class ExploringStateTest {
     void findLargerIntervalWrapped() {
         CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i ->
                 (i <= 1 || i >= 22)
-                        ? new CircularSector(1, 0)
-                        : new CircularSector(1, 1)
+                        ? CircularSector.empty(1)
+                        : CircularSector.create(1, 1)
         ).toArray(CircularSector[]::new);
 
         int result = ExploringState.findSectorTarget(createPolarMap(sectors), 0);

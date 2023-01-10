@@ -26,6 +26,7 @@
 package org.mmarini.wheelly.swing;
 
 import org.mmarini.Tuple2;
+import org.mmarini.wheelly.apis.RobotStatus;
 
 import java.awt.*;
 import java.awt.geom.AffineTransform;
@@ -36,7 +37,6 @@ import java.util.List;
 
 import static java.lang.Math.toRadians;
 import static java.lang.String.format;
-import static java.util.Objects.requireNonNull;
 
 /**
  * The canvas with environment display
@@ -133,26 +133,16 @@ public class EnvironmentPanel extends RadarPanel {
     }
 
     private Shape obstacleShape;
-    private Point2D robotLocation;
-    private int robotDirection;
-    private int sensorDirection;
-    private Point2D obstacleLocation;
-    private List<Point2D> obstacleMap;
-    private int contacts;
-    private float distance;
-    private float reward;
-    private boolean canMoveForward;
-    private boolean canMoveBackward;
-    private long time;
-    private float timeRatio;
     private boolean hudAtRight;
     private boolean hudAtBottom;
-    private int imuFailure;
+    private List<Point2D> obstacleMap;
+    private float reward;
+    private RobotStatus robotStatus;
+    private float timeRatio;
 
     public EnvironmentPanel() {
         setFont(Font.decode("Monospaced"));
         setScale(DEFAULT_SCALE);
-        robotLocation = new Point2D.Float();
         setObstacleSize(OBSTACLE_SIZE);
     }
 
@@ -169,7 +159,7 @@ public class EnvironmentPanel extends RadarPanel {
         return result;
     }
 
-    private void drawHUD(Graphics g) {
+    private void drawHUD(Graphics g, RobotStatus status, double reward, double timeRatio) {
         Graphics2D g1 = (Graphics2D) g;
         AffineTransform tr = g1.getTransform();
 
@@ -185,18 +175,18 @@ public class EnvironmentPanel extends RadarPanel {
         g1.setColor(HUD_BACKGROUND_COLOR);
         g1.fillRect(0, 0, HUD_WIDTH, hudHeight);
         g1.setColor(getForeground());
-        drawLine(g1, format("Time     %s %.1fx", strDate(time), timeRatio), 0, Color.GREEN);
+        drawLine(g1, format("Time     %s %.1fx", strDate(status.getTime()), timeRatio), 0, Color.GREEN);
         drawLine(g1, format("Reward   %.2f", reward), 1, Color.GREEN);
-        drawLine(g1, format("Distance %.2f m", distance), 2, Color.GREEN);
-        drawLine(g1, format("Contacts 0x%x", contacts), 3, Color.GREEN);
-        if (!canMoveForward) {
+        drawLine(g1, format("Distance %.2f m", status.getEchoDistance()), 2, Color.GREEN);
+        drawLine(g1, format("Contacts 0x%x", status.getContacts()), 3, Color.GREEN);
+        if (!status.canMoveForward()) {
             drawLine(g1, "FORWARD  STOP", 4, Color.RED);
         }
-        if (!canMoveBackward) {
+        if (!status.canMoveBackward()) {
             drawLine(g1, "BACKWARD STOP", 5, Color.RED);
         }
-        if (imuFailure != 0) {
-            drawLine(g1, format("Imu failure: 0x%x", imuFailure), 6, Color.RED);
+        if (status.getImuFailure() != 0) {
+            drawLine(g1, format("Imu failure: 0x%x", status.getImuFailure()), 6, Color.RED);
         }
         g1.setTransform(tr);
     }
@@ -267,64 +257,43 @@ public class EnvironmentPanel extends RadarPanel {
 
     @Override
     protected void paintComponent(Graphics g) {
-        Point2D location = robotLocation;
-        int robotDir = robotDirection;
-        int sensDir = sensorDirection;
-        List<Point2D> obsMap = obstacleMap;
-        List<Tuple2<Point2D, Color>> radarMap1 = getRadarMap();
         Dimension size = getSize();
         g.setColor(getBackground());
         g.fillRect(0, 0, size.width, size.height);
-        Graphics2D gr = (Graphics2D) g.create();
-        gr.transform(createBaseTransform());
-        AffineTransform base = gr.getTransform();
-        drawGrid(gr);
+        RobotStatus status = this.robotStatus;
+        if (status != null) {
+            // compute hud position
+            hudAtBottom = !hudAtBottom && status.getLocation().getY() > DEFAULT_WORLD_SIZE / 6
+                    || (!hudAtBottom || !(status.getLocation().getY() < -DEFAULT_WORLD_SIZE / 6))
+                    && hudAtBottom;
+            hudAtRight = !hudAtRight && status.getLocation().getX() < -DEFAULT_WORLD_SIZE / 6
+                    || (!hudAtRight || !(status.getLocation().getY() > DEFAULT_WORLD_SIZE / 6))
+                    && hudAtRight;
+            Graphics2D gr = (Graphics2D) g.create();
+            gr.transform(createBaseTransform());
+            AffineTransform base = gr.getTransform();
+            drawGrid(gr);
 
-        gr.setTransform(base);
-        drawMap(gr, obsMap);
+            gr.setTransform(base);
+            drawMap(gr, obstacleMap);
 
-        gr.setTransform(base);
-        drawSensor(gr, location, robotDir, sensDir);
+            gr.setTransform(base);
+            drawSensor(gr, status.getLocation(), status.getDirection(), status.getSensorDirection());
 
-        gr.setTransform(base);
-        drawObstacle(gr, obstacleLocation, OBSTACLE_COLOR);
+            gr.setTransform(base);
+            status.getSensorObstacle()
+                    .ifPresent(point -> drawObstacle(gr, point, OBSTACLE_COLOR));
 
-        gr.setTransform(base);
-        drawRadarMap(gr, radarMap1);
+            gr.setTransform(base);
+            List<Tuple2<Point2D, Color>> radarMap = createMap(status.getRadarMap());
+            Shape sectorShape = createSectorShape(status.getRadarMap());
+            drawRadarMap(gr, radarMap, sectorShape);
 
-        gr.setTransform(base);
-        drawRobot(gr, location, robotDir);
+            gr.setTransform(base);
+            drawRobot(gr, status.getLocation(), status.getDirection());
 
-        drawHUD(g);
-    }
-
-    public void setCanMoveBackward(boolean canMoveBackward) {
-        this.canMoveBackward = canMoveBackward;
-        repaint();
-    }
-
-    public void setCanMoveForward(boolean canMoveForward) {
-        this.canMoveForward = canMoveForward;
-        repaint();
-    }
-
-    public void setContacts(int contacts) {
-        this.contacts = contacts;
-        repaint();
-    }
-
-    public void setDistance(float distance) {
-        this.distance = distance;
-        repaint();
-    }
-
-    public void setImuFailure(int imuFailure) {
-        this.imuFailure = imuFailure;
-    }
-
-    public void setObstacleLocation(Point2D obstacleLocation) {
-        this.obstacleLocation = obstacleLocation;
-        repaint();
+            drawHUD(g, robotStatus, reward, timeRatio);
+        }
     }
 
     public void setObstacleMap(List<Point2D> obstacleMap) {
@@ -332,11 +301,11 @@ public class EnvironmentPanel extends RadarPanel {
         repaint();
     }
 
-    public void setObstacleSize(float obstacleSize) {
-        this.obstacleShape = new Rectangle2D.Float(
+    public void setObstacleSize(double obstacleSize) {
+        this.obstacleShape = new Rectangle2D.Double(
                 -obstacleSize / 2, -obstacleSize / 2,
                 obstacleSize, obstacleSize);
-
+        repaint();
     }
 
     public void setReward(float reward) {
@@ -344,31 +313,46 @@ public class EnvironmentPanel extends RadarPanel {
         repaint();
     }
 
-    public void setRobotDirection(int robotDirection) {
-        this.robotDirection = robotDirection;
-        repaint();
-    }
-
-    void setRobotLocation(Point2D location) {
-        this.robotLocation = (Point2D) requireNonNull(location).clone();
-        // compute hud position
-        hudAtBottom = !hudAtBottom && robotLocation.getY() > DEFAULT_WORLD_SIZE / 6 || (!hudAtBottom || !(robotLocation.getY() < -DEFAULT_WORLD_SIZE / 6)) && hudAtBottom;
-        hudAtRight = !hudAtRight && robotLocation.getX() < -DEFAULT_WORLD_SIZE / 6 || (!hudAtRight || !(robotLocation.getY() > DEFAULT_WORLD_SIZE / 6)) && hudAtRight;
-
-        repaint();
-    }
-
-    public void setSensorDirection(int sensorDirection) {
-        this.sensorDirection = sensorDirection;
-        repaint();
-    }
-
-    public void setTime(long time) {
-        this.time = time;
+    public void setRobotStatus(RobotStatus status) {
+        this.robotStatus = status;
         repaint();
     }
 
     public void setTimeRatio(float timeRatio) {
         this.timeRatio = timeRatio;
+        repaint();
     }
+
+    /*
+    static class PanelData {
+
+        PanelData(RobotStatus robotStatus, float timeRatio, float reward, List<Point2D> obstacleMap) {
+            this.robotStatus = robotStatus;
+            this.timeRatio = timeRatio;
+            this.obstacleMap = obstacleMap;
+            this.reward = reward;
+        }
+
+        public PanelData setObstacleMap(List<Point2D> obstacleMap) {
+            return new PanelData(robotStatus, timeRatio,
+                    reward, obstacleMap
+            );
+        }
+
+        public PanelData setReward(float reward) {
+            return new PanelData(robotStatus, timeRatio,
+                    reward, obstacleMap
+            );
+        }
+
+        public PanelData setRobotStatus(RobotStatus robotStatus) {
+            return new PanelData(robotStatus, timeRatio, reward, obstacleMap);
+        }
+
+        public PanelData setTimeRatio(float timeRatio) {
+            return new PanelData(robotStatus, timeRatio, reward, obstacleMap);
+        }
+    }
+
+     */
 }

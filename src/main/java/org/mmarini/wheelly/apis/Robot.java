@@ -88,7 +88,7 @@ public class Robot implements RobotApi {
      * @param cleanInterval          the radar clean interval (ms)
      * @param radarReceptiveDistance the radar receptive distance (m)
      */
-    public static Robot create(String robotHost, int port, RadarMap radarMap, long radarPersistence, long cleanInterval, float radarReceptiveDistance) {
+    public static Robot create(String robotHost, int port, RadarMap radarMap, long radarPersistence, long cleanInterval, double radarReceptiveDistance) {
         return Robot.create(robotHost, port, DEFAULT_CONNECTION_TIMEOUT, DEFAULT_READ_TIMEOUT, radarMap, radarPersistence, cleanInterval, radarReceptiveDistance);
     }
 
@@ -106,10 +106,10 @@ public class Robot implements RobotApi {
         long readTimeout = locator.path("readTimeout").getNode(root).asLong();
         int radarWidth = locator.path("radarWidth").getNode(root).asInt();
         int radarHeight = locator.path("radarHeight").getNode(root).asInt();
-        float radarGrid = (float) locator.path("radarGrid").getNode(root).asDouble();
+        double radarGrid = locator.path("radarGrid").getNode(root).asDouble();
         long radarCleanInterval = locator.path("radarCleanInterval").getNode(root).asLong();
         long radarPersistence = locator.path("radarPersistence").getNode(root).asLong();
-        float radarReceptiveDistance = (float) locator.path("radarReceptiveDistance").getNode(root).asDouble();
+        double radarReceptiveDistance = locator.path("radarReceptiveDistance").getNode(root).asDouble();
         RadarMap radarMap = RadarMap.create(radarWidth, radarHeight, new Point2D.Float(), radarGrid);
         return Robot.create(host, port, connectionTimeout, readTimeout, radarMap, radarPersistence, radarCleanInterval, radarReceptiveDistance);
     }
@@ -126,7 +126,7 @@ public class Robot implements RobotApi {
      * @param cleanInterval          the radar clean interval (ms)
      * @param radarReceptiveDistance the radar receptive distance (m)
      */
-    public static Robot create(String robotHost, int port, long connectionTimeout, long readTimeout, RadarMap radarMap, long radarPersistence, long cleanInterval, float radarReceptiveDistance) {
+    public static Robot create(String robotHost, int port, long connectionTimeout, long readTimeout, RadarMap radarMap, long radarPersistence, long cleanInterval, double radarReceptiveDistance) {
         RobotSocket socket = new RobotSocket(robotHost, port, connectionTimeout, readTimeout);
         return new Robot(socket, radarMap, radarPersistence, cleanInterval, radarReceptiveDistance);
     }
@@ -134,9 +134,9 @@ public class Robot implements RobotApi {
     private final RobotSocket socket;
     private final long radarPersistence;
     private final long cleanInterval;
-    private final float radarReceptiveDistance;
+    private final double radarReceptiveDistance;
     private Long timestampOffset;
-    private WheellyStatus status;
+    private RobotStatus status;
     private long cleanTimeout;
 
     /**
@@ -148,11 +148,10 @@ public class Robot implements RobotApi {
      * @param cleanInterval          the radar clean interval (ms)
      * @param radarReceptiveDistance the radar threshold distance (m)
      */
-    public Robot(RobotSocket socket, RadarMap radarMap, long radarPersistence, long cleanInterval, float radarReceptiveDistance) {
+    public Robot(RobotSocket socket, RadarMap radarMap, long radarPersistence, long cleanInterval, double radarReceptiveDistance) {
         this.socket = socket;
         this.radarReceptiveDistance = radarReceptiveDistance;
-        status = WheellyStatus.create();
-        status.setRadarMap(radarMap);
+        status = RobotStatus.create().setRadarMap(radarMap);
         this.radarPersistence = radarPersistence;
         this.cleanInterval = cleanInterval;
     }
@@ -163,7 +162,7 @@ public class Robot implements RobotApi {
     }
 
     @Override
-    public WheellyStatus getStatus() {
+    public RobotStatus getStatus() {
         return status;
     }
 
@@ -173,15 +172,14 @@ public class Robot implements RobotApi {
     }
 
     @Override
-    public void move(int dir, float speed) {
+    public void move(int dir, double speed) {
         writeCommand(format(Locale.ENGLISH, "mv %d %d", dir, round(speed * MAX_SPEED_VALUE)));
     }
 
     @Override
     public void reset() {
         long time = System.currentTimeMillis();
-        status.setTime(time);
-        status.setResetTime(time);
+        status = status.setTime(time).setResetTime(time);
     }
 
     @Override
@@ -243,13 +241,13 @@ public class Robot implements RobotApi {
                     }
                     try {
                         // Create the new status
-                        status = status.updateFromString(line, radarReceptiveDistance);
-                        RadarMap radarMap = status.getRadarMap();
-                        if (radarMap != null) {
-                            if (time >= this.cleanTimeout) {
-                                radarMap.clean(time - this.radarPersistence);
-                                cleanTimeout = time + cleanInterval;
-                            }
+                        status = status.setWheellyStatus(WheellyStatus.create(line)).update(radarReceptiveDistance);
+                        if (time >= this.cleanTimeout) {
+                            RadarMap radarMap = status.getRadarMap();
+                            RadarMap newRadarMap = radarMap.clean(time - this.radarPersistence);
+                            cleanTimeout = time + cleanInterval;
+                            status = status.setRadarMap(newRadarMap);
+
                         }
                     } catch (Throwable ignored) {
                     }

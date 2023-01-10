@@ -29,7 +29,7 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.WheellyStatus;
+import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.yaml.schema.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,14 +77,14 @@ public class AvoidingState extends AbstractStateNode {
             ctx.haltRobot();
             return TIMEOUT_EXIT;
         }
-        WheellyStatus status = ctx.getRobotStatus();
+        RobotStatus status = ctx.getRobotStatus();
         int dir = status.getDirection();
-        if (status.getCanMoveForward()) {
+        if (status.canMoveForward()) {
             // move robot forward
             ctx.moveRobot(dir, 1F);
             return null;
         }
-        if (status.getCanMoveBackward()) {
+        if (status.canMoveBackward()) {
             // move robot backward
             ctx.moveRobot(dir, -1F);
             return null;

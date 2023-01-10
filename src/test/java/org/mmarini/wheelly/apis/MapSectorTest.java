@@ -46,7 +46,7 @@ class MapSectorTest {
         sector.clean(timestamp - 1);
 
         assertTrue(sector.isKnown());
-        assertTrue(sector.isFilled());
+        assertTrue(sector.hasObstacle());
         assertEquals(timestamp, sector.getTimestamp());
     }
 
@@ -56,7 +56,7 @@ class MapSectorTest {
         long timestamp = System.currentTimeMillis();
         MapSector sector = new MapSector(sectorLocation, timestamp, true);
 
-        sector.clean(timestamp);
+        sector = sector.clean(timestamp);
 
         assertFalse(sector.isKnown());
         assertEquals(0L, sector.getTimestamp());
@@ -79,10 +79,10 @@ class MapSectorTest {
         Point2D sectorLocation = new Point2D.Float(0, 1F);
         MapSector sector = new MapSector(sectorLocation, 0, false);
 
-        sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
+        sector = sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
 
         assertTrue(sector.isKnown());
-        assertFalse(sector.isFilled());
+        assertFalse(sector.hasObstacle());
         assertEquals(timestamp, sector.getTimestamp());
     }
 
@@ -103,10 +103,10 @@ class MapSectorTest {
         Point2D sectorLocation = new Point2D.Float(0, 2F);
         MapSector sector = new MapSector(sectorLocation, 0, false);
 
-        sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
+        sector = sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
 
         assertTrue(sector.isKnown());
-        assertTrue(sector.isFilled());
+        assertTrue(sector.hasObstacle());
         assertEquals(timestamp, sector.getTimestamp());
     }
 
@@ -127,10 +127,10 @@ class MapSectorTest {
         Point2D sectorLocation = new Point2D.Float(0, 2.99F);
         MapSector sector = new MapSector(sectorLocation, 0, false);
 
-        sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
+        sector = sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
 
         assertTrue(sector.isKnown());
-        assertFalse(sector.isFilled());
+        assertFalse(sector.hasObstacle());
         assertEquals(timestamp, sector.getTimestamp());
     }
 
@@ -151,10 +151,10 @@ class MapSectorTest {
         Point2D sectorLocation = new Point2D.Float(0, 2.99F);
         MapSector sector = new MapSector(sectorLocation, 0, false);
 
-        sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
+        sector = sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
 
         assertTrue(sector.isKnown());
-        assertFalse(sector.isFilled());
+        assertFalse(sector.hasObstacle());
         assertEquals(timestamp, sector.getTimestamp());
     }
 
@@ -175,10 +175,10 @@ class MapSectorTest {
         long timestamp = System.currentTimeMillis();
         RadarMap.SensorSignal signal = new RadarMap.SensorSignal(sensLocation, sensDir, distance, timestamp);
 
-        sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
+        sector = sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
 
         assertTrue(sector.isKnown());
-        assertFalse(sector.isFilled());
+        assertFalse(sector.hasObstacle());
         assertEquals(timestamp, sector.getTimestamp());
     }
 
@@ -199,7 +199,7 @@ class MapSectorTest {
         Point2D sectorLocation = new Point2D.Float(0, 1);
         MapSector sector = new MapSector(sectorLocation, 0, false);
 
-        sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
+        sector = sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
 
         assertFalse(sector.isKnown());
     }
@@ -221,7 +221,7 @@ class MapSectorTest {
         Point2D sectorLocation = new Point2D.Float(0, 3.01F);
         MapSector sector = new MapSector(sectorLocation, 0, false);
 
-        sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
+        sector = sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
 
         assertFalse(sector.isKnown());
     }
@@ -243,7 +243,7 @@ class MapSectorTest {
         Point2D sectorLocation = new Point2D.Float(0, 2.21F);
         MapSector sector = new MapSector(sectorLocation, 0, false);
 
-        sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
+        sector = sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
 
         assertFalse(sector.isKnown());
     }
@@ -265,7 +265,7 @@ class MapSectorTest {
         Point2D sectorLocation = new Point2D.Float(0, 0.29F);
         MapSector sector = new MapSector(sectorLocation, 0, false);
 
-        sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
+        sector = sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
 
         assertFalse(sector.isKnown());
     }

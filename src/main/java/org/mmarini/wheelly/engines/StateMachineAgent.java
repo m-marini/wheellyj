@@ -31,7 +31,7 @@ package org.mmarini.wheelly.engines;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotApi;
-import org.mmarini.wheelly.apis.WheellyStatus;
+import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.envs.PolarMap;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
@@ -92,8 +92,8 @@ public class StateMachineAgent implements Closeable {
     private final long interval;
     private final long commandInterval;
     private final long reactionInterval;
-    private final PolarMap polarMap;
     private final float maxRadarDistance;
+    private PolarMap polarMap;
     private long lastMoveTime;
     private long lastScanTime;
     private int lastScanDir;
@@ -201,7 +201,7 @@ public class StateMachineAgent implements Closeable {
      * @param time the time to read
      */
     private void readStatus(long time) {
-        WheellyStatus status = robot.getStatus();
+        RobotStatus status = robot.getStatus();
         long timeout = status.getTime() + time;
         do {
             robot.tick(interval);
@@ -209,7 +209,8 @@ public class StateMachineAgent implements Closeable {
             processCommand();
         } while (!(status != null && status.getTime() >= timeout));
         context.setRobotStatus(status);
-        polarMap.update(status.getRadarMap(), status.getLocation(), status.getDirection(), maxRadarDistance);
+        //polarMap.update(status.getRadarMap(), status.getLocation(), status.getDirection(), maxRadarDistance);
+        polarMap = polarMap.update(status.getRadarMap(), status.getLocation(), status.getDirection(), maxRadarDistance);
     }
 
     /**

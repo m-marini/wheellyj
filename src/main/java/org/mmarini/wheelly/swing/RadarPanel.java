@@ -35,7 +35,6 @@ import java.awt.geom.AffineTransform;
 import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -81,6 +80,29 @@ public class RadarPanel extends JComponent {
         return shape;
     }
 
+    public static List<Tuple2<Point2D, Color>> createMap(RadarMap radarMap) {
+        if (radarMap != null) {
+            return radarMap.getSectorsStream()
+                    .filter(MapSector::isKnown)
+                    .map(sector -> Tuple2.of(sector.getLocation(),
+                            sector.hasObstacle() ? FILLED_COLOR : EMPTY_COLOR))
+                    .collect(Collectors.toList());
+        } else {
+            return null;
+        }
+    }
+
+    public static Shape createSectorShape(RadarMap radarMap) {
+        if (radarMap != null) {
+            double size = radarMap.getTopology().getGridSize();
+            return new Rectangle2D.Double(
+                    -size / 2, -size / 2,
+                    size, size);
+        } else {
+            return null;
+        }
+    }
+
     private final Point2D centerLocation;
     private float scale;
     private List<Tuple2<Point2D, Color>> radarMap;
@@ -116,13 +138,13 @@ public class RadarPanel extends JComponent {
         gr.draw(GRID_SHAPE);
     }
 
-    void drawRadarMap(Graphics2D gr, List<Tuple2<Point2D, Color>> radatMap) {
+    void drawRadarMap(Graphics2D gr, List<Tuple2<Point2D, Color>> radarMap, Shape sectorShape) {
         if (radarMap != null) {
             AffineTransform base = gr.getTransform();
             gr.setStroke(BORDER_STROKE);
             for (Tuple2<Point2D, Color> t : radarMap) {
                 gr.setTransform(base);
-                drawSector(gr, t._1, t._2);
+                drawSector(gr, t._1, t._2, sectorShape);
             }
         }
     }
@@ -130,11 +152,12 @@ public class RadarPanel extends JComponent {
     /**
      * Draws an obstacle
      *
-     * @param gr       the graphic context
-     * @param location the location
-     * @param color    the color
+     * @param gr          the graphic context
+     * @param location    the location
+     * @param color       the color
+     * @param sectorShape the sector shape
      */
-    void drawSector(Graphics2D gr, Point2D location, Color color) {
+    void drawSector(Graphics2D gr, Point2D location, Color color, Shape sectorShape) {
         if (location != null) {
             gr.transform(at(location));
             gr.setColor(color);
@@ -148,27 +171,6 @@ public class RadarPanel extends JComponent {
      */
     public Point2D getCenterLocation() {
         return centerLocation;
-    }
-
-    public List<Tuple2<Point2D, Color>> getRadarMap() {
-        return radarMap;
-    }
-
-    public void setRadarMap(RadarMap radarMap) {
-        if (radarMap != null) {
-            this.radarMap = Arrays.stream(radarMap.getSectors())
-                    .filter(MapSector::isKnown)
-                    .map(sector -> Tuple2.of(sector.getLocation(),
-                            sector.isFilled() ? FILLED_COLOR : EMPTY_COLOR))
-                    .collect(Collectors.toList());
-            float size = radarMap.getTopology().getGridSize();
-            sectorShape = new Rectangle2D.Float(
-                    -size / 2, -size / 2,
-                    size, size);
-        } else {
-            this.radarMap = null;
-        }
-        repaint();
     }
 
     public float getScale() {
@@ -188,8 +190,12 @@ public class RadarPanel extends JComponent {
         gr.transform(createBaseTransform());
         AffineTransform base = gr.getTransform();
         drawGrid(gr);
-
         gr.setTransform(base);
-        drawRadarMap(gr, radarMap);
+        drawRadarMap(gr, radarMap, sectorShape);
+    }
+
+    public void setRadarMap(RadarMap radarMap) {
+        this.radarMap = createMap(radarMap);
+        this.sectorShape = createSectorShape(radarMap);
     }
 }

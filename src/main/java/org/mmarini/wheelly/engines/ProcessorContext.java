@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.engines;
 
-import org.mmarini.wheelly.apis.WheellyStatus;
+import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.envs.PolarMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +50,7 @@ public class ProcessorContext {
     private final List<Object> stack;
     private final StateFlow flow;
     private final Random random;
-    private WheellyStatus robotStatus;
+    private RobotStatus robotStatus;
     private StateNode currentNode;
     private int sensorDirection;
     private int robotDirection;
@@ -250,7 +250,7 @@ public class ProcessorContext {
     /**
      * Returns the robot status
      */
-    public WheellyStatus getRobotStatus() {
+    public RobotStatus getRobotStatus() {
         return robotStatus;
     }
 
@@ -259,7 +259,7 @@ public class ProcessorContext {
      *
      * @param robotStatus the robot status
      */
-    public void setRobotStatus(WheellyStatus robotStatus) {
+    public void setRobotStatus(RobotStatus robotStatus) {
         this.robotStatus = robotStatus;
     }
 

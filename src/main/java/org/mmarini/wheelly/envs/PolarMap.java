@@ -25,14 +25,16 @@
 
 package org.mmarini.wheelly.envs;
 
+import org.jetbrains.annotations.NotNull;
 import org.mmarini.wheelly.apis.MapSector;
 import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.Utils;
 
 import java.awt.geom.Point2D;
+import java.util.Arrays;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
-import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
@@ -48,10 +50,14 @@ public class PolarMap {
      * @param sectorNumbers number of sectors
      */
     public static PolarMap create(int sectorNumbers) {
-        CircularSector[] sectors = IntStream.range(0, sectorNumbers).mapToObj(
-                i -> new CircularSector()
-        ).toArray(CircularSector[]::new);
-        return new PolarMap(sectors);
+        return new PolarMap(createEmptySectors(sectorNumbers));
+    }
+
+    @NotNull
+    private static CircularSector[] createEmptySectors(int sectorNumbers) {
+        CircularSector[] result = new CircularSector[sectorNumbers];
+        Arrays.fill(result, CircularSector.unknown());
+        return result;
     }
 
     private final CircularSector[] sectors;
@@ -70,11 +76,8 @@ public class PolarMap {
      * Clears the map.
      * Sets all the sector as unknown and zero distance
      */
-    public void clear() {
-        for (CircularSector sector : sectors) {
-            sector.setTimestamp(0);
-            sector.setDistance(0);
-        }
+    public PolarMap clear() {
+        return create(sectors.length);
     }
 
     /**
@@ -93,11 +96,15 @@ public class PolarMap {
         return Math.PI * 2 / sectors.length;
     }
 
+    public CircularSector[] getSectors() {
+        return sectors;
+    }
+
     /**
      * Returns the sectors
      */
-    public CircularSector[] getSectors() {
-        return sectors;
+    public Stream<CircularSector> getSectorsStream() {
+        return Arrays.stream(sectors);
     }
 
     /**
@@ -108,7 +115,6 @@ public class PolarMap {
     public double sectorDirection(int i) {
         return normalizeAngle(i * getSectorAngle());
     }
-
 
     /**
      * Returns the direction of sector (RAD)
@@ -123,7 +129,7 @@ public class PolarMap {
     }
 
     /**
-     * Retruns the sector index of a given sector
+     * Returns the sector index of a given sector
      *
      * @param sector the sector
      */
@@ -157,11 +163,43 @@ public class PolarMap {
      * @param direction   the direction of polar map (DEG)
      * @param maxDistance the max distance
      */
-    public void update(RadarMap map, Point2D center, int direction, double maxDistance) {
+    public PolarMap update(RadarMap map, Point2D center, int direction, double maxDistance) {
+        CircularSector[] sectors = createEmptySectors(this.sectors.length);
         clear();
-        float gridSize = map.getTopology().getGridSize();
+        double gridSize = map.getTopology().getGridSize();
         double sectorGamma = getSectorAngle() / 2;
         double dirRad = toRadians(direction);
+        map.getSectorsStream().
+                filter(MapSector::isKnown)
+                .forEach(radarSector -> {
+                    double distance = radarSector.getLocation().distance(center) - gridSize / 2;
+                    if (distance > 0 && distance < maxDistance) {
+                        double obsDirection = Utils.direction(center, radarSector.getLocation());
+                        double obstacleGamma = atan2(gridSize, distance);
+                        double leftAlpha = obsDirection - obstacleGamma;
+                        double rightAlpha = obsDirection + obstacleGamma;
+                        for (int i = 0; i < sectors.length; i++) {
+                            CircularSector polarSector = sectors[i];
+                            // Sector direction in world compass (rad)
+                            double sectorDir = sectorDirection(i) + dirRad;
+                            // Computes the obstacle angle range relative to circular sector
+                            double leftBeta = normalizeAngle(leftAlpha - sectorDir);
+                            double rightBeta = normalizeAngle(rightAlpha - sectorDir);
+                            if (rightBeta >= -sectorGamma && leftBeta <= sectorGamma) {
+                                // Sector in the circular sector
+                                if (!polarSector.isKnown()) {
+                                    sectors[i] = radarSector.hasObstacle()
+                                            ? CircularSector.create(radarSector.getTimestamp(), distance)
+                                            : CircularSector.empty(radarSector.getTimestamp());
+                                } else if (radarSector.hasObstacle()
+                                        && (polarSector.getDistance() == 0 || distance < polarSector.getDistance())) {
+                                    sectors[i] = CircularSector.create(radarSector.getTimestamp(), distance);
+                                }
+                            }
+                        }
+                    }
+                });
+        /*
         for (MapSector radarSector : map.getSectors()) {
             if (radarSector.isKnown()) {
                 double distance = radarSector.getLocation().distance(center) - gridSize / 2;
@@ -180,18 +218,19 @@ public class PolarMap {
                         if (rightBeta >= -sectorGamma && leftBeta <= sectorGamma) {
                             // Sector in the circular sector
                             if (!polarSector.isKnown()) {
-                                polarSector.setTimestamp(radarSector.getTimestamp());
-                                polarSector.setDistance(radarSector.isFilled() ? distance : 0);
-                            } else if (radarSector.isFilled()
+                                sectors[i] = radarSector.hasObstacle()
+                                        ? CircularSector.create(radarSector.getTimestamp(), distance)
+                                        : CircularSector.empty(radarSector.getTimestamp());
+                            } else if (radarSector.hasObstacle()
                                     && (polarSector.getDistance() == 0 || distance < polarSector.getDistance())) {
-                                polarSector.setTimestamp(radarSector.getTimestamp());
-                                polarSector.setDistance(distance);
+                                sectors[i] = CircularSector.create(radarSector.getTimestamp(), distance);
                             }
                         }
                     }
                 }
             }
         }
+         */
+        return new PolarMap(sectors);
     }
-
 }
