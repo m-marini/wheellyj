@@ -27,21 +27,18 @@ package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.eclipse.collections.api.block.function.primitive.DoubleFunction;
-import org.eclipse.collections.api.block.function.primitive.FloatFunction;
 import org.mmarini.wheelly.apis.MapSector;
 import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 import static java.lang.Math.abs;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.*;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
-import static org.mmarini.wheelly.apis.SimRobot.MAX_VELOCITY;
 import static org.mmarini.wheelly.apis.Utils.clip;
 import static org.mmarini.yaml.schema.Validator.nonNegativeInteger;
 

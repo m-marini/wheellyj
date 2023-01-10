@@ -94,12 +94,12 @@ public class MapSector {
         return isKnown() && filled;
     }
 
-    public MapSector setFilled(boolean filled) {
-        return new MapSector(location, timestamp, filled);
-    }
-
     public boolean isKnown() {
         return timestamp > 0;
+    }
+
+    public MapSector setFilled(boolean filled) {
+        return new MapSector(location, timestamp, filled);
     }
 
     public MapSector union(MapSector other) {

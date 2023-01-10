@@ -67,9 +67,9 @@ public class SimRobot implements RobotApi {
     private static final Vec2 GRAVITY = new Vec2();
     private static final int VELOCITY_ITER = 10;
     private static final int POSITION_ITER = 10;
-    private static final double RAD_10 = (double) toRadians(10);
-    private static final double RAD_15 = (double) toRadians(15);
-    private static final double RAD_30 = (double) toRadians(30);
+    private static final double RAD_10 = toRadians(10);
+    private static final double RAD_15 = toRadians(15);
+    private static final double RAD_30 = toRadians(30);
     private static final double ROBOT_TRACK = 0.136;
     private static final double ROBOT_MASS = 0.78;
     private static final double ROBOT_DENSITY = ROBOT_MASS / ROBOT_LENGTH / ROBOT_WIDTH;
@@ -303,7 +303,7 @@ public class SimRobot implements RobotApi {
      */
     private void controller(double dt) {
         // Direction difference
-        double dAngle = (double) normalizeAngle(toRadians(90 - direction) - robot.getAngle());
+        double dAngle = normalizeAngle(toRadians(90 - direction) - robot.getAngle());
         // Relative angular speed to fix the direction
         double angularVelocity = clip(linear(dAngle, -RAD_10, RAD_10, -1, 1), -1, 1);
         // Relative linear speed to fix the speed
@@ -475,13 +475,13 @@ public class SimRobot implements RobotApi {
         double x = position.getX();
         double y = position.getY();
         int sensorDeg = normalizeDegAngle(90 - status.getDirection() - sensor);
-        double sensorRad = (double) toRadians(sensorDeg);
+        double sensorRad = toRadians(sensorDeg);
         double distance = 0;
         int obsIdx = obstacleMap.indexOfNearest(x, y, sensorRad, RAD_15);
         if (obsIdx >= 0) {
             Point2D obs = obstacleMap.getPoint(obsIdx);
-            double dist = (double) (obs.distance(position) - obstacleMap.getTopology().getGridSize() / 2
-                    + random.nextGaussian() * errSensor);
+            double dist = obs.distance(position) - obstacleMap.getTopology().getGridSize() / 2
+                    + random.nextGaussian() * errSensor;
             distance = dist > 0 && dist < MAX_DISTANCE ? dist : 0;
         }
         status = status.setEchoDistance(distance);

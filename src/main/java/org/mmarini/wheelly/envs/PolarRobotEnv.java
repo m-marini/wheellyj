@@ -142,10 +142,10 @@ public class PolarRobotEnv implements Environment {
     private final long commandInterval;
     private final Map<String, SignalSpec> actions;
     private final Map<String, SignalSpec> states;
-    private PolarMap polarMap;
     private final INDArray sectorDistances;
     private final INDArray knownSectors;
     private final float maxRadarDistance;
+    private PolarMap polarMap;
     private int prevSensor;
     private long lastScanTimestamp;
     private long lastMoveTimestamp;
@@ -307,7 +307,7 @@ public class PolarRobotEnv implements Environment {
         } while (!(status != null && status.getTime() >= timeout));
         storeStatus(status);
 
-        polarMap=polarMap.update(status.getRadarMap(),status.getLocation(), status.getDirection(), maxRadarDistance);
+        polarMap = polarMap.update(status.getRadarMap(), status.getLocation(), status.getDirection(), maxRadarDistance);
         float maxDistance = ((FloatSignalSpec) states.get("sectorDistances")).getMaxValue();
         for (int i = 0; i < polarMap.getSectors().length; i++) {
             CircularSector sector = polarMap.getSectors()[i];
@@ -327,7 +327,7 @@ public class PolarRobotEnv implements Environment {
             started = true;
         }
         robot.reset();
-        polarMap=polarMap.clear();
+        polarMap = polarMap.clear();
         readStatus(0);
         return getObservation();
     }

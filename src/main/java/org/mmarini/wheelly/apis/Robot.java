@@ -106,10 +106,10 @@ public class Robot implements RobotApi {
         long readTimeout = locator.path("readTimeout").getNode(root).asLong();
         int radarWidth = locator.path("radarWidth").getNode(root).asInt();
         int radarHeight = locator.path("radarHeight").getNode(root).asInt();
-        double radarGrid = (double) locator.path("radarGrid").getNode(root).asDouble();
+        double radarGrid = locator.path("radarGrid").getNode(root).asDouble();
         long radarCleanInterval = locator.path("radarCleanInterval").getNode(root).asLong();
         long radarPersistence = locator.path("radarPersistence").getNode(root).asLong();
-        double radarReceptiveDistance = (double) locator.path("radarReceptiveDistance").getNode(root).asDouble();
+        double radarReceptiveDistance = locator.path("radarReceptiveDistance").getNode(root).asDouble();
         RadarMap radarMap = RadarMap.create(radarWidth, radarHeight, new Point2D.Float(), radarGrid);
         return Robot.create(host, port, connectionTimeout, readTimeout, radarMap, radarPersistence, radarCleanInterval, radarReceptiveDistance);
     }
@@ -242,11 +242,11 @@ public class Robot implements RobotApi {
                     try {
                         // Create the new status
                         status = status.setWheellyStatus(WheellyStatus.create(line)).update(radarReceptiveDistance);
-                            if (time >= this.cleanTimeout) {
-                                RadarMap radarMap = status.getRadarMap();
-                                RadarMap newRadarMap = radarMap.clean(time - this.radarPersistence);
-                                cleanTimeout = time + cleanInterval;
-                                status = status.setRadarMap(newRadarMap);
+                        if (time >= this.cleanTimeout) {
+                            RadarMap radarMap = status.getRadarMap();
+                            RadarMap newRadarMap = radarMap.clean(time - this.radarPersistence);
+                            cleanTimeout = time + cleanInterval;
+                            status = status.setRadarMap(newRadarMap);
 
                         }
                     } catch (Throwable ignored) {
