@@ -29,7 +29,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.eclipse.collections.api.block.function.primitive.FloatFunction;
 import org.mmarini.rl.envs.*;
 import org.mmarini.wheelly.apis.RobotApi;
-import org.mmarini.wheelly.apis.WheellyStatus;
+import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
@@ -98,7 +98,7 @@ public class RobotEnv implements Environment {
      * @param robot          the robot api
      * @param rewardFunction the reward function
      */
-    public static RobotEnv create(RobotApi robot, FloatFunction<WheellyStatus> rewardFunction) {
+    public static RobotEnv create(RobotApi robot, FloatFunction<RobotStatus> rewardFunction) {
         return RobotEnv.create(robot, rewardFunction,
                 DEFAULT_INTERVAL, DEFAULT_REACTION_INTERVAL, DEFAULT_COMMAND_INTERVAL,
                 DEFAULT_NUM_DIRECTION_VALUES, DEFAULT_NUM_SENSOR_VALUES, DEFAULT_NUM_SPEED_VALUES);
@@ -114,7 +114,7 @@ public class RobotEnv implements Environment {
     public static RobotEnv create(JsonNode root, Locator locator, RobotApi robot) {
         ROBOT_ENV_SPEC.apply(locator).accept(root);
 
-        FloatFunction<WheellyStatus> reward = Utils.createObject(root, locator.path("objective"), new Object[0], new Class[0]);
+        FloatFunction<RobotStatus> reward = Utils.createObject(root, locator.path("objective"), new Object[0], new Class[0]);
         long interval = locator.path("interval").getNode(root).asLong();
         long reactionInterval = locator.path("reactionInterval").getNode(root).asLong();
         long commandInterval = locator.path("commandInterval").getNode(root).asLong();
@@ -139,7 +139,7 @@ public class RobotEnv implements Environment {
      * @param numSensorValues    number of sensor direction values
      * @param numSpeedValues     number of speed values
      */
-    public static RobotEnv create(RobotApi robot, FloatFunction<WheellyStatus> reward,
+    public static RobotEnv create(RobotApi robot, FloatFunction<RobotStatus> reward,
                                   long interval, long reactionInterval, long commandInterval,
                                   int numDirectionValues, int numSensorValues, int numSpeedValues) {
         Map<String, SignalSpec> actions1 = Map.of(
@@ -153,7 +153,7 @@ public class RobotEnv implements Environment {
     }
 
     private final RobotApi robot;
-    private final FloatFunction<WheellyStatus> reward;
+    private final FloatFunction<RobotStatus> reward;
     private final long interval;
     private final long reactionInterval;
     private final long commandInterval;
@@ -185,7 +185,7 @@ public class RobotEnv implements Environment {
      * @param commandInterval  the command interval
      * @param actions          the actions spec
      */
-    public RobotEnv(RobotApi robot, FloatFunction<WheellyStatus> reward,
+    public RobotEnv(RobotApi robot, FloatFunction<RobotStatus> reward,
                     long interval, long reactionInterval, long commandInterval,
                     Map<String, SignalSpec> actions) {
         this.robot = requireNonNull(robot);
@@ -237,7 +237,7 @@ public class RobotEnv implements Environment {
     public ExecutionResult execute(Map<String, Signal> actions) {
         requireNonNull(actions);
         processAction(actions);
-        WheellyStatus status = readStatus(reactionInterval);
+        RobotStatus status = readStatus(reactionInterval);
         float reward = this.reward.floatValueOf(status);
         Map<String, Signal> observation = getObservation();
         return new ExecutionResult(observation, reward, false);
@@ -282,8 +282,8 @@ public class RobotEnv implements Environment {
      *
      * @param time the time interval in millis
      */
-    private WheellyStatus readStatus(long time) {
-        WheellyStatus status = robot.getStatus();
+    private RobotStatus readStatus(long time) {
+        RobotStatus status = robot.getStatus();
         long timeout = status.getTime() + time;
         do {
             robot.tick(interval);
@@ -361,12 +361,12 @@ public class RobotEnv implements Environment {
      *
      * @param status the status from robot
      */
-    private void storeStatus(WheellyStatus status) {
+    private void storeStatus(RobotStatus status) {
         robotDir = Nd4j.createFromArray((float) status.getDirection());
         sensor = Nd4j.createFromArray((float) status.getSensorDirection());
-        distance = Nd4j.createFromArray((float) status.getSampleDistance());
-        canMoveForward = Nd4j.createFromArray(status.getCanMoveForward() ? 1F : 0F);
-        canMoveBackward = Nd4j.createFromArray(status.getCanMoveBackward() ? 1F : 0F);
-        contacts = Nd4j.createFromArray((float) status.getProximity());
+        distance = Nd4j.createFromArray((float) status.getEchoDistance());
+        canMoveForward = Nd4j.createFromArray(status.canMoveForward() ? 1F : 0F);
+        canMoveBackward = Nd4j.createFromArray(status.canMoveBackward() ? 1F : 0F);
+        contacts = Nd4j.createFromArray((float) status.getContacts());
     }
 }

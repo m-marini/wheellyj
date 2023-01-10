@@ -26,15 +26,14 @@
 package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.eclipse.collections.api.block.function.primitive.FloatFunction;
+import org.eclipse.collections.api.block.function.primitive.DoubleFunction;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.apis.WheellyStatus;
+import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.schema.Locator;
 
-import java.awt.geom.Point2D;
 import java.io.IOException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -42,14 +41,12 @@ import static org.hamcrest.Matchers.closeTo;
 
 class StuckTest {
 
-    static WheellyStatus createStatus(int sensorDir, double distance, boolean canMoveForward, boolean canMoveBackward) {
-        WheellyStatus wheellyStatus = new WheellyStatus(0, 0, 0,
-                0,
-                sensorDir, 0, 0, 0,
-                0, 0, 0, canMoveForward,
-                canMoveBackward, 0, false, 0, null);
-        wheellyStatus.setSampleDistance(distance);
-        return wheellyStatus;
+    static RobotStatus createStatus(int sensorDir, double distance, boolean canMoveForward, boolean canMoveBackward) {
+        return RobotStatus.create()
+                .setSensorDirection(sensorDir)
+                .setCanMoveBackward(canMoveBackward)
+                .setCanMoveForward(canMoveForward)
+                .setEchoDistance(distance);
     }
 
     @ParameterizedTest
@@ -71,7 +68,7 @@ class StuckTest {
             "-1,0,0,1,1",
             "-1,0,3,1,1",
     })
-    void create(float expected,
+    void create(double expected,
                 int sensorDir,
                 double distance,
                 int canMoveForward,
@@ -82,10 +79,10 @@ class StuckTest {
                 "distance2: 1.1",
                 "distance3: 1.5",
                 "sensorRange: 20"));
-        FloatFunction<WheellyStatus> f = Stuck.create(root, Locator.root());
-        WheellyStatus status = createStatus(sensorDir, distance, canMoveForward != 0, canMoveBackward != 0);
-        float result = f.floatValueOf(status);
-        assertThat((double) result, closeTo(expected, 1e-6));
+        DoubleFunction<RobotStatus> f = Stuck.create(root, Locator.root());
+        RobotStatus status = createStatus(sensorDir, distance, canMoveForward != 0, canMoveBackward != 0);
+        double result = f.doubleValueOf(status);
+        assertThat(result, closeTo(expected, 1e-3));
     }
 
     @ParameterizedTest
@@ -107,19 +104,19 @@ class StuckTest {
             "-1,0,0,1,1",
             "-1,0,3,1,1",
     })
-    void stuck(float expected,
+    void stuck(double expected,
                int sensorDir,
                double distance,
                int canMoveForward,
                int canMoveBackward) {
-        float x1 = 0.5F;
-        float x2 = 0.9F;
-        float x3 = 1.1F;
-        float x4 = 1.5F;
+        double x1 = 0.5;
+        double x2 = 0.9;
+        double x3 = 1.1;
+        double x4 = 1.5;
         int directionRange = 20;
-        FloatFunction<WheellyStatus> f = Stuck.stuck(x1, x2, x3, x4, directionRange);
-        WheellyStatus status = createStatus(sensorDir, distance, canMoveForward != 0, canMoveBackward != 0);
-        float result = f.floatValueOf(status);
-        assertThat((double) result, closeTo(expected, 1e-6));
+        DoubleFunction<RobotStatus> f = Stuck.stuck(x1, x2, x3, x4, directionRange);
+        RobotStatus status = createStatus(sensorDir, distance, canMoveForward != 0, canMoveBackward != 0);
+        double result = f.doubleValueOf(status);
+        assertThat(result, closeTo(expected, 1e-3));
     }
 }

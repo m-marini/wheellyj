@@ -35,12 +35,23 @@ import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
  * MapSector keeps the presence of obstacles in the sector
  */
 public class MapSector {
-    public static final float MAX_SIGNAL_DISTANCE = 3F;
-    public static final double THRESHOLD_SIGNAL_DISTANCE = 0.2;
+    public static final double MAX_SIGNAL_DISTANCE = 3;
+
+    public static MapSector empty(Point2D location, long timestamp) {
+        return new MapSector(location, timestamp, false);
+    }
+
+    public static MapSector filled(Point2D location, long timestamp) {
+        return new MapSector(location, timestamp, true);
+    }
+
+    public static MapSector unknown(Point2D location) {
+        return new MapSector(location, 0, false);
+    }
 
     private final Point2D location;
-    private long timestamp;
-    private boolean filled;
+    private final long timestamp;
+    private final boolean filled;
 
     /**
      * Creates the MapSector
@@ -55,10 +66,16 @@ public class MapSector {
         this.filled = filled;
     }
 
-    public void clean(long timeout) {
-        if (timestamp <= timeout) {
-            timestamp = 0;
-        }
+    public MapSector clean(long timeout) {
+        return (timestamp <= timeout) ? setTimestamp(0) : this;
+    }
+
+    public MapSector empty(long timestamp) {
+        return new MapSector(location, timestamp, false);
+    }
+
+    public MapSector filled(long timestamp) {
+        return new MapSector(location, timestamp, true);
     }
 
     public Point2D getLocation() {
@@ -69,34 +86,28 @@ public class MapSector {
         return timestamp;
     }
 
-    public void setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
+    public MapSector setTimestamp(long timestamp) {
+        return new MapSector(location, timestamp, filled);
     }
 
     public boolean hasObstacle() {
         return isKnown() && filled;
     }
 
-    public boolean isFilled() {
-        return filled;
-    }
-
-    public void setFilled(boolean filled) {
-        this.filled = filled;
+    public MapSector setFilled(boolean filled) {
+        return new MapSector(location, timestamp, filled);
     }
 
     public boolean isKnown() {
         return timestamp > 0;
     }
 
-    public void union(MapSector other) {
-        if (other.timestamp > timestamp) {
-            timestamp = other.timestamp;
-            filled = other.filled;
-        }
+    public MapSector union(MapSector other) {
+        return other.timestamp > timestamp ? new MapSector(location, other.timestamp, other.filled) : this;
     }
 
     /**
+     * Returns the updated map sector.
      * Updates the map sector with the result of a sensor signal.
      * <p>
      * The condition to update the status of a sector is that the distance of the signal is in range (> minDistance && < MAX_SIGNAL_DISTANCE)
@@ -109,26 +120,27 @@ public class MapSector {
      * @param signal            the sensor signal
      * @param receptiveDistance the receptive sector distance (distance from signal to set sector filled)
      */
-    public void update(RadarMap.SensorSignal signal, float minDistance, float receptiveDistance) {
-        float sectorDistance = (float) signal.sensorLocation.distance(location);
+    public MapSector update(RadarMap.SensorSignal signal, double minDistance, double receptiveDistance) {
+        double sectorDistance = signal.sensorLocation.distance(location);
         boolean inRange = sectorDistance >= minDistance && sectorDistance <= MAX_SIGNAL_DISTANCE;
-        if (inRange) {
-            double sectorDirection = direction(signal.sensorLocation, location);
-            double sectorDirFromSens = normalizeDegAngle(signal.sensorDirection - toDegrees(sectorDirection));
-            //int a0 = (int) round(toDegrees(atan2(receptiveDistance, sectorDistance)));
-            int a0 = (int) round(toDegrees(asin(receptiveDistance / sectorDistance)));
-            boolean inDirection = abs(sectorDirFromSens) <= a0;
-            if (inDirection) {
-                if (signal.isEcho()) {
-                    if (signal.distance >= sectorDistance - receptiveDistance) {
-                        timestamp = signal.timestamp;
-                        filled = signal.distance <= sectorDistance + receptiveDistance;
-                    }
-                } else {
-                    timestamp = signal.timestamp;
-                    filled = false;
-                }
-            }
+        if (!inRange) {
+            return this;
         }
+        double sectorDirection = direction(signal.sensorLocation, location);
+        double sectorDirFromSens = normalizeDegAngle(signal.sensorDirection - toDegrees(sectorDirection));
+        int a0 = (int) round(toDegrees(asin(receptiveDistance / sectorDistance)));
+        boolean inDirection = abs(sectorDirFromSens) <= a0;
+        if (!inDirection) {
+            return this;
+        }
+        if (!signal.isEcho()) {
+            return new MapSector(location,
+                    signal.timestamp,
+                    false);
+        }
+        return signal.distance >= sectorDistance - receptiveDistance
+                ? new MapSector(location, signal.timestamp,
+                signal.distance <= sectorDistance + receptiveDistance)
+                : this;
     }
 }

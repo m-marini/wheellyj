@@ -131,13 +131,6 @@ public class PolarPanel extends JComponent {
 
     public void setPolarMap(PolarMap polarMap) {
         CircularSector[] sectors = polarMap.getSectors();
-        /*
-        sectors = IntStream.range(0, sectors.length)
-                .mapToObj(i -> new CircularSector())
-                .toArray(CircularSector[]::new);
-        sectors[23].setTimestamp(System.currentTimeMillis());
-        sectors[23].setDistance(2);
-*/
 
         if (numSector != sectors.length) {
             numSector = sectors.length;

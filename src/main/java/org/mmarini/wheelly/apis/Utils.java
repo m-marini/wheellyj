@@ -117,6 +117,10 @@ public class Utils {
         return normalizeAngle(toRadians(x));
     }
 
+    public static Vec2 vec2(double x, double y) {
+        return vec2((float) x, (float) y);
+    }
+
     public static Vec2 vec2(float x, float y) {
         Vec2 vec2 = new Vec2();
         vec2.x = x;
@@ -125,6 +129,10 @@ public class Utils {
     }
 
     public static Vec2 vec2(float[] x) {
+        return vec2(x[0], x[1]);
+    }
+
+    public static Vec2 vec2(double[] x) {
         return vec2(x[0], x[1]);
     }
 }

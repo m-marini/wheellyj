@@ -118,12 +118,16 @@ public class ExploringState extends AbstractStateNode {
                 .min(Comparator.comparingDouble(a -> a._2))
                 .map(Tuple2::getV1);
         if (unknownSector1.isPresent()) {
-            // Returns the known sector nearest the front
+            // Returns the unknown sector nearest the front
             return unknownSector1.get();
         }
         // All sectors are known
         if (!frontSector.hasObstacle()) {
             // Returns the front sector if empty
+            return 0;
+        }
+        if (frontSector.getDistance() >= minMoveDistance) {
+            // Returns the front sector if the obstacle is far away
             return 0;
         }
         // Search for empty sector intervals and furthest sector with obstacle
@@ -172,7 +176,7 @@ public class ExploringState extends AbstractStateNode {
             return 0;
         }
         // returns the further obstacle sector if no interval available
-        return furthest;
+        return max(furthest, 0);
     }
 
 
@@ -218,8 +222,12 @@ public class ExploringState extends AbstractStateNode {
         }
         double distance = sector.getDistance();
         int maxMoveDirection = getInt(context, "maxMoveDirection");
+        /*
         float speed = abs(sectorDirection) < maxMoveDirection && (distance == 0 || distance >= minMoveDistance)
                 ? 1 : 0;
+
+         */
+        float speed = abs(sectorDirection) < maxMoveDirection ? 1 : 0;
         // Compute speed
         int robotDir = context.getRobotStatus().getDirection();
         int dir = normalizeDegAngle(robotDir + sectorDirection);

@@ -30,7 +30,7 @@ import org.eclipse.collections.api.block.function.primitive.FloatFunction;
 import org.mmarini.rl.envs.*;
 import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotApi;
-import org.mmarini.wheelly.apis.WheellyStatus;
+import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
@@ -40,7 +40,6 @@ import org.nd4j.linalg.factory.Nd4j;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -102,7 +101,7 @@ public class RadarRobotEnv implements Environment {
     public static RadarRobotEnv create(JsonNode root, Locator locator, RobotApi robot) {
         ROBOT_ENV_SPEC.apply(locator).accept(root);
 
-        FloatFunction<WheellyStatus> reward = Utils.createObject(root, locator.path("objective"), new Object[0], new Class[0]);
+        FloatFunction<RobotStatus> reward = Utils.createObject(root, locator.path("objective"), new Object[0], new Class[0]);
         long interval = locator.path("interval").getNode(root).asLong();
         long reactionInterval = locator.path("reactionInterval").getNode(root).asLong();
         long commandInterval = locator.path("commandInterval").getNode(root).asLong();
@@ -132,7 +131,7 @@ public class RadarRobotEnv implements Environment {
      * @param numSpeedValues     number of speed values
      * @param radarMap           the radar map
      */
-    public static RadarRobotEnv create(RobotApi robot, FloatFunction<WheellyStatus> reward,
+    public static RadarRobotEnv create(RobotApi robot, FloatFunction<RobotStatus> reward,
                                        long interval, long reactionInterval, long commandInterval,
                                        int numDirectionValues, int numSensorValues, int numSpeedValues, RadarMap radarMap) {
         Map<String, SignalSpec> actions1 = Map.of(
@@ -146,7 +145,7 @@ public class RadarRobotEnv implements Environment {
     }
 
     private final RobotApi robot;
-    private final FloatFunction<WheellyStatus> reward;
+    private final FloatFunction<RobotStatus> reward;
     private final long interval;
     private final long reactionInterval;
     private final long commandInterval;
@@ -182,7 +181,7 @@ public class RadarRobotEnv implements Environment {
      * @param actions          the actions spec
      * @param radarMap         the radar map
      */
-    public RadarRobotEnv(RobotApi robot, FloatFunction<WheellyStatus> reward,
+    public RadarRobotEnv(RobotApi robot, FloatFunction<RobotStatus> reward,
                          long interval, long reactionInterval, long commandInterval,
                          Map<String, SignalSpec> actions,
                          RadarMap radarMap) {
@@ -193,7 +192,7 @@ public class RadarRobotEnv implements Environment {
         this.commandInterval = commandInterval;
         this.actions = requireNonNull(actions);
         this.radarMap = requireNonNull(radarMap);
-        int n = radarMap.getSectors().length;
+        int n = radarMap.getSectorsNumber();
         this.states = Map.of(
                 "sensor", new FloatSignalSpec(new long[]{1}, MIN_SENSOR_DIR, MAX_SENSOR_DIR),
                 "distance", new FloatSignalSpec(new long[]{1}, MIN_DISTANCE, MAX_DISTANCE),
@@ -245,7 +244,7 @@ public class RadarRobotEnv implements Environment {
     public ExecutionResult execute(Map<String, Signal> actions) {
         requireNonNull(actions);
         processAction(actions);
-        WheellyStatus status = readStatus(reactionInterval);
+        RobotStatus status = readStatus(reactionInterval);
         float reward = this.reward.floatValueOf(status);
         Map<String, Signal> observation = getObservation();
         return new ExecutionResult(observation, reward, false);
@@ -298,8 +297,8 @@ public class RadarRobotEnv implements Environment {
      *
      * @param time the time interval in millis
      */
-    private WheellyStatus readStatus(long time) {
-        WheellyStatus status = robot.getStatus();
+    private RobotStatus readStatus(long time) {
+        RobotStatus status = robot.getStatus();
         long timeout = status.getTime() + time;
         do {
             robot.tick(interval);
@@ -307,10 +306,11 @@ public class RadarRobotEnv implements Environment {
             status = robot.getStatus();
         } while (!(status != null && status.getTime() >= timeout));
         storeStatus(status);
-        radarMap.update(status.getRadarMap(), status.getLocation(), status.getDirection());
-        int[] radarAry = Arrays.stream(radarMap.getSectors()).mapToInt(
+        // TODO
+        //radarMap.update(status.getRadarMap(), status.getLocation(), status.getDirection());
+        int[] radarAry = radarMap.getSectorsStream().mapToInt(
                         s -> !s.isKnown() ? UNKNOWN_SECTOR_VALUE
-                                : s.isFilled() ? FILLED_SECTOR_VALUE : EMPTY_SECTOR_VALUE)
+                                : s.hasObstacle() ? FILLED_SECTOR_VALUE : EMPTY_SECTOR_VALUE)
                 .toArray();
         this.radarSignals = Nd4j.createFromArray(radarAry).castTo(DataType.FLOAT);
         return status;
@@ -383,12 +383,12 @@ public class RadarRobotEnv implements Environment {
      *
      * @param status the status from robot
      */
-    private void storeStatus(WheellyStatus status) {
+    private void storeStatus(RobotStatus status) {
         robotDir = Nd4j.createFromArray((float) status.getDirection());
         sensor = Nd4j.createFromArray((float) status.getSensorDirection());
-        distance = Nd4j.createFromArray((float) status.getSampleDistance());
-        canMoveForward = Nd4j.createFromArray(status.getCanMoveForward() ? 1F : 0F);
-        canMoveBackward = Nd4j.createFromArray(status.getCanMoveBackward() ? 1F : 0F);
-        contacts = Nd4j.createFromArray((float) status.getProximity());
+        distance = Nd4j.createFromArray((float) status.getEchoDistance());
+        canMoveForward = Nd4j.createFromArray(status.canMoveForward() ? 1F : 0F);
+        canMoveBackward = Nd4j.createFromArray(status.canMoveBackward() ? 1F : 0F);
+        contacts = Nd4j.createFromArray((float) status.getContacts());
     }
 }

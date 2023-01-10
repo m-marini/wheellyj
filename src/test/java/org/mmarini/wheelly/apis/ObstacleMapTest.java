@@ -41,7 +41,7 @@ class ObstacleMapTest {
     public static final float RAD30 = (float) PI / 6;
     public static final float RAD90 = (float) PI / 2;
 
-    {
+    static {
         Nd4j.zeros(0);
     }
 
@@ -67,9 +67,9 @@ class ObstacleMapTest {
         ObstacleMap map = ObstacleMap.create(Nd4j.create(new float[][]{
                 {0f, 0f},
                 {0.2f, 0.2f}
-        }), 0.2f);
-        assertTrue(map.contains(0.09f, 0.09f));
-        assertFalse(map.contains(0.59f, 0.59f));
+        }), 0.2);
+        assertTrue(map.contains(0.09, 0.09));
+        assertFalse(map.contains(0.59, 0.59));
     }
 
     @Test

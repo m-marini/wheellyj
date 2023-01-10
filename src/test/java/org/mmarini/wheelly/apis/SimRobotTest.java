@@ -46,11 +46,11 @@ class SimRobotTest {
     @Test
     void create() {
         SimRobot robot = createRobot();
-        WheellyStatus status = robot.getStatus();
+        RobotStatus status = robot.getStatus();
         assertEquals(new Point2D.Float(), status.getLocation());
         assertEquals(0, status.getDirection());
         assertEquals(0, status.getSensorDirection());
-        assertEquals(0f, status.getSampleDistance());
+        assertEquals(0f, status.getEchoDistance());
     }
 
     private SimRobot createRobot() {
@@ -66,13 +66,13 @@ class SimRobotTest {
 
         robot.move(0, 1);
         robot.tick(100);
-        WheellyStatus status = robot.getStatus();
+        RobotStatus status = robot.getStatus();
 
         assertThat(status.getLocation().getX(), closeTo(0, DISTANCE_EPSILON));
         assertThat(status.getLocation().getY(), closeTo(10e-3, DISTANCE_EPSILON));
         assertEquals(0, status.getDirection());
         assertEquals(0, status.getSensorDirection());
-        assertEquals(0f, status.getSampleDistance());
+        assertEquals(0f, status.getEchoDistance());
     }
 
     @Test
@@ -82,13 +82,13 @@ class SimRobotTest {
 
         robot.move(0, -1);
         robot.tick(100);
-        WheellyStatus status = robot.getStatus();
+        RobotStatus status = robot.getStatus();
 
         assertThat(status.getLocation().getX(), closeTo(0, DISTANCE_EPSILON));
         assertThat(status.getLocation().getY(), closeTo(-10e-3, DISTANCE_EPSILON));
         assertEquals(0, status.getDirection());
         assertEquals(0, status.getSensorDirection());
-        assertEquals(0f, status.getSampleDistance());
+        assertEquals(0f, status.getEchoDistance());
     }
 
     @Test
@@ -98,13 +98,13 @@ class SimRobotTest {
 
         robot.move(5, 0);
         robot.tick(100);
-        WheellyStatus status = robot.getStatus();
+        RobotStatus status = robot.getStatus();
 
         assertThat(status.getLocation().getX(), closeTo(0, DISTANCE_EPSILON));
         assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
         assertThat((double) status.getDirection(), closeTo(round(MAX_ANGULAR_VELOCITY * 0.1 / 2), 1));
         assertEquals(0, status.getSensorDirection());
-        assertEquals(0f, status.getSampleDistance());
+        assertEquals(0f, status.getEchoDistance());
     }
 
     @Test
@@ -113,13 +113,13 @@ class SimRobotTest {
 
         robot.move(90, 0);
         robot.tick(100);
-        WheellyStatus status = robot.getStatus();
+        RobotStatus status = robot.getStatus();
 
         assertThat(status.getLocation().getX(), closeTo(0, DISTANCE_EPSILON));
         assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
         assertEquals((int) round(MAX_ANGULAR_VELOCITY * 0.1), status.getDirection());
         assertEquals(0, status.getSensorDirection());
-        assertEquals(0d, status.getSampleDistance());
+        assertEquals(0d, status.getEchoDistance());
     }
 
     @Test
@@ -127,11 +127,11 @@ class SimRobotTest {
         SimRobot robot = createRobot();
 
         robot.tick(100);
-        WheellyStatus status = robot.getStatus();
+        RobotStatus status = robot.getStatus();
 
         assertEquals(new Point2D.Float(), status.getLocation());
         assertEquals(0, status.getDirection());
         assertEquals(0, status.getSensorDirection());
-        assertEquals(0f, status.getSampleDistance());
+        assertEquals(0f, status.getEchoDistance());
     }
 }

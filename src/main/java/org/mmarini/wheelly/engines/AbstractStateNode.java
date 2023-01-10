@@ -214,8 +214,8 @@ public abstract class AbstractStateNode implements StateNode {
      * @param context the processor context
      */
     protected boolean isBlocked(ProcessorContext context) {
-        return !context.getRobotStatus().getCanMoveForward()
-                || !context.getRobotStatus().getCanMoveBackward();
+        return !context.getRobotStatus().canMoveForward()
+                || !context.getRobotStatus().canMoveBackward();
     }
 
     @Override

@@ -42,7 +42,7 @@ import static java.util.Objects.requireNonNull;
  * Ths obstacle map defines the location of obstacle in a grid space
  */
 public class ObstacleMap {
-    public static ObstacleMap create(INDArray indArray, float gridSize) {
+    public static ObstacleMap create(INDArray indArray, double gridSize) {
         return new ObstacleMap(indArray, new GridTopology(gridSize));
     }
 
@@ -76,9 +76,9 @@ public class ObstacleMap {
      * @param x x coordinate
      * @param y coordinate
      */
-    public boolean contains(float x, float y) {
-        float[] location = topology.snap(x, y);
-        INDArray point = Nd4j.createFromArray(location);
+    public boolean contains(double x, double y) {
+        double[] location = topology.snap(x, y);
+        INDArray point = Nd4j.createFromArray(location).castTo(DataType.FLOAT);
         int n = getSize();
         for (int i = 0; i < n; i++) {
             INDArray o = getCoordinates(i);
@@ -134,9 +134,8 @@ public class ObstacleMap {
      * @param y              the y point coordinate
      * @param direction      the direction in RAD
      * @param directionRange the direction range in RAD
-     * @return
      */
-    public int indexOfNearest(float x, float y, float direction, float directionRange) {
+    public int indexOfNearest(double x, double y, double direction, double directionRange) {
         int n = getSize();
         if (n == 0) {
             return -1;

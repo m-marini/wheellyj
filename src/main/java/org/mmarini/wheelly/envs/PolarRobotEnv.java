@@ -29,7 +29,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.eclipse.collections.api.block.function.primitive.FloatFunction;
 import org.mmarini.rl.envs.*;
 import org.mmarini.wheelly.apis.RobotApi;
-import org.mmarini.wheelly.apis.WheellyStatus;
+import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
@@ -91,7 +91,7 @@ public class PolarRobotEnv implements Environment {
     public static PolarRobotEnv create(JsonNode root, Locator locator, RobotApi robot) {
         ROBOT_ENV_SPEC.apply(locator).accept(root);
 
-        FloatFunction<WheellyStatus> reward = Utils.createObject(root, locator.path("objective"), new Object[0], new Class[0]);
+        FloatFunction<RobotStatus> reward = Utils.createObject(root, locator.path("objective"), new Object[0], new Class[0]);
         long interval = locator.path("interval").getNode(root).asLong();
         long reactionInterval = locator.path("reactionInterval").getNode(root).asLong();
         long commandInterval = locator.path("commandInterval").getNode(root).asLong();
@@ -120,7 +120,7 @@ public class PolarRobotEnv implements Environment {
      * @param numRadarSectors    the number of radar sectors
      * @param maxRadarDistance   the max radar distance (m)
      */
-    public static PolarRobotEnv create(RobotApi robot, FloatFunction<WheellyStatus> reward,
+    public static PolarRobotEnv create(RobotApi robot, FloatFunction<RobotStatus> reward,
                                        long interval, long reactionInterval, long commandInterval,
                                        int numDirectionValues, int numSensorValues, int numSpeedValues,
                                        int numRadarSectors, float maxRadarDistance) {
@@ -136,13 +136,13 @@ public class PolarRobotEnv implements Environment {
     }
 
     private final RobotApi robot;
-    private final FloatFunction<WheellyStatus> reward;
+    private final FloatFunction<RobotStatus> reward;
     private final long interval;
     private final long reactionInterval;
     private final long commandInterval;
     private final Map<String, SignalSpec> actions;
     private final Map<String, SignalSpec> states;
-    private final PolarMap polarMap;
+    private PolarMap polarMap;
     private final INDArray sectorDistances;
     private final INDArray knownSectors;
     private final float maxRadarDistance;
@@ -175,7 +175,7 @@ public class PolarRobotEnv implements Environment {
      * @param polarMap         the polar map
      * @param maxRadarDistance max radar distance (m)
      */
-    public PolarRobotEnv(RobotApi robot, FloatFunction<WheellyStatus> reward,
+    public PolarRobotEnv(RobotApi robot, FloatFunction<RobotStatus> reward,
                          long interval, long reactionInterval, long commandInterval,
                          Map<String, SignalSpec> actions,
                          PolarMap polarMap, float maxRadarDistance) {
@@ -242,7 +242,7 @@ public class PolarRobotEnv implements Environment {
     public ExecutionResult execute(Map<String, Signal> actions) {
         requireNonNull(actions);
         processAction(actions);
-        WheellyStatus status = readStatus(reactionInterval);
+        RobotStatus status = readStatus(reactionInterval);
         float reward = this.reward.floatValueOf(status);
         Map<String, Signal> observation = getObservation();
         return new ExecutionResult(observation, reward, false);
@@ -297,8 +297,8 @@ public class PolarRobotEnv implements Environment {
      *
      * @param time the time interval in millis
      */
-    private WheellyStatus readStatus(long time) {
-        WheellyStatus status = robot.getStatus();
+    private RobotStatus readStatus(long time) {
+        RobotStatus status = robot.getStatus();
         long timeout = status.getTime() + time;
         do {
             sendCommand();
@@ -307,7 +307,7 @@ public class PolarRobotEnv implements Environment {
         } while (!(status != null && status.getTime() >= timeout));
         storeStatus(status);
 
-        polarMap.update(status.getRadarMap(), status.getLocation(), status.getDirection(), maxRadarDistance);
+        polarMap=polarMap.update(status.getRadarMap(),status.getLocation(), status.getDirection(), maxRadarDistance);
         float maxDistance = ((FloatSignalSpec) states.get("sectorDistances")).getMaxValue();
         for (int i = 0; i < polarMap.getSectors().length; i++) {
             CircularSector sector = polarMap.getSectors()[i];
@@ -327,7 +327,7 @@ public class PolarRobotEnv implements Environment {
             started = true;
         }
         robot.reset();
-        polarMap.clear();
+        polarMap=polarMap.clear();
         readStatus(0);
         return getObservation();
     }
@@ -388,12 +388,12 @@ public class PolarRobotEnv implements Environment {
      *
      * @param status the status from robot
      */
-    private void storeStatus(WheellyStatus status) {
+    private void storeStatus(RobotStatus status) {
         robotDir = Nd4j.createFromArray((float) status.getDirection());
         sensor = Nd4j.createFromArray((float) status.getSensorDirection());
-        distance = Nd4j.createFromArray((float) status.getSampleDistance());
-        canMoveForward = Nd4j.createFromArray(status.getCanMoveForward() ? 1F : 0F);
-        canMoveBackward = Nd4j.createFromArray(status.getCanMoveBackward() ? 1F : 0F);
-        contacts = Nd4j.createFromArray((float) status.getProximity());
+        distance = Nd4j.createFromArray((float) status.getEchoDistance());
+        canMoveForward = Nd4j.createFromArray(status.canMoveForward() ? 1F : 0F);
+        canMoveBackward = Nd4j.createFromArray(status.canMoveBackward() ? 1F : 0F);
+        contacts = Nd4j.createFromArray((float) status.getContacts());
     }
 }

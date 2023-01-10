@@ -35,7 +35,7 @@ public interface RobotApi extends Closeable {
     /**
      * Returns the robot status
      */
-    WheellyStatus getStatus();
+    RobotStatus getStatus();
 
 
     /**
@@ -49,7 +49,7 @@ public interface RobotApi extends Closeable {
      * @param dir   the directino in DEG
      * @param speed the speed in -1, 1 range
      */
-    void move(int dir, float speed);
+    void move(int dir, double speed);
 
     /**
      * Resets the robot

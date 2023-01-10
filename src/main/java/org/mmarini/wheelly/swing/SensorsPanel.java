@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.swing;
 
 import org.mmarini.swing.GridLayoutHelper;
+import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WheellyStatus;
 
 import javax.swing.*;
@@ -220,30 +221,31 @@ public class SensorsPanel extends JPanel {
     /**
      * @param status the robot status
      */
-    public void setStatus(WheellyStatus status) {
+    public void setStatus(RobotStatus status) {
         robotX.setValue(status.getLocation().getX());
         robotY.setValue(status.getLocation().getY());
-        xPulses.setValue(status.getXPulses());
-        yPulses.setValue(status.getYPulses());
+        WheellyStatus wheellyStatus = status.getWheellyStatus();
+        xPulses.setValue(wheellyStatus.getXPulses());
+        yPulses.setValue(wheellyStatus.getYPulses());
         direction.setValue(status.getDirection());
         sensorDirection.setValue(status.getSensorDirection());
-        echoTime.setValue(status.getEchoTime());
-        distance.setValue(status.getSampleDistance());
+        echoTime.setValue(wheellyStatus.getEchoTime());
+        distance.setValue(status.getEchoDistance());
         leftSpeed.setValue(status.getLeftPps());
         rightSpeed.setValue(status.getRightPps());
-        voltage.setValue(status.getVoltage());
-        supplySensor.setValue(status.getSupplySensor());
+        voltage.setValue(status.getSupplyVoltage());
+        supplySensor.setValue(wheellyStatus.getSupplySensor());
         imuFailure.setValue(status.getImuFailure());
-        rearSensors.setValue(status.getRearSensors());
-        frontSensors.setValue(status.getFrontSensors());
-        int proximity1 = status.getProximity();
+        rearSensors.setValue(wheellyStatus.getRearSensors());
+        frontSensors.setValue(wheellyStatus.getFrontSensors());
+        int proximity1 = status.getContacts();
         proximity.setValue(proximity1);
         frontLeft.setSelected((proximity1 & FRONT_LEFT_MASK) != 0);
         frontRight.setSelected((proximity1 & FRONT_RIGHT_MASK) != 0);
         rearLeft.setSelected((proximity1 & REAR_LEFT_MASK) != 0);
         rearRight.setSelected((proximity1 & REAR_RIGHT_MASK) != 0);
-        canMoveBackward.setSelected(status.getCanMoveBackward());
-        canMoveForward.setSelected(status.getCanMoveForward());
+        canMoveBackward.setSelected(status.canMoveBackward());
+        canMoveForward.setSelected(status.canMoveForward());
         halt.setSelected(status.isHalt());
     }
 }

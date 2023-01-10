@@ -99,17 +99,14 @@ class PolarMapTest {
     void update(float obsX, float obsY, int mapDir,
                 int obsAt0, int obsAt90, int obsAt180, int obsAt270,
                 double distanceAt0, double distanceAt90, double distanceAt180, double distanceAt270) {
-        Point2D.Float center = new Point2D.Float();
-        RadarMap radarMap = RadarMap.create(11, 11, center, GRID_SIZE);
+        Point2D center = new Point2D.Double();
         long timestamp = System.currentTimeMillis();
-        radarMap.getSector(obsX, obsY).ifPresent(s -> {
-            s.setTimestamp(timestamp);
-            s.setFilled(true);
-        });
+        RadarMap radarMap = RadarMap.create(11, 11, center, GRID_SIZE);
+        radarMap = radarMap.updateSector(radarMap.indexOf(obsX, obsY), sect -> sect.filled(timestamp));
 
-        PolarMap polarMap = PolarMap.create(4);
+        PolarMap polarMap = PolarMap.create(4)
+                .update(radarMap, center, mapDir, 3);
 
-        polarMap.update(radarMap, center, mapDir, 3);
         assertEquals(obsAt0 != 0, polarMap.getSector(0).hasObstacle());
         assertEquals(obsAt90 != 0, polarMap.getSector(90).hasObstacle());
         assertEquals(obsAt180 != 0, polarMap.getSector(180).hasObstacle());

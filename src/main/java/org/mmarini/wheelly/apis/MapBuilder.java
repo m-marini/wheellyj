@@ -39,7 +39,7 @@ import static java.lang.Math.signum;
  * The builder of point Map
  */
 public class MapBuilder {
-    public static MapBuilder create(float gridSize) {
+    public static MapBuilder create(double gridSize) {
         return new MapBuilder(new GridTopology(gridSize));
     }
 
@@ -62,7 +62,7 @@ public class MapBuilder {
      * @param x x coordinate
      * @param y y coordinate
      */
-    public MapBuilder add(float x, float y) {
+    public MapBuilder add(double x, double y) {
         points.add(topology.toGridPoint(x, y));
         return this;
     }
@@ -76,7 +76,7 @@ public class MapBuilder {
      * @param dx x stepping vector
      * @param dy y stepping vector
      */
-    private MapBuilder add(int n, float x, float y, float dx, float dy) {
+    private MapBuilder add(int n, double x, double y, double dx, double dy) {
         for (int i = 0; i < n; i++) {
             add(x, y);
             x += dx;
@@ -94,6 +94,7 @@ public class MapBuilder {
         } else {
             float[][] ary = points.stream()
                     .map(topology::toWorldCoords)
+                    .map(coords -> new float[]{(float) coords[0], (float) coords[1]})
                     .toArray(float[][]::new);
             return new ObstacleMap(Nd4j.create(ary), topology);
         }
@@ -107,21 +108,21 @@ public class MapBuilder {
      * @param x1 x end coordinate
      * @param y1 y end coordinate
      */
-    public MapBuilder line(float x0, float y0, float x1, float y1) {
-        float[] start = topology.snap(x0, y0);
-        float[] end = topology.snap(x1, y1);
-        float x = start[0];
-        float y = start[1];
-        float dx = end[0] - x;
-        float dy = end[1] - y;
+    public MapBuilder line(double x0, double y0, double x1, double y1) {
+        double[] start = topology.snap(x0, y0);
+        double[] end = topology.snap(x1, y1);
+        double x = start[0];
+        double y = start[1];
+        double dx = end[0] - x;
+        double dy = end[1] - y;
         if (dx == 0 && dy == 0) {
             add(x, y);
         } else if (abs(dx) >= abs(dy)) {
-            float gridSize = this.topology.getGridSize();
+            double gridSize = this.topology.getGridSize();
             int n = (int) (abs(dx) / gridSize) + 1;
             add(n, x, y, signum(dx) * gridSize, dy / abs(dx) * gridSize);
         } else {
-            float gridSize = this.topology.getGridSize();
+            double gridSize = this.topology.getGridSize();
             int n = (int) (abs(dy) / gridSize) + 1;
             add(n, x, y, dx / abs(dy) * gridSize, signum(dy) * gridSize);
         }
@@ -133,7 +134,7 @@ public class MapBuilder {
      *
      * @param coords the coordinates of points
      */
-    public MapBuilder lines(float... coords) {
+    public MapBuilder lines(double... coords) {
         if (coords.length % 2 != 0) {
             throw new IllegalArgumentException("coordinates must be pairs");
         }
@@ -157,17 +158,17 @@ public class MapBuilder {
      * @param maxDistance the maximum distance
      * @param random      the random generator
      */
-    public MapBuilder rand(int n, float x0, float y0, float minDistance, float maxDistance, Random random) {
-        float min_sqr_dist = minDistance * minDistance;
-        float max_sqr_dist = maxDistance * maxDistance;
+    public MapBuilder rand(int n, double x0, double y0, double minDistance, double maxDistance, Random random) {
+        double min_sqr_dist = minDistance * minDistance;
+        double max_sqr_dist = maxDistance * maxDistance;
         for (int i = 0; i < n; i++) {
             for (; ; ) {
-                float x = random.nextFloat() * 2 * maxDistance - maxDistance;
-                float y = random.nextFloat() * 2 * maxDistance - maxDistance;
-                float sqr_dist = x * x + y * y;
+                double x = random.nextDouble() * 2 * maxDistance - maxDistance;
+                double y = random.nextDouble() * 2 * maxDistance - maxDistance;
+                double sqr_dist = x * x + y * y;
                 if (sqr_dist >= min_sqr_dist && sqr_dist <= max_sqr_dist) {
-                    float xo = x + x0;
-                    float yo = y + y0;
+                    double xo = x + x0;
+                    double yo = y + y0;
 
                     if (!points.contains(topology.toGridPoint(xo, yo))) {
                         add(xo, yo);
@@ -184,10 +185,10 @@ public class MapBuilder {
      *
      * @param x0 left coordinate
      * @param y0 bottom coordinate
-     * @param x1 right coordiante
+     * @param x1 right coordinate
      * @param y1 top coordinate
      */
-    public MapBuilder rect(float x0, float y0, float x1, float y1) {
+    public MapBuilder rect(double x0, double y0, double x1, double y1) {
         return lines(
                 x0, y0,
                 x1, y0,

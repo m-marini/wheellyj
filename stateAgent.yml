@@ -24,10 +24,6 @@ configurations:
           timeout: 2000
         exploring:
           class: org.mmarini.wheelly.engines.ExploringState
-          scanInterval: 1000
-          minSensorDir: -45
-          maxSensorDir: 45
-          sensorDirNumber: 7
           minMoveDistance: 0.4
           maxMoveDirection: 30
         avoiding:

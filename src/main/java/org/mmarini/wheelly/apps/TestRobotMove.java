@@ -1,7 +1,7 @@
 package org.mmarini.wheelly.apps;
 
 import org.mmarini.wheelly.apis.Robot;
-import org.mmarini.wheelly.apis.WheellyStatus;
+import org.mmarini.wheelly.apis.RobotStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +38,7 @@ public class TestRobotMove {
                 }
                 cmd_timeout = t + CMD_INTERVAL;
                 robot.tick(dt);
-                WheellyStatus s = robot.getStatus();
+                RobotStatus s = robot.getStatus();
                 if (s != null) {
                     logger.info("Status: {}", s);
                 }

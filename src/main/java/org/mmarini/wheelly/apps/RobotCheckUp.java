@@ -40,7 +40,7 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
 import org.mmarini.wheelly.apis.Robot;
 import org.mmarini.wheelly.apis.Utils;
-import org.mmarini.wheelly.apis.WheellyStatus;
+import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.wheelly.swing.SensorsPanel;
 import org.slf4j.Logger;
@@ -138,7 +138,7 @@ public class RobotCheckUp {
     private MovementResult checkMove(int direction, float speed) {
         logger.info("Checking movement to {} DEG, speed {} ...", direction, speed);
         sensorPanel.setInfo(format("Checking movement to %d DEG, speed %.1f ...", direction, speed));
-        WheellyStatus status = robot.getStatus();
+        RobotStatus status = robot.getStatus();
         long time = status.getTime();
         Point2D startLocation = status.getLocation();
         long movementStart = time;
@@ -186,7 +186,7 @@ public class RobotCheckUp {
     private RotateResult checkRotate(int targetDir) {
         logger.info("Checking rotation to {} DEG ...", targetDir);
         sensorPanel.setInfo(format("Checking rotation to %d DEG ...", targetDir));
-        WheellyStatus status = robot.getStatus();
+        RobotStatus status = robot.getStatus();
         long time = status.getTime();
         Point2D startLocation = status.getLocation();
         long startDirection = time;
@@ -236,7 +236,7 @@ public class RobotCheckUp {
     private List<ScannerResult> checkScanner() {
         robot.halt();
         robot.tick(this.interval);
-        WheellyStatus status = robot.getStatus();
+        RobotStatus status = robot.getStatus();
         sensorPanel.setStatus(status);
         long time = status.getTime();
         int sensDir = -90;
@@ -263,7 +263,7 @@ public class RobotCheckUp {
                 if (scannerMoveTime == 0) {
                     scannerMoveTime = time - measureStart;
                 }
-                float sensorDistance = (float) status.getSampleDistance();
+                float sensorDistance = (float) status.getEchoDistance();
                 if (sensorDistance > 0) {
                     totDistance += sensorDistance;
                     measureCount++;
@@ -309,9 +309,9 @@ public class RobotCheckUp {
         sensorPanel.setInfo("Checking supply ...");
         for (int i = 0; i <= supplySamples; i++) {
             robot.tick(interval);
-            WheellyStatus status = robot.getStatus();
+            RobotStatus status = robot.getStatus();
             sensorPanel.setStatus(status);
-            sum += status.getVoltage();
+            sum += status.getSupplyVoltage();
         }
         sensorPanel.setInfo("");
         return sum / supplySamples;
@@ -453,7 +453,7 @@ public class RobotCheckUp {
                 logger.info("Sensor monitor started.");
                 while (monitorStop != null) {
                     robot.tick(this.interval);
-                    WheellyStatus status = robot.getStatus();
+                    RobotStatus status = robot.getStatus();
                     sensorPanel.setStatus(status);
                 }
                 logger.info("Sensor monitor stopped.");

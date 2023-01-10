@@ -29,7 +29,7 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.WheellyStatus;
+import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 
@@ -245,7 +245,7 @@ public class ProcessorCommand {
      * @param context the processor context
      */
     private static void timeCommand(ProcessorContext context) {
-        WheellyStatus status = context.getRobotStatus();
+        RobotStatus status = context.getRobotStatus();
         context.push(status.getTime());
     }
 
