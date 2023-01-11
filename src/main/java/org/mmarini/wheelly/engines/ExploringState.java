@@ -37,29 +37,46 @@ import org.mmarini.yaml.schema.Validator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.IntStream;
 
 import static java.lang.Math.*;
+import static org.mmarini.wheelly.apis.Utils.linear;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * Generates the behavior to explore environment.
  * <p>
- * Turns the sensor toward the unknown sectors if in front
- * or turns the robot toward the unknown sectors
- * or moves the robot to the furthest obstacle.
- * The front sector is prioritized on the other sectors.
- * <code>blocked</code> is generated at contact sensors signals.<br>
- * <code>timeout</code> is generated at timeout.
+ * Turns the sensor toward the unknown sectors if in front<br>
+ * Turns the robot toward the unknown sectors.<br>
+ * Moves ahead till obstacles.<br/>
+ * Turns to largest and nearest the front interval if any.<br/>
+ * Turns to the further obstacle if far away enough.<br/>
+ * Move ahead in any other cases.<br/>
+ * <p>
+ * Parameters are:
+ * <ul>
+ *     <li><code>timeout</code> the timeout interval (ms)</li>
+ *     <li><code>stopDistance</code> the stop distance (m)</li>
+ *     <li><code>turnDirectionRange</code> the turn direction range (DEG)</li>
+ * </ul>
+ * <p>
+ * Returns are:
+ * <ul>
+ *  <li><code>blocked</code> is generated at contact sensors signals</li>
+ *  <li><code>timeout</code> is generated at timeout</li>
+ * </ul>
  * </p>
  */
 public class ExploringState extends AbstractStateNode {
     public static final Validator STATE_SPEC = Validator.objectPropertiesRequired(Map.of(
-            "minMoveDistance", positiveNumber(),
-            "maxMoveDirection", integer(minimum(0), maximum(90))
-    ), List.of("minMoveDistance", "maxMoveDirection"));
+            "stopDistance", positiveNumber(),
+            "turnDirectionRange", integer(minimum(0), maximum(90))
+    ), List.of("stopDistance", "turnDirectionRange"));
     private static final Logger logger = LoggerFactory.getLogger(ExploringState.class);
 
     /**
@@ -72,13 +89,13 @@ public class ExploringState extends AbstractStateNode {
     public static ExploringState create(JsonNode root, Locator locator, String id) {
         BASE_STATE_SPEC.apply(locator).accept(root);
         STATE_SPEC.apply(locator).accept(root);
-        double minMoveDistance = locator.path("minMoveDistance").getNode(root).asDouble();
-        int maxMoveDirection = locator.path("maxMoveDirection").getNode(root).asInt();
+        double stopDistance = locator.path("stopDistance").getNode(root).asDouble();
+        int turnDirectionRange = locator.path("turnDirectionRange").getNode(root).asInt();
         ProcessorCommand onInit = ProcessorCommand.concat(
                 loadTimeout(root, locator, id),
                 ProcessorCommand.setProperties(Map.of(
-                        id + ".minMoveDistance", minMoveDistance,
-                        id + ".maxMoveDirection", maxMoveDirection
+                        id + ".stopDistance", stopDistance,
+                        id + ".turnDirectionRange", turnDirectionRange
                 )),
                 ProcessorCommand.create(root, locator.path("onInit")));
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
@@ -87,57 +104,47 @@ public class ExploringState extends AbstractStateNode {
     }
 
     /**
+     * Creates the exploring state
+     *
+     * @param id      the identifier
+     * @param onInit  the initialize command
+     * @param onEntry the entry command
+     * @param onExit  the exit command
+     */
+    protected ExploringState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit) {
+        super(id, onInit, onEntry, onExit);
+    }
+
+    /**
      * Returns the target sector index.
      * <p>
      * The target is in order:
      * <ul>
-     *     <li>the front sector if unknown</li>
-     *     <li>the unknown sector nearest the front</li>
-     *     <li>the front sector if empty</li>
+     *     <li>the front sector if empty or obstacle far away</li>
      *     <li>the middle sector of largest empty interval</li>
-     *     <li>the front sector if obstacle distance >= minMoveDistance</li>
      *     <li>the sector with further obstacle</li>
      * </ul>
      * </p>
      *
-     * @param map             the polar map
-     * @param minMoveDistance the minimum moving distance
+     * @param context the process context
      */
-    static int findSectorTarget(PolarMap map, double minMoveDistance) {
-        CircularSector[] sectors = map.getSectors();
-        CircularSector frontSector = sectors[0];
-        if (!frontSector.isKnown()) {
-            // Returns the front sector if unknown
+    int findTargetSector(ProcessorContext context) {
+        PolarMap polarMap = context.getPolarMap();
+        CircularSector frontSector = polarMap.getSector(0);
+        double stopDistance = getDouble(context, "stopDistance");
+        if (!frontSector.hasObstacle() || frontSector.getDistance() >= stopDistance) {
+            // returns the front sector if empty or obstacle far away
             return 0;
         }
-        int n = sectors.length;
-        // Searches for known sector nearest the front
-        Optional<Integer> unknownSector1 = IntStream.range(0, n)
-                .filter(i -> !sectors[i].isKnown())
-                .mapToObj(i -> Tuple2.of(i, abs(map.sectorDirection(i))))
-                .min(Comparator.comparingDouble(a -> a._2))
-                .map(Tuple2::getV1);
-        if (unknownSector1.isPresent()) {
-            // Returns the unknown sector nearest the front
-            return unknownSector1.get();
-        }
-        // All sectors are known
-        if (!frontSector.hasObstacle()) {
-            // Returns the front sector if empty
-            return 0;
-        }
-        if (frontSector.getDistance() >= minMoveDistance) {
-            // Returns the front sector if the obstacle is far away
-            return 0;
-        }
-        // Search for empty sector intervals and furthest sector with obstacle
+        // Searches for empty sector intervals and furthest sector with obstacle
         int start = -1;
         int len = 0;
-        int furthest = -1;
+        int furthestIndex = -1;
         double distance = 0;
         List<int[]> intervals = new ArrayList<>();
-        for (int i = 0; i < sectors.length; i++) {
-            CircularSector sector = sectors[i];
+        int n = polarMap.getSectorsNumber();
+        for (int i = 0; i < n; i++) {
+            CircularSector sector = polarMap.getSector(i);
             if (!sector.hasObstacle()) {
                 // Sector without obstacle
                 if (start >= 0) {
@@ -155,8 +162,8 @@ public class ExploringState extends AbstractStateNode {
                     start = -1;
                     len = 0;
                 }
-                if (furthest < 0 || sector.getDistance() > distance) {
-                    furthest = i;
+                if (furthestIndex < 0 || sector.getDistance() > distance) {
+                    furthestIndex = i;
                     distance = sector.getDistance();
                 }
             }
@@ -165,31 +172,37 @@ public class ExploringState extends AbstractStateNode {
         if (start >= 0) {
             intervals.add(new int[]{start, len});
         }
+
         if (!intervals.isEmpty()) {
             // Find the larger empty sector interval
             int[] target = intervals.stream().max(Comparator.comparingInt(a -> a[1])).orElseThrow();
-            // returns the middle sector in the interval
-            return (target[0] + (target[1] - 1) / 2 + sectors.length) % sectors.length;
+            // returns the middle sector of the largest empty interval
+            return (target[0] + (target[1] - 1) / 2 + n) % n;
         }
-        if (frontSector.getDistance() >= minMoveDistance) {
-            // returns the front sector if obstacle distance is >= minMoveDistance
-            return 0;
-        }
-        // returns the further obstacle sector if no interval available
-        return max(furthest, 0);
+
+        CircularSector furthestSector = polarMap.getSector(furthestIndex);
+        return furthestSector.getDistance() > stopDistance
+                // returns the sector with further obstacle
+                ? furthestIndex
+                // or front sector if further obstacle is near (near then stop distance)
+                : 0;
     }
 
-
     /**
-     * Creates the exploring state
+     * Returns the index of the nearest sector or -1 if none
      *
-     * @param id      the identifier
-     * @param onInit  the initialize command
-     * @param onEntry the entry command
-     * @param onExit  the exit command
+     * @param context the context
      */
-    protected ExploringState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit) {
-        super(id, onInit, onEntry, onExit);
+    int findUnknownSector(ProcessorContext context) {
+        PolarMap map = context.getPolarMap();
+        return !map.getSector(0).isKnown()
+                ? 0 // return front sector if unknown
+                : IntStream.range(0, map.getSectorsNumber())
+                .filter(i -> !map.getSector(i).isKnown())
+                .mapToObj(i -> Tuple2.of(i, abs(map.sectorDirection(i))))
+                .min(Comparator.comparingDouble(a -> a._2))
+                .map(Tuple2::getV1)
+                .orElse(-1);
     }
 
     @Override
@@ -206,46 +219,47 @@ public class ExploringState extends AbstractStateNode {
             context.moveSensor(0);
             return TIMEOUT_EXIT;
         }
+
         // Find the unknown sector target direction
-        PolarMap polarMap = context.getPolarMap();
-        double minMoveDistance = getDouble(context, "minMoveDistance");
-        int sectorIndex = findSectorTarget(polarMap, minMoveDistance);
-        CircularSector[] sectors = polarMap.getSectors();
-        CircularSector sector = sectors[sectorIndex];
-        int sectorDirection = (int) round(toDegrees(polarMap.sectorDirection(sectorIndex)));
-        if (!sector.isKnown() && abs(sectorDirection) <= 90) {
-            // scan to the sectorDirection
-            logger.debug("{}: scan {} DEG", getId(), sectorDirection);
-            context.moveSensor(sectorDirection);
-            context.haltRobot();
+        int targetIndex = findUnknownSector(context);
+        PolarMap map = context.getPolarMap();
+        if (targetIndex >= 0) {
+            int sectorDir = (int) round(toDegrees(map.sectorDirection(targetIndex)));
+            if (abs(sectorDir) <= 90) {
+                // Turns the scanner to the unknown sector
+                logger.debug("{}: scan {} DEG", getId(), sectorDir);
+                context.moveSensor(sectorDir);
+                context.haltRobot();
+            } else {
+                // Turns the robot to the unknown sector
+                int robotDir = normalizeDegAngle(context.getRobotDirection() + sectorDir);
+                logger.debug("{}: turn to unknown sector {} DEG", getId(), robotDir);
+                context.moveSensor(0);
+                context.moveRobot(robotDir, 0);
+            }
             return null;
         }
-        double distance = sector.getDistance();
-        int maxMoveDirection = getInt(context, "maxMoveDirection");
-        /*
-        float speed = abs(sectorDirection) < maxMoveDirection && (distance == 0 || distance >= minMoveDistance)
-                ? 1 : 0;
-
-         */
-        float speed = abs(sectorDirection) < maxMoveDirection ? 1 : 0;
-        // Compute speed
-        int robotDir = context.getRobotStatus().getDirection();
-        int dir = normalizeDegAngle(robotDir + sectorDirection);
-        String sectorAttribute;
-        if (!sector.isKnown()) {
-            sectorAttribute = "unknown";
-        } else if (sector.hasObstacle()) {
-            sectorAttribute = "furthest obstacle";
-        } else {
-            sectorAttribute = "empty";
-        }
-        if (speed == 0) {
-            logger.debug("{}: turn to {} sector {} DEG, {}", getId(), sectorAttribute, dir, speed);
-        } else {
-            logger.debug("{}: move to {} sector {} DEG, {}", getId(), sectorAttribute, dir, speed);
-        }
         context.moveSensor(0);
-        context.moveRobot(dir, speed);
+
+        targetIndex = findTargetSector(context);
+        CircularSector targetSector = map.getSector(targetIndex);
+
+        int sectorDir = (int) round(toDegrees(map.sectorDirection(targetIndex)));
+        int robotDir = normalizeDegAngle(context.getRobotDirection() + sectorDir);
+        double stopDistance = getDouble(context, "stopDistance");
+        int turnDirectionRange = getInt(context, "turnDirectionRange");
+        double speed = abs(sectorDir) > turnDirectionRange
+                ? 0
+                : !targetSector.hasObstacle()
+                ? 1
+                : min(max((double) round(linear(targetSector.getDistance(), 0, stopDistance, 1, 4)),
+                1), 4) / 4;
+        if (speed == 0) {
+            logger.debug("{}: turn to {} DEG", getId(), robotDir);
+        } else {
+            logger.debug("{}: move to {} DEG, speed {}", getId(), robotDir, speed);
+        }
+        context.moveRobot(robotDir, (float) speed);
         return null;
     }
 }

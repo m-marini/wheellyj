@@ -32,89 +32,131 @@ import org.junit.jupiter.api.Test;
 import org.mmarini.wheelly.envs.CircularSector;
 import org.mmarini.wheelly.envs.PolarMap;
 
+import java.util.List;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ExploringStateTest {
+    private static final double STOP_DISTANCE = 0.4;
+    private static final double MM1 = 0.001;
+
+    static ProcessorContext createContext(StateNode state, PolarMap polarMap) {
+        StateFlow flow = new StateFlow(List.of(state), List.of(), state, null);
+        ProcessorContext context = new ProcessorContext(flow);
+        context.setPolarMap(polarMap);
+        context.put("state.stopDistance", STOP_DISTANCE);
+        return context;
+    }
+
     static PolarMap createPolarMap(CircularSector[] sectors) {
         return new PolarMap(sectors);
     }
 
+    /**
+     * Given an exploring state
+     * And a polar map with all filled sectors below the stop distance
+     * And a processor context
+     * When find target sector
+     * Then should result sector 0
+     */
+    @Test
+    void findFullObstacle() {
+        ExploringState state = new ExploringState("state", null, null, null);
+        CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i ->
+                CircularSector.create(1, STOP_DISTANCE - MM1 * i)
+        ).toArray(CircularSector[]::new);
+        ProcessorContext context = createContext(state, createPolarMap(sectors));
+
+        int result = state.findTargetSector(context);
+
+        assertEquals(0, result);
+    }
+
+    /**
+     * Given an exploring state
+     * And a polar map with empty sectors' interval at 1 and 10-12
+     * And a processor context
+     * When find target sector
+     * Then should result sector 11 (middle of 10-12)
+     */
     @Test
     void findLargerInterval3() {
-
+        ExploringState state = new ExploringState("state", null, null, null);
         CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i ->
                 (i == 1 || i >= 10 && i <= 12)
                         ? CircularSector.empty(1)
-                        : CircularSector.create(1, 1)
+                        : CircularSector.create(1, STOP_DISTANCE - MM1)
         ).toArray(CircularSector[]::new);
+        ProcessorContext context = createContext(state, createPolarMap(sectors));
 
-        int result = ExploringState.findSectorTarget(createPolarMap(sectors), 0);
+        int result = state.findTargetSector(context);
+
 
         assertEquals(11, result);
     }
 
+    /**
+     * Given an exploring state
+     * And a polar map with empty sectors' interval at 0-1
+     * And a processor context
+     * When find target sector
+     * Then should result sector 0
+     */
     @Test
     void findLargerIntervalFirst() {
+        ExploringState state = new ExploringState("state", null, null, null);
         CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i ->
                 i <= 1
                         ? CircularSector.empty(1)
                         : CircularSector.create(1, 1)
         ).toArray(CircularSector[]::new);
+        ProcessorContext context = createContext(state, createPolarMap(sectors));
 
-        int result = ExploringState.findSectorTarget(createPolarMap(sectors), 0);
+        int result = state.findTargetSector(context);
 
         assertEquals(0, result);
     }
 
+    /**
+     * Given an exploring state
+     * And a full empty polar map
+     * And a processor context
+     * When find target sector
+     * Then should result sector 0
+     */
     @Test
     void findLargerIntervalFull() {
+        ExploringState state = new ExploringState("state", null, null, null);
         CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i ->
                 CircularSector.empty(1)
         ).toArray(CircularSector[]::new);
+        ProcessorContext context = createContext(state, createPolarMap(sectors));
 
-        int result = ExploringState.findSectorTarget(createPolarMap(sectors), 0);
+        int result = state.findTargetSector(context);
 
         assertEquals(0, result);
     }
 
-    @Test
-    void findLargerIntervalLast() {
-        CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i ->
-                i >= 22
-                        ? CircularSector.empty(1)
-                        : CircularSector.create(1, 1)
-        ).toArray(CircularSector[]::new);
-
-        int result = ExploringState.findSectorTarget(createPolarMap(sectors), 0);
-
-        assertEquals(22, result);
-    }
-
+    /**
+     * Given an exploring state
+     * And a polar map with all filled sectors and furthest sector at 3
+     * And a processor context
+     * When find target sector
+     * Then should result sector 0
+     */
     @Test
     void findLargerIntervalNone() {
+        ExploringState state = new ExploringState("state", null, null, null);
         CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i ->
-                i == 3 || i == 13
-                        ? CircularSector.create(1, 1 + i / 10D)
-                        : CircularSector.create(1, 1)
+                i == 3
+                        ? CircularSector.create(1, STOP_DISTANCE + MM1)
+                        : CircularSector.create(1, STOP_DISTANCE - MM1)
         ).toArray(CircularSector[]::new);
+        ProcessorContext context = createContext(state, createPolarMap(sectors));
 
-        int result = ExploringState.findSectorTarget(createPolarMap(sectors), 0);
+        int result = state.findTargetSector(context);
 
-        assertEquals(0, result);
-    }
-
-    @Test
-    void findLargerIntervalWrapped() {
-        CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i ->
-                (i <= 1 || i >= 22)
-                        ? CircularSector.empty(1)
-                        : CircularSector.create(1, 1)
-        ).toArray(CircularSector[]::new);
-
-        int result = ExploringState.findSectorTarget(createPolarMap(sectors), 0);
-
-        assertEquals(0, result);
+        assertEquals(3, result);
     }
 }
