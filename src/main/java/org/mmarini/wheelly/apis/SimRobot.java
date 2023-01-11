@@ -496,7 +496,7 @@ public class SimRobot implements RobotApi {
         // Check for radar map
         status = status.update(radarReceptiveDistance);
         long time = status.getTime();
-        if (time >= cleanTimeout) {
+        if (time >= cleanTimeout && status.getRadarMap() != null) {
             status = status.setRadarMap(status.getRadarMap().clean(time - radarPersistence));
             cleanTimeout = time + cleanInterval;
         }

@@ -202,12 +202,8 @@ flow:
       timeout: 2000
     exploring:
       class: org.mmarini.wheelly.engines.ExploringState
-      scanInterval: 1000
-      minSensorDir: -45
-      maxSensorDir: 45
-      sensorDirNumber: 5
-      minMoveDistance: 0.5
-      maxMoveDirection: 30
+      stopDistance: 0.5
+      turnDirectionRange: 30
     avoiding:
       class: org.mmarini.wheelly.engines.AvoidingState
   transitions:
@@ -264,8 +260,8 @@ The `blocked` signal is generated when robot has obstacle contacts.
 Parameter are:
 
 - `timeout` timeout interval (ms)
-- `minMoveDistance` minimum distance from obstacles to move the robot (m)
-- `maxMoveDirection`: maximum direction change to move the robot (DEG), beyond which the robot only turns 
+- `stopDistance` the stop distance distance from obstacles to stop the robot (m)
+- `turnDirectionRange`: turn direction range (DEG) to turn the robot, beyond which the robot move ahead
 
 ### Command specification
 

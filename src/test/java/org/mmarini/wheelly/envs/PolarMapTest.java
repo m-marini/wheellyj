@@ -107,21 +107,21 @@ class PolarMapTest {
         PolarMap polarMap = PolarMap.create(4)
                 .update(radarMap, center, mapDir, 3);
 
-        assertEquals(obsAt0 != 0, polarMap.getSector(0).hasObstacle());
-        assertEquals(obsAt90 != 0, polarMap.getSector(90).hasObstacle());
-        assertEquals(obsAt180 != 0, polarMap.getSector(180).hasObstacle());
-        assertEquals(obsAt270 != 0, polarMap.getSector(-90).hasObstacle());
+        assertEquals(obsAt0 != 0, polarMap.getSectorByDirection(0).hasObstacle());
+        assertEquals(obsAt90 != 0, polarMap.getSectorByDirection(90).hasObstacle());
+        assertEquals(obsAt180 != 0, polarMap.getSectorByDirection(180).hasObstacle());
+        assertEquals(obsAt270 != 0, polarMap.getSectorByDirection(-90).hasObstacle());
         if (obsAt0 != 0) {
-            assertThat(polarMap.getSector(0).getDistance(), closeTo(distanceAt0, EPSILON));
+            assertThat(polarMap.getSectorByDirection(0).getDistance(), closeTo(distanceAt0, EPSILON));
         }
         if (obsAt90 != 0) {
-            assertThat(polarMap.getSector(90).getDistance(), closeTo(distanceAt90, EPSILON));
+            assertThat(polarMap.getSectorByDirection(90).getDistance(), closeTo(distanceAt90, EPSILON));
         }
         if (obsAt180 != 0) {
-            assertThat(polarMap.getSector(180).getDistance(), closeTo(distanceAt180, EPSILON));
+            assertThat(polarMap.getSectorByDirection(180).getDistance(), closeTo(distanceAt180, EPSILON));
         }
         if (obsAt270 != 0) {
-            assertThat(polarMap.getSector(-90).getDistance(), closeTo(distanceAt270, EPSILON));
+            assertThat(polarMap.getSectorByDirection(-90).getDistance(), closeTo(distanceAt270, EPSILON));
         }
     }
 }

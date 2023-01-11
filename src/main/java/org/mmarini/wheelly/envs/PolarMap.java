@@ -80,13 +80,8 @@ public class PolarMap {
         return create(sectors.length);
     }
 
-    /**
-     * Returns the circular sector in a direction
-     *
-     * @param direction the direction (DEG)
-     */
-    public CircularSector getSector(int direction) {
-        return sectors[sectorIndex(direction)];
+    public CircularSector getSector(int i) {
+        return sectors[i];
     }
 
     /**
@@ -96,8 +91,21 @@ public class PolarMap {
         return Math.PI * 2 / sectors.length;
     }
 
+    /**
+     * Returns the circular sector in a direction
+     *
+     * @param direction the direction (DEG)
+     */
+    public CircularSector getSectorByDirection(int direction) {
+        return sectors[sectorIndex(direction)];
+    }
+
     public CircularSector[] getSectors() {
         return sectors;
+    }
+
+    public int getSectorsNumber() {
+        return sectors.length;
     }
 
     /**
