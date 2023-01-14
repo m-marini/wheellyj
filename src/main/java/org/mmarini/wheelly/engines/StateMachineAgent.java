@@ -29,10 +29,10 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.wheelly.apis.PolarMap;
 import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.envs.PolarMap;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 
@@ -62,10 +62,11 @@ public class StateMachineAgent implements Closeable {
             "commandInterval", positiveInteger(),
             "reactionInterval", positiveInteger(),
             "numRadarSectors", integer(minimum(2)),
+            "minRadarDistance", positiveNumber(),
             "maxRadarDistance", positiveNumber()
     ), List.of(
             "flow", "interval", "commandInterval", "reactionInterval",
-            "numRadarSectors", "maxRadarDistance"
+            "numRadarSectors", "minRadarDistance", "maxRadarDistance"
     ));
 
     /**
@@ -81,10 +82,11 @@ public class StateMachineAgent implements Closeable {
         long interval = locator.path("interval").getNode(root).asLong();
         long commandInterval = locator.path("commandInterval").getNode(root).asLong();
         long reactionInterval = locator.path("reactionInterval").getNode(root).asLong();
-        float maxRadarDistance = (float) locator.path("maxRadarDistance").getNode(root).asDouble();
+        double minRadarDistance = locator.path("minRadarDistance").getNode(root).asDouble();
+        double maxRadarDistance = locator.path("maxRadarDistance").getNode(root).asDouble();
         int numRadarSectors = locator.path("numRadarSectors").getNode(root).asInt();
         PolarMap polarMap = PolarMap.create(numRadarSectors);
-        return new StateMachineAgent(interval, commandInterval, reactionInterval, maxRadarDistance, polarMap, robot, new ProcessorContext(flow));
+        return new StateMachineAgent(interval, commandInterval, reactionInterval, minRadarDistance, maxRadarDistance, polarMap, robot, new ProcessorContext(flow));
     }
 
     private final RobotApi robot;
@@ -92,14 +94,15 @@ public class StateMachineAgent implements Closeable {
     private final long interval;
     private final long commandInterval;
     private final long reactionInterval;
-    private final float maxRadarDistance;
+    private final double maxRadarDistance;
+    private final double minRadarDistance;
     private PolarMap polarMap;
     private long lastMoveTime;
     private long lastScanTime;
     private int lastScanDir;
     private boolean halted;
     private int lastDirection;
-    private float lastSpeed;
+    private double lastSpeed;
 
     /**
      * Creates the agent
@@ -107,14 +110,16 @@ public class StateMachineAgent implements Closeable {
      * @param interval         the time interval between status scan (ms)
      * @param commandInterval  the time interval between commands (ms)
      * @param reactionInterval the time interval between reaction (ms)
+     * @param minRadarDistance the min radar distance (m)
      * @param maxRadarDistance the max radar distance (m)
      * @param polarMap         the polar map
      * @param robot            the robot api
      * @param context          the processor context
      */
-    public StateMachineAgent(long interval, long commandInterval, long reactionInterval, float maxRadarDistance, PolarMap polarMap, RobotApi robot, ProcessorContext context) {
+    public StateMachineAgent(long interval, long commandInterval, long reactionInterval, double minRadarDistance, double maxRadarDistance, PolarMap polarMap, RobotApi robot, ProcessorContext context) {
         this.commandInterval = commandInterval;
         this.reactionInterval = reactionInterval;
+        this.minRadarDistance = minRadarDistance;
         this.maxRadarDistance = maxRadarDistance;
         this.robot = requireNonNull(robot);
         this.context = context;
@@ -127,7 +132,7 @@ public class StateMachineAgent implements Closeable {
 
     }
 
-    public float getMaxRadarDistance() {
+    public double getMaxRadarDistance() {
         return this.maxRadarDistance;
     }
 
@@ -178,7 +183,7 @@ public class StateMachineAgent implements Closeable {
         }
         if (!context.isHalt()) {
             int dir = context.getRobotDirection();
-            float speed = context.getSpeed();
+            double speed = context.getSpeed();
             if (halted || lastDirection != dir || lastSpeed != speed ||
                     time >= lastMoveTime + commandInterval) {
                 robot.move(dir, speed);
@@ -210,7 +215,7 @@ public class StateMachineAgent implements Closeable {
         } while (!(status != null && status.getTime() >= timeout));
         context.setRobotStatus(status);
         //polarMap.update(status.getRadarMap(), status.getLocation(), status.getDirection(), maxRadarDistance);
-        polarMap = polarMap.update(status.getRadarMap(), status.getLocation(), status.getDirection(), maxRadarDistance);
+        polarMap = polarMap.update(status.getRadarMap(), status.getLocation(), status.getDirection(), minRadarDistance, maxRadarDistance);
     }
 
     /**

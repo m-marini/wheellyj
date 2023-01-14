@@ -29,9 +29,10 @@
 package org.mmarini.wheelly.engines;
 
 import org.junit.jupiter.api.Test;
+import org.mmarini.wheelly.apis.PolarMap;
 import org.mmarini.wheelly.envs.CircularSector;
-import org.mmarini.wheelly.envs.PolarMap;
 
+import java.awt.geom.Point2D;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -50,7 +51,7 @@ class ExploringStateTest {
     }
 
     static PolarMap createPolarMap(CircularSector[] sectors) {
-        return new PolarMap(sectors);
+        return new PolarMap(sectors, new Point2D.Double(), 0);
     }
 
     /**
@@ -64,7 +65,7 @@ class ExploringStateTest {
     void findFullObstacle() {
         ExploringState state = new ExploringState("state", null, null, null);
         CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i ->
-                CircularSector.create(1, STOP_DISTANCE - MM1 * i)
+                CircularSector.hindered(1, STOP_DISTANCE - MM1 * i)
         ).toArray(CircularSector[]::new);
         ProcessorContext context = createContext(state, createPolarMap(sectors));
 
@@ -86,7 +87,7 @@ class ExploringStateTest {
         CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i ->
                 (i == 1 || i >= 10 && i <= 12)
                         ? CircularSector.empty(1)
-                        : CircularSector.create(1, STOP_DISTANCE - MM1)
+                        : CircularSector.hindered(1, STOP_DISTANCE - MM1)
         ).toArray(CircularSector[]::new);
         ProcessorContext context = createContext(state, createPolarMap(sectors));
 
@@ -109,7 +110,7 @@ class ExploringStateTest {
         CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i ->
                 i <= 1
                         ? CircularSector.empty(1)
-                        : CircularSector.create(1, 1)
+                        : CircularSector.hindered(1, 1)
         ).toArray(CircularSector[]::new);
         ProcessorContext context = createContext(state, createPolarMap(sectors));
 
@@ -150,8 +151,8 @@ class ExploringStateTest {
         ExploringState state = new ExploringState("state", null, null, null);
         CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i ->
                 i == 3
-                        ? CircularSector.create(1, STOP_DISTANCE + MM1)
-                        : CircularSector.create(1, STOP_DISTANCE - MM1)
+                        ? CircularSector.hindered(1, STOP_DISTANCE + MM1)
+                        : CircularSector.hindered(1, STOP_DISTANCE - MM1)
         ).toArray(CircularSector[]::new);
         ProcessorContext context = createContext(state, createPolarMap(sectors));
 

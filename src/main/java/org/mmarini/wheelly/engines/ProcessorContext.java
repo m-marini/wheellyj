@@ -28,8 +28,8 @@
 
 package org.mmarini.wheelly.engines;
 
+import org.mmarini.wheelly.apis.PolarMap;
 import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.envs.PolarMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

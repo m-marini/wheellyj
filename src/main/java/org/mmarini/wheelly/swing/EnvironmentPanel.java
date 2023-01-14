@@ -136,9 +136,9 @@ public class EnvironmentPanel extends RadarPanel {
     private boolean hudAtRight;
     private boolean hudAtBottom;
     private List<Point2D> obstacleMap;
-    private float reward;
+    private double reward;
     private RobotStatus robotStatus;
-    private float timeRatio;
+    private double timeRatio;
 
     public EnvironmentPanel() {
         setFont(Font.decode("Monospaced"));
@@ -308,7 +308,7 @@ public class EnvironmentPanel extends RadarPanel {
         repaint();
     }
 
-    public void setReward(float reward) {
+    public void setReward(double reward) {
         this.reward = reward;
         repaint();
     }
@@ -318,41 +318,8 @@ public class EnvironmentPanel extends RadarPanel {
         repaint();
     }
 
-    public void setTimeRatio(float timeRatio) {
+    public void setTimeRatio(double timeRatio) {
         this.timeRatio = timeRatio;
         repaint();
     }
-
-    /*
-    static class PanelData {
-
-        PanelData(RobotStatus robotStatus, float timeRatio, float reward, List<Point2D> obstacleMap) {
-            this.robotStatus = robotStatus;
-            this.timeRatio = timeRatio;
-            this.obstacleMap = obstacleMap;
-            this.reward = reward;
-        }
-
-        public PanelData setObstacleMap(List<Point2D> obstacleMap) {
-            return new PanelData(robotStatus, timeRatio,
-                    reward, obstacleMap
-            );
-        }
-
-        public PanelData setReward(float reward) {
-            return new PanelData(robotStatus, timeRatio,
-                    reward, obstacleMap
-            );
-        }
-
-        public PanelData setRobotStatus(RobotStatus robotStatus) {
-            return new PanelData(robotStatus, timeRatio, reward, obstacleMap);
-        }
-
-        public PanelData setTimeRatio(float timeRatio) {
-            return new PanelData(robotStatus, timeRatio, reward, obstacleMap);
-        }
-    }
-
-     */
 }

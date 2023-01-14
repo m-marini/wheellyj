@@ -15,7 +15,8 @@ configurations:
     radarHeight: 25
     radarGrid: 0.6
     numRadarSectors: 24
-    maxRadarDistance: 3
+    minRadarDistance: 0.2
+    maxRadarDistance: 2.8
     flow:
       entry: start
       states:

@@ -60,7 +60,7 @@ public interface Environment extends Closeable {
     Map<String, Signal> reset();
 
     class ExecutionResult {
-        public final float reward;
+        public final double reward;
         public final Map<String, Signal> state;
         public final boolean terminal;
 
@@ -71,7 +71,7 @@ public interface Environment extends Closeable {
          * @param reward   the reward
          * @param terminal true if terminal state
          */
-        public ExecutionResult(Map<String, Signal> state, float reward, boolean terminal) {
+        public ExecutionResult(Map<String, Signal> state, double reward, boolean terminal) {
             this.state = requireNonNull(state);
             this.reward = reward;
             this.terminal = terminal;
@@ -82,13 +82,13 @@ public interface Environment extends Closeable {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             ExecutionResult that = (ExecutionResult) o;
-            return Float.compare(that.reward, reward) == 0 && terminal == that.terminal && state.equals(that.state);
+            return Double.compare(that.reward, reward) == 0 && terminal == that.terminal && state.equals(that.state);
         }
 
         /**
          * Returns the reward
          */
-        public float getReward() {
+        public double getReward() {
             return reward;
         }
 

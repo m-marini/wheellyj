@@ -561,7 +561,7 @@ public class TDAgent implements Agent {
      */
     void train(Map<String, Signal> actions, Environment.ExecutionResult result) {
         Map<String, INDArray> s0 = lastInputs;
-        float reward = result.reward;
+        float reward = (float) result.reward;
         Map<String, Signal> procState = processState(result.state);
         Map<String, INDArray> s1 = getInput(procState);
         Map<String, INDArray> c0 = critic.forward(s0);

@@ -35,6 +35,7 @@ import org.mmarini.yaml.schema.Validator;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 import static java.lang.Math.abs;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.*;
@@ -70,7 +71,7 @@ public interface Explore {
             }
             RadarMap radarMap = status.getRadarMap();
             long knownSectorsNumber = radarMap.getSectorsStream()
-                    .filter(MapSector::isKnown)
+                    .filter(Predicate.not(MapSector::isUnknown))
                     .count();
             // encourages the exploration of unfamiliar areas
             double isKnown = ((double) knownSectorsNumber) / radarMap.getSectorsNumber();

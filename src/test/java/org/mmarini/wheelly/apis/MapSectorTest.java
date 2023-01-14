@@ -32,21 +32,15 @@ import java.awt.geom.Point2D;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MapSectorTest {
-
-    //static final float GRID_SIZE = 0.2F;
-    static final float RECEPTIVE_DISTANCE = 0.1F;
-    static final float MIN_DISTANCE = 0.4F;
-
     @Test
     void cleanNoTimeout() {
         Point2D sectorLocation = new Point2D.Float(0, 2F);
         long timestamp = System.currentTimeMillis();
-        MapSector sector = new MapSector(sectorLocation, timestamp, true);
+        MapSector sector = MapSector.hindered(sectorLocation, timestamp);
 
-        sector.clean(timestamp - 1);
+        sector.clean(timestamp);
 
-        assertTrue(sector.isKnown());
-        assertTrue(sector.hasObstacle());
+        assertTrue(sector.isHindered());
         assertEquals(timestamp, sector.getTimestamp());
     }
 
@@ -54,219 +48,54 @@ class MapSectorTest {
     void cleanTimeout() {
         Point2D sectorLocation = new Point2D.Float(0, 2F);
         long timestamp = System.currentTimeMillis();
-        MapSector sector = new MapSector(sectorLocation, timestamp, true);
+        MapSector sector = MapSector.hindered(sectorLocation, timestamp - 1);
 
         sector = sector.clean(timestamp);
 
-        assertFalse(sector.isKnown());
-        assertEquals(0L, sector.getTimestamp());
+        assertTrue(sector.isUnknown());
     }
 
-    /**
-     * Given a signal at 2m
-     * And an unknown sector at 1m, 6 DEG from sensor direction (in direction) (sector at 0 DEG, sensor to -6 DEG)
-     * When update the sector status
-     * Than the sector should be empty (sector before the signal range)
-     */
     @Test
-    void updateEchoBefore() {
-        Point2D sensLocation = new Point2D.Float(0, 0);
-        int sensDir = -6;
-        float distance = 2;
+    void contact() {
         long timestamp = System.currentTimeMillis();
-        RadarMap.SensorSignal signal = new RadarMap.SensorSignal(sensLocation, sensDir, distance, timestamp);
-
-        Point2D sectorLocation = new Point2D.Float(0, 1F);
-        MapSector sector = new MapSector(sectorLocation, 0, false);
-
-        sector = sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
-
-        assertTrue(sector.isKnown());
-        assertFalse(sector.hasObstacle());
+        MapSector sector = MapSector.contact(new Point2D.Double(), timestamp);
+        assertFalse(sector.isUnknown());
+        assertFalse(sector.isHindered());
+        assertTrue(sector.isContact());
+        assertFalse(sector.isEmpty());
         assertEquals(timestamp, sector.getTimestamp());
     }
 
-    /**
-     * Given a signal at 2m
-     * And an unknown sector at 2m, 3 DEG from sensor direction (in direction) (sector at 0 DEG, sensor to -3 DEG)
-     * When update the sector status
-     * Than the sector should be filled (sector in the signal range)
-     */
     @Test
-    void updateEchoInRange() {
-        Point2D sensLocation = new Point2D.Float(0, 0);
-        int sensDir = -3;
-        float distance = 2;
+    void empty() {
         long timestamp = System.currentTimeMillis();
-        RadarMap.SensorSignal signal = new RadarMap.SensorSignal(sensLocation, sensDir, distance, timestamp);
-
-        Point2D sectorLocation = new Point2D.Float(0, 2F);
-        MapSector sector = new MapSector(sectorLocation, 0, false);
-
-        sector = sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
-
-        assertTrue(sector.isKnown());
-        assertTrue(sector.hasObstacle());
+        MapSector sector = MapSector.empty(new Point2D.Double(), timestamp);
+        assertFalse(sector.isUnknown());
+        assertFalse(sector.isHindered());
+        assertTrue(sector.isEmpty());
+        assertFalse(sector.isContact());
         assertEquals(timestamp, sector.getTimestamp());
     }
 
-    /**
-     * Given a no echo signal
-     * And an unknown sector at 2.99m, 0 DEG from sensor direction (in direction)
-     * When update the sector status
-     * Than the sector should be empty
-     */
     @Test
-    void updateNoEcho() {
-        Point2D sensLocation = new Point2D.Float(0, 0);
-        int sensDir = 0;
-        float distance = 0;
+    void hindered() {
         long timestamp = System.currentTimeMillis();
-        RadarMap.SensorSignal signal = new RadarMap.SensorSignal(sensLocation, sensDir, distance, timestamp);
-
-        Point2D sectorLocation = new Point2D.Float(0, 2.99F);
-        MapSector sector = new MapSector(sectorLocation, 0, false);
-
-        sector = sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
-
-        assertTrue(sector.isKnown());
-        assertFalse(sector.hasObstacle());
+        MapSector sector = MapSector.hindered(new Point2D.Double(), timestamp);
+        assertFalse(sector.isUnknown());
+        assertTrue(sector.isHindered());
+        assertFalse(sector.isEmpty());
+        assertFalse(sector.isContact());
+        assertFalse(sector.isEmpty());
         assertEquals(timestamp, sector.getTimestamp());
     }
 
-    /**
-     * Given a no echo signal
-     * And an unknown sector at 2.99m, 2 DEG from sensor direction (in direction)
-     * When update the sector status
-     * Than the sector should be empty
-     */
     @Test
-    void updateNoEchoLeft() {
-        Point2D sensLocation = new Point2D.Float(0, 0);
-        int sensDir = -2;
-        float distance = 0;
-        long timestamp = System.currentTimeMillis();
-        RadarMap.SensorSignal signal = new RadarMap.SensorSignal(sensLocation, sensDir, distance, timestamp);
-
-        Point2D sectorLocation = new Point2D.Float(0, 2.99F);
-        MapSector sector = new MapSector(sectorLocation, 0, false);
-
-        sector = sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
-
-        assertTrue(sector.isKnown());
-        assertFalse(sector.hasObstacle());
-        assertEquals(timestamp, sector.getTimestamp());
-    }
-
-    /**
-     * Given a no echo signal
-     * And an unknown sector at 2.99m, -2 DEG from sensor direction (in direction)
-     * When update the sector status
-     * Than the sector should be empty
-     */
-    @Test
-    void updateNoEchoRight() {
-        Point2D sectorLocation = new Point2D.Float(0, 2.99F);
-        MapSector sector = new MapSector(sectorLocation, 0, false);
-
-        Point2D sensLocation = new Point2D.Float(0, 0);
-        int sensDir = 2;
-        float distance = 0;
-        long timestamp = System.currentTimeMillis();
-        RadarMap.SensorSignal signal = new RadarMap.SensorSignal(sensLocation, sensDir, distance, timestamp);
-
-        sector = sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
-
-        assertTrue(sector.isKnown());
-        assertFalse(sector.hasObstacle());
-        assertEquals(timestamp, sector.getTimestamp());
-    }
-
-    /**
-     * Given a no echo signal
-     * And an unknown sector at 1m, -7 DEG from sensor direction (not in direction)
-     * When update the sector status
-     * Than the sector should remain unknown
-     */
-    @Test
-    void updateNotInDirection() {
-        Point2D sensLocation = new Point2D.Float(0, 0);
-        int sensDir = 7;
-        float distance = 0;
-        long timestamp = System.currentTimeMillis();
-        RadarMap.SensorSignal signal = new RadarMap.SensorSignal(sensLocation, sensDir, distance, timestamp);
-
-        Point2D sectorLocation = new Point2D.Float(0, 1);
-        MapSector sector = new MapSector(sectorLocation, 0, false);
-
-        sector = sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
-
-        assertFalse(sector.isKnown());
-    }
-
-    /**
-     * Given a no echo signal
-     * And an unknown sector at 3.01m, 0 DEG from sensor direction (in direction)
-     * When update the sector status
-     * Than the sector should remain unknown (not in range)
-     */
-    @Test
-    void updateOutOfRange() {
-        Point2D sensLocation = new Point2D.Float(0, 0);
-        int sensDir = 0;
-        float distance = 0;
-        long timestamp = System.currentTimeMillis();
-        RadarMap.SensorSignal signal = new RadarMap.SensorSignal(sensLocation, sensDir, distance, timestamp);
-
-        Point2D sectorLocation = new Point2D.Float(0, 3.01F);
-        MapSector sector = new MapSector(sectorLocation, 0, false);
-
-        sector = sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
-
-        assertFalse(sector.isKnown());
-    }
-
-    /**
-     * Given a signal at 2m
-     * And an unknown sector at 2.21m, 15 DEG from sensor direction (in direction range) (sector at 0 DEG, sensor to -15 DEG)
-     * When update the sector status
-     * Than the sector should not be updated (sector too far away)
-     */
-    @Test
-    void updateSectorFarAway() {
-        Point2D sensLocation = new Point2D.Float(0, 0);
-        int sensDir = -15;
-        float distance = 2;
-        long timestamp = System.currentTimeMillis();
-        RadarMap.SensorSignal signal = new RadarMap.SensorSignal(sensLocation, sensDir, distance, timestamp);
-
-        Point2D sectorLocation = new Point2D.Float(0, 2.21F);
-        MapSector sector = new MapSector(sectorLocation, 0, false);
-
-        sector = sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
-
-        assertFalse(sector.isKnown());
-    }
-
-    /**
-     * Given a no echo signal
-     * And an unknown sector at 0.29m, 0 DEG from sensor direction (in direction)
-     * When update the sector status
-     * Than the sector should remain unknown (too close)
-     */
-    @Test
-    void updateTooNear() {
-        Point2D sensLocation = new Point2D.Float(0, 0);
-        int sensDir = 0;
-        float distance = 0;
-        long timestamp = System.currentTimeMillis();
-        RadarMap.SensorSignal signal = new RadarMap.SensorSignal(sensLocation, sensDir, distance, timestamp);
-
-        Point2D sectorLocation = new Point2D.Float(0, 0.29F);
-        MapSector sector = new MapSector(sectorLocation, 0, false);
-
-        sector = sector.update(signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
-
-        assertFalse(sector.isKnown());
+    void unknown() {
+        MapSector sector = MapSector.unknown(new Point2D.Double());
+        assertTrue(sector.isUnknown());
+        assertFalse(sector.isHindered());
+        assertFalse(sector.isEmpty());
+        assertFalse(sector.isContact());
+        assertEquals(0, sector.getTimestamp());
     }
 }
