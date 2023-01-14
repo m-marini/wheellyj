@@ -68,7 +68,7 @@ import static org.mmarini.yaml.schema.Validator.*;
  * Run a test to check for robot environment with random behavior agent
  */
 public class Wheelly {
-    public static final float DEFAULT_DISCOUNT = (float) exp(-1 / 29.7);
+    public static final double DEFAULT_DISCOUNT = exp(-1 / 29.7);
     public static final String[] DEFAULT_KPIS = {
             "^reward$",
             "^avgReward$",
@@ -238,7 +238,7 @@ public class Wheelly {
                         radarFrame = createRadarFrame(radarPanel);
                     } else if (env instanceof PolarRobotEnv) {
                         polarPanel = new PolarPanel();
-                        float radarMaxDistance = ((PolarRobotEnv) env).getMaxRadarDistance();
+                        double radarMaxDistance = ((PolarRobotEnv) env).getMaxRadarDistance();
                         polarPanel.setRadarMaxDistance(radarMaxDistance);
                         radarFrame = createRadarFrame(polarPanel);
                     }
@@ -251,7 +251,7 @@ public class Wheelly {
                         createKpis(agent, env.getActions(), new File(kpis), args.getString("labels"));
                     }
                     long start = System.currentTimeMillis();
-                    float avgRewards = 0;
+                    double avgRewards = 0;
                     Map<String, Signal> state = env.reset();
                     RobotStatus status = robot.getStatus();
                     if (robot instanceof SimRobot) {
@@ -267,12 +267,12 @@ public class Wheelly {
                         Map<String, Signal> actions = agent.act(state);
                         Environment.ExecutionResult result = env.execute(actions);
                         agent.observe(result);
-                        float reward = result.getReward();
+                        double reward = result.getReward();
                         avgRewards = DEFAULT_DISCOUNT * (avgRewards - reward) + reward;
                         status = robot.getStatus();
                         frame.setRobotStatus(status);
                         frame.setReward(avgRewards);
-                        frame.setTimeRatio((float) status.getElapsed() / (System.currentTimeMillis() - start));
+                        frame.setTimeRatio((double) status.getElapsed() / (System.currentTimeMillis() - start));
                         if (radarPanel != null) {
                             radarPanel.setRadarMap(((RadarRobotEnv) env).getRadarMap());
                         }

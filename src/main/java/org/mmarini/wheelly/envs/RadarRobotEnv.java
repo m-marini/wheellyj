@@ -309,8 +309,8 @@ public class RadarRobotEnv implements Environment {
         // TODO
         //radarMap.update(status.getRadarMap(), status.getLocation(), status.getDirection());
         int[] radarAry = radarMap.getSectorsStream().mapToInt(
-                        s -> !s.isKnown() ? UNKNOWN_SECTOR_VALUE
-                                : s.hasObstacle() ? FILLED_SECTOR_VALUE : EMPTY_SECTOR_VALUE)
+                        s -> s.isUnknown() ? UNKNOWN_SECTOR_VALUE
+                                : s.isHindered() ? FILLED_SECTOR_VALUE : EMPTY_SECTOR_VALUE)
                 .toArray();
         this.radarSignals = Nd4j.createFromArray(radarAry).castTo(DataType.FLOAT);
         return status;

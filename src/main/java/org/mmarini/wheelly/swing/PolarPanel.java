@@ -25,8 +25,8 @@
 
 package org.mmarini.wheelly.swing;
 
+import org.mmarini.wheelly.apis.PolarMap;
 import org.mmarini.wheelly.envs.CircularSector;
-import org.mmarini.wheelly.envs.PolarMap;
 
 import javax.swing.*;
 import java.awt.*;
@@ -41,20 +41,20 @@ import static java.lang.Math.*;
  */
 public class PolarPanel extends JComponent {
     public static final BasicStroke BORDER_STROKE = new BasicStroke(0);
-    public static final float SECTOR_SIZE = 0.2F;
+    public static final double SECTOR_SIZE = 0.2F;
     public static final int DEFAULT_NUM_SECTOR = 24;
-    static final float DEFAULT_WORLD_SIZE = 11;
-    static final float DEFAULT_SCALE = 400 / DEFAULT_WORLD_SIZE;
-    static final float GRID_SIZE = 1f;
+    //static final double DEFAULT_WORLD_SIZE = 11;
+    //static final double DEFAULT_SCALE = 400 / DEFAULT_WORLD_SIZE;
+    static final double GRID_SIZE = 1f;
     static final Color GRID_COLOR = new Color(50, 50, 50);
     static final Color EMPTY_COLOR = new Color(64, 64, 64, 128);
     static final Color FILLED_COLOR = new Color(200, 0, 0, 128);
-    private static final float DEFAULT_MAX_DISTANCE = 3;
+    private static final double DEFAULT_MAX_DISTANCE = 3;
 
-    static List<Shape> createGridShapes(float radarMaxDistance, float gridSize, int sectorNumber) {
+    static List<Shape> createGridShapes(double radarMaxDistance, double gridSize, int sectorNumber) {
         List<Shape> gridShapes = new ArrayList<>();
-        for (float size = gridSize; size <= radarMaxDistance; size += gridSize) {
-            Shape shape = new Ellipse2D.Float(-size, -size, size * 2, size * 2);
+        for (double size = gridSize; size <= radarMaxDistance; size += gridSize) {
+            Shape shape = new Ellipse2D.Double(-size, -size, size * 2, size * 2);
             gridShapes.add(shape);
         }
         Path2D.Float shape = new Path2D.Float();
@@ -69,11 +69,11 @@ public class PolarPanel extends JComponent {
         return gridShapes;
     }
 
-    private static Shape createPie(float startAngle, float extent, float radius) {
-        return new Arc2D.Float(-radius, -radius, radius * 2, radius * 2, startAngle, extent, Arc2D.PIE);
+    private static Shape createPie(double startAngle, double extent, double radius) {
+        return new Arc2D.Double(-radius, -radius, radius * 2, radius * 2, startAngle, extent, Arc2D.PIE);
     }
 
-    private float radarMaxDistance;
+    private double radarMaxDistance;
     private List<Shape> gridShapes;
     private List<Shape> emptyShapes;
     private List<Shape> filledShapes;
@@ -95,7 +95,7 @@ public class PolarPanel extends JComponent {
      */
     AffineTransform createBaseTransform() {
         Dimension size = getSize();
-        AffineTransform result = AffineTransform.getTranslateInstance((float) size.width / 2, (float) size.height / 2);
+        AffineTransform result = AffineTransform.getTranslateInstance((double) size.width / 2, (double) size.height / 2);
         double scale = min(size.height, size.width) / (radarMaxDistance + SECTOR_SIZE) / 2;
         result.scale(scale, -scale);
         return result;
@@ -130,26 +130,26 @@ public class PolarPanel extends JComponent {
     }
 
     public void setPolarMap(PolarMap polarMap) {
-        CircularSector[] sectors = polarMap.getSectors();
 
-        if (numSector != sectors.length) {
-            numSector = sectors.length;
+        int n = polarMap.getSectorsNumber();
+        if (numSector != n) {
+            numSector = n;
             this.gridShapes = createGridShapes(radarMaxDistance, GRID_SIZE, numSector);
         }
         List<Shape> emptyShapes = new ArrayList<>();
         List<Shape> filledShapes = new ArrayList<>();
 
         double sectorAngle = toDegrees(polarMap.getSectorAngle());
-        for (int i = 0; i < sectors.length; i++) {
-            CircularSector sector = sectors[i];
+        for (int i = 0; i < n; i++) {
+            CircularSector sector = polarMap.getSector(i);
             double angle = -90 + toDegrees(polarMap.sectorDirection(i));
             if (sector.isKnown()) {
                 double distance = sector.getDistance();
                 if (distance == 0) {
-                    emptyShapes.add(createPie((float) (angle - sectorAngle / 2), (float) sectorAngle, radarMaxDistance + SECTOR_SIZE));
+                    emptyShapes.add(createPie(angle - sectorAngle / 2, sectorAngle, radarMaxDistance + SECTOR_SIZE));
                 } else {
-                    Shape outerPie = createPie((float) (angle - sectorAngle / 2), (float) sectorAngle, radarMaxDistance + SECTOR_SIZE);
-                    Shape innerPie = createPie((float) (angle - sectorAngle / 2), (float) sectorAngle, (float) distance);
+                    Shape outerPie = createPie(angle - sectorAngle / 2, sectorAngle, radarMaxDistance + SECTOR_SIZE);
+                    Shape innerPie = createPie(angle - sectorAngle / 2, sectorAngle, distance);
                     emptyShapes.add(innerPie);
                     Area outerSector = new Area(outerPie);
                     outerSector.subtract(new Area(innerPie));
@@ -162,7 +162,7 @@ public class PolarPanel extends JComponent {
         repaint();
     }
 
-    public void setRadarMaxDistance(float radarMaxDistance) {
+    public void setRadarMaxDistance(double radarMaxDistance) {
         this.radarMaxDistance = radarMaxDistance;
         this.gridShapes = createGridShapes(radarMaxDistance, GRID_SIZE, numSector);
         repaint();

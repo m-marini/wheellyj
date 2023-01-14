@@ -130,7 +130,7 @@ public class EnvironmentFrame extends JFrame {
         this.envPanel.setObstacleSize(obstacleSize);
     }
 
-    public void setReward(float reward) {
+    public void setReward(double reward) {
         envPanel.setReward(reward);
     }
 
@@ -143,7 +143,7 @@ public class EnvironmentFrame extends JFrame {
         envPanel.setRobotStatus(status);
     }
 
-    public void setTimeRatio(float timeRatio) {
+    public void setTimeRatio(double timeRatio) {
         envPanel.setTimeRatio(timeRatio);
     }
 

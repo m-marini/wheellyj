@@ -34,12 +34,15 @@ import java.util.function.UnaryOperator;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static java.lang.Math.toRadians;
+import static java.lang.Math.*;
+import static org.mmarini.wheelly.apis.Utils.direction;
+import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 
 /**
  * The RadarMap keeps the obstacle signal results of the space round the center
  */
 public class RadarMap {
+    public static final double MAX_SIGNAL_DISTANCE = 3;
 
     /**
      * Returns the empty radar map
@@ -74,6 +77,32 @@ public class RadarMap {
             }
         }
         return new RadarMap(topology, map1, width);
+    }
+
+    static MapSector update(MapSector sector, SensorSignal signal, double minDistance, double receptiveDistance) {
+        if (sector.isContact()) {
+            return sector;
+        }
+        double sectorDistance = signal.sensorLocation.distance(sector.getLocation());
+        boolean inRange = sectorDistance >= minDistance && sectorDistance <= MAX_SIGNAL_DISTANCE;
+        if (!inRange) {
+            return sector;
+        }
+        double sectorDirection = direction(signal.sensorLocation, sector.getLocation());
+        double sectorDirFromSens = normalizeDegAngle(signal.sensorDirection - toDegrees(sectorDirection));
+        int a0 = (int) round(toDegrees(asin(receptiveDistance / sectorDistance)));
+        boolean inDirection = abs(sectorDirFromSens) <= a0;
+        if (!inDirection) {
+            return sector;
+        }
+        if (!signal.isEcho()) {
+            return sector.empty(signal.timestamp);
+        }
+        return signal.distance <= sectorDistance - receptiveDistance
+                ? sector
+                : signal.distance <= sectorDistance + receptiveDistance
+                ? sector.hindered(signal.timestamp)
+                : sector.empty(signal.timestamp);
     }
 
     private final GridTopology topology;
@@ -171,8 +200,7 @@ public class RadarMap {
      * @param mapper the function map sector->sector
      */
     public RadarMap map(UnaryOperator<MapSector> mapper) {
-        return setSectors(IntStream.range(0, sectors.length)
-                .mapToObj(i -> mapper.apply(sectors[i]))
+        return setSectors(Arrays.stream(sectors).map(mapper)
                 .toArray(MapSector[]::new));
     }
 
@@ -184,15 +212,14 @@ public class RadarMap {
      * @param contactsTimestamp the contacts timestamp
      */
     public RadarMap setContactsAt(Point2D location, double contactsRadius, long contactsTimestamp) {
-        MapSector[] sectors1 = Arrays.stream(sectors).map(
+        return map(
                 sector -> {
                     double distance = sector.getLocation().distance(location);
                     return distance <= contactsRadius
-                            ? sector.filled(contactsTimestamp)
+                            ? sector.contact(contactsTimestamp)
                             : sector;
                 }
-        ).toArray(MapSector[]::new);
-        return setSectors(sectors1);
+        );
     }
 
     private RadarMap setSectors(MapSector[] sectors) {
@@ -206,9 +233,9 @@ public class RadarMap {
      * @param receptiveDistance the receptive distance of sector
      */
     public RadarMap update(SensorSignal signal, double receptiveDistance) {
-        return setSectors(Arrays.stream(sectors).map(sector ->
-                sector.update(signal, topology.getGridSize() * 2, receptiveDistance)
-        ).toArray(MapSector[]::new));
+        return map(sector ->
+                update(sector, signal, topology.getGridSize() * 2, receptiveDistance)
+        );
     }
 
     /**
@@ -224,7 +251,7 @@ public class RadarMap {
         tr.translate(-position.getX(), -position.getY());
         Point2D targetPt = new Point2D.Double();
         for (MapSector sourceSector : sourceMap.sectors) {
-            if (sourceSector.isKnown()) {
+            if (!sourceSector.isUnknown()) {
                 targetPt = tr.transform(sourceSector.getLocation(), targetPt);
                 int index = indexOf(targetPt);
                 sectors[index] = sectors[index].union(sourceSector);
@@ -237,7 +264,7 @@ public class RadarMap {
      * Returns the radar map with a changed sector
      *
      * @param index the sector index
-     * @param f     the unary operator that chages the sector
+     * @param f     the unary operator that changes the sector
      */
     public RadarMap updateSector(int index, UnaryOperator<MapSector> f) {
         MapSector[] sectors = Arrays.copyOf(this.sectors, this.sectors.length);
@@ -273,7 +300,7 @@ public class RadarMap {
          * Returns true if signal is an echo
          */
         public boolean isEcho() {
-            return distance > 0 && distance < MapSector.MAX_SIGNAL_DISTANCE;
+            return distance > 0 && distance < MAX_SIGNAL_DISTANCE;
         }
     }
 }

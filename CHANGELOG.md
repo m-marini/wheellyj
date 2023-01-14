@@ -10,12 +10,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 - Issue #143: Add sensors check and wheellino 0.3.0 messaging
-- Issue #148: Update radar map on contacts signals
-- Issue #151: Move robot ahead when exploring
 
 ### Changed
 
 - Issue #146: Change explorer agent behavior
+- Issue #148: Update radar map on contacts signals
+- Issue #151: Move robot ahead when exploring
+- Issue #152: Sector unknown on partial empty in polar map
 
 ## [0.4.2] 2023-01-08
 

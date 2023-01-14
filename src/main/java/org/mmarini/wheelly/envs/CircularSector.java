@@ -25,101 +25,100 @@
 
 package org.mmarini.wheelly.envs;
 
+import org.mmarini.wheelly.apis.MapSector;
+
+import java.util.Optional;
+
 /**
- * Circular sector is a space area that keeps the distance of nearest obstacle in the area and if it has been scanned
+ * Circular sector is a space area that keeps the distance of the nearest obstacle in the area and if it has been scanned
  */
-public interface CircularSector {
+public class CircularSector {
 
-    CircularSector UNKNOWN = new CircularSector() {
-        @Override
-        public double getDistance() {
-            return 0;
-        }
-
-        @Override
-        public long getTimestamp() {
-            return 0;
-        }
-
-        @Override
-        public boolean hasObstacle() {
-            return false;
-        }
-
-        @Override
-        public boolean isKnown() {
-            return false;
-        }
-    };
+    public static final CircularSector UNKNOWN_CIRCULAR_SECTOR = new CircularSector(0, 0, null);
 
     /**
-     * Returns a hindered sector with obstacle at specific distance
+     * Returns an empty sector
      *
-     * @param timestamp the sector status timastamp
-     * @param distance  the obstacle
+     * @param timestamp the sector status timestamp (ms)
      */
-    static CircularSector create(long timestamp, double distance) {
-        return new CircularSector() {
-            @Override
-            public double getDistance() {
-                return distance;
-            }
-
-            @Override
-            public long getTimestamp() {
-                return timestamp;
-            }
-
-            @Override
-            public boolean hasObstacle() {
-                return distance > 0;
-            }
-
-            @Override
-            public boolean isKnown() {
-                return true;
-            }
-        };
+    public static CircularSector empty(long timestamp) {
+        return new CircularSector(timestamp, 0, null);
     }
 
     /**
      * Returns an empty sector
      *
-     * @param timestamp the sector status timastamp
+     * @param timestamp the sector status timestamp (ms)
+     * @param mapSector the reference map sector
      */
-    static CircularSector empty(long timestamp) {
-        return new CircularSector() {
-            @Override
-            public double getDistance() {
-                return 0;
-            }
-
-            @Override
-            public long getTimestamp() {
-                return timestamp;
-            }
-
-            @Override
-            public boolean hasObstacle() {
-                return false;
-            }
-
-            @Override
-            public boolean isKnown() {
-                return true;
-            }
-        };
+    public static CircularSector empty(long timestamp, MapSector mapSector) {
+        return new CircularSector(timestamp, 0, mapSector);
     }
 
-    static CircularSector unknown() {
-        return UNKNOWN;
+    /**
+     * Returns a hindered sector with obstacle at specific distance
+     *
+     * @param timestamp the sector status timestamp (ms)
+     * @param distance  the obstacle distance (m)
+     */
+    public static CircularSector hindered(long timestamp, double distance) {
+        return new CircularSector(timestamp, distance, null);
     }
 
-    double getDistance();
+    /**
+     * Returns a hindered sector with obstacle at specific distance
+     *
+     * @param timestamp the sector status timestamp (ms)
+     * @param distance  the obstacle distance (m)
+     * @param mapSector the reference map sector
+     */
+    public static CircularSector hindered(long timestamp, double distance, MapSector mapSector) {
+        return new CircularSector(timestamp, distance, mapSector);
+    }
 
-    long getTimestamp();
+    /**
+     * Returns an unknown sector
+     */
+    public static CircularSector unknown() {
+        return UNKNOWN_CIRCULAR_SECTOR;
+    }
 
-    boolean hasObstacle();
+    /**
+     * Returns an unknown sector
+     *
+     * @param mapSector the reference map sector
+     */
+    public static CircularSector unknown(MapSector mapSector) {
+        return new CircularSector(0, 0, mapSector);
+    }
 
-    boolean isKnown();
+    private final long timestamp;
+    private final double distance;
+    private final MapSector mapSector;
+
+    public CircularSector(long timestamp, double distance, MapSector mapSector) {
+        this.timestamp = timestamp;
+        this.distance = distance;
+        this.mapSector = mapSector;
+    }
+
+    public double getDistance() {
+        return distance;
+    }
+
+    public Optional<MapSector> getMapSector() {
+        return Optional.ofNullable(mapSector);
+    }
+
+    public boolean isEmpty() {
+        return isKnown() && distance == 0;
+    }
+
+    public boolean isHindered() {
+        return isKnown() && distance > 0;
+    }
+
+    public boolean isKnown() {
+        return timestamp != 0;
+    }
 }

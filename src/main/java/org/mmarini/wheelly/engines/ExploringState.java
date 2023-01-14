@@ -30,8 +30,9 @@ package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
+import org.mmarini.wheelly.apis.MapSector;
+import org.mmarini.wheelly.apis.PolarMap;
 import org.mmarini.wheelly.envs.CircularSector;
-import org.mmarini.wheelly.envs.PolarMap;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 import org.slf4j.Logger;
@@ -132,7 +133,7 @@ public class ExploringState extends AbstractStateNode {
         PolarMap polarMap = context.getPolarMap();
         CircularSector frontSector = polarMap.getSector(0);
         double stopDistance = getDouble(context, "stopDistance");
-        if (!frontSector.hasObstacle() || frontSector.getDistance() >= stopDistance) {
+        if (!frontSector.isHindered() || frontSector.getDistance() >= stopDistance) {
             // returns the front sector if empty or obstacle far away
             return 0;
         }
@@ -145,7 +146,7 @@ public class ExploringState extends AbstractStateNode {
         int n = polarMap.getSectorsNumber();
         for (int i = 0; i < n; i++) {
             CircularSector sector = polarMap.getSector(i);
-            if (!sector.hasObstacle()) {
+            if (!sector.isHindered()) {
                 // Sector without obstacle
                 if (start >= 0) {
                     // contiguous empty interval
@@ -199,6 +200,7 @@ public class ExploringState extends AbstractStateNode {
                 ? 0 // return front sector if unknown
                 : IntStream.range(0, map.getSectorsNumber())
                 .filter(i -> !map.getSector(i).isKnown())
+                .filter(i -> map.getSector(i).getMapSector().isPresent())
                 .mapToObj(i -> Tuple2.of(i, abs(map.sectorDirection(i))))
                 .min(Comparator.comparingDouble(a -> a._2))
                 .map(Tuple2::getV1)
@@ -224,10 +226,13 @@ public class ExploringState extends AbstractStateNode {
         int targetIndex = findUnknownSector(context);
         PolarMap map = context.getPolarMap();
         if (targetIndex >= 0) {
-            int sectorDir = (int) round(toDegrees(map.sectorDirection(targetIndex)));
+            int sectorDir = map.radarSectorDirection(targetIndex);
             if (abs(sectorDir) <= 90) {
                 // Turns the scanner to the unknown sector
-                logger.debug("{}: scan {} DEG", getId(), sectorDir);
+                double dist = map.getSector(targetIndex).getMapSector().map(MapSector::getLocation)
+                        .map(map.getCenter()::distance)
+                        .orElse(0D);
+                logger.debug("{}: scan {} DEG, distance {}", getId(), sectorDir, dist);
                 context.moveSensor(sectorDir);
                 context.haltRobot();
             } else {
@@ -244,13 +249,13 @@ public class ExploringState extends AbstractStateNode {
         targetIndex = findTargetSector(context);
         CircularSector targetSector = map.getSector(targetIndex);
 
-        int sectorDir = (int) round(toDegrees(map.sectorDirection(targetIndex)));
+        int sectorDir = map.radarSectorDirection(targetIndex);
         int robotDir = normalizeDegAngle(context.getRobotDirection() + sectorDir);
         double stopDistance = getDouble(context, "stopDistance");
         int turnDirectionRange = getInt(context, "turnDirectionRange");
         double speed = abs(sectorDir) > turnDirectionRange
                 ? 0
-                : !targetSector.hasObstacle()
+                : !targetSector.isHindered()
                 ? 1
                 : min(max((double) round(linear(targetSector.getDistance(), 0, stopDistance, 1, 4)),
                 1), 4) / 4;

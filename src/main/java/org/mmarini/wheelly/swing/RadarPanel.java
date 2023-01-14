@@ -36,6 +36,7 @@ import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -83,9 +84,9 @@ public class RadarPanel extends JComponent {
     public static List<Tuple2<Point2D, Color>> createMap(RadarMap radarMap) {
         if (radarMap != null) {
             return radarMap.getSectorsStream()
-                    .filter(MapSector::isKnown)
+                    .filter(Predicate.not(MapSector::isUnknown))
                     .map(sector -> Tuple2.of(sector.getLocation(),
-                            sector.hasObstacle() ? FILLED_COLOR : EMPTY_COLOR))
+                            sector.isEmpty() ? EMPTY_COLOR : FILLED_COLOR))
                     .collect(Collectors.toList());
         } else {
             return null;

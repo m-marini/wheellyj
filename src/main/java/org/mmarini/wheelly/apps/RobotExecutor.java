@@ -163,7 +163,7 @@ public class RobotExecutor {
                 PolarPanel polarPanel = new PolarPanel();
 //                radarFrame = createRadarFrame(radarPanel);
                 radarFrame = createRadarFrame(polarPanel);
-                float radarMaxDistance = agent.getMaxRadarDistance();
+                double radarMaxDistance = agent.getMaxRadarDistance();
                 polarPanel.setRadarMaxDistance(radarMaxDistance);
                 long sessionDuration = args.getLong("time");
                 logger.info("Starting session ...");

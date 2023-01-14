@@ -707,4 +707,5 @@ public interface Validator extends Function<Locator, Consumer<JsonNode>> {
     static Validator values(String... values) {
         return values(Arrays.asList(values));
     }
+
 }

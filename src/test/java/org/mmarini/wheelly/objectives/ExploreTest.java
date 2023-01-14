@@ -47,7 +47,7 @@ class ExploreTest {
     static RobotStatus createStatus(int sensorDir, double leftSpeed, double rightSpeed, int known, boolean canMoveForward, boolean canMoveBackward) {
         long timestamp = System.currentTimeMillis();
         RadarMap radarMap = RadarMap.create(10, 10, new Point2D.Double(), 0.2)
-                .map((i, sector) -> i < known ? sector.setTimestamp(timestamp) : sector);
+                .map((i, sector) -> i < known ? sector.empty(timestamp) : sector);
 
         return RobotStatus.create()
                 .setSensorDirection(sensorDir)
