@@ -88,13 +88,15 @@ public class RobotSocket implements Closeable {
      * @throws IOException in case of error
      */
     public RobotSocket connect() throws IOException {
-        logger.debug("Connection {}, {}", robotHost, port);
+        logger.atDebug().setMessage("Connection {}, {}")
+                .addArgument(robotHost).addArgument(port).log();
         InetSocketAddress socketAddress = new InetSocketAddress(robotHost, port);
         SocketChannel channel = SocketChannel.open();
         channel.setOption(SO_KEEPALIVE, true);
         this.channel = channel;
         channel.socket().connect(socketAddress, (int) connectionTimeout);
-        logger.debug("Connected {}, {}", robotHost, port);
+        logger.atDebug().setMessage("Connected {}, {}")
+                .addArgument(robotHost).addArgument(port).log();
         return this;
     }
 
@@ -114,7 +116,6 @@ public class RobotSocket implements Closeable {
         if (channel != null && channel.isConnected()) {
             int n = channel.read(buffer);
             if (n > 0) {
-                //logger.debug("Read {} bytes", n);
                 buffer.flip();
                 splitLines();
             }
@@ -124,7 +125,7 @@ public class RobotSocket implements Closeable {
     /**
      * Returns the read line from socket or null if no line available
      *
-     * @throws IOException in caso of error
+     * @throws IOException in case of error
      */
     public Timed<String> readLine() throws IOException {
         if (!hasLines()) {
@@ -135,7 +136,7 @@ public class RobotSocket implements Closeable {
         }
         Timed<String> line = hasLines() ? lines.get(readPosition++) : null;
         if (line != null) {
-            logger.debug("Read line {}", line.value());
+            logger.atDebug().setMessage("Read line {}").addArgument(line::value).log();
         }
         return line;
     }
@@ -153,7 +154,6 @@ public class RobotSocket implements Closeable {
         this.lines = Arrays.stream(fragments).limit(fragments.length - 1)
                 .map(line -> new Timed<>(line, timestamp, TimeUnit.MILLISECONDS))
                 .collect(Collectors.toList());
-        //logger.debug("Read {} lines", this.lines.size());
         this.readPosition = 0;
     }
 
@@ -164,13 +164,12 @@ public class RobotSocket implements Closeable {
      * @param cmd the command
      */
     public void writeCommand(String cmd) throws IOException {
-        //logger.debug("Writing command {}", cmd);
         if (channel != null && channel.isConnected()) {
             ByteBuffer buffer = ByteBuffer.wrap((cmd + LF).getBytes(StandardCharsets.UTF_8));
             while (buffer.remaining() > 0) {
                 channel.write(buffer);
             }
-            logger.debug("Written command {}", cmd);
+            logger.atDebug().setMessage("Written command {}").addArgument(cmd).log();
         }
     }
 }

@@ -45,6 +45,7 @@ import java.util.Map;
 import java.util.stream.IntStream;
 
 import static java.lang.Math.*;
+import static java.lang.String.format;
 import static org.mmarini.wheelly.apis.Utils.linear;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 import static org.mmarini.yaml.schema.Validator.*;
@@ -232,13 +233,22 @@ public class ExploringState extends AbstractStateNode {
                 double dist = map.getSector(targetIndex).getMapSector().map(MapSector::getLocation)
                         .map(map.getCenter()::distance)
                         .orElse(0D);
-                logger.debug("{}: scan {} DEG, distance {}", getId(), sectorDir, dist);
+                logger.atDebug()
+                        .setMessage("{}: scan {} DEG, distance {}")
+                        .addArgument(this::getId)
+                        .addArgument(sectorDir)
+                        .addArgument(() -> format("%.2f", dist))
+                        .log();
                 context.moveSensor(sectorDir);
                 context.haltRobot();
             } else {
                 // Turns the robot to the unknown sector
                 int robotDir = normalizeDegAngle(context.getRobotDirection() + sectorDir);
-                logger.debug("{}: turn to unknown sector {} DEG", getId(), robotDir);
+                logger.atDebug()
+                        .setMessage("{}: turn to unknown sector {} DEG")
+                        .addArgument(this::getId)
+                        .addArgument(robotDir)
+                        .log();
                 context.moveSensor(0);
                 context.moveRobot(robotDir, 0);
             }
@@ -260,11 +270,20 @@ public class ExploringState extends AbstractStateNode {
                 : min(max((double) round(linear(targetSector.getDistance(), 0, stopDistance, 1, 4)),
                 1), 4) / 4;
         if (speed == 0) {
-            logger.debug("{}: turn to {} DEG", getId(), robotDir);
+            logger.atDebug()
+                    .setMessage("{}: turn to {} DEG")
+                    .addArgument(this::getId)
+                    .addArgument(robotDir)
+                    .log();
         } else {
-            logger.debug("{}: move to {} DEG, speed {}", getId(), robotDir, speed);
+            logger.atDebug()
+                    .setMessage("{}: move to {} DEG, speed {}")
+                    .addArgument(this::getId)
+                    .addArgument(robotDir)
+                    .addArgument(speed)
+                    .log();
         }
-        context.moveRobot(robotDir, (float) speed);
+        context.moveRobot(robotDir, speed);
         return null;
     }
 }

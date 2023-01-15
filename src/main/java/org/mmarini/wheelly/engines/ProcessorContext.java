@@ -55,7 +55,7 @@ public class ProcessorContext {
     private int sensorDirection;
     private int robotDirection;
     private boolean halt;
-    private float speed;
+    private double speed;
     private PolarMap polarMap;
 
     /**
@@ -246,7 +246,6 @@ public class ProcessorContext {
         return robotDirection;
     }
 
-
     /**
      * Returns the robot status
      */
@@ -273,7 +272,7 @@ public class ProcessorContext {
     /**
      * Returns the robot speed set by the process
      */
-    public float getSpeed() {
+    public double getSpeed() {
         return speed;
     }
 
@@ -339,7 +338,7 @@ public class ProcessorContext {
      * @param direction direction (DEG)
      * @param speed     speed
      */
-    public void moveRobot(int direction, float speed) {
+    public void moveRobot(int direction, double speed) {
         this.robotDirection = normalizeDegAngle(direction);
         this.speed = clip(speed, -1, 1);
         this.halt = false;
@@ -415,6 +414,15 @@ public class ProcessorContext {
     public ProcessorContext put(String key, Object value) {
         values.put(key, value);
         return this;
+    }
+
+    /**
+     * Removes a key from key,value map
+     *
+     * @param key the key to remove
+     */
+    public void remove(String key) {
+        values.remove(key);
     }
 
     /**

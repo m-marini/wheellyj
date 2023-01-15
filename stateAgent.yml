@@ -29,6 +29,7 @@ configurations:
           turnDirectionRange: 30
         avoiding:
           class: org.mmarini.wheelly.engines.AvoidingState
+          safeDistance: 0.4
       transitions:
         - from: start
           to: exploring

@@ -39,8 +39,8 @@
         <java.version>11</java.version>
         <rxjava.version>3.0.0-RC2</rxjava.version>
         <jackson.version>2.12.5</jackson.version>
-        <slf4j.version>1.7.32</slf4j.version>
-        <logback.version>1.2.6</logback.version>
+        <slf4j.version>2.0.6</slf4j.version>
+        <logback.version>1.3.5</logback.version>
         <junit.version>5.5.2</junit.version>
         <hamcrest.version>2.2</hamcrest.version>
         <dl4j-master.version>1.0.0-M2</dl4j-master.version>
