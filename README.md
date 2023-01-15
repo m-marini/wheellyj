@@ -244,11 +244,13 @@ Parameter are:
 The avoiding state moves the robot away from contact obstacle.
 
 The `timeout` signal is generated whenever the timeout interval has elapsed from state entry instant.
-The `completed` signal is generated whenever the robot has no more obstacle contacts.
+The `completed` signal is generated whenever the robot has no more obstacle contacts and at a safe distance from obstacles.
+The `blocked` signal is generated when robot cannot move anywhere.
 
 Parameter are:
 
 - `timeout` timeout interval (ms)
+- `safeDistance`: the safe distance from obstacle (m)
 
 ### Exploring state `org.mmarini.wheelly.engines.ExploringState`
 
