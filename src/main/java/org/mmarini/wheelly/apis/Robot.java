@@ -235,9 +235,9 @@ public class Robot implements RobotApi {
                 // Read the robot status
                 Timed<String> line = socket.readLine();
                 if (line != null) {
-                    logger.debug(">>> {}", line.value());
+                    logger.atDebug().setMessage(">>> {}").addArgument(line::value).log();
                     if (line.value().startsWith("!!")) {
-                        logger.error(">>> {}", line.value());
+                        logger.atError().setMessage(">>> {}").addArgument(line::value).log();
                     }
                     try {
                         // Create the new status
@@ -253,7 +253,7 @@ public class Robot implements RobotApi {
                     }
                 }
             }
-            logger.debug(">>> {}", status);
+            logger.atDebug().setMessage(">>> {}").addArgument(status).log();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -268,7 +268,7 @@ public class Robot implements RobotApi {
         try {
             socket.writeCommand(cmd);
         } catch (IOException ex) {
-            logger.error(ex.getMessage(), ex);
+            logger.atError().setCause(ex).log();
         }
     }
 }

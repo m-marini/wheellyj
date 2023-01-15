@@ -236,6 +236,16 @@ public abstract class AbstractStateNode implements StateNode {
     }
 
     /**
+     * Remove a value in the context prefixed by node id
+     *
+     * @param context the proccesor context
+     * @param key     the key
+     */
+    protected void remove(ProcessorContext context, String key) {
+        context.remove(format("%s.%s", id, key));
+    }
+
+    /**
      * Performs the auto scan behaviors.
      * Moves the sensor to a random direction within a range at given steps on given time interval
      *
@@ -256,7 +266,7 @@ public abstract class AbstractStateNode implements StateNode {
                 if (sensorDirNumber > 1) {
                     int x = context.getRandom().nextInt(sensorDirNumber);
                     int dir = x * (maxSensorDir - minSensorDir) / (sensorDirNumber - 1) + minSensorDir;
-                    logger.debug("sensor scan {}", dir);
+                    logger.atDebug().setMessage("sensor scan {}").addArgument(dir).log();
                     context.moveSensor(dir);
                 } else {
                     // Fix scan direction
