@@ -27,9 +27,11 @@ package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.eclipse.collections.api.block.function.primitive.DoubleFunction;
+import org.mmarini.rl.envs.Environment;
 import org.mmarini.wheelly.apis.MapSector;
 import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.envs.WithRadarMap;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 
@@ -57,19 +59,21 @@ public interface Explore {
      * @param root    the root json document
      * @param locator the locator
      */
-    static DoubleFunction<RobotStatus> create(JsonNode root, Locator locator) {
+    static DoubleFunction<Environment> create(JsonNode root, Locator locator) {
         VALIDATOR.apply(locator).accept(root);
         double sensorRange = locator.path("sensorRange").getNode(root).asDouble();
         return explore(sensorRange);
     }
 
-    static DoubleFunction<RobotStatus> explore(double sensorRange) {
-        return status -> {
+    static DoubleFunction<Environment> explore(double sensorRange) {
+        return environment -> {
+            WithRadarMap env = (WithRadarMap) environment;
+            RobotStatus status = env.getStatus();
             if (!status.canMoveBackward() || !status.canMoveForward()) {
                 // Avoid contacts
                 return -1;
             }
-            RadarMap radarMap = status.getRadarMap();
+            RadarMap radarMap = env.getRadarMap();
             long knownSectorsNumber = radarMap.getSectorsStream()
                     .filter(Predicate.not(MapSector::isUnknown))
                     .count();

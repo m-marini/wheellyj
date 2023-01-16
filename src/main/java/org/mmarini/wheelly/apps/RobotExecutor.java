@@ -159,9 +159,7 @@ public class RobotExecutor {
             logger.info("Creating environment");
             JFrame radarFrame = null;
             try (StateMachineAgent agent = createAgent(robot)) {
-//                RadarPanel radarPanel = new RadarPanel();
                 PolarPanel polarPanel = new PolarPanel();
-//                radarFrame = createRadarFrame(radarPanel);
                 radarFrame = createRadarFrame(polarPanel);
                 double radarMaxDistance = agent.getMaxRadarDistance();
                 polarPanel.setRadarMaxDistance(radarMaxDistance);
@@ -186,6 +184,7 @@ public class RobotExecutor {
                     agent.step();
                     status = robot.getStatus();
                     frame.setRobotStatus(status);
+                    frame.setRadarMap(agent.getRadarMap());
                     frame.setReward(avgRewards);
                     frame.setTimeRatio((float) status.getElapsed() / (System.currentTimeMillis() - start));
                     //                  radarPanel.setRadarMap(agent.getRadarMap());

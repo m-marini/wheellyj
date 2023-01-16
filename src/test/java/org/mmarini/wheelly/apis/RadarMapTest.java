@@ -25,6 +25,7 @@
 
 package org.mmarini.wheelly.apis;
 
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
 import java.awt.geom.Point2D;
@@ -42,39 +43,42 @@ class RadarMapTest {
     public static final int HEIGHT = 11;
     public static final double RECEPTIVE_DISTANCE = 0.1;
     public static final double MM1 = 0.001;
+    public static final int MAX_INTERVAL = 10000;
     static final double MIN_DISTANCE = 0.4;
 
     @Test
     void cleanNoTimeout() {
         long timestamp = System.currentTimeMillis();
-        RadarMap map = RadarMap.create(WIDTH, HEIGHT, new Point2D.Double(), GRID_SIZE)
+        RadarMap map = createRadarMap()
                 .map((i, sector) -> i >= 10 && i < 20
                         ? sector.hindered(timestamp)
                         : sector);
 
-        map = map.clean(timestamp - 1);
+        map = map.clean(timestamp);
 
         assertEquals(10L, map.getSectorsStream()
                 .filter(Predicate.not(MapSector::isUnknown))
                 .count());
+        assertEquals(timestamp + MAX_INTERVAL, map.getCleanTimestamp());
     }
 
     @Test
     void cleanTimeout() {
         long timestamp = System.currentTimeMillis();
-        RadarMap map = RadarMap.create(WIDTH, HEIGHT, new Point2D.Double(), 0.2)
-                .map((i, sector) -> i >= 10 && i < 20 ? sector.hindered(timestamp) : sector);
+        RadarMap map = createRadarMap()
+                .map((i, sector) -> i >= 10 && i < 20 ? sector.hindered(timestamp - MAX_INTERVAL - 1) : sector);
 
-        map = map.clean(timestamp + 1);
+        map = map.clean(timestamp);
 
         assertTrue(map.getSectorsStream()
                 .allMatch(MapSector::isUnknown));
+        assertEquals(timestamp + MAX_INTERVAL, map.getCleanTimestamp());
     }
 
     @Test
     void create() {
 
-        RadarMap map = RadarMap.create(WIDTH, HEIGHT, new Point2D.Double(), GRID_SIZE);
+        RadarMap map = createRadarMap();
 
         assertEquals(GRID_SIZE, map.getTopology().getGridSize());
 
@@ -100,9 +104,14 @@ class RadarMapTest {
         );
     }
 
+    @NotNull
+    private RadarMap createRadarMap() {
+        return RadarMap.create(WIDTH, HEIGHT, new Point2D.Double(), GRID_SIZE, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE);
+    }
+
     @Test
     void sectorIndex0() {
-        RadarMap map = RadarMap.create(WIDTH, HEIGHT, new Point2D.Double(), 0.2);
+        RadarMap map = createRadarMap();
 
         int idx = map.indexOf(0, 0);
 
@@ -111,7 +120,7 @@ class RadarMapTest {
 
     @Test
     void sectorIndexBottomLeft() {
-        RadarMap map = RadarMap.create(WIDTH, HEIGHT, new Point2D.Double(), 0.2);
+        RadarMap map = createRadarMap();
 
         int idx = map.indexOf(-1.0999, -1.0999);
         assertEquals(0, idx);
@@ -122,7 +131,7 @@ class RadarMapTest {
 
     @Test
     void sectorIndexOutBottomLeft() {
-        RadarMap map = RadarMap.create(WIDTH, HEIGHT, new Point2D.Double(), 0.2);
+        RadarMap map = createRadarMap();
 
         int idx = map.indexOf(-1.101, -1.101);
         assertEquals(-1, idx);
@@ -136,7 +145,7 @@ class RadarMapTest {
 
     @Test
     void sectorIndexOutTopRight() {
-        RadarMap map = RadarMap.create(WIDTH, HEIGHT, new Point2D.Double(), 0.2);
+        RadarMap map = createRadarMap();
 
         int idx = map.indexOf(1.1001, 1.1001);
 
@@ -151,7 +160,7 @@ class RadarMapTest {
 
     @Test
     void sectorIndexTopRight() {
-        RadarMap map = RadarMap.create(WIDTH, HEIGHT, new Point2D.Double(), 0.2);
+        RadarMap map = createRadarMap();
 
         int idx = map.indexOf(1, 1);
         assertEquals(WIDTH * HEIGHT - 1, idx);
@@ -165,7 +174,7 @@ class RadarMapTest {
 
     @Test
     void setContactsAt() {
-        RadarMap map = RadarMap.create(WIDTH, HEIGHT, new Point2D.Double(), GRID_SIZE);
+        RadarMap map = createRadarMap();
         Point2D point = new Point2D.Double();
         long timestamp = System.currentTimeMillis();
 
@@ -198,10 +207,10 @@ class RadarMapTest {
     @Test
     void transform30() {
         long ts = System.currentTimeMillis();
-        RadarMap map = RadarMap.create(WIDTH, HEIGHT, new Point2D.Double(), 0.2);
+        RadarMap map = createRadarMap();
         map = map.updateSector(map.indexOf(0, 0.4), sect -> sect.hindered(ts));
 
-        RadarMap newMap = RadarMap.create(WIDTH, HEIGHT, new Point2D.Double(), map.getTopology().getGridSize())
+        RadarMap newMap = createRadarMap()
                 .update(map, new Point2D.Double(-0.4, 0.4), 30);
 
         long np = newMap.getSectorsStream()
@@ -218,10 +227,10 @@ class RadarMapTest {
     @Test
     void transform90() {
         long ts = System.currentTimeMillis();
-        RadarMap map = RadarMap.create(WIDTH, HEIGHT, new Point2D.Double(), 0.2);
+        RadarMap map = createRadarMap();
         map = map.updateSector(map.indexOf(0, 0.4), sect -> sect.hindered(ts));
 
-        RadarMap newMap = RadarMap.create(WIDTH, HEIGHT, new Point2D.Double(), map.getTopology().getGridSize())
+        RadarMap newMap = createRadarMap()
                 .update(map, new Point2D.Double(-0.4, 0.4), 90);
 
         long np = newMap.getSectorsStream()
@@ -238,10 +247,10 @@ class RadarMapTest {
     @Test
     void transform_90() {
         long ts = System.currentTimeMillis();
-        RadarMap map = RadarMap.create(WIDTH, HEIGHT, new Point2D.Double(), 0.2);
+        RadarMap map = createRadarMap();
         map = map.updateSector(map.indexOf(0, 0.4), sect -> sect.hindered(ts));
 
-        RadarMap newMap = RadarMap.create(WIDTH, HEIGHT, new Point2D.Double(), map.getTopology().getGridSize())
+        RadarMap newMap = createRadarMap()
                 .update(map, new Point2D.Double(-0.4, 0.4), -90);
 
         long np = newMap.getSectorsStream()
@@ -257,7 +266,7 @@ class RadarMapTest {
 
     @Test
     void update() {
-        RadarMap map = RadarMap.create(WIDTH, HEIGHT, new Point2D.Double(), 0.2);
+        RadarMap map = createRadarMap();
         Point2D sensor = new Point2D.Double();
         int direction = 0;
         double distance = 0.8;

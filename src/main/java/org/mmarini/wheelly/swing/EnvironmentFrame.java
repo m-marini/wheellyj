@@ -27,6 +27,7 @@ package org.mmarini.wheelly.swing;
 
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
+import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -128,6 +129,10 @@ public class EnvironmentFrame extends JFrame {
 
     public void setObstacleSize(double obstacleSize) {
         this.envPanel.setObstacleSize(obstacleSize);
+    }
+
+    public void setRadarMap(RadarMap radarMap) {
+        envPanel.setRadarMap(radarMap);
     }
 
     public void setReward(double reward) {

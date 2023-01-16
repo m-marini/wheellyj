@@ -26,7 +26,7 @@
 package org.mmarini.wheelly.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.eclipse.collections.api.block.function.primitive.FloatFunction;
+import org.eclipse.collections.api.block.function.primitive.DoubleFunction;
 import org.mmarini.rl.envs.*;
 import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotStatus;
@@ -98,7 +98,7 @@ public class RobotEnv implements Environment {
      * @param robot          the robot api
      * @param rewardFunction the reward function
      */
-    public static RobotEnv create(RobotApi robot, FloatFunction<RobotStatus> rewardFunction) {
+    public static RobotEnv create(RobotApi robot, DoubleFunction<Environment> rewardFunction) {
         return RobotEnv.create(robot, rewardFunction,
                 DEFAULT_INTERVAL, DEFAULT_REACTION_INTERVAL, DEFAULT_COMMAND_INTERVAL,
                 DEFAULT_NUM_DIRECTION_VALUES, DEFAULT_NUM_SENSOR_VALUES, DEFAULT_NUM_SPEED_VALUES);
@@ -114,7 +114,7 @@ public class RobotEnv implements Environment {
     public static RobotEnv create(JsonNode root, Locator locator, RobotApi robot) {
         ROBOT_ENV_SPEC.apply(locator).accept(root);
 
-        FloatFunction<RobotStatus> reward = Utils.createObject(root, locator.path("objective"), new Object[0], new Class[0]);
+        DoubleFunction<Environment> reward = Utils.createObject(root, locator.path("objective"), new Object[0], new Class[0]);
         long interval = locator.path("interval").getNode(root).asLong();
         long reactionInterval = locator.path("reactionInterval").getNode(root).asLong();
         long commandInterval = locator.path("commandInterval").getNode(root).asLong();
@@ -139,7 +139,7 @@ public class RobotEnv implements Environment {
      * @param numSensorValues    number of sensor direction values
      * @param numSpeedValues     number of speed values
      */
-    public static RobotEnv create(RobotApi robot, FloatFunction<RobotStatus> reward,
+    public static RobotEnv create(RobotApi robot, DoubleFunction<Environment> reward,
                                   long interval, long reactionInterval, long commandInterval,
                                   int numDirectionValues, int numSensorValues, int numSpeedValues) {
         Map<String, SignalSpec> actions1 = Map.of(
@@ -153,7 +153,7 @@ public class RobotEnv implements Environment {
     }
 
     private final RobotApi robot;
-    private final FloatFunction<RobotStatus> reward;
+    private final DoubleFunction<Environment> reward;
     private final long interval;
     private final long reactionInterval;
     private final long commandInterval;
@@ -185,7 +185,7 @@ public class RobotEnv implements Environment {
      * @param commandInterval  the command interval
      * @param actions          the actions spec
      */
-    public RobotEnv(RobotApi robot, FloatFunction<RobotStatus> reward,
+    public RobotEnv(RobotApi robot, DoubleFunction<Environment> reward,
                     long interval, long reactionInterval, long commandInterval,
                     Map<String, SignalSpec> actions) {
         this.robot = requireNonNull(robot);
@@ -237,8 +237,8 @@ public class RobotEnv implements Environment {
     public ExecutionResult execute(Map<String, Signal> actions) {
         requireNonNull(actions);
         processAction(actions);
-        RobotStatus status = readStatus(reactionInterval);
-        float reward = this.reward.floatValueOf(status);
+        readStatus(reactionInterval);
+        double reward = this.reward.doubleValueOf(this);
         Map<String, Signal> observation = getObservation();
         return new ExecutionResult(observation, reward, false);
     }

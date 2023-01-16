@@ -29,10 +29,10 @@ configurations:
     policy:
       normalizedDistances:
         input: sectorDistances
-        inputs:
-          type: linear
-          b: -1
-          w: 0.667
+        layers:
+          - type: linear
+            b: -1
+            w: 0.667
       layer0:
         inputs:
           type: concat
@@ -106,10 +106,10 @@ configurations:
     critic:
       normalizedDistances:
         input: sectorDistances
-        inputs:
-          type: linear
-          b: -1
-          w: 0.667
+        layers:
+          - type: linear
+            b: -1
+            w: 0.667
       layer0:
         inputs:
           type: concat

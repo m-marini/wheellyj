@@ -35,7 +35,6 @@ import java.util.StringJoiner;
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.Utils.linear;
-import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 
 public class RobotStatus {
     public static final int PULSES_PER_ROOT = 40;
@@ -128,7 +127,7 @@ public class RobotStatus {
 
     private final WheellyStatus wheellyStatus;
     private final long resetTime;
-    private final RadarMap radarMap;
+//    private final RadarMap radarMap;
 
     /**
      * Creates the robot status
@@ -140,7 +139,7 @@ public class RobotStatus {
     public RobotStatus(WheellyStatus wheellyStatus, long resetTime, RadarMap radarMap) {
         this.wheellyStatus = requireNonNull(wheellyStatus);
         this.resetTime = resetTime;
-        this.radarMap = radarMap;
+        //      this.radarMap = radarMap;
     }
 
     public boolean canMoveBackward() {
@@ -222,13 +221,16 @@ public class RobotStatus {
                 location.getY() / DISTANCE_PER_PULSE));
     }
 
+    /*
     public RadarMap getRadarMap() {
         return radarMap;
     }
 
+
     public RobotStatus setRadarMap(RadarMap radarMap) {
         return new RobotStatus(wheellyStatus, resetTime, radarMap);
     }
+     */
 
     public double getRightPps() {
         return wheellyStatus.getRightPps();
@@ -280,7 +282,8 @@ public class RobotStatus {
     }
 
     public RobotStatus setWheellyStatus(WheellyStatus wheellyStatus) {
-        return new RobotStatus(wheellyStatus, resetTime, radarMap);
+//        return new RobotStatus(wheellyStatus, resetTime, radarMap);
+        return new RobotStatus(wheellyStatus, resetTime, null);
     }
 
     public boolean isHalt() {
@@ -300,7 +303,8 @@ public class RobotStatus {
     }
 
     public RobotStatus setResetTime(long resetTime) {
-        return new RobotStatus(wheellyStatus, resetTime, radarMap);
+//        return new RobotStatus(wheellyStatus, resetTime, radarMap);
+        return new RobotStatus(wheellyStatus, resetTime, null);
     }
 
     @Override
@@ -308,7 +312,6 @@ public class RobotStatus {
         return new StringJoiner(", ", RobotStatus.class.getSimpleName() + "[", "]")
                 .add("wheellyStatus=" + wheellyStatus)
                 .add("resetTime=" + resetTime)
-                .add("radarMap=" + radarMap)
                 .toString();
     }
 
@@ -317,6 +320,7 @@ public class RobotStatus {
      *
      * @param radarReceptiveDistance the radar receptive distance (m)
      */
+    /*
     public RobotStatus update(double radarReceptiveDistance) {
         if (radarMap != null) {
             // Updates the radar map
@@ -335,4 +339,6 @@ public class RobotStatus {
             return this;
         }
     }
+
+     */
 }

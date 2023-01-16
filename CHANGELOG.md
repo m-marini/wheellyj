@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+
+- Issue #158: Move radar management away from robot status
+
 ## [0.5.0] 2023-01-15
 
 ### Added

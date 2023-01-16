@@ -51,6 +51,7 @@ public class RadarPanel extends JComponent {
     static final Color GRID_COLOR = new Color(50, 50, 50);
     static final Color EMPTY_COLOR = new Color(64, 64, 64, 128);
     static final Color FILLED_COLOR = new Color(200, 0, 0, 128);
+    static final Color CONTACT_COLOR = new Color(200, 0, 200, 128);
     static final Shape GRID_SHAPE = createGridShape();
 
     /**
@@ -86,7 +87,10 @@ public class RadarPanel extends JComponent {
             return radarMap.getSectorsStream()
                     .filter(Predicate.not(MapSector::isUnknown))
                     .map(sector -> Tuple2.of(sector.getLocation(),
-                            sector.isEmpty() ? EMPTY_COLOR : FILLED_COLOR))
+                            sector.isEmpty() ? EMPTY_COLOR :
+                                    sector.isHindered() ? FILLED_COLOR :
+                                            CONTACT_COLOR
+                    ))
                     .collect(Collectors.toList());
         } else {
             return null;

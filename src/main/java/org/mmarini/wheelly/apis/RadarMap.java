@@ -25,9 +25,15 @@
 
 package org.mmarini.wheelly.apis;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.yaml.schema.Locator;
+import org.mmarini.yaml.schema.Validator;
+
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.UnaryOperator;
@@ -37,34 +43,75 @@ import java.util.stream.Stream;
 import static java.lang.Math.*;
 import static org.mmarini.wheelly.apis.Utils.direction;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
+import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * The RadarMap keeps the obstacle signal results of the space round the center
  */
 public class RadarMap {
     public static final double MAX_SIGNAL_DISTANCE = 3;
+    private static final Validator RADAR_SPEC = objectPropertiesRequired(
+            Map.ofEntries(
+                    Map.entry("radarWidth", positiveInteger()),
+                    Map.entry("radarHeight", positiveInteger()),
+                    Map.entry("radarGrid", positiveNumber()),
+                    Map.entry("radarReceptiveDistance", positiveNumber()),
+                    Map.entry("radarCleanInterval", positiveInteger()),
+                    Map.entry("radarPersistence", positiveInteger())
+            ), List.of(
+                    "radarWidth",
+                    "radarHeight",
+                    "radarGrid",
+                    "radarReceptiveDistance",
+                    "radarCleanInterval",
+                    "radarPersistence"
+            )
+    );
 
     /**
-     * Returns the empty radar map
+     * Returns the empty radar from definition
      *
-     * @param width    the number of horizontal sector
-     * @param height   the number of vertical sector
-     * @param center   the center of map
-     * @param gridSize the grid size
+     * @param root    the document
+     * @param locator the locator of radar map definition
      */
-    public static RadarMap create(int width, int height, Point2D center, double gridSize) {
-        return create(width, height, center, new GridTopology(gridSize));
+    public static RadarMap create(JsonNode root, Locator locator) {
+        RADAR_SPEC.apply(locator).accept(root);
+        int radarWidth = locator.path("radarWidth").getNode(root).asInt();
+        int radarHeight = locator.path("radarHeight").getNode(root).asInt();
+        double radarGrid = locator.path("radarGrid").getNode(root).asDouble();
+        long radarCleanInterval = locator.path("radarCleanInterval").getNode(root).asLong();
+        long radarPersistence = locator.path("radarPersistence").getNode(root).asLong();
+        double radarReceptiveDistance = locator.path("radarReceptiveDistance").getNode(root).asDouble();
+        return RadarMap.create(radarWidth, radarHeight, new Point2D.Float(), radarGrid, radarCleanInterval, radarPersistence, radarReceptiveDistance);
     }
 
     /**
      * Returns the empty radar map
      *
-     * @param width    the width of map
-     * @param height   the height of map
-     * @param center   the center of map
-     * @param topology the topology
+     * @param width                  the number of horizontal sector
+     * @param height                 the number of vertical sector
+     * @param center                 the center of map
+     * @param gridSize               the grid size
+     * @param radarCleanInterval     the clean interval (ms)
+     * @param radarPersistence       the radar persistence (ms)
+     * @param radarReceptiveDistance the receptive distance (m)
      */
-    private static RadarMap create(int width, int height, Point2D center, GridTopology topology) {
+    public static RadarMap create(int width, int height, Point2D center, double gridSize, long radarCleanInterval, long radarPersistence, double radarReceptiveDistance) {
+        return create(width, height, center, new GridTopology(gridSize), radarCleanInterval, radarPersistence, radarReceptiveDistance);
+    }
+
+    /**
+     * Returns the empty radar map
+     *
+     * @param width                  the width of map
+     * @param height                 the height of map
+     * @param center                 the center of map
+     * @param topology               the topology
+     * @param radarCleanInterval     the clean interval (ms)
+     * @param radarPersistence       the radar persistence (ms)
+     * @param radarReceptiveDistance the receptive distance (m)
+     */
+    private static RadarMap create(int width, int height, Point2D center, GridTopology topology, long radarCleanInterval, long radarPersistence, double radarReceptiveDistance) {
         MapSector[] map1 = new MapSector[width * height];
         double x0 = center.getX() - (width - 1) * topology.getGridSize() / 2;
         double y0 = center.getY() - (height - 1) * topology.getGridSize() / 2;
@@ -76,7 +123,8 @@ public class RadarMap {
                         i * topology.getGridSize() + y0));
             }
         }
-        return new RadarMap(topology, map1, width);
+        return new RadarMap(topology, map1, width
+                , radarCleanInterval, radarPersistence, 0, radarReceptiveDistance);
     }
 
     static MapSector update(MapSector sector, SensorSignal signal, double minDistance, double receptiveDistance) {
@@ -108,27 +156,55 @@ public class RadarMap {
     private final GridTopology topology;
     private final MapSector[] sectors;
     private final int stride;
+    private final long cleanInterval;
+    private final long persistence;
+    private final long cleanTimestamp;
+    private final double radarReceptiveDistance;
 
     /**
      * Creates the radar map
      *
-     * @param topology the topology
-     * @param sectors  the map sectors
-     * @param stride   the stride (width)
+     * @param topology               the topology
+     * @param sectors                the map sectors
+     * @param stride                 the stride (width)
+     * @param cleanInterval          the clean interval (ms)
+     * @param radarPersistence       the radar persistence (ms)
+     * @param cleanTimestamp         the next clean instant (ms)
+     * @param radarReceptiveDistance the receptive distance (m)
      */
-    public RadarMap(GridTopology topology, MapSector[] sectors, int stride) {
+    public RadarMap(GridTopology topology, MapSector[] sectors, int stride, long cleanInterval, long radarPersistence, long cleanTimestamp, double radarReceptiveDistance) {
         this.topology = topology;
         this.sectors = sectors;
         this.stride = stride;
+        this.cleanInterval = cleanInterval;
+        this.persistence = radarPersistence;
+        this.cleanTimestamp = cleanTimestamp;
+        this.radarReceptiveDistance = radarReceptiveDistance;
     }
 
     /**
      * Returns cleans up the map for timeout
      *
-     * @param timeout the timeout instant
+     * @param timestamp the time instant
      */
-    public RadarMap clean(long timeout) {
-        return setSectors(Arrays.stream(sectors).map(m -> m.clean(timeout)).toArray(MapSector[]::new));
+    public RadarMap clean(long timestamp) {
+        return timestamp >= cleanTimestamp
+                ? setSectors(Arrays.stream(sectors).map(m -> m.clean(timestamp - persistence)).toArray(MapSector[]::new))
+                .setCleanTimestamp(timestamp + cleanInterval)
+                : this;
+    }
+
+    public long getCleanTimestamp() {
+        return cleanTimestamp;
+    }
+
+    /**
+     * Returns the radar map with new clean instant
+     *
+     * @param cleanTimestamp the next clean instant (ms)
+     */
+    private RadarMap setCleanTimestamp(long cleanTimestamp) {
+        return new RadarMap(topology, sectors, stride, cleanInterval, persistence, cleanTimestamp, radarReceptiveDistance);
     }
 
     /**
@@ -223,7 +299,28 @@ public class RadarMap {
     }
 
     private RadarMap setSectors(MapSector[] sectors) {
-        return new RadarMap(topology, sectors, stride);
+        return new RadarMap(topology, sectors, stride, cleanInterval, persistence, cleanTimestamp, radarReceptiveDistance);
+    }
+
+    /**
+     * Returns the radar map updated with the radar status.
+     * It uses the time and signals from robot to updates the status of radar map
+     *
+     * @param status the robot status
+     */
+    public RadarMap update(RobotStatus status) {
+        // Updates the radar map
+        double distance = status.getEchoDistance();
+        Point2D location = status.getLocation();
+        long time = status.getTime();
+        RadarMap.SensorSignal signal = new RadarMap.SensorSignal(location,
+                normalizeDegAngle(status.getDirection() + status.getSensorDirection()),
+                (float) distance, time);
+        RadarMap hinderedMap = update(signal, radarReceptiveDistance);
+        RadarMap contactMap = status.getContacts() != 0 || !status.canMoveBackward() || !status.canMoveForward()
+                ? hinderedMap.setContactsAt(location, radarReceptiveDistance, time)
+                : hinderedMap;
+        return contactMap.clean(time);
     }
 
     /**

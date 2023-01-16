@@ -361,7 +361,7 @@ public class RobotCheckUp {
         logger.info("Robot check started.");
         this.robot = Robot.create(parseArgs.getString("robotHost"),
                 parseArgs.getInt("port"),
-                null, 10000, 1000, 0);
+                1000, 0);
         JFrame frame = new JFrame("Robot check up");
         Container contentPane = frame.getContentPane();
         contentPane.setLayout(new BorderLayout());

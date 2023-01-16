@@ -30,9 +30,9 @@ package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
+import org.mmarini.wheelly.apis.CircularSector;
 import org.mmarini.wheelly.apis.MapSector;
 import org.mmarini.wheelly.apis.PolarMap;
-import org.mmarini.wheelly.envs.CircularSector;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 import org.slf4j.Logger;
