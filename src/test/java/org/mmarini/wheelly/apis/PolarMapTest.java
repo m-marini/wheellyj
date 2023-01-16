@@ -28,10 +28,10 @@
 
 package org.mmarini.wheelly.apis;
 
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.mmarini.wheelly.envs.CircularSector;
 
 import java.awt.geom.Point2D;
 import java.util.function.Predicate;
@@ -46,6 +46,7 @@ class PolarMapTest {
 
     public static final double EPSILON = 1e-3;
     public static final float GRID_SIZE = 0.2F;
+    public static final int MAX_INTERVAL = 1000;
 
     @Test
     void create() {
@@ -54,6 +55,11 @@ class PolarMapTest {
 
         assertTrue(map.getSectorStream().allMatch(Predicate.not(CircularSector::isKnown)));
         assertTrue(map.getSectorStream().allMatch(Predicate.not(CircularSector::isHindered)));
+    }
+
+    @NotNull
+    private RadarMap createRadarMap() {
+        return RadarMap.create(31, 31, new Point2D.Double(), GRID_SIZE, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE);
     }
 
     @ParameterizedTest
@@ -99,7 +105,7 @@ class PolarMapTest {
                 double distanceAt0, double distanceAt90, double distanceAt180, double distanceAt270) {
         Point2D center = new Point2D.Double();
         long timestamp = System.currentTimeMillis();
-        RadarMap radarMap = RadarMap.create(11, 11, center, GRID_SIZE);
+        RadarMap radarMap = RadarMap.create(11, 11, center, GRID_SIZE, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE);
         radarMap = radarMap.updateSector(radarMap.indexOf(obsX, obsY), sect -> sect.hindered(timestamp));
 
         PolarMap polarMap = PolarMap.create(4)
@@ -132,8 +138,7 @@ class PolarMapTest {
     @Test
     void update1() {
         long timestamp = System.currentTimeMillis();
-        RadarMap radarMap = RadarMap.create(31, 31, new Point2D.Double(), GRID_SIZE)
-                .map(s -> s.empty(timestamp));
+        RadarMap radarMap = createRadarMap().map(s -> s.empty(timestamp));
         int index = radarMap.indexOf(0.2, 1.6);
         radarMap = radarMap.updateSector(index, s -> s.hindered(timestamp));
         assertFalse(radarMap.getSector(index).isUnknown());
@@ -168,7 +173,8 @@ class PolarMapTest {
     @Test
     void update2() {
         long timestamp = System.currentTimeMillis();
-        RadarMap radarMap = RadarMap.create(31, 31, new Point2D.Double(), GRID_SIZE);
+        RadarMap radarMap = createRadarMap();
+
         int index = radarMap.indexOf(0.2, 1.6);
         radarMap = radarMap.updateSector(index, s -> s.hindered(timestamp));
         assertTrue(radarMap.getSector(index).isHindered());
@@ -204,8 +210,7 @@ class PolarMapTest {
     @Test
     void update3() {
         long timestamp = System.currentTimeMillis();
-        RadarMap radarMap = RadarMap.create(31, 31, new Point2D.Double(), GRID_SIZE)
-                .map(s -> s.empty(timestamp));
+        RadarMap radarMap = createRadarMap().map(s -> s.empty(timestamp));
 
         PolarMap polarMap = PolarMap.create(24).update(radarMap,
                 new Point2D.Double(0.2, 0.2), 90,

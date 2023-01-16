@@ -11,12 +11,15 @@ configurations:
     interval: 10
     commandInterval: 600
     reactionInterval: 300
-    radarWidth: 25
-    radarHeight: 25
-    radarGrid: 0.6
     numRadarSectors: 24
-    minRadarDistance: 0.2
+    minRadarDistance: 0.3
     maxRadarDistance: 2.8
+    radarWidth: 51
+    radarHeight: 51
+    radarGrid: 0.2
+    radarReceptiveDistance: 0.28
+    radarPersistence: 300000
+    radarCleanInterval: 30000
     flow:
       entry: start
       states:

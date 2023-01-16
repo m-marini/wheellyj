@@ -38,7 +38,6 @@ import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
-import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -73,10 +72,7 @@ public class RadarRobotEnv implements Environment {
                     "commandInterval", positiveInteger(),
                     "numDirectionValues", integer(minimum(2)),
                     "numSensorValues", integer(minimum(2)),
-                    "numSpeedValues", integer(minimum(2)),
-                    "radarWidth", positiveInteger(),
-                    "radarHeight", positiveInteger(),
-                    "radarGrid", positiveNumber()
+                    "numSpeedValues", integer(minimum(2))
             ),
             List.of("objective",
                     "interval",
@@ -84,10 +80,7 @@ public class RadarRobotEnv implements Environment {
                     "commandInterval",
                     "numDirectionValues",
                     "numSensorValues",
-                    "numSpeedValues",
-                    "radarWidth",
-                    "radarHeight",
-                    "radarGrid"
+                    "numSpeedValues"
             ));
     private static final int NUM_RADAR_VALUES = 3;
 
@@ -108,11 +101,8 @@ public class RadarRobotEnv implements Environment {
         int numDirectionValues = locator.path("numDirectionValues").getNode(root).asInt();
         int numSensorValues = locator.path("numSensorValues").getNode(root).asInt();
         int numSpeedValues = locator.path("numSpeedValues").getNode(root).asInt();
-        int radarWidth = locator.path("radarWidth").getNode(root).asInt();
-        int radarHeight = locator.path("radarHeight").getNode(root).asInt();
-        float radarGrid = (float) locator.path("radarGrid").getNode(root).asDouble();
 
-        RadarMap radarMap = RadarMap.create(radarWidth, radarHeight, new Point2D.Float(), radarGrid);
+        RadarMap radarMap = RadarMap.create(root, locator);
         return RadarRobotEnv.create(robot, reward,
                 interval, reactionInterval, commandInterval,
                 numDirectionValues, numSensorValues, numSpeedValues, radarMap);

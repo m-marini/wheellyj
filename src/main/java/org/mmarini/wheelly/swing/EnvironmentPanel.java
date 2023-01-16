@@ -26,6 +26,7 @@
 package org.mmarini.wheelly.swing;
 
 import org.mmarini.Tuple2;
+import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotStatus;
 
 import java.awt.*;
@@ -137,13 +138,14 @@ public class EnvironmentPanel extends RadarPanel {
     private boolean hudAtBottom;
     private List<Point2D> obstacleMap;
     private double reward;
-    private RobotStatus robotStatus;
+    private PanelData panelData;
     private double timeRatio;
 
     public EnvironmentPanel() {
         setFont(Font.decode("Monospaced"));
         setScale(DEFAULT_SCALE);
         setObstacleSize(OBSTACLE_SIZE);
+        panelData = new PanelData(null, null);
     }
 
     /**
@@ -260,39 +262,45 @@ public class EnvironmentPanel extends RadarPanel {
         Dimension size = getSize();
         g.setColor(getBackground());
         g.fillRect(0, 0, size.width, size.height);
-        RobotStatus status = this.robotStatus;
-        if (status != null) {
-            // compute hud position
-            hudAtBottom = !hudAtBottom && status.getLocation().getY() > DEFAULT_WORLD_SIZE / 6
-                    || (!hudAtBottom || !(status.getLocation().getY() < -DEFAULT_WORLD_SIZE / 6))
-                    && hudAtBottom;
-            hudAtRight = !hudAtRight && status.getLocation().getX() < -DEFAULT_WORLD_SIZE / 6
-                    || (!hudAtRight || !(status.getLocation().getY() > DEFAULT_WORLD_SIZE / 6))
-                    && hudAtRight;
-            Graphics2D gr = (Graphics2D) g.create();
-            gr.transform(createBaseTransform());
-            AffineTransform base = gr.getTransform();
-            drawGrid(gr);
+        Graphics2D gr = (Graphics2D) g.create();
+        gr.transform(createBaseTransform());
+        AffineTransform base = gr.getTransform();
+        drawGrid(gr);
+        gr.setTransform(base);
+        drawMap(gr, obstacleMap);
+        PanelData data = this.panelData;
 
-            gr.setTransform(base);
-            drawMap(gr, obstacleMap);
+        if (data != null) {
+            RobotStatus status = data.status;
+            if (status != null) {
+                // compute hud position
+                hudAtBottom = !hudAtBottom && status.getLocation().getY() > DEFAULT_WORLD_SIZE / 6
+                        || (!hudAtBottom || !(status.getLocation().getY() < -DEFAULT_WORLD_SIZE / 6))
+                        && hudAtBottom;
+                hudAtRight = !hudAtRight && status.getLocation().getX() < -DEFAULT_WORLD_SIZE / 6
+                        || (!hudAtRight || !(status.getLocation().getY() > DEFAULT_WORLD_SIZE / 6))
+                        && hudAtRight;
 
-            gr.setTransform(base);
-            drawSensor(gr, status.getLocation(), status.getDirection(), status.getSensorDirection());
+                gr.setTransform(base);
+                drawSensor(gr, status.getLocation(), status.getDirection(), status.getSensorDirection());
 
-            gr.setTransform(base);
-            status.getSensorObstacle()
-                    .ifPresent(point -> drawObstacle(gr, point, OBSTACLE_COLOR));
+                gr.setTransform(base);
+                status.getSensorObstacle()
+                        .ifPresent(point -> drawObstacle(gr, point, OBSTACLE_COLOR));
+            }
+            RadarMap radarMap = data.radarMap;
+            if (radarMap != null) {
+                gr.setTransform(base);
+                List<Tuple2<Point2D, Color>> radarMap1 = createMap(radarMap);
+                Shape sectorShape = createSectorShape(radarMap);
+                drawRadarMap(gr, radarMap1, sectorShape);
+            }
 
-            gr.setTransform(base);
-            List<Tuple2<Point2D, Color>> radarMap = createMap(status.getRadarMap());
-            Shape sectorShape = createSectorShape(status.getRadarMap());
-            drawRadarMap(gr, radarMap, sectorShape);
-
-            gr.setTransform(base);
-            drawRobot(gr, status.getLocation(), status.getDirection());
-
-            drawHUD(g, robotStatus, reward, timeRatio);
+            if (status != null) {
+                gr.setTransform(base);
+                drawRobot(gr, status.getLocation(), status.getDirection());
+                drawHUD(g, status, reward, timeRatio);
+            }
         }
     }
 
@@ -308,18 +316,41 @@ public class EnvironmentPanel extends RadarPanel {
         repaint();
     }
 
+    public void setRadarMap(RadarMap radarMap) {
+        this.panelData = this.panelData.setRadarMap(radarMap);
+        repaint();
+    }
+
     public void setReward(double reward) {
         this.reward = reward;
         repaint();
     }
 
     public void setRobotStatus(RobotStatus status) {
-        this.robotStatus = status;
+        this.panelData = this.panelData.setStatus(status);
         repaint();
     }
 
     public void setTimeRatio(double timeRatio) {
         this.timeRatio = timeRatio;
         repaint();
+    }
+
+    static class PanelData {
+        public final RadarMap radarMap;
+        public final RobotStatus status;
+
+        PanelData(RobotStatus status, RadarMap radarMap) {
+            this.radarMap = radarMap;
+            this.status = status;
+        }
+
+        PanelData setRadarMap(RadarMap radarMap) {
+            return new PanelData(status, radarMap);
+        }
+
+        PanelData setStatus(RobotStatus status) {
+            return new PanelData(status, radarMap);
+        }
     }
 }

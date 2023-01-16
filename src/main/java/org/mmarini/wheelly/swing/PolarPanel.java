@@ -25,8 +25,8 @@
 
 package org.mmarini.wheelly.swing;
 
+import org.mmarini.wheelly.apis.CircularSector;
 import org.mmarini.wheelly.apis.PolarMap;
-import org.mmarini.wheelly.envs.CircularSector;
 
 import javax.swing.*;
 import java.awt.*;

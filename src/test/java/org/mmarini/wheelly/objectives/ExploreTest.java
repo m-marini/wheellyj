@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.eclipse.collections.api.block.function.primitive.DoubleFunction;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.mmarini.rl.envs.Environment;
 import org.mmarini.wheelly.TestFunctions;
 import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotStatus;
@@ -40,22 +41,34 @@ import java.io.IOException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
+import static org.mmarini.wheelly.apis.SimRobot.GRID_SIZE;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_VELOCITY;
 
 class ExploreTest {
 
-    static RobotStatus createStatus(int sensorDir, double leftSpeed, double rightSpeed, int known, boolean canMoveForward, boolean canMoveBackward) {
-        long timestamp = System.currentTimeMillis();
-        RadarMap radarMap = RadarMap.create(10, 10, new Point2D.Double(), 0.2)
-                .map((i, sector) -> i < known ? sector.empty(timestamp) : sector);
+    public static final int MAX_INTERVAL = 10000;
 
-        return RobotStatus.create()
+    static Environment createEnvironment(int sensorDir, double leftSpeed, double rightSpeed, boolean canMoveForward, boolean canMoveBackward, int knownCount) {
+        long timestamp = System.currentTimeMillis();
+        RadarMap radarMap = RadarMap.create(10, 10, new Point2D.Double(), 0.2, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE)
+                .map((i, sector) -> i < knownCount ? sector.empty(timestamp) : sector);
+        RobotStatus status = RobotStatus.create()
                 .setSensorDirection(sensorDir)
                 .setLeftPps(leftSpeed * MAX_VELOCITY / RobotStatus.DISTANCE_PER_PULSE)
                 .setRightPps(rightSpeed * MAX_VELOCITY / RobotStatus.DISTANCE_PER_PULSE)
                 .setCanMoveForward(canMoveForward)
-                .setCanMoveBackward(canMoveBackward)
-                .setRadarMap(radarMap);
+                .setCanMoveBackward(canMoveBackward);
+        return new MockEnvironment() {
+            @Override
+            public RadarMap getRadarMap() {
+                return radarMap;
+            }
+
+            @Override
+            public RobotStatus getStatus() {
+                return status;
+            }
+        };
     }
 
     @ParameterizedTest
@@ -85,9 +98,11 @@ class ExploreTest {
                 int canMoveBackward) throws IOException {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "sensorRange: 60"));
-        DoubleFunction<RobotStatus> f = Explore.create(root, Locator.root());
-        RobotStatus status = createStatus(sensorDir, leftSpeed, rightSpeed, knownCount, canMoveForward != 0, canMoveBackward != 0);
-        double result = f.doubleValueOf(status);
+        DoubleFunction<Environment> f = Explore.create(root, Locator.root());
+        Environment env = createEnvironment(sensorDir, leftSpeed, rightSpeed, canMoveForward != 0, canMoveBackward != 0, knownCount);
+
+        double result = f.doubleValueOf(env);
+
         assertThat(result, closeTo(expected, 1e-4));
     }
 }

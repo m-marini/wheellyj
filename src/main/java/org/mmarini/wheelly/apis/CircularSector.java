@@ -23,9 +23,7 @@
  *
  */
 
-package org.mmarini.wheelly.envs;
-
-import org.mmarini.wheelly.apis.MapSector;
+package org.mmarini.wheelly.apis;
 
 import java.util.Optional;
 

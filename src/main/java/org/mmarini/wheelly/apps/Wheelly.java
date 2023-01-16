@@ -40,6 +40,8 @@ import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.envs.PolarRobotEnv;
 import org.mmarini.wheelly.envs.RadarRobotEnv;
+import org.mmarini.wheelly.envs.WithPolarMap;
+import org.mmarini.wheelly.envs.WithRadarMap;
 import org.mmarini.wheelly.swing.EnvironmentFrame;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.wheelly.swing.PolarPanel;
@@ -271,13 +273,16 @@ public class Wheelly {
                         avgRewards = DEFAULT_DISCOUNT * (avgRewards - reward) + reward;
                         status = robot.getStatus();
                         frame.setRobotStatus(status);
+                        if (env instanceof WithRadarMap) {
+                            frame.setRadarMap(((WithRadarMap) env).getRadarMap());
+                        }
                         frame.setReward(avgRewards);
                         frame.setTimeRatio((double) status.getElapsed() / (System.currentTimeMillis() - start));
                         if (radarPanel != null) {
-                            radarPanel.setRadarMap(((RadarRobotEnv) env).getRadarMap());
+                            radarPanel.setRadarMap(((WithRadarMap) env).getRadarMap());
                         }
                         if (polarPanel != null) {
-                            polarPanel.setPolarMap(((PolarRobotEnv) env).getPolarMap());
+                            polarPanel.setPolarMap(((WithPolarMap) env).getPolarMap());
                         }
                         running = status.getElapsed() <= sessionDuration &&
                                 frame.isVisible();

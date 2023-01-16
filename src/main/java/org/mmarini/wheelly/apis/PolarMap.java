@@ -29,7 +29,6 @@
 package org.mmarini.wheelly.apis;
 
 import org.jetbrains.annotations.NotNull;
-import org.mmarini.wheelly.envs.CircularSector;
 
 import java.awt.geom.Point2D;
 import java.util.Arrays;
