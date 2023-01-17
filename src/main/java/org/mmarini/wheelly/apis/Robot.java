@@ -33,9 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.Math.round;
@@ -47,33 +45,36 @@ import static org.mmarini.yaml.schema.Validator.*;
  */
 public class Robot implements RobotApi {
     public static final int DEFAULT_PORT = 22;
-    public static final long DEFAULT_CONNECTION_TIMEOUT = 10000;
-    public static final long DEFAULT_READ_TIMEOUT = 3000;
 
-    public static final int[] MOTOR_CONFIG = new int[]{-15, -78, 6, 32, -10, -68, 5, 32};
+    private static final Validator NEG_THETA = array(
+            prefixItems(
+                    integer(minimum(-254), maximum(-1)),
+                    integer(minimum(-255), maximum(0))),
+            minItems(2), maxItems(2));
 
-    private static final Logger logger = LoggerFactory.getLogger(Robot.class);
+    private static final Validator POS_THETA = array(
+            prefixItems(
+                    integer(minimum(1), maximum(254)),
+                    integer(minimum(0), maximum(255))),
+            minItems(2), maxItems(2));
+
+    private static final Validator THETA_SPEC = array(
+            prefixItems(NEG_THETA, POS_THETA),
+            minItems(2), maxItems(2));
     private static final Validator ROBOT_SPEC = objectPropertiesRequired(Map.of(
                     "host", string(),
                     "port", integer(minimum(1), maximum(32768)),
                     "connectionTimeout", positiveInteger(),
-                    "readTimeout", positiveInteger()
+                    "readTimeout", positiveInteger(),
+                    "leftTheta", THETA_SPEC,
+                    "rightTheta", THETA_SPEC
             ),
             List.of("host",
                     "connectionTimeout",
                     "readTimeout"
             ));
+    private static final Logger logger = LoggerFactory.getLogger(Robot.class);
     private static final int MAX_SPEED_VALUE = 4;
-
-    /**
-     * Returns an interface to the robot
-     *
-     * @param robotHost the robot host
-     * @param port      the robot port
-     */
-    public static Robot create(String robotHost, int port) {
-        return Robot.create(robotHost, port, DEFAULT_CONNECTION_TIMEOUT, DEFAULT_READ_TIMEOUT);
-    }
 
     /**
      * Returns the robot from configuration
@@ -87,7 +88,20 @@ public class Robot implements RobotApi {
         int port = locator.path("port").getNode(root).asInt(DEFAULT_PORT);
         long connectionTimeout = locator.path("connectionTimeout").getNode(root).asLong();
         long readTimeout = locator.path("readTimeout").getNode(root).asLong();
-        return Robot.create(host, port, connectionTimeout, readTimeout);
+        int[] motorTheta = new int[]{-128, -128, 128, 128, -128, -128, 128, 128};
+        Locator leftThetaLoc = locator.path("leftTheta");
+        if (!leftThetaLoc.getNode(root).isMissingNode()) {
+            int[] theta = loadTheta(root, leftThetaLoc);
+            System.arraycopy(theta, 0, motorTheta, 0, 4);
+        }
+        Locator rightThetaLoc = locator.path("rightTheta");
+        if (!rightThetaLoc.getNode(root).isMissingNode()) {
+            int[] theta = loadTheta(root, rightThetaLoc);
+            System.arraycopy(theta, 0, motorTheta, 4, 4);
+        }
+        StringJoiner s = new StringJoiner(" ");
+        Arrays.stream(motorTheta).mapToObj(String::valueOf).forEach(s::add);
+        return Robot.create(host, port, connectionTimeout, readTimeout, s.toString());
     }
 
     /**
@@ -97,24 +111,42 @@ public class Robot implements RobotApi {
      * @param port              the robot port
      * @param connectionTimeout the connection timeout (ms)
      * @param readTimeout       the read timeout (ms)
+     * @param motorTheta        the motor theta corrections
      */
-    public static Robot create(String robotHost, int port, long connectionTimeout, long readTimeout) {
+    public static Robot create(String robotHost, int port, long connectionTimeout, long readTimeout, String motorTheta) {
         RobotSocket socket = new RobotSocket(robotHost, port, connectionTimeout, readTimeout);
-        return new Robot(socket);
+        return new Robot(socket, motorTheta);
+    }
+
+    /**
+     * Returns the theta values from configuration [x1, y1, x2, y2]
+     *
+     * @param root    the configuration document
+     * @param locator the theta locator
+     */
+    private static int[] loadTheta(JsonNode root, Locator locator) {
+        return locator.elements(root)
+                .flatMap(l1 -> l1.elements(root)
+                        .map(l2 -> l2.getNode(root).asInt()))
+                .mapToInt(i -> i)
+                .toArray();
     }
 
     private final RobotSocket socket;
+    private final String motorTheta;
     private Long timestampOffset;
     private RobotStatus status;
 
     /**
      * Create a Robot interface
      *
-     * @param socket the robot socket
+     * @param socket     the robot socket
+     * @param motorTheta the motor theta corrections
      */
-    public Robot(RobotSocket socket) {
+    public Robot(RobotSocket socket, String motorTheta) {
         this.socket = socket;
         status = RobotStatus.create();
+        this.motorTheta = motorTheta;
     }
 
     @Override
@@ -129,7 +161,7 @@ public class Robot implements RobotApi {
 
     @Override
     public void halt() {
-        writeCommand("al");
+        writeCommand("ha");
     }
 
     @Override
@@ -186,6 +218,7 @@ public class Robot implements RobotApi {
     public void tick(long dt) {
         if (timestampOffset == null) {
             sync();
+            writeCommand("cm " + motorTheta);
         }
         long time = status.getTime();
         long timeout = time + dt;

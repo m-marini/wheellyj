@@ -42,8 +42,6 @@ import java.util.*;
 
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.apis.RobotStatus.*;
-import static org.mmarini.wheelly.apis.Utils.*;
 import static org.mmarini.yaml.schema.Validator.*;
 
 /**
@@ -61,7 +59,7 @@ public class SimRobot implements RobotApi {
     public static final int FORWARD_PROXIMITY_MASK = 0xc;
     public static final int BACKWARD_PROXIMITY_MASK = 0x3;
     public static final double MAX_VELOCITY = 0.280;
-    public static final double MAX_PPS = MAX_VELOCITY / DISTANCE_PER_PULSE;
+    public static final double MAX_PPS = MAX_VELOCITY / RobotStatus.DISTANCE_PER_PULSE;
 
     private static final double MIN_OBSTACLE_DISTANCE = 1;
     private static final Vec2 GRAVITY = new Vec2();
@@ -142,7 +140,7 @@ public class SimRobot implements RobotApi {
      */
     protected static void createObstacle(World world, Point2D location) {
         PolygonShape obsShape = new PolygonShape();
-        obsShape.setAsBox(OBSTACLE_SIZE / 2, OBSTACLE_SIZE / 2);
+        obsShape.setAsBox(RobotStatus.OBSTACLE_SIZE / 2, RobotStatus.OBSTACLE_SIZE / 2);
 
         FixtureDef obsFixDef = new FixtureDef();
         obsFixDef.shape = obsShape;
@@ -273,15 +271,15 @@ public class SimRobot implements RobotApi {
      */
     private void controller(double dt) {
         // Direction difference
-        double dAngle = normalizeAngle(toRadians(90 - direction) - robot.getAngle());
+        double dAngle = Utils.normalizeAngle(toRadians(90 - direction) - robot.getAngle());
         // Relative angular speed to fix the direction
-        double angularVelocity = clip(linear(dAngle, -RAD_10, RAD_10, -1, 1), -1, 1);
+        double angularVelocity = Utils.clip(Utils.linear(dAngle, -RAD_10, RAD_10, -1, 1), -1, 1);
         // Relative linear speed to fix the speed
-        double linearVelocity = speed * clip(linear(abs(dAngle), 0, RAD_30, 1, 0), 0, 1);
+        double linearVelocity = speed * Utils.clip(Utils.linear(abs(dAngle), 0, RAD_30, 1, 0), 0, 1);
 
         // Relative left-right motor speeds
-        double left = clip((linearVelocity - angularVelocity) / 2, -1, 1);
-        double right = clip((linearVelocity + angularVelocity) / 2, -1, 1);
+        double left = Utils.clip((linearVelocity - angularVelocity) / 2, -1, 1);
+        double right = Utils.clip((linearVelocity + angularVelocity) / 2, -1, 1);
 
         // Real left-right motor speeds
         left = round(left * 10F) / 10F * MAX_VELOCITY;
@@ -304,7 +302,7 @@ public class SimRobot implements RobotApi {
         localForce = localForce.mul((float) (1 + random.nextGaussian() * errSensor));
 
         // Clip the local force to physic constraints
-        localForce.x = (float) clip(localForce.x, -MAX_FORCE, MAX_FORCE);
+        localForce.x = (float) Utils.clip(localForce.x, -MAX_FORCE, MAX_FORCE);
         force = robot.getWorldVector(localForce);
 
         // Angle rotation due to differential motor speeds
@@ -315,7 +313,7 @@ public class SimRobot implements RobotApi {
         // Add a random factor to angular impulse
         angularTorque *= (1 + random.nextGaussian() * errSigma);
         // Clip the angular torque
-        angularTorque = clip(angularTorque, -MAX_TORQUE, MAX_TORQUE);
+        angularTorque = Utils.clip(angularTorque, -MAX_TORQUE, MAX_TORQUE);
         world.clearForces();
         robot.applyForceToCenter(force);
         robot.applyTorque((float) angularTorque);
@@ -324,7 +322,7 @@ public class SimRobot implements RobotApi {
         // Update robot status
         Vec2 pos = robot.getPosition();
         Point2D.Float location = new Point2D.Float(pos.x, pos.y);
-        int direction = normalizeDegAngle((int) round(90 - toDegrees(robot.getAngle())));
+        int direction = Utils.normalizeDegAngle((int) round(90 - toDegrees(robot.getAngle())));
         status = status.setLocation(location)
                 .setDirection(direction)
                 .setLeftPps(left)
@@ -335,15 +333,15 @@ public class SimRobot implements RobotApi {
         Fixture fa = contact.m_fixtureA;
         Fixture fb = contact.m_fixtureB;
         if (fa == flSensor || fb == flSensor) {
-            return FRONT_LEFT;
+            return RobotStatus.FRONT_LEFT;
         } else if (fa == frSensor || fb == frSensor) {
-            return FRONT_RIGHT;
+            return RobotStatus.FRONT_RIGHT;
         } else if (fa == rlSensor || fb == rlSensor) {
-            return REAR_LEFT;
+            return RobotStatus.REAR_LEFT;
         } else if (fa == rrSensor || fb == rrSensor) {
-            return REAR_RIGHT;
+            return RobotStatus.REAR_RIGHT;
         } else {
-            return NO_CONTACT;
+            return RobotStatus.NO_CONTACT;
         }
     }
 
@@ -416,7 +414,7 @@ public class SimRobot implements RobotApi {
     public void setRobotDir(int direction) {
         this.direction = direction;
         status = status.setDirection(direction);
-        robot.setTransform(robot.getPosition(), (float) toNormalRadians(90 - direction));
+        robot.setTransform(robot.getPosition(), (float) Utils.toNormalRadians(90 - direction));
     }
 
     /**
@@ -444,7 +442,7 @@ public class SimRobot implements RobotApi {
         Point2D position = status.getLocation();
         double x = position.getX();
         double y = position.getY();
-        int sensorDeg = normalizeDegAngle(90 - status.getDirection() - sensor);
+        int sensorDeg = Utils.normalizeDegAngle(90 - status.getDirection() - sensor);
         double sensorRad = toRadians(sensorDeg);
         double distance = 0;
         int obsIdx = obstacleMap.indexOfNearest(x, y, sensorRad, RAD_15);

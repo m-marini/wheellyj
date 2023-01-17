@@ -12,7 +12,7 @@ configurations:
     commandInterval: 600
     reactionInterval: 300
     numRadarSectors: 24
-    minRadarDistance: 0.3
+    minRadarDistance: 0.4
     maxRadarDistance: 2.8
     radarWidth: 51
     radarHeight: 51
