@@ -2,7 +2,7 @@
 # Computes the correction factors for motors
 #
 clear all;
-FILENAME = "d:/git/wheellino/MotorsMeasures.txt";
+FILENAME = "MotorsMeasures.txt";
 PREC= 255;
 
 function DATA = loadData(FILENAME)

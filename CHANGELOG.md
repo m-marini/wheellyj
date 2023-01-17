@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- Issue #160: Add motor theta configuration
+
 ### Changed
 
 - Issue #158: Move radar management away from robot status
