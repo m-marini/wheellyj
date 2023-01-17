@@ -148,6 +148,15 @@ The kpi folder and the report folder should be selected.
 
 The weight changes are ploted with `td_delta_weights.m` octave program.
 
+### Motor theta corrections
+
+The speed of the motors depends on the voltage supplied.
+The dependence is non-linear mainly due to static friction.
+For this reason, the supplied voltage is a non-linear function of the power signal which corrects for these non-linearities.
+The parameters (theta) of this function can be deduced by measuring the speed of the motors with respect to the supplied voltage (see `MotorMeasuring` [wheellino project](https://github.com/m-marini/wheellino).
+
+The Octave `motorMeasureReport.m` application allows you to calculate the theta parameters in speed measurements and than can be transpose in the robot configuration yaml file.
+
 ## Run the robot executor
 
 After installed the application run the command:

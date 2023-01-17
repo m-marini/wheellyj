@@ -69,6 +69,7 @@ public class RobotCheckUp {
     public static final int SUPPLY_SAMPLES = 10;
     public static final int ROTATION_TOLERANCE = 5;
     public static final float DISTANCE_TOLERANCE = 0.1F;
+    public static final String MOTOR_THETA = "-127 -127 127 127 -127 -127 127 127";
     private static final Logger logger = LoggerFactory.getLogger(RobotCheckUp.class);
 
     /**
@@ -361,7 +362,7 @@ public class RobotCheckUp {
         logger.info("Robot check started.");
         this.robot = Robot.create(parseArgs.getString("robotHost"),
                 parseArgs.getInt("port"),
-                1000, 0);
+                1000, 0, MOTOR_THETA);
         JFrame frame = new JFrame("Robot check up");
         Container contentPane = frame.getContentPane();
         contentPane.setLayout(new BorderLayout());

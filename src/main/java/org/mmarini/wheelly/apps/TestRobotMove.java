@@ -7,6 +7,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
+import static org.mmarini.wheelly.apps.RobotCheckUp.MOTOR_THETA;
+
 /**
  * Run a test to check for Robot moving.
  * The test run for 2 secs turning the Roboto to 0 DEG and turning the sensro to 90 DEG
@@ -21,7 +23,7 @@ public class TestRobotMove {
      * @throws IOException in case of error
      */
     public static void main(String[] args) throws IOException {
-        try (Robot robot = Robot.create("192.168.1.11", 22, 0, 0)) {
+        try (Robot robot = Robot.create("192.168.1.11", 22, 0, 0, MOTOR_THETA)) {
             logger.info("Connecting to robot...");
             robot.start();
             long dt = 100;
