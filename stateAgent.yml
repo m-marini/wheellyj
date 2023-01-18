@@ -12,12 +12,13 @@ configurations:
     commandInterval: 600
     reactionInterval: 300
     numRadarSectors: 24
-    minRadarDistance: 0.4
+    minRadarDistance: 0.3
     maxRadarDistance: 2.8
     radarWidth: 51
     radarHeight: 51
     radarGrid: 0.2
     radarReceptiveDistance: 0.28
+    radarReceptiveAngle: 15
     radarPersistence: 300000
     radarCleanInterval: 30000
     flow:

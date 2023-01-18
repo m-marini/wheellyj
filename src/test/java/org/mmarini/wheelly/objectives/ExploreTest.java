@@ -50,7 +50,7 @@ class ExploreTest {
 
     static Environment createEnvironment(int sensorDir, double leftSpeed, double rightSpeed, boolean canMoveForward, boolean canMoveBackward, int knownCount) {
         long timestamp = System.currentTimeMillis();
-        RadarMap radarMap = RadarMap.create(10, 10, new Point2D.Double(), 0.2, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE)
+        RadarMap radarMap = RadarMap.create(10, 10, new Point2D.Double(), 0.2, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, 15)
                 .map((i, sector) -> i < knownCount ? sector.empty(timestamp) : sector);
         RobotStatus status = RobotStatus.create()
                 .setSensorDirection(sensorDir)

@@ -197,7 +197,8 @@ public class ExploringState extends AbstractStateNode {
      */
     int findUnknownSector(ProcessorContext context) {
         PolarMap map = context.getPolarMap();
-        return !map.getSector(0).isKnown()
+        CircularSector frontSector = map.getSector(0);
+        return frontSector.getMapSector().isPresent() && !frontSector.isKnown()
                 ? 0 // return front sector if unknown
                 : IntStream.range(0, map.getSectorsNumber())
                 .filter(i -> !map.getSector(i).isKnown())
@@ -263,11 +264,14 @@ public class ExploringState extends AbstractStateNode {
         int robotDir = normalizeDegAngle(context.getRobotDirection() + sectorDir);
         double stopDistance = getDouble(context, "stopDistance");
         int turnDirectionRange = getInt(context, "turnDirectionRange");
+        double distance = context.getEchoDistance();
+        distance = distance == 0 ? targetSector.getDistance()
+                : min(distance, targetSector.getDistance());
         double speed = abs(sectorDir) > turnDirectionRange
                 ? 0
                 : !targetSector.isHindered()
                 ? 1
-                : min(max((double) round(linear(targetSector.getDistance(), 0, stopDistance, 1, 4)),
+                : min(max((double) round(linear(distance, 0, stopDistance, 1, 4)),
                 1), 4) / 4;
         if (speed == 0) {
             logger.atDebug()

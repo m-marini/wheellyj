@@ -47,6 +47,7 @@ class PolarMapTest {
     public static final double EPSILON = 1e-3;
     public static final float GRID_SIZE = 0.2F;
     public static final int MAX_INTERVAL = 1000;
+    private static final int RECEPTIVE_ANGLE = 15;
 
     @Test
     void create() {
@@ -59,7 +60,7 @@ class PolarMapTest {
 
     @NotNull
     private RadarMap createRadarMap() {
-        return RadarMap.create(31, 31, new Point2D.Double(), GRID_SIZE, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE);
+        return RadarMap.create(31, 31, new Point2D.Double(), GRID_SIZE, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
     }
 
     @ParameterizedTest
@@ -105,7 +106,7 @@ class PolarMapTest {
                 double distanceAt0, double distanceAt90, double distanceAt180, double distanceAt270) {
         Point2D center = new Point2D.Double();
         long timestamp = System.currentTimeMillis();
-        RadarMap radarMap = RadarMap.create(11, 11, center, GRID_SIZE, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE);
+        RadarMap radarMap = RadarMap.create(11, 11, center, GRID_SIZE, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
         radarMap = radarMap.updateSector(radarMap.indexOf(obsX, obsY), sect -> sect.hindered(timestamp));
 
         PolarMap polarMap = PolarMap.create(4)

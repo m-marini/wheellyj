@@ -126,6 +126,13 @@ public class ProcessorContext {
     }
 
     /**
+     * Returns the echo distance (m)
+     */
+    public double getEchoDistance() {
+        return robotStatus.getEchoDistance();
+    }
+
+    /**
      * Returns a float value by key
      *
      * @param key          the key
