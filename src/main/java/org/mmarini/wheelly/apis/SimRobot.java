@@ -66,7 +66,6 @@ public class SimRobot implements RobotApi {
     private static final int VELOCITY_ITER = 10;
     private static final int POSITION_ITER = 10;
     private static final double RAD_10 = toRadians(10);
-    private static final double RAD_15 = toRadians(15);
     private static final double RAD_30 = toRadians(30);
     private static final double ROBOT_TRACK = 0.136;
     private static final double ROBOT_MASS = 0.78;
@@ -104,10 +103,12 @@ public class SimRobot implements RobotApi {
                     Map.entry("mapSeed", positiveInteger()),
                     Map.entry("errSigma", nonNegativeNumber()),
                     Map.entry("errSensor", nonNegativeNumber()),
+                    Map.entry("sensorReceptiveAngle", positiveInteger()),
                     Map.entry("numObstacles", nonNegativeInteger())
             ), List.of(
                     "errSigma",
                     "errSensor",
+                    "sensorReceptiveAngle",
                     "numObstacles"
             )
     );
@@ -117,6 +118,7 @@ public class SimRobot implements RobotApi {
         long mapSeed = locator.path("mapSeed").getNode(root).asLong(0);
         long robotSeed = locator.path("robotSeed").getNode(root).asLong(0);
         int numObstacles = locator.path("numObstacles").getNode(root).asInt();
+        double sensorReceptiveAngle = toRadians(locator.path("sensorReceptiveAngle").getNode(root).asInt());
         Random mapRandom = mapSeed > 0L ? new Random(mapSeed) : new Random();
         Random robotRandom = robotSeed > 0L ? new Random(robotSeed) : new Random();
         ObstacleMap obstacleMap = MapBuilder.create(GRID_SIZE)
@@ -128,8 +130,8 @@ public class SimRobot implements RobotApi {
         double errSensor = locator.path("errSensor").getNode(root).asDouble();
         return new SimRobot(obstacleMap,
                 robotRandom,
-                errSigma, errSensor
-        );
+                errSigma, errSensor,
+                sensorReceptiveAngle);
     }
 
     /**
@@ -174,6 +176,7 @@ public class SimRobot implements RobotApi {
     private final Body robot;
     private final double errSigma;
     private final double errSensor;
+    private final double sensorReceptiveAngle;
     private final Random random;
     private final ObstacleMap obstacleMap;
     private final Fixture flSensor;
@@ -188,16 +191,18 @@ public class SimRobot implements RobotApi {
     /**
      * Creates a simulated robot
      *
-     * @param obstacleMap the obstacle map
-     * @param random      the random generator
-     * @param errSigma    sigma of errors in physic simulation (U)
-     * @param errSensor   sensor error (m)
+     * @param obstacleMap          the obstacle map
+     * @param random               the random generator
+     * @param errSigma             sigma of errors in physic simulation (U)
+     * @param errSensor            sensor error (m)
+     * @param sensorReceptiveAngle sensor receptive angle (DEG)
      */
-    public SimRobot(ObstacleMap obstacleMap, Random random, double errSigma, double errSensor) {
+    public SimRobot(ObstacleMap obstacleMap, Random random, double errSigma, double errSensor, double sensorReceptiveAngle) {
         this.random = requireNonNull(random);
         this.errSigma = errSigma;
         this.errSensor = errSensor;
-        this.obstacleMap = obstacleMap;
+        this.obstacleMap = requireNonNull(obstacleMap);
+        this.sensorReceptiveAngle = sensorReceptiveAngle;
         this.status = RobotStatus.create();
 
         // Creates the jbox2 physic world
@@ -445,7 +450,7 @@ public class SimRobot implements RobotApi {
         int sensorDeg = Utils.normalizeDegAngle(90 - status.getDirection() - sensor);
         double sensorRad = toRadians(sensorDeg);
         double distance = 0;
-        int obsIdx = obstacleMap.indexOfNearest(x, y, sensorRad, RAD_15);
+        int obsIdx = obstacleMap.indexOfNearest(x, y, sensorRad, sensorReceptiveAngle);
         if (obsIdx >= 0) {
             Point2D obs = obstacleMap.getPoint(obsIdx);
             double dist = obs.distance(position) - obstacleMap.getTopology().getGridSize() / 2

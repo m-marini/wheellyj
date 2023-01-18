@@ -45,6 +45,7 @@ class RadarMapTest {
     public static final double MM1 = 0.001;
     public static final int MAX_INTERVAL = 10000;
     static final double MIN_DISTANCE = 0.4;
+    public static final int RECEPTIVE_ANGLE = 15;
 
     @Test
     void cleanNoTimeout() {
@@ -106,7 +107,8 @@ class RadarMapTest {
 
     @NotNull
     private RadarMap createRadarMap() {
-        return RadarMap.create(WIDTH, HEIGHT, new Point2D.Double(), GRID_SIZE, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE);
+        return RadarMap.create(WIDTH, HEIGHT, new Point2D.Double(), GRID_SIZE,
+                MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
     }
 
     @Test
@@ -273,7 +275,7 @@ class RadarMapTest {
         long timestamp = System.currentTimeMillis();
         RadarMap.SensorSignal signal = new RadarMap.SensorSignal(sensor, direction, distance, timestamp);
 
-        map = map.update(signal, RECEPTIVE_DISTANCE);
+        map = map.update(signal);
 
         Optional<MapSector> sectorOpt = map.getSector(0, 0);
 
@@ -314,7 +316,7 @@ class RadarMapTest {
         Point2D sectorLocation = new Point2D.Float(0, 1F);
         MapSector sector = MapSector.unknown(sectorLocation);
 
-        sector = RadarMap.update(sector, signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
+        sector = RadarMap.update(sector, signal, MIN_DISTANCE, RECEPTIVE_DISTANCE, RECEPTIVE_ANGLE);
 
         assertTrue(sector.isEmpty());
         assertEquals(timestamp, sector.getTimestamp());
@@ -337,7 +339,7 @@ class RadarMapTest {
         Point2D sectorLocation = new Point2D.Float(0, 2F);
         MapSector sector = MapSector.unknown(sectorLocation);
 
-        sector = RadarMap.update(sector, signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
+        sector = RadarMap.update(sector, signal, MIN_DISTANCE, RECEPTIVE_DISTANCE, RECEPTIVE_ANGLE);
 
         assertTrue(sector.isHindered());
         assertEquals(timestamp, sector.getTimestamp());
@@ -360,7 +362,7 @@ class RadarMapTest {
         Point2D sectorLocation = new Point2D.Float(0, 2.99F);
         MapSector sector = MapSector.unknown(sectorLocation);
 
-        sector = RadarMap.update(sector, signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
+        sector = RadarMap.update(sector, signal, MIN_DISTANCE, RECEPTIVE_DISTANCE, RECEPTIVE_ANGLE);
 
         assertTrue(sector.isEmpty());
         assertEquals(timestamp, sector.getTimestamp());
@@ -383,7 +385,7 @@ class RadarMapTest {
         Point2D sectorLocation = new Point2D.Float(0, 2.99F);
         MapSector sector = MapSector.unknown(sectorLocation);
 
-        sector = RadarMap.update(sector, signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
+        sector = RadarMap.update(sector, signal, MIN_DISTANCE, RECEPTIVE_DISTANCE, RECEPTIVE_ANGLE);
 
         assertTrue(sector.isEmpty());
         assertEquals(timestamp, sector.getTimestamp());
@@ -406,7 +408,7 @@ class RadarMapTest {
         long timestamp = System.currentTimeMillis();
         RadarMap.SensorSignal signal = new RadarMap.SensorSignal(sensLocation, sensDir, distance, timestamp);
 
-        sector = RadarMap.update(sector, signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
+        sector = RadarMap.update(sector, signal, MIN_DISTANCE, RECEPTIVE_DISTANCE, RECEPTIVE_ANGLE);
 
         assertTrue(sector.isEmpty());
         assertEquals(timestamp, sector.getTimestamp());
@@ -429,7 +431,7 @@ class RadarMapTest {
         Point2D sectorLocation = new Point2D.Float(0, 1);
         MapSector sector = MapSector.unknown(sectorLocation);
 
-        sector = RadarMap.update(sector, signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
+        sector = RadarMap.update(sector, signal, MIN_DISTANCE, RECEPTIVE_DISTANCE, 0);
 
         assertTrue(sector.isUnknown());
     }
@@ -451,7 +453,7 @@ class RadarMapTest {
         Point2D sectorLocation = new Point2D.Float(0, 3.01F);
         MapSector sector = MapSector.unknown(sectorLocation);
 
-        sector = RadarMap.update(sector, signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
+        sector = RadarMap.update(sector, signal, MIN_DISTANCE, RECEPTIVE_DISTANCE, RECEPTIVE_ANGLE);
 
         assertTrue(sector.isUnknown());
     }
@@ -473,7 +475,7 @@ class RadarMapTest {
         Point2D sectorLocation = new Point2D.Float(0, 2.21F);
         MapSector sector = MapSector.unknown(sectorLocation);
 
-        sector = RadarMap.update(sector, signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
+        sector = RadarMap.update(sector, signal, MIN_DISTANCE, RECEPTIVE_DISTANCE, RECEPTIVE_ANGLE);
 
         assertTrue(sector.isUnknown());
     }
@@ -495,7 +497,7 @@ class RadarMapTest {
         Point2D sectorLocation = new Point2D.Float(0, 0.29F);
         MapSector sector = MapSector.unknown(sectorLocation);
 
-        sector = RadarMap.update(sector, signal, MIN_DISTANCE, RECEPTIVE_DISTANCE);
+        sector = RadarMap.update(sector, signal, MIN_DISTANCE, RECEPTIVE_DISTANCE, RECEPTIVE_ANGLE);
 
         assertTrue(sector.isUnknown());
     }

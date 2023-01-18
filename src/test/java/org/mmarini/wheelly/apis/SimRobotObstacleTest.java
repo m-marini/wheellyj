@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
+import static java.lang.Math.toRadians;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.junit.jupiter.api.Assertions.*;
@@ -174,7 +175,7 @@ class SimRobotObstacleTest {
     private SimRobot createRobot() {
         Random random = new Random(SEED);
         return new SimRobot(new MapBuilder(new GridTopology(0.2f)).add(XO, 0).build(),
-                random, 0, 0);
+                random, 0, 0, toRadians(15));
     }
 
     @Test

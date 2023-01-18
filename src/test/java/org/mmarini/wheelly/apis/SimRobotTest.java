@@ -30,8 +30,7 @@ import org.junit.jupiter.api.Test;
 import java.awt.geom.Point2D;
 import java.util.Random;
 
-import static java.lang.Math.PI;
-import static java.lang.Math.round;
+import static java.lang.Math.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -56,7 +55,7 @@ class SimRobotTest {
     private SimRobot createRobot() {
         Random random = new Random(SEED);
         return new SimRobot(new MapBuilder(new GridTopology(0.2f)).build(),
-                random, 0, 0);
+                random, 0, 0, toRadians(15));
     }
 
     @Test
