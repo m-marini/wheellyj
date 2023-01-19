@@ -77,19 +77,7 @@ function THETA = optim(DATA, PREC=255)
 endfunction
 
 function DATA = normAry(DATA)
-  for I = 1 : size(DATA, 2)
-    DATA(:, I) = normVect(DATA(:, I));
-  endfor
-endfunction
-
-function DATA = normVect(DATA)
-  MIN = min(DATA);
-  MAX = max(DATA);
-
-  IDX = find(DATA > 0);
-  DATA(IDX) = DATA(IDX) / abs(MAX);
-  IDX = find(DATA < 0);
-  DATA(IDX) = DATA(IDX) / abs(MIN);
+  DATA = DATA ./ max(abs(DATA));
 endfunction
 
 function plotMotor(DATA, THETA)
@@ -105,8 +93,10 @@ endfunction
 
 DATA = loadData(FILENAME);
 
-LEFT = normAry(avgByValue([DATA(:, 1), DATA(:, 3)]));
-RIGHT = normAry(avgByValue([DATA(:, 2), DATA(:, 4)]));
+LEFT_VALUES = avgByValue([DATA(:, 1), DATA(:, 3)]);
+RIGHT_VALUES = avgByValue([DATA(:, 2), DATA(:, 4)]);
+LEFT = normAry(LEFT_VALUES);
+RIGHT = normAry(RIGHT_VALUES);
 
 printf("Optimizing left ...\n");
 LEFT_THETA = optim(LEFT, PREC);

@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Issue #160: Add motor theta configuration
 - Issue #162: Add sensor receptive angle in radar
+- Issue #164: Add matrix monitor app
 
 ### Changed
 

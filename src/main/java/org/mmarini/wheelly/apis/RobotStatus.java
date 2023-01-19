@@ -47,7 +47,7 @@ public class RobotStatus {
     public static final int REAR_LEFT = 2;
     public static final int REAR_RIGHT = 1;
     public static final int NO_CONTACT = 0;
-    private static final RobotStatus DEFAULT_ROBOT_STATUS = new RobotStatus(WheellyStatus.create(), 0, null);
+    private static final RobotStatus DEFAULT_ROBOT_STATUS = new RobotStatus(WheellyStatus.create(), 0);
     private static final int[] CONTACT_THRESHOLDS = new int[]{205, 512, 677};
     private static final int MIN_SUPPLY_SIGNAL = 720;
     private static final int MAX_SUPPLY_SIGNAL = 823;
@@ -127,19 +127,16 @@ public class RobotStatus {
 
     private final WheellyStatus wheellyStatus;
     private final long resetTime;
-//    private final RadarMap radarMap;
 
     /**
      * Creates the robot status
      *
      * @param wheellyStatus the wheelly status
      * @param resetTime     the reset time (ms)
-     * @param radarMap      the radar map
      */
-    public RobotStatus(WheellyStatus wheellyStatus, long resetTime, RadarMap radarMap) {
+    public RobotStatus(WheellyStatus wheellyStatus, long resetTime) {
         this.wheellyStatus = requireNonNull(wheellyStatus);
         this.resetTime = resetTime;
-        //      this.radarMap = radarMap;
     }
 
     public boolean canMoveBackward() {
@@ -221,17 +218,6 @@ public class RobotStatus {
                 location.getY() / DISTANCE_PER_PULSE));
     }
 
-    /*
-    public RadarMap getRadarMap() {
-        return radarMap;
-    }
-
-
-    public RobotStatus setRadarMap(RadarMap radarMap) {
-        return new RobotStatus(wheellyStatus, resetTime, radarMap);
-    }
-     */
-
     public double getRightPps() {
         return wheellyStatus.getRightPps();
     }
@@ -282,8 +268,7 @@ public class RobotStatus {
     }
 
     public RobotStatus setWheellyStatus(WheellyStatus wheellyStatus) {
-//        return new RobotStatus(wheellyStatus, resetTime, radarMap);
-        return new RobotStatus(wheellyStatus, resetTime, null);
+        return new RobotStatus(wheellyStatus, resetTime);
     }
 
     public boolean isHalt() {
@@ -303,8 +288,7 @@ public class RobotStatus {
     }
 
     public RobotStatus setResetTime(long resetTime) {
-//        return new RobotStatus(wheellyStatus, resetTime, radarMap);
-        return new RobotStatus(wheellyStatus, resetTime, null);
+        return new RobotStatus(wheellyStatus, resetTime);
     }
 
     @Override
@@ -314,31 +298,4 @@ public class RobotStatus {
                 .add("resetTime=" + resetTime)
                 .toString();
     }
-
-    /**
-     * Returns the robot status with radar map updated
-     *
-     * @param radarReceptiveDistance the radar receptive distance (m)
-     */
-    /*
-    public RobotStatus update(double radarReceptiveDistance) {
-        if (radarMap != null) {
-            // Updates the radar map
-            double distance = getEchoDistance();
-            Point2D location = getLocation();
-            long time = wheellyStatus.getTime();
-            RadarMap.SensorSignal signal = new RadarMap.SensorSignal(location,
-                    normalizeDegAngle(wheellyStatus.getDirection() + wheellyStatus.getSensorDirection()),
-                    (float) distance, time);
-            RadarMap newRadarMap = radarMap.update(signal, radarReceptiveDistance);
-            if (getContacts() != 0 || !wheellyStatus.getCanMoveBackward() || !wheellyStatus.canMoveForward()) {
-                newRadarMap = newRadarMap.setContactsAt(location, radarReceptiveDistance, time);
-            }
-            return setRadarMap(newRadarMap);
-        } else {
-            return this;
-        }
-    }
-
-     */
 }
