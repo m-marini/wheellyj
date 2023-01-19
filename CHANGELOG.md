@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Issue #158: Move radar management away from robot status
 
+### Fixed
+ 
+- Issue #167: Improve windows UI on MatrixMonitor
+
 ## [0.5.0] 2023-01-15
 
 ### Added

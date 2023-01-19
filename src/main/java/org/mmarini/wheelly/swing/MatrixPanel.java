@@ -43,17 +43,16 @@ import static java.lang.String.format;
  * The matrix panel display text in matrix fashion.
  */
 public class MatrixPanel extends JComponent {
-    //public static final String DEFAULT_TIME_PATTERN = "%1$tF %1$tH.%1$tM:%1$tS.%1$tL";
     public static final String DEFAULT_TIME_PATTERN = "%1$tH.%1$tM:%1$tS.%1$tL";
     private static final long DEFAULT_DECAY_TIME = 3000L;
     private static final float DEFAULT_MIN_BRIGHT = 0.5F;
-    private static final Font DEFAULT_FONT = Font.decode("Monospaced 16");
-    private static final int DEFAULT_ROW_NUMBER = 40;
+    private static final Font DEFAULT_FONT = Font.decode(Font.MONOSPACED + " 14");
+    private static final int DEFAULT_ROW_NUMBER = 36;
+    private final float minBright;
     private String[] rows;
     private int cursor;
     private long[] timestamps;
     private long decayTime;
-    private final float minBright;
     private int columns;
     private boolean printTimestamp;
     private String timePattern;
@@ -153,7 +152,7 @@ public class MatrixPanel extends JComponent {
         g.fillRect(0, 0, size.width, size.height);
         FontMetrics fm = getFontMetrics(getFont());
         int h = fm.getHeight();
-        int y = h;
+        int y = fm.getMaxAscent();
         long timestamp = System.currentTimeMillis();
         for (int i = 0; i < rows.length; i++) {
             String line = rows[i];
@@ -206,12 +205,14 @@ public class MatrixPanel extends JComponent {
     private void resize() {
         Font font = getFont();
         FontMetrics fm = getFontMetrics(font);
+        int colW = fm.charWidth('m');
+        int minW = colW * columns;
         int maxW = Arrays.stream(rows)
                 .mapToInt(fm::stringWidth)
                 .max().orElse(0);
-        int minW = Arrays.stream(fm.getWidths()).max().orElse(1) * columns;
-        int w = max(maxW, minW);
-        Dimension size = new Dimension(w, rows.length * fm.getHeight());
+        int w = max(maxW, minW);// + fm.getMaxAdvance();
+        Dimension size = new Dimension(w, rows.length * fm.getHeight() + fm.getMaxDescent());
         setPreferredSize(size);
+        invalidate();
     }
 }
