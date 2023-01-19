@@ -55,12 +55,14 @@ import static java.lang.String.format;
 
 
 public class MatrixMonitor {
-    public static final long INTERVAL = 100;
-    public static final long COMMAND_INTERVAL = 800;
-    public static final String MOTOR_THETA = "-127 -127 127 127 -127 -127 127 127";
-    public static final int SENSOR_COLUMNS = 13 + 70;
-    public static final int SCAN_COLUMNS = 13 + 6;
-    public static final int MOVE_COLUMNS = 13 + 11;
+    private static final long INTERVAL = 100;
+    private static final long COMMAND_INTERVAL = 800;
+    private static final String MOTOR_THETA = "-127 -127 127 127 -127 -127 127 127";
+    private static final int SENSOR_COLUMNS = 13 + 70 + 1;
+    private static final int SCAN_COLUMNS = 13 + 6 + 1;
+    private static final int MOVE_COLUMNS = 13 + 11 + 1;
+    private static final Dimension COMMAND_FRAME_SIZE = new Dimension(400, 800);
+    private static final Dimension MATRIX_FRAME_SIZE = new Dimension(1200, 800);
     private static final Logger logger = LoggerFactory.getLogger(MatrixMonitor.class);
     private static final int MAX_SPEED = 20;
     private static final int MAX_TIME = 10000;
@@ -404,17 +406,16 @@ public class MatrixMonitor {
 
         JFrame frame = new JFrame("Robot monitor");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(400, 800);
+        frame.setSize(COMMAND_FRAME_SIZE);
         Container contentPane = frame.getContentPane();
         contentPane.setLayout(new BorderLayout());
         contentPane.add(commandPanel, BorderLayout.CENTER);
 
         JFrame matrixFrame = new JFrame("Matrix");
         matrixFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        matrixFrame.setSize(1400, 800);
+        matrixFrame.setSize(MATRIX_FRAME_SIZE);
         Point frameLocation = frame.getLocation();
-        Dimension frameSize = frame.getSize();
-        matrixFrame.setLocation(frameLocation.x + frameSize.width, frameLocation.y);
+        matrixFrame.setLocation(frameLocation.x + COMMAND_FRAME_SIZE.width, frameLocation.y);
         contentPane = matrixFrame.getContentPane();
         contentPane.setLayout(new BorderLayout());
         contentPane.add(createMonitorPanel(), BorderLayout.CENTER);
