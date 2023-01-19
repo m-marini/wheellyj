@@ -104,7 +104,7 @@ public class Wheelly {
                             )
             ).toArray(String[]::new);
             sub = KpiCSVSubscriber.create(file, labs);
-        } else if ("all".equals(labels)) {
+        } else if ("all" .equals(labels)) {
             // full kpis
             sub = KpiCSVSubscriber.create(file);
         } else {
