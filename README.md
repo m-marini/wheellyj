@@ -37,13 +37,13 @@ In `target` folder you will find an installation zip file
 After installed the application run the command:
 
 ```bash
-java -classpath lib/wheelly-0.3.0.jar org.mmarini.wheelly.apps.WiFiConf win
+java -classpath lib/wheelly-0.5.0.jar org.mmarini.wheelly.apps.WiFiConf win
 ```
 
 or by CLP (Command Line Processor)
 
 ```bash
->java -classpath lib/wheelly-0.3.0.jar org.mmarini.wheelly.apps.WiFiConf -h
+>java -classpath lib/wheelly-0.5.0.jar org.mmarini.wheelly.apps.WiFiConf -h
 
 usage: org.mmarini.wheelly.apps.WiFiConf
        [-h] [-v] [-s SSID] [-a ADDRESS] [-p PASSWORD]
@@ -71,13 +71,13 @@ named arguments:
 After installed the application run the command:
 
 ```bash
-java -classpath lib/wheelly-0.3.0.jar org.mmarini.wheelly.apps.Wheelly
+java -classpath lib/wheelly-0.5.0.jar org.mmarini.wheelly.apps.Wheelly
 ```
 
 the options are
 
 ```bash
-> java -classpath lib/wheelly-0.3.0.jar org.mmarini.wheelly.apps.Wheelly -h
+> java -classpath lib/wheelly-0.5.0.jar org.mmarini.wheelly.apps.Wheelly -h
 usage: org.mmarini.wheelly.apps.Wheelly
        [-h] [-v] [-r ROBOT] [-e ENV] [-a AGENT] [-k KPIS] [-l LABELS]
        [-s] [-t TIME]
@@ -105,12 +105,37 @@ named arguments:
                          (default: 43200)
 ```
 
+### Run roboto monitor
+
+After installed the application run the command:
+
+```bash
+java -classpath lib/wheelly-0.5.0.jar org.mmarini.wheelly.apps.MatrixMonitor -r <robot ip address>
+```
+
+the options are
+
+```bash
+> java -classpath lib/wheelly-0.5.0.jar org.mmarini.wheelly.apps.MatrixMonitor -h
+usage: org.mmarini.wheelly.apps.MatrixMonitor
+       [-h] [--version] -r ROBOTHOST [-p PORT]
+
+Run a session of interaction between robot and environment.
+
+named arguments:
+  -h, --help             show this help message and exit
+  --version              show current version
+  -r ROBOTHOST, --robotHost ROBOTHOST
+                         specify robot host
+  -p PORT, --port PORT   specify robot port (default: 22)
+```
+
 ### Run agent info
 
 After installed the application run the command:
 
 ```bash
-java -classpath lib/wheelly-0.3.0.jar org.mmarini.wheelly.apps.WeightsStats
+java -classpath lib/wheelly-0.5.0.jar org.mmarini.wheelly.apps.WeightsStats
 ```
 
 the options are
@@ -162,13 +187,13 @@ The Octave `motorMeasureReport.m` application allows you to calculate the theta 
 After installed the application run the command:
 
 ```bash
-java -classpath lib/wheelly-0.3.0.jar org.mmarini.wheelly.apps.RobotExecutor
+java -classpath lib/wheelly-0.5.0.jar org.mmarini.wheelly.apps.RobotExecutor
 ```
 
 the options are
 
 ```bash
-> java -classpath lib/wheelly-0.3.0.jar org.mmarini.wheelly.apps.RobotExecutor -h
+> java -classpath lib/wheelly-0.5.0.jar org.mmarini.wheelly.apps.RobotExecutor -h
 usage: org.mmarini.wheelly.apps.RobotExecutor
        [-h] [-v] [-r ROBOT] [-a AGENT] [-s] [-t TIME]
 
