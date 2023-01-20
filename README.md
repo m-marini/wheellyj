@@ -5,9 +5,17 @@ The code of Arduino controller is at [Wheellino project](https://github.com/m-ma
 
 The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
+## Release 0.5.1
+
+Compatible with Wheellino 0.3.1
+
+Added motor theta configuration
+Added sensor receptive angle in radar
+Added matrix monitor app
+
 ## Release 0.5.0
 
-Compatible with Wheellino 0.3.x
+Compatible with Wheellino 0.3.0
 
 ## Release 0.4.2
 
