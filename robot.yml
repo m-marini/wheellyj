@@ -1,7 +1,7 @@
 ---
 version: "0.4"
-active: simRobot
-#active: realRobot
+#active: simRobot
+active: realRobot
 
 configurations:
   simRobot:
@@ -18,11 +18,11 @@ configurations:
     connectionTimeout: 10000
     readTimeout: 3000
     leftTheta:
-      - [ -4, -183 ]
-      - [ 26, 164 ]
+      - [ -240, -254]
+      - [ 30, 85 ]
     rightTheta:
-      - [ -4, -147 ]
-      - [ 7, 159 ]
+      - [ -21, -5 ]
+      - [ 77, 102 ]
   constantRobot:
     class: org.mmarini.wheelly.apis.MockRobot
     x: 2

@@ -168,7 +168,7 @@ public class Wheelly {
      * @param args       the builder additional arguments
      * @param argClasses the builder additional argument classes
      */
-    protected static <T> T fromConfig(String file, Object[] args, Class<?>[] argClasses) {
+    public static <T> T fromConfig(String file, Object[] args, Class<?>[] argClasses) {
         try {
             JsonNode config = Utils.fromFile(file);
             BASE_CONFIG.apply(Locator.root()).accept(config);

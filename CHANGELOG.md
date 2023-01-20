@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 
 - Issue #158: Move radar management away from robot status
+- Issue #169: Load robot config in check apps
 
 ### Fixed
  

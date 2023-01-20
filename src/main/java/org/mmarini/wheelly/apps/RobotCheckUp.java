@@ -38,7 +38,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
-import org.mmarini.wheelly.apis.Robot;
+import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.Utils;
 import org.mmarini.wheelly.swing.Messages;
@@ -56,6 +56,7 @@ import java.util.stream.Stream;
 import static java.lang.Math.*;
 import static java.lang.String.format;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
+import static org.mmarini.wheelly.apps.Wheelly.fromConfig;
 
 
 public class RobotCheckUp {
@@ -68,29 +69,25 @@ public class RobotCheckUp {
     public static final int SENSOR_STEP = 30;
     public static final int SUPPLY_SAMPLES = 10;
     public static final int ROTATION_TOLERANCE = 5;
-    public static final float DISTANCE_TOLERANCE = 0.1F;
-    public static final String MOTOR_THETA = "-127 -127 127 127 -127 -127 127 127";
+    public static final double DISTANCE_TOLERANCE = 0.1;
     private static final Logger logger = LoggerFactory.getLogger(RobotCheckUp.class);
+    private static final int TEST_SPEED = 20;
 
     /**
      * Returns the command line arguments parser
      */
     @NotNull
     private static ArgumentParser createParser() {
-        ArgumentParser parser = ArgumentParsers.newFor(RobotCheckUp.class.getName()).build()
+        ArgumentParser parser = ArgumentParsers.newFor(MatrixMonitor.class.getName()).build()
                 .defaultHelp(true)
                 .version(Messages.getString("Wheelly.title"))
-                .description("Run a session of interaction between robot and environment.");
+                .description("Run manual control robot.");
         parser.addArgument("--version")
                 .action(Arguments.version())
                 .help("show current version");
-        parser.addArgument("-r", "--robotHost")
-                .required(true)
-                .help("specify robot host");
-        parser.addArgument("-p", "--port")
-                .type(Integer.class)
-                .setDefault(22)
-                .help("specify robot port");
+        parser.addArgument("-r", "--robot")
+                .setDefault("robot.yml")
+                .help("specify robot yaml configuration file");
         parser.addArgument("-v", "--verbose")
                 .action(Arguments.storeTrue())
                 .help("print verbose output");
@@ -119,7 +116,7 @@ public class RobotCheckUp {
     private final long movementDuration;
     private final SensorsPanel sensorPanel;
     private Namespace parseArgs;
-    private Robot robot;
+    private RobotApi robot;
     private Completable monitorStop;
 
     /**
@@ -136,9 +133,9 @@ public class RobotCheckUp {
         this.sensorPanel = new SensorsPanel();
     }
 
-    private MovementResult checkMove(int direction, float speed) {
+    private MovementResult checkMove(int direction, int speed) {
         logger.info("Checking movement to {} DEG, speed {} ...", direction, speed);
-        sensorPanel.setInfo(format("Checking movement to %d DEG, speed %.1f ...", direction, speed));
+        sensorPanel.setInfo(format("Checking movement to %d DEG, speed %d ...", direction, speed));
         RobotStatus status = robot.getStatus();
         long time = status.getTime();
         Point2D startLocation = status.getLocation();
@@ -162,9 +159,9 @@ public class RobotCheckUp {
         time = status.getTime();
         Point2D pos = status.getLocation();
         double distance = pos.distance(startLocation);
-        Point2D targetLocation = new Point2D.Float(
-                (float) (startLocation.getX() + distance * sin(toRadians(direction))),
-                (float) (startLocation.getY() + distance * cos(toRadians(direction))));
+        Point2D targetLocation = new Point2D.Double(
+                startLocation.getX() + distance * sin(toRadians(direction)),
+                startLocation.getY() + distance * cos(toRadians(direction)));
         double distanceError = targetLocation.distance(pos);
 
         int realDirection = (int) round(toDegrees(Utils.direction(startLocation, pos)));
@@ -173,8 +170,8 @@ public class RobotCheckUp {
         return new MovementResult(direction,
                 speed,
                 time - movementStart,
-                (float) distance,
-                (float) distanceError,
+                distance,
+                distanceError,
                 abs(directionError),
                 robot.getStatus().getImuFailure());
     }
@@ -223,7 +220,7 @@ public class RobotCheckUp {
         int dir = status.getDirection();
         int directionError = abs(normalizeDegAngle(dir - targetDir));
         int rotationAngle = normalizeDegAngle(dir - startAngle);
-        float distanceError = (float) status.getLocation().distance(startLocation);
+        double distanceError = status.getLocation().distance(startLocation);
         robot.halt();
         sensorPanel.setInfo("");
         return new RotateResult(time - startDirection, targetDir, directionError, distanceError, rotationAngle, robot.getStatus().getImuFailure());
@@ -250,7 +247,7 @@ public class RobotCheckUp {
         long scannerMoveTime = 0;
         int measureCount = 0;
         int sampleCount = 0;
-        float totDistance = 0;
+        double totDistance = 0;
         List<ScannerResult> results = new ArrayList<>();
         for (; ; ) {
             robot.tick(this.interval);
@@ -264,7 +261,7 @@ public class RobotCheckUp {
                 if (scannerMoveTime == 0) {
                     scannerMoveTime = time - measureStart;
                 }
-                float sensorDistance = (float) status.getEchoDistance();
+                double sensorDistance = status.getEchoDistance();
                 if (sensorDistance > 0) {
                     totDistance += sensorDistance;
                     measureCount++;
@@ -319,6 +316,13 @@ public class RobotCheckUp {
     }
 
     /**
+     * Returns the robot api
+     */
+    protected RobotApi createRobot() {
+        return fromConfig(parseArgs.getString("robot"), new Object[0], new Class[0]);
+    }
+
+    /**
      * Initialize the check
      *
      * @param args the command line arguments
@@ -360,9 +364,7 @@ public class RobotCheckUp {
      */
     private void run() {
         logger.info("Robot check started.");
-        this.robot = Robot.create(parseArgs.getString("robotHost"),
-                parseArgs.getInt("port"),
-                1000, 0, MOTOR_THETA);
+        this.robot = createRobot();
         JFrame frame = new JFrame("Robot check up");
         Container contentPane = frame.getContentPane();
         contentPane.setLayout(new BorderLayout());
@@ -422,20 +424,20 @@ public class RobotCheckUp {
             rotateResults.add(checkRotate(90));
 
             rotateResults.add(checkRotate(0));
-            moveResults.add(checkMove(0, 1));
-            moveResults.add(checkMove(0, -1));
+            moveResults.add(checkMove(0, TEST_SPEED));
+            moveResults.add(checkMove(0, -TEST_SPEED));
 
             rotateResults.add(checkRotate(90));
-            moveResults.add(checkMove(90, 1));
-            moveResults.add(checkMove(90, -1));
+            moveResults.add(checkMove(90, TEST_SPEED));
+            moveResults.add(checkMove(90, -TEST_SPEED));
 
             rotateResults.add(checkRotate(180));
-            moveResults.add(checkMove(180, 1));
-            moveResults.add(checkMove(180, -1));
+            moveResults.add(checkMove(180, TEST_SPEED));
+            moveResults.add(checkMove(180, -TEST_SPEED));
 
             rotateResults.add(checkRotate(-90));
-            moveResults.add(checkMove(-90, 1));
-            moveResults.add(checkMove(-90, -1));
+            moveResults.add(checkMove(-90, TEST_SPEED));
+            moveResults.add(checkMove(-90, -TEST_SPEED));
 
             rotateResults.add(checkRotate(0));
 
@@ -536,9 +538,9 @@ public class RobotCheckUp {
                     .max()
                     .orElse(0);
 
-            float minDistance = Float.MAX_VALUE;
+            double minDistance = Double.MAX_VALUE;
             int minDistanceDirection = 0;
-            float maxDistance = 0;
+            double maxDistance = 0;
             int maxDistanceDirection = 0;
             boolean validSamples = false;
             for (int i = 1; i < scannerResults.size(); i++) {
@@ -572,8 +574,8 @@ public class RobotCheckUp {
 
             long numRotationFailure = rotateResults.stream().filter(result -> result.directionError > ROTATION_TOLERANCE || result.imuFailure != 0).count();
             int maxDirectionError = 0;
-            float maxLocationError = 0;
-            float maxRotationSpeed = 0;
+            double maxLocationError = 0;
+            double maxRotationSpeed = 0;
             for (RotateResult r : rotateResults) {
                 if (r.imuFailure == 0) {
                     if (r.directionError > maxDirectionError) {
@@ -583,7 +585,7 @@ public class RobotCheckUp {
                         maxLocationError = r.locationError;
                     }
                     if (r.testDuration > 0) {
-                        float speed = (float) abs(r.rotationAngle) / r.testDuration * 1000;
+                        double speed = (double) abs(r.rotationAngle) / r.testDuration * 1000;
                         if (speed > maxRotationSpeed) {
                             maxRotationSpeed = speed;
                         }
@@ -595,9 +597,9 @@ public class RobotCheckUp {
                     || result.distanceError > DISTANCE_TOLERANCE
                     || result.imuFailure != 0).count();
             int maxMoveDirectionError = 0;
-            float maxMoveDistanceError = 0;
-            float maxSpeed = 0;
-            float maxMoveDistance = 0;
+            double maxMoveDistanceError = 0;
+            double maxSpeed = 0;
+            double maxMoveDistance = 0;
             for (MovementResult r : moveResults) {
                 if (r.imuFailure == 0) {
                     if (r.distance > maxMoveDistance) {
@@ -609,7 +611,7 @@ public class RobotCheckUp {
                     if (r.directionError > maxMoveDirectionError) {
                         maxMoveDirectionError = r.directionError;
                     }
-                    float speed = r.distance / r.testDuration * 1000;
+                    double speed = r.distance / r.testDuration * 1000;
                     if (speed > maxSpeed) {
                         maxSpeed = speed;
                     }
@@ -645,13 +647,13 @@ public class RobotCheckUp {
     static class MovementResult {
         public final int direction;
         public final int directionError;
-        public final float distance;
-        public final float distanceError;
+        public final double distance;
+        public final double distanceError;
         public final int imuFailure;
-        public final float speed;
+        public final double speed;
         public final long testDuration;
 
-        MovementResult(int direction, float speed, long testDuration, float distance, float distanceError, int directionError, int imuFailure) {
+        MovementResult(int direction, double speed, long testDuration, double distance, double distanceError, int directionError, int imuFailure) {
             this.direction = direction;
             this.directionError = directionError;
             this.distance = distance;
@@ -668,13 +670,13 @@ public class RobotCheckUp {
     static class RotateResult {
         public final int directionError;
         public final int imuFailure;
-        public final float locationError;
+        public final double locationError;
         public final int rotationAngle;
         public final int targetDir;
         public final long testDuration;
 
 
-        RotateResult(long testDuration, int targetDir, int directionError, float distanceError, int rotationAngle, int imuFailure) {
+        RotateResult(long testDuration, int targetDir, int directionError, double distanceError, int rotationAngle, int imuFailure) {
             this.testDuration = testDuration;
             this.targetDir = targetDir;
             this.directionError = directionError;
@@ -688,14 +690,14 @@ public class RobotCheckUp {
      * Scanner result
      */
     static class ScannerResult {
-        public final float averageDistance;
+        public final double averageDistance;
         public final int direction;
         public final int imuFailure;
         public final long moveTime;
         public final long testDuration;
         public final boolean valid;
 
-        ScannerResult(int direction, long testDuration, boolean valid, long moveTime, float averageDistance, int imuFailure) {
+        ScannerResult(int direction, long testDuration, boolean valid, long moveTime, double averageDistance, int imuFailure) {
             this.direction = direction;
             this.valid = valid;
             this.averageDistance = averageDistance;
