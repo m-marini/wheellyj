@@ -17,6 +17,7 @@ configurations:
     host: "192.168.1.11"
     connectionTimeout: 10000
     readTimeout: 3000
+    # cm -240 -254 30 85 -21 -5 77 102
     leftTheta:
       - [ -240, -254]
       - [ 30, 85 ]

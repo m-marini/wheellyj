@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import static java.lang.Math.round;
 import static java.lang.String.format;
@@ -43,7 +44,7 @@ import static org.mmarini.yaml.schema.Validator.*;
 /**
  * Implements the Robot interface to the real robot
  */
-public class Robot implements RobotApi {
+public class Robot implements RobotApi, WithIOCallback {
     public static final int DEFAULT_PORT = 22;
 
     private static final Validator NEG_THETA = array(
@@ -134,8 +135,10 @@ public class Robot implements RobotApi {
 
     private final RobotSocket socket;
     private final String motorTheta;
-    private Long timestampOffset;
     private RobotStatus status;
+    private Consumer<String> onReadLine;
+    private Consumer<String> onWriteLine;
+    private boolean initialized;
 
     /**
      * Create a Robot interface
@@ -181,6 +184,16 @@ public class Robot implements RobotApi {
     }
 
     @Override
+    public void setOnReadLine(Consumer<String> onReadLine) {
+        this.onReadLine = onReadLine;
+    }
+
+    @Override
+    public void setOnWriteLine(Consumer<String> onWriteLine) {
+        this.onWriteLine = onWriteLine;
+    }
+
+    @Override
     public void start() {
         try {
             socket.connect();
@@ -199,10 +212,13 @@ public class Robot implements RobotApi {
             for (; ; ) {
                 Timed<String> line = socket.readLine();
                 if (line != null) {
+                    if (onReadLine != null) {
+                        onReadLine.accept(line.value());
+                    }
                     try {
                         ClockSyncEvent clock = ClockSyncEvent.from(line.value(), line.time(TimeUnit.MILLISECONDS));
                         if (now == clock.getOriginateTimestamp()) {
-                            timestampOffset = clock.getRemoteOffset();
+                            clock.getRemoteOffset();
                             break;
                         }
                     } catch (Throwable ignored) {
@@ -216,9 +232,10 @@ public class Robot implements RobotApi {
 
     @Override
     public void tick(long dt) {
-        if (timestampOffset == null) {
+        if (!initialized) {
             sync();
             writeCommand("cm " + motorTheta);
+            initialized = true;
         }
         long time = status.getTime();
         long timeout = time + dt;
@@ -229,6 +246,9 @@ public class Robot implements RobotApi {
                 // Read the robot status
                 Timed<String> line = socket.readLine();
                 if (line != null) {
+                    if (onReadLine != null) {
+                        onReadLine.accept(line.value());
+                    }
                     logger.atDebug().setMessage(">>> {}").addArgument(line::value).log();
                     if (line.value().startsWith("!!")) {
                         logger.atError().setMessage(">>> {}").addArgument(line::value).log();
@@ -253,6 +273,9 @@ public class Robot implements RobotApi {
      */
     private void writeCommand(String cmd) {
         try {
+            if (onWriteLine != null) {
+                onWriteLine.accept(cmd);
+            }
             socket.writeCommand(cmd);
         } catch (IOException ex) {
             logger.atError().setCause(ex).log();
