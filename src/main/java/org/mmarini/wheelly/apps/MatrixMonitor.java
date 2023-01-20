@@ -37,6 +37,7 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.wheelly.apis.Robot;
+import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.swing.MatrixPanel;
 import org.mmarini.wheelly.swing.Messages;
@@ -52,12 +53,12 @@ import java.util.concurrent.TimeUnit;
 
 import static java.lang.Math.max;
 import static java.lang.String.format;
+import static org.mmarini.wheelly.apps.Wheelly.fromConfig;
 
 
 public class MatrixMonitor {
     private static final long INTERVAL = 100;
     private static final long COMMAND_INTERVAL = 800;
-    private static final String MOTOR_THETA = "-127 -127 127 127 -127 -127 127 127";
     private static final int SENSOR_COLUMNS = 13 + 70 + 1;
     private static final int SCAN_COLUMNS = 13 + 6 + 1;
     private static final int MOVE_COLUMNS = 13 + 11 + 1;
@@ -76,17 +77,13 @@ public class MatrixMonitor {
         ArgumentParser parser = ArgumentParsers.newFor(MatrixMonitor.class.getName()).build()
                 .defaultHelp(true)
                 .version(Messages.getString("Wheelly.title"))
-                .description("Run a session of interaction between robot and environment.");
+                .description("Run manual control robot.");
         parser.addArgument("--version")
                 .action(Arguments.version())
                 .help("show current version");
-        parser.addArgument("-r", "--robotHost")
-                .required(true)
-                .help("specify robot host");
-        parser.addArgument("-p", "--port")
-                .type(Integer.class)
-                .setDefault(22)
-                .help("specify robot port");
+        parser.addArgument("-r", "--robot")
+                .setDefault("robot.yml")
+                .help("specify robot yaml configuration file");
         return parser;
     }
 
@@ -141,7 +138,7 @@ public class MatrixMonitor {
     private final JSlider timeSlider;
     private final JFormattedTextField timeField;
     private Namespace parseArgs;
-    private Robot robot;
+    private RobotApi robot;
     private int sensorDir;
     private int prevSensorDir;
     private long sensorCommandTimestamp;
@@ -289,6 +286,13 @@ public class MatrixMonitor {
         return new JScrollPane(panel);
     }
 
+    /**
+     * Returns the robot api
+     */
+    protected RobotApi createRobot() {
+        return fromConfig(parseArgs.getString("robot"), new Object[0], new Class[0]);
+    }
+
     private void handleCommands(long time) {
         if (sensorDir != prevSensorDir
                 || (sensorDir != 0 && time >= sensorCommandTimestamp + commandInterval)) {
@@ -400,9 +404,7 @@ public class MatrixMonitor {
      */
     private void run() {
         logger.info("Robot check started.");
-        this.robot = Robot.create(parseArgs.getString("robotHost"),
-                parseArgs.getInt("port"),
-                1000, 0, MOTOR_THETA);
+        this.robot = createRobot();
 
         JFrame frame = new JFrame("Robot monitor");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

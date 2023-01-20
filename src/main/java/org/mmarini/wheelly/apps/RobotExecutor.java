@@ -168,7 +168,6 @@ public class RobotExecutor {
                 logger.info("Session are running for {} sec...", sessionDuration);
                 sessionDuration *= 1000;
                 long start = System.currentTimeMillis();
-                float avgRewards = 0;
                 agent.init();
                 RobotStatus status = robot.getStatus();
                 if (robot instanceof SimRobot) {
@@ -185,9 +184,7 @@ public class RobotExecutor {
                     status = robot.getStatus();
                     frame.setRobotStatus(status);
                     frame.setRadarMap(agent.getRadarMap());
-                    frame.setReward(avgRewards);
-                    frame.setTimeRatio((float) status.getElapsed() / (System.currentTimeMillis() - start));
-                    //                  radarPanel.setRadarMap(agent.getRadarMap());
+                    frame.setTimeRatio((double) status.getElapsed() / (System.currentTimeMillis() - start));
                     polarPanel.setPolarMap(agent.getPolarMap());
                     running = status.getElapsed() <= sessionDuration &&
                             frame.isVisible();

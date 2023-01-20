@@ -7,11 +7,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
-import static org.mmarini.wheelly.apps.RobotCheckUp.MOTOR_THETA;
-
 /**
  * Run a test to check for Robot moving.
- * The test run for 2 secs turning the Roboto to 0 DEG and turning the sensro to 90 DEG
+ * The test run for 2 secs turning the Roboto to 0 DEG and turning the sensor to 90 DEG
  */
 public class TestRobotMove {
     private static final long TEST_DURATION = 2000;
@@ -23,14 +21,13 @@ public class TestRobotMove {
      * @throws IOException in case of error
      */
     public static void main(String[] args) throws IOException {
-        try (Robot robot = Robot.create("192.168.1.11", 22, 0, 0, MOTOR_THETA)) {
+        try (Robot robot = Robot.create("192.168.1.11", 22, 0, 0, "-127 -127 127 127 -127 -127 127 127")) {
             logger.info("Connecting to robot...");
             robot.start();
             long dt = 100;
             robot.tick(dt);
             long test_timeout = System.currentTimeMillis() + TEST_DURATION;
             long cmd_timeout = 0;
-            long prev = System.currentTimeMillis();
             while (System.currentTimeMillis() < test_timeout) {
                 long t = System.currentTimeMillis();
                 if (t >= cmd_timeout) {
