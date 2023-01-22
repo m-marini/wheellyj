@@ -17,13 +17,11 @@ configurations:
     host: "192.168.1.11"
     connectionTimeout: 10000
     readTimeout: 3000
-    # cm -240 -254 30 85 -21 -5 77 102
-    leftTheta:
-      - [ -240, -254]
-      - [ 30, 85 ]
-    rightTheta:
-      - [ -21, -5 ]
-      - [ 77, 102 ]
+    configCommands:
+      - cm -240 -254 30 85 -21 -5 77 102
+      - cs 1000
+      - cc 230 232 -232 30 3 30
+#      - cc 230 464 -464 30 3 30
   constantRobot:
     class: org.mmarini.wheelly.apis.MockRobot
     x: 2

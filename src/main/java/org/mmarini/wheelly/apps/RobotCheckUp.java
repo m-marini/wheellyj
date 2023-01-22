@@ -71,7 +71,7 @@ public class RobotCheckUp {
     public static final int ROTATION_TOLERANCE = 5;
     public static final double DISTANCE_TOLERANCE = 0.1;
     private static final Logger logger = LoggerFactory.getLogger(RobotCheckUp.class);
-    private static final int TEST_SPEED = 20;
+    private static final int TEST_SPEED = 10;
 
     /**
      * Returns the command line arguments parser

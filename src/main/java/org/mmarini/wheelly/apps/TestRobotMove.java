@@ -21,7 +21,7 @@ public class TestRobotMove {
      * @throws IOException in case of error
      */
     public static void main(String[] args) throws IOException {
-        try (Robot robot = Robot.create("192.168.1.11", 22, 0, 0, "-127 -127 127 127 -127 -127 127 127")) {
+        try (Robot robot = Robot.create("192.168.1.11", 22, 0, 0, "cm -127 -127 127 127 -127 -127 127 127")) {
             logger.info("Connecting to robot...");
             robot.start();
             long dt = 100;

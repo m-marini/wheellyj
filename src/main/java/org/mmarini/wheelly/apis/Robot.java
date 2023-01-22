@@ -33,7 +33,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -47,28 +49,12 @@ import static org.mmarini.yaml.schema.Validator.*;
 public class Robot implements RobotApi, WithIOCallback {
     public static final int DEFAULT_PORT = 22;
 
-    private static final Validator NEG_THETA = array(
-            prefixItems(
-                    integer(minimum(-254), maximum(-1)),
-                    integer(minimum(-255), maximum(0))),
-            minItems(2), maxItems(2));
-
-    private static final Validator POS_THETA = array(
-            prefixItems(
-                    integer(minimum(1), maximum(254)),
-                    integer(minimum(0), maximum(255))),
-            minItems(2), maxItems(2));
-
-    private static final Validator THETA_SPEC = array(
-            prefixItems(NEG_THETA, POS_THETA),
-            minItems(2), maxItems(2));
     private static final Validator ROBOT_SPEC = objectPropertiesRequired(Map.of(
                     "host", string(),
                     "port", integer(minimum(1), maximum(32768)),
                     "connectionTimeout", positiveInteger(),
                     "readTimeout", positiveInteger(),
-                    "leftTheta", THETA_SPEC,
-                    "rightTheta", THETA_SPEC
+                    "configCommands", arrayItems(string(minLength(3)))
             ),
             List.of("host",
                     "connectionTimeout",
@@ -89,20 +75,12 @@ public class Robot implements RobotApi, WithIOCallback {
         int port = locator.path("port").getNode(root).asInt(DEFAULT_PORT);
         long connectionTimeout = locator.path("connectionTimeout").getNode(root).asLong();
         long readTimeout = locator.path("readTimeout").getNode(root).asLong();
-        int[] motorTheta = new int[]{-128, -128, 128, 128, -128, -128, 128, 128};
-        Locator leftThetaLoc = locator.path("leftTheta");
-        if (!leftThetaLoc.getNode(root).isMissingNode()) {
-            int[] theta = loadTheta(root, leftThetaLoc);
-            System.arraycopy(theta, 0, motorTheta, 0, 4);
-        }
-        Locator rightThetaLoc = locator.path("rightTheta");
-        if (!rightThetaLoc.getNode(root).isMissingNode()) {
-            int[] theta = loadTheta(root, rightThetaLoc);
-            System.arraycopy(theta, 0, motorTheta, 4, 4);
-        }
-        StringJoiner s = new StringJoiner(" ");
-        Arrays.stream(motorTheta).mapToObj(String::valueOf).forEach(s::add);
-        return Robot.create(host, port, connectionTimeout, readTimeout, s.toString());
+
+        Locator configCommandsLoc = locator.path("configCommands");
+        String[] configCommands = !configCommandsLoc.getNode(root).isMissingNode()
+                ? configCommandsLoc.elements(root).map(l -> l.getNode(root).asText()).toArray(String[]::new)
+                : new String[0];
+        return Robot.create(host, port, connectionTimeout, readTimeout, configCommands);
     }
 
     /**
@@ -112,29 +90,15 @@ public class Robot implements RobotApi, WithIOCallback {
      * @param port              the robot port
      * @param connectionTimeout the connection timeout (ms)
      * @param readTimeout       the read timeout (ms)
-     * @param motorTheta        the motor theta corrections
+     * @param configCommands    the configuration commands
      */
-    public static Robot create(String robotHost, int port, long connectionTimeout, long readTimeout, String motorTheta) {
+    public static Robot create(String robotHost, int port, long connectionTimeout, long readTimeout, String... configCommands) {
         RobotSocket socket = new RobotSocket(robotHost, port, connectionTimeout, readTimeout);
-        return new Robot(socket, motorTheta);
-    }
-
-    /**
-     * Returns the theta values from configuration [x1, y1, x2, y2]
-     *
-     * @param root    the configuration document
-     * @param locator the theta locator
-     */
-    private static int[] loadTheta(JsonNode root, Locator locator) {
-        return locator.elements(root)
-                .flatMap(l1 -> l1.elements(root)
-                        .map(l2 -> l2.getNode(root).asInt()))
-                .mapToInt(i -> i)
-                .toArray();
+        return new Robot(socket, configCommands);
     }
 
     private final RobotSocket socket;
-    private final String motorTheta;
+    private final String[] configCommands;
     private RobotStatus status;
     private Consumer<String> onReadLine;
     private Consumer<String> onWriteLine;
@@ -143,13 +107,13 @@ public class Robot implements RobotApi, WithIOCallback {
     /**
      * Create a Robot interface
      *
-     * @param socket     the robot socket
-     * @param motorTheta the motor theta corrections
+     * @param socket         the robot socket
+     * @param configCommands the motor theta corrections
      */
-    public Robot(RobotSocket socket, String motorTheta) {
+    public Robot(RobotSocket socket, String[] configCommands) {
         this.socket = socket;
         status = RobotStatus.create();
-        this.motorTheta = motorTheta;
+        this.configCommands = configCommands;
     }
 
     @Override
@@ -165,6 +129,15 @@ public class Robot implements RobotApi, WithIOCallback {
     @Override
     public void halt() {
         writeCommand("ha");
+    }
+
+    private void init() throws InterruptedException {
+        sync();
+        for (String cmd : configCommands) {
+            writeCommand(cmd);
+            Thread.sleep(200);
+        }
+        initialized = true;
     }
 
     @Override
@@ -232,10 +205,11 @@ public class Robot implements RobotApi, WithIOCallback {
 
     @Override
     public void tick(long dt) {
-        if (!initialized) {
-            sync();
-            writeCommand("cm " + motorTheta);
-            initialized = true;
+        if (!initialized){
+            try {
+                init();
+            } catch (InterruptedException e) {
+            }
         }
         long time = status.getTime();
         long timeout = time + dt;
@@ -252,6 +226,9 @@ public class Robot implements RobotApi, WithIOCallback {
                     logger.atDebug().setMessage(">>> {}").addArgument(line::value).log();
                     if (line.value().startsWith("!!")) {
                         logger.atError().setMessage(">>> {}").addArgument(line::value).log();
+                    }
+                    if (line.value().startsWith("//")) {
+                        logger.atWarn().setMessage(">>> {}").addArgument(line::value).log();
                     }
                     try {
                         // Create the new status
