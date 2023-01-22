@@ -28,6 +28,7 @@ package org.mmarini.wheelly.apps;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.Flowable;
 import io.reactivex.rxjava3.core.BackpressureStrategy;
+import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
@@ -36,7 +37,6 @@ import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
 import org.mmarini.swing.GridLayoutHelper;
-import org.mmarini.wheelly.apis.Robot;
 import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.swing.MatrixPanel;
@@ -428,6 +428,11 @@ public class MatrixMonitor {
         robot.start();
         startSensorsMonitor();
         startCommandsMonitor();
+        /*
+        Completable.timer(1000, TimeUnit.MILLISECONDS)
+                .subscribe(() -> startCommandsMonitor());
+
+         */
     }
 
     private void startCommandsMonitor() {
@@ -445,7 +450,6 @@ public class MatrixMonitor {
                 if (status != null) {
                     sensorPanel.print(toMonitorString(status));
                 }
-                handleCommands(System.currentTimeMillis());
             }
         });
     }
