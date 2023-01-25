@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.5.2] 2023-01-25
+
 ### Added
 
 - Issue# 174: Add robot configuration in apps
