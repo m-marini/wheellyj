@@ -120,9 +120,7 @@ public class StateMachineAgent implements WithIOCallback, WithStatusCallback, Wi
 
     private void handleInference(RobotStatus status) {
         polarMap = polarMap.update(radarMap, status.getLocation(), status.getDirection(), minRadarDistance, maxRadarDistance);
-        context.setRobotStatus(status);
         context.setPolarMap(polarMap);
-        context.setRadarMap(radarMap);
         if (!started) {
             started = true;
             context.init();
@@ -131,6 +129,11 @@ public class StateMachineAgent implements WithIOCallback, WithStatusCallback, Wi
         if (onStepUp != null) {
             onStepUp.accept(context);
         }
+    }
+
+    private void handleLatch(RobotStatus status) {
+        context.setRobotStatus(status);
+        context.setRadarMap(radarMap);
     }
 
     private void handleStatus(RobotStatus status) {
@@ -148,6 +151,7 @@ public class StateMachineAgent implements WithIOCallback, WithStatusCallback, Wi
     public void init() {
         controller.setOnInference(this::handleInference);
         controller.setOnStatusReady(this::handleStatus);
+        controller.setOnLatch(this::handleLatch);
         controller.start();
     }
 

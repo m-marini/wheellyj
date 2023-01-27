@@ -81,12 +81,12 @@ public class MockEnvironment implements RobotEnvironment, WithRadarMap, WithRobo
     }
 
     @Override
-    public void setOnInference(Consumer<RobotStatus> callback) {
+    public void setOnError(Consumer<Throwable> callback) {
 
     }
 
     @Override
-    public void setOnError(Consumer<Throwable> callback) {
+    public void setOnInference(Consumer<RobotStatus> callback) {
 
     }
 

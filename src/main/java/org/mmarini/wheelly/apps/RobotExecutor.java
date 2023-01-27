@@ -133,13 +133,15 @@ public class RobotExecutor {
     private final JFrame radarFrame;
     private final EnvironmentPanel envPanel;
     private final PolarPanel polarPanel;
-    private final AverageValue reactionTime;
+    private final AverageValue reactionRobotTime;
+    private final AverageValue reactionRealTime;
     private Namespace args;
     private long start;
     private long sessionDuration;
     private StateMachineAgent agent;
     private long robotStartTimestamp;
-    private long prevStep;
+    private long prevRobotStep;
+    private long prevRealStep;
 
     /**
      * Creates the roboto executor
@@ -149,9 +151,11 @@ public class RobotExecutor {
         this.polarPanel = new PolarPanel();
         this.frame = createFrame(Messages.getString("RobotExecutor.title"), envPanel);
         this.radarFrame = createFixFrame(Messages.getString("Radar.title"), DEFALT_RADAR_DIMENSION, polarPanel);
-        this.reactionTime = AverageValue.create();
+        this.reactionRobotTime = AverageValue.create();
+        this.reactionRealTime = AverageValue.create();
         this.robotStartTimestamp = -1;
-        this.prevStep = -1;
+        this.prevRobotStep = -1;
+        this.prevRealStep = -1;
         SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
                 .toFlowable(BackpressureStrategy.DROP)
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
@@ -196,10 +200,13 @@ public class RobotExecutor {
         long robotClock = status.getTime();
         long robotElapsed = robotClock - robotStartTimestamp;
         envPanel.setTimeRatio((double) robotElapsed / (System.currentTimeMillis() - start));
-        if (prevStep >= 0) {
-            envPanel.setReactionTime(reactionTime.add(robotClock - prevStep) * 1e-3);
+        long clock = System.currentTimeMillis();
+        if (prevRobotStep >= 0) {
+            envPanel.setReactionRealTime(reactionRealTime.add(clock - prevRealStep) * 1e-3);
+            envPanel.setReactionRobotTime(reactionRobotTime.add(robotClock - prevRobotStep) * 1e-3);
         }
-        prevStep = robotClock;
+        prevRobotStep = robotClock;
+        this.prevRealStep = clock;
 
         polarPanel.setPolarMap(ctx.getPolarMap());
         if (robotElapsed > sessionDuration

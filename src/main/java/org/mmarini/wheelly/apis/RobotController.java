@@ -47,6 +47,9 @@ import static java.util.Objects.requireNonNull;
 import static org.mmarini.yaml.schema.Validator.objectPropertiesRequired;
 import static org.mmarini.yaml.schema.Validator.positiveInteger;
 
+/**
+ * Manages the processing threads and event generation to interface the robot
+ */
 public class RobotController implements RobotControllerApi {
     public static final Validator SPEC = objectPropertiesRequired(Map.of(
             "interval", positiveInteger(),
@@ -106,8 +109,11 @@ public class RobotController implements RobotControllerApi {
     private boolean isInference;
     private boolean connected;
     private long lastTick;
+    private Consumer<RobotStatus> onLatch;
 
     /**
+     * Creates the robot controller
+     *
      * @param robot                   the robot api
      * @param interval                the tick interval (ms)
      * @param reactionInterval        the minimum reaction interval of inference engine (ms)
@@ -232,6 +238,9 @@ public class RobotController implements RobotControllerApi {
         if (time > lastInference + reactionInterval && !isInference) {
             lastInference = time;
             isInference = true;
+            if (onLatch != null) {
+                onLatch.accept(status);
+            }
             Schedulers.computation().scheduleDirect(() -> {
                 logger.atDebug().setMessage("Inference process started").log();
                 if (onInference != null) {
@@ -341,6 +350,11 @@ public class RobotController implements RobotControllerApi {
     @Override
     public void setOnInference(Consumer<RobotStatus> callback) {
         onInference = callback;
+    }
+
+    @Override
+    public void setOnLatch(Consumer<RobotStatus> onLatch) {
+        this.onLatch = onLatch;
     }
 
     @Override
