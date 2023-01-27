@@ -44,8 +44,8 @@ public class AverageValue {
         return new AverageValue(0, DEFAULT_DISCOUNT);
     }
 
-    private double value;
     private final double discount;
+    private double value;
 
     /**
      * Creates the average value

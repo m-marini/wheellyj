@@ -71,6 +71,13 @@ public interface RobotControllerApi extends WithIOCallback, WithStatusCallback, 
     void setOnInference(Consumer<RobotStatus> callback);
 
     /**
+     * Registers the consumer of latch event
+     *
+     * @param callback the callback
+     */
+    void setOnLatch(Consumer<RobotStatus> callback);
+
+    /**
      * Shutdowns the controller
      */
     void shutdown();

@@ -183,7 +183,8 @@ public class Wheelly {
     protected final JFrame frame;
     protected final EnvironmentPanel envPanel;
     private final AverageValue avgRewards;
-    private final AverageValue reactionTime;
+    private final AverageValue reactionRobotTime;
+    private final AverageValue reactionRealTime;
     protected Namespace args;
     private long robotStartTimestamp;
     private Long sessionDuration;
@@ -192,6 +193,7 @@ public class Wheelly {
     private long start;
     private RobotEnvironment environment;
     private Agent agent;
+    private long prevRobotStep;
     private long prevStep;
 
     /**
@@ -202,7 +204,10 @@ public class Wheelly {
         this.frame = createFrame(Messages.getString("Wheelly.title"), envPanel);
         this.robotStartTimestamp = -1;
         this.avgRewards = AverageValue.create();
-        this.reactionTime = AverageValue.create();
+        this.reactionRobotTime = AverageValue.create();
+        this.reactionRealTime = AverageValue.create();
+        this.prevRobotStep = -1;
+        this.prevStep = -1;
         SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
                 .toFlowable(BackpressureStrategy.DROP)
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
@@ -230,10 +235,13 @@ public class Wheelly {
 
     private void handleInference(RobotStatus status) {
         long robotClock = status.getTime();
-        if (prevStep >= 0) {
-            envPanel.setReactionTime(reactionTime.add(robotClock - prevStep) * 1e-3);
+        long time = System.currentTimeMillis();
+        if (prevRobotStep >= 0) {
+            envPanel.setReactionRealTime(reactionRealTime.add(time - prevStep) * 1e-3);
+            envPanel.setReactionRobotTime(reactionRobotTime.add(robotClock - prevRobotStep) * 1e-3);
         }
-        prevStep = robotClock;
+        prevRobotStep = robotClock;
+        prevStep = time;
     }
 
     private void handleResult(Environment.ExecutionResult result) {

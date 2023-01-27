@@ -77,6 +77,7 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
         this.controller = requireNonNull(controller);
         this.rewardFunc = requireNonNull(rewardFunc);
         controller.setOnInference(this::handleInference);
+        controller.setOnLatch(this::latchStatus);
     }
 
     /**
@@ -98,7 +99,6 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
      * @param status the current status
      */
     private void handleInference(RobotStatus status) {
-        latchStatus(status);
         if (onInference != null) {
             onInference.accept(status);
         }

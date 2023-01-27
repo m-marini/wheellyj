@@ -140,7 +140,8 @@ public class EnvironmentPanel extends RadarPanel {
     private double reward;
     private PanelData panelData;
     private double timeRatio;
-    private double reactionTime;
+    private double reactionRobotTime;
+    private double reactionRealTime;
 
     public EnvironmentPanel() {
         setFont(Font.decode("Monospaced"));
@@ -179,7 +180,7 @@ public class EnvironmentPanel extends RadarPanel {
         g1.fillRect(0, 0, HUD_WIDTH, hudHeight);
         g1.setColor(getForeground());
         drawLine(g1, format("Time     %s %.1fx", strDate(status.getTime()), timeRatio), 0, Color.GREEN);
-        drawLine(g1, format("Reaction: %.3f s", reactionTime), 1, Color.GREEN);
+        drawLine(g1, format("Reaction: %.3f s / %.3f s", reactionRobotTime, reactionRealTime), 1, Color.GREEN);
         drawLine(g1, format("Reward   %.2f", reward), 2, Color.GREEN);
         drawLine(g1, format("Distance %.2f m", status.getEchoDistance()), 3, Color.GREEN);
         drawLine(g1, format("Contacts 0x%x", status.getContacts()), 4, Color.GREEN);
@@ -323,8 +324,12 @@ public class EnvironmentPanel extends RadarPanel {
         repaint();
     }
 
-    public void setReactionTime(double reactionTime) {
-        this.reactionTime = reactionTime;
+    public void setReactionRealTime(double reactionRealTime) {
+        this.reactionRealTime = reactionRealTime;
+    }
+
+    public void setReactionRobotTime(double reactionRobotTime) {
+        this.reactionRobotTime = reactionRobotTime;
     }
 
     public void setReward(double reward) {
