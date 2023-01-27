@@ -33,6 +33,8 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.mmarini.wheelly.apis.MockRobot;
 import org.mmarini.wheelly.apis.RobotApi;
+import org.mmarini.wheelly.apis.RobotControllerApi;
+import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.yaml.schema.Locator;
 
 import java.io.IOException;
@@ -44,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mmarini.wheelly.TestFunctions.text;
 import static org.mmarini.yaml.Utils.fromText;
+import static org.mockito.Mockito.mock;
 
 class ProcessorCommandTest {
 
@@ -60,6 +63,10 @@ class ProcessorCommandTest {
             "- add",
             "- put"
     );
+
+    static RobotControllerApi createController() {
+        return mock();
+    }
 
     static StateFlow createFlow() {
         StateNode entry = new HaltState("entry", null, null, null);
@@ -136,10 +143,13 @@ class ProcessorCommandTest {
 
     @NotNull
     private ProcessorContext createContext() {
-        ProcessorContext processorContext = new ProcessorContext(createFlow());
-        processorContext.setRobotStatus(createRobot().getStatus());
+        RobotControllerApi controller = createController();
+        ProcessorContext processorContext = new ProcessorContext(controller, createFlow());
+        RobotStatus status = RobotStatus.create().setTime(TIME);
+        processorContext.setRobotStatus(status);
         return processorContext;
     }
+
 
     @Test
     void div() {

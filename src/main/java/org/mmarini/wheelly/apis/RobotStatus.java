@@ -183,10 +183,6 @@ public class RobotStatus {
         return setWheellyStatus(wheellyStatus.setEchoTime(round(echoDistance / DISTANCE_SCALE)));
     }
 
-    public long getElapsed() {
-        return wheellyStatus.getTime() - resetTime;
-    }
-
     public int getImuFailure() {
         return wheellyStatus.getImuFailure();
     }

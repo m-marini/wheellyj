@@ -1,7 +1,7 @@
 ---
 version: "0.4"
-#active: simRobot
-active: realRobot
+active: simRobot
+#active: realRobot
 
 configurations:
   simRobot:
@@ -17,6 +17,7 @@ configurations:
     host: "192.168.1.11"
     connectionTimeout: 10000
     readTimeout: 3000
+    configureTimeout: 1000
     configCommands:
       - cm -240 -254 30 85 -21 -5 77 102
       - cs 1000

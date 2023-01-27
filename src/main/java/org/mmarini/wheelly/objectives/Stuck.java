@@ -26,15 +26,15 @@
 package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.eclipse.collections.api.block.function.primitive.DoubleFunction;
-import org.mmarini.rl.envs.Environment;
 import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.envs.WithRobotStatus;
+import org.mmarini.wheelly.apis.WithRobotStatus;
+import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.ToDoubleFunction;
 
 import static java.lang.Math.abs;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.*;
@@ -67,7 +67,7 @@ public interface Stuck {
      * @param root    the root json document
      * @param locator the locator
      */
-    static DoubleFunction<Environment> create(JsonNode root, Locator locator) {
+    static ToDoubleFunction<RobotEnvironment> create(JsonNode root, Locator locator) {
         VALIDATOR.apply(locator).accept(root);
         double distance0 = locator.path("distance0").getNode(root).asDouble();
         double distance1 = locator.path("distance1").getNode(root).asDouble();
@@ -86,9 +86,9 @@ public interface Stuck {
      * @param x4          maximum distance for 0 reward
      * @param sensorRange tolerance of sensor front position in DEG
      */
-    static DoubleFunction<Environment> stuck(double x1, double x2, double x3, double x4, int sensorRange) {
+    static ToDoubleFunction<RobotEnvironment> stuck(double x1, double x2, double x3, double x4, int sensorRange) {
         return environment -> {
-            RobotStatus status = ((WithRobotStatus) environment).getStatus();
+            RobotStatus status = ((WithRobotStatus) environment).getRobotStatus();
             double dist = status.getEchoDistance();
             if (!status.canMoveBackward() || !status.canMoveForward() || dist == 0 || dist >= MAX_DISTANCE) {
                 return -1;

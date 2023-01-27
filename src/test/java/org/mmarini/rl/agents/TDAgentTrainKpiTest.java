@@ -121,7 +121,7 @@ class TDAgentTrainKpiTest {
                     if (result.terminal) {
                         break;
                     }
-                    state = result.state;
+                    state = result.state1;
                 }
             }
 

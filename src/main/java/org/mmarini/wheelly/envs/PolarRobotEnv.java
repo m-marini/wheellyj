@@ -26,7 +26,6 @@
 package org.mmarini.wheelly.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.eclipse.collections.api.block.function.primitive.DoubleFunction;
 import org.mmarini.rl.envs.*;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.yaml.Utils;
@@ -35,12 +34,14 @@ import org.mmarini.yaml.schema.Validator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.ToDoubleFunction;
 
 import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS_SPEED;
 import static org.mmarini.wheelly.apis.Utils.*;
 import static org.mmarini.yaml.schema.Validator.*;
 
@@ -78,7 +79,7 @@ import static org.mmarini.yaml.schema.Validator.*;
  *     </ul>
  * </p>
  */
-public class PolarRobotEnv implements Environment, WithPolarMap {
+public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, WithRadarMap {
 
     public static final double MIN_DISTANCE = 0;
     public static final double MAX_DISTANCE = 10;
@@ -93,9 +94,6 @@ public class PolarRobotEnv implements Environment, WithPolarMap {
 
     private static final Validator ROBOT_ENV_SPEC = objectPropertiesRequired(Map.of(
                     "objective", object(),
-                    "interval", positiveInteger(),
-                    "reactionInterval", positiveInteger(),
-                    "commandInterval", positiveInteger(),
                     "numDirectionValues", integer(minimum(2)),
                     "numSensorValues", integer(minimum(2)),
                     "numSpeedValues", integer(minimum(2)),
@@ -104,9 +102,6 @@ public class PolarRobotEnv implements Environment, WithPolarMap {
                     "maxRadarDistance", positiveNumber()
             ),
             List.of("objective",
-                    "interval",
-                    "reactionInterval",
-                    "commandInterval",
                     "numDirectionValues",
                     "numSensorValues",
                     "numSpeedValues",
@@ -122,13 +117,10 @@ public class PolarRobotEnv implements Environment, WithPolarMap {
      * @param locator the locator of environment
      * @param robot   the robot interface
      */
-    public static PolarRobotEnv create(JsonNode root, Locator locator, RobotApi robot) {
+    public static PolarRobotEnv create(JsonNode root, Locator locator, RobotControllerApi robot) {
         ROBOT_ENV_SPEC.apply(locator).accept(root);
 
-        DoubleFunction<Environment> reward = Utils.createObject(root, locator.path("objective"), new Object[0], new Class[0]);
-        long interval = locator.path("interval").getNode(root).asLong();
-        long reactionInterval = locator.path("reactionInterval").getNode(root).asLong();
-        long commandInterval = locator.path("commandInterval").getNode(root).asLong();
+        ToDoubleFunction<RobotEnvironment> reward = Utils.createObject(root, locator.path("objective"), new Object[0], new Class[0]);
         int numDirectionValues = locator.path("numDirectionValues").getNode(root).asInt();
         int numSensorValues = locator.path("numSensorValues").getNode(root).asInt();
         int numSpeedValues = locator.path("numSpeedValues").getNode(root).asInt();
@@ -138,7 +130,6 @@ public class PolarRobotEnv implements Environment, WithPolarMap {
         RadarMap radarMap = RadarMap.create(root, locator);
 
         return PolarRobotEnv.create(robot, reward,
-                interval, reactionInterval, commandInterval,
                 numDirectionValues, numSensorValues, numSpeedValues, numRadarSectors, minRadarDistance, maxRadarDistance, radarMap);
     }
 
@@ -147,9 +138,6 @@ public class PolarRobotEnv implements Environment, WithPolarMap {
      *
      * @param robot              the robot api
      * @param reward             the reward function
-     * @param interval           the interval
-     * @param reactionInterval   the reaction interval
-     * @param commandInterval    the command interval
      * @param numDirectionValues number of direction values
      * @param numSensorValues    number of sensor direction values
      * @param numSpeedValues     number of speed values
@@ -158,8 +146,7 @@ public class PolarRobotEnv implements Environment, WithPolarMap {
      * @param maxRadarDistance   the max radar distance (m)
      * @param radarMap           the radar map
      */
-    public static PolarRobotEnv create(RobotApi robot, DoubleFunction<Environment> reward,
-                                       long interval, long reactionInterval, long commandInterval,
+    public static PolarRobotEnv create(RobotControllerApi robot, ToDoubleFunction<RobotEnvironment> reward,
                                        int numDirectionValues, int numSensorValues, int numSpeedValues,
                                        int numRadarSectors, double minRadarDistance, double maxRadarDistance, RadarMap radarMap) {
         Map<String, SignalSpec> actions1 = Map.of(
@@ -169,61 +156,38 @@ public class PolarRobotEnv implements Environment, WithPolarMap {
                 "sensorAction", new IntSignalSpec(new long[]{1}, numSensorValues)
         );
 
-        return new PolarRobotEnv(robot, reward, interval, reactionInterval, commandInterval, actions1,
+        return new PolarRobotEnv(robot, reward, actions1,
                 radarMap, PolarMap.create(numRadarSectors), minRadarDistance, maxRadarDistance);
     }
 
-    private final RobotApi robot;
-    private final DoubleFunction<Environment> reward;
-    private final long interval;
-    private final long reactionInterval;
-    private final long commandInterval;
     private final Map<String, SignalSpec> actions;
     private final Map<String, SignalSpec> states;
     private final double maxRadarDistance;
     private final double minRadarDistance;
-    private PolarMap polarMap;
-    private int prevSensor;
-    private long lastScanTimestamp;
-    private long lastMoveTimestamp;
-    private boolean prevHalt;
-    private boolean started;
-    private double currentSpeed;
-    private boolean currentHalted;
-    private int currentSensor;
-    private int currentDirection;
-    private RobotStatus status;
-    private RadarMap radarMap;
+    private CompositeStatus status;
+    private CompositeStatus currentStatus;
+    private Consumer<RobotStatus> onStatusReady;
 
     /**
-     * Creates the robot environment
+     * Creates the controller environment
      *
-     * @param robot            the robot api
-     * @param reward           the reward function
-     * @param interval         the interval
-     * @param reactionInterval the reaction interval
-     * @param commandInterval  the command interval
+     * @param controller       the controller api
+     * @param rewardFunc       the reward function
      * @param actions          the actions spec
      * @param radarMap         the radar map
      * @param polarMap         the polar map
      * @param minRadarDistance min radar distance (m)
      * @param maxRadarDistance max radar distance (m)
      */
-    public PolarRobotEnv(RobotApi robot, DoubleFunction<Environment> reward,
-                         long interval, long reactionInterval, long commandInterval,
+    public PolarRobotEnv(RobotControllerApi controller, ToDoubleFunction<RobotEnvironment> rewardFunc,
                          Map<String, SignalSpec> actions,
                          RadarMap radarMap,
                          PolarMap polarMap, double minRadarDistance, double maxRadarDistance) {
-        this.robot = requireNonNull(robot);
-        this.reward = requireNonNull(reward);
-        this.interval = interval;
-        this.reactionInterval = reactionInterval;
-        this.commandInterval = commandInterval;
+        super(controller, rewardFunc);
         this.actions = requireNonNull(actions);
-        this.polarMap = requireNonNull(polarMap);
+        this.status = new CompositeStatus(null, radarMap, polarMap);
         this.minRadarDistance = minRadarDistance;
         this.maxRadarDistance = maxRadarDistance;
-        this.radarMap = radarMap;
         int n = polarMap.getSectorsNumber();
         this.states = Map.of(
                 "sensor", new FloatSignalSpec(new long[]{1}, MIN_SENSOR_DIR, MAX_SENSOR_DIR),
@@ -234,24 +198,7 @@ public class PolarRobotEnv implements Environment, WithPolarMap {
                 "knownSectors", new IntSignalSpec(new long[]{n}, 2),
                 "sectorDistances", new FloatSignalSpec(new long[]{n}, 0, (float) maxRadarDistance)
         );
-        this.started = false;
-
-        this.prevHalt = true;
-        this.prevSensor = 0;
-        this.lastMoveTimestamp = 0L;
-        this.lastScanTimestamp = 0L;
-
-        this.currentHalted = true;
-        this.currentSensor = 0;
-        this.currentDirection = 0;
-        this.currentSpeed = 0;
-    }
-
-    @Override
-    public void close() throws IOException {
-        if (started) {
-            robot.close();
-        }
+        controller.setOnStatusReady(this::handleStatus);
     }
 
     /**
@@ -268,16 +215,6 @@ public class PolarRobotEnv implements Environment, WithPolarMap {
     }
 
     @Override
-    public ExecutionResult execute(Map<String, Signal> actions) {
-        requireNonNull(actions);
-        processAction(actions);
-        readStatus(reactionInterval);
-        double reward = this.reward.doubleValueOf(this);
-        Map<String, Signal> observation = getObservation();
-        return new ExecutionResult(observation, reward, false);
-    }
-
-    @Override
     public Map<String, SignalSpec> getActions() {
         return this.actions;
     }
@@ -286,13 +223,32 @@ public class PolarRobotEnv implements Environment, WithPolarMap {
         return maxRadarDistance;
     }
 
-    private Map<String, Signal> getObservation() {
+    @Override
+    public PolarMap getPolarMap() {
+        return status.polarMap;
+    }
+
+    @Override
+    public RadarMap getRadarMap() {
+        return status.radarMap;
+    }
+
+    @Override
+    public RobotStatus getRobotStatus() {
+        return currentStatus.status;
+    }
+
+    @Override
+    protected Map<String, Signal> getSignals() {
+        RobotStatus status = currentStatus.status;
         INDArray sensor = Nd4j.createFromArray((float) status.getSensorDirection());
         INDArray distance = Nd4j.createFromArray((float) status.getEchoDistance());
         INDArray canMoveForward = Nd4j.createFromArray(status.canMoveForward() ? 1F : 0F);
         INDArray canMoveBackward = Nd4j.createFromArray(status.canMoveBackward() ? 1F : 0F);
         INDArray contacts = Nd4j.createFromArray((float) status.getContacts());
         double maxDistance = ((FloatSignalSpec) states.get("sectorDistances")).getMaxValue();
+
+        PolarMap polarMap = currentStatus.polarMap;
         int n = polarMap.getSectorsNumber();
         INDArray knownSectors = Nd4j.zeros(n);
         INDArray sectorDistances = Nd4j.zeros(n);
@@ -315,94 +271,42 @@ public class PolarRobotEnv implements Environment, WithPolarMap {
         );
     }
 
-    public PolarMap getPolarMap() {
-        return polarMap;
-    }
-
-    public RadarMap getRadarMap() {
-        return radarMap;
-    }
-
     @Override
     public Map<String, SignalSpec> getState() {
         return states;
     }
 
-    public RobotStatus getStatus() {
-        return status;
-    }
-
-    /**
-     * Processes the action
-     *
-     * @param actions the action from agent
-     */
-    private void processAction(Map<String, Signal> actions) {
-        currentHalted = actions.get("halt").getInt(0) == 1;
-        double speed1 = speed(actions);
-        currentSpeed = round(speed1 * 4) / 4D;
-        currentSensor = sensorDir(actions);
-        int dDir = deltaDir(actions);
-        currentDirection = normalizeDegAngle(status.getDirection() + dDir);
-    }
-
-    /**
-     * Reads the status of robot after a time interval
-     *
-     * @param time the time interval in millis
-     */
-    private RobotStatus readStatus(long time) {
-        RobotStatus status = robot.getStatus();
-        long timeout = status.getTime() + time;
-        do {
-            sendCommand();
-            robot.tick(interval);
-            status = robot.getStatus();
-            if (status != null) {
-                radarMap = radarMap.update(status);
-            }
-        } while (!(status != null && status.getTime() >= timeout));
-        this.status = status;
-
-        polarMap = polarMap.update(radarMap, status.getLocation(), status.getDirection(), minRadarDistance, maxRadarDistance);
-        return status;
+    private void handleStatus(RobotStatus status) {
+        RadarMap newRadarMap = this.status.radarMap.update(status);
+        this.status = this.status.setStatus(status).setRadarMap(newRadarMap);
+        if (onStatusReady != null) {
+            onStatusReady.accept(status);
+        }
     }
 
     @Override
-    public Map<String, Signal> reset() {
-        if (!started) {
-            robot.start();
-            started = true;
-        }
-        robot.reset();
-        polarMap = polarMap.clear();
-        readStatus(0);
-        return getObservation();
+    protected void latchStatus(RobotStatus ignored) {
+        currentStatus = status;
+        RobotStatus robotStatus = currentStatus.status;
+        RadarMap radarMap = currentStatus.radarMap;
+        PolarMap polarMap = currentStatus.polarMap;
+        polarMap = polarMap.update(radarMap, robotStatus.getLocation(), robotStatus.getDirection(), minRadarDistance, maxRadarDistance);
+        currentStatus = currentStatus.setPolarMap(polarMap);
     }
 
-    private void sendCommand() {
-        long now = robot.getStatus().getTime();
-        if (currentHalted != prevHalt) {
-            prevHalt = currentHalted;
-            if (currentHalted) {
-                robot.halt();
-            } else {
-                robot.move(currentDirection, currentSpeed);
-            }
-            lastMoveTimestamp = now;
-        } else if (!currentHalted && now > lastMoveTimestamp + commandInterval) {
-            robot.move(currentDirection, currentSpeed);
-            lastMoveTimestamp = now;
+    @Override
+    protected void processActions(Map<String, Signal> actions) {
+        boolean halt = actions.get("halt").getInt(0) == 1;
+        RobotControllerApi controller = getController();
+        if (halt) {
+            controller.haltRobot();
+        } else {
+            int speed = speed(actions);
+            int dDir = deltaDir(actions);
+            int direction = normalizeDegAngle(currentStatus.status.getDirection() + dDir);
+            controller.moveRobot(direction, speed);
         }
-        if (prevSensor != currentSensor) {
-            robot.scan(currentSensor);
-            prevSensor = currentSensor;
-            lastScanTimestamp = now;
-        } else if (currentSensor != 0 && now >= lastScanTimestamp + commandInterval) {
-            robot.scan(currentSensor);
-            prevSensor = currentSensor;
-            lastScanTimestamp = now;
-        }
+        controller.moveSensor(sensorDir(actions));
     }
 
     /**
@@ -418,16 +322,60 @@ public class PolarRobotEnv implements Environment, WithPolarMap {
                 MIN_SENSOR_DIR, MAX_SENSOR_DIR));
     }
 
+    @Override
+    public void setOnError(Consumer<Throwable> callback) {
+        getController().setOnError(callback);
+    }
+
+    @Override
+    public void setOnReadLine(Consumer<String> callback) {
+        getController().setOnReadLine(callback);
+    }
+
+    @Override
+    public void setOnStatusReady(Consumer<RobotStatus> callback) {
+        onStatusReady = callback;
+    }
+
+    @Override
+    public void setOnWriteLine(Consumer<String> callback) {
+        getController().setOnWriteLine(callback);
+    }
+
     /**
      * Returns the speed from actions
      *
      * @param actions the actions
      */
-    double speed(Map<String, Signal> actions) {
+    int speed(Map<String, Signal> actions) {
         int action = actions.get("speed").getInt(0);
         int n = ((IntSignalSpec) getActions().get("speed")).getNumValues();
-        return round(linear(action,
+        return (int) round(linear(action,
                 0, n - 1,
-                MIN_SPEED, MAX_SPEED));
+                MIN_SPEED, MAX_SPEED) * MAX_PPS_SPEED * 4) / 4;
+    }
+
+    static class CompositeStatus {
+        public final PolarMap polarMap;
+        public final RadarMap radarMap;
+        public final RobotStatus status;
+
+        CompositeStatus(RobotStatus status, RadarMap radarMap, PolarMap polarMap) {
+            this.status = status;
+            this.radarMap = radarMap;
+            this.polarMap = polarMap;
+        }
+
+        public CompositeStatus setPolarMap(PolarMap polarMap) {
+            return new CompositeStatus(status, radarMap, polarMap);
+        }
+
+        public CompositeStatus setRadarMap(RadarMap radarMap) {
+            return new CompositeStatus(status, radarMap, polarMap);
+        }
+
+        public CompositeStatus setStatus(RobotStatus status) {
+            return new CompositeStatus(status, radarMap, polarMap);
+        }
     }
 }

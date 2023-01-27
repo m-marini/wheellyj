@@ -26,11 +26,52 @@
  *
  */
 
-package org.mmarini.wheelly.envs;
+package org.mmarini.wheelly.apps;
 
-import org.mmarini.wheelly.apis.RadarMap;
-import org.mmarini.wheelly.apis.WithStatusCallback;
+import static java.lang.Math.exp;
 
-public interface WithRadarMap extends WithStatusCallback {
-    RadarMap getRadarMap();
+/**
+ * Computes the discount average of values set
+ */
+public class AverageValue {
+    public static final double DEFAULT_DISCOUNT = exp(-1 / 29.7);
+
+    /**
+     * Returns the default average value
+     * The discount factor is about 0.9669 (21 steps to 0.5 factor)
+     */
+    public static AverageValue create() {
+        return new AverageValue(0, DEFAULT_DISCOUNT);
+    }
+
+    private double value;
+    private final double discount;
+
+    /**
+     * Creates the average value
+     *
+     * @param value    the initial value
+     * @param discount the discount
+     */
+    public AverageValue(double value, double discount) {
+        this.value = value;
+        this.discount = discount;
+    }
+
+    /**
+     * Returns the average value adding a value
+     *
+     * @param value the added value
+     */
+    public double add(double value) {
+        return this.value = discount * (this.value - value) + value;
+    }
+
+    /**
+     * Returns the average value adding a value
+     */
+    public double getValue() {
+        return value;
+    }
+
 }

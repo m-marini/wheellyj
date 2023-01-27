@@ -34,18 +34,20 @@ import static java.lang.Math.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_PER_PULSE;
+import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
+import static org.mmarini.wheelly.apis.SimRobot.ROBOT_TRACK;
 
 class SimRobotTest {
 
     public static final int SEED = 1234;
     public static final double DISTANCE_EPSILON = 1e-3;
-    public static final float MAX_ANGULAR_VELOCITY = (float) (0.280 / 0.136 * 180 / PI);
-    public static final float RECEPTIVE_DISTANCE = 0.1F;
+    public static final double MAX_ANGULAR_VELOCITY = toDegrees(MAX_PPS * 2 * DISTANCE_PER_PULSE / ROBOT_TRACK);
 
     @Test
     void create() {
         SimRobot robot = createRobot();
-        RobotStatus status = robot.getStatus();
+        RobotStatus status = robot.getRobotStatus();
         assertEquals(new Point2D.Float(), status.getLocation());
         assertEquals(0, status.getDirection());
         assertEquals(0, status.getSensorDirection());
@@ -54,8 +56,11 @@ class SimRobotTest {
 
     private SimRobot createRobot() {
         Random random = new Random(SEED);
-        return new SimRobot(new MapBuilder(new GridTopology(0.2f)).build(),
+        SimRobot simRobot = new SimRobot(new MapBuilder(new GridTopology(0.2f)).build(),
                 random, 0, 0, toRadians(15));
+        simRobot.connect();
+        simRobot.configure();
+        return simRobot;
     }
 
     @Test
@@ -63,12 +68,12 @@ class SimRobotTest {
         SimRobot robot = createRobot();
         robot.tick(100);
 
-        robot.move(0, 1);
+        robot.move(0, (int) MAX_PPS);
         robot.tick(100);
-        RobotStatus status = robot.getStatus();
+        RobotStatus status = robot.getRobotStatus();
 
         assertThat(status.getLocation().getX(), closeTo(0, DISTANCE_EPSILON));
-        assertThat(status.getLocation().getY(), closeTo(10e-3, DISTANCE_EPSILON));
+        assertThat(status.getLocation().getY(), closeTo(DISTANCE_PER_PULSE * MAX_PPS * 0.1, DISTANCE_EPSILON));
         assertEquals(0, status.getDirection());
         assertEquals(0, status.getSensorDirection());
         assertEquals(0f, status.getEchoDistance());
@@ -79,9 +84,9 @@ class SimRobotTest {
         SimRobot robot = createRobot();
         robot.tick(100);
 
-        robot.move(0, -1);
+        robot.move(0, -20);
         robot.tick(100);
-        RobotStatus status = robot.getStatus();
+        RobotStatus status = robot.getRobotStatus();
 
         assertThat(status.getLocation().getX(), closeTo(0, DISTANCE_EPSILON));
         assertThat(status.getLocation().getY(), closeTo(-10e-3, DISTANCE_EPSILON));
@@ -97,7 +102,7 @@ class SimRobotTest {
 
         robot.move(5, 0);
         robot.tick(100);
-        RobotStatus status = robot.getStatus();
+        RobotStatus status = robot.getRobotStatus();
 
         assertThat(status.getLocation().getX(), closeTo(0, DISTANCE_EPSILON));
         assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
@@ -112,7 +117,7 @@ class SimRobotTest {
 
         robot.move(90, 0);
         robot.tick(100);
-        RobotStatus status = robot.getStatus();
+        RobotStatus status = robot.getRobotStatus();
 
         assertThat(status.getLocation().getX(), closeTo(0, DISTANCE_EPSILON));
         assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
@@ -126,7 +131,7 @@ class SimRobotTest {
         SimRobot robot = createRobot();
 
         robot.tick(100);
-        RobotStatus status = robot.getStatus();
+        RobotStatus status = robot.getRobotStatus();
 
         assertEquals(new Point2D.Float(), status.getLocation());
         assertEquals(0, status.getDirection());

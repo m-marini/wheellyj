@@ -32,6 +32,7 @@ import org.mmarini.yaml.schema.Validator;
 import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.yaml.schema.Validator.*;
@@ -56,7 +57,7 @@ public class MockRobot implements RobotApi {
         return new MockRobot(robotPos1, robotDir1, sensorDir1, sensorDistance1);
     }
 
-
+    protected Consumer<RobotStatus> onStatusReady;
     private long time;
     private long resetTime;
     private Point2D robotPos;
@@ -80,8 +81,14 @@ public class MockRobot implements RobotApi {
     }
 
     @Override
-    public RobotStatus getStatus() {
+    public void configure() throws IOException {
+    }
 
+    @Override
+    public void connect() throws IOException {
+    }
+
+    public RobotStatus getStatus() {
         return RobotStatus.create()
                 .setTime(time)
                 .setDirection(robotDir)
@@ -96,7 +103,8 @@ public class MockRobot implements RobotApi {
     }
 
     @Override
-    public void move(int dir, double speed) {
+    public void move(int dir, int speed) throws IOException {
+
     }
 
     @Override
@@ -106,6 +114,11 @@ public class MockRobot implements RobotApi {
 
     @Override
     public void scan(int dir) {
+    }
+
+    @Override
+    public void setOnStatusReady(Consumer<RobotStatus> callback) {
+        this.onStatusReady = callback;
     }
 
     public void setResetTime(long resetTime) {
@@ -130,10 +143,6 @@ public class MockRobot implements RobotApi {
 
     public void setTime(long time) {
         this.time = time;
-    }
-
-    @Override
-    public void start() {
     }
 
     @Override

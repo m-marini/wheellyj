@@ -28,29 +28,30 @@
 
 package org.mmarini.wheelly.objectives;
 
+import io.reactivex.rxjava3.core.Completable;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.wheelly.apis.RadarMap;
+import org.mmarini.wheelly.apis.RobotControllerApi;
 import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.WithRobotStatus;
+import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.wheelly.envs.WithRadarMap;
 
-import java.io.IOException;
 import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 
-public class MockEnvironment implements Environment, WithRadarMap {
-    @Override
-    public void close() throws IOException {
-
-    }
+public class MockEnvironment implements RobotEnvironment, WithRadarMap, WithRobotStatus {
 
     @Override
-    public ExecutionResult execute(Map<String, Signal> actions) {
+    public Map<String, SignalSpec> getActions() {
         return null;
     }
 
     @Override
-    public Map<String, SignalSpec> getActions() {
+    public RobotControllerApi getController() {
         return null;
     }
 
@@ -60,17 +61,57 @@ public class MockEnvironment implements Environment, WithRadarMap {
     }
 
     @Override
+    public RobotStatus getRobotStatus() {
+        return null;
+    }
+
+    @Override
     public Map<String, SignalSpec> getState() {
         return null;
     }
 
     @Override
-    public RobotStatus getStatus() {
+    public Completable readShutdown() {
         return null;
     }
 
     @Override
-    public Map<String, Signal> reset() {
-        return null;
+    public void setOnAct(UnaryOperator<Map<String, Signal>> callback) {
+
+    }
+
+    @Override
+    public void setOnError(Consumer<Throwable> callback) {
+
+    }
+
+    @Override
+    public void setOnReadLine(Consumer<String> onReadLine) {
+
+    }
+
+    @Override
+    public void setOnResult(Consumer<Environment.ExecutionResult> callback) {
+
+    }
+
+    @Override
+    public void setOnStatusReady(Consumer<RobotStatus> callback) {
+
+    }
+
+    @Override
+    public void setOnWriteLine(Consumer<String> onWriteLine) {
+
+    }
+
+    @Override
+    public void shutdown() {
+
+    }
+
+    @Override
+    public void start() {
+
     }
 }

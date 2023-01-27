@@ -26,6 +26,8 @@
 package org.mmarini.wheelly.apps;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import hu.akarnokd.rxjava3.swing.SwingObservable;
+import io.reactivex.rxjava3.core.BackpressureStrategy;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -33,31 +35,33 @@ import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
 import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.engines.ProcessorContext;
 import org.mmarini.wheelly.engines.StateMachineAgent;
-import org.mmarini.wheelly.swing.EnvironmentFrame;
+import org.mmarini.wheelly.swing.EnvironmentPanel;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.wheelly.swing.PolarPanel;
 import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
-import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.mmarini.wheelly.swing.Utils.*;
 import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * Run a test to check for robot environment with random behavior agent
  */
 public class RobotExecutor {
+    public static final Dimension DEFALT_RADAR_DIMENSION = new Dimension(400, 400);
     private static final Logger logger = LoggerFactory.getLogger(RobotExecutor.class);
     private static final Validator BASE_CONFIG = objectPropertiesRequired(Map.of(
             "version", string(values("0.4")),
@@ -65,6 +69,9 @@ public class RobotExecutor {
             "configurations", object()
     ), List.of("version", "active", "configurations"));
 
+    /**
+     * Returns the argument parser
+     */
     @NotNull
     private static ArgumentParser createParser() {
         ArgumentParser parser = ArgumentParsers.newFor(RobotExecutor.class.getName()).build()
@@ -77,6 +84,9 @@ public class RobotExecutor {
         parser.addArgument("-r", "--robot")
                 .setDefault("robot.yml")
                 .help("specify robot yaml configuration file");
+        parser.addArgument("-c", "--controller")
+                .setDefault("controller.yml")
+                .help("specify controller yaml configuration file");
         parser.addArgument("-a", "--agent")
                 .setDefault("agent.yml")
                 .help("specify agent yaml configuration file");
@@ -88,18 +98,6 @@ public class RobotExecutor {
                 .type(Long.class)
                 .help("specify number of seconds of session duration");
         return parser;
-    }
-
-    static JFrame createRadarFrame(JComponent panel) {
-        JFrame frame = new JFrame("Radar");
-        frame.setSize(400, 400);
-        frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-        frame.setResizable(false);
-        Container content = frame.getContentPane();
-        content.setLayout(new BorderLayout());
-        content.add(panel, BorderLayout.CENTER);
-        frame.setVisible(true);
-        return frame;
     }
 
     /**
@@ -123,93 +121,145 @@ public class RobotExecutor {
     }
 
     /**
+     * Application entry point
+     *
      * @param args command line arguments
      */
     public static void main(String[] args) {
         new RobotExecutor().start(args);
     }
 
-    protected final EnvironmentFrame frame;
-    protected Namespace args;
+    private final JFrame frame;
+    private final JFrame radarFrame;
+    private final EnvironmentPanel envPanel;
+    private final PolarPanel polarPanel;
+    private final AverageValue reactionTime;
+    private Namespace args;
+    private long start;
+    private long sessionDuration;
+    private StateMachineAgent agent;
+    private long robotStartTimestamp;
+    private long prevStep;
 
     /**
-     *
+     * Creates the roboto executor
      */
     public RobotExecutor() {
-        frame = new EnvironmentFrame(Messages.getString("Wheelly.title"));
-        frame.onStart(this::process);
-    }
-
-    private StateMachineAgent createAgent(RobotApi robot) {
-        return fromConfig(args.getString("agent"), new Object[]{robot}, new Class[]{RobotApi.class});
+        this.envPanel = new EnvironmentPanel();
+        this.polarPanel = new PolarPanel();
+        this.frame = createFrame(Messages.getString("RobotExecutor.title"), envPanel);
+        this.radarFrame = createFixFrame(Messages.getString("Radar.title"), DEFALT_RADAR_DIMENSION, polarPanel);
+        this.reactionTime = AverageValue.create();
+        this.robotStartTimestamp = -1;
+        this.prevStep = -1;
+        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
+                .toFlowable(BackpressureStrategy.DROP)
+                .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
+                .doOnNext(this::handleWindowOpened)
+                .subscribe();
+        layHorizontaly(frame, radarFrame);
     }
 
     /**
-     * Returns the robot api
+     * Returns the agent from configuration files
      */
-    protected RobotApi createRobot() {
-        return fromConfig(args.getString("robot"), new Object[0], new Class[0]);
+    private StateMachineAgent createAgent() {
+        RobotApi robot = fromConfig(args.getString("robot"), new Object[0], new Class[0]);
+        RobotControllerApi controller = fromConfig(args.getString("controller"), new Object[]{robot}, new Class[]{RobotApi.class});
+        return fromConfig(args.getString("agent"), new Object[]{controller}, new Class[]{RobotControllerApi.class});
     }
 
-    private void process() {
-        try (INDArray ignored = Nd4j.zeros(1)) {
+    /**
+     * Handles the application shutdown
+     */
+    private void handleShutdown() {
+        frame.dispose();
+        radarFrame.dispose();
+        if (!args.getBoolean("silent")) {
+            JOptionPane.showMessageDialog(null,
+                    "Completed", "Information", JOptionPane.INFORMATION_MESSAGE);
         }
-        logger.info("Creating api");
-        try (RobotApi robot = createRobot()) {
-            logger.info("Creating environment");
-            JFrame radarFrame = null;
-            try (StateMachineAgent agent = createAgent(robot)) {
-                PolarPanel polarPanel = new PolarPanel();
-                radarFrame = createRadarFrame(polarPanel);
-                double radarMaxDistance = agent.getMaxRadarDistance();
-                polarPanel.setRadarMaxDistance(radarMaxDistance);
-                long sessionDuration = args.getLong("time");
-                logger.info("Starting session ...");
-                logger.info("Session are running for {} sec...", sessionDuration);
-                sessionDuration *= 1000;
-                long start = System.currentTimeMillis();
-                agent.init();
-                RobotStatus status = robot.getStatus();
-                if (robot instanceof SimRobot) {
-                    Optional<ObstacleMap> obstaclesMap = ((SimRobot) robot).getObstaclesMap();
-                    obstaclesMap.map(ObstacleMap::getPoints)
-                            .ifPresent(frame::setObstacleMap);
-                    obstaclesMap.map(ObstacleMap::getTopology)
-                            .map(GridTopology::getGridSize)
-                            .ifPresent(frame::setObstacleSize);
-                }
-                frame.setRobotStatus(status);
-                for (boolean running = true; running; ) {
-                    agent.step();
-                    status = robot.getStatus();
-                    frame.setRobotStatus(status);
-                    frame.setRadarMap(agent.getRadarMap());
-                    frame.setTimeRatio((double) status.getElapsed() / (System.currentTimeMillis() - start));
-                    polarPanel.setPolarMap(agent.getPolarMap());
-                    running = status.getElapsed() <= sessionDuration &&
-                            frame.isVisible();
-                }
-            } finally {
-                if (radarFrame != null) {
-                    radarFrame.dispose();
-                }
-            }
-            logger.info("Cleaning up ...");
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        logger.info("Cleaned up.");
     }
 
-    protected void start(String[] args) {
+    /**
+     * Handles step up of agent
+     *
+     * @param ctx the context
+     */
+    private void handleStepUp(ProcessorContext ctx) {
+        RobotStatus status = ctx.getRobotStatus();
+        if (robotStartTimestamp < 0) {
+            robotStartTimestamp = status.getTime();
+        }
+        envPanel.setRobotStatus(status);
+        envPanel.setRadarMap(ctx.getRadarMap());
+        long robotClock = status.getTime();
+        long robotElapsed = robotClock - robotStartTimestamp;
+        envPanel.setTimeRatio((double) robotElapsed / (System.currentTimeMillis() - start));
+        if (prevStep >= 0) {
+            envPanel.setReactionTime(reactionTime.add(robotClock - prevStep) * 1e-3);
+        }
+        prevStep = robotClock;
+
+        polarPanel.setPolarMap(ctx.getPolarMap());
+        if (robotElapsed > sessionDuration
+                || !frame.isVisible()
+                || !radarFrame.isVisible()) {
+            agent.shutdown();
+        }
+    }
+
+    /**
+     * Handles the windows opened
+     * Initializes the agent
+     *
+     * @param e the event
+     */
+    private void handleWindowOpened(WindowEvent e) {
+        agent.init();
+        RobotApi robot = agent.getController().getRobot();
+        if (robot instanceof SimRobot) {
+            Optional<ObstacleMap> obstaclesMap = ((SimRobot) robot).getObstaclesMap();
+            obstaclesMap.map(ObstacleMap::getPoints)
+                    .ifPresent(envPanel::setObstacleMap);
+            obstaclesMap.map(ObstacleMap::getTopology)
+                    .map(GridTopology::getGridSize)
+                    .ifPresent(envPanel::setObstacleSize);
+        }
+    }
+
+    /**
+     * Starts the executor.
+     * <p>
+     * Creates the agent
+     * Initializes the UI components
+     * Opens the application frames (environment + radar)
+     *
+     * @param args the command line parameters
+     */
+    private void start(String[] args) {
         ArgumentParser parser = createParser();
         try {
             this.args = parser.parseArgs(args);
-            frame.setSilent(this.args.getBoolean("silent"));
+            logger.atInfo().log("Creating Agent");
+            this.sessionDuration = this.args.getLong("time");
+            sessionDuration *= 1000;
+            logger.atInfo().log("Starting session ...");
+            this.agent = createAgent();
+            double radarMaxDistance = agent.getMaxRadarDistance();
+            polarPanel.setRadarMaxDistance(radarMaxDistance);
+            logger.atInfo().setMessage("Session are running for {} sec...").addArgument(sessionDuration).log();
+            this.start = System.currentTimeMillis();
+            agent.setOnStepUp(this::handleStepUp);
+            agent.readShutdown()
+                    .doOnComplete(this::handleShutdown)
+                    .subscribe();
+            agent.setOnError(err -> logger.atError().setCause(err).log());
+            frame.setVisible(true);
+            radarFrame.setVisible(true);
         } catch (ArgumentParserException e) {
             parser.handleError(e);
             System.exit(1);
         }
-        frame.start();
     }
 }

@@ -155,7 +155,7 @@ public class TDAgent implements Agent {
      * @param locator the agent spec locator
      * @param env     the environment
      */
-    public static TDAgent create(JsonNode root, Locator locator, Environment env) {
+    public static TDAgent create(JsonNode root, Locator locator, WithSignalsSpec env) {
         AGENT_SPEC.apply(locator).accept(root);
         File path = new File(locator.path("modelPath").getNode(root).asText());
         int savingIntervalStep = locator.path("savingIntervalSteps").getNode(root).asInt(Integer.MAX_VALUE);
@@ -313,9 +313,6 @@ public class TDAgent implements Agent {
     private PublishProcessor<Map<String, Object>> indicatorsPub;
     private Flowable<Map<String, INDArray>> indicators;
     private float avgReward;
-    private Map<String, Signal> lastActions;
-    private Map<String, INDArray> lastInputs;
-    private Map<String, INDArray> lastPolicy;
     private int savingStepCounter;
     private Consumer<Map<String, Object>> kpiListener;
 
@@ -367,20 +364,16 @@ public class TDAgent implements Agent {
         Map<String, INDArray> inputs = getInput(procState);
         Map<String, INDArray> policyStatus = policy.forward(inputs);
         Map<String, INDArray> pis = this.pis(policyStatus);
-        Map<String, Signal> flattenActions = chooseActions(pis, random);
-        this.lastActions = flattenActions;
-        this.lastInputs = inputs;
-        this.lastPolicy = policyStatus;
-        return flattenActions;
+        return chooseActions(pis, random);
     }
 
     private void autosave() {
         if (modelPath != null) {
             try {
                 save(modelPath);
-                logger.info("Saved model into \"{}\"", modelPath);
+                logger.atInfo().setMessage("Saved model into \"{}\"").addArgument(modelPath).log();
             } catch (IOException e) {
-                logger.error(e.getMessage(), e);
+                logger.atError().setCause(e).log();
             }
         }
     }
@@ -475,11 +468,7 @@ public class TDAgent implements Agent {
 
     @Override
     public void observe(Environment.ExecutionResult result) {
-        if (lastInputs != null) {
-            train(lastActions, result);
-        }
-        lastInputs = null;
-        lastActions = null;
+        train(result);
     }
 
     /**
@@ -556,14 +545,17 @@ public class TDAgent implements Agent {
     /**
      * Trains the agent
      *
-     * @param actions the actions taken
-     * @param result  the environment execution result
+     * @param result the environment execution result
      */
-    void train(Map<String, Signal> actions, Environment.ExecutionResult result) {
-        Map<String, INDArray> s0 = lastInputs;
+    void train(Environment.ExecutionResult result) {
+        Map<String, Signal> procState = processState(result.state0);
+        Map<String, INDArray> s0 = getInput(procState);
+
         float reward = (float) result.reward;
-        Map<String, Signal> procState = processState(result.state);
+
+        procState = processState(result.state1);
         Map<String, INDArray> s1 = getInput(procState);
+
         Map<String, INDArray> c0 = critic.forward(s0);
         float v0 = c0.get("output").getFloat(0, 0);
         float v1 = getCriticValue(s1);
@@ -572,11 +564,11 @@ public class TDAgent implements Agent {
                 ? reward - avgReward // If terminal state reward should be the average reward should be the reward
                 : reward - avgReward + v1 - v0;
 
-        Map<String, INDArray> pi = lastPolicy;
+        Map<String, INDArray> pi = policy.forward(s0);
         Map<String, INDArray> dc = Map.of(
                 "output", Nd4j.ones(1, 1)
         );
-        Map<String, INDArray> dp = gradLogPi(pi, actions);
+        Map<String, INDArray> dp = gradLogPi(pi, result.actions);
 
         float avgReward0 = avgReward;
         avgReward += delta * rewardAlpha;

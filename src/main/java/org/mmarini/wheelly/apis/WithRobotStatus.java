@@ -26,11 +26,8 @@
  *
  */
 
-package org.mmarini.wheelly.envs;
+package org.mmarini.wheelly.apis;
 
-import org.mmarini.wheelly.apis.RadarMap;
-import org.mmarini.wheelly.apis.WithStatusCallback;
-
-public interface WithRadarMap extends WithStatusCallback {
-    RadarMap getRadarMap();
+public interface WithRobotStatus {
+    RobotStatus getRobotStatus();
 }

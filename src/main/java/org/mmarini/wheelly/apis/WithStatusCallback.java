@@ -26,10 +26,15 @@
  *
  */
 
-package org.mmarini.wheelly.envs;
+package org.mmarini.wheelly.apis;
 
-import org.mmarini.wheelly.apis.RobotStatus;
+import java.util.function.Consumer;
 
-public interface WithRobotStatus {
-    RobotStatus getStatus();
+public interface WithStatusCallback {
+    /**
+     * Registers the consumer of status ready event
+     *
+     * @param callback the callback
+     */
+    void setOnStatusReady(Consumer<RobotStatus> callback);
 }

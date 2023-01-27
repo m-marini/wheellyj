@@ -26,11 +26,57 @@
  *
  */
 
-package org.mmarini.wheelly.envs;
+package org.mmarini.wheelly.apis;
 
-import org.mmarini.wheelly.apis.RadarMap;
-import org.mmarini.wheelly.apis.WithStatusCallback;
+import io.reactivex.rxjava3.core.Completable;
 
-public interface WithRadarMap extends WithStatusCallback {
-    RadarMap getRadarMap();
+import java.util.function.Consumer;
+
+/**
+ * Manages the processing threads and event generation to interface the robot
+ */
+public interface RobotControllerApi extends WithIOCallback, WithStatusCallback, WithErrorCallback {
+    /**
+     * Returns the apis
+     */
+    RobotApi getRobot();
+
+    /**
+     * Halt the robot
+     */
+    void haltRobot();
+
+    /**
+     * Moves the robot
+     *
+     * @param direction the robot direction (DEG)
+     * @param speed     the robot speed (pps)
+     */
+    void moveRobot(int direction, int speed);
+
+    /**
+     * Move the sensor
+     *
+     * @param direction the sensor direction (DEG)
+     */
+    void moveSensor(int direction);
+
+    Completable readShutdown();
+
+    /**
+     * Registers the consumer of inference event
+     *
+     * @param callback the callback
+     */
+    void setOnInference(Consumer<RobotStatus> callback);
+
+    /**
+     * Shutdowns the controller
+     */
+    void shutdown();
+
+    /**
+     * Starts the controller
+     */
+    void start();
 }

@@ -140,6 +140,7 @@ public class EnvironmentPanel extends RadarPanel {
     private double reward;
     private PanelData panelData;
     private double timeRatio;
+    private double reactionTime;
 
     public EnvironmentPanel() {
         setFont(Font.decode("Monospaced"));
@@ -166,7 +167,7 @@ public class EnvironmentPanel extends RadarPanel {
         AffineTransform tr = g1.getTransform();
 
         FontMetrics fm = getFontMetrics(getFont());
-        int hudHeight = 7 * fm.getHeight();
+        int hudHeight = 8 * fm.getHeight();
 
         Dimension size = getSize();
 
@@ -178,17 +179,18 @@ public class EnvironmentPanel extends RadarPanel {
         g1.fillRect(0, 0, HUD_WIDTH, hudHeight);
         g1.setColor(getForeground());
         drawLine(g1, format("Time     %s %.1fx", strDate(status.getTime()), timeRatio), 0, Color.GREEN);
-        drawLine(g1, format("Reward   %.2f", reward), 1, Color.GREEN);
-        drawLine(g1, format("Distance %.2f m", status.getEchoDistance()), 2, Color.GREEN);
-        drawLine(g1, format("Contacts 0x%x", status.getContacts()), 3, Color.GREEN);
+        drawLine(g1, format("Reaction: %.3f s", reactionTime), 1, Color.GREEN);
+        drawLine(g1, format("Reward   %.2f", reward), 2, Color.GREEN);
+        drawLine(g1, format("Distance %.2f m", status.getEchoDistance()), 3, Color.GREEN);
+        drawLine(g1, format("Contacts 0x%x", status.getContacts()), 4, Color.GREEN);
         if (!status.canMoveForward()) {
-            drawLine(g1, "FORWARD  STOP", 4, Color.RED);
+            drawLine(g1, "FORWARD  STOP", 5, Color.RED);
         }
         if (!status.canMoveBackward()) {
-            drawLine(g1, "BACKWARD STOP", 5, Color.RED);
+            drawLine(g1, "BACKWARD STOP", 6, Color.RED);
         }
         if (status.getImuFailure() != 0) {
-            drawLine(g1, format("Imu failure: 0x%x", status.getImuFailure()), 6, Color.RED);
+            drawLine(g1, format("Imu failure: 0x%x", status.getImuFailure()), 7, Color.RED);
         }
         g1.setTransform(tr);
     }
@@ -278,7 +280,7 @@ public class EnvironmentPanel extends RadarPanel {
                         || (!hudAtBottom || !(status.getLocation().getY() < -DEFAULT_WORLD_SIZE / 6))
                         && hudAtBottom;
                 hudAtRight = !hudAtRight && status.getLocation().getX() < -DEFAULT_WORLD_SIZE / 6
-                        || (!hudAtRight || !(status.getLocation().getY() > DEFAULT_WORLD_SIZE / 6))
+                        || (!hudAtRight || !(status.getLocation().getX() > DEFAULT_WORLD_SIZE / 6))
                         && hudAtRight;
 
                 gr.setTransform(base);
@@ -319,6 +321,10 @@ public class EnvironmentPanel extends RadarPanel {
     public void setRadarMap(RadarMap radarMap) {
         this.panelData = this.panelData.setRadarMap(radarMap);
         repaint();
+    }
+
+    public void setReactionTime(double reactionTime) {
+        this.reactionTime = reactionTime;
     }
 
     public void setReward(double reward) {

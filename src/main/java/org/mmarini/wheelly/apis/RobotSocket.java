@@ -78,7 +78,9 @@ public class RobotSocket implements Closeable {
     @Override
     public void close() throws IOException {
         if (channel != null) {
+            logger.atDebug().log("Closing ...");
             channel.close();
+            channel = null;
         }
     }
 
@@ -113,11 +115,20 @@ public class RobotSocket implements Closeable {
      * @throws IOException in case of error
      */
     private void readBuffer() throws IOException {
-        if (channel != null && channel.isConnected()) {
-            int n = channel.read(buffer);
-            if (n > 0) {
-                buffer.flip();
-                splitLines();
+        SocketChannel ch = channel;
+        if (ch != null && ch.isConnected()) {
+            try {
+                int n = ch.read(buffer);
+                if (n > 0) {
+                    buffer.flip();
+                    splitLines();
+                }
+            } catch (IOException ex) {
+                if (ch == channel) {
+                    throw ex;
+                } else {
+                    logger.atError().setCause(ex).log();
+                }
             }
         }
     }
@@ -164,10 +175,11 @@ public class RobotSocket implements Closeable {
      * @param cmd the command
      */
     public void writeCommand(String cmd) throws IOException {
-        if (channel != null && channel.isConnected()) {
+        SocketChannel ch = channel;
+        if (ch != null && ch.isConnected()) {
             ByteBuffer buffer = ByteBuffer.wrap((cmd + LF).getBytes(StandardCharsets.UTF_8));
             while (buffer.remaining() > 0) {
-                channel.write(buffer);
+                ch.write(buffer);
             }
             logger.atDebug().setMessage("Written command {}").addArgument(cmd).log();
         }

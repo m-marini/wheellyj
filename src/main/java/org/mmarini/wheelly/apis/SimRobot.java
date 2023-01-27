@@ -39,15 +39,17 @@ import org.mmarini.yaml.schema.Validator;
 
 import java.awt.geom.Point2D;
 import java.util.*;
+import java.util.function.Consumer;
 
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * Simulated robot
  */
-public class SimRobot implements RobotApi {
+public class SimRobot implements RobotApi, WithRobotStatus {
     public static final double GRID_SIZE = 0.2;
     public static final double WORLD_SIZE = 10;
     public static final double X_CENTER = 0;
@@ -58,16 +60,16 @@ public class SimRobot implements RobotApi {
     public static final double MAX_DISTANCE = 3;
     public static final int FORWARD_PROXIMITY_MASK = 0xc;
     public static final int BACKWARD_PROXIMITY_MASK = 0x3;
-    public static final double MAX_VELOCITY = 0.280;
-    public static final double MAX_PPS = MAX_VELOCITY / RobotStatus.DISTANCE_PER_PULSE;
-
+    public static final double MAX_PPS = 20;
+    public static final double MAX_VELOCITY = MAX_PPS * RobotStatus.DISTANCE_PER_PULSE;
+    //    public static final double MAX_PPS = MAX_VELOCITY / RobotStatus.DISTANCE_PER_PULSE;
+    public static final double ROBOT_TRACK = 0.136;
     private static final double MIN_OBSTACLE_DISTANCE = 1;
     private static final Vec2 GRAVITY = new Vec2();
     private static final int VELOCITY_ITER = 10;
     private static final int POSITION_ITER = 10;
     private static final double RAD_10 = toRadians(10);
     private static final double RAD_30 = toRadians(30);
-    private static final double ROBOT_TRACK = 0.136;
     private static final double ROBOT_MASS = 0.78;
     private static final double ROBOT_DENSITY = ROBOT_MASS / ROBOT_LENGTH / ROBOT_WIDTH;
     private static final double ROBOT_FRICTION = 1;
@@ -184,9 +186,10 @@ public class SimRobot implements RobotApi {
     private final Fixture rlSensor;
     private final Fixture rrSensor;
     private RobotStatus status;
-    private double speed;
+    private int speed;
     private int direction;
     private int sensor;
+    private Consumer<RobotStatus> onStatusReady;
 
     /**
      * Creates a simulated robot
@@ -271,6 +274,14 @@ public class SimRobot implements RobotApi {
     public void close() {
     }
 
+    @Override
+    public void configure() {
+    }
+
+    @Override
+    public void connect() {
+    }
+
     /**
      * @param dt the time interval
      */
@@ -280,11 +291,12 @@ public class SimRobot implements RobotApi {
         // Relative angular speed to fix the direction
         double angularVelocity = Utils.clip(Utils.linear(dAngle, -RAD_10, RAD_10, -1, 1), -1, 1);
         // Relative linear speed to fix the speed
-        double linearVelocity = speed * Utils.clip(Utils.linear(abs(dAngle), 0, RAD_30, 1, 0), 0, 1);
+
+        double linearVelocity = speed / MAX_PPS * Utils.clip(Utils.linear(abs(dAngle), 0, RAD_30, 1, 0), 0, 1);
 
         // Relative left-right motor speeds
-        double left = Utils.clip((linearVelocity - angularVelocity) / 2, -1, 1);
-        double right = Utils.clip((linearVelocity + angularVelocity) / 2, -1, 1);
+        double left = Utils.clip((linearVelocity - angularVelocity), -1, 1);
+        double right = Utils.clip((linearVelocity + angularVelocity), -1, 1);
 
         // Real left-right motor speeds
         left = round(left * 10F) / 10F * MAX_VELOCITY;
@@ -327,7 +339,7 @@ public class SimRobot implements RobotApi {
         // Update robot status
         Vec2 pos = robot.getPosition();
         Point2D.Float location = new Point2D.Float(pos.x, pos.y);
-        int direction = Utils.normalizeDegAngle((int) round(90 - toDegrees(robot.getAngle())));
+        int direction = normalizeDegAngle((int) round(90 - toDegrees(robot.getAngle())));
         status = status.setLocation(location)
                 .setDirection(direction)
                 .setLeftPps(left)
@@ -355,7 +367,7 @@ public class SimRobot implements RobotApi {
     }
 
     @Override
-    public RobotStatus getStatus() {
+    public RobotStatus getRobotStatus() {
         return status;
     }
 
@@ -375,15 +387,15 @@ public class SimRobot implements RobotApi {
     }
 
     @Override
-    public void move(int dir, double speed) {
-        this.direction = dir;
-        this.speed = speed;
+    public void move(int dir, int speed) {
+        this.direction = normalizeDegAngle(dir);
+        this.speed = min(max(speed, -MAX_PPS_SPEED), MAX_PPS_SPEED);
         checkForSpeed();
     }
 
     @Override
     public void reset() {
-        speed = 0f;
+        speed = 0;
         direction = 0;
         sensor = 0;
 
@@ -407,8 +419,13 @@ public class SimRobot implements RobotApi {
 
     @Override
     public void scan(int dir) {
-        this.sensor = dir;
+        this.sensor = min(max(dir, -90), 90);
         status = status.setSensorDirection(dir);
+    }
+
+    @Override
+    public void setOnStatusReady(Consumer<RobotStatus> callback) {
+        onStatusReady = callback;
     }
 
     /**
@@ -435,10 +452,6 @@ public class SimRobot implements RobotApi {
     }
 
     @Override
-    public void start() {
-    }
-
-    @Override
     public void tick(long dt) {
         controller(dt * 1e-3F);
         status = status.setTime(status.getTime() + dt);
@@ -447,7 +460,7 @@ public class SimRobot implements RobotApi {
         Point2D position = status.getLocation();
         double x = position.getX();
         double y = position.getY();
-        int sensorDeg = Utils.normalizeDegAngle(90 - status.getDirection() - sensor);
+        int sensorDeg = normalizeDegAngle(90 - status.getDirection() - sensor);
         double sensorRad = toRadians(sensorDeg);
         double distance = 0;
         int obsIdx = obstacleMap.indexOfNearest(x, y, sensorRad, sensorReceptiveAngle);
@@ -465,5 +478,8 @@ public class SimRobot implements RobotApi {
         boolean canMoveBackward = (status.getContacts() & BACKWARD_PROXIMITY_MASK) == 0;
         status = status.setCanMoveBackward(canMoveBackward);
         checkForSpeed();
+        if (onStatusReady != null) {
+            onStatusReady.accept(status);
+        }
     }
 }
