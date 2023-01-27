@@ -33,14 +33,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-import static java.lang.Math.round;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 import static org.mmarini.yaml.schema.Validator.*;
 
 /**
@@ -54,14 +55,15 @@ public class Robot implements RobotApi, WithIOCallback {
                     "port", integer(minimum(1), maximum(32768)),
                     "connectionTimeout", positiveInteger(),
                     "readTimeout", positiveInteger(),
+                    "configureTimeout", positiveInteger(),
                     "configCommands", arrayItems(string(minLength(3)))
             ),
             List.of("host",
                     "connectionTimeout",
-                    "readTimeout"
+                    "readTimeout",
+                    "configureTimeout"
             ));
     private static final Logger logger = LoggerFactory.getLogger(Robot.class);
-    private static final int MAX_SPEED_VALUE = 4;
 
     /**
      * Returns the robot from configuration
@@ -75,12 +77,13 @@ public class Robot implements RobotApi, WithIOCallback {
         int port = locator.path("port").getNode(root).asInt(DEFAULT_PORT);
         long connectionTimeout = locator.path("connectionTimeout").getNode(root).asLong();
         long readTimeout = locator.path("readTimeout").getNode(root).asLong();
+        long configureTimeout = locator.path("configureTimeout").getNode(root).asLong();
 
         Locator configCommandsLoc = locator.path("configCommands");
         String[] configCommands = !configCommandsLoc.getNode(root).isMissingNode()
                 ? configCommandsLoc.elements(root).map(l -> l.getNode(root).asText()).toArray(String[]::new)
                 : new String[0];
-        return Robot.create(host, port, connectionTimeout, readTimeout, configCommands);
+        return Robot.create(host, port, connectionTimeout, readTimeout, configureTimeout, configCommands);
     }
 
     /**
@@ -90,59 +93,144 @@ public class Robot implements RobotApi, WithIOCallback {
      * @param port              the robot port
      * @param connectionTimeout the connection timeout (ms)
      * @param readTimeout       the read timeout (ms)
+     * @param configureTimeout  the configuration timeout (ms)
      * @param configCommands    the configuration commands
      */
-    public static Robot create(String robotHost, int port, long connectionTimeout, long readTimeout, String... configCommands) {
-        RobotSocket socket = new RobotSocket(robotHost, port, connectionTimeout, readTimeout);
-        return new Robot(socket, configCommands);
+    public static Robot create(String robotHost, int port, long connectionTimeout, long readTimeout, long configureTimeout, String... configCommands) {
+        return new Robot(robotHost, port, connectionTimeout, readTimeout, configureTimeout, configCommands);
     }
 
-    private final RobotSocket socket;
+    private final String host;
+    private final int port;
+    private final long connectionTimeout;
+    private final long readTimeout;
     private final String[] configCommands;
+    private final long configureTimeout;
+    private RobotSocket socket;
     private RobotStatus status;
     private Consumer<String> onReadLine;
     private Consumer<String> onWriteLine;
-    private boolean initialized;
+    private Consumer<RobotStatus> onStatusReady;
 
     /**
      * Create a Robot interface
      *
-     * @param socket         the robot socket
-     * @param configCommands the motor theta corrections
+     * @param host              the robot host
+     * @param port              the robot port
+     * @param connectionTimeout the connection timeout (ms)
+     * @param readTimeout       the read timeout (ms)
+     * @param configureTimeout  the configuration timeout (ms)
+     * @param configCommands    the motor theta corrections
      */
-    public Robot(RobotSocket socket, String[] configCommands) {
-        this.socket = socket;
+    public Robot(String host, int port, long connectionTimeout, long readTimeout, long configureTimeout, String[] configCommands) {
+        this.host = host;
+        this.port = port;
+        this.connectionTimeout = connectionTimeout;
+        this.readTimeout = readTimeout;
+        this.configureTimeout = configureTimeout;
         status = RobotStatus.create();
-        this.configCommands = configCommands;
+        this.configCommands = requireNonNull(configCommands);
     }
 
     @Override
     public void close() throws IOException {
-        socket.close();
+        logger.atDebug().log("Closing ...");
+        try {
+            socket.close();
+            socket = null;
+        } catch (Exception ex) {
+            logger.atError().setCause(ex).log();
+        }
     }
 
     @Override
-    public RobotStatus getStatus() {
-        return status;
+    public void configure() throws IOException {
+        sync();
+        for (String cmd : configCommands) {
+            configure(cmd);
+        }
+    }
+
+    /**
+     * Sends the configuration command and wait for confirmation for a maximum of configured timeout
+     *
+     * @param command the configuration command
+     * @throws IOException in case of error
+     */
+    private void configure(String command) throws IOException {
+        writeCommand(command);
+        long time = System.currentTimeMillis();
+        long timeout = time + configureTimeout;
+        // Repeat until interval timeout
+        while (time < timeout) {
+            time = System.currentTimeMillis();
+            // Read the robot status
+            Timed<String> line = readLine();
+            if (line != null) {
+                parseForStatus(line);
+                if (line.value().equals("// " + command)) {
+                    return;
+                }
+            }
+        }
+        throw new InterruptedIOException(format("Timeout on configure %s", command));
     }
 
     @Override
-    public void halt() {
+    public void connect() throws IOException {
+        RobotSocket socket = new RobotSocket(host, port, connectionTimeout, readTimeout);
+        socket.connect();
+        this.socket = socket;
+    }
+
+    @Override
+    public void halt() throws IOException {
         writeCommand("ha");
     }
 
-    private void init() throws InterruptedException {
-        sync();
-        for (String cmd : configCommands) {
-            writeCommand(cmd);
-            Thread.sleep(200);
-        }
-        initialized = true;
+    @Override
+    public void move(int dir, int speed) throws IOException {
+        writeCommand(format(Locale.ENGLISH, "mv %d %d", dir, speed));
     }
 
-    @Override
-    public void move(int dir, double speed) {
-        writeCommand(format(Locale.ENGLISH, "mv %d %d", dir, round(speed * MAX_SPEED_VALUE)));
+    /**
+     * Returns the robot status updated with received data or null if no data available
+     *
+     * @param line the data line received
+     */
+    private void parseForStatus(Timed<String> line) {
+        if (line.value().startsWith("st ")) {
+            try {
+                WheellyStatus wheellyStatus = WheellyStatus.create(line);
+                status = status.setWheellyStatus(wheellyStatus);
+                if (onStatusReady != null) {
+                    onStatusReady.accept(status);
+                }
+            } catch (IllegalArgumentException ex) {
+                logger.atError().setCause(ex).log();
+            }
+        }
+    }
+
+    /**
+     * Returns the line read from roboto connection
+     * Notifies the line if onReadLine call back has been registered
+     *
+     * @throws IOException in case of error
+     */
+    private Timed<String> readLine() throws IOException {
+        RobotSocket socket = this.socket;
+        if (socket != null) {
+            Timed<String> line = socket.readLine();
+            logger.atDebug().setMessage("Read {}").addArgument(line).log();
+            if (line != null) {
+                if (onReadLine != null) {
+                    onReadLine.accept(line.value());
+                }
+            }
+            return line;
+        }
+        return null;
     }
 
     @Override
@@ -152,7 +240,7 @@ public class Robot implements RobotApi, WithIOCallback {
     }
 
     @Override
-    public void scan(int dir) {
+    public void scan(int dir) throws IOException {
         writeCommand("sc " + dir);
     }
 
@@ -162,100 +250,71 @@ public class Robot implements RobotApi, WithIOCallback {
     }
 
     @Override
-    public void setOnWriteLine(Consumer<String> onWriteLine) {
-        this.onWriteLine = onWriteLine;
+    public void setOnStatusReady(Consumer<RobotStatus> callback) {
+        this.onStatusReady = callback;
     }
 
     @Override
-    public void start() {
-        try {
-            socket.connect();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+    public void setOnWriteLine(Consumer<String> onWriteLine) {
+        this.onWriteLine = onWriteLine;
     }
 
     /**
      * Synchronizes the local clock with the remote clock
      */
-    private void sync() {
+    private void sync() throws IOException {
         long now = System.currentTimeMillis();
-        try {
-            writeCommand("ck " + now);
-            for (; ; ) {
-                Timed<String> line = socket.readLine();
-                if (line != null) {
-                    if (onReadLine != null) {
-                        onReadLine.accept(line.value());
-                    }
+        writeCommand("ck " + now);
+        long time = System.currentTimeMillis();
+        long timeout = time + configureTimeout;
+        // Repeat until interval timeout
+        while (time < timeout) {
+            time = System.currentTimeMillis();
+            // Read the robot status
+            Timed<String> line = readLine();
+            if (line != null) {
+                parseForStatus(line);
+                if (line.value().startsWith("ck " + now + " ")) {
                     try {
                         ClockSyncEvent clock = ClockSyncEvent.from(line.value(), line.time(TimeUnit.MILLISECONDS));
                         if (now == clock.getOriginateTimestamp()) {
                             clock.getRemoteOffset();
-                            break;
+                            return;
                         }
-                    } catch (Throwable ignored) {
+                    } catch (Throwable error) {
+                        logger.atError().setCause(error).log();
                     }
                 }
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
+        throw new InterruptedIOException("Timeout on sync");
     }
 
     @Override
-    public void tick(long dt) {
-        if (!initialized){
-            try {
-                init();
-            } catch (InterruptedException e) {
-            }
-        }
-        long time = status.getTime();
+    public void tick(long dt) throws IOException {
+        long time = System.currentTimeMillis();
         long timeout = time + dt;
-        try {
-            // Repeat until interval timeout
-            while (time < timeout) {
-                time = System.currentTimeMillis();
-                // Read the robot status
-                Timed<String> line = socket.readLine();
-                if (line != null) {
-                    if (onReadLine != null) {
-                        onReadLine.accept(line.value());
-                    }
-                    logger.atDebug().setMessage(">>> {}").addArgument(line::value).log();
-                    if (line.value().startsWith("!!")) {
-                        logger.atError().setMessage(">>> {}").addArgument(line::value).log();
-                    }
-                    if (line.value().startsWith("//")) {
-                        logger.atWarn().setMessage(">>> {}").addArgument(line::value).log();
-                    }
-                    try {
-                        // Create the new status
-                        status = status.setWheellyStatus(WheellyStatus.create(line));
-                    } catch (Throwable ignored) {
-                    }
-                }
+        // Repeat until interval timeout
+        while (time < timeout) {
+            time = System.currentTimeMillis();
+            // Read the robot status
+            Timed<String> line = readLine();
+            if (line != null) {
+                parseForStatus(line);
             }
-            logger.atDebug().setMessage(">>> {}").addArgument(status).log();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
     }
 
     /**
      * Writes a command to robot
+     * Notifies the line if onWriteLine call back has been registered
      *
      * @param cmd the command
      */
-    private void writeCommand(String cmd) {
-        try {
-            if (onWriteLine != null) {
-                onWriteLine.accept(cmd);
-            }
-            socket.writeCommand(cmd);
-        } catch (IOException ex) {
-            logger.atError().setCause(ex).log();
+    private void writeCommand(String cmd) throws IOException {
+        if (onWriteLine != null) {
+            onWriteLine.accept(cmd);
         }
+        socket.writeCommand(cmd);
     }
 }

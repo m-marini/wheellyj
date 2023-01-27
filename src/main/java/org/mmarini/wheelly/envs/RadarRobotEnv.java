@@ -27,6 +27,7 @@ package org.mmarini.wheelly.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.eclipse.collections.api.block.function.primitive.FloatFunction;
+import org.mmarini.NotImplementedException;
 import org.mmarini.rl.envs.*;
 import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotApi;
@@ -34,7 +35,6 @@ import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
-import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
@@ -142,16 +142,16 @@ public class RadarRobotEnv implements Environment {
     private final Map<String, SignalSpec> actions;
     private final Map<String, SignalSpec> states;
     private final RadarMap radarMap;
-    private int prevSensor;
-    private long lastScanTimestamp;
-    private long lastMoveTimestamp;
-    private boolean prevHalt;
+    private final int prevSensor;
+    private final long lastScanTimestamp;
+    private final long lastMoveTimestamp;
+    private final boolean prevHalt;
+    private final boolean started;
     private INDArray contacts;
     private INDArray canMoveForward;
     private INDArray distance;
     private INDArray robotDir;
     private INDArray sensor;
-    private boolean started;
     private INDArray canMoveBackward;
     private INDArray radarSignals;
     private float currentSpeed;
@@ -232,12 +232,21 @@ public class RadarRobotEnv implements Environment {
 
     @Override
     public ExecutionResult execute(Map<String, Signal> actions) {
-        requireNonNull(actions);
-        processAction(actions);
-        RobotStatus status = readStatus(reactionInterval);
-        float reward = this.reward.floatValueOf(status);
-        Map<String, Signal> observation = getObservation();
-        return new ExecutionResult(observation, reward, false);
+        /*
+        try {
+            requireNonNull(actions);
+            processAction(actions);
+            RobotStatus status = null;
+            status = readStatus(reactionInterval);
+            float reward = this.reward.floatValueOf(status);
+            Map<String, Signal> observation = getObservation();
+            return new ExecutionResult(observation, reward, false);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+         */
+        throw new NotImplementedException();
     }
 
     @Override
@@ -287,7 +296,8 @@ public class RadarRobotEnv implements Environment {
      *
      * @param time the time interval in millis
      */
-    private RobotStatus readStatus(long time) {
+    private RobotStatus readStatus(long time) throws IOException {
+        /*
         RobotStatus status = robot.getStatus();
         long timeout = status.getTime() + time;
         do {
@@ -304,31 +314,44 @@ public class RadarRobotEnv implements Environment {
                 .toArray();
         this.radarSignals = Nd4j.createFromArray(radarAry).castTo(DataType.FLOAT);
         return status;
+
+         */
+        throw new NotImplementedException();
     }
 
     @Override
     public Map<String, Signal> reset() {
-        if (!started) {
-            robot.start();
-            started = true;
+        /*
+        try {
+            if (!started) {
+                robot.connect();
+                robot.configure();
+                started = true;
+            }
+            robot.reset();
+            readStatus(0);
+            return getObservation();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
-        robot.reset();
-        readStatus(0);
-        return getObservation();
+
+         */
+        throw new NotImplementedException();
     }
 
-    private void sendCommand() {
+    private void sendCommand() throws IOException {
+        /*
         long now = robot.getStatus().getTime();
         if (currentHalted != prevHalt) {
             prevHalt = currentHalted;
             if (currentHalted) {
                 robot.halt();
             } else {
-                robot.move(currentDirection, currentSpeed);
+                robot.move(currentDirection, (int) currentSpeed);
             }
             lastMoveTimestamp = now;
         } else if (!currentHalted && now > lastMoveTimestamp + commandInterval) {
-            robot.move(currentDirection, currentSpeed);
+            robot.move(currentDirection, (int) currentSpeed);
             lastMoveTimestamp = now;
         }
         if (prevSensor != currentSensor) {
@@ -340,6 +363,9 @@ public class RadarRobotEnv implements Environment {
             prevSensor = currentSensor;
             lastScanTimestamp = now;
         }
+
+         */
+        throw new NotImplementedException();
     }
 
     /**

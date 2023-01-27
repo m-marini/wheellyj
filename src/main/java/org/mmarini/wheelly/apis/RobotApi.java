@@ -26,53 +26,64 @@
 package org.mmarini.wheelly.apis;
 
 import java.io.Closeable;
+import java.io.IOException;
 
 /**
  * API Interface for robot
  */
-public interface RobotApi extends Closeable {
+public interface RobotApi extends Closeable, WithStatusCallback {
+    int MAX_PPS_SPEED = 20;
 
     /**
-     * Returns the robot status
+     * Configures the robot
+     *
+     * @throws IOException in case of error
      */
-    RobotStatus getStatus();
+    void configure() throws IOException;
 
+    /**
+     * Connects the robot
+     *
+     * @throws IOException in case of error
+     */
+    void connect() throws IOException;
 
     /**
      * Halts the robot
+     *
+     * @throws IOException in case of error
      */
-    void halt();
+    void halt() throws IOException;
 
     /**
      * Moves robot to direction at speed
      *
-     * @param dir   the directino in DEG
-     * @param speed the speed in -1, 1 range
+     * @param dir   the direction in DEG
+     * @param speed the speed in pps
+     * @throws IOException in case of error
      */
-    void move(int dir, double speed);
+    void move(int dir, int speed) throws IOException;
 
     /**
      * Resets the robot
+     *
+     * @throws IOException in case of error
      */
-    void reset();
+    void reset() throws IOException;
 
     /**
      * Moves the sensor to a direction
      *
      * @param dir the direction in DEG
+     * @throws IOException in case of error
      */
-    void scan(int dir);
-
-    /**
-     * Starts the robot interface
-     */
-    void start();
+    void scan(int dir) throws IOException;
 
     /**
      * Advances time by a time interval
      *
      * @param dt the interval in millis
+     * @throws IOException in case of error
      */
-    void tick(long dt);
-
+    void tick(long dt) throws IOException;
 }

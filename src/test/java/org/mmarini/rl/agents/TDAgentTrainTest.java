@@ -115,16 +115,15 @@ class TDAgentTrainTest {
         Map<String, Signal> s1 = Map.of(
                 "input", ArraySignal.create(0f, 1f)
         );
-        agent.act(s0);
         float v00 = agent.criticValueFromSignals(s0);
         INDArray pi0 = agent.pisFromSignals(s0).get("output");
-        ExecutionResult result = new ExecutionResult(s1, -1f, false);
         int action = 0;
         Map<String, Signal> actions = Map.of(
                 "output", IntSignal.create(action)
         );
+        ExecutionResult result = new ExecutionResult(s0, actions, -1, s1, false);
 
-        agent.train(actions, result);
+        agent.train(result);
 
         float v10 = agent.criticValueFromSignals(s0);
         INDArray pi1 = agent.pisFromSignals(s0).get("output");
@@ -175,17 +174,16 @@ class TDAgentTrainTest {
         Map<String, Signal> s1 = Map.of(
                 "input", ArraySignal.create(0f, 1f)
         );
-        agent.act(s0);
         float v00 = agent.criticValueFromSignals(s0);
         INDArray pi0 = agent.pisFromSignals(s0).get("output");
-        ExecutionResult result = new ExecutionResult(s1, 1f, false);
         int action = 0;
         Map<String, Signal> actions = Map.of(
                 "output", IntSignal.create(action)
         );
+        ExecutionResult result = new ExecutionResult(s0, actions, 1, s1, false);
 
 
-        agent.train(actions, result);
+        agent.train(result);
         float v10 = agent.criticValueFromSignals(s0);
         INDArray pi1 = agent.pisFromSignals(s0).get("output");
 

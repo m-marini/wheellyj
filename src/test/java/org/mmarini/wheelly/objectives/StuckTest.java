@@ -26,31 +26,31 @@
 package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.eclipse.collections.api.block.function.primitive.DoubleFunction;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.mmarini.rl.envs.Environment;
 import org.mmarini.wheelly.TestFunctions;
 import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.WithRobotStatus;
+import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.schema.Locator;
 
 import java.io.IOException;
+import java.util.function.ToDoubleFunction;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 
 class StuckTest {
-
     static MockEnvironment createEnvironment(int sensorDir, double distance, boolean canMoveForward, boolean canMoveBackward) {
         RobotStatus status = RobotStatus.create()
                 .setSensorDirection(sensorDir)
                 .setCanMoveBackward(canMoveBackward)
                 .setCanMoveForward(canMoveForward)
                 .setEchoDistance(distance);
-        return new MockEnvironment() {
+        return new MockEnvironment1() {
             @Override
-            public RobotStatus getStatus() {
+            public RobotStatus getRobotStatus() {
                 return status;
             }
         };
@@ -86,9 +86,9 @@ class StuckTest {
                 "distance2: 1.1",
                 "distance3: 1.5",
                 "sensorRange: 20"));
-        DoubleFunction<Environment> f = Stuck.create(root, Locator.root());
+        ToDoubleFunction<RobotEnvironment> f = Stuck.create(root, Locator.root());
         MockEnvironment env = createEnvironment(sensorDir, distance, canMoveForward != 0, canMoveBackward != 0);
-        double result = f.doubleValueOf(env);
+        double result = f.applyAsDouble(env);
         assertThat(result, closeTo(expected, 1e-3));
     }
 
@@ -121,11 +121,14 @@ class StuckTest {
         double x3 = 1.1;
         double x4 = 1.5;
         int directionRange = 20;
-        DoubleFunction<Environment> f = Stuck.stuck(x1, x2, x3, x4, directionRange);
+        ToDoubleFunction<RobotEnvironment> f = Stuck.stuck(x1, x2, x3, x4, directionRange);
         MockEnvironment env = createEnvironment(sensorDir, distance, canMoveForward != 0, canMoveBackward != 0);
 
-        double result = f.doubleValueOf(env);
+        double result = f.applyAsDouble(env);
 
         assertThat(result, closeTo(expected, 1e-3));
+    }
+
+    static abstract class MockEnvironment1 extends MockEnvironment implements WithRobotStatus {
     }
 }

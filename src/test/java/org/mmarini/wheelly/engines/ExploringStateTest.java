@@ -31,12 +31,14 @@ package org.mmarini.wheelly.engines;
 import org.junit.jupiter.api.Test;
 import org.mmarini.wheelly.apis.CircularSector;
 import org.mmarini.wheelly.apis.PolarMap;
+import org.mmarini.wheelly.apis.RobotControllerApi;
 
 import java.awt.geom.Point2D;
 import java.util.List;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
 
 class ExploringStateTest {
     private static final double STOP_DISTANCE = 0.4;
@@ -44,7 +46,8 @@ class ExploringStateTest {
 
     static ProcessorContext createContext(StateNode state, PolarMap polarMap) {
         StateFlow flow = new StateFlow(List.of(state), List.of(), state, null);
-        ProcessorContext context = new ProcessorContext(flow);
+        RobotControllerApi controller = mock();
+        ProcessorContext context = new ProcessorContext(controller, flow);
         context.setPolarMap(polarMap);
         context.put("state.stopDistance", STOP_DISTANCE);
         return context;

@@ -26,10 +26,7 @@
 package org.mmarini.wheelly.apps;
 
 import hu.akarnokd.rxjava3.swing.SwingObservable;
-import io.reactivex.Flowable;
 import io.reactivex.rxjava3.core.BackpressureStrategy;
-import io.reactivex.rxjava3.core.Completable;
-import io.reactivex.rxjava3.schedulers.Schedulers;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -38,6 +35,7 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.wheelly.apis.RobotApi;
+import org.mmarini.wheelly.apis.RobotControllerApi;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.swing.MatrixPanel;
 import org.mmarini.wheelly.swing.Messages;
@@ -49,16 +47,15 @@ import javax.swing.event.ChangeEvent;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.text.DecimalFormat;
-import java.util.concurrent.TimeUnit;
 
 import static java.lang.Math.max;
 import static java.lang.String.format;
 import static org.mmarini.wheelly.apps.Wheelly.fromConfig;
+import static org.mmarini.wheelly.swing.Utils.createFrame;
+import static org.mmarini.wheelly.swing.Utils.layHorizontaly;
 
 
 public class MatrixMonitor {
-    private static final long INTERVAL = 100;
-    private static final long COMMAND_INTERVAL = 800;
     private static final int SENSOR_COLUMNS = 13 + 70 + 1;
     private static final int SCAN_COLUMNS = 13 + 6 + 1;
     private static final int MOVE_COLUMNS = 13 + 11 + 1;
@@ -84,6 +81,9 @@ public class MatrixMonitor {
         parser.addArgument("-r", "--robot")
                 .setDefault("robot.yml")
                 .help("specify robot yaml configuration file");
+        parser.addArgument("-c", "--controller")
+                .setDefault("controller.yml")
+                .help("specify controller yaml configuration file");
         return parser;
     }
 
@@ -96,7 +96,7 @@ public class MatrixMonitor {
         try {
             new MatrixMonitor().init(args).run();
         } catch (Throwable e) {
-            logger.error(e.getMessage(), e);
+            logger.atError().setCause(e).log();
         }
     }
 
@@ -121,8 +121,6 @@ public class MatrixMonitor {
         );
     }
 
-    private final long interval;
-    private final long commandInterval;
     private final MatrixPanel sensorPanel;
     private final MatrixPanel scanPanel;
     private final MatrixPanel movePanel;
@@ -138,26 +136,17 @@ public class MatrixMonitor {
     private final JSlider timeSlider;
     private final JFormattedTextField timeField;
     private Namespace parseArgs;
-    private RobotApi robot;
-    private int sensorDir;
-    private int prevSensorDir;
-    private long sensorCommandTimestamp;
-    private int robotDir;
-    private int robotSpeed;
-    private boolean halt;
-    private boolean prevHalt;
-    private int prevRobotDir;
-    private int prevSpeed;
-    private long moveTimestamp;
     private int commandDuration;
     private long runTimestamp;
+    private RobotControllerApi controller;
+    private boolean halt;
+    private JFrame frame;
+    private JFrame matrixFrame;
 
     /**
      * Creates the check
      */
     public MatrixMonitor() {
-        this.interval = INTERVAL;
-        this.commandInterval = COMMAND_INTERVAL;
         this.sensorPanel = new MatrixPanel();
         this.scanPanel = new MatrixPanel();
         this.movePanel = new MatrixPanel();
@@ -173,10 +162,9 @@ public class MatrixMonitor {
         this.timeField = new JFormattedTextField(intFormat);
         this.haltButton = new JButton("HALT !!!");
         this.runButton = new JButton("Run");
-        this.halt = true;
         this.commandDuration = 1000;
         this.commandPanel = createCommandPanel();
-
+        this.halt = true;
         initFlow();
     }
 
@@ -184,11 +172,11 @@ public class MatrixMonitor {
         sensorDirField.setColumns(5);
         sensorDirField.setEditable(false);
         sensorDirField.setHorizontalAlignment(SwingConstants.RIGHT);
-        sensorDirField.setValue(sensorDir);
+        sensorDirField.setValue(0);
 
         sensorDirSlider.setMinimum(-90);
         sensorDirSlider.setMaximum(90);
-        sensorDirSlider.setValue(sensorDir);
+        sensorDirSlider.setValue(0);
         sensorDirSlider.setMinorTickSpacing(5);
         sensorDirSlider.setMajorTickSpacing(15);
         sensorDirSlider.setPaintLabels(true);
@@ -198,11 +186,11 @@ public class MatrixMonitor {
         robotDirField.setColumns(5);
         robotDirField.setEditable(false);
         robotDirField.setHorizontalAlignment(SwingConstants.RIGHT);
-        robotDirField.setValue(robotDir);
+        robotDirField.setValue(0);
 
         robotDirSlider.setMinimum(-180);
         robotDirSlider.setMaximum(180);
-        robotDirSlider.setValue(robotDir);
+        robotDirSlider.setValue(0);
         robotDirSlider.setMinorTickSpacing(5);
         robotDirSlider.setMajorTickSpacing(45);
         robotDirSlider.setPaintLabels(true);
@@ -212,12 +200,12 @@ public class MatrixMonitor {
         speedField.setColumns(5);
         speedField.setEditable(false);
         speedField.setHorizontalAlignment(SwingConstants.RIGHT);
-        speedField.setValue(robotSpeed);
+        speedField.setValue(0);
 
         speedSlider.setOrientation(JSlider.VERTICAL);
         speedSlider.setMinimum(-MAX_SPEED);
         speedSlider.setMaximum(MAX_SPEED);
-        speedSlider.setValue(robotSpeed);
+        speedSlider.setValue(0);
         speedSlider.setMinorTickSpacing(5);
         speedSlider.setMajorTickSpacing(10);
         speedSlider.setPaintLabels(true);
@@ -273,6 +261,14 @@ public class MatrixMonitor {
                 .getContainer();
     }
 
+    /**
+     * Returns the robot controller
+     */
+    protected RobotControllerApi createController() {
+        RobotApi robot = fromConfig(parseArgs.getString("robot"), new Object[0], new Class[0]);
+        return fromConfig(parseArgs.getString("controller"), new Object[]{robot}, new Class[]{RobotApi.class});
+    }
+
     private Container createMonitorPanel() {
         sensorPanel.setColumns(SENSOR_COLUMNS);
         scanPanel.setColumns(SCAN_COLUMNS);
@@ -286,42 +282,17 @@ public class MatrixMonitor {
         return new JScrollPane(panel);
     }
 
-    /**
-     * Returns the robot api
-     */
-    protected RobotApi createRobot() {
-        return fromConfig(parseArgs.getString("robot"), new Object[0], new Class[0]);
-    }
-
-    private void handleCommands(long time) {
-        if (sensorDir != prevSensorDir
-                || (sensorDir != 0 && time >= sensorCommandTimestamp + commandInterval)) {
-            this.prevSensorDir = sensorDir;
-            this.sensorCommandTimestamp = time;
-            scanPanel.print("sc %d", sensorDir);
-            robot.scan(sensorDir);
-        }
+    private void handleCommands(RobotStatus status) {
+        long time = System.currentTimeMillis();
         if (!halt && time >= runTimestamp + timeSlider.getValue()) {
             halt = true;
-        }
-        if (halt && !prevHalt) {
-            this.prevHalt = true;
-            movePanel.print("ha");
-            robot.halt();
             runButton.setEnabled(true);
             timeSlider.setEnabled(true);
         }
-        if (!halt &&
-                (prevHalt
-                        || robotDir != prevRobotDir
-                        || robotSpeed != prevSpeed
-                        || time >= moveTimestamp + commandInterval)) {
-            this.prevRobotDir = robotDir;
-            this.prevSpeed = robotSpeed;
-            this.moveTimestamp = time;
-            this.prevHalt = false;
-            movePanel.print("mv %d %d", robotDir, robotSpeed);
-            robot.move(robotDir, robotSpeed);
+        if (halt) {
+            controller.haltRobot();
+        } else {
+            controller.moveRobot(robotDirSlider.getValue(), speedSlider.getValue());
         }
     }
 
@@ -329,10 +300,12 @@ public class MatrixMonitor {
         sensorDirSlider.setValue(0);
         speedSlider.setValue(0);
         halt = true;
+        runButton.setEnabled(true);
+        timeSlider.setEnabled(true);
     }
 
     private void handleRobotDirSlider(ChangeEvent changeEvent) {
-        robotDir = robotDirSlider.getValue();
+        int robotDir = robotDirSlider.getValue();
         robotDirField.setValue(robotDir);
     }
 
@@ -344,19 +317,43 @@ public class MatrixMonitor {
     }
 
     private void handleSensorDirSlider(ChangeEvent changeEvent) {
-        sensorDir = sensorDirSlider.getValue();
+        int sensorDir = sensorDirSlider.getValue();
         sensorDirField.setValue(sensorDir);
+        controller.moveSensor(sensorDir);
+    }
+
+    private void handleShutdown() {
+        frame.dispose();
+        matrixFrame.dispose();
     }
 
     private void handleSpeedSlider(ChangeEvent changeEvent) {
-        robotSpeed = speedSlider.getValue();
+        int robotSpeed = speedSlider.getValue();
         speedField.setValue(robotSpeed);
+    }
+
+    private void handleStatus(RobotStatus status) {
+        if (status != null) {
+            sensorPanel.print(toMonitorString(status));
+        }
+        if (!frame.isVisible() || !matrixFrame.isVisible()) {
+            controller.shutdown();
+        }
     }
 
     private void handleTimeSlider(ChangeEvent changeEvent) {
         this.commandDuration = max(timeSlider.getValue(), MIN_TIME);
         timeSlider.setValue(commandDuration);
         timeField.setValue(commandDuration);
+    }
+
+    private void handleWriteLine(String line) {
+        logger.atDebug().setMessage("<-- {}").addArgument(line).log();
+        if (line.startsWith("mv ") || line.equals("ha")) {
+            movePanel.print(line);
+        } else if (line.startsWith("sc ")) {
+            scanPanel.print(line);
+        }
     }
 
     /**
@@ -404,53 +401,23 @@ public class MatrixMonitor {
      */
     private void run() {
         logger.info("Robot check started.");
-        this.robot = createRobot();
+        controller = createController();
+        controller.setOnStatusReady(this::handleStatus);
+        controller.setOnInference(this::handleCommands);
+        controller.setOnError(er -> logger.atError().setCause(er).log());
+        if (logger.isDebugEnabled()) {
+            controller.setOnReadLine(line -> logger.atDebug().setMessage("--> {}").addArgument(line).log());
+        }
+        controller.setOnWriteLine(this::handleWriteLine);
+        controller.readShutdown()
+                .doOnComplete(this::handleShutdown)
+                .subscribe();
 
-        JFrame frame = new JFrame("Robot monitor");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(COMMAND_FRAME_SIZE);
-        Container contentPane = frame.getContentPane();
-        contentPane.setLayout(new BorderLayout());
-        contentPane.add(commandPanel, BorderLayout.CENTER);
-
-        JFrame matrixFrame = new JFrame("Matrix");
-        matrixFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        matrixFrame.setSize(MATRIX_FRAME_SIZE);
-        Point frameLocation = frame.getLocation();
-        matrixFrame.setLocation(frameLocation.x + COMMAND_FRAME_SIZE.width, frameLocation.y);
-        contentPane = matrixFrame.getContentPane();
-        contentPane.setLayout(new BorderLayout());
-        contentPane.add(createMonitorPanel(), BorderLayout.CENTER);
-
+        this.frame = createFrame(Messages.getString("MatrixMonitor.title"), COMMAND_FRAME_SIZE, commandPanel);
+        this.matrixFrame = createFrame(Messages.getString("MatrixMonitor.title"), MATRIX_FRAME_SIZE, createMonitorPanel());
+        layHorizontaly(frame, matrixFrame);
         matrixFrame.setVisible(true);
         frame.setVisible(true);
-
-        robot.start();
-        startSensorsMonitor();
-        startCommandsMonitor();
-        /*
-        Completable.timer(1000, TimeUnit.MILLISECONDS)
-                .subscribe(() -> startCommandsMonitor());
-
-         */
-    }
-
-    private void startCommandsMonitor() {
-        Flowable.interval(this.interval, TimeUnit.MILLISECONDS)
-                .doOnNext(unused -> handleCommands(System.currentTimeMillis()))
-                .subscribe();
-    }
-
-    private void startSensorsMonitor() {
-        Schedulers.io().scheduleDirect(() -> {
-            logger.info("Sensor monitor started.");
-            while (true) {
-                robot.tick(this.interval);
-                RobotStatus status = robot.getStatus();
-                if (status != null) {
-                    sensorPanel.print(toMonitorString(status));
-                }
-            }
-        });
+        controller.start();
     }
 }

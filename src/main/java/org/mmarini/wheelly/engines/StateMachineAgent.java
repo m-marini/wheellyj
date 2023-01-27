@@ -29,17 +29,14 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.PolarMap;
-import org.mmarini.wheelly.apis.RadarMap;
-import org.mmarini.wheelly.apis.RobotApi;
-import org.mmarini.wheelly.apis.RobotStatus;
+import io.reactivex.rxjava3.core.Completable;
+import org.mmarini.wheelly.apis.*;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 
-import java.io.Closeable;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.yaml.schema.Validator.*;
@@ -55,17 +52,14 @@ import static org.mmarini.yaml.schema.Validator.*;
  * </ul>
  * </p>
  */
-public class StateMachineAgent implements Closeable {
+public class StateMachineAgent implements WithIOCallback, WithStatusCallback, WithErrorCallback {
     public static final Validator AGENT_SPEC = objectPropertiesRequired(Map.of(
             "flow", StateFlow.STATE_FLOW_SPEC,
-            "interval", positiveInteger(),
-            "commandInterval", positiveInteger(),
-            "reactionInterval", positiveInteger(),
             "numRadarSectors", integer(minimum(2)),
             "minRadarDistance", positiveNumber(),
             "maxRadarDistance", positiveNumber()
     ), List.of(
-            "flow", "interval", "commandInterval", "reactionInterval",
+            "flow",
             "numRadarSectors", "minRadarDistance", "maxRadarDistance"
     ));
 
@@ -76,82 +70,74 @@ public class StateMachineAgent implements Closeable {
      * @param locator the locator of agent specification in the document
      * @param robot   the robot api
      */
-    public static StateMachineAgent create(JsonNode root, Locator locator, RobotApi robot) {
+    public static StateMachineAgent create(JsonNode root, Locator locator, RobotControllerApi robot) {
         AGENT_SPEC.apply(locator).accept(root);
         StateFlow flow = StateFlow.create(root, locator.path("flow"));
-        long interval = locator.path("interval").getNode(root).asLong();
-        long commandInterval = locator.path("commandInterval").getNode(root).asLong();
-        long reactionInterval = locator.path("reactionInterval").getNode(root).asLong();
         double minRadarDistance = locator.path("minRadarDistance").getNode(root).asDouble();
         double maxRadarDistance = locator.path("maxRadarDistance").getNode(root).asDouble();
         int numRadarSectors = locator.path("numRadarSectors").getNode(root).asInt();
         RadarMap radarMap = RadarMap.create(root, locator);
         PolarMap polarMap = PolarMap.create(numRadarSectors);
-        return new StateMachineAgent(interval, commandInterval, reactionInterval, minRadarDistance, maxRadarDistance, radarMap, polarMap, robot, new ProcessorContext(flow));
+        return new StateMachineAgent(minRadarDistance, maxRadarDistance, radarMap, polarMap, robot, new ProcessorContext(robot, flow));
     }
 
-    private final RobotApi robot;
+    private final RobotControllerApi controller;
     private final ProcessorContext context;
-    private final long interval;
-    private final long commandInterval;
-    private final long reactionInterval;
     private final double maxRadarDistance;
     private final double minRadarDistance;
     private PolarMap polarMap;
     private RadarMap radarMap;
-    private long lastMoveTime;
-    private long lastScanTime;
-    private int lastScanDir;
-    private boolean halted;
-    private int lastDirection;
-    private double lastSpeed;
+    private Consumer<ProcessorContext> onStepUp;
+    private boolean started;
+    private Consumer<RobotStatus> onStatusReady;
 
     /**
      * Creates the agent
      *
-     * @param interval         the time interval between status scan (ms)
-     * @param commandInterval  the time interval between commands (ms)
-     * @param reactionInterval the time interval between reaction (ms)
      * @param minRadarDistance the min radar distance (m)
      * @param maxRadarDistance the max radar distance (m)
      * @param radarMap         the radar map
      * @param polarMap         the polar map
-     * @param robot            the robot api
+     * @param controller       the robot api
      * @param context          the processor context
      */
-    public StateMachineAgent(long interval, long commandInterval, long reactionInterval, double minRadarDistance, double maxRadarDistance, RadarMap radarMap, PolarMap polarMap, RobotApi robot, ProcessorContext context) {
-        this.commandInterval = commandInterval;
-        this.reactionInterval = reactionInterval;
+    public StateMachineAgent(double minRadarDistance, double maxRadarDistance, RadarMap radarMap, PolarMap polarMap, RobotControllerApi controller, ProcessorContext context) {
         this.minRadarDistance = minRadarDistance;
         this.maxRadarDistance = maxRadarDistance;
-        this.robot = requireNonNull(robot);
-        this.context = context;
-        this.interval = interval;
-        this.polarMap = polarMap;
-        this.radarMap = radarMap;
+        this.controller = requireNonNull(controller);
+        this.context = requireNonNull(context);
+        this.polarMap = requireNonNull(polarMap);
+        this.radarMap = requireNonNull(radarMap);
     }
 
-    @Override
-    public void close() throws IOException {
-
+    public RobotControllerApi getController() {
+        return controller;
     }
 
     public double getMaxRadarDistance() {
         return this.maxRadarDistance;
     }
 
-    /**
-     * Returns the polar map
-     */
-    public PolarMap getPolarMap() {
-        return polarMap;
+    private void handleInference(RobotStatus status) {
+        polarMap = polarMap.update(radarMap, status.getLocation(), status.getDirection(), minRadarDistance, maxRadarDistance);
+        context.setRobotStatus(status);
+        context.setPolarMap(polarMap);
+        context.setRadarMap(radarMap);
+        if (!started) {
+            started = true;
+            context.init();
+        }
+        context.step();
+        if (onStepUp != null) {
+            onStepUp.accept(context);
+        }
     }
 
-    /**
-     * Returns the radar map
-     */
-    public RadarMap getRadarMap() {
-        return radarMap;
+    private void handleStatus(RobotStatus status) {
+        radarMap = radarMap.update(status);
+        if (onStatusReady != null) {
+            onStatusReady.accept(status);
+        }
     }
 
     /**
@@ -160,80 +146,40 @@ public class StateMachineAgent implements Closeable {
      * Initializes the robot and state machine context from the entry state
      */
     public void init() {
-        robot.start();
-        robot.reset();
-        readStatus(0L);
-        context.setRobotStatus(robot.getStatus());
-        context.init();
-        lastMoveTime = lastScanTime = robot.getStatus().getTime();
-        lastScanDir = context.getSensorDirection();
-        halted = true;
-        robot.halt();
-        robot.scan(lastScanDir);
+        controller.setOnInference(this::handleInference);
+        controller.setOnStatusReady(this::handleStatus);
+        controller.start();
     }
 
-    /**
-     * Processes the command to the robot.
-     * Sends the commands to the robot if command interval has elapsed since last command sent
-     * or if there have been changes of action to the robot.
-     */
-    private void processCommand() {
-        int scan = context.getSensorDirection();
-        long time = robot.getStatus().getTime();
-        if (this.lastScanDir != scan || time >= lastScanTime + commandInterval) {
-            robot.scan(scan);
-            lastScanDir = scan;
-            this.lastScanTime = time;
-        }
-        if (!context.isHalt()) {
-            int dir = context.getRobotDirection();
-            double speed = context.getSpeed();
-            if (halted || lastDirection != dir || lastSpeed != speed ||
-                    time >= lastMoveTime + commandInterval) {
-                robot.move(dir, speed);
-                halted = false;
-                lastDirection = dir;
-                lastSpeed = speed;
-                lastMoveTime = time;
-            }
-        } else if (!halted) {
-            robot.halt();
-            halted = true;
-            lastMoveTime = time;
-        }
+    public Completable readShutdown() {
+        return controller.readShutdown();
     }
 
-    /**
-     * Returns the status read from robot
-     * Reads the state of the robot for a given time interval, processing the sending of commands if necessary.
-     *
-     * @param time the time to read
-     */
-    private void readStatus(long time) {
-        RobotStatus status = robot.getStatus();
-        long timeout = status.getTime() + time;
-        do {
-            robot.tick(interval);
-            status = robot.getStatus();
-            if (status != null) {
-                radarMap = radarMap.update(status);
-            }
-            processCommand();
-        } while (!(status != null && status.getTime() >= timeout));
-        context.setRobotStatus(status);
-        //polarMap.update(status.getRadarMap(), status.getLocation(), status.getDirection(), maxRadarDistance);
-        polarMap = polarMap.update(radarMap, status.getLocation(), status.getDirection(), minRadarDistance, maxRadarDistance);
+    @Override
+    public void setOnError(Consumer<Throwable> callback) {
+        controller.setOnError(callback);
     }
 
-    /**
-     * Executes a processing step of the state machine.
-     * Reads the state of the robot and processes the state machine generating the required behavior.
-     */
-    public void step() {
-        readStatus(reactionInterval);
-        context.setRobotStatus(robot.getStatus());
-        context.setPolarMap(polarMap);
-        context.step();
-        processCommand();
+    @Override
+    public void setOnReadLine(Consumer<String> callback) {
+        controller.setOnReadLine(callback);
+    }
+
+    @Override
+    public void setOnStatusReady(Consumer<RobotStatus> callback) {
+        onStatusReady = callback;
+    }
+
+    public void setOnStepUp(Consumer<ProcessorContext> callback) {
+        this.onStepUp = callback;
+    }
+
+    @Override
+    public void setOnWriteLine(Consumer<String> callback) {
+        controller.setOnWriteLine(callback);
+    }
+
+    public void shutdown() {
+        controller.shutdown();
     }
 }

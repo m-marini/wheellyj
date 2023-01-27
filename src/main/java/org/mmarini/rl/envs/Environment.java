@@ -35,7 +35,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * The environment interface
  */
-public interface Environment extends Closeable {
+public interface Environment extends Closeable, WithSignalsSpec {
 
     /**
      * Returns the result of execution of actions
@@ -45,35 +45,31 @@ public interface Environment extends Closeable {
     ExecutionResult execute(Map<String, Signal> actions);
 
     /**
-     * Returns the actions specification
-     */
-    Map<String, SignalSpec> getActions();
-
-    /**
-     * Returns the state specification
-     */
-    Map<String, SignalSpec> getState();
-
-    /**
      * Returns the initial state of an episode
      */
     Map<String, Signal> reset();
 
     class ExecutionResult {
+        public final Map<String, Signal> actions;
         public final double reward;
-        public final Map<String, Signal> state;
+        public final Map<String, Signal> state0;
+        public final Map<String, Signal> state1;
         public final boolean terminal;
 
         /**
          * Creates an execution result
          *
-         * @param state    the result state
+         * @param state1   the result state
+         * @param actions  the action
          * @param reward   the reward
+         * @param state0   the resulting state
          * @param terminal true if terminal state
          */
-        public ExecutionResult(Map<String, Signal> state, double reward, boolean terminal) {
-            this.state = requireNonNull(state);
-            this.reward = reward;
+        public ExecutionResult(Map<String, Signal> state0, Map<String, Signal> actions, double reward, Map<String, Signal> state1, boolean terminal) {
+            this.state1 = requireNonNull(state1);
+            this.actions = requireNonNull(actions);
+            this.reward = requireNonNull(reward);
+            this.state0 = requireNonNull(state0);
             this.terminal = terminal;
         }
 
@@ -82,7 +78,11 @@ public interface Environment extends Closeable {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             ExecutionResult that = (ExecutionResult) o;
-            return Double.compare(that.reward, reward) == 0 && terminal == that.terminal && state.equals(that.state);
+            return Double.compare(that.reward, reward) == 0 && terminal == that.terminal && actions.equals(that.actions) && state0.equals(that.state0) && state1.equals(that.state1);
+        }
+
+        public Map<String, Signal> getActions() {
+            return actions;
         }
 
         /**
@@ -93,19 +93,26 @@ public interface Environment extends Closeable {
         }
 
         /**
-         * Returns the state
+         * Returns the state pre-action
          */
-        public Map<String, Signal> getState() {
-            return state;
+        public Map<String, Signal> getState0() {
+            return state0;
         }
 
-        public ExecutionResult setState(Map<String, Signal> state) {
-            return new ExecutionResult(state, reward, terminal);
+        /**
+         * Returns the state post action
+         */
+        public Map<String, Signal> getState1() {
+            return state1;
+        }
+
+        public ExecutionResult setState1(Map<String, Signal> state1) {
+            return new ExecutionResult(state1, actions, reward, state0, terminal);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(reward, state, terminal);
+            return Objects.hash(actions, reward, state0, state1, terminal);
         }
 
         /**
@@ -118,8 +125,10 @@ public interface Environment extends Closeable {
         @Override
         public String toString() {
             return new StringJoiner(", ", ExecutionResult.class.getSimpleName() + "[", "]")
-                    .add("state=" + state)
+                    .add("state0=" + state0)
+                    .add("action=" + actions)
                     .add("reward=" + reward)
+                    .add("state1=" + state1)
                     .add("terminal=" + terminal)
                     .toString();
         }

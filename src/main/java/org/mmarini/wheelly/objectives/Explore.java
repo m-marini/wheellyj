@@ -26,11 +26,11 @@
 package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.eclipse.collections.api.block.function.primitive.DoubleFunction;
-import org.mmarini.rl.envs.Environment;
 import org.mmarini.wheelly.apis.MapSector;
 import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.WithRobotStatus;
+import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.wheelly.envs.WithRadarMap;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
@@ -38,6 +38,7 @@ import org.mmarini.yaml.schema.Validator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
+import java.util.function.ToDoubleFunction;
 
 import static java.lang.Math.abs;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.*;
@@ -59,16 +60,17 @@ public interface Explore {
      * @param root    the root json document
      * @param locator the locator
      */
-    static DoubleFunction<Environment> create(JsonNode root, Locator locator) {
+    static ToDoubleFunction<RobotEnvironment> create(JsonNode root, Locator locator) {
         VALIDATOR.apply(locator).accept(root);
         double sensorRange = locator.path("sensorRange").getNode(root).asDouble();
         return explore(sensorRange);
     }
 
-    static DoubleFunction<Environment> explore(double sensorRange) {
+    static ToDoubleFunction<RobotEnvironment> explore(double sensorRange) {
         return environment -> {
             WithRadarMap env = (WithRadarMap) environment;
-            RobotStatus status = env.getStatus();
+
+            RobotStatus status = ((WithRobotStatus) env).getRobotStatus();
             if (!status.canMoveBackward() || !status.canMoveForward()) {
                 // Avoid contacts
                 return -1;

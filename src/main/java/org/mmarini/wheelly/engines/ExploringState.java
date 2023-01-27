@@ -33,6 +33,7 @@ import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.CircularSector;
 import org.mmarini.wheelly.apis.MapSector;
 import org.mmarini.wheelly.apis.PolarMap;
+import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 import org.slf4j.Logger;
@@ -46,6 +47,7 @@ import java.util.stream.IntStream;
 
 import static java.lang.Math.*;
 import static java.lang.String.format;
+import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS_SPEED;
 import static org.mmarini.wheelly.apis.Utils.linear;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 import static org.mmarini.yaml.schema.Validator.*;
@@ -227,6 +229,7 @@ public class ExploringState extends AbstractStateNode {
         // Find the unknown sector target direction
         int targetIndex = findUnknownSector(context);
         PolarMap map = context.getPolarMap();
+        RobotStatus robotStatus = context.getRobotStatus();
         if (targetIndex >= 0) {
             int sectorDir = map.radarSectorDirection(targetIndex);
             if (abs(sectorDir) <= 90) {
@@ -244,7 +247,7 @@ public class ExploringState extends AbstractStateNode {
                 context.haltRobot();
             } else {
                 // Turns the robot to the unknown sector
-                int robotDir = normalizeDegAngle(context.getRobotDirection() + sectorDir);
+                int robotDir = normalizeDegAngle(robotStatus.getDirection() + sectorDir);
                 logger.atDebug()
                         .setMessage("{}: turn to unknown sector {} DEG")
                         .addArgument(this::getId)
@@ -261,18 +264,18 @@ public class ExploringState extends AbstractStateNode {
         CircularSector targetSector = map.getSector(targetIndex);
 
         int sectorDir = map.radarSectorDirection(targetIndex);
-        int robotDir = normalizeDegAngle(context.getRobotDirection() + sectorDir);
+        int robotDir = normalizeDegAngle(robotStatus.getDirection() + sectorDir);
         double stopDistance = getDouble(context, "stopDistance");
         int turnDirectionRange = getInt(context, "turnDirectionRange");
         double distance = context.getEchoDistance();
         distance = distance == 0 ? targetSector.getDistance()
                 : min(distance, targetSector.getDistance());
-        double speed = abs(sectorDir) > turnDirectionRange
+        int speed = abs(sectorDir) > turnDirectionRange
                 ? 0
-                : !targetSector.isHindered()
-                ? 1
-                : min(max((double) round(linear(distance, 0, stopDistance, 1, 4)),
-                1), 4) / 4;
+                : (!targetSector.isHindered()
+                ? MAX_PPS_SPEED
+                : (int) round(min(max((double) round(linear(distance, 0, stopDistance, 1, 4)),
+                1), 4) * MAX_PPS_SPEED / 4));
         if (speed == 0) {
             logger.atDebug()
                     .setMessage("{}: turn to {} DEG")

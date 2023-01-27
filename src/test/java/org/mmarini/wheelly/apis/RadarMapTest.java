@@ -44,8 +44,8 @@ class RadarMapTest {
     public static final double RECEPTIVE_DISTANCE = 0.1;
     public static final double MM1 = 0.001;
     public static final int MAX_INTERVAL = 10000;
-    static final double MIN_DISTANCE = 0.4;
     public static final int RECEPTIVE_ANGLE = 15;
+    static final double MIN_DISTANCE = 0.4;
 
     @Test
     void cleanNoTimeout() {

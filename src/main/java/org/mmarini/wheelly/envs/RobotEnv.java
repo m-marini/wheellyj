@@ -27,6 +27,7 @@ package org.mmarini.wheelly.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.eclipse.collections.api.block.function.primitive.DoubleFunction;
+import org.mmarini.NotImplementedException;
 import org.mmarini.rl.envs.*;
 import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotStatus;
@@ -158,16 +159,16 @@ public class RobotEnv implements Environment {
     private final long reactionInterval;
     private final long commandInterval;
     private final Map<String, SignalSpec> actions;
-    private int prevSensor;
-    private long lastScanTimestamp;
-    private long lastMoveTimestamp;
-    private boolean prevHalt;
+    private final int prevSensor;
+    private final long lastScanTimestamp;
+    private final long lastMoveTimestamp;
+    private final boolean prevHalt;
+    private final boolean started;
     private INDArray contacts;
     private INDArray canMoveForward;
     private INDArray distance;
     private INDArray robotDir;
     private INDArray sensor;
-    private boolean started;
     private INDArray canMoveBackward;
     private float currentSpeed;
     private boolean currentHalted;
@@ -235,12 +236,20 @@ public class RobotEnv implements Environment {
 
     @Override
     public ExecutionResult execute(Map<String, Signal> actions) {
-        requireNonNull(actions);
-        processAction(actions);
-        readStatus(reactionInterval);
-        double reward = this.reward.doubleValueOf(this);
-        Map<String, Signal> observation = getObservation();
-        return new ExecutionResult(observation, reward, false);
+        /*
+        try {
+            requireNonNull(actions);
+            processAction(actions);
+            readStatus(reactionInterval);
+            double reward = this.reward.doubleValueOf(this);
+            Map<String, Signal> observation = getObservation();
+            return new ExecutionResult(observation, null, reward, null, false);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+         */
+        throw new NotImplementedException();
     }
 
     @Override
@@ -277,12 +286,13 @@ public class RobotEnv implements Environment {
         currentDirection = normalizeDegAngle(round(robotDir.getFloat(0)) + dDir);
     }
 
-    /**
+    /*
      * Reads the status of robot after a time interval
      *
      * @param time the time interval in millis
      */
-    private RobotStatus readStatus(long time) {
+    /*
+    private RobotStatus readStatus(long time) throws IOException {
         RobotStatus status = robot.getStatus();
         long timeout = status.getTime() + time;
         do {
@@ -293,30 +303,40 @@ public class RobotEnv implements Environment {
         storeStatus(status);
         return status;
     }
-
+*/
     @Override
     public Map<String, Signal> reset() {
-        if (!started) {
-            robot.start();
-            started = true;
+        /*
+        try {
+            if (!started) {
+                robot.connect();
+                robot.configure();
+                started = true;
+            }
+            robot.reset();
+            readStatus(0);
+            return getObservation();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
-        robot.reset();
-        readStatus(0);
-        return getObservation();
+
+         */
+        throw new NotImplementedException();
     }
 
-    private void sendCommand() {
+    private void sendCommand() throws IOException {
+        /*
         long now = robot.getStatus().getTime();
         if (currentHalted != prevHalt) {
             prevHalt = currentHalted;
             if (currentHalted) {
                 robot.halt();
             } else {
-                robot.move(currentDirection, currentSpeed);
+                robot.move(currentDirection, (int) currentSpeed);
             }
             lastMoveTimestamp = now;
         } else if (!currentHalted && now > lastMoveTimestamp + commandInterval) {
-            robot.move(currentDirection, currentSpeed);
+            robot.move(currentDirection, (int) currentSpeed);
             lastMoveTimestamp = now;
         }
         if (prevSensor != currentSensor) {
@@ -328,6 +348,8 @@ public class RobotEnv implements Environment {
             prevSensor = currentSensor;
             lastScanTimestamp = now;
         }
+
+         */
     }
 
     /**

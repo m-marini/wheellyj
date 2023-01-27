@@ -26,11 +26,20 @@
  *
  */
 
-package org.mmarini.wheelly.envs;
+package org.mmarini.rl.envs;
 
-import org.mmarini.wheelly.apis.RadarMap;
-import org.mmarini.wheelly.apis.WithStatusCallback;
+import java.util.Map;
 
-public interface WithRadarMap extends WithStatusCallback {
-    RadarMap getRadarMap();
+public interface WithSignalsSpec {
+
+    /**
+     * Returns the actions specification
+     */
+    Map<String, SignalSpec> getActions();
+
+    /**
+     * Returns the state specification
+     */
+    Map<String, SignalSpec> getState();
+
 }

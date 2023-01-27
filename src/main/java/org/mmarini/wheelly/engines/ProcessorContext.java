@@ -29,6 +29,8 @@
 package org.mmarini.wheelly.engines;
 
 import org.mmarini.wheelly.apis.PolarMap;
+import org.mmarini.wheelly.apis.RadarMap;
+import org.mmarini.wheelly.apis.RobotControllerApi;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,8 +39,6 @@ import java.util.*;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.apis.Utils.clip;
-import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 
 /**
  * The processor context handles the process stack and the key, value map of the process
@@ -50,20 +50,20 @@ public class ProcessorContext {
     private final List<Object> stack;
     private final StateFlow flow;
     private final Random random;
+    private final RobotControllerApi robot;
     private RobotStatus robotStatus;
     private StateNode currentNode;
-    private int sensorDirection;
-    private int robotDirection;
-    private boolean halt;
-    private double speed;
     private PolarMap polarMap;
+    private RadarMap radarMap;
 
     /**
      * Creates the processor context
      *
-     * @param flow the flow of state machine
+     * @param robot the robot controller
+     * @param flow  the flow of state machine
      */
-    public ProcessorContext(StateFlow flow) {
+    public ProcessorContext(RobotControllerApi robot, StateFlow flow) {
+        this.robot = requireNonNull(robot);
         this.flow = requireNonNull(flow);
         this.values = new HashMap<>();
         this.stack = new ArrayList<>();
@@ -239,18 +239,19 @@ public class ProcessorContext {
         this.polarMap = polarMap;
     }
 
+    public RadarMap getRadarMap() {
+        return radarMap;
+    }
+
+    public void setRadarMap(RadarMap radarMap) {
+        this.radarMap = radarMap;
+    }
+
     /**
      * Returns the random generator
      */
     public Random getRandom() {
         return random;
-    }
-
-    /**
-     * Returns the robot direction set by the process
-     */
-    public int getRobotDirection() {
-        return robotDirection;
     }
 
     /**
@@ -267,20 +268,6 @@ public class ProcessorContext {
      */
     public void setRobotStatus(RobotStatus robotStatus) {
         this.robotStatus = robotStatus;
-    }
-
-    /**
-     * Returns the sensor direction set by the process
-     */
-    public int getSensorDirection() {
-        return sensorDirection;
-    }
-
-    /**
-     * Returns the robot speed set by the process
-     */
-    public double getSpeed() {
-        return speed;
     }
 
     /**
@@ -303,7 +290,7 @@ public class ProcessorContext {
      * Halt the robot
      */
     public void haltRobot() {
-        halt = true;
+        robot.haltRobot();
     }
 
     /**
@@ -313,8 +300,6 @@ public class ProcessorContext {
         // Clears the stack and the value map
         clearStack();
         clearValues();
-        halt = true;
-        sensorDirection = 0;
         // Execute on init
         ProcessorCommand onInit = flow.getOnInit();
         if (onInit != null) {
@@ -333,22 +318,13 @@ public class ProcessorContext {
     }
 
     /**
-     * Returns true if the process halted the robot
-     */
-    public boolean isHalt() {
-        return halt;
-    }
-
-    /**
      * Moves the robot
      *
      * @param direction direction (DEG)
      * @param speed     speed
      */
-    public void moveRobot(int direction, double speed) {
-        this.robotDirection = normalizeDegAngle(direction);
-        this.speed = clip(speed, -1, 1);
-        this.halt = false;
+    public void moveRobot(int direction, int speed) {
+        robot.moveRobot(direction, speed);
     }
 
     /**
@@ -357,7 +333,7 @@ public class ProcessorContext {
      * @param direction direction (DEG)
      */
     public void moveSensor(int direction) {
-        sensorDirection = clip(normalizeDegAngle(direction), -90, 90);
+        robot.moveSensor(direction);
     }
 
     /**

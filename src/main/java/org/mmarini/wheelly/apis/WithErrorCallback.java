@@ -26,11 +26,15 @@
  *
  */
 
-package org.mmarini.wheelly.envs;
+package org.mmarini.wheelly.apis;
 
-import org.mmarini.wheelly.apis.RadarMap;
-import org.mmarini.wheelly.apis.WithStatusCallback;
+import java.util.function.Consumer;
 
-public interface WithRadarMap extends WithStatusCallback {
-    RadarMap getRadarMap();
+public interface WithErrorCallback {
+    /**
+     * Registers the consumer of errors event
+     *
+     * @param callback the callback
+     */
+    void setOnError(Consumer<Throwable> callback);
 }

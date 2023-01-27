@@ -30,7 +30,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.eclipse.collections.api.block.function.primitive.DoubleFunction;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.envs.WithRobotStatus;
+import org.mmarini.wheelly.apis.WithRobotStatus;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 
@@ -75,7 +75,7 @@ public interface NoMove {
      */
     static DoubleFunction<Environment> noMove(float velocityThreshold) {
         return environment -> {
-            RobotStatus status = ((WithRobotStatus) environment).getStatus();
+            RobotStatus status = ((WithRobotStatus) environment).getRobotStatus();
             return !status.canMoveForward() || !status.canMoveBackward()
                     ? -1
                     : (abs(status.getLeftPps()) < velocityThreshold

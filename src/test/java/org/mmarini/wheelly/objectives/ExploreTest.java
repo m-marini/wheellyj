@@ -26,18 +26,18 @@
 package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.eclipse.collections.api.block.function.primitive.DoubleFunction;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.mmarini.rl.envs.Environment;
 import org.mmarini.wheelly.TestFunctions;
 import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.schema.Locator;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;
+import java.util.function.ToDoubleFunction;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
@@ -48,7 +48,7 @@ class ExploreTest {
 
     public static final int MAX_INTERVAL = 10000;
 
-    static Environment createEnvironment(int sensorDir, double leftSpeed, double rightSpeed, boolean canMoveForward, boolean canMoveBackward, int knownCount) {
+    static RobotEnvironment createEnvironment(int sensorDir, double leftSpeed, double rightSpeed, boolean canMoveForward, boolean canMoveBackward, int knownCount) {
         long timestamp = System.currentTimeMillis();
         RadarMap radarMap = RadarMap.create(10, 10, new Point2D.Double(), 0.2, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, 15)
                 .map((i, sector) -> i < knownCount ? sector.empty(timestamp) : sector);
@@ -65,7 +65,7 @@ class ExploreTest {
             }
 
             @Override
-            public RobotStatus getStatus() {
+            public RobotStatus getRobotStatus() {
                 return status;
             }
         };
@@ -98,10 +98,10 @@ class ExploreTest {
                 int canMoveBackward) throws IOException {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "sensorRange: 60"));
-        DoubleFunction<Environment> f = Explore.create(root, Locator.root());
-        Environment env = createEnvironment(sensorDir, leftSpeed, rightSpeed, canMoveForward != 0, canMoveBackward != 0, knownCount);
+        ToDoubleFunction<RobotEnvironment> f = Explore.create(root, Locator.root());
+        RobotEnvironment env = createEnvironment(sensorDir, leftSpeed, rightSpeed, canMoveForward != 0, canMoveBackward != 0, knownCount);
 
-        double result = f.doubleValueOf(env);
+        double result = f.applyAsDouble(env);
 
         assertThat(result, closeTo(expected, 1e-4));
     }

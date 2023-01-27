@@ -45,17 +45,17 @@ public class SequenceEnv implements Environment {
     @Override
     public ExecutionResult execute(Map<String, Signal> actions) {
         int action = actions.get("output").getInt(0);
+        Map<String, Signal> signals0 = getSignals();
         if (currentState == action) {
             currentState++;
-            Map<String, Signal> signals = getSignals();
+            Map<String, Signal> signals1 = getSignals();
             if (currentState >= numStates - 1) {
                 currentState = 0;
-                return new ExecutionResult(signals, 1, true);
-            } else {
-                return new ExecutionResult(signals, 1, false);
+                return new ExecutionResult(signals0, actions, 1, signals0, true);
             }
+            return new ExecutionResult(signals0, actions, 1, signals1, false);
         } else {
-            return new ExecutionResult(getSignals(), 0, false);
+            return new ExecutionResult(signals0, actions, 0, signals0, false);
         }
     }
 

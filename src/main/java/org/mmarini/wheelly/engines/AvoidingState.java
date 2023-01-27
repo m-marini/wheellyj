@@ -41,6 +41,7 @@ import java.util.Map;
 import java.util.OptionalInt;
 
 import static java.lang.String.format;
+import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS_SPEED;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 import static org.mmarini.yaml.schema.Validator.positiveNumber;
 
@@ -123,7 +124,7 @@ public class AvoidingState extends AbstractStateNode {
                         .addArgument(this::getId)
                         .addArgument(dir)
                         .log();
-                ctx.moveRobot(dir, -1);
+                ctx.moveRobot(dir, -MAX_PPS_SPEED);
                 return null;
             }
             // Robot completely blocked
@@ -142,7 +143,7 @@ public class AvoidingState extends AbstractStateNode {
                     .addArgument(this::getId)
                     .addArgument(dir)
                     .log();
-            ctx.moveRobot(dir, 1);
+            ctx.moveRobot(dir, MAX_PPS_SPEED);
             return null;
         }
         // Robot not blocked
@@ -170,7 +171,7 @@ public class AvoidingState extends AbstractStateNode {
             return COMPLETED_EXIT;
         }
         // move robot away
-        ctx.moveRobot(escapeDir, 1);
+        ctx.moveRobot(escapeDir, MAX_PPS_SPEED);
         return null;
     }
 }

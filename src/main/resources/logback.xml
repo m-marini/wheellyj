@@ -20,6 +20,15 @@
     <logger name="org.mmarini.wheelly.engines.AbstractStateNode" level="INFO">
     </logger>
 
+    <logger name="org.mmarini.wheelly.apis.RobotController" level="INFO">
+    </logger>
+
+    <logger name="org.mmarini.wheelly.apps.MatrixMonitor" level="INFO">
+    </logger>
+
+    <logger name="org.mmarini.wheelly.apps.RobotCheckUp" level="INFO">
+    </logger>
+
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>
     </root>
