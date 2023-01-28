@@ -210,6 +210,14 @@ class SimRobotObstacleTest {
         assertFalse(status.canMoveForward());
     }
 
+    /**
+     * Given a sim robot at position 0.71, 0 and direction -90 DEG
+     * in environment with obstacle at 1, 0
+     * When move to -90 DEG at -max speed for 100 steps of 3 ms
+     * Than the robot should move to 0.744, 0
+     * And the contacts should be 3 (backwards)
+     * And cannot move backward
+     */
     @Test
     void obstacleRear() {
         SimRobot robot = createRobot();
@@ -228,13 +236,14 @@ class SimRobotObstacleTest {
         assertTrue(status.canMoveForward());
 
         robot.move(-90, (int) -MAX_PPS);
-        for (int i = 0; i < 100; i++) {
-            robot.tick(3);
+        for (int i = 0; i < 12; i++) {
+            robot.tick(30);
         }
+
         status = robot.getRobotStatus();
-        assertThat(status.getLocation().getX(), closeTo(XO - HALF_LENGTH - HALF_SIZE - 24e-3, DISTANCE_EPSILON));
-        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
         assertEquals(3, status.getContacts());
+        assertThat(status.getLocation().getX(), closeTo(XO - HALF_LENGTH - HALF_SIZE - 16e-3, DISTANCE_EPSILON));
+        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
         assertFalse(status.canMoveBackward());
         assertTrue(status.canMoveForward());
         assertThat(status.getEchoDistance(), closeTo(0, DISTANCE_EPSILON));
