@@ -12,6 +12,7 @@ configurations:
     errSigma: 0.05
     errSensor: 0.05
     sensorReceptiveAngle: 15
+    maxSimulationSpeed: 5
   realRobot:
     class: org.mmarini.wheelly.apis.Robot
     host: "192.168.1.11"

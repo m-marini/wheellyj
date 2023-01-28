@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  
 - Issue #144: Add resiliency management
 - Issue #179: Add real measure of reaction time
+- Issue #185: Setting simulation speed
 
 ### Fixed
 

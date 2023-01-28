@@ -36,6 +36,8 @@ import org.jbox2d.dynamics.*;
 import org.jbox2d.dynamics.contacts.Contact;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
 import java.util.*;
@@ -106,14 +108,18 @@ public class SimRobot implements RobotApi, WithRobotStatus {
                     Map.entry("errSigma", nonNegativeNumber()),
                     Map.entry("errSensor", nonNegativeNumber()),
                     Map.entry("sensorReceptiveAngle", positiveInteger()),
-                    Map.entry("numObstacles", nonNegativeInteger())
+                    Map.entry("numObstacles", nonNegativeInteger()),
+                    Map.entry("maxSimulationSpeed", number(minimum(1D)))
             ), List.of(
                     "errSigma",
                     "errSensor",
                     "sensorReceptiveAngle",
-                    "numObstacles"
+                    "numObstacles",
+                    "maxSimulationSpeed"
             )
     );
+    private static final long THRESHOLD_TIME = 5;
+    private static final Logger logger = LoggerFactory.getLogger(SimRobot.class);
 
     public static SimRobot create(JsonNode root, Locator locator) {
         ROBOT_SPEC.apply(locator).accept(root);
@@ -130,10 +136,11 @@ public class SimRobot implements RobotApi, WithRobotStatus {
                 .build();
         double errSigma = locator.path("errSigma").getNode(root).asDouble();
         double errSensor = locator.path("errSensor").getNode(root).asDouble();
+        double maxSimSpeed = locator.path("maxSimulationSpeed").getNode(root).asDouble();
         return new SimRobot(obstacleMap,
                 robotRandom,
                 errSigma, errSensor,
-                sensorReceptiveAngle);
+                sensorReceptiveAngle, maxSimSpeed);
     }
 
     /**
@@ -185,6 +192,7 @@ public class SimRobot implements RobotApi, WithRobotStatus {
     private final Fixture frSensor;
     private final Fixture rlSensor;
     private final Fixture rrSensor;
+    private final double maxSimSpeed;
     private RobotStatus status;
     private int speed;
     private int direction;
@@ -199,13 +207,15 @@ public class SimRobot implements RobotApi, WithRobotStatus {
      * @param errSigma             sigma of errors in physic simulation (U)
      * @param errSensor            sensor error (m)
      * @param sensorReceptiveAngle sensor receptive angle (DEG)
+     * @param maxSimSpeed          the maximum simulation speed
      */
-    public SimRobot(ObstacleMap obstacleMap, Random random, double errSigma, double errSensor, double sensorReceptiveAngle) {
+    public SimRobot(ObstacleMap obstacleMap, Random random, double errSigma, double errSensor, double sensorReceptiveAngle, double maxSimSpeed) {
         this.random = requireNonNull(random);
         this.errSigma = errSigma;
         this.errSensor = errSensor;
         this.obstacleMap = requireNonNull(obstacleMap);
         this.sensorReceptiveAngle = sensorReceptiveAngle;
+        this.maxSimSpeed = maxSimSpeed;
         this.status = RobotStatus.create();
 
         // Creates the jbox2 physic world
@@ -453,6 +463,7 @@ public class SimRobot implements RobotApi, WithRobotStatus {
 
     @Override
     public void tick(long dt) {
+        long start = System.currentTimeMillis();
         controller(dt * 1e-3F);
         status = status.setTime(status.getTime() + dt);
 
@@ -480,6 +491,16 @@ public class SimRobot implements RobotApi, WithRobotStatus {
         checkForSpeed();
         if (onStatusReady != null) {
             onStatusReady.accept(status);
+        }
+        long elaps = System.currentTimeMillis() - start;
+        long expected = round(dt / maxSimSpeed);
+        long remainder = expected - elaps;
+        if (remainder > THRESHOLD_TIME) {
+            try {
+                Thread.sleep(remainder);
+            } catch (InterruptedException e) {
+                logger.atError().setCause(e).log();
+            }
         }
     }
 }
