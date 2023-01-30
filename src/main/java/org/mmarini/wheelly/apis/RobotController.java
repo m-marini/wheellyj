@@ -418,6 +418,7 @@ public class RobotController implements RobotControllerApi {
         long time = System.currentTimeMillis();
         if (time >= lastTick + watchdogInterval) {
             logger.atError().log("No signals");
+            sendError(new IOException("No signals"));
             close = true;
         }
         if (close) {

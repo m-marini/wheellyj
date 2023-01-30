@@ -51,6 +51,16 @@ public interface Utils {
     }
 
     /**
+     * Returns a non-resizable frame
+     *
+     * @param title   the title
+     * @param content the content
+     */
+    static JFrame createFixFrame(String title, Component content) {
+        return createFixFrame(title, DEFAULT_SIZE, content);
+    }
+
+    /**
      * Returns a resizable frame with default size
      *
      * @param title   the title
