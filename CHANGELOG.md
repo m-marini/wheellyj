@@ -14,11 +14,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #185: Setting simulation speed
 - Issue #187: Add com monitor to apps
 
+### Changed
+
+- Issue #191: Unified halt and move actions
+
 ### Fixed
 
 - Issue #178: Compiler error on org.mmarini.wheelly.objectives.MockEnvironment
 - Issue #180: SimRobotObstacle Test Error
-- Issue #188: com frame is not resizable
+- Issue #188: Com frame is not resizable
+- Issue #190: Blind polar radar
 
 ## [0.5.2] 2023-01-25
 

@@ -250,6 +250,13 @@ public class Wheelly {
 
     private void handleInference(RobotStatus status) {
         long robotClock = status.getTime();
+        envPanel.setRobotStatus(status);
+        if (environment instanceof WithRadarMap) {
+            envPanel.setRadarMap(((WithRadarMap) environment).getRadarMap());
+        }
+        if (environment instanceof WithPolarMap) {
+            polarPanel.setPolarMap(((WithPolarMap) environment).getPolarMap());
+        }
         long time = System.currentTimeMillis();
         if (prevRobotStep >= 0) {
             envPanel.setReactionRealTime(reactionRealTime.add(time - prevStep) * 1e-3);
@@ -285,16 +292,6 @@ public class Wheelly {
     private void handleStatusReady(RobotStatus status) {
         if (robotStartTimestamp < 0) {
             robotStartTimestamp = status.getTime();
-        }
-        envPanel.setRobotStatus(status);
-        if (environment instanceof WithRadarMap) {
-            envPanel.setRadarMap(((WithRadarMap) environment).getRadarMap());
-        }
-        if (environment instanceof WithRadarMap) {
-            envPanel.setRadarMap(((WithRadarMap) environment).getRadarMap());
-        }
-        if (environment instanceof WithPolarMap) {
-            polarPanel.setPolarMap(((WithPolarMap) environment).getPolarMap());
         }
         long robotElapsed = status.getTime() - robotStartTimestamp;
         envPanel.setTimeRatio((double) robotElapsed / (System.currentTimeMillis() - start));
