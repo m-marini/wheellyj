@@ -44,6 +44,7 @@ import org.mmarini.wheelly.envs.PolarRobotEnv;
 import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.wheelly.envs.WithPolarMap;
 import org.mmarini.wheelly.envs.WithRadarMap;
+import org.mmarini.wheelly.swing.ComMonitor;
 import org.mmarini.wheelly.swing.EnvironmentPanel;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.wheelly.swing.PolarPanel;
@@ -185,6 +186,8 @@ public class Wheelly {
     private final AverageValue avgRewards;
     private final AverageValue reactionRobotTime;
     private final AverageValue reactionRealTime;
+    private final ComMonitor comMonitor;
+    private final JFrame comFrame;
     protected Namespace args;
     private long robotStartTimestamp;
     private Long sessionDuration;
@@ -202,6 +205,8 @@ public class Wheelly {
     public Wheelly() {
         this.envPanel = new EnvironmentPanel();
         this.frame = createFrame(Messages.getString("Wheelly.title"), envPanel);
+        this.comMonitor = new ComMonitor();
+        this.comFrame = createFrame(Messages.getString("ComMonitor.title"), new JScrollPane(comMonitor));
         this.robotStartTimestamp = -1;
         this.avgRewards = AverageValue.create();
         this.reactionRobotTime = AverageValue.create();
@@ -212,6 +217,16 @@ public class Wheelly {
                 .toFlowable(BackpressureStrategy.DROP)
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
                 .doOnNext(this::handleWindowOpened)
+                .subscribe();
+        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
+                .toFlowable(BackpressureStrategy.DROP)
+                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
+                .doOnNext(this::handleWindowClosing)
+                .subscribe();
+        SwingObservable.window(comFrame, SwingObservable.WINDOW_ACTIVE)
+                .toFlowable(BackpressureStrategy.DROP)
+                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
+                .doOnNext(this::handleWindowClosing)
                 .subscribe();
     }
 
@@ -260,6 +275,7 @@ public class Wheelly {
         if (radarFrame != null) {
             radarFrame.dispose();
         }
+        comFrame.dispose();
         if (!args.getBoolean("silent")) {
             JOptionPane.showMessageDialog(null,
                     "Completed", "Information", JOptionPane.INFORMATION_MESSAGE);
@@ -282,11 +298,13 @@ public class Wheelly {
         }
         long robotElapsed = status.getTime() - robotStartTimestamp;
         envPanel.setTimeRatio((double) robotElapsed / (System.currentTimeMillis() - start));
-        if (robotElapsed > sessionDuration
-                || !frame.isVisible()
-                || (radarFrame != null && !radarFrame.isVisible())) {
+        if (robotElapsed > sessionDuration) {
             environment.shutdown();
         }
+    }
+
+    private void handleWindowClosing(WindowEvent windowEvent) {
+        environment.shutdown();
     }
 
     /**
@@ -324,9 +342,15 @@ public class Wheelly {
                 double radarMaxDistance = ((PolarRobotEnv) environment).getMaxRadarDistance();
                 polarPanel.setRadarMaxDistance(radarMaxDistance);
                 radarFrame = createFixFrame(Messages.getString("Radar.title"), DEFAULT_RADAR_DIMENSION, polarPanel);
-                layHorizontaly(frame, radarFrame);
+                SwingObservable.window(radarFrame, SwingObservable.WINDOW_ACTIVE)
+                        .toFlowable(BackpressureStrategy.DROP)
+                        .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
+                        .doOnNext(this::handleWindowClosing)
+                        .subscribe();
+                layHorizontaly(frame, radarFrame, comFrame);
+            } else {
+                layHorizontaly(frame, comFrame);
             }
-
             sessionDuration = this.args.getLong("time");
             logger.atInfo().log("Starting session ...");
             logger.atInfo().setMessage("Session are running for {} sec...").addArgument(sessionDuration).log();
@@ -341,7 +365,12 @@ public class Wheelly {
             environment.setOnAct(agent::act);
             environment.setOnStatusReady(this::handleStatusReady);
             environment.setOnResult(this::handleResult);
-            environment.setOnError(err -> logger.atError().setCause(err).log());
+            environment.setOnReadLine(comMonitor::onReadLine);
+            environment.setOnWriteLine(comMonitor::onWriteLine);
+            environment.setOnError(err -> {
+                comMonitor.onError(err);
+                logger.atError().setCause(err).log();
+            });
             environment.readShutdown()
                     .doOnComplete(this::handleShutdown)
                     .subscribe();
@@ -350,6 +379,7 @@ public class Wheelly {
             if (radarFrame != null) {
                 radarFrame.setVisible(true);
             }
+            comFrame.setVisible(true);
             environment.start();
         } catch (ArgumentParserException e) {
             parser.handleError(e);

@@ -157,6 +157,7 @@ public class MatrixMonitor {
         sensorPanel.setPrintTimestamp(false);
         initFlow();
     }
+
     private Container createCommandPanel() {
         sensorDirField.setColumns(5);
         sensorDirField.setEditable(false);

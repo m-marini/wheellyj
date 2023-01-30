@@ -37,8 +37,8 @@ import org.jetbrains.annotations.NotNull;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.engines.ProcessorContext;
 import org.mmarini.wheelly.engines.StateMachineAgent;
-import org.mmarini.wheelly.swing.EnvironmentPanel;
 import org.mmarini.wheelly.swing.ComMonitor;
+import org.mmarini.wheelly.swing.EnvironmentPanel;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.wheelly.swing.PolarPanel;
 import org.mmarini.yaml.Utils;
@@ -155,7 +155,7 @@ public class RobotExecutor {
         this.frame = createFrame(Messages.getString("RobotExecutor.title"), envPanel);
         this.radarFrame = createFixFrame(Messages.getString("Radar.title"), DEFALT_RADAR_DIMENSION, polarPanel);
         this.monitorPanel = new ComMonitor();
-        this.monitorFrame = createFixFrame(Messages.getString("Monitor.title"), monitorPanel);
+        this.monitorFrame = createFixFrame(Messages.getString("ComMonitor.title"), monitorPanel);
         this.reactionRobotTime = AverageValue.create();
         this.reactionRealTime = AverageValue.create();
         this.robotStartTimestamp = -1;
@@ -166,7 +166,7 @@ public class RobotExecutor {
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
                 .doOnNext(this::handleWindowOpened)
                 .subscribe();
-        layHorizontaly(frame, radarFrame,monitorFrame);
+        layHorizontaly(frame, radarFrame, monitorFrame);
     }
 
     /**

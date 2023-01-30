@@ -59,9 +59,9 @@ public class MatrixColumn extends JComponent {
     private int columns;
     private boolean printTimestamp;
     private String timePattern;
-    private Color titleColor;
-    private Color titleBackgroundColor;
-    private Font titleFont;
+    private final Color titleColor;
+    private final Color titleBackgroundColor;
+    private final Font titleFont;
 
     /**
      * Creates the matrix panel
