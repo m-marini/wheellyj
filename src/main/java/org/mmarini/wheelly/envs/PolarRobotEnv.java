@@ -58,8 +58,7 @@ import static org.mmarini.yaml.schema.Validator.*;
  *      The robot actions are divided in two concurrent actions: robot movement and sensor movement<br>
  *      The robot movement are
  *      <ul>
- *          <li>halt robot</li>
- *          <li>move robot to a direction at specific speed</li>
+ *          <li>move robot to a direction at specific speed or halt (speedFeature == numSpeedValues)</li>
  *      </ul>
  *      The sensor movement determines the direction of sensor
  * </p>
@@ -150,9 +149,8 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
                                        int numDirectionValues, int numSensorValues, int numSpeedValues,
                                        int numRadarSectors, double minRadarDistance, double maxRadarDistance, RadarMap radarMap) {
         Map<String, SignalSpec> actions1 = Map.of(
-                "halt", new IntSignalSpec(new long[]{1}, 2),
                 "direction", new IntSignalSpec(new long[]{1}, numDirectionValues),
-                "speed", new IntSignalSpec(new long[]{1}, numSpeedValues),
+                "speed", new IntSignalSpec(new long[]{1}, numSpeedValues + 1), //number of speed values + halt command
                 "sensorAction", new IntSignalSpec(new long[]{1}, numSensorValues)
         );
 
@@ -225,12 +223,12 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
 
     @Override
     public PolarMap getPolarMap() {
-        return status.polarMap;
+        return currentStatus.polarMap;
     }
 
     @Override
     public RadarMap getRadarMap() {
-        return status.radarMap;
+        return currentStatus.radarMap;
     }
 
     @Override
@@ -296,12 +294,15 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
 
     @Override
     protected void processActions(Map<String, Signal> actions) {
-        boolean halt = actions.get("halt").getInt(0) == 1;
         RobotControllerApi controller = getController();
-        if (halt) {
+        int speedAction = actions.get("speed").getInt(0);
+        int n = ((IntSignalSpec) getActions().get("speed")).getNumValues();
+        if (speedAction == n - 1) {
             controller.haltRobot();
         } else {
-            int speed = speed(actions);
+            int speed = (int) round(linear(speedAction,
+                    0, n - 1,
+                    -MAX_PPS_SPEED, MAX_PPS_SPEED));
             int dDir = deltaDir(actions);
             int direction = normalizeDegAngle(currentStatus.status.getDirection() + dDir);
             controller.moveRobot(direction, speed);
@@ -340,19 +341,6 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
     @Override
     public void setOnWriteLine(Consumer<String> callback) {
         getController().setOnWriteLine(callback);
-    }
-
-    /**
-     * Returns the speed from actions
-     *
-     * @param actions the actions
-     */
-    int speed(Map<String, Signal> actions) {
-        int action = actions.get("speed").getInt(0);
-        int n = ((IntSignalSpec) getActions().get("speed")).getNumValues();
-        return (int) round(linear(action,
-                0, n - 1,
-                MIN_SPEED, MAX_SPEED) * MAX_PPS_SPEED * 4) / 4;
     }
 
     static class CompositeStatus {

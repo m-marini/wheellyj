@@ -71,14 +71,6 @@ configurations:
           - type: dense
             outputSize: 100
           - type: relu
-      halt:
-        input: hidden2
-        layers:
-          - type: dense
-            outputSize: 2
-          - type: tanh
-          - type: softmax
-            temperature: 0.435
       direction:
         input: hidden2
         layers:
@@ -91,7 +83,7 @@ configurations:
         input: hidden2
         layers:
           - type: dense
-            outputSize: 9
+            outputSize: 10
           - type: tanh
           - type: softmax
             temperature: 0.3
