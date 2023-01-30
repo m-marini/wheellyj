@@ -1,7 +1,7 @@
 ---
 version: "0.4"
-active: simRobot
-#active: realRobot
+#active: simRobot
+active: realRobot
 
 configurations:
   simRobot:

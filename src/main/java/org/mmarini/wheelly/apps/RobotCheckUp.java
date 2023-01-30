@@ -37,6 +37,7 @@ import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotControllerApi;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.Utils;
+import org.mmarini.wheelly.swing.ComMonitor;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.wheelly.swing.SensorsPanel;
 import org.slf4j.Logger;
@@ -59,6 +60,7 @@ import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 import static org.mmarini.wheelly.apps.Wheelly.fromConfig;
 import static org.mmarini.wheelly.swing.Utils.createFrame;
+import static org.mmarini.wheelly.swing.Utils.layHorizontaly;
 
 
 public class RobotCheckUp {
@@ -111,7 +113,9 @@ public class RobotCheckUp {
     }
 
     private final SensorsPanel sensorPanel;
+    private final ComMonitor lineMonitor;
     private final JFrame frame;
+    private final JFrame monitorFrame;
     private Namespace parseArgs;
     private RobotControllerApi controller;
     private Function<RobotStatus, FinalResult> checkupProcess;
@@ -121,7 +125,12 @@ public class RobotCheckUp {
      */
     public RobotCheckUp() {
         this.sensorPanel = new SensorsPanel();
+        this.lineMonitor = new ComMonitor();
         this.frame = createFrame(Messages.getString("RobotCheckUp.title"), RESULT_SIZE, sensorPanel);
+        this.monitorFrame = createFrame(Messages.getString("ComMonitor.title"), RESULT_SIZE, new JScrollPane(lineMonitor));
+        lineMonitor.setPrintTimestamp(true);
+        monitorFrame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+        layHorizontaly(frame, monitorFrame);
         SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
                 .doOnNext(this::handleWindowClose)
@@ -242,6 +251,7 @@ public class RobotCheckUp {
 
     private void handleShutdown() {
         frame.dispose();
+        monitorFrame.dispose();
         System.exit(0);
     }
 
@@ -296,15 +306,17 @@ public class RobotCheckUp {
         logger.info("Robot check started.");
         controller = createController();
         controller.setOnInference(this::handleInference);
-        controller.setOnError(err -> logger.atError().setCause(err).log());
-        if (logger.isDebugEnabled()) {
-            controller.setOnReadLine(line -> logger.atDebug().setMessage("--> {}").addArgument(line).log());
-            controller.setOnWriteLine(line -> logger.atDebug().setMessage("<-- {}").addArgument(line).log());
-        }
+        controller.setOnError(err -> {
+            lineMonitor.onError(err);
+            logger.atError().setCause(err).log();
+        });
+        controller.setOnReadLine(lineMonitor::onReadLine);
+        controller.setOnWriteLine(lineMonitor::onWriteLine);
         controller.readShutdown()
                 .doOnComplete(this::handleShutdown)
                 .subscribe();
         frame.setVisible(true);
+        monitorFrame.setVisible(true);
         controller.start();
     }
 

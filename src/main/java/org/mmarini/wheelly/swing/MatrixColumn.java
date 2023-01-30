@@ -38,17 +38,20 @@ import java.util.concurrent.TimeUnit;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The matrix panel display text in matrix fashion.
  */
-public class MatrixPanel extends JComponent {
+public class MatrixColumn extends JComponent {
     public static final String DEFAULT_TIME_PATTERN = "%1$tH.%1$tM:%1$tS.%1$tL";
     private static final long DEFAULT_DECAY_TIME = 3000L;
     private static final float DEFAULT_MIN_BRIGHT = 0.5F;
     private static final Font DEFAULT_FONT = Font.decode(Font.MONOSPACED + " 14");
     private static final int DEFAULT_ROW_NUMBER = 36;
+    private static final int TIMESTAMP_COLUMNS = 13;
     private final float minBright;
+    private String title;
     private String[] rows;
     private int cursor;
     private long[] timestamps;
@@ -56,21 +59,35 @@ public class MatrixPanel extends JComponent {
     private int columns;
     private boolean printTimestamp;
     private String timePattern;
+    private final Color titleColor;
+    private final Color titleBackgroundColor;
+    private final Font titleFont;
 
     /**
      * Creates the matrix panel
      */
-    public MatrixPanel() {
+    public MatrixColumn() {
         setBackground(Color.BLACK);
         setForeground(Color.GREEN);
+        this.titleFont = Font.decode("Dialog  bold");
         setFont(DEFAULT_FONT);
+
         decayTime = DEFAULT_DECAY_TIME;
         minBright = DEFAULT_MIN_BRIGHT;
         timePattern = DEFAULT_TIME_PATTERN;
         printTimestamp = true;
         setRows(DEFAULT_ROW_NUMBER);
+        this.titleColor = Color.BLACK;
+        this.titleBackgroundColor = Color.WHITE;
         Flowable.interval(1000 / 60, TimeUnit.MILLISECONDS)
                 .subscribe(i -> repaint());
+        this.title = "";
+    }
+
+    public MatrixColumn(String title, int size) {
+        this();
+        this.title = requireNonNull(title);
+        setColumns(size);
     }
 
     /**
@@ -143,6 +160,7 @@ public class MatrixPanel extends JComponent {
 
     public void setPrintTimestamp(boolean printTimestamp) {
         this.printTimestamp = printTimestamp;
+        invalidate();
     }
 
     @Override
@@ -154,10 +172,28 @@ public class MatrixPanel extends JComponent {
         int h = fm.getHeight();
         int y = fm.getMaxAscent();
         long timestamp = System.currentTimeMillis();
+        String[] rows1 = rows;
+        long[] timestamps1 = timestamps;
+        g.setColor(titleBackgroundColor);
+        g.fillRect(0, 0, getPreferredSize().width, h);
+        g.setColor(titleColor);
+        g.drawRect(0, 0, getPreferredSize().width, h);
+        g.setFont(titleFont);
+        int width = g.getFontMetrics().stringWidth(title);
+        int x = (getPreferredSize().width - width) / 2;
+        g.drawString(title, x, y);
+        g.setFont(getFont());
+        y += h;
+        g.setColor(getBackground());
         for (int i = 0; i < rows.length; i++) {
-            String line = rows[i];
-            g.setColor(getColor(timestamp - timestamps[i]));
-            g.drawString(line, 0, y);
+            String row = rows1[i];
+            if (row.length() > 0) {
+                String line = printTimestamp
+                        ? format(timePattern + " %2$s", timestamps1[i], row)
+                        : row;
+                g.setColor(getColor(timestamp - timestamps1[i]));
+                g.drawString(line, 0, y);
+            }
             y += h;
         }
     }
@@ -176,7 +212,6 @@ public class MatrixPanel extends JComponent {
         for (String s : lines.split("\n")) {
             printRow(s, timestamp);
         }
-
     }
 
     /**
@@ -185,10 +220,7 @@ public class MatrixPanel extends JComponent {
      * @param text the line
      */
     private void printRow(String text, long timestamp) {
-        String row = printTimestamp
-                ? format(timePattern + " %2$s", timestamp, text)
-                : text;
-        rows[cursor] = row;
+        rows[cursor] = text;
         timestamps[cursor] = timestamp;
         cursor++;
         if (cursor >= rows.length) {
@@ -206,12 +238,8 @@ public class MatrixPanel extends JComponent {
         Font font = getFont();
         FontMetrics fm = getFontMetrics(font);
         int colW = fm.charWidth('m');
-        int minW = colW * columns;
-        int maxW = Arrays.stream(rows)
-                .mapToInt(fm::stringWidth)
-                .max().orElse(0);
-        int w = max(maxW, minW);// + fm.getMaxAdvance();
-        Dimension size = new Dimension(w, rows.length * fm.getHeight() + fm.getMaxDescent());
+        int minW = colW * (columns + (printTimestamp ? TIMESTAMP_COLUMNS : 0));
+        Dimension size = new Dimension(minW, (rows.length + 1) * fm.getHeight() + fm.getMaxDescent());
         setPreferredSize(size);
         invalidate();
     }
