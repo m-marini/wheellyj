@@ -60,8 +60,8 @@ import static org.mmarini.wheelly.swing.Utils.layHorizontaly;
 public class MatrixMonitor {
     private static final int SENSOR_COLUMNS = 20;
     private static final Dimension COMMAND_FRAME_SIZE = new Dimension(400, 800);
-    private static final Dimension LINE_FRAME_SIZE = new Dimension(1200, 800);
-    private static final Dimension SENSOR_FRAME_SIZE = new Dimension(400, 800);
+    private static final Dimension COM_FRAME_SIZE = new Dimension(1200, 800);
+    private static final Dimension SENSOR_FRAME_SIZE = new Dimension(200, 800);
     private static final Logger logger = LoggerFactory.getLogger(MatrixMonitor.class);
     private static final int MAX_SPEED = 20;
     private static final int MAX_TIME = 10000;
@@ -391,7 +391,7 @@ public class MatrixMonitor {
 
         this.commandFrame = createFrame(Messages.getString("MatrixMonitor.title"), COMMAND_FRAME_SIZE, commandPanel);
         this.sensorFrame = createFrame(Messages.getString("MatrixMonitor.title"), SENSOR_FRAME_SIZE, new JScrollPane(sensorPanel));
-        this.lineFrame = createFrame(Messages.getString("ComMonitor.title"), LINE_FRAME_SIZE, new JScrollPane(comMonitor));
+        this.lineFrame = createFrame(Messages.getString("ComMonitor.title"), COM_FRAME_SIZE, new JScrollPane(comMonitor));
         layHorizontaly(commandFrame, sensorFrame, lineFrame);
 
         SwingObservable.window(commandFrame, SwingObservable.WINDOW_ACTIVE).toFlowable(BackpressureStrategy.DROP)

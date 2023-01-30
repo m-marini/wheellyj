@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Issue #178: Compiler error on org.mmarini.wheelly.objectives.MockEnvironment
 - Issue #180: SimRobotObstacle Test Error
+- Issue #188: com frame is not resizable
 
 ## [0.5.2] 2023-01-25
 
