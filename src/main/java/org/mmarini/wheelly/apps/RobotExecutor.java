@@ -136,8 +136,8 @@ public class RobotExecutor {
     private final PolarPanel polarPanel;
     private final AverageValue reactionRobotTime;
     private final AverageValue reactionRealTime;
-    private final ComMonitor monitorPanel;
-    private final JFrame monitorFrame;
+    private final ComMonitor comMonitor;
+    private final JFrame comFrame;
     private Namespace args;
     private long start;
     private long sessionDuration;
@@ -154,8 +154,8 @@ public class RobotExecutor {
         this.polarPanel = new PolarPanel();
         this.frame = createFrame(Messages.getString("RobotExecutor.title"), envPanel);
         this.radarFrame = createFixFrame(Messages.getString("Radar.title"), DEFALT_RADAR_DIMENSION, polarPanel);
-        this.monitorPanel = new ComMonitor();
-        this.monitorFrame = createFixFrame(Messages.getString("ComMonitor.title"), monitorPanel);
+        this.comMonitor = new ComMonitor();
+        this.comFrame = createFrame(Messages.getString("ComMonitor.title"), comMonitor);
         this.reactionRobotTime = AverageValue.create();
         this.reactionRealTime = AverageValue.create();
         this.robotStartTimestamp = -1;
@@ -166,7 +166,7 @@ public class RobotExecutor {
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
                 .doOnNext(this::handleWindowOpened)
                 .subscribe();
-        layHorizontaly(frame, radarFrame, monitorFrame);
+        layHorizontaly(frame, radarFrame, comFrame);
     }
 
     /**
@@ -184,7 +184,7 @@ public class RobotExecutor {
     private void handleShutdown() {
         frame.dispose();
         radarFrame.dispose();
-        monitorFrame.dispose();
+        comFrame.dispose();
         if (!args.getBoolean("silent")) {
             JOptionPane.showMessageDialog(null,
                     "Completed", "Information", JOptionPane.INFORMATION_MESSAGE);
@@ -197,7 +197,7 @@ public class RobotExecutor {
      * @param ctx the context
      */
     private void handleStepUp(ProcessorContext ctx) {
-        monitorPanel.onReadLine("sc aaaa");
+        comMonitor.onReadLine("sc aaaa");
         RobotStatus status = ctx.getRobotStatus();
         if (robotStartTimestamp < 0) {
             robotStartTimestamp = status.getTime();
@@ -269,14 +269,14 @@ public class RobotExecutor {
                     .doOnComplete(this::handleShutdown)
                     .subscribe();
             agent.setOnError(err -> {
-                monitorPanel.onError(err);
+                comMonitor.onError(err);
                 logger.atError().setCause(err).log();
             });
-            agent.setOnReadLine(monitorPanel::onReadLine);
-            agent.setOnWriteLine(monitorPanel::onWriteLine);
+            agent.setOnReadLine(comMonitor::onReadLine);
+            agent.setOnWriteLine(comMonitor::onWriteLine);
             frame.setVisible(true);
             radarFrame.setVisible(true);
-            monitorFrame.setVisible(true);
+            comFrame.setVisible(true);
         } catch (ArgumentParserException e) {
             parser.handleError(e);
             System.exit(1);
