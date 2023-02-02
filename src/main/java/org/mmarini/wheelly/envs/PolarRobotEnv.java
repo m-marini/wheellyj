@@ -164,7 +164,7 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
     private final double minRadarDistance;
     private CompositeStatus status;
     private CompositeStatus currentStatus;
-    private Consumer<RobotStatus> onStatusReady;
+    private CompositeStatus previousStatus;
 
     /**
      * Creates the controller environment
@@ -217,6 +217,10 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
         return this.actions;
     }
 
+    public CompositeStatus getCurrentStatus() {
+        return currentStatus;
+    }
+
     public double getMaxRadarDistance() {
         return maxRadarDistance;
     }
@@ -224,6 +228,10 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
     @Override
     public PolarMap getPolarMap() {
         return currentStatus.polarMap;
+    }
+
+    public CompositeStatus getPreviousStatus() {
+        return previousStatus;
     }
 
     @Override
@@ -274,14 +282,6 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
         return states;
     }
 
-    private void handleStatus(RobotStatus status) {
-        RadarMap newRadarMap = this.status.radarMap.update(status);
-        this.status = this.status.setStatus(status).setRadarMap(newRadarMap);
-        if (onStatusReady != null) {
-            onStatusReady.accept(status);
-        }
-    }
-
     @Override
     protected void latchStatus(RobotStatus ignored) {
         currentStatus = status;
@@ -290,6 +290,12 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
         PolarMap polarMap = currentStatus.polarMap;
         polarMap = polarMap.update(radarMap, robotStatus.getLocation(), robotStatus.getDirection(), minRadarDistance, maxRadarDistance);
         currentStatus = currentStatus.setPolarMap(polarMap);
+    }
+
+    @Override
+    protected void onStatus(RobotStatus status) {
+        RadarMap newRadarMap = this.status.radarMap.update(status);
+        this.status = this.status.setStatus(status).setRadarMap(newRadarMap);
     }
 
     @Override
@@ -334,13 +340,13 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
     }
 
     @Override
-    public void setOnStatusReady(Consumer<RobotStatus> callback) {
-        onStatusReady = callback;
+    public void setOnWriteLine(Consumer<String> callback) {
+        getController().setOnWriteLine(callback);
     }
 
     @Override
-    public void setOnWriteLine(Consumer<String> callback) {
-        getController().setOnWriteLine(callback);
+    protected void splitStatus() {
+        previousStatus = currentStatus;
     }
 
     static class CompositeStatus {
