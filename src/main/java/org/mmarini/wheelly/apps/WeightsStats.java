@@ -44,7 +44,7 @@ import java.io.IOException;
 import java.util.Map;
 
 /**
- * Run a test to check for robot environment with random behavior agent
+ * Runs the dump of weights statistic
  */
 public class WeightsStats {
     private static final Logger logger = LoggerFactory.getLogger(WeightsStats.class);

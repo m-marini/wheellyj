@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #180: SimRobotObstacle Test Error
 - Issue #188: Com frame is not resizable
 - Issue #190: Blind polar radar
+- Issue #193: Fix octave for speed action with halt
 
 ## [0.5.2] 2023-01-25
 
