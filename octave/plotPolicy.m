@@ -1,17 +1,16 @@
-function plotPolicy(HALT_H, DIR_H, SPEED_H, SENS_H)
+function plotPolicy(DIR_H, SPEED_H, SENS_H)
   NR = 2;
   NC = 2;
-  
-  HALT_LEGEND = {"Move", "Halt"};
+
   DIR_LEGEND = {};
   SPEED_LEGEND = {};
   SENS_LEGEND = {};
-  
+
   N_DIR = size(DIR_H, 2);
   for I = 1 : N_DIR
     DIR_LEGEND(1, I) = sprintf("%d", (I - 1) * 360 / N_DIR - 180);
   endfor
-  
+
   N_SPEED = size(SPEED_H, 2);
   for I = 1 : N_SPEED
     SPEED_LEGEND(1, I) = sprintf("%.1f", (I - 1) * 2.0 / (N_SPEED - 1) - 1);
@@ -23,14 +22,6 @@ function plotPolicy(HALT_H, DIR_H, SPEED_H, SENS_H)
   endfor
 
   clf;
-  
-  subplot(NR, NC, 1);
-  plot(softmax(HALT_H));
-  grid on;
-  title(sprintf("Halt prob"));
-  ylabel("Prob");
-  xlabel("Steps");
-  legend(HALT_LEGEND);
 
   subplot(NR, NC, 2);
   plot(softmax(DIR_H));

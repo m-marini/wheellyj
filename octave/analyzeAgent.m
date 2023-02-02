@@ -2,8 +2,6 @@ function analyzeAgent(
   J0,J1,                  # the J0 and J1
   REWARDS,                # rewards
   DELTA,                  # delta
-  HALT_ALPHA,             # halt alpha
-  HALT_DH,                # halt dh
   DIR_ALPHA,              # direction alpha
   DIR_DH,                 # direction dh
   SPEED_ALPHA,            # Apha
@@ -48,15 +46,6 @@ function analyzeAgent(
 
   NR = 3;             # number of rows
   NC = 2 + NA;
-
-  HALT_DH2 = HALT_DH .^ 2;
-  HALT_DH2M = mean(HALT_DH2, 2);
-  ALPHA = HALT_ALPHA(1);
-  # Compute alpha for percetile
-  PCH = prctile(sqrt(HALT_DH2M), PRC);
-  HALT_DIST = EPSH ./ PCH * ALPHA;
-  # Compute mean
-  HALT_DIST_TREND = ones(size(PRC, 1), 1) * EPSH ./ sqrt(mean(HALT_DH2M)) * ALPHA;
 
   DIR_DH2 = DIR_DH .^ 2;
   DIR_DH2M = mean(DIR_DH2, 2);
@@ -113,28 +102,6 @@ function analyzeAgent(
   xlabel("K");
   ylabel("# samples");
 
-  subplot(NR, NC, 3);
-  autoplot(PRC, [HALT_DIST, HALT_DIST_TREND]);
-  grid on;
-  grid minor on;
-  title(sprintf("Halt alpha"));
-  xlabel("% corrected samples");
-  ylabel(sprintf("Halt alpha"));
-
-  subplot(NR, NC, 3 + NC);
-  hist(HALT_DH2M, BINS);
-  grid on;
-  title(sprintf("Halt J distribution"));
-  xlabel(sprintf("Halt J distribution"));
-  ylabel("# samples");
-
-  subplot(NR, NC, 3 + 2 * NC);
-  autoplot(HALT_ALPHA);
-  grid on;
-  title(sprintf("Halt alpha"));
-  xlabel(sprintf("Alpha"));
-  ylabel("# samples");
-  
   subplot(NR, NC, 4);
   autoplot(PRC, [DIR_DIST, DIR_DIST_TREND]);
   grid on;
@@ -156,7 +123,7 @@ function analyzeAgent(
   title(sprintf("Direction alpha"));
   xlabel(sprintf("Alpha"));
   ylabel("# samples");
-  
+
   subplot(NR, NC, 5);
   autoplot(PRC, [SPEED_DIST, SPEED_DIST_TREND]);
   grid on;
@@ -171,7 +138,7 @@ function analyzeAgent(
   title(sprintf("Speed J distribution"));
   xlabel(sprintf("Speed J distribution"));
   ylabel("# samples");
- 
+
   subplot(NR, NC, 5 + 2 * NC);
   autoplot(SPEED_ALPHA);
   grid on;
@@ -210,7 +177,6 @@ function analyzeAgent(
 
   printf("\n");
 
-  printf("Optimal halt alpha:     %.1f\n", HALT_DIST_TREND(1));
   printf("Optimal directin alpha: %.1f\n", DIR_DIST_TREND(1));
   printf("Optimal speed alpha:    %.1f\n", SPEED_DIST_TREND(1));
   printf("Optimal sensor alpha:   %.1f\n", SENS_DIST_TREND(1));
