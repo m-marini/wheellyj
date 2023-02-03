@@ -35,6 +35,7 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.wheelly.apis.RobotApi;
+import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotControllerApi;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.swing.ComMonitor;
@@ -271,9 +272,9 @@ public class MatrixMonitor {
             timeSlider.setEnabled(true);
         }
         if (halt) {
-            controller.haltRobot();
+            controller.execute(RobotCommands.halt());
         } else {
-            controller.moveRobot(robotDirSlider.getValue(), speedSlider.getValue());
+            controller.execute(RobotCommands.move(robotDirSlider.getValue(), speedSlider.getValue()));
         }
     }
 
@@ -300,7 +301,7 @@ public class MatrixMonitor {
     private void handleSensorDirSlider(ChangeEvent changeEvent) {
         int sensorDir = sensorDirSlider.getValue();
         sensorDirField.setValue(sensorDir);
-        controller.moveSensor(sensorDir);
+        controller.execute(RobotCommands.scan(sensorDir));
     }
 
     private void handleShutdown() {

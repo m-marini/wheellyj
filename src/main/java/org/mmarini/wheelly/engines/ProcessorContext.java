@@ -28,10 +28,8 @@
 
 package org.mmarini.wheelly.engines;
 
-import org.mmarini.wheelly.apis.PolarMap;
-import org.mmarini.wheelly.apis.RadarMap;
-import org.mmarini.wheelly.apis.RobotControllerApi;
-import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.Tuple2;
+import org.mmarini.wheelly.apis.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +37,7 @@ import java.util.*;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.engines.StateNode.NONE_EXIT;
 
 /**
  * The processor context handles the process stack and the key, value map of the process
@@ -287,13 +286,6 @@ public class ProcessorContext {
     }
 
     /**
-     * Halt the robot
-     */
-    public void haltRobot() {
-        robot.haltRobot();
-    }
-
-    /**
      * Initializes context
      */
     public void init() {
@@ -315,25 +307,6 @@ public class ProcessorContext {
         this.currentNode = flow.getEntry();
         logger.debug("{}: entry", currentNode.getId());
         this.currentNode.entry(this);
-    }
-
-    /**
-     * Moves the robot
-     *
-     * @param direction direction (DEG)
-     * @param speed     speed
-     */
-    public void moveRobot(int direction, int speed) {
-        robot.moveRobot(direction, speed);
-    }
-
-    /**
-     * Move the sensor
-     *
-     * @param direction direction (DEG)
-     */
-    public void moveSensor(int direction) {
-        robot.moveSensor(direction);
     }
 
     /**
@@ -413,11 +386,12 @@ public class ProcessorContext {
      */
     public void step() {
         // Process the state node
-        String result = currentNode.step(this);
-        if (result != null) {
+        Tuple2<String, RobotCommands> result = currentNode.step(this);
+        robot.execute(result._2);
+        if (!NONE_EXIT.equals(result._1)) {
             //find for transition match
             Optional<StateTransition> tx = flow.getTransitions().stream()
-                    .filter(t -> t.getFrom().equals(currentNode.getId()) && t.isTriggered(result))
+                    .filter(t -> t.getFrom().equals(currentNode.getId()) && t.isTriggered(result._1))
                     .findFirst();
             tx.ifPresentOrElse(t -> {
                         // trigger the exit call back
@@ -431,7 +405,7 @@ public class ProcessorContext {
                         logger.debug("{}: entry", currentNode.getId());
                         currentNode.entry(this);
                     },
-                    () -> logger.debug("Trigger {} - {} ignored", currentNode.getId(), result)
+                    () -> logger.debug("Trigger {} - {} ignored", currentNode.getId(), result._1)
             );
         }
     }

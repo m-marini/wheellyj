@@ -148,7 +148,7 @@ class RobotControllerTest {
     }
 
     @Test
-    void inference() throws InterruptedException, IOException {
+    void inference() throws InterruptedException {
         Mock1Robot robot = spy(new Mock1Robot());
         RobotController rc = createController(robot);
         Consumer<RobotStatus> consumer = mock();
@@ -170,7 +170,7 @@ class RobotControllerTest {
         rc.stepUp(); // Configure
         rc.stepUp(); // Handle scan
 
-        rc.moveRobot(90, 10);
+        rc.execute(RobotCommands.move(90, 10));
         rc.stepUp(); // Handle move
 
         verify(robot).move(90, 10);
@@ -190,7 +190,7 @@ class RobotControllerTest {
         rc.stepUp(); // Connect
         rc.stepUp(); // Configure
         rc.stepUp(); // Handle scan
-        rc.moveRobot(90, 10);
+        rc.execute(RobotCommands.move(90, 10));
         rc.stepUp(); // Handle move
 
         rc.stepUp(); // Close
@@ -202,7 +202,7 @@ class RobotControllerTest {
     }
 
     @Test
-    void read() throws InterruptedException, IOException {
+    void read() throws InterruptedException {
         Mock1Robot robot = spy(new Mock1Robot());
         RobotController rc = createController(robot);
         Consumer<RobotStatus> consumer = mock();
@@ -223,7 +223,7 @@ class RobotControllerTest {
         rc.stepUp(); // Connect
         rc.stepUp(); // Configure
 
-        rc.moveSensor(90);
+        rc.execute(RobotCommands.scan(90));
         rc.stepUp(); // Handle scan
 
         verify(robot).scan(90);
@@ -243,7 +243,7 @@ class RobotControllerTest {
         rc.stepUp(); // Connect
         rc.stepUp(); // Configure
 
-        rc.moveSensor(90);
+        rc.execute(RobotCommands.scan(90));
         rc.stepUp(); // Handle scan
         rc.stepUp(); // Close
 
@@ -273,7 +273,7 @@ class RobotControllerTest {
         RobotController rc = createController(robot);
         rc.stepUp(); // Connect
         rc.stepUp(); // Configure
-        rc.moveSensor(90);
+        rc.execute(RobotCommands.scan(90));
         rc.stepUp(); // Handle scan
         rc.stepUp(); // Handle move
 
@@ -282,7 +282,7 @@ class RobotControllerTest {
         long elapsed = System.currentTimeMillis() - ts;
         assertThat(elapsed, greaterThanOrEqualTo(INTERVAL));
 
-        rc.moveSensor(-90);
+        rc.execute(RobotCommands.scan(-90));
         rc.stepUp(); // Handle scan
         InOrder inOrder = inOrder(robot);
         inOrder.verify(robot).scan(90);

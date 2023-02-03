@@ -51,6 +51,9 @@ public class MatrixColumn extends JComponent {
     private static final int DEFAULT_ROW_NUMBER = 36;
     private static final int TIMESTAMP_COLUMNS = 13;
     private final float minBright;
+    private final Color titleColor;
+    private final Color titleBackgroundColor;
+    private final Font titleFont;
     private String title;
     private String[] rows;
     private int cursor;
@@ -59,9 +62,6 @@ public class MatrixColumn extends JComponent {
     private int columns;
     private boolean printTimestamp;
     private String timePattern;
-    private final Color titleColor;
-    private final Color titleBackgroundColor;
-    private final Font titleFont;
 
     /**
      * Creates the matrix panel

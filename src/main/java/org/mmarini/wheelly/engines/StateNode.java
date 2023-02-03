@@ -29,6 +29,8 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.Tuple2;
+import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 
@@ -45,6 +47,11 @@ public interface StateNode {
     String TIMEOUT_EXIT = "timeout";
     String BLOCKED_EXIT = "blocked";
     String COMPLETED_EXIT = "completed";
+    String NONE_EXIT = "none";
+    Tuple2<String, RobotCommands> TIMEOUT_RESULT = Tuple2.of(TIMEOUT_EXIT, RobotCommands.idle());
+    Tuple2<String, RobotCommands> BLOCKED_RESULT = Tuple2.of(BLOCKED_EXIT, RobotCommands.idle());
+    Tuple2<String, RobotCommands> NONE_RESULT = Tuple2.of(NONE_EXIT, RobotCommands.none());
+    Tuple2<String, RobotCommands> COMPLETED_RESULT = Tuple2.of(COMPLETED_EXIT, RobotCommands.idle());
 
     Validator STATE_NODES = Validator.objectAdditionalProperties(DYNAMIC_OBJECT);
 
@@ -118,9 +125,9 @@ public interface StateNode {
     boolean isTimeout(ProcessorContext context);
 
     /**
-     * Processes the interaction and returns the exit key or null if no state change
+     * Processes the interaction and returns the exit key and the robot command
      *
      * @param context the processor context
      */
-    String step(ProcessorContext context);
+    Tuple2<String, RobotCommands> step(ProcessorContext context);
 }

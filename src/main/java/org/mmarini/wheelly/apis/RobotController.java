@@ -40,7 +40,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
@@ -63,8 +62,6 @@ public class RobotController implements RobotControllerApi {
             "connectionRetryInterval",
             "watchdogInterval"));
     private static final Logger logger = LoggerFactory.getLogger(RobotController.class);
-    private static final RobotCommand HALT_COMMAND = new RobotCommand() {
-    };
 
     /**
      * Returns the robot controller from configuration
@@ -92,13 +89,13 @@ public class RobotController implements RobotControllerApi {
     private final long watchdogInterval;
     Runnable statusTransition;
     private boolean isStarted;
-    private RobotCommand moveCommand;
+    private RobotCommands moveCommand;
     private int sensorDir;
     private boolean end;
     private RobotStatus robotStatus;
     private int prevSensorDir;
     private long lastSensorMoveTimestamp;
-    private RobotCommand lastMoveCommand;
+    private RobotCommands lastMoveCommand;
     private long lastRobotMoveTimestamp;
     private boolean close;
     private Consumer<Throwable> onError;
@@ -189,13 +186,18 @@ public class RobotController implements RobotControllerApi {
     }
 
     @Override
-    public RobotApi getRobot() {
-        return robot;
+    public void execute(RobotCommands command) {
+        if (command.isHalt() || command.isMove()) {
+            moveCommand = command.clearScan();
+        }
+        if (command.isScan()) {
+            sensorDir = command.scanDirection;
+        }
     }
 
     @Override
-    public void haltRobot() {
-        moveCommand = HALT_COMMAND;
+    public RobotApi getRobot() {
+        return robot;
     }
 
     /**
@@ -208,17 +210,17 @@ public class RobotController implements RobotControllerApi {
         }
         try {
             RobotStatus status = robotStatus;
-            RobotCommand cmd = this.moveCommand;
+            RobotCommands cmd = this.moveCommand;
             if (status != null && cmd != null) {
                 long time = status.getTime();
                 // Checks for move command required
                 if (!cmd.equals(lastMoveCommand)
-                        || !cmd.equals(HALT_COMMAND) && time >= lastRobotMoveTimestamp + commandInterval) {
-                    if (cmd.equals(HALT_COMMAND)) {
+                        || !cmd.isHalt() && time >= lastRobotMoveTimestamp + commandInterval) {
+                    if (cmd.isHalt()) {
                         robot.halt();
                     } else {
-                        MoveCommand moveCmd = (MoveCommand) cmd;
-                        robot.move(moveCmd.direction, moveCmd.speed);
+                        RobotCommands moveCmd = cmd;
+                        robot.move(moveCmd.moveDirection, moveCmd.speed);
                     }
                     this.lastRobotMoveTimestamp = time;
                     lastMoveCommand = cmd;
@@ -284,16 +286,6 @@ public class RobotController implements RobotControllerApi {
             sendError(ex);
             statusTransition = this::closing;
         }
-    }
-
-    @Override
-    public void moveRobot(int direction, int speed) {
-        moveCommand = new MoveCommand(direction, speed);
-    }
-
-    @Override
-    public void moveSensor(int direction) {
-        sensorDir = direction;
     }
 
     @Override
@@ -446,31 +438,5 @@ public class RobotController implements RobotControllerApi {
             }
         }
         statusTransition = this::connecting;
-    }
-
-    interface RobotCommand {
-    }
-
-    static class MoveCommand implements RobotCommand {
-        public final int direction;
-        public final int speed;
-
-        MoveCommand(int direction, int speed) {
-            this.direction = direction;
-            this.speed = speed;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            MoveCommand that = (MoveCommand) o;
-            return direction == that.direction && speed == that.speed;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(direction, speed);
-        }
     }
 }

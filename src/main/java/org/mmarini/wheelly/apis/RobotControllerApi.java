@@ -37,29 +37,16 @@ import java.util.function.Consumer;
  */
 public interface RobotControllerApi extends WithIOCallback, WithStatusCallback, WithErrorCallback {
     /**
+     * Executes the command
+     *
+     * @param command the command
+     */
+    void execute(RobotCommands command);
+
+    /**
      * Returns the apis
      */
     RobotApi getRobot();
-
-    /**
-     * Halt the robot
-     */
-    void haltRobot();
-
-    /**
-     * Moves the robot
-     *
-     * @param direction the robot direction (DEG)
-     * @param speed     the robot speed (pps)
-     */
-    void moveRobot(int direction, int speed);
-
-    /**
-     * Move the sensor
-     *
-     * @param direction the sensor direction (DEG)
-     */
-    void moveSensor(int direction);
 
     Completable readShutdown();
 

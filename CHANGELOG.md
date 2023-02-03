@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #179: Add real measure of reaction time
 - Issue #185: Setting simulation speed
 - Issue #187: Add com monitor to apps
+- Issue #195: Explore by imitation objective
 
 ### Changed
 

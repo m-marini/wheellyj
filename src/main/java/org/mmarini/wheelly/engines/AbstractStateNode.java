@@ -29,6 +29,8 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.Tuple2;
+import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 import org.slf4j.Logger;
@@ -131,8 +133,6 @@ public abstract class AbstractStateNode implements StateNode {
      * @param context the processor context
      */
     protected void entryAutoScan(ProcessorContext context) {
-        context.moveSensor(0);
-        context.haltRobot();
         put(context, "scanTime", -1);
         tickAutoScan(context);
     }
@@ -251,7 +251,7 @@ public abstract class AbstractStateNode implements StateNode {
      *
      * @param context the proccesor context
      */
-    protected void tickAutoScan(ProcessorContext context) {
+    protected Tuple2<String, RobotCommands> tickAutoScan(ProcessorContext context) {
         long scanInterval = getLong(context, "scanInterval");
         // Check for scan interval set
         if (scanInterval > 0) {
@@ -263,17 +263,20 @@ public abstract class AbstractStateNode implements StateNode {
                 int maxSensorDir = clip(getInt(context, "maxSensorDir"), -90, 90);
                 int sensorDirNumber = max(getInt(context, "sensorDirNumber"), 1);
                 // Check for random scan direction
+                RobotCommands command;
                 if (sensorDirNumber > 1) {
                     int x = context.getRandom().nextInt(sensorDirNumber);
                     int dir = x * (maxSensorDir - minSensorDir) / (sensorDirNumber - 1) + minSensorDir;
                     logger.atDebug().setMessage("sensor scan {}").addArgument(dir).log();
-                    context.moveSensor(dir);
+                    command = RobotCommands.scan(dir);
                 } else {
                     // Fix scan direction
-                    context.moveSensor((minSensorDir + maxSensorDir) / 2);
+                    command = RobotCommands.scan((minSensorDir + maxSensorDir) / 2);
                 }
                 put(context, "scanTime", time);
+                return Tuple2.of(NONE_EXIT, command);
             }
         }
+        return NONE_RESULT;
     }
 }
