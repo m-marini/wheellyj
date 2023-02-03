@@ -30,10 +30,7 @@ package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.CircularSector;
-import org.mmarini.wheelly.apis.MapSector;
-import org.mmarini.wheelly.apis.PolarMap;
-import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.*;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 import org.slf4j.Logger;
@@ -107,16 +104,64 @@ public class ExploringState extends AbstractStateNode {
         return new ExploringState(id, onInit, onEntry, onExit);
     }
 
-    /**
-     * Creates the exploring state
-     *
-     * @param id      the identifier
-     * @param onInit  the initialize command
-     * @param onEntry the entry command
-     * @param onExit  the exit command
-     */
-    protected ExploringState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit) {
-        super(id, onInit, onEntry, onExit);
+    public static Tuple2<String, RobotCommands> explore(RobotStatus robotStatus, PolarMap map, double stopDistance, int turnDirectionRange) {
+
+        // Find the unknown sector target direction
+        int targetIndex = findUnknownSector(map);
+        if (targetIndex >= 0) {
+            int sectorDir = map.radarSectorDirection(targetIndex);
+            RobotCommands command;
+            if (abs(sectorDir) <= 90) {
+                // Turns the scanner to the unknown sector
+                double dist = map.getSector(targetIndex).getMapSector().map(MapSector::getLocation)
+                        .map(map.getCenter()::distance)
+                        .orElse(0D);
+                logger.atDebug()
+                        .setMessage("scan {} DEG, distance {}")
+                        .addArgument(sectorDir)
+                        .addArgument(() -> format("%.2f", dist))
+                        .log();
+                command = RobotCommands.haltAndScan(sectorDir);
+            } else {
+                // Turns the robot to the unknown sector
+                int robotDir = normalizeDegAngle(robotStatus.getDirection() + sectorDir);
+                logger.atDebug()
+                        .setMessage("turn to unknown sector {} DEG")
+                        .addArgument(robotDir)
+                        .log();
+                command = RobotCommands.moveAndScan(robotDir, 0, sectorDir);
+            }
+            return Tuple2.of(NONE_EXIT, command);
+        }
+
+        targetIndex = findTargetSector(map, stopDistance);
+        CircularSector targetSector = map.getSector(targetIndex);
+
+        int sectorDir = map.radarSectorDirection(targetIndex);
+        int robotDir = normalizeDegAngle(robotStatus.getDirection() + sectorDir);
+
+        double distance = robotStatus.getEchoDistance();
+        distance = distance == 0 ? targetSector.getDistance()
+                : min(distance, targetSector.getDistance());
+        int speed = abs(sectorDir) > turnDirectionRange
+                ? 0
+                : (!targetSector.isHindered()
+                ? MAX_PPS_SPEED
+                : (int) round(min(max((double) round(linear(distance, 0, stopDistance, 1, 4)),
+                1), 4) * MAX_PPS_SPEED / 4));
+        if (speed == 0) {
+            logger.atDebug()
+                    .setMessage("turn to {} DEG")
+                    .addArgument(robotDir)
+                    .log();
+        } else {
+            logger.atDebug()
+                    .setMessage("move to {} DEG, speed {}")
+                    .addArgument(robotDir)
+                    .addArgument(speed)
+                    .log();
+        }
+        return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(robotDir, speed));
     }
 
     /**
@@ -130,12 +175,11 @@ public class ExploringState extends AbstractStateNode {
      * </ul>
      * </p>
      *
-     * @param context the process context
+     * @param polarMap     the polar map
+     * @param stopDistance the stop distance
      */
-    int findTargetSector(ProcessorContext context) {
-        PolarMap polarMap = context.getPolarMap();
+    static int findTargetSector(PolarMap polarMap, double stopDistance) {
         CircularSector frontSector = polarMap.getSector(0);
-        double stopDistance = getDouble(context, "stopDistance");
         if (!frontSector.isHindered() || frontSector.getDistance() >= stopDistance) {
             // returns the front sector if empty or obstacle far away
             return 0;
@@ -195,10 +239,9 @@ public class ExploringState extends AbstractStateNode {
     /**
      * Returns the index of the nearest sector or -1 if none
      *
-     * @param context the context
+     * @param map the polar map
      */
-    int findUnknownSector(ProcessorContext context) {
-        PolarMap map = context.getPolarMap();
+    static int findUnknownSector(PolarMap map) {
         CircularSector frontSector = map.getSector(0);
         return frontSector.getMapSector().isPresent() && !frontSector.isKnown()
                 ? 0 // return front sector if unknown
@@ -211,86 +254,42 @@ public class ExploringState extends AbstractStateNode {
                 .orElse(-1);
     }
 
+    /**
+     * Creates the exploring state
+     *
+     * @param id      the identifier
+     * @param onInit  the initialize command
+     * @param onEntry the entry command
+     * @param onExit  the exit command
+     */
+    protected ExploringState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit) {
+        super(id, onInit, onEntry, onExit);
+    }
+
+    /**
+     * Returns the target sector index.
+     *
+     * @param context the process context
+     * @see #findTargetSector(PolarMap, double)
+     */
+    int findTargetSector(ProcessorContext context) {
+        return findTargetSector(context.getPolarMap(), getDouble(context, "stopDistance"));
+    }
+
     @Override
-    public String step(ProcessorContext context) {
+    public Tuple2<String, RobotCommands> step(ProcessorContext context) {
         if (isBlocked(context)) {
             // Halt robot and move forward the sensor at block
-            context.haltRobot();
-            context.moveSensor(0);
-            return BLOCKED_EXIT;
+            return BLOCKED_RESULT;
         }
         if (isTimeout(context)) {
             // Halt robot and move forward the sensor at timeout
-            context.haltRobot();
-            context.moveSensor(0);
-            return TIMEOUT_EXIT;
+            return TIMEOUT_RESULT;
         }
 
-        // Find the unknown sector target direction
-        int targetIndex = findUnknownSector(context);
-        PolarMap map = context.getPolarMap();
-        RobotStatus robotStatus = context.getRobotStatus();
-        if (targetIndex >= 0) {
-            int sectorDir = map.radarSectorDirection(targetIndex);
-            if (abs(sectorDir) <= 90) {
-                // Turns the scanner to the unknown sector
-                double dist = map.getSector(targetIndex).getMapSector().map(MapSector::getLocation)
-                        .map(map.getCenter()::distance)
-                        .orElse(0D);
-                logger.atDebug()
-                        .setMessage("{}: scan {} DEG, distance {}")
-                        .addArgument(this::getId)
-                        .addArgument(sectorDir)
-                        .addArgument(() -> format("%.2f", dist))
-                        .log();
-                context.moveSensor(sectorDir);
-                context.haltRobot();
-            } else {
-                // Turns the robot to the unknown sector
-                int robotDir = normalizeDegAngle(robotStatus.getDirection() + sectorDir);
-                logger.atDebug()
-                        .setMessage("{}: turn to unknown sector {} DEG")
-                        .addArgument(this::getId)
-                        .addArgument(robotDir)
-                        .log();
-                context.moveSensor(0);
-                context.moveRobot(robotDir, 0);
-            }
-            return null;
-        }
-        context.moveSensor(0);
-
-        targetIndex = findTargetSector(context);
-        CircularSector targetSector = map.getSector(targetIndex);
-
-        int sectorDir = map.radarSectorDirection(targetIndex);
-        int robotDir = normalizeDegAngle(robotStatus.getDirection() + sectorDir);
-        double stopDistance = getDouble(context, "stopDistance");
-        int turnDirectionRange = getInt(context, "turnDirectionRange");
-        double distance = context.getEchoDistance();
-        distance = distance == 0 ? targetSector.getDistance()
-                : min(distance, targetSector.getDistance());
-        int speed = abs(sectorDir) > turnDirectionRange
-                ? 0
-                : (!targetSector.isHindered()
-                ? MAX_PPS_SPEED
-                : (int) round(min(max((double) round(linear(distance, 0, stopDistance, 1, 4)),
-                1), 4) * MAX_PPS_SPEED / 4));
-        if (speed == 0) {
-            logger.atDebug()
-                    .setMessage("{}: turn to {} DEG")
-                    .addArgument(this::getId)
-                    .addArgument(robotDir)
-                    .log();
-        } else {
-            logger.atDebug()
-                    .setMessage("{}: move to {} DEG, speed {}")
-                    .addArgument(this::getId)
-                    .addArgument(robotDir)
-                    .addArgument(speed)
-                    .log();
-        }
-        context.moveRobot(robotDir, speed);
-        return null;
+        return explore(context.getRobotStatus(),
+                context.getPolarMap(),
+                getDouble(context, "stopDistance"),
+                getInt(context, "turnDirectionRange"));
     }
 }

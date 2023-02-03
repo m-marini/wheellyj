@@ -166,6 +166,21 @@ public class RobotExecutor {
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
                 .doOnNext(this::handleWindowOpened)
                 .subscribe();
+        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
+                .toFlowable(BackpressureStrategy.DROP)
+                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
+                .doOnNext(this::handleWindowClosing)
+                .subscribe();
+        SwingObservable.window(comFrame, SwingObservable.WINDOW_ACTIVE)
+                .toFlowable(BackpressureStrategy.DROP)
+                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
+                .doOnNext(this::handleWindowClosing)
+                .subscribe();
+        SwingObservable.window(radarFrame, SwingObservable.WINDOW_ACTIVE)
+                .toFlowable(BackpressureStrategy.DROP)
+                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
+                .doOnNext(this::handleWindowClosing)
+                .subscribe();
         layHorizontaly(frame, radarFrame, comFrame);
     }
 
@@ -197,7 +212,6 @@ public class RobotExecutor {
      * @param ctx the context
      */
     private void handleStepUp(ProcessorContext ctx) {
-        comMonitor.onReadLine("sc aaaa");
         RobotStatus status = ctx.getRobotStatus();
         if (robotStartTimestamp < 0) {
             robotStartTimestamp = status.getTime();
@@ -216,11 +230,13 @@ public class RobotExecutor {
         this.prevRealStep = clock;
 
         polarPanel.setPolarMap(ctx.getPolarMap());
-        if (robotElapsed > sessionDuration
-                || !frame.isVisible()
-                || !radarFrame.isVisible()) {
+        if (robotElapsed > sessionDuration) {
             agent.shutdown();
         }
+    }
+
+    private void handleWindowClosing(WindowEvent windowEvent) {
+        agent.shutdown();
     }
 
     /**

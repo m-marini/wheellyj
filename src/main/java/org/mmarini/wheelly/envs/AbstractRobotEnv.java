@@ -30,18 +30,20 @@ package org.mmarini.wheelly.envs;
 
 import io.reactivex.rxjava3.core.Completable;
 import org.mmarini.rl.envs.Environment;
+import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.apis.RobotControllerApi;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WithRobotStatus;
-import org.mmarini.wheelly.apis.WithStatusCallback;
+import org.mmarini.wheelly.apis.*;
 
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.ToDoubleFunction;
 import java.util.function.UnaryOperator;
 
+import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS_SPEED;
+import static org.mmarini.wheelly.apis.Utils.linear;
+import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 
 /**
  * Implements general functionalities of RobotEnvironment
@@ -56,12 +58,16 @@ import static java.util.Objects.requireNonNull;
  * </ul>
  */
 public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotStatus, WithStatusCallback {
+    public static final int MIN_DIRECTION_ACTION = -180;
+    public static final int MAX_DIRECTION_ACTION = 180;
+    public static final int MIN_SENSOR_DIR = -90;
+    public static final int MAX_SENSOR_DIR = 90;
     private final RobotControllerApi controller;
     private final ToDoubleFunction<RobotEnvironment> rewardFunc;
     private Consumer<RobotStatus> onStatusReady;
     private UnaryOperator<Map<String, Signal>> onAct;
     private Consumer<Environment.ExecutionResult> onResult;
-    private Map<String, Signal> actions;
+    private Map<String, Signal> prevActions;
     private Map<String, Signal> signals0;
     private Consumer<RobotStatus> onInference;
 
@@ -80,11 +86,28 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
     }
 
     /**
+     * Returns the delta direction in DEG
+     *
+     * @param actions the actions
+     */
+    int deltaDir(Map<String, Signal> actions) {
+        int action = actions.get("direction").getInt(0);
+        int n = ((IntSignalSpec) getActions().get("direction")).getNumValues();
+        return round(linear(action,
+                0, n - 1,
+                MIN_DIRECTION_ACTION, MAX_DIRECTION_ACTION));
+    }
+
+    /**
      * Returns the controller
      */
     @Override
     public RobotControllerApi getController() {
         return controller;
+    }
+
+    public Map<String, Signal> getPrevActions() {
+        return prevActions;
     }
 
     /**
@@ -116,7 +139,7 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
         if (signals0 != null) {
             double reward = rewardFunc.applyAsDouble(this);
             Environment.ExecutionResult result = new Environment.ExecutionResult(
-                    signals0, actions, reward, signals1, false
+                    signals0, prevActions, reward, signals1, false
             );
             if (onResult != null) {
                 onResult.accept(result);
@@ -124,7 +147,7 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
         }
         // Split status
         signals0 = signals1;
-        actions = actions1;
+        prevActions = actions1;
         splitStatus();
     }
 
@@ -141,12 +164,23 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
         }
     }
 
+    public boolean isHalt(Map<String, Signal> actions) {
+        int speedAction = actions.get("speed").getInt(0);
+        int n = ((IntSignalSpec) getActions().get("speed")).getNumValues();
+        return speedAction == n - 1;
+    }
+
     /**
      * Latches the eventually composed current status for inference processing
      *
      * @param status the current status
      */
     protected void latchStatus(RobotStatus status) {
+    }
+
+    public int moveDirection(Map<String, Signal> actions, int currentDirection) {
+        int dDir = deltaDir(actions);
+        return normalizeDegAngle(currentDirection + dDir);
     }
 
     /**
@@ -163,11 +197,32 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
      * @param actions the actions
      */
     protected void processActions(Map<String, Signal> actions) {
+        RobotControllerApi controller = getController();
+        int sensorDirection = sensorDir(actions);
+        RobotCommands command = isHalt(actions)
+                ? RobotCommands.haltAndScan(sensorDirection)
+                : RobotCommands.moveAndScan(moveDirection(actions, getRobotStatus().getDirection()),
+                speed(actions),
+                sensorDirection);
+        controller.execute(command);
     }
 
     @Override
     public Completable readShutdown() {
         return controller.readShutdown();
+    }
+
+    /**
+     * Returns the sensor direction in DEG from actions
+     *
+     * @param actions the actions
+     */
+    public int sensorDir(Map<String, Signal> actions) {
+        int action = actions.get("sensorAction").getInt(0);
+        int n = ((IntSignalSpec) getActions().get("sensorAction")).getNumValues();
+        return round(linear(action,
+                0, n - 1,
+                MIN_SENSOR_DIR, MAX_SENSOR_DIR));
     }
 
     @Override
@@ -193,6 +248,14 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
     @Override
     public void shutdown() {
         controller.shutdown();
+    }
+
+    public int speed(Map<String, Signal> actions) {
+        int speedAction = actions.get("speed").getInt(0);
+        int n = ((IntSignalSpec) getActions().get("speed")).getNumValues();
+        return round(linear(speedAction,
+                0, n - 1,
+                -MAX_PPS_SPEED, MAX_PPS_SPEED));
     }
 
     /**

@@ -33,10 +33,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
-import org.mmarini.wheelly.apis.RobotApi;
-import org.mmarini.wheelly.apis.RobotControllerApi;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.Utils;
+import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.swing.ComMonitor;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.wheelly.swing.SensorsPanel;
@@ -165,12 +162,12 @@ public class RobotCheckUp {
             @Override
             public List<ScannerResult> apply(RobotStatus status) {
                 long time = status.getTime();
+                RobotCommands command = RobotCommands.halt().setScan(0);
                 if (currentTest < 0) {
                     // First sample
                     currentTest = 0;
-                    controller.haltRobot();
                     if (currentTest >= directions.length) {
-                        controller.moveSensor(0);
+                        controller.execute(command);
                         sensorPanel.setInfo("");
                         // No test required
                         return results;
@@ -180,7 +177,7 @@ public class RobotCheckUp {
                     sampleCount = 0;
                     measureCount = 0;
                     scannerMoveTime = 0;
-                    controller.moveSensor(directions[currentTest]);
+                    command = command.setScan(directions[currentTest]);
                     logger.atInfo().setMessage("Checking sensor to {} DEG ...").addArgument(directions[currentTest]).log();
                     sensorPanel.setInfo(format("Checking sensor to %d DEG ...", directions[currentTest]));
                 }
@@ -205,11 +202,11 @@ public class RobotCheckUp {
                             status.getImuFailure()));
                     currentTest++;
                     if (currentTest >= directions.length) {
-                        controller.moveSensor(0);
+                        controller.execute(command.setScan(0));
                         sensorPanel.setInfo("");
                         return results;
                     }
-                    controller.moveSensor(directions[currentTest]);
+                    controller.execute(command.setScan(directions[currentTest]));
                     logger.atInfo().setMessage("Checking sensor to {} DEG ...").addArgument(directions[currentTest]).log();
                     sensorPanel.setInfo(format("Checking sensor to %d DEG ...", directions[currentTest]));
                     measureStart = time;
@@ -606,10 +603,11 @@ public class RobotCheckUp {
                 @Override
                 public boolean test(RobotStatus status) {
                     long time = status.getTime();
+                    RobotCommands command = RobotCommands.none();
                     if (startLocation == null) {
                         startLocation = status.getLocation();
                         moveStart = time;
-                        controller.moveRobot(direction, speed);
+                        controller.execute(command.setMove(direction, speed));
                         sensorPanel.setInfo(format("Checking movement to %d DEG, speed %d ...", direction, speed));
                     }
                     if (time >= moveStart + MOVEMENT_DURATION) {
@@ -632,7 +630,7 @@ public class RobotCheckUp {
                                 abs(directionError),
                                 status.getImuFailure()));
                         sensorPanel.setInfo("");
-                        controller.haltRobot();
+                        controller.execute(command.setHalt());
                         return true;
                     }
                     return false;
@@ -652,8 +650,9 @@ public class RobotCheckUp {
                 public boolean test(RobotStatus status) {
                     long time = status.getTime();
                     int dir = status.getDirection();
+                    RobotCommands command = RobotCommands.none();
                     if (startLocation == null) {
-                        controller.moveRobot(direction, 0);
+                        controller.execute(command.setMove(direction, 0));
                         startLocation = status.getLocation();
                         rotationStart = time;
                         startAngle = dir;
@@ -665,7 +664,7 @@ public class RobotCheckUp {
                         int rotationAngle = normalizeDegAngle(dir - startAngle);
                         double distanceError = status.getLocation().distance(startLocation);
                         rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.getImuFailure()));
-                        controller.haltRobot();
+                        controller.execute(command.setHalt());
                         sensorPanel.setInfo("");
                         return true;
                     }
@@ -679,7 +678,7 @@ public class RobotCheckUp {
                             int rotationAngle = normalizeDegAngle(dir - startAngle);
                             double distanceError = status.getLocation().distance(startLocation);
                             rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.getImuFailure()));
-                            controller.haltRobot();
+                            controller.execute(command.setHalt());
                             sensorPanel.setInfo("");
                             return true;
                         }

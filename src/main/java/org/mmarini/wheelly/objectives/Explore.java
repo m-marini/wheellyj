@@ -70,7 +70,7 @@ public interface Explore {
         return environment -> {
             WithRadarMap env = (WithRadarMap) environment;
 
-            RobotStatus status = ((WithRobotStatus) env).getRobotStatus();
+            RobotStatus status = ((WithRobotStatus) environment).getRobotStatus();
             if (!status.canMoveBackward() || !status.canMoveForward()) {
                 // Avoid contacts
                 return -1;

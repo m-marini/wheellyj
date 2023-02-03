@@ -29,6 +29,8 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.Tuple2;
+import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
@@ -95,19 +97,15 @@ public class AvoidingState extends AbstractStateNode {
     @Override
     public void entry(ProcessorContext context) {
         super.entry(context);
-        context.haltRobot();
-        context.moveSensor(0);
         escapeDir(context).ifPresentOrElse(dir -> put(context, ESCAPE_DIRECTION, dir),
                 () -> remove(context, ESCAPE_DIRECTION));
         remove(context, FREE_POINT);
     }
 
     @Override
-    public String step(ProcessorContext ctx) {
+    public Tuple2<String, RobotCommands> step(ProcessorContext ctx) {
         if (isTimeout(ctx)) {
-            // Halt robot at timeout
-            ctx.haltRobot();
-            return TIMEOUT_EXIT;
+            return TIMEOUT_RESULT;
         }
         RobotStatus status = ctx.getRobotStatus();
         int dir = status.getDirection();
@@ -124,14 +122,12 @@ public class AvoidingState extends AbstractStateNode {
                         .addArgument(this::getId)
                         .addArgument(dir)
                         .log();
-                ctx.moveRobot(dir, -MAX_PPS_SPEED);
-                return null;
+                return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(dir, -MAX_PPS_SPEED));
             }
             // Robot completely blocked
             // holt robot
-            ctx.haltRobot();
             logger.atWarn().setMessage("{}: Robot blocked").addArgument(this::getId).log();
-            return BLOCKED_EXIT;
+            return BLOCKED_RESULT;
         }
         if (!status.canMoveBackward()) {
             // Robot can move forward
@@ -143,8 +139,7 @@ public class AvoidingState extends AbstractStateNode {
                     .addArgument(this::getId)
                     .addArgument(dir)
                     .log();
-            ctx.moveRobot(dir, MAX_PPS_SPEED);
-            return null;
+            return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(dir, MAX_PPS_SPEED));
         }
         // Robot not blocked
         Point2D freePoint = get(ctx, FREE_POINT);
@@ -167,11 +162,9 @@ public class AvoidingState extends AbstractStateNode {
                     .addArgument(this::getId)
                     .addArgument(() -> format("%.2f", distance))
                     .log();
-            ctx.haltRobot();
-            return COMPLETED_EXIT;
+            return COMPLETED_RESULT;
         }
         // move robot away
-        ctx.moveRobot(escapeDir, MAX_PPS_SPEED);
-        return null;
+        return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(escapeDir, MAX_PPS_SPEED));
     }
 }

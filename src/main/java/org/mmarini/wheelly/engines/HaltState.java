@@ -29,6 +29,8 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.Tuple2;
+import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.yaml.schema.Locator;
 
 /**
@@ -80,14 +82,13 @@ public class HaltState extends AbstractStateNode {
     }
 
     @Override
-    public String step(ProcessorContext ctx) {
-        tickAutoScan(ctx);
+    public Tuple2<String, RobotCommands> step(ProcessorContext ctx) {
         if (isTimeout(ctx)) {
-            return TIMEOUT_EXIT;
+            return TIMEOUT_RESULT;
         }
         if (isBlocked(ctx)) {
-            return BLOCKED_EXIT;
+            return BLOCKED_RESULT;
         }
-        return null;
+        return tickAutoScan(ctx);
     }
 }

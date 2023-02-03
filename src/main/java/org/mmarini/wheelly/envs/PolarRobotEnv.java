@@ -39,10 +39,8 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.ToDoubleFunction;
 
-import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS_SPEED;
-import static org.mmarini.wheelly.apis.Utils.*;
+import static org.mmarini.wheelly.apis.Utils.clip;
 import static org.mmarini.yaml.schema.Validator.*;
 
 /**
@@ -83,13 +81,6 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
     public static final double MIN_DISTANCE = 0;
     public static final double MAX_DISTANCE = 10;
     public static final int NUM_CONTACT_VALUES = 16;
-
-    public static final int MIN_DIRECTION_ACTION = -180;
-    public static final int MAX_DIRECTION_ACTION = 180;
-    public static final double MIN_SPEED = -1;
-    public static final double MAX_SPEED = 1;
-    public static final int MIN_SENSOR_DIR = -90;
-    public static final int MAX_SENSOR_DIR = 90;
 
     private static final Validator ROBOT_ENV_SPEC = objectPropertiesRequired(Map.of(
                     "objective", object(),
@@ -199,19 +190,6 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
         controller.setOnStatusReady(this::handleStatus);
     }
 
-    /**
-     * Returns the delta direction in DEG
-     *
-     * @param actions the actions
-     */
-    int deltaDir(Map<String, Signal> actions) {
-        int action = actions.get("direction").getInt(0);
-        int n = ((IntSignalSpec) getActions().get("direction")).getNumValues();
-        return round(linear(action,
-                0, n - 1,
-                MIN_DIRECTION_ACTION, MAX_DIRECTION_ACTION));
-    }
-
     @Override
     public Map<String, SignalSpec> getActions() {
         return this.actions;
@@ -299,37 +277,6 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
     }
 
     @Override
-    protected void processActions(Map<String, Signal> actions) {
-        RobotControllerApi controller = getController();
-        int speedAction = actions.get("speed").getInt(0);
-        int n = ((IntSignalSpec) getActions().get("speed")).getNumValues();
-        if (speedAction == n - 1) {
-            controller.haltRobot();
-        } else {
-            int speed = (int) round(linear(speedAction,
-                    0, n - 1,
-                    -MAX_PPS_SPEED, MAX_PPS_SPEED));
-            int dDir = deltaDir(actions);
-            int direction = normalizeDegAngle(currentStatus.status.getDirection() + dDir);
-            controller.moveRobot(direction, speed);
-        }
-        controller.moveSensor(sensorDir(actions));
-    }
-
-    /**
-     * Returns the sensor direction in DEG from actions
-     *
-     * @param actions the actions
-     */
-    int sensorDir(Map<String, Signal> actions) {
-        int action = actions.get("sensorAction").getInt(0);
-        int n = ((IntSignalSpec) getActions().get("sensorAction")).getNumValues();
-        return round(linear(action,
-                0, n - 1,
-                MIN_SENSOR_DIR, MAX_SENSOR_DIR));
-    }
-
-    @Override
     public void setOnError(Consumer<Throwable> callback) {
         getController().setOnError(callback);
     }
@@ -349,7 +296,7 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
         previousStatus = currentStatus;
     }
 
-    static class CompositeStatus {
+    public static class CompositeStatus {
         public final PolarMap polarMap;
         public final RadarMap radarMap;
         public final RobotStatus status;
