@@ -81,7 +81,7 @@ public interface ExploreByImitation {
             int expSpeed = expActions.speed;
 
             if (isHalt != expHalt) {
-                return -1;
+                return 0;
             }
 
             long dirNumber = env.getActions().get("direction").getShape()[0];
