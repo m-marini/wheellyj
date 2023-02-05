@@ -61,6 +61,13 @@ public class RobotController implements RobotControllerApi {
             "commandInterval",
             "connectionRetryInterval",
             "watchdogInterval"));
+    public static final String CONNECTING = "connecting";
+    public static final String WAITING_RETRY = "waitingRetry";
+    public static final String CLOSING = "closing";
+    public static final String SCAN = "scan";
+    public static final String CONFIGURING = "configuring";
+    public static final String WAIT_COMMAND_INTERVAL = "waitCommandInterval";
+    public static final String MOVE = "move";
     private static final Logger logger = LoggerFactory.getLogger(RobotController.class);
 
     /**
@@ -87,7 +94,7 @@ public class RobotController implements RobotControllerApi {
     private final long reactionInterval;
     private final CompletableSubject shutdownCompletable;
     private final long watchdogInterval;
-    Runnable statusTransition;
+    private Runnable statusTransition;
     private boolean isStarted;
     private RobotCommands moveCommand;
     private int sensorDir;
@@ -107,6 +114,7 @@ public class RobotController implements RobotControllerApi {
     private boolean connected;
     private long lastTick;
     private Consumer<RobotStatus> onLatch;
+    private Consumer<String> onControlStatus;
 
     /**
      * Creates the robot controller
@@ -126,7 +134,7 @@ public class RobotController implements RobotControllerApi {
         this.connectionRetryInterval = connectionRetryInterval;
         this.watchdogInterval = watchdogInterval;
         this.end = false;
-        this.statusTransition = this::connecting;
+        setStatusTransition(this::connecting, CONNECTING);
         shutdownCompletable = CompletableSubject.create();
         robot.setOnStatusReady(this::handleRobotStatus);
     }
@@ -145,7 +153,7 @@ public class RobotController implements RobotControllerApi {
         }
         connected = false;
         close = false;
-        statusTransition = this::waitingRetry;
+        setStatusTransition(this::waitingRetry, WAITING_RETRY);
     }
 
     /**
@@ -155,17 +163,17 @@ public class RobotController implements RobotControllerApi {
     void configuring() {
         logger.atDebug().setMessage("Configuring").log();
         if (close) {
-            statusTransition = this::closing;
+            setStatusTransition(this::closing, CLOSING);
         }
         try {
             robot.configure();
-            statusTransition = this::handleScan;
+            setStatusTransition(this::handleScan, SCAN);
             isReady = true;
             lastTick = System.currentTimeMillis();
             Schedulers.io().scheduleDirect(this::runStatusThread);
         } catch (Exception ex) {
             sendError(ex);
-            statusTransition = this::closing;
+            setStatusTransition(this::closing, CLOSING);
         }
     }
 
@@ -177,11 +185,11 @@ public class RobotController implements RobotControllerApi {
         logger.atDebug().setMessage("Connecting").log();
         try {
             robot.connect();
-            statusTransition = this::configuring;
+            setStatusTransition(this::configuring, CONFIGURING);
             connected = true;
         } catch (Exception ex) {
             sendError(ex);
-            statusTransition = this::waitingRetry;
+            setStatusTransition(this::waitingRetry, WAITING_RETRY);
         }
     }
 
@@ -206,7 +214,7 @@ public class RobotController implements RobotControllerApi {
     private void handleMove() {
         logger.atDebug().setMessage("Handle move").log();
         if (close) {
-            statusTransition = this::closing;
+            setStatusTransition(this::closing, CLOSING);
         }
         try {
             RobotStatus status = robotStatus;
@@ -219,17 +227,16 @@ public class RobotController implements RobotControllerApi {
                     if (cmd.isHalt()) {
                         robot.halt();
                     } else {
-                        RobotCommands moveCmd = cmd;
-                        robot.move(moveCmd.moveDirection, moveCmd.speed);
+                        robot.move(cmd.moveDirection, cmd.speed);
                     }
                     this.lastRobotMoveTimestamp = time;
                     lastMoveCommand = cmd;
                 }
             }
-            statusTransition = this::waitingCommandInterval;
+            setStatusTransition(this::waitingCommandInterval, WAIT_COMMAND_INTERVAL);
         } catch (Exception ex) {
             sendError(ex);
-            statusTransition = this::closing;
+            setStatusTransition(this::closing, CLOSING);
         }
     }
 
@@ -264,7 +271,7 @@ public class RobotController implements RobotControllerApi {
     void handleScan() {
         logger.atDebug().setMessage("Handle scan").log();
         if (close) {
-            statusTransition = this::closing;
+            setStatusTransition(this::closing, CLOSING);
         }
         try {
             RobotStatus status = robotStatus;
@@ -278,13 +285,13 @@ public class RobotController implements RobotControllerApi {
                     lastSensorMoveTimestamp = time;
                     prevSensorDir = dir;
                 }
-                statusTransition = this::handleMove;
+                setStatusTransition(this::handleMove, MOVE);
             } else {
-                statusTransition = this::waitingCommandInterval;
+                setStatusTransition(this::waitingCommandInterval, WAIT_COMMAND_INTERVAL);
             }
         } catch (Exception ex) {
             sendError(ex);
-            statusTransition = this::closing;
+            setStatusTransition(this::closing, CLOSING);
         }
     }
 
@@ -335,6 +342,11 @@ public class RobotController implements RobotControllerApi {
     }
 
     @Override
+    public void setOnControlStatus(Consumer<String> callback) {
+        this.onControlStatus = callback;
+    }
+
+    @Override
     public void setOnError(Consumer<Throwable> callback) {
         onError = callback;
     }
@@ -365,6 +377,13 @@ public class RobotController implements RobotControllerApi {
     public void setOnWriteLine(Consumer<String> callback) {
         if (robot instanceof WithIOCallback) {
             ((WithIOCallback) robot).setOnWriteLine(callback);
+        }
+    }
+
+    private void setStatusTransition(Runnable trans, String signal) {
+        this.statusTransition = trans;
+        if (onControlStatus != null) {
+            onControlStatus.accept(signal);
         }
     }
 
@@ -414,14 +433,14 @@ public class RobotController implements RobotControllerApi {
             close = true;
         }
         if (close) {
-            statusTransition = this::closing;
+            setStatusTransition(this::closing, CLOSING);
         } else {
             try {
                 Thread.sleep(interval);
             } catch (InterruptedException ex) {
                 sendError(ex);
             }
-            statusTransition = this::handleScan;
+            setStatusTransition(this::handleScan, SCAN);
         }
     }
 
@@ -437,6 +456,6 @@ public class RobotController implements RobotControllerApi {
                 sendError(ex);
             }
         }
-        statusTransition = this::connecting;
+        setStatusTransition(this::connecting, CONNECTING);
     }
 }

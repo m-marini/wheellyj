@@ -34,10 +34,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
 import org.mmarini.swing.GridLayoutHelper;
-import org.mmarini.wheelly.apis.RobotApi;
-import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.RobotControllerApi;
-import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.swing.ComMonitor;
 import org.mmarini.wheelly.swing.MatrixTable;
 import org.mmarini.wheelly.swing.Messages;
@@ -50,6 +47,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowEvent;
 import java.text.DecimalFormat;
+import java.util.Set;
 
 import static java.lang.Math.max;
 import static java.lang.String.format;
@@ -59,6 +57,12 @@ import static org.mmarini.wheelly.swing.Utils.layHorizontaly;
 
 
 public class MatrixMonitor {
+    public static final int CONTROL_COLUMNS = 16;
+    public static final Set<String> ACTIVE_STATES = Set.of(
+            RobotController.WAIT_COMMAND_INTERVAL,
+            RobotController.MOVE,
+            RobotController.SCAN);
+    public static final String ACTIVE = "active";
     private static final int SENSOR_COLUMNS = 20;
     private static final Dimension COMMAND_FRAME_SIZE = new Dimension(400, 800);
     private static final Dimension COM_FRAME_SIZE = new Dimension(1200, 800);
@@ -132,13 +136,15 @@ public class MatrixMonitor {
     private JFrame commandFrame;
     private JFrame sensorFrame;
     private JFrame lineFrame;
+    private String prevControl;
 
     /**
      * Creates the check
      */
     public MatrixMonitor() {
         this.comMonitor = new ComMonitor();
-        this.sensorPanel = MatrixTable.create("status", Messages.getString("MatrixMonitor.sensor"), SENSOR_COLUMNS);
+        this.sensorPanel = MatrixTable.create("status", Messages.getString("MatrixMonitor.sensor"), SENSOR_COLUMNS,
+                "control", Messages.getString("MatrixMonitor.control"), CONTROL_COLUMNS);
         this.sensorDirSlider = new JSlider();
         this.robotDirSlider = new JSlider();
         this.speedSlider = new JSlider();
@@ -278,6 +284,16 @@ public class MatrixMonitor {
         }
     }
 
+    private void handleControl(String status) {
+        if (ACTIVE_STATES.contains(status)) {
+            status = ACTIVE;
+        }
+        if (!status.equals(prevControl)) {
+            this.prevControl = status;
+            sensorPanel.printf("control", status);
+        }
+    }
+
     private void handleHaltButton(ActionEvent actionEvent) {
         sensorDirSlider.setValue(0);
         speedSlider.setValue(0);
@@ -389,6 +405,7 @@ public class MatrixMonitor {
         controller.readShutdown()
                 .doOnComplete(this::handleShutdown)
                 .subscribe();
+        controller.setOnControlStatus(this::handleControl);
 
         this.commandFrame = createFrame(Messages.getString("MatrixMonitor.title"), COMMAND_FRAME_SIZE, commandPanel);
         this.sensorFrame = createFrame(Messages.getString("MatrixMonitor.title"), SENSOR_FRAME_SIZE, new JScrollPane(sensorPanel));
@@ -412,6 +429,5 @@ public class MatrixMonitor {
         lineFrame.setVisible(true);
         commandFrame.setVisible(true);
         controller.start();
-
     }
 }

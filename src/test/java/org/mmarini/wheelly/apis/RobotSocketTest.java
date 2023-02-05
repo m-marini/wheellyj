@@ -28,56 +28,34 @@
 
 package org.mmarini.wheelly.apis;
 
-import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.schedulers.Timed;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.function.Consumer;
+import java.io.IOException;
 
-/**
- * Manages the processing threads and event generation to interface the robot
- */
-public interface RobotControllerApi extends WithIOCallback, WithStatusCallback, WithErrorCallback {
-    /**
-     * Executes the command
-     *
-     * @param command the command
-     */
-    void execute(RobotCommands command);
+class RobotSocketTest {
 
-    /**
-     * Returns the apis
-     */
-    RobotApi getRobot();
+    public static final long READ_TIMEOUT = 1000L;
+    public static final long CONNECTION_TIMEOUT = 1000L;
+    public static final int PORT = 22;
+    public static final String ROBOT_HOST = "192.168.1.11";
+    private static final Logger logger = LoggerFactory.getLogger(RobotSocketTest.class);
 
-    Completable readShutdown();
+    public static void main(String[] args) throws IOException {
+        RobotSocket socket = new RobotSocket(ROBOT_HOST, PORT, CONNECTION_TIMEOUT, READ_TIMEOUT);
+        logger.atDebug().log("Connecting...");
+        socket.connect();
+        logger.atDebug().log("Reading...");
 
-    /**
-     * Registers the consumer of control status
-     *
-     * @param callback the callback
-     */
-    void setOnControlStatus(Consumer<String> callback);
+        socket.writeCommand("sc 90");
+        Timed<String> line;
+        while ((line = socket.readLine()) != null) {
+            logger.atDebug().setMessage("Read {}").addArgument(line).log();
+        }
+        logger.atDebug().log("Closing...");
+        socket.close();
+        logger.atDebug().log("Closed.");
+    }
 
-    /**
-     * Registers the consumer of inference event
-     *
-     * @param callback the callback
-     */
-    void setOnInference(Consumer<RobotStatus> callback);
-
-    /**
-     * Registers the consumer of latch event
-     *
-     * @param callback the callback
-     */
-    void setOnLatch(Consumer<RobotStatus> callback);
-
-    /**
-     * Shutdowns the controller
-     */
-    void shutdown();
-
-    /**
-     * Starts the controller
-     */
-    void start();
 }
