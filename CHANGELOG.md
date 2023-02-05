@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+
+- Issue #197: Asynchronous socket implementation
+
 ### Fixed
 
 - Issue #198: ComMonitor cannot be scrolled

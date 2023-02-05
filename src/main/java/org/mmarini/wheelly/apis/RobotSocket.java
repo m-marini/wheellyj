@@ -26,18 +26,25 @@
 package org.mmarini.wheelly.apis;
 
 import io.reactivex.rxjava3.schedulers.Timed;
+import io.reactivex.rxjava3.subjects.SingleSubject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.AsynchronousSocketChannel;
+import java.nio.channels.CompletionHandler;
+import java.nio.channels.InterruptedByTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static java.net.StandardSocketOptions.SO_KEEPALIVE;
@@ -54,7 +61,7 @@ public class RobotSocket implements Closeable {
     private final long connectionTimeout;
     private final long readTimeout;
     private final ByteBuffer buffer;
-    private SocketChannel channel;
+    private AsynchronousSocketChannel channel;
     private List<Timed<String>> lines;
     private int readPosition;
 
@@ -93,13 +100,20 @@ public class RobotSocket implements Closeable {
         logger.atDebug().setMessage("Connection {}, {}")
                 .addArgument(robotHost).addArgument(port).log();
         InetSocketAddress socketAddress = new InetSocketAddress(robotHost, port);
-        SocketChannel channel = SocketChannel.open();
+        AsynchronousSocketChannel channel = AsynchronousSocketChannel.open();
         channel.setOption(SO_KEEPALIVE, true);
-        this.channel = channel;
-        channel.socket().connect(socketAddress, (int) connectionTimeout);
-        logger.atDebug().setMessage("Connected {}, {}")
-                .addArgument(robotHost).addArgument(port).log();
-        return this;
+        Future<Void> x = channel.connect(socketAddress);
+        try {
+            x.get(connectionTimeout, TimeUnit.MILLISECONDS);
+            this.channel = channel;
+            logger.atDebug().setMessage("Connected {}, {}")
+                    .addArgument(robotHost).addArgument(port).log();
+            return this;
+        } catch (InterruptedException | TimeoutException e) {
+            throw new InterruptedIOException(e.getMessage());
+        } catch (ExecutionException e) {
+            throw new IOException(e.getCause());
+        }
     }
 
     /**
@@ -115,19 +129,37 @@ public class RobotSocket implements Closeable {
      * @throws IOException in case of error
      */
     private void readBuffer() throws IOException {
-        SocketChannel ch = channel;
-        if (ch != null && ch.isConnected()) {
+        AsynchronousSocketChannel ch = channel;
+        if (ch != null && ch.isOpen()) {
             try {
-                int n = ch.read(buffer);
+                SingleSubject<Integer> result = SingleSubject.create();
+                CompletionHandler<Integer, SingleSubject<Integer>> callback = new CompletionHandler<>() {
+                    @Override
+                    public void completed(Integer integer, SingleSubject<Integer> subject) {
+                        subject.onSuccess(integer);
+                    }
+
+                    @Override
+                    public void failed(Throwable throwable, SingleSubject<Integer> subject) {
+                        subject.onError(throwable);
+                    }
+                };
+                ch.read(buffer, readTimeout, TimeUnit.MILLISECONDS, result, callback);
+                int n = result.blockingGet();
                 if (n > 0) {
                     buffer.flip();
                     splitLines();
                 }
-            } catch (IOException ex) {
-                if (ch == channel) {
-                    throw ex;
-                } else {
+            } catch (Throwable ex) {
+                if (ch != channel) {
                     logger.atError().setCause(ex).log();
+                    return;
+                }
+                Throwable cause = ex.getCause();
+                if (cause instanceof InterruptedByTimeoutException) {
+                    throw new InterruptedIOException(cause.getMessage());
+                } else {
+                    throw new IOException(cause);
                 }
             }
         }
@@ -175,11 +207,21 @@ public class RobotSocket implements Closeable {
      * @param cmd the command
      */
     public void writeCommand(String cmd) throws IOException {
-        SocketChannel ch = channel;
-        if (ch != null && ch.isConnected()) {
+        AsynchronousSocketChannel ch = channel;
+        if (ch != null && ch.isOpen()) {
             ByteBuffer buffer = ByteBuffer.wrap((cmd + LF).getBytes(StandardCharsets.UTF_8));
             while (buffer.remaining() > 0) {
-                ch.write(buffer);
+                try {
+                    ch.write(buffer).get();
+                } catch (RuntimeException e) {
+                    Throwable cause = e.getCause();
+                    if (cause instanceof IOException) {
+                        throw (IOException) cause;
+                    }
+                    throw e;
+                } catch (Throwable e) {
+                    throw new RuntimeException(e);
+                }
             }
             logger.atDebug().setMessage("Written command {}").addArgument(cmd).log();
         }

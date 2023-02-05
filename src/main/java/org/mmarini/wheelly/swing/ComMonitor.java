@@ -48,7 +48,7 @@ public class ComMonitor extends MatrixTable {
     }
 
     public void onError(Throwable err) {
-        printf(ERROR_KEY, err.getMessage());
+        printf(ERROR_KEY, String.valueOf(err.getMessage()));
     }
 
     public void onReadLine(String line) {
