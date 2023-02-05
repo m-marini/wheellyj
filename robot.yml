@@ -1,7 +1,7 @@
 ---
 version: "0.4"
-active: simRobot
-#active: realRobot
+#active: simRobot
+active: realRobot
 
 configurations:
   simRobot:
@@ -22,7 +22,8 @@ configurations:
     configCommands:
       - cm -240 -254 30 85 -21 -5 77 102
       - cs 1000
-      - cc 230 232 -232 30 3 30
+      - cc 240 200 -200 30 5 60
+# 2023-02-05     - cc 230 232 -232 30 3 30
 #      - cc 230 464 -464 30 3 30
   constantRobot:
     class: org.mmarini.wheelly.apis.MockRobot

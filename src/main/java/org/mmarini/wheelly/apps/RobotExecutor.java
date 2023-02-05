@@ -155,7 +155,7 @@ public class RobotExecutor {
         this.frame = createFrame(Messages.getString("RobotExecutor.title"), envPanel);
         this.radarFrame = createFixFrame(Messages.getString("Radar.title"), DEFALT_RADAR_DIMENSION, polarPanel);
         this.comMonitor = new ComMonitor();
-        this.comFrame = createFrame(Messages.getString("ComMonitor.title"), comMonitor);
+        this.comFrame = createFrame(Messages.getString("ComMonitor.title"), new JScrollPane(comMonitor));
         this.reactionRobotTime = AverageValue.create();
         this.reactionRealTime = AverageValue.create();
         this.robotStartTimestamp = -1;
