@@ -9,4 +9,4 @@ configurations:
     reactionInterval: 300
     commandInterval: 600
     connectionRetryInterval: 1000
-    watchdogInterval: 1000
+    watchdogInterval: 2000
