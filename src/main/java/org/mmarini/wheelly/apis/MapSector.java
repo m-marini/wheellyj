@@ -31,15 +31,6 @@ import java.awt.geom.Point2D;
  * MapSector keeps the presence of obstacles in the sector
  */
 public class MapSector {
-    /**
-     * Returns the contact sector
-     *
-     * @param location  the location
-     * @param timestamp the timestamp
-     */
-    public static MapSector contact(Point2D location, long timestamp) {
-        return new MapSector(location, MapSectorStatus.CONTACT, timestamp);
-    }
 
     /**
      * Returns the empty sector
@@ -47,9 +38,12 @@ public class MapSector {
      * @param location  the location
      * @param timestamp the timestamp
      */
+    /*
     public static MapSector empty(Point2D location, long timestamp) {
         return new MapSector(location, MapSectorStatus.EMPTY, timestamp);
     }
+
+     */
 
     /**
      * Returns the hindered sector
@@ -57,9 +51,12 @@ public class MapSector {
      * @param location  the location
      * @param timestamp the timestamp
      */
+    /*
     static MapSector hindered(Point2D location, long timestamp) {
         return new MapSector(location, MapSectorStatus.HINDERED, timestamp);
     }
+
+     */
 
     /**
      * Returns the unknown sector
@@ -67,17 +64,21 @@ public class MapSector {
      * @param location the location
      */
     static MapSector unknown(Point2D location) {
-        return new MapSector(location, MapSectorStatus.UNKNOWN, 0);
+        return new MapSector(location, 0, 0, 0, false);
     }
 
     private final Point2D location;
     private final long timestamp;
-    private final MapSectorStatus status;
+    private final int hinderedCounter;
+    private final int emptyCounter;
+    private final boolean contact;
 
-    protected MapSector(Point2D location, MapSectorStatus status, long timestamp) {
+    protected MapSector(Point2D location, long timestamp, int hinderedCounter, int emptyCounter, boolean contact) {
         this.location = location;
-        this.status = status;
         this.timestamp = timestamp;
+        this.hinderedCounter = hinderedCounter;
+        this.emptyCounter = emptyCounter;
+        this.contact = contact;
     }
 
     public MapSector clean(long validTimestamp) {
@@ -86,15 +87,19 @@ public class MapSector {
     }
 
     public MapSector contact(long timestamp) {
-        return MapSector.contact(getLocation(), timestamp);
+        return new MapSector(location, timestamp, hinderedCounter, emptyCounter, true);
     }
 
     public MapSector empty(long timestamp) {
-        return MapSector.empty(getLocation(), timestamp);
+        return new MapSector(location, timestamp, hinderedCounter, emptyCounter + 1, contact);
     }
 
     public Point2D getLocation() {
         return location;
+    }
+
+    private MapSector setLocation(Point2D location) {
+        return new MapSector(location, timestamp, hinderedCounter, emptyCounter, contact);
     }
 
     public long getTimestamp() {
@@ -102,34 +107,30 @@ public class MapSector {
     }
 
     public MapSector hindered(long timestamp) {
-        return MapSector.hindered(getLocation(), timestamp);
+        return new MapSector(location, timestamp, hinderedCounter + 1, emptyCounter, contact);
     }
 
     public boolean isContact() {
-        return status.equals(MapSectorStatus.CONTACT);
+        return contact && timestamp > 0;
     }
 
     public boolean isEmpty() {
-        return status.equals(MapSectorStatus.EMPTY);
+        return timestamp > 0 && !contact && emptyCounter > hinderedCounter;
     }
 
     public boolean isHindered() {
-        return status.equals(MapSectorStatus.HINDERED);
+        return timestamp > 0 && !contact && hinderedCounter >= emptyCounter;
     }
 
     public boolean isUnknown() {
-        return status.equals(MapSectorStatus.UNKNOWN);
+        return timestamp <= 0;
     }
 
     public MapSector union(MapSector other) {
-        return other.timestamp > timestamp ? new MapSector(location, other.status, other.timestamp) : this;
+        return other.timestamp > timestamp ? other.setLocation(location) : this;
     }
 
     public MapSector unknown() {
         return isUnknown() ? this : MapSector.unknown(getLocation());
-    }
-
-    private enum MapSectorStatus {
-        UNKNOWN, EMPTY, HINDERED, CONTACT
     }
 }

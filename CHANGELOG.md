@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- Issue #201: Radar map by samples median
 - Issue #202: Configure contact sensor thresholds
 
 ## [0.6.1] 2023-02-07
