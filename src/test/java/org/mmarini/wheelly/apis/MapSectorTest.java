@@ -36,7 +36,7 @@ class MapSectorTest {
     void cleanNoTimeout() {
         Point2D sectorLocation = new Point2D.Float(0, 2F);
         long timestamp = System.currentTimeMillis();
-        MapSector sector = MapSector.hindered(sectorLocation, timestamp);
+        MapSector sector = MapSector.unknown(sectorLocation).hindered(timestamp);
 
         sector.clean(timestamp);
 
@@ -48,7 +48,7 @@ class MapSectorTest {
     void cleanTimeout() {
         Point2D sectorLocation = new Point2D.Float(0, 2F);
         long timestamp = System.currentTimeMillis();
-        MapSector sector = MapSector.hindered(sectorLocation, timestamp - 1);
+        MapSector sector = MapSector.unknown(sectorLocation).hindered(timestamp - 1);
 
         sector = sector.clean(timestamp);
 
@@ -58,7 +58,7 @@ class MapSectorTest {
     @Test
     void contact() {
         long timestamp = System.currentTimeMillis();
-        MapSector sector = MapSector.contact(new Point2D.Double(), timestamp);
+        MapSector sector = MapSector.unknown(new Point2D.Double()).contact(timestamp);
         assertFalse(sector.isUnknown());
         assertFalse(sector.isHindered());
         assertTrue(sector.isContact());
@@ -69,7 +69,7 @@ class MapSectorTest {
     @Test
     void empty() {
         long timestamp = System.currentTimeMillis();
-        MapSector sector = MapSector.empty(new Point2D.Double(), timestamp);
+        MapSector sector = MapSector.unknown(new Point2D.Double()).empty(timestamp);
         assertFalse(sector.isUnknown());
         assertFalse(sector.isHindered());
         assertTrue(sector.isEmpty());
@@ -80,7 +80,7 @@ class MapSectorTest {
     @Test
     void hindered() {
         long timestamp = System.currentTimeMillis();
-        MapSector sector = MapSector.hindered(new Point2D.Double(), timestamp);
+        MapSector sector = MapSector.unknown(new Point2D.Double()).hindered(timestamp);
         assertFalse(sector.isUnknown());
         assertTrue(sector.isHindered());
         assertFalse(sector.isEmpty());
