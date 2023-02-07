@@ -5,11 +5,16 @@ The code of Arduino controller is at [Wheellino project](https://github.com/m-ma
 
 The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
+## Release 0.6.1
+
+Compatible with Wheellino 0.3.2
+
+
 ## Release 0.6.0
 
 Compatible with Wheellino 0.3.2
 
-Added resiliency management
+Minor fix and change
 
 ## Release 0.5.2
 
