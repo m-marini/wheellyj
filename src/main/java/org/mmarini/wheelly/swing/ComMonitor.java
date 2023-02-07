@@ -57,6 +57,7 @@ public class ComMonitor extends MatrixTable {
         } else if (line.startsWith("ck ")
                 || line.startsWith("// cc ")
                 || line.startsWith("// cs")
+                || line.startsWith("// ct")
                 || line.startsWith("// cm")) {
             printf(CONFIG, line);
         } else {
@@ -71,6 +72,7 @@ public class ComMonitor extends MatrixTable {
             printf(SCAN, line);
         } else if (line.startsWith("ck ")
                 || line.startsWith("cc ")
+                || line.startsWith("ct ")
                 || line.startsWith("cm ")
                 || line.startsWith("cs")) {
             printf(CONFIG, line);

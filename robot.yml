@@ -19,9 +19,14 @@ configurations:
     connectionTimeout: 10000
     readTimeout: 3000
     configureTimeout: 1000
+    # front 0 352 537 650
+    # rear 0 352 537 650
+    frontThresholds: [176, 445, 594]
+    rearThresholds: [176, 445, 594]
     configCommands:
       - cm -240 -254 30 85 -21 -5 77 102
       - cs 1000
+      - ct 176 176
       - cc 240 200 -200 30 5 60
 # 2023-02-05     - cc 230 232 -232 30 3 30
 #      - cc 230 464 -464 30 3 30

@@ -47,8 +47,7 @@ public class RobotStatus {
     public static final int REAR_LEFT = 2;
     public static final int REAR_RIGHT = 1;
     public static final int NO_CONTACT = 0;
-    private static final RobotStatus DEFAULT_ROBOT_STATUS = new RobotStatus(WheellyStatus.create(), 0);
-    private static final int[] CONTACT_THRESHOLDS = new int[]{205, 512, 677};
+    private static final RobotStatus DEFAULT_ROBOT_STATUS = new RobotStatus(WheellyStatus.create(), 0, 0);
     private static final int MIN_SUPPLY_SIGNAL = 720;
     private static final int MAX_SUPPLY_SIGNAL = 823;
     private static final double MIN_SUPPLY_VOLTAGE = 10.9;
@@ -62,57 +61,12 @@ public class RobotStatus {
     }
 
     /**
-     * Returns the contacts code from the contact sensors signals
-     *
-     * @param frontSignal the front signal
-     * @param rearSignal  the rear signal
-     */
-    private static int decodeContacts(int frontSignal, int rearSignal) {
-        return decodeContacts(frontSignal) * 4 + decodeContacts(rearSignal);
-    }
-
-    /**
-     * Returns the contacts code from the contact sensors signals
-     * <p>
-     * Return value are:
-     * <ul>
-     *     <li>0 - no contact</li>
-     *     <li>1 - right contact</li>
-     *     <li>2 - left contact</li>
-     *     <li>3 - both side contacts</li>
-     * </ul>
-     * </p>
-     *
-     * @param signal the signal
-     */
-    private static int decodeContacts(int signal) {
-        for (int i = 0; i < CONTACT_THRESHOLDS.length; i++) {
-            if (signal < CONTACT_THRESHOLDS[i]) {
-                return i;
-            }
-        }
-        return CONTACT_THRESHOLDS.length;
-    }
-
-    /**
      * Returns the supply voltage (V) from supply signal
      *
      * @param signal the signal
      */
     private static double decodeSupplyVoltage(int signal) {
         return linear(signal, MIN_SUPPLY_SIGNAL, MAX_SUPPLY_SIGNAL, MIN_SUPPLY_VOLTAGE, MAX_SUPPLY_VOLTAGE);
-    }
-
-    /**
-     * Returns the signal for a contact
-     *
-     * @param contacts the contacts
-     */
-    private static int encodeContacts(int contacts) {
-        if (contacts == 0) {
-            return 0;
-        }
-        return CONTACT_THRESHOLDS[contacts - 1];
     }
 
     /**
@@ -127,16 +81,19 @@ public class RobotStatus {
 
     private final WheellyStatus wheellyStatus;
     private final long resetTime;
+    private final int contacts;
 
     /**
      * Creates the robot status
      *
      * @param wheellyStatus the wheelly status
      * @param resetTime     the reset time (ms)
+     * @param contacts      the contacts
      */
-    public RobotStatus(WheellyStatus wheellyStatus, long resetTime) {
+    public RobotStatus(WheellyStatus wheellyStatus, long resetTime, int contacts) {
         this.wheellyStatus = requireNonNull(wheellyStatus);
         this.resetTime = resetTime;
+        this.contacts = contacts;
     }
 
     public boolean canMoveBackward() {
@@ -148,18 +105,11 @@ public class RobotStatus {
     }
 
     public int getContacts() {
-        return decodeContacts(wheellyStatus.getFrontSensors(), wheellyStatus.getRearSensors());
+        return this.contacts;
     }
 
-    /**
-     * Returns the robot status by setting the contacts signals
-     *
-     * @param contacts the contacts code
-     */
     public RobotStatus setContacts(int contacts) {
-        return setWheellyStatus(wheellyStatus.setSensors(
-                encodeContacts(contacts / 4),
-                encodeContacts(contacts & 3)));
+        return new RobotStatus(wheellyStatus, resetTime, contacts);
     }
 
     public int getDirection() {
@@ -264,7 +214,7 @@ public class RobotStatus {
     }
 
     public RobotStatus setWheellyStatus(WheellyStatus wheellyStatus) {
-        return new RobotStatus(wheellyStatus, resetTime);
+        return new RobotStatus(wheellyStatus, resetTime, contacts);
     }
 
     public boolean isHalt() {
@@ -284,7 +234,7 @@ public class RobotStatus {
     }
 
     public RobotStatus setResetTime(long resetTime) {
-        return new RobotStatus(wheellyStatus, resetTime);
+        return new RobotStatus(wheellyStatus, resetTime, contacts);
     }
 
     @Override
