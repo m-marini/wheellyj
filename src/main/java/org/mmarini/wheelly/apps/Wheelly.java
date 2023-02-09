@@ -27,7 +27,7 @@ package org.mmarini.wheelly.apps;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
-import io.reactivex.rxjava3.core.BackpressureStrategy;
+import io.reactivex.rxjava3.core.Observable;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -213,18 +213,14 @@ public class Wheelly {
         this.reactionRealTime = AverageValue.create();
         this.prevRobotStep = -1;
         this.prevStep = -1;
+        comMonitor.setPrintTimestamp(true);
         SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
-                .toFlowable(BackpressureStrategy.DROP)
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
                 .doOnNext(this::handleWindowOpened)
                 .subscribe();
-        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
-                .toFlowable(BackpressureStrategy.DROP)
-                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
-                .doOnNext(this::handleWindowClosing)
-                .subscribe();
-        SwingObservable.window(comFrame, SwingObservable.WINDOW_ACTIVE)
-                .toFlowable(BackpressureStrategy.DROP)
+        Observable.mergeArray(
+                        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE),
+                        SwingObservable.window(comFrame, SwingObservable.WINDOW_ACTIVE))
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
                 .doOnNext(this::handleWindowClosing)
                 .subscribe();
@@ -340,7 +336,6 @@ public class Wheelly {
                 polarPanel.setRadarMaxDistance(radarMaxDistance);
                 radarFrame = createFixFrame(Messages.getString("Radar.title"), DEFAULT_RADAR_DIMENSION, polarPanel);
                 SwingObservable.window(radarFrame, SwingObservable.WINDOW_ACTIVE)
-                        .toFlowable(BackpressureStrategy.DROP)
                         .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
                         .doOnNext(this::handleWindowClosing)
                         .subscribe();
@@ -364,6 +359,7 @@ public class Wheelly {
             environment.setOnResult(this::handleResult);
             environment.setOnReadLine(comMonitor::onReadLine);
             environment.setOnWriteLine(comMonitor::onWriteLine);
+            environment.getController().setOnControlStatus(comMonitor::onControllerStatus);
             environment.setOnError(err -> {
                 comMonitor.onError(err);
                 logger.atError().setCause(err).log();

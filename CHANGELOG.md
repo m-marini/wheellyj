@@ -7,10 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.7.0] 2023-02-09
+
 ### Added
 
-- Issue #201: Radar map by samples median
 - Issue #202: Configure contact sensor thresholds
+- Issue #206: Configure max angular velocity
+
+### Changed
+
+- Issue #201: Radar map by samples median
 
 ## [0.6.1] 2023-02-07
 

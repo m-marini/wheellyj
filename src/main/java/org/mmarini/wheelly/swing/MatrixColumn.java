@@ -33,6 +33,7 @@ import io.reactivex.rxjava3.core.Flowable;
 import javax.swing.*;
 import java.awt.*;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.Math.max;
@@ -44,12 +45,12 @@ import static java.util.Objects.requireNonNull;
  * The matrix panel display text in matrix fashion.
  */
 public class MatrixColumn extends JComponent {
-    public static final String DEFAULT_TIME_PATTERN = "%1$tH.%1$tM:%1$tS.%1$tL";
+    public static final String DEFAULT_TIME_PATTERN = "%1$tH:%1$tM:%1$tS.%1$tL";
+    public static final int TIMESTAMP_COLUMNS = 13;
     private static final long DEFAULT_DECAY_TIME = 3000L;
     private static final float DEFAULT_MIN_BRIGHT = 0.5F;
     private static final Font DEFAULT_FONT = Font.decode(Font.MONOSPACED + " 14");
     private static final int DEFAULT_ROW_NUMBER = 36;
-    private static final int TIMESTAMP_COLUMNS = 13;
     private final float minBright;
     private final Color titleColor;
     private final Color titleBackgroundColor;
@@ -69,6 +70,8 @@ public class MatrixColumn extends JComponent {
     public MatrixColumn() {
         setBackground(Color.BLACK);
         setForeground(Color.GREEN);
+        setAlignmentX(0F);
+        setAlignmentY(0F);
         this.titleFont = Font.decode("Dialog  bold");
         setFont(DEFAULT_FONT);
 
@@ -152,6 +155,8 @@ public class MatrixColumn extends JComponent {
 
     public void setTimePattern(String timePattern) {
         this.timePattern = timePattern;
+        resize();
+        repaint();
     }
 
     public boolean isPrintTimestamp() {
@@ -160,7 +165,8 @@ public class MatrixColumn extends JComponent {
 
     public void setPrintTimestamp(boolean printTimestamp) {
         this.printTimestamp = printTimestamp;
-        invalidate();
+        resize();
+        repaint();
     }
 
     @Override
@@ -185,6 +191,7 @@ public class MatrixColumn extends JComponent {
         g.setFont(getFont());
         y += h;
         g.setColor(getBackground());
+        x = fm.charWidth('m') / 2;
         for (int i = 0; i < rows.length; i++) {
             String row = rows1[i];
             if (row.length() > 0) {
@@ -192,14 +199,14 @@ public class MatrixColumn extends JComponent {
                         ? format(timePattern + " %2$s", timestamps1[i], row)
                         : row;
                 g.setColor(getColor(timestamp - timestamps1[i]));
-                g.drawString(line, 0, y);
+                g.drawString(line, x, y);
             }
             y += h;
         }
     }
 
     public void print(String pattern, Object... args) {
-        printLines(format(pattern, args));
+        printLines(format(Locale.ENGLISH, pattern, args));
     }
 
     /**
@@ -227,7 +234,6 @@ public class MatrixColumn extends JComponent {
             cursor = 0;
         }
         rows[cursor] = "";
-        resize();
         repaint();
     }
 
@@ -238,9 +244,11 @@ public class MatrixColumn extends JComponent {
         Font font = getFont();
         FontMetrics fm = getFontMetrics(font);
         int colW = fm.charWidth('m');
-        int minW = colW * (columns + (printTimestamp ? TIMESTAMP_COLUMNS : 0));
+        int minW = colW * (columns + (printTimestamp ? TIMESTAMP_COLUMNS : 0) + 2);
         Dimension size = new Dimension(minW, (rows.length + 1) * fm.getHeight() + fm.getMaxDescent());
         setPreferredSize(size);
+        setMinimumSize(size);
+        setMaximumSize(size);
         invalidate();
     }
 }

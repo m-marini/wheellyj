@@ -26,7 +26,7 @@
 package org.mmarini.wheelly.apps;
 
 import hu.akarnokd.rxjava3.swing.SwingObservable;
-import io.reactivex.rxjava3.core.BackpressureStrategy;
+import io.reactivex.rxjava3.core.Observable;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -34,7 +34,10 @@ import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
 import org.mmarini.swing.GridLayoutHelper;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apis.RobotApi;
+import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotControllerApi;
+import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.swing.ComMonitor;
 import org.mmarini.wheelly.swing.MatrixTable;
 import org.mmarini.wheelly.swing.Messages;
@@ -47,30 +50,37 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowEvent;
 import java.text.DecimalFormat;
-import java.util.Set;
 
 import static java.lang.Math.max;
-import static java.lang.String.format;
 import static org.mmarini.wheelly.apps.Wheelly.fromConfig;
 import static org.mmarini.wheelly.swing.Utils.createFrame;
 import static org.mmarini.wheelly.swing.Utils.layHorizontaly;
 
 
 public class MatrixMonitor {
-    public static final int CONTROL_COLUMNS = 16;
-    public static final Set<String> ACTIVE_STATES = Set.of(
-            RobotController.WAIT_COMMAND_INTERVAL,
-            RobotController.MOVE,
-            RobotController.SCAN);
-    public static final String ACTIVE = "active";
-    private static final int SENSOR_COLUMNS = 20;
+    public static final String LEFT_PPS_KEY = "leftPps";
+    public static final String RIGHT_PPS_KEY = "rightPps";
+    public static final String CONTACTS_KEY = "contacts";
+    public static final String VOLTAGE_KEY = "voltage";
+    private static final String HEAD_KEY = "head";
+    private static final String SENSOR_DIR_KEY = "sensorDir";
+    private static final String ECHO_DISTANCE_KEY = "echoDistance";
     private static final Dimension COMMAND_FRAME_SIZE = new Dimension(400, 800);
+    private static final Dimension SENSOR_FRAME_SIZE = new Dimension(300, 800);
     private static final Dimension COM_FRAME_SIZE = new Dimension(1200, 800);
-    private static final Dimension SENSOR_FRAME_SIZE = new Dimension(200, 800);
     private static final Logger logger = LoggerFactory.getLogger(MatrixMonitor.class);
     private static final int MAX_SPEED = 20;
     private static final int MAX_TIME = 10000;
     private static final int MIN_TIME = 500;
+    private static final Object[] SENSOR_CONFIG = new Object[]{
+            HEAD_KEY, Messages.getString("MatrixMonitor.head"), 3,
+            SENSOR_DIR_KEY, Messages.getString("MatrixMonitor.sensorDir"), 3,
+            ECHO_DISTANCE_KEY, Messages.getString("MatrixMonitor.echoDistance"), 4,
+            LEFT_PPS_KEY, Messages.getString("MatrixMonitor.leftPps"), 3,
+            RIGHT_PPS_KEY, Messages.getString("MatrixMonitor.rightPps"), 3,
+            CONTACTS_KEY, Messages.getString("MatrixMonitor.contacts"), 1,
+            VOLTAGE_KEY, Messages.getString("MatrixMonitor.voltage"), 4
+    };
 
     /**
      * Returns the command line arguments parser
@@ -106,15 +116,6 @@ public class MatrixMonitor {
         }
     }
 
-    private static String toMonitorString(RobotStatus status) {
-        return format("%3d %4.2f 0x0%1X %4.1f",
-                status.getSensorDirection(),
-                status.getEchoDistance(),
-                status.getContacts(),
-                status.getSupplyVoltage()
-        );
-    }
-
     private final MatrixTable sensorPanel;
     private final Container commandPanel;
     private final JButton haltButton;
@@ -136,15 +137,13 @@ public class MatrixMonitor {
     private JFrame commandFrame;
     private JFrame sensorFrame;
     private JFrame lineFrame;
-    private String prevControl;
 
     /**
      * Creates the check
      */
     public MatrixMonitor() {
         this.comMonitor = new ComMonitor();
-        this.sensorPanel = MatrixTable.create("status", Messages.getString("MatrixMonitor.sensor"), SENSOR_COLUMNS,
-                "control", Messages.getString("MatrixMonitor.control"), CONTROL_COLUMNS);
+        this.sensorPanel = MatrixTable.create(SENSOR_CONFIG);
         this.sensorDirSlider = new JSlider();
         this.robotDirSlider = new JSlider();
         this.speedSlider = new JSlider();
@@ -284,16 +283,6 @@ public class MatrixMonitor {
         }
     }
 
-    private void handleControl(String status) {
-        if (ACTIVE_STATES.contains(status)) {
-            status = ACTIVE;
-        }
-        if (!status.equals(prevControl)) {
-            this.prevControl = status;
-            sensorPanel.printf("control", status);
-        }
-    }
-
     private void handleHaltButton(ActionEvent actionEvent) {
         sensorDirSlider.setValue(0);
         speedSlider.setValue(0);
@@ -332,7 +321,13 @@ public class MatrixMonitor {
     }
 
     private void handleStatus(RobotStatus status) {
-        sensorPanel.printf("status", toMonitorString(status));
+        sensorPanel.printf(HEAD_KEY, "%4d", status.getDirection());
+        sensorPanel.printf(SENSOR_DIR_KEY, "%3d", status.getSensorDirection());
+        sensorPanel.printf(ECHO_DISTANCE_KEY, "%4.2f", status.getEchoDistance());
+        sensorPanel.printf(LEFT_PPS_KEY, "%3.0f", status.getLeftPps());
+        sensorPanel.printf(RIGHT_PPS_KEY, "%3.0f", status.getRightPps());
+        sensorPanel.printf(CONTACTS_KEY, "%1X", status.getContacts());
+        sensorPanel.printf(VOLTAGE_KEY, "%4.1f", status.getSupplyVoltage());
     }
 
     private void handleTimeSlider(ChangeEvent changeEvent) {
@@ -358,31 +353,12 @@ public class MatrixMonitor {
     }
 
     private void initFlow() {
-        SwingObservable.change(sensorDirSlider)
-                .toFlowable(BackpressureStrategy.BUFFER)
-                .doOnNext(this::handleSensorDirSlider)
-                .subscribe();
-        SwingObservable.actions(haltButton)
-                .toFlowable(BackpressureStrategy.BUFFER)
-                .doOnNext(this::handleHaltButton)
-                .subscribe();
-
-        SwingObservable.change(robotDirSlider)
-                .toFlowable(BackpressureStrategy.BUFFER)
-                .doOnNext(this::handleRobotDirSlider)
-                .subscribe();
-        SwingObservable.change(speedSlider)
-                .toFlowable(BackpressureStrategy.BUFFER)
-                .doOnNext(this::handleSpeedSlider)
-                .subscribe();
-        SwingObservable.change(timeSlider)
-                .toFlowable(BackpressureStrategy.BUFFER)
-                .doOnNext(this::handleTimeSlider)
-                .subscribe();
-        SwingObservable.actions(runButton)
-                .toFlowable(BackpressureStrategy.BUFFER)
-                .doOnNext(this::handleRunButton)
-                .subscribe();
+        sensorDirSlider.addChangeListener(this::handleSensorDirSlider);
+        haltButton.addActionListener(this::handleHaltButton);
+        robotDirSlider.addChangeListener(this::handleRobotDirSlider);
+        speedSlider.addChangeListener(this::handleSpeedSlider);
+        timeSlider.addChangeListener(this::handleTimeSlider);
+        runButton.addActionListener(this::handleRunButton);
     }
 
     /**
@@ -405,22 +381,17 @@ public class MatrixMonitor {
         controller.readShutdown()
                 .doOnComplete(this::handleShutdown)
                 .subscribe();
-        controller.setOnControlStatus(this::handleControl);
+        controller.setOnControlStatus(comMonitor::onControllerStatus);
 
         this.commandFrame = createFrame(Messages.getString("MatrixMonitor.title"), COMMAND_FRAME_SIZE, commandPanel);
         this.sensorFrame = createFrame(Messages.getString("MatrixMonitor.title"), SENSOR_FRAME_SIZE, new JScrollPane(sensorPanel));
         this.lineFrame = createFrame(Messages.getString("ComMonitor.title"), COM_FRAME_SIZE, new JScrollPane(comMonitor));
         layHorizontaly(commandFrame, sensorFrame, lineFrame);
 
-        SwingObservable.window(commandFrame, SwingObservable.WINDOW_ACTIVE).toFlowable(BackpressureStrategy.DROP)
-                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
-                .doOnNext(this::handleClose)
-                .subscribe();
-        SwingObservable.window(sensorFrame, SwingObservable.WINDOW_ACTIVE).toFlowable(BackpressureStrategy.DROP)
-                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
-                .doOnNext(this::handleClose)
-                .subscribe();
-        SwingObservable.window(lineFrame, SwingObservable.WINDOW_ACTIVE).toFlowable(BackpressureStrategy.DROP)
+        Observable.mergeArray(
+                        SwingObservable.window(commandFrame, SwingObservable.WINDOW_ACTIVE),
+                        SwingObservable.window(sensorFrame, SwingObservable.WINDOW_ACTIVE),
+                        SwingObservable.window(lineFrame, SwingObservable.WINDOW_ACTIVE))
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
                 .doOnNext(this::handleClose)
                 .subscribe();

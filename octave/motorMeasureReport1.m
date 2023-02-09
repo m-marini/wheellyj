@@ -93,36 +93,14 @@ endfunction
 
 DATA = loadData(FILENAME);
 
-LEFT_VALUES = avgByValue(DATA(:, [1 3]));
-RIGHT_VALUES = avgByValue(DATA(:, [2 4]));
-
-# Normalize
-Y_RATIO = max(abs(LEFT_VALUES(:, 1))) / max(abs(LEFT_VALUES(:, 2))) / 255;
-LEFT = [LEFT_VALUES(:, 1) / 255, LEFT_VALUES(:, 2) * Y_RATIO];
-LEFT = [-1 -1; LEFT; 1 1];
-Y_RATIO = max(abs(RIGHT_VALUES(:, 1))) / max(abs(RIGHT_VALUES(:, 2))) / 255;
-RIGHT  = [RIGHT_VALUES(:, 1) / 255, RIGHT_VALUES(:, 2) * Y_RATIO];
-RIGHT = [-1 -1; RIGHT; 1 1];
-
-printf("Optimizing left ...\n");
-LEFT_THETA = optim(LEFT, PREC);
-
-printf("Left: ");
-printTheta(LEFT_THETA * PREC);
-printf("\n");
-
-printf("Optimizing right ...\n");
-RIGHT_THETA = optim(RIGHT, PREC);
-
-printf("Right: ");
-printTheta(RIGHT_THETA * PREC);
-printf("\n");
-
 subplot(1, 2, 1);
-plotMotor(LEFT, LEFT_THETA);
 title("Left motor");
+plot(DATA(:, 1), DATA(:, 3));
+grid on;
 
 subplot(1, 2, 2);
-plotMotor(RIGHT, RIGHT_THETA);
 title("Right motor");
+plot(DATA(:, 2), DATA(:, 4));
+grid on;
+
 

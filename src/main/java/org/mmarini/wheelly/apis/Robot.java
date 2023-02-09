@@ -149,7 +149,7 @@ public class Robot implements RobotApi, WithIOCallback {
     private final long configureTimeout;
     private final int[] frontThresholds;
     private final int[] rearThresholds;
-    private RobotSocket socket;
+    private final RobotSocket socket;
     private RobotStatus status;
     private Consumer<String> onReadLine;
     private Consumer<String> onWriteLine;
@@ -173,6 +173,7 @@ public class Robot implements RobotApi, WithIOCallback {
         this.connectionTimeout = connectionTimeout;
         this.readTimeout = readTimeout;
         this.configureTimeout = configureTimeout;
+        socket = new RobotSocket(host, port, connectionTimeout, readTimeout);
         status = RobotStatus.create();
         this.frontThresholds = requireNonNull(frontThresholds);
         this.rearThresholds = requireNonNull(rearThresholds);
@@ -181,10 +182,9 @@ public class Robot implements RobotApi, WithIOCallback {
 
     @Override
     public void close() throws IOException {
-        logger.atDebug().log("Closing ...");
+        logger.atInfo().log("Closing ...");
         try {
             socket.close();
-            socket = null;
         } catch (Exception ex) {
             logger.atError().setCause(ex).log();
         }
@@ -225,9 +225,7 @@ public class Robot implements RobotApi, WithIOCallback {
 
     @Override
     public void connect() throws IOException {
-        RobotSocket socket = new RobotSocket(host, port, connectionTimeout, readTimeout);
         socket.connect();
-        this.socket = socket;
     }
 
     /**
@@ -277,18 +275,14 @@ public class Robot implements RobotApi, WithIOCallback {
      * @throws IOException in case of error
      */
     private Timed<String> readLine() throws IOException {
-        RobotSocket socket = this.socket;
-        if (socket != null) {
-            Timed<String> line = socket.readLine();
-            logger.atDebug().setMessage("Read {}").addArgument(line).log();
-            if (line != null) {
-                if (onReadLine != null) {
-                    onReadLine.accept(line.value());
-                }
+        Timed<String> line = socket.readLine();
+        logger.atDebug().setMessage("Read {}").addArgument(line).log();
+        if (line != null) {
+            if (onReadLine != null) {
+                onReadLine.accept(line.value());
             }
-            return line;
         }
-        return null;
+        return line;
     }
 
     @Override

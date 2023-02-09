@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.swing;
 
 import javax.swing.*;
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -59,14 +60,15 @@ public class MatrixTable extends JPanel {
     public MatrixTable() {
         columns = new ArrayList<>();
         columByKey = new HashMap<>();
-        setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
+        setLayout(new BoxLayout(this, BoxLayout.LINE_AXIS));
+        setBackground(Color.BLACK);
     }
 
     public MatrixTable addColumn(String key, MatrixColumn column) {
         columns.add(column);
         columByKey.put(key, column);
-        invalidate();
         add(column);
+        invalidate();
         return this;
     }
 
