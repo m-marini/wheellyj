@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.nio.channels.InterruptedByTimeoutException;
@@ -84,10 +85,15 @@ public class RobotSocket implements Closeable {
 
     @Override
     public void close() throws IOException {
-        if (channel != null) {
+        AsynchronousSocketChannel ch = channel;
+        channel = null;
+        if (ch != null) {
             logger.atDebug().log("Closing ...");
-            channel.close();
-            channel = null;
+            try {
+                ch.close();
+            } catch (Throwable ex) {
+                logger.atError().setCause(ex).log();
+            }
         }
     }
 
@@ -151,14 +157,17 @@ public class RobotSocket implements Closeable {
                     splitLines();
                 }
             } catch (Throwable ex) {
+                /*
                 if (ch != channel) {
                     logger.atError().setCause(ex).log();
                     return;
                 }
+
+                 */
                 Throwable cause = ex.getCause();
                 if (cause instanceof InterruptedByTimeoutException) {
                     throw new InterruptedIOException(cause.getMessage());
-                } else {
+                } else if (!(cause instanceof AsynchronousCloseException)) {
                     throw new IOException(cause);
                 }
             }

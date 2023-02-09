@@ -28,6 +28,12 @@
 
 package org.mmarini.wheelly.swing;
 
+import org.mmarini.wheelly.apis.RobotController;
+
+import java.util.Map;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
+
 public class ComMonitor extends MatrixTable {
 
     public static final String STATUS = "status";
@@ -36,15 +42,40 @@ public class ComMonitor extends MatrixTable {
     public static final String OTHER = "other";
     public static final String CONFIG = "config";
     public static final String ERROR_KEY = "error";
+    public static final String CONTROLLER_KEY = "controller";
+    private static final String CONFIG_COMMANDS_REGEX = "(cs|cc|ct|cr|cm) .*";
+
+    private static final Predicate<String> CONFIG_COMMANDS = Pattern.compile(CONFIG_COMMANDS_REGEX).asMatchPredicate();
+    private static final Predicate<String> CONFIG_COMMANDS_ACK = Pattern.compile("// " + CONFIG_COMMANDS_REGEX).asMatchPredicate();
+
+    private static final Map<String, String> CONTROLLER_STATUS_MAP = Map.of(
+            RobotController.CONFIGURING, "cfg",
+            RobotController.CONNECTING, "con",
+            RobotController.CLOSING, "cls",
+            RobotController.WAITING_RETRY, "wtr",
+            RobotController.SCAN, "act",
+            RobotController.MOVE, "act",
+            RobotController.WAIT_COMMAND_INTERVAL, "act"
+    );
+    private String prevController;
 
     public ComMonitor() {
+        addColumn(CONTROLLER_KEY, Messages.getString("ComMonitor.controller"), 3);
         addColumn(STATUS, Messages.getString("ComMonitor.status"), 77);
-        addColumn(SCAN, Messages.getString("ComMonitor.scan"), 7);
-        addColumn(MOVE, Messages.getString("ComMonitor.move"), 12);
+        addColumn(MOVE, Messages.getString("ComMonitor.move"), 11);
+        addColumn(SCAN, Messages.getString("ComMonitor.scan"), 6);
         addColumn(CONFIG, Messages.getString("ComMonitor.config"), 36);
         addColumn(OTHER, Messages.getString("ComMonitor.other"), 35);
         addColumn(ERROR_KEY, Messages.getString("ComMonitor.error"), 50);
         setPrintTimestamp(false);
+    }
+
+    public void onControllerStatus(String status) {
+        String stat = CONTROLLER_STATUS_MAP.getOrDefault(status, status);
+        if (!stat.equals(prevController)) {
+            prevController = stat;
+            printf(CONTROLLER_KEY, stat);
+        }
     }
 
     public void onError(Throwable err) {
@@ -53,31 +84,23 @@ public class ComMonitor extends MatrixTable {
 
     public void onReadLine(String line) {
         if (line.startsWith("st ")) {
-            printf(STATUS, line);
-        } else if (line.startsWith("ck ")
-                || line.startsWith("// cc ")
-                || line.startsWith("// cs")
-                || line.startsWith("// ct")
-                || line.startsWith("// cm")) {
-            printf(CONFIG, line);
+            printf(STATUS, " %s", line);
+        } else if (CONFIG_COMMANDS_ACK.test(line) || line.startsWith("ck ")) {
+            printf(CONFIG, " %s", line);
         } else {
-            printf(OTHER, line);
+            printf(OTHER, " %s", line);
         }
     }
 
     public void onWriteLine(String line) {
         if (line.equals("ha") || line.startsWith("mv ")) {
-            printf(MOVE, line);
+            printf(MOVE, " %s", line);
         } else if (line.startsWith("sc ")) {
-            printf(SCAN, line);
-        } else if (line.startsWith("ck ")
-                || line.startsWith("cc ")
-                || line.startsWith("ct ")
-                || line.startsWith("cm ")
-                || line.startsWith("cs")) {
-            printf(CONFIG, line);
+            printf(SCAN, " %s", line);
+        } else if (CONFIG_COMMANDS.test(line) || line.startsWith("ck ")) {
+            printf(CONFIG, " %s", line);
         } else {
-            printf(OTHER, line);
+            printf(OTHER, " %s", line);
         }
     }
 }

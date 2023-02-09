@@ -7,7 +7,9 @@ The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/w
 
 ## Release 0.7.0
 
-Compatible with Wheellino 0.4.0
+Compatible with Wheellino 0.4.1
+
+Added some robot configurations and radar map by samples median
 
 ## Release 0.6.1
 

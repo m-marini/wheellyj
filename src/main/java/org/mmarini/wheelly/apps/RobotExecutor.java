@@ -27,7 +27,7 @@ package org.mmarini.wheelly.apps;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
-import io.reactivex.rxjava3.core.BackpressureStrategy;
+import io.reactivex.rxjava3.core.Observable;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -161,23 +161,15 @@ public class RobotExecutor {
         this.robotStartTimestamp = -1;
         this.prevRobotStep = -1;
         this.prevRealStep = -1;
+        comMonitor.setPrintTimestamp(true);
         SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
-                .toFlowable(BackpressureStrategy.DROP)
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
                 .doOnNext(this::handleWindowOpened)
                 .subscribe();
-        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
-                .toFlowable(BackpressureStrategy.DROP)
-                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
-                .doOnNext(this::handleWindowClosing)
-                .subscribe();
-        SwingObservable.window(comFrame, SwingObservable.WINDOW_ACTIVE)
-                .toFlowable(BackpressureStrategy.DROP)
-                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
-                .doOnNext(this::handleWindowClosing)
-                .subscribe();
-        SwingObservable.window(radarFrame, SwingObservable.WINDOW_ACTIVE)
-                .toFlowable(BackpressureStrategy.DROP)
+        Observable.mergeArray(
+                        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE),
+                        SwingObservable.window(comFrame, SwingObservable.WINDOW_ACTIVE),
+                        SwingObservable.window(radarFrame, SwingObservable.WINDOW_ACTIVE))
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
                 .doOnNext(this::handleWindowClosing)
                 .subscribe();
@@ -290,6 +282,7 @@ public class RobotExecutor {
             });
             agent.setOnReadLine(comMonitor::onReadLine);
             agent.setOnWriteLine(comMonitor::onWriteLine);
+            agent.getController().setOnControlStatus(comMonitor::onControllerStatus);
             frame.setVisible(true);
             radarFrame.setVisible(true);
             comFrame.setVisible(true);

@@ -26,7 +26,7 @@
 package org.mmarini.wheelly.apps;
 
 import hu.akarnokd.rxjava3.swing.SwingObservable;
-import io.reactivex.rxjava3.core.BackpressureStrategy;
+import io.reactivex.rxjava3.core.Observable;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -110,7 +110,7 @@ public class RobotCheckUp {
     }
 
     private final SensorsPanel sensorPanel;
-    private final ComMonitor lineMonitor;
+    private final ComMonitor comMonitor;
     private final JFrame frame;
     private final JFrame monitorFrame;
     private Namespace parseArgs;
@@ -122,19 +122,18 @@ public class RobotCheckUp {
      */
     public RobotCheckUp() {
         this.sensorPanel = new SensorsPanel();
-        this.lineMonitor = new ComMonitor();
+        this.comMonitor = new ComMonitor();
         this.frame = createFrame(Messages.getString("RobotCheckUp.title"), RESULT_SIZE, sensorPanel);
-        this.monitorFrame = createFrame(Messages.getString("ComMonitor.title"), RESULT_SIZE, new JScrollPane(lineMonitor));
-        lineMonitor.setPrintTimestamp(true);
-        monitorFrame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+        this.monitorFrame = createFrame(Messages.getString("ComMonitor.title"), RESULT_SIZE, new JScrollPane(comMonitor));
+        comMonitor.setPrintTimestamp(true);
         layHorizontaly(frame, monitorFrame);
-        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
+        Observable.mergeArray(
+                        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE),
+                        SwingObservable.window(monitorFrame, SwingObservable.WINDOW_ACTIVE))
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
                 .doOnNext(this::handleWindowClose)
                 .subscribe();
-        SwingObservable.actions(sensorPanel.getCheckUpButton()).toFlowable(BackpressureStrategy.LATEST)
-                .doOnNext(this::handleStartCheckup)
-                .subscribe();
+        sensorPanel.getCheckUpButton().addActionListener(this::handleStartCheckup);
     }
 
     private CompositeCheckupProcess createCheckUpProcess(Function<RobotStatus, List<ScannerResult>> checkUpScanner) {
@@ -304,11 +303,12 @@ public class RobotCheckUp {
         controller = createController();
         controller.setOnInference(this::handleInference);
         controller.setOnError(err -> {
-            lineMonitor.onError(err);
+            comMonitor.onError(err);
             logger.atError().setCause(err).log();
         });
-        controller.setOnReadLine(lineMonitor::onReadLine);
-        controller.setOnWriteLine(lineMonitor::onWriteLine);
+        controller.setOnReadLine(comMonitor::onReadLine);
+        controller.setOnWriteLine(comMonitor::onWriteLine);
+        controller.setOnControlStatus(comMonitor::onControllerStatus);
         controller.readShutdown()
                 .doOnComplete(this::handleShutdown)
                 .subscribe();
