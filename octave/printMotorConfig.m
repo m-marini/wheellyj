@@ -90,8 +90,51 @@ function printTheta(THETA)
   printf("%d, %d, %d, %d", THETA(1, 2), THETA(1, 1), THETA(2, 2), THETA(2, 1));
 endfunction
 
+function [P0F P1F MUF P0B P1B MUB] = computeConfig(DATA)
+  IDX = find(DATA(:, 2) == 0 & DATA(:, 1) > 0);
+  X = DATA(IDX, 1);
+  P0F = min(X);
+  P1F = max(X);
+
+  MAXX = max(DATA(:, 1));
+  MAXY = max(DATA(:, 2));
+
+  MUF = round(255 * (MAXX - P0F) / MAXY);
+
+  IDX = find(DATA(:, 2) == 0 & DATA(:, 1) < 0);
+  X = DATA(IDX, 1);
+  P0B = max(X);
+  P1B = min(X);
+
+  MINX = min(DATA(:, 1));
+  MINY = min(DATA(:, 2));
+
+  MUB = round(255 * (MINX - P0F) / MINY);
+endfunction
+
+function printConfig(DATA)
+  [P0F P1F MUF P0B P1B MUB] = computeConfig(DATA);
+  printf("P0_FORWARD: %d\n", P0F);
+  printf("P1_FORWARD: %d\n", P1F);
+  printf("MU_FORWARD: %d\n", MUF);
+  printf("\n");
+  printf("P0_BACKWARD: %d\n", P0B);
+  printf("P1_BACKWARD: %d\n", P1B);
+  printf("MU_BACKWARD: %d\n", MUB);
+endfunction
+
 
 DATA = loadData(FILENAME);
+
+printf("# Left motor\n");
+printf("\n");
+printConfig(DATA(:, [1 3]));
+printf("\n");
+
+printf("# Right motor\n");
+printf("\n");
+printConfig(DATA(:, [2 4]));
+printf("\n");
 
 subplot(1, 2, 1);
 title("Left motor");
