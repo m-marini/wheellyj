@@ -29,6 +29,8 @@
 package org.mmarini.wheelly.swing;
 
 import org.mmarini.wheelly.apis.RobotController;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.function.Predicate;
@@ -43,11 +45,11 @@ public class ComMonitor extends MatrixTable {
     public static final String CONFIG = "config";
     public static final String ERROR_KEY = "error";
     public static final String CONTROLLER_KEY = "controller";
-    private static final String CONFIG_COMMANDS_REGEX = "(cs|cc|ct|cr|cm) .*";
+    private static final String CONFIG_COMMANDS_REGEX = "(cs|cc|ct|cl|cr|cm) .*";
 
     private static final Predicate<String> CONFIG_COMMANDS = Pattern.compile(CONFIG_COMMANDS_REGEX).asMatchPredicate();
     private static final Predicate<String> CONFIG_COMMANDS_ACK = Pattern.compile("// " + CONFIG_COMMANDS_REGEX).asMatchPredicate();
-
+    private static final Logger logger = LoggerFactory.getLogger(ComMonitor.class);
     private static final Map<String, String> CONTROLLER_STATUS_MAP = Map.of(
             RobotController.CONFIGURING, "cfg",
             RobotController.CONNECTING, "con",
@@ -80,6 +82,7 @@ public class ComMonitor extends MatrixTable {
 
     public void onError(Throwable err) {
         printf(ERROR_KEY, String.valueOf(err.getMessage()));
+        logger.atError().setCause(err).log();
     }
 
     public void onReadLine(String line) {
@@ -89,6 +92,9 @@ public class ComMonitor extends MatrixTable {
             printf(CONFIG, " %s", line);
         } else {
             printf(OTHER, " %s", line);
+            if (line.startsWith("!!")) {
+               logger.atError().log(line);
+            }
         }
     }
 
