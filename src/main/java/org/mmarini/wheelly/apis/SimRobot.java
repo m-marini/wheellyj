@@ -62,9 +62,7 @@ public class SimRobot implements RobotApi, WithRobotStatus {
     public static final double MAX_DISTANCE = 3;
     public static final int FORWARD_PROXIMITY_MASK = 0xc;
     public static final int BACKWARD_PROXIMITY_MASK = 0x3;
-    public static final double MAX_PPS = 20;
     public static final double MAX_VELOCITY = MAX_PPS * RobotStatus.DISTANCE_PER_PULSE;
-    //    public static final double MAX_PPS = MAX_VELOCITY / RobotStatus.DISTANCE_PER_PULSE;
     public static final double ROBOT_TRACK = 0.136;
     private static final double MIN_OBSTACLE_DISTANCE = 1;
     private static final Vec2 GRAVITY = new Vec2();
@@ -302,7 +300,7 @@ public class SimRobot implements RobotApi, WithRobotStatus {
         double angularVelocity = Utils.clip(Utils.linear(dAngle, -RAD_10, RAD_10, -1, 1), -1, 1);
         // Relative linear speed to fix the speed
 
-        double linearVelocity = speed / MAX_PPS * Utils.clip(Utils.linear(abs(dAngle), 0, RAD_30, 1, 0), 0, 1);
+        double linearVelocity = (double) speed / MAX_PPS * Utils.clip(Utils.linear(abs(dAngle), 0, RAD_30, 1, 0), 0, 1);
 
         // Relative left-right motor speeds
         double left = Utils.clip((linearVelocity - angularVelocity), -1, 1);
@@ -399,7 +397,7 @@ public class SimRobot implements RobotApi, WithRobotStatus {
     @Override
     public void move(int dir, int speed) {
         this.direction = normalizeDegAngle(dir);
-        this.speed = min(max(speed, -MAX_PPS_SPEED), MAX_PPS_SPEED);
+        this.speed = min(max(speed, -MAX_PPS), MAX_PPS);
         checkForSpeed();
     }
 

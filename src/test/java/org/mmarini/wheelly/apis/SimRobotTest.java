@@ -68,7 +68,7 @@ class SimRobotTest {
         SimRobot robot = createRobot();
         robot.tick(100);
 
-        robot.move(0, (int) MAX_PPS);
+        robot.move(0, MAX_PPS);
         robot.tick(100);
         RobotStatus status = robot.getRobotStatus();
 

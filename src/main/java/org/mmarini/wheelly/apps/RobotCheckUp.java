@@ -70,7 +70,7 @@ public class RobotCheckUp {
     public static final double DISTANCE_TOLERANCE = 0.1;
     public static final Dimension RESULT_SIZE = new Dimension(800, 600);
     private static final Logger logger = LoggerFactory.getLogger(RobotCheckUp.class);
-    private static final int TEST_SPEED = (int) (MAX_PPS / 2);
+    private static final int TEST_SPEED = MAX_PPS / 2;
 
     /**
      * Returns the command line arguments parser

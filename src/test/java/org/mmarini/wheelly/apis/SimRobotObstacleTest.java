@@ -72,7 +72,7 @@ class SimRobotObstacleTest {
         assertTrue(status.canMoveBackward());
         assertFalse(status.canMoveForward());
 
-        robot.move(90, (int) MAX_PPS);
+        robot.move(90, MAX_PPS);
         robot.tick(300);
 
         assertThat(status.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
@@ -99,7 +99,7 @@ class SimRobotObstacleTest {
         assertTrue(status.canMoveBackward());
         assertFalse(status.canMoveForward());
 
-        robot.move(90, (int) -MAX_PPS);
+        robot.move(90, -MAX_PPS);
         for (int i = 0; i < 10; i++) {
             robot.tick(30);
         }
@@ -159,7 +159,7 @@ class SimRobotObstacleTest {
         assertFalse(status.canMoveBackward());
         assertTrue(status.canMoveForward());
 
-        robot.move(-90, (int) MAX_PPS);
+        robot.move(-90, MAX_PPS);
         for (int i = 0; i < 10; i++) {
             robot.tick(30);
         }
@@ -235,7 +235,7 @@ class SimRobotObstacleTest {
         assertTrue(status.canMoveBackward());
         assertTrue(status.canMoveForward());
 
-        robot.move(-90, (int) -MAX_PPS);
+        robot.move(-90, -MAX_PPS);
         for (int i = 0; i < 12; i++) {
             robot.tick(30);
         }

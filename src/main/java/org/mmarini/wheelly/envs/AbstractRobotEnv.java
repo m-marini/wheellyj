@@ -41,7 +41,7 @@ import java.util.function.UnaryOperator;
 
 import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS_SPEED;
+import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
 import static org.mmarini.wheelly.apis.Utils.linear;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 
@@ -255,7 +255,7 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
         int n = ((IntSignalSpec) getActions().get("speed")).getNumValues();
         return round(linear(speedAction,
                 0, n - 1,
-                -MAX_PPS_SPEED, MAX_PPS_SPEED));
+                -MAX_PPS, MAX_PPS));
     }
 
     /**

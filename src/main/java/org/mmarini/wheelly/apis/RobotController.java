@@ -43,6 +43,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
 import static org.mmarini.yaml.schema.Validator.objectPropertiesRequired;
 import static org.mmarini.yaml.schema.Validator.positiveInteger;
 
@@ -196,10 +197,19 @@ public class RobotController implements RobotControllerApi {
     @Override
     public void execute(RobotCommands command) {
         if (command.isHalt() || command.isMove()) {
-            moveCommand = command.clearScan();
+            if (command.isMove() && !(command.moveDirection >= -180 && command.moveDirection <= 179
+                    && command.speed >= -MAX_PPS && command.speed <= MAX_PPS)) {
+                logger.atError().setMessage("Wrong move comand {}").addArgument(command).log();
+            } else {
+                moveCommand = command.clearScan();
+            }
         }
         if (command.isScan()) {
-            sensorDir = command.scanDirection;
+            if (command.scanDirection >= -90 && command.scanDirection <= 90) {
+                sensorDir = command.scanDirection;
+            } else {
+                logger.atError().setMessage("Wrong scan direction {}").addArgument(command.scanDirection).log();
+            }
         }
     }
 

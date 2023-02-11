@@ -44,7 +44,7 @@ import java.util.stream.IntStream;
 
 import static java.lang.Math.*;
 import static java.lang.String.format;
-import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS_SPEED;
+import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
 import static org.mmarini.wheelly.apis.Utils.linear;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 import static org.mmarini.yaml.schema.Validator.*;
@@ -104,6 +104,14 @@ public class ExploringState extends AbstractStateNode {
         return new ExploringState(id, onInit, onEntry, onExit);
     }
 
+    /**
+     * Returns the state target and the robot commands to explore
+     *
+     * @param robotStatus        the roboto status
+     * @param map                the map
+     * @param stopDistance       the stop distance (m)
+     * @param turnDirectionRange the turn direction range (DEG)
+     */
     public static Tuple2<String, RobotCommands> explore(RobotStatus robotStatus, PolarMap map, double stopDistance, int turnDirectionRange) {
 
         // Find the unknown sector target direction
@@ -111,6 +119,7 @@ public class ExploringState extends AbstractStateNode {
         if (targetIndex >= 0) {
             int sectorDir = map.radarSectorDirection(targetIndex);
             RobotCommands command;
+            int robotDir = normalizeDegAngle(robotStatus.getDirection() + sectorDir);
             if (abs(sectorDir) <= 90) {
                 // Turns the scanner to the unknown sector
                 double dist = map.getSector(targetIndex).getMapSector().map(MapSector::getLocation)
@@ -121,15 +130,14 @@ public class ExploringState extends AbstractStateNode {
                         .addArgument(sectorDir)
                         .addArgument(() -> format("%.2f", dist))
                         .log();
-                command = RobotCommands.haltAndScan(sectorDir);
+                command = RobotCommands.scan(sectorDir);
             } else {
                 // Turns the robot to the unknown sector
-                int robotDir = normalizeDegAngle(robotStatus.getDirection() + sectorDir);
                 logger.atDebug()
                         .setMessage("turn to unknown sector {} DEG")
                         .addArgument(robotDir)
                         .log();
-                command = RobotCommands.moveAndScan(robotDir, 0, sectorDir);
+                command = RobotCommands.moveAndScan(robotDir, 0, 0);
             }
             return Tuple2.of(NONE_EXIT, command);
         }
@@ -146,9 +154,9 @@ public class ExploringState extends AbstractStateNode {
         int speed = abs(sectorDir) > turnDirectionRange
                 ? 0
                 : (!targetSector.isHindered()
-                ? MAX_PPS_SPEED
+                ? MAX_PPS
                 : (int) round(min(max((double) round(linear(distance, 0, stopDistance, 1, 4)),
-                1), 4) * MAX_PPS_SPEED / 4));
+                1), 4) * MAX_PPS / 4));
         if (speed == 0) {
             logger.atDebug()
                     .setMessage("turn to {} DEG")
