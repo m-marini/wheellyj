@@ -37,7 +37,7 @@ import org.mmarini.yaml.schema.Locator;
 
 import java.util.function.ToDoubleFunction;
 
-import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS_SPEED;
+import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 
 /**
@@ -87,7 +87,7 @@ public interface ExploreByImitation {
             long dirNumber = env.getActions().get("direction").getShape()[0];
             long sensDirNumber = env.getActions().get("sensorAction").getShape()[0];
 
-            double rightSpeed = FuzzyFunctions.equalZero(speedAction - expSpeed, MAX_PPS_SPEED);
+            double rightSpeed = FuzzyFunctions.equalZero(speedAction - expSpeed, MAX_PPS);
             double rightDir = FuzzyFunctions.equalZero(normalizeDegAngle(dirAction - expMoveDir),
                     360D / dirNumber);
             double rightSensor = FuzzyFunctions.equalZero(normalizeDegAngle(sensorAction - expScanDir),

@@ -43,7 +43,7 @@ import java.util.Map;
 import java.util.OptionalInt;
 
 import static java.lang.String.format;
-import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS_SPEED;
+import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 import static org.mmarini.yaml.schema.Validator.positiveNumber;
 
@@ -122,7 +122,7 @@ public class AvoidingState extends AbstractStateNode {
                         .addArgument(this::getId)
                         .addArgument(dir)
                         .log();
-                return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(dir, -MAX_PPS_SPEED));
+                return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(dir, -MAX_PPS));
             }
             // Robot completely blocked
             // holt robot
@@ -139,7 +139,7 @@ public class AvoidingState extends AbstractStateNode {
                     .addArgument(this::getId)
                     .addArgument(dir)
                     .log();
-            return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(dir, MAX_PPS_SPEED));
+            return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(dir, MAX_PPS));
         }
         // Robot not blocked
         Point2D freePoint = get(ctx, FREE_POINT);
@@ -165,6 +165,6 @@ public class AvoidingState extends AbstractStateNode {
             return COMPLETED_RESULT;
         }
         // move robot away
-        return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(escapeDir, MAX_PPS_SPEED));
+        return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(escapeDir, MAX_PPS));
     }
 }

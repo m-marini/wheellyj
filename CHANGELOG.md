@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #208: Add octave engine calibration
 - Issue #210: Motor controller configuration
 
+### Fixed
+
+- Issue #211: ExploringState generates wrong sc command
+
 ## [0.7.0] 2023-02-09
 
 ### Added

@@ -93,7 +93,7 @@ public class ComMonitor extends MatrixTable {
         } else {
             printf(OTHER, " %s", line);
             if (line.startsWith("!!")) {
-               logger.atError().log(line);
+                logger.atError().log(line);
             }
         }
     }
