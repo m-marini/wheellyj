@@ -9,141 +9,225 @@ function DATA = loadData(FILENAME)
    DATA= dlmread(FILENAME, " ", 0,1);
 endfunction
 
-function AVG = avgByValue(DATA)
-  X = sort(unique(DATA(:, 1)));
-  Y = zeros(size(X));
-  for I = 1 : size(X, 1)
-    Y(I) = mean(DATA(find(DATA(:, 1) == X(I)), 2));
-  endfor
-  AVG = [X Y];
-endfunction
-
-function Y = aprox(X, THETA)
-  Y = zeros(size(X));
-  BX1 = THETA(1, 1);
-  BY1 = THETA(1, 2);
-  BX2 = THETA(2, 1);
-  BY2 = THETA(2, 2);
-  for I = 1 : size(X, 1)
-    XX = X(I);
-    if XX < BX1
-      Y(I) = (BY1 + 1) * (XX + 1) / (BX1 + 1) - 1;
-    elseif XX < 0
-      Y(I) = BY1 * XX / BX1;
-    elseif XX < BX2
-      Y(I) = BY2 * XX / BX2;
-    else
-      Y(I) = (1 - BY2) * (XX - BX2) / (1 - BX2) + BY2;
+function [startIndex endIndex] = findIncPos(x, fromIndex)
+  n = size(x, 1);
+  startIndex = 0;
+  endIndex = 0;
+  # Find start
+  while fromIndex <= n - 1
+    if x(fromIndex) == 0 && x(fromIndex + 1) > x(fromIndex)
+      startIndex = fromIndex;
+      break;
     endif
-  endfor
-  Y = min(max(Y, -1), 1);
-endfunction
+    fromIndex = fromIndex + 1;
+  endwhile
 
-function ERR = erraprox(X, Y, THETA)
-  YA = aprox(X, THETA);
-  ERR = sum((Y - YA) .^ 2);
-endfunction
-
-function THETA = optim(DATA, PREC=255)
-  THETA = [
-    -0.5, -0.5;
-    0.5, 0.5];
-  THETA1 = THETA;
-  BE = 1000;
-  for I = [1 : PREC - 1]
-    for J = [0 : PREC]
-      THETA1(1, 1) = -I / PREC;
-      THETA1(1, 2) = -J / PREC;
-      ERR = erraprox(DATA(:, 1), DATA(:, 2), THETA1);
-      if ERR < BE
-        BE = ERR;
-        THETA = THETA1;
+  if startIndex > 0
+    # find end
+    while fromIndex <= n - 1
+      if x(fromIndex + 1) < x(fromIndex)
+        endIndex = fromIndex;
+        break;
       endif
-    endfor
-  endfor
-  THETA1 = THETA;
-  BE = 1000;
-  for I = [1 : PREC - 1]
-    for J = [0 : PREC]
-      THETA1(2, 1) = I / PREC;
-      THETA1(2, 2) = J / PREC;
-      ERR = erraprox(DATA(:, 1), DATA(:, 2), THETA1);
-      if ERR < BE
-        BE = ERR;
-        THETA = THETA1;
+      fromIndex = fromIndex + 1;
+    endwhile
+  endif
+
+endfunction
+
+
+function [startIndex endIndex] = findDecNeg(x, fromIndex)
+  n = size(x, 1);
+  startIndex = 0;
+  endIndex = 0;
+  # Find start
+  while fromIndex <= n - 1
+    if x(fromIndex) == 0 && x(fromIndex + 1) < x(fromIndex)
+      startIndex = fromIndex;
+      break;
+    endif
+    fromIndex = fromIndex + 1;
+  endwhile
+
+  if startIndex > 0
+    # find end
+    while fromIndex <= n - 1
+      if x(fromIndex + 1) > x(fromIndex)
+        endIndex = fromIndex;
+        break;
       endif
-    endfor
-  endfor
+      fromIndex = fromIndex + 1;
+    endwhile
+  endif
+
 endfunction
 
-function DATA = normAry(DATA)
-  DATA = DATA ./ max(abs(DATA));
+function [startIndex endIndex] = findDecPos(x, fromIndex)
+  n = size(x, 1);
+  startIndex = 0;
+  endIndex = 0;
+  # Find start
+  while fromIndex <= n - 1
+    if x(fromIndex) > 0 && x(fromIndex + 1) < x(fromIndex)
+      startIndex = fromIndex;
+      break;
+    endif
+    fromIndex = fromIndex + 1;
+  endwhile
+
+  if startIndex > 0
+    # find end
+    while fromIndex <= n
+      if x(fromIndex) == 0
+        endIndex = fromIndex;
+        break;
+      endif
+      fromIndex = fromIndex + 1;
+    endwhile
+  endif
+
 endfunction
 
-function plotMotor(DATA, THETA)
-  YA = aprox(DATA(:, 1), THETA);
-  plot([DATA(:, 2) YA], DATA(:, 1));
-  grid on;
+
+function [startIndex endIndex] = findIncNeg(x, fromIndex)
+  n = size(x, 1);
+  startIndex = 0;
+  endIndex = 0;
+  # Find start
+  while fromIndex <= n - 1
+    if x(fromIndex) < 0 && x(fromIndex + 1) > x(fromIndex)
+      startIndex = fromIndex;
+      break;
+    endif
+    fromIndex = fromIndex + 1;
+  endwhile
+
+  if startIndex > 0
+    # find end
+    while fromIndex <= n
+      if x(fromIndex) == 0
+        endIndex = fromIndex;
+        break;
+      endif
+      fromIndex = fromIndex + 1;
+    endwhile
+  endif
+
 endfunction
 
-function printTheta(THETA)
-  printf("%d, %d, %d, %d", THETA(1, 2), THETA(1, 1), THETA(2, 2), THETA(2, 1));
+function [p0f p1f muf p0b p1b mub] = computeConfig(x)
+  p1f = 0;
+  p0f = 255;
+  muf = 0;
+  # scans for all forward ramp up
+  startIdx = 1;
+  while 1
+    [startIdx endIdx] = findIncPos(x(:, 1), startIdx);
+    if startIdx <= 0
+      break;
+    endif
+    ramp = x([startIdx : endIdx], :);
+    idx = find(ramp(:, 2) > 0);
+    p1f = max(min(ramp(idx, 1)), p1f);
+    startIdx = endIdx;
+  endwhile
+
+  # scans for all forward ramp down
+  startIdx = 1;
+  while 1
+    [startIdx endIdx] = findDecPos(x(:, 1), startIdx);
+    if startIdx <= 0
+      break;
+    endif
+    ramp = x([startIdx : endIdx], :);
+    idx = find(ramp(:, 2) > 0);
+
+    pw = min(ramp(idx, 1));
+    if pw < p0f
+      p0f = pw;
+      w2 = max(ramp(:, 2));
+      p2 = max(ramp(:, 1));
+      muf = round(256 * (p2 - p0f) / w2);
+    endif
+    startIdx = endIdx;
+  endwhile
+
+  p0b = -255;
+  p1b = 0;
+  mub = 0;
+
+  # scans for all backward ramp down
+  startIdx = 1;
+  while 1
+    [startIdx endIdx] = findDecNeg(x(:, 1), startIdx);
+    if startIdx <= 0
+      break;
+    endif
+    ramp = x([startIdx : endIdx], :);
+    idx = find(ramp(:, 2) < 0);
+    p1b = min(max(ramp(idx, 1)), p1b);
+    startIdx = endIdx;
+  endwhile
+
+  # scans for all backward ramp up
+  startIdx = 1;
+  while 1
+    [startIdx endIdx] = findIncNeg(x(:, 1), startIdx);
+    if startIdx <= 0
+      break;
+    endif
+    ramp = x([startIdx : endIdx], :);
+    idx = find(ramp(:, 2) < 0);
+    pw = max(ramp(idx, 1));
+    if pw > p0b
+      p0b = pw;
+      w2 = min(ramp(:, 2));
+      p2 = min(ramp(:, 1));
+      mub = round(256 * (p2 - p0b) / w2);
+    endif
+    startIdx = endIdx;
+  endwhile
 endfunction
 
-function [P0F P1F MUF P0B P1B MUB] = computeConfig(DATA)
-  IDX = find(DATA(:, 2) == 0 & DATA(:, 1) > 0);
-  X = DATA(IDX, 1);
-  P0F = min(X);
-  P1F = max(X);
-
-  MAXX = max(DATA(:, 1));
-  MAXY = max(DATA(:, 2));
-
-  MUF = round(255 * (MAXX - P0F) / MAXY);
-
-  IDX = find(DATA(:, 2) == 0 & DATA(:, 1) < 0);
-  X = DATA(IDX, 1);
-  P0B = max(X);
-  P1B = min(X);
-
-  MINX = min(DATA(:, 1));
-  MINY = min(DATA(:, 2));
-
-  MUB = round(255 * (MINX - P0F) / MINY);
-endfunction
-
-function printConfig(DATA)
-  [P0F P1F MUF P0B P1B MUB] = computeConfig(DATA);
-  printf("P0_FORWARD: %d\n", P0F);
-  printf("P1_FORWARD: %d\n", P1F);
-  printf("MU_FORWARD: %d\n", MUF);
+function printConfig(x)
+  [p0f p1f muf p0b p1b mub] = computeConfig(x);
+  printf("P0_FORWARD: %d\n", p0f);
+  printf("P1_FORWARD: %d\n", p1f);
+  printf("MU_FORWARD: %d\n", muf);
   printf("\n");
-  printf("P0_BACKWARD: %d\n", P0B);
-  printf("P1_BACKWARD: %d\n", P1B);
-  printf("MU_BACKWARD: %d\n", MUB);
+  printf("P0_BACKWARD: %d\n", p0b);
+  printf("P1_BACKWARD: %d\n", p1b);
+  printf("MU_BACKWARD: %d\n", mub);
 endfunction
 
+data = loadData(FILENAME);
 
-DATA = loadData(FILENAME);
 
 printf("# Left motor\n");
 printf("\n");
-printConfig(DATA(:, [1 3]));
+printConfig(data(:, [1 3]));
 printf("\n");
+
 
 printf("# Right motor\n");
 printf("\n");
-printConfig(DATA(:, [2 4]));
+printConfig(data(:, [2 4]));
 printf("\n");
 
 subplot(1, 2, 1);
 title("Left motor");
-plot(DATA(:, 1), DATA(:, 3));
+plot(data(:, 3), data(:, 1));
+xlabel("Left speed (pps)");
+ylabel("Left power (unit)");
 grid on;
+grid minor on;
 
 subplot(1, 2, 2);
 title("Right motor");
-plot(DATA(:, 2), DATA(:, 4));
+plot(data(:, 4), data(:, 2));
+ylabel("Right power (unit)");
+xlabel("Right speed (pps)");
 grid on;
+grid minor on;
 
 
