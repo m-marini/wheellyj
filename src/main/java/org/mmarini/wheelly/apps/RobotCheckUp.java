@@ -36,6 +36,7 @@ import org.jetbrains.annotations.NotNull;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.swing.ComMonitor;
 import org.mmarini.wheelly.swing.Messages;
+import org.mmarini.wheelly.swing.SensorMonitor;
 import org.mmarini.wheelly.swing.SensorsPanel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +58,7 @@ import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 import static org.mmarini.wheelly.apps.Wheelly.fromConfig;
 import static org.mmarini.wheelly.swing.Utils.createFrame;
-import static org.mmarini.wheelly.swing.Utils.layHorizontaly;
+import static org.mmarini.wheelly.swing.Utils.layHorizontally;
 
 
 public class RobotCheckUp {
@@ -113,6 +114,8 @@ public class RobotCheckUp {
     private final ComMonitor comMonitor;
     private final JFrame frame;
     private final JFrame monitorFrame;
+    private final SensorMonitor sensorMonitor;
+    private final JFrame sensorFrame;
     private Namespace parseArgs;
     private RobotControllerApi controller;
     private Function<RobotStatus, FinalResult> checkupProcess;
@@ -123,12 +126,15 @@ public class RobotCheckUp {
     public RobotCheckUp() {
         this.sensorPanel = new SensorsPanel();
         this.comMonitor = new ComMonitor();
-        this.frame = createFrame(Messages.getString("RobotCheckUp.title"), RESULT_SIZE, sensorPanel);
-        this.monitorFrame = createFrame(Messages.getString("ComMonitor.title"), RESULT_SIZE, new JScrollPane(comMonitor));
+        this.sensorMonitor = new SensorMonitor();
         comMonitor.setPrintTimestamp(true);
-        layHorizontaly(frame, monitorFrame);
+        this.frame = createFrame(Messages.getString("RobotCheckUp.title"), RESULT_SIZE, sensorPanel);
+        this.monitorFrame = comMonitor.createFrame();
+        this.sensorFrame = sensorMonitor.createFrame();
+        layHorizontally(frame, sensorFrame, monitorFrame);
         Observable.mergeArray(
                         SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE),
+                        SwingObservable.window(sensorFrame, SwingObservable.WINDOW_ACTIVE),
                         SwingObservable.window(monitorFrame, SwingObservable.WINDOW_ACTIVE))
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
                 .doOnNext(this::handleWindowClose)
@@ -227,6 +233,11 @@ public class RobotCheckUp {
         return fromConfig(parseArgs.getString("controller"), new Object[]{robot}, new Class[]{RobotApi.class});
     }
 
+    private void handleControlStatus(String status) {
+        comMonitor.onControllerStatus(status);
+        sensorMonitor.onControllerStatus(status);
+    }
+
     /**
      * Handle inference
      *
@@ -234,6 +245,7 @@ public class RobotCheckUp {
      */
     private void handleInference(RobotStatus status) {
         sensorPanel.setStatus(status);
+        sensorMonitor.onStatus(status);
         Function<RobotStatus, FinalResult> cp = checkupProcess;
         if (cp != null) {
             FinalResult result = cp.apply(status);
@@ -248,6 +260,7 @@ public class RobotCheckUp {
     private void handleShutdown() {
         frame.dispose();
         monitorFrame.dispose();
+        sensorFrame.dispose();
         System.exit(0);
     }
 
@@ -308,12 +321,14 @@ public class RobotCheckUp {
         });
         controller.setOnReadLine(comMonitor::onReadLine);
         controller.setOnWriteLine(comMonitor::onWriteLine);
-        controller.setOnControlStatus(comMonitor::onControllerStatus);
+        controller.setOnControlStatus(this::handleControlStatus);
         controller.readShutdown()
                 .doOnComplete(this::handleShutdown)
                 .subscribe();
         frame.setVisible(true);
+        sensorFrame.setVisible(true);
         monitorFrame.setVisible(true);
+        monitorFrame.setState(JFrame.ICONIFIED);
         controller.start();
     }
 

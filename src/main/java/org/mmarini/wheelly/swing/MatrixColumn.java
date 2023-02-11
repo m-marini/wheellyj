@@ -28,13 +28,10 @@
 
 package org.mmarini.wheelly.swing;
 
-import io.reactivex.rxjava3.core.Flowable;
-
 import javax.swing.*;
 import java.awt.*;
 import java.util.Arrays;
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -63,6 +60,7 @@ public class MatrixColumn extends JComponent {
     private int columns;
     private boolean printTimestamp;
     private String timePattern;
+    private boolean scrollOnChange;
 
     /**
      * Creates the matrix panel
@@ -82,8 +80,6 @@ public class MatrixColumn extends JComponent {
         setRows(DEFAULT_ROW_NUMBER);
         this.titleColor = Color.BLACK;
         this.titleBackgroundColor = Color.WHITE;
-        Flowable.interval(1000 / 60, TimeUnit.MILLISECONDS)
-                .subscribe(i -> repaint());
         this.title = "";
     }
 
@@ -169,6 +165,14 @@ public class MatrixColumn extends JComponent {
         repaint();
     }
 
+    public boolean isScrollOnChange() {
+        return scrollOnChange;
+    }
+
+    public void setScrollOnChange(boolean scrollOnChange) {
+        this.scrollOnChange = scrollOnChange;
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         g.setColor(getBackground());
@@ -227,6 +231,14 @@ public class MatrixColumn extends JComponent {
      * @param text the line
      */
     private void printRow(String text, long timestamp) {
+        if (scrollOnChange) {
+            int prev = (cursor + rows.length - 1) % rows.length;
+            if (text.equals(rows[prev])) {
+                timestamps[prev] = timestamp;
+                repaint();
+                return;
+            }
+        }
         rows[cursor] = text;
         timestamps[cursor] = timestamp;
         cursor++;

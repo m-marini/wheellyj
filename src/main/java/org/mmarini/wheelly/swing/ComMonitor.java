@@ -28,11 +28,10 @@
 
 package org.mmarini.wheelly.swing;
 
-import org.mmarini.wheelly.apis.RobotController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
+import javax.swing.*;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
@@ -50,19 +49,9 @@ public class ComMonitor extends MatrixTable {
     private static final Predicate<String> CONFIG_COMMANDS = Pattern.compile(CONFIG_COMMANDS_REGEX).asMatchPredicate();
     private static final Predicate<String> CONFIG_COMMANDS_ACK = Pattern.compile("// " + CONFIG_COMMANDS_REGEX).asMatchPredicate();
     private static final Logger logger = LoggerFactory.getLogger(ComMonitor.class);
-    private static final Map<String, String> CONTROLLER_STATUS_MAP = Map.of(
-            RobotController.CONFIGURING, "cfg",
-            RobotController.CONNECTING, "con",
-            RobotController.CLOSING, "cls",
-            RobotController.WAITING_RETRY, "wtr",
-            RobotController.SCAN, "act",
-            RobotController.MOVE, "act",
-            RobotController.WAIT_COMMAND_INTERVAL, "act"
-    );
-    private String prevController;
 
     public ComMonitor() {
-        addColumn(CONTROLLER_KEY, Messages.getString("ComMonitor.controller"), 3);
+        addColumn(CONTROLLER_KEY, Messages.getString("ComMonitor.controller"), 3, true);
         addColumn(STATUS, Messages.getString("ComMonitor.status"), 77);
         addColumn(MOVE, Messages.getString("ComMonitor.move"), 11);
         addColumn(SCAN, Messages.getString("ComMonitor.scan"), 6);
@@ -72,12 +61,12 @@ public class ComMonitor extends MatrixTable {
         setPrintTimestamp(false);
     }
 
+    public JFrame createFrame() {
+        return createFrame(Messages.getString("ComMonitor.title"));
+    }
+
     public void onControllerStatus(String status) {
-        String stat = CONTROLLER_STATUS_MAP.getOrDefault(status, status);
-        if (!stat.equals(prevController)) {
-            prevController = stat;
-            printf(CONTROLLER_KEY, stat);
-        }
+        printf(CONTROLLER_KEY, ControllerStatusMapper.map(status));
     }
 
     public void onError(Throwable err) {
