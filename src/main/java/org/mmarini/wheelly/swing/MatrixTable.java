@@ -28,16 +28,26 @@
 
 package org.mmarini.wheelly.swing;
 
+import io.reactivex.rxjava3.core.Flowable;
+
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
+import static java.lang.Math.min;
 import static java.lang.String.format;
 
 public class MatrixTable extends JPanel {
+
+    public static final int WIDTH_EXTENSION = 6;
+    private static final int HEIGHT_EXTENSION = 40;
+    private static final int MAX_WIDTH = 1024;
+    private static final int MAX_HEIGHT = 800;
+
     /**
      * Returns the matrix table with columns
      *
@@ -62,6 +72,8 @@ public class MatrixTable extends JPanel {
         columByKey = new HashMap<>();
         setLayout(new BoxLayout(this, BoxLayout.LINE_AXIS));
         setBackground(Color.BLACK);
+        Flowable.interval(1000 / 30, TimeUnit.MILLISECONDS)
+                .subscribe(i -> repaint());
     }
 
     public MatrixTable addColumn(String key, MatrixColumn column) {
@@ -72,9 +84,33 @@ public class MatrixTable extends JPanel {
         return this;
     }
 
+    public MatrixTable addColumn(String key, String title, int size, boolean scrollOnChange) {
+        MatrixColumn column = new MatrixColumn(title, size);
+        column.setScrollOnChange(scrollOnChange);
+        return addColumn(key, column);
+    }
+
     public MatrixTable addColumn(String key, String title, int size) {
         MatrixColumn column = new MatrixColumn(title, size);
         return addColumn(key, column);
+    }
+
+    /**
+     * Returns the frame for this table
+     *
+     * @param title the title
+     */
+    public JFrame createFrame(String title) {
+        JScrollPane scroll = new JScrollPane(this);
+        Dimension size = scroll.getPreferredSize();
+        int w = min(size.width + WIDTH_EXTENSION, MAX_WIDTH);
+        int h = min(size.height + HEIGHT_EXTENSION, MAX_HEIGHT);
+        JFrame frame = new JFrame(title);
+        frame.setSize(w, h);
+        Container contentPane = frame.getContentPane();
+        contentPane.setLayout(new BorderLayout());
+        contentPane.add(scroll, BorderLayout.CENTER);
+        return frame;
     }
 
     public MatrixColumn getColumn(String key) {

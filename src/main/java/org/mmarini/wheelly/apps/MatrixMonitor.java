@@ -32,15 +32,14 @@ import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
-import org.jetbrains.annotations.NotNull;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotControllerApi;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.swing.ComMonitor;
-import org.mmarini.wheelly.swing.MatrixTable;
 import org.mmarini.wheelly.swing.Messages;
+import org.mmarini.wheelly.swing.SensorMonitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,38 +53,19 @@ import java.text.DecimalFormat;
 import static java.lang.Math.max;
 import static org.mmarini.wheelly.apps.Wheelly.fromConfig;
 import static org.mmarini.wheelly.swing.Utils.createFrame;
-import static org.mmarini.wheelly.swing.Utils.layHorizontaly;
+import static org.mmarini.wheelly.swing.Utils.layHorizontally;
 
 
 public class MatrixMonitor {
-    public static final String LEFT_PPS_KEY = "leftPps";
-    public static final String RIGHT_PPS_KEY = "rightPps";
-    public static final String CONTACTS_KEY = "contacts";
-    public static final String VOLTAGE_KEY = "voltage";
-    private static final String HEAD_KEY = "head";
-    private static final String SENSOR_DIR_KEY = "sensorDir";
-    private static final String ECHO_DISTANCE_KEY = "echoDistance";
     private static final Dimension COMMAND_FRAME_SIZE = new Dimension(400, 800);
-    private static final Dimension SENSOR_FRAME_SIZE = new Dimension(300, 800);
-    private static final Dimension COM_FRAME_SIZE = new Dimension(1200, 800);
     private static final Logger logger = LoggerFactory.getLogger(MatrixMonitor.class);
     private static final int MAX_SPEED = 20;
     private static final int MAX_TIME = 10000;
     private static final int MIN_TIME = 500;
-    private static final Object[] SENSOR_CONFIG = new Object[]{
-            HEAD_KEY, Messages.getString("MatrixMonitor.head"), 3,
-            SENSOR_DIR_KEY, Messages.getString("MatrixMonitor.sensorDir"), 3,
-            ECHO_DISTANCE_KEY, Messages.getString("MatrixMonitor.echoDistance"), 4,
-            LEFT_PPS_KEY, Messages.getString("MatrixMonitor.leftPps"), 3,
-            RIGHT_PPS_KEY, Messages.getString("MatrixMonitor.rightPps"), 3,
-            CONTACTS_KEY, Messages.getString("MatrixMonitor.contacts"), 1,
-            VOLTAGE_KEY, Messages.getString("MatrixMonitor.voltage"), 4
-    };
 
     /**
      * Returns the command line arguments parser
      */
-    @NotNull
     private static ArgumentParser createParser() {
         ArgumentParser parser = ArgumentParsers.newFor(MatrixMonitor.class.getName()).build()
                 .defaultHelp(true)
@@ -116,7 +96,6 @@ public class MatrixMonitor {
         }
     }
 
-    private final MatrixTable sensorPanel;
     private final Container commandPanel;
     private final JButton haltButton;
     private final JSlider sensorDirSlider;
@@ -129,6 +108,7 @@ public class MatrixMonitor {
     private final JSlider timeSlider;
     private final JFormattedTextField timeField;
     private final ComMonitor comMonitor;
+    private final SensorMonitor sensorMonitor;
     private Namespace parseArgs;
     private int commandDuration;
     private long runTimestamp;
@@ -136,14 +116,14 @@ public class MatrixMonitor {
     private boolean halt;
     private JFrame commandFrame;
     private JFrame sensorFrame;
-    private JFrame lineFrame;
+    private JFrame comFrame;
 
     /**
      * Creates the check
      */
     public MatrixMonitor() {
         this.comMonitor = new ComMonitor();
-        this.sensorPanel = MatrixTable.create(SENSOR_CONFIG);
+        this.sensorMonitor = new SensorMonitor();
         this.sensorDirSlider = new JSlider();
         this.robotDirSlider = new JSlider();
         this.speedSlider = new JSlider();
@@ -160,7 +140,6 @@ public class MatrixMonitor {
         this.commandPanel = createCommandPanel();
         this.halt = true;
         comMonitor.setPrintTimestamp(true);
-        sensorPanel.setPrintTimestamp(false);
         initFlow();
     }
 
@@ -283,6 +262,11 @@ public class MatrixMonitor {
         }
     }
 
+    private void handleControlStatus(String s) {
+        comMonitor.onControllerStatus(s);
+        sensorMonitor.onControllerStatus(s);
+    }
+
     private void handleHaltButton(ActionEvent actionEvent) {
         sensorDirSlider.setValue(0);
         speedSlider.setValue(0);
@@ -312,7 +296,7 @@ public class MatrixMonitor {
     private void handleShutdown() {
         commandFrame.dispose();
         sensorFrame.dispose();
-        lineFrame.dispose();
+        comFrame.dispose();
     }
 
     private void handleSpeedSlider(ChangeEvent changeEvent) {
@@ -321,13 +305,7 @@ public class MatrixMonitor {
     }
 
     private void handleStatus(RobotStatus status) {
-        sensorPanel.printf(HEAD_KEY, "%4d", status.getDirection());
-        sensorPanel.printf(SENSOR_DIR_KEY, "%3d", status.getSensorDirection());
-        sensorPanel.printf(ECHO_DISTANCE_KEY, "%4.2f", status.getEchoDistance());
-        sensorPanel.printf(LEFT_PPS_KEY, "%3.0f", status.getLeftPps());
-        sensorPanel.printf(RIGHT_PPS_KEY, "%3.0f", status.getRightPps());
-        sensorPanel.printf(CONTACTS_KEY, "%1X", status.getContacts());
-        sensorPanel.printf(VOLTAGE_KEY, "%4.1f", status.getSupplyVoltage());
+        sensorMonitor.onStatus(status);
     }
 
     private void handleTimeSlider(ChangeEvent changeEvent) {
@@ -381,24 +359,25 @@ public class MatrixMonitor {
         controller.readShutdown()
                 .doOnComplete(this::handleShutdown)
                 .subscribe();
-        controller.setOnControlStatus(comMonitor::onControllerStatus);
+        controller.setOnControlStatus(this::handleControlStatus);
 
         this.commandFrame = createFrame(Messages.getString("MatrixMonitor.title"), COMMAND_FRAME_SIZE, commandPanel);
-        this.sensorFrame = createFrame(Messages.getString("MatrixMonitor.title"), SENSOR_FRAME_SIZE, new JScrollPane(sensorPanel));
-        this.lineFrame = createFrame(Messages.getString("ComMonitor.title"), COM_FRAME_SIZE, new JScrollPane(comMonitor));
-        layHorizontaly(commandFrame, sensorFrame, lineFrame);
+        this.sensorFrame = sensorMonitor.createFrame();
+        this.comFrame = comMonitor.createFrame();
+        layHorizontally(commandFrame, sensorFrame, comFrame);
 
         Observable.mergeArray(
                         SwingObservable.window(commandFrame, SwingObservable.WINDOW_ACTIVE),
                         SwingObservable.window(sensorFrame, SwingObservable.WINDOW_ACTIVE),
-                        SwingObservable.window(lineFrame, SwingObservable.WINDOW_ACTIVE))
+                        SwingObservable.window(comFrame, SwingObservable.WINDOW_ACTIVE))
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
                 .doOnNext(this::handleClose)
                 .subscribe();
 
-        sensorFrame.setVisible(true);
-        lineFrame.setVisible(true);
         commandFrame.setVisible(true);
+        sensorFrame.setVisible(true);
+        comFrame.setVisible(true);
+        comFrame.setState(JFrame.ICONIFIED);
         controller.start();
     }
 }

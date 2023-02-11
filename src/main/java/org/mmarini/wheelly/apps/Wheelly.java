@@ -44,10 +44,7 @@ import org.mmarini.wheelly.envs.PolarRobotEnv;
 import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.wheelly.envs.WithPolarMap;
 import org.mmarini.wheelly.envs.WithRadarMap;
-import org.mmarini.wheelly.swing.ComMonitor;
-import org.mmarini.wheelly.swing.EnvironmentPanel;
-import org.mmarini.wheelly.swing.Messages;
-import org.mmarini.wheelly.swing.PolarPanel;
+import org.mmarini.wheelly.swing.*;
 import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
@@ -188,6 +185,8 @@ public class Wheelly {
     private final AverageValue reactionRealTime;
     private final ComMonitor comMonitor;
     private final JFrame comFrame;
+    private final SensorMonitor sensorMonitor;
+    private final JFrame sensorFrame;
     protected Namespace args;
     private long robotStartTimestamp;
     private Long sessionDuration;
@@ -206,20 +205,23 @@ public class Wheelly {
         this.envPanel = new EnvironmentPanel();
         this.frame = createFrame(Messages.getString("Wheelly.title"), envPanel);
         this.comMonitor = new ComMonitor();
-        this.comFrame = createFrame(Messages.getString("ComMonitor.title"), new JScrollPane(comMonitor));
+        comMonitor.setPrintTimestamp(true);
+        this.comFrame = comMonitor.createFrame();
+        this.sensorMonitor = new SensorMonitor();
+        this.sensorFrame = sensorMonitor.createFrame();
         this.robotStartTimestamp = -1;
         this.avgRewards = AverageValue.create();
         this.reactionRobotTime = AverageValue.create();
         this.reactionRealTime = AverageValue.create();
         this.prevRobotStep = -1;
         this.prevStep = -1;
-        comMonitor.setPrintTimestamp(true);
         SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
                 .doOnNext(this::handleWindowOpened)
                 .subscribe();
         Observable.mergeArray(
                         SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE),
+                        SwingObservable.window(sensorFrame, SwingObservable.WINDOW_ACTIVE),
                         SwingObservable.window(comFrame, SwingObservable.WINDOW_ACTIVE))
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
                 .doOnNext(this::handleWindowClosing)
@@ -244,9 +246,15 @@ public class Wheelly {
         return fromConfig(args.getString("env"), new Object[]{controller}, new Class[]{RobotControllerApi.class});
     }
 
+    private void handleControllerStatus(String status) {
+        sensorMonitor.onControllerStatus(status);
+        comMonitor.onControllerStatus(status);
+    }
+
     private void handleInference(RobotStatus status) {
         long robotClock = status.getTime();
         envPanel.setRobotStatus(status);
+        sensorMonitor.onStatus(status);
         if (environment instanceof WithRadarMap) {
             envPanel.setRadarMap(((WithRadarMap) environment).getRadarMap());
         }
@@ -278,6 +286,7 @@ public class Wheelly {
         if (radarFrame != null) {
             radarFrame.dispose();
         }
+        sensorFrame.dispose();
         comFrame.dispose();
         if (!args.getBoolean("silent")) {
             JOptionPane.showMessageDialog(null,
@@ -339,9 +348,9 @@ public class Wheelly {
                         .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
                         .doOnNext(this::handleWindowClosing)
                         .subscribe();
-                layHorizontaly(frame, radarFrame, comFrame);
+                layHorizontally(frame, radarFrame, sensorFrame, comFrame);
             } else {
-                layHorizontaly(frame, comFrame);
+                layHorizontally(frame, sensorFrame, comFrame);
             }
             sessionDuration = this.args.getLong("time");
             logger.atInfo().log("Starting session ...");
@@ -359,7 +368,7 @@ public class Wheelly {
             environment.setOnResult(this::handleResult);
             environment.setOnReadLine(comMonitor::onReadLine);
             environment.setOnWriteLine(comMonitor::onWriteLine);
-            environment.getController().setOnControlStatus(comMonitor::onControllerStatus);
+            environment.getController().setOnControlStatus(this::handleControllerStatus);
             environment.setOnError(err -> {
                 comMonitor.onError(err);
                 logger.atError().setCause(err).log();
@@ -372,7 +381,9 @@ public class Wheelly {
             if (radarFrame != null) {
                 radarFrame.setVisible(true);
             }
+            sensorFrame.setVisible(true);
             comFrame.setVisible(true);
+            comFrame.setState(JFrame.ICONIFIED);
             environment.start();
         } catch (ArgumentParserException e) {
             parser.handleError(e);
