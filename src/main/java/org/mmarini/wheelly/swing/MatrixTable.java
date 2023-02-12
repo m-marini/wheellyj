@@ -43,8 +43,8 @@ import static java.lang.String.format;
 
 public class MatrixTable extends JPanel {
 
-    public static final int WIDTH_EXTENSION = 6;
-    private static final int HEIGHT_EXTENSION = 40;
+    public static final int WIDTH_EXTENSION = 14;
+    private static final int HEIGHT_EXTENSION = 48;
     private static final int MAX_WIDTH = 1024;
     private static final int MAX_HEIGHT = 800;
 
