@@ -376,6 +376,7 @@ public class Wheelly {
             environment.readShutdown()
                     .doOnComplete(this::handleShutdown)
                     .subscribe();
+            environment.setOnCommand(sensorMonitor::onCommand);
 
             frame.setVisible(true);
             if (radarFrame != null) {

@@ -67,6 +67,10 @@ public class SensorsPanel extends JPanel {
     private final JTextField info;
     private final JButton checkUpButton;
 
+    /**
+     * Creates the sensor panel.
+     * The sensor panel displays the robot status with several UI components and a button to run the check-up
+     */
     public SensorsPanel() {
         DecimalFormat cmFormat = new DecimalFormat("#0.00");
         DecimalFormat degFormat = new DecimalFormat("##0");
@@ -104,7 +108,7 @@ public class SensorsPanel extends JPanel {
     }
 
     /**
-     *
+     * Creates the content
      */
     private void createContent() {
 
@@ -186,7 +190,8 @@ public class SensorsPanel extends JPanel {
     }
 
     /**
-     *
+     * Initializes the panel.
+     * Sets the attributes of UI components
      */
     private void init() {
         for (JTextField x : List.of(robotX, robotY, direction, sensorDirection, distance, leftSpeed, rightSpeed, voltage, proximity, imuFailure, supplySensor, frontSensors, rearSensors)) {
@@ -212,6 +217,8 @@ public class SensorsPanel extends JPanel {
     }
 
     /**
+     * Shows the info message
+     *
      * @param text the text
      */
     public void setInfo(String text) {

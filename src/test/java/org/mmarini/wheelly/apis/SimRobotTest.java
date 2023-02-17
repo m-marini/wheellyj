@@ -73,7 +73,7 @@ class SimRobotTest {
         RobotStatus status = robot.getRobotStatus();
 
         assertThat(status.getLocation().getX(), closeTo(0, DISTANCE_EPSILON));
-        assertThat(status.getLocation().getY(), closeTo(DISTANCE_PER_PULSE * MAX_PPS * 0.1, DISTANCE_EPSILON));
+        assertThat(status.getLocation().getY(), closeTo(10e-3, DISTANCE_EPSILON));
         assertEquals(0, status.getDirection());
         assertEquals(0, status.getSensorDirection());
         assertEquals(0f, status.getEchoDistance());
@@ -84,7 +84,7 @@ class SimRobotTest {
         SimRobot robot = createRobot();
         robot.tick(100);
 
-        robot.move(0, -20);
+        robot.move(0, -MAX_PPS);
         robot.tick(100);
         RobotStatus status = robot.getRobotStatus();
 

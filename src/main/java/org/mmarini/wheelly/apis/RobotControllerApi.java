@@ -35,7 +35,7 @@ import java.util.function.Consumer;
 /**
  * Manages the processing threads and event generation to interface the robot
  */
-public interface RobotControllerApi extends WithIOCallback, WithStatusCallback, WithErrorCallback {
+public interface RobotControllerApi extends WithIOCallback, WithStatusCallback, WithErrorCallback, WithCommandCallback {
     /**
      * Executes the command
      *

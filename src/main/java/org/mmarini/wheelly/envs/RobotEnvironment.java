@@ -41,7 +41,7 @@ import java.util.function.UnaryOperator;
 /**
  * Manages the interaction between robot controller and TD agent
  */
-public interface RobotEnvironment extends WithStatusCallback, WithErrorCallback, WithIOCallback, WithSignalsSpec {
+public interface RobotEnvironment extends WithStatusCallback, WithErrorCallback, WithIOCallback, WithSignalsSpec, WithCommandCallback {
 
     /**
      * Returns the robot controller

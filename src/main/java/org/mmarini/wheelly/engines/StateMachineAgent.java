@@ -159,6 +159,10 @@ public class StateMachineAgent implements WithIOCallback, WithStatusCallback, Wi
         return controller.readShutdown();
     }
 
+    public void setOnCommand(Consumer<RobotCommands> callback) {
+        controller.setOnCommand(callback);
+    }
+
     @Override
     public void setOnError(Consumer<Throwable> callback) {
         controller.setOnError(callback);

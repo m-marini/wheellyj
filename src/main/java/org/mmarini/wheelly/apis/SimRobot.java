@@ -45,6 +45,7 @@ import java.util.function.Consumer;
 
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_PER_PULSE;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 import static org.mmarini.yaml.schema.Validator.*;
 
@@ -62,7 +63,7 @@ public class SimRobot implements RobotApi, WithRobotStatus {
     public static final double MAX_DISTANCE = 3;
     public static final int FORWARD_PROXIMITY_MASK = 0xc;
     public static final int BACKWARD_PROXIMITY_MASK = 0x3;
-    public static final double MAX_VELOCITY = MAX_PPS * RobotStatus.DISTANCE_PER_PULSE;
+    public static final double MAX_VELOCITY = MAX_PPS * DISTANCE_PER_PULSE;
     public static final double ROBOT_TRACK = 0.136;
     private static final double MIN_OBSTACLE_DISTANCE = 1;
     private static final Vec2 GRAVITY = new Vec2();
@@ -307,8 +308,10 @@ public class SimRobot implements RobotApi, WithRobotStatus {
         double right = Utils.clip((linearVelocity + angularVelocity), -1, 1);
 
         // Real left-right motor speeds
-        left = round(left * 10F) / 10F * MAX_VELOCITY;
-        right = round(right * 10) / 10F * MAX_VELOCITY;
+        int leftPps = (int) round(left * MAX_PPS);
+        int rightPps = (int) round(right * MAX_PPS);
+        left = leftPps * DISTANCE_PER_PULSE;
+        right = rightPps * DISTANCE_PER_PULSE;
 
         // Real forward velocity
         double forwardVelocity = (left + right) / 2;
@@ -350,8 +353,8 @@ public class SimRobot implements RobotApi, WithRobotStatus {
         int direction = normalizeDegAngle((int) round(90 - toDegrees(robot.getAngle())));
         status = status.setLocation(location)
                 .setDirection(direction)
-                .setLeftPps(left)
-                .setRightPps(right);
+                .setLeftPps(leftPps)
+                .setRightPps(rightPps);
     }
 
     private int decodeContact(Contact contact) {
