@@ -9,6 +9,8 @@ The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/w
 
 Compatible with Wheellino 0.5.0
 
+Add octave engine calibration, sensor monitor
+
 ## Release 0.7.0
 
 Compatible with Wheellino 0.4.1
