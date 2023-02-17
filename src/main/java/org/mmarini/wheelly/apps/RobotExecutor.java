@@ -292,6 +292,7 @@ public class RobotExecutor {
             agent.setOnReadLine(comMonitor::onReadLine);
             agent.setOnWriteLine(comMonitor::onWriteLine);
             agent.getController().setOnControlStatus(this::handleControllerStatus);
+            agent.setOnCommand(sensorMonitor::onCommand);
             frame.setVisible(true);
             radarFrame.setVisible(true);
             sensorFrame.setVisible(true);

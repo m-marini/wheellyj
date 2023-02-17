@@ -116,6 +116,7 @@ public class RobotController implements RobotControllerApi {
     private long lastTick;
     private Consumer<RobotStatus> onLatch;
     private Consumer<String> onControlStatus;
+    private Consumer<RobotCommands> onCommand;
 
     /**
      * Creates the robot controller
@@ -210,6 +211,9 @@ public class RobotController implements RobotControllerApi {
             } else {
                 logger.atError().setMessage("Wrong scan direction {}").addArgument(command.scanDirection).log();
             }
+        }
+        if (onCommand != null) {
+            onCommand.accept(command);
         }
     }
 
@@ -349,6 +353,11 @@ public class RobotController implements RobotControllerApi {
                 logger.atError().setCause(ex).log();
             }
         }
+    }
+
+    @Override
+    public void setOnCommand(Consumer<RobotCommands> callback) {
+        this.onCommand = callback;
     }
 
     @Override

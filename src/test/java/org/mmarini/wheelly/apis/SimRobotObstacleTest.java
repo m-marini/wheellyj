@@ -105,12 +105,12 @@ class SimRobotObstacleTest {
         }
         status = robot.getRobotStatus();
 
-        assertThat(status.getLocation().getX(), closeTo(x0 - 27e-3, DISTANCE_EPSILON));
+        assertThat(status.getLocation().getX(), closeTo(x0 - 39e-3, DISTANCE_EPSILON));
         assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
         assertEquals(0, status.getContacts());
         assertTrue(status.canMoveBackward());
         assertFalse(status.canMoveForward());
-        assertThat(status.getEchoDistance(), closeTo(140e-3 + 27e-3, DISTANCE_EPSILON));
+        assertThat(status.getEchoDistance(), closeTo(140e-3 + 39e-3, DISTANCE_EPSILON));
     }
 
     @Test
@@ -165,7 +165,7 @@ class SimRobotObstacleTest {
         }
         status = robot.getRobotStatus();
 
-        assertThat(status.getLocation().getX(), closeTo(x0 - 27e-3, DISTANCE_EPSILON));
+        assertThat(status.getLocation().getX(), closeTo(x0 - 39e-3, DISTANCE_EPSILON));
         assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
         assertEquals(0, status.getContacts());
         assertTrue(status.canMoveBackward());
@@ -176,7 +176,7 @@ class SimRobotObstacleTest {
     private SimRobot createRobot() {
         Random random = new Random(SEED);
         SimRobot simRobot = new SimRobot(new MapBuilder(new GridTopology(0.2f)).add(XO, 0).build(),
-                random, 0, 0, toRadians(15), 1000);
+                random, 0, 0, toRadians(15), MAX_PPS, 1000);
         simRobot.connect();
         simRobot.configure();
         return simRobot;
@@ -242,7 +242,7 @@ class SimRobotObstacleTest {
 
         status = robot.getRobotStatus();
         assertEquals(3, status.getContacts());
-        assertThat(status.getLocation().getX(), closeTo(XO - HALF_LENGTH - HALF_SIZE - 16e-3, DISTANCE_EPSILON));
+        assertThat(status.getLocation().getX(), closeTo(XO - HALF_LENGTH - HALF_SIZE - 4e-3, DISTANCE_EPSILON));
         assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
         assertFalse(status.canMoveBackward());
         assertTrue(status.canMoveForward());

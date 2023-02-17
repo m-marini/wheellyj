@@ -32,10 +32,7 @@ import io.reactivex.rxjava3.core.Completable;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
-import org.mmarini.wheelly.apis.RadarMap;
-import org.mmarini.wheelly.apis.RobotControllerApi;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WithRobotStatus;
+import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.wheelly.envs.WithRadarMap;
 
@@ -77,6 +74,11 @@ public class MockEnvironment implements RobotEnvironment, WithRadarMap, WithRobo
 
     @Override
     public void setOnAct(UnaryOperator<Map<String, Signal>> callback) {
+
+    }
+
+    @Override
+    public void setOnCommand(Consumer<RobotCommands> callback) {
 
     }
 

@@ -57,7 +57,7 @@ class SimRobotTest {
     private SimRobot createRobot() {
         Random random = new Random(SEED);
         SimRobot simRobot = new SimRobot(new MapBuilder(new GridTopology(0.2f)).build(),
-                random, 0, 0, toRadians(15), 1000);
+                random, 0, 0, toRadians(15), MAX_PPS, 1000);
         simRobot.connect();
         simRobot.configure();
         return simRobot;
@@ -73,7 +73,7 @@ class SimRobotTest {
         RobotStatus status = robot.getRobotStatus();
 
         assertThat(status.getLocation().getX(), closeTo(0, DISTANCE_EPSILON));
-        assertThat(status.getLocation().getY(), closeTo(DISTANCE_PER_PULSE * MAX_PPS * 0.1, DISTANCE_EPSILON));
+        assertThat(status.getLocation().getY(), closeTo(10e-3, DISTANCE_EPSILON));
         assertEquals(0, status.getDirection());
         assertEquals(0, status.getSensorDirection());
         assertEquals(0f, status.getEchoDistance());
@@ -84,7 +84,7 @@ class SimRobotTest {
         SimRobot robot = createRobot();
         robot.tick(100);
 
-        robot.move(0, -20);
+        robot.move(0, -MAX_PPS);
         robot.tick(100);
         RobotStatus status = robot.getRobotStatus();
 

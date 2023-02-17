@@ -45,6 +45,7 @@ import java.util.function.Consumer;
 
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_PER_PULSE;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 import static org.mmarini.yaml.schema.Validator.*;
 
@@ -62,7 +63,7 @@ public class SimRobot implements RobotApi, WithRobotStatus {
     public static final double MAX_DISTANCE = 3;
     public static final int FORWARD_PROXIMITY_MASK = 0xc;
     public static final int BACKWARD_PROXIMITY_MASK = 0x3;
-    public static final double MAX_VELOCITY = MAX_PPS * RobotStatus.DISTANCE_PER_PULSE;
+    public static final double MAX_VELOCITY = MAX_PPS * DISTANCE_PER_PULSE;
     public static final double ROBOT_TRACK = 0.136;
     private static final double MIN_OBSTACLE_DISTANCE = 1;
     private static final Vec2 GRAVITY = new Vec2();
@@ -107,13 +108,15 @@ public class SimRobot implements RobotApi, WithRobotStatus {
                     Map.entry("errSensor", nonNegativeNumber()),
                     Map.entry("sensorReceptiveAngle", positiveInteger()),
                     Map.entry("numObstacles", nonNegativeInteger()),
+                    Map.entry("maxAngularSpeed", positiveInteger()),
                     Map.entry("maxSimulationSpeed", number(minimum(1D)))
             ), List.of(
                     "errSigma",
                     "errSensor",
                     "sensorReceptiveAngle",
                     "numObstacles",
-                    "maxSimulationSpeed"
+                    "maxSimulationSpeed",
+                    "maxAngularSpeed"
             )
     );
     private static final long THRESHOLD_TIME = 5;
@@ -135,10 +138,11 @@ public class SimRobot implements RobotApi, WithRobotStatus {
         double errSigma = locator.path("errSigma").getNode(root).asDouble();
         double errSensor = locator.path("errSensor").getNode(root).asDouble();
         double maxSimSpeed = locator.path("maxSimulationSpeed").getNode(root).asDouble();
+        int maxAngularSpeed = locator.path("maxAngularSpeed").getNode(root).asInt();
         return new SimRobot(obstacleMap,
                 robotRandom,
                 errSigma, errSensor,
-                sensorReceptiveAngle, maxSimSpeed);
+                sensorReceptiveAngle, maxAngularSpeed, maxSimSpeed);
     }
 
     /**
@@ -191,6 +195,7 @@ public class SimRobot implements RobotApi, WithRobotStatus {
     private final Fixture rlSensor;
     private final Fixture rrSensor;
     private final double maxSimSpeed;
+    private final int maxAngularSpeed;
     private RobotStatus status;
     private int speed;
     private int direction;
@@ -205,14 +210,16 @@ public class SimRobot implements RobotApi, WithRobotStatus {
      * @param errSigma             sigma of errors in physic simulation (U)
      * @param errSensor            sensor error (m)
      * @param sensorReceptiveAngle sensor receptive angle (DEG)
+     * @param maxAngularSpeed
      * @param maxSimSpeed          the maximum simulation speed
      */
-    public SimRobot(ObstacleMap obstacleMap, Random random, double errSigma, double errSensor, double sensorReceptiveAngle, double maxSimSpeed) {
+    public SimRobot(ObstacleMap obstacleMap, Random random, double errSigma, double errSensor, double sensorReceptiveAngle, int maxAngularSpeed, double maxSimSpeed) {
         this.random = requireNonNull(random);
         this.errSigma = errSigma;
         this.errSensor = errSensor;
         this.obstacleMap = requireNonNull(obstacleMap);
         this.sensorReceptiveAngle = sensorReceptiveAngle;
+        this.maxAngularSpeed = maxAngularSpeed;
         this.maxSimSpeed = maxSimSpeed;
         this.status = RobotStatus.create();
 
@@ -297,18 +304,18 @@ public class SimRobot implements RobotApi, WithRobotStatus {
         // Direction difference
         double dAngle = Utils.normalizeAngle(toRadians(90 - direction) - robot.getAngle());
         // Relative angular speed to fix the direction
-        double angularVelocity = Utils.clip(Utils.linear(dAngle, -RAD_10, RAD_10, -1, 1), -1, 1);
+        double angularVelocityPps = Utils.clip(Utils.linear(dAngle, -RAD_10, RAD_10, -maxAngularSpeed, maxAngularSpeed), -maxAngularSpeed, maxAngularSpeed);
         // Relative linear speed to fix the speed
 
-        double linearVelocity = (double) speed / MAX_PPS * Utils.clip(Utils.linear(abs(dAngle), 0, RAD_30, 1, 0), 0, 1);
+        double linearVelocityPps = (double) speed * Utils.clip(Utils.linear(abs(dAngle), 0, RAD_30, MAX_PPS, 0), 0, MAX_PPS);
 
         // Relative left-right motor speeds
-        double left = Utils.clip((linearVelocity - angularVelocity), -1, 1);
-        double right = Utils.clip((linearVelocity + angularVelocity), -1, 1);
+        int leftPps = (int) round(Utils.clip((linearVelocityPps - angularVelocityPps), -MAX_PPS, MAX_PPS));
+        int rightPps = (int) round(Utils.clip((linearVelocityPps + angularVelocityPps), -MAX_PPS, MAX_PPS));
 
         // Real left-right motor speeds
-        left = round(left * 10F) / 10F * MAX_VELOCITY;
-        right = round(right * 10) / 10F * MAX_VELOCITY;
+        double left = leftPps * DISTANCE_PER_PULSE;
+        double right = rightPps * DISTANCE_PER_PULSE;
 
         // Real forward velocity
         double forwardVelocity = (left + right) / 2;
@@ -331,7 +338,7 @@ public class SimRobot implements RobotApi, WithRobotStatus {
         force = robot.getWorldVector(localForce);
 
         // Angle rotation due to differential motor speeds
-        angularVelocity = (right - left) / ROBOT_TRACK;
+        double angularVelocity = (right - left) / ROBOT_TRACK;
         // Angular impulse to fix direction
         double robotAngularVelocity = robot.getAngularVelocity();
         double angularTorque = (angularVelocity - robotAngularVelocity) * robot.getInertia() / dt;
@@ -350,10 +357,15 @@ public class SimRobot implements RobotApi, WithRobotStatus {
         int direction = normalizeDegAngle((int) round(90 - toDegrees(robot.getAngle())));
         status = status.setLocation(location)
                 .setDirection(direction)
-                .setLeftPps(left)
-                .setRightPps(right);
+                .setLeftPps(leftPps)
+                .setRightPps(rightPps);
     }
 
+    /**
+     * Returns the decoded contact
+     *
+     * @param contact the jbox contact
+     */
     private int decodeContact(Contact contact) {
         Fixture fa = contact.m_fixtureA;
         Fixture fb = contact.m_fixtureB;

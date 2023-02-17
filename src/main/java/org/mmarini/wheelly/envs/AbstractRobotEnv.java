@@ -231,6 +231,11 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
     }
 
     @Override
+    public void setOnCommand(Consumer<RobotCommands> callback) {
+        controller.setOnCommand(callback);
+    }
+
+    @Override
     public void setOnInference(Consumer<RobotStatus> callback) {
         onInference = callback;
     }
@@ -254,7 +259,7 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
         int speedAction = actions.get("speed").getInt(0);
         int n = ((IntSignalSpec) getActions().get("speed")).getNumValues();
         return round(linear(speedAction,
-                0, n - 1,
+                0, n - 2,
                 -MAX_PPS, MAX_PPS));
     }
 
