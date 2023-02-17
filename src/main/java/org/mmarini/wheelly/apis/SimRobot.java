@@ -108,13 +108,15 @@ public class SimRobot implements RobotApi, WithRobotStatus {
                     Map.entry("errSensor", nonNegativeNumber()),
                     Map.entry("sensorReceptiveAngle", positiveInteger()),
                     Map.entry("numObstacles", nonNegativeInteger()),
+                    Map.entry("maxAngularSpeed", positiveInteger()),
                     Map.entry("maxSimulationSpeed", number(minimum(1D)))
             ), List.of(
                     "errSigma",
                     "errSensor",
                     "sensorReceptiveAngle",
                     "numObstacles",
-                    "maxSimulationSpeed"
+                    "maxSimulationSpeed",
+                    "maxAngularSpeed"
             )
     );
     private static final long THRESHOLD_TIME = 5;
@@ -136,10 +138,11 @@ public class SimRobot implements RobotApi, WithRobotStatus {
         double errSigma = locator.path("errSigma").getNode(root).asDouble();
         double errSensor = locator.path("errSensor").getNode(root).asDouble();
         double maxSimSpeed = locator.path("maxSimulationSpeed").getNode(root).asDouble();
+        int maxAngularSpeed = locator.path("maxAngularSpeed").getNode(root).asInt();
         return new SimRobot(obstacleMap,
                 robotRandom,
                 errSigma, errSensor,
-                sensorReceptiveAngle, maxSimSpeed);
+                sensorReceptiveAngle, maxAngularSpeed, maxSimSpeed);
     }
 
     /**
@@ -192,6 +195,7 @@ public class SimRobot implements RobotApi, WithRobotStatus {
     private final Fixture rlSensor;
     private final Fixture rrSensor;
     private final double maxSimSpeed;
+    private final int maxAngularSpeed;
     private RobotStatus status;
     private int speed;
     private int direction;
@@ -206,14 +210,16 @@ public class SimRobot implements RobotApi, WithRobotStatus {
      * @param errSigma             sigma of errors in physic simulation (U)
      * @param errSensor            sensor error (m)
      * @param sensorReceptiveAngle sensor receptive angle (DEG)
+     * @param maxAngularSpeed
      * @param maxSimSpeed          the maximum simulation speed
      */
-    public SimRobot(ObstacleMap obstacleMap, Random random, double errSigma, double errSensor, double sensorReceptiveAngle, double maxSimSpeed) {
+    public SimRobot(ObstacleMap obstacleMap, Random random, double errSigma, double errSensor, double sensorReceptiveAngle, int maxAngularSpeed, double maxSimSpeed) {
         this.random = requireNonNull(random);
         this.errSigma = errSigma;
         this.errSensor = errSensor;
         this.obstacleMap = requireNonNull(obstacleMap);
         this.sensorReceptiveAngle = sensorReceptiveAngle;
+        this.maxAngularSpeed = maxAngularSpeed;
         this.maxSimSpeed = maxSimSpeed;
         this.status = RobotStatus.create();
 
@@ -298,20 +304,18 @@ public class SimRobot implements RobotApi, WithRobotStatus {
         // Direction difference
         double dAngle = Utils.normalizeAngle(toRadians(90 - direction) - robot.getAngle());
         // Relative angular speed to fix the direction
-        double angularVelocity = Utils.clip(Utils.linear(dAngle, -RAD_10, RAD_10, -1, 1), -1, 1);
+        double angularVelocityPps = Utils.clip(Utils.linear(dAngle, -RAD_10, RAD_10, -maxAngularSpeed, maxAngularSpeed), -maxAngularSpeed, maxAngularSpeed);
         // Relative linear speed to fix the speed
 
-        double linearVelocity = (double) speed / MAX_PPS * Utils.clip(Utils.linear(abs(dAngle), 0, RAD_30, 1, 0), 0, 1);
+        double linearVelocityPps = (double) speed * Utils.clip(Utils.linear(abs(dAngle), 0, RAD_30, MAX_PPS, 0), 0, MAX_PPS);
 
         // Relative left-right motor speeds
-        double left = Utils.clip((linearVelocity - angularVelocity), -1, 1);
-        double right = Utils.clip((linearVelocity + angularVelocity), -1, 1);
+        int leftPps = (int) round(Utils.clip((linearVelocityPps - angularVelocityPps), -MAX_PPS, MAX_PPS));
+        int rightPps = (int) round(Utils.clip((linearVelocityPps + angularVelocityPps), -MAX_PPS, MAX_PPS));
 
         // Real left-right motor speeds
-        int leftPps = (int) round(left * MAX_PPS);
-        int rightPps = (int) round(right * MAX_PPS);
-        left = leftPps * DISTANCE_PER_PULSE;
-        right = rightPps * DISTANCE_PER_PULSE;
+        double left = leftPps * DISTANCE_PER_PULSE;
+        double right = rightPps * DISTANCE_PER_PULSE;
 
         // Real forward velocity
         double forwardVelocity = (left + right) / 2;
@@ -334,7 +338,7 @@ public class SimRobot implements RobotApi, WithRobotStatus {
         force = robot.getWorldVector(localForce);
 
         // Angle rotation due to differential motor speeds
-        angularVelocity = (right - left) / ROBOT_TRACK;
+        double angularVelocity = (right - left) / ROBOT_TRACK;
         // Angular impulse to fix direction
         double robotAngularVelocity = robot.getAngularVelocity();
         double angularTorque = (angularVelocity - robotAngularVelocity) * robot.getInertia() / dt;
@@ -357,6 +361,11 @@ public class SimRobot implements RobotApi, WithRobotStatus {
                 .setRightPps(rightPps);
     }
 
+    /**
+     * Returns the decoded contact
+     *
+     * @param contact the jbox contact
+     */
     private int decodeContact(Contact contact) {
         Fixture fa = contact.m_fixtureA;
         Fixture fb = contact.m_fixtureB;

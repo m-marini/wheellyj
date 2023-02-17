@@ -12,7 +12,6 @@ configurations:
     errSigma: 0.05
     errSensor: 0.05
     sensorReceptiveAngle: 15
-    maxAngularSpeed: 5
     maxSimulationSpeed: 5
   realRobot:
     class: org.mmarini.wheelly.apis.Robot
