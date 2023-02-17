@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #208: Add octave engine calibration
 - Issue #214: Add sensor monitor
 
-# Changed
+### Changed
 
 - Issue #210: Motor controller configuration
 - Issue #216: Change motors configuration for acceleration limits
