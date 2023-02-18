@@ -1,5 +1,5 @@
 ---
-version: "0.2"
+version: "0.4"
 active: polarRadarAnalogAgent
 
 configurations:
@@ -12,9 +12,9 @@ configurations:
     modelPath: models/polarRadarAnalogAgent
     savingIntervalSteps: 1000
     rewardAlpha: 5e-3
-    policyAlpha: 1e-3
-    criticAlpha: 100e-6
-    lambda: 0.8
+    policyAlpha: 10e-3
+    criticAlpha: 1000e-6
+    lambda: 0.9
     inputProcess:
       - name: canMoveFeatures
         class: org.mmarini.rl.processors.PartitionProcessor
@@ -27,6 +27,12 @@ configurations:
         class: org.mmarini.rl.processors.NotProcessor
         input: sectorDistances
     policy:
+      normalizedDistances:
+        input: sectorDistances
+        layers:
+          - type: linear
+            b: -1
+            w: 0.667
       layer0:
         inputs:
           type: concat
@@ -34,7 +40,7 @@ configurations:
             - canMoveFeatures
             - knownSectors
             - emptySectors
-            - sectorDistances
+            - normalizedDistances
         layers:
           - type: dense
             outputSize: 100
@@ -65,14 +71,6 @@ configurations:
           - type: dense
             outputSize: 100
           - type: relu
-      halt:
-        input: hidden2
-        layers:
-          - type: dense
-            outputSize: 2
-          - type: tanh
-          - type: softmax
-            temperature: 0.435
       direction:
         input: hidden2
         layers:
@@ -85,7 +83,7 @@ configurations:
         input: hidden2
         layers:
           - type: dense
-            outputSize: 9
+            outputSize: 10
           - type: tanh
           - type: softmax
             temperature: 0.3
@@ -98,6 +96,12 @@ configurations:
           - type: softmax
             temperature: 0.313
     critic:
+      normalizedDistances:
+        input: sectorDistances
+        layers:
+          - type: linear
+            b: -1
+            w: 0.667
       layer0:
         inputs:
           type: concat
@@ -105,7 +109,7 @@ configurations:
             - canMoveFeatures
             - knownSectors
             - emptySectors
-            - sectorDistances
+            - normalizedDistances
         layers:
           - type: dense
             outputSize: 100

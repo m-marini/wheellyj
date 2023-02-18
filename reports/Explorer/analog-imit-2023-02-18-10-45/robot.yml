@@ -1,6 +1,7 @@
 ---
-version: "0.2"
+version: "0.4"
 active: simRobot
+#active: realRobot
 
 configurations:
   simRobot:
@@ -10,21 +11,25 @@ configurations:
     numObstacles: 10
     errSigma: 0.05
     errSensor: 0.05
-    radarGrid: 0.14
-    radarWidth: 71
-    radarHeight: 71
-    radarPersistence: 300000
-    radarCleanInterval: 30000
+    sensorReceptiveAngle: 15
+    maxAngularSpeed: 5
+    maxSimulationSpeed: 5
   realRobot:
     class: org.mmarini.wheelly.apis.Robot
     host: "192.168.1.11"
     connectionTimeout: 10000
     readTimeout: 3000
-    radarGrid: 0.14
-    radarWidth: 71
-    radarHeight: 71
-    radarPersistence: 300000
-    radarCleanInterval: 30000
+    configureTimeout: 1000
+    # front 0 352 537 650
+    # rear 0 352 537 650
+    frontThresholds: [176, 445, 594]
+    rearThresholds: [176, 445, 594]
+    configCommands:
+      - cs 1000
+      - ct 176 176
+      - cc 30 10 60 5
+      - cl 64 64 1270 50 80 -50 -80
+      - cr 64 64 1270 50 80 -50 -80
   constantRobot:
     class: org.mmarini.wheelly.apis.MockRobot
     x: 2
