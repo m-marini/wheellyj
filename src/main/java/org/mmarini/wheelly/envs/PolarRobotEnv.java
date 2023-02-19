@@ -36,7 +36,6 @@ import org.nd4j.linalg.factory.Nd4j;
 
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.function.ToDoubleFunction;
 
 import static java.util.Objects.requireNonNull;
@@ -187,7 +186,7 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
                 "knownSectors", new IntSignalSpec(new long[]{n}, 2),
                 "sectorDistances", new FloatSignalSpec(new long[]{n}, 0, (float) maxRadarDistance)
         );
-        controller.setOnStatusReady(this::handleStatus);
+        readRobotStatus().doOnNext(this::handleStatus).subscribe();
     }
 
     @Override
@@ -274,21 +273,6 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
     protected void onStatus(RobotStatus status) {
         RadarMap newRadarMap = this.status.radarMap.update(status);
         this.status = this.status.setStatus(status).setRadarMap(newRadarMap);
-    }
-
-    @Override
-    public void setOnError(Consumer<Throwable> callback) {
-        getController().setOnError(callback);
-    }
-
-    @Override
-    public void setOnReadLine(Consumer<String> callback) {
-        getController().setOnReadLine(callback);
-    }
-
-    @Override
-    public void setOnWriteLine(Consumer<String> callback) {
-        getController().setOnWriteLine(callback);
     }
 
     @Override

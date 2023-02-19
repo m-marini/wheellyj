@@ -345,21 +345,19 @@ public class MatrixMonitor {
     private void run() {
         logger.info("Robot check started.");
         controller = createController();
-        controller.setOnStatusReady(this::handleStatus);
-        controller.setOnInference(this::handleCommands);
-        controller.setOnError(er -> {
+        controller.readRobotStatus().subscribe(this::handleStatus);
+        controller.readErrors().subscribe(er -> {
             comMonitor.onError(er);
             logger.atError().setCause(er).log();
         });
-        controller.setOnReadLine(line -> {
+        controller.readReadLine().subscribe(line -> {
             comMonitor.onReadLine(line);
             logger.atDebug().setMessage("--> {}").addArgument(line).log();
         });
-        controller.setOnWriteLine(this::handleWriteLine);
-        controller.readShutdown()
-                .doOnComplete(this::handleShutdown)
-                .subscribe();
-        controller.setOnControlStatus(this::handleControlStatus);
+        controller.readWriteLine().subscribe(this::handleWriteLine);
+        controller.readShutdown().subscribe(this::handleShutdown);
+        controller.readControllerStatus().subscribe(this::handleControlStatus);
+        controller.setOnInference(this::handleCommands);
 
         this.commandFrame = createFrame(Messages.getString("MatrixMonitor.title"), COMMAND_FRAME_SIZE, commandPanel);
         this.sensorFrame = sensorMonitor.createFrame();

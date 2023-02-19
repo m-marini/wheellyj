@@ -281,18 +281,16 @@ public class RobotExecutor {
             polarPanel.setRadarMaxDistance(radarMaxDistance);
             logger.atInfo().setMessage("Session are running for {} sec...").addArgument(sessionDuration).log();
             this.start = System.currentTimeMillis();
-            agent.setOnStepUp(this::handleStepUp);
-            agent.readShutdown()
-                    .doOnComplete(this::handleShutdown)
-                    .subscribe();
-            agent.setOnError(err -> {
+            agent.readStepUp().subscribe(this::handleStepUp);
+            agent.readShutdown().subscribe(this::handleShutdown);
+            agent.readErrors().subscribe(err -> {
                 comMonitor.onError(err);
                 logger.atError().setCause(err).log();
             });
-            agent.setOnReadLine(comMonitor::onReadLine);
-            agent.setOnWriteLine(comMonitor::onWriteLine);
-            agent.getController().setOnControlStatus(this::handleControllerStatus);
-            agent.setOnCommand(sensorMonitor::onCommand);
+            agent.readReadLine().subscribe(comMonitor::onReadLine);
+            agent.readWriteLine().subscribe(comMonitor::onWriteLine);
+            agent.readControllerStatus().subscribe(this::handleControllerStatus);
+            agent.readCommand().subscribe(sensorMonitor::onCommand);
             frame.setVisible(true);
             radarFrame.setVisible(true);
             sensorFrame.setVisible(true);

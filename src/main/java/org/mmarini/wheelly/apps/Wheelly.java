@@ -362,21 +362,20 @@ public class Wheelly {
                 createKpis(agent, environment.getActions(), new File(kpis), this.args.getString("labels"));
             }
             this.start = System.currentTimeMillis();
-            environment.setOnInference(this::handleInference);
-            environment.setOnAct(agent::act);
-            environment.setOnStatusReady(this::handleStatusReady);
-            environment.setOnResult(this::handleResult);
-            environment.setOnReadLine(comMonitor::onReadLine);
-            environment.setOnWriteLine(comMonitor::onWriteLine);
-            environment.getController().setOnControlStatus(this::handleControllerStatus);
-            environment.setOnError(err -> {
+            environment.readRobotStatus().subscribe(this::handleStatusReady);
+            environment.readReadLine().subscribe(comMonitor::onReadLine);
+            environment.readWriteLine().subscribe(comMonitor::onWriteLine);
+            environment.readCommand().subscribe(sensorMonitor::onCommand);
+            environment.readErrors().subscribe(err -> {
                 comMonitor.onError(err);
                 logger.atError().setCause(err).log();
             });
-            environment.readShutdown()
-                    .doOnComplete(this::handleShutdown)
-                    .subscribe();
-            environment.setOnCommand(sensorMonitor::onCommand);
+            environment.readControllerStatus().subscribe(this::handleControllerStatus);
+            environment.readShutdown().subscribe(this::handleShutdown);
+
+            environment.setOnInference(this::handleInference);
+            environment.setOnAct(agent::act);
+            environment.setOnResult(this::handleResult);
 
             frame.setVisible(true);
             if (radarFrame != null) {

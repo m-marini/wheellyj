@@ -45,7 +45,7 @@ public class MatrixColumn extends JComponent {
     public static final String DEFAULT_TIME_PATTERN = "%1$tH:%1$tM:%1$tS.%1$tL";
     public static final int TIMESTAMP_COLUMNS = 13;
     private static final long DEFAULT_DECAY_TIME = 3000L;
-    private static final float DEFAULT_MIN_BRIGHT = 0.5F;
+    private static final float DEFAULT_MIN_BRIGHT = 50F / 256;
     private static final Font DEFAULT_FONT = Font.decode(Font.MONOSPACED + " 14");
     private static final int DEFAULT_ROW_NUMBER = 36;
     private final float minBright;

@@ -28,49 +28,11 @@
 
 package org.mmarini.wheelly.apis;
 
-import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Flowable;
 
-import java.util.function.Consumer;
-
-/**
- * Manages the processing threads and event generation to interface the robot
- */
-public interface RobotControllerApi extends WithIOFlowable, WithStatusFlowable, WithErrorFlowable, WithCommandFlowable, WithControllerFlowable, WithInferenceFlowable {
+public interface WithInferenceFlowable {
     /**
-     * Executes the command
-     *
-     * @param command the command
+     * Returns the stream of inference events
      */
-    void execute(RobotCommands command);
-
-    /**
-     * Returns the apis
-     */
-    RobotApi getRobot();
-
-    Completable readShutdown();
-
-    /**
-     * Registers the consumer of inference event
-     *
-     * @param callback the callback
-     */
-    void setOnInference(Consumer<RobotStatus> callback);
-
-    /**
-     * Registers the consumer of latch event
-     *
-     * @param callback the callback
-     */
-    void setOnLatch(Consumer<RobotStatus> callback);
-
-    /**
-     * Shutdowns the controller
-     */
-    void shutdown();
-
-    /**
-     * Starts the controller
-     */
-    void start();
+    Flowable<RobotStatus> readInference();
 }

@@ -314,17 +314,15 @@ public class RobotCheckUp {
     private void run() {
         logger.info("Robot check started.");
         controller = createController();
-        controller.setOnInference(this::handleInference);
-        controller.setOnError(err -> {
+        controller.readErrors().subscribe(err -> {
             comMonitor.onError(err);
             logger.atError().setCause(err).log();
         });
-        controller.setOnReadLine(comMonitor::onReadLine);
-        controller.setOnWriteLine(comMonitor::onWriteLine);
-        controller.setOnControlStatus(this::handleControlStatus);
-        controller.readShutdown()
-                .doOnComplete(this::handleShutdown)
-                .subscribe();
+        controller.readReadLine().subscribe(comMonitor::onReadLine);
+        controller.readWriteLine().subscribe(comMonitor::onWriteLine);
+        controller.readControllerStatus().subscribe(this::handleControlStatus);
+        controller.readShutdown().subscribe(this::handleShutdown);
+        controller.setOnInference(this::handleInference);
         frame.setVisible(true);
         sensorFrame.setVisible(true);
         monitorFrame.setVisible(true);
