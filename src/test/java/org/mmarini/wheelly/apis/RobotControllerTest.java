@@ -59,7 +59,7 @@ class RobotControllerTest {
         doThrow(error).when(robot).configure();
         RobotController rc = createController(robot);
         Consumer<Throwable> consumer = mock();
-        rc.setOnError(consumer);
+        rc.readErrors().subscribe(consumer::accept);
 
         rc.stepUp(); // connect
         rc.stepUp(); // configure
@@ -100,7 +100,7 @@ class RobotControllerTest {
         doThrow(error).when(robot).configure();
         RobotController rc = createController(robot);
         Consumer<Throwable> consumer = mock();
-        rc.setOnError(consumer);
+        rc.readErrors().subscribe(consumer::accept);
 
         rc.stepUp(); // connect
         rc.stepUp(); // configure
@@ -129,7 +129,7 @@ class RobotControllerTest {
         doThrow(error).when(robot).connect();
         RobotController rc = createController(robot);
         Consumer<Throwable> consumer = mock();
-        rc.setOnError(consumer);
+        rc.readErrors().subscribe(consumer::accept);
 
         rc.stepUp(); // connect 1
 
@@ -186,7 +186,7 @@ class RobotControllerTest {
 
         RobotController rc = createController(robot);
         Consumer<Throwable> consumer = mock();
-        rc.setOnError(consumer);
+        rc.readErrors().subscribe(consumer::accept);
         rc.stepUp(); // Connect
         rc.stepUp(); // Configure
         rc.stepUp(); // Handle scan
@@ -206,7 +206,7 @@ class RobotControllerTest {
         Mock1Robot robot = spy(new Mock1Robot());
         RobotController rc = createController(robot);
         Consumer<RobotStatus> consumer = mock();
-        rc.setOnStatusReady(consumer);
+        rc.readRobotStatus().doOnNext(consumer::accept).subscribe();
         rc.stepUp(); // Connect
         rc.stepUp(); // Configure
         Thread.sleep(INTERVAL * 2);
@@ -239,7 +239,7 @@ class RobotControllerTest {
 
         RobotController rc = createController(robot);
         Consumer<Throwable> consumer = mock();
-        rc.setOnError(consumer);
+        rc.readErrors().subscribe(consumer::accept);
         rc.stepUp(); // Connect
         rc.stepUp(); // Configure
 

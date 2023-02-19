@@ -30,13 +30,14 @@ package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.yaml.schema.Validator.*;
@@ -52,7 +53,7 @@ import static org.mmarini.yaml.schema.Validator.*;
  * </ul>
  * </p>
  */
-public class StateMachineAgent implements WithIOCallback, WithStatusCallback, WithErrorCallback {
+public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, WithErrorFlowable, WithCommandFlowable, WithControllerFlowable {
     public static final Validator AGENT_SPEC = objectPropertiesRequired(Map.of(
             "flow", StateFlow.STATE_FLOW_SPEC,
             "numRadarSectors", integer(minimum(2)),
@@ -85,11 +86,10 @@ public class StateMachineAgent implements WithIOCallback, WithStatusCallback, Wi
     private final ProcessorContext context;
     private final double maxRadarDistance;
     private final double minRadarDistance;
+    private final PublishProcessor<ProcessorContext> stepUpProcessor;
     private PolarMap polarMap;
     private RadarMap radarMap;
-    private Consumer<ProcessorContext> onStepUp;
     private boolean started;
-    private Consumer<RobotStatus> onStatusReady;
 
     /**
      * Creates the agent
@@ -108,6 +108,7 @@ public class StateMachineAgent implements WithIOCallback, WithStatusCallback, Wi
         this.context = requireNonNull(context);
         this.polarMap = requireNonNull(polarMap);
         this.radarMap = requireNonNull(radarMap);
+        this.stepUpProcessor = PublishProcessor.create();
     }
 
     public RobotControllerApi getController() {
@@ -126,9 +127,7 @@ public class StateMachineAgent implements WithIOCallback, WithStatusCallback, Wi
             context.init();
         }
         context.step();
-        if (onStepUp != null) {
-            onStepUp.accept(context);
-        }
+        stepUpProcessor.onNext(context);
     }
 
     private void handleLatch(RobotStatus status) {
@@ -138,9 +137,6 @@ public class StateMachineAgent implements WithIOCallback, WithStatusCallback, Wi
 
     private void handleStatus(RobotStatus status) {
         radarMap = radarMap.update(status);
-        if (onStatusReady != null) {
-            onStatusReady.accept(status);
-        }
     }
 
     /**
@@ -150,44 +146,51 @@ public class StateMachineAgent implements WithIOCallback, WithStatusCallback, Wi
      */
     public void init() {
         controller.setOnInference(this::handleInference);
-        controller.setOnStatusReady(this::handleStatus);
         controller.setOnLatch(this::handleLatch);
+        controller.readRobotStatus().subscribe(this::handleStatus);
         controller.start();
+    }
+
+    @Override
+    public Flowable<RobotCommands> readCommand() {
+        return controller.readCommand();
+    }
+
+    @Override
+    public Flowable<String> readControllerStatus() {
+        return controller.readControllerStatus();
+    }
+
+    @Override
+    public Flowable<Throwable> readErrors() {
+        return controller.readErrors();
+    }
+
+    @Override
+    public Flowable<String> readReadLine() {
+        return controller.readReadLine();
+    }
+
+    @Override
+    public Flowable<RobotStatus> readRobotStatus() {
+        return getController().readRobotStatus();
     }
 
     public Completable readShutdown() {
         return controller.readShutdown();
     }
 
-    public void setOnCommand(Consumer<RobotCommands> callback) {
-        controller.setOnCommand(callback);
+    public Flowable<ProcessorContext> readStepUp() {
+        return stepUpProcessor;
     }
 
     @Override
-    public void setOnError(Consumer<Throwable> callback) {
-        controller.setOnError(callback);
-    }
-
-    @Override
-    public void setOnReadLine(Consumer<String> callback) {
-        controller.setOnReadLine(callback);
-    }
-
-    @Override
-    public void setOnStatusReady(Consumer<RobotStatus> callback) {
-        onStatusReady = callback;
-    }
-
-    public void setOnStepUp(Consumer<ProcessorContext> callback) {
-        this.onStepUp = callback;
-    }
-
-    @Override
-    public void setOnWriteLine(Consumer<String> callback) {
-        controller.setOnWriteLine(callback);
+    public Flowable<String> readWriteLine() {
+        return controller.readWriteLine();
     }
 
     public void shutdown() {
         controller.shutdown();
+        stepUpProcessor.onComplete();
     }
 }

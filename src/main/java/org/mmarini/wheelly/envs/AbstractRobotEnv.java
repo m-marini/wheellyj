@@ -29,10 +29,14 @@
 package org.mmarini.wheelly.envs;
 
 import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Flowable;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotControllerApi;
+import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.WithRobotStatus;
 
 import java.util.Map;
 import java.util.function.Consumer;
@@ -57,14 +61,13 @@ import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
  *     <li><code>splitStatus</code> to split current composed status to previous status for next inference process</li>
  * </ul>
  */
-public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotStatus, WithStatusCallback {
+public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotStatus {
     public static final int MIN_DIRECTION_ACTION = -180;
     public static final int MAX_DIRECTION_ACTION = 180;
     public static final int MIN_SENSOR_DIR = -90;
     public static final int MAX_SENSOR_DIR = 90;
     private final RobotControllerApi controller;
     private final ToDoubleFunction<RobotEnvironment> rewardFunc;
-    private Consumer<RobotStatus> onStatusReady;
     private UnaryOperator<Map<String, Signal>> onAct;
     private Consumer<Environment.ExecutionResult> onResult;
     private Map<String, Signal> prevActions;
@@ -82,7 +85,7 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
         this.rewardFunc = requireNonNull(rewardFunc);
         controller.setOnInference(this::handleInference);
         controller.setOnLatch(this::latchStatus);
-        controller.setOnStatusReady(this::handleStatus);
+        readRobotStatus().doOnNext(this::handleStatus).subscribe();
     }
 
     /**
@@ -159,9 +162,6 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
      */
     protected void handleStatus(RobotStatus status) {
         onStatus(status);
-        if (onStatusReady != null) {
-            onStatusReady.accept(status);
-        }
     }
 
     public boolean isHalt(Map<String, Signal> actions) {
@@ -208,6 +208,11 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
     }
 
     @Override
+    public Flowable<RobotStatus> readRobotStatus() {
+        return getController().readRobotStatus();
+    }
+
+    @Override
     public Completable readShutdown() {
         return controller.readShutdown();
     }
@@ -231,11 +236,6 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
     }
 
     @Override
-    public void setOnCommand(Consumer<RobotCommands> callback) {
-        controller.setOnCommand(callback);
-    }
-
-    @Override
     public void setOnInference(Consumer<RobotStatus> callback) {
         onInference = callback;
     }
@@ -243,11 +243,6 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
     @Override
     public void setOnResult(Consumer<Environment.ExecutionResult> callback) {
         onResult = callback;
-    }
-
-    @Override
-    public void setOnStatusReady(Consumer<RobotStatus> callback) {
-        this.onStatusReady = callback;
     }
 
     @Override

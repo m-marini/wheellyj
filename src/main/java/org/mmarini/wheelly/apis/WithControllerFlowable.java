@@ -28,13 +28,11 @@
 
 package org.mmarini.wheelly.apis;
 
-import java.util.function.Consumer;
+import io.reactivex.rxjava3.core.Flowable;
 
-public interface WithErrorCallback {
+public interface WithControllerFlowable {
     /**
-     * Registers the consumer of errors event
-     *
-     * @param callback the callback
+     * Returns the stream of controller status
      */
-    void setOnError(Consumer<Throwable> callback);
+    Flowable<String> readControllerStatus();
 }

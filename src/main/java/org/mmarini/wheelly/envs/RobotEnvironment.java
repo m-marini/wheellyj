@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.envs;
 
 import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Flowable;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.WithSignalsSpec;
@@ -41,17 +42,47 @@ import java.util.function.UnaryOperator;
 /**
  * Manages the interaction between robot controller and TD agent
  */
-public interface RobotEnvironment extends WithStatusCallback, WithErrorCallback, WithIOCallback, WithSignalsSpec, WithCommandCallback {
+public interface RobotEnvironment extends WithStatusFlowable, WithErrorFlowable, WithIOFlowable, WithSignalsSpec, WithCommandFlowable, WithControllerFlowable {
 
     /**
      * Returns the robot controller
      */
     RobotControllerApi getController();
 
+    @Override
+    default Flowable<RobotCommands> readCommand() {
+        return getController().readCommand();
+    }
+
+    @Override
+    default Flowable<String> readControllerStatus() {
+        return getController().readControllerStatus();
+    }
+
+    @Override
+    default Flowable<Throwable> readErrors() {
+        return getController().readErrors();
+    }
+
+    @Override
+    default Flowable<String> readReadLine() {
+        return getController().readReadLine();
+    }
+
+    @Override
+    default Flowable<RobotStatus> readRobotStatus() {
+        return getController().readRobotStatus();
+    }
+
     /**
      * Returns the Completable of shutdown
      */
     Completable readShutdown();
+
+    @Override
+    default Flowable<String> readWriteLine() {
+        return getController().readWriteLine();
+    }
 
     /**
      * Registers the call back of act

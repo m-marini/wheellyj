@@ -30,6 +30,8 @@ package org.mmarini.wheelly.apis;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.CompletableSubject;
 import org.mmarini.yaml.schema.Locator;
@@ -95,6 +97,13 @@ public class RobotController implements RobotControllerApi {
     private final long reactionInterval;
     private final CompletableSubject shutdownCompletable;
     private final long watchdogInterval;
+    private final PublishProcessor<RobotStatus> robotStatusProcessor;
+    private final PublishProcessor<RobotStatus> inferencesProcessor;
+    private final PublishProcessor<String> controllerStatusProcessor;
+    private final PublishProcessor<RobotCommands> commandsProcessor;
+    private final PublishProcessor<Throwable> errorsProcessor;
+    private final PublishProcessor<String> readLinesProcessor;
+    private final PublishProcessor<String> writeLinesProcessor;
     private Runnable statusTransition;
     private boolean isStarted;
     private RobotCommands moveCommand;
@@ -106,17 +115,13 @@ public class RobotController implements RobotControllerApi {
     private RobotCommands lastMoveCommand;
     private long lastRobotMoveTimestamp;
     private boolean close;
-    private Consumer<Throwable> onError;
-    private Consumer<RobotStatus> onStatusReady;
     private boolean isReady;
     private long lastInference;
     private Consumer<RobotStatus> onInference;
+    private Consumer<RobotStatus> onLatch;
     private boolean isInference;
     private boolean connected;
     private long lastTick;
-    private Consumer<RobotStatus> onLatch;
-    private Consumer<String> onControlStatus;
-    private Consumer<RobotCommands> onCommand;
 
     /**
      * Creates the robot controller
@@ -136,8 +141,15 @@ public class RobotController implements RobotControllerApi {
         this.connectionRetryInterval = connectionRetryInterval;
         this.watchdogInterval = watchdogInterval;
         this.end = false;
+        this.robotStatusProcessor = PublishProcessor.create();
+        this.controllerStatusProcessor = PublishProcessor.create();
+        this.commandsProcessor = PublishProcessor.create();
+        this.errorsProcessor = PublishProcessor.create();
+        this.readLinesProcessor = PublishProcessor.create();
+        this.writeLinesProcessor = PublishProcessor.create();
+        this.inferencesProcessor = PublishProcessor.create();
+        this.shutdownCompletable = CompletableSubject.create();
         setStatusTransition(this::connecting, CONNECTING);
-        shutdownCompletable = CompletableSubject.create();
         robot.setOnStatusReady(this::handleRobotStatus);
     }
 
@@ -200,7 +212,7 @@ public class RobotController implements RobotControllerApi {
         if (command.isHalt() || command.isMove()) {
             if (command.isMove() && !(command.moveDirection >= -180 && command.moveDirection <= 179
                     && command.speed >= -MAX_PPS && command.speed <= MAX_PPS)) {
-                logger.atError().setMessage("Wrong move comand {}").addArgument(command).log();
+                logger.atError().setMessage("Wrong move command {}").addArgument(command).log();
             } else {
                 moveCommand = command.clearScan();
             }
@@ -212,9 +224,7 @@ public class RobotController implements RobotControllerApi {
                 logger.atError().setMessage("Wrong scan direction {}").addArgument(command.scanDirection).log();
             }
         }
-        if (onCommand != null) {
-            onCommand.accept(command);
-        }
+        commandsProcessor.onNext(command);
     }
 
     @Override
@@ -260,16 +270,23 @@ public class RobotController implements RobotControllerApi {
         long time = status.getTime();
         if (time > lastInference + reactionInterval && !isInference) {
             lastInference = time;
-            isInference = true;
             if (onLatch != null) {
-                onLatch.accept(status);
+                try {
+                    onLatch.accept(status);
+                } catch (Throwable ex) {
+                    sendError(ex);
+                    logger.atError().setCause(ex).log();
+                }
             }
+            isInference = true;
             Schedulers.computation().scheduleDirect(() -> {
                 logger.atDebug().setMessage("Inference process started").log();
+                inferencesProcessor.onNext(status);
                 if (onInference != null) {
                     try {
                         onInference.accept(status);
                     } catch (Throwable ex) {
+                        sendError(ex);
                         logger.atError().setCause(ex).log();
                     }
                 }
@@ -310,16 +327,61 @@ public class RobotController implements RobotControllerApi {
     }
 
     @Override
+    public Flowable<RobotCommands> readCommand() {
+        return commandsProcessor;
+    }
+
+    @Override
+    public Flowable<String> readControllerStatus() {
+        return controllerStatusProcessor;
+    }
+
+    @Override
+    public Flowable<Throwable> readErrors() {
+        return errorsProcessor;
+    }
+
+    @Override
+    public Flowable<RobotStatus> readInference() {
+        return inferencesProcessor;
+    }
+
+    @Override
+    public Flowable<String> readReadLine() {
+        return readLinesProcessor;
+    }
+
+    @Override
+    public Flowable<RobotStatus> readRobotStatus() {
+        return robotStatusProcessor;
+    }
+
+    @Override
     public Completable readShutdown() {
         return shutdownCompletable;
     }
 
+    @Override
+    public Flowable<String> readWriteLine() {
+        return writeLinesProcessor;
+    }
+
     private void runControlProcess() {
         logger.atInfo().setMessage("Control process started").log();
+        if (robot instanceof WithIOCallback) {
+            ((WithIOCallback) robot).setOnReadLine(readLinesProcessor::onNext);
+            ((WithIOCallback) robot).setOnWriteLine(writeLinesProcessor::onNext);
+        }
         while (!(end && !connected)) {
             stepUp();
         }
         logger.atInfo().setMessage("Control process ended").log();
+        robotStatusProcessor.onComplete();
+        controllerStatusProcessor.onComplete();
+        errorsProcessor.onComplete();
+        readLinesProcessor.onComplete();
+        writeLinesProcessor.onComplete();
+        inferencesProcessor.onComplete();
         shutdownCompletable.onComplete();
     }
 
@@ -336,38 +398,11 @@ public class RobotController implements RobotControllerApi {
     }
 
     private void sendError(Throwable ex) {
-        if (onError != null) {
-            try {
-                onError.accept(ex);
-            } catch (Throwable ex1) {
-                logger.atError().setCause(ex1).log();
-            }
-        }
+        errorsProcessor.onNext(ex);
     }
 
     private void sendStatus(RobotStatus status) {
-        if (onStatusReady != null) {
-            try {
-                onStatusReady.accept(status);
-            } catch (Throwable ex) {
-                logger.atError().setCause(ex).log();
-            }
-        }
-    }
-
-    @Override
-    public void setOnCommand(Consumer<RobotCommands> callback) {
-        this.onCommand = callback;
-    }
-
-    @Override
-    public void setOnControlStatus(Consumer<String> callback) {
-        this.onControlStatus = callback;
-    }
-
-    @Override
-    public void setOnError(Consumer<Throwable> callback) {
-        onError = callback;
+        robotStatusProcessor.onNext(status);
     }
 
     @Override
@@ -380,30 +415,9 @@ public class RobotController implements RobotControllerApi {
         this.onLatch = onLatch;
     }
 
-    @Override
-    public void setOnReadLine(Consumer<String> callback) {
-        if (robot instanceof WithIOCallback) {
-            ((WithIOCallback) robot).setOnReadLine(callback);
-        }
-    }
-
-    @Override
-    public void setOnStatusReady(Consumer<RobotStatus> callback) {
-        onStatusReady = callback;
-    }
-
-    @Override
-    public void setOnWriteLine(Consumer<String> callback) {
-        if (robot instanceof WithIOCallback) {
-            ((WithIOCallback) robot).setOnWriteLine(callback);
-        }
-    }
-
     private void setStatusTransition(Runnable trans, String signal) {
         this.statusTransition = trans;
-        if (onControlStatus != null) {
-            onControlStatus.accept(signal);
-        }
+        controllerStatusProcessor.onNext(signal);
     }
 
     @Override

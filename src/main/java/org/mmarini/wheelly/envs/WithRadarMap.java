@@ -29,8 +29,7 @@
 package org.mmarini.wheelly.envs;
 
 import org.mmarini.wheelly.apis.RadarMap;
-import org.mmarini.wheelly.apis.WithStatusCallback;
 
-public interface WithRadarMap extends WithStatusCallback {
+public interface WithRadarMap {
     RadarMap getRadarMap();
 }
