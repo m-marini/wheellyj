@@ -46,11 +46,12 @@ import static java.lang.Math.exp;
 import static java.lang.Math.tanh;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.ArgumentsGenerator.*;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 import static org.mmarini.wheelly.TestFunctions.text;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 
 class TDNetworkTest {
@@ -76,6 +77,19 @@ class TDNetworkTest {
             "  layer2: [layer1]",
             "  layer3: [layer2]"
     );
+    private static final String DROP_OUT_YAML = text("---",
+            "alpha: 1e-3",
+            "lambda: 0.0",
+            "layers:",
+            "- name: layer1",
+            "  type: dense",
+            "  dropOut: 0.5",
+            "  inputSize: 2",
+            "  outputSize: 3",
+            "inputs:",
+            "  layer1: [inputs]"
+    );
+    private static final float DROP_OUT = 1;
 
     static Stream<Arguments> cases() {
         Random random = Nd4j.getRandom();
@@ -102,6 +116,29 @@ class TDNetworkTest {
         );
     }
 
+    static TDNetwork createDenseDropOutNet(float b0, float b1, float b2,
+                                           float w00, float w01, float w02,
+                                           float w10, float w11, float w12
+    ) throws IOException {
+        INDArray eb = Nd4j.zeros(1, 3);
+        INDArray ew = Nd4j.zeros(2, 3);
+        INDArray b = Nd4j.createFromArray(b0, b1, b2).reshape(1, 3);
+        INDArray w = Nd4j.createFromArray(w00, w01, w02, w10, w11, w12).reshape(2, 3);
+        TDLayer layer1 = new TDDense("layer1", eb, ew, b, w, Float.MAX_VALUE, 0.5F);
+        Map<String, TDLayer> layers = Map.of("layer1", layer1);
+        List<String> forwardSeq = List.of("layer1");
+        Map<String, List<String>> inputs = Map.of("layer1", List.of("inputs"));
+        return new TDNetwork(layers, forwardSeq, inputs);
+    }
+
+    static TDNetwork createDropOutNet() throws IOException {
+        TDLayer layer1 = new TDDropOut("layer1", 0.5F);
+        Map<String, TDLayer> layers = Map.of("layer1", layer1);
+        List<String> forwardSeq = List.of("layer1");
+        Map<String, List<String>> inputs = Map.of("layer1", List.of("inputs"));
+        return new TDNetwork(layers, forwardSeq, inputs);
+    }
+
     static TDNetwork createNet(float alpha,
                                float lambda,
                                INDArray eb2,
@@ -117,9 +154,9 @@ class TDNetworkTest {
                                float temperature) {
         Map<String, TDLayer> layers = Stream.of(
                 new TDConcat("layer1"),
-                new TDDense("layer2", eb2, ew2, b2, w2, Float.MAX_VALUE),
+                new TDDense("layer2", eb2, ew2, b2, w2, Float.MAX_VALUE, DROP_OUT),
                 new TDRelu("layer3"),
-                new TDDense("layer4", eb4, ew4, b4, w4, Float.MAX_VALUE),
+                new TDDense("layer4", eb4, ew4, b4, w4, Float.MAX_VALUE, DROP_OUT),
                 new TDSum("layer5"),
                 new TDTanh("layer6"),
                 new TDLinear("layer7", b7, w7),
@@ -377,6 +414,53 @@ class TDNetworkTest {
                 equalTo("layer8"),
                 matrixCloseTo(new float[][]{
                         {l80, l81}
+                }, EPSILON)));
+    }
+
+    @Test
+    void forwardDenseDropOut() throws IOException {
+        float b0 = 0.1F;
+        float b1 = 0.2F;
+        float b2 = 0.3F;
+        float w00 = 0.4F;
+        float w01 = 0.5F;
+        float w02 = 0.6F;
+        float w10 = 0.7F;
+        float w11 = 0.8F;
+        float w12 = 0.9F;
+        TDNetwork net = createDenseDropOutNet(b0, b1, b2, w00, w01, w02, w10, w11, w12);
+        assertNotNull(net);
+        assertEquals(net.getLayers().get("layer1").getDropOut(), 0.5F);
+        float in0 = 0;
+        float in1 = 1;
+        Map<String, INDArray> inputs = Map.of("inputs", Nd4j.createFromArray(in0, in1).reshape(1, 2));
+        Random random = mock(Random.class);
+        when(random.nextDouble(new long[]{1, 3})).thenReturn(Nd4j.createFromArray(0.3F, 0.7F, 0.49F).reshape(1, 3));
+        Map<String, INDArray> out = net.forward(inputs, true, random);
+        assertThat(out, hasKey("layer1_mask"));
+        float dropOut = 0.5F;
+        assertThat(out, hasEntry(equalTo("layer1"),
+                matrixCloseTo(new float[][]{
+                        {0, (w01 * in0 + w11 * in1 + b1) / dropOut, 0}
+                }, EPSILON)));
+    }
+
+    @Test
+    void forwardDropOut() throws IOException {
+        TDNetwork net = createDropOutNet();
+        assertNotNull(net);
+        assertEquals(net.getLayers().get("layer1").getDropOut(), 0.5F);
+        float in0 = 0.2F;
+        float in1 = 1;
+        Map<String, INDArray> inputs = Map.of("inputs", Nd4j.createFromArray(in0, in1).reshape(1, 2));
+        Random random = mock(Random.class);
+        when(random.nextDouble(new long[]{1, 2})).thenReturn(Nd4j.createFromArray(0.5F, 0.7F).reshape(1, 2));
+        Map<String, INDArray> out = net.forward(inputs, true, random);
+        assertThat(out, hasKey("layer1_mask"));
+        float dropOut = 0.5F;
+        assertThat(out, hasEntry(equalTo("layer1"),
+                matrixCloseTo(new float[][]{
+                        {0, in1 / dropOut}
                 }, EPSILON)));
     }
 
@@ -799,6 +883,87 @@ class TDNetworkTest {
         assertThat(((TDDense) layers.get("layer4")).getW(), matrixCloseTo(new float[][]{
                 {post_w400, post_w401},
                 {post_w410, post_w411},
+        }, EPSILON));
+    }
+
+    @Test
+    void trainDenseDropOut() throws IOException {
+        float b0 = 0.1F;
+        float b1 = 0.2F;
+        float b2 = 0.3F;
+        float w00 = 0.4F;
+        float w01 = 0.5F;
+        float w02 = 0.6F;
+        float w10 = 0.7F;
+        float w11 = 0.8F;
+        float w12 = 0.9F;
+        TDNetwork net = createDenseDropOutNet(b0, b1, b2, w00, w01, w02, w10, w11, w12);
+        assertNotNull(net);
+        assertEquals(net.getLayers().get("layer1").getDropOut(), 0.5F);
+        float in0 = 0.2F;
+        float in1 = 1;
+        Map<String, INDArray> inputs = Map.of("inputs", Nd4j.createFromArray(in0, in1).reshape(1, 2));
+        Random random = mock(Random.class);
+        when(random.nextDouble(new long[]{1, 3})).thenReturn(Nd4j.createFromArray(0.3F, 0.7F, 0.49F).reshape(1, 3));
+        Map<String, INDArray> out = net.forward(inputs, true, random);
+
+        float dg0 = 1;
+        float dg1 = 2;
+        float dg2 = 3;
+        INDArray layer1Grad = Nd4j.createFromArray(dg0, dg1, dg2).reshape(1, 3);
+        Map<String, INDArray> grad = Map.of("layer1", layer1Grad);
+        float delta = 100e-3F;
+        Map<String, INDArray> trained = net.train(out, grad, Nd4j.createFromArray(delta), 0, null);
+        TDDense l1 = (TDDense) net.getLayers().get("layer1");
+
+        float bp0 = b0;
+        float bp1 = b1 + delta * dg1;
+        float bp2 = b2;
+        assertThat(l1.getB(), matrixCloseTo(new float[][]{
+                {bp0, bp1, bp2}
+        }, EPSILON));
+
+        float wp00 = w00;
+        float wp10 = w10;
+        float wp01 = w01 + delta * dg1 * in0;
+        float wp11 = w11 + delta * dg1 * in1;
+        float wp02 = w02;
+        float wp12 = w12;
+
+        assertThat(l1.getW(), matrixCloseTo(new float[][]{
+                {wp00, wp01, wp02},
+                {wp10, wp11, wp12}
+        }, EPSILON));
+
+        float din0 = dg1 * w01;
+        float din1 = dg1 * w11;
+        assertThat(trained.get("inputs"), matrixCloseTo(new float[][]{
+                {din0, din1}
+        }, EPSILON));
+    }
+
+    @Test
+    void trainDropOut() throws IOException {
+        TDNetwork net = createDropOutNet();
+        assertNotNull(net);
+        assertEquals(net.getLayers().get("layer1").getDropOut(), 0.5F);
+        float in0 = 0.2F;
+        float in1 = 1;
+        Map<String, INDArray> inputs = Map.of("inputs", Nd4j.createFromArray(in0, in1).reshape(1, 2));
+        Random random = mock(Random.class);
+        when(random.nextDouble(new long[]{1, 2})).thenReturn(Nd4j.createFromArray(0.5F, 0.7F).reshape(1, 2));
+        Map<String, INDArray> out = net.forward(inputs, true, random);
+
+        float dg0 = 1;
+        float dg1 = 2;
+        INDArray layer1Grad = Nd4j.createFromArray(dg0, dg1).reshape(1, 2);
+        Map<String, INDArray> grad = Map.of("layer1", layer1Grad);
+        float delta = 100e-3F;
+        Map<String, INDArray> trained = net.train(out, grad, Nd4j.createFromArray(delta), 0, null);
+        float din0 = 0;
+        float din1 = dg1;
+        assertThat(trained.get("inputs"), matrixCloseTo(new float[][]{
+                {din0, din1}
         }, EPSILON));
     }
 }

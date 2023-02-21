@@ -41,9 +41,15 @@ import static org.mmarini.yaml.schema.Validator.*;
 public class NetworkTranspiller {
     private static final Validator DENSE_SPEC = objectPropertiesRequired(Map.of(
             "outputSize", positiveInteger(),
-            "maxAbsWeights", positiveNumber()
+            "maxAbsWeights", positiveNumber(),
+            "dropOut", number(exclusiveMinimum(0D), maximum(1D))
     ), List.of(
             "outputSize"
+    ));
+    private static final Validator DROP_OUT_SPEC = objectPropertiesRequired(Map.of(
+            "dropOut", number(exclusiveMinimum(0D), maximum(1D))
+    ), List.of(
+            "dropOut"
     ));
     private static final Validator SOFTMAX_SPEC = objectPropertiesRequired(Map.of(
             "temperature", positiveNumber()
@@ -57,7 +63,7 @@ public class NetworkTranspiller {
             "b", "w"
     ));
     private static final Validator LAYER_SPEC = objectPropertiesRequired(Map.of(
-            "type", string(values("dense", "relu", "tanh", "softmax", "linear"))
+            "type", string(values("dense", "relu", "tanh", "softmax", "linear", "dropout"))
     ), List.of(
             "type"
     ));
@@ -136,19 +142,26 @@ public class NetworkTranspiller {
                 .toArray();
 
         switch (type) {
-            case "dense":
+            case "dense": {
                 DENSE_SPEC.apply(locator).accept(spec);
                 long outSize = locator.path("outputSize").getNode(spec).asLong();
                 float maxAbsWeights = (float) locator.path("maxAbsWeights").getNode(spec).asDouble(Float.MAX_VALUE);
+                float dropOut = (float) locator.path("dropOut").getNode(spec).asDouble(1);
                 layerSizes.put(id, outSize);
-                // TODO fix maxAbsWeights
-                return TDDense.create(id, inSizes[0], outSize, maxAbsWeights, random);
+                return TDDense.create(id, inSizes[0], outSize, maxAbsWeights, dropOut, random);
+            }
             case "relu":
                 layerSizes.put(id, inSizes[0]);
                 return new TDRelu(id);
             case "tanh":
                 layerSizes.put(id, inSizes[0]);
                 return new TDTanh(id);
+            case "dropout": {
+                DROP_OUT_SPEC.apply(locator).accept(spec);
+                layerSizes.put(id, inSizes[0]);
+                float dropOut = (float) locator.path("dropOut").getNode(spec).asDouble(1);
+                return new TDDropOut(id, dropOut);
+            }
             case "softmax":
                 SOFTMAX_SPEC.apply(locator).accept(spec);
                 layerSizes.put(id, inSizes[0]);

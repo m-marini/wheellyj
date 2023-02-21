@@ -61,6 +61,7 @@ class TDDenseTest {
             "inputs: [input]",
             "maxAbsWeights: 0.5"
     );
+    private static final float DROP_OUT = 1;
 
     static Stream<Arguments> cases() {
         Random random = Nd4j.getRandom();
@@ -123,7 +124,7 @@ class TDDenseTest {
                  float lambda,
                  INDArray delta,
                  INDArray grad) {
-        TDDense layer = new TDDense("name", eb, ew, b, w, Float.MAX_VALUE);
+        TDDense layer = new TDDense("name", eb, ew, b, w, Float.MAX_VALUE, DROP_OUT);
         float in0 = inputs.getFloat(0, 0);
         float in1 = inputs.getFloat(0, 1);
         float b0 = b.getFloat(0, 0);
@@ -173,13 +174,14 @@ class TDDenseTest {
         TDDense layer = new TDDense("name", Nd4j.zeros(1, 3),
                 Nd4j.zeros(2, 3),
                 Nd4j.zeros(1, 3),
-                Nd4j.zeros(2, 3), 10F);
+                Nd4j.zeros(2, 3), 10F, 0.5F);
         JsonNode node = layer.getSpec();
         assertThat(node.path("name").asText(), equalTo("name"));
         assertThat(node.path("type").asText(), equalTo("dense"));
         assertThat(node.path("inputSize").asInt(), equalTo(2));
         assertThat(node.path("outputSize").asInt(), equalTo(3));
         assertEquals(10D, node.path("maxAbsWeight").asDouble());
+        assertEquals(0.5D, node.path("dropOut").asDouble());
     }
 
     @ParameterizedTest
@@ -190,7 +192,7 @@ class TDDenseTest {
                float lambda,
                INDArray delta,
                INDArray grad) {
-        TDDense layer = new TDDense("name", eb, ew, b, w, Float.MAX_VALUE);
+        TDDense layer = new TDDense("name", eb, ew, b, w, Float.MAX_VALUE, DROP_OUT);
         float in0 = inputs.getFloat(0, 0);
         float in1 = inputs.getFloat(0, 1);
         float b0 = b.getFloat(0, 0);
@@ -273,7 +275,7 @@ class TDDenseTest {
         INDArray delta = Nd4j.ones(1);
         INDArray grad = Nd4j.ones(1, 3);
         float maxAbsWeights = 0.9F;
-        TDDense layer = new TDDense("name", eb, ew, b, w, maxAbsWeights);
+        TDDense layer = new TDDense("name", eb, ew, b, w, maxAbsWeights, DROP_OUT);
         float in0 = inputs.getFloat(0, 0);
         float in1 = inputs.getFloat(0, 1);
         float b0 = b.getFloat(0, 0);
@@ -350,7 +352,7 @@ class TDDenseTest {
         INDArray delta = Nd4j.ones(1);
         INDArray grad = Nd4j.ones(1, 3);
         float maxAbsWeights = 0.9F;
-        TDDense layer = new TDDense("name", eb, ew, b, w, maxAbsWeights);
+        TDDense layer = new TDDense("name", eb, ew, b, w, maxAbsWeights, DROP_OUT);
         float in0 = inputs.getFloat(0, 0);
         float in1 = inputs.getFloat(0, 1);
         float b0 = b.getFloat(0, 0);

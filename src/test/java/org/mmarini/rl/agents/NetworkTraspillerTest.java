@@ -110,7 +110,8 @@ class NetworkTraspillerTest {
             "output:",
             "  layers:",
             "  - type: dense",
-            "    outputSize: 3"
+            "    outputSize: 3",
+            "    dropOut: 0.5"
     );
     private static final String DENSE_YAML1 = text(
             "---",
@@ -125,6 +126,13 @@ class NetworkTraspillerTest {
             "output:",
             "  layers:",
             "  - type: relu"
+    );
+    private static final String DROP_OUT_YAML = text(
+            "---",
+            "output:",
+            "  layers:",
+            "  - type: dropout",
+            "    dropOut: 0.5"
     );
     private static final String TANH_YAML = text(
             "---",
@@ -209,6 +217,9 @@ class NetworkTraspillerTest {
         assertThat(tr.layers, contains(
                 hasProperty("maxAbsWeights", equalTo(Float.MAX_VALUE))
         ));
+        assertThat(tr.layers, contains(
+                hasProperty("dropOut", equalTo(0.5F))
+        ));
         assertArrayEquals(new long[]{2, 3},
                 ((TDDense) tr.layers.get(0)).getW().shape()
         );
@@ -238,6 +249,30 @@ class NetworkTraspillerTest {
         assertArrayEquals(new long[]{2, 3},
                 ((TDDense) tr.layers.get(0)).getW().shape()
         );
+    }
+
+    @Test
+    void parseDropOut() throws IOException {
+        NetworkTranspiller tr = create(DROP_OUT_YAML);
+        tr.parse();
+        assertThat(tr.layerDef, hasKey("output"));
+        assertThat(tr.inputsDef, hasEntry(
+                equalTo("output"),
+                containsInAnyOrder("input")
+        ));
+        assertThat(tr.sorted, contains("output"));
+        assertThat(tr.layerSizes, hasEntry(
+                equalTo("output"),
+                equalTo(2L)
+        ));
+        assertThat(tr.layers, contains(allOf(
+                hasProperty("name", equalTo("output")),
+                isA(TDDropOut.class)
+        )));
+        assertThat(tr.layers, contains(allOf(
+                hasProperty("name", equalTo("output")),
+                hasProperty("dropOut", equalTo(0.5F))
+        )));
     }
 
     @Test
