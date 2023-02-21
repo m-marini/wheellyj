@@ -55,6 +55,7 @@ public class SensorMonitor extends MatrixTable {
     public static final String SUPPLY_KEY = "supply";
     public static final String MOVE_HEAD = "moveHead";
     public static final String MOVE_SPEED = "moveSpeed";
+    public static final String REWARD_KEY = "reward";
     private static final Logger logger = LoggerFactory.getLogger(SensorMonitor.class);
 
     /**
@@ -72,10 +73,11 @@ public class SensorMonitor extends MatrixTable {
         addColumn(X_LOCATION_KEY, Messages.getString("SensorMonitor.xLocation"), 5, true);
         addColumn(Y_LOCATION_KEY, Messages.getString("SensorMonitor.yLocation"), 5, true);
         addColumn(CONTROLLER_STATUS_KEY, Messages.getString("SensorMonitor.controllerStatus"), 3, true);
-        addColumn(IMU_FAILURE_KEY, Messages.getString("SensorMonitor.imuFailure"), 3, true);
-        addColumn(SUPPLY_KEY, Messages.getString("SensorMonitor.supply"), 3, true);
         addColumn(MOVE_HEAD, Messages.getString("SensorMonitor.moveHead"), 4, true);
         addColumn(MOVE_SPEED, Messages.getString("SensorMonitor.moveSpeed"), 3, true);
+        addColumn(REWARD_KEY, Messages.getString("SensorMonitor.reward"), 6, true);
+        addColumn(IMU_FAILURE_KEY, Messages.getString("SensorMonitor.imuFailure"), 3, true);
+        addColumn(SUPPLY_KEY, Messages.getString("SensorMonitor.supply"), 3, true);
         setPrintTimestamp(false);
     }
 
@@ -105,6 +107,15 @@ public class SensorMonitor extends MatrixTable {
      */
     public void onControllerStatus(String status) {
         printf(CONTROLLER_STATUS_KEY, ControllerStatusMapper.map(status));
+    }
+
+    /**
+     * Shows the reward
+     *
+     * @param reward the reward
+     */
+    public void onReward(double reward) {
+        printf(REWARD_KEY, "%6.2f", reward);
     }
 
     /**
