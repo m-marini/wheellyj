@@ -556,7 +556,7 @@ public class TDAgent implements Agent {
         procState = processState(result.state1);
         Map<String, INDArray> s1 = getInput(procState);
 
-        Map<String, INDArray> c0 = critic.forward(s0);
+        Map<String, INDArray> c0 = critic.forward(s0, true, random);
         float v0 = c0.get("output").getFloat(0, 0);
         float v1 = getCriticValue(s1);
 
@@ -564,7 +564,7 @@ public class TDAgent implements Agent {
                 ? reward - avgReward // If terminal state reward should be the average reward should be the reward
                 : reward - avgReward + v1 - v0;
 
-        Map<String, INDArray> pi = policy.forward(s0);
+        Map<String, INDArray> pi = policy.forward(s0, true, random);
         Map<String, INDArray> dc = Map.of(
                 "output", Nd4j.ones(1, 1)
         );

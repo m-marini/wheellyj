@@ -42,14 +42,18 @@ configurations:
             - emptySectors
             - normalizedDistances
         layers:
+          - type: dropout
+            dropOut: 0.8
           - type: dense
             outputSize: 100
+            dropOut: 0.5
           - type: relu
       hidden0:
         input: layer0
         layers:
           - type: dense
             outputSize: 100
+            dropOut: 0.5
           - type: relu
       hidden1:
         inputs:
@@ -60,6 +64,7 @@ configurations:
         layers:
           - type: dense
             outputSize: 100
+            dropOut: 0.5
           - type: relu
       hidden2:
         inputs:
@@ -70,6 +75,7 @@ configurations:
         layers:
           - type: dense
             outputSize: 100
+            dropOut: 0.5
           - type: relu
       direction:
         input: hidden2
@@ -111,14 +117,18 @@ configurations:
             - emptySectors
             - normalizedDistances
         layers:
+          - type: dropout
+            dropOut: 0.8
           - type: dense
             outputSize: 100
+            dropOut: 0.5
           - type: relu
       hidden0:
         input: layer0
         layers:
           - type: dense
             outputSize: 100
+            dropOut: 0.5
           - type: relu
       hidden1:
         inputs:
@@ -129,6 +139,7 @@ configurations:
         layers:
           - type: dense
             outputSize: 100
+            dropOut: 0.5
           - type: relu
       hidden2:
         inputs:
@@ -139,6 +150,7 @@ configurations:
         layers:
           - type: dense
             outputSize: 100
+            dropOut: 0.5
           - type: relu
       output:
         input: hidden2

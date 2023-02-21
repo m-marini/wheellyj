@@ -48,6 +48,7 @@ public class TDRelu extends TDLayer {
         super(name);
     }
 
+
     @Override
     public INDArray forward(INDArray[] inputs, TDNetwork net) {
         return Transforms.relu(inputs[0]);

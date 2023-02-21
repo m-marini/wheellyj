@@ -45,7 +45,7 @@ import static org.mmarini.yaml.schema.Validator.*;
 public abstract class TDLayer {
     public static final Validator LAYER_SPEC = objectPropertiesRequired(Map.of(
             "name", string(),
-            "type", string(values("dense", "relu", "tanh", "linear", "softmax", "sum", "concat"))
+            "type", string(values("dense", "relu", "tanh", "linear", "softmax", "sum", "concat", "dropout"))
     ), List.of(
             "name", "type"
     ));
@@ -78,12 +78,15 @@ public abstract class TDLayer {
                 return new TDSum(name);
             case "concat":
                 return new TDConcat(name);
+            case "dropout":
+                return TDDropOut.create(root, locator);
             default:
                 throw new IllegalArgumentException(format("type \"%s\" unrecognized", type));
         }
     }
 
     protected final String name;
+
 
     /**
      * Create an abstract layer
@@ -101,6 +104,13 @@ public abstract class TDLayer {
      * @param net    the network
      */
     public abstract INDArray forward(INDArray[] inputs, TDNetwork net);
+
+    /**
+     * Returns the drop out value (retention probability)
+     */
+    public float getDropOut() {
+        return 1;
+    }
 
     /**
      * Returns name of layer
@@ -131,7 +141,7 @@ public abstract class TDLayer {
      * @param grad        gradient at output
      * @param delta       the error
      * @param lambda      the TD lambda factor
-     * @param kpiCallback
+     * @param kpiCallback kpi callback
      */
     public abstract INDArray[] train(INDArray[] inputs,
                                      INDArray output,

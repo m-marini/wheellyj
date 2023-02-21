@@ -34,6 +34,8 @@ import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
+import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.ops.transforms.Transforms;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -166,6 +168,17 @@ public class TDNetwork {
      * @param inputs the inputs
      */
     public Map<String, INDArray> forward(Map<String, INDArray> inputs) {
+        return forward(inputs, false, null);
+    }
+
+    /**
+     * Returns network state by performing a forward pass to generate prediction
+     *
+     * @param inputs   the inputs
+     * @param training true if training forward
+     * @param random   the randomizer
+     */
+    public Map<String, INDArray> forward(Map<String, INDArray> inputs, boolean training, Random random) {
         Map<String, INDArray> outs = new HashMap<>(inputs);
         for (String id : forwardSeq) {
             TDLayer layer = layers.get(id);
@@ -173,6 +186,16 @@ public class TDNetwork {
                     .map(outs::get)
                     .toArray(INDArray[]::new);
             INDArray output = layer.forward(layerInputs, this);
+            float dropOut = layer.getDropOut();
+            if (training && dropOut < 1) {
+                long[] shape = output.shape();
+                INDArray retainSeed = random.nextDouble(shape);
+                INDArray notMask = Transforms.lessThanOrEqual(retainSeed,
+                        Nd4j.ones(shape).mul(dropOut));
+                INDArray mask = Transforms.not(notMask);
+                output.muli(mask).divi(dropOut);
+                outs.put(id + "_mask", mask);
+            }
             outs.put(id, output);
         }
         return outs;
@@ -263,6 +286,10 @@ public class TDNetwork {
             INDArray[] inputs = inputNames.stream().map(outputs::get).toArray(INDArray[]::new);
             INDArray output = outputs.get(id);
             INDArray outGrad = grads.get(id);
+            INDArray mask = outputs.get(id + "_mask");
+            if (mask != null) {
+                outGrad.muli(mask);
+            }
             INDArray[] inGrad = node.train(inputs, output, outGrad, delta, lambda, kpiCallback);
             for (int i = 0; i < inputNames.size(); i++) {
                 String name = inputNames.get(i);

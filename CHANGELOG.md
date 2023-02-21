@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- Issue #77: Add drop regularization
+
 ### Changed
 
 - Issue #222: Reactive Controller

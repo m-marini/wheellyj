@@ -53,7 +53,8 @@ public class TDDense extends TDLayer {
             "name", string(),
             "inputSize", positiveInteger(),
             "outputSize", positiveInteger(),
-            "maxAbsWeights", positiveNumber()
+            "maxAbsWeights", positiveNumber(),
+            "dropOut", number(exclusiveMinimum(0D), maximum(1D))
     ), List.of(
             "name", "inputSize", "outputSize"
     ));
@@ -65,7 +66,7 @@ public class TDDense extends TDLayer {
      * @param locator the layer spec locator
      * @param prefix  the prefix of data to load
      * @param data    the data of restoring state
-     * @param random  the random number gernerator
+     * @param random  the random number generator
      */
     public static TDDense create(JsonNode root, Locator locator, String prefix, Map<String, INDArray> data, Random random) {
         DENSE_SPEC.apply(locator).accept(root);
@@ -73,6 +74,7 @@ public class TDDense extends TDLayer {
         int inpSize = locator.path("inputSize").getNode(root).asInt();
         int outSize = locator.path("outputSize").getNode(root).asInt();
         float maxAbsWeights = (float) locator.path("maxAbsWeights").getNode(root).asDouble(Float.MAX_VALUE);
+        float dropOut = (float) locator.path("dropOut").getNode(root).asDouble(1);
         INDArray eb = Nd4j.zeros(1, outSize);
         INDArray ew = Nd4j.zeros(inpSize, outSize);
         String baseDataId = prefix + "." + name;
@@ -80,16 +82,16 @@ public class TDDense extends TDLayer {
         INDArray w = data.getOrDefault(baseDataId + ".w",
                 // Xavier initialization
                 random.nextGaussian(new int[]{inpSize, outSize}).divi((inpSize + outSize)));
-        return new TDDense(name, eb, ew, b, w, maxAbsWeights);
+        return new TDDense(name, eb, ew, b, w, maxAbsWeights, dropOut);
     }
 
-    public static TDDense create(String id, long inpSize, long outSize, float maxAbsWeights, Random random) {
+    public static TDDense create(String id, long inpSize, long outSize, float maxAbsWeights, float dropOut, Random random) {
         INDArray eb = Nd4j.zeros(1, outSize);
         INDArray ew = Nd4j.zeros(inpSize, outSize);
         INDArray b = Nd4j.zeros(1, outSize);
         // Xavier initialization
         INDArray w = random.nextGaussian(new long[]{inpSize, outSize}).divi((inpSize + outSize));
-        return new TDDense(id, eb, ew, b, w, maxAbsWeights);
+        return new TDDense(id, eb, ew, b, w, maxAbsWeights, dropOut);
     }
 
     private final INDArray eb;
@@ -97,6 +99,7 @@ public class TDDense extends TDLayer {
     private final INDArray b;
     private final INDArray w;
     private final float maxAbsWeights;
+    private final float dropOut;
 
     /**
      * Creates a dense layer
@@ -107,14 +110,16 @@ public class TDDense extends TDLayer {
      * @param b             the bias vector
      * @param w             the weights matrix
      * @param maxAbsWeights maximum absolute weight value
+     * @param dropOut       the drop out value (retention probability)
      */
-    public TDDense(String name, INDArray eb, INDArray ew, INDArray b, INDArray w, float maxAbsWeights) {
+    public TDDense(String name, INDArray eb, INDArray ew, INDArray b, INDArray w, float maxAbsWeights, float dropOut) {
         super(name);
         this.eb = requireNonNull(eb);
         this.ew = requireNonNull(ew);
         this.b = requireNonNull(b);
         this.w = requireNonNull(w);
         this.maxAbsWeights = maxAbsWeights;
+        this.dropOut = dropOut;
         if (!(eb.shape().length == 2)) {
             throw new IllegalArgumentException(format("eb rank should be 2 (%d)", eb.shape().length));
         }
@@ -150,6 +155,11 @@ public class TDDense extends TDLayer {
         return b;
     }
 
+    @Override
+    public float getDropOut() {
+        return dropOut;
+    }
+
     public INDArray getEb() {
         return eb;
     }
@@ -173,6 +183,7 @@ public class TDDense extends TDLayer {
         node.put("inputSize", w.shape()[0]);
         node.put("outputSize", w.shape()[1]);
         node.put("maxAbsWeight", maxAbsWeights);
+        node.put("dropOut", this.dropOut);
         return node;
     }
 
