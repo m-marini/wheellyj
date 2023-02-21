@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #222: Reactive Controller
 - Issue #225: Shows reward on sensor monitor
 
+### Fixed  
+
+- Issue #227: Wrong reward on explore by imitation
+
 ## [0.8.0] 2023-02-17
 
 ### Added
