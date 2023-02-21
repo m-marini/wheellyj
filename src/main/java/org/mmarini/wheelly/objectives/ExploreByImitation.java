@@ -26,6 +26,7 @@
 package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.wheelly.apis.FuzzyFunctions;
 import org.mmarini.wheelly.apis.PolarMap;
 import org.mmarini.wheelly.apis.RobotCommands;
@@ -84,10 +85,10 @@ public interface ExploreByImitation {
                 return 0;
             }
 
-            long dirNumber = env.getActions().get("direction").getShape()[0];
-            long sensDirNumber = env.getActions().get("sensorAction").getShape()[0];
-
-            double rightSpeed = FuzzyFunctions.equalZero(speedAction - expSpeed, MAX_PPS);
+            long speedNumber = ((IntSignalSpec) env.getActions().get("speed")).getNumValues() - 2;
+            long dirNumber = ((IntSignalSpec) env.getActions().get("direction")).getNumValues() - 1;
+            long sensDirNumber = ((IntSignalSpec) env.getActions().get("sensorAction")).getNumValues() - 1;
+            double rightSpeed = FuzzyFunctions.equalZero(speedAction - expSpeed, MAX_PPS / speedNumber);
             double rightDir = FuzzyFunctions.equalZero(normalizeDegAngle(dirAction - expMoveDir),
                     360D / dirNumber);
             double rightSensor = FuzzyFunctions.equalZero(normalizeDegAngle(sensorAction - expScanDir),
