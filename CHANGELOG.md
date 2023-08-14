@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed  
 
 - Issue #227: Wrong reward on explore by imitation
+- Issue #229: Wrong Resnet block
 
 ## [0.8.0] 2023-02-17
 
