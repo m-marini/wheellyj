@@ -16,7 +16,7 @@ configurations:
     maxSimulationSpeed: 5
   realRobot:
     class: org.mmarini.wheelly.apis.Robot
-    host: "192.168.1.11"
+    host: wheelly
     connectionTimeout: 10000
     readTimeout: 3000
     configureTimeout: 1000

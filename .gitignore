@@ -8,3 +8,4 @@ docs/sonar-map.dxf~
 /**/*.csv
 /*.bin
 /dependency-reduced-pom.xml
+/output.md

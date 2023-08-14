@@ -12,8 +12,8 @@ configurations:
     modelPath: models/polarRadarAnalogAgent
     savingIntervalSteps: 1000
     rewardAlpha: 5e-3
-    policyAlpha: 30e-3
-    criticAlpha: 3e-3
+    policyAlpha: 10e-3
+    criticAlpha: 300e-6
     lambda: 0.9
     inputProcess:
       - name: canMoveFeatures

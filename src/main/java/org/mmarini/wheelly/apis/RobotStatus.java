@@ -48,10 +48,10 @@ public class RobotStatus {
     public static final int REAR_RIGHT = 1;
     public static final int NO_CONTACT = 0;
     private static final RobotStatus DEFAULT_ROBOT_STATUS = new RobotStatus(WheellyStatus.create(), 0, 0);
-    private static final int MIN_SUPPLY_SIGNAL = 720;
-    private static final int MAX_SUPPLY_SIGNAL = 823;
-    private static final double MIN_SUPPLY_VOLTAGE = 10.9;
-    private static final double MAX_SUPPLY_VOLTAGE = 12.1;
+    private static final int MIN_SUPPLY_SIGNAL = 0;
+    private static final int MAX_SUPPLY_SIGNAL = 2438;
+    private static final double MIN_SUPPLY_VOLTAGE = 0;
+    private static final double MAX_SUPPLY_VOLTAGE = 12.7;
 
     /**
      * Returns the default robot status
