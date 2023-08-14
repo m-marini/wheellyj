@@ -1,19 +1,19 @@
 ---
 version: "0.4"
-active: polarRadarAnalogAgent
+active: polarRadarAnalogAgentDropOut
 
 configurations:
   ######################################
-  # Polar radar agent
+  # Polar radar agent with drop out
   ######################################
-  polarRadarAnalogAgent:
+  polarRadarAnalogAgentDropOut:
     class: org.mmarini.rl.agents.TDAgent
     seed: 1234
     modelPath: models/polarRadarAnalogAgent
     savingIntervalSteps: 1000
     rewardAlpha: 5e-3
     policyAlpha: 10e-3
-    criticAlpha: 1000e-6
+    criticAlpha: 300e-6
     lambda: 0.9
     inputProcess:
       - name: canMoveFeatures
@@ -55,6 +55,10 @@ configurations:
             outputSize: 100
             dropOut: 0.5
           - type: relu
+          - type: dense
+            outputSize: 100
+            dropOut: 0.5
+          - type: relu
       hidden1:
         inputs:
           type: sum
@@ -66,7 +70,11 @@ configurations:
             outputSize: 100
             dropOut: 0.5
           - type: relu
-      hidden2:
+          - type: dense
+            outputSize: 100
+            dropOut: 0.5
+          - type: relu
+      features:
         inputs:
           type: sum
           inputs:
@@ -78,7 +86,7 @@ configurations:
             dropOut: 0.5
           - type: relu
       direction:
-        input: hidden2
+        input: features
         layers:
           - type: dense
             outputSize: 25
@@ -86,7 +94,7 @@ configurations:
           - type: softmax
             temperature: 0.257
       speed:
-        input: hidden2
+        input: features
         layers:
           - type: dense
             outputSize: 10
@@ -94,7 +102,7 @@ configurations:
           - type: softmax
             temperature: 0.3
       sensorAction:
-        input: hidden2
+        input: features
         layers:
           - type: dense
             outputSize: 7
@@ -130,6 +138,10 @@ configurations:
             outputSize: 100
             dropOut: 0.5
           - type: relu
+          - type: dense
+            outputSize: 100
+            dropOut: 0.5
+          - type: relu
       hidden1:
         inputs:
           type: sum
@@ -141,7 +153,11 @@ configurations:
             outputSize: 100
             dropOut: 0.5
           - type: relu
-      hidden2:
+          - type: dense
+            outputSize: 100
+            dropOut: 0.5
+          - type: relu
+      features:
         inputs:
           type: sum
           inputs:
@@ -153,7 +169,7 @@ configurations:
             dropOut: 0.5
           - type: relu
       output:
-        input: hidden2
+        input: features
         layers:
           - type: dense
             outputSize: 1
@@ -161,6 +177,173 @@ configurations:
           - type: linear
             b: 0
             w: 3
+  ######################################
+  # Polar radar agent
+  ######################################
+  polarRadarAnalogAgent:
+    class: org.mmarini.rl.agents.TDAgent
+    seed: 1234
+    modelPath: models/polarRadarAnalogAgent
+    savingIntervalSteps: 1000
+    rewardAlpha: 5e-3
+    policyAlpha: 10e-3
+    criticAlpha: 100e-6
+    lambda: 0.9
+    inputProcess:
+      - name: canMoveFeatures
+        class: org.mmarini.rl.processors.PartitionProcessor
+        inputs:
+          - name: canMoveForward
+            numTiles: 2
+          - name: canMoveBackward
+            numTiles: 2
+      - name: emptySectors
+        class: org.mmarini.rl.processors.NotProcessor
+        input: sectorDistances
+    policy:
+      normalizedDistances:
+        input: sectorDistances
+        layers:
+          - type: linear
+            b: -1
+            w: 0.667
+      layer0:
+        inputs:
+          type: concat
+          inputs:
+            - canMoveFeatures
+            - knownSectors
+            - emptySectors
+            - normalizedDistances
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden0:
+        input: layer0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+          - type: dense
+            outputSize: 100
+      hidden1:
+        inputs:
+          type: sum
+          inputs:
+            - layer0
+            - hidden0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+          - type: dense
+            outputSize: 100
+          - type: dense
+            outputSize: 100
+          - type: relu
+          - type: dense
+            outputSize: 100
+      hidden2:
+        input: hidden1
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+          - type: dense
+            outputSize: 100
+      hidden3:
+        inputs:
+          type: sum
+          inputs:
+            - hidden1
+            - hidden2
+        layers:
+          - type: relu
+      direction:
+        input: hidden3
+        layers:
+          - type: dense
+            outputSize: 25
+          - type: tanh
+          - type: softmax
+            temperature: 0.257
+      speed:
+        input: hidden3
+        layers:
+          - type: dense
+            outputSize: 10
+          - type: tanh
+          - type: softmax
+            temperature: 0.3
+      sensorAction:
+        input: hidden3
+        layers:
+          - type: dense
+            outputSize: 7
+          - type: tanh
+          - type: softmax
+            temperature: 0.313
+    critic:
+      normalizedDistances:
+        input: sectorDistances
+        layers:
+          - type: linear
+            b: -1
+            w: 0.667
+      layer0:
+        inputs:
+          type: concat
+          inputs:
+            - canMoveFeatures
+            - knownSectors
+            - emptySectors
+            - normalizedDistances
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden0:
+        input: layer0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+          - type: dense
+            outputSize: 100
+      hidden1:
+        inputs:
+          type: sum
+          inputs:
+            - layer0
+            - hidden0
+        layers:
+          - type: relu
+      hidden2:
+        input: hidden1
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+          - type: dense
+            outputSize: 100
+      hidden3:
+        inputs:
+          type: sum
+          inputs:
+            - hidden1
+            - hidden2
+        layers:
+          - type: relu
+      output:
+        input: hidden3
+        layers:
+          - type: dense
+            outputSize: 1
+          - type: tanh
+          - type: linear
+            b: 0
+            w: 6
   ######################################
   # Polar radar agent
   ######################################

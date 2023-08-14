@@ -450,6 +450,10 @@ public class TDAgent implements Agent {
         return policyAlpha;
     }
 
+    public InputProcessor getProcessor() {
+        return processor;
+    }
+
     public Map<String, INDArray> getProps() {
         Map<String, INDArray> props = new HashMap<>(policy.getProps("policy"));
         props.putAll(critic.getProps("critic"));

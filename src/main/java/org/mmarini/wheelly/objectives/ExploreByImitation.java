@@ -88,11 +88,18 @@ public interface ExploreByImitation {
             long speedNumber = ((IntSignalSpec) env.getActions().get("speed")).getNumValues() - 2;
             long dirNumber = ((IntSignalSpec) env.getActions().get("direction")).getNumValues() - 1;
             long sensDirNumber = ((IntSignalSpec) env.getActions().get("sensorAction")).getNumValues() - 1;
-            double rightSpeed = FuzzyFunctions.equalZero(speedAction - expSpeed, MAX_PPS / speedNumber);
+            double rightSpeed = FuzzyFunctions.equalZero(speedAction - expSpeed, MAX_PPS / speedNumber * 2);
             double rightDir = FuzzyFunctions.equalZero(normalizeDegAngle(dirAction - expMoveDir),
-                    360D / dirNumber);
+                    360D / dirNumber * 2);
             double rightSensor = FuzzyFunctions.equalZero(normalizeDegAngle(sensorAction - expScanDir),
-                    180D / sensDirNumber);
+                    180D / sensDirNumber * 2);
+            /*
+            double rightSpeed = FuzzyFunctions.equalZero(speedAction - expSpeed, MAX_PPS);
+            double rightDir = FuzzyFunctions.equalZero(normalizeDegAngle(dirAction - expMoveDir),
+                    45D);
+            double rightSensor = FuzzyFunctions.equalZero(normalizeDegAngle(sensorAction - expScanDir),
+                    45D);
+             */
 
             double rightActions = FuzzyFunctions.and(rightSpeed, rightDir, rightSensor);
             return FuzzyFunctions.defuzzy(0, 1, rightActions);

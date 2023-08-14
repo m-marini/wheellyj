@@ -6,13 +6,171 @@ configurations:
   ######################################
   # Polar radar agent
   ######################################
+  polarRadarAnalogAgentDropOut:
+    class: org.mmarini.rl.agents.TDAgent
+    seed: 1234
+    modelPath: models/polarRadarAnalogAgent
+    savingIntervalSteps: 1000
+    rewardAlpha: 5e-3
+    policyAlpha: 10e-3
+    criticAlpha: 300e-6
+    lambda: 0.9
+    inputProcess:
+      - name: canMoveFeatures
+        class: org.mmarini.rl.processors.PartitionProcessor
+        inputs:
+          - name: canMoveForward
+            numTiles: 2
+          - name: canMoveBackward
+            numTiles: 2
+      - name: emptySectors
+        class: org.mmarini.rl.processors.NotProcessor
+        input: sectorDistances
+    policy:
+      normalizedDistances:
+        input: sectorDistances
+        layers:
+          - type: linear
+            b: -1
+            w: 0.667
+      layer0:
+        inputs:
+          type: concat
+          inputs:
+            - canMoveFeatures
+            - knownSectors
+            - emptySectors
+            - normalizedDistances
+        layers:
+          - type: dropout
+            dropOut: 0.8
+          - type: dense
+            outputSize: 100
+            dropOut: 0.5
+          - type: relu
+      hidden0:
+        input: layer0
+        layers:
+          - type: dense
+            outputSize: 100
+            dropOut: 0.5
+          - type: relu
+      hidden1:
+        inputs:
+          type: sum
+          inputs:
+            - layer0
+            - hidden0
+        layers:
+          - type: dense
+            outputSize: 100
+            dropOut: 0.5
+          - type: relu
+      hidden2:
+        inputs:
+          type: sum
+          inputs:
+            - hidden0
+            - hidden1
+        layers:
+          - type: dense
+            outputSize: 100
+            dropOut: 0.5
+          - type: relu
+      direction:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 25
+          - type: tanh
+          - type: softmax
+            temperature: 0.257
+      speed:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 10
+          - type: tanh
+          - type: softmax
+            temperature: 0.3
+      sensorAction:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 7
+          - type: tanh
+          - type: softmax
+            temperature: 0.313
+    critic:
+      normalizedDistances:
+        input: sectorDistances
+        layers:
+          - type: linear
+            b: -1
+            w: 0.667
+      layer0:
+        inputs:
+          type: concat
+          inputs:
+            - canMoveFeatures
+            - knownSectors
+            - emptySectors
+            - normalizedDistances
+        layers:
+          - type: dropout
+            dropOut: 0.8
+          - type: dense
+            outputSize: 100
+            dropOut: 0.5
+          - type: relu
+      hidden0:
+        input: layer0
+        layers:
+          - type: dense
+            outputSize: 100
+            dropOut: 0.5
+          - type: relu
+      hidden1:
+        inputs:
+          type: sum
+          inputs:
+            - layer0
+            - hidden0
+        layers:
+          - type: dense
+            outputSize: 100
+            dropOut: 0.5
+          - type: relu
+      hidden2:
+        inputs:
+          type: sum
+          inputs:
+            - hidden0
+            - hidden1
+        layers:
+          - type: dense
+            outputSize: 100
+            dropOut: 0.5
+          - type: relu
+      output:
+        input: hidden2
+        layers:
+          - type: dense
+            outputSize: 1
+          - type: tanh
+          - type: linear
+            b: 0
+            w: 3
+  ######################################
+  # Polar radar agent
+  ######################################
   polarRadarAnalogAgent:
     class: org.mmarini.rl.agents.TDAgent
     seed: 1234
     modelPath: models/polarRadarAnalogAgent
     savingIntervalSteps: 1000
     rewardAlpha: 5e-3
-    policyAlpha: 3e-3
+    policyAlpha: 10e-3
     criticAlpha: 300e-6
     lambda: 0.9
     inputProcess:
