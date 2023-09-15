@@ -32,12 +32,8 @@ import org.mmarini.rl.envs.Environment;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WithRobotStatus;
 import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
-
-import java.util.Map;
 
 import static java.lang.Math.abs;
-import static org.mmarini.yaml.schema.Validator.nonNegativeNumber;
 
 /**
  * A set of reward function
@@ -45,9 +41,6 @@ import static org.mmarini.yaml.schema.Validator.nonNegativeNumber;
 public interface NoMove {
     float DEFAULT_VELOCITY_THRESHOLD = 0.01f;
     DoubleFunction<Environment> NO_MOVE = noMove(DEFAULT_VELOCITY_THRESHOLD);
-    Validator VALIDATOR = Validator.objectProperties(Map.of(
-            "velocityThreshold", nonNegativeNumber()
-    ));
 
     /**
      * Returns the reward function from configuration
@@ -56,7 +49,6 @@ public interface NoMove {
      * @param locator the locator
      */
     static DoubleFunction<Environment> create(JsonNode root, Locator locator) {
-        VALIDATOR.apply(locator).accept(root);
         float velocityThreshold = (float) locator.path("velocityThreshold").getNode(root).asDouble(DEFAULT_VELOCITY_THRESHOLD);
         return noMove(velocityThreshold);
     }

@@ -1,0 +1,49 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Robot
+$defs:
+  ControllerSet:
+    anyOf:
+      - $ref: "#/$defs/Controller"
+  Controller:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.wheelly.apis.RobotController
+      interval:
+        multipleOf: 1
+        minimum: 1
+      reactionInterval:
+        multipleOf: 1
+        minimum: 1
+      commandInterval:
+        multipleOf: 1
+        minimum: 1
+      connectionRetryInterval:
+        multipleOf: 1
+        minimum: 1
+      watchdogInterval:
+        multipleOf: 1
+        minimum: 1
+    requied:
+      - class
+      - interval
+      - reactionInterval
+      - commandInterval
+      - connectionRetryInterval
+      - watchdogInterval
+type: object
+properties:
+  version:
+    type: string
+    const: "0.4"
+  active:
+    type: string
+  configurations:
+    type: object
+    additionalProperties:
+      $ref: "#/$defs/ControllerSet"
+required:
+  - version
+  - active
+  - configurations

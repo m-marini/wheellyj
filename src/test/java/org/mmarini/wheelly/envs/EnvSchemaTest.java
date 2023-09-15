@@ -26,7 +26,7 @@
  *
  */
 
-package org.mmarini.wheelly.apis;
+package org.mmarini.wheelly.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.networknt.schema.JsonSchema;
@@ -42,17 +42,13 @@ import java.util.Set;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 
-class RobotSchemaTest {
+class EnvSchemaTest {
     @Test
     void validate() throws IOException {
         JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
-        JsonNode jsonSchemeNode = Utils.fromResource("/robot-schema.yml");
+        JsonNode jsonSchemeNode = Utils.fromResource("/env-schema.yml");
         JsonSchema jsonSchema = factory.getSchema(jsonSchemeNode);
-/*
-        JsonSchema jsonSchema = factory.getSchema(
-                RobotSchemaTest.class.getResourceAsStream("/robot-schema.json"));
- */
-        JsonNode jsonNode = Utils.fromFile("robot.yml");
+        JsonNode jsonNode = Utils.fromFile("env.yml");
         Set<ValidationMessage> errors = jsonSchema.validate(jsonNode);
         assertThat(errors, empty());
     }

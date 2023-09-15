@@ -35,35 +35,19 @@ import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.CompletableSubject;
 import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
-import static org.mmarini.yaml.schema.Validator.objectPropertiesRequired;
-import static org.mmarini.yaml.schema.Validator.positiveInteger;
 
 /**
  * Manages the processing threads and event generation to interface the robot
  */
 public class RobotController implements RobotControllerApi {
-    public static final Validator SPEC = objectPropertiesRequired(Map.of(
-            "interval", positiveInteger(),
-            "reactionInterval", positiveInteger(),
-            "commandInterval", positiveInteger(),
-            "connectionRetryInterval", positiveInteger(),
-            "watchdogInterval", positiveInteger()
-    ), List.of("interval",
-            "reactionInterval",
-            "commandInterval",
-            "connectionRetryInterval",
-            "watchdogInterval"));
     public static final String CONNECTING = "connecting";
     public static final String WAITING_RETRY = "waitingRetry";
     public static final String CLOSING = "closing";
@@ -81,7 +65,6 @@ public class RobotController implements RobotControllerApi {
      * @param robot   the robot api
      */
     public static RobotController create(JsonNode root, Locator locator, RobotApi robot) {
-        SPEC.apply(locator).accept(root);
         long interval = locator.path("interval").getNode(root).asLong();
         long reactionInterval = locator.path("reactionInterval").getNode(root).asLong();
         long commandInterval = locator.path("commandInterval").getNode(root).asLong();

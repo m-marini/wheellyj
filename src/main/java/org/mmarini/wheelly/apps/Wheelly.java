@@ -190,7 +190,7 @@ public class Wheelly {
     public static <T> T fromConfig(String file, String schema, Object[] args, Class<?>[] argClasses) {
         try {
             JsonNode config = Utils.fromFile(file);
-            JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V4);
+            JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
             JsonNode jsonSchemeNode = Utils.fromResource(schema);
             JsonSchema jsonSchema = factory.getSchema(jsonSchemeNode);
             Set<ValidationMessage> errors = jsonSchema.validate(config);
@@ -279,8 +279,8 @@ public class Wheelly {
      */
     protected RobotEnvironment createEnvironment() {
         RobotApi robot = fromConfig(args.getString("robot"), "/robot-schema.yml", new Object[0], new Class[0]);
-        RobotControllerApi controller = fromConfig(args.getString("controller"), new Object[]{robot}, new Class[]{RobotApi.class});
-        return fromConfig(args.getString("env"), new Object[]{controller}, new Class[]{RobotControllerApi.class});
+        RobotControllerApi controller = fromConfig(args.getString("controller"), "/controller-schema.yml", new Object[]{robot}, new Class[]{RobotApi.class});
+        return fromConfig(args.getString("env"), "/env-schema.yml", new Object[]{controller}, new Class[]{RobotControllerApi.class});
     }
 
     private void handleControllerStatus(String status) {

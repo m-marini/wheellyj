@@ -1,0 +1,151 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Environment
+type: object
+$defs:
+  ObjectiveSet:
+    anyOf:
+      - $ref: "#/$defs/ExploreByImitation"
+      - $ref: "#/$defs/Explore"
+      - $ref: "#/$defs/NoMove"
+      - $ref: "#/$defs/Stuck"
+  ExploreByImitation:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.wheelly.objectives.ExploreByImitation
+      stopDistance:
+        exclusiveMinimum: 0
+      turnDirectionRange:
+        multipleOf: 1
+        minimum: 0
+        maximum: 90
+    requierd:
+      - class
+      - stopDistance
+      - turnDirectionRange
+  Explore:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.wheelly.objectives.Explore
+      sensorRange:
+        minimum: 0
+    requierd:
+      - class
+      - sensorRange
+  NoMove:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.wheelly.objectives.NoMove
+      velocityThreshold:
+        minimum: 0
+    requierd:
+      - class
+  Stuck:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.wheelly.objectives.Stuck
+      distance0:
+        exclusiveMinimum: 0
+      distance1:
+        exclusiveMinimum: 0
+      distance2:
+        exclusiveMinimum: 0
+      distance3:
+        exclusiveMinimum: 0
+      sensorRange:
+        minimum: 0
+    required:
+      - class
+      - distance0
+      - distance1
+      - distance2
+      - distance3
+      - sensorRange
+  GeneralEnv:
+    anyOf:
+      - $ref: "#/$defs/PolarRobotEnv"
+      - $ref: "#/$defs/RadarRobotEnv"
+  PolarRobotEnv:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.wheelly.envs.PolarRobotEnv
+      objective:
+        $ref: "#/$defs/ObjectiveSet"
+      numDirectionValues:
+        multipleOf: 1
+        minimum: 2
+      numSensorValues:
+        multipleOf: 1
+        minimum: 2
+      numSpeedValues:
+        multipleOf: 1
+        minimum: 2
+      numRadarSectors:
+        multipleOf: 1
+        minimum: 2
+      minRadarDistance:
+        exclusiveMinimum: 0
+      maxRadarDistance:
+        exclusiveMinimum: 0
+    required:
+      - class
+      - objective
+      - numDirectionValues
+      - numSensorValues
+      - numSpeedValues
+      - numRadarSectors
+      - minRadarDistance
+      - maxRadarDistance
+  RadarRobotEnv:
+    type: object
+    properties:
+      class:
+        type: string
+        const: org.mmarini.wheelly.envs.RadarRobotEnv
+      objective:
+        $ref: "#/$defs/ObjectiveSet"
+      interval:
+        multipleOf: 1
+        minimum: 1
+      reactionInterval:
+        multipleOf: 1
+        minimum: 1
+      commandInterval:
+        multipleOf: 1
+        minimum: 1
+      numDirectionValues:
+        multipleOf: 1
+        minimum: 2
+      numSensorValues:
+        multipleOf: 1
+        minimum: 2
+      numSpeedValues:
+        multipleOf: 1
+        minimum: 2
+    required:
+      - class
+      - objective
+      - interval
+      - reactionInterval
+      - commandInterval
+      - numDirectionValues
+      - numSensorValues
+      - numSpeedValues
+properties:
+  version:
+    const: "0.4"
+  active:
+    type: string
+  configurations:
+    type: object
+    additionalProperties:
+      $ref: "#/$defs/GeneralEnv"
+required:
+  - version
+  - active
+  - configurations

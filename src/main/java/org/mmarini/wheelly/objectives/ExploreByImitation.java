@@ -52,7 +52,6 @@ public interface ExploreByImitation {
      * @param locator the locator
      */
     static ToDoubleFunction<RobotEnvironment> create(JsonNode root, Locator locator) {
-        ExploringState.STATE_SPEC.apply(locator).accept(root);
         return explore(
                 locator.path("sensorRange").getNode(root).asDouble(),
                 locator.path("turnDirectionRange").getNode(root).asInt());

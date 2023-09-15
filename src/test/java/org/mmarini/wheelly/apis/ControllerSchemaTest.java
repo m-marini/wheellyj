@@ -42,17 +42,17 @@ import java.util.Set;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 
-class RobotSchemaTest {
+class ControllerSchemaTest {
     @Test
     void validate() throws IOException {
         JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
-        JsonNode jsonSchemeNode = Utils.fromResource("/robot-schema.yml");
+        JsonNode jsonSchemeNode = Utils.fromResource("/controller-schema.yml");
         JsonSchema jsonSchema = factory.getSchema(jsonSchemeNode);
 /*
         JsonSchema jsonSchema = factory.getSchema(
                 RobotSchemaTest.class.getResourceAsStream("/robot-schema.json"));
  */
-        JsonNode jsonNode = Utils.fromFile("robot.yml");
+        JsonNode jsonNode = Utils.fromFile("controller.yml");
         Set<ValidationMessage> errors = jsonSchema.validate(jsonNode);
         assertThat(errors, empty());
     }
