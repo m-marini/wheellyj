@@ -27,40 +27,18 @@ package org.mmarini.rl.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.mmarini.Tuple2;
 import org.mmarini.yaml.Utils;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.StringJoiner;
 
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * The specification of compound signals
  */
 public class MapSignalSpec {
-
-    public static MapSignalSpec create(JsonNode node, Locator locator) {
-        validator().apply(locator).accept(node);
-        Map<String, SignalSpec> comps =
-                org.mmarini.Utils.stream(locator.getNode(node).fieldNames())
-                        .map(name -> Tuple2.of(name, SignalSpec.create(node, locator.path(name))))
-                        .collect(Tuple2.toMap());
-        return new MapSignalSpec(comps);
-    }
-
-    public static Validator validator() {
-        return objectPropertiesRequiredAdditionalProperties(Map.of(
-                "type", string(values("map"))
-        ), List.of(
-                "type"
-        ), SignalSpec.SIGNAL_SPEC);
-    }
 
     private final Map<String, SignalSpec> components;
 

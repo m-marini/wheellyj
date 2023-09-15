@@ -32,20 +32,17 @@ import org.mmarini.rl.envs.*;
 import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.yaml.Utils;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 
 import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.Utils.linear;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
-import static org.mmarini.yaml.schema.Validator.*;
 
 public class RobotEnv implements Environment {
 
@@ -75,23 +72,6 @@ public class RobotEnv implements Environment {
             "canMoveBackward", new IntSignalSpec(new long[]{1}, 2),
             "contacts", new IntSignalSpec(new long[]{1}, NUM_CONTACT_VALUES));
 
-    private static final Validator ROBOT_ENV_SPEC = objectPropertiesRequired(Map.of(
-                    "objective", object(),
-                    "interval", positiveInteger(),
-                    "reactionInterval", positiveInteger(),
-                    "commandInterval", positiveInteger(),
-                    "numDirectionValues", integer(minimum(2)),
-                    "numSensorValues", integer(minimum(2)),
-                    "numSpeedValues", integer(minimum(2))
-            ),
-            List.of("objective",
-                    "interval",
-                    "reactionInterval",
-                    "commandInterval",
-                    "numDirectionValues",
-                    "numSensorValues",
-                    "numSpeedValues"
-            ));
 
     /**
      * Returns a robot environment
@@ -113,8 +93,6 @@ public class RobotEnv implements Environment {
      * @param robot   the robot interface
      */
     public static RobotEnv create(JsonNode root, Locator locator, RobotApi robot) {
-        ROBOT_ENV_SPEC.apply(locator).accept(root);
-
         DoubleFunction<Environment> reward = Utils.createObject(root, locator.path("objective"), new Object[0], new Class[0]);
         long interval = locator.path("interval").getNode(root).asLong();
         long reactionInterval = locator.path("reactionInterval").getNode(root).asLong();

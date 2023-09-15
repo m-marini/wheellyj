@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.apis;
 
 import io.reactivex.rxjava3.core.Completable;
+import org.mmarini.wheelly.apps.Yaml;
 
 import java.util.function.Consumer;
 
@@ -36,6 +37,17 @@ import java.util.function.Consumer;
  * Manages the processing threads and event generation to interface the robot
  */
 public interface RobotControllerApi extends WithIOFlowable, WithStatusFlowable, WithErrorFlowable, WithCommandFlowable, WithControllerFlowable, WithInferenceFlowable {
+
+    /**
+     * Returns the robot controller from configuration file
+     *
+     * @param file  the file
+     * @param robot the robot api
+     */
+    static RobotControllerApi fromConfig(String file, RobotApi robot) {
+        return Yaml.fromConfig(file, "/controller-schema.yml", new Object[]{robot}, new Class[]{RobotApi.class});
+    }
+
     /**
      * Executes the command
      *

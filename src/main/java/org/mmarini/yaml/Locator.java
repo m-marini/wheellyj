@@ -1,6 +1,5 @@
 /*
- *
- * Copyright (c) 2021 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2021-2023 Marco Marini, marco.marini@mmarini.org
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -27,7 +26,7 @@
  *
  */
 
-package org.mmarini.yaml.schema;
+package org.mmarini.yaml;
 
 import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.JsonNode;

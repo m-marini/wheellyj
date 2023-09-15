@@ -32,6 +32,9 @@
     <logger name="org.mmarini.wheelly.apps.RobotCheckUp" level="INFO">
     </logger>
 
+    <logger name="com.networknt.schema" level="INFO">
+    </logger>
+
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>
     </root>

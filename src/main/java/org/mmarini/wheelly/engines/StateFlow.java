@@ -29,29 +29,18 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * The state flow defines all process states and state transitions
  */
 public class StateFlow {
-    public static final Validator STATE_FLOW_SPEC = objectPropertiesRequired(Map.of(
-                    "onInit", ProcessorCommand.COMMANDS_SPEC,
-                    "states", StateNode.STATE_NODES,
-                    "entry", string(minLength(1)),
-                    "transitions", StateTransition.TRANSITION_LIST_SPEC
-            ),
-            List.of("states", "transitions", "entry"));
-
     /**
      * Returns the state flow from configuration
      *
@@ -59,7 +48,6 @@ public class StateFlow {
      * @param locator the locator of state flow in the document
      */
     public static StateFlow create(JsonNode root, Locator locator) {
-        STATE_FLOW_SPEC.apply(locator).accept(root);
         Locator onInitLoc = locator.path("onInit");
         ProcessorCommand onInit = onInitLoc.getNode(root).isMissingNode()
                 ? null

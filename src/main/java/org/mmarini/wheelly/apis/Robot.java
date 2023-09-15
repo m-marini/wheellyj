@@ -27,47 +27,25 @@ package org.mmarini.wheelly.apis;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.schedulers.Timed;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apps.Yaml.loadIntArray;
-import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * Implements the Robot interface to the real robot
  */
 public class Robot implements RobotApi, WithIOCallback {
     public static final int DEFAULT_PORT = 22;
-
-    private static final Validator ROBOT_SPEC = objectPropertiesRequired(Map.of(
-                    "host", string(),
-                    "port", integer(minimum(1), maximum(32768)),
-                    "connectionTimeout", positiveInteger(),
-                    "readTimeout", positiveInteger(),
-                    "configureTimeout", positiveInteger(),
-                    "frontThresholds", arrayItems(integer(minimum(0), maximum(1023))),
-                    "rearThresholds", arrayItems(integer(minimum(0), maximum(1023))),
-                    "configCommands", arrayItems(string(minLength(3)))
-            ),
-            List.of("host",
-                    "connectionTimeout",
-                    "readTimeout",
-                    "configureTimeout",
-                    "frontThresholds",
-                    "rearThresholds"
-            ));
     private static final Logger logger = LoggerFactory.getLogger(Robot.class);
 
     /**
@@ -77,7 +55,6 @@ public class Robot implements RobotApi, WithIOCallback {
      * @param locator the locator of robot spec
      */
     public static Robot create(JsonNode root, Locator locator) {
-        ROBOT_SPEC.apply(locator).accept(root);
         String host = locator.path("host").getNode(root).asText();
         int port = locator.path("port").getNode(root).asInt(DEFAULT_PORT);
         long connectionTimeout = locator.path("connectionTimeout").getNode(root).asLong();
@@ -141,10 +118,6 @@ public class Robot implements RobotApi, WithIOCallback {
         return thresholds.length;
     }
 
-    private final String host;
-    private final int port;
-    private final long connectionTimeout;
-    private final long readTimeout;
     private final String[] configCommands;
     private final long configureTimeout;
     private final int[] frontThresholds;
@@ -168,10 +141,6 @@ public class Robot implements RobotApi, WithIOCallback {
      * @param configCommands    the motor theta corrections
      */
     public Robot(String host, int port, long connectionTimeout, long readTimeout, long configureTimeout, int[] frontThresholds, int[] rearThresholds, String[] configCommands) {
-        this.host = host;
-        this.port = port;
-        this.connectionTimeout = connectionTimeout;
-        this.readTimeout = readTimeout;
         this.configureTimeout = configureTimeout;
         socket = new RobotSocket(host, port, connectionTimeout, readTimeout);
         status = RobotStatus.create();

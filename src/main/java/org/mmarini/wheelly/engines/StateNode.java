@@ -31,13 +31,11 @@ package org.mmarini.wheelly.engines;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static org.mmarini.yaml.Utils.DYNAMIC_OBJECT;
 import static org.mmarini.yaml.Utils.createObject;
 
 /**
@@ -52,8 +50,6 @@ public interface StateNode {
     Tuple2<String, RobotCommands> BLOCKED_RESULT = Tuple2.of(BLOCKED_EXIT, RobotCommands.idle());
     Tuple2<String, RobotCommands> NONE_RESULT = Tuple2.of(NONE_EXIT, RobotCommands.none());
     Tuple2<String, RobotCommands> COMPLETED_RESULT = Tuple2.of(COMPLETED_EXIT, RobotCommands.idle());
-
-    Validator STATE_NODES = Validator.objectAdditionalProperties(DYNAMIC_OBJECT);
 
     /**
      * Returns the state node from yaml document
@@ -73,7 +69,6 @@ public interface StateNode {
      * @param locator the state node locator
      */
     static List<StateNode> createNodes(JsonNode root, Locator locator) {
-        STATE_NODES.apply(locator).accept(root);
         return locator.propertyNames(root)
                 .map(t -> createNode(root, t._2, t._1))
                 .collect(Collectors.toList());

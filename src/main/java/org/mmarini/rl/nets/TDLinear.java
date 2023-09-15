@@ -29,28 +29,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.mmarini.Tuple2;
 import org.mmarini.yaml.Utils;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
-import java.util.List;
-import java.util.Map;
 import java.util.StringJoiner;
 import java.util.function.Consumer;
-
-import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * The dense layer performs a linear transformation between the input and outputs.
  */
 public class TDLinear extends TDLayer {
-    public static final Validator LINEAR_SPEC = objectPropertiesRequired(Map.of(
-            "name", string(),
-            "b", number(),
-            "w", number()
-    ), List.of(
-            "name", "b", "w"
-    ));
 
     /**
      * Returns a linear layer from json doc
@@ -59,7 +47,6 @@ public class TDLinear extends TDLayer {
      * @param locator the locator of layer node
      */
     public static TDLinear create(JsonNode root, Locator locator) {
-        LINEAR_SPEC.apply(locator).accept(root);
         String name = locator.path("name").getNode(root).asText();
         float b = (float) locator.path("b").getNode(root).asDouble();
         float w = (float) locator.path("w").getNode(root).asDouble();

@@ -32,14 +32,12 @@ import org.mmarini.rl.envs.FloatSignalSpec;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.yaml.Utils;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.ops.transforms.Transforms;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
@@ -47,18 +45,11 @@ import java.util.stream.IntStream;
 
 import static java.lang.String.format;
 import static org.mmarini.rl.processors.InputProcessor.validateNames;
-import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * The processor creates a tile coding signal from float signals
  */
 public interface MaskedTilesVectorProcessor {
-    Validator MASKED_SPEC = objectPropertiesRequired(Map.of(
-            "name", string(),
-            "input", string(),
-            "mask", string(),
-            "numTiles", positiveInteger()
-    ), List.of("name", "input", "mask", "numTiles"));
     INDArray OFFSETS = Nd4j.createFromArray(0F, 1 / 4F, 2 / 4F, 3 / 4F).reshape(4, 1);
     int NUM_TILING = 4;
 
@@ -71,7 +62,6 @@ public interface MaskedTilesVectorProcessor {
      * @param inSpec  the input specification
      */
     static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpec> inSpec) {
-        MASKED_SPEC.apply(locator).accept(root);
         String outName = locator.path("name").getNode(root).asText();
         String input = locator.path("input").getNode(root).asText();
         String mask = locator.path("mask").getNode(root).asText();

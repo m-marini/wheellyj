@@ -29,26 +29,24 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.mmarini.yaml.Utils;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 
-import java.util.*;
-
-import static org.mmarini.yaml.schema.Validator.*;
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.StringJoiner;
 
 /**
  *
  */
 public class IntSignalSpec extends SignalSpec {
 
-    public static final Validator INT_SIGNAL_SPEC = objectPropertiesRequired(Map.of(
-            "numValues", integer(minimum(1))
-    ), List.of(
-            "numValues"
-    ));
-
-    public static IntSignalSpec create(JsonNode node, Locator locator) {
-        INT_SIGNAL_SPEC.apply(locator).accept(node);
+    /**
+     * Returns the integer signal specification
+     *
+     * @param node    the json document
+     * @param locator the locator
+     */
+    static IntSignalSpec create(JsonNode node, Locator locator) {
         long[] shape = SignalSpec.createShape(node, locator);
         int numValues = locator.path("numValues").getNode(node).asInt();
         return new IntSignalSpec(shape, numValues);

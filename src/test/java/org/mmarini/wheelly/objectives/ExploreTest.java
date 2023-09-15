@@ -33,7 +33,7 @@ import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.yaml.Utils;
-import org.mmarini.yaml.schema.Locator;
+import org.mmarini.yaml.Locator;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;

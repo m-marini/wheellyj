@@ -35,7 +35,7 @@ import org.mmarini.wheelly.apis.MockRobot;
 import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotControllerApi;
 import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.yaml.schema.Locator;
+import org.mmarini.yaml.Locator;
 
 import java.io.IOException;
 import java.util.List;

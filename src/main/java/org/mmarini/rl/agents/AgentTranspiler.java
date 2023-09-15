@@ -29,33 +29,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.rl.processors.InputProcessor;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.rng.Random;
 
 import java.io.File;
-import java.util.List;
 import java.util.Map;
-
-import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * Transpiler of simplified agent specification to internal agent specification
  */
 public class AgentTranspiler {
-    public static final Validator AGENT_VALIDATOR = objectPropertiesRequired(Map.of(
-            "version", string(values("0.1")),
-            "rewardAlpha", positiveNumber(),
-            "policyAlpha", positiveNumber(),
-            "criticAlpha", positiveNumber(),
-            "lambda", nonNegativeNumber(),
-            "policy", NetworkTranspiller.NETWORK_SPEC,
-            "critic", NetworkTranspiller.NETWORK_SPEC,
-            "inputProcess", InputProcessor.PROCESSOR_LIST
-    ), List.of(
-            "rewardAlpha", "policyAlpha", "criticAlpha", "lambda", "policy", "critic"
-    ));
-
     private final JsonNode spec;
     private final Map<String, SignalSpec> stateSpec;
     private final Map<String, SignalSpec> actionsSpec;
@@ -97,7 +80,6 @@ public class AgentTranspiler {
     }
 
     void parse() {
-        AGENT_VALIDATOR.apply(locator).accept(spec);
         this.rewardAlpha = (float) locator.path("rewardAlpha").getNode(spec).asDouble();
         this.policyAlpha = (float) locator.path("policyAlpha").getNode(spec).asDouble();
         this.criticAlpha = (float) locator.path("criticAlpha").getNode(spec).asDouble();
@@ -107,7 +89,7 @@ public class AgentTranspiler {
                 : null;
         Map<String, SignalSpec> postProcSpec = processor != null ? processor.getSpec() : stateSpec;
         Map<String, Long> stateSizes = TDAgent.getStateSizes(postProcSpec);
-        this.policy = new NetworkTranspiller(spec, locator.path("policy"), stateSizes, random).build();
-        this.critic = new NetworkTranspiller(spec, locator.path("critic"), stateSizes, random).build();
+        this.policy = new NetworkTranspiler(spec, locator.path("policy"), stateSizes, random).build();
+        this.critic = new NetworkTranspiler(spec, locator.path("critic"), stateSizes, random).build();
     }
 }

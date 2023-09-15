@@ -25,6 +25,8 @@
 
 package org.mmarini.wheelly.apis;
 
+import org.mmarini.wheelly.apps.Yaml;
+
 import java.io.Closeable;
 import java.io.IOException;
 
@@ -33,6 +35,15 @@ import java.io.IOException;
  */
 public interface RobotApi extends Closeable, WithStatusCallback {
     int MAX_PPS = 32;
+
+    /**
+     * Returns the robot api from configuration file
+     *
+     * @param file the file
+     */
+    static RobotApi fromConfig(String file) {
+        return Yaml.fromConfig(file, "/robot-schema.yml", new Object[0], new Class[0]);
+    }
 
     /**
      * Configures the robot

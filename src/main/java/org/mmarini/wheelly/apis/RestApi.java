@@ -26,8 +26,12 @@
 package org.mmarini.wheelly.apis;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import com.networknt.schema.JsonSchema;
+import com.networknt.schema.JsonSchemaFactory;
+import com.networknt.schema.SpecVersion;
+import com.networknt.schema.ValidationMessage;
+import org.mmarini.yaml.Utils;
+import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,19 +43,14 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.yaml.schema.Validator.*;
 
 public class RestApi {
     private static final Logger logger = LoggerFactory.getLogger(RestApi.class);
-
-    private static final Validator NET_LIST = objectPropertiesRequired(Map.of(
-            "networks", arrayItems(string())
-    ), List.of("networks"));
 
     /**
      * Returns the network configuration
@@ -89,8 +88,17 @@ public class RestApi {
             throw new IOException(format("Http Status %d", response.getStatus()));
         }
         JsonNode netList = response.readEntity(JsonNode.class);
+        JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
+        JsonNode jsonSchemeNode = Utils.fromResource("/network-list-schema.yml");
+        JsonSchema jsonSchema = factory.getSchema(jsonSchemeNode);
+        Set<ValidationMessage> errors = jsonSchema.validate(netList);
+        if (!errors.isEmpty()) {
+            String text = errors.stream()
+                    .map(ValidationMessage::toString)
+                    .collect(Collectors.joining(", "));
+            throw new RuntimeException(format("Errors: %s", text));
+        }
         Locator locator = Locator.root();
-        NET_LIST.apply(locator).accept(netList);
         return locator.path("networks").elements(netList)
                 .map(l -> l.getNode(netList))
                 .map(JsonNode::asText)

@@ -30,7 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.mmarini.rl.envs.*;
 import org.mmarini.wheelly.TestFunctions;
 import org.mmarini.yaml.Utils;
-import org.mmarini.yaml.schema.Locator;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.factory.Nd4j;
 
 import java.io.IOException;

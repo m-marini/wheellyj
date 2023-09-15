@@ -32,20 +32,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
-import java.util.List;
-import java.util.Map;
 import java.util.OptionalInt;
 
 import static java.lang.String.format;
 import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
-import static org.mmarini.yaml.schema.Validator.positiveNumber;
 
 /**
  * Generates the behavior to avoid contact obstacle.
@@ -59,17 +55,10 @@ public class AvoidingState extends AbstractStateNode {
     public static final String FREE_POINT = "freePoint";
     public static final String SAFE_DISTANCE = "safeDistance";
     public static final String ESCAPE_DIRECTION = "escapeDirection";
-    public static final Validator STATE_SPEC = Validator.objectPropertiesRequired(Map.of(
-                    "safeDistance", positiveNumber()
-            ), List.of(
-                    "safeDistance")
-    );
 
     private static final Logger logger = LoggerFactory.getLogger(AvoidingState.class);
 
     public static AvoidingState create(JsonNode root, Locator locator, String id) {
-        BASE_STATE_SPEC.apply(locator).accept(root);
-        STATE_SPEC.apply(locator).accept(root);
         ProcessorCommand onInit = ProcessorCommand.concat(
                 loadTimeout(root, locator, id),
                 ProcessorCommand.put(id + "." + SAFE_DISTANCE, locator.path(SAFE_DISTANCE).getNode(root).doubleValue()),

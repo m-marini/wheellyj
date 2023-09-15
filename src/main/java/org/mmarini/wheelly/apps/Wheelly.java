@@ -25,7 +25,6 @@
 
 package org.mmarini.wheelly.apps;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.Observable;
 import net.sourceforge.argparse4j.ArgumentParsers;
@@ -45,9 +44,6 @@ import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.wheelly.envs.WithPolarMap;
 import org.mmarini.wheelly.envs.WithRadarMap;
 import org.mmarini.wheelly.swing.*;
-import org.mmarini.yaml.Utils;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
@@ -58,13 +54,11 @@ import java.awt.*;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
 import static org.mmarini.wheelly.swing.Utils.*;
-import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * Run a test to check for robot environment with random behavior agent
@@ -79,11 +73,6 @@ public class Wheelly {
             "^trainedCritic.output$",
     };
     private static final Logger logger = LoggerFactory.getLogger(Wheelly.class);
-    private static final Validator BASE_CONFIG = objectPropertiesRequired(Map.of(
-            "version", string(values("0.4")),
-            "active", string(),
-            "configurations", object()
-    ), List.of("version", "active", "configurations"));
 
     /**
      * Creates kpis process
@@ -152,26 +141,6 @@ public class Wheelly {
     }
 
     /**
-     * Returns an object instance from configuration file
-     *
-     * @param <T>        the returned object class
-     * @param file       the filename
-     * @param args       the builder additional arguments
-     * @param argClasses the builder additional argument classes
-     */
-    public static <T> T fromConfig(String file, Object[] args, Class<?>[] argClasses) {
-        try {
-            JsonNode config = Utils.fromFile(file);
-            BASE_CONFIG.apply(Locator.root()).accept(config);
-            String active = Locator.locate("active").getNode(config).asText();
-            Locator baseLocator = Locator.locate("configurations").path(active);
-            return Utils.createObject(config, baseLocator, args, argClasses);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    /**
      * @param args command line arguments
      */
     public static void main(String[] args) {
@@ -234,16 +203,16 @@ public class Wheelly {
      * @param env the environment
      */
     protected Agent createAgent(WithSignalsSpec env) {
-        return fromConfig(args.getString("agent"), new Object[]{env}, new Class[]{WithSignalsSpec.class});
+        return Agent.fromConfig(args.getString("agent"), env);
     }
 
     /**
      * Returns the environment
      */
     protected RobotEnvironment createEnvironment() {
-        RobotApi robot = fromConfig(args.getString("robot"), new Object[0], new Class[0]);
-        RobotControllerApi controller = fromConfig(args.getString("controller"), new Object[]{robot}, new Class[]{RobotApi.class});
-        return fromConfig(args.getString("env"), new Object[]{controller}, new Class[]{RobotControllerApi.class});
+        RobotApi robot = RobotApi.fromConfig(args.getString("robot"));
+        RobotControllerApi controller = RobotControllerApi.fromConfig(args.getString("controller"), robot);
+        return RobotEnvironment.fromConfig(args.getString("env"), controller);
     }
 
     private void handleControllerStatus(String status) {
@@ -363,16 +332,29 @@ public class Wheelly {
                 createKpis(agent, environment.getActions(), new File(kpis), this.args.getString("labels"));
             }
             this.start = System.currentTimeMillis();
-            environment.readRobotStatus().subscribe(this::handleStatusReady);
-            environment.readReadLine().subscribe(comMonitor::onReadLine);
-            environment.readWriteLine().subscribe(comMonitor::onWriteLine);
-            environment.readCommand().subscribe(sensorMonitor::onCommand);
-            environment.readErrors().subscribe(err -> {
-                comMonitor.onError(err);
-                logger.atError().setCause(err).log();
-            });
-            environment.readControllerStatus().subscribe(this::handleControllerStatus);
-            environment.readShutdown().subscribe(this::handleShutdown);
+            environment.readRobotStatus()
+                    .doOnNext(this::handleStatusReady)
+                    .subscribe();
+            environment.readReadLine()
+                    .doOnNext(comMonitor::onReadLine)
+                    .subscribe();
+            environment.readWriteLine()
+                    .doOnNext(comMonitor::onWriteLine)
+                    .subscribe();
+            environment.readCommand()
+                    .doOnNext(sensorMonitor::onCommand)
+                    .subscribe();
+            environment.readErrors().doOnNext(err -> {
+                        comMonitor.onError(err);
+                        logger.atError().setCause(err).log();
+                    })
+                    .subscribe();
+            environment.readControllerStatus()
+                    .doOnNext(this::handleControllerStatus)
+                    .subscribe();
+            environment.readShutdown()
+                    .doOnComplete(this::handleShutdown)
+                    .subscribe();
 
             environment.setOnInference(this::handleInference);
             environment.setOnAct(agent::act);

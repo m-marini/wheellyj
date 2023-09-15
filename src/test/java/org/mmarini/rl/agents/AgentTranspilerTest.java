@@ -34,7 +34,7 @@ import org.mmarini.rl.nets.TDDense;
 import org.mmarini.rl.nets.TDRelu;
 import org.mmarini.rl.nets.TDSoftmax;
 import org.mmarini.rl.nets.TDTanh;
-import org.mmarini.yaml.schema.Locator;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
 

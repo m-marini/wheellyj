@@ -29,38 +29,18 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WithRobotStatus;
 import org.mmarini.wheelly.envs.RobotEnvironment;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 
-import java.util.List;
-import java.util.Map;
 import java.util.function.ToDoubleFunction;
 
 import static java.lang.Math.abs;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.*;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_DISTANCE;
-import static org.mmarini.yaml.schema.Validator.nonNegativeInteger;
-import static org.mmarini.yaml.schema.Validator.positiveNumber;
 
 /**
  * A set of reward function
  */
 public interface Stuck {
-
-    Validator VALIDATOR = Validator.objectPropertiesRequired(Map.of(
-            "distance0", positiveNumber(),
-            "distance1", positiveNumber(),
-            "distance2", positiveNumber(),
-            "distance3", positiveNumber(),
-            "sensorRange", nonNegativeInteger()
-    ), List.of(
-            "distance0",
-            "distance1",
-            "distance2",
-            "distance3",
-            "sensorRange"
-    ));
-
     /**
      * Returns the reward function from configuration
      *
@@ -68,7 +48,6 @@ public interface Stuck {
      * @param locator the locator
      */
     static ToDoubleFunction<RobotEnvironment> create(JsonNode root, Locator locator) {
-        VALIDATOR.apply(locator).accept(root);
         double distance0 = locator.path("distance0").getNode(root).asDouble();
         double distance1 = locator.path("distance1").getNode(root).asDouble();
         double distance2 = locator.path("distance2").getNode(root).asDouble();

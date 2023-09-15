@@ -1,0 +1,124 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Robot
+$defs:
+  GeneralRobot:
+    anyOf:
+      - $ref: "#/$defs/SimRobot"
+      - $ref: "#/$defs/Robot"
+      - $ref: "#/$defs/MockRobot"
+  SimRobot:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.wheelly.apis.SimRobot
+      mapSeed:
+        multipleOf: 1
+        minimum: 1
+      robotSeed:
+        multipleOf: 1
+        minimum: 1
+      errSigma:
+        minimum: 0
+      errSensor:
+        minimum: 0
+      sensorReceptiveAngle:
+        multipleOf: 1
+        minimum: 1
+      numObstacles:
+        multipleOf: 1
+        minimum: 0
+      maxAngularSpeed:
+        multipleOf: 1
+        minimum: 1
+      maxSimulationSpeed:
+        type: number
+        minimum: 1
+    required:
+      - class
+      - errSigma
+      - errSensor
+      - sensorReceptiveAngle
+      - numObstacles
+      - maxSimulationSpeed
+      - maxAngularSpeed
+  Robot:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.wheelly.apis.Robot
+      host:
+        type: string
+      port:
+        multipleOf: 1
+        minimum: 1
+        maximum: 32768
+      connectionTimeout:
+        multipleOf: 1
+        minimum: 1
+      readTimeout:
+        multipleOf: 1
+        minimum: 1
+      configureTimeout:
+        multipleOf: 1
+        minimum: 1
+      frontThresholds:
+        type: array
+        items:
+          multipleOf: 1
+          minimum: 0
+          maximum: 1023
+      rearThresholds:
+        type: array
+        items:
+          multipleOf: 1
+          minimum: 0
+          maximum: 1023
+      configCommands:
+        type: array
+        items:
+          type: string
+          minLength: 3
+    required:
+      - class
+      - host
+      - connectionTimeout
+      - readTimeout
+      - configureTimeout
+      - frontThresholds
+      - rearThresholds
+  MockRobot:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.wheelly.apis.MockRobot
+      x:
+        type: number
+      y:
+        type: number
+      direction:
+        multipleOf: 1
+        minimum: -180
+        maximum: 180
+      sensor:
+        multipleOf: 1
+        minimum: -90
+        maximum: 90
+      distance:
+        minimum: 0
+    required: [ class ]
+type: object
+properties:
+  version:
+    type: string
+    const: "0.4"
+  active:
+    type: string
+  configurations:
+    type: object
+    additionalProperties:
+      $ref: "#/$defs/GeneralRobot"
+required:
+  - version
+  - active
+  - configurations

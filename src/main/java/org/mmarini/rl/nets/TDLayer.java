@@ -27,29 +27,19 @@ package org.mmarini.rl.nets;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 
-import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
 import static java.lang.String.format;
-import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * The network layer performs the forward and backward processes to predict and train.
  */
 public abstract class TDLayer {
-    public static final Validator LAYER_SPEC = objectPropertiesRequired(Map.of(
-            "name", string(),
-            "type", string(values("dense", "relu", "tanh", "linear", "softmax", "sum", "concat", "dropout"))
-    ), List.of(
-            "name", "type"
-    ));
-
     /**
      * Returns the layer by spec
      *
@@ -60,7 +50,6 @@ public abstract class TDLayer {
      * @param random  the random number generator
      */
     public static TDLayer create(JsonNode root, Locator locator, String prefix, Map<String, INDArray> data, Random random) {
-        LAYER_SPEC.apply(locator).accept(root);
         String type = locator.path("type").getNode(root).asText();
         String name = locator.path("name").getNode(root).asText();
         switch (type) {

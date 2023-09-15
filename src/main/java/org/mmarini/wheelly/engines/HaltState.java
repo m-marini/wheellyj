@@ -31,7 +31,7 @@ package org.mmarini.wheelly.engines;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.yaml.schema.Locator;
+import org.mmarini.yaml.Locator;
 
 /**
  * Generates the behavior to halt the robot
@@ -52,8 +52,6 @@ public class HaltState extends AbstractStateNode {
      * @param id      the status identifier
      */
     public static HaltState create(JsonNode root, Locator locator, String id) {
-        BASE_STATE_SPEC.apply(locator).accept(root);
-        AUTO_SCAN_SPEC.apply(locator).accept(root);
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
         ProcessorCommand onInit = ProcessorCommand.concat(

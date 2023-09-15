@@ -1,0 +1,49 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Signal
+type: object
+additionalProperties:
+  type: object
+---
+$defs:
+  Signal:
+    type: object
+  Signal:
+    anyOf:
+      - $ref: "#/$defs/IntSignal"
+      - $ref: "#/$defs/FloatSignal"
+  Shape:
+    type: array
+    items:
+      multipleOf: 1
+      minimum: 1
+  IntSignal:
+    type: object
+    properties:
+      type:
+        const: int
+      shape:
+        $ref: "#/$defs/Shape"
+      numValues:
+        multipleOf: 1
+        minimum: 1
+    required:
+      - type
+      - shape
+      - numValues
+  FloatSignal:
+    type: object
+    properties:
+      type:
+        const: float
+      shape:
+        $ref: "#/$defs/Shape"
+      minValue:
+        type: number
+      maxValue:
+        type: number
+    required:
+      - type
+      - shape
+      - minValue
+      - maxValue

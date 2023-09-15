@@ -56,7 +56,6 @@ import static java.lang.Math.*;
 import static java.lang.String.format;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
-import static org.mmarini.wheelly.apps.Wheelly.fromConfig;
 import static org.mmarini.wheelly.swing.Utils.createFrame;
 import static org.mmarini.wheelly.swing.Utils.layHorizontally;
 
@@ -229,8 +228,8 @@ public class RobotCheckUp {
      * Returns the robot api
      */
     protected RobotControllerApi createController() {
-        RobotApi robot = fromConfig(parseArgs.getString("robot"), new Object[0], new Class[0]);
-        return fromConfig(parseArgs.getString("controller"), new Object[]{robot}, new Class[]{RobotApi.class});
+        RobotApi robot = RobotApi.fromConfig(parseArgs.getString("robot"));
+        return RobotControllerApi.fromConfig(parseArgs.getString("controller"), robot);
     }
 
     private void handleControlStatus(String status) {
@@ -314,14 +313,14 @@ public class RobotCheckUp {
     private void run() {
         logger.info("Robot check started.");
         controller = createController();
-        controller.readErrors().subscribe(err -> {
+        controller.readErrors().doOnNext(err -> {
             comMonitor.onError(err);
             logger.atError().setCause(err).log();
-        });
-        controller.readReadLine().subscribe(comMonitor::onReadLine);
-        controller.readWriteLine().subscribe(comMonitor::onWriteLine);
-        controller.readControllerStatus().subscribe(this::handleControlStatus);
-        controller.readShutdown().subscribe(this::handleShutdown);
+        }).subscribe();
+        controller.readReadLine().doOnNext(comMonitor::onReadLine).subscribe();
+        controller.readWriteLine().doOnNext(comMonitor::onWriteLine).subscribe();
+        controller.readControllerStatus().doOnNext(this::handleControlStatus).subscribe();
+        controller.readShutdown().doOnComplete(this::handleShutdown).subscribe();
         controller.setOnInference(this::handleInference);
         frame.setVisible(true);
         sensorFrame.setVisible(true);

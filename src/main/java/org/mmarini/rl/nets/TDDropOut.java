@@ -32,28 +32,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.mmarini.Tuple2;
 import org.mmarini.yaml.Utils;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
-import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
-
-import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * Performs the drop out regularization.
  * The regularization is concretely performed by TDNetwork, the layer just store the dropOut meta-parameter
  */
 public class TDDropOut extends TDLayer {
-    public static final Validator DROP_OUT_SPEC = objectPropertiesRequired(Map.of(
-            "name", string(),
-            "dropOut", number(exclusiveMinimum(0D), maximum(1D))
-    ), List.of(
-            "name", "dropOut"
-    ));
-
     /**
      * Returns the layer from spec
      *
@@ -61,7 +49,6 @@ public class TDDropOut extends TDLayer {
      * @param locator the layer spec locator
      */
     public static TDDropOut create(JsonNode root, Locator locator) {
-        DROP_OUT_SPEC.apply(locator).accept(root);
         String name = locator.path("name").getNode(root).asText();
         float dropOut = (float) locator.path("dropOut").getNode(root).asDouble(1);
         return new TDDropOut(name, dropOut);

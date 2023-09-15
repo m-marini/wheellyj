@@ -32,11 +32,8 @@ import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WithRobotStatus;
 import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.wheelly.envs.WithRadarMap;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 
-import java.util.List;
-import java.util.Map;
 import java.util.function.Predicate;
 import java.util.function.ToDoubleFunction;
 
@@ -44,15 +41,11 @@ import static java.lang.Math.abs;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.*;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
 import static org.mmarini.wheelly.apis.Utils.clip;
-import static org.mmarini.yaml.schema.Validator.nonNegativeInteger;
 
 /**
  * Explore objective
  */
 public interface Explore {
-    Validator VALIDATOR = Validator.objectPropertiesRequired(Map.of(
-            "sensorRange", nonNegativeInteger()
-    ), List.of("sensorRange"));
 
     /**
      * Returns the function that fuzzy rewards explore behavior from configuration
@@ -61,7 +54,6 @@ public interface Explore {
      * @param locator the locator
      */
     static ToDoubleFunction<RobotEnvironment> create(JsonNode root, Locator locator) {
-        VALIDATOR.apply(locator).accept(root);
         double sensorRange = locator.path("sensorRange").getNode(root).asDouble();
         return explore(sensorRange);
     }

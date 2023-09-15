@@ -31,8 +31,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.*;
 import org.mmarini.yaml.Utils;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.ops.transforms.Transforms;
@@ -47,17 +46,11 @@ import java.util.stream.IntStream;
 
 import static java.lang.String.format;
 import static org.mmarini.rl.processors.InputProcessor.validateNames;
-import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * The processor creates a tile coding signal from float signals
  */
 public interface FeatureVectorProcessor {
-    Validator TILE_SPEC = objectPropertiesRequired(Map.of(
-            "name", string(),
-            "inputs", arrayItems(string())
-    ), List.of("name", "inputs"));
-
     static long computeSize(IntSignalSpec spec) {
         return Arrays.stream(spec.getShape()).reduce(1, (a, b) -> a * b) * spec.getNumValues();
     }
@@ -70,7 +63,6 @@ public interface FeatureVectorProcessor {
      * @param inSpec  the input specification
      */
     static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpec> inSpec) {
-        TILE_SPEC.apply(locator).accept(root);
         String outName = locator.path("name").getNode(root).asText();
         List<String> inputNames = locator.path("inputs").elements(root)
                 .map(p -> p.getNode(root).asText())

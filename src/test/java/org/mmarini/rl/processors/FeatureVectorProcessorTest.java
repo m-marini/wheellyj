@@ -28,7 +28,7 @@ package org.mmarini.rl.processors;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
 import org.mmarini.rl.envs.*;
-import org.mmarini.yaml.schema.Locator;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
 import java.io.IOException;

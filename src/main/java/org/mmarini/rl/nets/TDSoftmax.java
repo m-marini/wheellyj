@@ -29,29 +29,19 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.mmarini.Tuple2;
 import org.mmarini.yaml.Utils;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.ops.transforms.Transforms;
 
-import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
-
-import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * The dense layer performs a linear transformation between the input and outputs.
  */
 public class TDSoftmax extends TDLayer {
-    public static Validator SOFTMAX_SPEC = objectPropertiesRequired(Map.of(
-            "name", string(),
-            "temperature", positiveNumber()
-    ), List.of("name", "temperature"));
 
     public static TDSoftmax create(JsonNode root, Locator locator) {
-        SOFTMAX_SPEC.apply(locator).accept(root);
         String name = locator.path("name").getNode(root).asText();
         float temperature = (float) locator.path("temperature").getNode(root).asDouble();
         return new TDSoftmax(name, temperature);

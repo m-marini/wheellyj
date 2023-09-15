@@ -29,28 +29,20 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Flowable;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.*;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
 import java.io.File;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.yaml.schema.Validator.objectAdditionalProperties;
-import static org.mmarini.yaml.schema.Validator.objectPropertiesRequired;
 
 /**
  * Agent that produces a random behavior
  */
 public class ConstantAgent implements Agent {
-    public static final Validator AGENT_SPEC = objectPropertiesRequired(Map.of(
-            "actions", objectAdditionalProperties(
-                    Validator.nonNegativeInteger()
-            )), List.of("actions"));
 
     /**
      * Returns the  random agent from spec
@@ -60,7 +52,6 @@ public class ConstantAgent implements Agent {
      * @param env     the environment
      */
     public static ConstantAgent create(JsonNode root, Locator locator, Environment env) {
-        AGENT_SPEC.apply(locator).accept(root);
         Map<String, Signal> actions = locator.path("actions").propertyNames(root)
                 .map(t -> t.setV2((Signal) IntSignal.create(t._2.getNode(root).asInt())))
                 .collect(Tuple2.toMap());

@@ -8,6 +8,7 @@ configurations:
   ######################################
   polarRadarAnalogAgentDropOut:
     class: org.mmarini.rl.agents.TDAgent
+    version: "0.1"
     seed: 1234
     modelPath: models/polarRadarAnalogAgent
     savingIntervalSteps: 1000
@@ -182,6 +183,7 @@ configurations:
   ######################################
   polarRadarAnalogAgent:
     class: org.mmarini.rl.agents.TDAgent
+    version: "0.1"
     seed: 1234
     modelPath: models/polarRadarAnalogAgent
     savingIntervalSteps: 1000
@@ -349,6 +351,7 @@ configurations:
   ######################################
   polarRadarAgent:
     class: org.mmarini.rl.agents.TDAgent
+    version: "0.1"
     seed: 1234
     modelPath: models/polarRadarAgentTiles
     savingIntervalSteps: 1000
@@ -501,6 +504,7 @@ configurations:
   ######################################
   radarAgent:
     class: org.mmarini.rl.agents.TDAgent
+    version: "0.1"
     seed: 1234
     modelPath: models/radarAgent
     savingIntervalSteps: 1000
@@ -635,21 +639,12 @@ configurations:
           - type: linear
             b: 0
             w: 3
-  randomAgent:
-    class: RandomAgent
-    seed: 1234
-  constantAgent:
-    class: ConstantAgent
-    actions:
-      halt: 0
-      direction: 15
-      sensorAction: 3
-      speed: 8
   ######################################
   # Radar agent 1 (critic +-1, tanh insted of relu0)
   ######################################
   radarAgent1:
     class: org.mmarini.rl.agents.TDAgent
+    version: "0.1"
     seed: 1234
     modelPath: models/radarAgent
     savingIntervalSteps: 1000
@@ -789,6 +784,7 @@ configurations:
   ######################################
   baseAgent:
     class: org.mmarini.rl.agents.TDAgent
+    version: "0.1"
     seed: 1234
     modelPath: models/baseAgent
     savingIntervalSteps: 1000
@@ -958,6 +954,7 @@ configurations:
 ######################################
   tilesAgent:
     class: org.mmarini.rl.agents.TDAgent
+    version: "0.1"
     seed: 1234
     modelPath: models/tilesAgent
     savingIntervalSteps: 1000

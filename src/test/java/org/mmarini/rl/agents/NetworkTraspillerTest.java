@@ -28,7 +28,7 @@ package org.mmarini.rl.agents;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import org.mmarini.rl.nets.*;
-import org.mmarini.yaml.schema.Locator;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
 
@@ -150,7 +150,7 @@ class NetworkTraspillerTest {
 
     @Test
     void build() throws IOException {
-        NetworkTranspiller tr = create(TANH_YAML);
+        NetworkTranspiler tr = create(TANH_YAML);
 
         TDNetwork net = tr.build();
 
@@ -166,19 +166,19 @@ class NetworkTraspillerTest {
         ));
     }
 
-    NetworkTranspiller create(String yaml) throws IOException {
+    NetworkTranspiler create(String yaml) throws IOException {
         JsonNode agentSpec = fromText(yaml);
         Map<String, Long> stateSpec = Map.of(
                 "input", 2L
         );
         Random random = Nd4j.getRandom();
         random.setSeed(SEED);
-        return new NetworkTranspiller(agentSpec, Locator.root(), stateSpec, random);
+        return new NetworkTranspiler(agentSpec, Locator.root(), stateSpec, random);
     }
 
     @Test
     void parseConcat() throws IOException {
-        NetworkTranspiller tr = create(CONCAT_YAML);
+        NetworkTranspiler tr = create(CONCAT_YAML);
         tr.parse();
         assertThat(tr.layerDef, hasKey("output"));
         assertThat(tr.inputsDef, hasEntry(
@@ -198,7 +198,7 @@ class NetworkTraspillerTest {
 
     @Test
     void parseDense() throws IOException {
-        NetworkTranspiller tr = create(DENSE_YAML);
+        NetworkTranspiler tr = create(DENSE_YAML);
         tr.parse();
         assertThat(tr.layerDef, hasKey("output"));
         assertThat(tr.inputsDef, hasEntry(
@@ -227,7 +227,7 @@ class NetworkTraspillerTest {
 
     @Test
     void parseDense1() throws IOException {
-        NetworkTranspiller tr = create(DENSE_YAML1);
+        NetworkTranspiler tr = create(DENSE_YAML1);
         tr.parse();
         assertThat(tr.layerDef, hasKey("output"));
         assertThat(tr.inputsDef, hasEntry(
@@ -253,7 +253,7 @@ class NetworkTraspillerTest {
 
     @Test
     void parseDropOut() throws IOException {
-        NetworkTranspiller tr = create(DROP_OUT_YAML);
+        NetworkTranspiler tr = create(DROP_OUT_YAML);
         tr.parse();
         assertThat(tr.layerDef, hasKey("output"));
         assertThat(tr.inputsDef, hasEntry(
@@ -277,7 +277,7 @@ class NetworkTraspillerTest {
 
     @Test
     void parseLinear() throws IOException {
-        NetworkTranspiller tr = create(LINEAR_YAML);
+        NetworkTranspiler tr = create(LINEAR_YAML);
         tr.parse();
         assertThat(tr.layerDef, hasKey("output"));
         assertThat(tr.inputsDef, hasEntry(
@@ -299,7 +299,7 @@ class NetworkTraspillerTest {
 
     @Test
     void parseMultiDense() throws IOException {
-        NetworkTranspiller tr = create(MULTIDENSE_YAML);
+        NetworkTranspiler tr = create(MULTIDENSE_YAML);
         tr.parse();
         assertThat(tr.layerDef, hasKey("output[0]"));
         assertThat(tr.layerDef, hasKey("output"));
@@ -339,7 +339,7 @@ class NetworkTraspillerTest {
 
     @Test
     void parseMultiSequence() throws IOException {
-        NetworkTranspiller tr = create(MULTI_SEQ_YAML);
+        NetworkTranspiler tr = create(MULTI_SEQ_YAML);
         tr.parse();
         assertThat(tr.layerDef, hasKey("hidden"));
         assertThat(tr.layerDef, hasKey("output.a"));
@@ -389,7 +389,7 @@ class NetworkTraspillerTest {
 
     @Test
     void parseRelu() throws IOException {
-        NetworkTranspiller tr = create(RELU_YAML);
+        NetworkTranspiler tr = create(RELU_YAML);
         tr.parse();
         assertThat(tr.layerDef, hasKey("output"));
         assertThat(tr.inputsDef, hasEntry(
@@ -409,7 +409,7 @@ class NetworkTraspillerTest {
 
     @Test
     void parseResnet() throws IOException {
-        NetworkTranspiller tr = create(RESNET_MULTILAYER_YAML);
+        NetworkTranspiler tr = create(RESNET_MULTILAYER_YAML);
         tr.parse();
         assertThat(tr.layerDef, hasKey("hidden"));
         assertThat(tr.layerDef, hasKey("output[0]"));
@@ -472,7 +472,7 @@ class NetworkTraspillerTest {
 
     @Test
     void parseSoftmax() throws IOException {
-        NetworkTranspiller tr = create(SOFTMAX_YAML);
+        NetworkTranspiler tr = create(SOFTMAX_YAML);
         tr.parse();
         assertThat(tr.layerDef, hasKey("output"));
         assertThat(tr.inputsDef, hasEntry(
@@ -493,7 +493,7 @@ class NetworkTraspillerTest {
 
     @Test
     void parseSum() throws IOException {
-        NetworkTranspiller tr = create(SUM_YAML);
+        NetworkTranspiler tr = create(SUM_YAML);
         tr.parse();
         assertThat(tr.layerDef, hasKey("output"));
         assertThat(tr.inputsDef, hasEntry(
@@ -513,7 +513,7 @@ class NetworkTraspillerTest {
 
     @Test
     void parseTanh() throws IOException {
-        NetworkTranspiller tr = create(TANH_YAML);
+        NetworkTranspiler tr = create(TANH_YAML);
         tr.parse();
         assertThat(tr.layerDef, hasKey("output"));
         assertThat(tr.inputsDef, hasEntry(

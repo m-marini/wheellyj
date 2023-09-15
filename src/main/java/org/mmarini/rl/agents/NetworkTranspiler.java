@@ -28,58 +28,15 @@ package org.mmarini.rl.agents;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.nets.*;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.rng.Random;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static org.mmarini.yaml.schema.Validator.*;
 
-public class NetworkTranspiller {
-    private static final Validator DENSE_SPEC = objectPropertiesRequired(Map.of(
-            "outputSize", positiveInteger(),
-            "maxAbsWeights", positiveNumber(),
-            "dropOut", number(exclusiveMinimum(0D), maximum(1D))
-    ), List.of(
-            "outputSize"
-    ));
-    private static final Validator DROP_OUT_SPEC = objectPropertiesRequired(Map.of(
-            "dropOut", number(exclusiveMinimum(0D), maximum(1D))
-    ), List.of(
-            "dropOut"
-    ));
-    private static final Validator SOFTMAX_SPEC = objectPropertiesRequired(Map.of(
-            "temperature", positiveNumber()
-    ), List.of(
-            "temperature"
-    ));
-    private static final Validator LINEAR_SPEC = objectPropertiesRequired(Map.of(
-            "b", number(),
-            "w", number()
-    ), List.of(
-            "b", "w"
-    ));
-    private static final Validator LAYER_SPEC = objectPropertiesRequired(Map.of(
-            "type", string(values("dense", "relu", "tanh", "softmax", "linear", "dropout"))
-    ), List.of(
-            "type"
-    ));
-    private static final Validator COMPOSER_SPEC = objectPropertiesRequired(Map.of(
-                    "type", string(values("sum", "concat")),
-                    "inputs", arrayItems(string())
-            ),
-            List.of("type", "inputs"));
-    public static final Validator LAYER_SEQ_SPEC = objectPropertiesRequired(Map.of(
-            "layers", arrayItems(LAYER_SPEC),
-            "inputs", COMPOSER_SPEC,
-            "input", string()
-    ), List.of(
-            "layers"
-    ));
-    public static final Validator NETWORK_SPEC = objectAdditionalProperties(LAYER_SEQ_SPEC);
+public class NetworkTranspiler {
     final HashMap<String, Long> layerSizes;
     private final JsonNode spec;
     private final Locator locator;
@@ -90,7 +47,7 @@ public class NetworkTranspiller {
     List<String> sorted;
     List<TDLayer> layers;
 
-    public NetworkTranspiller(JsonNode spec, Locator locator, Map<String, Long> stateSizes, Random random) {
+    public NetworkTranspiler(JsonNode spec, Locator locator, Map<String, Long> stateSizes, Random random) {
         this.spec = spec;
         this.locator = locator;
         this.random = random;
@@ -127,7 +84,6 @@ public class NetworkTranspiller {
      * Parses the global network specification
      */
     void parse() {
-        NETWORK_SPEC.apply(locator).accept(spec);
         parseNetwork();
     }
 
@@ -143,7 +99,6 @@ public class NetworkTranspiller {
 
         switch (type) {
             case "dense": {
-                DENSE_SPEC.apply(locator).accept(spec);
                 long outSize = locator.path("outputSize").getNode(spec).asLong();
                 float maxAbsWeights = (float) locator.path("maxAbsWeights").getNode(spec).asDouble(Float.MAX_VALUE);
                 float dropOut = (float) locator.path("dropOut").getNode(spec).asDouble(1);
@@ -157,17 +112,14 @@ public class NetworkTranspiller {
                 layerSizes.put(id, inSizes[0]);
                 return new TDTanh(id);
             case "dropout": {
-                DROP_OUT_SPEC.apply(locator).accept(spec);
                 layerSizes.put(id, inSizes[0]);
                 float dropOut = (float) locator.path("dropOut").getNode(spec).asDouble(1);
                 return new TDDropOut(id, dropOut);
             }
             case "softmax":
-                SOFTMAX_SPEC.apply(locator).accept(spec);
                 layerSizes.put(id, inSizes[0]);
                 return new TDSoftmax(id, (float) locator.path("temperature").getNode(spec).asDouble());
             case "linear":
-                LINEAR_SPEC.apply(locator).accept(spec);
                 layerSizes.put(id, inSizes[0]);
                 float b = (float) locator.path("b").getNode(spec).asDouble();
                 float w = (float) locator.path("w").getNode(spec).asDouble();
