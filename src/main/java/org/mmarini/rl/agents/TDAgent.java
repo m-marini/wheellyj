@@ -35,7 +35,6 @@ import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.rl.processors.InputProcessor;
 import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.ops.impl.transforms.custom.CumSum;
 import org.nd4j.linalg.api.rng.Random;
@@ -45,45 +44,20 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * Agent based on Temporal Difference Actor-Critic
  */
 public class TDAgent implements Agent {
-    public static final Validator SERDE_AGENT_SPEC = objectPropertiesRequired(Map.of(
-            "rewardAlpha", positiveNumber(),
-            "policyAlpha", positiveNumber(),
-            "criticAlpha", positiveNumber(),
-            "lambda", nonNegativeNumber(),
-            "state", SignalSpec.SIGNAL_MAP_SPEC,
-            "actions", SignalSpec.SIGNAL_MAP_SPEC,
-            "policy", TDNetwork.NETWORK_SPEC,
-            "critic", TDNetwork.NETWORK_SPEC,
-            "inputProcess", InputProcessor.PROCESSOR_LIST
-    ), List.of(
-            "rewardAlpha",
-            "policyAlpha",
-            "criticAlpha",
-            "lambda",
-            "state",
-            "actions",
-            "policy",
-            "critic"
-    ));
-    public static final Validator AGENT_SPEC = objectPropertiesRequired(Map.of(
-            "modelPath", string(),
-            "savingIntervalSteps", positiveInteger(),
-            "seed", positiveInteger()
-    ), List.of(
-            "modelPath"
-    ));
     private static final Logger logger = LoggerFactory.getLogger(TDAgent.class);
 
     /**
@@ -128,7 +102,6 @@ public class TDAgent implements Agent {
      * @param random              the random number generator
      */
     public static TDAgent create(JsonNode spec, Locator locator, Map<String, INDArray> props, File path, int savingIntervalSteps, Random random) {
-        SERDE_AGENT_SPEC.apply(locator).accept(spec);
         Map<String, SignalSpec> state = SignalSpec.createSignalSpecMap(spec, locator.path("state"));
         Map<String, SignalSpec> actions = SignalSpec.createSignalSpecMap(spec, locator.path("actions"));
         float avgReward = Optional.ofNullable(props.get("avgReward"))
@@ -156,7 +129,6 @@ public class TDAgent implements Agent {
      * @param env     the environment
      */
     public static TDAgent create(JsonNode root, Locator locator, WithSignalsSpec env) {
-        AGENT_SPEC.apply(locator).accept(root);
         File path = new File(locator.path("modelPath").getNode(root).asText());
         int savingIntervalStep = locator.path("savingIntervalSteps").getNode(root).asInt(Integer.MAX_VALUE);
         Random random = Nd4j.getRandom();

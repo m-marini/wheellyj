@@ -25,7 +25,6 @@
 
 package org.mmarini.wheelly.apps;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -42,9 +41,6 @@ import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotControllerApi;
 import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.wheelly.swing.Messages;
-import org.mmarini.yaml.Utils;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,19 +52,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.mmarini.yaml.schema.Validator.*;
-
 /**
  * Run a test to check for robot environment with random behavior agent
  */
 public class PrintNetChart {
     private static final Logger logger = LoggerFactory.getLogger(PrintNetChart.class);
-    private static final Validator BASE_CONFIG = objectPropertiesRequired(Map.of(
-            "version", string(values("0.4")),
-            "active", string(),
-            "configurations", object()
-    ), List.of("version", "active", "configurations"));
-
 
     @NotNull
     private static ArgumentParser createParser() {
@@ -95,26 +83,6 @@ public class PrintNetChart {
                 .setDefault("output.md")
                 .help("specify markdown output file");
         return parser;
-    }
-
-    /**
-     * Returns an object instance from configuration file
-     *
-     * @param <T>        the returned object class
-     * @param file       the filename
-     * @param args       the builder additional arguments
-     * @param argClasses the builder additional argument classes
-     */
-    public static <T> T fromConfig(String file, Object[] args, Class<?>[] argClasses) {
-        try {
-            JsonNode config = Utils.fromFile(file);
-            BASE_CONFIG.apply(Locator.root()).accept(config);
-            String active = Locator.locate("active").getNode(config).asText();
-            Locator baseLocator = Locator.locate("configurations").path(active);
-            return Utils.createObject(config, baseLocator, args, argClasses);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     /**

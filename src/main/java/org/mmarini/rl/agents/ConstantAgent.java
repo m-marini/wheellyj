@@ -47,10 +47,6 @@ import static org.mmarini.yaml.schema.Validator.objectPropertiesRequired;
  * Agent that produces a random behavior
  */
 public class ConstantAgent implements Agent {
-    public static final Validator AGENT_SPEC = objectPropertiesRequired(Map.of(
-            "actions", objectAdditionalProperties(
-                    Validator.nonNegativeInteger()
-            )), List.of("actions"));
 
     /**
      * Returns the  random agent from spec
@@ -60,7 +56,6 @@ public class ConstantAgent implements Agent {
      * @param env     the environment
      */
     public static ConstantAgent create(JsonNode root, Locator locator, Environment env) {
-        AGENT_SPEC.apply(locator).accept(root);
         Map<String, Signal> actions = locator.path("actions").propertyNames(root)
                 .map(t -> t.setV2((Signal) IntSignal.create(t._2.getNode(root).asInt())))
                 .collect(Tuple2.toMap());

@@ -53,8 +53,6 @@ public interface StateNode {
     Tuple2<String, RobotCommands> NONE_RESULT = Tuple2.of(NONE_EXIT, RobotCommands.none());
     Tuple2<String, RobotCommands> COMPLETED_RESULT = Tuple2.of(COMPLETED_EXIT, RobotCommands.idle());
 
-    Validator STATE_NODES = Validator.objectAdditionalProperties(DYNAMIC_OBJECT);
-
     /**
      * Returns the state node from yaml document
      *
@@ -73,7 +71,6 @@ public interface StateNode {
      * @param locator the state node locator
      */
     static List<StateNode> createNodes(JsonNode root, Locator locator) {
-        STATE_NODES.apply(locator).accept(root);
         return locator.propertyNames(root)
                 .map(t -> createNode(root, t._2, t._1))
                 .collect(Collectors.toList());

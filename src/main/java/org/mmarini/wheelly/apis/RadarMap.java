@@ -50,25 +50,6 @@ import static org.mmarini.yaml.schema.Validator.*;
  */
 public class RadarMap {
     public static final double MAX_SIGNAL_DISTANCE = 3;
-    private static final Validator RADAR_SPEC = objectPropertiesRequired(
-            Map.ofEntries(
-                    Map.entry("radarWidth", positiveInteger()),
-                    Map.entry("radarHeight", positiveInteger()),
-                    Map.entry("radarGrid", positiveNumber()),
-                    Map.entry("radarReceptiveDistance", positiveNumber()),
-                    Map.entry("radarReceptiveAngle", nonNegativeInteger()),
-                    Map.entry("radarCleanInterval", positiveInteger()),
-                    Map.entry("radarPersistence", positiveInteger())
-            ), List.of(
-                    "radarWidth",
-                    "radarHeight",
-                    "radarGrid",
-                    "radarReceptiveDistance",
-                    "radarReceptiveAngle",
-                    "radarCleanInterval",
-                    "radarPersistence"
-            )
-    );
 
     /**
      * Returns the empty radar from definition
@@ -77,7 +58,6 @@ public class RadarMap {
      * @param locator the locator of radar map definition
      */
     public static RadarMap create(JsonNode root, Locator locator) {
-        RADAR_SPEC.apply(locator).accept(root);
         int radarWidth = locator.path("radarWidth").getNode(root).asInt();
         int radarHeight = locator.path("radarHeight").getNode(root).asInt();
         double radarGrid = locator.path("radarGrid").getNode(root).asDouble();

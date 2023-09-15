@@ -69,6 +69,7 @@ $defs:
     anyOf:
       - $ref: "#/$defs/PolarRobotEnv"
       - $ref: "#/$defs/RadarRobotEnv"
+      - $ref: "#/$defs/RobotEnv"
   PolarRobotEnv:
     type: object
     properties:
@@ -92,6 +93,24 @@ $defs:
         exclusiveMinimum: 0
       maxRadarDistance:
         exclusiveMinimum: 0
+      radarWidth:
+        multipleOf: 1
+        minimum: 1
+      radarHeight:
+        multipleOf: 1
+        minimum: 1
+      radarGrid:
+        exclusiveMinimum: 0
+      radarReceptiveDistance:
+        exclusiveMinimum: 0
+      radarReceptiveAngle:
+        minimum: 0
+      radarCleanInterval:
+        multipleOf: 1
+        minimum: 1
+      radarPersistence:
+        multipleOf: 1
+        minimum: 1
     required:
       - class
       - objective
@@ -101,12 +120,79 @@ $defs:
       - numRadarSectors
       - minRadarDistance
       - maxRadarDistance
+      - radarWidth
+      - radarHeight
+      - radarGrid
+      - radarReceptiveDistance
+      - radarReceptiveAngle
+      - radarCleanInterval
+      - radarPersistence
   RadarRobotEnv:
     type: object
     properties:
       class:
         type: string
         const: org.mmarini.wheelly.envs.RadarRobotEnv
+      objective:
+        $ref: "#/$defs/ObjectiveSet"
+      interval:
+        multipleOf: 1
+        minimum: 1
+      reactionInterval:
+        multipleOf: 1
+        minimum: 1
+      commandInterval:
+        multipleOf: 1
+        minimum: 1
+      numDirectionValues:
+        multipleOf: 1
+        minimum: 2
+      numSensorValues:
+        multipleOf: 1
+        minimum: 2
+      numSpeedValues:
+        multipleOf: 1
+        minimum: 2
+      radarWidth:
+        multipleOf: 1
+        minimum: 1
+      radarHeight:
+        multipleOf: 1
+        minimum: 1
+      radarGrid:
+        exclusiveMinimum: 0
+      radarReceptiveDistance:
+        exclusiveMinimum: 0
+      radarReceptiveAngle:
+        minimum: 0
+      radarCleanInterval:
+        multipleOf: 1
+        minimum: 1
+      radarPersistence:
+        multipleOf: 1
+        minimum: 1
+    required:
+      - class
+      - objective
+      - interval
+      - reactionInterval
+      - commandInterval
+      - numDirectionValues
+      - numSensorValues
+      - numSpeedValues
+      - radarWidth
+      - radarHeight
+      - radarGrid
+      - radarReceptiveDistance
+      - radarReceptiveAngle
+      - radarCleanInterval
+      - radarPersistence
+  RobotEnv:
+    type: object
+    properties:
+      class:
+        type: string
+        const: org.mmarini.wheelly.envs.RobotEnv
       objective:
         $ref: "#/$defs/ObjectiveSet"
       interval:

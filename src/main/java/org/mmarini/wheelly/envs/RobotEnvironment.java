@@ -47,12 +47,12 @@ public interface RobotEnvironment extends WithStatusFlowable, WithErrorFlowable,
 
     /**
      * Returns the robot environment from configuration
-     * @param file
-     * @param controller
-     * @return
+     *
+     * @param file       the filename
+     * @param controller the controller
      */
     static RobotEnvironment fromConfig(String file, RobotControllerApi controller) {
-        return Yaml.fromConfig(file, "env-schema.yml", new Object[]{controller}, new Class[]{controller.getClass()});
+        return Yaml.fromConfig(file, "/env-schema.yml", new Object[]{controller}, new Class[]{RobotControllerApi.class});
     }
 
     /**
@@ -86,7 +86,7 @@ public interface RobotEnvironment extends WithStatusFlowable, WithErrorFlowable,
     }
 
     /**
-     * Returns the Completable of shutdown
+     * Returns the completable shutdown
      */
     Completable readShutdown();
 
