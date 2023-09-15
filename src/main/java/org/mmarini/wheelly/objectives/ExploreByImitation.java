@@ -34,7 +34,7 @@ import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.engines.ExploringState;
 import org.mmarini.wheelly.envs.PolarRobotEnv;
 import org.mmarini.wheelly.envs.RobotEnvironment;
-import org.mmarini.yaml.schema.Locator;
+import org.mmarini.yaml.Locator;
 
 import java.util.function.ToDoubleFunction;
 

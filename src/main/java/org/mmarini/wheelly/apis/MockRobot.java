@@ -26,7 +26,7 @@
 package org.mmarini.wheelly.apis;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.yaml.schema.Locator;
+import org.mmarini.yaml.Locator;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;

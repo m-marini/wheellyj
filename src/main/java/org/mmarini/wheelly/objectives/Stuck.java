@@ -29,7 +29,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WithRobotStatus;
 import org.mmarini.wheelly.envs.RobotEnvironment;
-import org.mmarini.yaml.schema.Locator;
+import org.mmarini.yaml.Locator;
 
 import java.util.function.ToDoubleFunction;
 

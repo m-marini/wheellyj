@@ -2,21 +2,149 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: Agent
 type: object
+properties:
+  version:
+    const: "0.4"
+  active:
+    type: string
+  configurations:
+    type: object
+    additionalProperties:
+      $ref: "#/$defs/AgentSet"
+required:
+  - version
+  - active
+  - configurations
 $defs:
+  InputProcessor:
+    anyOf:
+      - $ref: "#/$defs/AndProcessor"
+      - $ref: "#/$defs/NotProcessor"
+      - $ref: "#/$defs/MaskedTilesVectorProcessor"
+      - $ref: "#/$defs/TilesProcessor"
+      - $ref: "#/$defs/PartitionProcessor"
+      - $ref: "#/$defs/FeatureVectorProcessor"
+  FeatureVectorProcessor:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.rl.processors.FeatureVectorProcessor
+      name:
+        minLenght: 1
+      inputs:
+        type: array
+        items:
+          type: string
+    required:
+      - class
+      - name
+      - inputs
+  MaskedTilesVectorProcessor:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.rl.processors.MaskedTilesVectorProcessor
+      name:
+        minLenght: 1
+      input:
+        minLenght: 1
+      mask:
+        minLenght: 1
+      numTiles:
+        multipleOf: 1
+        minimum: 1
+    required:
+      - class
+      - name
+      - input
+      - mask
+      - numTiles
+  TilesProcessor:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.rl.processors.TilesProcessor
+      name:
+        minLenght: 1
+      inputs:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              minLenght: 1
+            numTiles:
+              multipleOf: 1
+              minimum: 1
+          required:
+            - name
+            - numTiles
+    required:
+      - class
+      - name
+      - inputs
+  NotProcessor:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.rl.processors.NotProcessor
+      name:
+        minLenght: 1
+      input:
+        minLenght: 1
+    required:
+      - class
+      - name
+      - input
+  AndProcessor:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.rl.processors.AndProcessor
+      name:
+        minLenght: 1
+      inputs:
+        type: array
+        items:
+          type: string
+    required:
+      - class
+      - name
+      - inputs
+  PartitionProcessor:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.rl.processors.PartitionProcessor
+      name:
+        minLenght: 1
+      inputs:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              minLenght: 1
+            numTiles:
+              multipleOf: 1
+              minimum: 1
+          required:
+            - name
+            - numTiles
+    required:
+      - class
+      - name
+      - inputs
   InputProcessors:
     type: array
     items:
-      type: object
-      properties:
-        minLength: 1
-      required:
-        - class
+      $ref: "#/$defs/InputProcessor"
     minItems: 1
   Composer:
     type: object
     properties:
       type:
-        enum: [sum, concat]
+        enum: [ sum, concat ]
       inputs:
         type: array
         items:
@@ -146,16 +274,3 @@ $defs:
       - lambda
       - policy
       - critic
-properties:
-  version:
-    const: "0.4"
-  active:
-    type: string
-  configurations:
-    type: object
-    additionalProperties:
-      $ref: "#/$defs/AgentSet"
-required:
-  - version
-  - active
-  - configurations

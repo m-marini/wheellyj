@@ -31,7 +31,7 @@ import org.eclipse.collections.api.block.function.primitive.DoubleFunction;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WithRobotStatus;
-import org.mmarini.yaml.schema.Locator;
+import org.mmarini.yaml.Locator;
 
 import static java.lang.Math.abs;
 

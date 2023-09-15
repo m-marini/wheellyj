@@ -32,29 +32,20 @@ import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.yaml.Utils;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.UnaryOperator;
 
 import static org.mmarini.rl.processors.InputProcessor.validateNames;
-import static org.mmarini.yaml.schema.Validator.objectPropertiesRequired;
-import static org.mmarini.yaml.schema.Validator.string;
 
 /**
  * The processor creates a new property by logical negation of other property
  */
 public interface NotProcessor {
-    Validator NOT_PROCESSOR_SPEC = objectPropertiesRequired(Map.of(
-            "name", string(),
-            "input", string()
-    ), List.of("name", "input"));
-
     /**
      * Returns the environment from json node spec
      *
@@ -63,7 +54,6 @@ public interface NotProcessor {
      * @param inSpec  the input specification
      */
     static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpec> inSpec) {
-        NOT_PROCESSOR_SPEC.apply(locator).accept(root);
         String outName = locator.path("name").getNode(root).asText();
         String inName = locator.path("input").getNode(root).asText();
         return create(outName, inName, inSpec);

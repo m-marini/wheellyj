@@ -203,7 +203,7 @@ public class Wheelly {
      * @param env the environment
      */
     protected Agent createAgent(WithSignalsSpec env) {
-        return Agent. fromConfig(args.getString("agent"), env);
+        return Agent.fromConfig(args.getString("agent"), env);
     }
 
     /**

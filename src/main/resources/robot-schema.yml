@@ -106,7 +106,7 @@ $defs:
         maximum: 90
       distance:
         minimum: 0
-    required: [class]
+    required: [ class ]
 type: object
 properties:
   version:

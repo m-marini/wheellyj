@@ -29,26 +29,14 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.networknt.schema.JsonSchema;
-import com.networknt.schema.JsonSchemaFactory;
-import com.networknt.schema.SpecVersion;
-import com.networknt.schema.ValidationMessage;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.apps.Yaml;
-import org.mmarini.yaml.Utils;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import org.mmarini.yaml.Locator;
 
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * State machine agent acts the robot basing on state machine flow.
@@ -81,7 +69,8 @@ public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, Wi
 
     /**
      * Returns the state machine agent
-     * @param file the file
+     *
+     * @param file       the file
      * @param controller the controller
      */
     public static StateMachineAgent fromConfig(String file, RobotControllerApi controller) {

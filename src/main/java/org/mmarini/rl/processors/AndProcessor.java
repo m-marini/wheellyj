@@ -33,8 +33,7 @@ import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.yaml.Utils;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
@@ -48,17 +47,11 @@ import java.util.stream.Collectors;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.rl.processors.InputProcessor.validateNames;
-import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * And processor creates a new property by logical and of properties
  */
 public interface AndProcessor {
-    Validator AND_PROCESSOR_SPEC = objectPropertiesRequired(Map.of(
-            "name", string(),
-            "inputs", arrayItems(string())
-    ), List.of("name", "inputs"));
-
     /**
      * Returns the input processor from document
      *
@@ -69,7 +62,6 @@ public interface AndProcessor {
     static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpec> inSpec) {
         requireNonNull(root);
         requireNonNull(locator);
-        AND_PROCESSOR_SPEC.apply(locator).accept(root);
         String outName = locator.path("name").getNode(root).asText();
 
         List<String> inNames = locator.path("inputs")

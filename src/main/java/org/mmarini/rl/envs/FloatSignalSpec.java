@@ -29,28 +29,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.mmarini.yaml.Utils;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 
 import java.util.*;
-
-import static org.mmarini.yaml.schema.Validator.number;
-import static org.mmarini.yaml.schema.Validator.objectPropertiesRequired;
 
 /**
  * The specification of float signal
  */
 public class FloatSignalSpec extends SignalSpec {
 
-    public static final Validator FLOAT_SIGNAL_SPEC = objectPropertiesRequired(Map.of(
-            "minValue", number(),
-            "maxValue", number()
-    ), List.of(
-            "minValue", "maxValue"
-    ));
-
-    public static FloatSignalSpec create(JsonNode node, Locator locator) {
-        FLOAT_SIGNAL_SPEC.apply(locator).accept(node);
+    static FloatSignalSpec create(JsonNode node, Locator locator) {
         long[] shape = SignalSpec.createShape(node, locator);
         float min = (float) locator.path("minValue").getNode(node).asDouble();
         float max = (float) locator.path("maxValue").getNode(node).asDouble();

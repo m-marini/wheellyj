@@ -29,7 +29,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.rl.processors.InputProcessor;
-import org.mmarini.yaml.schema.Locator;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.rng.Random;
 
 import java.io.File;

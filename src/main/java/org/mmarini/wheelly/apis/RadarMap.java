@@ -26,14 +26,11 @@
 package org.mmarini.wheelly.apis;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.UnaryOperator;
@@ -43,7 +40,6 @@ import java.util.stream.Stream;
 import static java.lang.Math.*;
 import static org.mmarini.wheelly.apis.Utils.direction;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
-import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * The RadarMap keeps the obstacle signal results of the space round the center

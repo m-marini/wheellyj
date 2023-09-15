@@ -32,8 +32,7 @@ import org.jetbrains.annotations.NotNull;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.*;
 import org.mmarini.yaml.Utils;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -48,22 +47,11 @@ import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
 import static org.mmarini.rl.processors.InputProcessor.validateNames;
-import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * The processor creates a tile coding signal from float signals
  */
 public interface PartitionProcessor {
-    Validator INPUT_SPEC = objectPropertiesRequired(Map.of(
-            "name", string(),
-            "numTiles", positiveInteger()
-    ), List.of(
-            "name", "numTiles"
-    ));
-    Validator TILE_SPEC = objectPropertiesRequired(Map.of(
-            "name", string(),
-            "inputs", arrayItems(INPUT_SPEC)
-    ), List.of("name", "inputs"));
 
     /**
      * Returns the number of values for each partition space dimension
@@ -89,7 +77,6 @@ public interface PartitionProcessor {
      * @param inSpec  the input specification
      */
     static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpec> inSpec) {
-        TILE_SPEC.apply(locator).accept(root);
         String outName = locator.path("name").getNode(root).asText();
         List<Tuple2<String, Long>> tilesInfo = createTilesInfo(root, locator);
         validateNames(inSpec, tilesInfo.stream().map(Tuple2::getV1).collect(Collectors.toList()));

@@ -27,37 +27,22 @@ package org.mmarini.rl.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.wheelly.apps.JsonSchemas;
+import org.mmarini.yaml.Locator;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.Utils.stream;
-import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  *
  */
 public abstract class SignalSpec {
-    public static final Validator SHAPE_SPEC = objectPropertiesRequired(Map.of(
-            "shape", arrayItems(positiveInteger())
-    ), List.of(
-            "shape"
-    ));
-    public static final Validator SIGNAL_SPEC = objectPropertiesRequired(Map.of(
-            "type", string(values("int", "float")),
-            "shape", arrayItems(positiveInteger())
-    ), List.of(
-            "type", "shape"
-    ));
-    public static final Validator SIGNAL_MAP_SPEC = objectAdditionalProperties(SignalSpec.SIGNAL_SPEC);
 
-    public static SignalSpec create(JsonNode node, Locator locator) {
-        SIGNAL_SPEC.apply(locator).accept(node);
+    private static SignalSpec create(JsonNode node, Locator locator) {
         String type = locator.path("type").getNode(node).asText();
         switch (type) {
             case "int":
@@ -70,14 +55,13 @@ public abstract class SignalSpec {
     }
 
     public static long[] createShape(JsonNode node, Locator locator) {
-        SHAPE_SPEC.apply(locator).accept(node);
         return locator.path("shape").elements(node)
                 .mapToLong(l -> l.getNode(node).asLong())
                 .toArray();
     }
 
     public static Map<String, SignalSpec> createSignalSpecMap(JsonNode node, Locator locator) {
-        SIGNAL_MAP_SPEC.apply(locator).accept(node);
+        JsonSchemas.instance().validateOrThrow(locator.getNode(node), "/signal-schema.yml");
         return stream(locator.getNode(node).fieldNames())
                 .map(name -> Tuple2.of(name, SignalSpec.create(node, locator.path(name))))
                 .collect(Tuple2.toMap());

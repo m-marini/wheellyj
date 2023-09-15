@@ -1,0 +1,106 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Network
+type: object
+properties:
+  layers:
+    type: array
+    items:
+      $ref: "#/$defs/Layer"
+  inputs:
+    type: object
+    additionalProperties:
+      type: array
+      items:
+        type: string
+required:
+  - layers
+  - inputs
+$defs:
+  Layer:
+    anyOf:
+      - $ref: "#/$defs/Dense"
+      - $ref: "#/$defs/Linear"
+      - $ref: "#/$defs/Softmax"
+      - $ref: "#/$defs/Dropout"
+      - $ref: "#/$defs/Others"
+  Dense:
+    type: object
+    properties:
+      type:
+        const: dense
+      name:
+        minLength: 1
+      inputSize:
+        multipleOf: 1
+        minimum: 1
+      outputSize:
+        multipleOf: 1
+        minimum: 1
+      maxAbsWeights:
+        exclusiveMinimun: 0
+      dropOut:
+        exclusiveMinimun: 0
+        maximum: 1
+    required:
+      - type
+      - name
+      - inputSize
+      - outputSize
+  Linear:
+    type: object
+    properties:
+      type:
+        const: linear
+      name:
+        minLength: 1
+      b:
+        type: number
+      w:
+        type: number
+    required:
+      - type
+      - name
+      - b
+      - w
+  Softmax:
+    type: object
+    properties:
+      type:
+        const: softmax
+      name:
+        minLength: 1
+      temperature:
+        exclusiveMinimum: 0
+    required:
+      - type
+      - name
+      - temperature
+  Dropout:
+    type: object
+    properties:
+      type:
+        const: dropout
+      name:
+        minLength: 1
+      dropOut:
+        exclusiveMinimum: 0
+        maximum: 1
+    required:
+      - type
+      - name
+      - dropOut
+  Others:
+    type: object
+    properties:
+      type:
+        enum:
+          - relu
+          - tanh
+          - sum
+          - concat
+      name:
+        minLength: 1
+    required:
+      - type
+      - name

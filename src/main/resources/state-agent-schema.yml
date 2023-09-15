@@ -8,7 +8,7 @@ $defs:
     items:
       $ref: "#/$defs/Command"
   Command:
-    type: [string, number]
+    type: [ string, number ]
   StateNode:
     anyOf:
       - $ref: "#/$defs/HaltState"

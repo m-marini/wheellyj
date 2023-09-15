@@ -33,7 +33,7 @@ import org.mmarini.rl.envs.ArraySignal;
 import org.mmarini.rl.envs.FloatSignalSpec;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
-import org.mmarini.yaml.schema.Locator;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.ops.transforms.Transforms;
@@ -71,7 +71,6 @@ public interface TilesProcessor {
      * @param inSpec  the input specification
      */
     static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpec> inSpec) {
-        TILE_SPEC.apply(locator).accept(root);
         String outName = locator.path("name").getNode(root).asText();
         List<Tuple2<String, Long>> tilesInfo = createTilesInfo(root, locator);
         // Validate inputs

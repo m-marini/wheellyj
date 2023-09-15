@@ -16,6 +16,9 @@
         </encoder>
     </appender>
 
+    <logger name="com.networknt.schema" level="INFO">
+    </logger>
+
     <root level="debug">
         <appender-ref ref="STDOUT"/>
     </root>

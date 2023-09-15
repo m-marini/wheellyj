@@ -30,8 +30,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.yaml.Utils;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -42,14 +41,11 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * The processor processes the signals to produce new coding signals
  */
 public class InputProcessor implements UnaryOperator<Map<String, Signal>> {
-    public static final Validator PROCESSOR_LIST = array(arrayItems(Utils.DYNAMIC_OBJECT),
-            minItems(1));
 
     public static InputProcessor concat(List<InputProcessor> list) {
         requireNonNull(list);
@@ -80,7 +76,6 @@ public class InputProcessor implements UnaryOperator<Map<String, Signal>> {
      * @param spec    the input specification
      */
     public static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpec> spec) {
-        PROCESSOR_LIST.apply(locator).accept(root);
         List<InputProcessor> processors = new ArrayList<>();
         Class<?>[] classes = new Class[]{Map.class};
         List<Locator> processorLocators = locator.elements(root).collect(Collectors.toList());

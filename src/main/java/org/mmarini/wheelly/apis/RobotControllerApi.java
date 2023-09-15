@@ -40,7 +40,8 @@ public interface RobotControllerApi extends WithIOFlowable, WithStatusFlowable, 
 
     /**
      * Returns the robot controller from configuration file
-     * @param file the file
+     *
+     * @param file  the file
      * @param robot the robot api
      */
     static RobotControllerApi fromConfig(String file, RobotApi robot) {

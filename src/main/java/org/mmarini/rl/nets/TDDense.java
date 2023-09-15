@@ -29,35 +29,23 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.mmarini.Tuple2;
 import org.mmarini.yaml.Utils;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.ops.transforms.Transforms;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * The dense layer performs a linear transformation between the input and outputs.
  */
 public class TDDense extends TDLayer {
-    public static final Validator DENSE_SPEC = objectPropertiesRequired(Map.of(
-            "name", string(),
-            "inputSize", positiveInteger(),
-            "outputSize", positiveInteger(),
-            "maxAbsWeights", positiveNumber(),
-            "dropOut", number(exclusiveMinimum(0D), maximum(1D))
-    ), List.of(
-            "name", "inputSize", "outputSize"
-    ));
 
     /**
      * Returns the layer from spec
@@ -69,7 +57,6 @@ public class TDDense extends TDLayer {
      * @param random  the random number generator
      */
     public static TDDense create(JsonNode root, Locator locator, String prefix, Map<String, INDArray> data, Random random) {
-        DENSE_SPEC.apply(locator).accept(root);
         String name = locator.path("name").getNode(root).asText();
         int inpSize = locator.path("inputSize").getNode(root).asInt();
         int outSize = locator.path("outputSize").getNode(root).asInt();

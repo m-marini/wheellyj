@@ -31,7 +31,7 @@ package org.mmarini.wheelly.engines;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.yaml.schema.Locator;
+import org.mmarini.yaml.Locator;
 
 /**
  * Generates the behavior to halt the robot

@@ -31,13 +31,11 @@ package org.mmarini.wheelly.engines;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.yaml.Locator;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static org.mmarini.yaml.Utils.DYNAMIC_OBJECT;
 import static org.mmarini.yaml.Utils.createObject;
 
 /**

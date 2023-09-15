@@ -30,8 +30,8 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.mmarini.Tuple2;
 import org.mmarini.Utils;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
+import org.mmarini.wheelly.apps.JsonSchemas;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
@@ -45,16 +45,8 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.yaml.schema.Validator.*;
 
 public class TDNetwork {
-    public static final Validator NETWORK_SPEC = objectPropertiesRequired(Map.of(
-            "layers", arrayItems(TDLayer.LAYER_SPEC),
-            "inputs", objectAdditionalProperties(arrayItems(string()))
-    ), List.of(
-            "layers", "inputs"
-    ));
-
     /**
      * Returns the network from spec and props data
      *
@@ -65,7 +57,7 @@ public class TDNetwork {
      * @param random  the random number generator
      */
     public static TDNetwork create(JsonNode spec, Locator locator, String prefix, Map<String, INDArray> props, Random random) {
-        NETWORK_SPEC.apply(locator).accept(spec);
+        JsonSchemas.instance().validateOrThrow(locator.getNode(spec), "/network-schema.yml");
         List<TDLayer> layerNodes = locator.path("layers").elements(spec)
                 .map(layerLocator -> TDLayer.create(spec, layerLocator, prefix, props, random))
                 .collect(Collectors.toList());
