@@ -26,6 +26,10 @@
 package org.mmarini.wheelly.apps;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.networknt.schema.JsonSchema;
+import com.networknt.schema.JsonSchemaFactory;
+import com.networknt.schema.SpecVersion;
+import com.networknt.schema.ValidationMessage;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.Observable;
 import net.sourceforge.argparse4j.ArgumentParsers;
@@ -61,8 +65,11 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static org.mmarini.wheelly.swing.Utils.*;
 import static org.mmarini.yaml.schema.Validator.*;
 
@@ -172,6 +179,36 @@ public class Wheelly {
     }
 
     /**
+     * Returns an object instance from configuration file
+     *
+     * @param <T>        the returned object class
+     * @param file       the filename
+     * @param schema     the validator schema
+     * @param args       the builder additional arguments
+     * @param argClasses the builder additional argument classes
+     */
+    public static <T> T fromConfig(String file, String schema, Object[] args, Class<?>[] argClasses) {
+        try {
+            JsonNode config = Utils.fromFile(file);
+            JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V4);
+            JsonNode jsonSchemeNode = Utils.fromResource(schema);
+            JsonSchema jsonSchema = factory.getSchema(jsonSchemeNode);
+            Set<ValidationMessage> errors = jsonSchema.validate(config);
+            if (!errors.isEmpty()){
+                String text=errors.stream()
+                        .map(ValidationMessage::toString)
+                        .collect(Collectors.joining(", "));
+                throw new RuntimeException(format("Errors: %s", text));
+            }
+            String active = Locator.locate("active").getNode(config).asText();
+            Locator baseLocator = Locator.locate("configurations").path(active);
+            return Utils.createObject(config, baseLocator, args, argClasses);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
      * @param args command line arguments
      */
     public static void main(String[] args) {
@@ -241,7 +278,7 @@ public class Wheelly {
      * Returns the environment
      */
     protected RobotEnvironment createEnvironment() {
-        RobotApi robot = fromConfig(args.getString("robot"), new Object[0], new Class[0]);
+        RobotApi robot = fromConfig(args.getString("robot"), "/robot-schema.yml", new Object[0], new Class[0]);
         RobotControllerApi controller = fromConfig(args.getString("controller"), new Object[]{robot}, new Class[]{RobotApi.class});
         return fromConfig(args.getString("env"), new Object[]{controller}, new Class[]{RobotControllerApi.class});
     }
@@ -363,16 +400,29 @@ public class Wheelly {
                 createKpis(agent, environment.getActions(), new File(kpis), this.args.getString("labels"));
             }
             this.start = System.currentTimeMillis();
-            environment.readRobotStatus().subscribe(this::handleStatusReady);
-            environment.readReadLine().subscribe(comMonitor::onReadLine);
-            environment.readWriteLine().subscribe(comMonitor::onWriteLine);
-            environment.readCommand().subscribe(sensorMonitor::onCommand);
-            environment.readErrors().subscribe(err -> {
+            environment.readRobotStatus()
+                    .doOnNext(this::handleStatusReady)
+                    .subscribe();
+            environment.readReadLine()
+                    .doOnNext(comMonitor::onReadLine)
+                    .subscribe();
+            environment.readWriteLine()
+                    .doOnNext(comMonitor::onWriteLine)
+                    .subscribe();
+            environment.readCommand()
+                    .doOnNext(sensorMonitor::onCommand)
+                    .subscribe();
+            environment.readErrors().doOnNext(err -> {
                 comMonitor.onError(err);
                 logger.atError().setCause(err).log();
-            });
-            environment.readControllerStatus().subscribe(this::handleControllerStatus);
-            environment.readShutdown().subscribe(this::handleShutdown);
+            })
+                    .subscribe();
+            environment.readControllerStatus()
+                    .doOnNext(this::handleControllerStatus)
+                    .subscribe();
+            environment.readShutdown()
+                    .doOnComplete(this::handleShutdown)
+                    .subscribe();
 
             environment.setOnInference(this::handleInference);
             environment.setOnAct(agent::act);

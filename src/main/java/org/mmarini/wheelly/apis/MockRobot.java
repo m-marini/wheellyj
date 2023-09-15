@@ -27,27 +27,15 @@ package org.mmarini.wheelly.apis;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;
-import java.util.Map;
 import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.yaml.schema.Validator.*;
 
 public class MockRobot implements RobotApi {
-    public static final Validator ROBOT_SPEC = objectProperties(Map.of(
-            "x", number(),
-            "y", number(),
-            "direction", integer(minimum(-180), maximum(180)),
-            "sensor", integer(minimum(-90), maximum(90)),
-            "distance", nonNegativeNumber()
-    ));
-
     public static MockRobot create(JsonNode root, Locator locator) {
-        ROBOT_SPEC.apply(locator).accept(root);
         float x = (float) locator.path("x").getNode(root).asDouble(0);
         float y = (float) locator.path("y").getNode(root).asDouble(0);
         Point2D robotPos1 = new Point2D.Float(x, y);

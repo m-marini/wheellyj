@@ -25,6 +25,10 @@
 
 package org.mmarini.wheelly.apis;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.yaml.Utils;
+import org.mmarini.yaml.schema.Locator;
+
 import java.io.Closeable;
 import java.io.IOException;
 

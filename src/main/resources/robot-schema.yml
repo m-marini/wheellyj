@@ -1,0 +1,142 @@
+---
+$schema: http://json-schema.org/draft-04/schema#
+title: Robot
+$defs:
+  GeneralRobot:
+    anyOf:
+      - $ref: "#/$defs/SimRobot"
+      - $ref: "#/$defs/Robot"
+      - $ref: "#/$defs/MockRobot"
+  SimRobot:
+    type: object
+    properties:
+      class:
+        enum: ["org.mmarini.wheelly.apis.SimRobot"]
+      mapSeed:
+        type: number
+        multipleOf: 1
+        minimum: 1
+      robotSeed:
+        type: number
+        multipleOf: 1
+        minimum: 1
+      errSigma:
+        type: number
+        minimum: 0
+      errSensor:
+        type: number
+        minimum: 0
+      sensorReceptiveAngle:
+        type: number
+        multipleOf: 1
+        minimum: 1
+      numObstacles:
+        type: number
+        multipleOf: 1
+        minimum: 0
+      maxAngularSpeed:
+        type: number
+        multipleOf: 1
+        minimum: 1
+      maxSimulationSpeed:
+        type: number
+        minimum: 1
+    required:
+      - class
+      - errSigma
+      - errSensor
+      - sensorReceptiveAngle
+      - numObstacles
+      - maxSimulationSpeed
+      - maxAngularSpeed
+  Robot:
+    type: object
+    properties:
+      class:
+        enum: ["org.mmarini.wheelly.apis.Robot"]
+      host:
+        type: string
+      port:
+        type: number
+        multipleOf: 1
+        minimum: 1
+        maximum: 32768
+      connectionTimeout:
+        type: number
+        multipleOf: 1
+        minimum: 1
+      readTimeout:
+        type: number
+        multipleOf: 1
+        minimum: 1
+      configureTimeout:
+        type: number
+        multipleOf: 1
+        minimum: 1
+      frontThresholds:
+        type: array
+        items:
+          type: number
+          multipleOf: 1
+          minimum: 0
+          maximum: 1023
+      rearThresholds:
+        type: array
+        items:
+          type: number
+          multipleOf: 1
+          minimum: 0
+          maximum: 1023
+      configCommands:
+        type: array
+        items:
+          type: string
+          minLength: 3
+    required:
+      - class
+      - host
+      - connectionTimeout
+      - readTimeout
+      - configureTimeout
+      - frontThresholds
+      - rearThresholds
+  MockRobot:
+    type: object
+    properties:
+      class:
+        enum: ["org.mmarini.wheelly.apis.MockRobot"]
+      x:
+        type: number
+      y:
+        type: number
+      direction:
+        type: number
+        multipleOf: 1
+        minimum: -180
+        maximum: 180
+      sensor:
+        type: number
+        multipleOf: 1
+        minimum: -90
+        maximum: 90
+      distance:
+        type: number
+        minimum: 0
+    required: [class]
+type: object
+properties:
+  version:
+    description: The version
+    type: string
+  active:
+    description: The active configuration
+    type: string
+  configurations:
+    description: The configurations
+    type: object
+    additionalProperties:
+      $ref: "#/$defs/GeneralRobot"
+required:
+  - version
+  - active
+  - configurations

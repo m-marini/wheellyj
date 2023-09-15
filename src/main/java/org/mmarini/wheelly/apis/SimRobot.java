@@ -35,19 +35,19 @@ import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.*;
 import org.jbox2d.dynamics.contacts.Contact;
 import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Optional;
+import java.util.Random;
 import java.util.function.Consumer;
 
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_PER_PULSE;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
-import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * Simulated robot
@@ -100,30 +100,10 @@ public class SimRobot implements RobotApi, WithRobotStatus {
             {-ROBOT_LENGTH / 2 - SENSOR_GAP, -ROBOT_WIDTH / 2 - SENSOR_GAP},
             {-ROBOT_LENGTH / 2 - SENSOR_GAP, -SENSOR_GAP}
     };
-    private static final Validator ROBOT_SPEC = objectPropertiesRequired(
-            Map.ofEntries(
-                    Map.entry("robotSeed", positiveInteger()),
-                    Map.entry("mapSeed", positiveInteger()),
-                    Map.entry("errSigma", nonNegativeNumber()),
-                    Map.entry("errSensor", nonNegativeNumber()),
-                    Map.entry("sensorReceptiveAngle", positiveInteger()),
-                    Map.entry("numObstacles", nonNegativeInteger()),
-                    Map.entry("maxAngularSpeed", positiveInteger()),
-                    Map.entry("maxSimulationSpeed", number(minimum(1D)))
-            ), List.of(
-                    "errSigma",
-                    "errSensor",
-                    "sensorReceptiveAngle",
-                    "numObstacles",
-                    "maxSimulationSpeed",
-                    "maxAngularSpeed"
-            )
-    );
     private static final long THRESHOLD_TIME = 5;
     private static final Logger logger = LoggerFactory.getLogger(SimRobot.class);
 
     public static SimRobot create(JsonNode root, Locator locator) {
-        ROBOT_SPEC.apply(locator).accept(root);
         long mapSeed = locator.path("mapSeed").getNode(root).asLong(0);
         long robotSeed = locator.path("robotSeed").getNode(root).asLong(0);
         int numObstacles = locator.path("numObstacles").getNode(root).asInt();
@@ -210,7 +190,7 @@ public class SimRobot implements RobotApi, WithRobotStatus {
      * @param errSigma             sigma of errors in physic simulation (U)
      * @param errSensor            sensor error (m)
      * @param sensorReceptiveAngle sensor receptive angle (DEG)
-     * @param maxAngularSpeed
+     * @param maxAngularSpeed      the maximum angular speed
      * @param maxSimSpeed          the maximum simulation speed
      */
     public SimRobot(ObstacleMap obstacleMap, Random random, double errSigma, double errSensor, double sensorReceptiveAngle, int maxAngularSpeed, double maxSimSpeed) {
@@ -502,9 +482,9 @@ public class SimRobot implements RobotApi, WithRobotStatus {
         if (onStatusReady != null) {
             onStatusReady.accept(status);
         }
-        long elaps = System.currentTimeMillis() - start;
+        long elapse = System.currentTimeMillis() - start;
         long expected = round(dt / maxSimSpeed);
-        long remainder = expected - elaps;
+        long remainder = expected - elapse;
         if (remainder > THRESHOLD_TIME) {
             try {
                 Thread.sleep(remainder);
