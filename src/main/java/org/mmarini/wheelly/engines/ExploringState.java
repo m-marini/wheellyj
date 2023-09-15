@@ -74,10 +74,6 @@ import static org.mmarini.yaml.schema.Validator.*;
  * </p>
  */
 public class ExploringState extends AbstractStateNode {
-    public static final Validator STATE_SPEC = Validator.objectPropertiesRequired(Map.of(
-            "stopDistance", positiveNumber(),
-            "turnDirectionRange", integer(minimum(0), maximum(90))
-    ), List.of("stopDistance", "turnDirectionRange"));
     private static final Logger logger = LoggerFactory.getLogger(ExploringState.class);
 
     /**
@@ -88,8 +84,6 @@ public class ExploringState extends AbstractStateNode {
      * @param id      the state identifier
      */
     public static ExploringState create(JsonNode root, Locator locator, String id) {
-        BASE_STATE_SPEC.apply(locator).accept(root);
-        STATE_SPEC.apply(locator).accept(root);
         double stopDistance = locator.path("stopDistance").getNode(root).asDouble();
         int turnDirectionRange = locator.path("turnDirectionRange").getNode(root).asInt();
         ProcessorCommand onInit = ProcessorCommand.concat(

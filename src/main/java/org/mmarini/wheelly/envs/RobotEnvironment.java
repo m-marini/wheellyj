@@ -34,6 +34,7 @@ import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apps.Yaml;
 
 import java.util.Map;
 import java.util.function.Consumer;
@@ -43,6 +44,16 @@ import java.util.function.UnaryOperator;
  * Manages the interaction between robot controller and TD agent
  */
 public interface RobotEnvironment extends WithStatusFlowable, WithErrorFlowable, WithIOFlowable, WithSignalsSpec, WithCommandFlowable, WithControllerFlowable {
+
+    /**
+     * Returns the robot environment from configuration
+     * @param file
+     * @param controller
+     * @return
+     */
+    static RobotEnvironment fromConfig(String file, RobotControllerApi controller) {
+        return Yaml.fromConfig(file, "env-schema.yml", new Object[]{controller}, new Class[]{controller.getClass()});
+    }
 
     /**
      * Returns the robot controller

@@ -43,8 +43,6 @@ import static java.util.Objects.requireNonNull;
  * Performs processor context processing
  */
 public class ProcessorCommand {
-    public static final Validator COMMANDS_SPEC = Validator.array();
-
     private static final List<ProcessorCommand> COMMANDS = List.of(
             new ProcessorCommand("put", ProcessorCommand::putCommand),
             new ProcessorCommand("get", ProcessorCommand::getCommand),
@@ -97,7 +95,6 @@ public class ProcessorCommand {
         if ((locator).getNode(root).isMissingNode()) {
             return null;
         }
-        COMMANDS_SPEC.apply(locator).accept(root);
         String[] lines = locator.elements(root)
                 .map(l -> l.getNode(root).asText())
                 .toArray(String[]::new);

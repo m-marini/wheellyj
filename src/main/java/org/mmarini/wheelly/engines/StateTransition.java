@@ -30,29 +30,17 @@ package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
 
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * Defines the transition between states, with the trigger condition and processing stage
  */
 public class StateTransition {
-    public static final Validator TRANSITION_SPEC = objectPropertiesRequired(Map.of(
-            "trigger", string(minLength(1)),
-            "from", string(minLength(1)),
-            "to", string(minLength(1)),
-            "onTransition", ProcessorCommand.COMMANDS_SPEC
-    ), List.of(
-            "trigger", "from", "to"
-    ));
-    public static final Validator TRANSITION_LIST_SPEC = arrayItems(TRANSITION_SPEC);
 
     /**
      * Returns the state transition list from yaml
@@ -61,7 +49,6 @@ public class StateTransition {
      * @param locator the state transition locator
      */
     public static StateTransition create(JsonNode root, Locator locator) {
-        TRANSITION_SPEC.apply(locator).accept(root);
         Pattern trigger1 = Pattern.compile(locator.path("trigger").getNode(root).asText());
         String from1 = locator.path("from").getNode(root).asText();
         String to1 = locator.path("to").getNode(root).asText();
@@ -79,7 +66,6 @@ public class StateTransition {
      * @param locator the state transition locator
      */
     public static List<StateTransition> createList(JsonNode root, Locator locator) {
-        TRANSITION_LIST_SPEC.apply(locator).accept(root);
         return locator.elements(root)
                 .map(l -> create(root, l))
                 .collect(Collectors.toList());

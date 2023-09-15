@@ -54,17 +54,6 @@ import static org.mmarini.yaml.schema.Validator.*;
  * Implements commons functions to manage timeout, robot block, automatic scanning
  */
 public abstract class AbstractStateNode implements StateNode {
-    public static final Validator BASE_STATE_SPEC = objectProperties(Map.of(
-            "onInit", ProcessorCommand.COMMANDS_SPEC,
-            "onEntry", ProcessorCommand.COMMANDS_SPEC,
-            "onExit", ProcessorCommand.COMMANDS_SPEC,
-            "timeout", positiveInteger()));
-    public static final Validator AUTO_SCAN_SPEC = Validator.objectProperties(Map.of(
-            "scanInterval", integer(),
-            "minSensorDir", integer(minimum(-90), maximum(90)),
-            "maxSensorDir", integer(minimum(-90), maximum(90)),
-            "sensorDirNumber", positiveInteger()
-    ));
     private static final Logger logger = LoggerFactory.getLogger(AbstractStateNode.class);
 
     /**
@@ -75,7 +64,6 @@ public abstract class AbstractStateNode implements StateNode {
      * @param id      the node id
      */
     protected static ProcessorCommand loadAutoScanOnInit(JsonNode root, Locator locator, String id) {
-        AUTO_SCAN_SPEC.apply(locator).accept(root);
         return ProcessorCommand.setProperties(Map.of(
                 id + ".scanInterval", locator.path("scanInterval").getNode(root).asLong(),
                 id + ".minSensorDir", locator.path("minSensorDir").getNode(root).asInt(),
@@ -91,7 +79,6 @@ public abstract class AbstractStateNode implements StateNode {
      * @param id      the identifier of node
      */
     protected static ProcessorCommand loadTimeout(JsonNode root, Locator locator, String id) {
-        AUTO_SCAN_SPEC.apply(locator).accept(root);
         JsonNode node = locator.path("timeout").getNode(root);
         return !node.isMissingNode()
                 ? ProcessorCommand.setProperties(Map.of(id + ".timeout", node.asLong()))

@@ -140,16 +140,16 @@ public class PrintNetChart {
      * @param env the environment
      */
     protected Agent createAgent(WithSignalsSpec env) {
-        return fromConfig(args.getString("agent"), new Object[]{env}, new Class[]{WithSignalsSpec.class});
+        return Agent.fromConfig(args.getString("agent"), env);
     }
 
     /**
      * Returns the environment
      */
     protected RobotEnvironment createEnvironment() {
-        RobotApi robot = fromConfig(args.getString("robot"), new Object[0], new Class[0]);
-        RobotControllerApi controller = fromConfig(args.getString("controller"), new Object[]{robot}, new Class[]{RobotApi.class});
-        return fromConfig(args.getString("env"), new Object[]{controller}, new Class[]{RobotControllerApi.class});
+        RobotApi robot = RobotApi.fromConfig(args.getString("robot"));
+        RobotControllerApi controller = RobotControllerApi.fromConfig(args.getString("controller"), robot);
+        return RobotEnvironment.fromConfig(args.getString("env"), controller);
     }
 
     private void printAgent() {

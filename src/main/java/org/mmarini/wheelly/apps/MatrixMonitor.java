@@ -51,7 +51,6 @@ import java.awt.event.WindowEvent;
 import java.text.DecimalFormat;
 
 import static java.lang.Math.max;
-import static org.mmarini.wheelly.apps.Wheelly.fromConfig;
 import static org.mmarini.wheelly.swing.Utils.createFrame;
 import static org.mmarini.wheelly.swing.Utils.layHorizontally;
 
@@ -240,8 +239,8 @@ public class MatrixMonitor {
      * Returns the robot controller
      */
     protected RobotControllerApi createController() {
-        RobotApi robot = fromConfig(parseArgs.getString("robot"), new Object[0], new Class[0]);
-        return fromConfig(parseArgs.getString("controller"), new Object[]{robot}, new Class[]{RobotApi.class});
+        RobotApi robot = RobotApi.fromConfig(parseArgs.getString("robot"));
+        return RobotControllerApi.fromConfig(parseArgs.getString("controller"), robot);
     }
 
     private void handleClose(WindowEvent windowEvent) {
@@ -345,18 +344,18 @@ public class MatrixMonitor {
     private void run() {
         logger.info("Robot check started.");
         controller = createController();
-        controller.readRobotStatus().subscribe(this::handleStatus);
-        controller.readErrors().subscribe(er -> {
+        controller.readRobotStatus().doOnNext(this::handleStatus).subscribe();
+        controller.readErrors().doOnNext(er -> {
             comMonitor.onError(er);
             logger.atError().setCause(er).log();
-        });
-        controller.readReadLine().subscribe(line -> {
+        }).subscribe();
+        controller.readReadLine().doOnNext(line -> {
             comMonitor.onReadLine(line);
             logger.atDebug().setMessage("--> {}").addArgument(line).log();
-        });
-        controller.readWriteLine().subscribe(this::handleWriteLine);
-        controller.readShutdown().subscribe(this::handleShutdown);
-        controller.readControllerStatus().subscribe(this::handleControlStatus);
+        }).subscribe();
+        controller.readWriteLine().doOnNext(this::handleWriteLine).subscribe();
+        controller.readShutdown().doOnComplete(this::handleShutdown).subscribe();
+        controller.readControllerStatus().doOnNext(this::handleControlStatus).subscribe();
         controller.setOnInference(this::handleCommands);
 
         this.commandFrame = createFrame(Messages.getString("MatrixMonitor.title"), COMMAND_FRAME_SIZE, commandPanel);

@@ -1,0 +1,155 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+title: State machine agent
+type: object
+$defs:
+  Commands:
+    type: array
+    items:
+      $ref: "#/$defs/Command"
+  Command:
+    type: [string, number]
+  StateNode:
+    anyOf:
+      - $ref: "#/$defs/HaltState"
+      - $ref: "#/$defs/ExploringState"
+      - $ref: "#/$defs/AvoidingState"
+  HaltState:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.wheelly.engines.HaltState
+      onInit:
+        $ref: "#/$defs/Commands"
+      onEntry:
+        $ref: "#/$defs/Commands"
+      onExit:
+        $ref: "#/$defs/Commands"
+      timeout:
+        multipleOf: 1
+        minimum: 1
+      scanInterval:
+        multipleOf: 1
+      minSensorDir:
+        multipleOf: 1
+        minimum: -90
+        maximum: 90
+      maxSensorDir:
+        multipleOf: 1
+        minimum: -90
+        maximum: 90
+      sensorDirNumber:
+        multipleOf: 1
+        minimum: 1
+    required:
+      - class
+  AvoidingState:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.wheelly.engines.AvoidingState
+      onInit:
+        $ref: "#/$defs/Commands"
+      onEntry:
+        $ref: "#/$defs/Commands"
+      onExit:
+        $ref: "#/$defs/Commands"
+      timeout:
+        multipleOf: 1
+        minimum: 1
+      safeDistance:
+        exclusiveMinimum: 0
+    required:
+      - class
+      - safeDistance
+  ExploringState:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.wheelly.engines.ExploringState
+      onInit:
+        $ref: "#/$defs/Commands"
+      onEntry:
+        $ref: "#/$defs/Commands"
+      onExit:
+        $ref: "#/$defs/Commands"
+      timeout:
+        multipleOf: 1
+        minimum: 1
+    required:
+      - class
+      - stopDistance
+      - turnDirectionRange
+  StateNodes:
+    type: object
+    additionalProperties:
+      $ref: "#/$defs/StateNode"
+  Transitions:
+    type: array
+    items:
+      $ref: "#/$defs/Transition"
+  Transition:
+    type: object
+    properties:
+      trigger:
+        minLength: 1
+      from:
+        minLength: 1
+      to:
+        minLength: 1
+      onTransition:
+        $ref: "#/$defs/Commands"
+    required:
+      - trigger
+      - from
+      - to
+  StateFlow:
+    type: object
+    properties:
+      onInit:
+        $ref: "#/$defs/Commands"
+      states:
+        $ref: "#/$defs/StateNodes"
+      transitions:
+        $ref: "#/$defs/Transitions"
+      entry:
+        minLength: 1
+    required:
+      - states
+      - transitions
+      - entry
+  StateMachineAgent:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.wheelly.engines.StateMachineAgent
+      flow:
+        $ref: "#/$defs/StateFlow"
+      numRadarSectors:
+        multipleOf: 1
+        minimum: 2
+      minRadarDistance:
+        exclusiveMinimum: 0
+      maxRadarDistance:
+        exclusiveMinimum: 0
+    required:
+      - class
+      - flow
+      - numRadarSectors
+      - minRadarDistance
+      - maxRadarDistance
+properties:
+  version:
+    type: string
+    const: "0.4"
+  active:
+    type: string
+  configurations:
+    type: object
+    additionalProperties:
+      $ref: "#/$defs/StateMachineAgent"
+required:
+  - version
+  - active
+  - configurations
+

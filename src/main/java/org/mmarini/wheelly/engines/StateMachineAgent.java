@@ -29,15 +29,23 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.networknt.schema.JsonSchema;
+import com.networknt.schema.JsonSchemaFactory;
+import com.networknt.schema.SpecVersion;
+import com.networknt.schema.ValidationMessage;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apps.Yaml;
+import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.schema.Locator;
 import org.mmarini.yaml.schema.Validator;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.yaml.schema.Validator.*;
@@ -54,16 +62,6 @@ import static org.mmarini.yaml.schema.Validator.*;
  * </p>
  */
 public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, WithErrorFlowable, WithCommandFlowable, WithControllerFlowable {
-    public static final Validator AGENT_SPEC = objectPropertiesRequired(Map.of(
-            "flow", StateFlow.STATE_FLOW_SPEC,
-            "numRadarSectors", integer(minimum(2)),
-            "minRadarDistance", positiveNumber(),
-            "maxRadarDistance", positiveNumber()
-    ), List.of(
-            "flow",
-            "numRadarSectors", "minRadarDistance", "maxRadarDistance"
-    ));
-
     /**
      * Returns the agent from configuration
      *
@@ -72,7 +70,6 @@ public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, Wi
      * @param robot   the robot api
      */
     public static StateMachineAgent create(JsonNode root, Locator locator, RobotControllerApi robot) {
-        AGENT_SPEC.apply(locator).accept(root);
         StateFlow flow = StateFlow.create(root, locator.path("flow"));
         double minRadarDistance = locator.path("minRadarDistance").getNode(root).asDouble();
         double maxRadarDistance = locator.path("maxRadarDistance").getNode(root).asDouble();
@@ -80,6 +77,15 @@ public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, Wi
         RadarMap radarMap = RadarMap.create(root, locator);
         PolarMap polarMap = PolarMap.create(numRadarSectors);
         return new StateMachineAgent(minRadarDistance, maxRadarDistance, radarMap, polarMap, robot, new ProcessorContext(robot, flow));
+    }
+
+    /**
+     * Returns the state machine agent
+     * @param file the file
+     * @param controller the controller
+     */
+    public static StateMachineAgent fromConfig(String file, RobotControllerApi controller) {
+        return Yaml.fromConfig(file, "/state-machine-schema.yml", new Object[]{controller}, new Class[]{controller.getClass()});
     }
 
     private final RobotControllerApi controller;

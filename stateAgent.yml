@@ -56,6 +56,7 @@ configurations:
     radarHeight: 25
     radarGrid: 0.6
     numRadarSectors: 24
+    minRadarDistance: 0.3
     maxRadarDistance: 3
     flow:
       entry: idle
@@ -68,6 +69,7 @@ configurations:
           sensorDirNumber: 9
         avoid:
           class: org.mmarini.wheelly.engines.AvoidingState
+          safeDistance: 0.1
       transitions:
         - from: idle
           to: avoid

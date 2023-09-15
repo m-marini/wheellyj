@@ -25,7 +25,6 @@
 
 package org.mmarini.wheelly.apps;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.Observable;
 import net.sourceforge.argparse4j.ArgumentParsers;
@@ -38,22 +37,15 @@ import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.engines.ProcessorContext;
 import org.mmarini.wheelly.engines.StateMachineAgent;
 import org.mmarini.wheelly.swing.*;
-import org.mmarini.yaml.Utils;
-import org.mmarini.yaml.schema.Locator;
-import org.mmarini.yaml.schema.Validator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowEvent;
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.mmarini.wheelly.swing.Utils.*;
-import static org.mmarini.yaml.schema.Validator.*;
 
 /**
  * Run a test to check for robot environment with random behavior agent
@@ -61,11 +53,6 @@ import static org.mmarini.yaml.schema.Validator.*;
 public class RobotExecutor {
     public static final Dimension DEFALT_RADAR_DIMENSION = new Dimension(400, 400);
     private static final Logger logger = LoggerFactory.getLogger(RobotExecutor.class);
-    private static final Validator BASE_CONFIG = objectPropertiesRequired(Map.of(
-            "version", string(values("0.4")),
-            "active", string(),
-            "configurations", object()
-    ), List.of("version", "active", "configurations"));
 
     /**
      * Returns the argument parser
@@ -96,26 +83,6 @@ public class RobotExecutor {
                 .type(Long.class)
                 .help("specify number of seconds of session duration");
         return parser;
-    }
-
-    /**
-     * Returns an object instance from configuration file
-     *
-     * @param <T>        the returned object class
-     * @param file       the filename
-     * @param args       the builder additional arguments
-     * @param argClasses the builder additional argument classes
-     */
-    protected static <T> T fromConfig(String file, Object[] args, Class<?>[] argClasses) {
-        try {
-            JsonNode config = Utils.fromFile(file);
-            BASE_CONFIG.apply(Locator.root()).accept(config);
-            String active = Locator.locate("active").getNode(config).asText();
-            Locator baseLocator = Locator.locate("configurations").path(active);
-            return Utils.createObject(config, baseLocator, args, argClasses);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     /**
@@ -182,9 +149,9 @@ public class RobotExecutor {
      * Returns the agent from configuration files
      */
     private StateMachineAgent createAgent() {
-        RobotApi robot = fromConfig(args.getString("robot"), new Object[0], new Class[0]);
-        RobotControllerApi controller = fromConfig(args.getString("controller"), new Object[]{robot}, new Class[]{RobotApi.class});
-        return fromConfig(args.getString("agent"), new Object[]{controller}, new Class[]{RobotControllerApi.class});
+        RobotApi robot = RobotApi.fromConfig(args.getString("robot"));
+        RobotControllerApi controller = RobotControllerApi.fromConfig(args.getString("controller"), robot);
+        return StateMachineAgent.fromConfig(args.getString("agent"), controller);
     }
 
     private void handleControllerStatus(String status) {
@@ -281,16 +248,16 @@ public class RobotExecutor {
             polarPanel.setRadarMaxDistance(radarMaxDistance);
             logger.atInfo().setMessage("Session are running for {} sec...").addArgument(sessionDuration).log();
             this.start = System.currentTimeMillis();
-            agent.readStepUp().subscribe(this::handleStepUp);
-            agent.readShutdown().subscribe(this::handleShutdown);
-            agent.readErrors().subscribe(err -> {
+            agent.readStepUp().doOnNext(this::handleStepUp).subscribe();
+            agent.readShutdown().doOnComplete(this::handleShutdown).subscribe();
+            agent.readErrors().doOnNext(err -> {
                 comMonitor.onError(err);
                 logger.atError().setCause(err).log();
-            });
-            agent.readReadLine().subscribe(comMonitor::onReadLine);
-            agent.readWriteLine().subscribe(comMonitor::onWriteLine);
-            agent.readControllerStatus().subscribe(this::handleControllerStatus);
-            agent.readCommand().subscribe(sensorMonitor::onCommand);
+            }).subscribe();
+            agent.readReadLine().doOnNext(comMonitor::onReadLine).subscribe();
+            agent.readWriteLine().doOnNext(comMonitor::onWriteLine).subscribe();
+            agent.readControllerStatus().doOnNext(this::handleControllerStatus).subscribe();
+            agent.readCommand().doOnNext(sensorMonitor::onCommand).subscribe();
             frame.setVisible(true);
             radarFrame.setVisible(true);
             sensorFrame.setVisible(true);

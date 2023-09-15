@@ -59,17 +59,10 @@ public class AvoidingState extends AbstractStateNode {
     public static final String FREE_POINT = "freePoint";
     public static final String SAFE_DISTANCE = "safeDistance";
     public static final String ESCAPE_DIRECTION = "escapeDirection";
-    public static final Validator STATE_SPEC = Validator.objectPropertiesRequired(Map.of(
-                    "safeDistance", positiveNumber()
-            ), List.of(
-                    "safeDistance")
-    );
 
     private static final Logger logger = LoggerFactory.getLogger(AvoidingState.class);
 
     public static AvoidingState create(JsonNode root, Locator locator, String id) {
-        BASE_STATE_SPEC.apply(locator).accept(root);
-        STATE_SPEC.apply(locator).accept(root);
         ProcessorCommand onInit = ProcessorCommand.concat(
                 loadTimeout(root, locator, id),
                 ProcessorCommand.put(id + "." + SAFE_DISTANCE, locator.path(SAFE_DISTANCE).getNode(root).doubleValue()),
