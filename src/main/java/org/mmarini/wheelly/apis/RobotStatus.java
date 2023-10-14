@@ -31,6 +31,7 @@ package org.mmarini.wheelly.apis;
 import java.awt.geom.Point2D;
 import java.util.Optional;
 import java.util.StringJoiner;
+import java.util.function.IntToDoubleFunction;
 
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
@@ -47,7 +48,6 @@ public class RobotStatus {
     public static final int REAR_LEFT = 2;
     public static final int REAR_RIGHT = 1;
     public static final int NO_CONTACT = 0;
-    private static final RobotStatus DEFAULT_ROBOT_STATUS = new RobotStatus(WheellyStatus.create(), 0, 0);
     private static final int MIN_SUPPLY_SIGNAL = 0;
     private static final int MAX_SUPPLY_SIGNAL = 2438;
     private static final double MIN_SUPPLY_VOLTAGE = 0;
@@ -55,9 +55,11 @@ public class RobotStatus {
 
     /**
      * Returns the default robot status
+     *
+     * @param decodeVoltage the decode voltage function
      */
-    public static RobotStatus create() {
-        return DEFAULT_ROBOT_STATUS;
+    public static RobotStatus create(IntToDoubleFunction decodeVoltage) {
+        return new RobotStatus(WheellyStatus.create(), 0, 0, decodeVoltage);
     }
 
     /**
@@ -82,6 +84,7 @@ public class RobotStatus {
     private final WheellyStatus wheellyStatus;
     private final long resetTime;
     private final int contacts;
+    private final IntToDoubleFunction decodeVoltage;
 
     /**
      * Creates the robot status
@@ -89,11 +92,13 @@ public class RobotStatus {
      * @param wheellyStatus the wheelly status
      * @param resetTime     the reset time (ms)
      * @param contacts      the contacts
+     * @param decodeVoltage the voltage decode function
      */
-    public RobotStatus(WheellyStatus wheellyStatus, long resetTime, int contacts) {
+    public RobotStatus(WheellyStatus wheellyStatus, long resetTime, int contacts, IntToDoubleFunction decodeVoltage) {
         this.wheellyStatus = requireNonNull(wheellyStatus);
         this.resetTime = resetTime;
         this.contacts = contacts;
+        this.decodeVoltage = decodeVoltage;
     }
 
     public boolean canMoveBackward() {
@@ -109,7 +114,7 @@ public class RobotStatus {
     }
 
     public RobotStatus setContacts(int contacts) {
-        return new RobotStatus(wheellyStatus, resetTime, contacts);
+        return new RobotStatus(wheellyStatus, resetTime, contacts, decodeVoltage);
     }
 
     public int getDirection() {
@@ -197,8 +202,11 @@ public class RobotStatus {
         }
     }
 
+    /**
+     * Returns the supply voltage
+     */
     public double getSupplyVoltage() {
-        return decodeSupplyVoltage(wheellyStatus.getSupplySensor());
+        return decodeVoltage.applyAsDouble(wheellyStatus.getSupplySensor());
     }
 
     public long getTime() {
@@ -214,7 +222,7 @@ public class RobotStatus {
     }
 
     public RobotStatus setWheellyStatus(WheellyStatus wheellyStatus) {
-        return new RobotStatus(wheellyStatus, resetTime, contacts);
+        return new RobotStatus(wheellyStatus, resetTime, contacts, decodeVoltage);
     }
 
     public boolean isHalt() {
@@ -234,7 +242,7 @@ public class RobotStatus {
     }
 
     public RobotStatus setResetTime(long resetTime) {
-        return new RobotStatus(wheellyStatus, resetTime, contacts);
+        return new RobotStatus(wheellyStatus, resetTime, contacts, decodeVoltage);
     }
 
     @Override

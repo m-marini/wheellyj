@@ -36,9 +36,12 @@ import java.io.InterruptedIOException;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.IntToDoubleFunction;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.Utils.linear;
+import static org.mmarini.wheelly.apps.Yaml.loadDoubleArray;
 import static org.mmarini.wheelly.apps.Yaml.loadIntArray;
 
 /**
@@ -62,6 +65,8 @@ public class Robot implements RobotApi, WithIOCallback {
         long configureTimeout = locator.path("configureTimeout").getNode(root).asLong();
         int[] frontThresholds = loadIntArray(root, locator.path("frontThresholds"));
         int[] rearThresholds = loadIntArray(root, locator.path("frontThresholds"));
+        int[] supplyValues = loadIntArray(root, locator.path("supplyValues"));
+        double[] voltages = loadDoubleArray(root, locator.path("voltages"));
 
         Locator configCommandsLoc = locator.path("configCommands");
         String[] configCommands = !configCommandsLoc.getNode(root).isMissingNode()
@@ -70,7 +75,7 @@ public class Robot implements RobotApi, WithIOCallback {
         return Robot.create(host, port,
                 connectionTimeout, readTimeout, configureTimeout,
                 frontThresholds, rearThresholds,
-                configCommands);
+                supplyValues, voltages, configCommands);
     }
 
     /**
@@ -83,16 +88,27 @@ public class Robot implements RobotApi, WithIOCallback {
      * @param configureTimeout  the configuration timeout (ms)
      * @param frontThresholds   the front thresholds
      * @param rearThresholds    the rear thresholds
+     * @param supplyValues      the supply values
+     * @param voltages          the voltage values
      * @param configCommands    the configuration commands
      */
     public static Robot create(String robotHost, int port,
                                long connectionTimeout, long readTimeout, long configureTimeout,
                                int[] frontThresholds, int[] rearThresholds,
-                               String... configCommands) {
+                               int[] supplyValues, double[] voltages, String... configCommands) {
+        requireNonNull(supplyValues);
+        requireNonNull(voltages);
+        if (!(supplyValues.length == 2)) {
+            throw new IllegalArgumentException(format("supplyValues must have 2 items (%d)", supplyValues.length));
+        }
+        if (!(voltages.length == 2)) {
+            throw new IllegalArgumentException(format("voltages must have 2 items (%d)", voltages.length));
+        }
+        IntToDoubleFunction decodeVoltage = x -> linear(x, supplyValues[0], supplyValues[1], voltages[0], voltages[1]);
         return new Robot(robotHost, port,
                 connectionTimeout, readTimeout, configureTimeout,
                 frontThresholds, rearThresholds,
-                configCommands);
+                configCommands, RobotStatus.create(decodeVoltage));
     }
 
     /**
@@ -139,11 +155,12 @@ public class Robot implements RobotApi, WithIOCallback {
      * @param frontThresholds   the front thresholds
      * @param rearThresholds    the rear thresholds
      * @param configCommands    the motor theta corrections
+     * @param status            the initial status
      */
-    public Robot(String host, int port, long connectionTimeout, long readTimeout, long configureTimeout, int[] frontThresholds, int[] rearThresholds, String[] configCommands) {
+    public Robot(String host, int port, long connectionTimeout, long readTimeout, long configureTimeout, int[] frontThresholds, int[] rearThresholds, String[] configCommands, RobotStatus status) {
         this.configureTimeout = configureTimeout;
         socket = new RobotSocket(host, port, connectionTimeout, readTimeout);
-        status = RobotStatus.create();
+        this.status = status;
         this.frontThresholds = requireNonNull(frontThresholds);
         this.rearThresholds = requireNonNull(rearThresholds);
         this.configCommands = requireNonNull(configCommands);

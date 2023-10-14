@@ -32,8 +32,8 @@ import org.mmarini.wheelly.TestFunctions;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WithRobotStatus;
 import org.mmarini.wheelly.envs.RobotEnvironment;
-import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.Locator;
+import org.mmarini.yaml.Utils;
 
 import java.io.IOException;
 import java.util.function.ToDoubleFunction;
@@ -43,7 +43,7 @@ import static org.hamcrest.Matchers.closeTo;
 
 class StuckTest {
     static MockEnvironment createEnvironment(int sensorDir, double distance, boolean canMoveForward, boolean canMoveBackward) {
-        RobotStatus status = RobotStatus.create()
+        RobotStatus status = RobotStatus.create(x -> 12d)
                 .setSensorDirection(sensorDir)
                 .setCanMoveBackward(canMoveBackward)
                 .setCanMoveForward(canMoveForward)

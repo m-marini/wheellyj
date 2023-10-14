@@ -74,6 +74,20 @@ $defs:
           multipleOf: 1
           minimum: 0
           maximum: 1023
+      supplyValues:
+        type: array
+        items:
+          multipleOf: 1
+          minimum: 0
+          maximum: 4095
+        minItems: 2
+        maxItems: 2
+      voltages:
+        type: array
+        items:
+            type: number
+        minItems: 2
+        maxItems: 2
       configCommands:
         type: array
         items:
@@ -87,6 +101,8 @@ $defs:
       - configureTimeout
       - frontThresholds
       - rearThresholds
+      - supplyValues
+      - voltages
   MockRobot:
     type: object
     properties:
@@ -111,7 +127,7 @@ type: object
 properties:
   version:
     type: string
-    const: "0.4"
+    const: "0.5"
   active:
     type: string
   configurations:

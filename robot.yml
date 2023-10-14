@@ -1,7 +1,7 @@
 ---
-version: "0.4"
-active: simRobot
-#active: realRobot
+version: "0.5"
+#active: simRobot
+active: realRobot
 
 configurations:
   simRobot:
@@ -24,12 +24,15 @@ configurations:
     # rear 0 352 537 650
     frontThresholds: [176, 445, 594]
     rearThresholds: [176, 445, 594]
+    supplyValues: [2165, 2683]
+    voltages: [9.8, 12.3]
     configCommands:
       - cs 1000
       - ct 176 176
       - cc 30 10 60 5
       - cl 64 64 1270 50 80 -50 -80
       - cr 64 64 1270 50 80 -50 -80
+      - ci 500 500
   constantRobot:
     class: org.mmarini.wheelly.apis.MockRobot
     x: 2

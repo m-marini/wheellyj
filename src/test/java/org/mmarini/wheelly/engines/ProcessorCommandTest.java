@@ -145,7 +145,7 @@ class ProcessorCommandTest {
     private ProcessorContext createContext() {
         RobotControllerApi controller = createController();
         ProcessorContext processorContext = new ProcessorContext(controller, createFlow());
-        RobotStatus status = RobotStatus.create().setTime(TIME);
+        RobotStatus status = RobotStatus.create(x -> 12d).setTime(TIME);
         processorContext.setRobotStatus(status);
         return processorContext;
     }

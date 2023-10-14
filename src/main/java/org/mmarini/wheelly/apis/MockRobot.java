@@ -77,7 +77,7 @@ public class MockRobot implements RobotApi {
     }
 
     public RobotStatus getStatus() {
-        return RobotStatus.create()
+        return RobotStatus.create(x -> 12d)
                 .setTime(time)
                 .setDirection(robotDir)
                 .setSensorDirection(sensorDir)

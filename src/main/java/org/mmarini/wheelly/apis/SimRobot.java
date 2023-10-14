@@ -201,7 +201,7 @@ public class SimRobot implements RobotApi, WithRobotStatus {
         this.sensorReceptiveAngle = sensorReceptiveAngle;
         this.maxAngularSpeed = maxAngularSpeed;
         this.maxSimSpeed = maxSimSpeed;
-        this.status = RobotStatus.create();
+        this.status = RobotStatus.create(x -> 12d);
 
         // Creates the jbox2 physic world
         this.world = new World(GRAVITY);

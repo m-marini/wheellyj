@@ -32,8 +32,8 @@ import org.mmarini.wheelly.TestFunctions;
 import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.envs.RobotEnvironment;
-import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.Locator;
+import org.mmarini.yaml.Utils;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;
@@ -52,7 +52,7 @@ class ExploreTest {
         long timestamp = System.currentTimeMillis();
         RadarMap radarMap = RadarMap.create(10, 10, new Point2D.Double(), 0.2, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, 15)
                 .map((i, sector) -> i < knownCount ? sector.empty(timestamp) : sector);
-        RobotStatus status = RobotStatus.create()
+        RobotStatus status = RobotStatus.create(x -> 12d)
                 .setSensorDirection(sensorDir)
                 .setLeftPps(leftSpeed * MAX_VELOCITY / RobotStatus.DISTANCE_PER_PULSE)
                 .setRightPps(rightSpeed * MAX_VELOCITY / RobotStatus.DISTANCE_PER_PULSE)
