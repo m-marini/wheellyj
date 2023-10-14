@@ -29,8 +29,8 @@
 package org.mmarini.wheelly.apps;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.Locator;
+import org.mmarini.yaml.Utils;
 
 import java.io.IOException;
 
@@ -58,6 +58,24 @@ public interface Yaml {
         }
     }
 
+    /**
+     * Returns the double arrays from json document
+     *
+     * @param root    the json root
+     * @param locator the array locator
+     */
+    static double[] loadDoubleArray(JsonNode root, Locator locator) {
+        return locator.elements(root)
+                .mapToDouble(l -> l.getNode(root).asDouble())
+                .toArray();
+    }
+
+    /**
+     * Returns the int arrays from json document
+     *
+     * @param root    the json root
+     * @param locator the array locator
+     */
     static int[] loadIntArray(JsonNode root, Locator locator) {
         return locator.elements(root)
                 .mapToInt(l -> l.getNode(root).asInt())

@@ -59,8 +59,8 @@ public class WiFiConf {
         parser.addArgument("-s", "--ssid")
                 .help("specify the SSID (network identification)");
         parser.addArgument("-a", "--address")
-                .setDefault("192.168.4.1")
-                .help("specify the host api address");
+                .setDefault("wheelly")
+                .help("specify the host name or ip address");
         parser.addArgument("-p", "--password")
                 .help("specify the network pass phrase");
         parser.addArgument("action")
