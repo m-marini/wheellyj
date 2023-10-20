@@ -58,7 +58,7 @@ import static org.mmarini.wheelly.swing.Utils.layHorizontally;
 public class MatrixMonitor {
     private static final Dimension COMMAND_FRAME_SIZE = new Dimension(400, 800);
     private static final Logger logger = LoggerFactory.getLogger(MatrixMonitor.class);
-    private static final int MAX_SPEED = 20;
+    private static final int MAX_SPEED = 40;
     private static final int MAX_TIME = 10000;
     private static final int MIN_TIME = 500;
 
