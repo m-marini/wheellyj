@@ -74,7 +74,7 @@ public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, Wi
      * @param controller the controller
      */
     public static StateMachineAgent fromConfig(String file, RobotControllerApi controller) {
-        return Yaml.fromConfig(file, "/state-machine-schema.yml", new Object[]{controller}, new Class[]{controller.getClass()});
+        return Yaml.fromConfig(file, "/state-agent-schema.yml", new Object[]{controller}, new Class[]{controller.getClass()});
     }
 
     private final RobotControllerApi controller;

@@ -166,7 +166,7 @@ public class RobotSocket implements Closeable {
                  */
                 Throwable cause = ex.getCause();
                 if (cause instanceof InterruptedByTimeoutException) {
-                    throw new InterruptedIOException(cause.getMessage());
+                    throw new InterruptedIOException("Read timeout");
                 } else if (!(cause instanceof AsynchronousCloseException)) {
                     throw new IOException(cause);
                 }

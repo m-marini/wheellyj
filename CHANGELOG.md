@@ -7,10 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.8.1] 2023-10-20
+
 ### Added
 
 - Issue #77: Add drop regularization
-- Issue #232:  Add supply sensor configuration
+- Issue #232: Add supply sensor configuration
+- Issue #236: Add physic measures app
 
 ### Changed
 

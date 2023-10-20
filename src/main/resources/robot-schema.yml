@@ -85,7 +85,7 @@ $defs:
       voltages:
         type: array
         items:
-            type: number
+          type: number
         minItems: 2
         maxItems: 2
       configCommands:
