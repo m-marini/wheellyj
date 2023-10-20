@@ -29,8 +29,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
-import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.Locator;
+import org.mmarini.yaml.Utils;
 
 import java.util.ArrayList;
 import java.util.Collection;

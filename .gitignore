@@ -5,7 +5,8 @@ models/*
 docs/sonar-map.dxf~
 /*.zip
 /*.dat
-/**/*.csv
 /*.bin
+/measures/*
 /dependency-reduced-pom.xml
 /output.md
+/data/**/*.csv

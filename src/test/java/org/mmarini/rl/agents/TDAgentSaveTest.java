@@ -32,8 +32,8 @@ import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.rl.nets.TDDense;
 import org.mmarini.rl.nets.TDNetwork;
-import org.mmarini.yaml.Utils;
 import org.mmarini.yaml.Locator;
+import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
 
