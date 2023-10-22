@@ -1,0 +1,938 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<svg height="458pt" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 973 458" width="973pt" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <title>Figure 1</title>
+ <desc>
+Creator: GL2PS 1.4.2, (C) 1999-2020 C. Geuzaine
+For: Octave
+CreationDate: Sun Oct 22 16:32:45 2023
+</desc>
+ <defs/>
+ <polygon points="0,0 973,0 973,458 0,458" fill="#ffffff"/>
+ <g>
+  <polygon shape-rendering="crispEdges" points="0,458 973,458 973,0 0,0" fill="#ffffff"/>
+  <clipPath id="cp00973458">
+   <polygon points="0,458 973,458 973,0 0,0"/>
+  </clipPath>
+  <g clip-path="url(#cp00973458)">
+   <polygon shape-rendering="crispEdges" points="126.601,185.397 247.909,185.397 247.909,43.475 126.601,43.475" fill="#ffffff"/>
+   <g transform="translate(101.255,33.475) rotate(-0,86,0)" font-size="11" xml:space="preserve" font-weight="bold" font-style="normal" font-family="FreeSans">
+    <text y="-3" fill="rgb(0,0,0)" x="0 7 13 17 21 24 31 38 42 51 57 61 68 71 78 82 85 91 95 98 105 112 115 119 125 131 134 140 146 152 158 168 ">Left Forward Stiction (75.0=90%)</text>
+   </g>
+   <g transform="translate(171.755,214.893) rotate(-0,15.5,-9)" font-size="11" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 7 13 21 27 ">Power</text>
+   </g>
+   <polygon shape-rendering="crispEdges" points="144.09,185.397 144.09,179.484 134.689,179.484 134.689,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="162.893,185.397 162.893,184.215 153.491,184.215 153.491,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="172.294,185.397 172.294,164.109 162.893,164.109 162.893,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="181.695,185.397 181.695,50.5711 172.294,50.5711 172.294,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="191.097,185.397 191.097,180.667 181.695,180.667 181.695,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="200.498,185.397 200.498,179.484 191.097,179.484 191.097,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="209.9,185.397 209.9,173.571 200.498,173.571 200.498,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="219.301,185.397 219.301,175.936 209.9,175.936 209.9,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="228.702,185.397 228.702,184.215 219.301,184.215 219.301,185.397" fill="#20928c"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="144.09,179.484 134.689,179.484 134.689,185.397 144.09,185.397 144.09,179.484" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="162.893,184.215 153.491,184.215 153.491,185.397 162.893,185.397 162.893,184.215" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="172.294,164.109 162.893,164.109 162.893,185.397 172.294,185.397 172.294,164.109" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="181.695,50.5711 172.294,50.5711 172.294,185.397 181.695,185.397 181.695,50.5711" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="191.097,180.667 181.695,180.667 181.695,185.397 191.097,185.397 191.097,180.667" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="200.498,179.484 191.097,179.484 191.097,185.397 200.498,185.397 200.498,179.484" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="209.9,173.571 200.498,173.571 200.498,185.397 209.9,185.397 209.9,173.571" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="219.301,175.936 209.9,175.936 209.9,185.397 219.301,185.397 219.301,175.936" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="228.702,184.215 219.301,184.215 219.301,185.397 228.702,185.397 228.702,184.215" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,185.397 126.601,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="146.819,185.397 146.819,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="167.037,185.397 167.037,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="187.255,185.397 187.255,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="207.473,185.397 207.473,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="227.691,185.397 227.691,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="247.909,185.397 247.909,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,185.397 126.601,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,43.475 126.601,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="146.819,185.397 146.819,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="146.819,43.475 146.819,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="167.037,185.397 167.037,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="167.037,43.475 167.037,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="187.255,185.397 187.255,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="187.255,43.475 187.255,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="207.473,185.397 207.473,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="207.473,43.475 207.473,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="227.691,185.397 227.691,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="227.691,43.475 227.691,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="247.909,185.397 247.909,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="247.909,43.475 247.909,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <g transform="translate(123.601,200.893) rotate(-0,3,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 ">0</text>
+   </g>
+   <g transform="translate(140.819,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">20</text>
+   </g>
+   <g transform="translate(161.037,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">40</text>
+   </g>
+   <g transform="translate(181.255,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">60</text>
+   </g>
+   <g transform="translate(201.473,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">80</text>
+   </g>
+   <g transform="translate(218.691,200.893) rotate(-0,9,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 12 ">100</text>
+   </g>
+   <g transform="translate(238.909,200.893) rotate(-0,9,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 12 ">120</text>
+   </g>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,185.397 247.909,185.397" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,161.744 247.909,161.744" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,138.09 247.909,138.09" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,114.436 247.909,114.436" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,90.7825 247.909,90.7825" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,67.1288 247.909,67.1288" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,43.475 247.909,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,185.397 128.024,185.397" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="247.909,185.397 246.486,185.397" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,161.744 128.024,161.744" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="247.909,161.744 246.486,161.744" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,138.09 128.024,138.09" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="247.909,138.09 246.486,138.09" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,114.436 128.024,114.436" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="247.909,114.436 246.486,114.436" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,90.7825 128.024,90.7825" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="247.909,90.7825 246.486,90.7825" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,67.1288 128.024,67.1288" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="247.909,67.1288 246.486,67.1288" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,43.475 128.024,43.475" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="247.909,43.475 246.486,43.475" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <g transform="translate(115.589,189.397) rotate(-0,6,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 ">0</text>
+   </g>
+   <g transform="translate(109.589,165.744) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">20</text>
+   </g>
+   <g transform="translate(109.589,142.09) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">40</text>
+   </g>
+   <g transform="translate(109.589,118.436) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">60</text>
+   </g>
+   <g transform="translate(109.589,94.7825) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">80</text>
+   </g>
+   <g transform="translate(103.589,71.1288) rotate(-0,18,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 12 ">100</text>
+   </g>
+   <g transform="translate(103.589,47.475) rotate(-0,18,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 12 ">120</text>
+   </g>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="126.601,185.397 247.909,185.397" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="126.601,43.475 247.909,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="126.601,185.397 126.601,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="247.909,185.397 247.909,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+  </g>
+  <clipPath id="cp00973458">
+   <polygon points="0,458 973,458 973,0 0,0"/>
+  </clipPath>
+  <g clip-path="url(#cp00973458)">
+   <polygon shape-rendering="crispEdges" points="337.745,185.397 459.053,185.397 459.053,43.475 337.745,43.475" fill="#ffffff"/>
+   <g transform="translate(308.399,33.475) rotate(-0,90,0)" font-size="11" xml:space="preserve" font-weight="bold" font-style="normal" font-family="FreeSans">
+    <text y="-3" fill="rgb(0,0,0)" x="0 8 11 18 25 29 32 39 46 50 59 65 69 76 79 86 90 93 99 103 106 113 120 123 127 133 139 142 148 154 160 166 176 ">Right Forward Stiction (57.0=90%)</text>
+   </g>
+   <g transform="translate(382.899,214.893) rotate(-0,15.5,-9)" font-size="11" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 7 13 21 27 ">Power</text>
+   </g>
+   <polygon shape-rendering="crispEdges" points="359.927,185.397 359.927,182.559 349.876,182.559 349.876,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="380.03,185.397 380.03,174.044 369.978,174.044 369.978,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="390.081,185.397 390.081,57.6673 380.03,57.6673 380.03,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="400.132,185.397 400.132,60.5057 390.081,60.5057 390.081,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="410.183,185.397 410.183,97.4055 400.132,97.4055 400.132,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="420.234,185.397 420.234,128.628 410.183,128.628 410.183,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="430.286,185.397 430.286,165.528 420.234,165.528 420.234,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="440.337,185.397 440.337,168.367 430.286,168.367 430.286,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="450.388,185.397 450.388,179.721 440.337,179.721 440.337,185.397" fill="#20928c"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="359.927,182.559 349.876,182.559 349.876,185.397 359.927,185.397 359.927,182.559" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="380.03,174.044 369.978,174.044 369.978,185.397 380.03,185.397 380.03,174.044" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="390.081,57.6673 380.03,57.6673 380.03,185.397 390.081,185.397 390.081,57.6673" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="400.132,60.5057 390.081,60.5057 390.081,185.397 400.132,185.397 400.132,60.5057" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="410.183,97.4055 400.132,97.4055 400.132,185.397 410.183,185.397 410.183,97.4055" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="420.234,128.628 410.183,128.628 410.183,185.397 420.234,185.397 420.234,128.628" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="430.286,165.528 420.234,165.528 420.234,185.397 430.286,185.397 430.286,165.528" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="440.337,168.367 430.286,168.367 430.286,185.397 440.337,185.397 440.337,168.367" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="450.388,179.721 440.337,179.721 440.337,185.397 450.388,185.397 450.388,179.721" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,185.397 337.745,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="355.075,185.397 355.075,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="372.404,185.397 372.404,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="389.734,185.397 389.734,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="407.064,185.397 407.064,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="424.394,185.397 424.394,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="441.723,185.397 441.723,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="459.053,185.397 459.053,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,185.397 337.745,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,43.475 337.745,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="355.075,185.397 355.075,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="355.075,43.475 355.075,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="372.404,185.397 372.404,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="372.404,43.475 372.404,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="389.734,185.397 389.734,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="389.734,43.475 389.734,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="407.064,185.397 407.064,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="407.064,43.475 407.064,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="424.394,185.397 424.394,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="424.394,43.475 424.394,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="441.723,185.397 441.723,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="441.723,43.475 441.723,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="459.053,185.397 459.053,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="459.053,43.475 459.053,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <g transform="translate(331.745,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">10</text>
+   </g>
+   <g transform="translate(349.075,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">20</text>
+   </g>
+   <g transform="translate(366.404,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">30</text>
+   </g>
+   <g transform="translate(383.734,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">40</text>
+   </g>
+   <g transform="translate(401.064,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">50</text>
+   </g>
+   <g transform="translate(418.394,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">60</text>
+   </g>
+   <g transform="translate(435.723,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">70</text>
+   </g>
+   <g transform="translate(453.053,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">80</text>
+   </g>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,185.397 459.053,185.397" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,157.013 459.053,157.013" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,128.628 459.053,128.628" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,100.244 459.053,100.244" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,71.8595 459.053,71.8595" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,43.475 459.053,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,185.397 339.168,185.397" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="459.053,185.397 457.63,185.397" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,157.013 339.168,157.013" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="459.053,157.013 457.63,157.013" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,128.628 339.168,128.628" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="459.053,128.628 457.63,128.628" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,100.244 339.168,100.244" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="459.053,100.244 457.63,100.244" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,71.8595 339.168,71.8595" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="459.053,71.8595 457.63,71.8595" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,43.475 339.168,43.475" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="459.053,43.475 457.63,43.475" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <g transform="translate(326.732,189.397) rotate(-0,6,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 ">0</text>
+   </g>
+   <g transform="translate(320.732,161.013) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">10</text>
+   </g>
+   <g transform="translate(320.732,132.628) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">20</text>
+   </g>
+   <g transform="translate(320.732,104.244) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">30</text>
+   </g>
+   <g transform="translate(320.732,75.8595) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">40</text>
+   </g>
+   <g transform="translate(320.732,47.475) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">50</text>
+   </g>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="337.745,185.397 459.053,185.397" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="337.745,43.475 459.053,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="337.745,185.397 337.745,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="459.053,185.397 459.053,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+  </g>
+  <clipPath id="cp00973458">
+   <polygon points="0,458 973,458 973,0 0,0"/>
+  </clipPath>
+  <g clip-path="url(#cp00973458)">
+   <polygon shape-rendering="crispEdges" points="126.601,408.087 247.909,408.087 247.909,266.164 126.601,266.164" fill="#ffffff"/>
+   <g transform="translate(95.2553,256.164) rotate(-0,92,0)" font-size="11" xml:space="preserve" font-weight="bold" font-style="normal" font-family="FreeSans">
+    <text y="-3" fill="rgb(0,0,0)" x="0 7 13 17 21 24 32 38 44 50 59 65 69 76 79 86 90 93 99 103 106 113 120 123 127 131 137 143 146 152 158 164 170 180 ">Left Backward Stiction (-65.3=90%)</text>
+   </g>
+   <g transform="translate(171.755,437.582) rotate(-0,15.5,-9)" font-size="11" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 7 13 21 27 ">Power</text>
+   </g>
+   <polygon shape-rendering="crispEdges" points="144.434,408.087 154.987,408.087 154.987,404.538 144.434,404.538 133.88,404.538 133.88,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="165.541,408.087 165.541,393.894 154.987,393.894 154.987,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="176.095,408.087 176.095,376.154 165.541,376.154 165.541,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="186.649,408.087 186.649,324.707 176.095,324.707 176.095,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="197.203,408.087 197.203,269.712 186.649,269.712 186.649,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="207.756,408.087 207.756,404.538 197.203,404.538 197.203,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="218.31,408.087 228.864,408.087 228.864,406.312 218.31,406.312 207.756,406.312 207.756,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="239.418,408.087 239.418,402.764 228.864,402.764 228.864,408.087" fill="#20928c"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="144.434,404.538 133.88,404.538 133.88,408.087 144.434,408.087 144.434,404.538" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="154.987,404.538 144.434,404.538 144.434,408.087 154.987,408.087 154.987,404.538" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="165.541,393.894 154.987,393.894 154.987,408.087 165.541,408.087 165.541,393.894" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="176.095,376.154 165.541,376.154 165.541,408.087 176.095,408.087 176.095,376.154" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="186.649,324.707 176.095,324.707 176.095,408.087 186.649,408.087 186.649,324.707" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="197.203,269.712 186.649,269.712 186.649,408.087 197.203,408.087 197.203,269.712" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="207.756,404.538 197.203,404.538 197.203,408.087 207.756,408.087 207.756,404.538" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="218.31,406.312 207.756,406.312 207.756,408.087 218.31,408.087 218.31,406.312" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="228.864,406.312 218.31,406.312 218.31,408.087 228.864,408.087 228.864,406.312" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="239.418,402.764 228.864,402.764 228.864,408.087 239.418,408.087 239.418,402.764" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,408.087 126.601,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="150.863,408.087 150.863,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="175.125,408.087 175.125,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="199.386,408.087 199.386,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="223.648,408.087 223.648,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="247.909,408.087 247.909,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,408.087 126.601,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,266.164 126.601,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="150.863,408.087 150.863,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="150.863,266.164 150.863,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="175.125,408.087 175.125,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="175.125,266.164 175.125,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="199.386,408.087 199.386,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="199.386,266.164 199.386,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="223.648,408.087 223.648,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="223.648,266.164 223.648,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="247.909,408.087 247.909,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="247.909,266.164 247.909,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <g transform="translate(116.101,423.582) rotate(-0,10.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 15 ">-100</text>
+   </g>
+   <g transform="translate(143.363,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-80</text>
+   </g>
+   <g transform="translate(167.625,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-60</text>
+   </g>
+   <g transform="translate(191.886,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-40</text>
+   </g>
+   <g transform="translate(216.148,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-20</text>
+   </g>
+   <g transform="translate(244.909,423.582) rotate(-0,3,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 ">0</text>
+   </g>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,408.087 247.909,408.087" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,372.606 247.909,372.606" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,337.125 247.909,337.125" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,301.645 247.909,301.645" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,266.164 247.909,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,408.087 128.024,408.087" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="247.909,408.087 246.486,408.087" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,372.606 128.024,372.606" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="247.909,372.606 246.486,372.606" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,337.125 128.024,337.125" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="247.909,337.125 246.486,337.125" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,301.645 128.024,301.645" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="247.909,301.645 246.486,301.645" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="126.601,266.164 128.024,266.164" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="247.909,266.164 246.486,266.164" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <g transform="translate(115.589,412.087) rotate(-0,6,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 ">0</text>
+   </g>
+   <g transform="translate(109.589,376.606) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">20</text>
+   </g>
+   <g transform="translate(109.589,341.125) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">40</text>
+   </g>
+   <g transform="translate(109.589,305.645) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">60</text>
+   </g>
+   <g transform="translate(109.589,270.164) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">80</text>
+   </g>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="126.601,408.087 247.909,408.087" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="126.601,266.164 247.909,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="126.601,408.087 126.601,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="247.909,408.087 247.909,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+  </g>
+  <clipPath id="cp00973458">
+   <polygon points="0,458 973,458 973,0 0,0"/>
+  </clipPath>
+  <g clip-path="url(#cp00973458)">
+   <polygon shape-rendering="crispEdges" points="337.745,408.087 459.053,408.087 459.053,266.164 337.745,266.164" fill="#ffffff"/>
+   <g transform="translate(302.399,256.164) rotate(-0,96,0)" font-size="11" xml:space="preserve" font-weight="bold" font-style="normal" font-family="FreeSans">
+    <text y="-3" fill="rgb(0,0,0)" x="0 8 11 18 25 29 32 40 46 52 58 67 73 77 84 87 94 98 101 107 111 114 121 128 131 135 139 145 151 154 160 166 172 178 188 ">Right Backward Stiction (-67.6=90%)</text>
+   </g>
+   <g transform="translate(382.899,437.582) rotate(-0,15.5,-9)" font-size="11" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 7 13 21 27 ">Power</text>
+   </g>
+   <polygon shape-rendering="crispEdges" points="358.367,408.087 358.367,403.356 347.854,403.356 347.854,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="368.881,408.087 368.881,398.625 358.367,398.625 358.367,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="379.394,408.087 379.394,391.529 368.881,391.529 368.881,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="389.907,408.087 389.907,398.625 379.394,398.625 379.394,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="400.421,408.087 400.421,405.721 389.907,405.721 389.907,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="410.934,408.087 410.934,389.164 400.421,389.164 400.421,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="421.448,408.087 421.448,377.337 410.934,377.337 410.934,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="431.961,408.087 431.961,268.529 421.448,268.529 421.448,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="442.474,408.087 442.474,287.452 431.961,287.452 431.961,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="452.988,408.087 452.988,384.433 442.474,384.433 442.474,408.087" fill="#20928c"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="358.367,403.356 347.854,403.356 347.854,408.087 358.367,408.087 358.367,403.356" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="368.881,398.625 358.367,398.625 358.367,408.087 368.881,408.087 368.881,398.625" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="379.394,391.529 368.881,391.529 368.881,408.087 379.394,408.087 379.394,391.529" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="389.907,398.625 379.394,398.625 379.394,408.087 389.907,408.087 389.907,398.625" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="400.421,405.721 389.907,405.721 389.907,408.087 400.421,408.087 400.421,405.721" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="410.934,389.164 400.421,389.164 400.421,408.087 410.934,408.087 410.934,389.164" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="421.448,377.337 410.934,377.337 410.934,408.087 421.448,408.087 421.448,377.337" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="431.961,268.529 421.448,268.529 421.448,408.087 431.961,408.087 431.961,268.529" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="442.474,287.452 431.961,287.452 431.961,408.087 442.474,408.087 442.474,287.452" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="452.988,384.433 442.474,384.433 442.474,408.087 452.988,408.087 452.988,384.433" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,408.087 337.745,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="357.963,408.087 357.963,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="378.181,408.087 378.181,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="398.399,408.087 398.399,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="418.617,408.087 418.617,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="438.835,408.087 438.835,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="459.053,408.087 459.053,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,408.087 337.745,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,266.164 337.745,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="357.963,408.087 357.963,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="357.963,266.164 357.963,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="378.181,408.087 378.181,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="378.181,266.164 378.181,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="398.399,408.087 398.399,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="398.399,266.164 398.399,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="418.617,408.087 418.617,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="418.617,266.164 418.617,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="438.835,408.087 438.835,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="438.835,266.164 438.835,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="459.053,408.087 459.053,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="459.053,266.164 459.053,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <g transform="translate(330.245,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-90</text>
+   </g>
+   <g transform="translate(350.463,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-80</text>
+   </g>
+   <g transform="translate(370.681,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-70</text>
+   </g>
+   <g transform="translate(390.899,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-60</text>
+   </g>
+   <g transform="translate(411.117,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-50</text>
+   </g>
+   <g transform="translate(431.335,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-40</text>
+   </g>
+   <g transform="translate(451.553,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-30</text>
+   </g>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,408.087 459.053,408.087" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,384.433 459.053,384.433" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,360.779 459.053,360.779" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,337.125 459.053,337.125" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,313.472 459.053,313.472" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,289.818 459.053,289.818" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,266.164 459.053,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,408.087 339.168,408.087" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="459.053,408.087 457.63,408.087" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,384.433 339.168,384.433" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="459.053,384.433 457.63,384.433" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,360.779 339.168,360.779" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="459.053,360.779 457.63,360.779" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,337.125 339.168,337.125" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="459.053,337.125 457.63,337.125" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,313.472 339.168,313.472" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="459.053,313.472 457.63,313.472" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,289.818 339.168,289.818" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="459.053,289.818 457.63,289.818" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="337.745,266.164 339.168,266.164" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="459.053,266.164 457.63,266.164" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <g transform="translate(326.732,412.087) rotate(-0,6,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 ">0</text>
+   </g>
+   <g transform="translate(320.732,388.433) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">10</text>
+   </g>
+   <g transform="translate(320.732,364.779) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">20</text>
+   </g>
+   <g transform="translate(320.732,341.125) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">30</text>
+   </g>
+   <g transform="translate(320.732,317.472) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">40</text>
+   </g>
+   <g transform="translate(320.732,293.818) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">50</text>
+   </g>
+   <g transform="translate(320.732,270.164) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">60</text>
+   </g>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="337.745,408.087 459.053,408.087" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="337.745,266.164 459.053,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="337.745,408.087 337.745,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="459.053,408.087 459.053,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+  </g>
+  <clipPath id="cp00973458">
+   <polygon points="0,458 973,458 973,0 0,0"/>
+  </clipPath>
+  <g clip-path="url(#cp00973458)">
+   <polygon shape-rendering="crispEdges" points="548.889,185.397 670.197,185.397 670.197,43.475 548.889,43.475" fill="#ffffff"/>
+   <g transform="translate(523.543,33.475) rotate(-0,86,0)" font-size="11" xml:space="preserve" font-weight="bold" font-style="normal" font-family="FreeSans">
+    <text y="-3" fill="rgb(0,0,0)" x="0 7 13 17 21 24 31 38 42 51 57 61 68 71 78 82 85 91 95 98 105 112 115 119 125 131 134 140 146 152 158 168 ">Left Forward Friction (50.0=90%)</text>
+   </g>
+   <g transform="translate(594.043,214.893) rotate(-0,15.5,-9)" font-size="11" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 7 13 21 27 ">Power</text>
+   </g>
+   <polygon shape-rendering="crispEdges" points="566.912,185.397 566.912,171.205 555.821,171.205 555.821,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="578.003,185.397 578.003,182.559 566.912,182.559 566.912,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="589.094,185.397 589.094,159.851 578.003,159.851 578.003,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="600.185,185.397 600.185,108.759 589.094,108.759 589.094,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="611.276,185.397 611.276,51.9904 600.185,51.9904 600.185,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="622.367,185.397 622.367,77.5364 611.276,77.5364 611.276,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="633.458,185.397 633.458,128.628 622.367,128.628 622.367,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="644.549,185.397 644.549,151.336 633.458,151.336 633.458,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="655.64,185.397 655.64,174.044 644.549,174.044 644.549,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="666.731,185.397 666.731,176.882 655.64,176.882 655.64,185.397" fill="#20928c"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="566.912,171.205 555.821,171.205 555.821,185.397 566.912,185.397 566.912,171.205" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="578.003,182.559 566.912,182.559 566.912,185.397 578.003,185.397 578.003,182.559" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="589.094,159.851 578.003,159.851 578.003,185.397 589.094,185.397 589.094,159.851" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="600.185,108.759 589.094,108.759 589.094,185.397 600.185,185.397 600.185,108.759" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="611.276,51.9904 600.185,51.9904 600.185,185.397 611.276,185.397 611.276,51.9904" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="622.367,77.5364 611.276,77.5364 611.276,185.397 622.367,185.397 622.367,77.5364" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="633.458,128.628 622.367,128.628 622.367,185.397 633.458,185.397 633.458,128.628" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="644.549,151.336 633.458,151.336 633.458,185.397 644.549,185.397 644.549,151.336" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="655.64,174.044 644.549,174.044 644.549,185.397 655.64,185.397 655.64,174.044" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="666.731,176.882 655.64,176.882 655.64,185.397 666.731,185.397 666.731,176.882" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,185.397 548.889,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="566.218,185.397 566.218,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="583.548,185.397 583.548,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="600.878,185.397 600.878,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="618.207,185.397 618.207,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="635.537,185.397 635.537,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="652.867,185.397 652.867,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="670.197,185.397 670.197,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,185.397 548.889,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,43.475 548.889,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="566.218,185.397 566.218,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="566.218,43.475 566.218,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="583.548,185.397 583.548,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="583.548,43.475 583.548,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="600.878,185.397 600.878,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="600.878,43.475 600.878,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="618.207,185.397 618.207,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="618.207,43.475 618.207,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="635.537,185.397 635.537,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="635.537,43.475 635.537,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="652.867,185.397 652.867,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="652.867,43.475 652.867,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="670.197,185.397 670.197,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="670.197,43.475 670.197,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <g transform="translate(545.889,200.893) rotate(-0,3,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 ">0</text>
+   </g>
+   <g transform="translate(560.218,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">10</text>
+   </g>
+   <g transform="translate(577.548,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">20</text>
+   </g>
+   <g transform="translate(594.878,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">30</text>
+   </g>
+   <g transform="translate(612.207,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">40</text>
+   </g>
+   <g transform="translate(629.537,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">50</text>
+   </g>
+   <g transform="translate(646.867,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">60</text>
+   </g>
+   <g transform="translate(664.197,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">70</text>
+   </g>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,185.397 670.197,185.397" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,157.013 670.197,157.013" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,128.628 670.197,128.628" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,100.244 670.197,100.244" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,71.8595 670.197,71.8595" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,43.475 670.197,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,185.397 550.311,185.397" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="670.197,185.397 668.774,185.397" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,157.013 550.311,157.013" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="670.197,157.013 668.774,157.013" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,128.628 550.311,128.628" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="670.197,128.628 668.774,128.628" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,100.244 550.311,100.244" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="670.197,100.244 668.774,100.244" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,71.8595 550.311,71.8595" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="670.197,71.8595 668.774,71.8595" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,43.475 550.311,43.475" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="670.197,43.475 668.774,43.475" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <g transform="translate(537.876,189.397) rotate(-0,6,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 ">0</text>
+   </g>
+   <g transform="translate(531.876,161.013) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">10</text>
+   </g>
+   <g transform="translate(531.876,132.628) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">20</text>
+   </g>
+   <g transform="translate(531.876,104.244) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">30</text>
+   </g>
+   <g transform="translate(531.876,75.8595) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">40</text>
+   </g>
+   <g transform="translate(531.876,47.475) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">50</text>
+   </g>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="548.889,185.397 670.197,185.397" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="548.889,43.475 670.197,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="548.889,185.397 548.889,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="670.197,185.397 670.197,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+  </g>
+  <clipPath id="cp00973458">
+   <polygon points="0,458 973,458 973,0 0,0"/>
+  </clipPath>
+  <g clip-path="url(#cp00973458)">
+   <polygon shape-rendering="crispEdges" points="760.032,185.397 881.34,185.397 881.34,43.475 760.032,43.475" fill="#ffffff"/>
+   <g transform="translate(730.686,33.475) rotate(-0,90,0)" font-size="11" xml:space="preserve" font-weight="bold" font-style="normal" font-family="FreeSans">
+    <text y="-3" fill="rgb(0,0,0)" x="0 8 11 18 25 29 32 39 46 50 59 65 69 76 79 86 90 93 99 103 106 113 120 123 127 133 139 142 148 154 160 166 176 ">Right Forward Friction (37.0=90%)</text>
+   </g>
+   <g transform="translate(805.186,214.893) rotate(-0,15.5,-9)" font-size="11" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 7 13 21 27 ">Power</text>
+   </g>
+   <polygon shape-rendering="crispEdges" points="778.471,185.397 778.471,179.721 767.311,179.721 767.311,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="800.792,185.397 800.792,179.721 789.631,179.721 789.631,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="811.952,185.397 811.952,157.013 800.792,157.013 800.792,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="823.112,185.397 823.112,88.8902 811.952,88.8902 811.952,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="834.273,185.397 845.433,185.397 845.433,51.9904 834.273,51.9904 823.112,51.9904 823.112,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="856.593,185.397 856.593,168.367 845.433,168.367 845.433,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="867.754,185.397 867.754,159.851 856.593,159.851 856.593,185.397" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="878.914,185.397 878.914,176.882 867.754,176.882 867.754,185.397" fill="#20928c"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="778.471,179.721 767.311,179.721 767.311,185.397 778.471,185.397 778.471,179.721" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="800.792,179.721 789.631,179.721 789.631,185.397 800.792,185.397 800.792,179.721" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="811.952,157.013 800.792,157.013 800.792,185.397 811.952,185.397 811.952,157.013" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="823.112,88.8902 811.952,88.8902 811.952,185.397 823.112,185.397 823.112,88.8902" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="834.273,51.9904 823.112,51.9904 823.112,185.397 834.273,185.397 834.273,51.9904" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="845.433,51.9904 834.273,51.9904 834.273,185.397 845.433,185.397 845.433,51.9904" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="856.593,168.367 845.433,168.367 845.433,185.397 856.593,185.397 856.593,168.367" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="867.754,159.851 856.593,159.851 856.593,185.397 867.754,185.397 867.754,159.851" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="878.914,176.882 867.754,176.882 867.754,185.397 878.914,185.397 878.914,176.882" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,185.397 760.032,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="784.294,185.397 784.294,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="808.555,185.397 808.555,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="832.817,185.397 832.817,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="857.079,185.397 857.079,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="881.34,185.397 881.34,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,185.397 760.032,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,43.475 760.032,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="784.294,185.397 784.294,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="784.294,43.475 784.294,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="808.555,185.397 808.555,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="808.555,43.475 808.555,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="832.817,185.397 832.817,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="832.817,43.475 832.817,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="857.079,185.397 857.079,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="857.079,43.475 857.079,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="881.34,185.397 881.34,183.979" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="881.34,43.475 881.34,44.8935" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <g transform="translate(757.032,200.893) rotate(-0,3,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 ">0</text>
+   </g>
+   <g transform="translate(778.294,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">10</text>
+   </g>
+   <g transform="translate(802.555,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">20</text>
+   </g>
+   <g transform="translate(826.817,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">30</text>
+   </g>
+   <g transform="translate(851.079,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">40</text>
+   </g>
+   <g transform="translate(875.34,200.893) rotate(-0,6,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">50</text>
+   </g>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,185.397 881.34,185.397" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,157.013 881.34,157.013" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,128.628 881.34,128.628" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,100.244 881.34,100.244" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,71.8595 881.34,71.8595" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,43.475 881.34,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,185.397 761.455,185.397" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="881.34,185.397 879.917,185.397" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,157.013 761.455,157.013" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="881.34,157.013 879.917,157.013" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,128.628 761.455,128.628" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="881.34,128.628 879.917,128.628" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,100.244 761.455,100.244" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="881.34,100.244 879.917,100.244" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,71.8595 761.455,71.8595" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="881.34,71.8595 879.917,71.8595" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,43.475 761.455,43.475" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="881.34,43.475 879.917,43.475" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <g transform="translate(749.02,189.397) rotate(-0,6,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 ">0</text>
+   </g>
+   <g transform="translate(743.02,161.013) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">10</text>
+   </g>
+   <g transform="translate(743.02,132.628) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">20</text>
+   </g>
+   <g transform="translate(743.02,104.244) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">30</text>
+   </g>
+   <g transform="translate(743.02,75.8595) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">40</text>
+   </g>
+   <g transform="translate(743.02,47.475) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">50</text>
+   </g>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="760.032,185.397 881.34,185.397" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="760.032,43.475 881.34,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="760.032,185.397 760.032,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="881.34,185.397 881.34,43.475" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+  </g>
+  <clipPath id="cp00973458">
+   <polygon points="0,458 973,458 973,0 0,0"/>
+  </clipPath>
+  <g clip-path="url(#cp00973458)">
+   <polygon shape-rendering="crispEdges" points="548.889,408.087 670.197,408.087 670.197,266.164 548.889,266.164" fill="#ffffff"/>
+   <g transform="translate(517.543,256.164) rotate(-0,92,0)" font-size="11" xml:space="preserve" font-weight="bold" font-style="normal" font-family="FreeSans">
+    <text y="-3" fill="rgb(0,0,0)" x="0 7 13 17 21 24 32 38 44 50 59 65 69 76 79 86 90 93 99 103 106 113 120 123 127 131 137 143 146 152 158 164 170 180 ">Left Backward Friction (-49.0=90%)</text>
+   </g>
+   <g transform="translate(594.043,437.582) rotate(-0,15.5,-9)" font-size="11" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 7 13 21 27 ">Power</text>
+   </g>
+   <polygon shape-rendering="crispEdges" points="568.645,408.087 568.645,403.356 557.554,403.356 557.554,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="579.736,408.087 579.736,396.26 568.645,396.26 568.645,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="590.827,408.087 590.827,341.856 579.736,341.856 579.736,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="601.918,408.087 601.918,330.029 590.827,330.029 590.827,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="613.009,408.087 613.009,270.895 601.918,270.895 601.918,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="624.1,408.087 624.1,339.491 613.009,339.491 613.009,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="635.191,408.087 635.191,405.721 624.1,405.721 624.1,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="646.282,408.087 657.373,408.087 668.464,408.087 668.464,403.356 657.373,403.356 646.282,403.356 635.191,403.356 635.191,408.087" fill="#20928c"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="568.645,403.356 557.554,403.356 557.554,408.087 568.645,408.087 568.645,403.356" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="579.736,396.26 568.645,396.26 568.645,408.087 579.736,408.087 579.736,396.26" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="590.827,341.856 579.736,341.856 579.736,408.087 590.827,408.087 590.827,341.856" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="601.918,330.029 590.827,330.029 590.827,408.087 601.918,408.087 601.918,330.029" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="613.009,270.895 601.918,270.895 601.918,408.087 613.009,408.087 613.009,270.895" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="624.1,339.491 613.009,339.491 613.009,408.087 624.1,408.087 624.1,339.491" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="635.191,405.721 624.1,405.721 624.1,408.087 635.191,408.087 635.191,405.721" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="646.282,403.356 635.191,403.356 635.191,408.087 646.282,408.087 646.282,403.356" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="657.373,403.356 646.282,403.356 646.282,408.087 657.373,408.087 657.373,403.356" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="668.464,403.356 657.373,403.356 657.373,408.087 668.464,408.087 668.464,403.356" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,408.087 548.889,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="566.218,408.087 566.218,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="583.548,408.087 583.548,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="600.878,408.087 600.878,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="618.207,408.087 618.207,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="635.537,408.087 635.537,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="652.867,408.087 652.867,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="670.197,408.087 670.197,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,408.087 548.889,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,266.164 548.889,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="566.218,408.087 566.218,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="566.218,266.164 566.218,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="583.548,408.087 583.548,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="583.548,266.164 583.548,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="600.878,408.087 600.878,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="600.878,266.164 600.878,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="618.207,408.087 618.207,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="618.207,266.164 618.207,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="635.537,408.087 635.537,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="635.537,266.164 635.537,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="652.867,408.087 652.867,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="652.867,266.164 652.867,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="670.197,408.087 670.197,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="670.197,266.164 670.197,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <g transform="translate(541.389,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-70</text>
+   </g>
+   <g transform="translate(558.718,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-60</text>
+   </g>
+   <g transform="translate(576.048,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-50</text>
+   </g>
+   <g transform="translate(593.378,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-40</text>
+   </g>
+   <g transform="translate(610.707,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-30</text>
+   </g>
+   <g transform="translate(628.037,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-20</text>
+   </g>
+   <g transform="translate(645.367,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-10</text>
+   </g>
+   <g transform="translate(667.197,423.582) rotate(-0,3,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 ">0</text>
+   </g>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,408.087 670.197,408.087" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,384.433 670.197,384.433" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,360.779 670.197,360.779" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,337.125 670.197,337.125" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,313.472 670.197,313.472" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,289.818 670.197,289.818" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,266.164 670.197,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,408.087 550.311,408.087" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="670.197,408.087 668.774,408.087" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,384.433 550.311,384.433" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="670.197,384.433 668.774,384.433" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,360.779 550.311,360.779" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="670.197,360.779 668.774,360.779" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,337.125 550.311,337.125" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="670.197,337.125 668.774,337.125" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,313.472 550.311,313.472" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="670.197,313.472 668.774,313.472" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,289.818 550.311,289.818" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="670.197,289.818 668.774,289.818" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="548.889,266.164 550.311,266.164" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="670.197,266.164 668.774,266.164" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <g transform="translate(537.876,412.087) rotate(-0,6,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 ">0</text>
+   </g>
+   <g transform="translate(531.876,388.433) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">10</text>
+   </g>
+   <g transform="translate(531.876,364.779) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">20</text>
+   </g>
+   <g transform="translate(531.876,341.125) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">30</text>
+   </g>
+   <g transform="translate(531.876,317.472) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">40</text>
+   </g>
+   <g transform="translate(531.876,293.818) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">50</text>
+   </g>
+   <g transform="translate(531.876,270.164) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">60</text>
+   </g>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="548.889,408.087 670.197,408.087" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="548.889,266.164 670.197,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="548.889,408.087 548.889,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="670.197,408.087 670.197,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+  </g>
+  <clipPath id="cp00973458">
+   <polygon points="0,458 973,458 973,0 0,0"/>
+  </clipPath>
+  <g clip-path="url(#cp00973458)">
+   <polygon shape-rendering="crispEdges" points="760.032,408.087 881.34,408.087 881.34,266.164 760.032,266.164" fill="#ffffff"/>
+   <g transform="translate(724.686,256.164) rotate(-0,96,0)" font-size="11" xml:space="preserve" font-weight="bold" font-style="normal" font-family="FreeSans">
+    <text y="-3" fill="rgb(0,0,0)" x="0 8 11 18 25 29 32 40 46 52 58 67 73 77 84 87 94 98 101 107 111 114 121 128 131 135 139 145 151 154 160 166 172 178 188 ">Right Backward Friction (-45.0=90%)</text>
+   </g>
+   <g transform="translate(805.186,437.582) rotate(-0,15.5,-9)" font-size="11" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 7 13 21 27 ">Power</text>
+   </g>
+   <polygon shape-rendering="crispEdges" points="785.507,408.087 785.507,360.779 776.207,360.779 776.207,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="794.807,408.087 794.807,318.202 785.507,318.202 785.507,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="804.108,408.087 804.108,275.626 794.807,275.626 794.807,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="813.408,408.087 813.408,270.895 804.108,270.895 804.108,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="822.708,408.087 832.008,408.087 832.008,285.087 822.708,285.087 813.408,285.087 813.408,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="841.309,408.087 841.309,356.048 832.008,356.048 832.008,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="850.609,408.087 850.609,379.702 841.309,379.702 841.309,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="859.909,408.087 859.909,393.894 850.609,393.894 850.609,408.087" fill="#20928c"/>
+   <polygon shape-rendering="crispEdges" points="869.21,408.087 869.21,403.356 859.909,403.356 859.909,408.087" fill="#20928c"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="785.507,360.779 776.207,360.779 776.207,408.087 785.507,408.087 785.507,360.779" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="794.807,318.202 785.507,318.202 785.507,408.087 794.807,408.087 794.807,318.202" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="804.108,275.626 794.807,275.626 794.807,408.087 804.108,408.087 804.108,275.626" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="813.408,270.895 804.108,270.895 804.108,408.087 813.408,408.087 813.408,270.895" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="822.708,285.087 813.408,285.087 813.408,408.087 822.708,408.087 822.708,285.087" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="832.008,285.087 822.708,285.087 822.708,408.087 832.008,408.087 832.008,285.087" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="841.309,356.048 832.008,356.048 832.008,408.087 841.309,408.087 841.309,356.048" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="850.609,379.702 841.309,379.702 841.309,408.087 850.609,408.087 850.609,379.702" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="859.909,393.894 850.609,393.894 850.609,408.087 859.909,408.087 859.909,393.894" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="869.21,403.356 859.909,403.356 859.909,408.087 869.21,408.087 869.21,403.356" fill="none" stroke="#000000" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,408.087 760.032,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="780.25,408.087 780.25,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="800.468,408.087 800.468,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="820.686,408.087 820.686,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="840.904,408.087 840.904,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="861.122,408.087 861.122,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="881.34,408.087 881.34,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,408.087 760.032,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,266.164 760.032,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="780.25,408.087 780.25,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="780.25,266.164 780.25,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="800.468,408.087 800.468,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="800.468,266.164 800.468,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="820.686,408.087 820.686,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="820.686,266.164 820.686,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="840.904,408.087 840.904,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="840.904,266.164 840.904,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="861.122,408.087 861.122,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="861.122,266.164 861.122,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="881.34,408.087 881.34,406.668" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="881.34,266.164 881.34,267.583" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <g transform="translate(752.532,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-60</text>
+   </g>
+   <g transform="translate(772.75,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-50</text>
+   </g>
+   <g transform="translate(792.968,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-40</text>
+   </g>
+   <g transform="translate(813.186,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-30</text>
+   </g>
+   <g transform="translate(833.404,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-20</text>
+   </g>
+   <g transform="translate(853.622,423.582) rotate(-0,7.5,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 3 9 ">-10</text>
+   </g>
+   <g transform="translate(878.34,423.582) rotate(-0,3,-8)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 ">0</text>
+   </g>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,408.087 881.34,408.087" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,384.433 881.34,384.433" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,360.779 881.34,360.779" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,337.125 881.34,337.125" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,313.472 881.34,313.472" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,289.818 881.34,289.818" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,266.164 881.34,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5" stroke-opacity="0.15"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,408.087 761.455,408.087" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="881.34,408.087 879.917,408.087" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,384.433 761.455,384.433" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="881.34,384.433 879.917,384.433" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,360.779 761.455,360.779" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="881.34,360.779 879.917,360.779" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,337.125 761.455,337.125" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="881.34,337.125 879.917,337.125" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,313.472 761.455,313.472" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="881.34,313.472 879.917,313.472" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,289.818 761.455,289.818" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="881.34,289.818 879.917,289.818" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="760.032,266.164 761.455,266.164" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <polyline stroke-linecap="butt" stroke-linejoin="miter" points="881.34,266.164 879.917,266.164" fill="none" stroke="#262626" stroke-width="0.5"/>
+   <g transform="translate(749.02,412.087) rotate(-0,6,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 ">0</text>
+   </g>
+   <g transform="translate(749.02,388.433) rotate(-0,6,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 ">5</text>
+   </g>
+   <g transform="translate(743.02,364.779) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">10</text>
+   </g>
+   <g transform="translate(743.02,341.125) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">15</text>
+   </g>
+   <g transform="translate(743.02,317.472) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">20</text>
+   </g>
+   <g transform="translate(743.02,293.818) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">25</text>
+   </g>
+   <g transform="translate(743.02,270.164) rotate(-0,12,-4)" font-size="10" xml:space="preserve" font-weight="normal" font-style="normal" font-family="FreeSans">
+    <text y="-0" fill="rgb(38,38,38)" x="0 6 ">30</text>
+   </g>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="760.032,408.087 881.34,408.087" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="760.032,266.164 881.34,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="760.032,408.087 760.032,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+   <polyline stroke-linecap="square" stroke-linejoin="miter" points="881.34,408.087 881.34,266.164" fill="none" stroke="#262626" stroke-dasharray="16,0" stroke-width="0.5"/>
+  </g>
+ </g>
+</svg>

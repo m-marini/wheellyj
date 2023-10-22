@@ -7,6 +7,7 @@ docs/sonar-map.dxf~
 /*.dat
 /*.bin
 /measures/*
+/stiction/*
 /dependency-reduced-pom.xml
 /output.md
 /data/**/*.csv

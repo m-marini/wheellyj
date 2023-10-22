@@ -29,8 +29,8 @@ configurations:
     configCommands:
       - cs 1000
       - cc 5 60 12
-      - cl 64 64 1270 24 70 -14 -70
-      - cr 64 64 1270 21 60 -18 -70
+      - cl 64 64 1270 50 75 -49 -65
+      - cr 64 64 1270 37 57 -45 -68
       - ci 500 500
   constantRobot:
     class: org.mmarini.wheelly.apis.MockRobot
