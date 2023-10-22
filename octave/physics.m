@@ -1,45 +1,4 @@
-
 clear all;
-
-function tests = listTest(folder)
-  tests = glob([folder "/*_head.csv"]);
-  for i = 1 : size(tests, 1)
-    file = tests{i, 1};
-    file = file(1 : end - 9);
-    tests{i,1} = file;
-  endfor
-endfunction
-
-function [power left right] = loadTest(id)
-  power = csvread([id "_head.csv"]);
-  left = csvread([id "_left.csv"]);
-  right = csvread([id "_right.csv"]);
-endfunction
-
-function z = filterBy(data, f)
-  idx = [];
-  for i = 1 : size(data,1)
-      if  f(data(i,:))
-        idx=[idx; i];
-      endif
-  endfor
-  z = data(idx,:);
-endfunction
-
-function z = groupBy(data, f, col=1)
-  x = sortrows(data, col);
-  z = [];
-  key = x(1, col);
-  start = 1;
-  for i = 2 : size(x, 1)
-    if x(i, col) != key
-      z = [z; f(x(start : i - 1,:))];
-      start = i;
-      key = x(i, col);
-    endif
-  endfor
-  z = [z; f(x(start : end, :))];
-endfunction
 
 function [up down] = parseMeasures(data1)
   data = groupBy(data1, @(data)[data(1,1) sum(data(:,2)) mean(data(:,3))]);

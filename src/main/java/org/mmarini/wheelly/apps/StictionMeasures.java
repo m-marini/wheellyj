@@ -53,20 +53,33 @@ import static java.lang.String.format;
 /**
  * Run a test to check for robot environment with random behavior agent
  */
-public class WheellyMeasures {
+public class StictionMeasures {
     public static final int CONNECTION_TIMEOUT = 3000;
-    public static final int READ_TIMEOUT = 20000;
+    public static final int READ_TIMEOUT = 30000;
     public static final long DEFAULT_IDLE_INTERVAL = 1000L;
     public static final int DEFAULT_PORT = 22;
-    private static final Logger logger = LoggerFactory.getLogger(WheellyMeasures.class);
-    private static final int DEFAULT_MAX_POWER = 255;
+    private static final long DEFAULT_STEP_TIME = 100;
+    private static final long DEFAULT_THRESHOLD_PULSES = 10;
+    private static final Logger logger = LoggerFactory.getLogger(StictionMeasures.class);
+    private static final int[][] TEST_DIRECTIONS = {
+            {1, 1},
+            {1, 0},
+            {1, -1},
+            {0, 1}
+    };
+    private static final int[][] TEST_OPPOSITE_DIRECTIONS = {
+            {-1, -1},
+            {-1, 0},
+            {-1, 1},
+            {0, -1}
+    };
 
     /**
      * Returns the argument parser
      */
     @NotNull
     private static ArgumentParser createParser() {
-        ArgumentParser parser = ArgumentParsers.newFor(WheellyMeasures.class.getName()).build()
+        ArgumentParser parser = ArgumentParsers.newFor(StictionMeasures.class.getName()).build()
                 .defaultHelp(true)
                 .version(Messages.getString("Wheelly.title"))
                 .description("Run a session of measure tests.");
@@ -81,22 +94,23 @@ public class WheellyMeasures {
                 .setDefault(DEFAULT_PORT)
                 .help("specify robot server name or ip address");
         parser.addArgument("-o", "--output")
-                .setDefault("measures/")
+                .setDefault("stiction/test")
                 .help("specify output files prefix");
-        parser.addArgument("-i", "--idle")
+        parser.addArgument("-w", "--wait")
                 .type(Long.class)
                 .setDefault(DEFAULT_IDLE_INTERVAL)
                 .help("specify idle interval between tests (ms)");
-        parser.addArgument("-x", "--maxPower")
-                .type(Integer.class)
-                .setDefault(DEFAULT_MAX_POWER)
-                .help("specify idle interval between tests (ms)");
+        parser.addArgument("-i", "--interval")
+                .type(Long.class)
+                .setDefault(DEFAULT_STEP_TIME)
+                .help("specify the step time (ms)");
+        parser.addArgument("-t", "--threshold")
+                .type(Long.class)
+                .setDefault(DEFAULT_THRESHOLD_PULSES)
+                .help("specify the threshold pulses");
         parser.addArgument("number")
                 .type(Integer.class)
                 .help("specify the number of tests");
-        parser.addArgument("duration")
-                .type(Integer.class)
-                .help("specify the single test duration (ms)");
         return parser;
     }
 
@@ -106,18 +120,7 @@ public class WheellyMeasures {
      * @param args command line arguments
      */
     public static void main(String[] args) {
-        new WheellyMeasures().start(args);
-    }
-
-    /**
-     * Returns the random power of motor
-     *
-     * @param random the ransom number generator
-     * @param max    the max absolute value
-     */
-    private static int nextPower(Random random, int max) {
-        int steps = max / 5;
-        return (random.nextInt(steps * 2 + 1) - steps) * 5;
+        new StictionMeasures().start(args);
     }
 
     /**
@@ -141,11 +144,13 @@ public class WheellyMeasures {
     private Namespace args;
     private RobotSocket socket;
     private String outputPrefix;
+    private long stepTime;
+    private long thresholdPulses;
 
     /**
      * Creates the roboto executor
      */
-    public WheellyMeasures() {
+    public StictionMeasures() {
     }
 
     /**
@@ -213,29 +218,27 @@ public class WheellyMeasures {
     /**
      * Returns the report from socket
      *
-     * @param leftPwr  the left power
-     * @param rightPwr the right power
+     * @param leftDir  the left direction
+     * @param rightDir the right direction
      */
-    private Report readReport(int leftPwr, int rightPwr) throws IOException {
+    private Report readReport(int leftDir, int rightDir) throws IOException {
         int[][] leftMeasures = readMeasureSet("l");
         int[][] rightMeasures = readMeasureSet("r");
-        return new Report(leftPwr, rightPwr, leftMeasures, rightMeasures);
+        return new Report(leftDir, rightDir, leftMeasures, rightMeasures);
     }
 
     /**
      * Runs the test
      *
-     * @param duration the duration (ms)
-     * @param leftPwr  the left power
-     * @param rightPwr the right power
+     * @param directions the motor directions [left, right]
      * @throws IOException in case of error
      */
-    private Report runTest(int duration, int leftPwr, int rightPwr) throws IOException {
-        String cmd = "start " + duration + " " + leftPwr + " " + rightPwr;
+    private Report runTest(int[] directions) throws IOException {
+        String cmd = "fr " + stepTime + " " + thresholdPulses + " " + directions[0] + " " + directions[1];
         logger.atInfo().log("  {}", cmd);
         socket.writeCommand(cmd);
         waitForCompletion();
-        return readReport(leftPwr, rightPwr);
+        return readReport(directions[0], directions[1]);
     }
 
     /**
@@ -244,21 +247,19 @@ public class WheellyMeasures {
     private void runTests() throws IOException {
         logger.atInfo().log("Started");
         int n = args.getInt("number");
-        int duration = args.getInt("duration");
         Random random = new Random();
-        long idle = args.getLong("idle");
-        int maxPower = args.getInt("maxPower");
+        long idle = args.getLong("wait");
         for (int i = 0; i < n; i++) {
-            int leftPwr = nextPower(random, maxPower);
-            int rightPwr = nextPower(random, maxPower);
+            int testIndex = random.nextInt(TEST_DIRECTIONS.length);
             logger.atInfo().log("Test {}", i + 1);
-            Report report = runTest(duration, leftPwr, rightPwr);
+            Report report = runTest(TEST_DIRECTIONS[testIndex]);
             writeResults(report);
             try {
                 Thread.sleep(idle);
             } catch (InterruptedException ignored) {
             }
-            report = runTest(duration, -leftPwr, -rightPwr);
+
+            report = runTest(TEST_OPPOSITE_DIRECTIONS[testIndex]);
             writeResults(report);
             try {
                 Thread.sleep(idle);
@@ -276,6 +277,8 @@ public class WheellyMeasures {
         ArgumentParser parser = createParser();
         try {
             this.args = parser.parseArgs(args);
+            this.stepTime = this.args.getLong("interval");
+            this.thresholdPulses = this.args.getLong("threshold");
             this.outputPrefix = this.args.getString("output");
             this.socket = new RobotSocket(this.args.getString("server"), this.args.getInt("port"),
                     CONNECTION_TIMEOUT, READ_TIMEOUT);
