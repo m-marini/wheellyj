@@ -62,7 +62,7 @@ public class Utils {
                     .toArray(Object[]::new);
             return (T) creator.invoke(null, builderArgs);
         } catch (ClassNotFoundException | NoSuchMethodException |
-                IllegalAccessException e) {
+                 IllegalAccessException e) {
             throw new RuntimeException(e);
         } catch (InvocationTargetException e) {
             throw new RuntimeException(e.getCause());

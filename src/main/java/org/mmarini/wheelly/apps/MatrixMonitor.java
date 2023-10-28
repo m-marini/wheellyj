@@ -48,7 +48,9 @@ import javax.swing.event.ChangeEvent;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowEvent;
+import java.io.IOException;
 import java.text.DecimalFormat;
+import java.util.Optional;
 
 import static java.lang.Math.max;
 import static org.mmarini.wheelly.swing.Utils.createFrame;
@@ -79,6 +81,8 @@ public class MatrixMonitor {
         parser.addArgument("-c", "--controller")
                 .setDefault("controller.yml")
                 .help("specify controller yaml configuration file");
+        parser.addArgument("-d", "--dump")
+                .help("specify dump signal file");
         return parser;
     }
 
@@ -90,8 +94,11 @@ public class MatrixMonitor {
     public static void main(String[] args) {
         try {
             new MatrixMonitor().init(args).run();
+        } catch (ArgumentParserException ignored) {
+            System.exit(4);
         } catch (Throwable e) {
             logger.atError().setCause(e).log();
+            System.exit(4);
         }
     }
 
@@ -108,6 +115,7 @@ public class MatrixMonitor {
     private final JFormattedTextField timeField;
     private final ComMonitor comMonitor;
     private final SensorMonitor sensorMonitor;
+    private ComDumper dumper;
     private Namespace parseArgs;
     private int commandDuration;
     private long runTimestamp;
@@ -274,6 +282,19 @@ public class MatrixMonitor {
         timeSlider.setEnabled(true);
     }
 
+    /**
+     * Handles the read line
+     *
+     * @param line the read line
+     */
+    private void handleReadLine(String line) {
+        comMonitor.onReadLine(line);
+        if (dumper != null) {
+            dumper.dumpReadLine(line);
+        }
+        logger.atDebug().setMessage("--> {}").addArgument(line).log();
+    }
+
     private void handleRobotDirSlider(ChangeEvent changeEvent) {
         int robotDir = robotDirSlider.getValue();
         robotDirField.setValue(robotDir);
@@ -296,6 +317,12 @@ public class MatrixMonitor {
         commandFrame.dispose();
         sensorFrame.dispose();
         comFrame.dispose();
+        if (dumper != null) {
+            try {
+                dumper.close();
+            } catch (IOException ignored) {
+            }
+        }
     }
 
     private void handleSpeedSlider(ChangeEvent changeEvent) {
@@ -313,8 +340,16 @@ public class MatrixMonitor {
         timeField.setValue(commandDuration);
     }
 
+    /**
+     * Handles the written line
+     *
+     * @param line the written line
+     */
     private void handleWriteLine(String line) {
         logger.atDebug().setMessage("<-- {}").addArgument(line).log();
+        if (dumper != null) {
+            dumper.dumpWrittenLine(line);
+        }
         comMonitor.onWriteLine(line);
     }
 
@@ -325,7 +360,13 @@ public class MatrixMonitor {
      * @throws ArgumentParserException in case of error
      */
     private MatrixMonitor init(String[] args) throws ArgumentParserException {
-        parseArgs = createParser().parseArgs(args);
+        ArgumentParser parser = createParser();
+        try {
+            parseArgs = parser.parseArgs(args);
+        } catch (ArgumentParserException e) {
+            parser.handleError(e);
+            throw e;
+        }
         return this;
     }
 
@@ -349,14 +390,19 @@ public class MatrixMonitor {
             comMonitor.onError(er);
             logger.atError().setCause(er).log();
         }).subscribe();
-        controller.readReadLine().doOnNext(line -> {
-            comMonitor.onReadLine(line);
-            logger.atDebug().setMessage("--> {}").addArgument(line).log();
-        }).subscribe();
+        controller.readReadLine().doOnNext(this::handleReadLine).subscribe();
         controller.readWriteLine().doOnNext(this::handleWriteLine).subscribe();
         controller.readShutdown().doOnComplete(this::handleShutdown).subscribe();
         controller.readControllerStatus().doOnNext(this::handleControlStatus).subscribe();
         controller.setOnInference(this::handleCommands);
+        Optional.ofNullable(parseArgs.getString("dump"))
+                .ifPresent(file -> {
+                    try {
+                        this.dumper = ComDumper.fromFile(file);
+                    } catch (IOException e) {
+                        logger.atError().setCause(e).log();
+                    }
+                });
 
         this.commandFrame = createFrame(Messages.getString("MatrixMonitor.title"), COMMAND_FRAME_SIZE, commandPanel);
         this.sensorFrame = sensorMonitor.createFrame();

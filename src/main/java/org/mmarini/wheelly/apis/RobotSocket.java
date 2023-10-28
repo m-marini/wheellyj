@@ -116,7 +116,7 @@ public class RobotSocket implements Closeable {
                     .addArgument(robotHost).addArgument(port).log();
             return this;
         } catch (InterruptedException | TimeoutException e) {
-            throw new InterruptedIOException(e.getMessage());
+            throw new InterruptedIOException("Connection timeout");
         } catch (ExecutionException e) {
             throw new IOException(e.getCause());
         }
