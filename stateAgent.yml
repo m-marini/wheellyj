@@ -1,6 +1,6 @@
 ---
 version: "0.4"
-active: explorerAgent
+active: idleAgent
 
 configurations:
   ######################################

@@ -1,6 +1,8 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/state-agent-schema
 title: State machine agent
+description: State Agent Schema
 type: object
 $defs:
   Commands:

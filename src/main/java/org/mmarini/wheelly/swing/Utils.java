@@ -40,6 +40,20 @@ public interface Utils {
     Dimension DEFAULT_SIZE = new Dimension(800, 800);
 
     /**
+     * Returns the desktop centered frame
+     *
+     * @param frame the frame
+     */
+    static JFrame center(JFrame frame) {
+        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
+        Dimension frameSize = frame.getSize();
+        frame.setLocation(
+                (screen.width - frameSize.width) / 2,
+                (screen.height - frameSize.height) / 2);
+        return frame;
+    }
+
+    /**
      * Returns a non-resizable frame
      *
      * @param title   the title
@@ -48,16 +62,6 @@ public interface Utils {
      */
     static JFrame createFixFrame(String title, Dimension size, Component content) {
         return createFrame(title, size, content, false);
-    }
-
-    /**
-     * Returns a resizable frame with default size
-     *
-     * @param title   the title
-     * @param content the content
-     */
-    static JFrame createFrame(String title, Component content) {
-        return createFrame(title, DEFAULT_SIZE, content, true);
     }
 
     /**
@@ -92,6 +96,16 @@ public interface Utils {
         content1.setLayout(new BorderLayout());
         content1.add(content, BorderLayout.CENTER);
         return frame;
+    }
+
+    /**
+     * Returns a resizable frame with default size
+     *
+     * @param title   the title
+     * @param content the content
+     */
+    static JFrame createFrame(String title, Component content) {
+        return createFrame(title, DEFAULT_SIZE, content, true);
     }
 
     static void layHorizontally(JFrame... frames) {

@@ -43,6 +43,7 @@ import org.slf4j.LoggerFactory;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowEvent;
+import java.io.IOException;
 import java.util.Optional;
 
 import static org.mmarini.wheelly.swing.Utils.*;
@@ -82,6 +83,8 @@ public class RobotExecutor {
                 .setDefault(43200L)
                 .type(Long.class)
                 .help("specify number of seconds of session duration");
+        parser.addArgument("-d", "--dump")
+                .help("specify dump signal file");
         return parser;
     }
 
@@ -111,6 +114,7 @@ public class RobotExecutor {
     private long robotStartTimestamp;
     private long prevRobotStep;
     private long prevRealStep;
+    private ComDumper dumper;
 
     /**
      * Creates the roboto executor
@@ -160,6 +164,18 @@ public class RobotExecutor {
     }
 
     /**
+     * Handles read line
+     *
+     * @param line the read line
+     */
+    private void handleReadLine(String line) {
+        comMonitor.onReadLine(line);
+        if (dumper != null) {
+            dumper.dumpReadLine(line);
+        }
+    }
+
+    /**
      * Handles the application shutdown
      */
     private void handleShutdown() {
@@ -167,6 +183,13 @@ public class RobotExecutor {
         radarFrame.dispose();
         comFrame.dispose();
         sensorFrame.dispose();
+        if (dumper != null) {
+            try {
+                dumper.close();
+            } catch (IOException e) {
+                logger.atError().setCause(e).log();
+            }
+        }
         if (!args.getBoolean("silent")) {
             JOptionPane.showMessageDialog(null,
                     "Completed", "Information", JOptionPane.INFORMATION_MESSAGE);
@@ -227,6 +250,18 @@ public class RobotExecutor {
     }
 
     /**
+     * Handles written line
+     *
+     * @param line the written line
+     */
+    private void handleWrittenLine(String line) {
+        comMonitor.onWriteLine(line);
+        if (dumper != null) {
+            dumper.dumpWrittenLine(line);
+        }
+    }
+
+    /**
      * Starts the executor.
      * <p>
      * Creates the agent
@@ -244,6 +279,14 @@ public class RobotExecutor {
             sessionDuration *= 1000;
             logger.atInfo().log("Starting session ...");
             this.agent = createAgent();
+            Optional.ofNullable(this.args.getString("dump"))
+                    .ifPresent(file -> {
+                        try {
+                            dumper = ComDumper.fromFile(file);
+                        } catch (IOException e) {
+                            logger.atError().setCause(e).log();
+                        }
+                    });
             double radarMaxDistance = agent.getMaxRadarDistance();
             polarPanel.setRadarMaxDistance(radarMaxDistance);
             logger.atInfo().setMessage("Session are running for {} sec...").addArgument(sessionDuration).log();
@@ -254,8 +297,8 @@ public class RobotExecutor {
                 comMonitor.onError(err);
                 logger.atError().setCause(err).log();
             }).subscribe();
-            agent.readReadLine().doOnNext(comMonitor::onReadLine).subscribe();
-            agent.readWriteLine().doOnNext(comMonitor::onWriteLine).subscribe();
+            agent.readReadLine().doOnNext(this::handleReadLine).subscribe();
+            agent.readWriteLine().doOnNext(this::handleWrittenLine).subscribe();
             agent.readControllerStatus().doOnNext(this::handleControllerStatus).subscribe();
             agent.readCommand().doOnNext(sensorMonitor::onCommand).subscribe();
             frame.setVisible(true);

@@ -28,6 +28,7 @@
 package org.mmarini.wheelly.swing;
 
 import java.util.MissingResourceException;
+import java.util.Optional;
 import java.util.ResourceBundle;
 
 /**
@@ -36,13 +37,17 @@ import java.util.ResourceBundle;
 public class Messages {
     private static final String BUNDLE_NAME = "resources"; //$NON-NLS-1$
 
-    private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle(BUNDLE_NAME);
+    public static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle(BUNDLE_NAME);
 
     public static String getString(final String key) {
+        return getStringOpt(key).orElseGet(() -> '!' + key + '!');
+    }
+
+    public static Optional<String> getStringOpt(final String key) {
         try {
-            return RESOURCE_BUNDLE.getString(key);
+            return Optional.of(RESOURCE_BUNDLE.getString(key));
         } catch (final MissingResourceException e) {
-            return '!' + key + '!';
+            return Optional.empty();
         }
     }
 

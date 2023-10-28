@@ -44,7 +44,6 @@ import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.wheelly.envs.WithPolarMap;
 import org.mmarini.wheelly.envs.WithRadarMap;
 import org.mmarini.wheelly.swing.*;
-import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -137,6 +136,8 @@ public class Wheelly {
                 .setDefault(43200L)
                 .type(Long.class)
                 .help("specify number of seconds of session duration");
+        parser.addArgument("-d", "--dump")
+                .help("specify dump signal file");
         return parser;
     }
 
@@ -166,6 +167,7 @@ public class Wheelly {
     private Agent agent;
     private long prevRobotStep;
     private long prevStep;
+    private ComDumper dumper;
 
     /**
      *
@@ -239,6 +241,18 @@ public class Wheelly {
         prevStep = time;
     }
 
+    /**
+     * Handles read line
+     *
+     * @param line read line
+     */
+    private void handleReadLine(String line) {
+        comMonitor.onReadLine(line);
+        if (dumper != null) {
+            dumper.dumpReadLine(line);
+        }
+    }
+
     private void handleResult(Environment.ExecutionResult result) {
         double reward = result.getReward();
         envPanel.setReward(avgRewards.add(reward));
@@ -258,6 +272,13 @@ public class Wheelly {
         }
         sensorFrame.dispose();
         comFrame.dispose();
+        if (dumper != null) {
+            try {
+                dumper.close();
+            } catch (IOException e) {
+                logger.atError().setCause(e).log();
+            }
+        }
         if (!args.getBoolean("silent")) {
             JOptionPane.showMessageDialog(null,
                     "Completed", "Information", JOptionPane.INFORMATION_MESSAGE);
@@ -286,8 +307,7 @@ public class Wheelly {
      * @param e the event
      */
     private void handleWindowOpened(WindowEvent e) {
-        try (INDArray ignored = Nd4j.zeros(1)) {
-        }
+        Nd4j.zeros(1);
         RobotApi robot = environment.getController().getRobot();
         if (robot instanceof SimRobot) {
             Optional<ObstacleMap> obstaclesMap = ((SimRobot) robot).getObstaclesMap();
@@ -298,6 +318,18 @@ public class Wheelly {
                     .ifPresent(envPanel::setObstacleSize);
         }
         environment.start();
+    }
+
+    /**
+     * Handles written line
+     *
+     * @param line written line
+     */
+    private void handleWrittenLine(String line) {
+        comMonitor.onWriteLine(line);
+        if (dumper != null) {
+            dumper.dumpWrittenLine(line);
+        }
     }
 
     protected void start(String[] args) {
@@ -332,14 +364,22 @@ public class Wheelly {
                 createKpis(agent, environment.getActions(), new File(kpis), this.args.getString("labels"));
             }
             this.start = System.currentTimeMillis();
+            Optional.ofNullable(this.args.getString("dump"))
+                    .ifPresent(file -> {
+                        try {
+                            this.dumper = ComDumper.fromFile(file);
+                        } catch (IOException e) {
+                            logger.atError().setCause(e).log();
+                        }
+                    });
             environment.readRobotStatus()
                     .doOnNext(this::handleStatusReady)
                     .subscribe();
             environment.readReadLine()
-                    .doOnNext(comMonitor::onReadLine)
+                    .doOnNext(this::handleReadLine)
                     .subscribe();
             environment.readWriteLine()
-                    .doOnNext(comMonitor::onWriteLine)
+                    .doOnNext(this::handleWrittenLine)
                     .subscribe();
             environment.readCommand()
                     .doOnNext(sensorMonitor::onCommand)
