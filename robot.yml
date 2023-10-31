@@ -28,10 +28,12 @@ configurations:
     supplyValues: [2165, 2683]
     voltages: [9.8, 12.3]
     configCommands:
-      - cs 1000
-      - cc 5 60 12
-      - cl 64 64 1270 50 75 -49 -65
-      - cr 64 64 1270 37 57 -45 -68
+      - cs 500
+      - cc 5 15 12
+      - cl 200 200 4000 71 107 -62 -81
+      - cr 200 200 4000 59 78 -62 -92
+#      - cl 100 48 2000 50 75 -49 -65
+#      - cr 100 48 2000 37 57 -45 -68
       - ci 500 500
   constantRobot:
     class: org.mmarini.wheelly.apis.MockRobot

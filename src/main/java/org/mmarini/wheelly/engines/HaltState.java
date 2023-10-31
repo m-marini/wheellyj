@@ -32,6 +32,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.yaml.Locator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Generates the behavior to halt the robot
@@ -43,6 +45,8 @@ import org.mmarini.yaml.Locator;
  */
 
 public class HaltState extends AbstractStateNode {
+
+    private static final Logger logger = LoggerFactory.getLogger(HaltState.class);
 
     /**
      * Returns the halt state from configuration
@@ -85,6 +89,9 @@ public class HaltState extends AbstractStateNode {
             return TIMEOUT_RESULT;
         }
         if (isBlocked(ctx)) {
+            logger.atDebug().log("Contacts at {} {}",
+                    !ctx.getRobotStatus().canMoveForward() ? "front" : "",
+                    !ctx.getRobotStatus().canMoveBackward() ? "rear" : "");
             return BLOCKED_RESULT;
         }
         return tickAutoScan(ctx);

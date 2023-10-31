@@ -34,7 +34,7 @@ import java.io.IOException;
  * API Interface for robot
  */
 public interface RobotApi extends Closeable, WithStatusCallback {
-    int MAX_PPS = 32;
+    int MAX_PPS = 40;
 
     /**
      * Returns the robot api from configuration file
