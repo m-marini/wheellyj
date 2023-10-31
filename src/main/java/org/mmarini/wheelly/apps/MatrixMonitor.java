@@ -53,16 +53,18 @@ import java.text.DecimalFormat;
 import java.util.Optional;
 
 import static java.lang.Math.max;
+import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 import static org.mmarini.wheelly.swing.Utils.createFrame;
 import static org.mmarini.wheelly.swing.Utils.layHorizontally;
 
 
 public class MatrixMonitor {
+    public static final int TIME_MAJOR_TICK_SPACING = 10;
     private static final Dimension COMMAND_FRAME_SIZE = new Dimension(400, 800);
     private static final Logger logger = LoggerFactory.getLogger(MatrixMonitor.class);
     private static final int MAX_SPEED = 40;
-    private static final int MAX_TIME = 10000;
-    private static final int MIN_TIME = 500;
+    private static final int MAX_TIME = 60;
+    private static final int MIN_TIME = 1;
 
     /**
      * Returns the command line arguments parser
@@ -117,7 +119,7 @@ public class MatrixMonitor {
     private final SensorMonitor sensorMonitor;
     private ComDumper dumper;
     private Namespace parseArgs;
-    private int commandDuration;
+//    private int commandDuration;
     private long runTimestamp;
     private RobotControllerApi controller;
     private boolean halt;
@@ -143,7 +145,7 @@ public class MatrixMonitor {
         this.timeField = new JFormattedTextField(intFormat);
         this.haltButton = new JButton("HALT !!!");
         this.runButton = new JButton("Run");
-        this.commandDuration = 1000;
+//        this.commandDuration = MAX_TIME;
         this.commandPanel = createCommandPanel();
         this.halt = true;
         comMonitor.setPrintTimestamp(true);
@@ -197,9 +199,9 @@ public class MatrixMonitor {
         timeSlider.setOrientation(JSlider.VERTICAL);
         timeSlider.setMinimum(0);
         timeSlider.setMaximum(MAX_TIME);
-        timeSlider.setValue(commandDuration);
+        timeSlider.setValue(MAX_TIME);
         timeSlider.setMinorTickSpacing(MIN_TIME);
-        timeSlider.setMajorTickSpacing(1000);
+        timeSlider.setMajorTickSpacing(TIME_MAJOR_TICK_SPACING);
         timeSlider.setPaintLabels(true);
         timeSlider.setPaintTicks(true);
         timeSlider.setSnapToTicks(true);
@@ -207,7 +209,7 @@ public class MatrixMonitor {
         timeField.setColumns(6);
         timeField.setEditable(false);
         timeField.setHorizontalAlignment(SwingConstants.RIGHT);
-        timeField.setValue(commandDuration);
+        timeField.setValue(MAX_TIME);
 
         haltButton.setBackground(Color.RED);
         haltButton.setForeground(Color.WHITE);
@@ -257,7 +259,7 @@ public class MatrixMonitor {
 
     private void handleCommands(RobotStatus status) {
         long time = System.currentTimeMillis();
-        if (!halt && time >= runTimestamp + timeSlider.getValue()) {
+        if (!halt && time >= runTimestamp + timeSlider.getValue() * 1000L) {
             halt = true;
             runButton.setEnabled(true);
             timeSlider.setEnabled(true);
@@ -265,7 +267,9 @@ public class MatrixMonitor {
         if (halt) {
             controller.execute(RobotCommands.halt());
         } else {
-            controller.execute(RobotCommands.move(robotDirSlider.getValue(), speedSlider.getValue()));
+            controller.execute(RobotCommands.move(
+                    normalizeDegAngle(robotDirSlider.getValue()),
+                    speedSlider.getValue()));
         }
     }
 
@@ -335,7 +339,7 @@ public class MatrixMonitor {
     }
 
     private void handleTimeSlider(ChangeEvent changeEvent) {
-        this.commandDuration = max(timeSlider.getValue(), MIN_TIME);
+        int commandDuration = max(timeSlider.getValue(), MIN_TIME);
         timeSlider.setValue(commandDuration);
         timeField.setValue(commandDuration);
     }
