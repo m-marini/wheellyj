@@ -115,6 +115,17 @@ public class ProcessorContext {
     }
 
     /**
+     * Returns the block result or null if no contacts
+     */
+    public Tuple2<String, RobotCommands> getBlockResult() {
+        return isFrontBlocked()
+                ? isRearBlocked()
+                ? StateNode.BLOCKED_RESULT : StateNode.FRONT_BLOCKED_RESULT
+                : isRearBlocked()
+                ? StateNode.REAR_BLOCKED_RESULT : null;
+    }
+
+    /**
      * Returns a double value by key
      *
      * @param key          the key
@@ -318,6 +329,28 @@ public class ProcessorContext {
         logger.debug("{}: entry", currentNode.getId());
         this.currentNode.entry(this);
         stateProcessor.onNext(currentNode);
+    }
+
+    /**
+     * Returns true if robot has any block
+     */
+    public boolean isBlocked() {
+        return !getRobotStatus().canMoveForward()
+                || !getRobotStatus().canMoveBackward();
+    }
+
+    /**
+     * Returns true if robot has front block
+     */
+    public boolean isFrontBlocked() {
+        return !getRobotStatus().canMoveForward();
+    }
+
+    /**
+     * Returns true if robot has rear block
+     */
+    public boolean isRearBlocked() {
+        return !getRobotStatus().canMoveBackward();
     }
 
     /**

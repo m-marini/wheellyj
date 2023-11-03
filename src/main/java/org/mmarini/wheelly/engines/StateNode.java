@@ -43,11 +43,15 @@ import static org.mmarini.yaml.Utils.createObject;
  */
 public interface StateNode {
     String TIMEOUT_EXIT = "timeout";
+    String FRONT_BLOCKED_EXIT = "frontBlocked";
+    String REAR_BLOCKED_EXIT = "rearBlocked";
     String BLOCKED_EXIT = "blocked";
     String COMPLETED_EXIT = "completed";
     String NONE_EXIT = "none";
     Tuple2<String, RobotCommands> TIMEOUT_RESULT = Tuple2.of(TIMEOUT_EXIT, RobotCommands.idle());
     Tuple2<String, RobotCommands> BLOCKED_RESULT = Tuple2.of(BLOCKED_EXIT, RobotCommands.idle());
+    Tuple2<String, RobotCommands> FRONT_BLOCKED_RESULT = Tuple2.of(FRONT_BLOCKED_EXIT, RobotCommands.idle());
+    Tuple2<String, RobotCommands> REAR_BLOCKED_RESULT = Tuple2.of(REAR_BLOCKED_EXIT, RobotCommands.idle());
     Tuple2<String, RobotCommands> NONE_RESULT = Tuple2.of(NONE_EXIT, RobotCommands.none());
     Tuple2<String, RobotCommands> COMPLETED_RESULT = Tuple2.of(COMPLETED_EXIT, RobotCommands.idle());
 

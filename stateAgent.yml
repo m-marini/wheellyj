@@ -77,7 +77,10 @@ configurations:
       transitions:
         - from: idle
           to: avoid
-          trigger: blocked
+          trigger: frontBlocked
+        - from: idle
+          to: avoid
+          trigger: rearBlocked
         - from: avoid
           to: idle
           trigger: completed
