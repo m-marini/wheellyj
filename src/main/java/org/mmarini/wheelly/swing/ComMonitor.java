@@ -51,7 +51,7 @@ public class ComMonitor extends MatrixTable {
     private static final Logger logger = LoggerFactory.getLogger(ComMonitor.class);
 
     public ComMonitor() {
-        addColumn(CONTROLLER_KEY, Messages.getString("ComMonitor.controller"), 3, true);
+        addColumn(CONTROLLER_KEY, Messages.getString("ComMonitor.controller"), 3).setScrollOnChange(true);
         addColumn(STATUS, Messages.getString("ComMonitor.status"), 77);
         addColumn(MOVE, Messages.getString("ComMonitor.move"), 11);
         addColumn(SCAN, Messages.getString("ComMonitor.scan"), 6);

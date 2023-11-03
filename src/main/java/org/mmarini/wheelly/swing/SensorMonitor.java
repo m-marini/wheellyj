@@ -34,6 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
+import java.util.stream.Stream;
 
 /**
  * Displays the robot status, controller status and roboto commands as matrix table
@@ -62,22 +63,24 @@ public class SensorMonitor extends MatrixTable {
      * Create the sensor monitor
      */
     public SensorMonitor() {
-        addColumn(HEAD_KEY, Messages.getString("SensorMonitor.head"), 4, true);
-        addColumn(SENSOR_DIR_KEY, Messages.getString("SensorMonitor.sensorDir"), 3, true);
-        addColumn(ECHO_DIST_KEY, Messages.getString("SensorMonitor.echoDistance"), 3, true);
-        addColumn(LEFT_PPS_KEY, Messages.getString("SensorMonitor.leftPps"), 3, true);
-        addColumn(RIGHT_PPS_KEY, Messages.getString("SensorMonitor.rightPps"), 3, true);
-        addColumn(CAN_MOVE_FORWARD_KEY, Messages.getString("SensorMonitor.canMoveForward"), 1, true);
-        addColumn(CAN_MOVE_BACKWARD_KEY, Messages.getString("SensorMonitor.canMoveBackward"), 1, true);
-        addColumn(CONTACTS_KEY, Messages.getString("SensorMonitor.contacts"), 1, true);
-        addColumn(X_LOCATION_KEY, Messages.getString("SensorMonitor.xLocation"), 5, true);
-        addColumn(Y_LOCATION_KEY, Messages.getString("SensorMonitor.yLocation"), 5, true);
-        addColumn(CONTROLLER_STATUS_KEY, Messages.getString("SensorMonitor.controllerStatus"), 3, true);
-        addColumn(MOVE_HEAD, Messages.getString("SensorMonitor.moveHead"), 4, true);
-        addColumn(MOVE_SPEED, Messages.getString("SensorMonitor.moveSpeed"), 3, true);
-        addColumn(REWARD_KEY, Messages.getString("SensorMonitor.reward"), 6, true);
-        addColumn(IMU_FAILURE_KEY, Messages.getString("SensorMonitor.imuFailure"), 3, true);
-        addColumn(SUPPLY_KEY, Messages.getString("SensorMonitor.supply"), 3, true);
+        Stream.of(
+                        addColumn(HEAD_KEY, Messages.getString("SensorMonitor.head"), 4),
+                        addColumn(SENSOR_DIR_KEY, Messages.getString("SensorMonitor.sensorDir"), 3),
+                        addColumn(ECHO_DIST_KEY, Messages.getString("SensorMonitor.echoDistance"), 3),
+                        addColumn(LEFT_PPS_KEY, Messages.getString("SensorMonitor.leftPps"), 3),
+                        addColumn(RIGHT_PPS_KEY, Messages.getString("SensorMonitor.rightPps"), 3),
+                        addColumn(CAN_MOVE_FORWARD_KEY, Messages.getString("SensorMonitor.canMoveForward"), 1),
+                        addColumn(CAN_MOVE_BACKWARD_KEY, Messages.getString("SensorMonitor.canMoveBackward"), 1),
+                        addColumn(CONTACTS_KEY, Messages.getString("SensorMonitor.contacts"), 1),
+                        addColumn(X_LOCATION_KEY, Messages.getString("SensorMonitor.xLocation"), 5),
+                        addColumn(Y_LOCATION_KEY, Messages.getString("SensorMonitor.yLocation"), 5),
+                        addColumn(CONTROLLER_STATUS_KEY, Messages.getString("SensorMonitor.controllerStatus"), 3),
+                        addColumn(MOVE_HEAD, Messages.getString("SensorMonitor.moveHead"), 4),
+                        addColumn(MOVE_SPEED, Messages.getString("SensorMonitor.moveSpeed"), 3),
+                        addColumn(REWARD_KEY, Messages.getString("SensorMonitor.reward"), 6),
+                        addColumn(IMU_FAILURE_KEY, Messages.getString("SensorMonitor.imuFailure"), 3),
+                        addColumn(SUPPLY_KEY, Messages.getString("SensorMonitor.supply"), 3))
+                .forEach(col -> col.setScrollOnChange(true));
         setPrintTimestamp(false);
     }
 

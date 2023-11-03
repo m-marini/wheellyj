@@ -38,7 +38,10 @@ import java.util.stream.Collectors;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Defines the transition between states, with the trigger condition and processing stage
+ * Defines the transition between states, with the trigger condition and processing stage.
+ * <p>
+ * It is an immutable object
+ * </p>
  */
 public class StateTransition {
 

@@ -36,6 +36,7 @@ import org.jetbrains.annotations.NotNull;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.engines.ProcessorContext;
 import org.mmarini.wheelly.engines.StateMachineAgent;
+import org.mmarini.wheelly.engines.StateNode;
 import org.mmarini.wheelly.swing.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +46,7 @@ import java.awt.*;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.mmarini.wheelly.swing.Utils.*;
 
@@ -99,14 +101,16 @@ public class RobotExecutor {
 
     private final JFrame frame;
     private final JFrame radarFrame;
+    private final JFrame comFrame;
+    private final JFrame sensorFrame;
+    private final JFrame engineFrame;
     private final EnvironmentPanel envPanel;
     private final PolarPanel polarPanel;
     private final AverageValue reactionRobotTime;
     private final AverageValue reactionRealTime;
     private final ComMonitor comMonitor;
-    private final JFrame comFrame;
     private final SensorMonitor sensorMonitor;
-    private final JFrame sensorFrame;
+    private final StateEngineMonitor engineMonitor;
     private Namespace args;
     private long start;
     private long sessionDuration;
@@ -122,31 +126,20 @@ public class RobotExecutor {
     public RobotExecutor() {
         this.envPanel = new EnvironmentPanel();
         this.polarPanel = new PolarPanel();
-        this.frame = createFrame(Messages.getString("RobotExecutor.title"), envPanel);
-        this.radarFrame = createFixFrame(Messages.getString("Radar.title"), DEFALT_RADAR_DIMENSION, polarPanel);
         this.comMonitor = new ComMonitor();
-        comMonitor.setPrintTimestamp(true);
-        this.comFrame = comMonitor.createFrame();
-        this.sensorMonitor = new SensorMonitor();
-        this.sensorFrame = sensorMonitor.createFrame();
+        this.engineMonitor = new StateEngineMonitor();
         this.reactionRobotTime = AverageValue.create();
         this.reactionRealTime = AverageValue.create();
         this.robotStartTimestamp = -1;
         this.prevRobotStep = -1;
         this.prevRealStep = -1;
-        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
-                .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
-                .doOnNext(this::handleWindowOpened)
-                .subscribe();
-        Observable.mergeArray(
-                        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE),
-                        SwingObservable.window(comFrame, SwingObservable.WINDOW_ACTIVE),
-                        SwingObservable.window(sensorFrame, SwingObservable.WINDOW_ACTIVE),
-                        SwingObservable.window(radarFrame, SwingObservable.WINDOW_ACTIVE))
-                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
-                .doOnNext(this::handleWindowClosing)
-                .subscribe();
-        layHorizontally(frame, radarFrame, sensorFrame, comFrame);
+        this.comFrame = comMonitor.createFrame();
+        this.sensorMonitor = new SensorMonitor();
+        this.frame = createFrame(Messages.getString("RobotExecutor.title"), envPanel);
+        this.radarFrame = createFixFrame(Messages.getString("Radar.title"), DEFALT_RADAR_DIMENSION, polarPanel);
+        this.engineFrame = engineMonitor.createFrame();
+        this.sensorFrame = sensorMonitor.createFrame();
+        init();
     }
 
     /**
@@ -183,6 +176,7 @@ public class RobotExecutor {
         radarFrame.dispose();
         comFrame.dispose();
         sensorFrame.dispose();
+        engineFrame.dispose();
         if (dumper != null) {
             try {
                 dumper.close();
@@ -194,6 +188,15 @@ public class RobotExecutor {
             JOptionPane.showMessageDialog(null,
                     "Completed", "Information", JOptionPane.INFORMATION_MESSAGE);
         }
+    }
+
+    /**
+     * Handles state change event
+     *
+     * @param state the state
+     */
+    private void handleState(StateNode state) {
+        engineMonitor.addState(state);
     }
 
     /**
@@ -224,6 +227,15 @@ public class RobotExecutor {
         if (robotElapsed > sessionDuration) {
             agent.shutdown();
         }
+    }
+
+    /**
+     * Handles the trigger event
+     *
+     * @param trigger the trigger
+     */
+    private void handleTrigger(String trigger) {
+        engineMonitor.addTrigger(trigger);
     }
 
     private void handleWindowClosing(WindowEvent windowEvent) {
@@ -259,6 +271,27 @@ public class RobotExecutor {
         if (dumper != null) {
             dumper.dumpWrittenLine(line);
         }
+    }
+
+    /**
+     * Initializes the application
+     */
+    private void init() {
+        comMonitor.setPrintTimestamp(true);
+        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
+                .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
+                .doOnNext(this::handleWindowOpened)
+                .subscribe();
+        Observable.mergeArray(
+                        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE),
+                        SwingObservable.window(comFrame, SwingObservable.WINDOW_ACTIVE),
+                        SwingObservable.window(sensorFrame, SwingObservable.WINDOW_ACTIVE),
+                        SwingObservable.window(engineFrame, SwingObservable.WINDOW_ACTIVE),
+                        SwingObservable.window(radarFrame, SwingObservable.WINDOW_ACTIVE))
+                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
+                .doOnNext(this::handleWindowClosing)
+                .subscribe();
+        layHorizontally(frame, radarFrame, engineFrame, sensorFrame, comFrame);
     }
 
     /**
@@ -301,10 +334,15 @@ public class RobotExecutor {
             agent.readWriteLine().doOnNext(this::handleWrittenLine).subscribe();
             agent.readControllerStatus().doOnNext(this::handleControllerStatus).subscribe();
             agent.readCommand().doOnNext(sensorMonitor::onCommand).subscribe();
-            frame.setVisible(true);
-            radarFrame.setVisible(true);
-            sensorFrame.setVisible(true);
-            comFrame.setVisible(true);
+            ProcessorContext context = agent.getContext();
+            context.readTriggers()
+                    .doOnNext(this::handleTrigger)
+                    .subscribe();
+            context.readState()
+                    .doOnNext(this::handleState)
+                    .subscribe();
+            Stream.of(frame, radarFrame, engineFrame, sensorFrame, comFrame)
+                    .forEach(f -> f.setVisible(true));
             comFrame.setState(JFrame.ICONIFIED);
         } catch (ArgumentParserException e) {
             parser.handleError(e);

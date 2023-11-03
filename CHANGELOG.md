@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #240: Add stiction test app
 - Issue #242: Add dump signals
 - Issue #244: Friction at 8.5V
+- Issue #246: Add trigger and state monitor
 
 ### Changed
 

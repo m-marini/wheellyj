@@ -38,7 +38,10 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 /**
- * The state flow defines all process states and state transitions
+ * The state flow defines all process states and state transitions.
+ * <p>
+ * It is an immutable object.
+ * </p>
  */
 public class StateFlow {
     /**

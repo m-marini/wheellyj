@@ -40,6 +40,9 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * Performs processor context processing
+ * <p>
+ * It is an immutable object
+ * </p>
  */
 public class ProcessorCommand {
     private static final List<ProcessorCommand> COMMANDS = List.of(
