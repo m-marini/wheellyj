@@ -57,6 +57,8 @@ public class DumpRecordPanel extends JPanel {
     private final JFormattedTextField sensorField;
     private final JFormattedTextField echoField;
     private final JCheckBox haltField;
+    private final JCheckBox forwardBlockField;
+    private final JCheckBox backwardBlockField;
     private final Flowable<Instant> offsetFlow;
     private final JFormattedTextField directionField;
     private final JFormattedTextField leftPpsField;
@@ -76,6 +78,8 @@ public class DumpRecordPanel extends JPanel {
         this.sensorField = new JFormattedTextField();
         this.echoField = new JFormattedTextField();
         this.haltField = SwingUtils.createCheckBox("DumpRecordPanel.haltButton");
+        this.forwardBlockField = SwingUtils.createCheckBox("DumpRecordPanel.forwardBlockButton");
+        this.backwardBlockField = SwingUtils.createCheckBox("DumpRecordPanel.backwardBlockButton");
         this.typeField = new JTextField();
         this.elapsedField = new JTextField();
         this.dataField = new JTextArea();
@@ -96,7 +100,8 @@ public class DumpRecordPanel extends JPanel {
     private void clearStatusField() {
         Stream.of(directionField, leftPpsField, rightPpsField, echoField, sensorField)
                 .forEach(c -> c.setText(""));
-        haltField.setSelected(false);
+        Stream.of(haltField, backwardBlockField, forwardBlockField)
+                .forEach(f -> f.setSelected(false));
         statusPanel.setVisible(false);
     }
 
@@ -136,7 +141,11 @@ public class DumpRecordPanel extends JPanel {
                 .add(sensorField)
                 .modify("at,1,4")
                 .add(echoField)
-                .modify("at,0,6 span,2,1 noweight")
+                .modify("at,0,6 noweight")
+                .add(forwardBlockField)
+                .modify("at,1,6 noweight")
+                .add(backwardBlockField)
+                .modify("at,0,7 span,2,1")
                 .add(haltField);
         // Creates the content
         new GridLayoutHelper<>(Messages.RESOURCE_BUNDLE, this)
@@ -237,7 +246,8 @@ public class DumpRecordPanel extends JPanel {
                     c.setMinimumSize(c.getPreferredSize());
                     c.setEditable(false);
                 });
-        haltField.setEnabled(false);
+        Stream.of(haltField, forwardBlockField, backwardBlockField)
+                .forEach(f -> f.setEnabled(false));
     }
 
     /**
@@ -260,6 +270,8 @@ public class DumpRecordPanel extends JPanel {
         sensorField.setValue(status.getSensorDirection());
         echoField.setValue(status.getEchoTime());
         haltField.setSelected(status.isHalt());
+        forwardBlockField.setSelected(!status.canMoveForward());
+        backwardBlockField.setSelected(!status.getCanMoveBackward());
         statusPanel.setVisible(true);
     }
 }

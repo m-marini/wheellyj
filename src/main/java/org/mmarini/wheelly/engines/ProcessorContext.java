@@ -28,6 +28,8 @@
 
 package org.mmarini.wheelly.engines;
 
+import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.*;
 import org.slf4j.Logger;
@@ -41,7 +43,11 @@ import static org.mmarini.wheelly.engines.StateNode.NONE_EXIT;
 
 /**
  * The processor context handles the process stack and the key, value map of the process
- * and performs the state machine flow
+ * and performs the state machine flow.
+ * <p>
+ * Is is a mutable object.
+ * It tracks the current state of the robot, inference engine, and radars
+ * </p>
  */
 public class ProcessorContext {
     private static final Logger logger = LoggerFactory.getLogger(ProcessorContext.class);
@@ -50,6 +56,8 @@ public class ProcessorContext {
     private final StateFlow flow;
     private final Random random;
     private final RobotControllerApi robot;
+    private final PublishProcessor<StateNode> stateProcessor;
+    private final PublishProcessor<String> triggerProcessor;
     private RobotStatus robotStatus;
     private StateNode currentNode;
     private PolarMap polarMap;
@@ -67,6 +75,8 @@ public class ProcessorContext {
         this.values = new HashMap<>();
         this.stack = new ArrayList<>();
         this.random = new Random();
+        this.triggerProcessor = PublishProcessor.create();
+        this.stateProcessor = PublishProcessor.create();
     }
 
     /**
@@ -307,6 +317,7 @@ public class ProcessorContext {
         this.currentNode = flow.getEntry();
         logger.debug("{}: entry", currentNode.getId());
         this.currentNode.entry(this);
+        stateProcessor.onNext(currentNode);
     }
 
     /**
@@ -373,6 +384,20 @@ public class ProcessorContext {
     }
 
     /**
+     * Returns the state flow
+     */
+    public Flowable<StateNode> readState() {
+        return stateProcessor;
+    }
+
+    /**
+     * Returns the trigger flow
+     */
+    public Flowable<String> readTriggers() {
+        return triggerProcessor;
+    }
+
+    /**
      * Removes a key from key,value map
      *
      * @param key the key to remove
@@ -388,6 +413,7 @@ public class ProcessorContext {
         // Process the state node
         Tuple2<String, RobotCommands> result = currentNode.step(this);
         robot.execute(result._2);
+        triggerProcessor.onNext(result._1);
         if (!NONE_EXIT.equals(result._1)) {
             //find for transition match
             Optional<StateTransition> tx = flow.getTransitions().stream()
@@ -404,6 +430,7 @@ public class ProcessorContext {
                         // trigger the entry state call back
                         logger.debug("{}: entry", currentNode.getId());
                         currentNode.entry(this);
+                        stateProcessor.onNext(currentNode);
                     },
                     () -> logger.debug("Trigger {} - {} ignored", currentNode.getId(), result._1)
             );

@@ -119,7 +119,7 @@ public class MatrixMonitor {
     private final SensorMonitor sensorMonitor;
     private ComDumper dumper;
     private Namespace parseArgs;
-//    private int commandDuration;
+    //    private int commandDuration;
     private long runTimestamp;
     private RobotControllerApi controller;
     private boolean halt;

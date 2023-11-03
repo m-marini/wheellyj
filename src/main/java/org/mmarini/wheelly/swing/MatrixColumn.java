@@ -39,7 +39,7 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 /**
- * The matrix panel display text in matrix fashion.
+ * The matrix column display text in matrix digital rain mode.
  */
 public class MatrixColumn extends JComponent {
     public static final String DEFAULT_TIME_PATTERN = "%1$tH:%1$tM:%1$tS.%1$tL";
@@ -61,6 +61,7 @@ public class MatrixColumn extends JComponent {
     private boolean printTimestamp;
     private String timePattern;
     private boolean scrollOnChange;
+    private boolean highlightLast;
 
     /**
      * Creates the matrix panel
@@ -83,6 +84,12 @@ public class MatrixColumn extends JComponent {
         this.title = "";
     }
 
+    /**
+     * Creates a matrix column
+     *
+     * @param title the column title
+     * @param size  the size (chars)
+     */
     public MatrixColumn(String title, int size) {
         this();
         this.title = requireNonNull(title);
@@ -90,7 +97,7 @@ public class MatrixColumn extends JComponent {
     }
 
     /**
-     * Clears the panel
+     * Clears the column
      */
     public void clearAll() {
         Arrays.fill(rows, "");
@@ -100,6 +107,11 @@ public class MatrixColumn extends JComponent {
         repaint();
     }
 
+    /**
+     * Returns the color by interval
+     *
+     * @param interval the interval
+     */
     private Color getColor(long interval) {
         Color color = getForeground();
         float[] hsb = Color.RGBtoHSB(color.getRed(), color.getGreen(), color.getBlue(), null);
@@ -112,19 +124,25 @@ public class MatrixColumn extends JComponent {
         return columns;
     }
 
-    public void setColumns(int columns) {
+    public MatrixColumn setColumns(int columns) {
         this.columns = columns;
         resize();
         repaint();
+        return this;
     }
 
     public long getDecayTime() {
         return decayTime;
     }
 
-    public void setDecayTime(long decayTime) {
+    public MatrixColumn setDecayTime(long decayTime) {
         this.decayTime = decayTime;
         repaint();
+        return this;
+    }
+
+    private int getPrevIndex() {
+        return (cursor + rows.length - 1) % rows.length;
     }
 
     /**
@@ -138,39 +156,90 @@ public class MatrixColumn extends JComponent {
      * Sets the number of row
      *
      * @param rows the number of row
+     * @return
      */
-    public void setRows(int rows) {
+    public MatrixColumn setRows(int rows) {
         this.rows = new String[rows];
         timestamps = new long[rows];
         clearAll();
+        return this;
     }
 
+    /**
+     * Returns the time pattern to print timestamp
+     */
     public String getTimePattern() {
         return timePattern;
     }
 
-    public void setTimePattern(String timePattern) {
+    /**
+     * Sets the time pattern to print timestamp
+     *
+     * @param timePattern the pattern
+     * @return
+     */
+    public MatrixColumn setTimePattern(String timePattern) {
         this.timePattern = timePattern;
         resize();
         repaint();
+        return this;
     }
 
+    /**
+     * Returns true if highlights the last record
+     */
+    public boolean isHighlightLast() {
+        return highlightLast;
+    }
+
+    /**
+     * Sets the highlight last record
+     *
+     * @param highlightLast true if highlight last record
+     * @return
+     */
+    public MatrixColumn setHighlightLast(boolean highlightLast) {
+        this.highlightLast = highlightLast;
+        repaint();
+        return this;
+    }
+
+    /**
+     * Returns true if timestamp is printed
+     */
     public boolean isPrintTimestamp() {
         return printTimestamp;
     }
 
-    public void setPrintTimestamp(boolean printTimestamp) {
+    /**
+     * Sets the print timestamp
+     *
+     * @param printTimestamp true if time stamp is printed
+     */
+    public MatrixColumn setPrintTimestamp(boolean printTimestamp) {
         this.printTimestamp = printTimestamp;
         resize();
         repaint();
+        return this;
     }
 
+    /**
+     * Returns true if scroll on change is active
+     */
     public boolean isScrollOnChange() {
         return scrollOnChange;
     }
 
-    public void setScrollOnChange(boolean scrollOnChange) {
+    /**
+     * Sets the scroll on change
+     * If scroll on change is active the new value is painted in the new row only if it changed the value
+     * otherwise only the new refresh color is activated
+     *
+     * @param scrollOnChange true if scroll on change
+     */
+    public MatrixColumn setScrollOnChange(boolean scrollOnChange) {
         this.scrollOnChange = scrollOnChange;
+        return this;
     }
 
     @Override
@@ -196,13 +265,17 @@ public class MatrixColumn extends JComponent {
         y += h;
         g.setColor(getBackground());
         x = fm.charWidth('m') / 2;
+        int prevIndex = getPrevIndex();
+        Color lastColor = getColor(0);
         for (int i = 0; i < rows.length; i++) {
             String row = rows1[i];
             if (row.length() > 0) {
                 String line = printTimestamp
                         ? format(timePattern + " %2$s", timestamps1[i], row)
                         : row;
-                g.setColor(getColor(timestamp - timestamps1[i]));
+                g.setColor(highlightLast && i == prevIndex
+                        ? lastColor
+                        : getColor(timestamp - timestamps1[i]));
                 g.drawString(line, x, y);
             }
             y += h;
@@ -232,7 +305,7 @@ public class MatrixColumn extends JComponent {
      */
     private void printRow(String text, long timestamp) {
         if (scrollOnChange) {
-            int prev = (cursor + rows.length - 1) % rows.length;
+            int prev = getPrevIndex();
             if (text.equals(rows[prev])) {
                 timestamps[prev] = timestamp;
                 repaint();
@@ -250,7 +323,7 @@ public class MatrixColumn extends JComponent {
     }
 
     /**
-     * Recomputes the prefered size base on content
+     * Recomputes the preferred size base on content
      */
     private void resize() {
         Font font = getFont();

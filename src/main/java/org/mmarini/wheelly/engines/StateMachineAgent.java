@@ -48,6 +48,9 @@ import static java.util.Objects.requireNonNull;
  *     <li>The <code>reactionInterval</code> parameter defines the interval (ms) between each state transition</li>
  * </ul>
  * </p>
+ * <p>
+ *     It is a mutable object
+ * </p>
  */
 public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, WithErrorFlowable, WithCommandFlowable, WithControllerFlowable {
     /**
@@ -104,6 +107,13 @@ public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, Wi
         this.polarMap = requireNonNull(polarMap);
         this.radarMap = requireNonNull(radarMap);
         this.stepUpProcessor = PublishProcessor.create();
+    }
+
+    /**
+     * Returns the current context
+     */
+    public ProcessorContext getContext() {
+        return context;
     }
 
     public RobotControllerApi getController() {

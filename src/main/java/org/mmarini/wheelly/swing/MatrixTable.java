@@ -41,6 +41,9 @@ import java.util.concurrent.TimeUnit;
 import static java.lang.Math.min;
 import static java.lang.String.format;
 
+/**
+ * Matrix table shows events in matrix digital rain
+ */
 public class MatrixTable extends JPanel {
 
     public static final int WIDTH_EXTENSION = 14;
@@ -67,6 +70,9 @@ public class MatrixTable extends JPanel {
     private final List<MatrixColumn> columns;
     private final Map<String, MatrixColumn> columByKey;
 
+    /**
+     * Creates the matrix table
+     */
     public MatrixTable() {
         columns = new ArrayList<>();
         columByKey = new HashMap<>();
@@ -76,21 +82,28 @@ public class MatrixTable extends JPanel {
                 .subscribe(i -> repaint());
     }
 
-    public MatrixTable addColumn(String key, MatrixColumn column) {
+    /**
+     * Adds a named columns and returns the changed matrix table
+     *
+     * @param key    the column key
+     * @param column the column
+     */
+    public MatrixColumn addColumn(String key, MatrixColumn column) {
         columns.add(column);
         columByKey.put(key, column);
         add(column);
         invalidate();
-        return this;
+        return column;
     }
 
-    public MatrixTable addColumn(String key, String title, int size, boolean scrollOnChange) {
-        MatrixColumn column = new MatrixColumn(title, size);
-        column.setScrollOnChange(scrollOnChange);
-        return addColumn(key, column);
-    }
-
-    public MatrixTable addColumn(String key, String title, int size) {
+    /**
+     * Returns the matrix column by adding a named columns
+     *
+     * @param key   the column key
+     * @param title the column title
+     * @param size  the size of column (chars)
+     */
+    public MatrixColumn addColumn(String key, String title, int size) {
         MatrixColumn column = new MatrixColumn(title, size);
         return addColumn(key, column);
     }
