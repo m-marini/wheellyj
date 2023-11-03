@@ -91,7 +91,7 @@ public abstract class AbstractStateNode implements StateNode {
     /**
      * Create the abstract node
      *
-     * @param id      the ndoe identifier
+     * @param id      the node identifier
      * @param onInit  the initialization command or null if none
      * @param onEntry the entry command or null if none
      * @param onExit  the exit command or null if none
@@ -193,16 +193,6 @@ public abstract class AbstractStateNode implements StateNode {
         }
     }
 
-    /**
-     * Returns true if robot has any block
-     *
-     * @param context the processor context
-     */
-    protected boolean isBlocked(ProcessorContext context) {
-        return !context.getRobotStatus().canMoveForward()
-                || !context.getRobotStatus().canMoveBackward();
-    }
-
     @Override
     public boolean isTimeout(ProcessorContext context) {
         OptionalLong timeout = context.getOptLong(format("%s.timeout", id));
@@ -212,7 +202,7 @@ public abstract class AbstractStateNode implements StateNode {
     /**
      * Put a value in the context prefixed by node id
      *
-     * @param context the proccesor context
+     * @param context the processor context
      * @param key     the key
      * @param value   the value
      */
@@ -223,7 +213,7 @@ public abstract class AbstractStateNode implements StateNode {
     /**
      * Remove a value in the context prefixed by node id
      *
-     * @param context the proccesor context
+     * @param context the processor context
      * @param key     the key
      */
     protected void remove(ProcessorContext context, String key) {
@@ -234,7 +224,7 @@ public abstract class AbstractStateNode implements StateNode {
      * Performs the auto scan behaviors.
      * Moves the sensor to a random direction within a range at given steps on given time interval
      *
-     * @param context the proccesor context
+     * @param context the processor context
      */
     protected Tuple2<String, RobotCommands> tickAutoScan(ProcessorContext context) {
         long scanInterval = getLong(context, "scanInterval");

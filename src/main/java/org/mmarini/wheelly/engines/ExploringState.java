@@ -278,9 +278,10 @@ public class ExploringState extends AbstractStateNode {
 
     @Override
     public Tuple2<String, RobotCommands> step(ProcessorContext context) {
-        if (isBlocked(context)) {
+        Tuple2<String, RobotCommands> blockResult = context.getBlockResult();
+        if (blockResult != null) {
             // Halt robot and move forward the sensor at block
-            return BLOCKED_RESULT;
+            return blockResult;
         }
         if (isTimeout(context)) {
             // Halt robot and move forward the sensor at timeout

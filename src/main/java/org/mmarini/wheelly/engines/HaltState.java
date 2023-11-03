@@ -40,6 +40,9 @@ import org.slf4j.LoggerFactory;
  * <p>
  * Stops the robot and moves the sensor if required.<br>
  * <code>blocked</code> is generated at contact sensors signals.<br>
+ * <code>frontBlocked</code> is generated at contact sensors signals.<br>
+ * <code>rearBlocked</code> is generated at contact sensors signals.<br>
+ * <code>blocked</code> is generated at contact sensors signals.<br>
  * <code>timeout</code> is generated at timeout.
  * </p>
  */
@@ -51,7 +54,7 @@ public class HaltState extends AbstractStateNode {
     /**
      * Returns the halt state from configuration
      *
-     * @param root    the configuration dcument
+     * @param root    the configuration document
      * @param locator the locator of halt sensor
      * @param id      the status identifier
      */
@@ -88,11 +91,12 @@ public class HaltState extends AbstractStateNode {
         if (isTimeout(ctx)) {
             return TIMEOUT_RESULT;
         }
-        if (isBlocked(ctx)) {
+        Tuple2<String, RobotCommands> result = ctx.getBlockResult();
+        if (result != null) {
             logger.atDebug().log("Contacts at {} {}",
                     !ctx.getRobotStatus().canMoveForward() ? "front" : "",
                     !ctx.getRobotStatus().canMoveBackward() ? "rear" : "");
-            return BLOCKED_RESULT;
+            return result;
         }
         return tickAutoScan(ctx);
     }
