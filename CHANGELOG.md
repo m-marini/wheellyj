@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #244: Friction at 8.5V
 - Issue #246: Add trigger and state monitor
 - Issue #248: Add contacts trigger on state machine agent
+- Issue #250: Add load dump file
 
 ### Changed
 

@@ -35,6 +35,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.swing.GridLayoutHelper;
+import org.mmarini.swing.SwingUtils;
 import org.mmarini.wheelly.apis.DumpRecord;
 import org.mmarini.wheelly.swing.DumpRecordPanel;
 import org.mmarini.wheelly.swing.DumpRecordsTable;
@@ -45,11 +46,11 @@ import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.awt.event.WindowEvent;
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -78,6 +79,7 @@ public class DumpReader {
                 .action(Arguments.version())
                 .help("show current version");
         parser.addArgument("file")
+                .nargs("?")
                 .help("specify dump signal file");
         return parser;
     }
@@ -113,6 +115,9 @@ public class DumpReader {
     private final RecordFilterPanel filtersPanel;
     private final JSplitPane splitPanel;
     private final JScrollPane scrollPanel;
+    private final JMenuItem loadMenuItem;
+    private final JMenuItem exitMenuItem;
+    private final JFileChooser openFileChooser;
     private JFrame dumpReaderFrame;
 
     /**
@@ -125,6 +130,9 @@ public class DumpReader {
         this.filtersPanel = new RecordFilterPanel();
         this.splitPanel = new JSplitPane();
         this.scrollPanel = new JScrollPane(recordsTable);
+        this.loadMenuItem = SwingUtils.createMenuItem("DumpReader.loadMenuItem");
+        this.exitMenuItem = SwingUtils.createMenuItem("DumpReader.exitMenuItem");
+        this.openFileChooser = new JFileChooser();
         createFlows();
     }
 
@@ -161,6 +169,14 @@ public class DumpReader {
         filtersPanel.readFilters()
                 .doOnNext(this::handleFilters)
                 .subscribe();
+        SwingObservable.actions(exitMenuItem)
+                .toFlowable(BackpressureStrategy.LATEST)
+                .doOnNext(ev -> dumpReaderFrame.dispose())
+                .subscribe();
+        SwingObservable.actions(loadMenuItem)
+                .toFlowable(BackpressureStrategy.LATEST)
+                .doOnNext(this::handleLoad)
+                .subscribe();
     }
 
     /**
@@ -181,10 +197,26 @@ public class DumpReader {
     private void handleFilters(Predicate<DumpRecord> filter) {
         logger.atDebug().log("{}", filter);
         List<DumpRecord> records = lineRecords.stream()
-                .filter(filter::test)
+                .filter(filter)
                 .collect(Collectors.toList());
         recordsTable.setRecords(records);
         detailPanel.setRecord(null);
+    }
+
+    /**
+     * Handles the load file event
+     *
+     * @param event the event
+     */
+    private void handleLoad(ActionEvent event) {
+        if (openFileChooser.showOpenDialog(dumpReaderFrame) == JFileChooser.APPROVE_OPTION) {
+            File file = openFileChooser.getSelectedFile();
+            try {
+                loadFile(file);
+            } catch (Throwable e) {
+                logger.atError().setCause(e).log("Error loading file {}", file);
+            }
+        }
     }
 
     /**
@@ -230,31 +262,58 @@ public class DumpReader {
     private DumpReader init(String[] args) throws ArgumentParserException, IOException {
         detailPanel.setBorder(BorderFactory.createTitledBorder(Messages.getString("DumpReader.detailPanel.title")));
         splitPanel.setOneTouchExpandable(true);
+        FileNameExtensionFilter filter = new FileNameExtensionFilter(
+                "Dump files", "txt");
+        openFileChooser.setFileFilter(filter);
+        openFileChooser.setCurrentDirectory(new File("./"));
+
         ArgumentParser parser = createParser();
         try {
             Namespace parseArgs = parser.parseArgs(args);
             String filename = parseArgs.getString("file");
-            BufferedReader reader = new BufferedReader(new FileReader(filename));
-            for (; ; ) {
-                String line = reader.readLine();
-                if (line == null) {
-                    break;
-                }
-                lineRecords.add(DumpRecord.create(line));
+            if (filename != null) {
+                File file = new File(filename);
+                loadFile(file);
+                openFileChooser.setSelectedFile(file);
             }
-            reader.close();
-            if (!lineRecords.isEmpty()) {
-                Instant offset = lineRecords.get(0).getInstant();
-                recordsTable.setTimestampOffset(offset);
-                detailPanel.setOffset(offset);
-                filtersPanel.setOffset(offset);
-            }
-            recordsTable.setRecords(lineRecords);
         } catch (ArgumentParserException e) {
             parser.handleError(e);
             throw e;
         }
         return this;
+    }
+
+    /**
+     * Loads the dump from file
+     *
+     * @param file the file
+     */
+    private void loadFile(File file) throws IOException {
+        loadFile(new FileReader(file));
+    }
+
+    /**
+     * Loads the dump from reader
+     *
+     * @param reader the reader
+     */
+    private void loadFile(Reader reader) throws IOException {
+        BufferedReader bufferedReader = new BufferedReader(reader);
+        for (; ; ) {
+            String line = bufferedReader.readLine();
+            if (line == null) {
+                break;
+            }
+            lineRecords.add(DumpRecord.create(line));
+        }
+        bufferedReader.close();
+        if (!lineRecords.isEmpty()) {
+            Instant offset = lineRecords.get(0).getInstant();
+            recordsTable.setTimestampOffset(offset);
+            detailPanel.setOffset(offset);
+            filtersPanel.setOffset(offset);
+        }
+        recordsTable.setRecords(lineRecords);
     }
 
     /**
@@ -266,6 +325,17 @@ public class DumpReader {
         this.dumpReaderFrame = center(createFrame(Messages.getString("DumpReader.title"),
                 WIDNOW_SIZE,
                 createContentPane()));
+
+        JMenu fileMenu = SwingUtils.createMenu("DumpReader.fileMenu");
+        fileMenu.add(loadMenuItem);
+        fileMenu.add(new JSeparator());
+        fileMenu.add(exitMenuItem);
+
+        JMenuBar menuBar = new JMenuBar();
+        menuBar.add(fileMenu);
+
+
+        dumpReaderFrame.setJMenuBar(menuBar);
 
         Flowable<WindowEvent> windowsEvents = Observable.mergeArray(
                 SwingObservable.window(dumpReaderFrame, SwingObservable.WINDOW_ACTIVE)

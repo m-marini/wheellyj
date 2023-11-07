@@ -56,6 +56,7 @@ public class DumpRecordPanel extends JPanel {
     private final JButton offsetButton;
     private final JFormattedTextField sensorField;
     private final JFormattedTextField echoField;
+    private final JFormattedTextField distanceField;
     private final JCheckBox haltField;
     private final JCheckBox forwardBlockField;
     private final JCheckBox backwardBlockField;
@@ -77,6 +78,7 @@ public class DumpRecordPanel extends JPanel {
         this.rightPpsField = new JFormattedTextField();
         this.sensorField = new JFormattedTextField();
         this.echoField = new JFormattedTextField();
+        this.distanceField = new JFormattedTextField();
         this.haltField = SwingUtils.createCheckBox("DumpRecordPanel.haltButton");
         this.forwardBlockField = SwingUtils.createCheckBox("DumpRecordPanel.forwardBlockButton");
         this.backwardBlockField = SwingUtils.createCheckBox("DumpRecordPanel.backwardBlockButton");
@@ -98,7 +100,7 @@ public class DumpRecordPanel extends JPanel {
      * Clears the status fields
      */
     private void clearStatusField() {
-        Stream.of(directionField, leftPpsField, rightPpsField, echoField, sensorField)
+        Stream.of(directionField, leftPpsField, rightPpsField, echoField, distanceField, sensorField)
                 .forEach(c -> c.setText(""));
         Stream.of(haltField, backwardBlockField, forwardBlockField)
                 .forEach(f -> f.setSelected(false));
@@ -131,6 +133,8 @@ public class DumpRecordPanel extends JPanel {
                 .add("DumpRecordPanel.sensor.label")
                 .modify("at,1,3")
                 .add("DumpRecordPanel.echo.label")
+                .modify("at,0,5")
+                .add("DumpRecordPanel.distance.label")
                 .modify("at,1,0 nospan")
                 .add(directionField)
                 .modify("at,0,2")
@@ -141,11 +145,13 @@ public class DumpRecordPanel extends JPanel {
                 .add(sensorField)
                 .modify("at,1,4")
                 .add(echoField)
-                .modify("at,0,6 noweight")
+                .modify("at,1,5")
+                .add(distanceField)
+                .modify("at,0,7 noweight")
                 .add(forwardBlockField)
-                .modify("at,1,6 noweight")
+                .modify("at,1,7 noweight")
                 .add(backwardBlockField)
-                .modify("at,0,7 span,2,1")
+                .modify("at,0,8 span,2,1")
                 .add(haltField);
         // Creates the content
         new GridLayoutHelper<>(Messages.RESOURCE_BUNDLE, this)
@@ -239,9 +245,11 @@ public class DumpRecordPanel extends JPanel {
         leftPpsField.setColumns(6);
         rightPpsField.setColumns(6);
         echoField.setColumns(5);
+        distanceField.setColumns(5);
         offsetButton.setMargin(new Insets(0, 0, 0, 0));
         Stream.of(instantField, dataField, typeField, elapsedField,
-                        directionField, leftPpsField, rightPpsField, echoField, sensorField)
+                        directionField, leftPpsField, rightPpsField, echoField,
+                        distanceField, sensorField)
                 .forEach(c -> {
                     c.setMinimumSize(c.getPreferredSize());
                     c.setEditable(false);
@@ -269,6 +277,7 @@ public class DumpRecordPanel extends JPanel {
         rightPpsField.setValue(status.getRightPps());
         sensorField.setValue(status.getSensorDirection());
         echoField.setValue(status.getEchoTime());
+        distanceField.setValue(status.getEchoTime() * 100 / 5887);
         haltField.setSelected(status.isHalt());
         forwardBlockField.setSelected(!status.canMoveForward());
         backwardBlockField.setSelected(!status.getCanMoveBackward());
