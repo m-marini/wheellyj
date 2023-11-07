@@ -48,10 +48,13 @@ import java.util.stream.Stream;
  * Shows the record filters' user interface
  */
 public class RecordFilterPanel extends JPanel {
-    public static final Predicate<DumpRecord> STATUS_FILTER = record -> record instanceof DumpRecord.StatusDumpRecord;
-    public static final Predicate<DumpRecord> ERROR_FILTER = record -> record instanceof DumpRecord.ReadDumpRecord && record.getData().startsWith("!! ");
-    public static final Predicate<DumpRecord> OTHER_READ_FILTER = Predicate.not(STATUS_FILTER.or(ERROR_FILTER))
+    public static final Predicate<DumpRecord> CONTACT_FILTER = record -> record instanceof DumpRecord.StatusDumpRecord &&
+            (!((DumpRecord.StatusDumpRecord) record).getStatus().canMoveForward()
+                    || !((DumpRecord.StatusDumpRecord) record).getStatus().getCanMoveBackward());
+    public static final Predicate<DumpRecord> STATUS_FILTER = CONTACT_FILTER.negate().and(record -> record instanceof DumpRecord.StatusDumpRecord);
+    public static final Predicate<DumpRecord> OTHER_READ_FILTER = Predicate.not(STATUS_FILTER.or(ERROR_FILTER).or(CONTACT_FILTER))
             .and(record -> record instanceof DumpRecord.ReadDumpRecord);
+    public static final Predicate<DumpRecord> ERROR_FILTER = record -> record instanceof DumpRecord.ReadDumpRecord && record.getData().startsWith("!! ");
     public static final Predicate<DumpRecord> MOVE_FILTER = record -> record instanceof DumpRecord.WriteDumpRecord && record.getData().startsWith("mv ");
     public static final Predicate<DumpRecord> HALT_FILTER = record -> record instanceof DumpRecord.WriteDumpRecord && record.getData().equals("ha");
     public static final Predicate<DumpRecord> SCAN_FILTER = record -> record instanceof DumpRecord.WriteDumpRecord && record.getData().startsWith("sc ");
@@ -60,6 +63,7 @@ public class RecordFilterPanel extends JPanel {
     private static final Predicate<DumpRecord> NONE_FILTER = record -> false;
     private static final Logger logger = LoggerFactory.getLogger(RecordFilterPanel.class);
     private final JCheckBox statusBtn;
+    private final JCheckBox contactsBtn;
     private final JCheckBox errorBtn;
     private final JCheckBox readBtn;
     private final JCheckBox moveBtn;
@@ -81,6 +85,7 @@ public class RecordFilterPanel extends JPanel {
      */
     public RecordFilterPanel() {
         this.statusBtn = SwingUtils.createCheckBox("RecordFiltersPanel.statusButton");
+        this.contactsBtn = SwingUtils.createCheckBox("RecordFiltersPanel.contactsButton");
         this.errorBtn = SwingUtils.createCheckBox("RecordFiltersPanel.errorButton");
         this.readBtn = SwingUtils.createCheckBox("RecordFiltersPanel.readButton");
         this.moveBtn = SwingUtils.createCheckBox("RecordFiltersPanel.moveButton");
@@ -106,22 +111,24 @@ public class RecordFilterPanel extends JPanel {
         JPanel typesFilterPanel = new GridLayoutHelper<>(new JPanel())
                 .modify("insets,4,4 w weight,1,0")
                 .modify("at,0,0")
-                .add(statusBtn)
+                .add(contactsBtn)
                 .modify("at,0,1")
-                .add(errorBtn)
+                .add(statusBtn)
                 .modify("at,0,2")
-                .add(readBtn)
+                .add(errorBtn)
                 .modify("at,0,3")
-                .add(moveBtn)
+                .add(readBtn)
                 .modify("at,0,4")
-                .add(haltBtn)
+                .add(moveBtn)
                 .modify("at,0,5")
-                .add(scanBtn)
+                .add(haltBtn)
                 .modify("at,0,6")
-                .add(writeBtn)
+                .add(scanBtn)
                 .modify("at,0,7")
-                .add(allTypesBtn)
+                .add(writeBtn)
                 .modify("at,0,8")
+                .add(allTypesBtn)
+                .modify("at,0,9")
                 .add(noneTypesBtn)
                 .getContainer();
         typesFilterPanel.setBorder(BorderFactory.createTitledBorder(
@@ -166,6 +173,9 @@ public class RecordFilterPanel extends JPanel {
         Predicate<DumpRecord> statusFilter = statusBtn.isSelected()
                 ? STATUS_FILTER
                 : NONE_FILTER;
+        Predicate<DumpRecord> contactsFilter = contactsBtn.isSelected()
+                ? CONTACT_FILTER
+                : NONE_FILTER;
         Predicate<DumpRecord> errorFilter = errorBtn.isSelected()
                 ? ERROR_FILTER
                 : NONE_FILTER;
@@ -185,7 +195,7 @@ public class RecordFilterPanel extends JPanel {
                 ? OTHER_WRITE_FILTER
                 : NONE_FILTER;
 
-        Predicate<DumpRecord> typesFilter = Stream.of(statusFilter, errorFilter, readFilter,
+        Predicate<DumpRecord> typesFilter = Stream.of(statusFilter, contactsFilter, errorFilter, readFilter,
                         moveFilter, haltFilter, scanFilter, writeFilter)
                 .reduce(Predicate::or)
                 .orElseThrow();
@@ -226,7 +236,7 @@ public class RecordFilterPanel extends JPanel {
      */
     private void handleAllTypesButton(ActionEvent event) {
         if (!allTypesBtn.isSelected()) {
-            Stream.of(statusBtn, errorBtn, readBtn, moveBtn, haltBtn, scanBtn, writeBtn, allTypesBtn)
+            Stream.of(statusBtn, contactsBtn, errorBtn, readBtn, moveBtn, haltBtn, scanBtn, writeBtn, allTypesBtn)
                     .forEach(btn -> btn.setSelected(true));
         }
     }
@@ -248,7 +258,7 @@ public class RecordFilterPanel extends JPanel {
      */
     private void handleNoneTypeButton(ActionEvent event) {
         if (noneTypesBtn.isSelected()) {
-            Stream.of(statusBtn, errorBtn, readBtn, moveBtn, haltBtn, scanBtn, writeBtn, noneTypesBtn)
+            Stream.of(statusBtn, contactsBtn, errorBtn, readBtn, moveBtn, haltBtn, scanBtn, writeBtn, noneTypesBtn)
                     .forEach(btn -> btn.setSelected(false));
         }
     }
@@ -257,7 +267,7 @@ public class RecordFilterPanel extends JPanel {
      * Initializes the panel
      */
     private void init() {
-        Stream.of(statusBtn, errorBtn, readBtn, moveBtn, haltBtn, scanBtn, writeBtn, afterBtn, allTimeBtn, allTypesBtn)
+        Stream.of(statusBtn, contactsBtn, errorBtn, readBtn, moveBtn, haltBtn, scanBtn, writeBtn, afterBtn, allTimeBtn, allTypesBtn)
                 .forEach(btn -> btn.setSelected(true));
         Flowable<ActionEvent> noneTypesFlow = SwingObservable.actions(noneTypesBtn)
                 .toFlowable(BackpressureStrategy.LATEST)
@@ -280,7 +290,7 @@ public class RecordFilterPanel extends JPanel {
                 .publish()
                 .autoConnect();
 
-        filtersFlow = Stream.of(statusBtn, errorBtn, readBtn, moveBtn, haltBtn, scanBtn, writeBtn, beforeBtn, afterBtn)
+        filtersFlow = Stream.of(statusBtn, contactsBtn, errorBtn, readBtn, moveBtn, haltBtn, scanBtn, writeBtn, beforeBtn, afterBtn)
                 .map(SwingObservable::actions)
                 .map(o -> o.toFlowable(BackpressureStrategy.LATEST))
                 .reduce(Flowable::mergeWith)
