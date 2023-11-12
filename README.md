@@ -9,6 +9,13 @@ The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/w
 
 Compatible with Wheellino 0.7.0
 
+- Add friction/stiction test app
+- Add dump signals abd dump reader aoo
+- Add trigger and state monitor in monitor app
+- Add contacts trigger on state machine agent
+- Add power and target speed on status record
+
+
 ## Release 0.8.1
 
 Compatible with Wheellino 0.6.1
