@@ -39,7 +39,7 @@ import static java.lang.String.format;
  * The Wheelly status contain the sensor value of Wheelly
  */
 public class WheellyStatus {
-    public static final int NO_STATUS_PARAMS = 19;
+    public static final int NO_STATUS_PARAMS = 23;
     public static final WheellyStatus DEFAULT_WHEELLY_STATUS = new WheellyStatus(0,
             0, 0, 0,
             0, 0,
@@ -47,7 +47,7 @@ public class WheellyStatus {
             0, 0,
             0,
             true, true,
-            0, true);
+            0, true, 0, 0, 0, 0);
 
     /**
      * Returns default status
@@ -79,6 +79,10 @@ public class WheellyStatus {
      *     [move direction]
      *     [move speed]
      *     [next sensor direction]
+     *     [left target pps]
+     *     [right target pps]
+     *     [left power]
+     *     [right power]
      * </pre>
      *
      * @param line the status string
@@ -88,7 +92,7 @@ public class WheellyStatus {
         long time = line.time(TimeUnit.MILLISECONDS);
         String[] params = line.value().split(" ");
         if (params.length != NO_STATUS_PARAMS) {
-            throw new IllegalArgumentException(format("Wrong status message \"%s\"", line.value()));
+            throw new IllegalArgumentException(format("Wrong status message \"%s\" (#params=%d)", line.value(), params.length));
         }
 
         double x = parseDouble(params[2]);
@@ -109,14 +113,18 @@ public class WheellyStatus {
 
         int imuFailure = Integer.parseInt(params[14]);
         boolean halt = Integer.parseInt(params[15]) != 0;
+        int leftTargetPps = Integer.parseInt(params[19]);
+        int rightTargetPps = Integer.parseInt(params[20]);
+        int leftPower = Integer.parseInt(params[21]);
+        int rightPower = Integer.parseInt(params[22]);
 
         return new WheellyStatus(time, x, y,
                 robotDeg,
                 sensorDirection, echoTime,
                 left, right,
                 frontSensors, rearSensors,
-                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt);
-
+                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt,
+                leftTargetPps, rightTargetPps, leftPower, rightPower);
     }
 
     private final long time;
@@ -134,6 +142,10 @@ public class WheellyStatus {
     private final boolean halt;
     private final int frontSensors;
     private final int rearSensors;
+    private final int leftTargetPps;
+    private final int rightTargetPps;
+    private final int leftPower;
+    private final int rightPower;
 
     /**
      * Creates wheelly status
@@ -153,13 +165,17 @@ public class WheellyStatus {
      * @param canMoveBackward true if it can move backward
      * @param imuFailure      true if imu failure
      * @param halt            true if in halt
+     * @param leftTargetPps   the left target pps
+     * @param rightTargetPps  the right target pps
+     * @param leftPower       the left power
+     * @param rightPower      the right power
      */
     public WheellyStatus(long time, double xPulses, double yPulses, int direction,
                          int sensorDirection, long echoTime,
                          double leftPps, double rightPps,
                          int frontSensors, int rearSensors, int supplySensor,
                          boolean canMoveForward, boolean canMoveBackward,
-                         int imuFailure, boolean halt) {
+                         int imuFailure, boolean halt, int leftTargetPps, int rightTargetPps, int leftPower, int rightPower) {
         this.time = time;
         this.xPulses = xPulses;
         this.yPulses = yPulses;
@@ -175,22 +191,18 @@ public class WheellyStatus {
         this.canMoveForward = canMoveForward;
         this.imuFailure = imuFailure;
         this.halt = halt;
+        this.leftTargetPps = leftTargetPps;
+        this.rightTargetPps = rightTargetPps;
+        this.leftPower = leftPower;
+        this.rightPower = rightPower;
+    }
+
+    public boolean canMoveBackward() {
+        return canMoveBackward;
     }
 
     public boolean canMoveForward() {
         return canMoveForward;
-    }
-
-    public boolean getCanMoveBackward() {
-        return canMoveBackward;
-    }
-
-    public WheellyStatus setCanMoveBackward(boolean canMoveBackward) {
-        return new WheellyStatus(time, xPulses, yPulses,
-                direction, sensorDirection, echoTime,
-                leftPps, rightPps,
-                frontSensors, rearSensors,
-                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt);
     }
 
     public int getDirection() {
@@ -202,7 +214,7 @@ public class WheellyStatus {
                 direction, sensorDirection, echoTime,
                 leftPps, rightPps,
                 frontSensors, rearSensors,
-                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt);
+                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
     }
 
     public long getEchoTime() {
@@ -214,7 +226,7 @@ public class WheellyStatus {
                 direction, sensorDirection, echoTime,
                 leftPps, rightPps,
                 frontSensors, rearSensors,
-                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt);
+                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
     }
 
     public int getFrontSensors() {
@@ -226,7 +238,7 @@ public class WheellyStatus {
                 direction, sensorDirection, echoTime,
                 leftPps, rightPps,
                 frontSensors, rearSensors,
-                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt);
+                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
     }
 
     public int getImuFailure() {
@@ -238,7 +250,27 @@ public class WheellyStatus {
                 direction, sensorDirection, echoTime,
                 leftPps, rightPps,
                 frontSensors, rearSensors,
-                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt);
+                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
+    }
+
+    /**
+     * Returns the left power
+     */
+    public int getLeftPower() {
+        return leftPower;
+    }
+
+    /**
+     * Returns wheelly status by setting the left power
+     *
+     * @param leftPower the left power
+     */
+    public WheellyStatus setLeftPower(int leftPower) {
+        return new WheellyStatus(time, xPulses, yPulses,
+                direction, sensorDirection, echoTime,
+                leftPps, rightPps,
+                frontSensors, rearSensors,
+                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
     }
 
     public double getLeftPps() {
@@ -250,7 +282,14 @@ public class WheellyStatus {
                 direction, sensorDirection, echoTime,
                 leftPps, rightPps,
                 frontSensors, rearSensors,
-                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt);
+                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
+    }
+
+    /**
+     * Returns the left target pps
+     */
+    public int getLeftTargetPps() {
+        return leftTargetPps;
     }
 
     public int getRearSensors() {
@@ -262,7 +301,27 @@ public class WheellyStatus {
                 direction, sensorDirection, echoTime,
                 leftPps, rightPps,
                 frontSensors, rearSensors,
-                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt);
+                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
+    }
+
+    /**
+     * Returns the right power
+     */
+    public int getRightPower() {
+        return rightPower;
+    }
+
+    /**
+     * Returns wheelly status by setting the right power
+     *
+     * @param rightPower the right power
+     */
+    public WheellyStatus setRightPower(int rightPower) {
+        return new WheellyStatus(time, xPulses, yPulses,
+                direction, sensorDirection, echoTime,
+                leftPps, rightPps,
+                frontSensors, rearSensors,
+                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
     }
 
     public double getRightPps() {
@@ -274,7 +333,14 @@ public class WheellyStatus {
                 direction, sensorDirection, echoTime,
                 leftPps, rightPps,
                 frontSensors, rearSensors,
-                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt);
+                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
+    }
+
+    /**
+     * Returns the left target pps
+     */
+    public int getRightTargetPps() {
+        return rightTargetPps;
     }
 
     public int getSensorDirection() {
@@ -286,7 +352,7 @@ public class WheellyStatus {
                 direction, sensorDirection, echoTime,
                 leftPps, rightPps,
                 frontSensors, rearSensors,
-                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt);
+                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
     }
 
     public int getSupplySensor() {
@@ -303,7 +369,7 @@ public class WheellyStatus {
                 direction, sensorDirection, echoTime,
                 leftPps, rightPps,
                 frontSensors, rearSensors,
-                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt);
+                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
     }
 
     public long getTime() {
@@ -315,7 +381,7 @@ public class WheellyStatus {
                 direction, sensorDirection, echoTime,
                 leftPps, rightPps,
                 frontSensors, rearSensors,
-                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt);
+                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
     }
 
     public double getXPulses() {
@@ -327,7 +393,7 @@ public class WheellyStatus {
                 direction, sensorDirection, echoTime,
                 leftPps, rightPps,
                 frontSensors, rearSensors,
-                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt);
+                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
     }
 
     public double getYPulses() {
@@ -339,7 +405,7 @@ public class WheellyStatus {
                 direction, sensorDirection, echoTime,
                 leftPps, rightPps,
                 frontSensors, rearSensors,
-                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt);
+                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
     }
 
     public boolean isHalt() {
@@ -351,7 +417,15 @@ public class WheellyStatus {
                 direction, sensorDirection, echoTime,
                 leftPps, rightPps,
                 frontSensors, rearSensors,
-                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt);
+                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
+    }
+
+    public WheellyStatus setCanMoveBackward(boolean canMoveBackward) {
+        return new WheellyStatus(time, xPulses, yPulses,
+                direction, sensorDirection, echoTime,
+                leftPps, rightPps,
+                frontSensors, rearSensors,
+                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
     }
 
     public WheellyStatus setCanMoveForward(boolean canMoveForward) {
@@ -359,7 +433,7 @@ public class WheellyStatus {
                 direction, sensorDirection, echoTime,
                 leftPps, rightPps,
                 frontSensors, rearSensors,
-                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt);
+                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
     }
 
     /**
@@ -373,7 +447,7 @@ public class WheellyStatus {
                 direction, sensorDirection, echoTime,
                 leftPps, rightPps,
                 frontSensors, rearSensors,
-                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt);
+                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
     }
 
     public WheellyStatus setSensors(int frontSensors, int rearSensors) {
@@ -381,7 +455,7 @@ public class WheellyStatus {
                 direction, sensorDirection, echoTime,
                 leftPps, rightPps,
                 frontSensors, rearSensors,
-                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt);
+                supplySensor, canMoveForward, canMoveBackward, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
     }
 
     @Override

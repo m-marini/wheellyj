@@ -44,7 +44,7 @@ public class ComDumper implements Closeable {
      * @param file the filename
      */
     public static ComDumper fromFile(String file) throws IOException {
-        return new ComDumper(new PrintWriter(new FileWriter(file, true)));
+        return new ComDumper(new PrintWriter(new FileWriter(file)));
     }
 
     private final PrintWriter writer;

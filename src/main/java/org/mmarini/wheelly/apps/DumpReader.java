@@ -34,13 +34,12 @@ import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
-import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.SwingUtils;
 import org.mmarini.wheelly.apis.DumpRecord;
 import org.mmarini.wheelly.swing.DumpRecordPanel;
 import org.mmarini.wheelly.swing.DumpRecordsTable;
 import org.mmarini.wheelly.swing.Messages;
-import org.mmarini.wheelly.swing.RecordFilterPanel;
+import org.mmarini.wheelly.swing.RecordFilterMenu;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -112,11 +111,11 @@ public class DumpReader {
     private final List<DumpRecord> lineRecords;
     private final DumpRecordsTable recordsTable;
     private final DumpRecordPanel detailPanel;
-    private final RecordFilterPanel filtersPanel;
     private final JSplitPane splitPanel;
     private final JScrollPane scrollPanel;
     private final JMenuItem loadMenuItem;
     private final JMenuItem exitMenuItem;
+    private final RecordFilterMenu filterMenu;
     private final JFileChooser openFileChooser;
     private JFrame dumpReaderFrame;
 
@@ -127,11 +126,11 @@ public class DumpReader {
         this.lineRecords = new ArrayList<>();
         this.recordsTable = new DumpRecordsTable();
         this.detailPanel = new DumpRecordPanel();
-        this.filtersPanel = new RecordFilterPanel();
         this.splitPanel = new JSplitPane();
         this.scrollPanel = new JScrollPane(recordsTable);
         this.loadMenuItem = SwingUtils.createMenuItem("DumpReader.loadMenuItem");
         this.exitMenuItem = SwingUtils.createMenuItem("DumpReader.exitMenuItem");
+        this.filterMenu = new RecordFilterMenu();
         this.openFileChooser = new JFileChooser();
         createFlows();
     }
@@ -142,15 +141,8 @@ public class DumpReader {
     private Component createContentPane() {
         scrollPanel.setBorder(BorderFactory.createTitledBorder(Messages.getString("DumpReader.recordTable.title")));
 
-        JPanel rightPanel = new GridLayoutHelper<>(new JPanel())
-                .modify("at,0,0 fill noweight insets,0")
-                .add(filtersPanel)
-                .modify("at,0,1 hfill n weight,1,1 insets,4")
-                .add(detailPanel)
-                .getContainer();
-
         splitPanel.setLeftComponent(scrollPanel);
-        splitPanel.setRightComponent(rightPanel);
+        splitPanel.setRightComponent(detailPanel);
         return splitPanel;
     }
 
@@ -166,7 +158,7 @@ public class DumpReader {
         detailPanel.readOffset()
                 .doOnNext(this::handleSetOffset)
                 .subscribe();
-        filtersPanel.readFilters()
+        filterMenu.readFilters()
                 .doOnNext(this::handleFilters)
                 .subscribe();
         SwingObservable.actions(exitMenuItem)
@@ -250,7 +242,7 @@ public class DumpReader {
      */
     private void handleSetOffset(Instant offset) {
         recordsTable.setTimestampOffset(offset);
-        filtersPanel.setOffset(offset);
+        filterMenu.setOffset(offset);
     }
 
     /**
@@ -311,7 +303,7 @@ public class DumpReader {
             Instant offset = lineRecords.get(0).getInstant();
             recordsTable.setTimestampOffset(offset);
             detailPanel.setOffset(offset);
-            filtersPanel.setOffset(offset);
+            filterMenu.setOffset(offset);
         }
         recordsTable.setRecords(lineRecords);
     }
@@ -331,9 +323,10 @@ public class DumpReader {
         fileMenu.add(new JSeparator());
         fileMenu.add(exitMenuItem);
 
+
         JMenuBar menuBar = new JMenuBar();
         menuBar.add(fileMenu);
-
+        menuBar.add(filterMenu);
 
         dumpReaderFrame.setJMenuBar(menuBar);
 

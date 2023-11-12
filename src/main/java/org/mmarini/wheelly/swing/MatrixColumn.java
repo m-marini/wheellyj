@@ -82,6 +82,7 @@ public class MatrixColumn extends JComponent {
         this.titleColor = Color.BLACK;
         this.titleBackgroundColor = Color.WHITE;
         this.title = "";
+        this.highlightLast = true;
     }
 
     /**
