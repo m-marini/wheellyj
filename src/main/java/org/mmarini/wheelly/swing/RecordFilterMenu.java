@@ -32,7 +32,6 @@ import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.BackpressureStrategy;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
-import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.SwingUtils;
 import org.mmarini.wheelly.apis.DumpRecord;
 import org.slf4j.Logger;
@@ -47,35 +46,36 @@ import java.util.stream.Stream;
 /**
  * Shows the record filters' user interface
  */
-public class RecordFilterPanel extends JPanel {
+public class RecordFilterMenu extends JMenu {
     public static final Predicate<DumpRecord> CONTACT_FILTER = record -> record instanceof DumpRecord.StatusDumpRecord &&
             (!((DumpRecord.StatusDumpRecord) record).getStatus().canMoveForward()
-                    || !((DumpRecord.StatusDumpRecord) record).getStatus().getCanMoveBackward());
+                    || !((DumpRecord.StatusDumpRecord) record).getStatus().canMoveBackward());
     public static final Predicate<DumpRecord> STATUS_FILTER = CONTACT_FILTER.negate().and(record -> record instanceof DumpRecord.StatusDumpRecord);
+    public static final Predicate<DumpRecord> ERROR_FILTER = record -> record instanceof DumpRecord.ReadDumpRecord && record.getData().startsWith("!! ");
+
     public static final Predicate<DumpRecord> OTHER_READ_FILTER = Predicate.not(STATUS_FILTER.or(ERROR_FILTER).or(CONTACT_FILTER))
             .and(record -> record instanceof DumpRecord.ReadDumpRecord);
-    public static final Predicate<DumpRecord> ERROR_FILTER = record -> record instanceof DumpRecord.ReadDumpRecord && record.getData().startsWith("!! ");
     public static final Predicate<DumpRecord> MOVE_FILTER = record -> record instanceof DumpRecord.WriteDumpRecord && record.getData().startsWith("mv ");
     public static final Predicate<DumpRecord> HALT_FILTER = record -> record instanceof DumpRecord.WriteDumpRecord && record.getData().equals("ha");
     public static final Predicate<DumpRecord> SCAN_FILTER = record -> record instanceof DumpRecord.WriteDumpRecord && record.getData().startsWith("sc ");
     public static final Predicate<DumpRecord> OTHER_WRITE_FILTER = Predicate.not(MOVE_FILTER.or(HALT_FILTER).or(SCAN_FILTER))
             .and(record -> record instanceof DumpRecord.WriteDumpRecord);
     private static final Predicate<DumpRecord> NONE_FILTER = record -> false;
-    private static final Logger logger = LoggerFactory.getLogger(RecordFilterPanel.class);
-    private final JCheckBox statusBtn;
-    private final JCheckBox contactsBtn;
-    private final JCheckBox errorBtn;
-    private final JCheckBox readBtn;
-    private final JCheckBox moveBtn;
-    private final JCheckBox haltBtn;
-    private final JCheckBox scanBtn;
-    private final JCheckBox writeBtn;
-    private final JCheckBox beforeBtn;
-    private final JCheckBox afterBtn;
-    private final JCheckBox allTypesBtn;
-    private final JCheckBox noneTypesBtn;
-    private final JCheckBox allTimeBtn;
-    private final JCheckBox noneTimeBtn;
+    private static final Logger logger = LoggerFactory.getLogger(RecordFilterMenu.class);
+    private final JCheckBoxMenuItem statusBtn;
+    private final JCheckBoxMenuItem contactsBtn;
+    private final JCheckBoxMenuItem errorBtn;
+    private final JCheckBoxMenuItem readBtn;
+    private final JCheckBoxMenuItem moveBtn;
+    private final JCheckBoxMenuItem haltBtn;
+    private final JCheckBoxMenuItem scanBtn;
+    private final JCheckBoxMenuItem writeBtn;
+    private final JCheckBoxMenuItem beforeBtn;
+    private final JCheckBoxMenuItem afterBtn;
+    private final JCheckBoxMenuItem allTypesBtn;
+    private final JCheckBoxMenuItem noneTypesBtn;
+    private final JCheckBoxMenuItem allTimeBtn;
+    private final JCheckBoxMenuItem noneTimeBtn;
     private final PublishProcessor<Instant> offsetFlow;
     private Flowable<Predicate<DumpRecord>> filtersFlow;
     private Instant offset;
@@ -83,21 +83,25 @@ public class RecordFilterPanel extends JPanel {
     /**
      * Creates the panel
      */
-    public RecordFilterPanel() {
-        this.statusBtn = SwingUtils.createCheckBox("RecordFiltersPanel.statusButton");
-        this.contactsBtn = SwingUtils.createCheckBox("RecordFiltersPanel.contactsButton");
-        this.errorBtn = SwingUtils.createCheckBox("RecordFiltersPanel.errorButton");
-        this.readBtn = SwingUtils.createCheckBox("RecordFiltersPanel.readButton");
-        this.moveBtn = SwingUtils.createCheckBox("RecordFiltersPanel.moveButton");
-        this.haltBtn = SwingUtils.createCheckBox("RecordFiltersPanel.haltButton");
-        this.scanBtn = SwingUtils.createCheckBox("RecordFiltersPanel.scanButton");
-        this.writeBtn = SwingUtils.createCheckBox("RecordFiltersPanel.writeButton");
-        this.beforeBtn = SwingUtils.createCheckBox("RecordFiltersPanel.beforeButton");
-        this.afterBtn = SwingUtils.createCheckBox("RecordFiltersPanel.afterButton");
-        this.allTypesBtn = SwingUtils.createCheckBox("RecordFiltersPanel.allTypesButton");
-        this.noneTypesBtn = SwingUtils.createCheckBox("RecordFiltersPanel.noneTypesButton");
-        this.allTimeBtn = SwingUtils.createCheckBox("RecordFiltersPanel.allTimeButton");
-        this.noneTimeBtn = SwingUtils.createCheckBox("RecordFiltersPanel.noneTimeButton");
+    public RecordFilterMenu() {
+        setText(Messages.getString("RecordFiltersMenu.name"));
+        Messages.getStringOpt("RecordFiltersMenu.mnemonic")
+                .map(s -> s.charAt(0))
+                .ifPresent(this::setMnemonic);
+        this.statusBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.statusButton");
+        this.contactsBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.contactsButton");
+        this.errorBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.errorButton");
+        this.readBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.readButton");
+        this.moveBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.moveButton");
+        this.haltBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.haltButton");
+        this.scanBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.scanButton");
+        this.writeBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.writeButton");
+        this.beforeBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.beforeButton");
+        this.afterBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.afterButton");
+        this.allTypesBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.allTypesButton");
+        this.noneTypesBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.noneTypesButton");
+        this.allTimeBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.allTimeButton");
+        this.noneTimeBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.noneTimeButton");
         this.offsetFlow = PublishProcessor.create();
         this.offset = Instant.now();
         init();
@@ -108,52 +112,24 @@ public class RecordFilterPanel extends JPanel {
      * Creates the panel content
      */
     private void createContent() {
-        JPanel typesFilterPanel = new GridLayoutHelper<>(new JPanel())
-                .modify("insets,4,4 w weight,1,0")
-                .modify("at,0,0")
-                .add(contactsBtn)
-                .modify("at,0,1")
-                .add(statusBtn)
-                .modify("at,0,2")
-                .add(errorBtn)
-                .modify("at,0,3")
-                .add(readBtn)
-                .modify("at,0,4")
-                .add(moveBtn)
-                .modify("at,0,5")
-                .add(haltBtn)
-                .modify("at,0,6")
-                .add(scanBtn)
-                .modify("at,0,7")
-                .add(writeBtn)
-                .modify("at,0,8")
-                .add(allTypesBtn)
-                .modify("at,0,9")
-                .add(noneTypesBtn)
-                .getContainer();
-        typesFilterPanel.setBorder(BorderFactory.createTitledBorder(
-                Messages.getString("RecordsFiltersPanel.typesFilterPanel.title")));
+        Stream.of(contactsBtn,
+                        statusBtn,
+                        errorBtn,
+                        readBtn,
+                        moveBtn,
+                        haltBtn,
+                        scanBtn,
+                        writeBtn,
+                        allTypesBtn,
+                        noneTypesBtn)
+                .forEach(this::add);
+        add(new JSeparator());
 
-        JPanel timeFilterPanel = new GridLayoutHelper<>(new JPanel())
-                .modify("insets,4,4 w weight,1,0")
-                .modify("at,0,0")
-                .add(beforeBtn)
-                .modify("at,0,1")
-                .add(afterBtn)
-                .modify("at,0,2")
-                .add(allTimeBtn)
-                .modify("at,0,3")
-                .add(noneTimeBtn)
-                .getContainer();
-        timeFilterPanel.setBorder(BorderFactory.createTitledBorder(
-                Messages.getString("RecordFiltersPanel.timeFilterPanel.title")));
-
-        new GridLayoutHelper<>(this)
-                .modify("insets,4,4 n weight,0,1")
-                .modify("at,0,0")
-                .add(typesFilterPanel)
-                .modify("at,1,0")
-                .add(timeFilterPanel);
+        Stream.of(beforeBtn,
+                        afterBtn,
+                        allTimeBtn,
+                        noneTimeBtn)
+                .forEach(this::add);
     }
 
     /**

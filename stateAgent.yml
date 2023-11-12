@@ -57,8 +57,8 @@ configurations:
     radarGrid: 0.6
     radarReceptiveDistance: 0.28
     radarReceptiveAngle: 15
-    radarPersistence: 300000
-    radarCleanInterval: 30000
+    radarPersistence: 30000
+    radarCleanInterval: 10000
     numRadarSectors: 24
     minRadarDistance: 0.3
     maxRadarDistance: 3

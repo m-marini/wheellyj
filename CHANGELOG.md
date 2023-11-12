@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #246: Add trigger and state monitor
 - Issue #248: Add contacts trigger on state machine agent
 - Issue #250: Add load dump file
+- Issue #252: Add power and target speed on status record
 
 ### Changed
 

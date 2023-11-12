@@ -57,6 +57,10 @@ public class SensorMonitor extends MatrixTable {
     public static final String MOVE_HEAD = "moveHead";
     public static final String MOVE_SPEED = "moveSpeed";
     public static final String REWARD_KEY = "reward";
+    public static final String LEFT_POWER_KEY = "leftPower";
+    public static final String RIGHT_POWER_KEY = "rightPower";
+    public static final String LEFT_TARGET_PPS_KEY = "leftTargetPps";
+    public static final String RIGHT_TARGET_PPS_KEY = "rightTargetPps";
     private static final Logger logger = LoggerFactory.getLogger(SensorMonitor.class);
 
     /**
@@ -78,6 +82,10 @@ public class SensorMonitor extends MatrixTable {
                         addColumn(MOVE_HEAD, Messages.getString("SensorMonitor.moveHead"), 4),
                         addColumn(MOVE_SPEED, Messages.getString("SensorMonitor.moveSpeed"), 3),
                         addColumn(REWARD_KEY, Messages.getString("SensorMonitor.reward"), 6),
+                        addColumn(LEFT_TARGET_PPS_KEY, Messages.getString("SensorMonitor.leftTargetPps"), 3),
+                        addColumn(RIGHT_TARGET_PPS_KEY, Messages.getString("SensorMonitor.rightTargetPps"), 3),
+                        addColumn(LEFT_POWER_KEY, Messages.getString("SensorMonitor.leftPower"), 4),
+                        addColumn(RIGHT_POWER_KEY, Messages.getString("SensorMonitor.rightPower"), 4),
                         addColumn(IMU_FAILURE_KEY, Messages.getString("SensorMonitor.imuFailure"), 3),
                         addColumn(SUPPLY_KEY, Messages.getString("SensorMonitor.supply"), 3))
                 .forEach(col -> col.setScrollOnChange(true));
@@ -132,12 +140,16 @@ public class SensorMonitor extends MatrixTable {
         printf(ECHO_DIST_KEY, "%3.1f", status.getEchoDistance());
         printf(LEFT_PPS_KEY, "%3.0f", status.getLeftPps());
         printf(RIGHT_PPS_KEY, "%3.0f", status.getRightPps());
-        printf(CAN_MOVE_FORWARD_KEY, status.canMoveForward() ? "-" : "X");
-        printf(CAN_MOVE_BACKWARD_KEY, status.canMoveBackward() ? "-" : "X");
+        printf(CAN_MOVE_FORWARD_KEY, status.canMoveForward() ? "-" : "F");
+        printf(CAN_MOVE_BACKWARD_KEY, status.canMoveBackward() ? "-" : "B");
         printf(CONTACTS_KEY, "%1X", status.getContacts());
         printf(X_LOCATION_KEY, "%6.2f", status.getLocation().getX());
         printf(Y_LOCATION_KEY, "%6.2f", status.getLocation().getY());
         printf(IMU_FAILURE_KEY, "%3d", status.getImuFailure());
         printf(SUPPLY_KEY, "%4.1f", status.getSupplyVoltage());
+        printf(LEFT_TARGET_PPS_KEY, "%3d", status.getLeftTargetPps());
+        printf(RIGHT_TARGET_PPS_KEY, "%3d", status.getRightTargetPps());
+        printf(LEFT_POWER_KEY, "%4d", status.getLeftPower());
+        printf(RIGHT_POWER_KEY, "%4d", status.getRightPower());
     }
 }

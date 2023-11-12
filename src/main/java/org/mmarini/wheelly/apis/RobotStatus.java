@@ -102,7 +102,7 @@ public class RobotStatus {
     }
 
     public boolean canMoveBackward() {
-        return wheellyStatus.getCanMoveBackward();
+        return wheellyStatus.canMoveBackward();
     }
 
     public boolean canMoveForward() {
@@ -146,12 +146,20 @@ public class RobotStatus {
         return setWheellyStatus(wheellyStatus.setImuFailure(imuFailure));
     }
 
+    public int getLeftPower() {
+        return wheellyStatus.getLeftPower();
+    }
+
     public double getLeftPps() {
         return wheellyStatus.getLeftPps();
     }
 
     public RobotStatus setLeftPps(double left) {
         return setWheellyStatus(wheellyStatus.setLeftPps(left));
+    }
+
+    public int getLeftTargetPps() {
+        return wheellyStatus.getLeftTargetPps();
     }
 
     public Point2D getLocation() {
@@ -169,12 +177,20 @@ public class RobotStatus {
                 location.getY() / DISTANCE_PER_PULSE));
     }
 
+    public int getRightPower() {
+        return wheellyStatus.getRightPower();
+    }
+
     public double getRightPps() {
         return wheellyStatus.getRightPps();
     }
 
     public RobotStatus setRightPps(double rightPps) {
         return setWheellyStatus(wheellyStatus.setRightPps(rightPps));
+    }
+
+    public int getRightTargetPps() {
+        return wheellyStatus.getRightTargetPps();
     }
 
     public int getSensorDirection() {
