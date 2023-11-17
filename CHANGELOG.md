@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- Issue #255: Add move to state
+
 ## [0.9.0] 2023-11-12
 
 ### Added
