@@ -72,7 +72,7 @@ public class RobotStatus {
     }
 
     /**
-     * Returns the location from pulse coordinate
+     * Returns the location (m) from pulse coordinate
      *
      * @param xPulses the x pulse coordinate
      * @param yPulses the y pulse coordinate
@@ -146,10 +146,16 @@ public class RobotStatus {
         return setWheellyStatus(wheellyStatus.setImuFailure(imuFailure));
     }
 
+    /**
+     * Returns the left target power (unit)
+     */
     public int getLeftPower() {
         return wheellyStatus.getLeftPower();
     }
 
+    /**
+     * Returns the left speed (pps)
+     */
     public double getLeftPps() {
         return wheellyStatus.getLeftPps();
     }
@@ -158,10 +164,16 @@ public class RobotStatus {
         return setWheellyStatus(wheellyStatus.setLeftPps(left));
     }
 
+    /**
+     * Returns the left target speed (pps)
+     */
     public int getLeftTargetPps() {
         return wheellyStatus.getLeftTargetPps();
     }
 
+    /**
+     * Returns the location of robot (m)
+     */
     public Point2D getLocation() {
         return pulses2Location(wheellyStatus.getXPulses(), wheellyStatus.getYPulses());
     }

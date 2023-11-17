@@ -405,6 +405,7 @@ public class RobotController implements RobotControllerApi {
 
     @Override
     public void shutdown() {
+        execute(RobotCommands.halt());
         logger.atInfo().log("Shutting down...");
         end = true;
         close = true;

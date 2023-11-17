@@ -63,18 +63,6 @@ $defs:
       configureTimeout:
         multipleOf: 1
         minimum: 1
-      frontThresholds:
-        type: array
-        items:
-          multipleOf: 1
-          minimum: 0
-          maximum: 1023
-      rearThresholds:
-        type: array
-        items:
-          multipleOf: 1
-          minimum: 0
-          maximum: 1023
       supplyValues:
         type: array
         items:
@@ -100,8 +88,6 @@ $defs:
       - connectionTimeout
       - readTimeout
       - configureTimeout
-      - frontThresholds
-      - rearThresholds
       - supplyValues
       - voltages
   MockRobot:
@@ -128,7 +114,7 @@ type: object
 properties:
   version:
     type: string
-    const: "0.5"
+    const: "0.6"
   active:
     type: string
   configurations:

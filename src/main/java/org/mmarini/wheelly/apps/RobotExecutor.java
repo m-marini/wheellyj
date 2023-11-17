@@ -172,6 +172,7 @@ public class RobotExecutor {
      * Handles the application shutdown
      */
     private void handleShutdown() {
+        agent.shutdown();
         frame.dispose();
         radarFrame.dispose();
         comFrame.dispose();

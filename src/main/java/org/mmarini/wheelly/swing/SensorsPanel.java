@@ -243,8 +243,8 @@ public class SensorsPanel extends JPanel {
         voltage.setValue(status.getSupplyVoltage());
         supplySensor.setValue(wheellyStatus.getSupplySensor());
         imuFailure.setValue(status.getImuFailure());
-        rearSensors.setValue(wheellyStatus.getRearSensors());
-        frontSensors.setValue(wheellyStatus.getFrontSensors());
+        rearSensors.setValue(wheellyStatus.isRearSensors());
+        frontSensors.setValue(wheellyStatus.isFrontSensors());
         int proximity1 = status.getContacts();
         proximity.setValue(proximity1);
         frontLeft.setSelected((proximity1 & FRONT_LEFT_MASK) != 0);

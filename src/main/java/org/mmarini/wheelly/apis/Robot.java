@@ -63,8 +63,6 @@ public class Robot implements RobotApi, WithIOCallback {
         long connectionTimeout = locator.path("connectionTimeout").getNode(root).asLong();
         long readTimeout = locator.path("readTimeout").getNode(root).asLong();
         long configureTimeout = locator.path("configureTimeout").getNode(root).asLong();
-        int[] frontThresholds = loadIntArray(root, locator.path("frontThresholds"));
-        int[] rearThresholds = loadIntArray(root, locator.path("frontThresholds"));
         int[] supplyValues = loadIntArray(root, locator.path("supplyValues"));
         double[] voltages = loadDoubleArray(root, locator.path("voltages"));
 
@@ -74,7 +72,6 @@ public class Robot implements RobotApi, WithIOCallback {
                 : new String[0];
         return Robot.create(host, port,
                 connectionTimeout, readTimeout, configureTimeout,
-                frontThresholds, rearThresholds,
                 supplyValues, voltages, configCommands);
     }
 
@@ -86,15 +83,12 @@ public class Robot implements RobotApi, WithIOCallback {
      * @param connectionTimeout the connection timeout (ms)
      * @param readTimeout       the read timeout (ms)
      * @param configureTimeout  the configuration timeout (ms)
-     * @param frontThresholds   the front thresholds
-     * @param rearThresholds    the rear thresholds
      * @param supplyValues      the supply values
      * @param voltages          the voltage values
      * @param configCommands    the configuration commands
      */
     public static Robot create(String robotHost, int port,
                                long connectionTimeout, long readTimeout, long configureTimeout,
-                               int[] frontThresholds, int[] rearThresholds,
                                int[] supplyValues, double[] voltages, String... configCommands) {
         requireNonNull(supplyValues);
         requireNonNull(voltages);
@@ -107,37 +101,11 @@ public class Robot implements RobotApi, WithIOCallback {
         IntToDoubleFunction decodeVoltage = x -> linear(x, supplyValues[0], supplyValues[1], voltages[0], voltages[1]);
         return new Robot(robotHost, port,
                 connectionTimeout, readTimeout, configureTimeout,
-                frontThresholds, rearThresholds,
                 configCommands, RobotStatus.create(decodeVoltage));
-    }
-
-    /**
-     * Returns the contacts code from the contact sensors signals
-     * <p>
-     * Return value are:
-     * <ul>
-     *     <li>0 - no contact</li>
-     *     <li>1 - right contact</li>
-     *     <li>2 - left contact</li>
-     *     <li>3 - both side contacts</li>
-     * </ul>
-     * </p>
-     *
-     * @param signal the signal
-     */
-    private static int decodeContacts(int signal, int[] thresholds) {
-        for (int i = 0; i < thresholds.length; i++) {
-            if (signal < thresholds[i]) {
-                return i;
-            }
-        }
-        return thresholds.length;
     }
 
     private final String[] configCommands;
     private final long configureTimeout;
-    private final int[] frontThresholds;
-    private final int[] rearThresholds;
     private final RobotSocket socket;
     private RobotStatus status;
     private Consumer<String> onReadLine;
@@ -152,17 +120,13 @@ public class Robot implements RobotApi, WithIOCallback {
      * @param connectionTimeout the connection timeout (ms)
      * @param readTimeout       the read timeout (ms)
      * @param configureTimeout  the configuration timeout (ms)
-     * @param frontThresholds   the front thresholds
-     * @param rearThresholds    the rear thresholds
      * @param configCommands    the motor theta corrections
      * @param status            the initial status
      */
-    public Robot(String host, int port, long connectionTimeout, long readTimeout, long configureTimeout, int[] frontThresholds, int[] rearThresholds, String[] configCommands, RobotStatus status) {
+    public Robot(String host, int port, long connectionTimeout, long readTimeout, long configureTimeout, String[] configCommands, RobotStatus status) {
         this.configureTimeout = configureTimeout;
         socket = new RobotSocket(host, port, connectionTimeout, readTimeout);
         this.status = status;
-        this.frontThresholds = requireNonNull(frontThresholds);
-        this.rearThresholds = requireNonNull(rearThresholds);
         this.configCommands = requireNonNull(configCommands);
     }
 
@@ -220,8 +184,10 @@ public class Robot implements RobotApi, WithIOCallback {
      * @param frontSignal the front signal
      * @param rearSignal  the rear signal
      */
-    private int decodeContacts(int frontSignal, int rearSignal) {
-        return decodeContacts(frontSignal, frontThresholds) * 4 + decodeContacts(rearSignal, rearThresholds);
+    private int decodeContacts(boolean frontSignal, boolean rearSignal) {
+        return frontSignal ?
+                rearSignal ? 0 : 1
+                : rearSignal ? 2 : 3;
     }
 
     @Override
@@ -243,7 +209,7 @@ public class Robot implements RobotApi, WithIOCallback {
         if (line.value().startsWith("st ")) {
             try {
                 WheellyStatus wheellyStatus = WheellyStatus.create(line);
-                int contacts = decodeContacts(wheellyStatus.getFrontSensors(), wheellyStatus.getRearSensors());
+                int contacts = decodeContacts(wheellyStatus.isFrontSensors(), wheellyStatus.isRearSensors());
                 status = status.setWheellyStatus(wheellyStatus).setContacts(contacts);
                 if (onStatusReady != null) {
                     onStatusReady.accept(status);

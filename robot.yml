@@ -1,5 +1,5 @@
 ---
-version: "0.5"
+version: "0.6"
 #active: simRobot
 active: realRobot
 
@@ -19,23 +19,19 @@ configurations:
     #host: wheelly
     host: 192.168.1.43
     connectionTimeout: 10000
-    readTimeout: 3000
-    configureTimeout: 1000
-    # front 0 352 537 650
-    # rear 0 352 537 650
-    frontThresholds: [176, 445, 594]
-    rearThresholds: [176, 445, 594]
+    readTimeout: 10000
+    configureTimeout: 2000
     supplyValues: [2165, 2683]
     voltages: [9.8, 12.3]
     configCommands:
       - cs 500
-      - cc 5 15 12
-      - tcsl 71 107 255 -62 -81 -255 400 25
-      - tcsr 59 78 255 -62 -92 -255 400 25
-      - fl 0 0
-      - fr 0 0
-      - fl 300000 300000
-      - fr 300000 300000
+      - cc 5 30 20
+      - tcsl 30 107 180 -32 -81 -180 400 50
+      - tcsr 39 78 180 -32 -92 -180 400 50
+#      - fl 0 0
+#      - fr 0 0
+      - fl 10000 10000
+      - fr 10000 10000
 #      - cl 200 200 4000 71 107 -62 -81
 #      - cr 200 200 4000 59 78 -62 -92
 #      - cl 100 48 2000 50 75 -49 -65

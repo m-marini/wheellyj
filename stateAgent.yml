@@ -1,8 +1,70 @@
 ---
-version: "0.4"
-active: idleAgent
+version: "0.5"
+active: moveToAgent
 
 configurations:
+  ######################################
+  # Explorer agent
+  ######################################
+  moveToAgent:
+    class: org.mmarini.wheelly.engines.StateMachineAgent
+    interval: 10
+    commandInterval: 600
+    reactionInterval: 300
+    numRadarSectors: 24
+    minRadarDistance: 0.3
+    maxRadarDistance: 2.8
+    radarWidth: 51
+    radarHeight: 51
+    radarGrid: 0.2
+    radarReceptiveDistance: 0.28
+    radarReceptiveAngle: 15
+    radarPersistence: 300000
+    radarCleanInterval: 30000
+    flow:
+      entry: start
+      states:
+        start:
+          class: org.mmarini.wheelly.engines.HaltState
+          timeout: 2000
+        movingTo0:
+          class: org.mmarini.wheelly.engines.MoveToState
+          stopDistance: 0.4
+          x: 0
+          y: 0
+        movingTo1:
+          class: org.mmarini.wheelly.engines.MoveToState
+          stopDistance: 0.4
+          x: 0
+          y: 2
+      transitions:
+        - from: start
+          to: movingTo1
+          trigger: timeout
+        - from: movingTo1
+          to: movingTo0
+          trigger: completed
+        - from: movingTo1
+          to: start
+          trigger: rearBlocked
+        - from: movingTo1
+          to: start
+          trigger: frontBlocked
+        - from: movingTo1
+          to: start
+          trigger: blocked
+        - from: movingTo0
+          to: movingTo1
+          trigger: completed
+        - from: movingTo0
+          to: start
+          trigger: rearBlocked
+        - from: movingTo0
+          to: start
+          trigger: frontBlocked
+        - from: movingTo0
+          to: start
+          trigger: blocked
   ######################################
   # Explorer agent
   ######################################
