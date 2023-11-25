@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 
 - Issue #258: Polar Radar Check
+- Issue #260: Wrong version in pom
 
 ## [0.10.0] 2023-11-17
 
