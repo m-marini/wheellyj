@@ -7,12 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Fixed
+
+- Issue #258: Polar Radar Check
+
 ## [0.10.0] 2023-11-17
 
 ### Added
 
 - Issue #255: Add move to state
-
+  
 ## [0.9.0] 2023-11-12
 
 ### Added

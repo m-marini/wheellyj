@@ -215,7 +215,7 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
         for (int i = 0; i < n; i++) {
             CircularSector sector = polarMap.getSector(i);
             double dist = sector.isHindered()
-                    ? clip(sector.getDistance(), 0, maxDistance)
+                    ? clip(sector.getDistance(polarMap.getCenter()), 0, maxDistance)
                     : 0;
             sectorDistances.getScalar(i).assign(dist);
             knownSectors.getScalar(i).assign(sector.isKnown() ? 1 : 0);

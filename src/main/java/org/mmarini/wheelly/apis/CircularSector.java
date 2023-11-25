@@ -25,6 +25,7 @@
 
 package org.mmarini.wheelly.apis;
 
+import java.awt.geom.Point2D;
 import java.util.Optional;
 
 /**
@@ -32,46 +33,26 @@ import java.util.Optional;
  */
 public class CircularSector {
 
-    public static final CircularSector UNKNOWN_CIRCULAR_SECTOR = new CircularSector(0, 0, null);
+    public static final CircularSector UNKNOWN_CIRCULAR_SECTOR = new CircularSector(0, false, null);
 
     /**
      * Returns an empty sector
      *
      * @param timestamp the sector status timestamp (ms)
+     * @param location  the status location
      */
-    public static CircularSector empty(long timestamp) {
-        return new CircularSector(timestamp, 0, null);
-    }
-
-    /**
-     * Returns an empty sector
-     *
-     * @param timestamp the sector status timestamp (ms)
-     * @param mapSector the reference map sector
-     */
-    public static CircularSector empty(long timestamp, MapSector mapSector) {
-        return new CircularSector(timestamp, 0, mapSector);
+    public static CircularSector empty(long timestamp, Point2D location) {
+        return new CircularSector(timestamp, false, location);
     }
 
     /**
      * Returns a hindered sector with obstacle at specific distance
      *
      * @param timestamp the sector status timestamp (ms)
-     * @param distance  the obstacle distance (m)
+     * @param location  the status location
      */
-    public static CircularSector hindered(long timestamp, double distance) {
-        return new CircularSector(timestamp, distance, null);
-    }
-
-    /**
-     * Returns a hindered sector with obstacle at specific distance
-     *
-     * @param timestamp the sector status timestamp (ms)
-     * @param distance  the obstacle distance (m)
-     * @param mapSector the reference map sector
-     */
-    public static CircularSector hindered(long timestamp, double distance, MapSector mapSector) {
-        return new CircularSector(timestamp, distance, mapSector);
+    public static CircularSector hindered(long timestamp, Point2D location) {
+        return new CircularSector(timestamp, true, location);
     }
 
     /**
@@ -84,36 +65,52 @@ public class CircularSector {
     /**
      * Returns an unknown sector
      *
-     * @param mapSector the reference map sector
+     * @param location the status location
      */
-    public static CircularSector unknown(MapSector mapSector) {
-        return new CircularSector(0, 0, mapSector);
+    public static CircularSector unknown(Point2D location) {
+        return new CircularSector(0, false, location);
     }
 
     private final long timestamp;
-    private final double distance;
-    private final MapSector mapSector;
+    private final boolean hindered;
+    private final Point2D location;
 
-    public CircularSector(long timestamp, double distance, MapSector mapSector) {
+    /**
+     * Creates the Circular sectoe
+     *
+     * @param timestamp the status timestamp
+     * @param hindered
+     * @param location  the status location
+     */
+    public CircularSector(long timestamp, boolean hindered, Point2D location) {
         this.timestamp = timestamp;
-        this.distance = distance;
-        this.mapSector = mapSector;
+        this.hindered = hindered;
+        this.location = location;
     }
 
-    public double getDistance() {
-        return distance;
+    /**
+     * Returns the distance of location from center (0 if location does not exist
+     *
+     * @param center the center
+     */
+    public double getDistance(Point2D center) {
+        return location != null
+                ? location.distance(center) : 0;
     }
 
-    public Optional<MapSector> getMapSector() {
-        return Optional.ofNullable(mapSector);
+    /**
+     * Returns the status location if any
+     */
+    public Optional<Point2D> getLocation() {
+        return Optional.ofNullable(location);
     }
 
     public boolean isEmpty() {
-        return isKnown() && distance == 0;
+        return isKnown() && !hindered;
     }
 
     public boolean isHindered() {
-        return isKnown() && distance > 0;
+        return isKnown() && hindered;
     }
 
     public boolean isKnown() {

@@ -52,7 +52,6 @@ public class RecordFilterMenu extends JMenu {
                     || !((DumpRecord.StatusDumpRecord) record).getStatus().canMoveBackward());
     public static final Predicate<DumpRecord> STATUS_FILTER = CONTACT_FILTER.negate().and(record -> record instanceof DumpRecord.StatusDumpRecord);
     public static final Predicate<DumpRecord> ERROR_FILTER = record -> record instanceof DumpRecord.ReadDumpRecord && record.getData().startsWith("!! ");
-
     public static final Predicate<DumpRecord> OTHER_READ_FILTER = Predicate.not(STATUS_FILTER.or(ERROR_FILTER).or(CONTACT_FILTER))
             .and(record -> record instanceof DumpRecord.ReadDumpRecord);
     public static final Predicate<DumpRecord> MOVE_FILTER = record -> record instanceof DumpRecord.WriteDumpRecord && record.getData().startsWith("mv ");
@@ -135,7 +134,7 @@ public class RecordFilterMenu extends JMenu {
     /**
      * Returns the current record filter
      *
-     * @param ignored the ingnored parameter
+     * @param ignored the ignored parameter
      */
     private Predicate<DumpRecord> createFilter(Instant ignored) {
         Predicate<DumpRecord> afterFilter = afterBtn.isSelected()

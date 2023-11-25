@@ -37,12 +37,12 @@ import java.awt.geom.Point2D;
 import java.util.List;
 import java.util.stream.IntStream;
 
+import static java.lang.Math.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
 class ExploringStateTest {
     private static final double STOP_DISTANCE = 0.4;
-    private static final double MM1 = 0.001;
 
     static ProcessorContext createContext(StateNode state, PolarMap polarMap) {
         StateFlow flow = new StateFlow(List.of(state), List.of(), state, null);
@@ -67,9 +67,12 @@ class ExploringStateTest {
     @Test
     void findFullObstacle() {
         ExploringState state = new ExploringState("state", null, null, null);
-        CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i ->
-                CircularSector.hindered(1, STOP_DISTANCE - MM1 * i)
-        ).toArray(CircularSector[]::new);
+        double distance = 1;
+        CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i -> {
+            double dir = i * 2 * PI / 24;
+            Point2D.Double location = new Point2D.Double(distance * sin(dir), distance * cos(dir));
+            return CircularSector.hindered(1, location);
+        }).toArray(CircularSector[]::new);
         ProcessorContext context = createContext(state, createPolarMap(sectors));
 
         int result = state.findTargetSector(context);
@@ -87,10 +90,14 @@ class ExploringStateTest {
     @Test
     void findLargerInterval3() {
         ExploringState state = new ExploringState("state", null, null, null);
-        CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i ->
-                (i == 1 || i >= 10 && i <= 12)
-                        ? CircularSector.empty(1)
-                        : CircularSector.hindered(1, STOP_DISTANCE - MM1)
+        double distance = 1;
+        CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i -> {
+                    double dir = i * 2 * PI / 24;
+                    Point2D location = new Point2D.Double(distance * sin(dir), distance * cos(dir));
+                    return (i == 1 || i >= 10 && i <= 12)
+                            ? CircularSector.empty(1, location)
+                            : CircularSector.hindered(1, location);
+                }
         ).toArray(CircularSector[]::new);
         ProcessorContext context = createContext(state, createPolarMap(sectors));
 
@@ -110,11 +117,14 @@ class ExploringStateTest {
     @Test
     void findLargerIntervalFirst() {
         ExploringState state = new ExploringState("state", null, null, null);
-        CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i ->
-                i <= 1
-                        ? CircularSector.empty(1)
-                        : CircularSector.hindered(1, 1)
-        ).toArray(CircularSector[]::new);
+        double distance = 1;
+        CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i -> {
+            double dir = i * 2 * PI / 24;
+            Point2D location = new Point2D.Double(distance * sin(dir), distance * cos(dir));
+            return i <= 1
+                    ? CircularSector.empty(1, location)
+                    : CircularSector.hindered(1, location);
+        }).toArray(CircularSector[]::new);
         ProcessorContext context = createContext(state, createPolarMap(sectors));
 
         int result = state.findTargetSector(context);
@@ -132,9 +142,12 @@ class ExploringStateTest {
     @Test
     void findLargerIntervalFull() {
         ExploringState state = new ExploringState("state", null, null, null);
-        CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i ->
-                CircularSector.empty(1)
-        ).toArray(CircularSector[]::new);
+        double distance = 1;
+        CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i -> {
+            double dir = i * 2 * PI / 24;
+            Point2D location = new Point2D.Double(distance * sin(dir), distance * cos(dir));
+            return CircularSector.empty(1, location);
+        }).toArray(CircularSector[]::new);
         ProcessorContext context = createContext(state, createPolarMap(sectors));
 
         int result = state.findTargetSector(context);
@@ -152,11 +165,12 @@ class ExploringStateTest {
     @Test
     void findLargerIntervalNone() {
         ExploringState state = new ExploringState("state", null, null, null);
-        CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i ->
-                i == 3
-                        ? CircularSector.hindered(1, STOP_DISTANCE + MM1)
-                        : CircularSector.hindered(1, STOP_DISTANCE - MM1)
-        ).toArray(CircularSector[]::new);
+        double distance = 1;
+        CircularSector[] sectors = IntStream.range(0, 24).mapToObj(i -> {
+            double dir = i * 2 * PI / 24;
+            Point2D location = new Point2D.Double(distance * sin(dir), distance * cos(dir));
+            return CircularSector.hindered(1, location);
+        }).toArray(CircularSector[]::new);
         ProcessorContext context = createContext(state, createPolarMap(sectors));
 
         int result = state.findTargetSector(context);

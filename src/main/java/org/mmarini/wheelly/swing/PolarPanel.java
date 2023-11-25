@@ -43,8 +43,6 @@ public class PolarPanel extends JComponent {
     public static final BasicStroke BORDER_STROKE = new BasicStroke(0);
     public static final double SECTOR_SIZE = 0.2F;
     public static final int DEFAULT_NUM_SECTOR = 24;
-    //static final double DEFAULT_WORLD_SIZE = 11;
-    //static final double DEFAULT_SCALE = 400 / DEFAULT_WORLD_SIZE;
     static final double GRID_SIZE = 1f;
     static final Color GRID_COLOR = new Color(50, 50, 50);
     static final Color EMPTY_COLOR = new Color(64, 64, 64, 128);
@@ -144,7 +142,7 @@ public class PolarPanel extends JComponent {
             CircularSector sector = polarMap.getSector(i);
             double angle = -90 + toDegrees(polarMap.sectorDirection(i));
             if (sector.isKnown()) {
-                double distance = sector.getDistance();
+                double distance = sector.getLocation().map(polarMap.getCenter()::distance).orElse(0d);
                 if (distance == 0) {
                     emptyShapes.add(createPie(angle - sectorAngle / 2, sectorAngle, radarMaxDistance + SECTOR_SIZE));
                 } else {
