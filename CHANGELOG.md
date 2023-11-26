@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+
+- Issue #262: Add ping signals in polar panel
+
 ### Fixed
 
 - Issue #258: Polar Radar Check

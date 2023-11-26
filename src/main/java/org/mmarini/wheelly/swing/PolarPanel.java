@@ -34,6 +34,7 @@ import java.awt.geom.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.awt.Color.WHITE;
 import static java.lang.Math.*;
 
 /**
@@ -47,7 +48,9 @@ public class PolarPanel extends JComponent {
     static final Color GRID_COLOR = new Color(50, 50, 50);
     static final Color EMPTY_COLOR = new Color(64, 64, 64, 128);
     static final Color FILLED_COLOR = new Color(200, 0, 0, 128);
+    private static final Color PING_COLOR = new Color(255, 128, 128);
     private static final double DEFAULT_MAX_DISTANCE = 3;
+    private static final double PING_SIZE = 0.05;
 
     static List<Shape> createGridShapes(double radarMaxDistance, double gridSize, int sectorNumber) {
         List<Shape> gridShapes = new ArrayList<>();
@@ -71,21 +74,32 @@ public class PolarPanel extends JComponent {
         return new Arc2D.Double(-radius, -radius, radius * 2, radius * 2, startAngle, extent, Arc2D.PIE);
     }
 
+    /**
+     * Returns the ping shape at location
+     *
+     * @param location the polar radar location
+     */
+    private static Shape createPing(Point2D location) {
+        return new Ellipse2D.Double(location.getX(), location.getY(), PING_SIZE, PING_SIZE);
+    }
+
     private double radarMaxDistance;
     private List<Shape> gridShapes;
     private List<Shape> emptyShapes;
     private List<Shape> filledShapes;
+    private List<Shape> pingShapes;
     private int numSector;
 
     public PolarPanel() {
         setBackground(Color.BLACK);
-        setForeground(Color.WHITE);
+        setForeground(WHITE);
         setFont(Font.decode("Monospaced"));
         this.radarMaxDistance = DEFAULT_MAX_DISTANCE;
         this.numSector = DEFAULT_NUM_SECTOR;
         this.gridShapes = createGridShapes(radarMaxDistance, GRID_SIZE, numSector);
         this.emptyShapes = new ArrayList<>();
         this.filledShapes = new ArrayList<>();
+        this.pingShapes = new ArrayList<>();
     }
 
     /**
@@ -113,6 +127,13 @@ public class PolarPanel extends JComponent {
         filledShapes.forEach(gr::fill);
     }
 
+    private void drawPings(Graphics2D gr) {
+        gr.setStroke(BORDER_STROKE);
+        gr.setColor(PING_COLOR);
+        pingShapes.forEach(gr::fill);
+        gr.setColor(FILLED_COLOR);
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         Dimension size = getSize();
@@ -125,10 +146,10 @@ public class PolarPanel extends JComponent {
         gr.setTransform(base);
         drawGrid(gr);
         drawMap(gr, emptyShapes, filledShapes);
+        drawPings(gr);
     }
 
     public void setPolarMap(PolarMap polarMap) {
-
         int n = polarMap.getSectorsNumber();
         if (numSector != n) {
             numSector = n;
@@ -136,14 +157,18 @@ public class PolarPanel extends JComponent {
         }
         List<Shape> emptyShapes = new ArrayList<>();
         List<Shape> filledShapes = new ArrayList<>();
+        List<Shape> pingShapes = new ArrayList<>();
 
         double sectorAngle = toDegrees(polarMap.getSectorAngle());
+        Point2D center = polarMap.getCenter();
+        AffineTransform transform = AffineTransform.getRotateInstance(toRadians(polarMap.getDirection()));
+        transform.translate(-center.getX(), -center.getY());
         for (int i = 0; i < n; i++) {
             CircularSector sector = polarMap.getSector(i);
             double angle = -90 + toDegrees(polarMap.sectorDirection(i));
             if (sector.isKnown()) {
-                double distance = sector.getLocation().map(polarMap.getCenter()::distance).orElse(0d);
-                if (distance == 0) {
+                double distance = sector.getDistance(center);
+                if (distance == 0 || sector.isEmpty()) {
                     emptyShapes.add(createPie(angle - sectorAngle / 2, sectorAngle, radarMaxDistance + SECTOR_SIZE));
                 } else {
                     Shape outerPie = createPie(angle - sectorAngle / 2, sectorAngle, radarMaxDistance + SECTOR_SIZE);
@@ -151,12 +176,17 @@ public class PolarPanel extends JComponent {
                     emptyShapes.add(innerPie);
                     Area outerSector = new Area(outerPie);
                     outerSector.subtract(new Area(innerPie));
+                    sector.getLocation()
+                            .map(p -> transform.transform(p, null))
+                            .map(PolarPanel::createPing)
+                            .ifPresent(pingShapes::add);
                     filledShapes.add(outerSector);
                 }
             }
         }
         this.emptyShapes = emptyShapes;
         this.filledShapes = filledShapes;
+        this.pingShapes = pingShapes;
         repaint();
     }
 
