@@ -1,6 +1,6 @@
 ---
 version: "0.5"
-active: moveToAgent
+active: idleAgent
 
 configurations:
   ######################################
