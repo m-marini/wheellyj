@@ -119,6 +119,7 @@ public abstract class AbstractStateNode implements StateNode {
      */
     protected void entryAutoScan(ProcessorContext context) {
         put(context, "scanTime", -1);
+        put(context, "scanIndex", 0);
         tickAutoScan(context);
     }
 
@@ -240,9 +241,15 @@ public abstract class AbstractStateNode implements StateNode {
                 // Check for random scan direction
                 RobotCommands command;
                 if (sensorDirNumber > 1) {
-                    int x = context.getRandom().nextInt(sensorDirNumber);
+                    int scanIndex = getInt(context, "scanIndex");
+                    int mod = (sensorDirNumber - 1) * 2;
+                    int x = scanIndex;
+                    if (x >= sensorDirNumber) {
+                        x = mod - x;
+                    }
                     int dir = x * (maxSensorDir - minSensorDir) / (sensorDirNumber - 1) + minSensorDir;
                     logger.atDebug().setMessage("sensor scan {}").addArgument(dir).log();
+                    put(context, "scanIndex", (scanIndex + 1) % mod);
                     command = RobotCommands.scan(dir);
                 } else {
                     // Fix scan direction

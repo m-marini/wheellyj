@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 
 - Issue #262: Add ping signals in polar panel
+- Issue #264: Change auto scan in state machine agent
 
 ### Fixed
 
