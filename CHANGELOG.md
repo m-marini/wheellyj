@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.10.1] 2023-11-29
+
 ### Changed
 
 - Issue #262: Add ping signals in polar panel
