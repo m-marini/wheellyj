@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- Issue #266: Add ExploringPointState
+
 ## [0.10.1] 2023-11-29
 
 ### Changed
