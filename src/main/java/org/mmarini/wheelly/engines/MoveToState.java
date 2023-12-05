@@ -62,8 +62,7 @@ public class MoveToState extends AbstractStateNode {
                 loadTimeout(root, locator, id),
                 ProcessorCommand.setProperties(Map.of(
                         id + ".stopDistance", stopDistance,
-                        id + ".x", x,
-                        id + ".y", y
+                        id + ".target", new Point2D.Double(x, y)
                 )),
                 ProcessorCommand.create(root, locator.path("onInit")));
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
@@ -126,10 +125,8 @@ public class MoveToState extends AbstractStateNode {
             return TIMEOUT_RESULT;
         }
 
-        double x = getDouble(context, "x");
-        double y = getDouble(context, "y");
         double stopDistance = getDouble(context, "stopDistance");
-        Point2D target = new Point2D.Double(x, y);
+        Point2D target = get(context, "target");
         return moveTo(context.getRobotStatus(), target, stopDistance);
     }
 }

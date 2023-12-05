@@ -15,6 +15,7 @@ $defs:
     anyOf:
       - $ref: "#/$defs/HaltState"
       - $ref: "#/$defs/ExploringState"
+      - $ref: "#/$defs/ExploringPointState"
       - $ref: "#/$defs/AvoidingState"
       - $ref: "#/$defs/MoveToState"
   HaltState:
@@ -83,6 +84,31 @@ $defs:
       - class
       - stopDistance
       - turnDirectionRange
+  ExploringPointState:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.wheelly.engines.ExploringPointState
+      onInit:
+        $ref: "#/$defs/Commands"
+      onEntry:
+        $ref: "#/$defs/Commands"
+      onExit:
+        $ref: "#/$defs/Commands"
+      timeout:
+        multipleOf: 1
+        minimum: 1
+      distance:
+        exclusiveMinimum: 0
+      safeDistance:
+        exclusiveMinimum: 0
+      maxDistance:
+        exclusiveMinimum: 0
+    required:
+      - class
+      - distance
+      - safeDistance
+      - maxDistance
   MoveToState:
     type: object
     properties:
@@ -192,7 +218,7 @@ $defs:
 properties:
   version:
     type: string
-    const: "0.5"
+    const: "0.6"
   active:
     type: string
   configurations:
