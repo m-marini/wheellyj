@@ -26,116 +26,296 @@
 package org.mmarini.wheelly.apis;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
+import org.mockito.hamcrest.MockitoHamcrest;
 
 import java.awt.geom.Point2D;
 import java.util.Random;
+import java.util.function.Consumer;
 
-import static java.lang.Math.*;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.closeTo;
+import static java.lang.Math.toDegrees;
+import static java.lang.Math.toRadians;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_PER_PULSE;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
 import static org.mmarini.wheelly.apis.SimRobot.ROBOT_TRACK;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.*;
 
 class SimRobotTest {
 
     public static final int SEED = 1234;
     public static final double DISTANCE_EPSILON = 1e-3;
     public static final double MAX_ANGULAR_VELOCITY = toDegrees(MAX_PPS * 2 * DISTANCE_PER_PULSE / ROBOT_TRACK);
+    public static final int MAX_SIM_SPEED = 1000;
+    public static final long INTERVAL = 500;
+    public static final float GRID_SIZE = 0.2f;
+    private static final double PULSES_EPSILON = 1;
+
+    @Test
+    void configureTest() {
+        // Given a sim robot connected
+        SimRobot robot = createRobot();
+        robot.connect();
+
+        // and a clock sync event consumer
+        Consumer<ClockSyncEvent> onClock = mock();
+        robot.setOnClock(onClock);
+
+        // and a motion consumer
+        Consumer<WheellyMotionMessage> onMotion = mock();
+        robot.setOnMotion(onMotion);
+
+        // and a proxy consumer
+        Consumer<WheellyProxyMessage> onProxy = mock();
+        robot.setOnProxy(onProxy);
+
+        // and a contacts consumer
+        Consumer<WheellyContactsMessage> onContacts = mock();
+        robot.setOnContacts(onContacts);
+
+        // When configure
+        robot.configure();
+
+        // the consumer should be invoked
+        verify(onClock, times(1)).accept(MockitoHamcrest.argThat(
+                allOf(
+                        hasProperty("receiveTimestamp", equalTo(0L)),
+                        hasProperty("transmitTimestamp", equalTo(0L))
+                )));
+        verify(onMotion, times(1)).accept(MockitoHamcrest.argThat(
+                allOf(
+                        hasProperty("remoteTime", equalTo(0L))
+                )
+        ));
+        verify(onProxy, times(1)).accept(MockitoHamcrest.argThat(
+                allOf(
+                        hasProperty("remoteTime", equalTo(0L))
+                )
+        ));
+        verify(onContacts, times(1)).accept(MockitoHamcrest.argThat(
+                allOf(
+                        hasProperty("remoteTime", equalTo(0L))
+                )
+        ));
+    }
 
     @Test
     void create() {
         SimRobot robot = createRobot();
-        RobotStatus status = robot.getRobotStatus();
-        assertEquals(new Point2D.Float(), status.getLocation());
-        assertEquals(0, status.getDirection());
-        assertEquals(0, status.getSensorDirection());
-        assertEquals(0f, status.getEchoDistance());
+        assertEquals(new Point2D.Float(), robot.getLocation());
+        assertEquals(0, robot.getDirection());
+        assertEquals(0, robot.getSensorDirection());
+        assertEquals(0f, robot.getEchoDistance());
     }
 
+    /**
+     * Given a simulated robot with an obstacles map grid of 0.2 m without obstacles
+     */
     private SimRobot createRobot() {
         Random random = new Random(SEED);
-        SimRobot simRobot = new SimRobot(new MapBuilder(new GridTopology(0.2f)).build(),
-                random, 0, 0, toRadians(15), MAX_PPS, 1000);
-        simRobot.connect();
-        simRobot.configure();
-        return simRobot;
+        return new SimRobot(new MapBuilder(new GridTopology(GRID_SIZE)).build(),
+                random, 0, 0, toRadians(15), MAX_PPS,
+                INTERVAL, INTERVAL);
     }
 
     @Test
-    void moveFrom0To0By1() {
+    void moveFrom0To0ByMAX() {
+        // Given a robot connected and configured
         SimRobot robot = createRobot();
-        robot.tick(100);
+        robot.connect();
+        robot.configure();
+        Consumer<WheellyMotionMessage> onMotion = mock();
+        robot.setOnMotion(onMotion);
 
+        // When move to 0 DEG at max speed
         robot.move(0, MAX_PPS);
-        robot.tick(100);
-        RobotStatus status = robot.getRobotStatus();
+        // And ticks 5 time for 100 ms
+        for (int i = 0; i < 5; i++) {
+            robot.tick(100);
+        }
 
-        assertThat(status.getLocation().getX(), closeTo(0, DISTANCE_EPSILON));
-        assertThat(status.getLocation().getY(), closeTo(10e-3, DISTANCE_EPSILON));
-        assertEquals(0, status.getDirection());
-        assertEquals(0, status.getSensorDirection());
-        assertEquals(0f, status.getEchoDistance());
+        // Then robot should emit motion at (0, 18) ~= (0, MAX_PPS * 0.5)
+        verify(onMotion).accept(MockitoHamcrest.argThat(
+                allOf(
+                        hasProperty("remoteTime", equalTo(500L)),
+                        hasProperty("XPulses", closeTo(0, PULSES_EPSILON)),
+                        hasProperty("YPulses", closeTo(18, PULSES_EPSILON)),
+                        hasProperty("direction", equalTo(0))
+                )
+        ));
     }
 
     @Test
-    void moveFrom0To0By_1() {
+    void moveFrom0To0By_MAX() {
+        // Given a robot connected and configured
         SimRobot robot = createRobot();
-        robot.tick(100);
+        robot.connect();
+        robot.configure();
+        Consumer<WheellyMotionMessage> onMotion = mock();
+        robot.setOnMotion(onMotion);
 
+        // When move to 0 DEG at max speed
         robot.move(0, -MAX_PPS);
-        robot.tick(100);
-        RobotStatus status = robot.getRobotStatus();
+        // And ticks 5 time for 100 ms
+        for (int i = 0; i < 5; i++) {
+            robot.tick(100);
+        }
 
-        assertThat(status.getLocation().getX(), closeTo(0, DISTANCE_EPSILON));
-        assertThat(status.getLocation().getY(), closeTo(-10e-3, DISTANCE_EPSILON));
-        assertEquals(0, status.getDirection());
-        assertEquals(0, status.getSensorDirection());
-        assertEquals(0f, status.getEchoDistance());
+        // Then robot should emit motion at (0, -18) ~= (0, -MAX_PPS * 0.5)
+        verify(onMotion).accept(MockitoHamcrest.argThat(
+                allOf(
+                        hasProperty("remoteTime", equalTo(500L)),
+                        hasProperty("XPulses", closeTo(0, PULSES_EPSILON)),
+                        hasProperty("YPulses", closeTo(-18, PULSES_EPSILON)),
+                        hasProperty("direction", equalTo(0))
+                )
+        ));
     }
 
     @Test
     void rotateFrom0To5() {
+        // Given a robot connected and configured
         SimRobot robot = createRobot();
-        robot.tick(100);
+        robot.connect();
+        robot.configure();
+        Consumer<WheellyMotionMessage> onMotion = mock();
+        robot.setOnMotion(onMotion);
 
+        // When move to 5 DEG at 0 speed
         robot.move(5, 0);
-        robot.tick(100);
-        RobotStatus status = robot.getRobotStatus();
+        // And ticks 5 time for 100 ms
+        for (int i = 0; i < 5; i++) {
+            robot.tick(100);
+        }
 
-        assertThat(status.getLocation().getX(), closeTo(0, DISTANCE_EPSILON));
-        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertThat((double) status.getDirection(), closeTo(round(MAX_ANGULAR_VELOCITY * 0.1 / 2), 1));
-        assertEquals(0, status.getSensorDirection());
-        assertEquals(0f, status.getEchoDistance());
+        // Then robot should emit motion at (0, 0) toward 5 DEG
+        verify(onMotion).accept(MockitoHamcrest.argThat(
+                allOf(
+                        hasProperty("remoteTime", equalTo(500L)),
+                        hasProperty("XPulses", closeTo(0, PULSES_EPSILON)),
+                        hasProperty("YPulses", closeTo(0, PULSES_EPSILON)),
+                        hasProperty("direction", greaterThanOrEqualTo(4)),
+                        hasProperty("direction", lessThanOrEqualTo(6))
+                )
+        ));
     }
 
     @Test
     void rotateFrom0To90() {
+        // Given a robot connected and configured
         SimRobot robot = createRobot();
+        robot.connect();
+        robot.configure();
+        Consumer<WheellyMotionMessage> onMotion = mock();
+        robot.setOnMotion(onMotion);
 
+        // When move to 90 DEG at 0 speed
         robot.move(90, 0);
-        robot.tick(100);
-        RobotStatus status = robot.getRobotStatus();
+        // And ticks 5 time for 100 ms
+        for (int i = 0; i < 5; i++) {
+            robot.tick(100);
+        }
 
-        assertThat(status.getLocation().getX(), closeTo(0, DISTANCE_EPSILON));
-        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertEquals((int) round(MAX_ANGULAR_VELOCITY * 0.1), status.getDirection());
-        assertEquals(0, status.getSensorDirection());
-        assertEquals(0d, status.getEchoDistance());
+        // Then robot should emit motion at (0, 0) toward approx 90 DEG
+        verify(onMotion).accept(MockitoHamcrest.argThat(
+                allOf(
+                        hasProperty("remoteTime", equalTo(500L)),
+                        hasProperty("XPulses", closeTo(0, PULSES_EPSILON)),
+                        hasProperty("YPulses", closeTo(0, PULSES_EPSILON)),
+                        hasProperty("direction", greaterThanOrEqualTo(89)),
+                        hasProperty("direction", lessThanOrEqualTo(91))
+                )
+        ));
     }
 
     @Test
-    void tickStopping() {
+    void scanTest() {
+        // Given a sim robot connected and configured
         SimRobot robot = createRobot();
+        robot.connect();
+        robot.configure();
 
-        robot.tick(100);
-        RobotStatus status = robot.getRobotStatus();
+        // and a proxy consumer
+        Consumer<WheellyProxyMessage> onProxy = mock();
+        robot.setOnProxy(onProxy);
 
-        assertEquals(new Point2D.Float(), status.getLocation());
-        assertEquals(0, status.getDirection());
-        assertEquals(0, status.getSensorDirection());
-        assertEquals(0f, status.getEchoDistance());
+        // When scan 90 DEG
+        robot.scan(90);
+        robot.tick(500);
+
+        // the consumer should be invoked
+        verify(onProxy, times(1)).accept(MockitoHamcrest.argThat(
+                allOf(
+                        hasProperty("remoteTime", equalTo(500L)),
+                        hasProperty("sensorDirection", equalTo(90))
+                )));
+    }
+
+    @Test
+    void tickForStatus() {
+        // Given a sim robot connected and configured
+        SimRobot robot = createRobot();
+        robot.connect();
+        robot.configure();
+
+        // and a motion consumer
+        Consumer<WheellyMotionMessage> onMotion = mock();
+        robot.setOnMotion(onMotion);
+
+        // and a proxy consumer
+        Consumer<WheellyProxyMessage> onProxy = mock();
+        robot.setOnProxy(onProxy);
+
+        // and a contacts consumer
+        Consumer<WheellyContactsMessage> onContacts = mock();
+        robot.setOnContacts(onContacts);
+
+        // When tick 3 time for 500ms
+        for (int i = 0; i < 3; i++) {
+            robot.tick(INTERVAL);
+        }
+
+        // Then contacts consumer should be never invoked
+        verify(onContacts, never()).accept(any());
+
+        // and motion consumer should be invoked by 500 ms intervals
+        InOrder onMotionOrder = inOrder(onMotion);
+        onMotionOrder.verify(onMotion).accept(MockitoHamcrest.argThat(
+                allOf(
+                        hasProperty("remoteTime", equalTo(INTERVAL))
+                )
+        ));
+        onMotionOrder.verify(onMotion).accept(MockitoHamcrest.argThat(
+                allOf(
+                        hasProperty("remoteTime", equalTo(2 * INTERVAL))
+                )
+        ));
+        onMotionOrder.verify(onMotion).accept(MockitoHamcrest.argThat(
+                allOf(
+                        hasProperty("remoteTime", equalTo(3 * INTERVAL))
+                )
+        ));
+        onMotionOrder.verifyNoMoreInteractions();
+
+        // and proxy consumer should be invoked by 500 ms intervals
+        InOrder onProxyOrder = inOrder(onProxy);
+        onProxyOrder.verify(onProxy).accept(MockitoHamcrest.argThat(
+                allOf(
+                        hasProperty("remoteTime", equalTo(INTERVAL))
+                )
+        ));
+        onProxyOrder.verify(onProxy).accept(MockitoHamcrest.argThat(
+                allOf(
+                        hasProperty("remoteTime", equalTo(2 * INTERVAL))
+                )
+        ));
+        onProxyOrder.verify(onProxy).accept(MockitoHamcrest.argThat(
+                allOf(
+                        hasProperty("remoteTime", equalTo(3 * INTERVAL))
+                )
+        ));
+        onProxyOrder.verifyNoMoreInteractions();
     }
 }

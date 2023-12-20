@@ -105,7 +105,7 @@ public abstract class AbstractStateNode implements StateNode {
 
     @Override
     public void entry(ProcessorContext context) {
-        long time = context.getRobotStatus().getTime();
+        long time = context.getRobotStatus().getLocalTime();
         context.put(format("%s.entryTime", id), time);
         if (onEntry != null) {
             onEntry.execute(context);
@@ -153,7 +153,7 @@ public abstract class AbstractStateNode implements StateNode {
 
     @Override
     public long getElapsedTime(ProcessorContext context) {
-        return context.getRobotStatus().getTime() -
+        return context.getRobotStatus().getLocalTime() -
                 getEntryTime(context);
     }
 
@@ -232,8 +232,9 @@ public abstract class AbstractStateNode implements StateNode {
         // Check for scan interval set
         if (scanInterval > 0) {
             long scanTime = getLong(context, "scanTime");
-            long time = context.getRobotStatus().getTime();
+            long time = context.getRobotStatus().getLocalTime();
             // Check for scan timeout
+            logger.atDebug().log("tickAutoScan time={}", time);
             if (scanTime < 0 || time > scanTime + scanInterval) {
                 int minSensorDir = clip(getInt(context, "minSensorDir"), -90, 90);
                 int maxSensorDir = clip(getInt(context, "maxSensorDir"), -90, 90);
@@ -248,7 +249,6 @@ public abstract class AbstractStateNode implements StateNode {
                         x = mod - x;
                     }
                     int dir = x * (maxSensorDir - minSensorDir) / (sensorDirNumber - 1) + minSensorDir;
-                    logger.atDebug().setMessage("sensor scan {}").addArgument(dir).log();
                     put(context, "scanIndex", (scanIndex + 1) % mod);
                     command = RobotCommands.scan(dir);
                 } else {
@@ -256,6 +256,7 @@ public abstract class AbstractStateNode implements StateNode {
                     command = RobotCommands.scan((minSensorDir + maxSensorDir) / 2);
                 }
                 put(context, "scanTime", time);
+                logger.atDebug().log("sensor scan {}", command.scanDirection);
                 return Tuple2.of(NONE_EXIT, command);
             }
         }

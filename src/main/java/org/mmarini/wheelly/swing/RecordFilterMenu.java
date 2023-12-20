@@ -33,7 +33,7 @@ import io.reactivex.rxjava3.core.BackpressureStrategy;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.swing.SwingUtils;
-import org.mmarini.wheelly.apis.DumpRecord;
+import org.mmarini.wheelly.apis.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,12 +47,21 @@ import java.util.stream.Stream;
  * Shows the record filters' user interface
  */
 public class RecordFilterMenu extends JMenu {
-    public static final Predicate<DumpRecord> CONTACT_FILTER = record -> record instanceof DumpRecord.StatusDumpRecord &&
-            (!((DumpRecord.StatusDumpRecord) record).getStatus().canMoveForward()
-                    || !((DumpRecord.StatusDumpRecord) record).getStatus().canMoveBackward());
-    public static final Predicate<DumpRecord> STATUS_FILTER = CONTACT_FILTER.negate().and(record -> record instanceof DumpRecord.StatusDumpRecord);
+    public static final Predicate<DumpRecord> PROXY_FILTER = record -> record instanceof DumpRecord.MessageDumpRecord &&
+            ((DumpRecord.MessageDumpRecord<?>) record).getMessage() instanceof WheellyProxyMessage;
+    public static final Predicate<DumpRecord> CONTACT_FILTER = record -> record instanceof DumpRecord.MessageDumpRecord &&
+            ((DumpRecord.MessageDumpRecord<?>) record).getMessage() instanceof WheellyContactsMessage;
+    public static final Predicate<DumpRecord> MOTION_FILTER = record -> record instanceof DumpRecord.MessageDumpRecord &&
+            ((DumpRecord.MessageDumpRecord<?>) record).getMessage() instanceof WheellyMotionMessage;
+    public static final Predicate<DumpRecord> SUPPLY_FILTER = record -> record instanceof DumpRecord.MessageDumpRecord &&
+            ((DumpRecord.MessageDumpRecord<?>) record).getMessage() instanceof WheellySupplyMessage;
     public static final Predicate<DumpRecord> ERROR_FILTER = record -> record instanceof DumpRecord.ReadDumpRecord && record.getData().startsWith("!! ");
-    public static final Predicate<DumpRecord> OTHER_READ_FILTER = Predicate.not(STATUS_FILTER.or(ERROR_FILTER).or(CONTACT_FILTER))
+    public static final Predicate<DumpRecord> OTHER_READ_FILTER = Predicate.not(
+                    PROXY_FILTER
+                            .or(SUPPLY_FILTER)
+                            .or(MOTION_FILTER)
+                            .or(ERROR_FILTER)
+                            .or(CONTACT_FILTER))
             .and(record -> record instanceof DumpRecord.ReadDumpRecord);
     public static final Predicate<DumpRecord> MOVE_FILTER = record -> record instanceof DumpRecord.WriteDumpRecord && record.getData().startsWith("mv ");
     public static final Predicate<DumpRecord> HALT_FILTER = record -> record instanceof DumpRecord.WriteDumpRecord && record.getData().equals("ha");
@@ -61,7 +70,10 @@ public class RecordFilterMenu extends JMenu {
             .and(record -> record instanceof DumpRecord.WriteDumpRecord);
     private static final Predicate<DumpRecord> NONE_FILTER = record -> false;
     private static final Logger logger = LoggerFactory.getLogger(RecordFilterMenu.class);
-    private final JCheckBoxMenuItem statusBtn;
+
+    private final JCheckBoxMenuItem motionBtn;
+    private final JCheckBoxMenuItem proxyBtn;
+    private final JCheckBoxMenuItem supplyBtn;
     private final JCheckBoxMenuItem contactsBtn;
     private final JCheckBoxMenuItem errorBtn;
     private final JCheckBoxMenuItem readBtn;
@@ -87,7 +99,9 @@ public class RecordFilterMenu extends JMenu {
         Messages.getStringOpt("RecordFiltersMenu.mnemonic")
                 .map(s -> s.charAt(0))
                 .ifPresent(this::setMnemonic);
-        this.statusBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.statusButton");
+        this.proxyBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.proxyButton");
+        this.motionBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.motionBtn");
+        this.supplyBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.supplyButton");
         this.contactsBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.contactsButton");
         this.errorBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.errorButton");
         this.readBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.readButton");
@@ -111,8 +125,10 @@ public class RecordFilterMenu extends JMenu {
      * Creates the panel content
      */
     private void createContent() {
-        Stream.of(contactsBtn,
-                        statusBtn,
+        Stream.of(motionBtn,
+                        proxyBtn,
+                        contactsBtn,
+                        supplyBtn,
                         errorBtn,
                         readBtn,
                         moveBtn,
@@ -145,8 +161,14 @@ public class RecordFilterMenu extends JMenu {
                 : NONE_FILTER;
         Predicate<DumpRecord> timeFilter = afterFilter.or(beforeFilter);
 
-        Predicate<DumpRecord> statusFilter = statusBtn.isSelected()
-                ? STATUS_FILTER
+        Predicate<DumpRecord> motionFilter = motionBtn.isSelected()
+                ? MOTION_FILTER
+                : NONE_FILTER;
+        Predicate<DumpRecord> proxyFilter = proxyBtn.isSelected()
+                ? PROXY_FILTER
+                : NONE_FILTER;
+        Predicate<DumpRecord> supplyFilter = supplyBtn.isSelected()
+                ? SUPPLY_FILTER
                 : NONE_FILTER;
         Predicate<DumpRecord> contactsFilter = contactsBtn.isSelected()
                 ? CONTACT_FILTER
@@ -170,7 +192,7 @@ public class RecordFilterMenu extends JMenu {
                 ? OTHER_WRITE_FILTER
                 : NONE_FILTER;
 
-        Predicate<DumpRecord> typesFilter = Stream.of(statusFilter, contactsFilter, errorFilter, readFilter,
+        Predicate<DumpRecord> typesFilter = Stream.of(motionFilter, proxyFilter, supplyFilter, contactsFilter, errorFilter, readFilter,
                         moveFilter, haltFilter, scanFilter, writeFilter)
                 .reduce(Predicate::or)
                 .orElseThrow();
@@ -211,7 +233,7 @@ public class RecordFilterMenu extends JMenu {
      */
     private void handleAllTypesButton(ActionEvent event) {
         if (!allTypesBtn.isSelected()) {
-            Stream.of(statusBtn, contactsBtn, errorBtn, readBtn, moveBtn, haltBtn, scanBtn, writeBtn, allTypesBtn)
+            Stream.of(motionBtn, proxyBtn, contactsBtn, supplyBtn, errorBtn, readBtn, moveBtn, haltBtn, scanBtn, writeBtn, allTypesBtn)
                     .forEach(btn -> btn.setSelected(true));
         }
     }
@@ -233,7 +255,7 @@ public class RecordFilterMenu extends JMenu {
      */
     private void handleNoneTypeButton(ActionEvent event) {
         if (noneTypesBtn.isSelected()) {
-            Stream.of(statusBtn, contactsBtn, errorBtn, readBtn, moveBtn, haltBtn, scanBtn, writeBtn, noneTypesBtn)
+            Stream.of(motionBtn, proxyBtn, contactsBtn, supplyBtn, errorBtn, readBtn, moveBtn, haltBtn, scanBtn, writeBtn, noneTypesBtn)
                     .forEach(btn -> btn.setSelected(false));
         }
     }
@@ -242,7 +264,7 @@ public class RecordFilterMenu extends JMenu {
      * Initializes the panel
      */
     private void init() {
-        Stream.of(statusBtn, contactsBtn, errorBtn, readBtn, moveBtn, haltBtn, scanBtn, writeBtn, afterBtn, allTimeBtn, allTypesBtn)
+        Stream.of(motionBtn, proxyBtn, contactsBtn, supplyBtn, errorBtn, readBtn, moveBtn, haltBtn, scanBtn, writeBtn, afterBtn, allTimeBtn, allTypesBtn)
                 .forEach(btn -> btn.setSelected(true));
         Flowable<ActionEvent> noneTypesFlow = SwingObservable.actions(noneTypesBtn)
                 .toFlowable(BackpressureStrategy.LATEST)
@@ -265,7 +287,7 @@ public class RecordFilterMenu extends JMenu {
                 .publish()
                 .autoConnect();
 
-        filtersFlow = Stream.of(statusBtn, contactsBtn, errorBtn, readBtn, moveBtn, haltBtn, scanBtn, writeBtn, beforeBtn, afterBtn)
+        filtersFlow = Stream.of(motionBtn, proxyBtn, supplyBtn, contactsBtn, errorBtn, readBtn, moveBtn, haltBtn, scanBtn, writeBtn, beforeBtn, afterBtn)
                 .map(SwingObservable::actions)
                 .map(o -> o.toFlowable(BackpressureStrategy.LATEST))
                 .reduce(Flowable::mergeWith)

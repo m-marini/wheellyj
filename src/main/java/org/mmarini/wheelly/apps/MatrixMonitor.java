@@ -389,7 +389,8 @@ public class MatrixMonitor {
     private void run() {
         logger.info("Robot check started.");
         controller = createController();
-        controller.readRobotStatus().doOnNext(this::handleStatus).subscribe();
+        controller.readRobotStatus()
+                .doOnNext(this::handleStatus).subscribe();
         controller.readErrors().doOnNext(er -> {
             comMonitor.onError(er);
             logger.atError().setCause(er).log();

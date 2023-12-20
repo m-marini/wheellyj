@@ -223,7 +223,7 @@ public class Wheelly {
     }
 
     private void handleInference(RobotStatus status) {
-        long robotClock = status.getTime();
+        long robotClock = status.getLocalTime();
         envPanel.setRobotStatus(status);
         sensorMonitor.onStatus(status);
         if (environment instanceof WithRadarMap) {
@@ -287,9 +287,9 @@ public class Wheelly {
 
     private void handleStatusReady(RobotStatus status) {
         if (robotStartTimestamp < 0) {
-            robotStartTimestamp = status.getTime();
+            robotStartTimestamp = status.getLocalTime();
         }
-        long robotElapsed = status.getTime() - robotStartTimestamp;
+        long robotElapsed = status.getLocalTime() - robotStartTimestamp;
         envPanel.setTimeRatio((double) robotElapsed / (System.currentTimeMillis() - start));
         if (robotElapsed > sessionDuration) {
             environment.shutdown();

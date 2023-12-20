@@ -152,13 +152,18 @@ public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, Wi
     public void init() {
         controller.setOnInference(this::handleInference);
         controller.setOnLatch(this::handleLatch);
-        controller.readRobotStatus().subscribe(this::handleStatus);
+        controller.readRobotStatus().doOnNext(this::handleStatus).subscribe();
         controller.start();
     }
 
     @Override
     public Flowable<RobotCommands> readCommand() {
         return controller.readCommand();
+    }
+
+    @Override
+    public Flowable<RobotStatus> readContacts() {
+        return controller.readContacts();
     }
 
     @Override
@@ -172,13 +177,23 @@ public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, Wi
     }
 
     @Override
+    public Flowable<RobotStatus> readMotion() {
+        return controller.readMotion();
+    }
+
+    @Override
+    public Flowable<RobotStatus> readProxy() {
+        return controller.readProxy();
+    }
+
+    @Override
     public Flowable<String> readReadLine() {
         return controller.readReadLine();
     }
 
     @Override
     public Flowable<RobotStatus> readRobotStatus() {
-        return getController().readRobotStatus();
+        return controller.readRobotStatus();
     }
 
     public Completable readShutdown() {
@@ -187,6 +202,11 @@ public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, Wi
 
     public Flowable<ProcessorContext> readStepUp() {
         return stepUpProcessor;
+    }
+
+    @Override
+    public Flowable<RobotStatus> readSupply() {
+        return controller.readSupply();
     }
 
     @Override

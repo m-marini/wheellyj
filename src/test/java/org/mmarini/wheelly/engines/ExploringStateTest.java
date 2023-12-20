@@ -103,7 +103,6 @@ class ExploringStateTest {
 
         int result = state.findTargetSector(context);
 
-
         assertEquals(11, result);
     }
 

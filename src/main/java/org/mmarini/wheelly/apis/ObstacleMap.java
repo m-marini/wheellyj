@@ -141,20 +141,29 @@ public class ObstacleMap {
             return -1;
         }
         INDArray point = Nd4j.createFromArray(x, y).reshape(1, 2);
+        // Computes the vectors of obstacles relative the given position (x,y)
         INDArray vect = coordinates.sub(point);
+        // Computes the distances of obstacles relative the given position
         INDArray n1 = vect.norm2(1).reshape(vect.shape()[0], 1);
+        // Computes the versor of the given direction
         INDArray dirVersor = Nd4j.createFromArray((float) cos(direction), (float) sin(direction)).reshape(1, 2);
+        // calculates the cosine of the direction of the obstacles with respect to the given position
         INDArray cosDir = vect.mmul(dirVersor.transpose()).div(n1);
+        // Calculates the limit cosine of direction range
         float cosThreshold = (float) cos(directionRange);
+        // Finds the eligible obstacle points
         INDArray valid = cosDir.gte(cosThreshold);
         int index = -1;
         Float minDist = Float.MAX_VALUE;
+        // Find for nearest valid obstacles
         for (int i = 0; i < n; i++) {
             int val = valid.getInt(i, 0);
             float dist = n1.getFloat(i, 0);
             if (dist == 0) {
+                // the obstacle coincides with the given position
                 return i;
             } else if (val == 1 && dist < minDist) {
+                // the obstacle is valid and is near the previous found
                 index = i;
                 minDist = dist;
             }

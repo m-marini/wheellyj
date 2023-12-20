@@ -29,7 +29,6 @@
 package org.mmarini.wheelly.envs;
 
 import io.reactivex.rxjava3.core.Completable;
-import io.reactivex.rxjava3.core.Flowable;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
@@ -205,11 +204,6 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
                 speed(actions),
                 sensorDirection);
         controller.execute(command);
-    }
-
-    @Override
-    public Flowable<RobotStatus> readRobotStatus() {
-        return getController().readRobotStatus();
     }
 
     @Override

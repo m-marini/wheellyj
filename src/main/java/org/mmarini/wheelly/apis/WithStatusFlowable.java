@@ -32,7 +32,27 @@ import io.reactivex.rxjava3.core.Flowable;
 
 public interface WithStatusFlowable {
     /**
+     * Returns the stream of proxy events
+     */
+    Flowable<RobotStatus> readContacts();
+
+    /**
+     * Returns the stream of motion events
+     */
+    Flowable<RobotStatus> readMotion();
+
+    /**
+     * Returns the stream of proxy events
+     */
+    Flowable<RobotStatus> readProxy();
+
+    /**
      * Returns the stream of status
      */
     Flowable<RobotStatus> readRobotStatus();
+
+    /**
+     * Returns the stream of supply events
+     */
+    Flowable<RobotStatus> readSupply();
 }

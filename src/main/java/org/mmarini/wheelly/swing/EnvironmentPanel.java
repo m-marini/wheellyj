@@ -179,7 +179,7 @@ public class EnvironmentPanel extends RadarPanel {
         g1.setColor(HUD_BACKGROUND_COLOR);
         g1.fillRect(0, 0, HUD_WIDTH, hudHeight);
         g1.setColor(getForeground());
-        drawLine(g1, format("Time     %s %.1fx", strDate(status.getTime()), timeRatio), 0, Color.GREEN);
+        drawLine(g1, format("Time     %s %.1fx", strDate(status.getRemoteTime() - status.getResetTime()), timeRatio), 0, Color.GREEN);
         drawLine(g1, format("Reaction: %.3f s / %.3f s", reactionRobotTime, reactionRealTime), 1, Color.GREEN);
         drawLine(g1, format("Reward   %.2f", reward), 2, Color.GREEN);
         drawLine(g1, format("Distance %.2f m", status.getEchoDistance()), 3, Color.GREEN);

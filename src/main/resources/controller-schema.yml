@@ -25,6 +25,23 @@ $defs:
       watchdogInterval:
         multipleOf: 1
         minimum: 1
+      simulationSpeed:
+        type: number
+        minimum: 1
+      supplyValues:
+        type: array
+        items:
+          multipleOf: 1
+          minimum: 0
+          maximum: 4095
+        minItems: 2
+        maxItems: 2
+      voltages:
+        type: array
+        items:
+          type: number
+        minItems: 2
+        maxItems: 2
     required:
       - class
       - interval
@@ -32,11 +49,14 @@ $defs:
       - commandInterval
       - connectionRetryInterval
       - watchdogInterval
+      - supplyValues
+      - voltages
+
 type: object
 properties:
   version:
     type: string
-    const: "0.4"
+    const: "0.5"
   active:
     type: string
   configurations:

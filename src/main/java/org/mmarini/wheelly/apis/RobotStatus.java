@@ -32,6 +32,7 @@ import java.awt.geom.Point2D;
 import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.function.IntToDoubleFunction;
+import java.util.stream.Stream;
 
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
@@ -43,11 +44,6 @@ public class RobotStatus {
     public static final double DISTANCE_PER_PULSE = WHEEL_DIAMETER * PI / PULSES_PER_ROOT;
     public static final float DISTANCE_SCALE = 1F / 5882;
     public static final float OBSTACLE_SIZE = 0.2f;
-    public static final int FRONT_LEFT = 8;
-    public static final int FRONT_RIGHT = 4;
-    public static final int REAR_LEFT = 2;
-    public static final int REAR_RIGHT = 1;
-    public static final int NO_CONTACT = 0;
     private static final int MIN_SUPPLY_SIGNAL = 0;
     private static final int MAX_SUPPLY_SIGNAL = 2438;
     private static final double MIN_SUPPLY_VOLTAGE = 0;
@@ -59,7 +55,12 @@ public class RobotStatus {
      * @param decodeVoltage the decode voltage function
      */
     public static RobotStatus create(IntToDoubleFunction decodeVoltage) {
-        return new RobotStatus(WheellyStatus.create(), 0, 0, decodeVoltage);
+        long now = System.currentTimeMillis();
+        return new RobotStatus(ClockSyncEvent.create(),
+                new WheellyMotionMessage(now, 0, 0, 0, 0, 0, 0, 0, true, 0, 0, 0, 0),
+                new WheellyProxyMessage(now, 0, 0, 0, 0, 0, 0),
+                new WheellyContactsMessage(now, 0, true, true, true, true),
+                new WheellySupplyMessage(now, 0, 0), 0, 0, decodeVoltage);
     }
 
     /**
@@ -81,7 +82,11 @@ public class RobotStatus {
         return new Point2D.Double(xPulses * DISTANCE_PER_PULSE, yPulses * DISTANCE_PER_PULSE);
     }
 
-    private final WheellyStatus wheellyStatus;
+    private final ClockSyncEvent clockSync;
+    private final WheellyMotionMessage motionMessage;
+    private final WheellyProxyMessage proxyMessage;
+    private final WheellyContactsMessage contactsMessage;
+    private final WheellySupplyMessage supplyMessage;
     private final long resetTime;
     private final int contacts;
     private final IntToDoubleFunction decodeVoltage;
@@ -89,24 +94,32 @@ public class RobotStatus {
     /**
      * Creates the robot status
      *
-     * @param wheellyStatus the wheelly status
-     * @param resetTime     the reset time (ms)
-     * @param contacts      the contacts
-     * @param decodeVoltage the voltage decode function
+     * @param clockSync       the clock sync event
+     * @param motionMessage   the motion message
+     * @param proxyMessage    the proxy message
+     * @param contactsMessage the contacts message
+     * @param supplyMessage   the supply message
+     * @param resetTime       the reset time (ms)
+     * @param contacts        the contacts
+     * @param decodeVoltage   the voltage decode function
      */
-    public RobotStatus(WheellyStatus wheellyStatus, long resetTime, int contacts, IntToDoubleFunction decodeVoltage) {
-        this.wheellyStatus = requireNonNull(wheellyStatus);
+    public RobotStatus(ClockSyncEvent clockSync, WheellyMotionMessage motionMessage, WheellyProxyMessage proxyMessage, WheellyContactsMessage contactsMessage, WheellySupplyMessage supplyMessage, long resetTime, int contacts, IntToDoubleFunction decodeVoltage) {
+        this.clockSync = requireNonNull(clockSync);
+        this.motionMessage = requireNonNull(motionMessage);
+        this.proxyMessage = requireNonNull(proxyMessage);
+        this.contactsMessage = requireNonNull(contactsMessage);
+        this.supplyMessage = requireNonNull(supplyMessage);
         this.resetTime = resetTime;
         this.contacts = contacts;
         this.decodeVoltage = decodeVoltage;
     }
 
     public boolean canMoveBackward() {
-        return wheellyStatus.canMoveBackward();
+        return contactsMessage.canMoveBackward();
     }
 
     public boolean canMoveForward() {
-        return wheellyStatus.canMoveForward();
+        return contactsMessage.canMoveForward();
     }
 
     public int getContacts() {
@@ -114,19 +127,49 @@ public class RobotStatus {
     }
 
     public RobotStatus setContacts(int contacts) {
-        return new RobotStatus(wheellyStatus, resetTime, contacts, decodeVoltage);
+        return new RobotStatus(clockSync, motionMessage, proxyMessage, contactsMessage, supplyMessage, resetTime, contacts, decodeVoltage);
+    }
+
+    /**
+     * Returns the contacts message
+     */
+    public WheellyContactsMessage getContactsMessage() {
+        return contactsMessage;
+    }
+
+    /**
+     * Returns the status updated by contacts message
+     *
+     * @param contactsMessage the message
+     */
+    public RobotStatus setContactsMessage(WheellyContactsMessage contactsMessage) {
+        return new RobotStatus(clockSync, motionMessage, proxyMessage, contactsMessage, supplyMessage, resetTime, contacts, decodeVoltage);
     }
 
     public int getDirection() {
-        return wheellyStatus.getDirection();
+        return motionMessage.getDirection();
     }
 
     public RobotStatus setDirection(int direction) {
-        return setWheellyStatus(wheellyStatus.setDirection(direction));
+        long now = clockSync.fromLocal(System.currentTimeMillis());
+        return setMotionMessage(
+                motionMessage.setDirection(direction)
+                        .setRemoteTime(now));
+    }
+
+    public long getEchoDelay() {
+        return proxyMessage.getEchoDelay();
+    }
+
+    /**
+     * Returns the echo absolute direction (DEG)
+     */
+    public int getEchoDirection() {
+        return proxyMessage.getEchoDirection();
     }
 
     public double getEchoDistance() {
-        return wheellyStatus.getEchoTime() * DISTANCE_SCALE;
+        return proxyMessage.getEchoDelay() * DISTANCE_SCALE;
     }
 
     /**
@@ -135,47 +178,84 @@ public class RobotStatus {
      * @param echoDistance the echo distance (m)
      */
     public RobotStatus setEchoDistance(double echoDistance) {
-        return setWheellyStatus(wheellyStatus.setEchoTime(round(echoDistance / DISTANCE_SCALE)));
+        long now = clockSync.fromLocal(System.currentTimeMillis());
+        return setProxyMessage(
+                proxyMessage.setEchoDelay(round(echoDistance / DISTANCE_SCALE))
+                        .setRemoteTime(now));
+    }
+
+    /**
+     * Returns thhe robot location at ping time (pulses)
+     */
+    public Point2D getEchoRobotLocation() {
+        return pulses2Location(proxyMessage.getXPulses(), proxyMessage.getYPulses());
     }
 
     public int getImuFailure() {
-        return wheellyStatus.getImuFailure();
-    }
-
-    public RobotStatus setImuFailure(int imuFailure) {
-        return setWheellyStatus(wheellyStatus.setImuFailure(imuFailure));
+        return motionMessage.getImuFailure();
     }
 
     /**
      * Returns the left target power (unit)
      */
     public int getLeftPower() {
-        return wheellyStatus.getLeftPower();
+        return motionMessage.getLeftPower();
     }
 
     /**
      * Returns the left speed (pps)
      */
     public double getLeftPps() {
-        return wheellyStatus.getLeftPps();
-    }
-
-    public RobotStatus setLeftPps(double left) {
-        return setWheellyStatus(wheellyStatus.setLeftPps(left));
+        return motionMessage.getLeftPps();
     }
 
     /**
      * Returns the left target speed (pps)
      */
     public int getLeftTargetPps() {
-        return wheellyStatus.getLeftTargetPps();
+        return motionMessage.getLeftTargetPps();
+    }
+
+    /**
+     * Returns the ping time in local clock
+     */
+    public long getLocalContactsTime() {
+        return clockSync.fromRemote(contactsMessage.getRemoteTime());
+    }
+
+    /**
+     * Returns the ping time in local clock
+     */
+    public long getLocalEchoTime() {
+        return clockSync.fromRemote(proxyMessage.getRemoteTime());
+    }
+
+    /**
+     * Returns the ping time in local clock
+     */
+    public long getLocalMotionTime() {
+        return clockSync.fromRemote(motionMessage.getRemoteTime());
+    }
+
+    /**
+     * Returns the ping time in local clock
+     */
+    public long getLocalSupplyTime() {
+        return clockSync.fromRemote(supplyMessage.getRemoteTime());
+    }
+
+    /**
+     * Returns the last local status time
+     */
+    public long getLocalTime() {
+        return clockSync.fromRemote(getRemoteTime());
     }
 
     /**
      * Returns the location of robot (m)
      */
     public Point2D getLocation() {
-        return pulses2Location(wheellyStatus.getXPulses(), wheellyStatus.getYPulses());
+        return pulses2Location(motionMessage.getXPulses(), motionMessage.getYPulses());
     }
 
     /**
@@ -184,33 +264,87 @@ public class RobotStatus {
      * @param location the robot location
      */
     public RobotStatus setLocation(Point2D location) {
-        return setWheellyStatus(wheellyStatus.setPulses(
-                location.getX() / DISTANCE_PER_PULSE,
-                location.getY() / DISTANCE_PER_PULSE));
+        long now = clockSync.fromLocal(System.currentTimeMillis());
+        return setMotionMessage(
+                motionMessage.setPulses(
+                                location.getX() / DISTANCE_PER_PULSE,
+                                location.getY() / DISTANCE_PER_PULSE)
+                        .setRemoteTime(now));
+    }
+
+    /**
+     * Returns the motion message
+     */
+    public WheellyMotionMessage getMotionMessage() {
+        return motionMessage;
+    }
+
+    /**
+     * Returns the robot status updated by motion message
+     *
+     * @param motionMessage the motion message
+     */
+    public RobotStatus setMotionMessage(WheellyMotionMessage motionMessage) {
+        return new RobotStatus(clockSync, motionMessage, proxyMessage, contactsMessage, supplyMessage, resetTime, contacts, decodeVoltage);
+    }
+
+    /**
+     * Returns the proxy message
+     */
+    public WheellyProxyMessage getProxyMessage() {
+        return proxyMessage;
+    }
+
+    /**
+     * Returns the status updated by proxy message
+     *
+     * @param proxyMessage the message
+     */
+    public RobotStatus setProxyMessage(WheellyProxyMessage proxyMessage) {
+        return new RobotStatus(clockSync, motionMessage, proxyMessage, contactsMessage, supplyMessage, resetTime, contacts, decodeVoltage);
+    }
+
+    /**
+     * Returns the last remote status time
+     */
+    public long getRemoteTime() {
+        return Stream.of(proxyMessage, contactsMessage, supplyMessage, motionMessage)
+                .mapToLong(WheellyMessage::getRemoteTime)
+                .max()
+                .orElse(0);
+    }
+
+    /**
+     * Returns the reset time
+     */
+    public long getResetTime() {
+        return resetTime;
+    }
+
+    public RobotStatus setResetTime(long resetTime) {
+        return new RobotStatus(clockSync, motionMessage, proxyMessage, contactsMessage, supplyMessage, resetTime, contacts, decodeVoltage);
     }
 
     public int getRightPower() {
-        return wheellyStatus.getRightPower();
+        return motionMessage.getRightPower();
     }
 
     public double getRightPps() {
-        return wheellyStatus.getRightPps();
-    }
-
-    public RobotStatus setRightPps(double rightPps) {
-        return setWheellyStatus(wheellyStatus.setRightPps(rightPps));
+        return motionMessage.getRightPps();
     }
 
     public int getRightTargetPps() {
-        return wheellyStatus.getRightTargetPps();
+        return motionMessage.getRightTargetPps();
     }
 
     public int getSensorDirection() {
-        return wheellyStatus.getSensorDirection();
+        return proxyMessage.getSensorDirection();
     }
 
     public RobotStatus setSensorDirection(int dir) {
-        return setWheellyStatus(wheellyStatus.setSensorDirection(dir));
+        long now = clockSync.fromLocal(System.currentTimeMillis());
+        return setProxyMessage(proxyMessage.setSensorDirection(dir)
+                .setRemoteTime(now));
     }
 
     /**
@@ -220,7 +354,7 @@ public class RobotStatus {
         double sampleDistance = getEchoDistance();
         if (sampleDistance > 0) {
             float d = (float) (sampleDistance + OBSTACLE_SIZE / 2);
-            double angle = toRadians(90 - wheellyStatus.getDirection() - wheellyStatus.getSensorDirection());
+            double angle = toRadians(90 - proxyMessage.getEchoDirection());
             Point2D location = getLocation();
             float x = (float) (d * cos(angle) + location.getX());
             float y = (float) (d * sin(angle) + location.getY());
@@ -231,53 +365,120 @@ public class RobotStatus {
     }
 
     /**
+     * Returns the supply message
+     */
+    public WheellySupplyMessage getSupplyMessage() {
+        return supplyMessage;
+    }
+
+    /**
+     * Returns the status updated by supply message
+     *
+     * @param supplyMessage the message
+     */
+    public RobotStatus setSupplyMessage(WheellySupplyMessage supplyMessage) {
+        return new RobotStatus(clockSync, motionMessage, proxyMessage, contactsMessage, supplyMessage, resetTime, contacts, decodeVoltage);
+    }
+
+    /**
+     * Returns the supply sensor value
+     */
+    public int getSupplySensor() {
+        return supplyMessage.getSupplySensor();
+    }
+
+    /**
      * Returns the supply voltage
      */
     public double getSupplyVoltage() {
-        return decodeVoltage.applyAsDouble(wheellyStatus.getSupplySensor());
+        return decodeVoltage.applyAsDouble(supplyMessage.getSupplySensor());
     }
 
-    public long getTime() {
-        return wheellyStatus.getTime();
+    /**
+     * Returns the abscissa robot location (pulses)
+     */
+    public double getXPulses() {
+        return motionMessage.getXPulses();
     }
 
-    public RobotStatus setTime(long time) {
-        return setWheellyStatus(wheellyStatus.setTime(time));
+    /**
+     * Returns the ordinata robot location (pulses)
+     */
+    public double getYPulses() {
+        return motionMessage.getYPulses();
     }
 
-    public WheellyStatus getWheellyStatus() {
-        return wheellyStatus;
+    /**
+     * Returns true if front sensor is clear
+     */
+    public boolean isFrontSensors() {
+        return contactsMessage.isFrontSensors();
     }
 
-    public RobotStatus setWheellyStatus(WheellyStatus wheellyStatus) {
-        return new RobotStatus(wheellyStatus, resetTime, contacts, decodeVoltage);
-    }
-
+    /**
+     * Returns true if robot is halted
+     */
     public boolean isHalt() {
-        return wheellyStatus.isHalt();
+        return motionMessage.isHalt();
     }
 
     public RobotStatus setHalt(boolean halt) {
-        return setWheellyStatus(wheellyStatus.setHalt(halt));
+        long now = clockSync.fromLocal(System.currentTimeMillis());
+        return setMotionMessage(
+                motionMessage.setHalt(halt)
+                        .setRemoteTime(now));
+    }
+
+    /**
+     * Returns true if rear sensor is clear
+     */
+    public boolean isRearSensors() {
+        return contactsMessage.isRearSensors();
     }
 
     public RobotStatus setCanMoveBackward(boolean canMoveBackward) {
-        return setWheellyStatus(wheellyStatus.setCanMoveBackward(canMoveBackward));
+        long now = clockSync.fromLocal(System.currentTimeMillis());
+        return setContactsMessage(
+                contactsMessage.setCanMoveBackward(canMoveBackward)
+                        .setRemoteTime(now));
     }
 
     public RobotStatus setCanMoveForward(boolean canMoveForward) {
-        return setWheellyStatus(wheellyStatus.setCanMoveForward(canMoveForward));
+        long now = clockSync.fromLocal(System.currentTimeMillis());
+        return setContactsMessage(
+                contactsMessage.setCanMoveForward(canMoveForward)
+                        .setRemoteTime(now));
     }
 
-    public RobotStatus setResetTime(long resetTime) {
-        return new RobotStatus(wheellyStatus, resetTime, contacts, decodeVoltage);
+    /**
+     * Sets the clock event
+     *
+     * @param clockSync the event
+     */
+    public RobotStatus setClock(ClockSyncEvent clockSync) {
+        long resetTime = clockSync.receiveTimestamp;
+        return new RobotStatus(clockSync, motionMessage, proxyMessage, contactsMessage, supplyMessage, resetTime, contacts, decodeVoltage);
+    }
+
+    public RobotStatus setSpeeds(double leftPps, double rightPps) {
+        long now = clockSync.fromLocal(System.currentTimeMillis());
+        return setMotionMessage(
+                motionMessage.setSpeeds(leftPps, rightPps)
+                        .setRemoteTime(now));
     }
 
     @Override
     public String toString() {
         return new StringJoiner(", ", RobotStatus.class.getSimpleName() + "[", "]")
-                .add("wheellyStatus=" + wheellyStatus)
+                .add("clockSync=" + clockSync)
+                .add("motionMessage=" + motionMessage)
+                .add("proxyMessage=" + proxyMessage)
+                .add("contactsMessage=" + contactsMessage)
+                .add("supplyMessage=" + supplyMessage)
                 .add("resetTime=" + resetTime)
+                .add("contacts=" + contacts)
+                .add("decodeVoltage=" + decodeVoltage)
                 .toString();
     }
+
 }

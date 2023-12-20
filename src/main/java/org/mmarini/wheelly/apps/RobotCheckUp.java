@@ -165,7 +165,7 @@ public class RobotCheckUp {
 
             @Override
             public List<ScannerResult> apply(RobotStatus status) {
-                long time = status.getTime();
+                long time = status.getLocalTime();
                 RobotCommands command = RobotCommands.halt().setScan(0);
                 if (currentTest < 0) {
                     // First sample
@@ -614,7 +614,7 @@ public class RobotCheckUp {
 
                 @Override
                 public boolean test(RobotStatus status) {
-                    long time = status.getTime();
+                    long time = status.getLocalTime();
                     RobotCommands command = RobotCommands.none();
                     if (startLocation == null) {
                         startLocation = status.getLocation();
@@ -660,7 +660,7 @@ public class RobotCheckUp {
 
                 @Override
                 public boolean test(RobotStatus status) {
-                    long time = status.getTime();
+                    long time = status.getLocalTime();
                     int dir = status.getDirection();
                     RobotCommands command = RobotCommands.none();
                     if (startLocation == null) {

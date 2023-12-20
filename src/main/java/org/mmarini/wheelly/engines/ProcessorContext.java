@@ -445,6 +445,7 @@ public class ProcessorContext {
     public void step() {
         // Process the state node
         Tuple2<String, RobotCommands> result = currentNode.step(this);
+        // Execute robot command
         robot.execute(result._2);
         triggerProcessor.onNext(result._1);
         if (!NONE_EXIT.equals(result._1)) {

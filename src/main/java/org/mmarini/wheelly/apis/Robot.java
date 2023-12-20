@@ -36,19 +36,47 @@ import java.io.InterruptedIOException;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.function.IntToDoubleFunction;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.apis.Utils.linear;
-import static org.mmarini.wheelly.apps.Yaml.loadDoubleArray;
-import static org.mmarini.wheelly.apps.Yaml.loadIntArray;
 
 /**
- * Implements the Robot interface to the real robot
+ * Implements the Robot interface to the real robot.
+ * <p>
+ * The usage samples is
+ * <code><pre>
+ *
+ *     RobotApi robot = new Robot(...);
+ *
+ *     robot.connect();
+ *
+ *     robot.configure();
+ *
+ *     // Sending any command
+ *     robot.halt();
+ *     robot.scan(...);
+ *     robot.move(...);
+ *
+ *     // Setting the callback on events
+ *     robot.setOnClock(...);
+ *     robot.setOnMotion(...);
+ *     robot.setOnProxy(...);
+ *     robot.setOnContacts(...);
+ *     robot.setOnSupply(...);
+ *
+ *     // Polling for status changed
+ *     while (...) {
+ *         robot.tick(...);
+ *     }
+ *
+ *     robotSocket.close();
+ * </pre>
+ * </code>
+ * </p>
  */
 public class Robot implements RobotApi, WithIOCallback {
     public static final int DEFAULT_PORT = 22;
+    public static final int FLUSH_INTERVAL = 1000;
     private static final Logger logger = LoggerFactory.getLogger(Robot.class);
 
     /**
@@ -63,8 +91,6 @@ public class Robot implements RobotApi, WithIOCallback {
         long connectionTimeout = locator.path("connectionTimeout").getNode(root).asLong();
         long readTimeout = locator.path("readTimeout").getNode(root).asLong();
         long configureTimeout = locator.path("configureTimeout").getNode(root).asLong();
-        int[] supplyValues = loadIntArray(root, locator.path("supplyValues"));
-        double[] voltages = loadDoubleArray(root, locator.path("voltages"));
 
         Locator configCommandsLoc = locator.path("configCommands");
         String[] configCommands = !configCommandsLoc.getNode(root).isMissingNode()
@@ -72,7 +98,7 @@ public class Robot implements RobotApi, WithIOCallback {
                 : new String[0];
         return Robot.create(host, port,
                 connectionTimeout, readTimeout, configureTimeout,
-                supplyValues, voltages, configCommands);
+                configCommands);
     }
 
     /**
@@ -83,34 +109,26 @@ public class Robot implements RobotApi, WithIOCallback {
      * @param connectionTimeout the connection timeout (ms)
      * @param readTimeout       the read timeout (ms)
      * @param configureTimeout  the configuration timeout (ms)
-     * @param supplyValues      the supply values
-     * @param voltages          the voltage values
      * @param configCommands    the configuration commands
      */
     public static Robot create(String robotHost, int port,
                                long connectionTimeout, long readTimeout, long configureTimeout,
-                               int[] supplyValues, double[] voltages, String... configCommands) {
-        requireNonNull(supplyValues);
-        requireNonNull(voltages);
-        if (!(supplyValues.length == 2)) {
-            throw new IllegalArgumentException(format("supplyValues must have 2 items (%d)", supplyValues.length));
-        }
-        if (!(voltages.length == 2)) {
-            throw new IllegalArgumentException(format("voltages must have 2 items (%d)", voltages.length));
-        }
-        IntToDoubleFunction decodeVoltage = x -> linear(x, supplyValues[0], supplyValues[1], voltages[0], voltages[1]);
+                               String... configCommands) {
         return new Robot(robotHost, port,
                 connectionTimeout, readTimeout, configureTimeout,
-                configCommands, RobotStatus.create(decodeVoltage));
+                configCommands);
     }
 
     private final String[] configCommands;
     private final long configureTimeout;
     private final RobotSocket socket;
-    private RobotStatus status;
     private Consumer<String> onReadLine;
     private Consumer<String> onWriteLine;
-    private Consumer<RobotStatus> onStatusReady;
+    private Consumer<WheellyMotionMessage> onMotion;
+    private Consumer<WheellyProxyMessage> onProxy;
+    private Consumer<WheellyContactsMessage> onContacts;
+    private Consumer<WheellySupplyMessage> onSupply;
+    private Consumer<ClockSyncEvent> onClock;
 
     /**
      * Create a Robot interface
@@ -121,12 +139,10 @@ public class Robot implements RobotApi, WithIOCallback {
      * @param readTimeout       the read timeout (ms)
      * @param configureTimeout  the configuration timeout (ms)
      * @param configCommands    the motor theta corrections
-     * @param status            the initial status
      */
-    public Robot(String host, int port, long connectionTimeout, long readTimeout, long configureTimeout, String[] configCommands, RobotStatus status) {
+    public Robot(String host, int port, long connectionTimeout, long readTimeout, long configureTimeout, String[] configCommands) {
         this.configureTimeout = configureTimeout;
         socket = new RobotSocket(host, port, connectionTimeout, readTimeout);
-        this.status = status;
         this.configCommands = requireNonNull(configCommands);
     }
 
@@ -164,10 +180,10 @@ public class Robot implements RobotApi, WithIOCallback {
             // Read the robot status
             Timed<String> line = readLine();
             if (line != null) {
-                parseForStatus(line);
                 if (line.value().equals("// " + command)) {
                     return;
                 }
+                parseForMessage(line);
             }
         }
         throw new InterruptedIOException(format("Timeout on configure %s", command));
@@ -179,15 +195,17 @@ public class Robot implements RobotApi, WithIOCallback {
     }
 
     /**
-     * Returns the contacts code from the contact sensors signals
-     *
-     * @param frontSignal the front signal
-     * @param rearSignal  the rear signal
+     * Flushes the message for interval
      */
-    private int decodeContacts(boolean frontSignal, boolean rearSignal) {
-        return frontSignal ?
-                rearSignal ? 0 : 1
-                : rearSignal ? 2 : 3;
+    private void flush() throws IOException {
+        long timeout = System.currentTimeMillis() + FLUSH_INTERVAL;
+        while (System.currentTimeMillis() <= timeout) {
+            Timed<String> line = readLine();
+            parseForMessage(line);
+            if (line == null) {
+                break;
+            }
+        }
     }
 
     @Override
@@ -201,23 +219,31 @@ public class Robot implements RobotApi, WithIOCallback {
     }
 
     /**
-     * Returns the robot status updated with received data or null if no data available
+     * Parses the data received for messages.
+     * The robot status is updated with received message.
      *
      * @param line the data line received
      */
-    private void parseForStatus(Timed<String> line) {
-        if (line.value().startsWith("st ")) {
-            try {
-                WheellyStatus wheellyStatus = WheellyStatus.create(line);
-                int contacts = decodeContacts(wheellyStatus.isFrontSensors(), wheellyStatus.isRearSensors());
-                status = status.setWheellyStatus(wheellyStatus).setContacts(contacts);
-                if (onStatusReady != null) {
-                    onStatusReady.accept(status);
+    private void parseForMessage(Timed<String> line) {
+        WheellyMessage.fromLine(line).ifPresent(msg -> {
+            if (msg instanceof WheellyMotionMessage) {
+                if (onMotion != null) {
+                    onMotion.accept((WheellyMotionMessage) msg);
                 }
-            } catch (IllegalArgumentException ex) {
-                logger.atError().setCause(ex).log();
+            } else if (msg instanceof WheellyContactsMessage) {
+                if (onContacts != null) {
+                    onContacts.accept((WheellyContactsMessage) msg);
+                }
+            } else if (msg instanceof WheellyProxyMessage) {
+                if (onProxy != null) {
+                    onProxy.accept((WheellyProxyMessage) msg);
+                }
+            } else if (msg instanceof WheellySupplyMessage) {
+                if (onSupply != null) {
+                    onSupply.accept((WheellySupplyMessage) msg);
+                }
             }
-        }
+        });
     }
 
     /**
@@ -239,8 +265,6 @@ public class Robot implements RobotApi, WithIOCallback {
 
     @Override
     public void reset() {
-        long time = System.currentTimeMillis();
-        status = status.setTime(time).setResetTime(time);
     }
 
     @Override
@@ -249,13 +273,33 @@ public class Robot implements RobotApi, WithIOCallback {
     }
 
     @Override
+    public void setOnClock(Consumer<ClockSyncEvent> callback) {
+        this.onClock = callback;
+    }
+
+    @Override
+    public void setOnContacts(Consumer<WheellyContactsMessage> callback) {
+        this.onContacts = callback;
+    }
+
+    @Override
+    public void setOnMotion(Consumer<WheellyMotionMessage> callback) {
+        this.onMotion = callback;
+    }
+
+    @Override
+    public void setOnProxy(Consumer<WheellyProxyMessage> callback) {
+        this.onProxy = callback;
+    }
+
+    @Override
     public void setOnReadLine(Consumer<String> onReadLine) {
         this.onReadLine = onReadLine;
     }
 
     @Override
-    public void setOnStatusReady(Consumer<RobotStatus> callback) {
-        this.onStatusReady = callback;
+    public void setOnSupply(Consumer<WheellySupplyMessage> callback) {
+        this.onSupply = callback;
     }
 
     @Override
@@ -267,6 +311,7 @@ public class Robot implements RobotApi, WithIOCallback {
      * Synchronizes the local clock with the remote clock
      */
     private void sync() throws IOException {
+        flush();
         long now = System.currentTimeMillis();
         writeCommand("ck " + now);
         long time = System.currentTimeMillis();
@@ -277,17 +322,20 @@ public class Robot implements RobotApi, WithIOCallback {
             // Read the robot status
             Timed<String> line = readLine();
             if (line != null) {
-                parseForStatus(line);
                 if (line.value().startsWith("ck " + now + " ")) {
                     try {
                         ClockSyncEvent clock = ClockSyncEvent.from(line.value(), line.time(TimeUnit.MILLISECONDS));
                         if (now == clock.getOriginateTimestamp()) {
-                            clock.getRemoteOffset();
+                            if (onClock != null) {
+                                onClock.accept(clock);
+                            }
                             return;
                         }
                     } catch (Throwable error) {
                         logger.atError().setCause(error).log();
                     }
+                } else {
+                    parseForMessage(line);
                 }
             }
         }
@@ -304,7 +352,7 @@ public class Robot implements RobotApi, WithIOCallback {
             // Read the robot status
             Timed<String> line = readLine();
             if (line != null) {
-                parseForStatus(line);
+                parseForMessage(line);
             }
         }
     }

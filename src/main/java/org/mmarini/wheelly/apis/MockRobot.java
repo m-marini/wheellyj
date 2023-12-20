@@ -32,6 +32,7 @@ import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.util.function.Consumer;
 
+import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
 
 public class MockRobot implements RobotApi {
@@ -45,7 +46,10 @@ public class MockRobot implements RobotApi {
         return new MockRobot(robotPos1, robotDir1, sensorDir1, sensorDistance1);
     }
 
-    protected Consumer<RobotStatus> onStatusReady;
+    protected Consumer<WheellyMotionMessage> onMotion;
+    protected Consumer<WheellyProxyMessage> onProxy;
+    protected Consumer<WheellyContactsMessage> onContacts;
+    protected Consumer<ClockSyncEvent> onClock;
     private long time;
     private long resetTime;
     private Point2D robotPos;
@@ -70,6 +74,12 @@ public class MockRobot implements RobotApi {
 
     @Override
     public void configure() throws IOException {
+        if (onClock != null) {
+            onClock.accept(ClockSyncEvent.create());
+        }
+        sendMotion();
+        sendProxy();
+        sendContacts();
     }
 
     @Override
@@ -78,7 +88,6 @@ public class MockRobot implements RobotApi {
 
     public RobotStatus getStatus() {
         return RobotStatus.create(x -> 12d)
-                .setTime(time)
                 .setDirection(robotDir)
                 .setSensorDirection(sensorDir)
                 .setEchoDistance(sensorDistance)
@@ -104,9 +113,66 @@ public class MockRobot implements RobotApi {
     public void scan(int dir) {
     }
 
+    protected void sendContacts() {
+        if (onContacts != null) {
+            onContacts.accept(
+                    new WheellyContactsMessage(
+                            time, time,
+                            true, true,
+                            true, true)
+            );
+        }
+    }
+
+    protected void sendMotion() {
+        if (onMotion != null) {
+            onMotion.accept(
+                    new WheellyMotionMessage(time, time,
+                            robotPos.getX() / RobotStatus.DISTANCE_PER_PULSE,
+                            robotPos.getY() / RobotStatus.DISTANCE_PER_PULSE,
+                            robotDir,
+                            0, 0,
+                            0, true,
+                            0, 0,
+                            0, 0
+                    ));
+        }
+    }
+
+    protected void sendProxy() {
+        if (onProxy != null) {
+            onProxy.accept(
+                    new WheellyProxyMessage(
+                            time, time, sensorDir, round(sensorDistance / RobotStatus.DISTANCE_SCALE),
+                            robotPos.getX() / RobotStatus.DISTANCE_PER_PULSE,
+                            robotPos.getY() / RobotStatus.DISTANCE_PER_PULSE,
+                            robotDir)
+            );
+        }
+    }
+
     @Override
-    public void setOnStatusReady(Consumer<RobotStatus> callback) {
-        this.onStatusReady = callback;
+    public void setOnClock(Consumer<ClockSyncEvent> callback) {
+        onClock = callback;
+    }
+
+    @Override
+    public void setOnContacts(Consumer<WheellyContactsMessage> callback) {
+        onContacts = callback;
+    }
+
+    @Override
+    public void setOnMotion(Consumer<WheellyMotionMessage> callback) {
+        onMotion = callback;
+    }
+
+    @Override
+    public void setOnProxy(Consumer<WheellyProxyMessage> callback) {
+        onProxy = callback;
+    }
+
+    @Override
+    public void setOnSupply(Consumer<WheellySupplyMessage> callback) {
     }
 
     public void setResetTime(long resetTime) {
@@ -136,5 +202,8 @@ public class MockRobot implements RobotApi {
     @Override
     public void tick(long dt) {
         time += dt;
+        sendMotion();
+        sendProxy();
+        sendContacts();
     }
 }

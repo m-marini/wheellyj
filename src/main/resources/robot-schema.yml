@@ -32,16 +32,12 @@ $defs:
       maxAngularSpeed:
         multipleOf: 1
         minimum: 1
-      maxSimulationSpeed:
-        type: number
-        minimum: 1
     required:
       - class
       - errSigma
       - errSensor
       - sensorReceptiveAngle
       - numObstacles
-      - maxSimulationSpeed
       - maxAngularSpeed
   Robot:
     type: object
@@ -63,20 +59,6 @@ $defs:
       configureTimeout:
         multipleOf: 1
         minimum: 1
-      supplyValues:
-        type: array
-        items:
-          multipleOf: 1
-          minimum: 0
-          maximum: 4095
-        minItems: 2
-        maxItems: 2
-      voltages:
-        type: array
-        items:
-          type: number
-        minItems: 2
-        maxItems: 2
       configCommands:
         type: array
         items:
@@ -88,8 +70,6 @@ $defs:
       - connectionTimeout
       - readTimeout
       - configureTimeout
-      - supplyValues
-      - voltages
   MockRobot:
     type: object
     properties:
@@ -114,7 +94,7 @@ type: object
 properties:
   version:
     type: string
-    const: "0.6"
+    const: "0.7"
   active:
     type: string
   configurations:

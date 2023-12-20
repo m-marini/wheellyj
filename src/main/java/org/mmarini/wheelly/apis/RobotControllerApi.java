@@ -34,7 +34,71 @@ import org.mmarini.wheelly.apps.Yaml;
 import java.util.function.Consumer;
 
 /**
- * Manages the processing threads and event generation to interface the robot
+ * Manages the processing threads and event generation to interface the robot.
+ * <p>
+ * The usage samples is
+ * <code><pre>
+ *     RobotControllerApi ctrl = ...;
+ *
+ *     // Subscribe for required events
+ *
+ *     // Reactive read for status change
+ *     ctrl.readRobotStatus(status -> {
+ *        // Code on new status
+ *         ...
+ *     });
+ *
+ *     // Reactive read for inference
+ *     ctrl.readInference(status -> {
+ *        // Code on inference status
+ *         ...
+ *     });
+ *
+ *     // Reactive read for errors
+ *     ctrl.readError(exception -> {
+ *        // Code on exception
+ *         ...
+ *     });
+ *
+ *     // Reactive read controller status
+ *     ctrl.readControllerStatus(statusString -> {
+ *        // Code on controller status
+ *         ...
+ *     });
+ *
+ *     // Reactive read sent commands
+ *     ctrl.readCommand(command -> {
+ *        // Code on command sent
+ *         ...
+ *     });
+ *
+ *     // Reactive read on data sent
+ *     ctrl.readWriteLine(lineString -> {
+ *        // Code on data sent
+ *         ...
+ *     });
+ *
+ *     // Reactive read on data received
+ *     ctrl.readReadLine(lineString -> {
+ *        // Code on data received
+ *         ...
+ *     });
+ *
+ *      // Starts the robot controller
+ *     ctrl.start();
+ *     ...
+ *
+ *     // Shutdown the controller
+ *     ctrl.shutdown();
+ *
+ *     // Sending any command
+ *     ctrl.execute(...);
+ *
+ *     // Reactive wait for shutdown
+ *     ctrl.readShutdown().blockingAwait();
+ * </pre>
+ * </code>
+ * </p>
  */
 public interface RobotControllerApi extends WithIOFlowable, WithStatusFlowable, WithErrorFlowable, WithCommandFlowable, WithControllerFlowable, WithInferenceFlowable {
 

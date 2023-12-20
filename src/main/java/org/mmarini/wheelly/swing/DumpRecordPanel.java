@@ -34,7 +34,6 @@ import io.reactivex.rxjava3.core.Flowable;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.SwingUtils;
 import org.mmarini.wheelly.apis.DumpRecord;
-import org.mmarini.wheelly.apis.WheellyStatus;
 
 import javax.swing.*;
 import java.awt.*;
@@ -243,8 +242,8 @@ public class DumpRecordPanel extends JPanel {
             elapsedField.setText(
                     formatDuration(
                             Duration.between(offset, record.getInstant())));
-            if (record instanceof DumpRecord.StatusDumpRecord) {
-                setStatusFields((DumpRecord.StatusDumpRecord) record);
+            if (record instanceof DumpRecord.MessageDumpRecord) {
+                setStatusFields((DumpRecord.MessageDumpRecord<?>) record);
             } else {
                 clearStatusField();
             }
@@ -300,6 +299,15 @@ public class DumpRecordPanel extends JPanel {
      *
      * @param record the record
      */
+    private void setStatusFields(DumpRecord.MessageDumpRecord<?> record) {
+    }
+
+    /*
+     * Sets the status fields
+     *
+     * @param record the record
+     */
+    /*
     private void setStatusFields(DumpRecord.StatusDumpRecord record) {
         WheellyStatus status = record.getStatus();
         directionField.setValue(status.getDirection());
@@ -317,4 +325,6 @@ public class DumpRecordPanel extends JPanel {
         leftTargetPpsField.setValue(status.getLeftTargetPps());
         rightTargetPpsField.setValue(status.getRightTargetPps());
     }
+
+     */
 }
