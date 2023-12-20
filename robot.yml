@@ -1,5 +1,5 @@
 ---
-version: "0.6"
+version: "0.7"
 #active: simRobot
 active: realRobot
 
@@ -13,7 +13,6 @@ configurations:
     errSensor: 0.05
     sensorReceptiveAngle: 15
     maxAngularSpeed: 5
-    maxSimulationSpeed: 5
   realRobot:
     class: org.mmarini.wheelly.apis.Robot
     #host: wheelly
@@ -21,21 +20,13 @@ configurations:
     connectionTimeout: 10000
     readTimeout: 10000
     configureTimeout: 2000
-    supplyValues: [2165, 2683]
-    voltages: [9.8, 12.3]
     configCommands:
       - cs 500
       - cc 5 30 20
       - tcsl 30 107 180 -32 -81 -180 400 50
       - tcsr 39 78 180 -32 -92 -180 400 50
-#      - fl 0 0
-#      - fr 0 0
       - fl 10000 10000
       - fr 10000 10000
-#      - cl 200 200 4000 71 107 -62 -81
-#      - cr 200 200 4000 59 78 -62 -92
-#      - cl 100 48 2000 50 75 -49 -65
-#      - cr 100 48 2000 37 57 -45 -68
       - ci 500 500
   constantRobot:
     class: org.mmarini.wheelly.apis.MockRobot

@@ -47,12 +47,14 @@ import java.util.function.Consumer;
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_PER_PULSE;
+import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_SCALE;
+import static org.mmarini.wheelly.apis.Utils.normalizeAngle;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 
 /**
  * Simulated robot
  */
-public class SimRobot implements RobotApi, WithRobotStatus {
+public class SimRobot implements RobotApi {
     public static final double GRID_SIZE = 0.2;
     public static final double WORLD_SIZE = 10;
     public static final double X_CENTER = 0;
@@ -61,8 +63,6 @@ public class SimRobot implements RobotApi, WithRobotStatus {
     public static final double ROBOT_LENGTH = 0.26;
     public static final double MAX_OBSTACLE_DISTANCE = 3;
     public static final double MAX_DISTANCE = 3;
-    public static final int FORWARD_PROXIMITY_MASK = 0xc;
-    public static final int BACKWARD_PROXIMITY_MASK = 0x3;
     public static final double MAX_VELOCITY = MAX_PPS * DISTANCE_PER_PULSE;
     public static final double ROBOT_TRACK = 0.136;
     private static final double MIN_OBSTACLE_DISTANCE = 1;
@@ -100,7 +100,6 @@ public class SimRobot implements RobotApi, WithRobotStatus {
             {-ROBOT_LENGTH / 2 - SENSOR_GAP, -ROBOT_WIDTH / 2 - SENSOR_GAP},
             {-ROBOT_LENGTH / 2 - SENSOR_GAP, -SENSOR_GAP}
     };
-    private static final long THRESHOLD_TIME = 5;
     private static final Logger logger = LoggerFactory.getLogger(SimRobot.class);
 
     public static SimRobot create(JsonNode root, Locator locator) {
@@ -117,12 +116,13 @@ public class SimRobot implements RobotApi, WithRobotStatus {
                 .build();
         double errSigma = locator.path("errSigma").getNode(root).asDouble();
         double errSensor = locator.path("errSensor").getNode(root).asDouble();
-        double maxSimSpeed = locator.path("maxSimulationSpeed").getNode(root).asDouble();
         int maxAngularSpeed = locator.path("maxAngularSpeed").getNode(root).asInt();
+        long motionInterval = locator.path("motionInterval").getNode(root).asLong(500);
+        long proxyInterval = locator.path("proxyInterval").getNode(root).asLong(500);
         return new SimRobot(obstacleMap,
                 robotRandom,
                 errSigma, errSensor,
-                sensorReceptiveAngle, maxAngularSpeed, maxSimSpeed);
+                sensorReceptiveAngle, maxAngularSpeed, motionInterval, proxyInterval);
     }
 
     /**
@@ -174,13 +174,24 @@ public class SimRobot implements RobotApi, WithRobotStatus {
     private final Fixture frSensor;
     private final Fixture rlSensor;
     private final Fixture rrSensor;
-    private final double maxSimSpeed;
     private final int maxAngularSpeed;
-    private RobotStatus status;
+    private final long motionInterval;
+    private final long proxyInterval;
+    private long proxyTimeout;
     private int speed;
     private int direction;
-    private int sensor;
-    private Consumer<RobotStatus> onStatusReady;
+    private int sensorDirection;
+    private Consumer<WheellyMotionMessage> onMotion;
+    private Consumer<WheellyProxyMessage> onProxy;
+    private Consumer<WheellyContactsMessage> onContacts;
+    private Consumer<ClockSyncEvent> onClock;
+    private double leftPps;
+    private double rightPps;
+    private boolean frontSensor;
+    private boolean rearSensor;
+    private long robotTime;
+    private double echoDistance;
+    private long motionTimeout;
 
     /**
      * Creates a simulated robot
@@ -191,17 +202,19 @@ public class SimRobot implements RobotApi, WithRobotStatus {
      * @param errSensor            sensor error (m)
      * @param sensorReceptiveAngle sensor receptive angle (DEG)
      * @param maxAngularSpeed      the maximum angular speed
-     * @param maxSimSpeed          the maximum simulation speed
+     * @param motionInterval       the interval between motion messages
+     * @param proxyInterval        the interval between proxy messages
      */
-    public SimRobot(ObstacleMap obstacleMap, Random random, double errSigma, double errSensor, double sensorReceptiveAngle, int maxAngularSpeed, double maxSimSpeed) {
+    public SimRobot(ObstacleMap obstacleMap, Random random, double errSigma, double errSensor, double sensorReceptiveAngle, int maxAngularSpeed, long motionInterval, long proxyInterval) {
         this.random = requireNonNull(random);
         this.errSigma = errSigma;
         this.errSensor = errSensor;
         this.obstacleMap = requireNonNull(obstacleMap);
         this.sensorReceptiveAngle = sensorReceptiveAngle;
         this.maxAngularSpeed = maxAngularSpeed;
-        this.maxSimSpeed = maxSimSpeed;
-        this.status = RobotStatus.create(x -> 12d);
+        this.motionInterval = motionInterval;
+        this.proxyInterval = proxyInterval;
+        this.frontSensor = this.rearSensor = true;
 
         // Creates the jbox2 physic world
         this.world = new World(GRAVITY);
@@ -254,13 +267,25 @@ public class SimRobot implements RobotApi, WithRobotStatus {
     }
 
     /**
+     * Returns true if robot can move backward
+     */
+    boolean canMoveBackward() {
+        return rearSensor;
+    }
+
+    /**
+     * Returns true if robot can move forward
+     */
+    boolean canMoveForward() {
+        return frontSensor && (echoDistance == 0 || echoDistance > SAFE_DISTANCE);
+    }
+
+    /**
      * Halt the robot if it is moving in forbidden direction
      */
     private void checkForSpeed() {
-        double left = status.getLeftPps();
-        double right = status.getRightPps();
-        if (((speed > 0 || left > 0 || right > 0) && !status.canMoveForward())
-                || ((speed < 0 || left < 0 || right < 0) && !status.canMoveBackward())) {
+        if (((speed > 0 || leftPps > 0 || rightPps > 0) && !canMoveForward())
+                || ((speed < 0 || leftPps < 0 || rightPps < 0) && !canMoveBackward())) {
             halt();
         }
     }
@@ -271,6 +296,13 @@ public class SimRobot implements RobotApi, WithRobotStatus {
 
     @Override
     public void configure() {
+        if (onClock != null) {
+            long now = System.currentTimeMillis();
+            onClock.accept(ClockSyncEvent.create(now, robotTime, robotTime, now));
+        }
+        sendMotion();
+        sendProxy();
+        sendContacts();
     }
 
     @Override
@@ -290,8 +322,8 @@ public class SimRobot implements RobotApi, WithRobotStatus {
         double linearVelocityPps = (double) speed * Utils.clip(Utils.linear(abs(dAngle), 0, RAD_30, MAX_PPS, 0), 0, MAX_PPS);
 
         // Relative left-right motor speeds
-        int leftPps = (int) round(Utils.clip((linearVelocityPps - angularVelocityPps), -MAX_PPS, MAX_PPS));
-        int rightPps = (int) round(Utils.clip((linearVelocityPps + angularVelocityPps), -MAX_PPS, MAX_PPS));
+        leftPps = Utils.clip((linearVelocityPps - angularVelocityPps), -MAX_PPS, MAX_PPS);
+        rightPps = Utils.clip((linearVelocityPps + angularVelocityPps), -MAX_PPS, MAX_PPS);
 
         // Real left-right motor speeds
         double left = leftPps * DISTANCE_PER_PULSE;
@@ -332,58 +364,106 @@ public class SimRobot implements RobotApi, WithRobotStatus {
         world.step((float) dt, VELOCITY_ITER, POSITION_ITER);
 
         // Update robot status
-        Vec2 pos = robot.getPosition();
-        Point2D.Float location = new Point2D.Float(pos.x, pos.y);
-        int direction = normalizeDegAngle((int) round(90 - toDegrees(robot.getAngle())));
-        status = status.setLocation(location)
-                .setDirection(direction)
-                .setLeftPps(leftPps)
-                .setRightPps(rightPps);
+        updateMotion();
     }
 
     /**
-     * Returns the decoded contact
-     *
-     * @param contact the jbox contact
+     * Returns the robot direction (DEG)
      */
-    private int decodeContact(Contact contact) {
-        Fixture fa = contact.m_fixtureA;
-        Fixture fb = contact.m_fixtureB;
-        if (fa == flSensor || fb == flSensor) {
-            return RobotStatus.FRONT_LEFT;
-        } else if (fa == frSensor || fb == frSensor) {
-            return RobotStatus.FRONT_RIGHT;
-        } else if (fa == rlSensor || fb == rlSensor) {
-            return RobotStatus.REAR_LEFT;
-        } else if (fa == rrSensor || fb == rrSensor) {
-            return RobotStatus.REAR_RIGHT;
-        } else {
-            return RobotStatus.NO_CONTACT;
-        }
+    public int getDirection() {
+        return normalizeDegAngle((int) round(90 - toDegrees(robot.getAngle())));
     }
 
+    /**
+     * Returns the echo distance (m)
+     */
+    public double getEchoDistance() {
+        return echoDistance;
+    }
+
+    /**
+     * Returns the robot location (m)
+     */
+    public Point2D getLocation() {
+        Vec2 pos = robot.getPosition();
+        return new Point2D.Double(pos.x, pos.y);
+    }
+
+    /**
+     * Returns the obstacles map
+     */
     public Optional<ObstacleMap> getObstaclesMap() {
         return Optional.ofNullable(obstacleMap);
     }
 
-    @Override
-    public RobotStatus getRobotStatus() {
-        return status;
+    /**
+     * Returns the sensor direction (DEG)
+     */
+    public int getSensorDirection() {
+        return sensorDirection;
     }
 
     @Override
     public void halt() {
         speed = 0;
-        status = status.setLeftPps(0)
-                .setRightPps(0);
+        leftPps = 0;
+        rightPps = 0;
     }
 
     private void handleBeginContact(Contact contact) {
-        status = status.setContacts(status.getContacts() | decodeContact(contact));
+        if (isFront(contact)) {
+            frontSensor = false;
+        }
+        if (isRear(contact)) {
+            rearSensor = false;
+        }
+        sendContacts();
     }
 
     private void handleEndContact(Contact contact) {
-        status = status.setContacts(status.getContacts() & ~decodeContact(contact));
+        if (isFront(contact)) {
+            frontSensor = true;
+        }
+        if (isRear(contact)) {
+            rearSensor = true;
+        }
+        sendContacts();
+    }
+
+    /**
+     * Returns true if contact is frontal
+     *
+     * @param contact contact
+     */
+    private boolean isFront(Contact contact) {
+        Fixture fa = contact.m_fixtureA;
+        Fixture fb = contact.m_fixtureB;
+        return fa == flSensor || fb == flSensor || fa == frSensor || fb == frSensor;
+    }
+
+    /**
+     * Returns true if front sensor is clear
+     */
+    boolean isFrontSensor() {
+        return frontSensor;
+    }
+
+    /**
+     * Returns true if contact is later
+     *
+     * @param contact contact
+     */
+    private boolean isRear(Contact contact) {
+        Fixture fa = contact.m_fixtureA;
+        Fixture fb = contact.m_fixtureB;
+        return fa == rlSensor || fb == rlSensor || fa == rrSensor || fb == rrSensor;
+    }
+
+    /**
+     * Returns true if rear sensor is clear
+     */
+    boolean isRearSensor() {
+        return rearSensor;
     }
 
     @Override
@@ -397,21 +477,8 @@ public class SimRobot implements RobotApi, WithRobotStatus {
     public void reset() {
         speed = 0;
         direction = 0;
-        sensor = 0;
-
-        status = status.setResetTime(status.getTime())
-                .setLocation(new Point2D.Float())
-                .setDirection(0)
-                .setSensorDirection(0)
-                .setEchoDistance(0)
-                .setContacts(0)
-                .setLeftPps(0)
-                .setRightPps(0)
-                .setCanMoveForward(true)
-                .setCanMoveBackward(true)
-                .setHalt(true)
-                .setImuFailure(0);
-
+        sensorDirection = 0;
+        robotTime = 0;
         robot.setLinearVelocity(new Vec2());
         robot.setTransform(new Vec2(), (float) (PI / 2));
         robot.setAngularVelocity(0f);
@@ -419,13 +486,85 @@ public class SimRobot implements RobotApi, WithRobotStatus {
 
     @Override
     public void scan(int dir) {
-        this.sensor = min(max(dir, -90), 90);
-        status = status.setSensorDirection(dir);
+        this.sensorDirection = min(max(dir, -90), 90);
+    }
+
+    /**
+     * Sends the contacts message
+     */
+    private void sendContacts() {
+        if (onContacts != null) {
+            WheellyContactsMessage msg = new WheellyContactsMessage(
+                    System.currentTimeMillis(), robotTime,
+                    frontSensor, rearSensor,
+                    canMoveForward(),
+                    canMoveBackward()
+            );
+            onContacts.accept(msg);
+        }
+    }
+
+    /**
+     * Sends the motion message
+     */
+    private void sendMotion() {
+        if (onMotion != null) {
+            Vec2 pos = robot.getPosition();
+            double xPulses = pos.x / DISTANCE_PER_PULSE;
+            double yPulses = pos.y / DISTANCE_PER_PULSE;
+            int robotDir = getDirection();
+            WheellyMotionMessage msg = new WheellyMotionMessage(
+                    System.currentTimeMillis(), robotTime,
+                    xPulses, yPulses, robotDir,
+                    leftPps, rightPps,
+                    0, speed == 0,
+                    (int) round(leftPps), (int) round(rightPps),
+                    0, 0);
+            onMotion.accept(msg);
+        }
+        motionTimeout = robotTime + motionInterval;
+    }
+
+    /**
+     * Sends the proxy message
+     */
+    private void sendProxy() {
+        if (onProxy != null) {
+            Vec2 pos = robot.getPosition();
+            double xPulses = pos.x / DISTANCE_PER_PULSE;
+            double yPulses = pos.y / DISTANCE_PER_PULSE;
+            int echoYaw = getDirection();
+            long echoDelay = round(echoDistance / DISTANCE_SCALE);
+            WheellyProxyMessage msg = new WheellyProxyMessage(
+                    System.currentTimeMillis(), robotTime,
+                    sensorDirection, echoDelay, xPulses, yPulses, echoYaw);
+            onProxy.accept(msg);
+        }
+        proxyTimeout = robotTime + proxyInterval;
     }
 
     @Override
-    public void setOnStatusReady(Consumer<RobotStatus> callback) {
-        onStatusReady = callback;
+    public void setOnClock(Consumer<ClockSyncEvent> callback) {
+        onClock = callback;
+    }
+
+    @Override
+    public void setOnContacts(Consumer<WheellyContactsMessage> callback) {
+        this.onContacts = callback;
+    }
+
+    @Override
+    public void setOnMotion(Consumer<WheellyMotionMessage> callback) {
+        this.onMotion = callback;
+    }
+
+    @Override
+    public void setOnProxy(Consumer<WheellyProxyMessage> callback) {
+        this.onProxy = callback;
+    }
+
+    @Override
+    public void setOnSupply(Consumer<WheellySupplyMessage> callback) {
     }
 
     /**
@@ -435,7 +574,6 @@ public class SimRobot implements RobotApi, WithRobotStatus {
      */
     public void setRobotDir(int direction) {
         this.direction = direction;
-        status = status.setDirection(direction);
         robot.setTransform(robot.getPosition(), (float) Utils.toNormalRadians(90 - direction));
     }
 
@@ -448,49 +586,52 @@ public class SimRobot implements RobotApi, WithRobotStatus {
         pos.x = (float) x;
         pos.y = (float) y;
         robot.setTransform(pos, robot.getAngle());
-        status = status.setLocation(new Point2D.Double(x, y));
     }
 
     @Override
     public void tick(long dt) {
-        long start = System.currentTimeMillis();
+        this.robotTime += dt;
+
+        // Simulate robot motion
         controller(dt * 1e-3F);
-        status = status.setTime(status.getTime() + dt);
 
         // Check for sensor
-        Point2D position = status.getLocation();
-        double x = position.getX();
-        double y = position.getY();
-        int sensorDeg = normalizeDegAngle(90 - status.getDirection() - sensor);
-        double sensorRad = toRadians(sensorDeg);
-        double distance = 0;
+        Vec2 pos = robot.getPosition();
+        double x = pos.x;
+        double y = pos.y;
+        Point2D position = new Point2D.Double(x, y);
+        double sensorRad = normalizeAngle(robot.getAngle() - toRadians(sensorDirection));
+        this.echoDistance = 0;
+        // Finds the nearest obstacle in proxy sensor range
         int obsIdx = obstacleMap.indexOfNearest(x, y, sensorRad, sensorReceptiveAngle);
         if (obsIdx >= 0) {
+            // Computes the distance of obstacles
             Point2D obs = obstacleMap.getPoint(obsIdx);
             double dist = obs.distance(position) - obstacleMap.getTopology().getGridSize() / 2
                     + random.nextGaussian() * errSensor;
-            distance = dist > 0 && dist < MAX_DISTANCE ? dist : 0;
+            echoDistance = dist > 0 && dist < MAX_DISTANCE ? dist : 0;
         }
-        status = status.setEchoDistance(distance);
 
         // Check for movement constraints
-        boolean canMoveForward = (distance == 0 || distance > SAFE_DISTANCE) && (status.getContacts() & FORWARD_PROXIMITY_MASK) == 0;
-        status = status.setCanMoveForward(canMoveForward);
-        boolean canMoveBackward = (status.getContacts() & BACKWARD_PROXIMITY_MASK) == 0;
-        status = status.setCanMoveBackward(canMoveBackward);
         checkForSpeed();
-        if (onStatusReady != null) {
-            onStatusReady.accept(status);
+        updateProxy();
+    }
+
+    /**
+     * Sends the motion message if interval has elapsed
+     */
+    private void updateMotion() {
+        if (robotTime >= motionTimeout) {
+            sendMotion();
         }
-        long elapse = System.currentTimeMillis() - start;
-        long expected = round(dt / maxSimSpeed);
-        long remainder = expected - elapse;
-        if (remainder > THRESHOLD_TIME) {
-            try {
-                Thread.sleep(remainder);
-            } catch (InterruptedException e) {
-                logger.atError().setCause(e).log();
-            }
+    }
+
+    /**
+     * Sends the proxy message if interval has elapsed
+     */
+    private void updateProxy() {
+        if (robotTime >= proxyTimeout) {
+            sendProxy();
         }
     }
 }

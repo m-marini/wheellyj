@@ -306,10 +306,10 @@ public class RadarMap {
     public RadarMap update(RobotStatus status) {
         // Updates the radar map
         double distance = status.getEchoDistance();
-        Point2D location = status.getLocation();
-        long time = status.getTime();
+        Point2D location = status.getEchoRobotLocation();
+        long time = status.getLocalEchoTime();
         RadarMap.SensorSignal signal = new RadarMap.SensorSignal(location,
-                normalizeDegAngle(status.getDirection() + status.getSensorDirection()),
+                status.getEchoDirection(),
                 distance, time);
         RadarMap hinderedMap = update(signal);
         RadarMap contactMap = status.getContacts() != 0 || !status.canMoveBackward() || !status.canMoveForward()

@@ -1,5 +1,5 @@
 ---
-version: "0.4"
+version: "0.5"
 active: controller
 
 configurations:
@@ -10,3 +10,6 @@ configurations:
     commandInterval: 600
     connectionRetryInterval: 1000
     watchdogInterval: 5000
+    simulationSpeed: 1
+    supplyValues: [2165, 2683]
+    voltages: [9.8, 12.3]

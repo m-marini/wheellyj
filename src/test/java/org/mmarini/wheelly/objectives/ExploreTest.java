@@ -54,8 +54,8 @@ class ExploreTest {
                 .map((i, sector) -> i < knownCount ? sector.empty(timestamp) : sector);
         RobotStatus status = RobotStatus.create(x -> 12d)
                 .setSensorDirection(sensorDir)
-                .setLeftPps(leftSpeed * MAX_VELOCITY / RobotStatus.DISTANCE_PER_PULSE)
-                .setRightPps(rightSpeed * MAX_VELOCITY / RobotStatus.DISTANCE_PER_PULSE)
+                .setSpeeds(leftSpeed * MAX_VELOCITY / RobotStatus.DISTANCE_PER_PULSE,
+                        rightSpeed * MAX_VELOCITY / RobotStatus.DISTANCE_PER_PULSE)
                 .setCanMoveForward(canMoveForward)
                 .setCanMoveBackward(canMoveBackward);
         return new MockEnvironment() {

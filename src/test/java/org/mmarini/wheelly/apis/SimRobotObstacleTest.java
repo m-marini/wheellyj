@@ -32,7 +32,8 @@ import java.util.Random;
 import static java.lang.Math.toRadians;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
 
 class SimRobotObstacleTest {
@@ -48,69 +49,109 @@ class SimRobotObstacleTest {
      * Given a space with an obstacle at X0,0
      * and robot directed to 90 DEG at distance of 239 mm from obstacle (-1 mm border distance obstacle - robot)
      * When halt the robot and after 300ms
-     * Then the robot should remain stoped
+     * Then the robot should remain stopped
      * and the distance sensor should signal 140mm
-     * and the proximity sould signal 12 (front contacts)
+     * and the proximity should signal 12 (front contacts)
      * and the forward block should be active
      * and the backward block should be inactive
      */
     @Test
     void contactFront() {
         SimRobot robot = createRobot();
+        // When positioning robot at (0.761, 0)
         double x0 = XO - HALF_LENGTH - HALF_SIZE + MM1;
         robot.setRobotPos(x0, 0);
+        // and directed to 90 DEG
         robot.setRobotDir(90);
         robot.halt();
 
+        // and ticking for 300 ms
         robot.tick(300);
-        RobotStatus status = robot.getRobotStatus();
 
-        assertThat(status.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
-        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertThat(status.getEchoDistance(), closeTo(140e-3, DISTANCE_EPSILON));
-        assertEquals(12, status.getContacts());
-        assertTrue(status.canMoveBackward());
-        assertFalse(status.canMoveForward());
+        // Then the robot should not change the location
+        assertThat(robot.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
+        assertThat(robot.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
 
+        // and the proxy sensor should signal obstacle at 140 mm
+        assertThat(robot.getEchoDistance(), closeTo(140e-3, DISTANCE_EPSILON));
+
+        // And front contact
+        assertFalse(robot.isFrontSensor());
+        assertTrue(robot.isRearSensor());
+
+        // and cannot move forward
+        assertFalse(robot.canMoveForward());
+        assertTrue(robot.canMoveBackward());
+
+        // When move ahead to 90 DEG at max speed
         robot.move(90, MAX_PPS);
         robot.tick(300);
 
-        assertThat(status.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
-        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertThat(status.getEchoDistance(), closeTo(140e-3, DISTANCE_EPSILON));
-        assertEquals(12, status.getContacts());
-        assertTrue(status.canMoveBackward());
-        assertFalse(status.canMoveForward());
+        // Then the robot should not change the location
+        assertThat(robot.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
+        assertThat(robot.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
+
+        // And the proxy sensor should signal obstacle at 140 mm
+        assertThat(robot.getEchoDistance(), closeTo(140e-3, DISTANCE_EPSILON));
+
+        // and front contact
+        assertFalse(robot.isFrontSensor());
+        assertTrue(robot.isRearSensor());
+
+        // And robot cannot move ahead
+        assertFalse(robot.canMoveForward());
+        assertTrue(robot.canMoveBackward());
     }
 
     @Test
     void contactFrontMoveBack() {
         SimRobot robot = createRobot();
         double x0 = XO - HALF_LENGTH - HALF_SIZE;
+
+        // When positioning robot at (0.76, 0)
         robot.setRobotPos(x0, 0);
+        // and directed to 90 DEG
         robot.setRobotDir(90);
         robot.halt();
+        // and ticking for 300 ms
         robot.tick(300);
-        RobotStatus status = robot.getRobotStatus();
-        assertThat(status.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
-        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertThat(status.getEchoDistance(), closeTo(140e-3, DISTANCE_EPSILON));
-        assertEquals(12, status.getContacts());
-        assertTrue(status.canMoveBackward());
-        assertFalse(status.canMoveForward());
 
+        // Then the robot should not change the location
+        assertThat(robot.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
+        assertThat(robot.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
+
+        // and the proxy sensor should signal obstacle at 140 mm
+        assertThat(robot.getEchoDistance(), closeTo(140e-3, DISTANCE_EPSILON));
+
+        // and front contact
+        assertFalse(robot.isFrontSensor());
+        assertTrue(robot.isRearSensor());
+
+        // and robot cannot move forward
+        assertTrue(robot.canMoveBackward());
+        assertFalse(robot.canMoveForward());
+
+        // When move back at max speed for 300 ms
         robot.move(90, -MAX_PPS);
         for (int i = 0; i < 10; i++) {
             robot.tick(30);
         }
-        status = robot.getRobotStatus();
 
-        assertThat(status.getLocation().getX(), closeTo(x0 - 39e-3, DISTANCE_EPSILON));
-        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertEquals(0, status.getContacts());
-        assertTrue(status.canMoveBackward());
-        assertFalse(status.canMoveForward());
-        assertThat(status.getEchoDistance(), closeTo(140e-3 + 39e-3, DISTANCE_EPSILON));
+        // Then the robot should be located back of 44 mm
+        double ds = 44e-3;
+        assertThat(robot.getLocation().getX(), closeTo(x0 - ds, DISTANCE_EPSILON));
+        assertThat(robot.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
+
+        // and no contacts
+        assertTrue(robot.isFrontSensor());
+        assertTrue(robot.isRearSensor());
+
+        // and can move back and not forward (proxy block)
+        assertTrue(robot.canMoveBackward());
+        assertFalse(robot.canMoveForward());
+
+        // And proxy sensor should measure 140+39 mm of distance
+        assertThat(robot.getEchoDistance(), closeTo(140e-3 + ds, DISTANCE_EPSILON));
     }
 
     @Test
@@ -121,62 +162,93 @@ class SimRobotObstacleTest {
         robot.setRobotDir(-90);
         robot.halt();
         robot.tick(300);
-        RobotStatus status = robot.getRobotStatus();
 
-        assertThat(status.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
-        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertThat(status.getEchoDistance(), closeTo(0, DISTANCE_EPSILON));
-        assertEquals(3, status.getContacts());
-        assertFalse(status.canMoveBackward());
-        assertTrue(status.canMoveForward());
+        assertThat(robot.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
+        assertThat(robot.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat(robot.getEchoDistance(), closeTo(0, DISTANCE_EPSILON));
+
+        // and rear contact
+        assertTrue(robot.isFrontSensor());
+        assertFalse(robot.isRearSensor());
+
+        // And cannot move back
+        assertTrue(robot.canMoveForward());
+        assertFalse(robot.canMoveBackward());
 
         robot.move(-90, -1);
         robot.tick(300);
-        status = robot.getRobotStatus();
 
-        assertThat(status.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
-        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertThat(status.getEchoDistance(), closeTo(0, DISTANCE_EPSILON));
-        assertEquals(3, status.getContacts());
-        assertFalse(status.canMoveBackward());
-        assertTrue(status.canMoveForward());
+        assertThat(robot.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
+        assertThat(robot.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat(robot.getEchoDistance(), closeTo(0, DISTANCE_EPSILON));
+
+        // and rear contact
+        assertTrue(robot.isFrontSensor());
+        assertFalse(robot.isRearSensor());
+
+        // And cannot move back
+        assertTrue(robot.canMoveForward());
+        assertFalse(robot.canMoveBackward());
+
     }
 
     @Test
     void contactRearMoveForward() {
         SimRobot robot = createRobot();
+        // When positioning robot at (0.76, 0)
         double x0 = XO - HALF_LENGTH - HALF_SIZE;
         robot.setRobotPos(x0, 0);
+        // and directed to -90 DEG
         robot.setRobotDir(-90);
         robot.halt();
+        // and ticking for 300 ms
         robot.tick(300);
-        RobotStatus status = robot.getRobotStatus();
 
-        assertThat(status.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
-        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertThat(status.getEchoDistance(), closeTo(0, DISTANCE_EPSILON));
-        assertEquals(3, status.getContacts());
-        assertFalse(status.canMoveBackward());
-        assertTrue(status.canMoveForward());
+        // Then the robot should not change the location
+        assertThat(robot.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
+        assertThat(robot.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
 
+        // and the proxy sensor should signal no obstacle
+        assertThat(robot.getEchoDistance(), closeTo(0, DISTANCE_EPSILON));
+
+        // and rear contact
+        assertTrue(robot.isFrontSensor());
+        assertFalse(robot.isRearSensor());
+
+        // and robot cannot move backward
+        assertTrue(robot.canMoveForward());
+        assertFalse(robot.canMoveBackward());
+
+        // When move front at max speed for 300 ms
         robot.move(-90, MAX_PPS);
         for (int i = 0; i < 10; i++) {
             robot.tick(30);
         }
-        status = robot.getRobotStatus();
 
-        assertThat(status.getLocation().getX(), closeTo(x0 - 39e-3, DISTANCE_EPSILON));
-        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertEquals(0, status.getContacts());
-        assertTrue(status.canMoveBackward());
-        assertTrue(status.canMoveForward());
-        assertThat(status.getEchoDistance(), closeTo(0, DISTANCE_EPSILON));
+        // Then the robot should be located ahead of 44 mm
+        double ds = 44e-3;
+        assertThat(robot.getLocation().getX(), closeTo(x0 - ds, DISTANCE_EPSILON));
+        assertThat(robot.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
+
+        // and no contacts
+        assertTrue(robot.isFrontSensor());
+        assertTrue(robot.isRearSensor());
+
+        // and can move back and forward
+        assertTrue(robot.canMoveBackward());
+        assertTrue(robot.canMoveForward());
+
+        // and the proxy sensor should signal no obstacle
+        assertThat(robot.getEchoDistance(), closeTo(0, DISTANCE_EPSILON));
     }
 
+    /**
+     * Given a simulated robot with a map grid of 0.2 m and an obstacle at 1,0
+     */
     private SimRobot createRobot() {
         Random random = new Random(SEED);
         SimRobot simRobot = new SimRobot(new MapBuilder(new GridTopology(0.2f)).add(XO, 0).build(),
-                random, 0, 0, toRadians(15), MAX_PPS, 1000);
+                random, 0, 0, toRadians(15), MAX_PPS, 500, 500);
         simRobot.connect();
         simRobot.configure();
         return simRobot;
@@ -190,24 +262,33 @@ class SimRobotObstacleTest {
         robot.setRobotDir(90);
         robot.halt();
         robot.tick(300);
-        RobotStatus status = robot.getRobotStatus();
 
-        assertThat(status.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
-        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertThat(status.getEchoDistance(), closeTo(XO - x0 - HALF_SIZE, DISTANCE_EPSILON));
-        assertEquals(0, status.getContacts());
-        assertTrue(status.canMoveBackward());
-        assertFalse(status.canMoveForward());
+        assertThat(robot.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
+        assertThat(robot.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat(robot.getEchoDistance(), closeTo(XO - x0 - HALF_SIZE, DISTANCE_EPSILON));
+
+        // and no contacts
+        assertTrue(robot.isFrontSensor());
+        assertTrue(robot.isRearSensor());
+
+        // and cannot move ahead (proxy signal)
+        assertFalse(robot.canMoveForward());
+        assertTrue(robot.canMoveBackward());
 
         robot.move(90, 1);
         robot.tick(300);
 
-        assertThat(status.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
-        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertThat(status.getEchoDistance(), closeTo(XO - x0 - HALF_SIZE, DISTANCE_EPSILON));
-        assertEquals(0, status.getContacts());
-        assertTrue(status.canMoveBackward());
-        assertFalse(status.canMoveForward());
+        assertThat(robot.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
+        assertThat(robot.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat(robot.getEchoDistance(), closeTo(XO - x0 - HALF_SIZE, DISTANCE_EPSILON));
+
+        // and no contacts
+        assertTrue(robot.isFrontSensor());
+        assertTrue(robot.isRearSensor());
+
+        // and cannot move ahead
+        assertFalse(robot.canMoveForward());
+        assertTrue(robot.canMoveBackward());
     }
 
     /**
@@ -215,7 +296,7 @@ class SimRobotObstacleTest {
      * in environment with obstacle at 1, 0
      * When move to -90 DEG at -max speed for 100 steps of 3 ms
      * Than the robot should move to 0.744, 0
-     * And the contacts should be 3 (backwards)
+     * And the contacts should be rear
      * And cannot move backward
      */
     @Test
@@ -226,27 +307,33 @@ class SimRobotObstacleTest {
         robot.setRobotDir(-90);
         robot.halt();
         robot.tick(300);
-        RobotStatus status = robot.getRobotStatus();
 
-        assertThat(status.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
-        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertThat(status.getEchoDistance(), closeTo(0, DISTANCE_EPSILON));
-        assertEquals(0, status.getContacts());
-        assertTrue(status.canMoveBackward());
-        assertTrue(status.canMoveForward());
+        assertThat(robot.getLocation().getX(), closeTo(x0, DISTANCE_EPSILON));
+        assertThat(robot.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat(robot.getEchoDistance(), closeTo(0, DISTANCE_EPSILON));
+
+        assertTrue(robot.isFrontSensor());
+        assertTrue(robot.isRearSensor());
+
+        assertTrue(robot.canMoveForward());
+        assertTrue(robot.canMoveBackward());
 
         robot.move(-90, -MAX_PPS);
         for (int i = 0; i < 12; i++) {
             robot.tick(30);
         }
 
-        status = robot.getRobotStatus();
-        assertEquals(3, status.getContacts());
-        assertThat(status.getLocation().getX(), closeTo(XO - HALF_LENGTH - HALF_SIZE - 4e-3, DISTANCE_EPSILON));
-        assertThat(status.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
-        assertFalse(status.canMoveBackward());
-        assertTrue(status.canMoveForward());
-        assertThat(status.getEchoDistance(), closeTo(0, DISTANCE_EPSILON));
+        assertTrue(robot.isFrontSensor());
+        assertFalse(robot.isRearSensor());
+
+        assertTrue(robot.canMoveForward());
+        assertFalse(robot.canMoveBackward());
+
+        // and the robot should be located at 1 mm over the obstacle (?)
+        double ds = 1e-3;
+        assertThat(robot.getLocation().getX(), closeTo(XO - HALF_LENGTH - HALF_SIZE + ds, DISTANCE_EPSILON));
+        assertThat(robot.getLocation().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat(robot.getEchoDistance(), closeTo(0, DISTANCE_EPSILON));
     }
 
 }

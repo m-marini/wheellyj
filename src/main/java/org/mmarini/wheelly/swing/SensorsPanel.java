@@ -30,7 +30,6 @@ package org.mmarini.wheelly.swing;
 
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WheellyStatus;
 
 import javax.swing.*;
 import java.text.DecimalFormat;
@@ -231,20 +230,19 @@ public class SensorsPanel extends JPanel {
     public void setStatus(RobotStatus status) {
         robotX.setValue(status.getLocation().getX());
         robotY.setValue(status.getLocation().getY());
-        WheellyStatus wheellyStatus = status.getWheellyStatus();
-        xPulses.setValue(wheellyStatus.getXPulses());
-        yPulses.setValue(wheellyStatus.getYPulses());
+        xPulses.setValue(status.getXPulses());
+        yPulses.setValue(status.getYPulses());
         direction.setValue(status.getDirection());
         sensorDirection.setValue(status.getSensorDirection());
-        echoTime.setValue(wheellyStatus.getEchoTime());
+        echoTime.setValue(status.getEchoDelay());
         distance.setValue(status.getEchoDistance());
         leftSpeed.setValue(status.getLeftPps());
         rightSpeed.setValue(status.getRightPps());
         voltage.setValue(status.getSupplyVoltage());
-        supplySensor.setValue(wheellyStatus.getSupplySensor());
+        supplySensor.setValue(status.getSupplySensor());
         imuFailure.setValue(status.getImuFailure());
-        rearSensors.setValue(wheellyStatus.isRearSensors());
-        frontSensors.setValue(wheellyStatus.isFrontSensors());
+        rearSensors.setValue(status.isRearSensors());
+        frontSensors.setValue(status.isFrontSensors());
         int proximity1 = status.getContacts();
         proximity.setValue(proximity1);
         frontLeft.setSelected((proximity1 & FRONT_LEFT_MASK) != 0);

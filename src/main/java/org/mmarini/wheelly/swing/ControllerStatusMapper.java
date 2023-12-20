@@ -38,9 +38,8 @@ interface ControllerStatusMapper {
             RobotController.CONNECTING, "con",
             RobotController.CLOSING, "cls",
             RobotController.WAITING_RETRY, "wtr",
-            RobotController.SCAN, "act",
-            RobotController.MOVE, "act",
-            RobotController.WAIT_COMMAND_INTERVAL, "act"
+            RobotController.HANDLING_COMMANDS, "act",
+            RobotController.WAITING_COMMAND_INTERVAL, "act"
     );
 
     static String map(String status) {

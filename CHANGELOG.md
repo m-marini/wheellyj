@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 - Issue #266: Add ExploringPointState
+- Issue #269: Add asynchronous status message
 
 ## [0.10.1] 2023-11-29
 

@@ -44,7 +44,6 @@ import java.util.function.UnaryOperator;
  * Manages the interaction between robot controller and TD agent
  */
 public interface RobotEnvironment extends WithStatusFlowable, WithErrorFlowable, WithIOFlowable, WithSignalsSpec, WithCommandFlowable, WithControllerFlowable {
-
     /**
      * Returns the robot environment from configuration
      *
@@ -66,6 +65,11 @@ public interface RobotEnvironment extends WithStatusFlowable, WithErrorFlowable,
     }
 
     @Override
+    default Flowable<RobotStatus> readContacts() {
+        return getController().readContacts();
+    }
+
+    @Override
     default Flowable<String> readControllerStatus() {
         return getController().readControllerStatus();
     }
@@ -73,6 +77,16 @@ public interface RobotEnvironment extends WithStatusFlowable, WithErrorFlowable,
     @Override
     default Flowable<Throwable> readErrors() {
         return getController().readErrors();
+    }
+
+    @Override
+    default Flowable<RobotStatus> readMotion() {
+        return getController().readMotion();
+    }
+
+    @Override
+    default Flowable<RobotStatus> readProxy() {
+        return getController().readProxy();
     }
 
     @Override
@@ -89,6 +103,11 @@ public interface RobotEnvironment extends WithStatusFlowable, WithErrorFlowable,
      * Returns the completable shutdown
      */
     Completable readShutdown();
+
+    @Override
+    default Flowable<RobotStatus> readSupply() {
+        return getController().readSupply();
+    }
 
     @Override
     default Flowable<String> readWriteLine() {

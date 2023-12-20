@@ -208,12 +208,12 @@ public class RobotExecutor {
     private void handleStepUp(ProcessorContext ctx) {
         RobotStatus status = ctx.getRobotStatus();
         if (robotStartTimestamp < 0) {
-            robotStartTimestamp = status.getTime();
+            robotStartTimestamp = status.getLocalTime();
         }
         sensorMonitor.onStatus(status);
         envPanel.setRobotStatus(status);
         envPanel.setRadarMap(ctx.getRadarMap());
-        long robotClock = status.getTime();
+        long robotClock = status.getLocalTime();
         long robotElapsed = robotClock - robotStartTimestamp;
         envPanel.setTimeRatio((double) robotElapsed / (System.currentTimeMillis() - start));
         long clock = System.currentTimeMillis();

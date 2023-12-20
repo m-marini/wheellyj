@@ -145,7 +145,7 @@ class ProcessorCommandTest {
     private ProcessorContext createContext() {
         RobotControllerApi controller = createController();
         ProcessorContext processorContext = new ProcessorContext(controller, createFlow());
-        RobotStatus status = RobotStatus.create(x -> 12d).setTime(TIME);
+        RobotStatus status = RobotStatus.create(x -> 12d);
         processorContext.setRobotStatus(status);
         return processorContext;
     }
@@ -238,7 +238,8 @@ class ProcessorCommandTest {
         ProcessorContext ctx = createContext();
 
         cmd.execute(ctx);
-        assertEquals(TIME, ctx.peek());
+        long expected = ctx.getRobotStatus().getLocalTime();
+        assertEquals(expected, ctx.peek());
     }
 
 }

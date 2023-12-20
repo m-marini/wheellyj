@@ -50,6 +50,29 @@ import java.util.stream.Collectors;
 
 import static java.net.StandardSocketOptions.SO_KEEPALIVE;
 
+/**
+ * The RobotSocket manages the communication channel via socket.
+ * <p>
+ * Any IO function can throw an IOException on errors or timeout
+ * </p>
+ * <p>
+ * The usage samples is
+ * <code><pre>
+ *
+ *     RobotSocket robotSocket = new RobotSocket(...);
+ *
+ *     robotSocket.connect();
+ *
+ *     robotSocket.writeCommand("...");
+ *
+ *     Timed<String> line = robotSocket.readLine();
+ *     ...
+ *
+ *     robotSocket.close();
+ * </pre>
+ * </code>
+ * </p>
+ */
 public class RobotSocket implements Closeable {
     private static final String LF = "\r\n";
     private static final String CRLF_PATTERN = "\\r?\\n";
@@ -98,7 +121,7 @@ public class RobotSocket implements Closeable {
     }
 
     /**
-     * Connects the robot
+     * Connects the robot socket
      *
      * @throws IOException in case of error
      */
@@ -124,6 +147,7 @@ public class RobotSocket implements Closeable {
 
     /**
      * Returns true if it has lines in the buffer
+     * It does not poll for receivd data.
      */
     private boolean hasLines() {
         return readPosition < lines.size();

@@ -57,12 +57,12 @@ public abstract class DumpRecord {
         Instant timestamp = Instant.ofEpochMilli(Long.parseLong(matcher.group(1)));
         String dir = matcher.group(2);
         String data = matcher.group(3);
-        return ">".equals(dir)
-                ? new WriteDumpRecord(timestamp, data)
-                : data.startsWith("st ")
-                ? new StatusDumpRecord(timestamp, data,
-                WheellyStatus.create(new Timed<>(data, timestamp.toEpochMilli(), TimeUnit.MILLISECONDS)))
-                : new ReadDumpRecord(timestamp, data);
+        if (">".equals(dir)) {
+            return new WriteDumpRecord(timestamp, data);
+        }
+        return WheellyMessage.fromLine(new Timed<>(data, timestamp.toEpochMilli(), TimeUnit.MILLISECONDS))
+                .map(msg -> (DumpRecord) new MessageDumpRecord<>(timestamp, data, msg))
+                .orElseGet(() -> new ReadDumpRecord(timestamp, data));
     }
 
     protected final Instant instant;
@@ -125,19 +125,16 @@ public abstract class DumpRecord {
         }
     }
 
-    /**
-     * Stores the read dump record
-     */
-    public static class StatusDumpRecord extends ReadDumpRecord {
-        private final WheellyStatus status;
+    public static class MessageDumpRecord<T extends WheellyMessage> extends ReadDumpRecord {
+        private final T message;
 
-        protected StatusDumpRecord(Instant timestamp, String data, WheellyStatus status) {
+        protected MessageDumpRecord(Instant timestamp, String data, T message) {
             super(timestamp, data);
-            this.status = status;
+            this.message = message;
         }
 
-        public WheellyStatus getStatus() {
-            return status;
+        public T getMessage() {
+            return message;
         }
     }
 

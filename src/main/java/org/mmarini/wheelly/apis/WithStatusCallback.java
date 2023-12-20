@@ -32,9 +32,37 @@ import java.util.function.Consumer;
 
 public interface WithStatusCallback {
     /**
-     * Registers the consumer of status ready event
+     * Registers the consumer of clock event
      *
      * @param callback the callback
      */
-    void setOnStatusReady(Consumer<RobotStatus> callback);
+    void setOnClock(Consumer<ClockSyncEvent> callback);
+
+    /**
+     * Registers the consumer of contacts event
+     *
+     * @param callback the callback
+     */
+    void setOnContacts(Consumer<WheellyContactsMessage> callback);
+
+    /**
+     * Registers the consumer of motion event
+     *
+     * @param callback the callback
+     */
+    void setOnMotion(Consumer<WheellyMotionMessage> callback);
+
+    /**
+     * Registers the consumer of proxy event
+     *
+     * @param callback the callback
+     */
+    void setOnProxy(Consumer<WheellyProxyMessage> callback);
+
+    /**
+     * Registers the consumer of supply event
+     *
+     * @param callback the callback
+     */
+    void setOnSupply(Consumer<WheellySupplyMessage> callback);
 }

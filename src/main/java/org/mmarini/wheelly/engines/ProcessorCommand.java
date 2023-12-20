@@ -245,7 +245,7 @@ public class ProcessorCommand {
      */
     private static void timeCommand(ProcessorContext context) {
         RobotStatus status = context.getRobotStatus();
-        context.push(status.getTime());
+        context.push(status.getLocalTime());
     }
 
     private final String id;

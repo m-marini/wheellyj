@@ -25,6 +25,8 @@
 
 package org.mmarini.wheelly.apis;
 
+import java.util.StringJoiner;
+
 import static java.lang.String.format;
 
 /**
@@ -41,6 +43,14 @@ public class ClockSyncEvent {
      */
     public static ClockSyncEvent create(long originateTimestamp, long receiveTimestamp, long transmitTimestamp, long destinationTimestamp) {
         return new ClockSyncEvent(originateTimestamp, receiveTimestamp, transmitTimestamp, destinationTimestamp);
+    }
+
+    /**
+     * Returns the clock sync event for local clock (no Latency)
+     */
+    public static ClockSyncEvent create() {
+        long now = System.currentTimeMillis();
+        return new ClockSyncEvent(now, 0, 0, now);
     }
 
     /**
@@ -67,6 +77,10 @@ public class ClockSyncEvent {
 
     /**
      * Creates the clock sync event
+     * <pre>
+     * |---------|-------|--------|
+     * originate receive transmit destination
+     * </pre>
      *
      * @param originateTimestamp   the originate timestamp in local clock ticks (ms)
      * @param receiveTimestamp     the receive timestamp in remote clock ticks (ms)
@@ -78,6 +92,31 @@ public class ClockSyncEvent {
         this.receiveTimestamp = receiveTimestamp;
         this.transmitTimestamp = transmitTimestamp;
         this.destinationTimestamp = destinationTimestamp;
+    }
+
+    /**
+     * Retuns the remote timestamp from local timestamp
+     *
+     * @param localTime the local timestamp
+     */
+    public long fromLocal(long localTime) {
+        return localTime - getRemoteOffset();
+    }
+
+    /**
+     * Retuns the local timestamp from remote timestamp
+     *
+     * @param remoteTime the remote timestamp
+     */
+    public long fromRemote(long remoteTime) {
+        return getRemoteOffset() + remoteTime;
+    }
+
+    /**
+     * Returns the destination timestamp (local clock)
+     */
+    public long getDestinationTimestamp() {
+        return destinationTimestamp;
     }
 
     /**
@@ -95,10 +134,33 @@ public class ClockSyncEvent {
     }
 
     /**
+     * Returns the received timestamp (remote clock)
+     */
+    public long getReceiveTimestamp() {
+        return receiveTimestamp;
+    }
+
+    /**
      * Returns the remote offset
      */
     public long getRemoteOffset() {
         return originateTimestamp + getLatency() - receiveTimestamp;
     }
 
+    /**
+     * Returns the transmit timestamp (remote clock)
+     */
+    public long getTransmitTimestamp() {
+        return transmitTimestamp;
+    }
+
+    @Override
+    public String toString() {
+        return new StringJoiner(", ", ClockSyncEvent.class.getSimpleName() + "[", "]")
+                .add("destinationTimestamp=" + destinationTimestamp)
+                .add("originateTimestamp=" + originateTimestamp)
+                .add("receiveTimestamp=" + receiveTimestamp)
+                .add("transmitTimestamp=" + transmitTimestamp)
+                .toString();
+    }
 }
