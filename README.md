@@ -5,6 +5,12 @@ The code of Arduino controller is at [Wheellino project](https://github.com/m-ma
 
 The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
+## Release 0.11.0
+
+Add asynchronous status message and ExploringPointState
+
+Compatible with Wheellino 0.8.0
+
 ## Release 0.10.1
 
 Added ping signals in polar map, changed auto scan and some minor fix
