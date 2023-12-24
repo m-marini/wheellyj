@@ -47,7 +47,7 @@ import java.util.function.UnaryOperator;
  */
 public interface RobotEnvironment extends WithStatusFlowable, WithErrorFlowable, WithIOFlowable, WithSignalsSpec, WithCommandFlowable, WithControllerFlowable {
 
-    String ENV_SCHEMA_YML = "/env-schema.yml";
+    String ENV_SCHEMA_YML = "https://mmarini.org/wheelly/env-schema-0.5";
 
     /**
      * Returns the robot environment from configuration

@@ -33,13 +33,18 @@ import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
+import org.mmarini.Tuple2;
 import org.mmarini.yaml.Utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 
@@ -47,7 +52,49 @@ import static java.lang.String.format;
  * Load and cache json schemas
  */
 public class JsonSchemas {
-    private static final JsonSchemas singleton = new JsonSchemas();
+    private static final Logger logger = LoggerFactory.getLogger(JsonSchemas.class);
+
+    private static final JsonSchemas singleton = create(
+            "/agent-schema.yml",
+            "/checkup-schema.yml",
+            "/controller-schema.yml",
+            "/env-schema.yml",
+            "/executor-schema.yml",
+            "/monitor-schema.yml",
+            "/network-list-schema.yml",
+            "/network-schema.yml",
+            "/robot-schema.yml",
+            "/signal-schema.yml",
+            "/state-agent-schema.yml",
+            "/wheelly-schema.yml"
+    );
+
+    private static JsonSchemas create(String... schemas) {
+        JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
+        Map<String, JsonSchema> schemaMap = Arrays.stream(schemas)
+                .flatMap(id -> {
+                    try {
+                        return Stream.of(Utils.fromResource(id));
+                    } catch (IOException e) {
+                        logger.atError().setCause(e).log("Error loading schema {}", id);
+                        return Stream.of();
+                    }
+                })
+                .map(factory::getSchema)
+                .filter(schema -> {
+                    boolean hasId = schema.getSchemaNode().has("$id");
+                    if (!hasId) {
+                        logger.atError().log("Missing $id in schema {}", schema.getSchemaPath());
+                    }
+                    return hasId;
+                })
+                .map(schema -> Tuple2.of(
+                        schema.getSchemaNode().get("$id").asText(),
+                        schema
+                ))
+                .collect(Tuple2.toMap());
+        return new JsonSchemas(schemaMap);
+    }
 
     /**
      * Returns the singleton instance
@@ -61,26 +108,21 @@ public class JsonSchemas {
     /**
      * Creates the json schemas
      */
-    protected JsonSchemas() {
-        this.cache = new HashMap<>();
+    protected JsonSchemas(Map<String, JsonSchema> cache) {
+        this.cache = cache;
     }
-
 
     /**
      * Returns the schema from resource
      *
      * @param id the resource schema
-     * @throws IOException in case of error
      */
     public JsonSchema get(String id) throws IOException {
-        JsonSchema schema = cache.get(id);
-        if (schema == null) {
-            JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
-            JsonNode jsonSchemeNode = Utils.fromResource(id);
-            schema = factory.getSchema(jsonSchemeNode);
-            cache.put(id, schema);
+        JsonSchema jsonSchema = cache.get(id);
+        if (jsonSchema == null) {
+            throw new FileNotFoundException(id);
         }
-        return schema;
+        return jsonSchema;
     }
 
     /**

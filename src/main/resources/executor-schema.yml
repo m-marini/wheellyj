@@ -1,6 +1,6 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/monitor-schema-0.1
+$id: https://mmarini.org/wheelly/executor-schema-0.1
 title: Monitor application
 
 # monitor schema

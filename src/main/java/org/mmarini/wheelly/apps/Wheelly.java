@@ -73,7 +73,7 @@ public class Wheelly {
             "^v0$",
             "^trainedCritic.output$",
     };
-    public static final String WHEELLY_SCHEMA_YML = "/wheelly-schema.yml";
+    public static final String WHEELLY_SCHEMA_YML = "https://mmarini.org/wheelly/wheelly-schema-0.1";
     private static final Logger logger = LoggerFactory.getLogger(Wheelly.class);
 
     /**

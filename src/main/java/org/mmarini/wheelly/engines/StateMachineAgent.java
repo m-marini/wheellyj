@@ -53,7 +53,7 @@ import static java.util.Objects.requireNonNull;
  * </p>
  */
 public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, WithErrorFlowable, WithCommandFlowable, WithControllerFlowable {
-    public static final String STATE_AGENT_SCHEMA_YML = "/state-agent-schema.yml";
+    public static final String STATE_AGENT_SCHEMA_YML = "https://mmarini.org/wheelly/state-agent-schema-0.7";
 
     /**
      * Returns the agent from configuration

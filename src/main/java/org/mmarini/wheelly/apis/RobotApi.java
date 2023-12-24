@@ -37,6 +37,7 @@ import java.io.IOException;
  */
 public interface RobotApi extends Closeable, WithStatusCallback {
     int MAX_PPS = 40;
+    String ROBOT_SCHEMA_YML = "https://mmarini.org/wheelly/robot-schema-0.8";
 
     /**
      * Returns the robot api from configuration
@@ -45,7 +46,7 @@ public interface RobotApi extends Closeable, WithStatusCallback {
      * @param locator the configuration locator
      */
     static RobotApi fromConfig(JsonNode config, Locator locator) {
-        return Yaml.fromConfig(config, locator, "/robot-schema.yml", new Object[0], new Class[0]);
+        return Yaml.fromConfig(config, locator, ROBOT_SCHEMA_YML, new Object[0], new Class[0]);
     }
 
     /**
