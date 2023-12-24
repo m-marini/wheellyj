@@ -59,7 +59,7 @@ import static org.mmarini.wheelly.swing.Utils.layHorizontally;
 
 public class MatrixMonitor {
     public static final int TIME_MAJOR_TICK_SPACING = 10;
-    public static final String MONITOR_SCHEMA_YML = "/monitor-schema.yml";
+    public static final String MONITOR_SCHEMA_YML = "https://mmarini.org/wheelly/monitor-schema-0.1";
     private static final Dimension COMMAND_FRAME_SIZE = new Dimension(400, 800);
     private static final Logger logger = LoggerFactory.getLogger(MatrixMonitor.class);
     private static final int MAX_SPEED = 40;

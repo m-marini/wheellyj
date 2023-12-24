@@ -42,16 +42,15 @@ import static org.mmarini.Utils.stream;
  */
 public abstract class SignalSpec {
 
+    public static final String SIGNAL_SCHEMA_YML = "https://mmarini.org/wheelly/signal-schema";
+
     private static SignalSpec create(JsonNode node, Locator locator) {
         String type = locator.path("type").getNode(node).asText();
-        switch (type) {
-            case "int":
-                return IntSignalSpec.create(node, locator);
-            case "float":
-                return FloatSignalSpec.create(node, locator);
-            default:
-                throw new IllegalArgumentException(format("Wrong type \"%s\"", type));
-        }
+        return switch (type) {
+            case "int" -> IntSignalSpec.create(node, locator);
+            case "float" -> FloatSignalSpec.create(node, locator);
+            default -> throw new IllegalArgumentException(format("Wrong type \"%s\"", type));
+        };
     }
 
     public static long[] createShape(JsonNode node, Locator locator) {
@@ -61,7 +60,7 @@ public abstract class SignalSpec {
     }
 
     public static Map<String, SignalSpec> createSignalSpecMap(JsonNode node, Locator locator) {
-        JsonSchemas.instance().validateOrThrow(locator.getNode(node), "/signal-schema.yml");
+        JsonSchemas.instance().validateOrThrow(locator.getNode(node), SIGNAL_SCHEMA_YML);
         return stream(locator.getNode(node).fieldNames())
                 .map(name -> Tuple2.of(name, SignalSpec.create(node, locator.path(name))))
                 .collect(Tuple2.toMap());

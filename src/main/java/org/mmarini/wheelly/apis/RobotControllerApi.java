@@ -104,7 +104,7 @@ import java.util.function.Consumer;
  */
 public interface RobotControllerApi extends WithIOFlowable, WithStatusFlowable, WithErrorFlowable, WithCommandFlowable, WithControllerFlowable, WithInferenceFlowable {
 
-    String CONTROLLER_SCHEMA_YML = "/controller-schema.yml";
+    String CONTROLLER_SCHEMA_YML = "https://mmarini.org/wheelly/controller-schema-0.6";
 
     /**
      * Returns the robot controller from configuration json

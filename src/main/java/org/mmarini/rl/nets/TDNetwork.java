@@ -47,6 +47,9 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 public class TDNetwork {
+
+    public static final String NETWORK_SCHEMA_YML = "https://mmarini.org/wheelly/network-schema";
+
     /**
      * Returns the network from spec and props data
      *
@@ -57,10 +60,10 @@ public class TDNetwork {
      * @param random  the random number generator
      */
     public static TDNetwork create(JsonNode spec, Locator locator, String prefix, Map<String, INDArray> props, Random random) {
-        JsonSchemas.instance().validateOrThrow(locator.getNode(spec), "/network-schema.yml");
+        JsonSchemas.instance().validateOrThrow(locator.getNode(spec), NETWORK_SCHEMA_YML);
         List<TDLayer> layerNodes = locator.path("layers").elements(spec)
                 .map(layerLocator -> TDLayer.create(spec, layerLocator, prefix, props, random))
-                .collect(Collectors.toList());
+                .toList();
         List<String> forward = layerNodes.stream().map(TDLayer::getName).collect(Collectors.toList());
         Map<String, TDLayer> layers1 = layerNodes.stream().collect(Collectors.toMap(
                 TDLayer::getName,
@@ -101,7 +104,7 @@ public class TDNetwork {
         this.outputs = layers.keySet().stream().map(key -> {
             List<String> value = inputs.keySet().stream()
                     .filter(out -> inputs.get(out).contains(key))
-                    .collect(Collectors.toList());
+                    .toList();
             return Map.entry(key, value);
         }).collect(Utils.entriesToMap());
         this.sourceLabels = inputs.values()

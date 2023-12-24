@@ -72,7 +72,7 @@ public class RobotCheckUp {
     public static final int ROTATION_TOLERANCE = 5;
     public static final double DISTANCE_TOLERANCE = 0.1;
     public static final Dimension RESULT_SIZE = new Dimension(800, 600);
-    public static final String CHECKUP_SCHEMA_YML = "/checkup-schema.yml";
+    public static final String CHECKUP_SCHEMA_YML = "https://mmarini.org/wheelly/checkup-schema-0.1";
     private static final Logger logger = LoggerFactory.getLogger(RobotCheckUp.class);
     private static final int TEST_SPEED = MAX_PPS / 2;
 

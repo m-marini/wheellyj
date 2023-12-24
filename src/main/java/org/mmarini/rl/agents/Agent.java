@@ -44,7 +44,7 @@ import java.util.Map;
  */
 public interface Agent extends Closeable, WithSignalsSpec {
 
-    String AGENT_SCHEMA_YML = "/agent-schema.yml";
+    String AGENT_SCHEMA_YML = "https://mmarini.org/wheelly/agent-schema-0.5";
 
     /**
      * Returns the agent

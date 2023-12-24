@@ -57,7 +57,7 @@ import static org.mmarini.wheelly.swing.Utils.*;
  */
 public class RobotExecutor {
     public static final Dimension DEFALT_RADAR_DIMENSION = new Dimension(400, 400);
-    public static final String EXECUTOR_SCHEMA_YML = "/executor-schema.yml";
+    public static final String EXECUTOR_SCHEMA_YML = "https://mmarini.org/wheelly/executor-schema-0.1";
     private static final Logger logger = LoggerFactory.getLogger(RobotExecutor.class);
 
     /**
