@@ -1,11 +1,11 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/agent-schema
+$id: https://mmarini.org/wheelly/agent-schema-0.5
 title: Agent
 type: object
 properties:
-  version:
-    const: "0.4"
+  $schema:
+    const: https://mmarini.org/wheelly/agent-schema-0.5
   active:
     type: string
   configurations:
@@ -13,7 +13,7 @@ properties:
     additionalProperties:
       $ref: "#/$defs/AgentSet"
 required:
-  - version
+  - $schema
   - active
   - configurations
 $defs:

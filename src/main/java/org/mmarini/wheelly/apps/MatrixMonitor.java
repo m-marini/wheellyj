@@ -33,7 +33,6 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.swing.GridLayoutHelper;
-import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotControllerApi;
 import org.mmarini.wheelly.apis.RobotStatus;
@@ -60,6 +59,7 @@ import static org.mmarini.wheelly.swing.Utils.layHorizontally;
 
 public class MatrixMonitor {
     public static final int TIME_MAJOR_TICK_SPACING = 10;
+    public static final String MONITOR_SCHEMA_YML = "/monitor-schema.yml";
     private static final Dimension COMMAND_FRAME_SIZE = new Dimension(400, 800);
     private static final Logger logger = LoggerFactory.getLogger(MatrixMonitor.class);
     private static final int MAX_SPEED = 40;
@@ -77,12 +77,9 @@ public class MatrixMonitor {
         parser.addArgument("--version")
                 .action(Arguments.version())
                 .help("show current version");
-        parser.addArgument("-r", "--robot")
-                .setDefault("robot.yml")
-                .help("specify robot yaml configuration file");
-        parser.addArgument("-c", "--controller")
-                .setDefault("controller.yml")
-                .help("specify controller yaml configuration file");
+        parser.addArgument("-c", "--config")
+                .setDefault("monitor.yml")
+                .help("specify yaml configuration file");
         parser.addArgument("-d", "--dump")
                 .help("specify dump signal file");
         return parser;
@@ -145,7 +142,6 @@ public class MatrixMonitor {
         this.timeField = new JFormattedTextField(intFormat);
         this.haltButton = new JButton("HALT !!!");
         this.runButton = new JButton("Run");
-//        this.commandDuration = MAX_TIME;
         this.commandPanel = createCommandPanel();
         this.halt = true;
         comMonitor.setPrintTimestamp(true);
@@ -243,14 +239,6 @@ public class MatrixMonitor {
                 .modify("at,0,1 weight,1,1").add(otherPanel)
                 .modify("at,0,2 insets,10 noweight nofill").add(haltButton)
                 .getContainer();
-    }
-
-    /**
-     * Returns the robot controller
-     */
-    protected RobotControllerApi createController() {
-        RobotApi robot = RobotApi.fromConfig(parseArgs.getString("robot"));
-        return RobotControllerApi.fromConfig(parseArgs.getString("controller"), robot);
     }
 
     private void handleClose(WindowEvent windowEvent) {
@@ -388,7 +376,7 @@ public class MatrixMonitor {
      */
     private void run() {
         logger.info("Robot check started.");
-        controller = createController();
+        controller = Yaml.fromFile(parseArgs.getString("config"), MONITOR_SCHEMA_YML);
         controller.readRobotStatus()
                 .doOnNext(this::handleStatus).subscribe();
         controller.readErrors().doOnNext(er -> {

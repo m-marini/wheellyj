@@ -1,0 +1,25 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/wheelly-schema-0.1
+title: Monitor application
+
+# monitor schema
+type: object
+properties:
+  $schema:
+    type: string
+    const: https://mmarini.org/wheelly/wheelly-schema-0.1
+  robot:
+    type: object
+  controller:
+    type: object
+  environment:
+    type: object
+  agent:
+    type: object
+required:
+  - $schema
+  - robot
+  - controller
+  - environment
+  - agent

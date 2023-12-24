@@ -25,6 +25,7 @@
 
 package org.mmarini.wheelly.apps;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.Observable;
 import net.sourceforge.argparse4j.ArgumentParsers;
@@ -37,13 +38,13 @@ import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.KpiCSVSubscriber;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.SignalSpec;
-import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.envs.PolarRobotEnv;
 import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.wheelly.envs.WithPolarMap;
 import org.mmarini.wheelly.envs.WithRadarMap;
 import org.mmarini.wheelly.swing.*;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,6 +59,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static org.mmarini.wheelly.swing.Utils.*;
+import static org.mmarini.yaml.Utils.fromFile;
 
 /**
  * Run a test to check for robot environment with random behavior agent
@@ -71,6 +73,7 @@ public class Wheelly {
             "^v0$",
             "^trainedCritic.output$",
     };
+    public static final String WHEELLY_SCHEMA_YML = "/wheelly-schema.yml";
     private static final Logger logger = LoggerFactory.getLogger(Wheelly.class);
 
     /**
@@ -111,18 +114,9 @@ public class Wheelly {
         parser.addArgument("-v", "--version")
                 .action(Arguments.version())
                 .help("show current version");
-        parser.addArgument("-r", "--robot")
-                .setDefault("robot.yml")
-                .help("specify robot yaml configuration file");
-        parser.addArgument("-c", "--controller")
-                .setDefault("controller.yml")
-                .help("specify controller yaml configuration file");
-        parser.addArgument("-e", "--env")
-                .setDefault("env.yml")
-                .help("specify environment yaml configuration file");
-        parser.addArgument("-a", "--agent")
-                .setDefault("agent.yml")
-                .help("specify agent yaml configuration file");
+        parser.addArgument("-c", "--config")
+                .setDefault("wheelly.yml")
+                .help("specify yaml configuration file");
         parser.addArgument("-k", "--kpis")
                 .setDefault("")
                 .help("specify kpis path");
@@ -197,24 +191,6 @@ public class Wheelly {
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
                 .doOnNext(this::handleWindowClosing)
                 .subscribe();
-    }
-
-    /**
-     * Returns the agent
-     *
-     * @param env the environment
-     */
-    protected Agent createAgent(WithSignalsSpec env) {
-        return Agent.fromConfig(args.getString("agent"), env);
-    }
-
-    /**
-     * Returns the environment
-     */
-    protected RobotEnvironment createEnvironment() {
-        RobotApi robot = RobotApi.fromConfig(args.getString("robot"));
-        RobotControllerApi controller = RobotControllerApi.fromConfig(args.getString("controller"), robot);
-        return RobotEnvironment.fromConfig(args.getString("env"), controller);
     }
 
     private void handleControllerStatus(String status) {
@@ -337,10 +313,11 @@ public class Wheelly {
         try {
             this.args = parser.parseArgs(args);
             logger.atInfo().log("Creating environment");
-            this.environment = createEnvironment();
+            JsonNode config = fromFile(this.args.getString("config"));
+            this.environment = Yaml.envFromJson(config, Locator.root(), WHEELLY_SCHEMA_YML);
+            this.agent = Agent.fromConfig(config, Locator.locate("agent"), environment);
 
             logger.atInfo().log("Creating agent");
-            this.agent = createAgent(environment);
             if (environment instanceof PolarRobotEnv) {
                 this.polarPanel = new PolarPanel();
                 double radarMaxDistance = ((PolarRobotEnv) environment).getMaxRadarDistance();
@@ -410,6 +387,9 @@ public class Wheelly {
             environment.start();
         } catch (ArgumentParserException e) {
             parser.handleError(e);
+            System.exit(1);
+        } catch (IOException e) {
+            logger.atError().setCause(e).log("IO exception");
             System.exit(1);
         }
     }

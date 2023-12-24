@@ -1,0 +1,1208 @@
+---
+$schema: https://mmarini.org/wheelly/wheelly-schema-0.1
+robot:
+  $schema: https://mmarini.org/wheelly/robot-schema-0.8
+  active: realRobot
+  configurations:
+    simRobot:
+      class: org.mmarini.wheelly.apis.SimRobot
+      robotSeed: 1234
+      mapSeed: 1234
+      numObstacles: 10
+      errSigma: 0.05
+      errSensor: 0.05
+      sensorReceptiveAngle: 15
+      maxAngularSpeed: 5
+    realRobot:
+      class: org.mmarini.wheelly.apis.Robot
+      #host: wheelly
+      host: 192.168.1.43
+      connectionTimeout: 10000
+      readTimeout: 10000
+      configureTimeout: 2000
+      configCommands:
+        - cs 500
+        - cc 5 30 20
+        - tcsl 30 107 180 -32 -81 -180 400 50
+        - tcsr 39 78 180 -32 -92 -180 400 50
+        - fl 10000 10000
+        - fr 10000 10000
+        - ci 500 500
+controller:
+  $schema: https://mmarini.org/wheelly/controller-schema-0.6
+  active: controller
+  configurations:
+    controller:
+      class: org.mmarini.wheelly.apis.RobotController
+      interval: 100
+      reactionInterval: 300
+      commandInterval: 600
+      connectionRetryInterval: 1000
+      watchdogInterval: 5000
+      simulationSpeed: 1
+      supplyValues: [ 2165, 2683 ]
+      voltages: [ 9.8, 12.3 ]
+environment:
+  $schema: https://mmarini.org/wheelly/env-schema-0.5
+  active: explorerEnvImitation
+  configurations:
+    explorerEnvImitation:
+      class: org.mmarini.wheelly.envs.PolarRobotEnv
+      objective:
+        class: org.mmarini.wheelly.objectives.ExploreByImitation
+        stopDistance: 0.4
+        turnDirectionRange: 30
+      interval: 10
+      commandInterval: 600
+      reactionInterval: 300
+      numDirectionValues: 25
+      numSpeedValues: 9
+      numSensorValues: 7
+      radarWidth: 51
+      radarHeight: 51
+      radarGrid: 0.2
+      radarReceptiveDistance: 0.28
+      radarReceptiveAngle: 15
+      radarPersistence: 300000
+      radarCleanInterval: 30000
+      numRadarSectors: 24
+      minRadarDistance: 0.3
+      maxRadarDistance: 3
+    explorerEnv:
+      class: org.mmarini.wheelly.envs.PolarRobotEnv
+      objective:
+        class: org.mmarini.wheelly.objectives.Explore
+        sensorRange: 60
+      interval: 10
+      commandInterval: 600
+      reactionInterval: 300
+      numDirectionValues: 25
+      numSpeedValues: 9
+      numSensorValues: 7
+      radarWidth: 51
+      radarHeight: 51
+      radarGrid: 0.2
+      radarReceptiveDistance: 0.28
+      radarReceptiveAngle: 15
+      radarPersistence: 300000
+      radarCleanInterval: 30000
+      numRadarSectors: 24
+      minRadarDistance: 0.3
+      maxRadarDistance: 3
+    radarEnv:
+      class: org.mmarini.wheelly.envs.RadarRobotEnv
+      objective:
+        class: org.mmarini.wheelly.objectives.Stuck
+        distance0: 0.1
+        distance1: 0.3
+        distance2: 0.7
+        distance3: 2
+        sensorRange: 90
+      interval: 10
+      commandInterval: 600
+      reactionInterval: 300
+      numDirectionValues: 25
+      numSpeedValues: 9
+      numSensorValues: 7
+      radarGrid: 0.2
+      radarWidth: 25
+      radarHeight: 25
+      radarReceptiveDistance: 0.28
+      radarReceptiveAngle: 15
+      radarPersistence: 300000
+      radarCleanInterval: 30000
+agent:
+  $schema: https://mmarini.org/wheelly/agent-schema-0.5
+
+  active: polarRadarAnalogAgentDropOut
+
+  configurations:
+    ######################################
+    # Polar radar agent with drop out
+    ######################################
+    polarRadarAnalogAgentDropOut:
+      class: org.mmarini.rl.agents.TDAgent
+      version: "0.1"
+      seed: 1234
+      modelPath: models/polarRadarAnalogAgent
+      savingIntervalSteps: 1000
+      rewardAlpha: 5e-3
+      policyAlpha: 10e-3
+      criticAlpha: 300e-6
+      lambda: 0.9
+      inputProcess:
+        - name: canMoveFeatures
+          class: org.mmarini.rl.processors.PartitionProcessor
+          inputs:
+            - name: canMoveForward
+              numTiles: 2
+            - name: canMoveBackward
+              numTiles: 2
+        - name: emptySectors
+          class: org.mmarini.rl.processors.NotProcessor
+          input: sectorDistances
+      policy:
+        normalizedDistances:
+          input: sectorDistances
+          layers:
+            - type: linear
+              b: -1
+              w: 0.667
+        layer0:
+          inputs:
+            type: concat
+            inputs:
+              - canMoveFeatures
+              - knownSectors
+              - emptySectors
+              - normalizedDistances
+          layers:
+            - type: dropout
+              dropOut: 0.8
+            - type: dense
+              outputSize: 100
+              dropOut: 0.5
+            - type: relu
+        hidden0:
+          input: layer0
+          layers:
+            - type: dense
+              outputSize: 100
+              dropOut: 0.5
+            - type: relu
+            - type: dense
+              outputSize: 100
+              dropOut: 0.5
+            - type: relu
+        hidden1:
+          inputs:
+            type: sum
+            inputs:
+              - layer0
+              - hidden0
+          layers:
+            - type: dense
+              outputSize: 100
+              dropOut: 0.5
+            - type: relu
+            - type: dense
+              outputSize: 100
+              dropOut: 0.5
+            - type: relu
+        features:
+          inputs:
+            type: sum
+            inputs:
+              - hidden0
+              - hidden1
+          layers:
+            - type: dense
+              outputSize: 100
+              dropOut: 0.5
+            - type: relu
+        direction:
+          input: features
+          layers:
+            - type: dense
+              outputSize: 25
+            - type: tanh
+            - type: softmax
+              temperature: 0.257
+        speed:
+          input: features
+          layers:
+            - type: dense
+              outputSize: 10
+            - type: tanh
+            - type: softmax
+              temperature: 0.3
+        sensorAction:
+          input: features
+          layers:
+            - type: dense
+              outputSize: 7
+            - type: tanh
+            - type: softmax
+              temperature: 0.313
+      critic:
+        normalizedDistances:
+          input: sectorDistances
+          layers:
+            - type: linear
+              b: -1
+              w: 0.667
+        layer0:
+          inputs:
+            type: concat
+            inputs:
+              - canMoveFeatures
+              - knownSectors
+              - emptySectors
+              - normalizedDistances
+          layers:
+            - type: dropout
+              dropOut: 0.8
+            - type: dense
+              outputSize: 100
+              dropOut: 0.5
+            - type: relu
+        hidden0:
+          input: layer0
+          layers:
+            - type: dense
+              outputSize: 100
+              dropOut: 0.5
+            - type: relu
+            - type: dense
+              outputSize: 100
+              dropOut: 0.5
+            - type: relu
+        hidden1:
+          inputs:
+            type: sum
+            inputs:
+              - layer0
+              - hidden0
+          layers:
+            - type: dense
+              outputSize: 100
+              dropOut: 0.5
+            - type: relu
+            - type: dense
+              outputSize: 100
+              dropOut: 0.5
+            - type: relu
+        features:
+          inputs:
+            type: sum
+            inputs:
+              - hidden0
+              - hidden1
+          layers:
+            - type: dense
+              outputSize: 100
+              dropOut: 0.5
+            - type: relu
+        output:
+          input: features
+          layers:
+            - type: dense
+              outputSize: 1
+            - type: tanh
+            - type: linear
+              b: 0
+              w: 3
+    ######################################
+    # Polar radar agent
+    ######################################
+    polarRadarAnalogAgent:
+      class: org.mmarini.rl.agents.TDAgent
+      version: "0.1"
+      seed: 1234
+      modelPath: models/polarRadarAnalogAgent
+      savingIntervalSteps: 1000
+      rewardAlpha: 5e-3
+      policyAlpha: 10e-3
+      criticAlpha: 100e-6
+      lambda: 0.9
+      inputProcess:
+        - name: canMoveFeatures
+          class: org.mmarini.rl.processors.PartitionProcessor
+          inputs:
+            - name: canMoveForward
+              numTiles: 2
+            - name: canMoveBackward
+              numTiles: 2
+        - name: emptySectors
+          class: org.mmarini.rl.processors.NotProcessor
+          input: sectorDistances
+      policy:
+        normalizedDistances:
+          input: sectorDistances
+          layers:
+            - type: linear
+              b: -1
+              w: 0.667
+        layer0:
+          inputs:
+            type: concat
+            inputs:
+              - canMoveFeatures
+              - knownSectors
+              - emptySectors
+              - normalizedDistances
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        hidden0:
+          input: layer0
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+            - type: dense
+              outputSize: 100
+        hidden1:
+          inputs:
+            type: sum
+            inputs:
+              - layer0
+              - hidden0
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+            - type: dense
+              outputSize: 100
+            - type: dense
+              outputSize: 100
+            - type: relu
+            - type: dense
+              outputSize: 100
+        hidden2:
+          input: hidden1
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+            - type: dense
+              outputSize: 100
+        hidden3:
+          inputs:
+            type: sum
+            inputs:
+              - hidden1
+              - hidden2
+          layers:
+            - type: relu
+        direction:
+          input: hidden3
+          layers:
+            - type: dense
+              outputSize: 25
+            - type: tanh
+            - type: softmax
+              temperature: 0.257
+        speed:
+          input: hidden3
+          layers:
+            - type: dense
+              outputSize: 10
+            - type: tanh
+            - type: softmax
+              temperature: 0.3
+        sensorAction:
+          input: hidden3
+          layers:
+            - type: dense
+              outputSize: 7
+            - type: tanh
+            - type: softmax
+              temperature: 0.313
+      critic:
+        normalizedDistances:
+          input: sectorDistances
+          layers:
+            - type: linear
+              b: -1
+              w: 0.667
+        layer0:
+          inputs:
+            type: concat
+            inputs:
+              - canMoveFeatures
+              - knownSectors
+              - emptySectors
+              - normalizedDistances
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        hidden0:
+          input: layer0
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+            - type: dense
+              outputSize: 100
+        hidden1:
+          inputs:
+            type: sum
+            inputs:
+              - layer0
+              - hidden0
+          layers:
+            - type: relu
+        hidden2:
+          input: hidden1
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+            - type: dense
+              outputSize: 100
+        hidden3:
+          inputs:
+            type: sum
+            inputs:
+              - hidden1
+              - hidden2
+          layers:
+            - type: relu
+        output:
+          input: hidden3
+          layers:
+            - type: dense
+              outputSize: 1
+            - type: tanh
+            - type: linear
+              b: 0
+              w: 6
+    ######################################
+    # Polar radar agent
+    ######################################
+    polarRadarAgent:
+      class: org.mmarini.rl.agents.TDAgent
+      version: "0.1"
+      seed: 1234
+      modelPath: models/polarRadarAgentTiles
+      savingIntervalSteps: 1000
+      rewardAlpha: 5e-3
+      policyAlpha: 1e-3
+      criticAlpha: 100e-6
+      lambda: 0.5
+      inputProcess:
+        - name: canMoveFeatures
+          class: org.mmarini.rl.processors.PartitionProcessor
+          inputs:
+            - name: canMoveForward
+              numTiles: 2
+            - name: canMoveBackward
+              numTiles: 2
+        - name: emptySectors
+          class: org.mmarini.rl.processors.NotProcessor
+          input: sectorDistances
+        - name: distanceMask
+          class: org.mmarini.rl.processors.AndProcessor
+          inputs:
+            - sectorDistances
+            - knownSectors
+        - name: distanceFeatures
+          class: org.mmarini.rl.processors.MaskedTilesVectorProcessor
+          input: sectorDistances
+          numTiles: 8
+          mask: distanceMask
+      policy:
+        layer0:
+          inputs:
+            type: concat
+            inputs:
+              - canMoveFeatures
+              - knownSectors
+              - emptySectors
+              - distanceFeatures
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        hidden0:
+          input: layer0
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        hidden1:
+          inputs:
+            type: sum
+            inputs:
+              - layer0
+              - hidden0
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        hidden2:
+          inputs:
+            type: sum
+            inputs:
+              - hidden0
+              - hidden1
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        halt:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 2
+            - type: tanh
+            - type: softmax
+              temperature: 0.435
+        direction:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 25
+            - type: tanh
+            - type: softmax
+              temperature: 0.257
+        speed:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 9
+            - type: tanh
+            - type: softmax
+              temperature: 0.3
+        sensorAction:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 7
+            - type: tanh
+            - type: softmax
+              temperature: 0.313
+      critic:
+        layer0:
+          inputs:
+            type: concat
+            inputs:
+              - canMoveFeatures
+              - knownSectors
+              - emptySectors
+              - distanceFeatures
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        hidden0:
+          input: layer0
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        hidden1:
+          inputs:
+            type: sum
+            inputs:
+              - layer0
+              - hidden0
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        hidden2:
+          inputs:
+            type: sum
+            inputs:
+              - hidden0
+              - hidden1
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        output:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 1
+            - type: tanh
+            - type: linear
+              b: 0
+              w: 3
+    ######################################
+    # Radar agent
+    ######################################
+    radarAgent:
+      class: org.mmarini.rl.agents.TDAgent
+      version: "0.1"
+      seed: 1234
+      modelPath: models/radarAgent
+      savingIntervalSteps: 1000
+      rewardAlpha: 5e-3
+      policyAlpha: 1e-3
+      criticAlpha: 100e-6
+      lambda: 0.5
+      inputProcess:
+        - name: radarFeatures
+          class: org.mmarini.rl.processors.FeatureVectorProcessor
+          inputs:
+            - radar
+        - name: canMoveFeatures
+          class: org.mmarini.rl.processors.PartitionProcessor
+          inputs:
+            - name: canMoveForward
+              numTiles: 2
+            - name: canMoveBackward
+              numTiles: 2
+      policy:
+        layer0:
+          inputs:
+            type: concat
+            inputs:
+              - radarFeatures
+              - canMoveFeatures
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        hidden0:
+          input: layer0
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        hidden1:
+          inputs:
+            type: sum
+            inputs:
+              - layer0
+              - hidden0
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        hidden2:
+          inputs:
+            type: sum
+            inputs:
+              - hidden0
+              - hidden1
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        halt:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 2
+            - type: tanh
+            - type: softmax
+              temperature: 0.435
+        direction:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 25
+            - type: tanh
+            - type: softmax
+              temperature: 0.257
+        speed:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 9
+            - type: tanh
+            - type: softmax
+              temperature: 0.3
+        sensorAction:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 7
+            - type: tanh
+            - type: softmax
+              temperature: 0.313
+      critic:
+        layer0:
+          inputs:
+            type: concat
+            inputs:
+              - radarFeatures
+              - canMoveFeatures
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        hidden0:
+          input: layer0
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        hidden1:
+          inputs:
+            type: sum
+            inputs:
+              - layer0
+              - hidden0
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        hidden2:
+          inputs:
+            type: sum
+            inputs:
+              - hidden0
+              - hidden1
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        output:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 1
+            - type: tanh
+            - type: linear
+              b: 0
+              w: 3
+    ######################################
+    # Radar agent 1 (critic +-1, tanh insted of relu0)
+    ######################################
+    radarAgent1:
+      class: org.mmarini.rl.agents.TDAgent
+      version: "0.1"
+      seed: 1234
+      modelPath: models/radarAgent
+      savingIntervalSteps: 1000
+      rewardAlpha: 5e-3
+      policyAlpha: 10e-3
+      criticAlpha: 1e-3
+      lambda: 0.5
+      inputProcess:
+        - name: radarFeatures
+          class: org.mmarini.rl.processors.FeatureVectorProcessor
+          inputs:
+            - radar
+        - name: canMoveFeatures
+          class: org.mmarini.rl.processors.PartitionProcessor
+          inputs:
+            - name: canMoveForward
+              numTiles: 2
+            - name: canMoveBackward
+              numTiles: 2
+      policy:
+        layer0:
+          inputs:
+            type: concat
+            inputs:
+              - radarFeatures
+              - canMoveFeatures
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: tanh
+        hidden0:
+          input: layer0
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: tanh
+        hidden1:
+          inputs:
+            type: sum
+            inputs:
+              - layer0
+              - hidden0
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: tanh
+        hidden2:
+          inputs:
+            type: sum
+            inputs:
+              - hidden0
+              - hidden1
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: tanh
+        halt:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 2
+            - type: tanh
+            - type: softmax
+              temperature: 0.91
+        direction:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 25
+            - type: tanh
+            - type: softmax
+              temperature: 0.372
+        speed:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 9
+            - type: tanh
+            - type: softmax
+              temperature: 0.4677
+        sensorAction:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 7
+            - type: tanh
+            - type: softmax
+              temperature: 0.501
+      critic:
+        layer0:
+          inputs:
+            type: concat
+            inputs:
+              - radarFeatures
+              - canMoveFeatures
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: tanh
+        hidden0:
+          input: layer0
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: tanh
+        hidden1:
+          inputs:
+            type: sum
+            inputs:
+              - layer0
+              - hidden0
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: tanh
+        hidden2:
+          inputs:
+            type: sum
+            inputs:
+              - hidden0
+              - hidden1
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: tanh
+        output:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 1
+            - type: tanh
+            - type: linear
+              b: 0
+              w: 10
+    ######################################
+    # Base agent
+    ######################################
+    baseAgent:
+      class: org.mmarini.rl.agents.TDAgent
+      version: "0.1"
+      seed: 1234
+      modelPath: models/baseAgent
+      savingIntervalSteps: 1000
+      rewardAlpha: 5e-3
+      policyAlpha: 100e-3
+      criticAlpha: 100e-3
+      lambda: 0
+      policy:
+        sensorNorm:
+          input: sensor
+          layers:
+            - type: linear
+              b: 0
+              w: 11.111111e-3
+        distanceNorm:
+          input: distance
+          layers:
+            - type: linear
+              b: 0
+              w: 333.33333e-3
+        contactsNorm:
+          input: contacts
+          layers:
+            - type: linear
+              b: 0
+              w: 62.4e-3
+        layer0:
+          inputs:
+            type: concat
+            inputs:
+              - sensorNorm
+              - distanceNorm
+              - canMoveForward
+              - canMoveBackward
+              - contactsNorm
+          layers:
+            - type: dense
+              outputSize: 300
+            - type: relu
+        hidden0:
+          input: layer0
+          layers:
+            - type: dense
+              outputSize: 300
+            - type: relu
+        hidden1:
+          inputs:
+            type: sum
+            inputs:
+              - layer0
+              - hidden0
+          layers:
+            - type: dense
+              outputSize: 300
+            - type: relu
+        hidden2:
+          inputs:
+            type: sum
+            inputs:
+              - hidden0
+              - hidden1
+          layers:
+            - type: dense
+              outputSize: 300
+            - type: relu
+        halt:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 2
+            - type: tanh
+            - type: softmax
+              temperature: 0.6
+        direction:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 25
+            - type: tanh
+            - type: softmax
+              temperature: 0.6
+        speed:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 9
+            - type: tanh
+            - type: softmax
+              temperature: 0.6
+        sensorAction:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 7
+            - type: tanh
+            - type: softmax
+              temperature: 0.6
+      critic:
+        sensorNorm:
+          input: sensor
+          layers:
+            - type: linear
+              b: 0
+              w: 11.111111e-3
+        distanceNorm:
+          input: distance
+          layers:
+            - type: linear
+              b: 0
+              w: 333.33333e-3
+        contactsNorm:
+          input: contacts
+          layers:
+            - type: linear
+              b: 0
+              w: 62.4e-3
+        layer0:
+          inputs:
+            type: concat
+            inputs:
+              - sensorNorm
+              - distanceNorm
+              - canMoveForward
+              - canMoveBackward
+              - contactsNorm
+          layers:
+            - type: dense
+              outputSize: 300
+            - type: relu
+        hidden0:
+          input: layer0
+          layers:
+            - type: dense
+              outputSize: 300
+            - type: relu
+        hidden1:
+          inputs:
+            type: sum
+            inputs:
+              - layer0
+              - hidden0
+          layers:
+            - type: dense
+              outputSize: 300
+            - type: relu
+        hidden2:
+          inputs:
+            type: sum
+            inputs:
+              - hidden0
+              - hidden1
+          layers:
+            - type: dense
+              outputSize: 300
+            - type: relu
+        output:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 1
+            - type: tanh
+            - type: linear
+              b: 0
+              w: 3
+  ######################################
+  # Tiles agent
+  ######################################
+    tilesAgent:
+      class: org.mmarini.rl.agents.TDAgent
+      version: "0.1"
+      seed: 1234
+      modelPath: models/tilesAgent
+      savingIntervalSteps: 1000
+      rewardAlpha: 5e-3
+      policyAlpha: 300e-3
+      criticAlpha: 300e-3
+      lambda: 0.5
+      inputProcess:
+        - name: tiles
+          class: org.mmarini.rl.processors.TilesProcessor
+          inputs:
+            - name: sensor
+              numTiles: 7
+            - name: distance
+              numTiles: 30
+        - name: canMoveFeatures
+          class: org.mmarini.rl.processors.PartitionProcessor
+          inputs:
+            - name: canMoveForward
+              numTiles: 2
+            - name: canMoveBackward
+              numTiles: 2
+      policy:
+        layer0:
+          inputs:
+            type: concat
+            inputs:
+              - tiles
+              - canMoveFeatures
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        hidden0:
+          input: layer0
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        hidden1:
+          inputs:
+            type: sum
+            inputs:
+              - layer0
+              - hidden0
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        hidden2:
+          inputs:
+            type: sum
+            inputs:
+              - hidden0
+              - hidden1
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        halt:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 2
+            - type: tanh
+            - type: softmax
+              temperature: 0.91
+        direction:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 25
+            - type: tanh
+            - type: softmax
+              temperature: 0.372
+        speed:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 9
+            - type: tanh
+            - type: softmax
+              temperature: 0.4677
+        sensorAction:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 7
+            - type: tanh
+            - type: softmax
+              temperature: 0.501
+      critic:
+        layer0:
+          inputs:
+            type: concat
+            inputs:
+              - tiles
+              - canMoveFeatures
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        hidden0:
+          input: layer0
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        hidden1:
+          inputs:
+            type: sum
+            inputs:
+              - layer0
+              - hidden0
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        hidden2:
+          inputs:
+            type: sum
+            inputs:
+              - hidden0
+              - hidden1
+          layers:
+            - type: dense
+              outputSize: 100
+            - type: relu
+        output:
+          input: hidden2
+          layers:
+            - type: dense
+              outputSize: 1
+            - type: tanh
+            - type: linear
+              b: 0
+              w: 3

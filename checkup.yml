@@ -1,0 +1,44 @@
+---
+$schema: https://mmarini.org/wheelly/checkup-schema-0.1
+robot:
+  $schema: https://mmarini.org/wheelly/robot-schema-0.8
+  active: realRobot
+  configurations:
+    simRobot:
+      class: org.mmarini.wheelly.apis.SimRobot
+      robotSeed: 1234
+      mapSeed: 1234
+      numObstacles: 10
+      errSigma: 0.05
+      errSensor: 0.05
+      sensorReceptiveAngle: 15
+      maxAngularSpeed: 5
+    realRobot:
+      class: org.mmarini.wheelly.apis.Robot
+      #host: wheelly
+      host: 192.168.1.43
+      connectionTimeout: 10000
+      readTimeout: 10000
+      configureTimeout: 2000
+      configCommands:
+        - cs 500
+        - cc 5 30 20
+        - tcsl 30 107 180 -32 -81 -180 400 50
+        - tcsr 39 78 180 -32 -92 -180 400 50
+        - fl 10000 10000
+        - fr 10000 10000
+        - ci 500 500
+controller:
+  $schema: https://mmarini.org/wheelly/controller-schema-0.6
+  active: controller
+  configurations:
+    controller:
+      class: org.mmarini.wheelly.apis.RobotController
+      interval: 100
+      reactionInterval: 300
+      commandInterval: 600
+      connectionRetryInterval: 1000
+      watchdogInterval: 5000
+      simulationSpeed: 1
+      supplyValues: [ 2165, 2683 ]
+      voltages: [ 9.8, 12.3 ]
