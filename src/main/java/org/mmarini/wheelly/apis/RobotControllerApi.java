@@ -28,8 +28,10 @@
 
 package org.mmarini.wheelly.apis;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Completable;
 import org.mmarini.wheelly.apps.Yaml;
+import org.mmarini.yaml.Locator;
 
 import java.util.function.Consumer;
 
@@ -102,14 +104,17 @@ import java.util.function.Consumer;
  */
 public interface RobotControllerApi extends WithIOFlowable, WithStatusFlowable, WithErrorFlowable, WithCommandFlowable, WithControllerFlowable, WithInferenceFlowable {
 
+    String CONTROLLER_SCHEMA_YML = "/controller-schema.yml";
+
     /**
-     * Returns the robot controller from configuration file
+     * Returns the robot controller from configuration json
      *
-     * @param file  the file
-     * @param robot the robot api
+     * @param config  the root document
+     * @param locator the configuration locator
+     * @param robot   the robot api
      */
-    static RobotControllerApi fromConfig(String file, RobotApi robot) {
-        return Yaml.fromConfig(file, "/controller-schema.yml", new Object[]{robot}, new Class[]{RobotApi.class});
+    static RobotControllerApi fromConfig(JsonNode config, Locator locator, RobotApi robot) {
+        return Yaml.fromConfig(config, locator, CONTROLLER_SCHEMA_YML, new Object[]{robot}, new Class[]{RobotApi.class});
     }
 
     /**

@@ -1,6 +1,6 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/state-agent-schema
+$id: https://mmarini.org/wheelly/state-agent-schema-0.7
 title: State machine agent
 description: State Agent Schema
 type: object
@@ -216,9 +216,9 @@ $defs:
       - radarCleanInterval
       - radarPersistence
 properties:
-  version:
+  $schema:
     type: string
-    const: "0.6"
+    const: https://mmarini.org/wheelly/state-agent-schema-0.7
   active:
     type: string
   configurations:
@@ -226,7 +226,7 @@ properties:
     additionalProperties:
       $ref: "#/$defs/StateMachineAgent"
 required:
-  - version
+  - $schema
   - active
   - configurations
 

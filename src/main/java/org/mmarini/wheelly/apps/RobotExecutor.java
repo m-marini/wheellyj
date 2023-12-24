@@ -25,6 +25,7 @@
 
 package org.mmarini.wheelly.apps;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.Observable;
 import net.sourceforge.argparse4j.ArgumentParsers;
@@ -38,6 +39,7 @@ import org.mmarini.wheelly.engines.ProcessorContext;
 import org.mmarini.wheelly.engines.StateMachineAgent;
 import org.mmarini.wheelly.engines.StateNode;
 import org.mmarini.wheelly.swing.*;
+import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +57,24 @@ import static org.mmarini.wheelly.swing.Utils.*;
  */
 public class RobotExecutor {
     public static final Dimension DEFALT_RADAR_DIMENSION = new Dimension(400, 400);
+    public static final String EXECUTOR_SCHEMA_YML = "/executor-schema.yml";
     private static final Logger logger = LoggerFactory.getLogger(RobotExecutor.class);
+
+    /**
+     * Returns the agent from configuration files
+     *
+     * @param file the configuration file
+     */
+    static StateMachineAgent createAgent(String file) {
+        try {
+            JsonNode config = org.mmarini.yaml.Utils.fromFile(file);
+            RobotControllerApi controller = Yaml.controllerFromJson(config, Locator.root(), EXECUTOR_SCHEMA_YML);
+            Locator agentLocator = Locator.locate("agent");
+            return StateMachineAgent.fromConfig(config, agentLocator, controller);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     /**
      * Returns the argument parser
@@ -69,15 +88,9 @@ public class RobotExecutor {
         parser.addArgument("-v", "--version")
                 .action(Arguments.version())
                 .help("show current version");
-        parser.addArgument("-r", "--robot")
-                .setDefault("robot.yml")
-                .help("specify robot yaml configuration file");
-        parser.addArgument("-c", "--controller")
-                .setDefault("controller.yml")
-                .help("specify controller yaml configuration file");
-        parser.addArgument("-a", "--agent")
-                .setDefault("agent.yml")
-                .help("specify agent yaml configuration file");
+        parser.addArgument("-c", "--config")
+                .setDefault("executor.yml")
+                .help("specify yaml configuration file");
         parser.addArgument("-s", "--silent")
                 .action(Arguments.storeTrue())
                 .help("specify silent closing (no window messages)");
@@ -140,15 +153,6 @@ public class RobotExecutor {
         this.engineFrame = engineMonitor.createFrame();
         this.sensorFrame = sensorMonitor.createFrame();
         init();
-    }
-
-    /**
-     * Returns the agent from configuration files
-     */
-    private StateMachineAgent createAgent() {
-        RobotApi robot = RobotApi.fromConfig(args.getString("robot"));
-        RobotControllerApi controller = RobotControllerApi.fromConfig(args.getString("controller"), robot);
-        return StateMachineAgent.fromConfig(args.getString("agent"), controller);
     }
 
     private void handleControllerStatus(String status) {
@@ -312,7 +316,7 @@ public class RobotExecutor {
             this.sessionDuration = this.args.getLong("time");
             sessionDuration *= 1000;
             logger.atInfo().log("Starting session ...");
-            this.agent = createAgent();
+            this.agent = createAgent(this.args.getString("config"));
             Optional.ofNullable(this.args.getString("dump"))
                     .ifPresent(file -> {
                         try {

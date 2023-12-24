@@ -53,6 +53,8 @@ import static java.util.Objects.requireNonNull;
  * </p>
  */
 public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, WithErrorFlowable, WithCommandFlowable, WithControllerFlowable {
+    public static final String STATE_AGENT_SCHEMA_YML = "/state-agent-schema.yml";
+
     /**
      * Returns the agent from configuration
      *
@@ -73,11 +75,12 @@ public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, Wi
     /**
      * Returns the state machine agent
      *
-     * @param file       the file
+     * @param config     the root document
+     * @param locator    the configuration locator
      * @param controller the controller
      */
-    public static StateMachineAgent fromConfig(String file, RobotControllerApi controller) {
-        return Yaml.fromConfig(file, "/state-agent-schema.yml", new Object[]{controller}, new Class[]{RobotControllerApi.class});
+    public static StateMachineAgent fromConfig(JsonNode config, Locator locator, RobotControllerApi controller) {
+        return Yaml.fromConfig(config, locator, STATE_AGENT_SCHEMA_YML, new Object[]{controller}, new Class[]{RobotControllerApi.class});
     }
 
     private final RobotControllerApi controller;

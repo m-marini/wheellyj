@@ -1,6 +1,6 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/robot-schema
+$id: https://mmarini.org/wheelly/robot-schema-0.8
 title: Robot
 $defs:
   GeneralRobot:
@@ -92,9 +92,9 @@ $defs:
     required: [ class ]
 type: object
 properties:
-  version:
+  $schema:
     type: string
-    const: "0.7"
+    const: https://mmarini.org/wheelly/robot-schema-0.8
   active:
     type: string
   configurations:
@@ -102,6 +102,6 @@ properties:
     additionalProperties:
       $ref: "#/$defs/GeneralRobot"
 required:
-  - version
+  - $schema
   - active
   - configurations

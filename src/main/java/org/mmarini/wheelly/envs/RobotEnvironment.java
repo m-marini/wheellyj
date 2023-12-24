@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.envs;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
 import org.mmarini.rl.envs.Environment;
@@ -35,6 +36,7 @@ import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.apps.Yaml;
+import org.mmarini.yaml.Locator;
 
 import java.util.Map;
 import java.util.function.Consumer;
@@ -44,14 +46,18 @@ import java.util.function.UnaryOperator;
  * Manages the interaction between robot controller and TD agent
  */
 public interface RobotEnvironment extends WithStatusFlowable, WithErrorFlowable, WithIOFlowable, WithSignalsSpec, WithCommandFlowable, WithControllerFlowable {
+
+    String ENV_SCHEMA_YML = "/env-schema.yml";
+
     /**
      * Returns the robot environment from configuration
      *
-     * @param file       the filename
+     * @param config     the json document
+     * @param locator    the configuration locator
      * @param controller the controller
      */
-    static RobotEnvironment fromConfig(String file, RobotControllerApi controller) {
-        return Yaml.fromConfig(file, "/env-schema.yml", new Object[]{controller}, new Class[]{RobotControllerApi.class});
+    static RobotEnvironment fromConfig(JsonNode config, Locator locator, RobotControllerApi controller) {
+        return Yaml.fromConfig(config, locator, ENV_SCHEMA_YML, new Object[]{controller}, new Class[]{RobotControllerApi.class});
     }
 
     /**

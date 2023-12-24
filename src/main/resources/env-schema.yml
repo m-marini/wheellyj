@@ -1,6 +1,6 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/env-schema
+$id: https://mmarini.org/wheelly/env-schema-0.5
 title: Environment
 type: object
 $defs:
@@ -224,8 +224,9 @@ $defs:
       - numSensorValues
       - numSpeedValues
 properties:
-  version:
-    const: "0.4"
+  $schema:
+    type: string
+    const: https://mmarini.org/wheelly/env-schema-0.5
   active:
     type: string
   configurations:
@@ -233,6 +234,6 @@ properties:
     additionalProperties:
       $ref: "#/$defs/GeneralEnv"
 required:
-  - version
+  - $schema
   - active
   - configurations

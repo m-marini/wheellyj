@@ -25,7 +25,9 @@
 
 package org.mmarini.wheelly.apis;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apps.Yaml;
+import org.mmarini.yaml.Locator;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -37,12 +39,13 @@ public interface RobotApi extends Closeable, WithStatusCallback {
     int MAX_PPS = 40;
 
     /**
-     * Returns the robot api from configuration file
+     * Returns the robot api from configuration
      *
-     * @param file the file
+     * @param config  the json document
+     * @param locator the configuration locator
      */
-    static RobotApi fromConfig(String file) {
-        return Yaml.fromConfig(file, "/robot-schema.yml", new Object[0], new Class[0]);
+    static RobotApi fromConfig(JsonNode config, Locator locator) {
+        return Yaml.fromConfig(config, locator, "/robot-schema.yml", new Object[0], new Class[0]);
     }
 
     /**

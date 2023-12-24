@@ -34,7 +34,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static java.lang.String.format;
@@ -324,7 +323,7 @@ public class Robot implements RobotApi, WithIOCallback {
             if (line != null) {
                 if (line.value().startsWith("ck " + now + " ")) {
                     try {
-                        ClockSyncEvent clock = ClockSyncEvent.from(line.value(), line.time(TimeUnit.MILLISECONDS));
+                        ClockSyncEvent clock = ClockSyncEvent.from(line.value(), line.time());
                         if (now == clock.getOriginateTimestamp()) {
                             if (onClock != null) {
                                 onClock.accept(clock);

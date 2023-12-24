@@ -33,7 +33,10 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotControllerApi;
+import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.Utils;
 import org.mmarini.wheelly.swing.ComMonitor;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.wheelly.swing.SensorMonitor;
@@ -69,6 +72,7 @@ public class RobotCheckUp {
     public static final int ROTATION_TOLERANCE = 5;
     public static final double DISTANCE_TOLERANCE = 0.1;
     public static final Dimension RESULT_SIZE = new Dimension(800, 600);
+    public static final String CHECKUP_SCHEMA_YML = "/checkup-schema.yml";
     private static final Logger logger = LoggerFactory.getLogger(RobotCheckUp.class);
     private static final int TEST_SPEED = MAX_PPS / 2;
 
@@ -84,12 +88,9 @@ public class RobotCheckUp {
         parser.addArgument("--version")
                 .action(Arguments.version())
                 .help("show the current version");
-        parser.addArgument("-r", "--robot")
-                .setDefault("robot.yml")
-                .help("specify the robot yaml configuration file");
-        parser.addArgument("-c", "--controller")
-                .setDefault("controller.yml")
-                .help("specify the controller yaml configuration file");
+        parser.addArgument("-c", "--config")
+                .setDefault("checkup.yml")
+                .help("specify the yaml configuration file");
         parser.addArgument("-v", "--verbose")
                 .action(Arguments.storeTrue())
                 .help("print verbose output");
@@ -224,14 +225,6 @@ public class RobotCheckUp {
         };
     }
 
-    /**
-     * Returns the robot api
-     */
-    protected RobotControllerApi createController() {
-        RobotApi robot = RobotApi.fromConfig(parseArgs.getString("robot"));
-        return RobotControllerApi.fromConfig(parseArgs.getString("controller"), robot);
-    }
-
     private void handleControlStatus(String status) {
         comMonitor.onControllerStatus(status);
         sensorMonitor.onControllerStatus(status);
@@ -312,7 +305,7 @@ public class RobotCheckUp {
      */
     private void run() {
         logger.info("Robot check started.");
-        controller = createController();
+        controller = Yaml.fromFile(parseArgs.getString("config"), CHECKUP_SCHEMA_YML);
         controller.readErrors().doOnNext(err -> {
             comMonitor.onError(err);
             logger.atError().setCause(err).log();
@@ -363,16 +356,8 @@ public class RobotCheckUp {
                 .addRotateTest(0);
     }
 
-    static class FinalResult {
-        public final List<MovementResult> moveResults;
-        public final List<RotateResult> rotateResults;
-        public final List<ScannerResult> scannerResults;
-
-        FinalResult(List<ScannerResult> scannerResults, List<RotateResult> rotateResults, List<MovementResult> moveResults) {
-            this.scannerResults = scannerResults;
-            this.rotateResults = rotateResults;
-            this.moveResults = moveResults;
-        }
+    record FinalResult(List<ScannerResult> scannerResults, List<RotateResult> rotateResults,
+                       List<MovementResult> moveResults) {
 
         public Stream<String> getDetailsStream() {
             Stream.Builder<String> builder = Stream.builder();
@@ -529,24 +514,8 @@ public class RobotCheckUp {
         }
     }
 
-    static class MovementResult {
-        public final int direction;
-        public final int directionError;
-        public final double distance;
-        public final double distanceError;
-        public final int imuFailure;
-        public final double speed;
-        public final long testDuration;
-
-        MovementResult(int direction, double speed, long testDuration, double distance, double distanceError, int directionError, int imuFailure) {
-            this.direction = direction;
-            this.directionError = directionError;
-            this.distance = distance;
-            this.distanceError = distanceError;
-            this.imuFailure = imuFailure;
-            this.speed = speed;
-            this.testDuration = testDuration;
-        }
+    record MovementResult(int direction, double speed, long testDuration, double distance, double distanceError,
+                          int directionError, int imuFailure) {
     }
 
     /**
@@ -574,22 +543,8 @@ public class RobotCheckUp {
     /**
      * Scanner result
      */
-    static class ScannerResult {
-        public final double averageDistance;
-        public final int direction;
-        public final int imuFailure;
-        public final long moveTime;
-        public final long testDuration;
-        public final boolean valid;
-
-        ScannerResult(int direction, long testDuration, boolean valid, long moveTime, double averageDistance, int imuFailure) {
-            this.direction = direction;
-            this.valid = valid;
-            this.averageDistance = averageDistance;
-            this.moveTime = moveTime;
-            this.testDuration = testDuration;
-            this.imuFailure = imuFailure;
-        }
+    record ScannerResult(int direction, long testDuration, boolean valid, long moveTime, double averageDistance,
+                         int imuFailure) {
     }
 
     class CompositeCheckupProcess implements Function<RobotStatus, FinalResult> {

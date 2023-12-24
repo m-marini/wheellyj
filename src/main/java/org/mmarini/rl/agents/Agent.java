@@ -31,6 +31,7 @@ import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.wheelly.apps.Yaml;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
 import java.io.Closeable;
@@ -43,8 +44,17 @@ import java.util.Map;
  */
 public interface Agent extends Closeable, WithSignalsSpec {
 
-    static Agent fromConfig(String file, WithSignalsSpec env) {
-        return Yaml.fromConfig(file, "/agent-schema.yml", new Object[]{env}, new Class[]{WithSignalsSpec.class});
+    String AGENT_SCHEMA_YML = "/agent-schema.yml";
+
+    /**
+     * Returns the agent
+     *
+     * @param config      the json document
+     * @param locator     the config locator
+     * @param environment the environment
+     */
+    static Agent fromConfig(JsonNode config, Locator locator, WithSignalsSpec environment) {
+        return Yaml.fromConfig(config, locator, AGENT_SCHEMA_YML, new Object[]{environment}, new Class[]{WithSignalsSpec.class});
     }
 
     /**

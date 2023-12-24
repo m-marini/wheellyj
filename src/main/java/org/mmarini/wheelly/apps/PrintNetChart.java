@@ -25,6 +25,7 @@
 
 package org.mmarini.wheelly.apps;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -35,12 +36,10 @@ import org.mmarini.Tuple2;
 import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.TDAgent;
 import org.mmarini.rl.envs.SignalSpec;
-import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.rl.nets.*;
-import org.mmarini.wheelly.apis.RobotApi;
-import org.mmarini.wheelly.apis.RobotControllerApi;
 import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.wheelly.swing.Messages;
+import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,6 +50,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import static org.mmarini.yaml.Utils.fromFile;
 
 /**
  * Run a test to check for robot environment with random behavior agent
@@ -67,18 +68,9 @@ public class PrintNetChart {
         parser.addArgument("-v", "--version")
                 .action(Arguments.version())
                 .help("show current version");
-        parser.addArgument("-r", "--robot")
-                .setDefault("robot.yml")
-                .help("specify robot yaml configuration file");
-        parser.addArgument("-c", "--controller")
-                .setDefault("controller.yml")
+        parser.addArgument("-c", "--config")
+                .setDefault("print-net.yml")
                 .help("specify controller yaml configuration file");
-        parser.addArgument("-e", "--env")
-                .setDefault("env.yml")
-                .help("specify environment yaml configuration file");
-        parser.addArgument("-a", "--agent")
-                .setDefault("agent.yml")
-                .help("specify agent yaml configuration file");
         parser.addArgument("-o", "--output")
                 .setDefault("output.md")
                 .help("specify markdown output file");
@@ -103,23 +95,8 @@ public class PrintNetChart {
     }
 
     /**
-     * Returns the agent
-     *
-     * @param env the environment
+     * Prints the agent
      */
-    protected Agent createAgent(WithSignalsSpec env) {
-        return Agent.fromConfig(args.getString("agent"), env);
-    }
-
-    /**
-     * Returns the environment
-     */
-    protected RobotEnvironment createEnvironment() {
-        RobotApi robot = RobotApi.fromConfig(args.getString("robot"));
-        RobotControllerApi controller = RobotControllerApi.fromConfig(args.getString("controller"), robot);
-        return RobotEnvironment.fromConfig(args.getString("env"), controller);
-    }
-
     private void printAgent() {
         TDAgent ag = (TDAgent) this.agent;
         output.println("## Critic");
@@ -132,19 +109,31 @@ public class PrintNetChart {
         printNet(ag.getPolicy(), state);
     }
 
+    /**
+     * Prints the network
+     *
+     * @param network the network
+     * @param state   the state
+     */
     private void printNet(TDNetwork network, Map<String, SignalSpec> state) {
         new NetworkPrinter(output, network, state).print();
     }
 
+    /**
+     * Starts the application
+     *
+     * @param args the arguments
+     */
     protected void start(String[] args) {
         ArgumentParser parser = createParser();
         try {
             this.args = parser.parseArgs(args);
             logger.atInfo().log("Creating environment");
-            RobotEnvironment environment = createEnvironment();
+            JsonNode config = fromFile(this.args.getString("config"));
+            RobotEnvironment environment = Yaml.envFromJson(config, Locator.root(), Wheelly.WHEELLY_SCHEMA_YML);
 
             logger.atInfo().log("Creating agent");
-            this.agent = createAgent(environment);
+            this.agent = Agent.fromConfig(config, Locator.locate("agent"), environment);
             String outputFilename = this.args.getString("output");
             logger.atInfo().log("Creating {}", outputFilename);
             try {
@@ -158,6 +147,9 @@ public class PrintNetChart {
 
         } catch (ArgumentParserException e) {
             parser.handleError(e);
+            System.exit(1);
+        } catch (IOException e) {
+            logger.atError().setCause(e).log("IO Error");
             System.exit(1);
         }
     }

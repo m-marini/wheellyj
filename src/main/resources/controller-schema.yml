@@ -1,5 +1,6 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/controller-schema-0.6
 title: Robot
 $defs:
   ControllerSet:
@@ -54,9 +55,9 @@ $defs:
 
 type: object
 properties:
-  version:
+  $schema:
     type: string
-    const: "0.5"
+    const: https://mmarini.org/wheelly/controller-schema-0.6
   active:
     type: string
   configurations:
@@ -64,6 +65,6 @@ properties:
     additionalProperties:
       $ref: "#/$defs/ControllerSet"
 required:
-  - version
+  - $schema
   - active
   - configurations

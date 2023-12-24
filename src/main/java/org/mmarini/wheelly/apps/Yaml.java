@@ -29,6 +29,9 @@
 package org.mmarini.wheelly.apps;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.wheelly.apis.RobotApi;
+import org.mmarini.wheelly.apis.RobotControllerApi;
+import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -36,6 +39,33 @@ import java.io.IOException;
 
 public interface Yaml {
 
+
+    /**
+     * Returns the controller from configuration file
+     *
+     * @param config  the root node
+     * @param locator the configuration locator
+     * @param schema  the schema
+     */
+    static RobotControllerApi controllerFromJson(JsonNode config, Locator locator, String schema) {
+        JsonSchemas.instance().validateOrThrow(config, schema);
+        Locator robotLocator = locator.path("robot");
+        RobotApi robot = RobotApi.fromConfig(config, robotLocator);
+        Locator controllerLocator = locator.path("controller");
+        return RobotControllerApi.fromConfig(config, controllerLocator, robot);
+    }
+
+    /**
+     * Returns the environment
+     *
+     * @param config  the json document
+     * @param locator the config locator
+     * @param schema  the schema
+     */
+    static RobotEnvironment envFromJson(JsonNode config, Locator locator, String schema) {
+        RobotControllerApi controller = controllerFromJson(config, locator, schema);
+        return RobotEnvironment.fromConfig(config, locator.path("environment"), controller);
+    }
 
     /**
      * Returns an object instance from configuration file
@@ -53,6 +83,27 @@ public interface Yaml {
             String active = Locator.locate("active").getNode(config).asText();
             Locator baseLocator = Locator.locate("configurations").path(active);
             return Utils.createObject(config, baseLocator, args, argClasses);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    static <T> T fromConfig(JsonNode config, Locator locator, String schema, Object[] args, Class<?>[] argClasses) {
+        JsonSchemas.instance().validateOrThrow(locator.getNode(config), schema);
+        String active = locator.path("active").getNode(config).asText();
+        Locator baseLocator = locator.path("configurations").path(active);
+        return Utils.createObject(config, baseLocator, args, argClasses);
+    }
+
+    /**
+     * Returns the controller from configuration file
+     *
+     * @param file the file
+     */
+    static RobotControllerApi fromFile(String file, String schema) {
+        try {
+            JsonNode config = org.mmarini.yaml.Utils.fromFile(file);
+            return controllerFromJson(config, Locator.root(), schema);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
