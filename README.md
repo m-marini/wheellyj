@@ -5,6 +5,10 @@ The code of Arduino controller is at [Wheellino project](https://github.com/m-ma
 
 The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
+## Release 0.11.1
+
+Java 21 support
+
 ## Release 0.11.0
 
 Add asynchronous status message and ExploringPointState
