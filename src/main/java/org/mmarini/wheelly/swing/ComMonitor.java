@@ -52,7 +52,7 @@ public class ComMonitor extends MatrixTable {
 
     public ComMonitor() {
         addColumn(CONTROLLER_KEY, Messages.getString("ComMonitor.controller"), 3).setScrollOnChange(true);
-        addColumn(STATUS, Messages.getString("ComMonitor.status"), 77);
+        addColumn(STATUS, Messages.getString("ComMonitor.status"), 48);
         addColumn(MOVE, Messages.getString("ComMonitor.move"), 11);
         addColumn(SCAN, Messages.getString("ComMonitor.scan"), 6);
         addColumn(CONFIG, Messages.getString("ComMonitor.config"), 36);
@@ -71,11 +71,14 @@ public class ComMonitor extends MatrixTable {
 
     public void onError(Throwable err) {
         printf(ERROR_KEY, String.valueOf(err.getMessage()));
-        logger.atError().setCause(err).log();
+        logger.atError().setCause(err).log("Error message");
     }
 
     public void onReadLine(String line) {
-        if (line.startsWith("st ")) {
+        if (line.startsWith("px ")
+                || line.startsWith("mt ")
+                || line.startsWith("ct ")
+                || line.startsWith("sv ")) {
             printf(STATUS, " %s", line);
         } else if (CONFIG_COMMANDS_ACK.test(line) || line.startsWith("ck ")) {
             printf(CONFIG, " %s", line);
