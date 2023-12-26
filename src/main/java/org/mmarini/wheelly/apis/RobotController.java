@@ -474,7 +474,7 @@ public class RobotController implements RobotControllerApi {
         }
         // Loops till the controller is running
         while (!end || connected) {
-            stepUp();
+                stepUp();
         }
         logger.atInfo().setMessage("Control process ended").log();
         Stream.of(motionProcessor, proxyProcessor, supplyProcessor, contactsProcessor,

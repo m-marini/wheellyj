@@ -96,7 +96,7 @@ public class MatrixMonitor {
         } catch (ArgumentParserException ignored) {
             System.exit(4);
         } catch (Throwable e) {
-            logger.atError().setCause(e).log();
+            logger.atError().setCause(e).log("Error running matrix monitor");
             System.exit(4);
         }
     }

@@ -48,18 +48,19 @@ public class MatrixColumn extends JComponent {
     private static final float DEFAULT_MIN_BRIGHT = 50F / 256;
     private static final Font DEFAULT_FONT = Font.decode(Font.MONOSPACED + " 14");
     private static final int DEFAULT_ROW_NUMBER = 36;
+
     private final float minBright;
     private final Color titleColor;
     private final Color titleBackgroundColor;
     private final Font titleFont;
+    private final long decayTime;
+    private final String timePattern;
     private String title;
     private String[] rows;
     private int cursor;
     private long[] timestamps;
-    private long decayTime;
     private int columns;
     private boolean printTimestamp;
-    private String timePattern;
     private boolean scrollOnChange;
     private boolean highlightLast;
 
@@ -103,7 +104,7 @@ public class MatrixColumn extends JComponent {
     public void clearAll() {
         Arrays.fill(rows, "");
         Arrays.fill(timestamps, System.currentTimeMillis());
-        cursor = 0;
+        cursor = rows.length - 1;
         resize();
         repaint();
     }
@@ -116,131 +117,10 @@ public class MatrixColumn extends JComponent {
     private Color getColor(long interval) {
         Color color = getForeground();
         float[] hsb = Color.RGBtoHSB(color.getRed(), color.getGreen(), color.getBlue(), null);
-        double alpha = 1 - (1 - minBright) * min(max((double) interval / decayTime, 0), 1);
+        long dt = min(max(interval, 0), decayTime);
+        double alpha = 1 - (1 - minBright) * (double) dt / decayTime;
         hsb[2] *= alpha;
         return Color.getHSBColor(hsb[0], hsb[1], hsb[2]);
-    }
-
-    public int getColumns() {
-        return columns;
-    }
-
-    public MatrixColumn setColumns(int columns) {
-        this.columns = columns;
-        resize();
-        repaint();
-        return this;
-    }
-
-    public long getDecayTime() {
-        return decayTime;
-    }
-
-    public MatrixColumn setDecayTime(long decayTime) {
-        this.decayTime = decayTime;
-        repaint();
-        return this;
-    }
-
-    private int getPrevIndex() {
-        return (cursor + rows.length - 1) % rows.length;
-    }
-
-    /**
-     * Returns the row number
-     */
-    public int getRows() {
-        return rows.length;
-    }
-
-    /**
-     * Sets the number of row
-     *
-     * @param rows the number of row
-     * @return
-     */
-    public MatrixColumn setRows(int rows) {
-        this.rows = new String[rows];
-        timestamps = new long[rows];
-        clearAll();
-        return this;
-    }
-
-    /**
-     * Returns the time pattern to print timestamp
-     */
-    public String getTimePattern() {
-        return timePattern;
-    }
-
-    /**
-     * Sets the time pattern to print timestamp
-     *
-     * @param timePattern the pattern
-     * @return
-     */
-    public MatrixColumn setTimePattern(String timePattern) {
-        this.timePattern = timePattern;
-        resize();
-        repaint();
-        return this;
-    }
-
-    /**
-     * Returns true if highlights the last record
-     */
-    public boolean isHighlightLast() {
-        return highlightLast;
-    }
-
-    /**
-     * Sets the highlight last record
-     *
-     * @param highlightLast true if highlight last record
-     * @return
-     */
-    public MatrixColumn setHighlightLast(boolean highlightLast) {
-        this.highlightLast = highlightLast;
-        repaint();
-        return this;
-    }
-
-    /**
-     * Returns true if timestamp is printed
-     */
-    public boolean isPrintTimestamp() {
-        return printTimestamp;
-    }
-
-    /**
-     * Sets the print timestamp
-     *
-     * @param printTimestamp true if time stamp is printed
-     */
-    public MatrixColumn setPrintTimestamp(boolean printTimestamp) {
-        this.printTimestamp = printTimestamp;
-        resize();
-        repaint();
-        return this;
-    }
-
-    /**
-     * Returns true if scroll on change is active
-     */
-    public boolean isScrollOnChange() {
-        return scrollOnChange;
-    }
-
-    /**
-     * Sets the scroll on change
-     * If scroll on change is active the new value is painted in the new row only if it changed the value
-     * otherwise only the new refresh color is activated
-     *
-     * @param scrollOnChange true if scroll on change
-     */
-    public MatrixColumn setScrollOnChange(boolean scrollOnChange) {
-        this.scrollOnChange = scrollOnChange;
-        return this;
     }
 
     @Override
@@ -254,6 +134,9 @@ public class MatrixColumn extends JComponent {
         long timestamp = System.currentTimeMillis();
         String[] rows1 = rows;
         long[] timestamps1 = timestamps;
+        Color[] colors = Arrays.stream(timestamps1)
+                .mapToObj(t -> getColor(timestamp - t))
+                .toArray(Color[]::new);
         g.setColor(titleBackgroundColor);
         g.fillRect(0, 0, getPreferredSize().width, h);
         g.setColor(titleColor);
@@ -266,7 +149,6 @@ public class MatrixColumn extends JComponent {
         y += h;
         g.setColor(getBackground());
         x = fm.charWidth('m') / 2;
-        int prevIndex = getPrevIndex();
         Color lastColor = getColor(0);
         for (int i = 0; i < rows.length; i++) {
             String row = rows1[i];
@@ -274,9 +156,9 @@ public class MatrixColumn extends JComponent {
                 String line = printTimestamp
                         ? format(timePattern + " %2$s", timestamps1[i], row)
                         : row;
-                g.setColor(highlightLast && i == prevIndex
-                        ? lastColor
-                        : getColor(timestamp - timestamps1[i]));
+                Color color = highlightLast && i == cursor
+                        ? lastColor : colors[i];
+                g.setColor(color);
                 g.drawString(line, x, y);
             }
             y += h;
@@ -306,20 +188,18 @@ public class MatrixColumn extends JComponent {
      */
     private void printRow(String text, long timestamp) {
         if (scrollOnChange) {
-            int prev = getPrevIndex();
-            if (text.equals(rows[prev])) {
-                timestamps[prev] = timestamp;
+            if (text.equals(rows[cursor])) {
+                timestamps[cursor] = timestamp;
                 repaint();
                 return;
             }
         }
+        // Set current row
+        cursor = (cursor + 1) % rows.length;
         rows[cursor] = text;
         timestamps[cursor] = timestamp;
-        cursor++;
-        if (cursor >= rows.length) {
-            cursor = 0;
-        }
-        rows[cursor] = "";
+        // Clear next row
+        rows[(cursor + 1) % rows.length] = "";
         repaint();
     }
 
@@ -336,5 +216,59 @@ public class MatrixColumn extends JComponent {
         setMinimumSize(size);
         setMaximumSize(size);
         invalidate();
+    }
+
+    public MatrixColumn setColumns(int columns) {
+        this.columns = columns;
+        resize();
+        repaint();
+        return this;
+    }
+
+    /**
+     * Sets the highlight last record
+     *
+     * @param highlightLast true if highlight last record
+     */
+    public MatrixColumn setHighlightLast(boolean highlightLast) {
+        this.highlightLast = highlightLast;
+        repaint();
+        return this;
+    }
+
+    /**
+     * Sets the print timestamp
+     *
+     * @param printTimestamp true if time stamp is printed
+     */
+    public MatrixColumn setPrintTimestamp(boolean printTimestamp) {
+        this.printTimestamp = printTimestamp;
+        resize();
+        repaint();
+        return this;
+    }
+
+    /**
+     * Sets the number of row
+     *
+     * @param rows the number of row
+     */
+    public MatrixColumn setRows(int rows) {
+        this.rows = new String[rows];
+        timestamps = new long[rows];
+        clearAll();
+        return this;
+    }
+
+    /**
+     * Sets the scroll on change
+     * If scroll on change is active the new value is painted in the new row only if it changed the value
+     * otherwise only the new refresh color is activated
+     *
+     * @param scrollOnChange true if scroll on change
+     */
+    public MatrixColumn setScrollOnChange(boolean scrollOnChange) {
+        this.scrollOnChange = scrollOnChange;
+        return this;
     }
 }
