@@ -74,6 +74,7 @@ public class ClockSyncEvent {
     public final long originateTimestamp;
     public final long receiveTimestamp;
     public final long transmitTimestamp;
+    private final long remoteOffset;
 
     /**
      * Creates the clock sync event
@@ -92,24 +93,25 @@ public class ClockSyncEvent {
         this.receiveTimestamp = receiveTimestamp;
         this.transmitTimestamp = transmitTimestamp;
         this.destinationTimestamp = destinationTimestamp;
+        this.remoteOffset = originateTimestamp + getLatency() - receiveTimestamp;
     }
 
     /**
-     * Retuns the remote timestamp from local timestamp
+     * Returns the remote timestamp from local timestamp
      *
      * @param localTime the local timestamp
      */
     public long fromLocal(long localTime) {
-        return localTime - getRemoteOffset();
+        return localTime - remoteOffset;
     }
 
     /**
-     * Retuns the local timestamp from remote timestamp
+     * Returns the local timestamp from remote timestamp
      *
      * @param remoteTime the remote timestamp
      */
     public long fromRemote(long remoteTime) {
-        return getRemoteOffset() + remoteTime;
+        return remoteOffset + remoteTime;
     }
 
     /**
@@ -123,7 +125,8 @@ public class ClockSyncEvent {
      * Returns the latency
      */
     public long getLatency() {
-        return (destinationTimestamp - originateTimestamp - transmitTimestamp + receiveTimestamp + 1) / 2;
+        long latency = (destinationTimestamp - originateTimestamp - transmitTimestamp + receiveTimestamp + 1) / 2;
+        return latency;
     }
 
     /**
@@ -144,7 +147,7 @@ public class ClockSyncEvent {
      * Returns the remote offset
      */
     public long getRemoteOffset() {
-        return originateTimestamp + getLatency() - receiveTimestamp;
+        return remoteOffset;
     }
 
     /**

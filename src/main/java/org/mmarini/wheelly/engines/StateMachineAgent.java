@@ -35,6 +35,8 @@ import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.apps.Yaml;
 import org.mmarini.yaml.Locator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static java.util.Objects.requireNonNull;
 
@@ -54,6 +56,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, WithErrorFlowable, WithCommandFlowable, WithControllerFlowable {
     public static final String STATE_AGENT_SCHEMA_YML = "https://mmarini.org/wheelly/state-agent-schema-0.7";
+    private static final Logger logger = LoggerFactory.getLogger(StateMachineAgent.class);
 
     /**
      * Returns the agent from configuration
@@ -139,8 +142,10 @@ public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, Wi
     }
 
     private void handleLatch(RobotStatus status) {
+        logger.atDebug().log("Latch status {}", status);
         context.setRobotStatus(status);
         context.setRadarMap(radarMap);
+
     }
 
     private void handleStatus(RobotStatus status) {

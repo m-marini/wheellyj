@@ -23,6 +23,9 @@
     <logger name="org.mmarini.wheelly.engines.AbstractStateNode" level="INFO">
     </logger>
 
+    <logger name="org.mmarini.wheelly.engines.StateMachineAgent" level="INFO">
+    </logger>
+
     <logger name="org.mmarini.wheelly.apis.RobotController" level="INFO">
     </logger>
 

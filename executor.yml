@@ -3,6 +3,7 @@ $schema: https://mmarini.org/wheelly/executor-schema-0.1
 robot:
   $schema: https://mmarini.org/wheelly/robot-schema-0.8
   active: realRobot
+  #active: simRobot
   configurations:
     simRobot:
       class: org.mmarini.wheelly.apis.SimRobot
@@ -95,7 +96,7 @@ agent:
               - put
           avoid:
             class: org.mmarini.wheelly.engines.AvoidingState
-            safeDistance: 0.4
+            safeDistance: 0.2
         transitions:
           - from: scan
             to: target

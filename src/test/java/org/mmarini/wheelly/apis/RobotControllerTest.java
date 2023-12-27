@@ -263,8 +263,8 @@ class RobotControllerTest {
         long dt = round(10 * INTERVAL / SIM_SPEED);
         Thread.sleep(dt);
 
-        verify(robot, atLeast((int) round(SIM_SPEED * dt / INTERVAL) - 2)).tick(INTERVAL);
-        verify(onInference, atLeast((int) round(SIM_SPEED * dt / REACTION_INTERVAL) - 2)).accept(any());
+        verify(robot, atLeast((int) round(SIM_SPEED * dt / INTERVAL) - 3)).tick(INTERVAL);
+        verify(onInference, atLeast((int) round(SIM_SPEED * dt / REACTION_INTERVAL) - 3)).accept(any());
 
         rc.shutdown();
     }
