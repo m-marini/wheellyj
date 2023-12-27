@@ -234,7 +234,13 @@ public abstract class AbstractStateNode implements StateNode {
             long scanTime = getLong(context, "scanTime");
             long time = context.getRobotStatus().getLocalTime();
             // Check for scan timeout
-            logger.atDebug().log("tickAutoScan time={}", time);
+            long t0 = System.currentTimeMillis();
+            logger.atDebug().log("tickAutoScan currentTime={}, remoteTime={}, statusDt={}, statusScanDt={}, time to next scan={}",
+                    t0,
+                    context.getRobotStatus().getRemoteTime(),
+                    t0 - time,
+                    t0 - scanTime,
+                    scanTime + scanInterval - time);
             if (scanTime < 0 || time > scanTime + scanInterval) {
                 int minSensorDir = clip(getInt(context, "minSensorDir"), -90, 90);
                 int maxSensorDir = clip(getInt(context, "maxSensorDir"), -90, 90);

@@ -474,7 +474,7 @@ public class RobotController implements RobotControllerApi {
         }
         // Loops till the controller is running
         while (!end || connected) {
-                stepUp();
+            stepUp();
         }
         logger.atInfo().setMessage("Control process ended").log();
         Stream.of(motionProcessor, proxyProcessor, supplyProcessor, contactsProcessor,
@@ -507,33 +507,37 @@ public class RobotController implements RobotControllerApi {
      * @param status the robot status
      */
     private void scheduleInference(RobotStatus status) {
-        long time = System.currentTimeMillis();
-        logger.atDebug().log("scheduleInference {}", isInference);
-        if (time >= lastInference + round(reactionInterval / simSpeed) && !isInference) {
-            lastInference = time;
-            if (onLatch != null) {
-                try {
-                    onLatch.accept(status);
-                } catch (Throwable ex) {
-                    sendError(ex);
-                    logger.atError().setCause(ex).log();
-                }
-            }
-            isInference = true;
-            Schedulers.computation().scheduleDirect(() -> {
-                logger.atDebug().setMessage("Inference process started").log();
-                inferencesProcessor.onNext(status);
-                if (onInference != null) {
+        if (isReady) {
+            long time = System.currentTimeMillis();
+            logger.atDebug().log("scheduleInference {}", isInference);
+            long t0 = System.currentTimeMillis();
+            logger.atDebug().log("status remote={}, dt {}", status.getRemoteTime(), t0 - status.getLocalTime());
+            if (time >= lastInference + round(reactionInterval / simSpeed) && !isInference) {
+                lastInference = time;
+                if (onLatch != null) {
                     try {
-                        onInference.accept(status);
+                        onLatch.accept(status);
                     } catch (Throwable ex) {
                         sendError(ex);
                         logger.atError().setCause(ex).log();
                     }
                 }
-                isInference = false;
-                logger.atDebug().setMessage("Inference process ended").log();
-            });
+                isInference = true;
+                Schedulers.computation().scheduleDirect(() -> {
+                    logger.atDebug().setMessage("Inference process started").log();
+                    inferencesProcessor.onNext(status);
+                    if (onInference != null) {
+                        try {
+                            onInference.accept(status);
+                        } catch (Throwable ex) {
+                            sendError(ex);
+                            logger.atError().setCause(ex).log();
+                        }
+                    }
+                    isInference = false;
+                    logger.atDebug().setMessage("Inference process ended").log();
+                });
+            }
         }
     }
 
