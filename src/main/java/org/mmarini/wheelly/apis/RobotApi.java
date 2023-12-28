@@ -101,4 +101,9 @@ public interface RobotApi extends Closeable, WithStatusCallback {
      * @throws IOException in case of error
      */
     void tick(long dt) throws IOException;
+
+    /**
+     * Returns the robot time
+     */
+    long getRemoteTime();
 }

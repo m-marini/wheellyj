@@ -304,8 +304,7 @@ public class GridLayoutHelper<T extends Container> {
     public GridLayoutHelper<T> add(final Object... args) {
         GridBagConstraints gbc = constraints;
         for (final Object o : args)
-            if (o instanceof Component) {
-                final Component c = (Component) o;
+            if (o instanceof Component c) {
                 layout.setConstraints(c, gbc);
                 container.add(c);
                 gbc = constraints;

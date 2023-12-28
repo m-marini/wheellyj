@@ -62,6 +62,8 @@ public class SensorMonitor extends MatrixTable {
     public static final String LEFT_TARGET_PPS_KEY = "leftTargetPps";
     public static final String RIGHT_TARGET_PPS_KEY = "rightTargetPps";
     private static final Logger logger = LoggerFactory.getLogger(SensorMonitor.class);
+    private static final String FRONT_CONTACT_KEY = "frontContact";
+    private static final String REAR_CONTACT_KEY = "rearContact";
 
     /**
      * Create the sensor monitor
@@ -75,7 +77,8 @@ public class SensorMonitor extends MatrixTable {
                         addColumn(RIGHT_PPS_KEY, Messages.getString("SensorMonitor.rightPps"), 3),
                         addColumn(CAN_MOVE_FORWARD_KEY, Messages.getString("SensorMonitor.canMoveForward"), 1),
                         addColumn(CAN_MOVE_BACKWARD_KEY, Messages.getString("SensorMonitor.canMoveBackward"), 1),
-                        addColumn(CONTACTS_KEY, Messages.getString("SensorMonitor.contacts"), 1),
+                        addColumn(FRONT_CONTACT_KEY, Messages.getString("SensorMonitor.frontContact"), 1),
+                        addColumn(REAR_CONTACT_KEY, Messages.getString("SensorMonitor.rearContact"), 1),
                         addColumn(X_LOCATION_KEY, Messages.getString("SensorMonitor.xLocation"), 5),
                         addColumn(Y_LOCATION_KEY, Messages.getString("SensorMonitor.yLocation"), 5),
                         addColumn(CONTROLLER_STATUS_KEY, Messages.getString("SensorMonitor.controllerStatus"), 3),
@@ -142,7 +145,8 @@ public class SensorMonitor extends MatrixTable {
         printf(RIGHT_PPS_KEY, "%3.0f", status.getRightPps());
         printf(CAN_MOVE_FORWARD_KEY, status.canMoveForward() ? "-" : "F");
         printf(CAN_MOVE_BACKWARD_KEY, status.canMoveBackward() ? "-" : "B");
-        printf(CONTACTS_KEY, "%1X", status.getContacts());
+        printf(FRONT_CONTACT_KEY, status.isFrontSensors() ? "-" : "F");
+        printf(REAR_CONTACT_KEY, status.isRearSensors() ? "-" : "R");
         printf(X_LOCATION_KEY, "%6.2f", status.getLocation().getX());
         printf(Y_LOCATION_KEY, "%6.2f", status.getLocation().getY());
         printf(IMU_FAILURE_KEY, "%3d", status.getImuFailure());

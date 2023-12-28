@@ -206,4 +206,9 @@ public class MockRobot implements RobotApi {
         sendProxy();
         sendContacts();
     }
+
+    @Override
+    public long getRemoteTime() {
+        return 0;
+    }
 }

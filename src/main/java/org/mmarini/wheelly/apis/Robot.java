@@ -128,6 +128,7 @@ public class Robot implements RobotApi, WithIOCallback {
     private Consumer<WheellyContactsMessage> onContacts;
     private Consumer<WheellySupplyMessage> onSupply;
     private Consumer<ClockSyncEvent> onClock;
+    private ClockSyncEvent clockEvent;
 
     /**
      * Create a Robot interface
@@ -143,6 +144,7 @@ public class Robot implements RobotApi, WithIOCallback {
         this.configureTimeout = configureTimeout;
         socket = new RobotSocket(host, port, connectionTimeout, readTimeout);
         this.configCommands = requireNonNull(configCommands);
+        this.clockEvent = ClockSyncEvent.create();
     }
 
     @Override
@@ -225,21 +227,28 @@ public class Robot implements RobotApi, WithIOCallback {
      */
     private void parseForMessage(Timed<String> line) {
         WheellyMessage.fromLine(line).ifPresent(msg -> {
-            if (msg instanceof WheellyMotionMessage) {
-                if (onMotion != null) {
-                    onMotion.accept((WheellyMotionMessage) msg);
+            switch (msg) {
+                case WheellyMotionMessage ignored -> {
+                    if (onMotion != null) {
+                        onMotion.accept((WheellyMotionMessage) msg);
+                    }
                 }
-            } else if (msg instanceof WheellyContactsMessage) {
-                if (onContacts != null) {
-                    onContacts.accept((WheellyContactsMessage) msg);
+                case WheellyContactsMessage ignored -> {
+                    if (onContacts != null) {
+                        onContacts.accept((WheellyContactsMessage) msg);
+                    }
                 }
-            } else if (msg instanceof WheellyProxyMessage) {
-                if (onProxy != null) {
-                    onProxy.accept((WheellyProxyMessage) msg);
+                case WheellyProxyMessage ignored -> {
+                    if (onProxy != null) {
+                        onProxy.accept((WheellyProxyMessage) msg);
+                    }
                 }
-            } else if (msg instanceof WheellySupplyMessage) {
-                if (onSupply != null) {
-                    onSupply.accept((WheellySupplyMessage) msg);
+                case WheellySupplyMessage ignored -> {
+                    if (onSupply != null) {
+                        onSupply.accept((WheellySupplyMessage) msg);
+                    }
+                }
+                default -> {
                 }
             }
         });
@@ -325,6 +334,7 @@ public class Robot implements RobotApi, WithIOCallback {
                     try {
                         ClockSyncEvent clock = ClockSyncEvent.from(line.value(), line.time());
                         if (now == clock.getOriginateTimestamp()) {
+                            clockEvent = clock;
                             if (onClock != null) {
                                 onClock.accept(clock);
                             }
@@ -354,6 +364,11 @@ public class Robot implements RobotApi, WithIOCallback {
                 parseForMessage(line);
             }
         }
+    }
+
+    @Override
+    public long getRemoteTime() {
+        return this.clockEvent.fromLocal(System.currentTimeMillis());
     }
 
     /**

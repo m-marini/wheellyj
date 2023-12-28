@@ -205,7 +205,8 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
         INDArray distance = Nd4j.createFromArray((float) status.getEchoDistance());
         INDArray canMoveForward = Nd4j.createFromArray(status.canMoveForward() ? 1F : 0F);
         INDArray canMoveBackward = Nd4j.createFromArray(status.canMoveBackward() ? 1F : 0F);
-        INDArray contacts = Nd4j.createFromArray((float) status.getContacts());
+        // TODO fix contacts
+        INDArray contacts = Nd4j.createFromArray(status.isFrontSensors() ? 1F : 0F, status.isRearSensors() ? 1F : 0F);
         double maxDistance = ((FloatSignalSpec) states.get("sectorDistances")).getMaxValue();
 
         PolarMap polarMap = currentStatus.polarMap;
