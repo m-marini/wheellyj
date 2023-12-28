@@ -237,7 +237,7 @@ public abstract class AbstractStateNode implements StateNode {
             long t0 = System.currentTimeMillis();
             logger.atDebug().log("tickAutoScan currentTime={}, remoteTime={}, statusDt={}, statusScanDt={}, time to next scan={}",
                     t0,
-                    context.getRobotStatus().getRemoteTime(),
+                    context.getRobotStatus().getRobotTime(),
                     t0 - time,
                     t0 - scanTime,
                     scanTime + scanInterval - time);

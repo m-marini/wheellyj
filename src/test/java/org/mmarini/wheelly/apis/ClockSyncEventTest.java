@@ -2,7 +2,7 @@ package org.mmarini.wheelly.apis;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ClockSyncEventTest {
 

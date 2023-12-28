@@ -189,7 +189,7 @@ public class SimRobot implements RobotApi {
     private double rightPps;
     private boolean frontSensor;
     private boolean rearSensor;
-    private long robotTime;
+    private long remoteTime;
     private double echoDistance;
     private long motionTimeout;
 
@@ -206,6 +206,7 @@ public class SimRobot implements RobotApi {
      * @param proxyInterval        the interval between proxy messages
      */
     public SimRobot(ObstacleMap obstacleMap, Random random, double errSigma, double errSensor, double sensorReceptiveAngle, int maxAngularSpeed, long motionInterval, long proxyInterval) {
+        logger.atDebug().log("Created");
         this.random = requireNonNull(random);
         this.errSigma = errSigma;
         this.errSensor = errSensor;
@@ -298,7 +299,7 @@ public class SimRobot implements RobotApi {
     public void configure() {
         if (onClock != null) {
             long now = System.currentTimeMillis();
-            onClock.accept(ClockSyncEvent.create(now, robotTime, robotTime, now));
+            onClock.accept(ClockSyncEvent.create(now, remoteTime, remoteTime, now));
         }
         sendMotion();
         sendProxy();
@@ -478,7 +479,7 @@ public class SimRobot implements RobotApi {
         speed = 0;
         direction = 0;
         sensorDirection = 0;
-        robotTime = 0;
+        remoteTime = 0;
         robot.setLinearVelocity(new Vec2());
         robot.setTransform(new Vec2(), (float) (PI / 2));
         robot.setAngularVelocity(0f);
@@ -495,7 +496,7 @@ public class SimRobot implements RobotApi {
     private void sendContacts() {
         if (onContacts != null) {
             WheellyContactsMessage msg = new WheellyContactsMessage(
-                    System.currentTimeMillis(), robotTime,
+                    System.currentTimeMillis(), remoteTime,
                     frontSensor, rearSensor,
                     canMoveForward(),
                     canMoveBackward()
@@ -514,7 +515,7 @@ public class SimRobot implements RobotApi {
             double yPulses = pos.y / DISTANCE_PER_PULSE;
             int robotDir = getDirection();
             WheellyMotionMessage msg = new WheellyMotionMessage(
-                    System.currentTimeMillis(), robotTime,
+                    System.currentTimeMillis(), remoteTime,
                     xPulses, yPulses, robotDir,
                     leftPps, rightPps,
                     0, speed == 0,
@@ -522,7 +523,7 @@ public class SimRobot implements RobotApi {
                     0, 0);
             onMotion.accept(msg);
         }
-        motionTimeout = robotTime + motionInterval;
+        motionTimeout = remoteTime + motionInterval;
     }
 
     /**
@@ -536,11 +537,11 @@ public class SimRobot implements RobotApi {
             int echoYaw = getDirection();
             long echoDelay = round(echoDistance / DISTANCE_SCALE);
             WheellyProxyMessage msg = new WheellyProxyMessage(
-                    System.currentTimeMillis(), robotTime,
+                    System.currentTimeMillis(), remoteTime,
                     sensorDirection, echoDelay, xPulses, yPulses, echoYaw);
             onProxy.accept(msg);
         }
-        proxyTimeout = robotTime + proxyInterval;
+        proxyTimeout = remoteTime + proxyInterval;
     }
 
     @Override
@@ -590,7 +591,7 @@ public class SimRobot implements RobotApi {
 
     @Override
     public void tick(long dt) {
-        this.robotTime += dt;
+        this.remoteTime += dt;
 
         // Simulate robot motion
         controller(dt * 1e-3F);
@@ -617,11 +618,16 @@ public class SimRobot implements RobotApi {
         updateProxy();
     }
 
+    @Override
+    public long getRemoteTime() {
+        return remoteTime;
+    }
+
     /**
      * Sends the motion message if interval has elapsed
      */
     private void updateMotion() {
-        if (robotTime >= motionTimeout) {
+        if (remoteTime >= motionTimeout) {
             sendMotion();
         }
     }
@@ -630,7 +636,7 @@ public class SimRobot implements RobotApi {
      * Sends the proxy message if interval has elapsed
      */
     private void updateProxy() {
-        if (robotTime >= proxyTimeout) {
+        if (remoteTime >= proxyTimeout) {
             sendProxy();
         }
     }

@@ -33,22 +33,16 @@ import java.awt.geom.Point2D;
 import java.util.Random;
 import java.util.function.Consumer;
 
-import static java.lang.Math.toDegrees;
 import static java.lang.Math.toRadians;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_PER_PULSE;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
-import static org.mmarini.wheelly.apis.SimRobot.ROBOT_TRACK;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.*;
 
 class SimRobotTest {
 
     public static final int SEED = 1234;
-    public static final double DISTANCE_EPSILON = 1e-3;
-    public static final double MAX_ANGULAR_VELOCITY = toDegrees(MAX_PPS * 2 * DISTANCE_PER_PULSE / ROBOT_TRACK);
-    public static final int MAX_SIM_SPEED = 1000;
     public static final long INTERVAL = 500;
     public static final float GRID_SIZE = 0.2f;
     private static final double PULSES_EPSILON = 1;
@@ -78,7 +72,10 @@ class SimRobotTest {
         // When configure
         robot.configure();
 
-        // the consumer should be invoked
+        // Then remote clock should be 0
+        assertEquals(0L, robot.getRemoteTime());
+
+        // and the consumer should be invoked
         verify(onClock, times(1)).accept(MockitoHamcrest.argThat(
                 allOf(
                         hasProperty("receiveTimestamp", equalTo(0L)),
@@ -102,12 +99,14 @@ class SimRobotTest {
     }
 
     @Test
-    void create() {
+    void connectTest() {
         SimRobot robot = createRobot();
+        robot.connect();
         assertEquals(new Point2D.Float(), robot.getLocation());
         assertEquals(0, robot.getDirection());
         assertEquals(0, robot.getSensorDirection());
         assertEquals(0f, robot.getEchoDistance());
+        assertEquals(0L, robot.getRemoteTime());
     }
 
     /**
@@ -118,6 +117,16 @@ class SimRobotTest {
         return new SimRobot(new MapBuilder(new GridTopology(GRID_SIZE)).build(),
                 random, 0, 0, toRadians(15), MAX_PPS,
                 INTERVAL, INTERVAL);
+    }
+
+    @Test
+    void createTest() {
+        SimRobot robot = createRobot();
+        assertEquals(new Point2D.Float(), robot.getLocation());
+        assertEquals(0, robot.getDirection());
+        assertEquals(0, robot.getSensorDirection());
+        assertEquals(0f, robot.getEchoDistance());
+        assertEquals(0L, robot.getRemoteTime());
     }
 
     @Test
@@ -172,6 +181,8 @@ class SimRobotTest {
                         hasProperty("direction", equalTo(0))
                 )
         ));
+        // And remote time should be 500L
+        assertEquals(500L, robot.getRemoteTime());
     }
 
     @Test
@@ -200,6 +211,8 @@ class SimRobotTest {
                         hasProperty("direction", lessThanOrEqualTo(6))
                 )
         ));
+        // And remote time should be 500L
+        assertEquals(500L, robot.getRemoteTime());
     }
 
     @Test
@@ -228,6 +241,8 @@ class SimRobotTest {
                         hasProperty("direction", lessThanOrEqualTo(91))
                 )
         ));
+        // And remote time should be 500L
+        assertEquals(500L, robot.getRemoteTime());
     }
 
     @Test
@@ -243,6 +258,7 @@ class SimRobotTest {
 
         // When scan 90 DEG
         robot.scan(90);
+        // And tick for 500ms
         robot.tick(500);
 
         // the consumer should be invoked
@@ -251,6 +267,8 @@ class SimRobotTest {
                         hasProperty("remoteTime", equalTo(500L)),
                         hasProperty("sensorDirection", equalTo(90))
                 )));
+        // And remote time should be 500L
+        assertEquals(500L, robot.getRemoteTime());
     }
 
     @Test
@@ -279,6 +297,9 @@ class SimRobotTest {
 
         // Then contacts consumer should be never invoked
         verify(onContacts, never()).accept(any());
+
+        // And remote time should be 500*3
+        assertEquals(1500L, robot.getRemoteTime());
 
         // and motion consumer should be invoked by 500 ms intervals
         InOrder onMotionOrder = inOrder(onMotion);

@@ -36,10 +36,6 @@ import java.text.DecimalFormat;
 import java.util.List;
 
 public class SensorsPanel extends JPanel {
-    public static final int FRONT_LEFT_MASK = 0x8;
-    public static final int FRONT_RIGHT_MASK = 0x4;
-    public static final int REAR_LEFT_MASK = 0x2;
-    public static final int REAR_RIGHT_MASK = 0x1;
     private final JFormattedTextField direction;
     private final JFormattedTextField sensorDirection;
     private final JFormattedTextField echoTime;
@@ -52,17 +48,12 @@ public class SensorsPanel extends JPanel {
     private final JFormattedTextField rightSpeed;
     private final JFormattedTextField supplySensor;
     private final JFormattedTextField voltage;
+    private final JFormattedTextField imuFailure;
     private final JCheckBox canMoveForward;
     private final JCheckBox canMoveBackward;
     private final JCheckBox halt;
-    private final JFormattedTextField imuFailure;
-    private final JFormattedTextField frontSensors;
-    private final JFormattedTextField rearSensors;
-    private final JFormattedTextField proximity;
-    private final JCheckBox frontRight;
-    private final JCheckBox frontLeft;
-    private final JCheckBox rearRight;
-    private final JCheckBox rearLeft;
+    private final JCheckBox frontSensors;
+    private final JCheckBox rearSensors;
     private final JTextField info;
     private final JButton checkUpButton;
 
@@ -89,17 +80,12 @@ public class SensorsPanel extends JPanel {
         this.rightSpeed = new JFormattedTextField(cmFormat);
         this.voltage = new JFormattedTextField(voltageFormat);
         this.imuFailure = new JFormattedTextField(intFormat);
-        this.proximity = new JFormattedTextField(intFormat);
-        this.frontSensors = new JFormattedTextField(intFormat);
-        this.rearSensors = new JFormattedTextField(intFormat);
+        this.frontSensors = new JCheckBox();
+        this.rearSensors = new JCheckBox();
         this.supplySensor = new JFormattedTextField(intFormat);
         this.canMoveForward = new JCheckBox();
         this.canMoveBackward = new JCheckBox();
         this.halt = new JCheckBox();
-        this.frontRight = new JCheckBox();
-        this.frontLeft = new JCheckBox();
-        this.rearRight = new JCheckBox();
-        this.rearLeft = new JCheckBox();
         this.info = new JTextField(50);
         this.checkUpButton = new JButton("Check up");
         createContent();
@@ -153,25 +139,15 @@ public class SensorsPanel extends JPanel {
         JPanel proxyPanel = new GridLayoutHelper<>(new JPanel())
                 .modify("insets,2 at,0,0 noweight nospan nofill e").add("Can move forward")
                 .modify("at,0,1").add("Can move backward")
-                .modify("at,0,2").add("frontSensors")
-                .modify("at,0,3").add("rearSensors")
-                .modify("at,0,4").add("Code")
-                .modify("at,0,5 weight,0,1").add("")
+                .modify("at,0,2").add("FrontSensors")
+                .modify("at,0,3").add("RearSensors")
+                .modify("at,0,4 weight,0,1").add("")
                 .modify("at,1,0 w weight,1,0").add(canMoveForward)
                 .modify("at,1,1").add(canMoveBackward)
                 .modify("at,1,2").add(frontSensors)
                 .modify("at,1,3").add(rearSensors)
-                .modify("at,1,4").add(proximity)
                 .getContainer();
         proxyPanel.setBorder(BorderFactory.createTitledBorder("Proximity sensors"));
-
-        JPanel contactsPanel = new GridLayoutHelper<>(new JPanel())
-                .modify("insets,2 at,0,0 nofill nospan weight,1,1 center").add(frontLeft)
-                .modify("at,1,0").add(frontRight)
-                .modify("at,0,1").add(rearLeft)
-                .modify("at,1,1").add(rearRight)
-                .getContainer();
-        contactsPanel.setBorder(BorderFactory.createTitledBorder("Contacts"));
 
         new GridLayoutHelper<>(this)
                 .modify("insets,4 at,0,0 hfill span,2,1").add(info)
@@ -179,9 +155,7 @@ public class SensorsPanel extends JPanel {
                 .modify("at,0,2").add(speedPane)
                 .modify("at,1,1").add(sensorPanel)
                 .modify("at,1,2").add(proxyPanel)
-                .modify("at,0,3 span,2,1 center weight,1,1").add(contactsPanel)
-                .modify("at,0,4 span,2,1 center noweight nofill").add(checkUpButton)
-                .getContainer();
+                .modify("at,0,4 span,2,1 center noweight nofill").add(checkUpButton);
     }
 
     public JButton getCheckUpButton() {
@@ -193,7 +167,8 @@ public class SensorsPanel extends JPanel {
      * Sets the attributes of UI components
      */
     private void init() {
-        for (JTextField x : List.of(robotX, robotY, direction, sensorDirection, distance, leftSpeed, rightSpeed, voltage, proximity, imuFailure, supplySensor, frontSensors, rearSensors)) {
+        for (JTextField x : List.of(robotX, robotY, direction, sensorDirection, distance, leftSpeed, rightSpeed,
+                voltage, imuFailure, supplySensor)) {
             x.setColumns(5);
             x.setHorizontalAlignment(JTextField.RIGHT);
         }
@@ -206,11 +181,11 @@ public class SensorsPanel extends JPanel {
         yPulses.setHorizontalAlignment(JTextField.RIGHT);
 
         for (JTextField x : List.of(robotX, robotY, direction, sensorDirection, distance,
-                leftSpeed, rightSpeed, voltage, proximity, imuFailure, info, echoTime,
-                rearSensors, frontSensors, supplySensor, xPulses, yPulses)) {
+                leftSpeed, rightSpeed, voltage, imuFailure, info, echoTime,
+                supplySensor, xPulses, yPulses)) {
             x.setEditable(false);
         }
-        for (JCheckBox x : List.of(canMoveBackward, canMoveForward, halt, frontLeft, frontRight, rearLeft, rearRight)) {
+        for (JCheckBox x : List.of(canMoveBackward, canMoveForward, halt, frontSensors, rearSensors)) {
             x.setEnabled(false);
         }
     }
@@ -241,14 +216,8 @@ public class SensorsPanel extends JPanel {
         voltage.setValue(status.getSupplyVoltage());
         supplySensor.setValue(status.getSupplySensor());
         imuFailure.setValue(status.getImuFailure());
-        rearSensors.setValue(status.isRearSensors());
-        frontSensors.setValue(status.isFrontSensors());
-        int proximity1 = status.getContacts();
-        proximity.setValue(proximity1);
-        frontLeft.setSelected((proximity1 & FRONT_LEFT_MASK) != 0);
-        frontRight.setSelected((proximity1 & FRONT_RIGHT_MASK) != 0);
-        rearLeft.setSelected((proximity1 & REAR_LEFT_MASK) != 0);
-        rearRight.setSelected((proximity1 & REAR_RIGHT_MASK) != 0);
+        rearSensors.setSelected(status.isRearSensors());
+        frontSensors.setSelected(status.isFrontSensors());
         canMoveBackward.setSelected(status.canMoveBackward());
         canMoveForward.setSelected(status.canMoveForward());
         halt.setSelected(status.isHalt());

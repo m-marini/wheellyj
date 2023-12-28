@@ -312,7 +312,7 @@ public class RadarMap {
                 status.getEchoDirection(),
                 distance, time);
         RadarMap hinderedMap = update(signal);
-        RadarMap contactMap = status.getContacts() != 0 || !status.canMoveBackward() || !status.canMoveForward()
+        RadarMap contactMap = !status.isFrontSensors() || !status.isRearSensors() || !status.canMoveBackward() || !status.canMoveForward()
                 ? hinderedMap.setContactsAt(location, receptiveDistance, time)
                 : hinderedMap;
         return contactMap.clean(time);
