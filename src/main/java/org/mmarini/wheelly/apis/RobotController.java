@@ -329,7 +329,7 @@ public class RobotController implements RobotControllerApi {
                 logger.atDebug().log("Scan dir={}, prevSensorDir={}", dir, prevSensorDir);
                 // Checks for scan command required
                 if (dir != this.prevSensorDir
-                        || dir != 0 && time >= lastSensorMoveTimestamp + round(commandInterval / simSpeed)) {
+                        || dir != 0 && time >= lastSensorMoveTimestamp + commandInterval) {
                     logger.atDebug().log("Scan {}", dir);
                     robot.scan(dir);
                     lastSensorMoveTimestamp = time;
@@ -340,7 +340,7 @@ public class RobotController implements RobotControllerApi {
                 if (cmd != null) {
                     // Checks for move command required
                     if (!cmd.equals(lastMoveCommand)
-                            || !cmd.isHalt() && time >= lastRobotMoveTimestamp + round(commandInterval / simSpeed)) {
+                            || !cmd.isHalt() && time >= lastRobotMoveTimestamp + commandInterval) {
                         if (cmd.isHalt()) {
                             robot.halt();
                         } else {
