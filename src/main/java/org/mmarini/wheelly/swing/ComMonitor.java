@@ -37,14 +37,17 @@ import java.util.regex.Pattern;
 
 public class ComMonitor extends MatrixTable {
 
-    public static final String STATUS = "status";
+    public static final String MOTION = "motion";
+    public static final String PROXY = "proxy";
+    public static final String CONTACTS = "contacts";
+    public static final String SUPPLY = "supply";
     public static final String SCAN = "scan";
     public static final String MOVE = "move";
     public static final String OTHER = "other";
     public static final String CONFIG = "config";
     public static final String ERROR_KEY = "error";
     public static final String CONTROLLER_KEY = "controller";
-    private static final String CONFIG_COMMANDS_REGEX = "(cs|cc|ct|cl|cr|cm) .*";
+    private static final String CONFIG_COMMANDS_REGEX = "(cs|cc|ct|cl|cr|cm|ci|fl|fr|tcsl|tcsr) .*";
 
     private static final Predicate<String> CONFIG_COMMANDS = Pattern.compile(CONFIG_COMMANDS_REGEX).asMatchPredicate();
     private static final Predicate<String> CONFIG_COMMANDS_ACK = Pattern.compile("// " + CONFIG_COMMANDS_REGEX).asMatchPredicate();
@@ -52,7 +55,10 @@ public class ComMonitor extends MatrixTable {
 
     public ComMonitor() {
         addColumn(CONTROLLER_KEY, Messages.getString("ComMonitor.controller"), 3).setScrollOnChange(true);
-        addColumn(STATUS, Messages.getString("ComMonitor.status"), 48);
+        addColumn(MOTION, Messages.getString("ComMonitor.motion"), 70);
+        addColumn(PROXY, Messages.getString("ComMonitor.proxy"), 40);
+        addColumn(CONTACTS, Messages.getString("ComMonitor.contacts"), 20);
+        addColumn(SUPPLY, Messages.getString("ComMonitor.supply"), 16);
         addColumn(MOVE, Messages.getString("ComMonitor.move"), 11);
         addColumn(SCAN, Messages.getString("ComMonitor.scan"), 6);
         addColumn(CONFIG, Messages.getString("ComMonitor.config"), 36);
@@ -75,30 +81,31 @@ public class ComMonitor extends MatrixTable {
     }
 
     public void onReadLine(String line) {
-        if (line.startsWith("px ")
-                || line.startsWith("mt ")
-                || line.startsWith("ct ")
-                || line.startsWith("sv ")) {
-            printf(STATUS, " %s", line);
-        } else if (CONFIG_COMMANDS_ACK.test(line) || line.startsWith("ck ")) {
-            printf(CONFIG, " %s", line);
-        } else {
-            printf(OTHER, " %s", line);
-            if (line.startsWith("!!")) {
-                logger.atError().log(line);
-            }
+        String messageClass = switch (line) {
+            case String l when l.startsWith("mt ") -> MOTION;
+            case String l when l.startsWith("px ") -> PROXY;
+            case String l when l.startsWith("ct ") -> CONTACTS;
+            case String l when l.startsWith("sv ") -> SUPPLY;
+            case String l when l.startsWith("ck ") -> CONFIG;
+            case String l when CONFIG_COMMANDS_ACK.test(l) -> CONFIG;
+            case String l when l.startsWith("!!") -> ERROR_KEY;
+            default -> OTHER;
+        };
+        printf(messageClass, " %s", line);
+        if (line.startsWith("!!")) {
+            logger.atError().log(line);
         }
     }
 
     public void onWriteLine(String line) {
-        if (line.equals("ha") || line.startsWith("mv ")) {
-            printf(MOVE, " %s", line);
-        } else if (line.startsWith("sc ")) {
-            printf(SCAN, " %s", line);
-        } else if (CONFIG_COMMANDS.test(line) || line.startsWith("ck ")) {
-            printf(CONFIG, " %s", line);
-        } else {
-            printf(OTHER, " %s", line);
-        }
+        String messageClass = switch (line) {
+            case String l when l.startsWith("ha") -> MOVE;
+            case String l when l.startsWith("mv ") -> MOVE;
+            case String l when l.startsWith("sc ") -> SCAN;
+            case String l when l.startsWith("ck ") -> CONFIG;
+            case String l when CONFIG_COMMANDS.test(l) -> CONFIG;
+            default -> OTHER;
+        };
+        printf(messageClass, " %s", line);
     }
 }

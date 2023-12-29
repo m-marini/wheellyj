@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #275: Unify yaml configuration files
 - Issue #278: Api schema by id
 - Issue #281: Add new status signals recognition to COM monitor
+- Issue #286: COMMonitor with calssified status signals
 
 ### Fixed
 
