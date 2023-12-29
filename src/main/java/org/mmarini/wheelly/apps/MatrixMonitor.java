@@ -144,7 +144,6 @@ public class MatrixMonitor {
         this.runButton = new JButton("Run");
         this.commandPanel = createCommandPanel();
         this.halt = true;
-        comMonitor.setPrintTimestamp(true);
         initFlow();
     }
 

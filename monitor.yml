@@ -40,5 +40,5 @@ controller:
       connectionRetryInterval: 1000
       watchdogInterval: 5000
       simulationSpeed: 1
-      supplyValues: [ 2165, 2683 ]
-      voltages: [ 9.8, 12.3 ]
+      supplyValues: [ 2239, 2878 ]
+      voltages: [ 10.1, 11.9 ]

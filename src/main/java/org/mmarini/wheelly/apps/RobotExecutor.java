@@ -282,7 +282,6 @@ public class RobotExecutor {
      * Initializes the application
      */
     private void init() {
-        comMonitor.setPrintTimestamp(true);
         SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
                 .doOnNext(this::handleWindowOpened)
