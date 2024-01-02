@@ -44,7 +44,7 @@ import static java.util.Objects.requireNonNull;
  * It is an immutable object
  * </p>
  */
-public class ProcessorCommand {
+public record ProcessorCommand(String id, Consumer<ProcessorContext> command) {
     private static final List<ProcessorCommand> COMMANDS = List.of(
             new ProcessorCommand("put", ProcessorCommand::putCommand),
             new ProcessorCommand("get", ProcessorCommand::getCommand),
@@ -156,10 +156,10 @@ public class ProcessorCommand {
      */
     public static ProcessorCommand parse(String... lines) {
         requireNonNull(lines);
-        ProcessorCommand[] cmds = Arrays.stream(lines)
+        ProcessorCommand[] commands = Arrays.stream(lines)
                 .map(ProcessorCommand::parseCommand)
                 .toArray(ProcessorCommand[]::new);
-        return concat(cmds);
+        return concat(commands);
     }
 
     /**
@@ -173,7 +173,7 @@ public class ProcessorCommand {
             return new ProcessorCommand(command, ctx -> ctx.push(value));
         } catch (NumberFormatException ex) {
             Optional<ProcessorCommand> cmd = COMMANDS.stream()
-                    .filter(c -> c.getId().equals(command))
+                    .filter(c -> c.id().equals(command))
                     .findAny();
             return cmd.orElseGet(() -> new ProcessorCommand(command, ctx -> ctx.push(command)));
         }
@@ -248,9 +248,6 @@ public class ProcessorCommand {
         context.push(status.getLocalTime());
     }
 
-    private final String id;
-    private final Consumer<ProcessorContext> command;
-
     /**
      * Creates the processor command
      *
@@ -269,17 +266,5 @@ public class ProcessorCommand {
      */
     public void execute(ProcessorContext ctx) {
         command.accept(ctx);
-    }
-
-    /**
-     * Returns the command identifer
-     */
-    public String getId() {
-        return id;
-    }
-
-    @Override
-    public String toString() {
-        return id;
     }
 }

@@ -40,6 +40,7 @@ import java.awt.geom.Point2D;
 import java.util.OptionalInt;
 
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 
@@ -50,8 +51,14 @@ import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
  * <code>completed</code> is generated at completion (no blocking signals).<br>
  * <code>timeout</code> is generated at timeout.
  * </p>
+ *
+ * @param id      the state id
+ * @param onInit  the on init command
+ * @param onEntry the on entry command
+ * @param onExit  the on exit command
  */
-public class AvoidingState extends AbstractStateNode {
+public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand onEntry,
+                            ProcessorCommand onExit) implements ExtendedStateNode {
     public static final String FREE_POINT = "freePoint";
     public static final String SAFE_DISTANCE = "safeDistance";
     public static final String ESCAPE_DIRECTION = "escapeDirection";
@@ -60,7 +67,7 @@ public class AvoidingState extends AbstractStateNode {
 
     public static AvoidingState create(JsonNode root, Locator locator, String id) {
         ProcessorCommand onInit = ProcessorCommand.concat(
-                loadTimeout(root, locator, id),
+                ExtendedStateNode.loadTimeout(root, locator, id),
                 ProcessorCommand.put(id + "." + SAFE_DISTANCE, locator.path(SAFE_DISTANCE).getNode(root).doubleValue()),
                 ProcessorCommand.create(root, locator.path("onInit")));
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
@@ -79,13 +86,16 @@ public class AvoidingState extends AbstractStateNode {
                 : OptionalInt.of(robotDir);
     }
 
-    protected AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit) {
-        super(id, onInit, onEntry, onExit);
+    public AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit) {
+        this.id = requireNonNull(id);
+        this.onInit = onInit;
+        this.onEntry = onEntry;
+        this.onExit = onExit;
     }
 
     @Override
     public void entry(ProcessorContext context) {
-        super.entry(context);
+        ExtendedStateNode.super.entry(context);
         escapeDir(context).ifPresentOrElse(dir -> put(context, ESCAPE_DIRECTION, dir),
                 () -> remove(context, ESCAPE_DIRECTION));
         remove(context, FREE_POINT);
@@ -108,14 +118,14 @@ public class AvoidingState extends AbstractStateNode {
                 remove(ctx, FREE_POINT);
                 logger.atDebug()
                         .setMessage("{}: move backward {} DEG")
-                        .addArgument(this::getId)
+                        .addArgument(this::id)
                         .addArgument(dir)
                         .log();
                 return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(dir, -MAX_PPS));
             }
             // Robot completely blocked
             // holt robot
-            logger.atWarn().setMessage("{}: Robot blocked").addArgument(this::getId).log();
+            logger.atWarn().setMessage("{}: Robot blocked").addArgument(this::id).log();
             return BLOCKED_RESULT;
         }
         if (!status.canMoveBackward()) {
@@ -125,7 +135,7 @@ public class AvoidingState extends AbstractStateNode {
             remove(ctx, FREE_POINT);
             logger.atDebug()
                     .setMessage("{}: move forward {} DEG")
-                    .addArgument(this::getId)
+                    .addArgument(this::id)
                     .addArgument(dir)
                     .log();
             return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(dir, MAX_PPS));
@@ -137,7 +147,7 @@ public class AvoidingState extends AbstractStateNode {
             freePoint = ctx.getRobotStatus().getLocation();
             put(ctx, FREE_POINT, freePoint);
             logger.atDebug().setMessage("{}: escaping to {} DEG from {}")
-                    .addArgument(this::getId)
+                    .addArgument(this::id)
                     .addArgument(escapeDir)
                     .addArgument(freePoint)
                     .log();
@@ -148,7 +158,7 @@ public class AvoidingState extends AbstractStateNode {
             // Halt robot at exit
             logger.atDebug()
                     .setMessage("{}: safety at {} m")
-                    .addArgument(this::getId)
+                    .addArgument(this::id)
                     .addArgument(() -> format("%.2f", distance))
                     .log();
             return COMPLETED_RESULT;

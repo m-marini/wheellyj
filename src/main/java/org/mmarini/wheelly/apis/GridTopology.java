@@ -31,25 +31,10 @@ import static java.lang.Math.round;
 
 /**
  * The grid topology
+ *
+ * @param gridSize the grid size
  */
-public class GridTopology {
-    private final double gridSize;
-
-    /**
-     * Create the grid topology
-     *
-     * @param gridSize the grid size
-     */
-    public GridTopology(double gridSize) {
-        this.gridSize = gridSize;
-    }
-
-    /**
-     * Returns the grid size
-     */
-    public double getGridSize() {
-        return gridSize;
-    }
+public record GridTopology(double gridSize) {
 
     /**
      * Snap the point to grid

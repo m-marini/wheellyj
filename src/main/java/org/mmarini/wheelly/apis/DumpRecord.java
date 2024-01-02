@@ -31,25 +31,22 @@ package org.mmarini.wheelly.apis;
 import io.reactivex.rxjava3.schedulers.Timed;
 
 import java.time.Instant;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static java.util.Objects.requireNonNull;
-
 /**
  * Stores the dump record
  */
-public abstract class DumpRecord {
-    private static final Pattern RECORD_PATTERN = Pattern.compile("^(\\d*) ([><]) (.*)$");
+public interface DumpRecord {
+    Pattern RECORD_PATTERN = Pattern.compile("^(\\d*) ([><]) (.*)$");
 
     /**
      * Returns the dump record from string
      *
      * @param line the string
      */
-    public static DumpRecord create(String line) {
+    static DumpRecord create(String line) {
         Matcher matcher = RECORD_PATTERN.matcher(line);
         if (!matcher.matches()) {
             throw new IllegalArgumentException("wrong record format");
@@ -65,89 +62,46 @@ public abstract class DumpRecord {
                 .orElseGet(() -> new ReadDumpRecord(timestamp, data));
     }
 
-    protected final Instant instant;
-    protected final String data;
-
-    /**
-     * Creates the dump record
-     *
-     * @param instant the timestamp of record
-     * @param data    the data
-     */
-    protected DumpRecord(Instant instant, String data) {
-        this.instant = requireNonNull(instant);
-        this.data = requireNonNull(data);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        DumpRecord that = (DumpRecord) o;
-        return instant.equals(that.instant) && data.equals(that.data);
-    }
-
     /**
      * Returns the communication direction [RX, TX]
      */
-    public abstract String getComDirection();
+    String comDirection();
 
     /**
      * Returns the line data of record
      */
-    public String getData() {
-        return data;
-    }
+    String data();
 
     /**
      * Returns the instant of record
      */
-    public Instant getInstant() {
-        return instant;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(instant, data);
-    }
+    Instant instant();
 
     /**
      * Stores the read dump record
      */
-    public static class ReadDumpRecord extends DumpRecord {
-        protected ReadDumpRecord(Instant timestamp, String data) {
-            super(timestamp, data);
-        }
+    interface ReadDumpRecordIntf extends DumpRecord {
 
         @Override
-        public String getComDirection() {
+        default String comDirection() {
             return "RX";
         }
     }
 
-    public static class MessageDumpRecord<T extends WheellyMessage> extends ReadDumpRecord {
-        private final T message;
+    record ReadDumpRecord(Instant instant, String data) implements ReadDumpRecordIntf {
+    }
 
-        protected MessageDumpRecord(Instant timestamp, String data, T message) {
-            super(timestamp, data);
-            this.message = message;
-        }
-
-        public T getMessage() {
-            return message;
-        }
+    record MessageDumpRecord<T extends WheellyMessage>(Instant instant, String data,
+                                                       T message) implements ReadDumpRecordIntf {
     }
 
     /**
      * Stores the written dump record
      */
-    public static class WriteDumpRecord extends DumpRecord {
-        protected WriteDumpRecord(Instant timestamp, String data) {
-            super(timestamp, data);
-        }
+    record WriteDumpRecord(Instant instant, String data) implements DumpRecord {
 
         @Override
-        public String getComDirection() {
+        public String comDirection() {
             return "TX";
         }
     }

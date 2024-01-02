@@ -50,7 +50,7 @@ public class MockRobot implements RobotApi {
     protected Consumer<WheellyProxyMessage> onProxy;
     protected Consumer<WheellyContactsMessage> onContacts;
     protected Consumer<ClockSyncEvent> onClock;
-    private long time;
+    private long remoteTime;
     private long resetTime;
     private Point2D robotPos;
     private int robotDir;
@@ -86,6 +86,15 @@ public class MockRobot implements RobotApi {
     public void connect() throws IOException {
     }
 
+    @Override
+    public long getRemoteTime() {
+        return remoteTime;
+    }
+
+    public void setRemoteTime(long remoteTime) {
+        this.remoteTime = remoteTime;
+    }
+
     public RobotStatus getStatus() {
         return RobotStatus.create(x -> 12d)
                 .setDirection(robotDir)
@@ -106,7 +115,7 @@ public class MockRobot implements RobotApi {
 
     @Override
     public void reset() {
-        resetTime = time;
+        resetTime = remoteTime;
     }
 
     @Override
@@ -117,7 +126,7 @@ public class MockRobot implements RobotApi {
         if (onContacts != null) {
             onContacts.accept(
                     new WheellyContactsMessage(
-                            time, time,
+                            remoteTime, remoteTime,
                             true, true,
                             true, true)
             );
@@ -127,7 +136,7 @@ public class MockRobot implements RobotApi {
     protected void sendMotion() {
         if (onMotion != null) {
             onMotion.accept(
-                    new WheellyMotionMessage(time, time,
+                    new WheellyMotionMessage(remoteTime, remoteTime,
                             robotPos.getX() / RobotStatus.DISTANCE_PER_PULSE,
                             robotPos.getY() / RobotStatus.DISTANCE_PER_PULSE,
                             robotDir,
@@ -143,7 +152,7 @@ public class MockRobot implements RobotApi {
         if (onProxy != null) {
             onProxy.accept(
                     new WheellyProxyMessage(
-                            time, time, sensorDir, round(sensorDistance / RobotStatus.DISTANCE_SCALE),
+                            remoteTime, remoteTime, sensorDir, round(sensorDistance / RobotStatus.DISTANCE_SCALE),
                             robotPos.getX() / RobotStatus.DISTANCE_PER_PULSE,
                             robotPos.getY() / RobotStatus.DISTANCE_PER_PULSE,
                             robotDir)
@@ -195,20 +204,11 @@ public class MockRobot implements RobotApi {
         this.sensorDistance = sensorDistance;
     }
 
-    public void setTime(long time) {
-        this.time = time;
-    }
-
     @Override
     public void tick(long dt) {
-        time += dt;
+        remoteTime += dt;
         sendMotion();
         sendProxy();
         sendContacts();
-    }
-
-    @Override
-    public long getRemoteTime() {
-        return 0;
     }
 }

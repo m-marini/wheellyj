@@ -397,6 +397,11 @@ public class SimRobot implements RobotApi {
         return Optional.ofNullable(obstacleMap);
     }
 
+    @Override
+    public long getRemoteTime() {
+        return remoteTime;
+    }
+
     /**
      * Returns the sensor direction (DEG)
      */
@@ -608,7 +613,7 @@ public class SimRobot implements RobotApi {
         if (obsIdx >= 0) {
             // Computes the distance of obstacles
             Point2D obs = obstacleMap.getPoint(obsIdx);
-            double dist = obs.distance(position) - obstacleMap.getTopology().getGridSize() / 2
+            double dist = obs.distance(position) - obstacleMap.topology().gridSize() / 2
                     + random.nextGaussian() * errSensor;
             echoDistance = dist > 0 && dist < MAX_DISTANCE ? dist : 0;
         }
@@ -616,11 +621,6 @@ public class SimRobot implements RobotApi {
         // Check for movement constraints
         checkForSpeed();
         updateProxy();
-    }
-
-    @Override
-    public long getRemoteTime() {
-        return remoteTime;
     }
 
     /**

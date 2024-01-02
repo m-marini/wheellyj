@@ -27,7 +27,6 @@ package org.mmarini.wheelly.apis;
 
 import io.reactivex.rxjava3.schedulers.Timed;
 
-import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.Double.parseDouble;
@@ -38,8 +37,18 @@ import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 
 /**
  * The Wheelly status contain the sensor value of Wheelly
+ *
+ * @param time            the local message time
+ * @param remoteTime      the remote ping time
+ * @param sensorDirection the sensor direction at ping (DEG)
+ * @param echoDelay       the echo delay (um)
+ * @param xPulses         the x robot location pulses at echo ping
+ * @param yPulses         the y robot location pulses at echo ping
+ * @param echoYaw         the robot direction at ping (DEG)
  */
-public class WheellyProxyMessage extends WheellyMessage {
+public record WheellyProxyMessage(long time, long remoteTime,
+                                  int sensorDirection, long echoDelay,
+                                  double xPulses, double yPulses, int echoYaw) implements WheellyMessage {
     public static final int NUM_PARAMS = 7;
 
     /**
@@ -75,38 +84,11 @@ public class WheellyProxyMessage extends WheellyMessage {
                 y, echoYaw);
     }
 
-    private final int sensorDirection;
-    private final long echoDelay;
-    private final double xPulses;
-    private final double yPulses;
-    private final int echoYaw;
-
     /**
-     * Creates wheelly status
-     *
-     * @param time            the local message time
-     * @param remoteTime      the remote ping time
-     * @param sensorDirection the sensor direction at ping (DEG)
-     * @param echoDelay       the echo delay (um)
-     * @param xPulses         the x robot location pulses at echo ping
-     * @param yPulses         the y robot location pulses at echo ping
-     * @param echoYaw         the robot direction at ping (DEG)
+     * Returns the absolute echo direction (DEG)
      */
-    public WheellyProxyMessage(long time, long remoteTime, int sensorDirection, long echoDelay, double xPulses, double yPulses,
-                               int echoYaw) {
-        super(time, remoteTime);
-        this.xPulses = xPulses;
-        this.yPulses = yPulses;
-        this.sensorDirection = sensorDirection;
-        this.echoDelay = echoDelay;
-        this.echoYaw = echoYaw;
-    }
-
-    /**
-     * Returns the echo delay (us)
-     */
-    public long getEchoDelay() {
-        return echoDelay;
+    public int echoDirection() {
+        return normalizeDegAngle(sensorDirection + echoYaw);
     }
 
     /**
@@ -121,24 +103,14 @@ public class WheellyProxyMessage extends WheellyMessage {
     }
 
     /**
-     * Returns the absolute echo direction (DEG)
+     * Returns the status with remote time instant set
+     *
+     * @param remoteTime the remote ping instant
      */
-    public int getEchoDirection() {
-        return normalizeDegAngle(sensorDirection + echoYaw);
-    }
-
-    /**
-     * Returns the robot direction at ping (DEG)
-     */
-    public int getEchoYaw() {
-        return echoYaw;
-    }
-
-    /**
-     * Returns the sensor direction at ping (DEG)
-     */
-    public int getSensorDirection() {
-        return sensorDirection;
+    public WheellyProxyMessage setRemoteTime(long remoteTime) {
+        return remoteTime != this.remoteTime
+                ? new WheellyProxyMessage(time, remoteTime, sensorDirection, echoDelay, xPulses, yPulses, echoYaw)
+                : this;
     }
 
     /**
@@ -151,43 +123,4 @@ public class WheellyProxyMessage extends WheellyMessage {
                 ? new WheellyProxyMessage(time, remoteTime, sensorDirection, echoDelay, xPulses, yPulses, echoYaw)
                 : this;
     }
-
-    /**
-     * Returns the robot location abscissa at ping
-     */
-    public double getXPulses() {
-        return xPulses;
-    }
-
-    /**
-     * Returns the robot location ordinate at ping
-     */
-    public double getYPulses() {
-        return yPulses;
-    }
-
-    /**
-     * Returns the status with remote time instant set
-     *
-     * @param remoteTime the remote ping instant
-     */
-    public WheellyProxyMessage setRemoteTime(long remoteTime) {
-        return remoteTime != this.remoteTime
-                ? new WheellyProxyMessage(time, remoteTime, sensorDirection, echoDelay, xPulses, yPulses, echoYaw)
-                : this;
-    }
-
-    @Override
-    public String toString() {
-        return new StringJoiner(", ", WheellyProxyMessage.class.getSimpleName() + "[", "]")
-                .add("time=" + time)
-                .add("remoteTime=" + remoteTime)
-                .add("echoDirection=" + sensorDirection)
-                .add("echoDelay=" + echoDelay)
-                .add("xPulses=" + xPulses)
-                .add("yPulses=" + yPulses)
-                .add("echoYaw=" + echoYaw)
-                .toString();
-    }
-
 }

@@ -13,6 +13,7 @@ import java.util.Map;
 
 import static java.lang.Math.round;
 import static java.lang.Math.toDegrees;
+import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.defuzzy;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.positive;
 import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
@@ -42,8 +43,14 @@ import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
  *  <li><code>timeout</code> is generated at timeout</li>
  * </ul>
  * </p>
+ *
+ * @param id      the node identifier
+ * @param onInit  the initialization command or null if none
+ * @param onEntry the entry command or null if none
+ * @param onExit  the exit command or null if none
  */
-public class MoveToState extends AbstractStateNode {
+public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand onEntry,
+                          ProcessorCommand onExit) implements ExtendedStateNode {
     private static final Logger logger = LoggerFactory.getLogger(MoveToState.class);
     private static final int MIN_PPS = 10;
 
@@ -59,7 +66,7 @@ public class MoveToState extends AbstractStateNode {
         double y = locator.path("y").getNode(root).asDouble();
         double stopDistance = locator.path("stopDistance").getNode(root).asDouble();
         ProcessorCommand onInit = ProcessorCommand.concat(
-                loadTimeout(root, locator, id),
+                ExtendedStateNode.loadTimeout(root, locator, id),
                 ProcessorCommand.setProperties(Map.of(
                         id + ".stopDistance", stopDistance,
                         id + ".target", new Point2D.Double(x, y)
@@ -109,8 +116,11 @@ public class MoveToState extends AbstractStateNode {
      * @param onEntry the entry command or null if none
      * @param onExit  the exit command or null if none
      */
-    protected MoveToState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit) {
-        super(id, onInit, onEntry, onExit);
+    public MoveToState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit) {
+        this.id = requireNonNull(id);
+        this.onInit = onInit;
+        this.onEntry = onEntry;
+        this.onExit = onExit;
     }
 
     @Override

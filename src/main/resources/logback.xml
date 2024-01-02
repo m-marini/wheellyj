@@ -20,7 +20,7 @@
     <logger name="org.mmarini.wheelly.apis.Robot" level="INFO">
     </logger>
 
-    <logger name="org.mmarini.wheelly.engines.AbstractStateNode" level="INFO">
+    <logger name="org.mmarini.wheelly.engines.ExtendedStateNode" level="INFO">
     </logger>
 
     <logger name="org.mmarini.wheelly.engines.StateMachineAgent" level="INFO">

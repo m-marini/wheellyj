@@ -25,14 +25,23 @@
 
 package org.mmarini.wheelly.apis;
 
-import java.util.StringJoiner;
-
 import static java.lang.String.format;
 
 /**
  * The clock sync event
+ *
+ * <pre>
+ * |---------|-------|--------|
+ * originate receive transmit destination
+ * </pre>
+ *
+ * @param originateTimestamp   the originate timestamp in local clock ticks (ms)
+ * @param receiveTimestamp     the receive timestamp in remote clock ticks (ms)
+ * @param transmitTimestamp    the transmit timestamp in remote clock ticks (ms)
+ * @param destinationTimestamp the destination timestamp in local clock ticks (ms)
  */
-public class ClockSyncEvent {
+public record ClockSyncEvent(long originateTimestamp, long receiveTimestamp, long transmitTimestamp,
+                             long destinationTimestamp) {
     /**
      * Returns the clock sync event
      *
@@ -70,39 +79,13 @@ public class ClockSyncEvent {
         return ClockSyncEvent.create(originateTimestamp, receiveTimestamp, transmitTimestamp, destinationTimestamp);
     }
 
-    public final long destinationTimestamp;
-    public final long originateTimestamp;
-    public final long receiveTimestamp;
-    public final long transmitTimestamp;
-    private final long remoteOffset;
-
-    /**
-     * Creates the clock sync event
-     * <pre>
-     * |---------|-------|--------|
-     * originate receive transmit destination
-     * </pre>
-     *
-     * @param originateTimestamp   the originate timestamp in local clock ticks (ms)
-     * @param receiveTimestamp     the receive timestamp in remote clock ticks (ms)
-     * @param transmitTimestamp    the transmit timestamp in remote clock ticks (ms)
-     * @param destinationTimestamp the destination timestamp in local clock ticks (ms)
-     */
-    protected ClockSyncEvent(long originateTimestamp, long receiveTimestamp, long transmitTimestamp, long destinationTimestamp) {
-        this.originateTimestamp = originateTimestamp;
-        this.receiveTimestamp = receiveTimestamp;
-        this.transmitTimestamp = transmitTimestamp;
-        this.destinationTimestamp = destinationTimestamp;
-        this.remoteOffset = originateTimestamp + getLatency() - receiveTimestamp;
-    }
-
     /**
      * Returns the remote timestamp from local timestamp
      *
      * @param localTime the local timestamp
      */
     public long fromLocal(long localTime) {
-        return localTime - remoteOffset;
+        return localTime - remoteOffset();
     }
 
     /**
@@ -111,59 +94,20 @@ public class ClockSyncEvent {
      * @param remoteTime the remote timestamp
      */
     public long fromRemote(long remoteTime) {
-        return remoteOffset + remoteTime;
-    }
-
-    /**
-     * Returns the destination timestamp (local clock)
-     */
-    public long getDestinationTimestamp() {
-        return destinationTimestamp;
+        return remoteOffset() + remoteTime;
     }
 
     /**
      * Returns the latency
      */
-    public long getLatency() {
-        long latency = (destinationTimestamp - originateTimestamp - transmitTimestamp + receiveTimestamp + 1) / 2;
-        return latency;
-    }
-
-    /**
-     * Returns the originate timestamp in local clock ticks (ms)
-     */
-    public long getOriginateTimestamp() {
-        return originateTimestamp;
-    }
-
-    /**
-     * Returns the received timestamp (remote clock)
-     */
-    public long getReceiveTimestamp() {
-        return receiveTimestamp;
+    public long latency() {
+        return (destinationTimestamp - originateTimestamp - transmitTimestamp + receiveTimestamp + 1) / 2;
     }
 
     /**
      * Returns the remote offset
      */
-    public long getRemoteOffset() {
-        return remoteOffset;
-    }
-
-    /**
-     * Returns the transmit timestamp (remote clock)
-     */
-    public long getTransmitTimestamp() {
-        return transmitTimestamp;
-    }
-
-    @Override
-    public String toString() {
-        return new StringJoiner(", ", ClockSyncEvent.class.getSimpleName() + "[", "]")
-                .add("destinationTimestamp=" + destinationTimestamp)
-                .add("originateTimestamp=" + originateTimestamp)
-                .add("receiveTimestamp=" + receiveTimestamp)
-                .add("transmitTimestamp=" + transmitTimestamp)
-                .toString();
+    public long remoteOffset() {
+        return originateTimestamp + latency() - receiveTimestamp;
     }
 }

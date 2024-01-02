@@ -5,14 +5,14 @@ in forza o impulso e coppia o impulso angolare:
 
 Calcolare la rotazione richiesta
 Se il valore assoluto della rotazione è > di 10 DEG
-    applicare una velocità angolare massima
+applicare una velocità angolare massima
 Se il valore assoluto della rotazione è < di 3 DEG
-    applicare una velocità angolare nulla
+applicare una velocità angolare nulla
 Altrimenti
-    applicare una velocità angolare proporzionale alla rotazione residua
+applicare una velocità angolare proporzionale alla rotazione residua
 
 Se il valore assoluto della rotazione è > di 30 DEG
-    applicare una velocità lineare nulla
+applicare una velocità lineare nulla
 
 Altrimenti applicare una velocità lineare proporzionale alla rotazione fino al massimo richiesto
 

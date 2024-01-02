@@ -98,7 +98,7 @@ public class DumpRecordPanel extends JPanel {
         this.offsetFlow = SwingObservable.actions(offsetButton)
                 .toFlowable(BackpressureStrategy.LATEST)
                 .filter(x -> record != null)
-                .map(x -> record.getInstant());
+                .map(x -> record.instant());
         init();
         createContent();
     }
@@ -217,7 +217,7 @@ public class DumpRecordPanel extends JPanel {
         if (record != null) {
             elapsedField.setText(
                     formatDuration(
-                            Duration.between(offset, record.getInstant())));
+                            Duration.between(offset, record.instant())));
         }
     }
 
@@ -236,12 +236,12 @@ public class DumpRecordPanel extends JPanel {
     public void setRecord(DumpRecord record) {
         this.record = record;
         if (record != null) {
-            instantField.setValue(record.getInstant());
-            typeField.setText(record.getComDirection());
-            dataField.setText(record.getData());
+            instantField.setValue(record.instant());
+            typeField.setText(record.comDirection());
+            dataField.setText(record.data());
             elapsedField.setText(
                     formatDuration(
-                            Duration.between(offset, record.getInstant())));
+                            Duration.between(offset, record.instant())));
             if (record instanceof DumpRecord.MessageDumpRecord) {
                 setStatusFields((DumpRecord.MessageDumpRecord<?>) record);
             } else {

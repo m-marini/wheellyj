@@ -314,19 +314,19 @@ public class ProcessorContext {
         clearStack();
         clearValues();
         // Execute on init
-        ProcessorCommand onInit = flow.getOnInit();
+        ProcessorCommand onInit = flow.onInit();
         if (onInit != null) {
             onInit.execute(this);
         }
 
         // Initializes all states
-        for (StateNode state : flow.getStates()) {
+        for (StateNode state : flow.states()) {
             state.init(this);
         }
 
         // Entry state
-        this.currentNode = flow.getEntry();
-        logger.debug("{}: entry", currentNode.getId());
+        this.currentNode = flow.entry();
+        logger.debug("{}: entry", currentNode.id());
         this.currentNode.entry(this);
         stateProcessor.onNext(currentNode);
     }
@@ -450,23 +450,23 @@ public class ProcessorContext {
         triggerProcessor.onNext(result._1);
         if (!NONE_EXIT.equals(result._1)) {
             //find for transition match
-            Optional<StateTransition> tx = flow.getTransitions().stream()
-                    .filter(t -> t.getFrom().equals(currentNode.getId()) && t.isTriggered(result._1))
+            Optional<StateTransition> tx = flow.transitions().stream()
+                    .filter(t -> t.from().equals(currentNode.id()) && t.isTriggered(result._1))
                     .findFirst();
             tx.ifPresentOrElse(t -> {
                         // trigger the exit call back
-                        logger.debug("{}: Trigger {}", currentNode.getId(), result);
+                        logger.debug("{}: Trigger {}", currentNode.id(), result);
                         currentNode.exit(this);
                         // trigger the transition call back
                         t.activate(this);
                         // Change the state
-                        currentNode = getState(t.getTo());
+                        currentNode = getState(t.to());
                         // trigger the entry state call back
-                        logger.debug("{}: entry", currentNode.getId());
+                        logger.debug("{}: entry", currentNode.id());
                         currentNode.entry(this);
                         stateProcessor.onNext(currentNode);
                     },
-                    () -> logger.debug("Trigger {} - {} ignored", currentNode.getId(), result._1)
+                    () -> logger.debug("Trigger {} - {} ignored", currentNode.id(), result._1)
             );
         }
     }

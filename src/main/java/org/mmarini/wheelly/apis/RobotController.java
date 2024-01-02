@@ -114,8 +114,8 @@ public class RobotController implements RobotControllerApi {
     public static final String HANDLING_COMMANDS = "handlingCommands";
     public static final String CONFIGURING = "configuring";
     public static final String WAITING_COMMAND_INTERVAL = "waitingCommandInterval";
-    private static final Logger logger = LoggerFactory.getLogger(RobotController.class);
     public static final long MIN_SYNCH_INTERVAL = 3;
+    private static final Logger logger = LoggerFactory.getLogger(RobotController.class);
 
     /**
      * Returns the robot controller from configuration
@@ -280,19 +280,19 @@ public class RobotController implements RobotControllerApi {
     @Override
     public void execute(RobotCommands command) {
         // Validates the command
-        if (command.isHalt() || command.isMove()) {
-            if (command.isMove() && !(command.moveDirection >= -180 && command.moveDirection <= 179
-                    && command.speed >= -MAX_PPS && command.speed <= MAX_PPS)) {
+        if (command.halt() || command.move()) {
+            if (command.move() && !(command.moveDirection() >= -180 && command.moveDirection() <= 179
+                    && command.speed() >= -MAX_PPS && command.speed() <= MAX_PPS)) {
                 logger.atError().setMessage("Wrong move command {}").addArgument(command).log();
             } else {
                 moveCommand = command.clearScan();
             }
         }
-        if (command.isScan()) {
-            if (command.scanDirection >= -90 && command.scanDirection <= 90) {
-                sensorDir = command.scanDirection;
+        if (command.scan()) {
+            if (command.scanDirection() >= -90 && command.scanDirection() <= 90) {
+                sensorDir = command.scanDirection();
             } else {
-                logger.atError().setMessage("Wrong scan direction {}").addArgument(command.scanDirection).log();
+                logger.atError().setMessage("Wrong scan direction {}").addArgument(command.scanDirection()).log();
             }
         }
         commandsProcessor.onNext(command);
@@ -340,11 +340,11 @@ public class RobotController implements RobotControllerApi {
                 if (cmd != null) {
                     // Checks for move command required
                     if (!cmd.equals(lastMoveCommand)
-                            || !cmd.isHalt() && time >= lastRobotMoveTimestamp + commandInterval) {
-                        if (cmd.isHalt()) {
+                            || !cmd.halt() && time >= lastRobotMoveTimestamp + commandInterval) {
+                        if (cmd.halt()) {
                             robot.halt();
                         } else {
-                            robot.move(cmd.moveDirection, cmd.speed);
+                            robot.move(cmd.moveDirection(), cmd.speed());
                         }
                         this.lastRobotMoveTimestamp = time;
                         lastMoveCommand = cmd;
@@ -586,7 +586,7 @@ public class RobotController implements RobotControllerApi {
     @Override
     public void shutdown() {
         if (isStarted) {
-            execute(RobotCommands.halt());
+            execute(RobotCommands.haltCommand());
             logger.atInfo().log("Shutting down...");
             end = true;
             close = true;

@@ -42,6 +42,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.lang.Math.*;
+import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 
 /**
@@ -68,7 +69,8 @@ import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
  * </ul>
  * </p>
  */
-public class ExploringPointState extends AbstractStateNode {
+public record ExploringPointState(String id, ProcessorCommand onInit, ProcessorCommand onEntry,
+                                  ProcessorCommand onExit) implements ExtendedStateNode {
     private static final Logger logger = LoggerFactory.getLogger(ExploringPointState.class);
     private static final Tuple2<String, RobotCommands> NOT_FOUND_RESULT = Tuple2.of("notFound", RobotCommands.idle());
 
@@ -84,7 +86,7 @@ public class ExploringPointState extends AbstractStateNode {
         double safeDistance = locator.path("safeDistance").getNode(root).asDouble();
         double maxDistance = locator.path("maxDistance").getNode(root).asDouble();
         ProcessorCommand onInit = ProcessorCommand.concat(
-                loadTimeout(root, locator, id),
+                ExtendedStateNode.loadTimeout(root, locator, id),
                 ProcessorCommand.setProperties(Map.of(
                         id + ".distance", distance,
                         id + ".safeDistance", safeDistance,
@@ -104,8 +106,11 @@ public class ExploringPointState extends AbstractStateNode {
      * @param onEntry the entry command
      * @param onExit  the exit command
      */
-    protected ExploringPointState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit) {
-        super(id, onInit, onEntry, onExit);
+    public ExploringPointState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit) {
+        this.id = requireNonNull(id);
+        this.onInit = onInit;
+        this.onEntry = onEntry;
+        this.onExit = onExit;
     }
 
     @Override
@@ -117,17 +122,16 @@ public class ExploringPointState extends AbstractStateNode {
         Point2D robotLocation = context.getRobotStatus().getLocation();
         // Callects all obstacles from hindered circular sectors
         List<Point2D> obstacles = map.getSectorStream()
-                .filter(CircularSector::isHindered)
-                .map(CircularSector::getLocation)
-                .flatMap(Optional::stream)
+                .filter(CircularSector::knownHindered)
+                .map(CircularSector::location)
                 .collect(Collectors.toList());
         // Collects all target points
-        int n = map.getSectorsNumber();
+        int n = map.sectorsNumber();
         List<Point2D> targets = new ArrayList<>();
         for (int i = 0; i < n; i++) {
             CircularSector sector = map.getSector(i);
-            if (sector.isHindered()) {
-                Point2D p = sector.getLocation().orElseThrow();
+            if (sector.knownHindered()) {
+                Point2D p = sector.location();
                 double d1 = p.distance(robotLocation);
                 double d = d1 - safeDistance;
                 if (d >= distance) {
@@ -141,7 +145,7 @@ public class ExploringPointState extends AbstractStateNode {
                     targets.add(new Point2D.Double(x, y));
                 }
             } else {
-                double sectorDirRad = normalizeDegAngle(map.sectorDirection(i) + toRadians(map.getDirection()));
+                double sectorDirRad = normalizeDegAngle(map.sectorDirection(i) + toRadians(map.direction()));
                 double x0 = robotLocation.getX();
                 double y0 = robotLocation.getY();
                 double x = maxDistance * sin(sectorDirRad) + x0;

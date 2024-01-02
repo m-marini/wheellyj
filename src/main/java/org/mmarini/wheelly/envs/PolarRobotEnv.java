@@ -52,7 +52,7 @@ import static org.mmarini.wheelly.apis.Utils.clip;
  *      The robot actions are divided in two concurrent actions: robot movement and sensor movement<br>
  *      The robot movement are
  *      <ul>
- *          <li>move robot to a direction at specific speed or halt (speedFeature == numSpeedValues)</li>
+ *          <li>move robot to a direction at specific speed or haltCommand (speedFeature == numSpeedValues)</li>
  *      </ul>
  *      The sensor movement determines the direction of sensor
  * </p>
@@ -117,7 +117,7 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
                                        int numRadarSectors, double minRadarDistance, double maxRadarDistance, RadarMap radarMap) {
         Map<String, SignalSpec> actions1 = Map.of(
                 "direction", new IntSignalSpec(new long[]{1}, numDirectionValues),
-                "speed", new IntSignalSpec(new long[]{1}, numSpeedValues + 1), //number of speed values + halt command
+                "speed", new IntSignalSpec(new long[]{1}, numSpeedValues + 1), //number of speed values + haltCommand command
                 "sensorAction", new IntSignalSpec(new long[]{1}, numSensorValues)
         );
 
@@ -153,7 +153,7 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
         this.status = new CompositeStatus(null, radarMap, polarMap);
         this.minRadarDistance = minRadarDistance;
         this.maxRadarDistance = maxRadarDistance;
-        int n = polarMap.getSectorsNumber();
+        int n = polarMap.sectorsNumber();
         this.states = Map.of(
                 "sensor", new FloatSignalSpec(new long[]{1}, MIN_SENSOR_DIR, MAX_SENSOR_DIR),
                 "distance", new FloatSignalSpec(new long[]{1}, (float) MIN_DISTANCE, (float) MAX_DISTANCE),
@@ -210,16 +210,16 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
         double maxDistance = ((FloatSignalSpec) states.get("sectorDistances")).getMaxValue();
 
         PolarMap polarMap = currentStatus.polarMap;
-        int n = polarMap.getSectorsNumber();
+        int n = polarMap.sectorsNumber();
         INDArray knownSectors = Nd4j.zeros(n);
         INDArray sectorDistances = Nd4j.zeros(n);
         for (int i = 0; i < n; i++) {
             CircularSector sector = polarMap.getSector(i);
-            double dist = sector.isHindered()
-                    ? clip(sector.getDistance(polarMap.getCenter()), 0, maxDistance)
+            double dist = sector.knownHindered()
+                    ? clip(sector.distance(polarMap.center()), 0, maxDistance)
                     : 0;
             sectorDistances.getScalar(i).assign(dist);
-            knownSectors.getScalar(i).assign(sector.isKnown() ? 1 : 0);
+            knownSectors.getScalar(i).assign(sector.known() ? 1 : 0);
         }
         return Map.of(
                 "sensor", new ArraySignal(sensor),

@@ -48,7 +48,7 @@ class SimRobotObstacleTest {
     /**
      * Given a space with an obstacle at X0,0
      * and robot directed to 90 DEG at distance of 239 mm from obstacle (-1 mm border distance obstacle - robot)
-     * When halt the robot and after 300ms
+     * When haltCommand the robot and after 300ms
      * Then the robot should remain stopped
      * and the distance sensor should signal 140mm
      * and the proximity should signal 12 (front contacts)

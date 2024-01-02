@@ -35,7 +35,6 @@ Compatible with Wheellino 0.7.0
 - Add contacts trigger on state machine agent
 - Add power and target speed on status record
 
-
 ## Release 0.8.1
 
 Compatible with Wheellino 0.6.1
@@ -43,7 +42,6 @@ Compatible with Wheellino 0.6.1
 - Add drop regularization
 - Add supply sensor configuration
 - Add physic measures app
-
 
 ## Release 0.8.0
 
@@ -110,22 +108,22 @@ Compatible with Wheellino 0.2.x
 - Added the radar map component that processes the proxy sensor signals creating a map of obstacles.
 - The map feeds the neural network as environment state signals.
 
-
 ## Release 0.3.0
 
 - The remote server is Java software running in JVM that implements the interaction between environment and agent.
 - The environment can collect and drive the remote robot by Wi-Fi connection or simulate the robot in a virtual
-environment.
+  environment.
 
-- The agent is based on Temporal Difference (TD) actor-critic algorithms with eligibility trace, the critic component use
-the residual advantage state value to evaluate the policy of actor.
+- The agent is based on Temporal Difference (TD) actor-critic algorithms with eligibility trace, the critic component
+  use
+  the residual advantage state value to evaluate the policy of actor.
 
 ## Release 0.2.0
 
 - The remote server is Java software running in JVM that allow to drive the robot running different inference engine
-models (simple manual controller via joystick or state machine base engine).
+  models (simple manual controller via joystick or state machine base engine).
 - The software creates a 2D space model from the proximity and contact sensors and implements different basic behaviors
-that can be composed to build the state machine engine.
+  that can be composed to build the state machine engine.
 
 The basic behaviors are:
 

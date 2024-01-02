@@ -1,7 +1,9 @@
 # Note RLAgent
+
 L'agente RL gener il comportamento sulla base di una rete neurale.
 
 ## processForTrain
+
 La funzione `processForTrain` processa i segnali di feedback cosi da creare
 i dati necessari all'apprendimento.
 
@@ -11,7 +13,7 @@ produce un dizionario di dati con i dati per l'apprendimeno;
 
 - gli stati s0 e s1 vengono trasformati nei segnali di ingresso della rete attraverso i codificatore di stati
 - i segnali engono applicati alla rete per produrre i vari segnali di uscita.
-- i segnali del critico del modello vengono convertiti in residual advantage average reward (v0, v1) 
+- i segnali del critico del modello vengono convertiti in residual advantage average reward (v0, v1)
   attraverso la funzione di denormalizzazione
   dei valori delle azioni (conversione linerare da -1, +1 a -minRewarda maxReward)
 - Viene calcolato il valore corretto del resiual advantage average reward considerando il premio ricevuto
@@ -25,7 +27,7 @@ produce un dizionario di dati con i dati per l'apprendimeno;
 - Viene calcolata la label del critico attraverso la normalizzazione del nuovo valore
   (conversione linerare da -minRewarda maxReward a -1, +1)
 - Vengono calcolate le label di ogni attore
-- Vengono raccolti e uniti i nuovi parametri alpha per ogni attore 
+- Vengono raccolti e uniti i nuovi parametri alpha per ogni attore
 - Vengono poi fuse insieme tutte le labels calcolate per produrre le effettive
   labels per istruire la rete.
 
@@ -47,10 +49,11 @@ l'azione selezionata (ordinale del valore dell'azione) per produrre le labels pe
 - vengono poi calcolate le probabilità di selezione di un valore `pi` con la funzione softmax delle preference.
 - viene calcolata la matrice di feature `y` dell'azione attraverso la funzione di codifica dell'azione
   (matrice binaria per ogni possibile valore con solo l'azione selezionata a valore 1 e i rimanenti a 0)
-- viene calcolata la funzione di errore delle probabilità `z = y - pi` 
+- viene calcolata la funzione di errore delle probabilità `z = y - pi`
 - viene calcolata la funzione di errore delle preferenze `deltaH = z delta alpha`
 - vengono calcolati i nuovi valori di preferenze `h* = h + deltaH`
-- vengono calcolati i nuovi valori di correzione alpha `alpha* = alpha * alphaDecay + epsilonH / deltaHRMS (1 - alphaDecay)`
+- vengono calcolati i nuovi valori di correzione
+  alpha `alpha* = alpha * alphaDecay + epsilonH / deltaHRMS (1 - alphaDecay)`
 - vengono calcolate le labels di correzione della reta attraverso la
   funzione di normalizzazione delle preferenze (bilancamenro dei valori e conversione lineare ai livelli -1, 1)
 

@@ -74,11 +74,12 @@ public interface ExploreByImitation {
             int sensorAction = env.sensorDir(env.getPrevActions());
 
             PolarMap polarMap = compositeStatus.polarMap;
+
             RobotCommands expActions = ExploringState.explore(status, polarMap, stopDistance, turnDirectionRange)._2;
-            boolean expHalt = expActions.isHalt();
-            int expMoveDir = expActions.moveDirection;
-            int expScanDir = expActions.scanDirection;
-            int expSpeed = expActions.speed;
+            boolean expHalt = expActions.halt();
+            int expMoveDir = expActions.moveDirection();
+            int expScanDir = expActions.scanDirection();
+            int expSpeed = expActions.speed();
 
             if (isHalt != expHalt) {
                 return 0;

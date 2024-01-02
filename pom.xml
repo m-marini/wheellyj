@@ -104,7 +104,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.0.0-M5</version>
             </plugin>
-                <!-- https://mvnrepository.com/artifact/com.googlecode.mavennatives/maven-nativedependencies-plugin -->
+            <!-- https://mvnrepository.com/artifact/com.googlecode.mavennatives/maven-nativedependencies-plugin -->
             <!--
             <plugin>
                 <groupId>com.googlecode.mavennatives</groupId>
@@ -310,6 +310,12 @@
             <groupId>org.hamcrest</groupId>
             <artifactId>hamcrest</artifactId>
             <version>${hamcrest.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>rocks.cleancode</groupId>
+            <artifactId>hamcrest-record</artifactId>
+            <version>1.0.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>

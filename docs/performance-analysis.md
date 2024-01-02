@@ -19,7 +19,7 @@ reward range.
 The difference of probability of the selected action between the value after the training and the previous value
 indicates the factor of correction of the policy network.
 It should have the same sign of delta (note that the probability is limiteted to one values so the difference tents to
-decrease as the pobability goes near the one value). 
+decrease as the pobability goes near the one value).
 
 # Weight updates
 

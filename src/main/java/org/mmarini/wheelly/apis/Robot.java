@@ -52,7 +52,7 @@ import static java.util.Objects.requireNonNull;
  *     robot.configure();
  *
  *     // Sending any command
- *     robot.halt();
+ *     robot.haltCommand();
  *     robot.scan(...);
  *     robot.move(...);
  *
@@ -210,6 +210,11 @@ public class Robot implements RobotApi, WithIOCallback {
     }
 
     @Override
+    public long getRemoteTime() {
+        return this.clockEvent.fromLocal(System.currentTimeMillis());
+    }
+
+    @Override
     public void halt() throws IOException {
         writeCommand("ha");
     }
@@ -333,7 +338,7 @@ public class Robot implements RobotApi, WithIOCallback {
                 if (line.value().startsWith("ck " + now + " ")) {
                     try {
                         ClockSyncEvent clock = ClockSyncEvent.from(line.value(), line.time());
-                        if (now == clock.getOriginateTimestamp()) {
+                        if (now == clock.originateTimestamp()) {
                             clockEvent = clock;
                             if (onClock != null) {
                                 onClock.accept(clock);
@@ -364,11 +369,6 @@ public class Robot implements RobotApi, WithIOCallback {
                 parseForMessage(line);
             }
         }
-    }
-
-    @Override
-    public long getRemoteTime() {
-        return this.clockEvent.fromLocal(System.currentTimeMillis());
     }
 
     /**

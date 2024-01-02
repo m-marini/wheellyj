@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #278: Api schema by id
 - Issue #281: Add new status signals recognition to COM monitor
 - Issue #286: COMMonitor with calssified status signals
+- Issue #290: Review RadarMap update
 
 ### Fixed
 
@@ -50,7 +51,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 - Issue #255: Add move to state
-  
+
 ## [0.9.0] 2023-11-12
 
 ### Added
@@ -81,7 +82,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #225: Shows reward on sensor monitor
 - Issue #233: json schema validator
 
-### Fixed  
+### Fixed
 
 - Issue #227: Wrong reward on explore by imitation
 - Issue #229: Wrong Resnet block
@@ -89,7 +90,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [0.8.0] 2023-02-17
 
 ### Added
- 
+
 - Issue #208: Add octave engine calibration
 - Issue #214: Add sensor monitor
 
@@ -127,7 +128,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [0.6.0] 2023-02-03
 
 ### Added
- 
+
 - Issue #144: Add resiliency management
 - Issue #179: Add real measure of reaction time
 - Issue #185: Setting simulation speed
@@ -167,7 +168,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #169: Load robot config in check apps
 
 ### Fixed
- 
+
 - Issue #167: Improve windows UI on MatrixMonitor
 
 ## [0.5.0] 2023-01-15
@@ -246,7 +247,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #89: Add state tiles coding
 - Issue #91: Add partition processor
 - Issue #98: Add weight's changes kpi
- 
+
 ### Changed
 
 - Issue #71: Halt goal behaviour
@@ -282,7 +283,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
- - Issue #61: Change status LEDs with multicolor LED
+- Issue #61: Change status LEDs with multicolor LED
 
 ## [0.1.0] 2022-05-14
 
@@ -302,7 +303,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #24: Create a proxy map by robot asset
 - Issue #27: Add the gyroscope data asset
 - Issue #31: Add map display with robot and obstacles, create base engine to manage different automa behavior
-- Issue #29  Create automa behavior
+- Issue #29 Create automa behavior
 - Issue #33: Arrange the obstacles in a grid
 - Issue #39: Merge pr event and st event
 - Issue #41: Move the motion control in Wheelly

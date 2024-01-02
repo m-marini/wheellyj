@@ -118,11 +118,11 @@ public class MapBuilder {
         if (dx == 0 && dy == 0) {
             add(x, y);
         } else if (abs(dx) >= abs(dy)) {
-            double gridSize = this.topology.getGridSize();
+            double gridSize = this.topology.gridSize();
             int n = (int) (abs(dx) / gridSize) + 1;
             add(n, x, y, signum(dx) * gridSize, dy / abs(dx) * gridSize);
         } else {
-            double gridSize = this.topology.getGridSize();
+            double gridSize = this.topology.gridSize();
             int n = (int) (abs(dy) / gridSize) + 1;
             add(n, x, y, dx / abs(dy) * gridSize, signum(dy) * gridSize);
         }

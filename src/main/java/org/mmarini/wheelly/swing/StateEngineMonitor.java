@@ -57,7 +57,7 @@ public class StateEngineMonitor extends MatrixTable {
      * @param state the state
      */
     public void addState(StateNode state) {
-        printf(STATE_KEY, "%s", state.getId());
+        printf(STATE_KEY, "%s", state.id());
     }
 
     /**

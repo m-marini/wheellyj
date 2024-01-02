@@ -38,6 +38,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.mmarini.wheelly.TestFunctions.text;
 import static org.mmarini.yaml.Utils.fromText;
+import static rocks.cleancode.hamcrest.record.HasFieldMatcher.field;
 
 class StateFlowTest {
 
@@ -69,15 +70,15 @@ class StateFlowTest {
 
         StateFlow sf = StateFlow.create(root, Locator.root());
 
-        assertThat(sf, hasProperty("states", hasSize(2)));
-        assertThat(sf, hasProperty("states",
-                hasItem(hasProperty("id",
+        assertThat(sf, field("states", hasSize(2)));
+        assertThat(sf, field("states",
+                hasItem(field("id",
                         equalTo("a")))));
-        assertThat(sf, hasProperty("states",
-                hasItem(hasProperty("id",
+        assertThat(sf, field("states",
+                hasItem(field("id",
                         equalTo("b")))));
-        assertThat(sf, hasProperty("onInit",
-                hasProperty("id", equalTo("@program"))));
-        assertThat(sf, hasProperty("transitions", hasSize(1)));
+        assertThat(sf, field("onInit",
+                field("id", equalTo("@program"))));
+        assertThat(sf, field("transitions", hasSize(1)));
     }
 }

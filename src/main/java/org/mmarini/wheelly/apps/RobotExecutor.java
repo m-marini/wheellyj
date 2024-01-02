@@ -260,8 +260,8 @@ public class RobotExecutor {
             Optional<ObstacleMap> obstaclesMap = ((SimRobot) robot).getObstaclesMap();
             obstaclesMap.map(ObstacleMap::getPoints)
                     .ifPresent(envPanel::setObstacleMap);
-            obstaclesMap.map(ObstacleMap::getTopology)
-                    .map(GridTopology::getGridSize)
+            obstaclesMap.map(ObstacleMap::topology)
+                    .map(GridTopology::gridSize)
                     .ifPresent(envPanel::setObstacleSize);
         }
     }

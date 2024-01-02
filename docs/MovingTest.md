@@ -1,4 +1,3 @@
-
 The robot must move trying to explore the environment towards unknown areas
 
 ```mermaid

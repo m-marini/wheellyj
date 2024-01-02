@@ -252,7 +252,7 @@ public class MatrixMonitor {
             timeSlider.setEnabled(true);
         }
         if (halt) {
-            controller.execute(RobotCommands.halt());
+            controller.execute(RobotCommands.haltCommand());
         } else {
             controller.execute(RobotCommands.move(
                     normalizeDegAngle(robotDirSlider.getValue()),

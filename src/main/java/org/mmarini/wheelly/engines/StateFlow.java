@@ -39,11 +39,14 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * The state flow defines all process states and state transitions.
- * <p>
- * It is an immutable object.
- * </p>
+ *
+ * @param states      the list of states
+ * @param transitions the list of transitions
+ * @param entry       the entry state
+ * @param onInit      the processor command on initialization
  */
-public class StateFlow {
+public record StateFlow(List<StateNode> states, List<StateTransition> transitions, StateNode entry,
+                        ProcessorCommand onInit) {
     /**
      * Returns the state flow from configuration
      *
@@ -71,7 +74,7 @@ public class StateFlow {
      * @param id     the identifier
      */
     private static Optional<StateNode> findState(List<StateNode> states, String id) {
-        return states.stream().filter(n -> n.getId().equals(id)).findAny();
+        return states.stream().filter(n -> n.id().equals(id)).findAny();
     }
 
     /**
@@ -87,22 +90,17 @@ public class StateFlow {
         }
         for (int i = 0; i < transitions.size(); i++) {
             StateTransition tr = transitions.get(i);
-            if (findState(states, tr.getFrom()).isEmpty()) {
+            if (findState(states, tr.from()).isEmpty()) {
                 throw new IllegalArgumentException(format("transition %d  (%s -- %s --> %s) from state not found",
-                        i, tr.getFrom(), tr.getTrigger(), tr.getTo()));
+                        i, tr.from(), tr.trigger(), tr.to()));
             }
-            if (findState(states, tr.getTo()).isEmpty()) {
+            if (findState(states, tr.to()).isEmpty()) {
                 throw new IllegalArgumentException(format("transition %d  (%s -- %s --> %s) to state not found",
-                        i, tr.getFrom(), tr.getTrigger(), tr.getTo()));
+                        i, tr.from(), tr.trigger(), tr.to()));
             }
         }
 
     }
-
-    private final List<StateNode> states;
-    private final List<StateTransition> transitions;
-    private final StateNode entry;
-    private final ProcessorCommand onInit;
 
     /**
      * Creates the state flow
@@ -120,39 +118,11 @@ public class StateFlow {
     }
 
     /**
-     * Returns the entry state
-     */
-    public StateNode getEntry() {
-        return entry;
-    }
-
-    /**
-     * Returns the initialization processor command
-     */
-    public ProcessorCommand getOnInit() {
-        return onInit;
-    }
-
-    /**
      * Returns the state by identifier or null if not exits
      *
      * @param id the identifier
      */
     public StateNode getState(String id) {
         return findState(states, id).orElse(null);
-    }
-
-    /**
-     * Returns the list of states
-     */
-    public List<StateNode> getStates() {
-        return states;
-    }
-
-    /**
-     * Returns the lilst of transitions
-     */
-    public List<StateTransition> getTransitions() {
-        return transitions;
     }
 }

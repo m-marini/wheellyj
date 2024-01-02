@@ -77,7 +77,7 @@ class ProcessorCommandTest {
 
     static RobotApi createRobot() {
         MockRobot mockRobot = new MockRobot();
-        mockRobot.setTime(TIME);
+        mockRobot.setRemoteTime(TIME);
         return mockRobot;
     }
 

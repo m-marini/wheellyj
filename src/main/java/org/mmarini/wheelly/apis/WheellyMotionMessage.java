@@ -27,7 +27,6 @@ package org.mmarini.wheelly.apis;
 
 import io.reactivex.rxjava3.schedulers.Timed;
 
-import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.Double.parseDouble;
@@ -37,8 +36,26 @@ import static java.lang.String.format;
 
 /**
  * The Wheelly status contain the sensor value of Wheelly
+ *
+ * @param time           the status time
+ * @param remoteTime     the remote status instant
+ * @param xPulses        the x robot location pulses
+ * @param yPulses        the y robot location pulses
+ * @param direction      the robot direction DEG
+ * @param leftPps        the left motor speed (pulse per seconds)
+ * @param rightPps       the right motor speed (pulse per seconds)
+ * @param imuFailure     true if imu failure
+ * @param halt           true if in haltCommand
+ * @param leftTargetPps  the left target pps
+ * @param rightTargetPps the right target pps
+ * @param leftPower      the left power
+ * @param rightPower     the right power
  */
-public class WheellyMotionMessage extends WheellyMessage {
+public record WheellyMotionMessage(long time, long remoteTime, double xPulses, double yPulses, int direction,
+                                   double leftPps, double rightPps,
+                                   int imuFailure, boolean halt, int leftTargetPps, int rightTargetPps, int leftPower,
+                                   int rightPower)
+        implements WheellyMessage {
     public static final int NO_STATUS_PARAMS = 15;
 
     /**
@@ -53,7 +70,7 @@ public class WheellyMotionMessage extends WheellyMessage {
      *     [leftSpeed]
      *     [rightSpeed]
      *     [imuFailure]
-     *     [halt]
+     *     [haltCommand]
      *     [move direction]
      *     [move speed]
      *     [left target pps]
@@ -94,59 +111,6 @@ public class WheellyMotionMessage extends WheellyMessage {
                 halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
     }
 
-    private final double xPulses;
-    private final double yPulses;
-    private final int direction;
-    private final double leftPps;
-    private final double rightPps;
-    private final int imuFailure;
-    private final boolean halt;
-    private final int leftTargetPps;
-    private final int rightTargetPps;
-    private final int leftPower;
-    private final int rightPower;
-
-    /**
-     * Creates wheelly status
-     *
-     * @param time           the status time
-     * @param remoteTime     the remote status instant
-     * @param xPulses        the x robot location pulses
-     * @param yPulses        the y robot location pulses
-     * @param direction      the robot direction DEG
-     * @param leftPps        the left motor speed (pulse per seconds)
-     * @param rightPps       the right motor speed (pulse per seconds)
-     * @param imuFailure     true if imu failure
-     * @param halt           true if in halt
-     * @param leftTargetPps  the left target pps
-     * @param rightTargetPps the right target pps
-     * @param leftPower      the left power
-     * @param rightPower     the right power
-     */
-    public WheellyMotionMessage(long time, long remoteTime, double xPulses, double yPulses, int direction,
-                                double leftPps, double rightPps,
-                                int imuFailure, boolean halt, int leftTargetPps, int rightTargetPps, int leftPower, int rightPower) {
-        super(time, remoteTime);
-        this.xPulses = xPulses;
-        this.yPulses = yPulses;
-        this.direction = direction;
-        this.leftPps = leftPps;
-        this.rightPps = rightPps;
-        this.imuFailure = imuFailure;
-        this.halt = halt;
-        this.leftTargetPps = leftTargetPps;
-        this.rightTargetPps = rightTargetPps;
-        this.leftPower = leftPower;
-        this.rightPower = rightPower;
-    }
-
-    /**
-     * Returns the roboto direction (DEG)
-     */
-    public int getDirection() {
-        return direction;
-    }
-
     /**
      * Returns the motion message with direction set
      *
@@ -159,77 +123,7 @@ public class WheellyMotionMessage extends WheellyMessage {
     }
 
     /**
-     * Returns the IMU failure code
-     */
-    public int getImuFailure() {
-        return imuFailure;
-    }
-
-    /**
-     * Returns the left power
-     */
-    public int getLeftPower() {
-        return leftPower;
-    }
-
-    /**
-     * Returns the left motor speed (pps)
-     */
-    public double getLeftPps() {
-        return leftPps;
-    }
-
-    /**
-     * Returns the left motor target speed (pps)
-     */
-    public int getLeftTargetPps() {
-        return leftTargetPps;
-    }
-
-    /**
-     * Returns the right motor power
-     */
-    public int getRightPower() {
-        return rightPower;
-    }
-
-    /**
-     * Returns the right motor speed (pps)
-     */
-    public double getRightPps() {
-        return rightPps;
-    }
-
-    /**
-     * Returns the left motor target speed (pps)
-     */
-    public int getRightTargetPps() {
-        return rightTargetPps;
-    }
-
-    /**
-     * Returns the robot location abscissa pulses
-     */
-    public double getXPulses() {
-        return xPulses;
-    }
-
-    /**
-     * Returns the robot location ordinata pulses
-     */
-    public double getYPulses() {
-        return yPulses;
-    }
-
-    /**
-     * Returns true if roboto is halt
-     */
-    public boolean isHalt() {
-        return halt;
-    }
-
-    /**
-     * Returns the message with halt status
+     * Returns the message with haltCommand status
      *
      * @param halt true if robot is halted
      */
@@ -273,24 +167,4 @@ public class WheellyMotionMessage extends WheellyMessage {
                 ? new WheellyMotionMessage(time, remoteTime, xPulses, yPulses, direction, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower)
                 : this;
     }
-
-    @Override
-    public String toString() {
-        return new StringJoiner(", ", WheellyMotionMessage.class.getSimpleName() + "[", "]")
-                .add("time=" + time)
-                .add("remoteTime=" + remoteTime)
-                .add("xPulses=" + xPulses)
-                .add("yPulses=" + yPulses)
-                .add("direction=" + direction)
-                .add("leftPps=" + leftPps)
-                .add("rightPps=" + rightPps)
-                .add("imuFailure=" + imuFailure)
-                .add("halt=" + halt)
-                .add("leftTargetPps=" + leftTargetPps)
-                .add("rightTargetPps=" + rightTargetPps)
-                .add("leftPower=" + leftPower)
-                .add("rightPower=" + rightPower)
-                .toString();
-    }
-
 }

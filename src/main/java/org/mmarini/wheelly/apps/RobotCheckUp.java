@@ -167,7 +167,7 @@ public class RobotCheckUp {
             @Override
             public List<ScannerResult> apply(RobotStatus status) {
                 long time = status.getLocalTime();
-                RobotCommands command = RobotCommands.halt().setScan(0);
+                RobotCommands command = RobotCommands.haltCommand().setScan(0);
                 if (currentTest < 0) {
                     // First sample
                     currentTest = 0;

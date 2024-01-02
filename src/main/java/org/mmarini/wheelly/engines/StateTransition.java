@@ -39,11 +39,13 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * Defines the transition between states, with the trigger condition and processing stage.
- * <p>
- * It is an immutable object
- * </p>
+ *
+ * @param trigger      the trigger regex
+ * @param from         the source state
+ * @param to           the target state
+ * @param onTransition the on transition commands
  */
-public class StateTransition {
+public record StateTransition(Pattern trigger, String from, String to, ProcessorCommand onTransition) {
 
     /**
      * Returns the state transition list from yaml
@@ -74,11 +76,6 @@ public class StateTransition {
                 .collect(Collectors.toList());
     }
 
-    private final Pattern trigger;
-    private final String from;
-    private final String to;
-    private final ProcessorCommand onTransition;
-
     /**
      * Creates the state transition
      *
@@ -103,34 +100,6 @@ public class StateTransition {
         if (onTransition != null) {
             onTransition.execute(processorContext);
         }
-    }
-
-    /**
-     * Returns the start state identifier
-     */
-    public String getFrom() {
-        return from;
-    }
-
-    /**
-     * Returns the processor command on transition
-     */
-    public ProcessorCommand getOnTransition() {
-        return onTransition;
-    }
-
-    /**
-     * Returns the end state identifier
-     */
-    public String getTo() {
-        return to;
-    }
-
-    /**
-     * Returns the trigger regex
-     */
-    public Pattern getTrigger() {
-        return trigger;
     }
 
     /**
