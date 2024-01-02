@@ -26,7 +26,7 @@
 package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.MapSector;
+import org.mmarini.wheelly.apis.MapCell;
 import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WithRobotStatus;
@@ -69,10 +69,10 @@ public interface Explore {
             }
             RadarMap radarMap = env.getRadarMap();
             long knownSectorsNumber = radarMap.getSectorsStream()
-                    .filter(Predicate.not(MapSector::isUnknown))
+                    .filter(Predicate.not(MapCell::unknown))
                     .count();
             // encourages the exploration of unfamiliar areas
-            double isKnown = ((double) knownSectorsNumber) / radarMap.getSectorsNumber();
+            double isKnown = ((double) knownSectorsNumber) / radarMap.sectorsNumber();
             // encourages the linear speed
             double linSpeed = (status.getRightPps() + status.getLeftPps()) / MAX_PPS / 2;
             double isLinearSpeed = clip(linSpeed, 0, 1);

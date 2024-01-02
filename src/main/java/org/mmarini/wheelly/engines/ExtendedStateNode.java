@@ -40,7 +40,6 @@ import java.util.OptionalLong;
 
 import static java.lang.Math.max;
 import static java.lang.String.format;
-import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.Utils.clip;
 
 /**
@@ -51,8 +50,8 @@ import static org.mmarini.wheelly.apis.Utils.clip;
  * Implements access to key,value processor context by prefixing node id in the key.<br>
  * Implements commons functions to manage timeout, robot block, automatic scanning
  */
-public abstract class AbstractStateNode implements StateNode {
-    private static final Logger logger = LoggerFactory.getLogger(AbstractStateNode.class);
+public interface ExtendedStateNode extends StateNode {
+    Logger logger = LoggerFactory.getLogger(ExtendedStateNode.class);
 
     /**
      * Returns the command to set the auto scan behavior of node from configuration
@@ -61,7 +60,7 @@ public abstract class AbstractStateNode implements StateNode {
      * @param locator the auto scan locator
      * @param id      the node id
      */
-    protected static ProcessorCommand loadAutoScanOnInit(JsonNode root, Locator locator, String id) {
+    static ProcessorCommand loadAutoScanOnInit(JsonNode root, Locator locator, String id) {
         return ProcessorCommand.setProperties(Map.of(
                 id + ".scanInterval", locator.path("scanInterval").getNode(root).asLong(),
                 id + ".minSensorDir", locator.path("minSensorDir").getNode(root).asInt(),
@@ -76,37 +75,18 @@ public abstract class AbstractStateNode implements StateNode {
      * @param locator the locator of node
      * @param id      the identifier of node
      */
-    protected static ProcessorCommand loadTimeout(JsonNode root, Locator locator, String id) {
+    static ProcessorCommand loadTimeout(JsonNode root, Locator locator, String id) {
         JsonNode node = locator.path("timeout").getNode(root);
         return !node.isMissingNode()
                 ? ProcessorCommand.setProperties(Map.of(id + ".timeout", node.asLong()))
                 : null;
     }
 
-    private final String id;
-    private final ProcessorCommand onInit;
-    private final ProcessorCommand onEntry;
-    private final ProcessorCommand onExit;
-
-    /**
-     * Create the abstract node
-     *
-     * @param id      the node identifier
-     * @param onInit  the initialization command or null if none
-     * @param onEntry the entry command or null if none
-     * @param onExit  the exit command or null if none
-     */
-    protected AbstractStateNode(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit) {
-        this.id = requireNonNull(id);
-        this.onInit = onInit;
-        this.onEntry = onEntry;
-        this.onExit = onExit;
-    }
-
     @Override
-    public void entry(ProcessorContext context) {
+    default void entry(ProcessorContext context) {
         long time = context.getRobotStatus().getLocalTime();
-        context.put(format("%s.entryTime", id), time);
+        context.put(format("%s.entryTime", id()), time);
+        ProcessorCommand onEntry = onEntry();
         if (onEntry != null) {
             onEntry.execute(context);
         }
@@ -117,14 +97,15 @@ public abstract class AbstractStateNode implements StateNode {
      *
      * @param context the processor context
      */
-    protected void entryAutoScan(ProcessorContext context) {
+    default void entryAutoScan(ProcessorContext context) {
         put(context, "scanTime", -1);
         put(context, "scanIndex", 0);
         tickAutoScan(context);
     }
 
     @Override
-    public void exit(ProcessorContext context) {
+    default void exit(ProcessorContext context) {
+        ProcessorCommand onExit = onExit();
         if (onExit != null) {
             onExit.execute(context);
         }
@@ -137,8 +118,8 @@ public abstract class AbstractStateNode implements StateNode {
      * @param key     the node key
      * @param <T>     the type of value
      */
-    protected <T> T get(ProcessorContext context, String key) {
-        return context.get(format("%s.%s", id, key));
+    default <T> T get(ProcessorContext context, String key) {
+        return context.get(format("%s.%s", id(), key));
     }
 
     /**
@@ -147,24 +128,19 @@ public abstract class AbstractStateNode implements StateNode {
      * @param context the processor context
      * @param key     the node key
      */
-    public double getDouble(ProcessorContext context, String key) {
-        return context.getDouble(format("%s.%s", id, key));
+    default double getDouble(ProcessorContext context, String key) {
+        return context.getDouble(format("%s.%s", id(), key));
     }
 
     @Override
-    public long getElapsedTime(ProcessorContext context) {
+    default long getElapsedTime(ProcessorContext context) {
         return context.getRobotStatus().getLocalTime() -
                 getEntryTime(context);
     }
 
     @Override
-    public long getEntryTime(ProcessorContext context) {
-        return context.getLong(format("%s.entryTime", id));
-    }
-
-    @Override
-    public String getId() {
-        return id;
+    default long getEntryTime(ProcessorContext context) {
+        return context.getLong(format("%s.entryTime", id()));
     }
 
     /**
@@ -173,8 +149,8 @@ public abstract class AbstractStateNode implements StateNode {
      * @param context the processor context
      * @param key     the node key
      */
-    public int getInt(ProcessorContext context, String key) {
-        return context.getInt(format("%s.%s", id, key));
+    default int getInt(ProcessorContext context, String key) {
+        return context.getInt(format("%s.%s", id(), key));
     }
 
     /**
@@ -183,22 +159,38 @@ public abstract class AbstractStateNode implements StateNode {
      * @param context the processor context
      * @param key     the node key
      */
-    public long getLong(ProcessorContext context, String key) {
-        return context.getLong(format("%s.%s", id, key));
+    default long getLong(ProcessorContext context, String key) {
+        return context.getLong(format("%s.%s", id(), key));
     }
 
     @Override
-    public void init(ProcessorContext context) {
+    default void init(ProcessorContext context) {
+        ProcessorCommand onInit = onInit();
         if (onInit != null) {
             onInit.execute(context);
         }
     }
 
     @Override
-    public boolean isTimeout(ProcessorContext context) {
-        OptionalLong timeout = context.getOptLong(format("%s.timeout", id));
+    default boolean isTimeout(ProcessorContext context) {
+        OptionalLong timeout = context.getOptLong(format("%s.timeout", id()));
         return timeout.isPresent() && getElapsedTime(context) >= timeout.getAsLong();
     }
+
+    /**
+     * Returns the entry command or null if none
+     */
+    ProcessorCommand onEntry();
+
+    /**
+     * Returns the exit command or null if none
+     */
+    ProcessorCommand onExit();
+
+    /**
+     * Returns the initialization command or null if none
+     */
+    ProcessorCommand onInit();
 
     /**
      * Put a value in the context prefixed by node id
@@ -207,8 +199,8 @@ public abstract class AbstractStateNode implements StateNode {
      * @param key     the key
      * @param value   the value
      */
-    protected void put(ProcessorContext context, String key, Object value) {
-        context.put(format("%s.%s", id, key), value);
+    default void put(ProcessorContext context, String key, Object value) {
+        context.put(format("%s.%s", id(), key), value);
     }
 
     /**
@@ -217,8 +209,8 @@ public abstract class AbstractStateNode implements StateNode {
      * @param context the processor context
      * @param key     the key
      */
-    protected void remove(ProcessorContext context, String key) {
-        context.remove(format("%s.%s", id, key));
+    default void remove(ProcessorContext context, String key) {
+        context.remove(format("%s.%s", id(), key));
     }
 
     /**
@@ -227,7 +219,7 @@ public abstract class AbstractStateNode implements StateNode {
      *
      * @param context the processor context
      */
-    protected Tuple2<String, RobotCommands> tickAutoScan(ProcessorContext context) {
+    default Tuple2<String, RobotCommands> tickAutoScan(ProcessorContext context) {
         long scanInterval = getLong(context, "scanInterval");
         // Check for scan interval set
         if (scanInterval > 0) {
@@ -237,7 +229,7 @@ public abstract class AbstractStateNode implements StateNode {
             long t0 = System.currentTimeMillis();
             logger.atDebug().log("tickAutoScan currentTime={}, remoteTime={}, statusDt={}, statusScanDt={}, time to next scan={}",
                     t0,
-                    context.getRobotStatus().getRobotTime(),
+                    context.getRobotStatus().robotTime(),
                     t0 - time,
                     t0 - scanTime,
                     scanTime + scanInterval - time);
@@ -262,7 +254,7 @@ public abstract class AbstractStateNode implements StateNode {
                     command = RobotCommands.scan((minSensorDir + maxSensorDir) / 2);
                 }
                 put(context, "scanTime", time);
-                logger.atDebug().log("sensor scan {}", command.scanDirection);
+                logger.atDebug().log("sensor scan {}", command.scanDirection());
                 return Tuple2.of(NONE_EXIT, command);
             }
         }

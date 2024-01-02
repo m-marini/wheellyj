@@ -26,15 +26,17 @@
 package org.mmarini.wheelly.apis;
 
 import java.awt.geom.Point2D;
-import java.util.Optional;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Circular sector is a space area that keeps the distance of the nearest obstacle in the area and if it has been scanned
+ *
+ * @param timestamp the sector timestamp
+ * @param hindered  true id sector is hindered
+ * @param location  sector center location
  */
-public class CircularSector {
-
-    public static final CircularSector UNKNOWN_CIRCULAR_SECTOR = new CircularSector(0, false, null);
-
+public record CircularSector(long timestamp, boolean hindered, Point2D location) {
     /**
      * Returns an empty sector
      *
@@ -56,36 +58,16 @@ public class CircularSector {
     }
 
     /**
-     * Returns an unknown sector
+     * Returns unknown sector centered at 0,0
      */
-    public static CircularSector unknown() {
-        return UNKNOWN_CIRCULAR_SECTOR;
+    public static CircularSector unknownSector() {
+        return new CircularSector(0, false, new Point2D.Double());
     }
 
-    /**
-     * Returns an unknown sector
-     *
-     * @param location the status location
-     */
-    public static CircularSector unknown(Point2D location) {
-        return new CircularSector(0, false, location);
-    }
-
-    private final long timestamp;
-    private final boolean hindered;
-    private final Point2D location;
-
-    /**
-     * Creates the Circular sectoe
-     *
-     * @param timestamp the status timestamp
-     * @param hindered
-     * @param location  the status location
-     */
     public CircularSector(long timestamp, boolean hindered, Point2D location) {
         this.timestamp = timestamp;
         this.hindered = hindered;
-        this.location = location;
+        this.location = requireNonNull(location);
     }
 
     /**
@@ -93,27 +75,29 @@ public class CircularSector {
      *
      * @param center the center
      */
-    public double getDistance(Point2D center) {
+    public double distance(Point2D center) {
         return location != null
                 ? location.distance(center) : 0;
     }
 
     /**
-     * Returns the status location if any
+     * Returns true if the sector is empty
      */
-    public Optional<Point2D> getLocation() {
-        return Optional.ofNullable(location);
+    public boolean empty() {
+        return known() && !hindered;
     }
 
-    public boolean isEmpty() {
-        return isKnown() && !hindered;
-    }
-
-    public boolean isHindered() {
-        return isKnown() && hindered;
-    }
-
-    public boolean isKnown() {
+    /**
+     * Returns true is the sector is known
+     */
+    public boolean known() {
         return timestamp != 0;
+    }
+
+    /**
+     * Returns true if the sector is known and hindered
+     */
+    public boolean knownHindered() {
+        return known() && hindered;
     }
 }

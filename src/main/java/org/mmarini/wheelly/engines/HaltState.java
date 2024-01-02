@@ -35,8 +35,10 @@ import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static java.util.Objects.requireNonNull;
+
 /**
- * Generates the behavior to halt the robot
+ * Generates the behavior to haltCommand the robot
  * <p>
  * Stops the robot and moves the sensor if required.<br>
  * <code>blocked</code> is generated at contact sensors signals.<br>
@@ -45,44 +47,53 @@ import org.slf4j.LoggerFactory;
  * <code>blocked</code> is generated at contact sensors signals.<br>
  * <code>timeout</code> is generated at timeout.
  * </p>
+ *
+ * @param id      the identifier
+ * @param onInit  the initialization command
+ * @param onEntry the entry command
+ * @param onExit  eht exit command
  */
 
-public class HaltState extends AbstractStateNode {
+public record HaltState(String id, ProcessorCommand onInit, ProcessorCommand onEntry,
+                        ProcessorCommand onExit) implements ExtendedStateNode {
 
     private static final Logger logger = LoggerFactory.getLogger(HaltState.class);
 
     /**
-     * Returns the halt state from configuration
+     * Returns the haltCommand state from configuration
      *
      * @param root    the configuration document
-     * @param locator the locator of halt sensor
+     * @param locator the locator of haltCommand sensor
      * @param id      the status identifier
      */
     public static HaltState create(JsonNode root, Locator locator, String id) {
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
         ProcessorCommand onInit = ProcessorCommand.concat(
-                loadTimeout(root, locator, id),
-                loadAutoScanOnInit(root, locator, id),
+                ExtendedStateNode.loadTimeout(root, locator, id),
+                ExtendedStateNode.loadAutoScanOnInit(root, locator, id),
                 ProcessorCommand.create(root, locator.path("onInit")));
         return new HaltState(id, onInit, onEntry, onExit);
     }
 
     /**
-     * Creates the halt state
+     * Creates the haltCommand state
      *
      * @param id      the identifier
      * @param onInit  the initialization command
      * @param onEntry the entry command
      * @param onExit  eht exit command
      */
-    protected HaltState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit) {
-        super(id, onInit, onEntry, onExit);
+    public HaltState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit) {
+        this.id = requireNonNull(id);
+        this.onInit = onInit;
+        this.onEntry = onEntry;
+        this.onExit = onExit;
     }
 
     @Override
     public void entry(ProcessorContext context) {
-        super.entry(context);
+        ExtendedStateNode.super.entry(context);
         entryAutoScan(context);
     }
 

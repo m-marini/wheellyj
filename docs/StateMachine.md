@@ -1,4 +1,3 @@
-
 After installed the application run the command:
 
 ```bash
@@ -82,7 +81,7 @@ The halt state stops the robot and may activates the automatic movement of scann
 
 Signals are:
 
-- `timeout` signal is generated whenever the timeout interval has elapsed from state entry instant. 
+- `timeout` signal is generated whenever the timeout interval has elapsed from state entry instant.
 - `frontBlocked` signal is generated when robot has front obstacle contact.
 - `rearBlocked` signal is generated when robot has rear obstacle contact.
 - `blocked` signal is generated when robot has both front and rear obstacle contacts.
@@ -105,7 +104,8 @@ Variables are:
 The avoiding state moves the robot away from contact obstacle.
 
 - `timeout` signal is generated whenever the timeout interval has elapsed from state entry instant.
-- `completed` signal is generated whenever the robot has no more obstacle contacts and at a safe distance from obstacles.
+- `completed` signal is generated whenever the robot has no more obstacle contacts and at a safe distance from
+  obstacles.
 - `blocked` signal is generated when robot cannot move anywhere.
 
 Parameter are:
@@ -123,6 +123,7 @@ Variables are:
 The exploring state moves the robot round the environment to explore the unknwon zones.
 
 The signals are:
+
 - `timeout` signal is generated whenever the timeout interval has elapsed from state entry instant.
 - `frontBlocked` signal is generated when robot has front obstacle contact.
 - `rearBlocked` signal is generated when robot has rear obstacle contact.
@@ -137,10 +138,12 @@ Parameter are:
 ### Select exploring point state `org.mmarini.wheelly.engines.ExploringPointState`
 
 The state selects the point of the unknown area to move towards.
-It searches for the unknown sector of the radar map at a distance greater than the minimum distance that can be reached directly from the robot's position.
+It searches for the unknown sector of the radar map at a distance greater than the minimum distance that can be reached
+directly from the robot's position.
 If it does not exist, it searches for the furthest reachable point.
 
 The signals are:
+
 - `timeout` signal is generated whenever the timeout interval has elapsed from state entry instant.
 - `completed` signal is generated if the point exists.
 - `notFound` signal is generated if no points are founded.
@@ -174,7 +177,8 @@ any other string defines operator that pushes in the stack the string value
 
 Example:
 
-Store the value `3=(1+2)` in the key, value map with key `aKey` 
+Store the value `3=(1+2)` in the key, value map with key `aKey`
+
 ```yaml
 onInit:
   - aKey

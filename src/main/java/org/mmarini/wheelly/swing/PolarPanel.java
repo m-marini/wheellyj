@@ -150,7 +150,7 @@ public class PolarPanel extends JComponent {
     }
 
     public void setPolarMap(PolarMap polarMap) {
-        int n = polarMap.getSectorsNumber();
+        int n = polarMap.sectorsNumber();
         if (numSector != n) {
             numSector = n;
             this.gridShapes = createGridShapes(radarMaxDistance, GRID_SIZE, numSector);
@@ -159,16 +159,16 @@ public class PolarPanel extends JComponent {
         List<Shape> filledShapes = new ArrayList<>();
         List<Shape> pingShapes = new ArrayList<>();
 
-        double sectorAngle = toDegrees(polarMap.getSectorAngle());
-        Point2D center = polarMap.getCenter();
-        AffineTransform transform = AffineTransform.getRotateInstance(toRadians(polarMap.getDirection()));
+        double sectorAngle = toDegrees(polarMap.sectorAngle());
+        Point2D center = polarMap.center();
+        AffineTransform transform = AffineTransform.getRotateInstance(toRadians(polarMap.direction()));
         transform.translate(-center.getX(), -center.getY());
         for (int i = 0; i < n; i++) {
             CircularSector sector = polarMap.getSector(i);
             double angle = -90 + toDegrees(polarMap.sectorDirection(i));
-            if (sector.isKnown()) {
-                double distance = sector.getDistance(center);
-                if (distance == 0 || sector.isEmpty()) {
+            if (sector.known()) {
+                double distance = sector.distance(center);
+                if (distance == 0 || sector.empty()) {
                     emptyShapes.add(createPie(angle - sectorAngle / 2, sectorAngle, radarMaxDistance + SECTOR_SIZE));
                 } else {
                     Shape outerPie = createPie(angle - sectorAngle / 2, sectorAngle, radarMaxDistance + SECTOR_SIZE);
@@ -176,10 +176,9 @@ public class PolarPanel extends JComponent {
                     emptyShapes.add(innerPie);
                     Area outerSector = new Area(outerPie);
                     outerSector.subtract(new Area(innerPie));
-                    sector.getLocation()
-                            .map(p -> transform.transform(p, null))
-                            .map(PolarPanel::createPing)
-                            .ifPresent(pingShapes::add);
+                    pingShapes.add(
+                            createPing(
+                                    transform.transform(sector.location(), null)));
                     filledShapes.add(outerSector);
                 }
             }

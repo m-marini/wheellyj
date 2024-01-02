@@ -147,13 +147,13 @@ public class DumpRecordTableModel extends AbstractTableModel {
     public Object getValueAt(int row, int col) {
         switch (col) {
             case TIMESTAMP_COLUMN:
-                return records.get(row).getInstant();
+                return records.get(row).instant();
             case ELAPSED_COLUMN:
-                return formatDuration(Duration.between(timeOffset, records.get(row).getInstant()));
+                return formatDuration(Duration.between(timeOffset, records.get(row).instant()));
             case TYPE_COLUMN:
-                return records.get(row).getComDirection();
+                return records.get(row).comDirection();
             case DATA_COLUMN:
-                return records.get(row).getData();
+                return records.get(row).data();
             default:
                 return "?";
         }

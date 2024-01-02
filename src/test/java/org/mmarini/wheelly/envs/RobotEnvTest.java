@@ -38,7 +38,7 @@ import static org.mmarini.wheelly.objectives.NoMove.noMove;
 class RobotEnvTest {
     private Map<String, Signal> createActions(int direction, int sensorAction, int speed) {
         return Map.of(
-                "halt", IntSignal.create(0),
+                "haltCommand", IntSignal.create(0),
                 "direction", IntSignal.create(direction),
                 "sensorAction", IntSignal.create(sensorAction),
                 "speed", IntSignal.create(speed)

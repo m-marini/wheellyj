@@ -122,7 +122,7 @@ public class RobotEnv implements Environment {
                                   long interval, long reactionInterval, long commandInterval,
                                   int numDirectionValues, int numSensorValues, int numSpeedValues) {
         Map<String, SignalSpec> actions1 = Map.of(
-                "halt", new IntSignalSpec(new long[]{1}, 2),
+                "haltCommand", new IntSignalSpec(new long[]{1}, 2),
                 "direction", new IntSignalSpec(new long[]{1}, numDirectionValues),
                 "speed", new IntSignalSpec(new long[]{1}, numSpeedValues),
                 "sensorAction", new IntSignalSpec(new long[]{1}, numSensorValues)
@@ -256,7 +256,7 @@ public class RobotEnv implements Environment {
      * @param actions the action from agent
      */
     private void processAction(Map<String, Signal> actions) {
-        currentHalted = actions.get("halt").getInt(0) == 1;
+        currentHalted = actions.get("haltCommand").getInt(0) == 1;
         float speed1 = speed(actions);
         currentSpeed = round(speed1 * 10f) * 0.1f;
         currentSensor = sensorDir(actions);
@@ -308,7 +308,7 @@ public class RobotEnv implements Environment {
         if (currentHalted != prevHalt) {
             prevHalt = currentHalted;
             if (currentHalted) {
-                robot.halt();
+                robot.haltCommand();
             } else {
                 robot.move(currentDirection, (int) currentSpeed);
             }

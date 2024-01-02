@@ -46,7 +46,7 @@ class MapBuilderTest {
                 .add(0, 0);
         ObstacleMap map = builder.build();
         assertThat(map.getSize(), equalTo(1));
-        assertThat(map.getCoordinates(), equalTo(Nd4j.zeros(1, 2)));
+        assertThat(map.coordinates(), equalTo(Nd4j.zeros(1, 2)));
     }
 
     @Test
@@ -55,7 +55,7 @@ class MapBuilderTest {
                 .add(0.09f, 0.09f);
         ObstacleMap map = builder.build();
         assertThat(map.getSize(), equalTo(1));
-        assertThat(map.getCoordinates(), equalTo(Nd4j.zeros(1, 2)));
+        assertThat(map.coordinates(), equalTo(Nd4j.zeros(1, 2)));
     }
 
     @Test
@@ -64,7 +64,7 @@ class MapBuilderTest {
                 .add(-0.09f, -0.09f);
         ObstacleMap map = builder.build();
         assertThat(map.getSize(), equalTo(1));
-        assertThat(map.getCoordinates(), equalTo(Nd4j.zeros(1, 2)));
+        assertThat(map.coordinates(), equalTo(Nd4j.zeros(1, 2)));
     }
 
     @Test
@@ -73,7 +73,7 @@ class MapBuilderTest {
                 .add(0.101f, 0.101f);
         ObstacleMap map = builder.build();
         assertThat(map.getSize(), equalTo(1));
-        assertThat(map.getCoordinates(), equalTo(Nd4j.create(new float[][]{{0.2f, 0.2f}})));
+        assertThat(map.coordinates(), equalTo(Nd4j.create(new float[][]{{0.2f, 0.2f}})));
     }
 
     @Test
@@ -82,7 +82,7 @@ class MapBuilderTest {
                 .add(-0.101f, -0.101f);
         ObstacleMap map = builder.build();
         assertThat(map.getSize(), equalTo(1));
-        assertThat(map.getCoordinates(), equalTo(Nd4j.create(new float[][]{{-0.2f, -0.2f}})));
+        assertThat(map.coordinates(), equalTo(Nd4j.create(new float[][]{{-0.2f, -0.2f}})));
     }
 
     @Test
@@ -92,7 +92,7 @@ class MapBuilderTest {
                 .add(-0.09f, -0.09f);
         ObstacleMap map = builder.build();
         assertThat(map.getSize(), equalTo(1));
-        assertThat(map.getCoordinates(), equalTo(Nd4j.create(new float[][]{{0f, 0f}})));
+        assertThat(map.coordinates(), equalTo(Nd4j.create(new float[][]{{0f, 0f}})));
     }
 
     @Test
@@ -178,7 +178,7 @@ class MapBuilderTest {
                         0, 0);
         ObstacleMap map = builder.build();
         assertThat(map.getSize(), equalTo(1));
-        assertThat(map.getCoordinates(), equalTo(Nd4j.create(new float[][]{{0f, 0f}})));
+        assertThat(map.coordinates(), equalTo(Nd4j.create(new float[][]{{0f, 0f}})));
     }
 
     @Test

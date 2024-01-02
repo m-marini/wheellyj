@@ -27,7 +27,6 @@ package org.mmarini.wheelly.apis;
 
 import io.reactivex.rxjava3.schedulers.Timed;
 
-import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.Long.parseLong;
@@ -35,8 +34,18 @@ import static java.lang.String.format;
 
 /**
  * The Wheelly status contain the sensor value of Wheelly
+ *
+ * @param time            the status time
+ * @param remoteTime      the remote contacts time
+ * @param frontSensors    the front sensors signals
+ * @param rearSensors     the rear sensors signals
+ * @param canMoveForward  true if it can move forward
+ * @param canMoveBackward true if it can move backward
  */
-public class WheellyContactsMessage extends WheellyMessage {
+public record WheellyContactsMessage(long time,
+                                     long remoteTime, boolean frontSensors, boolean rearSensors,
+                                     boolean canMoveForward, boolean canMoveBackward)
+        implements WheellyMessage {
     public static final int NO_PARAMS = 6;
 
     /**
@@ -73,59 +82,6 @@ public class WheellyContactsMessage extends WheellyMessage {
         );
     }
 
-    private final boolean frontSensors;
-    private final boolean rearSensors;
-    private final boolean canMoveBackward;
-    private final boolean canMoveForward;
-
-    /**
-     * Creates wheelly status
-     *
-     * @param time            the status time
-     * @param remoteTime      the remote contacts time
-     * @param frontSensors    the front sensors signals
-     * @param rearSensors     the rear sensors signals
-     * @param canMoveForward  true if it can move forward
-     * @param canMoveBackward true if it can move backward
-     */
-    public WheellyContactsMessage(long time,
-                                  long remoteTime, boolean frontSensors, boolean rearSensors,
-                                  boolean canMoveForward, boolean canMoveBackward) {
-        super(time, remoteTime);
-        this.frontSensors = frontSensors;
-        this.rearSensors = rearSensors;
-        this.canMoveBackward = canMoveBackward;
-        this.canMoveForward = canMoveForward;
-    }
-
-    /**
-     * Return true if robot can move backward
-     */
-    public boolean canMoveBackward() {
-        return canMoveBackward;
-    }
-
-    /**
-     * Return true if robot can move forward
-     */
-    public boolean canMoveForward() {
-        return canMoveForward;
-    }
-
-    /**
-     * Returns true if front sensor is clear
-     */
-    public boolean isFrontSensors() {
-        return frontSensors;
-    }
-
-    /**
-     * Returns true if rear sensor is clear
-     */
-    public boolean isRearSensors() {
-        return rearSensors;
-    }
-
     /**
      * Returns the message with can move backward set
      *
@@ -157,17 +113,5 @@ public class WheellyContactsMessage extends WheellyMessage {
         return remoteTime != this.remoteTime
                 ? new WheellyContactsMessage(time, remoteTime, frontSensors, rearSensors, canMoveForward, canMoveBackward)
                 : this;
-    }
-
-    @Override
-    public String toString() {
-        return new StringJoiner(", ", WheellyContactsMessage.class.getSimpleName() + "[", "]")
-                .add("time=" + time)
-                .add("remoteTime=" + remoteTime)
-                .add("frontSensors=" + frontSensors)
-                .add("rearSensors=" + rearSensors)
-                .add("canMoveBackward=" + canMoveBackward)
-                .add("canMoveForward=" + canMoveForward)
-                .toString();
     }
 }

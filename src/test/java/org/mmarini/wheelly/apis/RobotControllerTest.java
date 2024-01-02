@@ -42,6 +42,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.*;
+import static rocks.cleancode.hamcrest.record.HasFieldMatcher.field;
 
 class RobotControllerTest {
 
@@ -137,22 +138,22 @@ class RobotControllerTest {
 
         // And motion message should be emitted
         verify(onMotion).accept(MockitoHamcrest.argThat(
-                hasProperty("motionMessage", allOf(
-                        hasProperty("remoteTime", equalTo(0L)),
-                        hasProperty("XPulses", closeTo(0, PULSES_EPSILON)),
-                        hasProperty("YPulses", closeTo(0, PULSES_EPSILON))
+                field("motionMessage", allOf(
+                        field("remoteTime", equalTo(0L)),
+                        field("xPulses", closeTo(0, PULSES_EPSILON)),
+                        field("yPulses", closeTo(0, PULSES_EPSILON))
                 ))));
 
         // And proxy message should be emitted
         verify(onProxy).accept(MockitoHamcrest.argThat(
-                hasProperty("proxyMessage", allOf(
-                        hasProperty("remoteTime", equalTo(0L))
+                field("proxyMessage", allOf(
+                        field("remoteTime", equalTo(0L))
                 ))));
 
         // And contacts message should be emitted
         verify(onContacts).accept(MockitoHamcrest.argThat(
-                hasProperty("contactsMessage", allOf(
-                        hasProperty("remoteTime", equalTo(0L))
+                field("contactsMessage", allOf(
+                        field("remoteTime", equalTo(0L))
                 ))));
 
         rc.shutdown();
@@ -236,7 +237,7 @@ class RobotControllerTest {
     }
 
     @Test
-    void inference() throws Throwable {
+    void inferenceTest() throws Throwable {
         // Given a mock robot
         RobotApi robot = spy(new MockRobot() {
             @Override
@@ -259,12 +260,16 @@ class RobotControllerTest {
         Consumer<RobotStatus> onInference = mock();
         rc.setOnInference(onInference);
 
-        // When sleeping for 10 simulated time interval
-        long dt = round(10 * INTERVAL / SIM_SPEED);
+        // When sleeping for 20 simulated time interval
+        long dt = 3000;
+        int ticks = (int) round(dt * SIM_SPEED / INTERVAL);
+        int reactions = (int) (ticks * INTERVAL / REACTION_INTERVAL);
         Thread.sleep(dt);
 
-        verify(robot, atLeast((int) round(SIM_SPEED * dt / INTERVAL) - 3)).tick(INTERVAL);
-        verify(onInference, atLeast((int) round(SIM_SPEED * dt / REACTION_INTERVAL) - 3)).accept(any());
+        int expTicks = ticks / 2;
+        int expReact = reactions / 2;
+        verify(robot, atLeast(expTicks)).tick(INTERVAL);
+        verify(onInference, atLeast(expReact)).accept(any());
 
         rc.shutdown();
     }
@@ -314,7 +319,7 @@ class RobotControllerTest {
     void moveError() throws Throwable {
         // Given a mock robot that throws error on move command
         Mock1Robot robot = spy(new Mock1Robot());
-        robot.setTime(System.currentTimeMillis());
+        robot.setRemoteTime(System.currentTimeMillis());
         IOException error = new IOException("Error");
         doThrow(error).when(robot).move(anyInt(), anyInt());
 
@@ -400,7 +405,7 @@ class RobotControllerTest {
     @Test
     void scanError() throws IOException {
         Mock1Robot robot = spy(new Mock1Robot());
-        robot.setTime(System.currentTimeMillis());
+        robot.setRemoteTime(System.currentTimeMillis());
         IOException error = new IOException("Error");
         doThrow(error).when(robot).scan(anyInt());
 

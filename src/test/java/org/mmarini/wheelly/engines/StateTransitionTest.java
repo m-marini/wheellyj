@@ -40,6 +40,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.wheelly.TestFunctions.text;
 import static org.mmarini.yaml.Utils.fromText;
+import static rocks.cleancode.hamcrest.record.HasFieldMatcher.field;
 
 class StateTransitionTest {
 
@@ -65,11 +66,11 @@ class StateTransitionTest {
         JsonNode root = fromText(YAML);
         StateTransition st = StateTransition.create(root, Locator.root());
         assertNotNull(st);
-        assertEquals("a", st.getFrom());
-        assertEquals("b", st.getTo());
+        assertEquals("a", st.from());
+        assertEquals("b", st.to());
         assertTrue(st.isTriggered("armed"));
-        assertThat(st, hasProperty("onTransition",
-                hasProperty("id", equalTo("@program"))));
+        assertThat(st, field("onTransition",
+                field("id", equalTo("@program"))));
     }
 
     @Test
@@ -78,14 +79,14 @@ class StateTransitionTest {
         List<StateTransition> st = StateTransition.createList(root, Locator.root());
         assertThat(st, hasSize(2));
 
-        assertThat(st.get(0), hasProperty("from", equalTo("a")));
-        assertThat(st.get(0), hasProperty("to", equalTo("b")));
+        assertThat(st.get(0), field("from", equalTo("a")));
+        assertThat(st.get(0), field("to", equalTo("b")));
         assertTrue(st.get(0).isTriggered("armed"));
-        assertThat(st.get(0), hasProperty("onTransition", nullValue()));
+        assertThat(st.get(0), field("onTransition", nullValue()));
 
-        assertThat(st.get(1), hasProperty("from", equalTo("b")));
-        assertThat(st.get(1), hasProperty("to", equalTo("c")));
+        assertThat(st.get(1), field("from", equalTo("b")));
+        assertThat(st.get(1), field("to", equalTo("c")));
         assertTrue(st.get(1).isTriggered("armed"));
-        assertThat(st.get(1), hasProperty("onTransition", nullValue()));
+        assertThat(st.get(1), field("onTransition", nullValue()));
     }
 }

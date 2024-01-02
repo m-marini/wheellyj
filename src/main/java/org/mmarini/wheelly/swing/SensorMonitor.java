@@ -108,9 +108,9 @@ public class SensorMonitor extends MatrixTable {
      * @param command the command
      */
     public void onCommand(RobotCommands command) {
-        if (command.isMove()) {
-            printf(MOVE_HEAD, "%4d", command.moveDirection);
-            printf(MOVE_SPEED, "%3d", command.speed);
+        if (command.move()) {
+            printf(MOVE_HEAD, "%4d", command.moveDirection());
+            printf(MOVE_SPEED, "%3d", command.speed());
         }
     }
 

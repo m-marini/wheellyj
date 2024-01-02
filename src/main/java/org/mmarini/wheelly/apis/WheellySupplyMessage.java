@@ -27,7 +27,6 @@ package org.mmarini.wheelly.apis;
 
 import io.reactivex.rxjava3.schedulers.Timed;
 
-import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.Integer.parseInt;
@@ -36,8 +35,12 @@ import static java.lang.String.format;
 
 /**
  * The Wheelly status contain the sensor value of Wheelly
+ *
+ * @param time         the status time (ms)
+ * @param remoteTime   the remote time (ms)
+ * @param supplySensor the supply voltage (U)
  */
-public class WheellySupplyMessage extends WheellyMessage {
+public record WheellySupplyMessage(long time, long remoteTime, int supplySensor) implements WheellyMessage {
     public static final int NO_PARAMS = 3;
 
     /**
@@ -51,7 +54,6 @@ public class WheellySupplyMessage extends WheellyMessage {
      *
      * @param line the status string
      */
-
     public static WheellySupplyMessage create(Timed<String> line) {
         long time = line.time(TimeUnit.MILLISECONDS);
         String[] params = line.value().split(" ");
@@ -63,27 +65,6 @@ public class WheellySupplyMessage extends WheellyMessage {
         return new WheellySupplyMessage(time, remoteTime, supplySensor);
     }
 
-    private final int supplySensor;
-
-    /**
-     * Creates wheelly status
-     *
-     * @param time         the status time
-     * @param remoteTime   the remote time
-     * @param supplySensor the supply voltage
-     */
-    public WheellySupplyMessage(long time, long remoteTime, int supplySensor) {
-        super(time, remoteTime);
-        this.supplySensor = supplySensor;
-    }
-
-    /**
-     * Returns the supply sensor value (U)
-     */
-    public int getSupplySensor() {
-        return supplySensor;
-    }
-
     /**
      * Returns the status with remote time instant set
      *
@@ -93,13 +74,5 @@ public class WheellySupplyMessage extends WheellyMessage {
         return remoteTime != this.remoteTime
                 ? new WheellySupplyMessage(time, remoteTime, supplySensor)
                 : this;
-    }
-
-    @Override
-    public String toString() {
-        return new StringJoiner(", ", WheellySupplyMessage.class.getSimpleName() + "[", "]")
-                .add("time=" + time)
-                .add("supplySensor=" + supplySensor)
-                .toString();
     }
 }

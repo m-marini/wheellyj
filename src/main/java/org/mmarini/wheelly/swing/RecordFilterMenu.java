@@ -48,24 +48,24 @@ import java.util.stream.Stream;
  */
 public class RecordFilterMenu extends JMenu {
     public static final Predicate<DumpRecord> PROXY_FILTER = record -> record instanceof DumpRecord.MessageDumpRecord &&
-            ((DumpRecord.MessageDumpRecord<?>) record).getMessage() instanceof WheellyProxyMessage;
+            ((DumpRecord.MessageDumpRecord<?>) record).message() instanceof WheellyProxyMessage;
     public static final Predicate<DumpRecord> CONTACT_FILTER = record -> record instanceof DumpRecord.MessageDumpRecord &&
-            ((DumpRecord.MessageDumpRecord<?>) record).getMessage() instanceof WheellyContactsMessage;
+            ((DumpRecord.MessageDumpRecord<?>) record).message() instanceof WheellyContactsMessage;
     public static final Predicate<DumpRecord> MOTION_FILTER = record -> record instanceof DumpRecord.MessageDumpRecord &&
-            ((DumpRecord.MessageDumpRecord<?>) record).getMessage() instanceof WheellyMotionMessage;
+            ((DumpRecord.MessageDumpRecord<?>) record).message() instanceof WheellyMotionMessage;
     public static final Predicate<DumpRecord> SUPPLY_FILTER = record -> record instanceof DumpRecord.MessageDumpRecord &&
-            ((DumpRecord.MessageDumpRecord<?>) record).getMessage() instanceof WheellySupplyMessage;
-    public static final Predicate<DumpRecord> ERROR_FILTER = record -> record instanceof DumpRecord.ReadDumpRecord && record.getData().startsWith("!! ");
+            ((DumpRecord.MessageDumpRecord<?>) record).message() instanceof WheellySupplyMessage;
+    public static final Predicate<DumpRecord> ERROR_FILTER = record -> record instanceof DumpRecord.ReadDumpRecordIntf && record.data().startsWith("!! ");
     public static final Predicate<DumpRecord> OTHER_READ_FILTER = Predicate.not(
                     PROXY_FILTER
                             .or(SUPPLY_FILTER)
                             .or(MOTION_FILTER)
                             .or(ERROR_FILTER)
                             .or(CONTACT_FILTER))
-            .and(record -> record instanceof DumpRecord.ReadDumpRecord);
-    public static final Predicate<DumpRecord> MOVE_FILTER = record -> record instanceof DumpRecord.WriteDumpRecord && record.getData().startsWith("mv ");
-    public static final Predicate<DumpRecord> HALT_FILTER = record -> record instanceof DumpRecord.WriteDumpRecord && record.getData().equals("ha");
-    public static final Predicate<DumpRecord> SCAN_FILTER = record -> record instanceof DumpRecord.WriteDumpRecord && record.getData().startsWith("sc ");
+            .and(record -> record instanceof DumpRecord.ReadDumpRecordIntf);
+    public static final Predicate<DumpRecord> MOVE_FILTER = record -> record instanceof DumpRecord.WriteDumpRecord && record.data().startsWith("mv ");
+    public static final Predicate<DumpRecord> HALT_FILTER = record -> record instanceof DumpRecord.WriteDumpRecord && record.data().equals("ha");
+    public static final Predicate<DumpRecord> SCAN_FILTER = record -> record instanceof DumpRecord.WriteDumpRecord && record.data().startsWith("sc ");
     public static final Predicate<DumpRecord> OTHER_WRITE_FILTER = Predicate.not(MOVE_FILTER.or(HALT_FILTER).or(SCAN_FILTER))
             .and(record -> record instanceof DumpRecord.WriteDumpRecord);
     private static final Predicate<DumpRecord> NONE_FILTER = record -> false;
@@ -154,10 +154,10 @@ public class RecordFilterMenu extends JMenu {
      */
     private Predicate<DumpRecord> createFilter(Instant ignored) {
         Predicate<DumpRecord> afterFilter = afterBtn.isSelected()
-                ? record -> !record.getInstant().isBefore(offset)
+                ? record -> !record.instant().isBefore(offset)
                 : NONE_FILTER;
         Predicate<DumpRecord> beforeFilter = beforeBtn.isSelected()
-                ? record -> !record.getInstant().isAfter(offset)
+                ? record -> !record.instant().isAfter(offset)
                 : NONE_FILTER;
         Predicate<DumpRecord> timeFilter = afterFilter.or(beforeFilter);
 
@@ -197,23 +197,6 @@ public class RecordFilterMenu extends JMenu {
                 .reduce(Predicate::or)
                 .orElseThrow();
         return timeFilter.and(typesFilter);
-    }
-
-    /**
-     * Returns the time offset
-     */
-    public Instant getOffset() {
-        return offset;
-    }
-
-    /**
-     * Sets the time offset
-     *
-     * @param offset the time offset
-     */
-    public void setOffset(Instant offset) {
-        this.offset = offset;
-        offsetFlow.onNext(offset);
     }
 
     /**
@@ -307,5 +290,15 @@ public class RecordFilterMenu extends JMenu {
      */
     public Flowable<Predicate<DumpRecord>> readFilters() {
         return filtersFlow;
+    }
+
+    /**
+     * Sets the time offset
+     *
+     * @param offset the time offset
+     */
+    public void setOffset(Instant offset) {
+        this.offset = offset;
+        offsetFlow.onNext(offset);
     }
 }

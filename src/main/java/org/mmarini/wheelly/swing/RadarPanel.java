@@ -26,7 +26,7 @@
 package org.mmarini.wheelly.swing;
 
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.MapSector;
+import org.mmarini.wheelly.apis.MapCell;
 import org.mmarini.wheelly.apis.RadarMap;
 
 import javax.swing.*;
@@ -85,10 +85,10 @@ public class RadarPanel extends JComponent {
     public static List<Tuple2<Point2D, Color>> createMap(RadarMap radarMap) {
         if (radarMap != null) {
             return radarMap.getSectorsStream()
-                    .filter(Predicate.not(MapSector::isUnknown))
-                    .map(sector -> Tuple2.of(sector.getLocation(),
-                            sector.isEmpty() ? EMPTY_COLOR :
-                                    sector.isHindered() ? FILLED_COLOR :
+                    .filter(Predicate.not(MapCell::unknown))
+                    .map(sector -> Tuple2.of(sector.location(),
+                            sector.empty() ? EMPTY_COLOR :
+                                    sector.hindered() ? FILLED_COLOR :
                                             CONTACT_COLOR
                     ))
                     .collect(Collectors.toList());
@@ -99,7 +99,7 @@ public class RadarPanel extends JComponent {
 
     public static Shape createSectorShape(RadarMap radarMap) {
         if (radarMap != null) {
-            double size = radarMap.getTopology().getGridSize();
+            double size = radarMap.topology().gridSize();
             return new Rectangle2D.Double(
                     -size / 2, -size / 2,
                     size, size);

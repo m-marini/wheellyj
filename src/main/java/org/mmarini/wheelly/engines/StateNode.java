@@ -107,7 +107,7 @@ public interface StateNode {
      */
     long getEntryTime(ProcessorContext context);
 
-    String getId();
+    String id();
 
     /**
      * Initializes state node

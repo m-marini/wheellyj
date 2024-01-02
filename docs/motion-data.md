@@ -1,7 +1,8 @@
 # Motion data
 
 - Sensore di rotazione del motore con 20 fori per giro
-- Sensore con 40 transizioni per giro pari a 9 DEG /transizione (traisizione si intenede passaggio da occlusine a libero e viceversa)
+- Sensore con 40 transizioni per giro pari a 9 DEG /transizione (traisizione si intenede passaggio da occlusine a libero
+  e viceversa)
 - Diametro ruota 67 mm
 - Circonferenza ruota 210 mm
 - Sensibilità linere di 5.24 mm / transizione

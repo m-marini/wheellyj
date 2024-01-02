@@ -300,7 +300,7 @@ public class DumpReader {
         }
         bufferedReader.close();
         if (!lineRecords.isEmpty()) {
-            Instant offset = lineRecords.get(0).getInstant();
+            Instant offset = lineRecords.get(0).instant();
             recordsTable.setTimestampOffset(offset);
             detailPanel.setOffset(offset);
             filterMenu.setOffset(offset);

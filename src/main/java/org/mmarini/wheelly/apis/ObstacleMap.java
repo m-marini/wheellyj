@@ -40,14 +40,14 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * Ths obstacle map defines the location of obstacle in a grid space
+ *
+ * @param coordinates the coordinates array of n x 2 float
+ * @param topology    the grid topology
  */
-public class ObstacleMap {
+public record ObstacleMap(INDArray coordinates, GridTopology topology) {
     public static ObstacleMap create(INDArray indArray, double gridSize) {
         return new ObstacleMap(indArray, new GridTopology(gridSize));
     }
-
-    private final INDArray coordinates;
-    private final GridTopology topology;
 
     /**
      * Create the obstacle map
@@ -89,15 +89,8 @@ public class ObstacleMap {
         return false;
     }
 
-    /**
-     * Returns the coordinates of obstacles
-     */
-    public INDArray getCoordinates() {
-        return coordinates;
-    }
-
     public INDArray getCoordinates(int i) {
-        return getCoordinates().getRow(i);
+        return coordinates().getRow(i);
     }
 
     public Point2D getPoint(int index) {
@@ -118,13 +111,6 @@ public class ObstacleMap {
      */
     public int getSize() {
         return (int) coordinates.shape()[0];
-    }
-
-    /**
-     * Returns the grid topology
-     */
-    public GridTopology getTopology() {
-        return topology;
     }
 
     /**

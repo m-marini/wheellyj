@@ -29,14 +29,20 @@
 package org.mmarini.wheelly.apis;
 
 import java.util.Arrays;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.StringJoiner;
 
 /**
- * Store the possible commands combination halt, move, scan
+ * Store the possible commands combination haltCommand, move, scan
+ *
+ * @param scan          true if scan command
+ * @param scanDirection the scan direction (DEG)
+ * @param move          true if movement command
+ * @param halt          true if haltCommand command
+ * @param moveDirection the move direction (DEG)
+ * @param speed         the speed (pps)
  */
-public class RobotCommands {
+public record RobotCommands(boolean scan, int scanDirection, boolean move, boolean halt, int moveDirection,
+                            int speed) {
 
     private static final RobotCommands NONE = new RobotCommands(false, 0, false, false, 0, 0);
     private static final RobotCommands HALT = new RobotCommands(false, 0, false, true, 0, 0);
@@ -44,33 +50,33 @@ public class RobotCommands {
 
     /**
      * Returns the concatenation of commands
-     * The last scan with last move or halt command is returned
+     * The last scan with last move or haltCommand command is returned
      *
      * @param commands the commands
      */
     public static RobotCommands concat(RobotCommands... commands) {
-        Optional<RobotCommands> scanCmd = Arrays.stream(commands).filter(RobotCommands::isScan).reduce((a, b) -> b);
+        Optional<RobotCommands> scanCmd = Arrays.stream(commands).filter(RobotCommands::scan).reduce((a, b) -> b);
         Optional<RobotCommands> movementCmd = Arrays.stream(commands).filter(RobotCommands::isMovement).reduce((a, b) -> b);
         return movementCmd.map(mv ->
-                scanCmd.map(sc -> mv.setScan(sc.getScanDirection())).orElse(mv)
+                scanCmd.map(sc -> mv.setScan(sc.scanDirection())).orElse(mv)
         ).orElse(
                 scanCmd.orElse(RobotCommands.none()));
     }
 
     /**
-     * Returns the halt command
-     */
-    public static RobotCommands halt() {
-        return HALT;
-    }
-
-    /**
-     * Returns the only scan command and halt
+     * Returns the only scan command and haltCommand
      *
      * @param direction the scanner direction
      */
     public static RobotCommands haltAndScan(int direction) {
         return new RobotCommands(true, direction, false, true, 0, 0);
+    }
+
+    /**
+     * Returns the haltCommand command
+     */
+    public static RobotCommands haltCommand() {
+        return HALT;
     }
 
     /**
@@ -127,32 +133,6 @@ public class RobotCommands {
         return new RobotCommands(true, direction, false, false, 0, 0);
     }
 
-    public final boolean halt;
-    public final boolean move;
-    public final int moveDirection;
-    public final boolean scan;
-    public final int scanDirection;
-    public final int speed;
-
-    /**
-     * Create the command
-     *
-     * @param scan          true if scan command
-     * @param scanDirection the scan direction (DEG)
-     * @param move          true if movement command
-     * @param halt          true if halt command
-     * @param moveDirection the move direction (DEG)
-     * @param speed         the speed (pps)
-     */
-    protected RobotCommands(boolean scan, int scanDirection, boolean move, boolean halt, int moveDirection, int speed) {
-        this.halt = halt;
-        this.moveDirection = moveDirection;
-        this.move = move;
-        this.scan = scan;
-        this.scanDirection = scanDirection;
-        this.speed = speed;
-    }
-
     /**
      * Returns the command with cleared movement
      */
@@ -167,79 +147,15 @@ public class RobotCommands {
         return new RobotCommands(false, 0, move, halt, moveDirection, speed);
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        RobotCommands that = (RobotCommands) o;
-        return halt == that.halt && moveDirection == that.moveDirection && move == that.move && scan == that.scan && scanDirection == that.scanDirection && speed == that.speed;
-    }
-
     /**
-     * Returns the move direction (DEG)
-     */
-    public int getMoveDirection() {
-        return moveDirection;
-    }
-
-    /**
-     * Return the scan direction (DEG)
-     */
-    public int getScanDirection() {
-        return scanDirection;
-    }
-
-    /**
-     * Returns the speed (pps)
-     */
-    public int getSpeed() {
-        return speed;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(halt, moveDirection, move, scan, scanDirection, speed);
-    }
-
-    /**
-     * Returns true if halt command
-     */
-    public boolean isHalt() {
-        return halt;
-    }
-
-    /**
-     * Returns true if move command
-     */
-    public boolean isMove() {
-        return move;
-    }
-
-    /**
-     * Returns true if movement command (move o halt)
+     * Returns true if movement command (move o haltCommand)
      */
     public boolean isMovement() {
         return halt || move;
     }
 
     /**
-     * Returns true if scan command
-     */
-    public boolean isScan() {
-        return scan;
-    }
-
-    /**
-     * Returns the command with set scan
-     *
-     * @param scanDirection the scan direction (DEG)
-     */
-    public RobotCommands setScan(int scanDirection) {
-        return new RobotCommands(true, scanDirection, move, halt, moveDirection, speed);
-    }
-
-    /**
-     * Returns the command with halt command
+     * Returns the command with haltCommand command
      */
     public RobotCommands setHalt() {
         return new RobotCommands(scan, scanDirection, false, true, 0, 0);
@@ -256,6 +172,15 @@ public class RobotCommands {
     }
 
     /**
+     * Returns the command with set scan
+     *
+     * @param scanDirection the scan direction (DEG)
+     */
+    public RobotCommands setScan(int scanDirection) {
+        return new RobotCommands(true, scanDirection, move, halt, moveDirection, speed);
+    }
+
+    /**
      * Returns the concatenation of this command with another
      *
      * @param other the other command
@@ -264,15 +189,4 @@ public class RobotCommands {
         return concat(this, other);
     }
 
-    @Override
-    public String toString() {
-        return new StringJoiner(", ", RobotCommands.class.getSimpleName() + "[", "]")
-                .add("scan=" + scan)
-                .add("scanDirection=" + scanDirection)
-                .add("halt=" + halt)
-                .add("move=" + move)
-                .add("moveDirection=" + moveDirection)
-                .add("speed=" + speed)
-                .toString();
-    }
 }

@@ -44,6 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.*;
+import static rocks.cleancode.hamcrest.record.HasFieldMatcher.field;
 
 class SimRobotControllerTest {
 
@@ -111,22 +112,22 @@ class SimRobotControllerTest {
 
         // And motion message should be emitted
         verify(onMotion).accept(MockitoHamcrest.argThat(
-                hasProperty("motionMessage", allOf(
-                        hasProperty("remoteTime", equalTo(0L)),
-                        hasProperty("XPulses", closeTo(0, PULSES_EPSILON)),
-                        hasProperty("YPulses", closeTo(0, PULSES_EPSILON))
+                field("motionMessage", allOf(
+                        field("remoteTime", equalTo(0L)),
+                        field("xPulses", closeTo(0, PULSES_EPSILON)),
+                        field("yPulses", closeTo(0, PULSES_EPSILON))
                 ))));
 
         // And proxy message should be emitted
         verify(onProxy).accept(MockitoHamcrest.argThat(
-                hasProperty("proxyMessage", allOf(
-                        hasProperty("remoteTime", equalTo(0L))
+                field("proxyMessage", allOf(
+                        field("remoteTime", equalTo(0L))
                 ))));
 
         // And contacts message should be emitted
         verify(onContacts).accept(MockitoHamcrest.argThat(
-                hasProperty("contactsMessage", allOf(
-                        hasProperty("remoteTime", equalTo(0L))
+                field("contactsMessage", allOf(
+                        field("remoteTime", equalTo(0L))
                 ))));
 
         shutdown(rc);
@@ -161,11 +162,11 @@ class SimRobotControllerTest {
         // Given a connected and configured controller
         RobotController rc = createController(simSpeed);
         rc.stepUp(); // Connect
-        rc.stepUp(); // Configure
 
         // And an inference consumer
         Consumer<RobotStatus> onInference = mock();
         rc.setOnInference(onInference);
+        rc.stepUp(); // Configure
 
         // When sleeping for 10 simulated time interval
         long dt = round(10 * INTERVAL / simSpeed);
@@ -173,13 +174,13 @@ class SimRobotControllerTest {
 
         verify(onInference, atLeast((int) round(simSpeed * dt / REACTION_INTERVAL) - 3)).accept(any());
         verify(onInference).accept(
-                MockitoHamcrest.argThat(hasProperty("robotTime", equalTo(REACTION_INTERVAL)))
+                MockitoHamcrest.argThat(field("robotTime", equalTo(REACTION_INTERVAL)))
         );
         verify(onInference).accept(
-                MockitoHamcrest.argThat(hasProperty("robotTime", equalTo(2 * REACTION_INTERVAL)))
+                MockitoHamcrest.argThat(field("robotTime", equalTo(2 * REACTION_INTERVAL)))
         );
         verify(onInference).accept(
-                MockitoHamcrest.argThat(hasProperty("robotTime", equalTo(3 * REACTION_INTERVAL)))
+                MockitoHamcrest.argThat(field("robotTime", equalTo(3 * REACTION_INTERVAL)))
         );
 
 

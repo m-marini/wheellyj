@@ -39,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.*;
+import static rocks.cleancode.hamcrest.record.HasFieldMatcher.field;
 
 class SimRobotTest {
 
@@ -78,22 +79,22 @@ class SimRobotTest {
         // and the consumer should be invoked
         verify(onClock, times(1)).accept(MockitoHamcrest.argThat(
                 allOf(
-                        hasProperty("receiveTimestamp", equalTo(0L)),
-                        hasProperty("transmitTimestamp", equalTo(0L))
+                        field("receiveTimestamp", equalTo(0L)),
+                        field("transmitTimestamp", equalTo(0L))
                 )));
         verify(onMotion, times(1)).accept(MockitoHamcrest.argThat(
                 allOf(
-                        hasProperty("remoteTime", equalTo(0L))
+                        field("remoteTime", equalTo(0L))
                 )
         ));
         verify(onProxy, times(1)).accept(MockitoHamcrest.argThat(
                 allOf(
-                        hasProperty("remoteTime", equalTo(0L))
+                        field("remoteTime", equalTo(0L))
                 )
         ));
         verify(onContacts, times(1)).accept(MockitoHamcrest.argThat(
                 allOf(
-                        hasProperty("remoteTime", equalTo(0L))
+                        field("remoteTime", equalTo(0L))
                 )
         ));
     }
@@ -148,10 +149,10 @@ class SimRobotTest {
         // Then robot should emit motion at (0, 18) ~= (0, MAX_PPS * 0.5)
         verify(onMotion).accept(MockitoHamcrest.argThat(
                 allOf(
-                        hasProperty("remoteTime", equalTo(500L)),
-                        hasProperty("XPulses", closeTo(0, PULSES_EPSILON)),
-                        hasProperty("YPulses", closeTo(18, PULSES_EPSILON)),
-                        hasProperty("direction", equalTo(0))
+                        field("remoteTime", equalTo(500L)),
+                        field("xPulses", closeTo(0, PULSES_EPSILON)),
+                        field("yPulses", closeTo(18, PULSES_EPSILON)),
+                        field("direction", equalTo(0))
                 )
         ));
     }
@@ -175,10 +176,10 @@ class SimRobotTest {
         // Then robot should emit motion at (0, -18) ~= (0, -MAX_PPS * 0.5)
         verify(onMotion).accept(MockitoHamcrest.argThat(
                 allOf(
-                        hasProperty("remoteTime", equalTo(500L)),
-                        hasProperty("XPulses", closeTo(0, PULSES_EPSILON)),
-                        hasProperty("YPulses", closeTo(-18, PULSES_EPSILON)),
-                        hasProperty("direction", equalTo(0))
+                        field("remoteTime", equalTo(500L)),
+                        field("xPulses", closeTo(0, PULSES_EPSILON)),
+                        field("yPulses", closeTo(-18, PULSES_EPSILON)),
+                        field("direction", equalTo(0))
                 )
         ));
         // And remote time should be 500L
@@ -204,11 +205,11 @@ class SimRobotTest {
         // Then robot should emit motion at (0, 0) toward 5 DEG
         verify(onMotion).accept(MockitoHamcrest.argThat(
                 allOf(
-                        hasProperty("remoteTime", equalTo(500L)),
-                        hasProperty("XPulses", closeTo(0, PULSES_EPSILON)),
-                        hasProperty("YPulses", closeTo(0, PULSES_EPSILON)),
-                        hasProperty("direction", greaterThanOrEqualTo(4)),
-                        hasProperty("direction", lessThanOrEqualTo(6))
+                        field("remoteTime", equalTo(500L)),
+                        field("xPulses", closeTo(0, PULSES_EPSILON)),
+                        field("yPulses", closeTo(0, PULSES_EPSILON)),
+                        field("direction", greaterThanOrEqualTo(4)),
+                        field("direction", lessThanOrEqualTo(6))
                 )
         ));
         // And remote time should be 500L
@@ -234,11 +235,11 @@ class SimRobotTest {
         // Then robot should emit motion at (0, 0) toward approx 90 DEG
         verify(onMotion).accept(MockitoHamcrest.argThat(
                 allOf(
-                        hasProperty("remoteTime", equalTo(500L)),
-                        hasProperty("XPulses", closeTo(0, PULSES_EPSILON)),
-                        hasProperty("YPulses", closeTo(0, PULSES_EPSILON)),
-                        hasProperty("direction", greaterThanOrEqualTo(89)),
-                        hasProperty("direction", lessThanOrEqualTo(91))
+                        field("remoteTime", equalTo(500L)),
+                        field("xPulses", closeTo(0, PULSES_EPSILON)),
+                        field("yPulses", closeTo(0, PULSES_EPSILON)),
+                        field("direction", greaterThanOrEqualTo(89)),
+                        field("direction", lessThanOrEqualTo(91))
                 )
         ));
         // And remote time should be 500L
@@ -264,8 +265,8 @@ class SimRobotTest {
         // the consumer should be invoked
         verify(onProxy, times(1)).accept(MockitoHamcrest.argThat(
                 allOf(
-                        hasProperty("remoteTime", equalTo(500L)),
-                        hasProperty("sensorDirection", equalTo(90))
+                        field("remoteTime", equalTo(500L)),
+                        field("sensorDirection", equalTo(90))
                 )));
         // And remote time should be 500L
         assertEquals(500L, robot.getRemoteTime());
@@ -305,17 +306,17 @@ class SimRobotTest {
         InOrder onMotionOrder = inOrder(onMotion);
         onMotionOrder.verify(onMotion).accept(MockitoHamcrest.argThat(
                 allOf(
-                        hasProperty("remoteTime", equalTo(INTERVAL))
+                        field("remoteTime", equalTo(INTERVAL))
                 )
         ));
         onMotionOrder.verify(onMotion).accept(MockitoHamcrest.argThat(
                 allOf(
-                        hasProperty("remoteTime", equalTo(2 * INTERVAL))
+                        field("remoteTime", equalTo(2 * INTERVAL))
                 )
         ));
         onMotionOrder.verify(onMotion).accept(MockitoHamcrest.argThat(
                 allOf(
-                        hasProperty("remoteTime", equalTo(3 * INTERVAL))
+                        field("remoteTime", equalTo(3 * INTERVAL))
                 )
         ));
         onMotionOrder.verifyNoMoreInteractions();
@@ -324,17 +325,17 @@ class SimRobotTest {
         InOrder onProxyOrder = inOrder(onProxy);
         onProxyOrder.verify(onProxy).accept(MockitoHamcrest.argThat(
                 allOf(
-                        hasProperty("remoteTime", equalTo(INTERVAL))
+                        field("remoteTime", equalTo(INTERVAL))
                 )
         ));
         onProxyOrder.verify(onProxy).accept(MockitoHamcrest.argThat(
                 allOf(
-                        hasProperty("remoteTime", equalTo(2 * INTERVAL))
+                        field("remoteTime", equalTo(2 * INTERVAL))
                 )
         ));
         onProxyOrder.verify(onProxy).accept(MockitoHamcrest.argThat(
                 allOf(
-                        hasProperty("remoteTime", equalTo(3 * INTERVAL))
+                        field("remoteTime", equalTo(3 * INTERVAL))
                 )
         ));
         onProxyOrder.verifyNoMoreInteractions();

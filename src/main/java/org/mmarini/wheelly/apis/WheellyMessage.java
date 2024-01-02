@@ -32,8 +32,8 @@ import java.util.Optional;
 /**
  * The Wheelly status contain the sensor value of Wheelly
  */
-public abstract class WheellyMessage {
-    public static <T extends WheellyMessage> Optional<T> fromLine(Timed<String> line) {
+public interface WheellyMessage {
+    static <T extends WheellyMessage> Optional<T> fromLine(Timed<String> line) {
         if (line.value().startsWith("ct ")) {
             return Optional.of((T) WheellyContactsMessage.create(line));
         } else if (line.value().startsWith("mt ")) {
@@ -47,31 +47,13 @@ public abstract class WheellyMessage {
         }
     }
 
-    protected final long time;
-    protected final long remoteTime;
-
-    /**
-     * Creates wheelly status
-     *
-     * @param time       the status time
-     * @param remoteTime
-     */
-    public WheellyMessage(long time, long remoteTime) {
-        this.time = time;
-        this.remoteTime = remoteTime;
-    }
-
     /**
      * Returns the remote message time (remote clock)
      */
-    public long getRemoteTime() {
-        return remoteTime;
-    }
+    long remoteTime();
 
     /**
      * Returns the local received time of message (local clock)
      */
-    public long getTime() {
-        return time;
-    }
+    long time();
 }
