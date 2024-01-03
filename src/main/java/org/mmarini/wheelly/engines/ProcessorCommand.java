@@ -54,7 +54,7 @@ public record ProcessorCommand(String id, Consumer<ProcessorContext> command) {
             new ProcessorCommand("mul", ProcessorCommand::mulCommand),
             new ProcessorCommand("div", ProcessorCommand::divCommand),
             new ProcessorCommand("swap", ProcessorCommand::swapCommand),
-            new ProcessorCommand("time", ProcessorCommand::timeCommand)
+            new ProcessorCommand("localTime", ProcessorCommand::timeCommand)
     );
 
     /**
@@ -239,13 +239,13 @@ public record ProcessorCommand(String id, Consumer<ProcessorContext> command) {
     }
 
     /**
-     * Pushes the robot time in the stack
+     * Pushes the robot localTime in the stack
      *
      * @param context the processor context
      */
     private static void timeCommand(ProcessorContext context) {
         RobotStatus status = context.getRobotStatus();
-        context.push(status.getLocalTime());
+        context.push(status.simulationTime());
     }
 
     /**

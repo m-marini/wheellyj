@@ -84,7 +84,7 @@ public interface ExtendedStateNode extends StateNode {
 
     @Override
     default void entry(ProcessorContext context) {
-        long time = context.getRobotStatus().getLocalTime();
+        long time = context.getRobotStatus().simulationTime();
         context.put(format("%s.entryTime", id()), time);
         ProcessorCommand onEntry = onEntry();
         if (onEntry != null) {
@@ -134,7 +134,7 @@ public interface ExtendedStateNode extends StateNode {
 
     @Override
     default long getElapsedTime(ProcessorContext context) {
-        return context.getRobotStatus().getLocalTime() -
+        return context.getRobotStatus().simulationTime() -
                 getEntryTime(context);
     }
 
@@ -215,7 +215,7 @@ public interface ExtendedStateNode extends StateNode {
 
     /**
      * Performs the auto scan behaviors.
-     * Moves the sensor to a random direction within a range at given steps on given time interval
+     * Moves the sensor to a random direction within a range at given steps on given localTime interval
      *
      * @param context the processor context
      */
@@ -224,12 +224,12 @@ public interface ExtendedStateNode extends StateNode {
         // Check for scan interval set
         if (scanInterval > 0) {
             long scanTime = getLong(context, "scanTime");
-            long time = context.getRobotStatus().getLocalTime();
+            long time = context.getRobotStatus().simulationTime();
             // Check for scan timeout
             long t0 = System.currentTimeMillis();
-            logger.atDebug().log("tickAutoScan currentTime={}, remoteTime={}, statusDt={}, statusScanDt={}, time to next scan={}",
+            logger.atDebug().log("tickAutoScan currentTime={}, remoteTime={}, statusDt={}, statusScanDt={}, localTime to next scan={}",
                     t0,
-                    context.getRobotStatus().robotTime(),
+                    context.getRobotStatus().simulationTime(),
                     t0 - time,
                     t0 - scanTime,
                     scanTime + scanInterval - time);

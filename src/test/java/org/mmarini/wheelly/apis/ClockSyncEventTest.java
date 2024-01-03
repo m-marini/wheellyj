@@ -21,17 +21,18 @@ class ClockSyncEventTest {
         long rdt = 10;
         long rt0 = 10000;
         long latency = (dt - rdt + 1) / 2;
-        ClockSyncEvent clockEvent = ClockSyncEvent.create(t0, rt0 + latency, rt0 + latency + rdt, t0 + dt);
+        ClockSyncEvent clockEvent = new ClockSyncEvent(t0, rt0 + latency, rt0 + latency + rdt, t0 + dt);
+        ClockConverter converter = clockEvent.converter();
 
-        // When computing local time from rt0
-        long localTime0 = clockEvent.fromRemote(rt0);
+        // When computing local localTime from rt0
+        long localTime0 = converter.fromRemote(rt0);
 
         // Then
         assertEquals(0, localTime0 - t0);
 
-        // When computing local time from rt0 + 10000
+        // When computing local localTime from rt0 + 10000
         long interval = 10000;
-        long localTime = clockEvent.fromRemote(rt0 + interval);
+        long localTime = converter.fromRemote(rt0 + interval);
 
         assertEquals(interval, localTime - t0);
     }

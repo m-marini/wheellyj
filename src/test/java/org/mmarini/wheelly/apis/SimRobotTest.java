@@ -74,7 +74,7 @@ class SimRobotTest {
         robot.configure();
 
         // Then remote clock should be 0
-        assertEquals(0L, robot.getRemoteTime());
+        assertEquals(0L, robot.simulationTime());
 
         // and the consumer should be invoked
         verify(onClock, times(1)).accept(MockitoHamcrest.argThat(
@@ -107,7 +107,7 @@ class SimRobotTest {
         assertEquals(0, robot.getDirection());
         assertEquals(0, robot.getSensorDirection());
         assertEquals(0f, robot.getEchoDistance());
-        assertEquals(0L, robot.getRemoteTime());
+        assertEquals(0L, robot.simulationTime());
     }
 
     /**
@@ -127,7 +127,7 @@ class SimRobotTest {
         assertEquals(0, robot.getDirection());
         assertEquals(0, robot.getSensorDirection());
         assertEquals(0f, robot.getEchoDistance());
-        assertEquals(0L, robot.getRemoteTime());
+        assertEquals(0L, robot.simulationTime());
     }
 
     @Test
@@ -141,7 +141,7 @@ class SimRobotTest {
 
         // When move to 0 DEG at max speed
         robot.move(0, MAX_PPS);
-        // And ticks 5 time for 100 ms
+        // And ticks 5 localTime for 100 ms
         for (int i = 0; i < 5; i++) {
             robot.tick(100);
         }
@@ -168,7 +168,7 @@ class SimRobotTest {
 
         // When move to 0 DEG at max speed
         robot.move(0, -MAX_PPS);
-        // And ticks 5 time for 100 ms
+        // And ticks 5 localTime for 100 ms
         for (int i = 0; i < 5; i++) {
             robot.tick(100);
         }
@@ -182,8 +182,8 @@ class SimRobotTest {
                         field("direction", equalTo(0))
                 )
         ));
-        // And remote time should be 500L
-        assertEquals(500L, robot.getRemoteTime());
+        // And remote localTime should be 500L
+        assertEquals(500L, robot.simulationTime());
     }
 
     @Test
@@ -197,7 +197,7 @@ class SimRobotTest {
 
         // When move to 5 DEG at 0 speed
         robot.move(5, 0);
-        // And ticks 5 time for 100 ms
+        // And ticks 5 localTime for 100 ms
         for (int i = 0; i < 5; i++) {
             robot.tick(100);
         }
@@ -212,8 +212,8 @@ class SimRobotTest {
                         field("direction", lessThanOrEqualTo(6))
                 )
         ));
-        // And remote time should be 500L
-        assertEquals(500L, robot.getRemoteTime());
+        // And remote localTime should be 500L
+        assertEquals(500L, robot.simulationTime());
     }
 
     @Test
@@ -227,7 +227,7 @@ class SimRobotTest {
 
         // When move to 90 DEG at 0 speed
         robot.move(90, 0);
-        // And ticks 5 time for 100 ms
+        // And ticks 5 localTime for 100 ms
         for (int i = 0; i < 5; i++) {
             robot.tick(100);
         }
@@ -242,8 +242,8 @@ class SimRobotTest {
                         field("direction", lessThanOrEqualTo(91))
                 )
         ));
-        // And remote time should be 500L
-        assertEquals(500L, robot.getRemoteTime());
+        // And remote localTime should be 500L
+        assertEquals(500L, robot.simulationTime());
     }
 
     @Test
@@ -268,8 +268,8 @@ class SimRobotTest {
                         field("remoteTime", equalTo(500L)),
                         field("sensorDirection", equalTo(90))
                 )));
-        // And remote time should be 500L
-        assertEquals(500L, robot.getRemoteTime());
+        // And remote localTime should be 500L
+        assertEquals(500L, robot.simulationTime());
     }
 
     @Test
@@ -291,7 +291,7 @@ class SimRobotTest {
         Consumer<WheellyContactsMessage> onContacts = mock();
         robot.setOnContacts(onContacts);
 
-        // When tick 3 time for 500ms
+        // When tick 3 localTime for 500ms
         for (int i = 0; i < 3; i++) {
             robot.tick(INTERVAL);
         }
@@ -299,8 +299,8 @@ class SimRobotTest {
         // Then contacts consumer should be never invoked
         verify(onContacts, never()).accept(any());
 
-        // And remote time should be 500*3
-        assertEquals(1500L, robot.getRemoteTime());
+        // And remote localTime should be 500*3
+        assertEquals(1500L, robot.simulationTime());
 
         // and motion consumer should be invoked by 500 ms intervals
         InOrder onMotionOrder = inOrder(onMotion);

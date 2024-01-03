@@ -271,14 +271,14 @@ public class RadarRobotEnv implements Environment {
     }
 
     /**
-     * Reads the status of robot after a time interval
+     * Reads the status of robot after a localTime interval
      *
-     * @param time the time interval in millis
+     * @param time the localTime interval in millis
      */
     private RobotStatus readStatus(long time) throws IOException {
         /*
         RobotStatus status = robot.getStatus();
-        long timeout = status.getTime() + time;
+        long timeout = status.getTime() + localTime;
         do {
             robot.tick(interval);
             sendCommand();

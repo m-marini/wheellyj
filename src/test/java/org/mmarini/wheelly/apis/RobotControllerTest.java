@@ -175,7 +175,7 @@ class RobotControllerTest {
         io.reactivex.rxjava3.functions.Consumer<? super String> onController = mock();
         rc.readControllerStatus().doOnNext(onController).subscribe();
 
-        // When steps one time
+        // When steps one localTime
         rc.stepUp(); // connect 1
 
         // Then robot connection should be invoked
@@ -260,7 +260,7 @@ class RobotControllerTest {
         Consumer<RobotStatus> onInference = mock();
         rc.setOnInference(onInference);
 
-        // When sleeping for 20 simulated time interval
+        // When sleeping for 20 simulated localTime interval
         long dt = 3000;
         int ticks = (int) round(dt * SIM_SPEED / INTERVAL);
         int reactions = (int) (ticks * INTERVAL / REACTION_INTERVAL);
@@ -319,7 +319,7 @@ class RobotControllerTest {
     void moveError() throws Throwable {
         // Given a mock robot that throws error on move command
         Mock1Robot robot = spy(new Mock1Robot());
-        robot.setRemoteTime(System.currentTimeMillis());
+        robot.setSimulationTime(System.currentTimeMillis());
         IOException error = new IOException("Error");
         doThrow(error).when(robot).move(anyInt(), anyInt());
 
@@ -405,7 +405,7 @@ class RobotControllerTest {
     @Test
     void scanError() throws IOException {
         Mock1Robot robot = spy(new Mock1Robot());
-        robot.setRemoteTime(System.currentTimeMillis());
+        robot.setSimulationTime(System.currentTimeMillis());
         IOException error = new IOException("Error");
         doThrow(error).when(robot).scan(anyInt());
 
@@ -464,7 +464,7 @@ class RobotControllerTest {
         rc.stepUp(); // wait interval
         long elapsed = System.currentTimeMillis() - ts;
 
-        // Then the elapsed time should be the simulated command interval
+        // Then the elapsed localTime should be the simulated command interval
         assertThat(elapsed, greaterThanOrEqualTo(round(INTERVAL / SIM_SPEED)));
 
         // and the status should change in order ...

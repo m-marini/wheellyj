@@ -50,8 +50,7 @@ public class MockRobot implements RobotApi {
     protected Consumer<WheellyProxyMessage> onProxy;
     protected Consumer<WheellyContactsMessage> onContacts;
     protected Consumer<ClockSyncEvent> onClock;
-    private long remoteTime;
-    private long resetTime;
+    private long simulationTime;
     private Point2D robotPos;
     private int robotDir;
     private int sensorDir;
@@ -75,7 +74,7 @@ public class MockRobot implements RobotApi {
     @Override
     public void configure() throws IOException {
         if (onClock != null) {
-            onClock.accept(ClockSyncEvent.create());
+            onClock.accept(new ClockSyncEvent(simulationTime, simulationTime, simulationTime, simulationTime));
         }
         sendMotion();
         sendProxy();
@@ -86,21 +85,11 @@ public class MockRobot implements RobotApi {
     public void connect() throws IOException {
     }
 
-    @Override
-    public long getRemoteTime() {
-        return remoteTime;
-    }
-
-    public void setRemoteTime(long remoteTime) {
-        this.remoteTime = remoteTime;
-    }
-
     public RobotStatus getStatus() {
         return RobotStatus.create(x -> 12d)
                 .setDirection(robotDir)
                 .setSensorDirection(sensorDir)
                 .setEchoDistance(sensorDistance)
-                .setResetTime(resetTime)
                 .setLocation(robotPos);
     }
 
@@ -114,11 +103,6 @@ public class MockRobot implements RobotApi {
     }
 
     @Override
-    public void reset() {
-        resetTime = remoteTime;
-    }
-
-    @Override
     public void scan(int dir) {
     }
 
@@ -126,7 +110,7 @@ public class MockRobot implements RobotApi {
         if (onContacts != null) {
             onContacts.accept(
                     new WheellyContactsMessage(
-                            remoteTime, remoteTime,
+                            System.currentTimeMillis(), simulationTime, simulationTime,
                             true, true,
                             true, true)
             );
@@ -136,7 +120,8 @@ public class MockRobot implements RobotApi {
     protected void sendMotion() {
         if (onMotion != null) {
             onMotion.accept(
-                    new WheellyMotionMessage(remoteTime, remoteTime,
+                    new WheellyMotionMessage(
+                            System.currentTimeMillis(), simulationTime, simulationTime,
                             robotPos.getX() / RobotStatus.DISTANCE_PER_PULSE,
                             robotPos.getY() / RobotStatus.DISTANCE_PER_PULSE,
                             robotDir,
@@ -152,7 +137,8 @@ public class MockRobot implements RobotApi {
         if (onProxy != null) {
             onProxy.accept(
                     new WheellyProxyMessage(
-                            remoteTime, remoteTime, sensorDir, round(sensorDistance / RobotStatus.DISTANCE_SCALE),
+                            System.currentTimeMillis(), simulationTime, simulationTime,
+                            sensorDir, round(sensorDistance / RobotStatus.DISTANCE_SCALE),
                             robotPos.getX() / RobotStatus.DISTANCE_PER_PULSE,
                             robotPos.getY() / RobotStatus.DISTANCE_PER_PULSE,
                             robotDir)
@@ -184,10 +170,6 @@ public class MockRobot implements RobotApi {
     public void setOnSupply(Consumer<WheellySupplyMessage> callback) {
     }
 
-    public void setResetTime(long resetTime) {
-        this.resetTime = resetTime;
-    }
-
     public void setRobotDir(int robotDir) {
         this.robotDir = robotDir;
     }
@@ -204,9 +186,18 @@ public class MockRobot implements RobotApi {
         this.sensorDistance = sensorDistance;
     }
 
+    public void setSimulationTime(long simulationTime) {
+        this.simulationTime = simulationTime;
+    }
+
+    @Override
+    public long simulationTime() {
+        return simulationTime;
+    }
+
     @Override
     public void tick(long dt) {
-        remoteTime += dt;
+        simulationTime += dt;
         sendMotion();
         sendProxy();
         sendContacts();

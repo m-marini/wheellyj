@@ -64,11 +64,6 @@ public interface RobotApi extends Closeable, WithStatusCallback {
     void connect() throws IOException;
 
     /**
-     * Returns the robot time
-     */
-    long getRemoteTime();
-
-    /**
      * Halts the robot
      *
      * @throws IOException in case of error
@@ -85,13 +80,6 @@ public interface RobotApi extends Closeable, WithStatusCallback {
     void move(int dir, int speed) throws IOException;
 
     /**
-     * Resets the robot
-     *
-     * @throws IOException in case of error
-     */
-    void reset() throws IOException;
-
-    /**
      * Moves the sensor to a direction
      *
      * @param dir the direction in DEG
@@ -100,7 +88,12 @@ public interface RobotApi extends Closeable, WithStatusCallback {
     void scan(int dir) throws IOException;
 
     /**
-     * Advances time by a time interval
+     * Returns the robot localTime
+     */
+    long simulationTime();
+
+    /**
+     * Advances localTime by a localTime interval
      *
      * @param dt the interval in millis
      * @throws IOException in case of error

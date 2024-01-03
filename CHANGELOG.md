@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #280: RobotExecutor stuck
 - Issue #284: Wrong speed with simulated robot
 - Issue #288: Wrong command timing in RobotExecutor
+- Issue #291: Wrong timing when restart robot
 
 ## [0.11.1] 2023-12-24
 

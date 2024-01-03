@@ -126,7 +126,7 @@ public class Wheelly {
         parser.addArgument("-s", "--silent")
                 .action(Arguments.storeTrue())
                 .help("specify silent closing (no window messages)");
-        parser.addArgument("-t", "--time")
+        parser.addArgument("-t", "--localTime")
                 .setDefault(43200L)
                 .type(Long.class)
                 .help("specify number of seconds of session duration");
@@ -199,7 +199,7 @@ public class Wheelly {
     }
 
     private void handleInference(RobotStatus status) {
-        long robotClock = status.getLocalTime();
+        long robotClock = status.simulationTime();
         envPanel.setRobotStatus(status);
         sensorMonitor.onStatus(status);
         if (environment instanceof WithRadarMap) {
@@ -263,9 +263,9 @@ public class Wheelly {
 
     private void handleStatusReady(RobotStatus status) {
         if (robotStartTimestamp < 0) {
-            robotStartTimestamp = status.getLocalTime();
+            robotStartTimestamp = status.simulationTime();
         }
-        long robotElapsed = status.getLocalTime() - robotStartTimestamp;
+        long robotElapsed = status.simulationTime() - robotStartTimestamp;
         envPanel.setTimeRatio((double) robotElapsed / (System.currentTimeMillis() - start));
         if (robotElapsed > sessionDuration) {
             environment.shutdown();
@@ -331,7 +331,7 @@ public class Wheelly {
             } else {
                 layHorizontally(frame, sensorFrame, comFrame);
             }
-            sessionDuration = this.args.getLong("time");
+            sessionDuration = this.args.getLong("localTime");
             logger.atInfo().log("Starting session ...");
             logger.atInfo().setMessage("Session are running for {} sec...").addArgument(sessionDuration).log();
             sessionDuration *= 1000;

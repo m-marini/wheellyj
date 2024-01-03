@@ -77,7 +77,7 @@ class ProcessorCommandTest {
 
     static RobotApi createRobot() {
         MockRobot mockRobot = new MockRobot();
-        mockRobot.setRemoteTime(TIME);
+        mockRobot.setSimulationTime(TIME);
         return mockRobot;
     }
 
@@ -233,12 +233,12 @@ class ProcessorCommandTest {
 
     @Test
     void time() {
-        ProcessorCommand cmd = ProcessorCommand.parseCommand("time");
+        ProcessorCommand cmd = ProcessorCommand.parseCommand("localTime");
 
         ProcessorContext ctx = createContext();
 
         cmd.execute(ctx);
-        long expected = ctx.getRobotStatus().getLocalTime();
+        long expected = ctx.getRobotStatus().simulationTime();
         assertEquals(expected, ctx.peek());
     }
 

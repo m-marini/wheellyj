@@ -201,16 +201,16 @@ public class DumpRecordPanel extends JPanel {
     }
 
     /**
-     * Returns the time offset
+     * Returns the localTime offset
      */
     public Instant getOffset() {
         return offset;
     }
 
     /**
-     * Sets the time offset
+     * Sets the localTime offset
      *
-     * @param offset the time offset
+     * @param offset the localTime offset
      */
     public void setOffset(Instant offset) {
         this.offset = requireNonNull(offset);

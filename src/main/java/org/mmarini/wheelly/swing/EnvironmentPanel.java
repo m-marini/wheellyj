@@ -107,9 +107,9 @@ public class EnvironmentPanel extends RadarPanel {
     }
 
     /**
-     * Returns the string representation of a time interval
+     * Returns the string representation of a localTime interval
      *
-     * @param interval the time interval in millis
+     * @param interval the localTime interval in millis
      */
     private static String strDate(long interval) {
         long decSec = (interval + 50) / 100;
@@ -179,7 +179,7 @@ public class EnvironmentPanel extends RadarPanel {
         g1.setColor(HUD_BACKGROUND_COLOR);
         g1.fillRect(0, 0, HUD_WIDTH, hudHeight);
         g1.setColor(getForeground());
-        drawLine(g1, format("Time     %s %.1fx", strDate(status.robotTime() - status.resetTime()), timeRatio), 0, Color.GREEN);
+        drawLine(g1, format("Time     %s %.1fx", strDate(status.simulationTime()), timeRatio), 0, Color.GREEN);
         drawLine(g1, format("Reaction: %.3f s / %.3f s", reactionRobotTime, reactionRealTime), 1, Color.GREEN);
         drawLine(g1, format("Reward   %.2f", reward), 2, Color.GREEN);
         drawLine(g1, format("Distance %.2f m", status.getEchoDistance()), 3, Color.GREEN);

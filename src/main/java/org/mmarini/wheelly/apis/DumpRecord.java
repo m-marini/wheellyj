@@ -57,7 +57,7 @@ public interface DumpRecord {
         if (">".equals(dir)) {
             return new WriteDumpRecord(timestamp, data);
         }
-        return WheellyMessage.fromLine(new Timed<>(data, timestamp.toEpochMilli(), TimeUnit.MILLISECONDS))
+        return WheellyMessage.fromLine(new Timed<>(data, timestamp.toEpochMilli(), TimeUnit.MILLISECONDS), ClockConverter.identity())
                 .map(msg -> (DumpRecord) new MessageDumpRecord<>(timestamp, data, msg))
                 .orElseGet(() -> new ReadDumpRecord(timestamp, data));
     }

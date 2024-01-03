@@ -189,7 +189,7 @@ public class SimRobot implements RobotApi {
     private double rightPps;
     private boolean frontSensor;
     private boolean rearSensor;
-    private long remoteTime;
+    private long simulationTime;
     private double echoDistance;
     private long motionTimeout;
 
@@ -298,8 +298,7 @@ public class SimRobot implements RobotApi {
     @Override
     public void configure() {
         if (onClock != null) {
-            long now = System.currentTimeMillis();
-            onClock.accept(ClockSyncEvent.create(now, remoteTime, remoteTime, now));
+            onClock.accept(new ClockSyncEvent(simulationTime, simulationTime, simulationTime, simulationTime));
         }
         sendMotion();
         sendProxy();
@@ -311,7 +310,7 @@ public class SimRobot implements RobotApi {
     }
 
     /**
-     * @param dt the time interval
+     * @param dt the localTime interval
      */
     private void controller(double dt) {
         // Direction difference
@@ -397,11 +396,6 @@ public class SimRobot implements RobotApi {
         return Optional.ofNullable(obstacleMap);
     }
 
-    @Override
-    public long getRemoteTime() {
-        return remoteTime;
-    }
-
     /**
      * Returns the sensor direction (DEG)
      */
@@ -480,17 +474,6 @@ public class SimRobot implements RobotApi {
     }
 
     @Override
-    public void reset() {
-        speed = 0;
-        direction = 0;
-        sensorDirection = 0;
-        remoteTime = 0;
-        robot.setLinearVelocity(new Vec2());
-        robot.setTransform(new Vec2(), (float) (PI / 2));
-        robot.setAngularVelocity(0f);
-    }
-
-    @Override
     public void scan(int dir) {
         this.sensorDirection = min(max(dir, -90), 90);
     }
@@ -501,7 +484,7 @@ public class SimRobot implements RobotApi {
     private void sendContacts() {
         if (onContacts != null) {
             WheellyContactsMessage msg = new WheellyContactsMessage(
-                    System.currentTimeMillis(), remoteTime,
+                    System.currentTimeMillis(), simulationTime, simulationTime,
                     frontSensor, rearSensor,
                     canMoveForward(),
                     canMoveBackward()
@@ -520,7 +503,7 @@ public class SimRobot implements RobotApi {
             double yPulses = pos.y / DISTANCE_PER_PULSE;
             int robotDir = getDirection();
             WheellyMotionMessage msg = new WheellyMotionMessage(
-                    System.currentTimeMillis(), remoteTime,
+                    System.currentTimeMillis(), simulationTime, simulationTime,
                     xPulses, yPulses, robotDir,
                     leftPps, rightPps,
                     0, speed == 0,
@@ -528,7 +511,7 @@ public class SimRobot implements RobotApi {
                     0, 0);
             onMotion.accept(msg);
         }
-        motionTimeout = remoteTime + motionInterval;
+        motionTimeout = simulationTime + motionInterval;
     }
 
     /**
@@ -542,11 +525,11 @@ public class SimRobot implements RobotApi {
             int echoYaw = getDirection();
             long echoDelay = round(echoDistance / DISTANCE_SCALE);
             WheellyProxyMessage msg = new WheellyProxyMessage(
-                    System.currentTimeMillis(), remoteTime,
+                    System.currentTimeMillis(), simulationTime, simulationTime,
                     sensorDirection, echoDelay, xPulses, yPulses, echoYaw);
             onProxy.accept(msg);
         }
-        proxyTimeout = remoteTime + proxyInterval;
+        proxyTimeout = simulationTime + proxyInterval;
     }
 
     @Override
@@ -595,8 +578,13 @@ public class SimRobot implements RobotApi {
     }
 
     @Override
+    public long simulationTime() {
+        return simulationTime;
+    }
+
+    @Override
     public void tick(long dt) {
-        this.remoteTime += dt;
+        this.simulationTime += dt;
 
         // Simulate robot motion
         controller(dt * 1e-3F);
@@ -627,7 +615,7 @@ public class SimRobot implements RobotApi {
      * Sends the motion message if interval has elapsed
      */
     private void updateMotion() {
-        if (remoteTime >= motionTimeout) {
+        if (simulationTime >= motionTimeout) {
             sendMotion();
         }
     }
@@ -636,7 +624,7 @@ public class SimRobot implements RobotApi {
      * Sends the proxy message if interval has elapsed
      */
     private void updateProxy() {
-        if (remoteTime >= proxyTimeout) {
+        if (simulationTime >= proxyTimeout) {
             sendProxy();
         }
     }
