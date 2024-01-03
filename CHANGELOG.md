@@ -14,13 +14,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #281: Add new status signals recognition to COM monitor
 - Issue #286: COMMonitor with calssified status signals
 - Issue #290: Review RadarMap update
-- Issue #291: Wrong timing when restart robot
 
 ### Fixed
 
 - Issue #280: RobotExecutor stuck
 - Issue #284: Wrong speed with simulated robot
 - Issue #288: Wrong command timing in RobotExecutor
+- Issue #291: Wrong timing when restart robot
 
 ## [0.11.1] 2023-12-24
 
