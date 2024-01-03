@@ -43,7 +43,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * State machine agent acts the robot basing on state machine flow.
  * <p>
- * The main method is <code>tick</code> which for the duration of the reaction time checks the I/O to the robot.<br>
+ * The main method is <code>tick</code> which for the duration of the reaction localTime checks the I/O to the robot.<br>
  * <ul>
  *     <li>The <code>interval</code> parameter defines the interval (ms) between the read robot status.</li>
  *     <li>The <code>commandInterval</code> parameter defines the interval (ms) between sending output command to the robot.</li></7LU>

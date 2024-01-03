@@ -103,8 +103,8 @@ class SimRobotControllerTest {
         // And wait for 2 simulated intervals
         Thread.sleep(round(2 * INTERVAL / simSpeed));
 
-        // Then the robot time should be 0
-        assertThat(rc.getRobot().getRemoteTime(), greaterThanOrEqualTo(2 * INTERVAL));
+        // Then the robot localTime should be 0
+        assertThat(rc.getRobot().simulationTime(), greaterThanOrEqualTo(2 * INTERVAL));
 
         // And the handling commands should be emitted
         verify(onController).accept(RobotController.HANDLING_COMMANDS);
@@ -149,9 +149,9 @@ class SimRobotControllerTest {
         // And the configuring status should be emitted
         verify(onController).accept(RobotController.CONFIGURING);
 
-        // And robot time should be 0
+        // And robot localTime should be 0
         RobotApi robot = rc.getRobot();
-        assertEquals(0L, robot.getRemoteTime());
+        assertEquals(0L, robot.simulationTime());
 
         shutdown(rc);
     }
@@ -168,19 +168,19 @@ class SimRobotControllerTest {
         rc.setOnInference(onInference);
         rc.stepUp(); // Configure
 
-        // When sleeping for 10 simulated time interval
+        // When sleeping for 10 simulated localTime interval
         long dt = round(10 * INTERVAL / simSpeed);
         Thread.sleep(dt);
 
         verify(onInference, atLeast((int) round(simSpeed * dt / REACTION_INTERVAL) - 3)).accept(any());
         verify(onInference).accept(
-                MockitoHamcrest.argThat(field("robotTime", equalTo(REACTION_INTERVAL)))
+                MockitoHamcrest.argThat(field("simulationTime", equalTo(REACTION_INTERVAL)))
         );
         verify(onInference).accept(
-                MockitoHamcrest.argThat(field("robotTime", equalTo(2 * REACTION_INTERVAL)))
+                MockitoHamcrest.argThat(field("simulationTime", equalTo(2 * REACTION_INTERVAL)))
         );
         verify(onInference).accept(
-                MockitoHamcrest.argThat(field("robotTime", equalTo(3 * REACTION_INTERVAL)))
+                MockitoHamcrest.argThat(field("simulationTime", equalTo(3 * REACTION_INTERVAL)))
         );
 
 

@@ -138,7 +138,7 @@ public record RadarMap(GridTopology topology, MapCell[] sectors, int stride,
     /**
      * Returns cleans up the map for timeout
      *
-     * @param timestamp the time instant
+     * @param timestamp the localTime instant
      */
     public RadarMap clean(long timestamp) {
         return timestamp >= cleanTimestamp
@@ -249,7 +249,7 @@ public record RadarMap(GridTopology topology, MapCell[] sectors, int stride,
 
     /**
      * Returns the radar map updated with the radar status.
-     * It uses the time and signals from robot to updates the status of radar map
+     * It uses the localTime and signals from robot to updates the status of radar map
      *
      * @param status the robot status
      */
@@ -257,7 +257,7 @@ public record RadarMap(GridTopology topology, MapCell[] sectors, int stride,
         // Updates the radar map
         double distance = status.getEchoDistance();
         Point2D location = status.getEchoRobotLocation();
-        long time = status.getLocalEchoTime();
+        long time = status.simulationTime();
         RadarMap.SensorSignal signal = new RadarMap.SensorSignal(location,
                 status.getEchoDirection(),
                 distance, time);

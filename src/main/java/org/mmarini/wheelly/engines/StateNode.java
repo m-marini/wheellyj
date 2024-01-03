@@ -94,14 +94,14 @@ public interface StateNode {
     void exit(ProcessorContext context);
 
     /**
-     * Returns the elapsed time (ms) from state entry time
+     * Returns the elapsed localTime (ms) from state entry localTime
      *
      * @param context the processor context
      */
     long getElapsedTime(ProcessorContext context);
 
     /**
-     * Returns the state entry time (ms)
+     * Returns the state entry localTime (ms)
      *
      * @param context the processor context
      */

@@ -239,7 +239,7 @@ public class MatrixColumn extends JComponent {
     /**
      * Sets the print timestamp
      *
-     * @param printTimestamp true if time stamp is printed
+     * @param printTimestamp true if localTime stamp is printed
      */
     public MatrixColumn setPrintTimestamp(boolean printTimestamp) {
         this.printTimestamp = printTimestamp;

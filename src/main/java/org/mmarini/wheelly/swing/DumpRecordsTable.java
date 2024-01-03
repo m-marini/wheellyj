@@ -80,14 +80,14 @@ public class DumpRecordsTable extends JTable {
     }
 
     /**
-     * Returns the time offset
+     * Returns the localTime offset
      */
     public Instant getTimestampOffset() {
         return ((DumpRecordTableModel) getModel()).getTimeOffset();
     }
 
     /**
-     * Sets the time offset
+     * Sets the localTime offset
      *
      * @param offset the offset
      */

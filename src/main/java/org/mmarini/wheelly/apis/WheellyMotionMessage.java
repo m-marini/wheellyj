@@ -37,8 +37,9 @@ import static java.lang.String.format;
 /**
  * The Wheelly status contain the sensor value of Wheelly
  *
- * @param time           the status time
- * @param remoteTime     the remote status instant
+ * @param localTime      the status localTime (ms)
+ * @param simulationTime the simulation time (ms)
+ * @param remoteTime     the remote status instant (ms)
  * @param xPulses        the x robot location pulses
  * @param yPulses        the y robot location pulses
  * @param direction      the robot direction DEG
@@ -51,7 +52,8 @@ import static java.lang.String.format;
  * @param leftPower      the left power
  * @param rightPower     the right power
  */
-public record WheellyMotionMessage(long time, long remoteTime, double xPulses, double yPulses, int direction,
+public record WheellyMotionMessage(long localTime, long simulationTime, long remoteTime, double xPulses, double yPulses,
+                                   int direction,
                                    double leftPps, double rightPps,
                                    int imuFailure, boolean halt, int leftTargetPps, int rightTargetPps, int leftPower,
                                    int rightPower)
@@ -79,10 +81,11 @@ public record WheellyMotionMessage(long time, long remoteTime, double xPulses, d
      *     [right power]
      * </pre>
      *
-     * @param line the status string
+     * @param line           the status string
+     * @param clockConverter the clock coverter
      */
 
-    public static WheellyMotionMessage create(Timed<String> line) {
+    public static WheellyMotionMessage create(Timed<String> line, ClockConverter clockConverter) {
         long time = line.time(TimeUnit.MILLISECONDS);
         String[] params = line.value().split(" ");
         if (params.length != NO_STATUS_PARAMS) {
@@ -104,7 +107,8 @@ public record WheellyMotionMessage(long time, long remoteTime, double xPulses, d
         int leftPower = Integer.parseInt(params[13]);
         int rightPower = Integer.parseInt(params[14]);
 
-        return new WheellyMotionMessage(time, remoteTime, x,
+        long simTime = clockConverter.fromRemote(remoteTime);
+        return new WheellyMotionMessage(time, simTime, remoteTime, x,
                 y,
                 robotDeg, left,
                 right, imuFailure,
@@ -118,7 +122,7 @@ public record WheellyMotionMessage(long time, long remoteTime, double xPulses, d
      */
     public WheellyMotionMessage setDirection(int direction) {
         return direction != this.direction
-                ? new WheellyMotionMessage(time, remoteTime, xPulses, yPulses, direction, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower)
+                ? new WheellyMotionMessage(localTime, simulationTime, remoteTime, xPulses, yPulses, direction, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower)
                 : this;
     }
 
@@ -129,7 +133,7 @@ public record WheellyMotionMessage(long time, long remoteTime, double xPulses, d
      */
     public WheellyMotionMessage setHalt(boolean halt) {
         return halt != this.halt
-                ? new WheellyMotionMessage(time, remoteTime, xPulses, yPulses, direction, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower)
+                ? new WheellyMotionMessage(localTime, simulationTime, remoteTime, xPulses, yPulses, direction, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower)
                 : this;
     }
 
@@ -141,18 +145,18 @@ public record WheellyMotionMessage(long time, long remoteTime, double xPulses, d
      */
     public WheellyMotionMessage setPulses(double xPulses, double yPulses) {
         return xPulses != this.xPulses || yPulses != this.yPulses
-                ? new WheellyMotionMessage(time, remoteTime, xPulses, yPulses, direction, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower)
+                ? new WheellyMotionMessage(localTime, simulationTime, remoteTime, xPulses, yPulses, direction, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower)
                 : this;
     }
 
     /**
-     * Returns the status with remote time instant set
+     * Returns the motion message with a simulated time
      *
-     * @param remoteTime the remote instant
+     * @param simulationTime the simulated time (ms)
      */
-    public WheellyMotionMessage setRemoteTime(long remoteTime) {
-        return remoteTime != this.remoteTime
-                ? new WheellyMotionMessage(time, remoteTime, xPulses, yPulses, direction, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower)
+    public WheellyMotionMessage setSimulationTime(long simulationTime) {
+        return simulationTime != this.simulationTime
+                ? new WheellyMotionMessage(localTime, simulationTime, remoteTime, xPulses, yPulses, direction, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower)
                 : this;
     }
 
@@ -164,7 +168,7 @@ public record WheellyMotionMessage(long time, long remoteTime, double xPulses, d
      */
     public WheellyMotionMessage setSpeeds(double leftPps, double rightPps) {
         return leftPps != this.leftPps || rightPps != this.rightPps
-                ? new WheellyMotionMessage(time, remoteTime, xPulses, yPulses, direction, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower)
+                ? new WheellyMotionMessage(localTime, simulationTime, remoteTime, xPulses, yPulses, direction, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower)
                 : this;
     }
 }

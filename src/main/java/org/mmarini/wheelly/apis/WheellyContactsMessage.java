@@ -35,15 +35,16 @@ import static java.lang.String.format;
 /**
  * The Wheelly status contain the sensor value of Wheelly
  *
- * @param time            the status time
- * @param remoteTime      the remote contacts time
+ * @param localTime       the local time (ms)
+ * @param simulationTime  the simulation time (ms)
+ * @param remoteTime      the remote contacts time (ms)
  * @param frontSensors    the front sensors signals
  * @param rearSensors     the rear sensors signals
  * @param canMoveForward  true if it can move forward
  * @param canMoveBackward true if it can move backward
  */
-public record WheellyContactsMessage(long time,
-                                     long remoteTime, boolean frontSensors, boolean rearSensors,
+public record WheellyContactsMessage(long localTime, long simulationTime, long remoteTime,
+                                     boolean frontSensors, boolean rearSensors,
                                      boolean canMoveForward, boolean canMoveBackward)
         implements WheellyMessage {
     public static final int NO_PARAMS = 6;
@@ -60,10 +61,11 @@ public record WheellyContactsMessage(long time,
      *     [canMoveBackward]
      * </pre>
      *
-     * @param line the status string
+     * @param line           the status string
+     * @param clockConverter the clock converter
      */
 
-    public static WheellyContactsMessage create(Timed<String> line) {
+    public static WheellyContactsMessage create(Timed<String> line, ClockConverter clockConverter) {
         long time = line.time(TimeUnit.MILLISECONDS);
         String[] params = line.value().split(" ");
         if (params.length != NO_PARAMS) {
@@ -75,9 +77,9 @@ public record WheellyContactsMessage(long time,
 
         boolean canMoveForward = Integer.parseInt(params[4]) != 0;
         boolean canMoveBackward = Integer.parseInt(params[5]) != 0;
-
+        long simTime = clockConverter.fromRemote(remoteTime);
         return new WheellyContactsMessage(time,
-                remoteTime, frontSensors, rearSensors,
+                simTime, remoteTime, frontSensors, rearSensors,
                 canMoveForward, canMoveBackward
         );
     }
@@ -89,7 +91,8 @@ public record WheellyContactsMessage(long time,
      */
     public WheellyContactsMessage setCanMoveBackward(boolean canMoveBackward) {
         return canMoveBackward != this.canMoveBackward
-                ? new WheellyContactsMessage(time, remoteTime, frontSensors, rearSensors, canMoveForward, canMoveBackward)
+                ? new WheellyContactsMessage(localTime, simulationTime, remoteTime, frontSensors, rearSensors,
+                canMoveForward, canMoveBackward)
                 : this;
     }
 
@@ -100,18 +103,20 @@ public record WheellyContactsMessage(long time,
      */
     public WheellyContactsMessage setCanMoveForward(boolean canMoveForward) {
         return canMoveForward != this.canMoveForward
-                ? new WheellyContactsMessage(time, remoteTime, frontSensors, rearSensors, canMoveForward, canMoveBackward)
+                ? new WheellyContactsMessage(localTime, simulationTime, remoteTime, frontSensors, rearSensors,
+                canMoveForward, canMoveBackward)
                 : this;
     }
 
     /**
-     * Returns the status with remote time instant set
+     * Returns the contact message with simulation time
      *
-     * @param remoteTime the remote instant
+     * @param simulationTime the simulation time (ms)
      */
-    public WheellyContactsMessage setRemoteTime(long remoteTime) {
-        return remoteTime != this.remoteTime
-                ? new WheellyContactsMessage(time, remoteTime, frontSensors, rearSensors, canMoveForward, canMoveBackward)
+    public WheellyContactsMessage setSimulationTime(long simulationTime) {
+        return simulationTime != this.simulationTime
+                ? new WheellyContactsMessage(localTime, simulationTime, remoteTime, frontSensors, rearSensors,
+                canMoveForward, canMoveBackward)
                 : this;
     }
 }

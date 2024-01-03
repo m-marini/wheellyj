@@ -83,7 +83,7 @@ import static org.mmarini.wheelly.apps.Yaml.loadIntArray;
  *     </dd>
  *     <dt>waitingCommandInterval</dt>
  *     <dd>
- *         If the watch dog time has elapsed close the controller and move to closing state.
+ *         If the watch dog localTime has elapsed close the controller and move to closing state.
  *         Waits for interval.
  *         Moves to handleScan state.
  *     </dd>
@@ -216,7 +216,6 @@ public class RobotController implements RobotControllerApi {
         this.robotStatus = RobotStatus.create(decodeVoltage);
         this.statusFlow = Flowable.merge(readMotion(), readContacts(), readProxy(), readSupply());
         setStatusTransition(this::connecting, CONNECTING);
-        robot.setOnClock(this::handleClock);
         robot.setOnMotion(this::handleMotion);
         robot.setOnProxy(this::handleProxy);
         robot.setOnContacts(this::handleContacts);
@@ -252,7 +251,7 @@ public class RobotController implements RobotControllerApi {
         try {
             robot.configure();
             isReady = true;
-            lastTick = robot.getRemoteTime();
+            lastTick = robot.simulationTime();
             Schedulers.io().scheduleDirect(this::runStatusThread);
             setStatusTransition(this::handleCommands, HANDLING_COMMANDS);
         } catch (Exception ex) {
@@ -303,16 +302,6 @@ public class RobotController implements RobotControllerApi {
         return robot;
     }
 
-
-    /**
-     * Handles clock event
-     *
-     * @param event clock event
-     */
-    private void handleClock(ClockSyncEvent event) {
-        robotStatus = robotStatus.setClock(event).setRobotTime(robot.getRemoteTime());
-    }
-
     /**
      * Handles commands
      */
@@ -323,7 +312,7 @@ public class RobotController implements RobotControllerApi {
         }
         RobotStatus status = robotStatus;
         if (status != null) {
-            long time = robot.getRemoteTime();
+            long time = robot.simulationTime();
             int dir = sensorDir;
             try {
                 logger.atDebug().log("Scan dir={}, prevSensorDir={}", dir, prevSensorDir);
@@ -365,7 +354,7 @@ public class RobotController implements RobotControllerApi {
      * @param msg contacts message
      */
     private void handleContacts(WheellyContactsMessage msg) {
-        robotStatus = robotStatus.setContactsMessage(msg).setRobotTime(robot.getRemoteTime());
+        robotStatus = robotStatus.setContactsMessage(msg).setSimulationTime(robot.simulationTime());
         contactsProcessor.onNext(robotStatus);
         scheduleInference(robotStatus);
     }
@@ -377,7 +366,7 @@ public class RobotController implements RobotControllerApi {
      */
     private void handleMotion(WheellyMotionMessage msg) {
         logger.atDebug().log("handleMotion");
-        robotStatus = robotStatus.setMotionMessage(msg).setRobotTime(robot.getRemoteTime());
+        robotStatus = robotStatus.setMotionMessage(msg).setSimulationTime(robot.simulationTime());
         motionProcessor.onNext(robotStatus);
         scheduleInference(robotStatus);
     }
@@ -388,7 +377,7 @@ public class RobotController implements RobotControllerApi {
      * @param msg the proxy message
      */
     private void handleProxy(WheellyProxyMessage msg) {
-        robotStatus = robotStatus.setProxyMessage(msg).setRobotTime(robot.getRemoteTime());
+        robotStatus = robotStatus.setProxyMessage(msg).setSimulationTime(robot.simulationTime());
         proxyProcessor.onNext(robotStatus);
         scheduleInference(robotStatus);
     }
@@ -399,7 +388,7 @@ public class RobotController implements RobotControllerApi {
      * @param msg the robot status
      */
     private void handleSupply(WheellySupplyMessage msg) {
-        robotStatus = robotStatus.setSupplyMessage(msg).setRobotTime(robot.getRemoteTime());
+        robotStatus = robotStatus.setSupplyMessage(msg).setSimulationTime(robot.simulationTime());
         supplyProcessor.onNext(robotStatus);
         scheduleInference(robotStatus);
     }
@@ -489,14 +478,14 @@ public class RobotController implements RobotControllerApi {
     private void runStatusThread() {
         logger.atDebug().setMessage("Status process started").log();
         long prev = System.currentTimeMillis();
-        lastTick = robot.getRemoteTime();
+        lastTick = robot.simulationTime();
         while (!end && isReady) {
             try {
                 // Advance clock of interval
                 tick();
-                // Computes the real elapsed time and robot elapsed time
+                // Computes the real elapsed localTime and robot elapsed localTime
                 long t0 = System.currentTimeMillis();
-                long robotT0 = robot.getRemoteTime();
+                long robotT0 = robot.simulationTime();
                 long robotElapsed = robotT0 - lastTick;
                 long realElapsed = t0 - prev;
                 prev = t0;
@@ -508,7 +497,7 @@ public class RobotController implements RobotControllerApi {
                 long waitTime = realSimElapsed - realElapsed - MIN_SYNCH_INTERVAL;
                 // Checks for required sleep for synchronization
                 if (waitTime >= 1) {
-                    logger.atDebug().log("Wait {} ms for synch", waitTime);
+                    logger.atDebug().log("Wait {} ms for sync", waitTime);
                     try {
                         Thread.sleep(waitTime);
                     } catch (InterruptedException ignored) {
@@ -533,7 +522,7 @@ public class RobotController implements RobotControllerApi {
      */
     private void scheduleInference(RobotStatus status) {
         if (isReady) {
-            long time = robot.getRemoteTime();
+            long time = robot.simulationTime();
             logger.atDebug().log("scheduleInference {}", isInference);
             if (time >= lastInference + reactionInterval && !isInference) {
                 lastInference = time;
@@ -614,7 +603,7 @@ public class RobotController implements RobotControllerApi {
     }
 
     /**
-     * Ticks the robot for interval time to handle communications
+     * Ticks the robot for interval localTime to handle communications
      *
      * @throws IOException in case of error
      */
@@ -634,7 +623,7 @@ public class RobotController implements RobotControllerApi {
      */
     private void waitingCommandInterval() {
         logger.atDebug().setMessage("Waiting {}").addArgument(interval).log();
-        long time = robot.getRemoteTime();
+        long time = robot.simulationTime();
         if (time >= lastTick + watchdogInterval) {
             logger.atError().log("No signals");
             sendError(new IOException("No signals"));

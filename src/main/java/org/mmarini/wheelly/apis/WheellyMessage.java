@@ -33,27 +33,39 @@ import java.util.Optional;
  * The Wheelly status contain the sensor value of Wheelly
  */
 public interface WheellyMessage {
-    static <T extends WheellyMessage> Optional<T> fromLine(Timed<String> line) {
+    /**
+     * Creates the wheelly message from line
+     *
+     * @param <T>            the type of message
+     * @param line           the text of message
+     * @param clockConverter the clock converter
+     */
+    static <T extends WheellyMessage> Optional<T> fromLine(Timed<String> line, ClockConverter clockConverter) {
         if (line.value().startsWith("ct ")) {
-            return Optional.of((T) WheellyContactsMessage.create(line));
+            return Optional.of((T) WheellyContactsMessage.create(line, clockConverter));
         } else if (line.value().startsWith("mt ")) {
-            return Optional.of((T) WheellyMotionMessage.create(line));
+            return Optional.of((T) WheellyMotionMessage.create(line, clockConverter));
         } else if (line.value().startsWith("px ")) {
-            return Optional.of((T) WheellyProxyMessage.create(line));
+            return Optional.of((T) WheellyProxyMessage.create(line, clockConverter));
         } else if (line.value().startsWith("sv ")) {
-            return Optional.of((T) WheellySupplyMessage.create(line));
+            return Optional.of((T) WheellySupplyMessage.create(line, clockConverter));
         } else {
             return Optional.empty();
         }
     }
 
     /**
-     * Returns the remote message time (remote clock)
+     * Returns the local received localTime of message (local clock)
+     */
+    long localTime();
+
+    /**
+     * Returns the remote message localTime (remote clock)
      */
     long remoteTime();
 
     /**
-     * Returns the local received time of message (local clock)
+     * Returns the simulation time
      */
-    long time();
+    long simulationTime();
 }

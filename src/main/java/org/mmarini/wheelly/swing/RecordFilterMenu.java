@@ -200,7 +200,7 @@ public class RecordFilterMenu extends JMenu {
     }
 
     /**
-     * Handles all time button
+     * Handles all localTime button
      *
      * @param event the event
      */
@@ -222,7 +222,7 @@ public class RecordFilterMenu extends JMenu {
     }
 
     /**
-     * Handles none time button
+     * Handles none localTime button
      *
      * @param event the event
      */
@@ -293,9 +293,9 @@ public class RecordFilterMenu extends JMenu {
     }
 
     /**
-     * Sets the time offset
+     * Sets the localTime offset
      *
-     * @param offset the time offset
+     * @param offset the localTime offset
      */
     public void setOffset(Instant offset) {
         this.offset = offset;

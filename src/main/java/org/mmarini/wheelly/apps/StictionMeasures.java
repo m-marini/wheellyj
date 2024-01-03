@@ -103,7 +103,7 @@ public class StictionMeasures {
         parser.addArgument("-i", "--interval")
                 .type(Long.class)
                 .setDefault(DEFAULT_STEP_TIME)
-                .help("specify the step time (ms)");
+                .help("specify the step localTime (ms)");
         parser.addArgument("-t", "--threshold")
                 .type(Long.class)
                 .setDefault(DEFAULT_THRESHOLD_PULSES)

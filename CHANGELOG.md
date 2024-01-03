@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #281: Add new status signals recognition to COM monitor
 - Issue #286: COMMonitor with calssified status signals
 - Issue #290: Review RadarMap update
+- Issue #291: Wrong timing when restart robot
 
 ### Fixed
 

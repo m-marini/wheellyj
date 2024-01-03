@@ -24,7 +24,7 @@ named arguments:
                          agent.yml)
   -s, --silent           specify  silent  closing   (no   window  messages)
                          (default: false)
-  -t TIME, --time TIME   specify number  of  seconds  of  session  duration
+  -t TIME, --localTime TIME   specify number  of  seconds  of  session  duration
                          (default: 43200)
 ```
 

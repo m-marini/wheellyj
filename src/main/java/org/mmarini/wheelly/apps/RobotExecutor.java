@@ -94,7 +94,7 @@ public class RobotExecutor {
         parser.addArgument("-s", "--silent")
                 .action(Arguments.storeTrue())
                 .help("specify silent closing (no window messages)");
-        parser.addArgument("-t", "--time")
+        parser.addArgument("-t", "--localTime")
                 .setDefault(43200L)
                 .type(Long.class)
                 .help("specify number of seconds of session duration");
@@ -212,12 +212,12 @@ public class RobotExecutor {
     private void handleStepUp(ProcessorContext ctx) {
         RobotStatus status = ctx.getRobotStatus();
         if (robotStartTimestamp < 0) {
-            robotStartTimestamp = status.getLocalTime();
+            robotStartTimestamp = status.simulationTime();
         }
         sensorMonitor.onStatus(status);
         envPanel.setRobotStatus(status);
         envPanel.setRadarMap(ctx.getRadarMap());
-        long robotClock = status.getLocalTime();
+        long robotClock = status.simulationTime();
         long robotElapsed = robotClock - robotStartTimestamp;
         envPanel.setTimeRatio((double) robotElapsed / (System.currentTimeMillis() - start));
         long clock = System.currentTimeMillis();
@@ -312,7 +312,7 @@ public class RobotExecutor {
         try {
             this.args = parser.parseArgs(args);
             logger.atInfo().log("Creating Agent");
-            this.sessionDuration = this.args.getLong("time");
+            this.sessionDuration = this.args.getLong("localTime");
             sessionDuration *= 1000;
             logger.atInfo().log("Starting session ...");
             this.agent = createAgent(this.args.getString("config"));

@@ -166,7 +166,7 @@ public class RobotCheckUp {
 
             @Override
             public List<ScannerResult> apply(RobotStatus status) {
-                long time = status.getLocalTime();
+                long time = status.simulationTime();
                 RobotCommands command = RobotCommands.haltCommand().setScan(0);
                 if (currentTest < 0) {
                     // First sample
@@ -368,7 +368,7 @@ public class RobotCheckUp {
                 builder.add(format("Sensor direction check %d DEG", scannerResult.direction));
                 builder.add(format("    %s", scannerResult.valid ? "valid" : "invalid"));
                 builder.add(format("    duration %d ms", scannerResult.testDuration));
-                builder.add(format("    move time %d ms", scannerResult.moveTime));
+                builder.add(format("    move localTime %d ms", scannerResult.moveTime));
                 builder.add(format("    average distance %.2f m", scannerResult.averageDistance));
             }
 
@@ -435,7 +435,7 @@ public class RobotCheckUp {
             } else {
                 builder.add("Scanner checks passed");
             }
-            builder.add(format("    move time <= %d ms", maxMoveDuration));
+            builder.add(format("    move localTime <= %d ms", maxMoveDuration));
             if (validSamples) {
                 builder.add(format("    min distance = %.1f at %d DEG",
                         minDistance, minDistanceDirection));
@@ -569,7 +569,7 @@ public class RobotCheckUp {
 
                 @Override
                 public boolean test(RobotStatus status) {
-                    long time = status.getLocalTime();
+                    long time = status.simulationTime();
                     RobotCommands command = RobotCommands.none();
                     if (startLocation == null) {
                         startLocation = status.getLocation();
@@ -615,7 +615,7 @@ public class RobotCheckUp {
 
                 @Override
                 public boolean test(RobotStatus status) {
-                    long time = status.getLocalTime();
+                    long time = status.simulationTime();
                     int dir = status.getDirection();
                     RobotCommands command = RobotCommands.none();
                     if (startLocation == null) {

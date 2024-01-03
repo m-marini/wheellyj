@@ -30,45 +30,21 @@ import static java.lang.String.format;
 /**
  * The clock sync event
  *
- * <pre>
- * |---------|-------|--------|
- * originate receive transmit destination
- * </pre>
- *
  * @param originateTimestamp   the originate timestamp in local clock ticks (ms)
  * @param receiveTimestamp     the receive timestamp in remote clock ticks (ms)
  * @param transmitTimestamp    the transmit timestamp in remote clock ticks (ms)
  * @param destinationTimestamp the destination timestamp in local clock ticks (ms)
  */
-public record ClockSyncEvent(long originateTimestamp, long receiveTimestamp, long transmitTimestamp,
+public record ClockSyncEvent(long originateTimestamp,
+                             long receiveTimestamp, long transmitTimestamp,
                              long destinationTimestamp) {
-    /**
-     * Returns the clock sync event
-     *
-     * @param originateTimestamp   the originate timestamp in local clock ticks (ms)
-     * @param receiveTimestamp     the receive timestamp in remote clock ticks (ms)
-     * @param transmitTimestamp    the transmit timestamp in remote clock ticks (ms)
-     * @param destinationTimestamp the destination timestamp in local clock ticks (ms)
-     */
-    public static ClockSyncEvent create(long originateTimestamp, long receiveTimestamp, long transmitTimestamp, long destinationTimestamp) {
-        return new ClockSyncEvent(originateTimestamp, receiveTimestamp, transmitTimestamp, destinationTimestamp);
-    }
-
-    /**
-     * Returns the clock sync event for local clock (no Latency)
-     */
-    public static ClockSyncEvent create() {
-        long now = System.currentTimeMillis();
-        return new ClockSyncEvent(now, 0, 0, now);
-    }
-
     /**
      * Returns the clock sync event from a clock sync string
      *
      * @param data                 the sync string
      * @param destinationTimestamp the destination timestamp in local clock ticks (ms)
      */
-    public static ClockSyncEvent from(String data, long destinationTimestamp) {
+    static ClockSyncEvent from(String data, long destinationTimestamp) {
         String[] fields = data.split(" ");
         if (fields.length != 4) {
             throw new IllegalArgumentException(format("Wrong clock message \"%s\"", data));
@@ -76,37 +52,31 @@ public record ClockSyncEvent(long originateTimestamp, long receiveTimestamp, lon
         long originateTimestamp = Long.parseLong(fields[1]);
         long receiveTimestamp = Long.parseLong(fields[2]);
         long transmitTimestamp = Long.parseLong(fields[3]);
-        return ClockSyncEvent.create(originateTimestamp, receiveTimestamp, transmitTimestamp, destinationTimestamp);
+        return new ClockSyncEvent(originateTimestamp, receiveTimestamp, transmitTimestamp, destinationTimestamp);
     }
 
     /**
-     * Returns the remote timestamp from local timestamp
-     *
-     * @param localTime the local timestamp
+     * Returns the clock converter of the event
      */
-    public long fromLocal(long localTime) {
-        return localTime - remoteOffset();
+    public ClockConverter converter() {
+        long offset = remoteOffset();
+        return new ClockConverter() {
+            @Override
+            public long fromRemote(long time) {
+                return time + offset;
+            }
+
+            @Override
+            public long fromSimulation(long time) {
+                return time - offset;
+            }
+        };
     }
 
-    /**
-     * Returns the local timestamp from remote timestamp
-     *
-     * @param remoteTime the remote timestamp
-     */
-    public long fromRemote(long remoteTime) {
-        return remoteOffset() + remoteTime;
-    }
-
-    /**
-     * Returns the latency
-     */
     public long latency() {
         return (destinationTimestamp - originateTimestamp - transmitTimestamp + receiveTimestamp + 1) / 2;
     }
 
-    /**
-     * Returns the remote offset
-     */
     public long remoteOffset() {
         return originateTimestamp + latency() - receiveTimestamp;
     }

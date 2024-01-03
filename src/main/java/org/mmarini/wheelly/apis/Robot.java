@@ -128,7 +128,8 @@ public class Robot implements RobotApi, WithIOCallback {
     private Consumer<WheellyContactsMessage> onContacts;
     private Consumer<WheellySupplyMessage> onSupply;
     private Consumer<ClockSyncEvent> onClock;
-    private ClockSyncEvent clockEvent;
+    private ClockConverter clockConverter;
+    private long simulationTime;
 
     /**
      * Create a Robot interface
@@ -144,7 +145,7 @@ public class Robot implements RobotApi, WithIOCallback {
         this.configureTimeout = configureTimeout;
         socket = new RobotSocket(host, port, connectionTimeout, readTimeout);
         this.configCommands = requireNonNull(configCommands);
-        this.clockEvent = ClockSyncEvent.create();
+        this.clockConverter = ClockConverter.identity();
     }
 
     @Override
@@ -210,11 +211,6 @@ public class Robot implements RobotApi, WithIOCallback {
     }
 
     @Override
-    public long getRemoteTime() {
-        return this.clockEvent.fromLocal(System.currentTimeMillis());
-    }
-
-    @Override
     public void halt() throws IOException {
         writeCommand("ha");
     }
@@ -231,7 +227,7 @@ public class Robot implements RobotApi, WithIOCallback {
      * @param line the data line received
      */
     private void parseForMessage(Timed<String> line) {
-        WheellyMessage.fromLine(line).ifPresent(msg -> {
+        WheellyMessage.fromLine(line, clockConverter).ifPresent(msg -> {
             switch (msg) {
                 case WheellyMotionMessage ignored -> {
                     if (onMotion != null) {
@@ -277,10 +273,6 @@ public class Robot implements RobotApi, WithIOCallback {
     }
 
     @Override
-    public void reset() {
-    }
-
-    @Override
     public void scan(int dir) throws IOException {
         writeCommand("sc " + dir);
     }
@@ -320,13 +312,18 @@ public class Robot implements RobotApi, WithIOCallback {
         this.onWriteLine = onWriteLine;
     }
 
+    @Override
+    public long simulationTime() {
+        return simulationTime;
+    }
+
     /**
      * Synchronizes the local clock with the remote clock
      */
     private void sync() throws IOException {
         flush();
-        long now = System.currentTimeMillis();
-        writeCommand("ck " + now);
+        long t0 = simulationTime;
+        writeCommand("ck " + t0);
         long time = System.currentTimeMillis();
         long timeout = time + configureTimeout;
         // Repeat until interval timeout
@@ -335,14 +332,14 @@ public class Robot implements RobotApi, WithIOCallback {
             // Read the robot status
             Timed<String> line = readLine();
             if (line != null) {
-                if (line.value().startsWith("ck " + now + " ")) {
+                if (line.value().startsWith("ck " + t0 + " ")) {
                     try {
-                        ClockSyncEvent clock = ClockSyncEvent.from(line.value(), line.time());
-                        if (now == clock.originateTimestamp()) {
-                            clockEvent = clock;
+                        ClockSyncEvent clockEvent = ClockSyncEvent.from(line.value(), line.time());
+                        if (t0 == clockEvent.originateTimestamp()) {
                             if (onClock != null) {
-                                onClock.accept(clock);
+                                onClock.accept(clockEvent);
                             }
+                            clockConverter = clockEvent.converter();
                             return;
                         }
                     } catch (Throwable error) {
@@ -358,17 +355,19 @@ public class Robot implements RobotApi, WithIOCallback {
 
     @Override
     public void tick(long dt) throws IOException {
-        long time = System.currentTimeMillis();
-        long timeout = time + dt;
+        long t0 = System.currentTimeMillis();
+        long timeout = t0 + dt;
+        long t = t0;
         // Repeat until interval timeout
-        while (time < timeout) {
-            time = System.currentTimeMillis();
+        while (t < timeout) {
             // Read the robot status
             Timed<String> line = readLine();
             if (line != null) {
                 parseForMessage(line);
             }
+            t = System.currentTimeMillis();
         }
+        simulationTime += t - t0;
     }
 
     /**

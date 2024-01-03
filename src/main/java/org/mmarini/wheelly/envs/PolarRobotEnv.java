@@ -60,7 +60,7 @@ import static org.mmarini.wheelly.apis.Utils.clip;
  *     The environment is parametrized by:
  *     <ul>
  *         <li><code>objective</code> the objective</li>
- *         <li><code>interval</code> the minimum interval of time tick (ms) (10 suggested)</li>
+ *         <li><code>interval</code> the minimum interval of localTime tick (ms) (10 suggested)</li>
  *         <li><code>reactionInterval</code> the reaction interval (ms) between inference steps (suggested 300)</li>
  *         <li><code>commandInterval</code> the maximum interval (ms) between robot commands (suggested 600)</li>
  *         <li><code>numDirectionValues</code> the number of values for robot direction action (suggested 24 = 15 DEG)</li>

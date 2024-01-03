@@ -127,16 +127,16 @@ public class DumpRecordTableModel extends AbstractTableModel {
     }
 
     /**
-     * Returns the time offset
+     * Returns the localTime offset
      */
     public Instant getTimeOffset() {
         return timeOffset;
     }
 
     /**
-     * Sets the time offset
+     * Sets the localTime offset
      *
-     * @param timeOffset the time offset
+     * @param timeOffset the localTime offset
      */
     public void setTimeOffset(Instant timeOffset) {
         this.timeOffset = timeOffset;

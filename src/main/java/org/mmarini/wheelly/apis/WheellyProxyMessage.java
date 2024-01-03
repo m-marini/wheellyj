@@ -38,15 +38,16 @@ import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 /**
  * The Wheelly status contain the sensor value of Wheelly
  *
- * @param time            the local message time
- * @param remoteTime      the remote ping time
+ * @param localTime       the local message localTime (ms)
+ * @param simulationTime  the simulation time (ms)
+ * @param remoteTime      the remote ping localTime (ms)
  * @param sensorDirection the sensor direction at ping (DEG)
  * @param echoDelay       the echo delay (um)
  * @param xPulses         the x robot location pulses at echo ping
  * @param yPulses         the y robot location pulses at echo ping
  * @param echoYaw         the robot direction at ping (DEG)
  */
-public record WheellyProxyMessage(long time, long remoteTime,
+public record WheellyProxyMessage(long localTime, long simulationTime, long remoteTime,
                                   int sensorDirection, long echoDelay,
                                   double xPulses, double yPulses, int echoYaw) implements WheellyMessage {
     public static final int NUM_PARAMS = 7;
@@ -64,10 +65,11 @@ public record WheellyProxyMessage(long time, long remoteTime,
      *     [yaw]
      * </pre>
      *
-     * @param line the status string
+     * @param line           the status string
+     * @param clockConverter the clock converter
      */
 
-    public static WheellyProxyMessage create(Timed<String> line) {
+    public static WheellyProxyMessage create(Timed<String> line, ClockConverter clockConverter) {
         long time = line.time(TimeUnit.MILLISECONDS);
         String[] params = line.value().split(" ");
         if (params.length != NUM_PARAMS) {
@@ -80,7 +82,8 @@ public record WheellyProxyMessage(long time, long remoteTime,
         double y = parseDouble(params[5]);
         int echoYaw = parseInt(params[6]);
 
-        return new WheellyProxyMessage(time, remoteTime, echoDirection, echoDelay, x,
+        long simTime = clockConverter.fromRemote(remoteTime);
+        return new WheellyProxyMessage(time, simTime, remoteTime, echoDirection, echoDelay, x,
                 y, echoYaw);
     }
 
@@ -98,18 +101,7 @@ public record WheellyProxyMessage(long time, long remoteTime,
      */
     public WheellyProxyMessage setEchoDelay(long echoDelay) {
         return echoDelay != this.echoDelay
-                ? new WheellyProxyMessage(time, remoteTime, sensorDirection, echoDelay, xPulses, yPulses, echoYaw)
-                : this;
-    }
-
-    /**
-     * Returns the status with remote time instant set
-     *
-     * @param remoteTime the remote ping instant
-     */
-    public WheellyProxyMessage setRemoteTime(long remoteTime) {
-        return remoteTime != this.remoteTime
-                ? new WheellyProxyMessage(time, remoteTime, sensorDirection, echoDelay, xPulses, yPulses, echoYaw)
+                ? new WheellyProxyMessage(localTime, simulationTime, remoteTime, sensorDirection, echoDelay, xPulses, yPulses, echoYaw)
                 : this;
     }
 
@@ -120,7 +112,18 @@ public record WheellyProxyMessage(long time, long remoteTime,
      */
     public WheellyProxyMessage setSensorDirection(int sensorDirection) {
         return sensorDirection != this.sensorDirection
-                ? new WheellyProxyMessage(time, remoteTime, sensorDirection, echoDelay, xPulses, yPulses, echoYaw)
+                ? new WheellyProxyMessage(localTime, simulationTime, remoteTime, sensorDirection, echoDelay, xPulses, yPulses, echoYaw)
+                : this;
+    }
+
+    /**
+     * Returns the proxy message with simulation time
+     *
+     * @param simulationTime the simulation time
+     */
+    public WheellyProxyMessage setSimulationTime(long simulationTime) {
+        return simulationTime != this.simulationTime
+                ? new WheellyProxyMessage(localTime, simulationTime, remoteTime, sensorDirection, echoDelay, xPulses, yPulses, echoYaw)
                 : this;
     }
 }
