@@ -1,8 +1,22 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/env-schema-0.5
+$id: https://mmarini.org/wheelly/env-schema-0.6
 title: Environment
 type: object
+properties:
+  $schema:
+    type: string
+    const: https://mmarini.org/wheelly/env-schema-0.6
+  active:
+    type: string
+  configurations:
+    type: object
+    additionalProperties:
+      $ref: "#/$defs/GeneralEnv"
+required:
+  - $schema
+  - active
+  - configurations
 $defs:
   ObjectiveSet:
     anyOf:
@@ -109,7 +123,10 @@ $defs:
       radarCleanInterval:
         multipleOf: 1
         minimum: 1
-      radarPersistence:
+      echoPersistence:
+        multipleOf: 1
+        minimum: 1
+      contactPersistence:
         multipleOf: 1
         minimum: 1
     required:
@@ -127,7 +144,8 @@ $defs:
       - radarReceptiveDistance
       - radarReceptiveAngle
       - radarCleanInterval
-      - radarPersistence
+      - echoPersistence
+      - contactPersistence
   RadarRobotEnv:
     type: object
     properties:
@@ -169,7 +187,10 @@ $defs:
       radarCleanInterval:
         multipleOf: 1
         minimum: 1
-      radarPersistence:
+      echoPersistence:
+        multipleOf: 1
+        minimum: 1
+      contactPersistence:
         multipleOf: 1
         minimum: 1
     required:
@@ -187,7 +208,8 @@ $defs:
       - radarReceptiveDistance
       - radarReceptiveAngle
       - radarCleanInterval
-      - radarPersistence
+      - echoPersistence
+      - contactPersistence
   RobotEnv:
     type: object
     properties:
@@ -223,17 +245,3 @@ $defs:
       - numDirectionValues
       - numSensorValues
       - numSpeedValues
-properties:
-  $schema:
-    type: string
-    const: https://mmarini.org/wheelly/env-schema-0.5
-  active:
-    type: string
-  configurations:
-    type: object
-    additionalProperties:
-      $ref: "#/$defs/GeneralEnv"
-required:
-  - $schema
-  - active
-  - configurations

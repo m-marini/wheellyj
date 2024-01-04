@@ -50,12 +50,12 @@ class RadarMapTest {
         long timestamp = System.currentTimeMillis();
         RadarMap map = createRadarMap()
                 .map((i, sector) -> i >= 10 && i < 20
-                        ? sector.setHindered(timestamp)
+                        ? sector.addEchogenic(timestamp)
                         : sector);
 
         map = map.clean(timestamp);
 
-        assertEquals(10L, map.getSectorsStream()
+        assertEquals(10L, map.cellStream()
                 .filter(Predicate.not(MapCell::unknown))
                 .count());
         assertEquals(timestamp + MAX_INTERVAL, map.cleanTimestamp());
@@ -65,11 +65,11 @@ class RadarMapTest {
     void cleanTimeout() {
         long timestamp = System.currentTimeMillis();
         RadarMap map = createRadarMap()
-                .map((i, sector) -> i >= 10 && i < 20 ? sector.setHindered(timestamp - MAX_INTERVAL - 1) : sector);
+                .map((i, sector) -> i >= 10 && i < 20 ? sector.addEchogenic(timestamp - MAX_INTERVAL - 1) : sector);
 
         map = map.clean(timestamp);
 
-        assertTrue(map.getSectorsStream()
+        assertTrue(map.cellStream()
                 .allMatch(MapCell::unknown));
         assertEquals(timestamp + MAX_INTERVAL, map.cleanTimestamp());
     }
@@ -81,15 +81,15 @@ class RadarMapTest {
 
         assertEquals(GRID_SIZE, map.topology().gridSize());
 
-        MapCell sector0 = map.getSector(0);
+        MapCell sector0 = map.cell(0);
         assertThat(sector0.location(), pointCloseTo(-1, -1, 1e-3));
         assertTrue(sector0.unknown());
 
-        MapCell sector1 = map.getSector(HEIGHT * WIDTH - 1);
+        MapCell sector1 = map.cell(HEIGHT * WIDTH - 1);
         assertThat(sector1.location(), pointCloseTo(1, 1, 1e-3));
         assertTrue(sector1.unknown());
 
-        MapCell sector2 = map.getSector(HEIGHT * WIDTH / 2);
+        MapCell sector2 = map.cell(HEIGHT * WIDTH / 2);
         assertThat(sector2.location(), pointCloseTo(0, 0, 1e-3));
         assertTrue(sector2.unknown());
     }
@@ -97,7 +97,7 @@ class RadarMapTest {
     @NotNull
     private RadarMap createRadarMap() {
         return RadarMap.create(WIDTH, HEIGHT, new Point2D.Double(), GRID_SIZE,
-                MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
+                MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
     }
 
     @Test
@@ -171,88 +171,28 @@ class RadarMapTest {
 
         map = map.setContactsAt(point, GRID_SIZE + MM1, timestamp);
 
-        Optional<MapCell> sectorOpt = map.getSector(0, 0);
+        Optional<MapCell> sectorOpt = map.cell(0, 0);
         assertTrue(sectorOpt.isPresent());
 
-        sectorOpt = map.getSector(GRID_SIZE, 0);
+        sectorOpt = map.cell(GRID_SIZE, 0);
         assertTrue(sectorOpt.isPresent());
-        assertTrue(sectorOpt.orElseThrow().isContact());
+        assertTrue(sectorOpt.orElseThrow().hasContact());
 
-        sectorOpt = map.getSector(-GRID_SIZE, 0);
+        sectorOpt = map.cell(-GRID_SIZE, 0);
         assertTrue(sectorOpt.isPresent());
-        assertTrue(sectorOpt.orElseThrow().isContact());
+        assertTrue(sectorOpt.orElseThrow().hasContact());
 
-        sectorOpt = map.getSector(0, GRID_SIZE);
+        sectorOpt = map.cell(0, GRID_SIZE);
         assertTrue(sectorOpt.isPresent());
-        assertTrue(sectorOpt.orElseThrow().isContact());
+        assertTrue(sectorOpt.orElseThrow().hasContact());
 
-        sectorOpt = map.getSector(GRID_SIZE * 2, 0);
+        sectorOpt = map.cell(GRID_SIZE * 2, 0);
         assertTrue(sectorOpt.isPresent());
-        assertFalse(sectorOpt.orElseThrow().isContact());
+        assertFalse(sectorOpt.orElseThrow().hasContact());
 
-        sectorOpt = map.getSector(-GRID_SIZE * 2, 0);
+        sectorOpt = map.cell(-GRID_SIZE * 2, 0);
         assertTrue(sectorOpt.isPresent());
-        assertFalse(sectorOpt.orElseThrow().isContact());
-    }
-
-    @Test
-    void transform30() {
-        long ts = System.currentTimeMillis();
-        RadarMap map = createRadarMap();
-        map = map.updateSector(map.indexOf(0, 0.4), sect -> sect.setHindered(ts));
-
-        RadarMap newMap = createRadarMap()
-                .update(map, new Point2D.Double(-0.4, 0.4), 30);
-
-        long np = newMap.getSectorsStream()
-                .filter(Predicate.not(MapCell::unknown))
-                .filter(MapCell::hindered)
-                .count();
-        assertEquals(1L, np);
-
-        MapCell sect = newMap.getSector(0.4, 0.2).orElseThrow();
-        assertTrue(sect.hindered());
-        assertEquals(ts, sect.timestamp());
-    }
-
-    @Test
-    void transform90() {
-        long ts = System.currentTimeMillis();
-        RadarMap map = createRadarMap();
-        map = map.updateSector(map.indexOf(0, 0.4), sect -> sect.setHindered(ts));
-
-        RadarMap newMap = createRadarMap()
-                .update(map, new Point2D.Double(-0.4, 0.4), 90);
-
-        long np = newMap.getSectorsStream()
-                .filter(Predicate.not(MapCell::unknown))
-                .filter(MapCell::hindered)
-                .count();
-        assertEquals(1L, np);
-
-        MapCell sect = newMap.getSector(0, 0.4).orElseThrow();
-        assertTrue(sect.hindered());
-        assertEquals(ts, sect.timestamp());
-    }
-
-    @Test
-    void transform_90() {
-        long ts = System.currentTimeMillis();
-        RadarMap map = createRadarMap();
-        map = map.updateSector(map.indexOf(0, 0.4), sect -> sect.setHindered(ts));
-
-        RadarMap newMap = createRadarMap()
-                .update(map, new Point2D.Double(-0.4, 0.4), -90);
-
-        long np = newMap.getSectorsStream()
-                .filter(Predicate.not(MapCell::unknown))
-                .filter(MapCell::hindered)
-                .count();
-        assertEquals(1L, np);
-
-        MapCell sect = newMap.getSector(0, -0.4).orElseThrow();
-        assertTrue(sect.hindered());
-        assertEquals(ts, sect.timestamp());
+        assertFalse(sectorOpt.orElseThrow().hasContact());
     }
 
     @Test
@@ -266,23 +206,23 @@ class RadarMapTest {
 
         map = map.update(signal);
 
-        Optional<MapCell> sectorOpt = map.getSector(0, 0);
+        Optional<MapCell> sectorOpt = map.cell(0, 0);
 
         assertTrue(sectorOpt.isPresent());
         assertTrue(sectorOpt.get().unknown());
 
-        sectorOpt = map.getSector(0, 0.4);
+        sectorOpt = map.cell(0, 0.4);
         assertTrue(sectorOpt.isPresent());
         assertFalse(sectorOpt.orElseThrow().unknown());
 
-        sectorOpt = map.getSector(0, 0.8);
+        sectorOpt = map.cell(0, 0.8);
 
         assertTrue(sectorOpt.isPresent());
         assertFalse(sectorOpt.get().unknown());
-        assertTrue(sectorOpt.get().hindered());
-        assertEquals(timestamp, sectorOpt.orElseThrow().timestamp());
+        assertTrue(sectorOpt.get().echogenic());
+        assertEquals(timestamp, sectorOpt.orElseThrow().echoTime());
 
-        sectorOpt = map.getSector(0.2, 1);
+        sectorOpt = map.cell(0.2, 1);
 
         assertTrue(sectorOpt.isPresent());
         assertTrue(sectorOpt.orElseThrow().unknown());

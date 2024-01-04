@@ -34,7 +34,7 @@ import static java.util.Objects.requireNonNull;
  *
  * @param timestamp the sector timestamp
  * @param hindered  true id sector is hindered
- * @param location  sector center location
+ * @param location  location of echogenic
  */
 public record CircularSector(long timestamp, boolean hindered, Point2D location) {
     /**

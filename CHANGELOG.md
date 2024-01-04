@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #284: Wrong speed with simulated robot
 - Issue #288: Wrong command timing in RobotExecutor
 - Issue #291: Wrong timing when restart robot
+- Issue #294: Handle contacts in radar map
 
 ## [0.11.1] 2023-12-24
 

@@ -59,7 +59,7 @@ class ExploringStateTest {
 
     /**
      * Given an exploring state
-     * And a polar map with all filled sectors below the stop distance
+     * And a polar map with all filled cells below the stop distance
      * And a processor context
      * When find target sector
      * Then should result sector 0
@@ -82,7 +82,7 @@ class ExploringStateTest {
 
     /**
      * Given an exploring state
-     * And a polar map with empty sectors' interval at 1 and 10-12
+     * And a polar map with empty cells' interval at 1 and 10-12
      * And a processor context
      * When find target sector
      * Then should result sector 11 (middle of 10-12)
@@ -108,7 +108,7 @@ class ExploringStateTest {
 
     /**
      * Given an exploring state
-     * And a polar map with empty sectors' interval at 0-1
+     * And a polar map with empty cells' interval at 0-1
      * And a processor context
      * When find target sector
      * Then should result sector 0
@@ -156,7 +156,7 @@ class ExploringStateTest {
 
     /**
      * Given an exploring state
-     * And a polar map with all filled sectors and furthest sector at 3
+     * And a polar map with all filled cells and furthest sector at 3
      * And a processor context
      * When find target sector
      * Then should result sector 0
