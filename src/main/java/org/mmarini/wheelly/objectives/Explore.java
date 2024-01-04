@@ -68,7 +68,7 @@ public interface Explore {
                 return -1;
             }
             RadarMap radarMap = env.getRadarMap();
-            long knownSectorsNumber = radarMap.getSectorsStream()
+            long knownSectorsNumber = radarMap.cellStream()
                     .filter(Predicate.not(MapCell::unknown))
                     .count();
             // encourages the exploration of unfamiliar areas

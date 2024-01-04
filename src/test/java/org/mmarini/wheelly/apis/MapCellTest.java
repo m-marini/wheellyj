@@ -38,29 +38,80 @@ class MapCellTest {
     public static final double GRID_SIZE = 0.1;
     public static final int RECEPTIVE_ANGLE = 15;
     public static final double MAX_SIGNAL_DISTANCE = 3;
-    static final double MIN_DISTANCE = 0.4;
 
     @Test
-    void cleanNoTimeoutTest() {
-        Point2D sectorLocation = new Point2D.Float(0, 2F);
-        long timestamp = System.currentTimeMillis();
-        MapCell sector = MapCell.unknown(sectorLocation).setHindered(timestamp);
+    void cleanContactTimeoutTest() {
+        // Given a cell with echo and conctact set at 100 ms
+        MapCell cell = MapCell.unknown(new Point2D.Float(0, 2F))
+                .addEchogenic(100)
+                .setContact(100);
 
-        sector.clean(timestamp);
+        // When clean echo before 100 ms (not expired) and contact before 99 ms (expiried)
+        cell = cell.clean(100, 101);
 
-        assertTrue(sector.hindered());
-        assertEquals(timestamp, sector.timestamp());
+        // Then cell should has echo
+        assertTrue(cell.echogenic());
+        // And should not have contact
+        assertFalse(cell.hasContact());
+        // And echo time should be 100 ms
+        assertEquals(100, cell.echoTime());
+        // And contact time should be 0 ms
+        assertEquals(0, cell.contactTime());
     }
 
     @Test
-    void cleanTimeoutTest() {
-        Point2D sectorLocation = new Point2D.Float(0, 2F);
-        long timestamp = System.currentTimeMillis();
-        MapCell sector = MapCell.unknown(sectorLocation).setHindered(timestamp - 1);
+    void cleanEchoTimeoutTest() {
+        // Given a cell with echo and conctact set at 100 ms
+        MapCell cell = MapCell.unknown(new Point2D.Float(0, 2F))
+                .addEchogenic(100)
+                .setContact(100);
 
-        sector = sector.clean(timestamp);
+        // When clean echo before 100 ms (not expired) and contact before 99 ms (expiried)
+        cell = cell.clean(101, 100);
 
-        assertTrue(sector.unknown());
+        // Then cell should not be echogenic
+        assertFalse(cell.echogenic());
+        // Then cell should not be anechoic
+        assertFalse(cell.anechoic());
+        // And should have contact
+        assertTrue(cell.hasContact());
+        // And echo time should be 100 ms
+        assertEquals(0, cell.echoTime());
+        // And contact time should be 0 ms
+        assertEquals(100, cell.contactTime());
+    }
+
+    @Test
+    void cleanFullTimeoutTest() {
+        // Given a cell with echo and conctact set at 100 ms
+        MapCell cell = MapCell.unknown(new Point2D.Float(0, 2F))
+                .addEchogenic(100)
+                .setContact(100);
+
+        // When clean before 100 ms (no expireations)
+        cell = cell.clean(101, 101);
+
+        // Then cell should be unknown
+        assertTrue(cell.unknown());
+    }
+
+    @Test
+    void cleanNoTimeoutTest() {
+        // Given a cell with echo and conctact set at 100 ms
+        MapCell cell = MapCell.unknown(new Point2D.Float(0, 2F))
+                .addEchogenic(100)
+                .setContact(100);
+
+        // When clean before 100 ms (no expireations)
+        cell.clean(100, 100);
+
+        // Then cell should has echo
+        assertTrue(cell.echogenic());
+        // And conctact
+        assertTrue(cell.hasContact());
+        // And times should be 100 ms
+        assertEquals(100, cell.echoTime());
+        assertEquals(100, cell.contactTime());
     }
 
     @Test
@@ -68,43 +119,43 @@ class MapCellTest {
         long timestamp = System.currentTimeMillis();
         MapCell sector = MapCell.unknown(new Point2D.Double()).setContact(timestamp);
         assertFalse(sector.unknown());
-        assertFalse(sector.hindered());
-        assertTrue(sector.isContact());
-        assertFalse(sector.empty());
-        assertEquals(timestamp, sector.timestamp());
+        assertFalse(sector.echogenic());
+        assertTrue(sector.hasContact());
+        assertFalse(sector.anechoic());
+        assertEquals(timestamp, sector.contactTime());
     }
 
     @Test
     void emptyTest() {
         long timestamp = System.currentTimeMillis();
-        MapCell sector = MapCell.unknown(new Point2D.Double()).setEmpty(timestamp);
+        MapCell sector = MapCell.unknown(new Point2D.Double()).addAnechoic(timestamp);
         assertFalse(sector.unknown());
-        assertFalse(sector.hindered());
-        assertTrue(sector.empty());
-        assertFalse(sector.isContact());
-        assertEquals(timestamp, sector.timestamp());
+        assertFalse(sector.echogenic());
+        assertTrue(sector.anechoic());
+        assertFalse(sector.hasContact());
+        assertEquals(timestamp, sector.echoTime());
     }
 
     @Test
     void hinderedTest() {
         long timestamp = System.currentTimeMillis();
-        MapCell sector = MapCell.unknown(new Point2D.Double()).setHindered(timestamp);
+        MapCell sector = MapCell.unknown(new Point2D.Double()).addEchogenic(timestamp);
         assertFalse(sector.unknown());
-        assertTrue(sector.hindered());
-        assertFalse(sector.empty());
-        assertFalse(sector.isContact());
-        assertFalse(sector.empty());
-        assertEquals(timestamp, sector.timestamp());
+        assertTrue(sector.echogenic());
+        assertFalse(sector.anechoic());
+        assertFalse(sector.hasContact());
+        assertFalse(sector.anechoic());
+        assertEquals(timestamp, sector.echoTime());
     }
 
     @Test
     void unknownTest() {
         MapCell sector = MapCell.unknown(new Point2D.Double());
         assertTrue(sector.unknown());
-        assertFalse(sector.hindered());
-        assertFalse(sector.empty());
-        assertFalse(sector.isContact());
-        assertEquals(0, sector.timestamp());
+        assertFalse(sector.echogenic());
+        assertFalse(sector.anechoic());
+        assertFalse(sector.hasContact());
+        assertEquals(0, sector.echoTime());
     }
 
     /**
@@ -143,10 +194,10 @@ class MapCellTest {
 
         // Then ...
         assertEquals(unknown, cell.unknown());
-        assertEquals(hindered, cell.hindered());
-        assertEquals(empty, cell.empty());
+        assertEquals(hindered, cell.echogenic());
+        assertEquals(empty, cell.anechoic());
         if (!unknown) {
-            assertEquals(timestamp, cell.timestamp());
+            assertEquals(timestamp, cell.echoTime());
         }
     }
 }

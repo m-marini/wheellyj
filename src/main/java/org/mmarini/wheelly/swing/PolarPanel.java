@@ -164,7 +164,7 @@ public class PolarPanel extends JComponent {
         AffineTransform transform = AffineTransform.getRotateInstance(toRadians(polarMap.direction()));
         transform.translate(-center.getX(), -center.getY());
         for (int i = 0; i < n; i++) {
-            CircularSector sector = polarMap.getSector(i);
+            CircularSector sector = polarMap.sector(i);
             double angle = -90 + toDegrees(polarMap.sectorDirection(i));
             if (sector.known()) {
                 double distance = sector.distance(center);

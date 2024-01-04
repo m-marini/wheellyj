@@ -47,7 +47,7 @@ controller:
 
 # Agent
 agent:
-  $schema: https://mmarini.org/wheelly/state-agent-schema-0.7
+  $schema: https://mmarini.org/wheelly/state-agent-schema-0.8
   active: explorerAgent
 
   configurations:
@@ -67,7 +67,8 @@ agent:
       radarGrid: 0.2
       radarReceptiveDistance: 0.28
       radarReceptiveAngle: 15
-      radarPersistence: 300000
+      echoPersistence: 300000
+      contactPersistence: 300000
       radarCleanInterval: 30000
       flow:
         entry: scan
@@ -160,7 +161,8 @@ agent:
       radarGrid: 0.2
       radarReceptiveDistance: 0.28
       radarReceptiveAngle: 15
-      radarPersistence: 300000
+      echoPersistence: 300000
+      contactPersistence: 300000
       radarCleanInterval: 30000
       flow:
         entry: start
@@ -222,7 +224,8 @@ agent:
       radarGrid: 0.2
       radarReceptiveDistance: 0.28
       radarReceptiveAngle: 15
-      radarPersistence: 300000
+      echoPersistence: 300000
+      contactPersistence: 300000
       radarCleanInterval: 30000
       flow:
         entry: start
@@ -260,7 +263,8 @@ agent:
       radarGrid: 0.1
       radarReceptiveDistance: 0.28
       radarReceptiveAngle: 15
-      radarPersistence: 30000
+      echoPersistence: 30000
+      contactPersistence: 300000
       radarCleanInterval: 10000
       numRadarSectors: 24
       minRadarDistance: 0.3

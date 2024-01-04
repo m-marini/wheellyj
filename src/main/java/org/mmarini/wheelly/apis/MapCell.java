@@ -32,106 +32,112 @@ import static java.lang.Math.toRadians;
 /**
  * MapCell keeps the presence of obstacles in the sector
  */
-public record MapCell(Point2D location, long timestamp, int hinderedCounter, int emptyCounter, boolean contact) {
+public record MapCell(Point2D location, long echoTime, int echoCounter, long contactTime) {
     /**
      * Returns the unknown sector
      *
      * @param location the location
      */
     static MapCell unknown(Point2D location) {
-        return new MapCell(location, 0, 0, 0, false);
+        return new MapCell(location, 0, 0, 0);
+    }
+
+    /**
+     * Returns the cell with new no echo registered
+     *
+     * @param echoTime the registration time
+     */
+    public MapCell addAnechoic(long echoTime) {
+        return new MapCell(location, echoTime,
+                unknown() ? 0 : echoCounter - 1, contactTime);
+    }
+
+    /**
+     * Returns the cell with new echo registered
+     *
+     * @param echoTime the registration time
+     */
+    public MapCell addEchogenic(long echoTime) {
+        return new MapCell(location, echoTime,
+                unknown() ? 1 : echoCounter + 1, contactTime);
+    }
+
+    /**
+     * Returns true if cell is anechoic (no echo)
+     */
+    public boolean anechoic() {
+        return echoTime > 0 && echoCounter <= 0;
     }
 
     /**
      * Returns the cleaned cell
      *
-     * @param validTimestamp valid timestamp
+     * @param echoLimit    echo limit time
+     * @param contactLimit contact limit time
      */
-    public MapCell clean(long validTimestamp) {
-        return !unknown() && timestamp < validTimestamp
-                ? setUnknown() : this;
+    public MapCell clean(long echoLimit, long contactLimit) {
+        return echoTime < echoLimit
+                ? contactTime < contactLimit
+                // both times expired
+                ? unknown(location)
+                // only echo expired
+                : new MapCell(location, 0, 0, contactTime)
+                : contactTime < contactLimit
+                // only contact expired
+                ? new MapCell(location, echoTime, echoCounter, 0)
+                // nothing expired
+                : this;
     }
 
     /**
-     * Returns true if cell is empty
+     * Returns true if the cell is echogenic (echo)
+     */
+    public boolean echogenic() {
+        return echoTime > 0 && echoCounter > 0;
+    }
+
+    /**
+     * Return true if the cell is empty (no echo and no contact)
      */
     public boolean empty() {
-        return timestamp > 0 && !contact && emptyCounter > hinderedCounter;
+        return !unknown() && !hasContact() && anechoic();
     }
 
     /**
-     * Returns true if the cell is hindered
+     * Returns true if the cell recorded contacts
+     */
+    public boolean hasContact() {
+        return contactTime > 0;
+    }
+
+    /**
+     * Returns true if the cell is hindered (echo or contacts)
      */
     public boolean hindered() {
-        return timestamp > 0 && !contact && hinderedCounter >= emptyCounter;
-    }
-
-    /**
-     * Returns true if the cell has contacts
-     */
-    public boolean isContact() {
-        return contact && timestamp > 0;
+        return echogenic() || hasContact();
     }
 
     /**
      * Returns the cell with contacts
      *
-     * @param timestamp the contacts timestamp
+     * @param contactTime the contacts timestamp
      */
-    public MapCell setContact(long timestamp) {
-        return new MapCell(location, timestamp, hinderedCounter, emptyCounter, true);
+    public MapCell setContact(long contactTime) {
+        return new MapCell(location, echoTime, echoCounter, contactTime);
     }
 
     /**
-     * Returns the empty cell empty
-     *
-     * @param timestamp the empty timestamp
-     */
-    public MapCell setEmpty(long timestamp) {
-        return new MapCell(location, timestamp, hinderedCounter, emptyCounter + 1, contact);
-    }
-
-    /**
-     * Returns the hindered cell
-     *
-     * @param timestamp the hindered timestamp
-     */
-    public MapCell setHindered(long timestamp) {
-        return new MapCell(location, timestamp, hinderedCounter + 1, emptyCounter, contact);
-    }
-
-    /**
-     * Returns the cell with location changed
-     *
-     * @param location the location
-     */
-    private MapCell setLocation(Point2D location) {
-        return location != this.location
-                ? new MapCell(location, timestamp, hinderedCounter, emptyCounter, contact)
-                : this;
-    }
-
-    /**
-     * Returns the unknown cell
+     * Returns the cell in unknown state
      */
     public MapCell setUnknown() {
         return unknown() ? this : MapCell.unknown(location);
     }
 
     /**
-     * Returns the union of two cell
-     *
-     * @param other the other cell
-     */
-    public MapCell union(MapCell other) {
-        return other.timestamp > timestamp ? other.setLocation(location) : this;
-    }
-
-    /**
      * Returns true if the cell is unknown
      */
     public boolean unknown() {
-        return timestamp <= 0;
+        return echoTime <= 0 && contactTime <= 0;
     }
 
     /**
@@ -143,9 +149,6 @@ public record MapCell(Point2D location, long timestamp, int hinderedCounter, int
      * @param receptiveAngle receptive angle (DEG)
      */
     public MapCell update(RadarMap.SensorSignal signal, double maxDistance, double gridSize, int receptiveAngle) {
-        if (isContact()) {
-            return this;
-        }
         long t0 = signal.timestamp();
         Point2D q = signal.sensorLocation();
         double distance = signal.distance();
@@ -157,8 +160,8 @@ public record MapCell(Point2D location, long timestamp, int hinderedCounter, int
                     return near == 0 || near > maxDistance || (near > distance && signal.isEcho())
                             ? this
                             : far >= distance && signal.isEcho()
-                            ? setHindered(t0)
-                            : setEmpty(t0);
+                            ? addEchogenic(t0)
+                            : addAnechoic(t0);
                 })
                 .orElse(this);
     }

@@ -41,6 +41,7 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mmarini.Matchers.pointCloseTo;
 
 class PolarMapTest {
 
@@ -54,13 +55,13 @@ class PolarMapTest {
         PolarMap map = PolarMap.create(8);
         assertEquals(PI * 2 / 8, map.sectorAngle());
 
-        assertTrue(map.getSectorStream().allMatch(Predicate.not(CircularSector::known)));
-        assertTrue(map.getSectorStream().allMatch(Predicate.not(CircularSector::knownHindered)));
+        assertTrue(map.sectorStream().allMatch(Predicate.not(CircularSector::known)));
+        assertTrue(map.sectorStream().allMatch(Predicate.not(CircularSector::knownHindered)));
     }
 
     @NotNull
     private RadarMap createRadarMap() {
-        return RadarMap.create(31, 31, new Point2D.Double(), GRID_SIZE, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
+        return RadarMap.create(31, 31, new Point2D.Double(), GRID_SIZE, MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
     }
 
     @ParameterizedTest
@@ -111,8 +112,8 @@ class PolarMapTest {
          */
         Point2D center = new Point2D.Double();
         long timestamp = System.currentTimeMillis();
-        RadarMap radarMap = RadarMap.create(11, 11, center, GRID_SIZE, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
-        radarMap = radarMap.updateSector(radarMap.indexOf(obsX, obsY), sect -> sect.setHindered(timestamp));
+        RadarMap radarMap = RadarMap.create(11, 11, center, GRID_SIZE, MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
+        radarMap = radarMap.updateCell(radarMap.indexOf(obsX, obsY), sect -> sect.addEchogenic(timestamp));
 
         // When create a polar map from center directed to mapDir limited by GRID_SIZE and 3m
         PolarMap polarMap = PolarMap.create(4)
@@ -121,64 +122,73 @@ class PolarMapTest {
         /*
          Then polar map at 0 DEG should be hindered as obsAt0
          */
-        assertEquals(obsAt0, polarMap.getSectorByDirection(0).knownHindered());
-        assertEquals(obsAt90, polarMap.getSectorByDirection(90).knownHindered());
-        assertEquals(obsAt180, polarMap.getSectorByDirection(180).knownHindered());
-        assertEquals(obsAt270, polarMap.getSectorByDirection(-90).knownHindered());
+        assertEquals(obsAt0, polarMap.directionSector(0).knownHindered());
+        assertEquals(obsAt90, polarMap.directionSector(90).knownHindered());
+        assertEquals(obsAt180, polarMap.directionSector(180).knownHindered());
+        assertEquals(obsAt270, polarMap.directionSector(-90).knownHindered());
         if (obsAt0) {
-            assertThat(polarMap.getSectorByDirection(0).distance(center), closeTo(distanceAt0, EPSILON));
+            assertThat(polarMap.directionSector(0).distance(center), closeTo(distanceAt0, EPSILON));
         }
         if (obsAt90) {
-            assertThat(polarMap.getSectorByDirection(90).distance(center), closeTo(distanceAt90, EPSILON));
+            assertThat(polarMap.directionSector(90).distance(center), closeTo(distanceAt90, EPSILON));
         }
         if (obsAt180) {
-            assertThat(polarMap.getSectorByDirection(180).distance(center), closeTo(distanceAt180, EPSILON));
+            assertThat(polarMap.directionSector(180).distance(center), closeTo(distanceAt180, EPSILON));
         }
         if (obsAt270) {
-            assertThat(polarMap.getSectorByDirection(-90).distance(center), closeTo(distanceAt270, EPSILON));
+            assertThat(polarMap.directionSector(-90).distance(center), closeTo(distanceAt270, EPSILON));
         }
     }
 
     /**
      * Given a completely empty radar map 31x31 except unknown at 0.2, 1.6
-     * And a polar map with 24 sectors at 0.2, 0.2 directed to 90 DEG
+     * And a polar map with 24 cells at 0.2, 0.2 directed to 90 DEG
      * When update the polar map with radar map
      * Than polar map should have sector at 90 DEG unknown
      */
     @Test
     void update1() {
+        // Given a completely empty radar map 31x31 except unknown at 0.2, 1.6
         long timestamp = System.currentTimeMillis();
-        RadarMap radarMap = createRadarMap().map(s -> s.setEmpty(timestamp));
+        RadarMap radarMap = createRadarMap().map(s -> s.addAnechoic(timestamp));
         int index = radarMap.indexOf(0.2, 1.6);
-        radarMap = radarMap.updateSector(index, s -> s.setHindered(timestamp));
-        assertFalse(radarMap.getSector(index).unknown());
+        radarMap = radarMap.updateCell(index, s -> s.addEchogenic(timestamp));
+        assertFalse(radarMap.cell(index).unknown());
 
-        PolarMap polarMap = PolarMap.create(24).update(radarMap,
+        // And a polar map with 24 cells
+        PolarMap polarMap1 = PolarMap.create(24);
+
+        // When update the polar map at 0.2, 0.2 directed to 90 DEG with radar map
+        PolarMap polarMap = polarMap1.update(radarMap,
                 new Point2D.Double(0.2, 0.2), 90,
                 0.4, 3);
 
+        // Then polar map should be centered at 0.2, 0.2
         assertEquals(new Point2D.Double(0.2, 0.2), polarMap.center());
+
+        // And directied to 90 DEG
         assertEquals(90, polarMap.direction());
 
-        CircularSector sector = polarMap.getSectorByDirection(-90);
+        // And sector at -90 DEG should be unknown
+        CircularSector sector = polarMap.directionSector(-90);
         assertTrue(sector.known());
-        assertThat(new Point2D.Double(0.2, 1.5).distance(sector.location()),
-                closeTo(0, 1e-3));
-        assertEquals(-90, polarMap.radarSectorDirection(18));
+        // The sector point location should be close to 0.2,1.5
+        assertThat(sector.location(), pointCloseTo(0.2, 1.5, 1e-3));
+        assertEquals(-90, polarMap.indexDirection(18));
 
         for (int i = 0; i < polarMap.sectorsNumber(); i++) {
             if (i == 18) {
                 //if (i >= 18 && i <= 18) {
-                assertTrue(polarMap.getSector(i).knownHindered(), format("index %d", i));
+                assertTrue(polarMap.sector(i).knownHindered(), format("index %d", i));
             } else {
-                assertTrue(polarMap.getSector(i).empty(), format("index %d", i));
+                assertTrue(polarMap.sector(i).empty(), format("index %d", i));
             }
         }
     }
 
     /**
      * Given a completely unknown radar map 31x31 except an obstacle at 0.2, 1.6
-     * And a polar map with 24 sectors at 0.2, 0.2 directed to 90 DEG
+     * And a polar map with 24 cells at 0.2, 0.2 directed to 90 DEG
      * When update the polar map with radar map
      * Than polar map should have sector at 90 DEG hindered
      */
@@ -188,8 +198,8 @@ class PolarMapTest {
         RadarMap radarMap = createRadarMap();
 
         int index = radarMap.indexOf(0.2, 1.6);
-        radarMap = radarMap.updateSector(index, s -> s.setHindered(timestamp));
-        assertTrue(radarMap.getSector(index).hindered());
+        radarMap = radarMap.updateCell(index, s -> s.addEchogenic(timestamp));
+        assertTrue(radarMap.cell(index).echogenic());
 
         PolarMap polarMap = PolarMap.create(24).update(radarMap,
                 new Point2D.Double(0.2, 0.2), 90,
@@ -199,43 +209,49 @@ class PolarMapTest {
         assertEquals(new Point2D.Double(0.2, 0.2), polarMap.center());
         assertEquals(90, polarMap.direction());
 
-        CircularSector sector = polarMap.getSectorByDirection(-90);
+        CircularSector sector = polarMap.directionSector(-90);
         assertTrue(sector.knownHindered());
         assertThat(sector.distance(center), closeTo(1.3, 1e-3));
         assertThat(new Point2D.Double(0.2, 1.5).distance(sector.location()),
                 closeTo(0, 1e-3));
-        assertEquals(-90, polarMap.radarSectorDirection(18));
+        assertEquals(-90, polarMap.indexDirection(18));
 
         for (int i = 0; i < polarMap.sectorsNumber(); i++) {
             if (i == 18) {
                 //if (i >= 18 && i <= 18) {
-                assertTrue(polarMap.getSector(i).knownHindered(), format("index %d", i));
+                assertTrue(polarMap.sector(i).knownHindered(), format("index %d", i));
             } else {
-                assertFalse(polarMap.getSector(i).known(), format("index %d", i));
+                assertFalse(polarMap.sector(i).known(), format("index %d", i));
             }
         }
     }
 
     /**
      * Given a completely empty radar map 31x31
-     * And a polar map with 24 sectors at 0.2, 0.2 directed to 90 DEG
+     * And a polar map with 24 cells at 0.2, 0.2 directed to 90 DEG
      * When update the polar map with radar map
-     * Than polar map should have all sectors empty
+     * Than polar map should have all cells empty
      */
     @Test
     void update3() {
+        // Given a completely empty radar map 31x31
         long timestamp = System.currentTimeMillis();
-        RadarMap radarMap = createRadarMap().map(s -> s.setEmpty(timestamp));
+        RadarMap radarMap = createRadarMap().map(s -> s.addAnechoic(timestamp));
 
-        PolarMap polarMap = PolarMap.create(24).update(radarMap,
+        // And a polar map with 24 sectors (15 DEG)
+        PolarMap polarMap1 = PolarMap.create(24);
+        // When update the polar map  at 0.2, 0.2 directed to 90 DEG with radar map
+        PolarMap polarMap = polarMap1.update(radarMap,
                 new Point2D.Double(0.2, 0.2), 90,
                 0.4, 3);
 
-        assertEquals(new Point2D.Double(0.2, 0.2), polarMap.center());
+        // Then the polar map should be centered at 0.2, 0.2
+        assertThat(polarMap.center(), pointCloseTo(0.2, 0.2, 1e-3));
         assertEquals(90, polarMap.direction());
 
+        // And should have all cells empty
         for (int i = 0; i < polarMap.sectorsNumber(); i++) {
-            assertFalse(polarMap.getSector(i).knownHindered(), format("index %d", i));
+            assertTrue(polarMap.sector(i).empty(), format("index %d", i));
         }
     }
 

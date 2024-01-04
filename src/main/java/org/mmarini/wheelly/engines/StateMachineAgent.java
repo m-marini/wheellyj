@@ -55,7 +55,7 @@ import static java.util.Objects.requireNonNull;
  * </p>
  */
 public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, WithErrorFlowable, WithCommandFlowable, WithControllerFlowable {
-    public static final String STATE_AGENT_SCHEMA_YML = "https://mmarini.org/wheelly/state-agent-schema-0.7";
+    public static final String STATE_AGENT_SCHEMA_YML = "https://mmarini.org/wheelly/state-agent-schema-0.8";
     private static final Logger logger = LoggerFactory.getLogger(StateMachineAgent.class);
 
     /**

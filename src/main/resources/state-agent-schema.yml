@@ -1,9 +1,23 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/state-agent-schema-0.7
+$id: https://mmarini.org/wheelly/state-agent-schema-0.8
 title: State machine agent
 description: State Agent Schema
 type: object
+properties:
+  $schema:
+    type: string
+    const: https://mmarini.org/wheelly/state-agent-schema-0.8
+  active:
+    type: string
+  configurations:
+    type: object
+    additionalProperties:
+      $ref: "#/$defs/StateMachineAgent"
+required:
+  - $schema
+  - active
+  - configurations
 $defs:
   Commands:
     type: array
@@ -199,7 +213,10 @@ $defs:
       radarCleanInterval:
         multipleOf: 1
         minimum: 1
-      radarPersistence:
+      echoPersistence:
+        multipleOf: 1
+        minimum: 1
+      contactPersistence:
         multipleOf: 1
         minimum: 1
     required:
@@ -214,19 +231,5 @@ $defs:
       - radarReceptiveDistance
       - radarReceptiveAngle
       - radarCleanInterval
-      - radarPersistence
-properties:
-  $schema:
-    type: string
-    const: https://mmarini.org/wheelly/state-agent-schema-0.7
-  active:
-    type: string
-  configurations:
-    type: object
-    additionalProperties:
-      $ref: "#/$defs/StateMachineAgent"
-required:
-  - $schema
-  - active
-  - configurations
-
+      - echoPersistence
+      - contactPersistence

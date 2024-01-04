@@ -107,7 +107,7 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
      * @param numDirectionValues number of direction values
      * @param numSensorValues    number of sensor direction values
      * @param numSpeedValues     number of speed values
-     * @param numRadarSectors    the number of radar sectors
+     * @param numRadarSectors    the number of radar cells
      * @param minRadarDistance   the min radar distance (m)
      * @param maxRadarDistance   the max radar distance (m)
      * @param radarMap           the radar map
@@ -214,7 +214,7 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
         INDArray knownSectors = Nd4j.zeros(n);
         INDArray sectorDistances = Nd4j.zeros(n);
         for (int i = 0; i < n; i++) {
-            CircularSector sector = polarMap.getSector(i);
+            CircularSector sector = polarMap.sector(i);
             double dist = sector.knownHindered()
                     ? clip(sector.distance(polarMap.center()), 0, maxDistance)
                     : 0;

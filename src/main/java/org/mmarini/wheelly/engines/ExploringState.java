@@ -55,8 +55,8 @@ import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 /**
  * Generates the behavior to explore environment.
  * <p>
- * Turns the sensor toward the unknown sectors if in front<br>
- * Turns the robot toward the unknown sectors.<br>
+ * Turns the sensor toward the unknown cells if in front<br>
+ * Turns the robot toward the unknown cells.<br>
  * Moves ahead till obstacles.<br/>
  * Turns to largest and nearest the front interval if any.<br/>
  * Turns to the further obstacle if far away enough.<br/>
@@ -115,13 +115,13 @@ public record ExploringState(String id, ProcessorCommand onInit, ProcessorComman
         // Find the unknown sector target direction
         int targetIndex = findUnknownSector(map);
         if (targetIndex >= 0) {
-            int sectorDir = map.radarSectorDirection(targetIndex);
+            int sectorDir = map.indexDirection(targetIndex);
             RobotCommands command;
             int robotDir = normalizeDegAngle(robotStatus.getDirection() + sectorDir);
             if (abs(sectorDir) <= 90) {
                 // Turns the scanner to the unknown sector
                 Point2D center = map.center();
-                double dist = map.getSector(targetIndex).location().distance(center);
+                double dist = map.sector(targetIndex).location().distance(center);
                 logger.atDebug()
                         .setMessage("scan {} DEG, distance {}")
                         .addArgument(sectorDir)
@@ -140,9 +140,9 @@ public record ExploringState(String id, ProcessorCommand onInit, ProcessorComman
         }
 
         targetIndex = findTargetSector(map, stopDistance);
-        CircularSector targetSector = map.getSector(targetIndex);
+        CircularSector targetSector = map.sector(targetIndex);
 
-        int sectorDir = map.radarSectorDirection(targetIndex);
+        int sectorDir = map.indexDirection(targetIndex);
         int robotDir = normalizeDegAngle(robotStatus.getDirection() + sectorDir);
 
         double distance = robotStatus.getEchoDistance();
@@ -186,7 +186,7 @@ public record ExploringState(String id, ProcessorCommand onInit, ProcessorComman
      * @param stopDistance the stop distance
      */
     static int findTargetSector(PolarMap polarMap, double stopDistance) {
-        CircularSector frontSector = polarMap.getSector(0);
+        CircularSector frontSector = polarMap.sector(0);
         Point2D center = polarMap.center();
         if (!frontSector.knownHindered() || frontSector.distance(center) >= stopDistance) {
             // returns the front sector if empty or obstacle far away
@@ -200,7 +200,7 @@ public record ExploringState(String id, ProcessorCommand onInit, ProcessorComman
         List<int[]> intervals = new ArrayList<>();
         int n = polarMap.sectorsNumber();
         for (int i = 0; i < n; i++) {
-            CircularSector sector = polarMap.getSector(i);
+            CircularSector sector = polarMap.sector(i);
             if (!sector.knownHindered()) {
                 // Sector without obstacle
                 if (start >= 0) {
@@ -236,7 +236,7 @@ public record ExploringState(String id, ProcessorCommand onInit, ProcessorComman
             return (target[0] + (target[1] - 1) / 2 + n) % n;
         }
 
-        CircularSector furthestSector = polarMap.getSector(furthestIndex);
+        CircularSector furthestSector = polarMap.sector(furthestIndex);
         return furthestSector.distance(center) > stopDistance
                 // returns the sector with further obstacle
                 ? furthestIndex
@@ -250,11 +250,11 @@ public record ExploringState(String id, ProcessorCommand onInit, ProcessorComman
      * @param map the polar map
      */
     static int findUnknownSector(PolarMap map) {
-        CircularSector frontSector = map.getSector(0);
+        CircularSector frontSector = map.sector(0);
         return !frontSector.known()
                 ? 0 // return front sector if unknown
                 : IntStream.range(0, map.sectorsNumber())
-                .filter(i -> !map.getSector(i).known())
+                .filter(i -> !map.sector(i).known())
                 .mapToObj(i -> Tuple2.of(i, abs(map.sectorDirection(i))))
                 .min(Comparator.comparingDouble(a -> a._2))
                 .map(Tuple2::getV1)

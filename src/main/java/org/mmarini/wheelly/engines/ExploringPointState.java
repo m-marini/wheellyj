@@ -39,7 +39,6 @@ import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
@@ -48,8 +47,8 @@ import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 /**
  * Generates the behavior to explore environment.
  * <p>
- * Turns the sensor toward the unknown sectors if in front<br>
- * Turns the robot toward the unknown sectors.<br>
+ * Turns the sensor toward the unknown cells if in front<br>
+ * Turns the robot toward the unknown cells.<br>
  * Moves ahead till obstacles.<br/>
  * Turns to largest and nearest the front interval if any.<br/>
  * Turns to the further obstacle if far away enough.<br/>
@@ -120,16 +119,16 @@ public record ExploringPointState(String id, ProcessorCommand onInit, ProcessorC
         double safeDistance = getDouble(context, "safeDistance");
         PolarMap map = context.getPolarMap();
         Point2D robotLocation = context.getRobotStatus().getLocation();
-        // Callects all obstacles from hindered circular sectors
-        List<Point2D> obstacles = map.getSectorStream()
+        // Callects all obstacles from hindered circular cells
+        List<Point2D> obstacles = map.sectorStream()
                 .filter(CircularSector::knownHindered)
                 .map(CircularSector::location)
-                .collect(Collectors.toList());
+                .toList();
         // Collects all target points
         int n = map.sectorsNumber();
         List<Point2D> targets = new ArrayList<>();
         for (int i = 0; i < n; i++) {
-            CircularSector sector = map.getSector(i);
+            CircularSector sector = map.sector(i);
             if (sector.knownHindered()) {
                 Point2D p = sector.location();
                 double d1 = p.distance(robotLocation);

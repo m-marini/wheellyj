@@ -50,16 +50,16 @@ public record PolarMap(CircularSector[] sectors, Point2D center, int direction) 
     /**
      * Returns the unknown status polar map
      *
-     * @param sectorNumbers number of sectors
+     * @param sectorNumbers number of cells
      */
     public static PolarMap create(int sectorNumbers) {
         return new PolarMap(createUnknownSectors(sectorNumbers), new Point2D.Double(), 0);
     }
 
     /**
-     * Returns an array of unknown sectors
+     * Returns an array of unknown cells
      *
-     * @param sectorNumbers the number of sectors
+     * @param sectorNumbers the number of cells
      */
     @NotNull
     private static CircularSector[] createUnknownSectors(int sectorNumbers) {
@@ -71,7 +71,7 @@ public record PolarMap(CircularSector[] sectors, Point2D center, int direction) 
     /**
      * Creates the polar map
      *
-     * @param sectors   the sectors
+     * @param sectors   the cells
      * @param center    the map center in world coordinate
      * @param direction the map direction (DEG) in world compass
      */
@@ -89,21 +89,13 @@ public record PolarMap(CircularSector[] sectors, Point2D center, int direction) 
         return create(sectors.length);
     }
 
-    public CircularSector getSector(int i) {
-        return sectors[i];
-    }
-
     /**
      * Returns the circular sector in a direction
      *
      * @param direction the direction (DEG)
      */
-    public CircularSector getSectorByDirection(int direction) {
+    public CircularSector directionSector(int direction) {
         return sectors[sectorIndex(direction)];
-    }
-
-    public Stream<CircularSector> getSectorStream() {
-        return Arrays.stream(sectors);
     }
 
     /**
@@ -111,11 +103,15 @@ public record PolarMap(CircularSector[] sectors, Point2D center, int direction) 
      *
      * @param sectorIndex the sector index
      */
-    public int radarSectorDirection(int sectorIndex) {
+    public int indexDirection(int sectorIndex) {
         Point2D point = sectors[sectorIndex].location();
         return (int) round(normalizeDegAngle(
                 toDegrees(Utils.direction(center, point))
                         - direction));
+    }
+
+    public CircularSector sector(int i) {
+        return sectors[i];
     }
 
     /**
@@ -147,6 +143,10 @@ public record PolarMap(CircularSector[] sectors, Point2D center, int direction) 
         return (idx1 + n) % n;
     }
 
+    public Stream<CircularSector> sectorStream() {
+        return Arrays.stream(sectors);
+    }
+
     /**
      * Returns the number of sector in tha map
      */
@@ -166,6 +166,7 @@ public record PolarMap(CircularSector[] sectors, Point2D center, int direction) 
     public PolarMap update(RadarMap map, Point2D center, int direction, double minDistance, double maxDistance) {
         double gridSize = map.topology().gridSize();
         int sectorsNum = this.sectors.length;
+
         double[] emptyDistances = new double[sectorsNum];
         Arrays.fill(emptyDistances, Double.MAX_VALUE);
         long[] emptyTimestamps = new long[sectors.length];
@@ -176,35 +177,33 @@ public record PolarMap(CircularSector[] sectors, Point2D center, int direction) 
         Point2D[] notEmptyPoints = new Point2D[sectors.length];
 
         double[] unknownDistances = Arrays.copyOf(emptyDistances, sectors.length);
-        Point2D[] unknownPoints = new Point2D[sectors.length];
 
         double thresholdDistance = max(minDistance, gridSize);
         double dAlpha = sectorAngle() * 1.25 / 2;
         double directionRad = toRadians(direction);
-        map.getSectorsStream()
-                .forEach(radarSector -> { // For each radar sector
+        map.cellStream()
+                .forEach(cell -> { // For each radar sector
                     for (int i = 0; i < this.sectorsNumber(); i++) { // for each polar sector
                         int sector = i;
                         double sectorDir = normalizeAngle(this.sectorDirection(i) + directionRad);
                         // Computes the contact point
-                        Optional<Point2D> point = squareInterval(radarSector.location(), gridSize, center, sectorDir, dAlpha).map(Tuple2::getV1);
+                        Optional<Point2D> point = squareInterval(cell.location(), gridSize, center, sectorDir, dAlpha).map(Tuple2::getV1);
                         point.ifPresent(s -> {
                             double distance = s.distance(center);
                             if (distance >= thresholdDistance && distance < maxDistance) {
-                                if (radarSector.unknown()) {
+                                if (cell.unknown()) {
                                     if (distance < unknownDistances[sector]) {
                                         unknownDistances[sector] = distance;
-                                        unknownPoints[sector] = s;
                                     }
-                                } else if (radarSector.empty()) {
+                                } else if (cell.empty()) {
                                     if (distance < emptyDistances[sector]) {
                                         emptyDistances[sector] = distance;
-                                        emptyTimestamps[sector] = radarSector.timestamp();
+                                        emptyTimestamps[sector] = cell.echoTime();
                                         emptyPoints[sector] = s;
                                     }
                                 } else if (distance < notEmptyDistances[sector]) {
                                     notEmptyDistances[sector] = distance;
-                                    notEmptyTimestamps[sector] = radarSector.timestamp();
+                                    notEmptyTimestamps[sector] = cell.echoTime();
                                     notEmptyPoints[sector] = s;
                                 }
                             }

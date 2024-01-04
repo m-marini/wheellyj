@@ -84,12 +84,14 @@ public class RadarPanel extends JComponent {
 
     public static List<Tuple2<Point2D, Color>> createMap(RadarMap radarMap) {
         if (radarMap != null) {
-            return radarMap.getSectorsStream()
+            return radarMap.cellStream()
                     .filter(Predicate.not(MapCell::unknown))
                     .map(sector -> Tuple2.of(sector.location(),
-                            sector.empty() ? EMPTY_COLOR :
-                                    sector.hindered() ? FILLED_COLOR :
-                                            CONTACT_COLOR
+                            sector.hasContact()
+                                    ? CONTACT_COLOR
+                                    : sector.echogenic()
+                                    ? FILLED_COLOR : EMPTY_COLOR
+
                     ))
                     .collect(Collectors.toList());
         } else {
@@ -149,7 +151,7 @@ public class RadarPanel extends JComponent {
             gr.setStroke(BORDER_STROKE);
             for (Tuple2<Point2D, Color> t : radarMap) {
                 gr.setTransform(base);
-                drawSector(gr, t._1, t._2, sectorShape);
+                drawShape(gr, t._1, t._2, sectorShape);
             }
         }
     }
@@ -157,17 +159,17 @@ public class RadarPanel extends JComponent {
     /**
      * Draws an obstacle
      *
-     * @param gr          the graphic context
-     * @param location    the location
-     * @param color       the color
-     * @param sectorShape the sector shape
+     * @param gr       the graphic context
+     * @param location the location
+     * @param color    the color
+     * @param shape    the sector shape
      */
-    void drawSector(Graphics2D gr, Point2D location, Color color, Shape sectorShape) {
+    void drawShape(Graphics2D gr, Point2D location, Color color, Shape shape) {
         if (location != null) {
             gr.transform(at(location));
             gr.setColor(color);
             gr.setStroke(BORDER_STROKE);
-            gr.fill(sectorShape);
+            gr.fill(shape);
         }
     }
 

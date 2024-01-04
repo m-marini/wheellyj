@@ -28,7 +28,6 @@ package org.mmarini.wheelly.apis;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.yaml.Locator;
 
-import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
 import java.util.Arrays;
 import java.util.Optional;
@@ -37,14 +36,13 @@ import java.util.function.UnaryOperator;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static java.lang.Math.toRadians;
 import static java.util.Objects.requireNonNull;
 
 /**
  * The RadarMap keeps the obstacle signal results of the space round the center
  */
-public record RadarMap(GridTopology topology, MapCell[] sectors, int stride,
-                       long cleanInterval, long persistence, long cleanTimestamp,
+public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
+                       long cleanInterval, long echoPersistence, long contactPersistence, long cleanTimestamp,
                        double receptiveDistance, int receptiveAngle) {
     public static final double MAX_SIGNAL_DISTANCE = 3;
 
@@ -59,12 +57,13 @@ public record RadarMap(GridTopology topology, MapCell[] sectors, int stride,
         int radarHeight = locator.path("radarHeight").getNode(root).asInt();
         double radarGrid = locator.path("radarGrid").getNode(root).asDouble();
         long radarCleanInterval = locator.path("radarCleanInterval").getNode(root).asLong();
-        long radarPersistence = locator.path("radarPersistence").getNode(root).asLong();
+        long echoPersistence = locator.path("echoPersistence").getNode(root).asLong();
+        long contactPersistence = locator.path("contactPersistence").getNode(root).asLong();
         double radarReceptiveDistance = locator.path("radarReceptiveDistance").getNode(root).asDouble();
         int radarReceptiveAngle = locator.path("radarReceptiveAngle").getNode(root).asInt();
         return RadarMap.create(radarWidth, radarHeight, new Point2D.Float(), radarGrid,
-                radarCleanInterval, radarPersistence,
-                radarReceptiveDistance, radarReceptiveAngle);
+                radarCleanInterval, echoPersistence,
+                contactPersistence, radarReceptiveDistance, radarReceptiveAngle);
     }
 
     /**
@@ -75,12 +74,15 @@ public record RadarMap(GridTopology topology, MapCell[] sectors, int stride,
      * @param center                 the center of map
      * @param gridSize               the grid size
      * @param radarCleanInterval     the clean interval (ms)
-     * @param radarPersistence       the radar persistence (ms)
+     * @param echoPersistence        the echo persistence (ms)
+     * @param contactPersistence     the contact persistence (ms)
      * @param radarReceptiveDistance the receptive distance (m)
      * @param receptiveAngle         receptive angle (DEG)
      */
-    public static RadarMap create(int width, int height, Point2D center, double gridSize, long radarCleanInterval, long radarPersistence, double radarReceptiveDistance, int receptiveAngle) {
-        return create(width, height, center, new GridTopology(gridSize), radarCleanInterval, radarPersistence, radarReceptiveDistance, receptiveAngle);
+    public static RadarMap create(int width, int height, Point2D center, double gridSize,
+                                  long radarCleanInterval, long echoPersistence, long contactPersistence,
+                                  double radarReceptiveDistance, int receptiveAngle) {
+        return create(width, height, center, new GridTopology(gridSize), radarCleanInterval, echoPersistence, contactPersistence, radarReceptiveDistance, receptiveAngle);
     }
 
     /**
@@ -91,11 +93,14 @@ public record RadarMap(GridTopology topology, MapCell[] sectors, int stride,
      * @param center                 the center of map
      * @param topology               the topology
      * @param radarCleanInterval     the clean interval (ms)
-     * @param persistence            the radar persistence (ms)
+     * @param echoPersistence        the echo persistence (ms)
+     * @param contactPersistence     the contact persistence (ms)
      * @param radarReceptiveDistance the receptive distance (m)
      * @param receptiveAngle         receptive angle (DEG)
      */
-    private static RadarMap create(int width, int height, Point2D center, GridTopology topology, long radarCleanInterval, long persistence, double radarReceptiveDistance, int receptiveAngle) {
+    private static RadarMap create(int width, int height, Point2D center, GridTopology topology,
+                                   long radarCleanInterval, long echoPersistence, long contactPersistence,
+                                   double radarReceptiveDistance, int receptiveAngle) {
         MapCell[] map1 = new MapCell[width * height];
         double gridSize = topology.gridSize();
         double x0 = center.getX() - (width - 1) * gridSize / 2;
@@ -108,43 +113,34 @@ public record RadarMap(GridTopology topology, MapCell[] sectors, int stride,
                         i * gridSize + y0));
             }
         }
-        return new RadarMap(topology, map1, width
-                , radarCleanInterval, persistence, 0, radarReceptiveDistance, receptiveAngle);
+        return new RadarMap(topology, map1, width,
+                radarCleanInterval, echoPersistence, contactPersistence,
+                0, radarReceptiveDistance, receptiveAngle);
     }
 
     /**
      * Creates the radar map
      *
-     * @param topology          the topology
-     * @param sectors           the map sectors
-     * @param stride            the stride (width)
-     * @param cleanInterval     the clean interval (ms)
-     * @param persistence       the radar persistence (ms)
-     * @param cleanTimestamp    the next clean instant (ms)
-     * @param receptiveDistance the receptive distance (m)
-     * @param receptiveAngle    the receptive angle (DEG)
+     * @param topology           the topology
+     * @param cells              the map cells
+     * @param stride             the stride (width)
+     * @param cleanInterval      the clean interval (ms)
+     * @param echoPersistence    the echo persistence (ms)
+     * @param contactPersistence the contact persistence (ms)
+     * @param cleanTimestamp     the next clean instant (ms)
+     * @param receptiveDistance  the receptive distance (m)
+     * @param receptiveAngle     the receptive angle (DEG)
      */
-    public RadarMap(GridTopology topology, MapCell[] sectors, int stride, long cleanInterval, long persistence, long cleanTimestamp, double receptiveDistance, int receptiveAngle) {
+    public RadarMap(GridTopology topology, MapCell[] cells, int stride, long cleanInterval, long echoPersistence, long contactPersistence, long cleanTimestamp, double receptiveDistance, int receptiveAngle) {
         this.topology = requireNonNull(topology);
-        this.sectors = requireNonNull(sectors);
+        this.cells = requireNonNull(cells);
         this.stride = stride;
         this.cleanInterval = cleanInterval;
-        this.persistence = persistence;
+        this.echoPersistence = echoPersistence;
+        this.contactPersistence = contactPersistence;
         this.cleanTimestamp = cleanTimestamp;
         this.receptiveDistance = receptiveDistance;
         this.receptiveAngle = receptiveAngle;
-    }
-
-    /**
-     * Returns cleans up the map for timeout
-     *
-     * @param timestamp the localTime instant
-     */
-    public RadarMap clean(long timestamp) {
-        return timestamp >= cleanTimestamp
-                ? setSectors(Arrays.stream(sectors).map(m -> m.clean(timestamp - persistence)).toArray(MapCell[]::new))
-                .setCleanTimestamp(timestamp + cleanInterval)
-                : this;
     }
 
     /**
@@ -153,17 +149,37 @@ public record RadarMap(GridTopology topology, MapCell[] sectors, int stride,
      * @param x x coordinate of point
      * @param y y coordinate of point
      */
-    public Optional<MapCell> getSector(double x, double y) {
+    public Optional<MapCell> cell(double x, double y) {
         int idx = indexOf(x, y);
-        return idx >= 0 ? Optional.of(sectors[idx]) : Optional.empty();
+        return idx >= 0 ? Optional.of(cells[idx]) : Optional.empty();
     }
 
-    public MapCell getSector(int index) {
-        return sectors[index];
+    public MapCell cell(int index) {
+        return cells[index];
     }
 
-    public Stream<MapCell> getSectorsStream() {
-        return Arrays.stream(sectors);
+    /**
+     * Returns the cell stream
+     */
+    public Stream<MapCell> cellStream() {
+        return Arrays.stream(cells);
+    }
+
+    /**
+     * Returns cleans up the map for timeout
+     *
+     * @param time the simulation time instant
+     */
+    public RadarMap clean(long time) {
+        long echoLimit = time - echoPersistence;
+        long contactLimit = time - contactPersistence;
+        return time >= cleanTimestamp
+                ?
+                setCells(Arrays.stream(cells)
+                        .map(m -> m.clean(echoLimit, contactLimit))
+                        .toArray(MapCell[]::new))
+                        .setCleanTimestamp(time + cleanInterval)
+                : this;
     }
 
     /**
@@ -173,47 +189,42 @@ public record RadarMap(GridTopology topology, MapCell[] sectors, int stride,
      * @param y y coordinate of point
      */
     public int indexOf(double x, double y) {
-        Point2D offset = sectors[0].location();
+        Point2D offset = cells[0].location();
         int[] indices = topology.toGridCoords(x - offset.getX(), y - offset.getY());
         if (indices[0] < 0 || indices[0] >= stride || indices[1] < 0) {
             return -1;
         }
         int idx = indices[0] + indices[1] * stride;
-        return idx < sectors.length ? idx : -1;
+        return idx < cells.length ? idx : -1;
     }
 
     /**
-     * Returns the indices of sector containing the point
-     *
-     * @param point the point
-     */
-    private int indexOf(Point2D point) {
-        return indexOf(point.getX(), point.getY());
-    }
-
-    /**
-     * Returns the radar map with sectors mapped by function
+     * Returns the radar map with cells mapped by function
      *
      * @param mapper the function map (index, sector)->sector
      */
     public RadarMap map(BiFunction<Integer, MapCell, MapCell> mapper) {
-        return setSectors(IntStream.range(0, sectors.length)
-                .mapToObj(i -> mapper.apply(i, sectors[i]))
+        return setCells(IntStream.range(0, cells.length)
+                .mapToObj(i -> mapper.apply(i, cells[i]))
                 .toArray(MapCell[]::new));
     }
 
     /**
-     * Returns the radar map with sectors mapped by function
+     * Returns the radar map with cells mapped by function
      *
      * @param mapper the function map sector->sector
      */
     public RadarMap map(UnaryOperator<MapCell> mapper) {
-        return setSectors(Arrays.stream(sectors).map(mapper)
+        return setCells(Arrays.stream(cells).map(mapper)
                 .toArray(MapCell[]::new));
     }
 
     public int sectorsNumber() {
-        return sectors.length;
+        return cells.length;
+    }
+
+    private RadarMap setCells(MapCell[] sectors) {
+        return new RadarMap(topology, sectors, stride, cleanInterval, echoPersistence, contactPersistence, cleanTimestamp, receptiveDistance, receptiveAngle);
     }
 
     /**
@@ -222,11 +233,11 @@ public record RadarMap(GridTopology topology, MapCell[] sectors, int stride,
      * @param cleanTimestamp the next clean instant (ms)
      */
     private RadarMap setCleanTimestamp(long cleanTimestamp) {
-        return new RadarMap(topology, sectors, stride, cleanInterval, persistence, cleanTimestamp, receptiveDistance, receptiveAngle);
+        return new RadarMap(topology, cells, stride, cleanInterval, echoPersistence, contactPersistence, cleanTimestamp, receptiveDistance, receptiveAngle);
     }
 
     /**
-     * Returns the radar map with the filled sectors at contacts point
+     * Returns the radar map with the filled cells at contacts point
      *
      * @param location          contact point
      * @param contactsRadius    the radius of contacts receptive area (m)
@@ -234,17 +245,13 @@ public record RadarMap(GridTopology topology, MapCell[] sectors, int stride,
      */
     public RadarMap setContactsAt(Point2D location, double contactsRadius, long contactsTimestamp) {
         return map(
-                sector -> {
-                    double distance = sector.location().distance(location);
+                cell -> {
+                    double distance = cell.location().distance(location);
                     return distance <= contactsRadius
-                            ? sector.setContact(contactsTimestamp)
-                            : sector;
+                            ? cell.setContact(contactsTimestamp)
+                            : cell;
                 }
         );
-    }
-
-    private RadarMap setSectors(MapCell[] sectors) {
-        return new RadarMap(topology, sectors, stride, cleanInterval, persistence, cleanTimestamp, receptiveDistance, receptiveAngle);
     }
 
     /**
@@ -280,37 +287,15 @@ public record RadarMap(GridTopology topology, MapCell[] sectors, int stride,
     }
 
     /**
-     * Updates the map from other map using a new origin position and direction
-     *
-     * @param sourceMap the source map
-     * @param position  the origin position in the source space
-     * @param direction the direction (DEG)
-     */
-    public RadarMap update(RadarMap sourceMap, Point2D position, int direction) {
-        MapCell[] sectors = Arrays.copyOf(this.sectors, this.sectors.length);
-        AffineTransform tr = AffineTransform.getRotateInstance(toRadians(direction));
-        tr.translate(-position.getX(), -position.getY());
-        Point2D targetPt = new Point2D.Double();
-        for (MapCell sourceSector : sourceMap.sectors) {
-            if (!sourceSector.unknown()) {
-                targetPt = tr.transform(sourceSector.location(), targetPt);
-                int index = indexOf(targetPt);
-                sectors[index] = sectors[index].union(sourceSector);
-            }
-        }
-        return setSectors(sectors);
-    }
-
-    /**
      * Returns the radar map with a changed sector
      *
      * @param index the sector index
      * @param f     the unary operator that changes the sector
      */
-    public RadarMap updateSector(int index, UnaryOperator<MapCell> f) {
-        MapCell[] sectors = Arrays.copyOf(this.sectors, this.sectors.length);
+    public RadarMap updateCell(int index, UnaryOperator<MapCell> f) {
+        MapCell[] sectors = Arrays.copyOf(this.cells, this.cells.length);
         sectors[index] = f.apply(sectors[index]);
-        return setSectors(sectors);
+        return setCells(sectors);
     }
 
     /**
