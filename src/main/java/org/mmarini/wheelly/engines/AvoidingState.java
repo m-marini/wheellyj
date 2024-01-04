@@ -64,6 +64,7 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
     public static final String ESCAPE_DIRECTION = "escapeDirection";
 
     private static final Logger logger = LoggerFactory.getLogger(AvoidingState.class);
+    public static final String ESCAPE_SPEED = "escapeSpeed";
 
     public static AvoidingState create(JsonNode root, Locator locator, String id) {
         ProcessorCommand onInit = ProcessorCommand.concat(
@@ -76,16 +77,6 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
         return new AvoidingState(id, onInit, onEntry, onExit);
     }
 
-    static OptionalInt escapeDir(ProcessorContext context) {
-        RobotStatus status = context.getRobotStatus();
-        int robotDir = status.getDirection();
-        return !status.canMoveForward() ?
-                status.canMoveBackward() ?
-                        OptionalInt.of(normalizeDegAngle(robotDir + 180))
-                        : OptionalInt.empty()
-                : OptionalInt.of(robotDir);
-    }
-
     public AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit) {
         this.id = requireNonNull(id);
         this.onInit = onInit;
@@ -96,8 +87,8 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
     @Override
     public void entry(ProcessorContext context) {
         ExtendedStateNode.super.entry(context);
-        escapeDir(context).ifPresentOrElse(dir -> put(context, ESCAPE_DIRECTION, dir),
-                () -> remove(context, ESCAPE_DIRECTION));
+        remove(context, ESCAPE_DIRECTION);
+        remove(context, ESCAPE_SPEED);
         remove(context, FREE_POINT);
     }
 
@@ -112,9 +103,10 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
             // Robot blocked forward
             if (status.canMoveBackward()) {
                 // Robot can move backward
+                // Set escape direction the robot direction and backward speed
                 // move robot backward
-                int escapeDir = normalizeDegAngle(dir + 180);
-                put(ctx, ESCAPE_DIRECTION, escapeDir);
+                put(ctx, ESCAPE_DIRECTION, dir);
+                put(ctx, ESCAPE_SPEED, -MAX_PPS);
                 remove(ctx, FREE_POINT);
                 logger.atDebug()
                         .setMessage("{}: move backward {} DEG")
@@ -132,6 +124,7 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
             // Robot can move forward
             // move robot forward
             put(ctx, ESCAPE_DIRECTION, dir);
+            put(ctx, ESCAPE_SPEED, MAX_PPS);
             remove(ctx, FREE_POINT);
             logger.atDebug()
                     .setMessage("{}: move forward {} DEG")
@@ -141,9 +134,13 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
             return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(dir, MAX_PPS));
         }
         // Robot not blocked
-        Point2D freePoint = get(ctx, FREE_POINT);
+        // Get escape direction and speed
         int escapeDir = getInt(ctx, ESCAPE_DIRECTION);
+        int escapeSpeed = getInt(ctx, ESCAPE_SPEED);
+        Point2D freePoint = get(ctx, FREE_POINT);
+        // Check if free point has been set
         if (freePoint == null) {
+            // Set the location as free point
             freePoint = ctx.getRobotStatus().getLocation();
             put(ctx, FREE_POINT, freePoint);
             logger.atDebug().setMessage("{}: escaping to {} DEG from {}")
@@ -152,6 +149,8 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
                     .addArgument(freePoint)
                     .log();
         }
+
+        // Check for robot at safe distance
         double distance = freePoint.distance(ctx.getRobotStatus().getLocation());
         double safeDistance = getDouble(ctx, SAFE_DISTANCE);
         if (distance >= safeDistance) {
@@ -164,6 +163,6 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
             return COMPLETED_RESULT;
         }
         // move robot away
-        return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(escapeDir, MAX_PPS));
+        return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(escapeDir, escapeSpeed));
     }
 }
