@@ -5,6 +5,17 @@ The code of Arduino controller is at [Wheellino project](https://github.com/m-ma
 
 The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
+## Release 0.12.0
+
+- Added clean Radar map state
+- Unified yaml configuration files
+- schema by id
+- new status signals recognition to COM monitor
+- Review RadarMap update
+- Move back the robot in avoid state without rotation
+- Improve exploring state point
+- Some fixes
+
 ## Release 0.11.1
 
 Java 21 support
