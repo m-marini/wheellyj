@@ -1,12 +1,12 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/env-schema-0.6
+$id: https://mmarini.org/wheelly/env-schema-0.7
 title: Environment
 type: object
 properties:
   $schema:
     type: string
-    const: https://mmarini.org/wheelly/env-schema-0.6
+    const: https://mmarini.org/wheelly/env-schema-0.7
   active:
     type: string
   configurations:
@@ -20,25 +20,9 @@ required:
 $defs:
   ObjectiveSet:
     anyOf:
-      - $ref: "#/$defs/ExploreByImitation"
       - $ref: "#/$defs/Explore"
       - $ref: "#/$defs/NoMove"
       - $ref: "#/$defs/Stuck"
-  ExploreByImitation:
-    type: object
-    properties:
-      class:
-        const: org.mmarini.wheelly.objectives.ExploreByImitation
-      stopDistance:
-        exclusiveMinimum: 0
-      turnDirectionRange:
-        multipleOf: 1
-        minimum: 0
-        maximum: 90
-    requierd:
-      - class
-      - stopDistance
-      - turnDirectionRange
   Explore:
     type: object
     properties:

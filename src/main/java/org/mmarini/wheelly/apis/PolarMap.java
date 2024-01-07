@@ -39,7 +39,7 @@ import java.util.stream.Stream;
 
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.apis.Geometry.squareInterval;
+import static org.mmarini.wheelly.apis.Geometry.squareArcInterval;
 import static org.mmarini.wheelly.apis.Utils.normalizeAngle;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 
@@ -187,7 +187,7 @@ public record PolarMap(CircularSector[] sectors, Point2D center, int direction) 
                         int sector = i;
                         double sectorDir = normalizeAngle(this.sectorDirection(i) + directionRad);
                         // Computes the contact point
-                        Optional<Point2D> point = squareInterval(cell.location(), gridSize, center, sectorDir, dAlpha).map(Tuple2::getV1);
+                        Optional<Point2D> point = squareArcInterval(cell.location(), gridSize, center, sectorDir, dAlpha).map(Tuple2::getV1);
                         point.ifPresent(s -> {
                             double distance = s.distance(center);
                             if (distance >= thresholdDistance && distance < maxDistance) {

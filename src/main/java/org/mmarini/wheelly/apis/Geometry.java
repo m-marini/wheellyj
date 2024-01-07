@@ -32,6 +32,7 @@ import org.mmarini.Tuple2;
 
 import java.awt.geom.Point2D;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -55,7 +56,7 @@ public interface Geometry {
      * @param alpha  the direction from Q (RAD)
      * @param dAlpha the size of direction interval (RAD)
      */
-    static double[] horizontalIntersect(Point2D q, double y, double alpha, double dAlpha) {
+    static double[] horizontalArcIntersect(Point2D q, double y, double alpha, double dAlpha) {
         double xq = q.getX();
         double yq = q.getY();
         if (abs(y - yq) <= HALF_MM) {
@@ -103,8 +104,8 @@ public interface Geometry {
      * @param alpha  the direction from point Q (RDA)
      * @param dAlpha the direction range (RAD)
      */
-    static Optional<Tuple2<Point2D, Point2D>> horizontalInterval(Point2D q, double xl, double xr, double y, double alpha, double dAlpha) {
-        double[] x0 = horizontalIntersect(q, y, alpha, dAlpha);
+    static Optional<Tuple2<Point2D, Point2D>> horizontalArcInterval(Point2D q, double xl, double xr, double y, double alpha, double dAlpha) {
+        double[] x0 = horizontalArcIntersect(q, y, alpha, dAlpha);
         if (x0[0] == Double.NEGATIVE_INFINITY && x0[1] == Double.POSITIVE_INFINITY) {
             return Optional.empty();
         }
@@ -127,66 +128,79 @@ public interface Geometry {
     }
 
     /**
-     * Returns the nearest and farthest points of sqare from Q and in the direction range of alpha +- dAlpha
+     * Returns the  vertex's projections and intersection points of the square and line from given point
+     * in the given direction
      *
-     * @param p      square center
-     * @param size   the size of square l
-     * @param q      the point Q
-     * @param alpha  the direction from point Q
-     * @param dAlpha the direction range from point Q
+     * @param from      the point (m)
+     * @param direction the direction (RAD)
+     * @param center    the square center (m)
+     * @param size      the square size (m)
      */
-    static Optional<Tuple2<Point2D, Point2D>> square1Interval(Point2D p, double size, Point2D q, double alpha, double dAlpha) {
-        double xp = p.getX();
-        double yp = p.getY();
-        double xq = q.getX();
-        double yq = q.getY();
-        double xl = xp - size / 2; // square left x
-        double xr = xp + size / 2; // square right x
-        double yr = yp - size / 2; // square rear y
-        double yf = yp + size / 2; // square front y
-        if (xq >= xl && xq <= xr && yq >= yr && yq <= yf) {
-            // Checks for xq in square
-            return Optional.of(Tuple2.of(q, q));
-        } else {
-            Optional<Tuple2<Point2D, Point2D>> svl = verticalInterval(q, yr, yf, xl, alpha, dAlpha);
-            Optional<Tuple2<Point2D, Point2D>> svr = verticalInterval(q, yr, yf, xr, alpha, dAlpha);
-            Optional<Tuple2<Point2D, Point2D>> shr = horizontalInterval(q, xl, xr, yr, alpha, dAlpha);
-            Optional<Tuple2<Point2D, Point2D>> shf = horizontalInterval(q, xl, xr, yf, alpha, dAlpha);
-            Optional<Point2D> sv = (xq < xl
-                    ? svl.map(Tuple2::getV1)
-                    : xq > xr
-                    ? svr.map(Tuple2::getV1)
-                    : Optional.empty());
+    static List<Point2D> lineSquareProjections(Point2D from, double direction, Point2D center, double size) {
+        double xl = center.getX() - size / 2;
+        double xr = center.getX() + size / 2;
+        double yr = center.getY() - size / 2;
+        double yf = center.getY() + size / 2;
 
-            Optional<Point2D> sh = yq < yr
-                    ? shr.map(Tuple2::getV1)
-                    : yq > yf
-                    ? shf.map(Tuple2::getV1)
-                    : Optional.empty();
-            Optional<Point2D> nearest = (xq >= xl && xq <= xr && yq >= yr && yq <= yf)
-                    // Checks for xq in square
-                    ? Optional.of(q)
-                    : Stream.concat(
-                    sv.stream(),
-                    sh.stream()
-            ).min(Comparator.comparingDouble(q::distanceSq));
-            Optional<Point2D> farthest = Stream.concat(
-                            Stream.concat(
-                                    svl.stream(),
-                                    svr.stream()),
-                            Stream.concat(
-                                    shr.stream(),
-                                    shf.stream())
-                    )
-                    .map(Tuple2::getV2)
-                    .max(Comparator.comparingDouble(q::distanceSq));
+        List<Point2D> vertices = List.of(
+                new Point2D.Double(xl, yr),
+                new Point2D.Double(xl, yf),
+                new Point2D.Double(xr, yf),
+                new Point2D.Double(xr, yr)
+        );
 
-            return nearest.flatMap(n -> farthest.map(f -> Tuple2.of(n, f)));
-        }
+        List<Point2D> projections = vertices.stream()
+                .map(p -> projectLine(from, direction, p))
+                .toList();
+        Point2D p0 = projections.get(0);
+        Point2D p1 = projections.get(1);
+        Point2D p2 = projections.get(2);
+        Point2D p3 = projections.get(3);
+
+        List<Point2D> intersections = Stream.of(
+                        Tuple2.of(p0, p1),
+                        Tuple2.of(p1, p2),
+                        Tuple2.of(p2, p3),
+                        Tuple2.of(p3, p0)
+                ).filter(t -> signum(t._1.getX()) != signum(t._2.getX()))
+                .map(t -> {
+                    double xp0 = t._1.getX();
+                    double yp0 = t._1.getY();
+                    double xp1 = t._2.getX();
+                    double yp1 = t._2.getY();
+                    double y = (xp1 * yp0 - xp0 * yp1) / (xp1 - xp0);
+                    return (Point2D) new Point2D.Double(0, y);
+                })
+                .toList();
+        return Stream.concat(projections.stream(), intersections.stream())
+                .toList();
     }
 
     /**
-     * Returns the nearest and farthest points of sqare from Q and in the direction range of alpha +- dAlpha
+     * Returns the projection of line from - to in the give direction
+     * abscissa = distance from direction (cross product, positive = to at right of direction)
+     * ordinate = distance from projection (scalar product)
+     *
+     * @param center    the center point
+     * @param direction the direction (DEG)
+     * @param to        the give point
+     */
+    static Point2D projectLine(Point2D center, double direction, Point2D to) {
+        double x0 = center.getX();
+        double y0 = center.getY();
+        double x1 = to.getX();
+        double y1 = to.getY();
+        double dx = x1 - x0;
+        double dy = y1 - y0;
+        double sa = sin(direction);
+        double ca = cos(direction);
+        double y = dx * sa + dy * ca;
+        double x = dx * ca - dy * sa;
+        return new Point2D.Double(x, y);
+    }
+
+    /**
+     * Returns the nearest and farthest points of square from Q and in the direction range of alpha +- dAlpha
      *
      * @param p      square center
      * @param size   the size of square l
@@ -194,7 +208,7 @@ public interface Geometry {
      * @param alpha  the direction from point Q
      * @param dAlpha the direction range from point Q
      */
-    static Optional<Tuple2<Point2D, Point2D>> squareInterval(Point2D p, double size, Point2D q, double alpha, double dAlpha) {
+    static Optional<Tuple2<Point2D, Point2D>> squareArcInterval(Point2D p, double size, Point2D q, double alpha, double dAlpha) {
         double xp = p.getX();
         double yp = p.getY();
         double xq = q.getX();
@@ -203,10 +217,10 @@ public interface Geometry {
         double xr = xp + size / 2; // square right x
         double yr = yp - size / 2; // square rear y
         double yf = yp + size / 2; // square front y
-        Optional<Tuple2<Point2D, Point2D>> svl = verticalInterval(q, yr, yf, xl, alpha, dAlpha);
-        Optional<Tuple2<Point2D, Point2D>> svr = verticalInterval(q, yr, yf, xr, alpha, dAlpha);
-        Optional<Tuple2<Point2D, Point2D>> shr = horizontalInterval(q, xl, xr, yr, alpha, dAlpha);
-        Optional<Tuple2<Point2D, Point2D>> shf = horizontalInterval(q, xl, xr, yf, alpha, dAlpha);
+        Optional<Tuple2<Point2D, Point2D>> svl = verticalArcInterval(q, yr, yf, xl, alpha, dAlpha);
+        Optional<Tuple2<Point2D, Point2D>> svr = verticalArcInterval(q, yr, yf, xr, alpha, dAlpha);
+        Optional<Tuple2<Point2D, Point2D>> shr = horizontalArcInterval(q, xl, xr, yr, alpha, dAlpha);
+        Optional<Tuple2<Point2D, Point2D>> shf = horizontalArcInterval(q, xl, xr, yf, alpha, dAlpha);
 
         Optional<Point2D> nearest = (xq >= xl && xq <= xr && yq >= yr && yq <= yf)
                 // Checks for xq in square
@@ -243,7 +257,7 @@ public interface Geometry {
      * @param alpha  the direction from Q (RAD)
      * @param dAlpha the size of direction interval (RAD)
      */
-    static double[] verticalIntersect(Point2D q, double x, double alpha, double dAlpha) {
+    static double[] verticalArcIntersect(Point2D q, double x, double alpha, double dAlpha) {
         double xq = q.getX();
         double yq = q.getY();
         if (abs(x - xq) < HALF_MM) {
@@ -291,8 +305,8 @@ public interface Geometry {
      * @param alpha  the direction from point Q (RDA)
      * @param dAlpha the direction range (RAD)
      */
-    static Optional<Tuple2<Point2D, Point2D>> verticalInterval(Point2D q, double yr, double yf, double x, double alpha, double dAlpha) {
-        double[] y0 = verticalIntersect(q, x, alpha, dAlpha);
+    static Optional<Tuple2<Point2D, Point2D>> verticalArcInterval(Point2D q, double yr, double yf, double x, double alpha, double dAlpha) {
+        double[] y0 = verticalArcIntersect(q, x, alpha, dAlpha);
         if (y0[0] == Double.NEGATIVE_INFINITY && y0[1] == Double.POSITIVE_INFINITY) {
             return Optional.empty();
         }

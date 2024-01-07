@@ -47,7 +47,7 @@ controller:
 
 # Agent
 agent:
-  $schema: https://mmarini.org/wheelly/state-agent-schema-0.8
+  $schema: https://mmarini.org/wheelly/state-agent-schema-0.9
   active: explorerAgent
 
   configurations:
@@ -208,48 +208,6 @@ agent:
           - from: movingTo0
             to: start
             trigger: blocked
-    ######################################
-    # Explorer agent old
-    ######################################
-    explorerAgent1:
-      class: org.mmarini.wheelly.engines.StateMachineAgent
-      interval: 10
-      commandInterval: 600
-      reactionInterval: 300
-      numRadarSectors: 24
-      minRadarDistance: 0.3
-      maxRadarDistance: 2.8
-      radarWidth: 51
-      radarHeight: 51
-      radarGrid: 0.2
-      radarReceptiveDistance: 0.28
-      radarReceptiveAngle: 15
-      echoPersistence: 300000
-      contactPersistence: 300000
-      radarCleanInterval: 30000
-      flow:
-        entry: start
-        states:
-          start:
-            class: org.mmarini.wheelly.engines.HaltState
-            timeout: 2000
-          exploring:
-            class: org.mmarini.wheelly.engines.ExploringState
-            stopDistance: 0.4
-            turnDirectionRange: 30
-          avoiding:
-            class: org.mmarini.wheelly.engines.AvoidingState
-            safeDistance: 0.4
-        transitions:
-          - from: start
-            to: exploring
-            trigger: timeout
-          - from: exploring
-            to: avoiding
-            trigger: blocked
-          - from: avoiding
-            to: exploring
-            trigger: completed
     ######################################
     # Idle agent
     ######################################
