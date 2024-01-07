@@ -32,18 +32,22 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
+import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.apps.Yaml;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.geom.Point2D;
+import java.util.*;
+
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.engines.StateNode.NONE_EXIT;
 
 /**
  * State machine agent acts the robot basing on state machine flow.
  * <p>
- * The main method is <code>tick</code> which for the duration of the reaction localTime checks the I/O to the robot.<br>
  * <ul>
  *     <li>The <code>interval</code> parameter defines the interval (ms) between the read robot status.</li>
  *     <li>The <code>commandInterval</code> parameter defines the interval (ms) between sending output command to the robot.</li></7LU>
@@ -54,7 +58,8 @@ import static java.util.Objects.requireNonNull;
  *     It is a mutable object
  * </p>
  */
-public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, WithErrorFlowable, WithCommandFlowable, WithControllerFlowable {
+public class StateMachineAgent implements ProcessorContext, WithIOFlowable, WithStatusFlowable, WithErrorFlowable,
+        WithCommandFlowable, WithControllerFlowable {
     public static final String STATE_AGENT_SCHEMA_YML = "https://mmarini.org/wheelly/state-agent-schema-0.9";
     private static final Logger logger = LoggerFactory.getLogger(StateMachineAgent.class);
 
@@ -72,7 +77,7 @@ public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, Wi
         int numRadarSectors = locator.path("numRadarSectors").getNode(root).asInt();
         RadarMap radarMap = RadarMap.create(root, locator);
         PolarMap polarMap = PolarMap.create(numRadarSectors);
-        return new StateMachineAgent(minRadarDistance, maxRadarDistance, radarMap, polarMap, robot, new ProcessorContext(robot, flow));
+        return new StateMachineAgent(minRadarDistance, maxRadarDistance, radarMap, polarMap, robot, flow);
     }
 
     /**
@@ -87,13 +92,21 @@ public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, Wi
     }
 
     private final RobotControllerApi controller;
-    private final ProcessorContext context;
     private final double maxRadarDistance;
     private final double minRadarDistance;
     private final PublishProcessor<ProcessorContext> stepUpProcessor;
+    private final PublishProcessor<String> triggerProcessor;
+    private final PublishProcessor<Optional<Point2D>> targetProcessor;
+    private final Map<String, Object> values;
+    private final List<Object> stack;
+    private final StateFlow flow;
+    private final PublishProcessor<StateNode> stateProcessor;
     private PolarMap polarMap;
     private RadarMap radarMap;
     private boolean started;
+    private StateNode currentNode;
+    private RobotStatus robotStatus;
+    private RadarMap contextRadarMap;
 
     /**
      * Creates the agent
@@ -103,23 +116,30 @@ public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, Wi
      * @param radarMap         the radar map
      * @param polarMap         the polar map
      * @param controller       the robot api
-     * @param context          the processor context
      */
-    public StateMachineAgent(double minRadarDistance, double maxRadarDistance, RadarMap radarMap, PolarMap polarMap, RobotControllerApi controller, ProcessorContext context) {
+    public StateMachineAgent(double minRadarDistance, double maxRadarDistance, RadarMap radarMap, PolarMap polarMap, RobotControllerApi controller, StateFlow flow) {
         this.minRadarDistance = minRadarDistance;
         this.maxRadarDistance = maxRadarDistance;
         this.controller = requireNonNull(controller);
-        this.context = requireNonNull(context);
         this.polarMap = requireNonNull(polarMap);
         this.radarMap = requireNonNull(radarMap);
+        this.flow = flow;
         this.stepUpProcessor = PublishProcessor.create();
+        this.stack = new ArrayList<>();
+        this.values = new HashMap<>();
+        this.triggerProcessor = PublishProcessor.create();
+        this.stateProcessor = PublishProcessor.create();
+        this.targetProcessor = PublishProcessor.create();
     }
 
-    /**
-     * Returns the current context
-     */
-    public ProcessorContext getContext() {
-        return context;
+    @Override
+    public void clearMap() {
+        radarMap = radarMap.clean();
+    }
+
+    @Override
+    public <T> T get(String key) {
+        return (T) values.get(key);
     }
 
     public RobotControllerApi getController() {
@@ -132,20 +152,19 @@ public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, Wi
 
     private void handleInference(RobotStatus status) {
         polarMap = polarMap.update(radarMap, status.getLocation(), status.getDirection(), minRadarDistance, maxRadarDistance);
-        context.setPolarMap(polarMap);
+        robotStatus = status;
         if (!started) {
             started = true;
-            context.init();
+            initContext();
         }
-        context.step();
-        stepUpProcessor.onNext(context);
+        step();
+        stepUpProcessor.onNext(this);
     }
 
     private void handleLatch(RobotStatus status) {
         logger.atDebug().log("Latch status {}", status);
-        context.setRobotStatus(status);
-        context.setRadarMap(radarMap);
-
+        robotStatus = status;
+        contextRadarMap = radarMap;
     }
 
     private void handleStatus(RobotStatus status) {
@@ -162,6 +181,66 @@ public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, Wi
         controller.setOnLatch(this::handleLatch);
         controller.readRobotStatus().doOnNext(this::handleStatus).subscribe();
         controller.start();
+    }
+
+    /**
+     * Initializes context
+     */
+    private void initContext() {
+        // Clears the stack and the value map
+        stack.clear();
+        values.clear();
+        // Execute on init
+        ProcessorCommand onInit = flow.onInit();
+        if (onInit != null) {
+            onInit.execute(this);
+        }
+
+        // Initializes all states
+        for (StateNode state : flow.states()) {
+            state.init(this);
+        }
+
+        // Entry state
+        this.currentNode = flow.entry();
+        logger.debug("{}: entry", currentNode.id());
+        this.currentNode.entry(this);
+        stateProcessor.onNext(currentNode);
+    }
+
+    @Override
+    public <T> T peek() {
+        return stack.isEmpty() ? null : (T) stack.getLast();
+    }
+
+    @Override
+    public PolarMap polarMap() {
+        return polarMap;
+    }
+
+    @Override
+    public <T> T pop() {
+        if (stack.isEmpty()) {
+            throw new IllegalArgumentException("Missing operand");
+        }
+        return (T) stack.removeLast();
+    }
+
+    @Override
+    public <T> ProcessorContext push(T value) {
+        stack.add(value);
+        return this;
+    }
+
+    @Override
+    public <T> ProcessorContext put(String key, T value) {
+        values.put(key, value);
+        return this;
+    }
+
+    @Override
+    public RadarMap radarMap() {
+        return contextRadarMap;
     }
 
     @Override
@@ -204,10 +283,23 @@ public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, Wi
         return controller.readRobotStatus();
     }
 
+    /**
+     * Returns the shutdown event
+     */
     public Completable readShutdown() {
         return controller.readShutdown();
     }
 
+    /**
+     * Returns the state flow
+     */
+    public Flowable<StateNode> readState() {
+        return stateProcessor;
+    }
+
+    /**
+     * Returns the process context step up event
+     */
     public Flowable<ProcessorContext> readStepUp() {
         return stepUpProcessor;
     }
@@ -217,13 +309,79 @@ public class StateMachineAgent implements WithIOFlowable, WithStatusFlowable, Wi
         return controller.readSupply();
     }
 
+    /**
+     * Returns the flow of target points
+     */
+    public Flowable<Optional<Point2D>> readTargets() {
+        return targetProcessor;
+    }
+
+    /**
+     * Returns the trigger flow
+     */
+    public Flowable<String> readTriggers() {
+        return triggerProcessor;
+    }
+
     @Override
     public Flowable<String> readWriteLine() {
         return controller.readWriteLine();
     }
 
+    @Override
+    public void remove(String key) {
+        values.remove(key);
+    }
+
+    @Override
+    public RobotStatus robotStatus() {
+        return robotStatus;
+    }
+
+    @Override
+    public void setTarget(Point2D target) {
+        targetProcessor.onNext(Optional.ofNullable(target));
+    }
+
     public void shutdown() {
         controller.shutdown();
         stepUpProcessor.onComplete();
+    }
+
+    @Override
+    public int stackSize() {
+        return stack.size();
+    }
+
+    /**
+     * Process the next transition
+     */
+    public void step() {
+        // Process the state node
+        Tuple2<String, RobotCommands> result = currentNode.step(this);
+        // Execute robot command
+        controller.execute(result._2);
+        triggerProcessor.onNext(result._1);
+        if (!NONE_EXIT.equals(result._1)) {
+            //find for transition match
+            Optional<StateTransition> tx = flow.transitions().stream()
+                    .filter(t -> t.from().equals(currentNode.id()) && t.isTriggered(result._1))
+                    .findFirst();
+            tx.ifPresentOrElse(t -> {
+                        // trigger the exit call back
+                        logger.debug("{}: Trigger {}", currentNode.id(), result);
+                        currentNode.exit(this);
+                        // trigger the transition call back
+                        t.activate(this);
+                        // Change the state
+                        currentNode = flow.getState(t.to());
+                        // trigger the entry state call back
+                        logger.debug("{}: entry", currentNode.id());
+                        currentNode.entry(this);
+                        stateProcessor.onNext(currentNode);
+                    },
+                    () -> logger.debug("Trigger {} - {} ignored", currentNode.id(), result._1)
+            );
+        }
     }
 }

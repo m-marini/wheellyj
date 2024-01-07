@@ -38,14 +38,10 @@ import org.slf4j.LoggerFactory;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Generates the behavior to haltCommand the robot
+ * Generates the behavior to clear map
  * <p>
- * Stops the robot and moves the sensor if required.<br>
- * <code>blocked</code> is generated at contact sensors signals.<br>
- * <code>frontBlocked</code> is generated at contact sensors signals.<br>
- * <code>rearBlocked</code> is generated at contact sensors signals.<br>
- * <code>blocked</code> is generated at contact sensors signals.<br>
- * <code>timeout</code> is generated at timeout.
+ * Clear the map.<br>
+ * <code>completed</code> is generated at completion
  * </p>
  *
  * @param id      the identifier
@@ -54,10 +50,10 @@ import static java.util.Objects.requireNonNull;
  * @param onExit  eht exit command
  */
 
-public record HaltState(String id, ProcessorCommand onInit, ProcessorCommand onEntry,
-                        ProcessorCommand onExit) implements ExtendedStateNode {
+public record ClearMapState(String id, ProcessorCommand onInit, ProcessorCommand onEntry,
+                            ProcessorCommand onExit) implements ExtendedStateNode {
 
-    private static final Logger logger = LoggerFactory.getLogger(HaltState.class);
+    private static final Logger logger = LoggerFactory.getLogger(ClearMapState.class);
 
     /**
      * Returns the haltCommand state from configuration
@@ -66,14 +62,11 @@ public record HaltState(String id, ProcessorCommand onInit, ProcessorCommand onE
      * @param locator the locator of haltCommand sensor
      * @param id      the status identifier
      */
-    public static HaltState create(JsonNode root, Locator locator, String id) {
+    public static ClearMapState create(JsonNode root, Locator locator, String id) {
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
-        ProcessorCommand onInit = ProcessorCommand.concat(
-                ExtendedStateNode.loadTimeout(root, locator, id),
-                ExtendedStateNode.loadAutoScanOnInit(root, locator, id),
-                ProcessorCommand.create(root, locator.path("onInit")));
-        return new HaltState(id, onInit, onEntry, onExit);
+        ProcessorCommand onInit = ProcessorCommand.concat(ProcessorCommand.create(root, locator.path("onInit")));
+        return new ClearMapState(id, onInit, onEntry, onExit);
     }
 
     /**
@@ -84,31 +77,19 @@ public record HaltState(String id, ProcessorCommand onInit, ProcessorCommand onE
      * @param onEntry the entry command
      * @param onExit  eht exit command
      */
-    public HaltState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit) {
+    public ClearMapState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit) {
         this.id = requireNonNull(id);
         this.onInit = onInit;
         this.onEntry = onEntry;
         this.onExit = onExit;
-    }
-
-    @Override
-    public void entry(ProcessorContext context) {
-        ExtendedStateNode.super.entry(context);
-        entryAutoScan(context);
+        logger.atDebug().log("Created");
     }
 
     @Override
     public Tuple2<String, RobotCommands> step(ProcessorContext ctx) {
-        if (isTimeout(ctx)) {
-            return TIMEOUT_RESULT;
-        }
-        Tuple2<String, RobotCommands> result = getBlockResult(ctx);
-        if (result != null) {
-            logger.atDebug().log("Contacts at {} {}",
-                    !ctx.robotStatus().canMoveForward() ? "front" : "",
-                    !ctx.robotStatus().canMoveBackward() ? "rear" : "");
-            return result;
-        }
-        return tickAutoScan(ctx);
+        // Clear the map
+        logger.atDebug().log("Clearing map ...");
+        ctx.clearMap();
+        return COMPLETED_RESULT;
     }
 }

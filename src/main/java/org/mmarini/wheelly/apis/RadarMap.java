@@ -169,6 +169,15 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
     }
 
     /**
+     * Returns cleaned up map
+     */
+    public RadarMap clean() {
+        return setCells(Arrays.stream(cells)
+                .map(MapCell::setUnknown)
+                .toArray(MapCell[]::new));
+    }
+
+    /**
      * Returns cleans up the map for timeout
      *
      * @param time the simulation time instant

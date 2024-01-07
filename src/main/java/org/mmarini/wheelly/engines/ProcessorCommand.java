@@ -81,8 +81,9 @@ public record ProcessorCommand(String id, Consumer<ProcessorContext> command) {
                     for (ProcessorCommand cmd : compress) {
                         cmd.execute(ctx);
                     }
-                    if (!ctx.getStack().isEmpty()) {
-                        throw new IllegalArgumentException(format("Stack pollution (%d unused elements)", ctx.getStack().size()));
+                    int n = ctx.stackSize();
+                    if (n != 0) {
+                        throw new IllegalArgumentException(format("Stack pollution (%d unused elements)", n));
                     }
                 });
     }
@@ -232,8 +233,8 @@ public record ProcessorCommand(String id, Consumer<ProcessorContext> command) {
      * @param context the processor context
      */
     private static void swapCommand(ProcessorContext context) {
-        double b = context.popDouble();
-        double a = context.popDouble();
+        Object b = context.pop();
+        Object a = context.pop();
         context.push(b);
         context.push(a);
     }
@@ -244,7 +245,7 @@ public record ProcessorCommand(String id, Consumer<ProcessorContext> command) {
      * @param context the processor context
      */
     private static void timeCommand(ProcessorContext context) {
-        RobotStatus status = context.getRobotStatus();
+        RobotStatus status = context.robotStatus();
         context.push(status.simulationTime());
     }
 

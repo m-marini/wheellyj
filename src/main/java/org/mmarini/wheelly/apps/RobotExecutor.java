@@ -46,6 +46,7 @@ import org.slf4j.LoggerFactory;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowEvent;
+import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -210,13 +211,13 @@ public class RobotExecutor {
      * @param ctx the context
      */
     private void handleStepUp(ProcessorContext ctx) {
-        RobotStatus status = ctx.getRobotStatus();
+        RobotStatus status = ctx.robotStatus();
         if (robotStartTimestamp < 0) {
             robotStartTimestamp = status.simulationTime();
         }
         sensorMonitor.onStatus(status);
         envPanel.setRobotStatus(status);
-        envPanel.setRadarMap(ctx.getRadarMap());
+        envPanel.setRadarMap(ctx.radarMap());
         long robotClock = status.simulationTime();
         long robotElapsed = robotClock - robotStartTimestamp;
         envPanel.setTimeRatio((double) robotElapsed / (System.currentTimeMillis() - start));
@@ -228,10 +229,19 @@ public class RobotExecutor {
         prevRobotStep = robotClock;
         this.prevRealStep = clock;
 
-        polarPanel.setPolarMap(ctx.getPolarMap());
+        polarPanel.setPolarMap(ctx.polarMap());
         if (robotElapsed > sessionDuration) {
             agent.shutdown();
         }
+    }
+
+    /**
+     * Handles the target event
+     *
+     * @param target the target point
+     */
+    private void handleTarget(Optional<Point2D> target) {
+        envPanel.setTarget(target.orElse(null));
     }
 
     /**
@@ -329,6 +339,7 @@ public class RobotExecutor {
             logger.atInfo().setMessage("Session are running for {} sec...").addArgument(sessionDuration).log();
             this.start = System.currentTimeMillis();
             agent.readStepUp().doOnNext(this::handleStepUp).subscribe();
+            agent.readTargets().doOnNext(this::handleTarget).subscribe();
             agent.readShutdown().doOnComplete(this::handleShutdown).subscribe();
             agent.readErrors().doOnNext(err -> {
                 comMonitor.onError(err);
@@ -338,11 +349,10 @@ public class RobotExecutor {
             agent.readWriteLine().doOnNext(this::handleWrittenLine).subscribe();
             agent.readControllerStatus().doOnNext(this::handleControllerStatus).subscribe();
             agent.readCommand().doOnNext(sensorMonitor::onCommand).subscribe();
-            ProcessorContext context = agent.getContext();
-            context.readTriggers()
+            agent.readTriggers()
                     .doOnNext(this::handleTrigger)
                     .subscribe();
-            context.readState()
+            agent.readState()
                     .doOnNext(this::handleState)
                     .subscribe();
             Stream.of(frame, radarFrame, engineFrame, sensorFrame, comFrame)

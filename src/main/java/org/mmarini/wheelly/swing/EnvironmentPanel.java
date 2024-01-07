@@ -307,6 +307,11 @@ public class EnvironmentPanel extends RadarPanel {
                 drawRobot(gr, status.getLocation(), status.getDirection());
                 drawHUD(g, status, reward, timeRatio);
             }
+
+            if (target != null) {
+                gr.setTransform(base);
+                drawTarget(gr, target);
+            }
         }
     }
 

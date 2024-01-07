@@ -31,10 +31,7 @@ import org.mmarini.wheelly.apis.RadarMap;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.geom.AffineTransform;
-import java.awt.geom.Path2D;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
+import java.awt.geom.*;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -52,7 +49,10 @@ public class RadarPanel extends JComponent {
     static final Color EMPTY_COLOR = new Color(64, 64, 64, 128);
     static final Color FILLED_COLOR = new Color(200, 0, 0, 128);
     static final Color CONTACT_COLOR = new Color(200, 0, 200, 128);
+    static final Color TARGET_COLOR = new Color(0, 200, 0);
     static final Shape GRID_SHAPE = createGridShape();
+    static final double TARGET_SIZE = 0.2;
+    static final Shape TARGET_SHAPE = new Ellipse2D.Double(-TARGET_SIZE / 2, -TARGET_SIZE / 2, TARGET_SIZE, TARGET_SIZE);
 
     /**
      * Returns the transformation to draw in a world location
@@ -63,6 +63,9 @@ public class RadarPanel extends JComponent {
         return AffineTransform.getTranslateInstance(location.getX(), location.getY());
     }
 
+    /**
+     * Returns the grid shape
+     */
     static Shape createGridShape() {
         Path2D.Float shape = new Path2D.Float();
         shape.moveTo(0, -DEFAULT_WORLD_SIZE);
@@ -82,6 +85,11 @@ public class RadarPanel extends JComponent {
         return shape;
     }
 
+    /**
+     * Return cell points with the color
+     *
+     * @param radarMap the radar map
+     */
     public static List<Tuple2<Point2D, Color>> createMap(RadarMap radarMap) {
         if (radarMap != null) {
             return radarMap.cellStream()
@@ -111,10 +119,14 @@ public class RadarPanel extends JComponent {
     }
 
     private final Point2D centerLocation;
+    protected Point2D target;
     private float scale;
     private List<Tuple2<Point2D, Color>> radarMap;
     private Shape sectorShape;
 
+    /**
+     * Creates the radar panel
+     */
     public RadarPanel() {
         setBackground(Color.BLACK);
         setForeground(Color.WHITE);
@@ -151,20 +163,41 @@ public class RadarPanel extends JComponent {
             gr.setStroke(BORDER_STROKE);
             for (Tuple2<Point2D, Color> t : radarMap) {
                 gr.setTransform(base);
-                drawShape(gr, t._1, t._2, sectorShape);
+                fillShape(gr, t._1, t._2, sectorShape);
             }
         }
     }
 
     /**
-     * Draws an obstacle
+     * Draws a shape
      *
      * @param gr       the graphic context
      * @param location the location
      * @param color    the color
-     * @param shape    the sector shape
+     * @param shape    the shape
      */
     void drawShape(Graphics2D gr, Point2D location, Color color, Shape shape) {
+        if (location != null) {
+            gr.transform(at(location));
+            gr.setColor(color);
+            gr.setStroke(BORDER_STROKE);
+            gr.draw(shape);
+        }
+    }
+
+    /**
+     * Draws the target symbol
+     *
+     * @param gr     the graphics
+     * @param target the target location
+     */
+    protected void drawTarget(Graphics2D gr, Point2D target) {
+        if (target != null) {
+            drawShape(gr, target, TARGET_COLOR, TARGET_SHAPE);
+        }
+    }
+
+    void fillShape(Graphics2D gr, Point2D location, Color color, Shape shape) {
         if (location != null) {
             gr.transform(at(location));
             gr.setColor(color);
@@ -180,10 +213,18 @@ public class RadarPanel extends JComponent {
         return centerLocation;
     }
 
+    /**
+     * Returns the scale
+     */
     public float getScale() {
         return scale;
     }
 
+    /**
+     * Sets the scale
+     *
+     * @param scale the scale
+     */
     public void setScale(float scale) {
         this.scale = scale;
     }
@@ -199,10 +240,29 @@ public class RadarPanel extends JComponent {
         drawGrid(gr);
         gr.setTransform(base);
         drawRadarMap(gr, radarMap, sectorShape);
+        if (target != null) {
+            drawTarget(gr, target);
+        }
     }
 
+    /**
+     * Sets the radar map to draw
+     *
+     * @param radarMap the radar map
+     */
     public void setRadarMap(RadarMap radarMap) {
         this.radarMap = createMap(radarMap);
         this.sectorShape = createSectorShape(radarMap);
+        repaint();
+    }
+
+    /**
+     * Sets the target point
+     *
+     * @param target the target point
+     */
+    public void setTarget(Point2D target) {
+        this.target = target;
+        repaint();
     }
 }
