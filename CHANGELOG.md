@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #286: COMMonitor with calssified status signals
 - Issue #290: Review RadarMap update
 - Issue #295: Move back the robot in avoid state without rotation
+- Issue #298: Improve exploring state point
 
 ### Fixed
 

@@ -152,7 +152,7 @@ public record MapCell(Point2D location, long echoTime, int echoCounter, long con
         long t0 = signal.timestamp();
         Point2D q = signal.sensorLocation();
         double distance = signal.distance();
-        return Geometry.squareInterval(location, gridSize, q,
+        return Geometry.squareArcInterval(location, gridSize, q,
                         toRadians(signal.sensorDirection()), toRadians(receptiveAngle))
                 .map(t -> {
                     double near = t.getV1().distance(q);

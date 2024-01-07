@@ -37,12 +37,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
-import java.util.OptionalInt;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
-import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 
 /**
  * Generates the behavior to avoid contact obstacle.
@@ -62,9 +60,8 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
     public static final String FREE_POINT = "freePoint";
     public static final String SAFE_DISTANCE = "safeDistance";
     public static final String ESCAPE_DIRECTION = "escapeDirection";
-
-    private static final Logger logger = LoggerFactory.getLogger(AvoidingState.class);
     public static final String ESCAPE_SPEED = "escapeSpeed";
+    private static final Logger logger = LoggerFactory.getLogger(AvoidingState.class);
 
     public static AvoidingState create(JsonNode root, Locator locator, String id) {
         ProcessorCommand onInit = ProcessorCommand.concat(
@@ -133,6 +130,15 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
                     .log();
             return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(dir, MAX_PPS));
         }
+        // Check for escape direction
+        if (get(ctx, ESCAPE_DIRECTION) == null) {
+            // roboto in safe location without movement
+            logger.atDebug()
+                    .setMessage("{}: safety")
+                    .addArgument(this::id)
+                    .log();
+            return COMPLETED_RESULT;
+        }
         // Robot not blocked
         // Get escape direction and speed
         int escapeDir = getInt(ctx, ESCAPE_DIRECTION);
@@ -163,6 +169,12 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
             return COMPLETED_RESULT;
         }
         // move robot away
+        logger.atDebug()
+                .setMessage("{}: moving to {} DEG at {} pps")
+                .addArgument(this::id)
+                .addArgument(escapeDir)
+                .addArgument(escapeSpeed)
+                .log();
         return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(escapeDir, escapeSpeed));
     }
 }

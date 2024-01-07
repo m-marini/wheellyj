@@ -30,12 +30,15 @@ import org.mmarini.yaml.Locator;
 
 import java.awt.geom.Point2D;
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.UnaryOperator;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static java.lang.Math.abs;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -183,6 +186,54 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
     }
 
     /**
+     * Returns the point furthest from the given whose direct trajectory is free and no further than the maximum distance
+     *
+     * @param location     the departure point
+     * @param maxDistance  the maximum distance
+     * @param safeDistance the safe distance
+     */
+    public Optional<Point2D> findTarget(Point2D location, double maxDistance, double safeDistance) {
+        double maxDistance2 = maxDistance * maxDistance;
+        double safeDistance2 = safeDistance * safeDistance;
+        // Extracts the empty cell
+        List<Point2D> points1 = cellStream().filter(c ->
+                        (c.empty() || c.unknown()))
+                .map(MapCell::location)
+                .toList();
+        List<Point2D> points2 = points1.stream()
+                // Filters cell at a distance no longer maxDistance and with free trajectory
+                .filter(p -> {
+                    double d2 = location.distanceSq(p);
+                    return d2 >= safeDistance2
+                            && d2 <= maxDistance2
+                            && freeTrajectory(location, p, safeDistance);
+                }).toList();
+        return points2.stream()
+                .max(Comparator.comparingDouble(location::distanceSq));
+    }
+
+    /**
+     * Returns true if the trajectory from given point to given point has obstacles (all intersection point distance > safeDistance)
+     *
+     * @param from         departure (m)
+     * @param to           destination (m)
+     * @param safeDistance safe distance (m)
+     */
+    boolean freeTrajectory(Point2D from, Point2D to, double safeDistance) {
+        double size = topology.gridSize();
+        double dir = Utils.direction(from, to);
+        double distance = from.distance(to);
+        double maxDistance = distance + safeDistance;
+        return cellStream().filter(MapCell::hindered)
+                // Get all projections of hindered cells
+                .flatMap(cell -> Geometry.lineSquareProjections(from, dir, cell.location(), size).stream())
+                // Check intersection of oll cells with trajectory
+                .noneMatch(p ->
+                        p.getY() >= safeDistance && p.getY() <= maxDistance
+                                && abs(p.getX()) <= safeDistance);
+    }
+
+    /**
      * Returns the indices of sector containing the point
      *
      * @param x x coordinate of point
@@ -239,9 +290,9 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
     /**
      * Returns the radar map with the filled cells at contacts point
      *
-     * @param location          contact point
+     * @param location          contact point (m)
      * @param contactsRadius    the radius of contacts receptive area (m)
-     * @param contactsTimestamp the contacts timestamp
+     * @param contactsTimestamp the contacts timestamp (ms)
      */
     public RadarMap setContactsAt(Point2D location, double contactsRadius, long contactsTimestamp) {
         return map(
