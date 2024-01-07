@@ -31,6 +31,7 @@ $defs:
       - $ref: "#/$defs/ExploringPointState"
       - $ref: "#/$defs/AvoidingState"
       - $ref: "#/$defs/MoveToState"
+      - $ref: "#/$defs/ClearMapState"
   HaltState:
     type: object
     properties:
@@ -58,6 +59,19 @@ $defs:
       sensorDirNumber:
         multipleOf: 1
         minimum: 1
+    required:
+      - class
+  ClearMapState:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.wheelly.engines.ClearMapState
+      onInit:
+        $ref: "#/$defs/Commands"
+      onEntry:
+        $ref: "#/$defs/Commands"
+      onExit:
+        $ref: "#/$defs/Commands"
     required:
       - class
   AvoidingState:

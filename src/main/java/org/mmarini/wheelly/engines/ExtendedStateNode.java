@@ -31,6 +31,7 @@ package org.mmarini.wheelly.engines;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,7 +85,7 @@ public interface ExtendedStateNode extends StateNode {
 
     @Override
     default void entry(ProcessorContext context) {
-        long time = context.getRobotStatus().simulationTime();
+        long time = context.robotStatus().simulationTime();
         context.put(format("%s.entryTime", id()), time);
         ProcessorCommand onEntry = onEntry();
         if (onEntry != null) {
@@ -123,6 +124,20 @@ public interface ExtendedStateNode extends StateNode {
     }
 
     /**
+     * Returns the block result or null if no contacts
+     *
+     * @param context the context
+     */
+    default Tuple2<String, RobotCommands> getBlockResult(ProcessorContext context) {
+        RobotStatus status = context.robotStatus();
+        return !status.canMoveForward()
+                ? !status.canMoveBackward()
+                ? StateNode.BLOCKED_RESULT : StateNode.FRONT_BLOCKED_RESULT
+                : !status.canMoveBackward()
+                ? StateNode.REAR_BLOCKED_RESULT : null;
+    }
+
+    /**
      * Returns the double value by node key or 0 if not exits
      *
      * @param context the processor context
@@ -134,7 +149,7 @@ public interface ExtendedStateNode extends StateNode {
 
     @Override
     default long getElapsedTime(ProcessorContext context) {
-        return context.getRobotStatus().simulationTime() -
+        return context.robotStatus().simulationTime() -
                 getEntryTime(context);
     }
 
@@ -224,12 +239,12 @@ public interface ExtendedStateNode extends StateNode {
         // Check for scan interval set
         if (scanInterval > 0) {
             long scanTime = getLong(context, "scanTime");
-            long time = context.getRobotStatus().simulationTime();
+            long time = context.robotStatus().simulationTime();
             // Check for scan timeout
             long t0 = System.currentTimeMillis();
             logger.atDebug().log("tickAutoScan currentTime={}, remoteTime={}, statusDt={}, statusScanDt={}, localTime to next scan={}",
                     t0,
-                    context.getRobotStatus().simulationTime(),
+                    context.robotStatus().simulationTime(),
                     t0 - time,
                     t0 - scanTime,
                     scanTime + scanInterval - time);

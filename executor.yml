@@ -52,7 +52,7 @@ agent:
 
   configurations:
     ######################################
-    # Explorer agent old
+    # Explorer agent
     ######################################
     explorerAgent:
       class: org.mmarini.wheelly.engines.StateMachineAgent
@@ -98,6 +98,8 @@ agent:
           avoid:
             class: org.mmarini.wheelly.engines.AvoidingState
             safeDistance: 0.2
+          clearMap:
+            class: org.mmarini.wheelly.engines.ClearMapState
         transitions:
           - from: scan
             to: target
@@ -116,17 +118,8 @@ agent:
             to: move
             trigger: completed
           - from: target
-            to: scan
+            to: clearMap
             trigger: notFound
-          - from: target
-            to: avoid
-            trigger: rearBlocked
-          - from: target
-            to: avoid
-            trigger: frontBlocked
-          - from: target
-            to: avoid
-            trigger: blocked
 
           - from: move
             to: scan
@@ -142,6 +135,10 @@ agent:
             trigger: blocked
 
           - from: avoid
+            to: scan
+            trigger: completed
+
+          - from: clearMap
             to: scan
             trigger: completed
 

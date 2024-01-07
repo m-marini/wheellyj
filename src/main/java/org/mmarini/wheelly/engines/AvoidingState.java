@@ -87,6 +87,37 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
         remove(context, ESCAPE_DIRECTION);
         remove(context, ESCAPE_SPEED);
         remove(context, FREE_POINT);
+        RobotStatus status = context.robotStatus();
+        int dir = status.getDirection();
+        if (!status.canMoveForward()) {
+            // Robot blocked forward
+            if (status.canMoveBackward()) {
+                // Robot can move backward
+                // Set escape direction the robot direction and backward speed
+                // move robot backward
+                put(context, ESCAPE_DIRECTION, dir);
+                put(context, ESCAPE_SPEED, -MAX_PPS);
+                remove(context, FREE_POINT);
+                logger.atDebug()
+                        .setMessage("{}: move backward {} DEG")
+                        .addArgument(this::id)
+                        .addArgument(dir)
+                        .log();
+            }
+            return;
+        }
+        if (!status.canMoveBackward()) {
+            // Robot can move forward
+            // move robot forward
+            put(context, ESCAPE_DIRECTION, dir);
+            put(context, ESCAPE_SPEED, MAX_PPS);
+            remove(context, FREE_POINT);
+            logger.atDebug()
+                    .setMessage("{}: move forward {} DEG")
+                    .addArgument(this::id)
+                    .addArgument(dir)
+                    .log();
+        }
     }
 
     @Override
@@ -94,7 +125,7 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
         if (isTimeout(ctx)) {
             return TIMEOUT_RESULT;
         }
-        RobotStatus status = ctx.getRobotStatus();
+        RobotStatus status = ctx.robotStatus();
         int dir = status.getDirection();
         if (!status.canMoveForward()) {
             // Robot blocked forward
@@ -147,7 +178,7 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
         // Check if free point has been set
         if (freePoint == null) {
             // Set the location as free point
-            freePoint = ctx.getRobotStatus().getLocation();
+            freePoint = ctx.robotStatus().getLocation();
             put(ctx, FREE_POINT, freePoint);
             logger.atDebug().setMessage("{}: escaping to {} DEG from {}")
                     .addArgument(this::id)
@@ -157,7 +188,7 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
         }
 
         // Check for robot at safe distance
-        double distance = freePoint.distance(ctx.getRobotStatus().getLocation());
+        double distance = freePoint.distance(ctx.robotStatus().getLocation());
         double safeDistance = getDouble(ctx, SAFE_DISTANCE);
         if (distance >= safeDistance) {
             // Halt robot at exit
