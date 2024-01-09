@@ -22,7 +22,7 @@ robot:
       configureTimeout: 2000
       configCommands:
         - cs 500
-        - cc 5 30 20
+        - cc 10 45 20
         - tcsl 30 107 180 -32 -81 -180 400 50
         - tcsr 39 78 180 -32 -92 -180 400 50
         - fl 10000 10000
@@ -43,7 +43,7 @@ controller:
       supplyValues: [ 2165, 2683 ]
       voltages: [ 9.8, 12.3 ]
 environment:
-  $schema: https://mmarini.org/wheelly/env-schema-0.5
+  $schema: https://mmarini.org/wheelly/env-schema-0.6
   active: explorerEnvImitation
   configurations:
     explorerEnvImitation:

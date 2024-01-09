@@ -2,8 +2,8 @@
 $schema: https://mmarini.org/wheelly/executor-schema-0.1
 robot:
   $schema: https://mmarini.org/wheelly/robot-schema-0.8
-  #active: realRobot
-  active: simRobot
+  active: realRobot
+  #active: simRobot
   configurations:
     simRobot:
       class: org.mmarini.wheelly.apis.SimRobot
@@ -23,7 +23,7 @@ robot:
       configureTimeout: 2000
       configCommands:
         - cs 500
-        - cc 5 30 20
+        - cc 10 45 20
         - tcsl 30 107 180 -32 -81 -180 400 50
         - tcsr 39 78 180 -32 -92 -180 400 50
         - fl 10000 10000
@@ -65,7 +65,7 @@ agent:
       radarWidth: 101
       radarHeight: 101
       radarGrid: 0.1
-      radarReceptiveDistance: 0.14
+      contactRadius: 0.2
       radarReceptiveAngle: 15
       echoPersistence: 120000
       contactPersistence: 60000
@@ -157,7 +157,7 @@ agent:
       radarWidth: 51
       radarHeight: 51
       radarGrid: 0.2
-      radarReceptiveDistance: 0.28
+      contactRadius: 0.2
       radarReceptiveAngle: 15
       echoPersistence: 300000
       contactPersistence: 300000
@@ -217,7 +217,7 @@ agent:
       radarWidth: 101
       radarHeight: 101
       radarGrid: 0.1
-      radarReceptiveDistance: 0.28
+      contactRadius: 0.2
       radarReceptiveAngle: 15
       echoPersistence: 30000
       contactPersistence: 300000
