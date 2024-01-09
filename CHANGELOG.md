@@ -7,9 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-### Changed
+### Added
 
-- Issue #306: Move to free point in avoid state
+- Issue #303: Set max speed on move state
+- Issue #306: Move to free point in avoid state at parametrized speed
 
 ## [0.12.0] 2024-01-08
 
