@@ -136,9 +136,14 @@ $defs:
         type: number
       y:
         type: number
+      stop:
+        exclusiveMinimum: 0
+      maxSpeed:
+        multipleOf: 1
+        minimum: 10
+        maximum: 60
     required:
       - class
-      - stopDistance
       - x
       - y
   StateNodes:

@@ -51,8 +51,13 @@ import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
  */
 public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand onEntry,
                           ProcessorCommand onExit) implements ExtendedStateNode {
+    public static final String MAX_SPEED = "maxSpeed";
+    public static final String STOP_DISTANCE = "stopDistance";
+    public static final String TARGET = "target";
+    private static final double DEFAULT_STOP_DISTANCE = 0.4;
     private static final Logger logger = LoggerFactory.getLogger(MoveToState.class);
     private static final int MIN_PPS = 10;
+    public static final double NEAR_DISTANCE = 0.4;
 
     /**
      * Returns the exploring state from configuration
@@ -64,12 +69,14 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
     public static MoveToState create(JsonNode root, Locator locator, String id) {
         double x = locator.path("x").getNode(root).asDouble();
         double y = locator.path("y").getNode(root).asDouble();
-        double stopDistance = locator.path("stopDistance").getNode(root).asDouble();
+        double stopDistance = locator.path(STOP_DISTANCE).getNode(root).asDouble(DEFAULT_STOP_DISTANCE);
+        double maxSpeed = locator.path(MAX_SPEED).getNode(root).asInt(MAX_PPS);
         ProcessorCommand onInit = ProcessorCommand.concat(
                 ExtendedStateNode.loadTimeout(root, locator, id),
                 ProcessorCommand.setProperties(Map.of(
-                        id + ".stopDistance", stopDistance,
-                        id + ".target", new Point2D.Double(x, y)
+                        id + "." + STOP_DISTANCE, stopDistance,
+                        id + "." + MAX_SPEED, maxSpeed,
+                        id + "." + TARGET, new Point2D.Double(x, y)
                 )),
                 ProcessorCommand.create(root, locator.path("onInit")));
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
@@ -83,8 +90,9 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
      * @param robotStatus  the roboto status
      * @param target       the target
      * @param stopDistance the stopDistance
+     * @param maxSpeed     the maximum speed (pps)
      */
-    private static Tuple2<String, RobotCommands> moveTo(RobotStatus robotStatus, Point2D target, double stopDistance) {
+    private static Tuple2<String, RobotCommands> moveTo(RobotStatus robotStatus, Point2D target, double stopDistance, double maxSpeed) {
         // Converts location to meters
         Point2D current = robotStatus.location();
 
@@ -97,11 +105,10 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
         // Computes the direction of target
         int dir = (int) normalizeDegAngle(round(toDegrees(direction(current, target))));
         // Computes the speed
-        double nearDistance = 0.4;
-        double isFar = positive(distance - stopDistance, nearDistance);
+        double isFar = positive(distance - stopDistance, NEAR_DISTANCE);
         logger.atDebug().log("isFar {}", isFar);
 
-        int speed = (int) round(defuzzy(MIN_PPS, MAX_PPS, isFar));
+        int speed = (int) round(defuzzy(MIN_PPS, maxSpeed, isFar));
 
         logger.atDebug().log("move to {} DEG, speed {}", dir, speed);
 
@@ -126,7 +133,7 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
     @Override
     public void entry(ProcessorContext context) {
         ExtendedStateNode.super.entry(context);
-        Point2D target = get(context, "target");
+        Point2D target = get(context, TARGET);
         if (target != null) {
             context.setTarget(target);
         }
@@ -150,8 +157,9 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
             return TIMEOUT_RESULT;
         }
 
-        double stopDistance = getDouble(context, "stopDistance");
-        Point2D target = get(context, "target");
-        return moveTo(context.robotStatus(), target, stopDistance);
+        double stopDistance = getDouble(context, STOP_DISTANCE);
+        Point2D target = get(context, TARGET);
+        int maxSpeed = getInt(context, MAX_SPEED);
+        return moveTo(context.robotStatus(), target, stopDistance, maxSpeed);
     }
 }
