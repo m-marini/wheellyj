@@ -95,185 +95,116 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
         return contactsMessage.canMoveForward();
     }
 
-    public int getDirection() {
+    public int direction() {
         return motionMessage.direction();
     }
 
-    public RobotStatus setDirection(int direction) {
-        return setMotionMessage(
-                motionMessage.setDirection(direction)
-                        .setSimulationTime(simulationTime));
-    }
-
-    public long getEchoDelay() {
+    public long echoDelay() {
         return proxyMessage.echoDelay();
     }
 
     /**
      * Returns the echo absolute direction (DEG)
      */
-    public int getEchoDirection() {
+    public int echoDirection() {
         return proxyMessage.echoDirection();
     }
 
-    public double getEchoDistance() {
+    public double echoDistance() {
         return proxyMessage.echoDelay() * DISTANCE_SCALE;
-    }
-
-    /**
-     * Returns the robot status by setting the echo distance
-     *
-     * @param echoDistance the echo distance (m)
-     */
-    public RobotStatus setEchoDistance(double echoDistance) {
-        return setProxyMessage(
-                proxyMessage.setEchoDelay(round(echoDistance / DISTANCE_SCALE))
-                        .setSimulationTime(simulationTime));
     }
 
     /**
      * Returns the robot location at ping localTime (pulses)
      */
-    public Point2D getEchoRobotLocation() {
+    public Point2D echoRobotLocation() {
         return pulses2Location(proxyMessage.xPulses(), proxyMessage.yPulses());
-    }
-
-    public int getImuFailure() {
-        return motionMessage.imuFailure();
-    }
-
-    /**
-     * Returns the left target power (unit)
-     */
-    public int getLeftPower() {
-        return motionMessage.leftPower();
-    }
-
-    /**
-     * Returns the left speed (pps)
-     */
-    public double getLeftPps() {
-        return motionMessage.leftPps();
-    }
-
-    /**
-     * Returns the left target speed (pps)
-     */
-    public int getLeftTargetPps() {
-        return motionMessage.leftTargetPps();
-    }
-
-    /**
-     * Returns the location of robot (m)
-     */
-    public Point2D getLocation() {
-        return pulses2Location(motionMessage.xPulses(), motionMessage.yPulses());
-    }
-
-    /**
-     * Returns the robot status by setting the robot location
-     *
-     * @param location the robot location
-     */
-    public RobotStatus setLocation(Point2D location) {
-        return setMotionMessage(
-                motionMessage.setPulses(
-                                location.getX() / DISTANCE_PER_PULSE,
-                                location.getY() / DISTANCE_PER_PULSE)
-                        .setSimulationTime(simulationTime));
-    }
-
-    public int getRightPower() {
-        return motionMessage.rightPower();
-    }
-
-    public double getRightPps() {
-        return motionMessage.rightPps();
-    }
-
-    public int getRightTargetPps() {
-        return motionMessage.rightTargetPps();
-    }
-
-    public int getSensorDirection() {
-        return proxyMessage.sensorDirection();
-    }
-
-    public RobotStatus setSensorDirection(int dir) {
-        return setProxyMessage(proxyMessage.setSensorDirection(dir)
-                .setSimulationTime(simulationTime));
-    }
-
-    /**
-     * Returns the obstacle location
-     */
-    public Optional<Point2D> getSensorObstacle() {
-        double sampleDistance = getEchoDistance();
-        if (sampleDistance > 0) {
-            float d = (float) (sampleDistance + OBSTACLE_SIZE / 2);
-            double angle = toRadians(90 - proxyMessage.echoDirection());
-            Point2D location = getLocation();
-            float x = (float) (d * cos(angle) + location.getX());
-            float y = (float) (d * sin(angle) + location.getY());
-            return Optional.of(new Point2D.Float(x, y));
-        } else {
-            return Optional.empty();
-        }
-    }
-
-    /**
-     * Returns the supply sensor value
-     */
-    public int getSupplySensor() {
-        return supplyMessage.supplySensor();
-    }
-
-    /**
-     * Returns the supply voltage
-     */
-    public double getSupplyVoltage() {
-        return decodeVoltage.applyAsDouble(supplyMessage.supplySensor());
-    }
-
-    /**
-     * Returns the abscissa robot location (pulses)
-     */
-    public double getXPulses() {
-        return motionMessage.xPulses();
-    }
-
-    /**
-     * Returns the ordinate robot location (pulses)
-     */
-    public double getYPulses() {
-        return motionMessage.yPulses();
     }
 
     /**
      * Returns true if front sensor is clear
      */
-    public boolean isFrontSensors() {
+    public boolean frontSensor() {
         return contactsMessage.frontSensors();
     }
 
     /**
      * Returns true if robot is halted
      */
-    public boolean isHalt() {
+    public boolean halt() {
         return motionMessage.halt();
     }
 
-    public RobotStatus setHalt(boolean halt) {
-        return setMotionMessage(
-                motionMessage.setHalt(halt)
-                        .setSimulationTime(simulationTime));
+    public int imuFailure() {
+        return motionMessage.imuFailure();
+    }
+
+    /**
+     * Returns the left target power (unit)
+     */
+    public int leftPower() {
+        return motionMessage.leftPower();
+    }
+
+    /**
+     * Returns the left speed (pps)
+     */
+    public double leftPps() {
+        return motionMessage.leftPps();
+    }
+
+    /**
+     * Returns the left target speed (pps)
+     */
+    public int leftTargetPps() {
+        return motionMessage.leftTargetPps();
+    }
+
+    /**
+     * Returns the location of robot (m)
+     */
+    public Point2D location() {
+        return pulses2Location(motionMessage.xPulses(), motionMessage.yPulses());
     }
 
     /**
      * Returns true if rear sensor is clear
      */
-    public boolean isRearSensors() {
+    public boolean rearSensor() {
         return contactsMessage.rearSensors();
+    }
+
+    public int rightPower() {
+        return motionMessage.rightPower();
+    }
+
+    public double rightPps() {
+        return motionMessage.rightPps();
+    }
+
+    public int rightTargetPps() {
+        return motionMessage.rightTargetPps();
+    }
+
+    public int sensorDirection() {
+        return proxyMessage.sensorDirection();
+    }
+
+    /**
+     * Returns the obstacle location
+     */
+    public Optional<Point2D> sensorObstacle() {
+        double sampleDistance = echoDistance();
+        if (sampleDistance > 0) {
+            float d = (float) (sampleDistance + OBSTACLE_SIZE / 2);
+            double angle = toRadians(90 - proxyMessage.echoDirection());
+            Point2D location = location();
+            float x = (float) (d * cos(angle) + location.getX());
+            float y = (float) (d * sin(angle) + location.getY());
+            return Optional.of(new Point2D.Float(x, y));
+        } else {
+            return Optional.empty();
+        }
     }
 
     public RobotStatus setCanMoveBackward(boolean canMoveBackward) {
@@ -297,6 +228,42 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
         return new RobotStatus(simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage);
     }
 
+    public RobotStatus setDirection(int direction) {
+        return setMotionMessage(
+                motionMessage.setDirection(direction)
+                        .setSimulationTime(simulationTime));
+    }
+
+    /**
+     * Returns the robot status by setting the echo distance
+     *
+     * @param echoDistance the echo distance (m)
+     */
+    public RobotStatus setEchoDistance(double echoDistance) {
+        return setProxyMessage(
+                proxyMessage.setEchoDelay(round(echoDistance / DISTANCE_SCALE))
+                        .setSimulationTime(simulationTime));
+    }
+
+    public RobotStatus setHalt(boolean halt) {
+        return setMotionMessage(
+                motionMessage.setHalt(halt)
+                        .setSimulationTime(simulationTime));
+    }
+
+    /**
+     * Returns the robot status by setting the robot location
+     *
+     * @param location the robot location
+     */
+    public RobotStatus setLocation(Point2D location) {
+        return setMotionMessage(
+                motionMessage.setPulses(
+                                location.getX() / DISTANCE_PER_PULSE,
+                                location.getY() / DISTANCE_PER_PULSE)
+                        .setSimulationTime(simulationTime));
+    }
+
     /**
      * Returns the robot status updated by motion message
      *
@@ -313,6 +280,11 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
      */
     public RobotStatus setProxyMessage(WheellyProxyMessage proxyMessage) {
         return new RobotStatus(simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage);
+    }
+
+    public RobotStatus setSensorDirection(int dir) {
+        return setProxyMessage(proxyMessage.setSensorDirection(dir)
+                .setSimulationTime(simulationTime));
     }
 
     /**
@@ -345,5 +317,33 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
      */
     public RobotStatus setSupplyMessage(WheellySupplyMessage supplyMessage) {
         return new RobotStatus(simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage);
+    }
+
+    /**
+     * Returns the supply sensor value
+     */
+    public int supplySensor() {
+        return supplyMessage.supplySensor();
+    }
+
+    /**
+     * Returns the supply voltage
+     */
+    public double supplyVoltage() {
+        return decodeVoltage.applyAsDouble(supplyMessage.supplySensor());
+    }
+
+    /**
+     * Returns the abscissa robot location (pulses)
+     */
+    public double xPulse() {
+        return motionMessage.xPulses();
+    }
+
+    /**
+     * Returns the ordinate robot location (pulses)
+     */
+    public double yPulse() {
+        return motionMessage.yPulses();
     }
 }

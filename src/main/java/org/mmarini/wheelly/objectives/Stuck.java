@@ -68,11 +68,11 @@ public interface Stuck {
     static ToDoubleFunction<RobotEnvironment> stuck(double x1, double x2, double x3, double x4, int sensorRange) {
         return environment -> {
             RobotStatus status = ((WithRobotStatus) environment).getRobotStatus();
-            double dist = status.getEchoDistance();
+            double dist = status.echoDistance();
             if (!status.canMoveBackward() || !status.canMoveForward() || dist == 0 || dist >= MAX_DISTANCE) {
                 return -1;
             } else {
-                int sensor = status.getSensorDirection();
+                int sensor = status.sensorDirection();
                 double isInRange = between(dist, x1, x2, x3, x4);
                 double isInDirection = not(positive(abs(sensor), sensorRange));
                 double isTarget = and(isInRange, isInDirection);

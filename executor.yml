@@ -42,8 +42,8 @@ controller:
       connectionRetryInterval: 1000
       watchdogInterval: 5000
       simulationSpeed: 100
-      supplyValues: [ 2239, 2878 ]
-      voltages: [ 10.1, 11.9 ]
+      supplyValues: [ 1762, 2878 ]
+      voltages: [ 8.3, 11.9 ]
 
 # Agent
 agent:
@@ -61,15 +61,15 @@ agent:
       reactionInterval: 300
       numRadarSectors: 24
       minRadarDistance: 0.3
-      maxRadarDistance: 2.8
-      radarWidth: 51
-      radarHeight: 51
-      radarGrid: 0.2
-      radarReceptiveDistance: 0.28
+      maxRadarDistance: 3
+      radarWidth: 101
+      radarHeight: 101
+      radarGrid: 0.1
+      radarReceptiveDistance: 0.14
       radarReceptiveAngle: 15
-      echoPersistence: 300000
-      contactPersistence: 300000
-      radarCleanInterval: 30000
+      echoPersistence: 120000
+      contactPersistence: 60000
+      radarCleanInterval: 15000
       flow:
         entry: scan
         states:
@@ -98,6 +98,7 @@ agent:
           avoid:
             class: org.mmarini.wheelly.engines.AvoidingState
             safeDistance: 0.2
+            speed: 20
           clearMap:
             class: org.mmarini.wheelly.engines.ClearMapState
         transitions:

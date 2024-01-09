@@ -26,6 +26,7 @@
 package org.mmarini.wheelly.apis;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.NotImplementedException;
 import org.mmarini.yaml.Locator;
 
 import java.awt.geom.Point2D;
@@ -195,6 +196,31 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
     }
 
     /**
+     * Returns the safe point from location toward escape direction at safe distance
+     *
+     * @param location     the location
+     * @param escapeDir    the escape dir (RAD)
+     * @param safeDistance the safe distance (m)
+     */
+    public Optional<Point2D> findSafeTarget(Point2D location, double escapeDir, double safeDistance) {
+        double safeDistance2 = safeDistance * safeDistance;
+        // Extracts the empty cell
+        List<Point2D> points1 = cellStream().filter(c ->
+                        (c.empty() || c.unknown()))
+                .map(MapCell::location)
+                .toList();
+        List<Point2D> points2 = points1.stream()
+                // Filters cell at a distance no longer maxDistance and with free trajectory
+                .filter(p -> {
+                    double d2 = location.distanceSq(p);
+                    return d2 >= safeDistance2
+                            && freeTrajectory(location, p, safeDistance);
+                }).toList();
+        return points2.stream()
+                .min(Comparator.comparingDouble(location::distanceSq));
+    }
+
+    /**
      * Returns the point furthest from the given whose direct trajectory is free and no further than the maximum distance
      *
      * @param location     the departure point
@@ -322,14 +348,14 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
      */
     public RadarMap update(RobotStatus status) {
         // Updates the radar map
-        double distance = status.getEchoDistance();
-        Point2D location = status.getEchoRobotLocation();
+        double distance = status.echoDistance();
+        Point2D location = status.echoRobotLocation();
         long time = status.simulationTime();
         RadarMap.SensorSignal signal = new RadarMap.SensorSignal(location,
-                status.getEchoDirection(),
+                status.echoDirection(),
                 distance, time);
         RadarMap hinderedMap = update(signal);
-        RadarMap contactMap = !status.isFrontSensors() || !status.isRearSensors() || !status.canMoveBackward() || !status.canMoveForward()
+        RadarMap contactMap = !status.frontSensor() || !status.rearSensor() || !status.canMoveBackward() || !status.canMoveForward()
                 ? hinderedMap.setContactsAt(location, receptiveDistance, time)
                 : hinderedMap;
         return contactMap.clean(time);

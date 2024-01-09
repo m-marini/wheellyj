@@ -37,10 +37,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
+import java.util.Optional;
 
-import static java.lang.String.format;
+import static java.lang.Math.toDegrees;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
+import static org.mmarini.wheelly.apis.Utils.direction;
+import static org.mmarini.wheelly.apis.Utils.toNormalRadians;
+import static org.nd4j.common.util.MathUtils.round;
 
 /**
  * Generates the behavior to avoid contact obstacle.
@@ -57,16 +61,23 @@ import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
  */
 public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand onEntry,
                             ProcessorCommand onExit) implements ExtendedStateNode {
-    public static final String FREE_POINT = "freePoint";
+
+    public static final String SAFE_POINT = "safePoint";
     public static final String SAFE_DISTANCE = "safeDistance";
-    public static final String ESCAPE_DIRECTION = "escapeDirection";
-    public static final String ESCAPE_SPEED = "escapeSpeed";
+    public static final String CONTACT_DIRECTION = "contactDirection";
+    public static final String SPEED = "speed";
+    public static final String CONTACT_POINT = "contactPoint";
+    public static final String FRONT_CONTACT = "frontContact";
     private static final Logger logger = LoggerFactory.getLogger(AvoidingState.class);
+    private static final double DEFAULT_SAFE_DISTANCE = 0.3;
 
     public static AvoidingState create(JsonNode root, Locator locator, String id) {
+        double safeDistance = locator.path(SAFE_DISTANCE).getNode(root).asDouble(DEFAULT_SAFE_DISTANCE);
+        int speed = locator.path(SPEED).getNode(root).asInt(MAX_PPS);
         ProcessorCommand onInit = ProcessorCommand.concat(
                 ExtendedStateNode.loadTimeout(root, locator, id),
-                ProcessorCommand.put(id + "." + SAFE_DISTANCE, locator.path(SAFE_DISTANCE).getNode(root).doubleValue()),
+                ProcessorCommand.put(id + "." + SAFE_DISTANCE, safeDistance),
+                ProcessorCommand.put(id + "." + SPEED, speed),
                 ProcessorCommand.create(root, locator.path("onInit")));
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
@@ -81,43 +92,57 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
         this.onExit = onExit;
     }
 
-    @Override
-    public void entry(ProcessorContext context) {
-        ExtendedStateNode.super.entry(context);
-        remove(context, ESCAPE_DIRECTION);
-        remove(context, ESCAPE_SPEED);
-        remove(context, FREE_POINT);
+    /**
+     * Computes the reaction
+     *
+     * @param context the context
+     */
+    private Optional<Tuple2<String, RobotCommands>> computeReaction(ProcessorContext context) {
         RobotStatus status = context.robotStatus();
-        int dir = status.getDirection();
+        int direction = status.direction();
+        int speed = getInt(context, SPEED);
+        Point2D robotLocation = status.location();
         if (!status.canMoveForward()) {
             // Robot blocked forward
+            put(context, CONTACT_POINT, robotLocation);
+            logger.atDebug().log("Avoid front contact at {}", robotLocation);
             if (status.canMoveBackward()) {
                 // Robot can move backward
                 // Set escape direction the robot direction and backward speed
                 // move robot backward
-                put(context, ESCAPE_DIRECTION, dir);
-                put(context, ESCAPE_SPEED, -MAX_PPS);
-                remove(context, FREE_POINT);
-                logger.atDebug()
-                        .setMessage("{}: move backward {} DEG")
-                        .addArgument(this::id)
-                        .addArgument(dir)
-                        .log();
+                put(context, CONTACT_DIRECTION, direction);
+                put(context, FRONT_CONTACT, true);
+                logger.atDebug().log("Move {} DEG at {} pps", direction, -speed);
+                return Optional.of(Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(direction, -speed)));
+            } else {
+                // Robot completely blocked
+                // holt robot
+                logger.atWarn().setMessage("{}: Robot blocked").addArgument(this::id).log();
+                return Optional.of(BLOCKED_RESULT);
+
             }
-            return;
-        }
-        if (!status.canMoveBackward()) {
+        } else if (!status.canMoveBackward()) {
             // Robot can move forward
             // move robot forward
-            put(context, ESCAPE_DIRECTION, dir);
-            put(context, ESCAPE_SPEED, MAX_PPS);
-            remove(context, FREE_POINT);
-            logger.atDebug()
-                    .setMessage("{}: move forward {} DEG")
-                    .addArgument(this::id)
-                    .addArgument(dir)
-                    .log();
+            put(context, CONTACT_POINT, robotLocation);
+            logger.atDebug().log("Avoid rear contact at {}", robotLocation);
+
+            put(context, CONTACT_DIRECTION, direction);
+            put(context, FRONT_CONTACT, false);
+            logger.atDebug().log("Move {} DEG at {} pps", direction, speed);
+            return Optional.of(Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(direction, speed)));
+        } else {
+            return Optional.empty();
         }
+    }
+
+    @Override
+    public void entry(ProcessorContext context) {
+        ExtendedStateNode.super.entry(context);
+        remove(context, CONTACT_DIRECTION);
+        remove(context, CONTACT_POINT);
+        remove(context, SAFE_POINT);
+        computeReaction(context);
     }
 
     @Override
@@ -125,87 +150,70 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
         if (isTimeout(ctx)) {
             return TIMEOUT_RESULT;
         }
-        RobotStatus status = ctx.robotStatus();
-        int dir = status.getDirection();
-        if (!status.canMoveForward()) {
-            // Robot blocked forward
-            if (status.canMoveBackward()) {
-                // Robot can move backward
-                // Set escape direction the robot direction and backward speed
-                // move robot backward
-                put(ctx, ESCAPE_DIRECTION, dir);
-                put(ctx, ESCAPE_SPEED, -MAX_PPS);
-                remove(ctx, FREE_POINT);
-                logger.atDebug()
-                        .setMessage("{}: move backward {} DEG")
-                        .addArgument(this::id)
-                        .addArgument(dir)
-                        .log();
-                return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(dir, -MAX_PPS));
+        return computeReaction(ctx).orElseGet(() -> {
+            // contact disappeared
+            RobotStatus status = ctx.robotStatus();
+            Point2D robotLocation = status.location();
+            Point2D contactPoint = get(ctx, CONTACT_POINT);
+            double safeDistance = getDouble(ctx, SAFE_DISTANCE);
+            // Check for robot at safe distance
+            double contactDistance = contactPoint.distance(status.location());
+            if (contactDistance >= safeDistance) {
+                // Robot at safe distance: halt at exit
+                logger.atDebug().log("Avoided contact at {} m", contactDistance);
+                return COMPLETED_RESULT;
             }
-            // Robot completely blocked
-            // holt robot
-            logger.atWarn().setMessage("{}: Robot blocked").addArgument(this::id).log();
-            return BLOCKED_RESULT;
-        }
-        if (!status.canMoveBackward()) {
-            // Robot can move forward
-            // move robot forward
-            put(ctx, ESCAPE_DIRECTION, dir);
-            put(ctx, ESCAPE_SPEED, MAX_PPS);
-            remove(ctx, FREE_POINT);
-            logger.atDebug()
-                    .setMessage("{}: move forward {} DEG")
-                    .addArgument(this::id)
-                    .addArgument(dir)
-                    .log();
-            return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(dir, MAX_PPS));
-        }
-        // Check for escape direction
-        if (get(ctx, ESCAPE_DIRECTION) == null) {
-            // roboto in safe location without movement
-            logger.atDebug()
-                    .setMessage("{}: safety")
-                    .addArgument(this::id)
-                    .log();
-            return COMPLETED_RESULT;
-        }
-        // Robot not blocked
-        // Get escape direction and speed
-        int escapeDir = getInt(ctx, ESCAPE_DIRECTION);
-        int escapeSpeed = getInt(ctx, ESCAPE_SPEED);
-        Point2D freePoint = get(ctx, FREE_POINT);
-        // Check if free point has been set
-        if (freePoint == null) {
-            // Set the location as free point
-            freePoint = ctx.robotStatus().getLocation();
-            put(ctx, FREE_POINT, freePoint);
-            logger.atDebug().setMessage("{}: escaping to {} DEG from {}")
-                    .addArgument(this::id)
-                    .addArgument(escapeDir)
-                    .addArgument(freePoint)
-                    .log();
-        }
+            // Check for escape direction
+            Integer contactsDir = get(ctx, CONTACT_DIRECTION);
+            if (contactsDir == null) {
+                // robot in safe location without movement
+                logger.atDebug()
+                        .setMessage("{}: safety without any contact")
+                        .addArgument(this::id)
+                        .log();
+                return COMPLETED_RESULT;
+            }
 
-        // Check for robot at safe distance
-        double distance = freePoint.distance(ctx.robotStatus().getLocation());
-        double safeDistance = getDouble(ctx, SAFE_DISTANCE);
-        if (distance >= safeDistance) {
-            // Halt robot at exit
-            logger.atDebug()
-                    .setMessage("{}: safety at {} m")
-                    .addArgument(this::id)
-                    .addArgument(() -> format("%.2f", distance))
-                    .log();
-            return COMPLETED_RESULT;
-        }
-        // move robot away
-        logger.atDebug()
-                .setMessage("{}: moving to {} DEG at {} pps")
-                .addArgument(this::id)
-                .addArgument(escapeDir)
-                .addArgument(escapeSpeed)
-                .log();
-        return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(escapeDir, escapeSpeed));
+            // Check for free point
+            boolean frontContact = this.<Boolean>get(ctx, FRONT_CONTACT);
+            Point2D safePoint = get(ctx, SAFE_POINT);
+            if (safePoint == null) {
+                //  No free point set: search for it
+                Optional<Point2D> target = ctx.radarMap().findSafeTarget(
+                        robotLocation,
+                        frontContact
+                                ? toNormalRadians(contactsDir + 180)
+                                : toNormalRadians(contactsDir),
+                        safeDistance);
+                target.ifPresent(p -> {
+                    put(ctx, SAFE_POINT, p);
+                    logger.atDebug().log("Safe point at {}", p);
+                });
+                safePoint = target.orElse(null);
+            }
+
+            int escapeDir;
+            int escapeSpeed;
+            int speed = getInt(ctx, SPEED);
+            if (safePoint == null) {
+                // no free point found: move away
+                escapeDir = contactsDir;
+                // Compute speed
+                escapeSpeed = frontContact
+                        ? -speed : speed;
+                logger.atDebug().log("Avoiding without safe point to {} DEG at {} pps", escapeDir, escapeSpeed);
+            } else if (frontContact) {
+                // escape from front contact
+                escapeDir = round(toDegrees(direction(safePoint, robotLocation)));
+                escapeSpeed = -speed;
+                logger.atDebug().log("Avoiding front contact safe point to {} DEG at {} pps", escapeDir, escapeSpeed);
+            } else {
+                // escape from rear contact
+                escapeDir = round(toDegrees(direction(robotLocation, safePoint)));
+                escapeSpeed = speed;
+                logger.atDebug().log("Avoiding rear contact to {} DEG at {} pps", escapeDir, escapeSpeed);
+            }
+            return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(escapeDir, escapeSpeed));
+        });
     }
 }

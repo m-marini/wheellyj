@@ -182,10 +182,10 @@ public class EnvironmentPanel extends RadarPanel {
         drawLine(g1, format("Time     %s %.1fx", strDate(status.simulationTime()), timeRatio), 0, Color.GREEN);
         drawLine(g1, format("Reaction: %.3f s / %.3f s", reactionRobotTime, reactionRealTime), 1, Color.GREEN);
         drawLine(g1, format("Reward   %.2f", reward), 2, Color.GREEN);
-        drawLine(g1, format("Distance %.2f m", status.getEchoDistance()), 3, Color.GREEN);
+        drawLine(g1, format("Distance %.2f m", status.echoDistance()), 3, Color.GREEN);
         drawLine(g1, format("Contacts %s %s",
-                        status.isFrontSensors() ? "-" : "F",
-                        status.isRearSensors() ? "-" : "B"),
+                        status.frontSensor() ? "-" : "F",
+                        status.rearSensor() ? "-" : "B"),
                 4, Color.GREEN);
         if (!status.canMoveForward()) {
             drawLine(g1, "FORWARD  STOP", 5, Color.RED);
@@ -193,8 +193,8 @@ public class EnvironmentPanel extends RadarPanel {
         if (!status.canMoveBackward()) {
             drawLine(g1, "BACKWARD STOP", 6, Color.RED);
         }
-        if (status.getImuFailure() != 0) {
-            drawLine(g1, format("Imu failure: 0x%x", status.getImuFailure()), 7, Color.RED);
+        if (status.imuFailure() != 0) {
+            drawLine(g1, format("Imu failure: 0x%x", status.imuFailure()), 7, Color.RED);
         }
         g1.setTransform(tr);
     }
@@ -280,18 +280,18 @@ public class EnvironmentPanel extends RadarPanel {
             RobotStatus status = data.status;
             if (status != null) {
                 // compute hud position
-                hudAtBottom = !hudAtBottom && status.getLocation().getY() > DEFAULT_WORLD_SIZE / 6
-                        || (!hudAtBottom || !(status.getLocation().getY() < -DEFAULT_WORLD_SIZE / 6))
+                hudAtBottom = !hudAtBottom && status.location().getY() > DEFAULT_WORLD_SIZE / 6
+                        || (!hudAtBottom || !(status.location().getY() < -DEFAULT_WORLD_SIZE / 6))
                         && hudAtBottom;
-                hudAtRight = !hudAtRight && status.getLocation().getX() < -DEFAULT_WORLD_SIZE / 6
-                        || (!hudAtRight || !(status.getLocation().getX() > DEFAULT_WORLD_SIZE / 6))
+                hudAtRight = !hudAtRight && status.location().getX() < -DEFAULT_WORLD_SIZE / 6
+                        || (!hudAtRight || !(status.location().getX() > DEFAULT_WORLD_SIZE / 6))
                         && hudAtRight;
 
                 gr.setTransform(base);
-                drawSensor(gr, status.getLocation(), status.getDirection(), status.getSensorDirection());
+                drawSensor(gr, status.location(), status.direction(), status.sensorDirection());
 
                 gr.setTransform(base);
-                status.getSensorObstacle()
+                status.sensorObstacle()
                         .ifPresent(point -> drawObstacle(gr, point, OBSTACLE_COLOR));
             }
             RadarMap radarMap = data.radarMap;
@@ -304,7 +304,7 @@ public class EnvironmentPanel extends RadarPanel {
 
             if (status != null) {
                 gr.setTransform(base);
-                drawRobot(gr, status.getLocation(), status.getDirection());
+                drawRobot(gr, status.location(), status.direction());
                 drawHUD(g, status, reward, timeRatio);
             }
 

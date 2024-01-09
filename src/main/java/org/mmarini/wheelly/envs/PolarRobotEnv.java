@@ -201,12 +201,12 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
     @Override
     protected Map<String, Signal> getSignals() {
         RobotStatus status = currentStatus.status;
-        INDArray sensor = Nd4j.createFromArray((float) status.getSensorDirection());
-        INDArray distance = Nd4j.createFromArray((float) status.getEchoDistance());
+        INDArray sensor = Nd4j.createFromArray((float) status.sensorDirection());
+        INDArray distance = Nd4j.createFromArray((float) status.echoDistance());
         INDArray canMoveForward = Nd4j.createFromArray(status.canMoveForward() ? 1F : 0F);
         INDArray canMoveBackward = Nd4j.createFromArray(status.canMoveBackward() ? 1F : 0F);
         // TODO fix contacts
-        INDArray contacts = Nd4j.createFromArray(status.isFrontSensors() ? 1F : 0F, status.isRearSensors() ? 1F : 0F);
+        INDArray contacts = Nd4j.createFromArray(status.frontSensor() ? 1F : 0F, status.rearSensor() ? 1F : 0F);
         double maxDistance = ((FloatSignalSpec) states.get("sectorDistances")).getMaxValue();
 
         PolarMap polarMap = currentStatus.polarMap;
@@ -243,7 +243,7 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
         RobotStatus robotStatus = currentStatus.status;
         RadarMap radarMap = currentStatus.radarMap;
         PolarMap polarMap = currentStatus.polarMap;
-        polarMap = polarMap.update(radarMap, robotStatus.getLocation(), robotStatus.getDirection(), minRadarDistance, maxRadarDistance);
+        polarMap = polarMap.update(radarMap, robotStatus.location(), robotStatus.direction(), minRadarDistance, maxRadarDistance);
         currentStatus = currentStatus.setPolarMap(polarMap);
     }
 

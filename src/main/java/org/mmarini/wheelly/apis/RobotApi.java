@@ -36,7 +36,7 @@ import java.io.IOException;
  * API Interface for robot
  */
 public interface RobotApi extends Closeable, WithStatusCallback {
-    int MAX_PPS = 40;
+    int MAX_PPS = 60;
     String ROBOT_SCHEMA_YML = "https://mmarini.org/wheelly/robot-schema-0.8";
 
     /**

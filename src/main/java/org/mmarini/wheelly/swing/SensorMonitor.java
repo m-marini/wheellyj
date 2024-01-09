@@ -138,22 +138,22 @@ public class SensorMonitor extends MatrixTable {
      * @param status the robot status
      */
     public void onStatus(RobotStatus status) {
-        printf(HEAD_KEY, "%4d", status.getDirection());
-        printf(SENSOR_DIR_KEY, "%4d", status.getSensorDirection());
-        printf(ECHO_DIST_KEY, "%3.1f", status.getEchoDistance());
-        printf(LEFT_PPS_KEY, "%3.0f", status.getLeftPps());
-        printf(RIGHT_PPS_KEY, "%3.0f", status.getRightPps());
+        printf(HEAD_KEY, "%4d", status.direction());
+        printf(SENSOR_DIR_KEY, "%4d", status.sensorDirection());
+        printf(ECHO_DIST_KEY, "%3.1f", status.echoDistance());
+        printf(LEFT_PPS_KEY, "%3.0f", status.leftPps());
+        printf(RIGHT_PPS_KEY, "%3.0f", status.rightPps());
         printf(CAN_MOVE_FORWARD_KEY, status.canMoveForward() ? "-" : "F");
         printf(CAN_MOVE_BACKWARD_KEY, status.canMoveBackward() ? "-" : "B");
-        printf(FRONT_CONTACT_KEY, status.isFrontSensors() ? "-" : "F");
-        printf(REAR_CONTACT_KEY, status.isRearSensors() ? "-" : "R");
-        printf(X_LOCATION_KEY, "%6.2f", status.getLocation().getX());
-        printf(Y_LOCATION_KEY, "%6.2f", status.getLocation().getY());
-        printf(IMU_FAILURE_KEY, "%3d", status.getImuFailure());
-        printf(SUPPLY_KEY, "%4.1f", status.getSupplyVoltage());
-        printf(LEFT_TARGET_PPS_KEY, "%3d", status.getLeftTargetPps());
-        printf(RIGHT_TARGET_PPS_KEY, "%3d", status.getRightTargetPps());
-        printf(LEFT_POWER_KEY, "%4d", status.getLeftPower());
-        printf(RIGHT_POWER_KEY, "%4d", status.getRightPower());
+        printf(FRONT_CONTACT_KEY, status.frontSensor() ? "-" : "F");
+        printf(REAR_CONTACT_KEY, status.rearSensor() ? "-" : "R");
+        printf(X_LOCATION_KEY, "%6.2f", status.location().getX());
+        printf(Y_LOCATION_KEY, "%6.2f", status.location().getY());
+        printf(IMU_FAILURE_KEY, "%3d", status.imuFailure());
+        printf(SUPPLY_KEY, "%4.1f", status.supplyVoltage());
+        printf(LEFT_TARGET_PPS_KEY, "%3d", status.leftTargetPps());
+        printf(RIGHT_TARGET_PPS_KEY, "%3d", status.rightTargetPps());
+        printf(LEFT_POWER_KEY, "%4d", status.leftPower());
+        printf(RIGHT_POWER_KEY, "%4d", status.rightPower());
     }
 }

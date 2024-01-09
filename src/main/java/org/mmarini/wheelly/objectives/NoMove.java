@@ -70,9 +70,9 @@ public interface NoMove {
             RobotStatus status = ((WithRobotStatus) environment).getRobotStatus();
             return !status.canMoveForward() || !status.canMoveBackward()
                     ? -1
-                    : (abs(status.getLeftPps()) < velocityThreshold
-                    && abs(status.getRightPps()) < velocityThreshold
-                    && status.getSensorDirection() == 0) ? 1
+                    : (abs(status.leftPps()) < velocityThreshold
+                    && abs(status.rightPps()) < velocityThreshold
+                    && status.sensorDirection() == 0) ? 1
                     : 0;
         };
 
