@@ -206,7 +206,7 @@ $defs:
         minimum: 1
       radarGrid:
         exclusiveMinimum: 0
-      radarReceptiveDistance:
+      contactRadius:
         exclusiveMinimum: 0
       radarReceptiveAngle:
         minimum: 0
@@ -228,7 +228,7 @@ $defs:
       - radarWidth
       - radarHeight
       - radarGrid
-      - radarReceptiveDistance
+      - contactRadius
       - radarReceptiveAngle
       - radarCleanInterval
       - echoPersistence

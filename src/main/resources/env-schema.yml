@@ -1,12 +1,12 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/env-schema-0.7
+$id: https://mmarini.org/wheelly/env-schema-0.6
 title: Environment
 type: object
 properties:
   $schema:
     type: string
-    const: https://mmarini.org/wheelly/env-schema-0.7
+    const: https://mmarini.org/wheelly/env-schema-0.6
   active:
     type: string
   configurations:
@@ -100,7 +100,7 @@ $defs:
         minimum: 1
       radarGrid:
         exclusiveMinimum: 0
-      radarReceptiveDistance:
+      contactRadius:
         exclusiveMinimum: 0
       radarReceptiveAngle:
         minimum: 0
@@ -125,7 +125,7 @@ $defs:
       - radarWidth
       - radarHeight
       - radarGrid
-      - radarReceptiveDistance
+      - contactRadius
       - radarReceptiveAngle
       - radarCleanInterval
       - echoPersistence
@@ -164,7 +164,7 @@ $defs:
         minimum: 1
       radarGrid:
         exclusiveMinimum: 0
-      radarReceptiveDistance:
+      contactRadius:
         exclusiveMinimum: 0
       radarReceptiveAngle:
         minimum: 0
@@ -189,7 +189,7 @@ $defs:
       - radarWidth
       - radarHeight
       - radarGrid
-      - radarReceptiveDistance
+      - contactRadius
       - radarReceptiveAngle
       - radarCleanInterval
       - echoPersistence

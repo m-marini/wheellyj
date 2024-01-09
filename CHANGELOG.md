@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+- Issue #304: Use effective radar grid size in panel
 - Issue #305: Change the ping spot to little circle
 
 ## [0.12.0] 2024-01-08
