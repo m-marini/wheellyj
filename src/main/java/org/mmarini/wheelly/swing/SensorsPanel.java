@@ -203,23 +203,23 @@ public class SensorsPanel extends JPanel {
      * @param status the robot status
      */
     public void setStatus(RobotStatus status) {
-        robotX.setValue(status.getLocation().getX());
-        robotY.setValue(status.getLocation().getY());
-        xPulses.setValue(status.getXPulses());
-        yPulses.setValue(status.getYPulses());
-        direction.setValue(status.getDirection());
-        sensorDirection.setValue(status.getSensorDirection());
-        echoTime.setValue(status.getEchoDelay());
-        distance.setValue(status.getEchoDistance());
-        leftSpeed.setValue(status.getLeftPps());
-        rightSpeed.setValue(status.getRightPps());
-        voltage.setValue(status.getSupplyVoltage());
-        supplySensor.setValue(status.getSupplySensor());
-        imuFailure.setValue(status.getImuFailure());
-        rearSensors.setSelected(status.isRearSensors());
-        frontSensors.setSelected(status.isFrontSensors());
+        robotX.setValue(status.location().getX());
+        robotY.setValue(status.location().getY());
+        xPulses.setValue(status.xPulse());
+        yPulses.setValue(status.yPulse());
+        direction.setValue(status.direction());
+        sensorDirection.setValue(status.sensorDirection());
+        echoTime.setValue(status.echoDelay());
+        distance.setValue(status.echoDistance());
+        leftSpeed.setValue(status.leftPps());
+        rightSpeed.setValue(status.rightPps());
+        voltage.setValue(status.supplyVoltage());
+        supplySensor.setValue(status.supplySensor());
+        imuFailure.setValue(status.imuFailure());
+        rearSensors.setSelected(status.rearSensor());
+        frontSensors.setSelected(status.frontSensor());
         canMoveBackward.setSelected(status.canMoveBackward());
         canMoveForward.setSelected(status.canMoveForward());
-        halt.setSelected(status.isHalt());
+        halt.setSelected(status.halt());
     }
 }

@@ -86,7 +86,7 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
      */
     private static Tuple2<String, RobotCommands> moveTo(RobotStatus robotStatus, Point2D target, double stopDistance) {
         // Converts location to meters
-        Point2D current = robotStatus.getLocation();
+        Point2D current = robotStatus.location();
 
         double distance = current.distance(target);
         logger.atDebug().log("Distance to target {} m, stop at {} m", distance, stopDistance);

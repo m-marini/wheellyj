@@ -151,7 +151,7 @@ public class StateMachineAgent implements ProcessorContext, WithIOFlowable, With
     }
 
     private void handleInference(RobotStatus status) {
-        polarMap = polarMap.update(radarMap, status.getLocation(), status.getDirection(), minRadarDistance, maxRadarDistance);
+        polarMap = polarMap.update(radarMap, status.location(), status.direction(), minRadarDistance, maxRadarDistance);
         robotStatus = status;
         if (!started) {
             started = true;

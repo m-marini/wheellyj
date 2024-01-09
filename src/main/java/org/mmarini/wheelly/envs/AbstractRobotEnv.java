@@ -200,7 +200,7 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
         int sensorDirection = sensorDir(actions);
         RobotCommands command = isHalt(actions)
                 ? RobotCommands.haltAndScan(sensorDirection)
-                : RobotCommands.moveAndScan(moveDirection(actions, getRobotStatus().getDirection()),
+                : RobotCommands.moveAndScan(moveDirection(actions, getRobotStatus().direction()),
                 speed(actions),
                 sensorDirection);
         controller.execute(command);

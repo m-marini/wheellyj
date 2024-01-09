@@ -187,13 +187,13 @@ public class RobotCheckUp {
                     sensorPanel.setInfo(format("Checking sensor to %d DEG ...", directions[currentTest]));
                 }
                 int sensDir = directions[currentTest];
-                int dir = status.getSensorDirection();
+                int dir = status.sensorDirection();
                 if (dir == sensDir) {
                     sampleCount++;
                     if (scannerMoveTime == 0) {
                         scannerMoveTime = time - measureStart;
                     }
-                    double sensorDistance = status.getEchoDistance();
+                    double sensorDistance = status.echoDistance();
                     if (sensorDistance > 0) {
                         totDistance += sensorDistance;
                         measureCount++;
@@ -204,7 +204,7 @@ public class RobotCheckUp {
                             time - measureStart,
                             sampleCount > 0, scannerMoveTime,
                             measureCount > 0 ? totDistance / measureCount : 0,
-                            status.getImuFailure()));
+                            status.imuFailure()));
                     currentTest++;
                     if (currentTest >= directions.length) {
                         controller.execute(command.setScan(0));
@@ -572,14 +572,14 @@ public class RobotCheckUp {
                     long time = status.simulationTime();
                     RobotCommands command = RobotCommands.none();
                     if (startLocation == null) {
-                        startLocation = status.getLocation();
+                        startLocation = status.location();
                         moveStart = time;
                         controller.execute(command.setMove(direction, speed));
                         sensorPanel.setInfo(format("Checking movement to %d DEG, speed %d ...", direction, speed));
                     }
                     if (time >= moveStart + MOVEMENT_DURATION) {
                         // Move timeout
-                        Point2D pos = status.getLocation();
+                        Point2D pos = status.location();
                         double distance = pos.distance(startLocation);
                         Point2D targetLocation = new Point2D.Double(
                                 startLocation.getX() + distance * sin(toRadians(direction)),
@@ -595,7 +595,7 @@ public class RobotCheckUp {
                                 distance,
                                 distanceError,
                                 abs(directionError),
-                                status.getImuFailure()));
+                                status.imuFailure()));
                         sensorPanel.setInfo("");
                         controller.execute(command.setHalt());
                         return true;
@@ -616,11 +616,11 @@ public class RobotCheckUp {
                 @Override
                 public boolean test(RobotStatus status) {
                     long time = status.simulationTime();
-                    int dir = status.getDirection();
+                    int dir = status.direction();
                     RobotCommands command = RobotCommands.none();
                     if (startLocation == null) {
                         controller.execute(command.setMove(direction, 0));
-                        startLocation = status.getLocation();
+                        startLocation = status.location();
                         rotationStart = time;
                         startAngle = dir;
                         sensorPanel.setInfo(format("Checking rotation to %d DEG ...", direction));
@@ -629,13 +629,13 @@ public class RobotCheckUp {
                         // Rotation timeout
                         int directionError = abs(normalizeDegAngle(dir - direction));
                         int rotationAngle = normalizeDegAngle(dir - startAngle);
-                        double distanceError = status.getLocation().distance(startLocation);
-                        rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.getImuFailure()));
+                        double distanceError = status.location().distance(startLocation);
+                        rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.imuFailure()));
                         controller.execute(command.setHalt());
                         sensorPanel.setInfo("");
                         return true;
                     }
-                    if (status.getLeftPps() == 0 && status.getRightPps() == 0) {
+                    if (status.leftPps() == 0 && status.rightPps() == 0) {
                         if (haltTime == 0) {
                             haltTime = time;
                         }
@@ -643,8 +643,8 @@ public class RobotCheckUp {
                             // Halt timeout
                             int directionError = abs(normalizeDegAngle(dir - direction));
                             int rotationAngle = normalizeDegAngle(dir - startAngle);
-                            double distanceError = status.getLocation().distance(startLocation);
-                            rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.getImuFailure()));
+                            double distanceError = status.location().distance(startLocation);
+                            rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.imuFailure()));
                             controller.execute(command.setHalt());
                             sensorPanel.setInfo("");
                             return true;

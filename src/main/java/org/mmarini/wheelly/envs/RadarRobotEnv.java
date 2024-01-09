@@ -379,12 +379,12 @@ public class RadarRobotEnv implements Environment {
      * @param status the status from robot
      */
     private void storeStatus(RobotStatus status) {
-        robotDir = Nd4j.createFromArray((float) status.getDirection());
-        sensor = Nd4j.createFromArray((float) status.getSensorDirection());
-        distance = Nd4j.createFromArray((float) status.getEchoDistance());
+        robotDir = Nd4j.createFromArray((float) status.direction());
+        sensor = Nd4j.createFromArray((float) status.sensorDirection());
+        distance = Nd4j.createFromArray((float) status.echoDistance());
         canMoveForward = Nd4j.createFromArray(status.canMoveForward() ? 1F : 0F);
         canMoveBackward = Nd4j.createFromArray(status.canMoveBackward() ? 1F : 0F);
         // TODO fix contacts
-        contacts = Nd4j.createFromArray(status.isFrontSensors() ? 1F : 0F, status.isRearSensors() ? 1F : 0F);
+        contacts = Nd4j.createFromArray(status.frontSensor() ? 1F : 0F, status.rearSensor() ? 1F : 0F);
     }
 }

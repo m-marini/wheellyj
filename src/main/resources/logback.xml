@@ -14,7 +14,10 @@
     <logger name="org.mmarini.wheelly.apis.RobotSocket" level="INFO">
     </logger>
 
-    <logger name="org.mmarini.wheelly.engines.ExploringState" level="INFO">
+    <logger name="org.mmarini.wheelly.engines.ExploringPointState" level="INFO">
+    </logger>
+
+    <logger name="org.mmarini.wheelly.engines.AvoidingState" level="INFO">
     </logger>
 
     <logger name="org.mmarini.wheelly.apis.Robot" level="INFO">

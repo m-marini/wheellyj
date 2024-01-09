@@ -112,7 +112,7 @@ public record ExploringPointState(String id, ProcessorCommand onInit, ProcessorC
         double maxDistance = getDouble(context, "maxDistance");
         double safeDistance = getDouble(context, "safeDistance");
 
-        Optional<Point2D> target = context.radarMap().findTarget(context.robotStatus().getLocation(),
+        Optional<Point2D> target = context.radarMap().findTarget(context.robotStatus().location(),
                 maxDistance, safeDistance);
         target.ifPresentOrElse(p -> {
                     logger.atDebug().log("Target {}", p);

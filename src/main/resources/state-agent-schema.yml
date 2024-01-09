@@ -88,11 +88,14 @@ $defs:
       timeout:
         multipleOf: 1
         minimum: 1
+      speed:
+        multipleOf: 1
+        minimum: 1
+        maximum: 60
       safeDistance:
         exclusiveMinimum: 0
     required:
       - class
-      - safeDistance
   ExploringPointState:
     type: object
     properties:
