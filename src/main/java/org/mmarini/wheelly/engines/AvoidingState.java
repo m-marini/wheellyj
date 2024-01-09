@@ -68,6 +68,7 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
     public static final String SPEED = "speed";
     public static final String CONTACT_POINT = "contactPoint";
     public static final String FRONT_CONTACT = "frontContact";
+    public static final double SAFE_DISTANCE_GAP = 0.2;
     private static final Logger logger = LoggerFactory.getLogger(AvoidingState.class);
     private static final double DEFAULT_SAFE_DISTANCE = 0.3;
 
@@ -184,7 +185,7 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
                         frontContact
                                 ? toNormalRadians(contactsDir + 180)
                                 : toNormalRadians(contactsDir),
-                        safeDistance);
+                        safeDistance + SAFE_DISTANCE_GAP);
                 target.ifPresent(p -> {
                     put(ctx, SAFE_POINT, p);
                     logger.atDebug().log("Safe point at {}", p);

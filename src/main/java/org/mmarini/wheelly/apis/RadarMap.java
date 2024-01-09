@@ -26,7 +26,6 @@
 package org.mmarini.wheelly.apis;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.NotImplementedException;
 import org.mmarini.yaml.Locator;
 
 import java.awt.geom.Point2D;
@@ -39,8 +38,11 @@ import java.util.function.UnaryOperator;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static java.lang.Math.PI;
 import static java.lang.Math.abs;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.Utils.direction;
+import static org.mmarini.wheelly.apis.Utils.normalizeAngle;
 
 /**
  * The RadarMap keeps the obstacle signal results of the space round the center
@@ -208,6 +210,8 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
         List<Point2D> points1 = cellStream().filter(c ->
                         (c.empty() || c.unknown()))
                 .map(MapCell::location)
+                // Filter the points to the direction
+                .filter(p -> abs(normalizeAngle(direction(location, p) - escapeDir)) <= PI / 2)
                 .toList();
         List<Point2D> points2 = points1.stream()
                 // Filters cell at a distance no longer maxDistance and with free trajectory
@@ -230,21 +234,31 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
     public Optional<Point2D> findTarget(Point2D location, double maxDistance, double safeDistance) {
         double maxDistance2 = maxDistance * maxDistance;
         double safeDistance2 = safeDistance * safeDistance;
-        // Extracts the empty cell
-        List<Point2D> points1 = cellStream().filter(c ->
-                        (c.empty() || c.unknown()))
+        // Extracts the target unknown cells
+        return cellStream()
+                .filter(MapCell::unknown)
                 .map(MapCell::location)
-                .toList();
-        List<Point2D> points2 = points1.stream()
                 // Filters cell at a distance no longer maxDistance and with free trajectory
                 .filter(p -> {
                     double d2 = location.distanceSq(p);
                     return d2 >= safeDistance2
                             && d2 <= maxDistance2
                             && freeTrajectory(location, p, safeDistance);
-                }).toList();
-        return points2.stream()
-                .max(Comparator.comparingDouble(location::distanceSq));
+                })
+                .max(Comparator.comparingDouble(location::distanceSq))
+                .or(() ->
+                        // unknown target not found: search for empty target cells
+                        cellStream()
+                                .filter(MapCell::empty)
+                                .map(MapCell::location)
+                                // Filters cell at a distance no longer maxDistance and with free trajectory
+                                .filter(p -> {
+                                    double d2 = location.distanceSq(p);
+                                    return d2 >= safeDistance2
+                                            && d2 <= maxDistance2
+                                            && freeTrajectory(location, p, safeDistance);
+                                })
+                                .max(Comparator.comparingDouble(location::distanceSq)));
     }
 
     /**
@@ -256,7 +270,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
      */
     boolean freeTrajectory(Point2D from, Point2D to, double safeDistance) {
         double size = topology.gridSize();
-        double dir = Utils.direction(from, to);
+        double dir = direction(from, to);
         double distance = from.distance(to);
         double maxDistance = distance + safeDistance;
         return cellStream().filter(MapCell::hindered)
