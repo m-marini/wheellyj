@@ -30,10 +30,7 @@ import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotStatus;
 
 import java.awt.*;
-import java.awt.geom.AffineTransform;
-import java.awt.geom.Path2D;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
+import java.awt.geom.*;
 import java.util.List;
 
 import static java.lang.Math.toRadians;
@@ -52,12 +49,14 @@ public class EnvironmentPanel extends RadarPanel {
     private static final float ROBOT_L_BEVEL = 0.05f;
     private static final float OBSTACLE_SIZE = 0.2f;
     private static final float SENSOR_LENGTH = 3f;
+    private static final int HUD_WIDTH = 200;
+    private static final double PING_SIZE = 0.1;
 
     private static final Color ROBOT_COLOR = new Color(255, 255, 0);
-    private static final Color OBSTACLE_COLOR = new Color(255, 0, 0);
     private static final Color OBSTACLE_PHANTOM_COLOR = new Color(128, 128, 128);
     private static final Color HUD_BACKGROUND_COLOR = new Color(32, 32, 32);
     private static final Color SENSOR_COLOR = new Color(200, 0, 0);
+    private static final Color PING_COLOR = new Color(255, 192, 192);
 
     private static final float[][] ROBOT_POINTS = {
             {ROBOT_WIDTH / 2 - ROBOT_W_BEVEL, ROBOT_LENGTH / 2},
@@ -73,7 +72,7 @@ public class EnvironmentPanel extends RadarPanel {
             {0, SENSOR_LENGTH}
     };
     private static final Shape SENSOR_SHAPE = createShape(SENSOR_POINTS);
-    private static final int HUD_WIDTH = 200;
+    private static final Shape PING_SHAPE = new Ellipse2D.Double(-PING_SIZE / 2, -PING_SIZE / 2, PING_SIZE, PING_SIZE);
 
     /**
      * Returns the transformation to draw the CW rotated shape in a world location
@@ -239,6 +238,19 @@ public class EnvironmentPanel extends RadarPanel {
     }
 
     /**
+     * Draws the ping echo point
+     *
+     * @param gr       the graphics
+     * @param location the location
+     * @param color    the color
+     */
+    private void drawPing(Graphics2D gr, Point2D location, Color color) {
+        if (location != null) {
+            fillShape(gr, location, color, PING_SHAPE);
+        }
+    }
+
+    /**
      * Draws the robot
      *
      * @param gr the graphic context
@@ -286,13 +298,6 @@ public class EnvironmentPanel extends RadarPanel {
                 hudAtRight = !hudAtRight && status.location().getX() < -DEFAULT_WORLD_SIZE / 6
                         || (!hudAtRight || !(status.location().getX() > DEFAULT_WORLD_SIZE / 6))
                         && hudAtRight;
-
-                gr.setTransform(base);
-                drawSensor(gr, status.location(), status.direction(), status.sensorDirection());
-
-                gr.setTransform(base);
-                status.sensorObstacle()
-                        .ifPresent(point -> drawObstacle(gr, point, OBSTACLE_COLOR));
             }
             RadarMap radarMap = data.radarMap;
             if (radarMap != null) {
@@ -305,6 +310,13 @@ public class EnvironmentPanel extends RadarPanel {
             if (status != null) {
                 gr.setTransform(base);
                 drawRobot(gr, status.location(), status.direction());
+
+                gr.setTransform(base);
+                drawSensor(gr, status.location(), status.direction(), status.sensorDirection());
+
+                gr.setTransform(base);
+                status.sensorObstacle()
+                        .ifPresent(point -> drawPing(gr, point, PING_COLOR));
                 drawHUD(g, status, reward, timeRatio);
             }
 
@@ -355,14 +367,7 @@ public class EnvironmentPanel extends RadarPanel {
         repaint();
     }
 
-    static class PanelData {
-        public final RadarMap radarMap;
-        public final RobotStatus status;
-
-        PanelData(RobotStatus status, RadarMap radarMap) {
-            this.radarMap = radarMap;
-            this.status = status;
-        }
+    record PanelData(RobotStatus status, RadarMap radarMap) {
 
         PanelData setRadarMap(RadarMap radarMap) {
             return new PanelData(status, radarMap);
