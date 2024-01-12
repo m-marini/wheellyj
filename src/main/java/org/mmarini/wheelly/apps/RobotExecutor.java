@@ -355,7 +355,7 @@ public class RobotExecutor {
             agent.readState()
                     .doOnNext(this::handleState)
                     .subscribe();
-            Stream.of(frame, radarFrame, engineFrame, sensorFrame, comFrame)
+            Stream.of(comFrame, engineFrame, sensorFrame, radarFrame, frame)
                     .forEach(f -> f.setVisible(true));
             comFrame.setState(JFrame.ICONIFIED);
         } catch (ArgumentParserException e) {

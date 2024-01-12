@@ -31,6 +31,7 @@ package org.mmarini.wheelly.swing;
 import javax.swing.*;
 import java.awt.*;
 
+import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -108,15 +109,54 @@ public interface Utils {
         return createFrame(title, DEFAULT_SIZE, content, true);
     }
 
+    /**
+     * Lays horizontaly the freams
+     *
+     * @param frames the list of frames
+     */
     static void layHorizontally(JFrame... frames) {
         requireNonNull(frames);
         if (frames.length > 0) {
-            int x0 = frames[0].getX();
-            int y0 = frames[0].getY();
-            int x = x0;
+            GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+            GraphicsDevice gd = ge.getDefaultScreenDevice();
+            GraphicsConfiguration gc = gd.getDefaultConfiguration();
+            Rectangle screenBound = gc.getBounds();
+            Insets insets = Toolkit.getDefaultToolkit().getScreenInsets(gc);
+            int xScreen = screenBound.x + insets.left;
+            int yScreen = screenBound.y + insets.top;
+            int wScreen = screenBound.width - insets.left - insets.right;
+            int hScreen = screenBound.height - insets.top - insets.bottom;
+            int remainderWidth = wScreen;
+            int x = xScreen;
+            int y = yScreen;
             for (JFrame frame : frames) {
-                frame.setLocation(x, y0);
-                x = x + frame.getWidth();
+                int width = frame.getSize().width;
+                int height = frame.getSize().width;
+                if (width > remainderWidth) {
+                    // No more horizontal space on screen
+                    if (width > wScreen) {
+                        // frame too wide
+                        frame.setLocation(xScreen, yScreen);
+                        // Resize because of frame too high
+                        frame.setSize(wScreen, min(hScreen, height));
+                    } else {
+                        // Align left
+                        frame.setLocation(xScreen + wScreen - width, yScreen);
+                        if (height > hScreen) {
+                            // Resize because of frame too high
+                            frame.setSize(width, hScreen);
+                        }
+                    }
+                } else {
+                    // horizontal space available for frame
+                    frame.setLocation(x, y);
+                    x = x + frame.getWidth();
+                    remainderWidth -= width;
+                    if (height > hScreen) {
+                        // Resize because of frame too high
+                        frame.setSize(width, hScreen);
+                    }
+                }
             }
         }
     }

@@ -378,12 +378,11 @@ public class Wheelly {
             environment.setOnResult(this::handleResult);
 
             frame.setVisible(true);
-            if (radarFrame != null) {
-                radarFrame.setVisible(true);
-            }
-            sensorFrame.setVisible(true);
-            comFrame.setVisible(true);
+            (radarFrame != null
+                    ? Stream.of(comFrame, sensorFrame, radarFrame, frame)
+                    : Stream.of(comFrame, sensorFrame, frame)).forEach(f -> f.setVisible(true));
             comFrame.setState(JFrame.ICONIFIED);
+
             environment.start();
         } catch (ArgumentParserException e) {
             parser.handleError(e);

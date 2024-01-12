@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #304: Use effective radar grid size in panel
 - Issue #305: Change the ping spot to little circle
 
+### Fixed
+
+- Issue #311: Windows does not lay out correctly at app start
+
 ## [0.12.0] 2024-01-08
 
 ### Added
