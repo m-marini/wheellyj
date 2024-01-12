@@ -50,6 +50,7 @@ import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.Math.max;
 import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
@@ -409,9 +410,7 @@ public class MatrixMonitor {
                 .doOnNext(this::handleClose)
                 .subscribe();
 
-        commandFrame.setVisible(true);
-        sensorFrame.setVisible(true);
-        comFrame.setVisible(true);
+        Stream.of(comFrame, sensorFrame, commandFrame).forEach(f->f.setVisible(true));
         comFrame.setState(JFrame.ICONIFIED);
         controller.start();
     }
