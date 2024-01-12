@@ -38,18 +38,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static java.lang.Math.min;
 import static java.lang.String.format;
 
 /**
  * Matrix table shows events in matrix digital rain
  */
 public class MatrixTable extends JPanel {
-
-    public static final int WIDTH_EXTENSION = 14;
-    private static final int HEIGHT_EXTENSION = 48;
-    private static final int MAX_WIDTH = 1024;
-    private static final int MAX_HEIGHT = 800;
 
     /**
      * Returns the matrix table with columns
@@ -79,7 +73,8 @@ public class MatrixTable extends JPanel {
         setLayout(new BoxLayout(this, BoxLayout.LINE_AXIS));
         setBackground(Color.BLACK);
         Flowable.interval(1000 / 30, TimeUnit.MILLISECONDS)
-                .subscribe(i -> repaint());
+                .doOnNext(ignored -> repaint())
+                .subscribe();
     }
 
     /**
@@ -116,10 +111,8 @@ public class MatrixTable extends JPanel {
     public JFrame createFrame(String title) {
         JScrollPane scroll = new JScrollPane(this);
         Dimension size = scroll.getPreferredSize();
-        int w = min(size.width + WIDTH_EXTENSION, MAX_WIDTH);
-        int h = min(size.height + HEIGHT_EXTENSION, MAX_HEIGHT);
         JFrame frame = new JFrame(title);
-        frame.setSize(w, h);
+        frame.setSize(size);
         Container contentPane = frame.getContentPane();
         contentPane.setLayout(new BorderLayout());
         contentPane.add(scroll, BorderLayout.CENTER);

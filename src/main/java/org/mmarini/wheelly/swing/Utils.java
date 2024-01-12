@@ -110,7 +110,7 @@ public interface Utils {
     }
 
     /**
-     * Lays horizontaly the freams
+     * Lays horizontally the frames
      *
      * @param frames the list of frames
      */
@@ -128,10 +128,9 @@ public interface Utils {
             int hScreen = screenBound.height - insets.top - insets.bottom;
             int remainderWidth = wScreen;
             int x = xScreen;
-            int y = yScreen;
             for (JFrame frame : frames) {
                 int width = frame.getSize().width;
-                int height = frame.getSize().width;
+                int height = frame.getSize().height;
                 if (width > remainderWidth) {
                     // No more horizontal space on screen
                     if (width > wScreen) {
@@ -149,7 +148,7 @@ public interface Utils {
                     }
                 } else {
                     // horizontal space available for frame
-                    frame.setLocation(x, y);
+                    frame.setLocation(x, yScreen);
                     x = x + frame.getWidth();
                     remainderWidth -= width;
                     if (height > hScreen) {
