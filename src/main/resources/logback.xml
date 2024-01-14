@@ -26,13 +26,16 @@
     <logger name="org.mmarini.wheelly.engines.ExtendedStateNode" level="INFO">
     </logger>
 
-    <logger name="org.mmarini.wheelly.engines.StateMachineAgent" level="DEBUG">
+    <logger name="org.mmarini.wheelly.engines.StateMachineAgent" level="INFO">
     </logger>
 
     <logger name="org.mmarini.wheelly.apis.RobotController" level="INFO">
     </logger>
 
     <logger name="org.mmarini.wheelly.engines.MoveToState" level="INFO">
+    </logger>
+
+    <logger name="org.mmarini.wheelly.engines.HaltState" level="INFO">
     </logger>
 
     <logger name="org.mmarini.wheelly.engines.ClearMapState" level="INFO">

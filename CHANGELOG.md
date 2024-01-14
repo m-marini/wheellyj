@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 
 - Issue #314: Simplify yaml file schema
+- Issue #316: Updating polar map takes too much cpu
 
 ## [0.12.1] 2024-01-14
 

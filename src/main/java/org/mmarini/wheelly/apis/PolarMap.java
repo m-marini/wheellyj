@@ -182,6 +182,7 @@ public record PolarMap(CircularSector[] sectors, Point2D center, int direction) 
         double dAlpha = sectorAngle() * 1.25 / 2;
         double directionRad = toRadians(direction);
         map.cellStream()
+                .filter(cell -> cell.location().distance(center) < maxDistance)
                 .forEach(cell -> { // For each radar sector
                     for (int i = 0; i < this.sectorsNumber(); i++) { // for each polar sector
                         int sector = i;
