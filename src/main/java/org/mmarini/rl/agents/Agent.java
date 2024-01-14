@@ -30,8 +30,8 @@ import io.reactivex.rxjava3.core.Flowable;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.WithSignalsSpec;
-import org.mmarini.wheelly.apps.Yaml;
 import org.mmarini.yaml.Locator;
+import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
 import java.io.Closeable;
@@ -44,8 +44,6 @@ import java.util.Map;
  */
 public interface Agent extends Closeable, WithSignalsSpec {
 
-    String AGENT_SCHEMA_YML = "https://mmarini.org/wheelly/agent-schema-0.5";
-
     /**
      * Returns the agent
      *
@@ -54,7 +52,7 @@ public interface Agent extends Closeable, WithSignalsSpec {
      * @param environment the environment
      */
     static Agent fromConfig(JsonNode config, Locator locator, WithSignalsSpec environment) {
-        return Yaml.fromConfig(config, locator, AGENT_SCHEMA_YML, new Object[]{environment}, new Class[]{WithSignalsSpec.class});
+        return Utils.createObject(config, locator, new Object[]{environment}, new Class[]{WithSignalsSpec.class});
     }
 
     /**

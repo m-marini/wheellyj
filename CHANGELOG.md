@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+
+- Issue #314: Simplify yaml file schema
+
 ## [0.12.1] 2024-01-14
 
 ### Added

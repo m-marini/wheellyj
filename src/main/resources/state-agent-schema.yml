@@ -1,23 +1,60 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/state-agent-schema-0.9
+$id: https://mmarini.org/wheelly/state-agent-schema-1.0
 title: State machine agent
 description: State Agent Schema
 type: object
 properties:
   $schema:
     type: string
-    const: https://mmarini.org/wheelly/state-agent-schema-0.9
-  active:
-    type: string
-  configurations:
-    type: object
-    additionalProperties:
-      $ref: "#/$defs/StateMachineAgent"
+    const: https://mmarini.org/wheelly/state-agent-schema-1.0
+  class:
+    const: org.mmarini.wheelly.engines.StateMachineAgent
+  flow:
+    $ref: "#/$defs/StateFlow"
+  numRadarSectors:
+    multipleOf: 1
+    minimum: 2
+  minRadarDistance:
+    exclusiveMinimum: 0
+  maxRadarDistance:
+    exclusiveMinimum: 0
+  radarWidth:
+    multipleOf: 1
+    minimum: 1
+  radarHeight:
+    multipleOf: 1
+    minimum: 1
+  radarGrid:
+    exclusiveMinimum: 0
+  contactRadius:
+    exclusiveMinimum: 0
+  radarReceptiveAngle:
+    minimum: 0
+  radarCleanInterval:
+    multipleOf: 1
+    minimum: 1
+  echoPersistence:
+    multipleOf: 1
+    minimum: 1
+  contactPersistence:
+    multipleOf: 1
+    minimum: 1
 required:
   - $schema
-  - active
-  - configurations
+  - class
+  - flow
+  - numRadarSectors
+  - minRadarDistance
+  - maxRadarDistance
+  - radarWidth
+  - radarHeight
+  - radarGrid
+  - contactRadius
+  - radarReceptiveAngle
+  - radarCleanInterval
+  - echoPersistence
+  - contactPersistence
 $defs:
   Commands:
     type: array
@@ -184,52 +221,3 @@ $defs:
       - states
       - transitions
       - entry
-  StateMachineAgent:
-    type: object
-    properties:
-      class:
-        const: org.mmarini.wheelly.engines.StateMachineAgent
-      flow:
-        $ref: "#/$defs/StateFlow"
-      numRadarSectors:
-        multipleOf: 1
-        minimum: 2
-      minRadarDistance:
-        exclusiveMinimum: 0
-      maxRadarDistance:
-        exclusiveMinimum: 0
-      radarWidth:
-        multipleOf: 1
-        minimum: 1
-      radarHeight:
-        multipleOf: 1
-        minimum: 1
-      radarGrid:
-        exclusiveMinimum: 0
-      contactRadius:
-        exclusiveMinimum: 0
-      radarReceptiveAngle:
-        minimum: 0
-      radarCleanInterval:
-        multipleOf: 1
-        minimum: 1
-      echoPersistence:
-        multipleOf: 1
-        minimum: 1
-      contactPersistence:
-        multipleOf: 1
-        minimum: 1
-    required:
-      - class
-      - flow
-      - numRadarSectors
-      - minRadarDistance
-      - maxRadarDistance
-      - radarWidth
-      - radarHeight
-      - radarGrid
-      - contactRadius
-      - radarReceptiveAngle
-      - radarCleanInterval
-      - echoPersistence
-      - contactPersistence

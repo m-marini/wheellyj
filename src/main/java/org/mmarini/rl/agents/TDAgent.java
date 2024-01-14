@@ -157,18 +157,13 @@ public class TDAgent implements Agent {
 
     private static Stream<Tuple2<String, INDArray>> flat(Tuple2<String, Object> kpi) {
         String key = kpi._1;
-        Object obj = kpi._2;
-        if (obj instanceof Number) {
-            return Stream.of(kpi.setV2(Nd4j.create(new float[][]{{((Number) obj).floatValue()}})));
-        } else if (obj instanceof INDArray) {
-            return Stream.of(kpi.setV2((INDArray) kpi.getV2()));
-        } else if (obj instanceof Map) {
-            Map<String, Object> map = (Map<String, Object>) obj;
-            return Tuple2.stream(map)
+        return switch (kpi._2) {
+            case Number num -> Stream.of(kpi.setV2(Nd4j.create(new float[][]{{num.floatValue()}})));
+            case INDArray ary -> Stream.of(kpi.setV2(ary));
+            case Map<?, ?> map -> Tuple2.stream((Map<String, Object>) map)
                     .flatMap(t -> flat(Tuple2.of(key + "." + t._1, t._2)));
-        } else {
-            return Stream.empty();
-        }
+            default -> Stream.empty();
+        };
     }
 
     private static Map<String, INDArray> flatKpis(Map<String, Object> kpis) {

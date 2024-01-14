@@ -1,18 +1,18 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/checkup-schema-0.1
-title: Monitor application
+$id: https://mmarini.org/wheelly/checkup-schema-1.0
+title: Check up application
 
 # monitor schema
 type: object
 properties:
   $schema:
     type: string
-    const: https://mmarini.org/wheelly/checkup-schema-0.1
+    const: https://mmarini.org/wheelly/checkup-schema-1.0
   robot:
-    type: object
+    type: string
   controller:
-    type: object
+    type: string
 required:
   - $schema
   - robot

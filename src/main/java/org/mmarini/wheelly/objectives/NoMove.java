@@ -27,11 +27,13 @@ package org.mmarini.wheelly.objectives;
 
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.eclipse.collections.api.block.function.primitive.DoubleFunction;
-import org.mmarini.rl.envs.Environment;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WithRobotStatus;
+import org.mmarini.wheelly.apps.JsonSchemas;
+import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.yaml.Locator;
+
+import java.util.function.ToDoubleFunction;
 
 import static java.lang.Math.abs;
 
@@ -40,7 +42,8 @@ import static java.lang.Math.abs;
  */
 public interface NoMove {
     float DEFAULT_VELOCITY_THRESHOLD = 0.01f;
-    DoubleFunction<Environment> NO_MOVE = noMove(DEFAULT_VELOCITY_THRESHOLD);
+    ToDoubleFunction<RobotEnvironment> NO_MOVE = noMove(DEFAULT_VELOCITY_THRESHOLD);
+    String SCHEMA_NAME = "https://mmarini.org/wheelly/objective-nomove-schema-0.1";
 
     /**
      * Returns the reward function from configuration
@@ -48,7 +51,8 @@ public interface NoMove {
      * @param root    the root json document
      * @param locator the locator
      */
-    static DoubleFunction<Environment> create(JsonNode root, Locator locator) {
+    static ToDoubleFunction<RobotEnvironment> create(JsonNode root, Locator locator) {
+        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         float velocityThreshold = (float) locator.path("velocityThreshold").getNode(root).asDouble(DEFAULT_VELOCITY_THRESHOLD);
         return noMove(velocityThreshold);
     }
@@ -56,7 +60,7 @@ public interface NoMove {
     /**
      * Returns the function that rewards the no move behavior
      */
-    static DoubleFunction<Environment> noMove() {
+    static ToDoubleFunction<RobotEnvironment> noMove() {
         return NO_MOVE;
     }
 
@@ -65,7 +69,7 @@ public interface NoMove {
      *
      * @param velocityThreshold the velocity threshold
      */
-    static DoubleFunction<Environment> noMove(float velocityThreshold) {
+    static ToDoubleFunction<RobotEnvironment> noMove(float velocityThreshold) {
         return environment -> {
             RobotStatus status = ((WithRobotStatus) environment).getRobotStatus();
             return !status.canMoveForward() || !status.canMoveBackward()

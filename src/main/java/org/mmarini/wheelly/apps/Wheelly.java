@@ -58,6 +58,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static org.mmarini.wheelly.swing.Utils.*;
 import static org.mmarini.yaml.Utils.fromFile;
 
@@ -73,7 +74,7 @@ public class Wheelly {
             "^v0$",
             "^trainedCritic.output$",
     };
-    public static final String WHEELLY_SCHEMA_YML = "https://mmarini.org/wheelly/wheelly-schema-0.1";
+    public static final String WHEELLY_SCHEMA_YML = "https://mmarini.org/wheelly/wheelly-schema-1.0";
     private static final Logger logger = LoggerFactory.getLogger(Wheelly.class);
 
     /**
@@ -87,7 +88,7 @@ public class Wheelly {
     private static void createKpis(Agent agent, Map<String, SignalSpec> actions, File file, String labels) {
         KpiCSVSubscriber sub;
 
-        if (labels.length() == 0) {
+        if (labels.isEmpty()) {
             // Default kpis
             String[] labs = Stream.concat(Stream.of(DEFAULT_KPIS),
                     actions.keySet().stream()
@@ -314,8 +315,12 @@ public class Wheelly {
             this.args = parser.parseArgs(args);
             logger.atInfo().log("Creating environment");
             JsonNode config = fromFile(this.args.getString("config"));
-            this.environment = Yaml.envFromJson(config, Locator.root(), WHEELLY_SCHEMA_YML);
-            this.agent = Agent.fromConfig(config, Locator.locate("agent"), environment);
+            this.environment = AppYaml.envFromJson(config, Locator.root(), WHEELLY_SCHEMA_YML);
+            Locator agentLocator = Locator.locate(Locator.locate("agent").getNode(config).asText());
+            if (agentLocator.getNode(config).isMissingNode()) {
+                throw new IllegalArgumentException(format("Missing node %s", agentLocator));
+            }
+            this.agent = Agent.fromConfig(config, agentLocator, environment);
 
             logger.atInfo().log("Creating agent");
             if (environment instanceof PolarRobotEnv) {
@@ -337,7 +342,7 @@ public class Wheelly {
             sessionDuration *= 1000;
 
             String kpis = this.args.getString("kpis");
-            if (kpis.length() != 0) {
+            if (!kpis.isEmpty()) {
                 createKpis(agent, environment.getActions(), new File(kpis), this.args.getString("labels"));
             }
             this.start = System.currentTimeMillis();

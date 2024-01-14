@@ -35,6 +35,7 @@ import org.jbox2d.collision.shapes.PolygonShape;
 import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.*;
 import org.jbox2d.dynamics.contacts.Contact;
+import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,6 +65,10 @@ public class SimRobot implements RobotApi {
     public static final double MAX_ANGULAR_PPS = 20;
     public static final double ROBOT_TRACK = 0.136;
     public static final double MAX_ANGULAR_VELOCITY = MAX_ANGULAR_PPS * DISTANCE_PER_PULSE / ROBOT_TRACK * 2; // RAD/s
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/sim-robot-schema-0.1";
+    private static final int DEFAULT_MAX_ANGULAR_SPEED = 5;
+    private static final long DEFAULT_MOTION_INTERVAL = 500;
+    private static final long DEFAULT_PROXY_INTERVAL = 500;
     private static final double MIN_OBSTACLE_DISTANCE = 1;
     private static final Vec2 GRAVITY = new Vec2();
     private static final int VELOCITY_ITER = 10;
@@ -80,12 +85,14 @@ public class SimRobot implements RobotApi {
     private static final Logger logger = LoggerFactory.getLogger(SimRobot.class);
     private static final float ROBOT_RADIUS = 0.15f;
     private static final double ROBOT_DENSITY = ROBOT_MASS / (ROBOT_RADIUS * ROBOT_RADIUS * PI);
+    private static final int DEFAULT_SENSOR_RECEPTIVE_ANGLE = 15;
 
     public static SimRobot create(JsonNode root, Locator locator) {
+        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         long mapSeed = locator.path("mapSeed").getNode(root).asLong(0);
         long robotSeed = locator.path("robotSeed").getNode(root).asLong(0);
         int numObstacles = locator.path("numObstacles").getNode(root).asInt();
-        double sensorReceptiveAngle = toRadians(locator.path("sensorReceptiveAngle").getNode(root).asInt());
+        double sensorReceptiveAngle = toRadians(locator.path("sensorReceptiveAngle").getNode(root).asInt(DEFAULT_SENSOR_RECEPTIVE_ANGLE));
         Random mapRandom = mapSeed > 0L ? new Random(mapSeed) : new Random();
         Random robotRandom = robotSeed > 0L ? new Random(robotSeed) : new Random();
         ObstacleMap obstacleMap = MapBuilder.create(GRID_SIZE)
@@ -95,9 +102,9 @@ public class SimRobot implements RobotApi {
                 .build();
         double errSigma = locator.path("errSigma").getNode(root).asDouble();
         double errSensor = locator.path("errSensor").getNode(root).asDouble();
-        int maxAngularSpeed = locator.path("maxAngularSpeed").getNode(root).asInt();
-        long motionInterval = locator.path("motionInterval").getNode(root).asLong(500);
-        long proxyInterval = locator.path("proxyInterval").getNode(root).asLong(500);
+        int maxAngularSpeed = locator.path("maxAngularSpeed").getNode(root).asInt(DEFAULT_MAX_ANGULAR_SPEED);
+        long motionInterval = locator.path("motionInterval").getNode(root).asLong(DEFAULT_MOTION_INTERVAL);
+        long proxyInterval = locator.path("proxyInterval").getNode(root).asLong(DEFAULT_PROXY_INTERVAL);
         return new SimRobot(obstacleMap,
                 robotRandom,
                 errSigma, errSensor,

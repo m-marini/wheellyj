@@ -30,6 +30,7 @@ import org.mmarini.wheelly.apis.MapCell;
 import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WithRobotStatus;
+import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.wheelly.envs.WithRadarMap;
 import org.mmarini.yaml.Locator;
@@ -47,6 +48,8 @@ import static org.mmarini.wheelly.apis.Utils.clip;
  */
 public interface Explore {
 
+    String SCHEMA_NAME = "https://mmarini.org/wheelly/objective-explore-schema-0.1";
+
     /**
      * Returns the function that fuzzy rewards explore behavior from configuration
      *
@@ -54,6 +57,7 @@ public interface Explore {
      * @param locator the locator
      */
     static ToDoubleFunction<RobotEnvironment> create(JsonNode root, Locator locator) {
+        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double sensorRange = locator.path("sensorRange").getNode(root).asDouble();
         return explore(sensorRange);
     }

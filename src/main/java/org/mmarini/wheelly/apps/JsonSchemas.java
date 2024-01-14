@@ -38,7 +38,6 @@ import org.mmarini.yaml.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
@@ -57,13 +56,17 @@ public class JsonSchemas {
     private static final JsonSchemas singleton = create(
             "/agent-schema.yml",
             "/checkup-schema.yml",
+            "/objective-nomove-schema.yml",
+            "/objective-explore-schema.yml",
+            "/objective-stuck-schema.yml",
             "/controller-schema.yml",
-            "/env-schema.yml",
+            "/env-polar-schema.yml",
             "/executor-schema.yml",
             "/monitor-schema.yml",
             "/network-list-schema.yml",
             "/network-schema.yml",
             "/robot-schema.yml",
+            "/sim-robot-schema.yml",
             "/signal-schema.yml",
             "/state-agent-schema.yml",
             "/wheelly-schema.yml"
@@ -117,10 +120,10 @@ public class JsonSchemas {
      *
      * @param id the resource schema
      */
-    public JsonSchema get(String id) throws IOException {
+    public JsonSchema get(String id) {
         JsonSchema jsonSchema = cache.get(id);
         if (jsonSchema == null) {
-            throw new FileNotFoundException(id);
+            throw new IllegalArgumentException(format("Schema %s not found", id));
         }
         return jsonSchema;
     }

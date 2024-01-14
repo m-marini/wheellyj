@@ -1,0 +1,67 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/env-polar-schema-0.1
+title: Environment
+type: object
+properties:
+  $schema:
+    const: https://mmarini.org/wheelly/env-polar-schema-0.1
+  class:
+    const: org.mmarini.wheelly.envs.PolarRobotEnv
+  objective:
+    type: string
+  numDirectionValues:
+    multipleOf: 1
+    minimum: 2
+  numSensorValues:
+    multipleOf: 1
+    minimum: 2
+  numSpeedValues:
+    multipleOf: 1
+    minimum: 2
+  numRadarSectors:
+    multipleOf: 1
+    minimum: 2
+  minRadarDistance:
+    exclusiveMinimum: 0
+  maxRadarDistance:
+    exclusiveMinimum: 0
+  radarWidth:
+    multipleOf: 1
+    minimum: 1
+  radarHeight:
+    multipleOf: 1
+    minimum: 1
+  radarGrid:
+    exclusiveMinimum: 0
+  contactRadius:
+    exclusiveMinimum: 0
+  radarReceptiveAngle:
+    minimum: 0
+  radarCleanInterval:
+    multipleOf: 1
+    minimum: 1
+  echoPersistence:
+    multipleOf: 1
+    minimum: 1
+  contactPersistence:
+    multipleOf: 1
+    minimum: 1
+required:
+  - $schema
+  - class
+  - objective
+  - numDirectionValues
+  - numSensorValues
+  - numSpeedValues
+  - numRadarSectors
+  - minRadarDistance
+  - maxRadarDistance
+  - radarWidth
+  - radarHeight
+  - radarGrid
+  - contactRadius
+  - radarReceptiveAngle
+  - radarCleanInterval
+  - echoPersistence
+  - contactPersistence

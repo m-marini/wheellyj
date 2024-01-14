@@ -35,8 +35,8 @@ import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.wheelly.apis.*;
-import org.mmarini.wheelly.apps.Yaml;
 import org.mmarini.yaml.Locator;
+import org.mmarini.yaml.Utils;
 
 import java.util.Map;
 import java.util.function.Consumer;
@@ -47,8 +47,6 @@ import java.util.function.UnaryOperator;
  */
 public interface RobotEnvironment extends WithStatusFlowable, WithErrorFlowable, WithIOFlowable, WithSignalsSpec, WithCommandFlowable, WithControllerFlowable {
 
-    String ENV_SCHEMA_YML = "https://mmarini.org/wheelly/env-schema-0.5";
-
     /**
      * Returns the robot environment from configuration
      *
@@ -57,7 +55,7 @@ public interface RobotEnvironment extends WithStatusFlowable, WithErrorFlowable,
      * @param controller the controller
      */
     static RobotEnvironment fromConfig(JsonNode config, Locator locator, RobotControllerApi controller) {
-        return Yaml.fromConfig(config, locator, ENV_SCHEMA_YML, new Object[]{controller}, new Class[]{RobotControllerApi.class});
+        return Utils.createObject(config, locator, new Object[]{controller}, new Class[]{RobotControllerApi.class});
     }
 
     /**
