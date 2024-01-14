@@ -1,0 +1,17 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/objective-explore-schema-0.1
+title: Explore schema
+type: object
+properties:
+  $schema:
+    const: https://mmarini.org/wheelly/objective-explore-schema-0.1
+  class:
+    const: org.mmarini.wheelly.objectives.Explore
+  sensorRange:
+    multipleOf: 1
+    minimum: 0
+required:
+  - $schema
+  - class
+  - sensorRange

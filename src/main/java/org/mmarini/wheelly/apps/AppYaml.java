@@ -37,7 +37,9 @@ import org.mmarini.yaml.Utils;
 
 import java.io.IOException;
 
-public interface Yaml {
+import static java.lang.String.format;
+
+public interface AppYaml {
 
 
     /**
@@ -49,9 +51,15 @@ public interface Yaml {
      */
     static RobotControllerApi controllerFromJson(JsonNode config, Locator locator, String schema) {
         JsonSchemas.instance().validateOrThrow(config, schema);
-        Locator robotLocator = locator.path("robot");
+        Locator robotLocator = locator.path(locator.path("robot").getNode(config).asText());
+        if (robotLocator.getNode(config).isMissingNode()) {
+            throw new IllegalArgumentException(format("Missing node %s", robotLocator));
+        }
+        Locator controllerLocator = locator.path(locator.path("controller").getNode(config).asText());
+        if (controllerLocator.getNode(config).isMissingNode()) {
+            throw new IllegalArgumentException(format("Missing node %s", controllerLocator));
+        }
         RobotApi robot = RobotApi.fromConfig(config, robotLocator);
-        Locator controllerLocator = locator.path("controller");
         return RobotControllerApi.fromConfig(config, controllerLocator, robot);
     }
 
@@ -64,7 +72,11 @@ public interface Yaml {
      */
     static RobotEnvironment envFromJson(JsonNode config, Locator locator, String schema) {
         RobotControllerApi controller = controllerFromJson(config, locator, schema);
-        return RobotEnvironment.fromConfig(config, locator.path("environment"), controller);
+        Locator envLocator = locator.path(locator.path("environment").getNode(config).asText());
+        if (envLocator.getNode(config).isMissingNode()) {
+            throw new IllegalArgumentException(format("Missing node %s", envLocator));
+        }
+        return RobotEnvironment.fromConfig(config, envLocator, controller);
     }
 
     /**

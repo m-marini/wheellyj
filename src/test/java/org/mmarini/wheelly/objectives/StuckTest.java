@@ -81,6 +81,8 @@ class StuckTest {
                 int canMoveForward,
                 int canMoveBackward) throws IOException {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
+                "$schema: " + Stuck.SCHEMA_NAME,
+                "class: " + Stuck.class.getName(),
                 "distance0: 0.5",
                 "distance1: 0.9",
                 "distance2: 1.1",

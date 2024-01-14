@@ -130,7 +130,7 @@ public class PrintNetChart {
             this.args = parser.parseArgs(args);
             logger.atInfo().log("Creating environment");
             JsonNode config = fromFile(this.args.getString("config"));
-            RobotEnvironment environment = Yaml.envFromJson(config, Locator.root(), Wheelly.WHEELLY_SCHEMA_YML);
+            RobotEnvironment environment = AppYaml.envFromJson(config, Locator.root(), Wheelly.WHEELLY_SCHEMA_YML);
 
             logger.atInfo().log("Creating agent");
             this.agent = Agent.fromConfig(config, Locator.locate("agent"), environment);

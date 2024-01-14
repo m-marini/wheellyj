@@ -34,7 +34,7 @@ import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.*;
-import org.mmarini.wheelly.apps.Yaml;
+import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,7 +60,7 @@ import static org.mmarini.wheelly.engines.StateNode.NONE_EXIT;
  */
 public class StateMachineAgent implements ProcessorContext, WithIOFlowable, WithStatusFlowable, WithErrorFlowable,
         WithCommandFlowable, WithControllerFlowable {
-    public static final String STATE_AGENT_SCHEMA_YML = "https://mmarini.org/wheelly/state-agent-schema-0.9";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-agent-schema-1.0";
     private static final Logger logger = LoggerFactory.getLogger(StateMachineAgent.class);
 
     /**
@@ -71,6 +71,7 @@ public class StateMachineAgent implements ProcessorContext, WithIOFlowable, With
      * @param robot   the robot api
      */
     public static StateMachineAgent create(JsonNode root, Locator locator, RobotControllerApi robot) {
+        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         StateFlow flow = StateFlow.create(root, locator.path("flow"));
         double minRadarDistance = locator.path("minRadarDistance").getNode(root).asDouble();
         double maxRadarDistance = locator.path("maxRadarDistance").getNode(root).asDouble();
@@ -78,17 +79,6 @@ public class StateMachineAgent implements ProcessorContext, WithIOFlowable, With
         RadarMap radarMap = RadarMap.create(root, locator);
         PolarMap polarMap = PolarMap.create(numRadarSectors);
         return new StateMachineAgent(minRadarDistance, maxRadarDistance, radarMap, polarMap, robot, flow);
-    }
-
-    /**
-     * Returns the state machine agent
-     *
-     * @param config     the root document
-     * @param locator    the configuration locator
-     * @param controller the controller
-     */
-    public static StateMachineAgent fromConfig(JsonNode config, Locator locator, RobotControllerApi controller) {
-        return Yaml.fromConfig(config, locator, STATE_AGENT_SCHEMA_YML, new Object[]{controller}, new Class[]{RobotControllerApi.class});
     }
 
     private final RobotControllerApi controller;

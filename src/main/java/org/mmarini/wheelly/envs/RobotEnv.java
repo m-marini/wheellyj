@@ -26,7 +26,6 @@
 package org.mmarini.wheelly.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.eclipse.collections.api.block.function.primitive.DoubleFunction;
 import org.mmarini.NotImplementedException;
 import org.mmarini.rl.envs.*;
 import org.mmarini.wheelly.apis.RobotApi;
@@ -38,6 +37,7 @@ import org.nd4j.linalg.factory.Nd4j;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.function.ToDoubleFunction;
 
 import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
@@ -79,7 +79,7 @@ public class RobotEnv implements Environment {
      * @param robot          the robot api
      * @param rewardFunction the reward function
      */
-    public static RobotEnv create(RobotApi robot, DoubleFunction<Environment> rewardFunction) {
+    public static RobotEnv create(RobotApi robot, ToDoubleFunction<RobotEnvironment> rewardFunction) {
         return RobotEnv.create(robot, rewardFunction,
                 DEFAULT_INTERVAL, DEFAULT_REACTION_INTERVAL, DEFAULT_COMMAND_INTERVAL,
                 DEFAULT_NUM_DIRECTION_VALUES, DEFAULT_NUM_SENSOR_VALUES, DEFAULT_NUM_SPEED_VALUES);
@@ -93,7 +93,7 @@ public class RobotEnv implements Environment {
      * @param robot   the robot interface
      */
     public static RobotEnv create(JsonNode root, Locator locator, RobotApi robot) {
-        DoubleFunction<Environment> reward = Utils.createObject(root, locator.path("objective"), new Object[0], new Class[0]);
+        ToDoubleFunction<RobotEnvironment> reward = Utils.createObject(root, locator.path("objective"), new Object[0], new Class[0]);
         long interval = locator.path("interval").getNode(root).asLong();
         long reactionInterval = locator.path("reactionInterval").getNode(root).asLong();
         long commandInterval = locator.path("commandInterval").getNode(root).asLong();
@@ -118,7 +118,7 @@ public class RobotEnv implements Environment {
      * @param numSensorValues    number of sensor direction values
      * @param numSpeedValues     number of speed values
      */
-    public static RobotEnv create(RobotApi robot, DoubleFunction<Environment> reward,
+    public static RobotEnv create(RobotApi robot, ToDoubleFunction<RobotEnvironment> reward,
                                   long interval, long reactionInterval, long commandInterval,
                                   int numDirectionValues, int numSensorValues, int numSpeedValues) {
         Map<String, SignalSpec> actions1 = Map.of(
@@ -132,7 +132,7 @@ public class RobotEnv implements Environment {
     }
 
     private final RobotApi robot;
-    private final DoubleFunction<Environment> reward;
+    private final ToDoubleFunction<RobotEnvironment> reward;
     private final long interval;
     private final long reactionInterval;
     private final long commandInterval;
@@ -164,7 +164,7 @@ public class RobotEnv implements Environment {
      * @param commandInterval  the command interval
      * @param actions          the actions spec
      */
-    public RobotEnv(RobotApi robot, DoubleFunction<Environment> reward,
+    public RobotEnv(RobotApi robot, ToDoubleFunction<RobotEnvironment> reward,
                     long interval, long reactionInterval, long commandInterval,
                     Map<String, SignalSpec> actions) {
         this.robot = requireNonNull(robot);

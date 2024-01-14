@@ -1,249 +1,242 @@
 ---
-$schema: https://mmarini.org/wheelly/executor-schema-0.1
-robot:
-  $schema: https://mmarini.org/wheelly/robot-schema-0.8
-  #active: realRobot
-  active: simRobot
-  configurations:
-    simRobot:
-      class: org.mmarini.wheelly.apis.SimRobot
-      robotSeed: 1234
-      mapSeed: 1234
-      numObstacles: 10
-      errSigma: 0.05
-      errSensor: 0.05
-      sensorReceptiveAngle: 15
-      maxAngularSpeed: 5
-    realRobot:
-      class: org.mmarini.wheelly.apis.Robot
-      #host: wheelly
-      host: 192.168.1.43
-      connectionTimeout: 10000
-      readTimeout: 10000
-      configureTimeout: 2000
-      configCommands:
-        - cs 500
-        - cc 10 45 20
-        - tcsl 30 107 180 -32 -81 -180 400 50
-        - tcsr 39 78 180 -32 -92 -180 400 50
-        - fl 10000 10000
-        - fr 10000 10000
-        - ci 500 500
-# Controller
-controller:
-  $schema: https://mmarini.org/wheelly/controller-schema-0.6
-  active: controller
-  configurations:
-    controller:
-      class: org.mmarini.wheelly.apis.RobotController
-      interval: 100
-      reactionInterval: 300
-      commandInterval: 600
-      connectionRetryInterval: 1000
-      watchdogInterval: 5000
-      simulationSpeed: 10
-      supplyValues: [ 1762, 2878 ]
-      voltages: [ 8.3, 11.9 ]
+$schema: https://mmarini.org/wheelly/executor-schema-1.0
 
-# Agent
-agent:
-  $schema: https://mmarini.org/wheelly/state-agent-schema-0.9
-  active: explorerAgent
+robot: robots/simRobot
+controller: controllers/controller
+agent: agents/explorerAgent
 
-  configurations:
-    ######################################
-    # Explorer agent
-    ######################################
-    explorerAgent:
-      class: org.mmarini.wheelly.engines.StateMachineAgent
-      interval: 10
-      commandInterval: 600
-      reactionInterval: 300
-      numRadarSectors: 24
-      minRadarDistance: 0.3
-      maxRadarDistance: 3
-      radarWidth: 101
-      radarHeight: 101
-      radarGrid: 0.1
-      contactRadius: 0.2
-      radarReceptiveAngle: 15
-      echoPersistence: 120000
-      contactPersistence: 60000
-      radarCleanInterval: 15000
-      flow:
-        entry: scan
-        states:
-          scan:
-            class: org.mmarini.wheelly.engines.HaltState
-            timeout: 20000
-            scanInterval: 500
-            minSensorDir: -90
-            maxSensorDir: 90
-            sensorDirNumber: 9
-          target:
-            class: org.mmarini.wheelly.engines.ExploringPointState
-            distance: 1
-            safeDistance: 0.4
-            maxDistance: 3
-          move:
-            class: org.mmarini.wheelly.engines.MoveToState
-            stopDistance: 0.1
-            x: 0
-            y: 0
-            onEntry:
-              - move.target
-              - target.target
-              - get
-              - put
-          avoid:
-            class: org.mmarini.wheelly.engines.AvoidingState
-            safeDistance: 0.2
-            speed: 20
-          clearMap:
-            class: org.mmarini.wheelly.engines.ClearMapState
-        transitions:
-          - from: scan
-            to: target
-            trigger: timeout
-          - from: scan
-            to: avoid
-            trigger: rearBlocked
-          - from: scan
-            to: avoid
-            trigger: frontBlocked
-          - from: scan
-            to: avoid
-            trigger: blocked
+robots:
+  simRobot:
+    $schema: https://mmarini.org/wheelly/sim-robot-schema-0.1
+    class: org.mmarini.wheelly.apis.SimRobot
+    robotSeed: 1234
+    mapSeed: 1234
+    numObstacles: 10
+    errSigma: 0.05
+    errSensor: 0.05
+    sensorReceptiveAngle: 15
+    maxAngularSpeed: 5
+  realRobot:
+    class: org.mmarini.wheelly.apis.Robot
+    #host: wheelly
+    host: 192.168.1.43
+    connectionTimeout: 10000
+    readTimeout: 10000
+    configureTimeout: 2000
+    configCommands:
+      - cs 500
+      - cc 10 45 20
+      - tcsl 30 107 180 -32 -81 -180 400 50
+      - tcsr 39 78 180 -32 -92 -180 400 50
+      - fl 10000 10000
+      - fr 10000 10000
+      - ci 500 500
 
-          - from: target
-            to: move
-            trigger: completed
-          - from: target
-            to: clearMap
-            trigger: notFound
+controllers:
+  controller:
+    $schema: https://mmarini.org/wheelly/controller-schema-1.0
+    class: org.mmarini.wheelly.apis.RobotController
+    interval: 100
+    reactionInterval: 300
+    commandInterval: 600
+    connectionRetryInterval: 1000
+    watchdogInterval: 5000
+    simulationSpeed: 10
+    supplyValues: [ 1762, 2878 ]
+    voltages: [ 8.3, 11.9 ]
 
-          - from: move
-            to: scan
-            trigger: completed
-          - from: move
-            to: avoid
-            trigger: rearBlocked
-          - from: move
-            to: avoid
-            trigger: frontBlocked
-          - from: move
-            to: avoid
-            trigger: blocked
+agents:
+  ######################################
+  # Explorer agent
+  ######################################
+  explorerAgent:
+    $schema: https://mmarini.org/wheelly/state-agent-schema-1.0
+    class: org.mmarini.wheelly.engines.StateMachineAgent
+    numRadarSectors: 24
+    minRadarDistance: 0.3
+    maxRadarDistance: 3
+    radarWidth: 101
+    radarHeight: 101
+    radarGrid: 0.1
+    contactRadius: 0.2
+    radarReceptiveAngle: 15
+    echoPersistence: 120000
+    contactPersistence: 60000
+    radarCleanInterval: 15000
+    flow:
+      entry: scan
+      states:
+        scan:
+          class: org.mmarini.wheelly.engines.HaltState
+          timeout: 20000
+          scanInterval: 500
+          minSensorDir: -90
+          maxSensorDir: 90
+          sensorDirNumber: 9
+        target:
+          class: org.mmarini.wheelly.engines.ExploringPointState
+          distance: 1
+          safeDistance: 0.4
+          maxDistance: 3
+        move:
+          class: org.mmarini.wheelly.engines.MoveToState
+          stopDistance: 0.1
+          x: 0
+          y: 0
+          onEntry:
+            - move.target
+            - target.target
+            - get
+            - put
+        avoid:
+          class: org.mmarini.wheelly.engines.AvoidingState
+          safeDistance: 0.2
+          speed: 20
+        clearMap:
+          class: org.mmarini.wheelly.engines.ClearMapState
+      transitions:
+        - from: scan
+          to: target
+          trigger: timeout
+        - from: scan
+          to: avoid
+          trigger: rearBlocked
+        - from: scan
+          to: avoid
+          trigger: frontBlocked
+        - from: scan
+          to: avoid
+          trigger: blocked
 
-          - from: avoid
-            to: scan
-            trigger: completed
+        - from: target
+          to: move
+          trigger: completed
+        - from: target
+          to: clearMap
+          trigger: notFound
 
-          - from: clearMap
-            to: scan
-            trigger: completed
+        - from: move
+          to: scan
+          trigger: completed
+        - from: move
+          to: avoid
+          trigger: rearBlocked
+        - from: move
+          to: avoid
+          trigger: frontBlocked
+        - from: move
+          to: avoid
+          trigger: blocked
 
-    ######################################
-    # Guard agent
-    ######################################
-    guardAgent:
-      class: org.mmarini.wheelly.engines.StateMachineAgent
-      interval: 10
-      commandInterval: 600
-      reactionInterval: 300
-      numRadarSectors: 24
-      minRadarDistance: 0.3
-      maxRadarDistance: 2.8
-      radarWidth: 51
-      radarHeight: 51
-      radarGrid: 0.2
-      contactRadius: 0.2
-      radarReceptiveAngle: 15
-      echoPersistence: 300000
-      contactPersistence: 300000
-      radarCleanInterval: 30000
-      flow:
-        entry: start
-        states:
-          start:
-            class: org.mmarini.wheelly.engines.HaltState
-            timeout: 2000
-          movingTo0:
-            class: org.mmarini.wheelly.engines.MoveToState
-            stopDistance: 0.1
-            x: 0
-            y: 0
-          movingTo1:
-            class: org.mmarini.wheelly.engines.MoveToState
-            stopDistance: 0.1
-            x: 0
-            y: 2
-        transitions:
-          - from: start
-            to: movingTo1
-            trigger: timeout
-          - from: movingTo1
-            to: movingTo0
-            trigger: completed
-          - from: movingTo1
-            to: start
-            trigger: rearBlocked
-          - from: movingTo1
-            to: start
-            trigger: frontBlocked
-          - from: movingTo1
-            to: start
-            trigger: blocked
-          - from: movingTo0
-            to: movingTo1
-            trigger: completed
-          - from: movingTo0
-            to: start
-            trigger: rearBlocked
-          - from: movingTo0
-            to: start
-            trigger: frontBlocked
-          - from: movingTo0
-            to: start
-            trigger: blocked
-    ######################################
-    # Idle agent
-    ######################################
-    idleAgent:
-      class: org.mmarini.wheelly.engines.StateMachineAgent
-      interval: 10
-      commandInterval: 600
-      reactionInterval: 300
-      radarWidth: 101
-      radarHeight: 101
-      radarGrid: 0.1
-      contactRadius: 0.2
-      radarReceptiveAngle: 15
-      echoPersistence: 30000
-      contactPersistence: 300000
-      radarCleanInterval: 10000
-      numRadarSectors: 24
-      minRadarDistance: 0.3
-      maxRadarDistance: 3
-      flow:
-        entry: idle
-        states:
-          idle:
-            class: org.mmarini.wheelly.engines.HaltState
-            scanInterval: 1000
-            minSensorDir: -90
-            maxSensorDir: 90
-            sensorDirNumber: 9
-          avoid:
-            class: org.mmarini.wheelly.engines.AvoidingState
-            safeDistance: 0.1
-        transitions:
-          - from: idle
-            to: avoid
-            trigger: frontBlocked
-          - from: idle
-            to: avoid
-            trigger: rearBlocked
-          - from: avoid
-            to: idle
-            trigger: completed
+        - from: avoid
+          to: scan
+          trigger: completed
+
+        - from: clearMap
+          to: scan
+          trigger: completed
+
+  ######################################
+  # Guard agent
+  ######################################
+  guardAgent:
+    class: org.mmarini.wheelly.engines.StateMachineAgent
+    interval: 10
+    commandInterval: 600
+    reactionInterval: 300
+    numRadarSectors: 24
+    minRadarDistance: 0.3
+    maxRadarDistance: 2.8
+    radarWidth: 51
+    radarHeight: 51
+    radarGrid: 0.2
+    contactRadius: 0.2
+    radarReceptiveAngle: 15
+    echoPersistence: 300000
+    contactPersistence: 300000
+    radarCleanInterval: 30000
+    flow:
+      entry: start
+      states:
+        start:
+          class: org.mmarini.wheelly.engines.HaltState
+          timeout: 2000
+        movingTo0:
+          class: org.mmarini.wheelly.engines.MoveToState
+          stopDistance: 0.1
+          x: 0
+          y: 0
+        movingTo1:
+          class: org.mmarini.wheelly.engines.MoveToState
+          stopDistance: 0.1
+          x: 0
+          y: 2
+      transitions:
+        - from: start
+          to: movingTo1
+          trigger: timeout
+        - from: movingTo1
+          to: movingTo0
+          trigger: completed
+        - from: movingTo1
+          to: start
+          trigger: rearBlocked
+        - from: movingTo1
+          to: start
+          trigger: frontBlocked
+        - from: movingTo1
+          to: start
+          trigger: blocked
+        - from: movingTo0
+          to: movingTo1
+          trigger: completed
+        - from: movingTo0
+          to: start
+          trigger: rearBlocked
+        - from: movingTo0
+          to: start
+          trigger: frontBlocked
+        - from: movingTo0
+          to: start
+          trigger: blocked
+  ######################################
+  # Idle agent
+  ######################################
+  idleAgent:
+    class: org.mmarini.wheelly.engines.StateMachineAgent
+    interval: 10
+    commandInterval: 600
+    reactionInterval: 300
+    radarWidth: 101
+    radarHeight: 101
+    radarGrid: 0.1
+    contactRadius: 0.2
+    radarReceptiveAngle: 15
+    echoPersistence: 30000
+    contactPersistence: 300000
+    radarCleanInterval: 10000
+    numRadarSectors: 24
+    minRadarDistance: 0.3
+    maxRadarDistance: 3
+    flow:
+      entry: idle
+      states:
+        idle:
+          class: org.mmarini.wheelly.engines.HaltState
+          scanInterval: 1000
+          minSensorDir: -90
+          maxSensorDir: 90
+          sensorDirNumber: 9
+        avoid:
+          class: org.mmarini.wheelly.engines.AvoidingState
+          safeDistance: 0.1
+      transitions:
+        - from: idle
+          to: avoid
+          trigger: frontBlocked
+        - from: idle
+          to: avoid
+          trigger: rearBlocked
+        - from: avoid
+          to: idle
+          trigger: completed

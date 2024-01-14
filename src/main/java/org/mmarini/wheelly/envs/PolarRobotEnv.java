@@ -28,6 +28,7 @@ package org.mmarini.wheelly.envs;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.rl.envs.*;
 import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -36,6 +37,7 @@ import org.nd4j.linalg.factory.Nd4j;
 import java.util.Map;
 import java.util.function.ToDoubleFunction;
 
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.Utils.clip;
 
@@ -77,6 +79,7 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
     public static final double MIN_DISTANCE = 0;
     public static final double MAX_DISTANCE = 10;
     public static final int NUM_CONTACT_VALUES = 16;
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/env-polar-schema-0.1";
 
     /**
      * Returns the environment from json node spec
@@ -86,7 +89,12 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
      * @param robot   the robot interface
      */
     public static PolarRobotEnv create(JsonNode root, Locator locator, RobotControllerApi robot) {
-        ToDoubleFunction<RobotEnvironment> reward = Utils.createObject(root, locator.path("objective"), new Object[0], new Class[0]);
+        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        Locator objectiveLocator = Locator.locate(locator.path("objective").getNode(root).asText());
+        if (objectiveLocator.getNode(root).isMissingNode()) {
+            throw new IllegalArgumentException(format("Missing node %s", objectiveLocator));
+        }
+        ToDoubleFunction<RobotEnvironment> reward = Utils.createObject(root, objectiveLocator, new Object[0], new Class[0]);
         int numDirectionValues = locator.path("numDirectionValues").getNode(root).asInt();
         int numSensorValues = locator.path("numSensorValues").getNode(root).asInt();
         int numSpeedValues = locator.path("numSpeedValues").getNode(root).asInt();

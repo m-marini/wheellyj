@@ -60,7 +60,7 @@ import static org.mmarini.wheelly.swing.Utils.layHorizontally;
 
 public class MatrixMonitor {
     public static final int TIME_MAJOR_TICK_SPACING = 10;
-    public static final String MONITOR_SCHEMA_YML = "https://mmarini.org/wheelly/monitor-schema-0.1";
+    public static final String MONITOR_SCHEMA_YML = "https://mmarini.org/wheelly/monitor-schema-1.0";
     private static final Dimension COMMAND_FRAME_SIZE = new Dimension(400, 800);
     private static final Logger logger = LoggerFactory.getLogger(MatrixMonitor.class);
     private static final int MAX_SPEED = 40;
@@ -376,7 +376,7 @@ public class MatrixMonitor {
      */
     private void run() {
         logger.info("Robot check started.");
-        controller = Yaml.fromFile(parseArgs.getString("config"), MONITOR_SCHEMA_YML);
+        controller = AppYaml.fromFile(parseArgs.getString("config"), MONITOR_SCHEMA_YML);
         controller.readRobotStatus()
                 .doOnNext(this::handleStatus).subscribe();
         controller.readErrors().doOnNext(er -> {

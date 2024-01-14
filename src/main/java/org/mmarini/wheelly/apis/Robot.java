@@ -27,6 +27,7 @@ package org.mmarini.wheelly.apis;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.schedulers.Timed;
+import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,6 +77,7 @@ import static java.util.Objects.requireNonNull;
 public class Robot implements RobotApi, WithIOCallback {
     public static final int DEFAULT_PORT = 22;
     public static final int FLUSH_INTERVAL = 1000;
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/robot-schema-1.0";
     private static final Logger logger = LoggerFactory.getLogger(Robot.class);
 
     /**
@@ -85,6 +87,7 @@ public class Robot implements RobotApi, WithIOCallback {
      * @param locator the locator of robot spec
      */
     public static Robot create(JsonNode root, Locator locator) {
+        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         String host = locator.path("host").getNode(root).asText();
         int port = locator.path("port").getNode(root).asInt(DEFAULT_PORT);
         long connectionTimeout = locator.path("connectionTimeout").getNode(root).asLong();

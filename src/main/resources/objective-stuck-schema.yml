@@ -1,0 +1,29 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/objective-stuck-schema-0.1
+title: Environment
+type: object
+properties:
+  $schema:
+    const: https://mmarini.org/wheelly/objective-stuck-schema-0.1
+  class:
+    const: org.mmarini.wheelly.objectives.Stuck
+  distance0:
+    exclusiveMinimum: 0
+  distance1:
+    exclusiveMinimum: 0
+  distance2:
+    exclusiveMinimum: 0
+  distance3:
+    exclusiveMinimum: 0
+  sensorRange:
+    multipleOf: 1
+    minimum: 0
+required:
+  - $schema
+  - class
+  - distance0
+  - distance1
+  - distance2
+  - distance3
+  - sensorRange

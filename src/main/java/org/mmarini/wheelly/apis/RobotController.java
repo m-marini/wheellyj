@@ -34,6 +34,7 @@ import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.CompletableSubject;
+import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,8 +49,8 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
 import static org.mmarini.wheelly.apis.Utils.linear;
-import static org.mmarini.wheelly.apps.Yaml.loadDoubleArray;
-import static org.mmarini.wheelly.apps.Yaml.loadIntArray;
+import static org.mmarini.wheelly.apps.AppYaml.loadDoubleArray;
+import static org.mmarini.wheelly.apps.AppYaml.loadIntArray;
 
 /**
  * Manages the processing threads and event generation to interface the robot.
@@ -108,6 +109,7 @@ import static org.mmarini.wheelly.apps.Yaml.loadIntArray;
  * </p>
  */
 public class RobotController implements RobotControllerApi {
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/controller-schema-1.0";
     public static final String CONNECTING = "connecting";
     public static final String WAITING_RETRY = "waitingRetry";
     public static final String CLOSING = "closing";
@@ -125,6 +127,7 @@ public class RobotController implements RobotControllerApi {
      * @param robot   the robot api
      */
     public static RobotController create(JsonNode root, Locator locator, RobotApi robot) {
+        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         long interval = locator.path("interval").getNode(root).asLong();
         long reactionInterval = locator.path("reactionInterval").getNode(root).asLong();
         long commandInterval = locator.path("commandInterval").getNode(root).asLong();

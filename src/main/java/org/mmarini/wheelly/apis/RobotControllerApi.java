@@ -30,8 +30,8 @@ package org.mmarini.wheelly.apis;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Completable;
-import org.mmarini.wheelly.apps.Yaml;
 import org.mmarini.yaml.Locator;
+import org.mmarini.yaml.Utils;
 
 import java.util.function.Consumer;
 
@@ -103,9 +103,6 @@ import java.util.function.Consumer;
  * </p>
  */
 public interface RobotControllerApi extends WithIOFlowable, WithStatusFlowable, WithErrorFlowable, WithCommandFlowable, WithControllerFlowable, WithInferenceFlowable {
-
-    String CONTROLLER_SCHEMA_YML = "https://mmarini.org/wheelly/controller-schema-0.6";
-
     /**
      * Returns the robot controller from configuration json
      *
@@ -114,7 +111,7 @@ public interface RobotControllerApi extends WithIOFlowable, WithStatusFlowable, 
      * @param robot   the robot api
      */
     static RobotControllerApi fromConfig(JsonNode config, Locator locator, RobotApi robot) {
-        return Yaml.fromConfig(config, locator, CONTROLLER_SCHEMA_YML, new Object[]{robot}, new Class[]{RobotApi.class});
+        return Utils.createObject(config, locator, new Object[]{robot}, new Class[]{RobotApi.class});
     }
 
     /**

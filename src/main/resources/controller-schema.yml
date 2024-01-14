@@ -1,70 +1,52 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/controller-schema-0.6
-title: Robot
-$defs:
-  ControllerSet:
-    anyOf:
-      - $ref: "#/$defs/Controller"
-  Controller:
-    type: object
-    properties:
-      class:
-        const: org.mmarini.wheelly.apis.RobotController
-      interval:
-        multipleOf: 1
-        minimum: 1
-      reactionInterval:
-        multipleOf: 1
-        minimum: 1
-      commandInterval:
-        multipleOf: 1
-        minimum: 1
-      connectionRetryInterval:
-        multipleOf: 1
-        minimum: 1
-      watchdogInterval:
-        multipleOf: 1
-        minimum: 1
-      simulationSpeed:
-        type: number
-        minimum: 1
-      supplyValues:
-        type: array
-        items:
-          multipleOf: 1
-          minimum: 0
-          maximum: 4095
-        minItems: 2
-        maxItems: 2
-      voltages:
-        type: array
-        items:
-          type: number
-        minItems: 2
-        maxItems: 2
-    required:
-      - class
-      - interval
-      - reactionInterval
-      - commandInterval
-      - connectionRetryInterval
-      - watchdogInterval
-      - supplyValues
-      - voltages
-
+$id: https://mmarini.org/wheelly/controller-schema-1.0
+title: Robot controller
 type: object
 properties:
   $schema:
-    type: string
-    const: https://mmarini.org/wheelly/controller-schema-0.6
-  active:
-    type: string
-  configurations:
-    type: object
-    additionalProperties:
-      $ref: "#/$defs/ControllerSet"
+    const: https://mmarini.org/wheelly/controller-schema-1.0
+  class:
+    const: org.mmarini.wheelly.apis.RobotController
+  interval:
+    multipleOf: 1
+    minimum: 1
+  reactionInterval:
+    multipleOf: 1
+    minimum: 1
+  commandInterval:
+    multipleOf: 1
+    minimum: 1
+  connectionRetryInterval:
+    multipleOf: 1
+    minimum: 1
+  watchdogInterval:
+    multipleOf: 1
+    minimum: 1
+  simulationSpeed:
+    type: number
+    minimum: 1
+  supplyValues:
+    type: array
+    items:
+      multipleOf: 1
+      minimum: 0
+      maximum: 4095
+    minItems: 2
+    maxItems: 2
+  voltages:
+    type: array
+    items:
+      type: number
+    minItems: 2
+    maxItems: 2
 required:
   - $schema
-  - active
-  - configurations
+  - class
+  - interval
+  - reactionInterval
+  - commandInterval
+  - connectionRetryInterval
+  - watchdogInterval
+  - supplyValues
+  - voltages

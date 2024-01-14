@@ -51,6 +51,7 @@ import java.io.IOException;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static org.mmarini.wheelly.swing.Utils.*;
 
 /**
@@ -58,7 +59,7 @@ import static org.mmarini.wheelly.swing.Utils.*;
  */
 public class RobotExecutor {
     public static final Dimension DEFALT_RADAR_DIMENSION = new Dimension(400, 400);
-    public static final String EXECUTOR_SCHEMA_YML = "https://mmarini.org/wheelly/executor-schema-0.1";
+    public static final String EXECUTOR_SCHEMA_YML = "https://mmarini.org/wheelly/executor-schema-1.0";
     private static final Logger logger = LoggerFactory.getLogger(RobotExecutor.class);
 
     /**
@@ -69,9 +70,12 @@ public class RobotExecutor {
     static StateMachineAgent createAgent(String file) {
         try {
             JsonNode config = org.mmarini.yaml.Utils.fromFile(file);
-            RobotControllerApi controller = Yaml.controllerFromJson(config, Locator.root(), EXECUTOR_SCHEMA_YML);
-            Locator agentLocator = Locator.locate("agent");
-            return StateMachineAgent.fromConfig(config, agentLocator, controller);
+            RobotControllerApi controller = AppYaml.controllerFromJson(config, Locator.root(), EXECUTOR_SCHEMA_YML);
+            Locator agentLocator = Locator.locate(Locator.locate("agent").getNode(config).asText());
+            if (agentLocator.getNode(config).isMissingNode()) {
+                throw new IllegalArgumentException(format("Missing node %s", agentLocator));
+            }
+            return StateMachineAgent.create(config, agentLocator, controller);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

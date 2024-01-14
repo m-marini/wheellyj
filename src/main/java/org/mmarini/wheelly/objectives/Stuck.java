@@ -28,6 +28,7 @@ package org.mmarini.wheelly.objectives;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WithRobotStatus;
+import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.yaml.Locator;
 
@@ -41,6 +42,8 @@ import static org.mmarini.wheelly.apis.SimRobot.MAX_DISTANCE;
  * A set of reward function
  */
 public interface Stuck {
+    String SCHEMA_NAME = "https://mmarini.org/wheelly/objective-stuck-schema-0.1";
+
     /**
      * Returns the reward function from configuration
      *
@@ -48,6 +51,7 @@ public interface Stuck {
      * @param locator the locator
      */
     static ToDoubleFunction<RobotEnvironment> create(JsonNode root, Locator locator) {
+        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double distance0 = locator.path("distance0").getNode(root).asDouble();
         double distance1 = locator.path("distance1").getNode(root).asDouble();
         double distance2 = locator.path("distance2").getNode(root).asDouble();

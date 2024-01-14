@@ -97,6 +97,8 @@ class ExploreTest {
                 int canMoveForward,
                 int canMoveBackward) throws IOException {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
+                "$schema: " + Explore.SCHEMA_NAME,
+                "class: " + Explore.class.getName(),
                 "sensorRange: 60"));
         ToDoubleFunction<RobotEnvironment> f = Explore.create(root, Locator.root());
         RobotEnvironment env = createEnvironment(sensorDir, leftSpeed, rightSpeed, canMoveForward != 0, canMoveBackward != 0, knownCount);

@@ -26,8 +26,8 @@
 package org.mmarini.wheelly.apis;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apps.Yaml;
 import org.mmarini.yaml.Locator;
+import org.mmarini.yaml.Utils;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -37,7 +37,6 @@ import java.io.IOException;
  */
 public interface RobotApi extends Closeable, WithStatusCallback {
     int MAX_PPS = 60;
-    String ROBOT_SCHEMA_YML = "https://mmarini.org/wheelly/robot-schema-0.8";
 
     /**
      * Returns the robot api from configuration
@@ -46,7 +45,7 @@ public interface RobotApi extends Closeable, WithStatusCallback {
      * @param locator the configuration locator
      */
     static RobotApi fromConfig(JsonNode config, Locator locator) {
-        return Yaml.fromConfig(config, locator, ROBOT_SCHEMA_YML, new Object[0], new Class[0]);
+        return Utils.createObject(config, locator, new Object[0], new Class[0]);
     }
 
     /**

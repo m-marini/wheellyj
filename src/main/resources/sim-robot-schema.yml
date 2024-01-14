@@ -1,0 +1,32 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/sim-robot-schema-0.1
+title: Robot
+type: object
+properties:
+  $schema:
+    const: https://mmarini.org/wheelly/sim-robot-schema-0.1
+  class:
+    const: org.mmarini.wheelly.apis.SimRobot
+  mapSeed:
+    multipleOf: 1
+    minimum: 1
+  robotSeed:
+    multipleOf: 1
+    minimum: 1
+  errSigma:
+    minimum: 0
+  errSensor:
+    minimum: 0
+  sensorReceptiveAngle:
+    multipleOf: 1
+    minimum: 1
+  numObstacles:
+    multipleOf: 1
+    minimum: 0
+  maxAngularSpeed:
+    multipleOf: 1
+    minimum: 1
+required:
+  - $schema
+  - class
