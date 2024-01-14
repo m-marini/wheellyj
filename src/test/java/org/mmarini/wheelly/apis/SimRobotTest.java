@@ -33,12 +33,15 @@ import java.awt.geom.Point2D;
 import java.util.Random;
 import java.util.function.Consumer;
 
-import static java.lang.Math.toRadians;
+import static java.lang.Math.*;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_PER_PULSE;
+import static org.mmarini.wheelly.apis.SimRobot.MAX_ANGULAR_VELOCITY;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.*;
+import static org.nd4j.common.util.MathUtils.round;
 import static rocks.cleancode.hamcrest.record.HasFieldMatcher.field;
 
 class SimRobotTest {
@@ -46,7 +49,25 @@ class SimRobotTest {
     public static final int SEED = 1234;
     public static final long INTERVAL = 500;
     public static final float GRID_SIZE = 0.2f;
+    public static final double ACCELERATION = 1d / DISTANCE_PER_PULSE; // ppss
     private static final double PULSES_EPSILON = 1;
+
+    /**
+     * Returns the space traveled (m) in the given time with uniformly accelerated motion
+     * till max speed
+     *
+     * @param maxSpeed the max speed
+     * @param dt       the time
+     */
+    private static double expectedPulses(int maxSpeed, long dt) {
+        // Computes space limited by time in uniformly accelerated motion
+        double sa = ACCELERATION * dt * dt / 2 / 1e6;
+        // Computes space limited by speed in uniformly accelerated motion
+        double sb = maxSpeed * maxSpeed / ACCELERATION / 2;
+        double sl = maxSpeed * dt / 1e3 - sb;
+        return sa <= sb ? sa
+                : sl;
+    }
 
     @Test
     void configureTest() {
@@ -140,21 +161,28 @@ class SimRobotTest {
         robot.setOnMotion(onMotion);
 
         // When move to 0 DEG at max speed
-        robot.move(0, MAX_PPS);
-        // And ticks 5 localTime for 100 ms
+        int speed = MAX_PPS;
+        robot.move(0, speed);
+        // And ticks 100 ms by 5 times
+        long dt = 100;
         for (int i = 0; i < 5; i++) {
-            robot.tick(100);
+            robot.tick(dt);
         }
 
-        // Then robot should emit motion at (0, 18) ~= (0, MAX_PPS * 0.5)
+        // Then robot should emit motion at 500 ms remote time with the expected traveled distance
+        long rt = 500;
+        double dPulses = speed * dt;
+        double yPulses = expectedPulses(speed, rt);
         verify(onMotion).accept(MockitoHamcrest.argThat(
                 allOf(
-                        field("remoteTime", equalTo(500L)),
+                        field("remoteTime", equalTo(rt)),
+                        field("yPulses", closeTo(yPulses, dPulses)),
                         field("xPulses", closeTo(0, PULSES_EPSILON)),
-                        field("yPulses", closeTo(18, PULSES_EPSILON)),
                         field("direction", equalTo(0))
                 )
         ));
+        // And remote localTime should be 500L
+        assertEquals(500L, robot.simulationTime());
     }
 
     @Test
@@ -167,18 +195,23 @@ class SimRobotTest {
         robot.setOnMotion(onMotion);
 
         // When move to 0 DEG at max speed
-        robot.move(0, -MAX_PPS);
-        // And ticks 5 localTime for 100 ms
+        int speed = MAX_PPS;
+        robot.move(0, -speed);
+        // And ticks 100 ms by 5 times
+        long dt = 100;
         for (int i = 0; i < 5; i++) {
-            robot.tick(100);
+            robot.tick(dt);
         }
 
-        // Then robot should emit motion at (0, -18) ~= (0, -MAX_PPS * 0.5)
+        // Then robot should emit motion at 500 ms remote time with the expected traveled distance
+        long rt = 500;
+        double dPulses = speed * dt;
+        double yPulses = -expectedPulses(speed, rt);
         verify(onMotion).accept(MockitoHamcrest.argThat(
                 allOf(
-                        field("remoteTime", equalTo(500L)),
+                        field("remoteTime", equalTo(rt)),
+                        field("yPulses", closeTo(yPulses, dPulses)),
                         field("xPulses", closeTo(0, PULSES_EPSILON)),
-                        field("yPulses", closeTo(-18, PULSES_EPSILON)),
                         field("direction", equalTo(0))
                 )
         ));
@@ -196,20 +229,28 @@ class SimRobotTest {
         robot.setOnMotion(onMotion);
 
         // When move to 5 DEG at 0 speed
-        robot.move(5, 0);
+        int dir = 5;
+        robot.move(dir, 0);
         // And ticks 5 localTime for 100 ms
+        long dt = 100;
         for (int i = 0; i < 5; i++) {
-            robot.tick(100);
+            robot.tick(dt);
         }
 
         // Then robot should emit motion at (0, 0) toward 5 DEG
+        long rt = 500;
+        int maxRot = round(toDegrees(MAX_ANGULAR_VELOCITY * rt / 1e-3));
+        int da = round(toDegrees(MAX_ANGULAR_VELOCITY * dt / 1e-3));
+        int expDir = min(maxRot, dir);
+        int minDir = expDir - da;
+        int maxDir = expDir + da;
         verify(onMotion).accept(MockitoHamcrest.argThat(
                 allOf(
                         field("remoteTime", equalTo(500L)),
                         field("xPulses", closeTo(0, PULSES_EPSILON)),
                         field("yPulses", closeTo(0, PULSES_EPSILON)),
-                        field("direction", greaterThanOrEqualTo(4)),
-                        field("direction", lessThanOrEqualTo(6))
+                        field("direction", greaterThanOrEqualTo(minDir)),
+                        field("direction", lessThanOrEqualTo(maxDir))
                 )
         ));
         // And remote localTime should be 500L
@@ -226,20 +267,28 @@ class SimRobotTest {
         robot.setOnMotion(onMotion);
 
         // When move to 90 DEG at 0 speed
-        robot.move(90, 0);
+        int dir = 90;
+        robot.move(dir, 0);
         // And ticks 5 localTime for 100 ms
+        long dt = 100;
         for (int i = 0; i < 5; i++) {
-            robot.tick(100);
+            robot.tick(dt);
         }
 
         // Then robot should emit motion at (0, 0) toward approx 90 DEG
+        long rt = 500;
+        int maxRot = round(toDegrees(MAX_ANGULAR_VELOCITY * rt / 1e-3));
+        int da = round(toDegrees(MAX_ANGULAR_VELOCITY * dt / 1e-3));
+        int expDir = min(maxRot, dir);
+        int minDir = expDir - da;
+        int maxDir = expDir + da;
         verify(onMotion).accept(MockitoHamcrest.argThat(
                 allOf(
                         field("remoteTime", equalTo(500L)),
                         field("xPulses", closeTo(0, PULSES_EPSILON)),
                         field("yPulses", closeTo(0, PULSES_EPSILON)),
-                        field("direction", greaterThanOrEqualTo(89)),
-                        field("direction", lessThanOrEqualTo(91))
+                        field("direction", greaterThanOrEqualTo(minDir)),
+                        field("direction", lessThanOrEqualTo(maxDir))
                 )
         ));
         // And remote localTime should be 500L

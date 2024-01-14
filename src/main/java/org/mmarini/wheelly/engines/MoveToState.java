@@ -54,10 +54,10 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
     public static final String MAX_SPEED = "maxSpeed";
     public static final String STOP_DISTANCE = "stopDistance";
     public static final String TARGET = "target";
+    public static final double NEAR_DISTANCE = 0.4;
     private static final double DEFAULT_STOP_DISTANCE = 0.4;
     private static final Logger logger = LoggerFactory.getLogger(MoveToState.class);
     private static final int MIN_PPS = 10;
-    public static final double NEAR_DISTANCE = 0.4;
 
     /**
      * Returns the exploring state from configuration

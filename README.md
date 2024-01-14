@@ -5,6 +5,12 @@ The code of Arduino controller is at [Wheellino project](https://github.com/m-ma
 
 The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
+## Release 0.12.1
+
+- Set max speed on move state
+- Move to free point in avoid state at parametrized speed
+- Change robot simulation shape
+
 ## Release 0.12.0
 
 - Added clean Radar map state
