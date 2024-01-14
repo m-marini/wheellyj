@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Issue #304: Use effective radar grid size in panel
 - Issue #305: Change the ping spot to little circle
+- Issue #315: Change robot simulation shape
 
 ### Fixed
 

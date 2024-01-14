@@ -41,6 +41,10 @@ import static java.lang.String.format;
  */
 public class EnvironmentPanel extends RadarPanel {
     public static final BasicStroke BORDER_STROKE = new BasicStroke(0);
+    private static final float ROBOT_RADIUS = 0.15f;
+    private static final float ROBOT_ARROW_X = 0.11f;
+    private static final float ROBOT_ARROW_Y = 0.102f;
+    private static final float ROBOT_ARROW_BACK = 0.05f;
     private static final float DEFAULT_WORLD_SIZE = 11;
     private static final float DEFAULT_SCALE = 800 / DEFAULT_WORLD_SIZE;
     private static final float ROBOT_WIDTH = 0.18f;
@@ -51,14 +55,12 @@ public class EnvironmentPanel extends RadarPanel {
     private static final float SENSOR_LENGTH = 3f;
     private static final int HUD_WIDTH = 200;
     private static final double PING_SIZE = 0.1;
-
     private static final Color ROBOT_COLOR = new Color(255, 255, 0);
     private static final Color OBSTACLE_PHANTOM_COLOR = new Color(128, 128, 128);
     private static final Color HUD_BACKGROUND_COLOR = new Color(32, 32, 32);
     private static final Color SENSOR_COLOR = new Color(200, 0, 0);
     private static final Color PING_COLOR = new Color(255, 192, 192);
-
-    private static final float[][] ROBOT_POINTS = {
+    private static final float[][] ROBOT_POINTS1 = {
             {ROBOT_WIDTH / 2 - ROBOT_W_BEVEL, ROBOT_LENGTH / 2},
             {ROBOT_WIDTH / 2, ROBOT_LENGTH / 2 - ROBOT_L_BEVEL},
             {ROBOT_WIDTH / 2, -ROBOT_LENGTH / 2},
@@ -66,7 +68,14 @@ public class EnvironmentPanel extends RadarPanel {
             {-ROBOT_WIDTH / 2, ROBOT_LENGTH / 2 - ROBOT_L_BEVEL},
             {-ROBOT_WIDTH / 2 + ROBOT_W_BEVEL, ROBOT_LENGTH / 2}
     };
+    private static final float[][] ROBOT_POINTS = {
+            {0, ROBOT_RADIUS},
+            {-ROBOT_ARROW_X, -ROBOT_ARROW_Y},
+            {0, -ROBOT_ARROW_BACK},
+            {ROBOT_ARROW_X, -ROBOT_ARROW_Y}
+    };
     private static final Shape ROBOT_SHAPE = createShape(ROBOT_POINTS);
+    private static final Shape ROBOT_OUTER = new Ellipse2D.Double(-ROBOT_RADIUS, -ROBOT_RADIUS, ROBOT_RADIUS * 2, ROBOT_RADIUS * 2);
     private static final float[][] SENSOR_POINTS = {
             {0, 0},
             {0, SENSOR_LENGTH}
@@ -259,6 +268,7 @@ public class EnvironmentPanel extends RadarPanel {
         gr.transform(at(robotLocation, robotDirection));
         gr.setColor(ROBOT_COLOR);
         gr.setStroke(BORDER_STROKE);
+        gr.draw(ROBOT_OUTER);
         gr.fill(ROBOT_SHAPE);
     }
 

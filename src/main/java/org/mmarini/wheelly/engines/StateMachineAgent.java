@@ -151,7 +151,10 @@ public class StateMachineAgent implements ProcessorContext, WithIOFlowable, With
     }
 
     private void handleInference(RobotStatus status) {
+        long t0 = System.currentTimeMillis();
+        logger.atDebug().log("Handle inference");
         polarMap = polarMap.update(radarMap, status.location(), status.direction(), minRadarDistance, maxRadarDistance);
+        logger.atDebug().log("Polar map updated in {} ms", System.currentTimeMillis() - t0);
         robotStatus = status;
         if (!started) {
             started = true;
@@ -159,6 +162,7 @@ public class StateMachineAgent implements ProcessorContext, WithIOFlowable, With
         }
         step();
         stepUpProcessor.onNext(this);
+        logger.atDebug().log("Handle inference completed in {} ms", System.currentTimeMillis() - t0);
     }
 
     private void handleLatch(RobotStatus status) {

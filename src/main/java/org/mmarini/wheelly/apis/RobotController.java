@@ -490,14 +490,16 @@ public class RobotController implements RobotControllerApi {
                 long realElapsed = t0 - prev;
                 prev = t0;
                 lastTick = robotT0;
-                long realSimElapsed = round(robotElapsed / simSpeed);
+                long expectedElapsed = round(robotElapsed / simSpeed);
+                long waitTime = expectedElapsed - realElapsed - MIN_SYNCH_INTERVAL;
+
                 logger.atDebug().log("Robot elapsed {} ms", robotElapsed);
-                logger.atDebug().log("Real simulated elapsed {} ms", realSimElapsed);
                 logger.atDebug().log("Real elapsed {} ms", realElapsed);
-                long waitTime = realSimElapsed - realElapsed - MIN_SYNCH_INTERVAL;
+                logger.atDebug().log("Expected elapsed {} ms", expectedElapsed);
+                logger.atDebug().log("Wait {} ms", waitTime);
+
                 // Checks for required sleep for synchronization
                 if (waitTime >= 1) {
-                    logger.atDebug().log("Wait {} ms for sync", waitTime);
                     try {
                         Thread.sleep(waitTime);
                     } catch (InterruptedException ignored) {
@@ -531,23 +533,24 @@ public class RobotController implements RobotControllerApi {
                         onLatch.accept(status);
                     } catch (Throwable ex) {
                         sendError(ex);
-                        logger.atError().setCause(ex).log();
+                        logger.atError().setCause(ex).log("Error on latch");
                     }
                 }
                 isInference = true;
                 Schedulers.computation().scheduleDirect(() -> {
-                    logger.atDebug().setMessage("Inference process started").log();
+                    long t0 = System.currentTimeMillis();
+                    logger.atDebug().log("Inference process started");
                     inferencesProcessor.onNext(status);
                     if (onInference != null) {
                         try {
                             onInference.accept(status);
                         } catch (Throwable ex) {
                             sendError(ex);
-                            logger.atError().setCause(ex).log();
+                            logger.atError().setCause(ex).log("Error on inference");
                         }
                     }
                     isInference = false;
-                    logger.atDebug().setMessage("Inference process ended").log();
+                    logger.atDebug().log("Inference process ended, elapsed {} ms", System.currentTimeMillis() - t0);
                 });
             }
         }
@@ -622,7 +625,7 @@ public class RobotController implements RobotControllerApi {
      * Waiting command interval
      */
     private void waitingCommandInterval() {
-        logger.atDebug().setMessage("Waiting {}").addArgument(interval).log();
+        logger.atDebug().log("Waiting for command {} ms", commandInterval);
         long time = robot.simulationTime();
         if (time >= lastTick + watchdogInterval) {
             logger.atError().log("No signals");
@@ -632,11 +635,14 @@ public class RobotController implements RobotControllerApi {
         if (close) {
             setStatusTransition(this::closing, CLOSING);
         } else {
-            try {
-//                robot.tick(interval);
-                Thread.sleep(round(interval / simSpeed));
-            } catch (InterruptedException ex) {
-                sendError(ex);
+            long waitTime = round(commandInterval / simSpeed);
+            if (waitTime >= 1) {
+                try {
+                    logger.atDebug().log("Sleep thread for {} ms", waitTime);
+                    Thread.sleep(waitTime);
+                } catch (InterruptedException ex) {
+                    sendError(ex);
+                }
             }
             setStatusTransition(this::handleCommands, HANDLING_COMMANDS);
         }

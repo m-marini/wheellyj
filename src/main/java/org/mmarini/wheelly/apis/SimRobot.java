@@ -29,7 +29,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.jbox2d.callbacks.ContactImpulse;
 import org.jbox2d.callbacks.ContactListener;
 import org.jbox2d.collision.Manifold;
-import org.jbox2d.collision.shapes.ChainShape;
+import org.jbox2d.collision.WorldManifold;
+import org.jbox2d.collision.shapes.CircleShape;
 import org.jbox2d.collision.shapes.PolygonShape;
 import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.*;
@@ -39,7 +40,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
-import java.util.Arrays;
 import java.util.Optional;
 import java.util.Random;
 import java.util.function.Consumer;
@@ -48,8 +48,7 @@ import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_PER_PULSE;
 import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_SCALE;
-import static org.mmarini.wheelly.apis.Utils.normalizeAngle;
-import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
+import static org.mmarini.wheelly.apis.Utils.*;
 
 /**
  * Simulated robot
@@ -59,48 +58,28 @@ public class SimRobot implements RobotApi {
     public static final double WORLD_SIZE = 10;
     public static final double X_CENTER = 0;
     public static final double Y_CENTER = 0;
-    public static final double ROBOT_WIDTH = 0.18;
-    public static final double ROBOT_LENGTH = 0.26;
     public static final double MAX_OBSTACLE_DISTANCE = 3;
     public static final double MAX_DISTANCE = 3;
     public static final double MAX_VELOCITY = MAX_PPS * DISTANCE_PER_PULSE;
+    public static final double MAX_ANGULAR_PPS = 20;
     public static final double ROBOT_TRACK = 0.136;
+    public static final double MAX_ANGULAR_VELOCITY = MAX_ANGULAR_PPS * DISTANCE_PER_PULSE / ROBOT_TRACK * 2; // RAD/s
     private static final double MIN_OBSTACLE_DISTANCE = 1;
     private static final Vec2 GRAVITY = new Vec2();
     private static final int VELOCITY_ITER = 10;
     private static final int POSITION_ITER = 10;
     private static final double RAD_10 = toRadians(10);
     private static final double RAD_30 = toRadians(30);
-    private static final double ROBOT_MASS = 0.78;
-    private static final double ROBOT_DENSITY = ROBOT_MASS / ROBOT_LENGTH / ROBOT_WIDTH;
+    private static final double ROBOT_MASS = 0.785;
     private static final double ROBOT_FRICTION = 1;
     private static final double ROBOT_RESTITUTION = 0;
     private static final double SAFE_DISTANCE = 0.2;
     private static final double MAX_ACC = 1;
     private static final double MAX_FORCE = MAX_ACC * ROBOT_MASS;
     private static final double MAX_TORQUE = 0.7;
-    private static final double SENSOR_GAP = 0.01;
-    private static final double[][] FRONT_LEFT_VERTICES = {
-            {SENSOR_GAP, ROBOT_WIDTH / 2 + SENSOR_GAP},
-            {ROBOT_LENGTH / 2 + SENSOR_GAP, ROBOT_WIDTH / 2 + SENSOR_GAP},
-            {ROBOT_LENGTH / 2 + SENSOR_GAP, SENSOR_GAP}
-    };
-    private static final double[][] FRONT_RIGHT_VERTICES = {
-            {SENSOR_GAP, -ROBOT_WIDTH / 2 - SENSOR_GAP},
-            {ROBOT_LENGTH / 2 + SENSOR_GAP, -ROBOT_WIDTH / 2 - SENSOR_GAP},
-            {ROBOT_LENGTH / 2 + SENSOR_GAP, -SENSOR_GAP}
-    };
-    private static final double[][] REAR_LEFT_VERTICES = {
-            {-SENSOR_GAP, ROBOT_WIDTH / 2 + SENSOR_GAP},
-            {-ROBOT_LENGTH / 2 - SENSOR_GAP, ROBOT_WIDTH / 2 + SENSOR_GAP},
-            {-ROBOT_LENGTH / 2 - SENSOR_GAP, SENSOR_GAP}
-    };
-    private static final double[][] REAR_RIGHT_VERTICES = {
-            {-SENSOR_GAP, -ROBOT_WIDTH / 2 - SENSOR_GAP},
-            {-ROBOT_LENGTH / 2 - SENSOR_GAP, -ROBOT_WIDTH / 2 - SENSOR_GAP},
-            {-ROBOT_LENGTH / 2 - SENSOR_GAP, -SENSOR_GAP}
-    };
     private static final Logger logger = LoggerFactory.getLogger(SimRobot.class);
+    private static final float ROBOT_RADIUS = 0.15f;
+    private static final double ROBOT_DENSITY = ROBOT_MASS / (ROBOT_RADIUS * ROBOT_RADIUS * PI);
 
     public static SimRobot create(JsonNode root, Locator locator) {
         long mapSeed = locator.path("mapSeed").getNode(root).asLong(0);
@@ -147,22 +126,6 @@ public class SimRobot implements RobotApi {
         obs.createFixture(obsFixDef);
     }
 
-    /**
-     * Returns a sensor fixture
-     *
-     * @param parentBody parent body
-     * @param vertices   the vertices
-     */
-    private static Fixture createSensor(Body parentBody, double[][] vertices) {
-        ChainShape shape = new ChainShape();
-        Vec2[] vertices1 = Arrays.stream(vertices).map(Utils::vec2).toArray(Vec2[]::new);
-        shape.createChain(vertices1, vertices.length);
-        FixtureDef def = new FixtureDef();
-        def.shape = shape;
-        def.isSensor = true;
-        return parentBody.createFixture(def);
-    }
-
     private final World world;
     private final Body robot;
     private final double errSigma;
@@ -170,10 +133,6 @@ public class SimRobot implements RobotApi {
     private final double sensorReceptiveAngle;
     private final Random random;
     private final ObstacleMap obstacleMap;
-    private final Fixture flSensor;
-    private final Fixture frSensor;
-    private final Fixture rlSensor;
-    private final Fixture rrSensor;
     private final int maxAngularSpeed;
     private final long motionInterval;
     private final long proxyInterval;
@@ -245,21 +204,14 @@ public class SimRobot implements RobotApi {
         bodyDef.angle = (float) (PI / 2);
         this.robot = world.createBody(bodyDef);
 
-        // Creates the jbox2 robot fixture
-        PolygonShape robotShape = new PolygonShape();
-        robotShape.setAsBox((float) (ROBOT_WIDTH / 2), (float) (ROBOT_LENGTH / 2));
+        CircleShape circleShape = new CircleShape();
+        circleShape.setRadius(ROBOT_RADIUS);
         FixtureDef fixDef = new FixtureDef();
-        fixDef.shape = robotShape;
+        fixDef.shape = circleShape;
         fixDef.friction = (float) ROBOT_FRICTION;
         fixDef.density = (float) ROBOT_DENSITY;
         fixDef.restitution = (float) ROBOT_RESTITUTION;
         robot.createFixture(fixDef);
-
-        // Creates the jbox2 sensor fixtures
-        this.flSensor = createSensor(robot, FRONT_LEFT_VERTICES);
-        this.frSensor = createSensor(robot, FRONT_RIGHT_VERTICES);
-        this.rlSensor = createSensor(robot, REAR_LEFT_VERTICES);
-        this.rrSensor = createSensor(robot, REAR_RIGHT_VERTICES);
 
         // Create obstacle fixture
         for (Point2D point : obstacleMap.getPoints()) {
@@ -310,6 +262,22 @@ public class SimRobot implements RobotApi {
     }
 
     /**
+     * Returns the contact direction relative to the robot (RAD)
+     *
+     * @param contact the contact
+     */
+    private double contactRelativeDirection(Contact contact) {
+        WorldManifold worldManifold = new WorldManifold();
+        contact.getWorldManifold(worldManifold);
+        Point2D contactAt = new Point2D.Double(worldManifold.points[0].x,
+                worldManifold.points[0].y);
+        Point2D location = this.getLocation();
+        double contactDirection = Utils.direction(location, contactAt);
+        float angle = robot.getAngle();
+        return normalizeDegAngle(contactDirection - angle);
+    }
+
+    /**
      * @param dt the localTime interval
      */
     private void controller(double dt) {
@@ -319,7 +287,7 @@ public class SimRobot implements RobotApi {
         double angularVelocityPps = Utils.clip(Utils.linear(dAngle, -RAD_10, RAD_10, -maxAngularSpeed, maxAngularSpeed), -maxAngularSpeed, maxAngularSpeed);
         // Relative linear speed to fix the speed
 
-        double linearVelocityPps = (double) speed * Utils.clip(Utils.linear(abs(dAngle), 0, RAD_30, MAX_PPS, 0), 0, MAX_PPS);
+        double linearVelocityPps = speed * Utils.clip(Utils.linear(abs(dAngle), 0, RAD_30, 1, 0), 0, 1);
 
         // Relative left-right motor speeds
         leftPps = Utils.clip((linearVelocityPps - angularVelocityPps), -MAX_PPS, MAX_PPS);
@@ -350,7 +318,9 @@ public class SimRobot implements RobotApi {
         force = robot.getWorldVector(localForce);
 
         // Angle rotation due to differential motor speeds
-        double angularVelocity = (right - left) / ROBOT_TRACK;
+        double angularVelocity1 = (right - left) / ROBOT_TRACK;
+        // Limits rotation to max allowed rotation
+        double angularVelocity = clip(angularVelocity1, -MAX_ANGULAR_VELOCITY, MAX_ANGULAR_VELOCITY);
         // Angular impulse to fix direction
         double robotAngularVelocity = robot.getAngularVelocity();
         double angularTorque = (angularVelocity - robotAngularVelocity) * robot.getInertia() / dt;
@@ -411,34 +381,18 @@ public class SimRobot implements RobotApi {
     }
 
     private void handleBeginContact(Contact contact) {
-        if (isFront(contact)) {
+        if (abs(contactRelativeDirection(contact)) <= PI / 2) {
             frontSensor = false;
-        }
-        if (isRear(contact)) {
+        } else {
             rearSensor = false;
         }
         sendContacts();
     }
 
     private void handleEndContact(Contact contact) {
-        if (isFront(contact)) {
-            frontSensor = true;
-        }
-        if (isRear(contact)) {
-            rearSensor = true;
-        }
+        frontSensor = true;
+        rearSensor = true;
         sendContacts();
-    }
-
-    /**
-     * Returns true if contact is frontal
-     *
-     * @param contact contact
-     */
-    private boolean isFront(Contact contact) {
-        Fixture fa = contact.m_fixtureA;
-        Fixture fb = contact.m_fixtureB;
-        return fa == flSensor || fb == flSensor || fa == frSensor || fb == frSensor;
     }
 
     /**
@@ -446,17 +400,6 @@ public class SimRobot implements RobotApi {
      */
     boolean isFrontSensor() {
         return frontSensor;
-    }
-
-    /**
-     * Returns true if contact is later
-     *
-     * @param contact contact
-     */
-    private boolean isRear(Contact contact) {
-        Fixture fa = contact.m_fixtureA;
-        Fixture fb = contact.m_fixtureB;
-        return fa == rlSensor || fb == rlSensor || fa == rrSensor || fb == rrSensor;
     }
 
     /**
@@ -584,6 +527,7 @@ public class SimRobot implements RobotApi {
 
     @Override
     public void tick(long dt) {
+        long t0 = System.currentTimeMillis();
         this.simulationTime += dt;
 
         // Simulate robot motion
@@ -609,6 +553,7 @@ public class SimRobot implements RobotApi {
         // Check for movement constraints
         checkForSpeed();
         updateProxy();
+        logger.atDebug().log("Tick elapsed {} ms", System.currentTimeMillis() - t0);
     }
 
     /**
