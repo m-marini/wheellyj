@@ -31,7 +31,6 @@ package org.mmarini.wheelly.apis;
 import org.mmarini.Tuple2;
 
 import java.awt.geom.Point2D;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -46,6 +45,38 @@ public interface Geometry {
 
     double HALF_MM = 500e-6;
     double HALF_DEG = toRadians(0.5);
+
+    static Point2D getFarthest(Point2D q, Optional<Tuple2<Point2D, Point2D>>... pts) {
+        double distance2 = Double.NEGATIVE_INFINITY;
+        Point2D farthest = null;
+        for (Optional<Tuple2<Point2D, Point2D>> pt : pts) {
+            Point2D p = pt.map(Tuple2::getV2).orElse(null);
+            if (p != null) {
+                double d2 = q.distanceSq(p);
+                if (d2 > distance2) {
+                    farthest = p;
+                    distance2 = d2;
+                }
+            }
+        }
+        return farthest;
+    }
+
+    static Point2D getNearest(Point2D q, Optional<Tuple2<Point2D, Point2D>>... pts) {
+        double distance2 = Double.POSITIVE_INFINITY;
+        Point2D nearest = null;
+        for (Optional<Tuple2<Point2D, Point2D>> pt : pts) {
+            Point2D p = pt.map(Tuple2::getV1).orElse(null);
+            if (p != null) {
+                double d2 = q.distanceSq(p);
+                if (d2 < distance2) {
+                    nearest = p;
+                    distance2 = d2;
+                }
+            }
+        }
+        return nearest;
+    }
 
     /**
      * Returns the intersection [xLeft, xRight] of the line y = y_0 and the directed lines from Q
@@ -222,30 +253,14 @@ public interface Geometry {
         Optional<Tuple2<Point2D, Point2D>> shr = horizontalArcInterval(q, xl, xr, yr, alpha, dAlpha);
         Optional<Tuple2<Point2D, Point2D>> shf = horizontalArcInterval(q, xl, xr, yf, alpha, dAlpha);
 
-        Optional<Point2D> nearest = (xq >= xl && xq <= xr && yq >= yr && yq <= yf)
-                // Checks for xq in square
-                ? Optional.of(q)
-                : Stream.concat(
-                        Stream.concat(
-                                svl.stream(),
-                                svr.stream()),
-                        Stream.concat(
-                                shr.stream(),
-                                shf.stream()))
-                .map(Tuple2::getV1)
-                .min(Comparator.comparingDouble(q::distanceSq));
-        Optional<Point2D> farthest = Stream.concat(
-                        Stream.concat(
-                                svl.stream(),
-                                svr.stream()),
-                        Stream.concat(
-                                shr.stream(),
-                                shf.stream())
-                )
-                .map(Tuple2::getV2)
-                .max(Comparator.comparingDouble(q::distanceSq));
+        Point2D nearest = (xq >= xl && xq <= xr && yq >= yr && yq <= yf)
+                ? q
+                : getNearest(q, svl, svr, shr, shf);
+        Point2D farthest = getFarthest(q, svl, svr, shr, shf);
 
-        return nearest.flatMap(n -> farthest.map(f -> Tuple2.of(n, f)));
+        return farthest != null && nearest != null
+                ? Optional.of(Tuple2.of(nearest, farthest))
+                : Optional.empty();
     }
 
     /**
