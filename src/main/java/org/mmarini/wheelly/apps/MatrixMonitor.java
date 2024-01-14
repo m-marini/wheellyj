@@ -410,7 +410,7 @@ public class MatrixMonitor {
                 .doOnNext(this::handleClose)
                 .subscribe();
 
-        Stream.of(comFrame, sensorFrame, commandFrame).forEach(f->f.setVisible(true));
+        Stream.of(comFrame, sensorFrame, commandFrame).forEach(f -> f.setVisible(true));
         comFrame.setState(JFrame.ICONIFIED);
         controller.start();
     }

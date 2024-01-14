@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.12.1] 2024-01-14
+
 ### Added
 
 - Issue #303: Set max speed on move state
