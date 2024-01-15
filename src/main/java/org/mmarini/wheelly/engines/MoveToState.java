@@ -11,8 +11,7 @@ import org.slf4j.LoggerFactory;
 import java.awt.geom.Point2D;
 import java.util.Map;
 
-import static java.lang.Math.round;
-import static java.lang.Math.toDegrees;
+import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.defuzzy;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.positive;
@@ -102,10 +101,14 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
             // Target reached
             return COMPLETED_RESULT;
         }
+        double echoDistance = robotStatus.echoDistance();
         // Computes the direction of target
         int dir = (int) normalizeDegAngle(round(toDegrees(direction(current, target))));
-        // Computes the speed
-        double isFar = positive(distance - stopDistance, NEAR_DISTANCE);
+        // Computes the speed basing on distance between target and obstacle
+        double isFar = (echoDistance > 0 && echoDistance < distance && robotStatus.sensorDirection() == 0)
+                ? positive(min(distance, echoDistance) - stopDistance, NEAR_DISTANCE)
+                : positive(distance - stopDistance, NEAR_DISTANCE);
+
         logger.atDebug().log("isFar {}", isFar);
 
         int speed = (int) round(defuzzy(MIN_PPS, maxSpeed, isFar));

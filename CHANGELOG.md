@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #314: Simplify yaml file schema
 - Issue #316: Updating polar map takes too much cpu
 - Issue #320: Differentiate contact updates in the radar map
+- Issue #322: Monitoring distance while moving to
 
 ## [0.12.1] 2024-01-14
 
