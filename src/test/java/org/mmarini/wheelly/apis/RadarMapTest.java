@@ -40,8 +40,10 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static java.lang.Math.PI;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.any;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.*;
 
@@ -110,25 +112,25 @@ class RadarMapTest {
     }
 
     static Arguments parseRadarMap(String text) {
-        Point2D location = parseRadarMap(WIDTH, HEIGHT, GRID_SIZE, "X", text).getFirst();
-        Point2D target = parseRadarMap(WIDTH, HEIGHT, GRID_SIZE, "T", text).getFirst();
-        return Arguments.of(parseRadarMap(WIDTH, HEIGHT, GRID_SIZE, text), location, 1, target);
+        Point2D location = parseRadarMap("X", text).getFirst();
+        Point2D target = parseRadarMap("T", text).getFirst();
+        return Arguments.of(parseRadarMap(GRID_SIZE, text), location, 1, target);
     }
 
-    static List<Point2D> parseRadarMap(int width, int height, double size, String pattern, String text) {
+    static List<Point2D> parseRadarMap(String pattern, String text) {
         List<Point2D> result = new ArrayList<>();
         String[] lines = text.split("\n");
-        if (lines.length < height) {
-            throw new IllegalArgumentException(format("text must have %d line (%d", height, lines.length));
+        if (lines.length < RadarMapTest.HEIGHT) {
+            throw new IllegalArgumentException(format("text must have %d line (%d", RadarMapTest.HEIGHT, lines.length));
         }
         Predicate<String> p = Pattern.compile(pattern).asMatchPredicate();
-        for (int i = 0; i < width; i++) {
-            if (lines[i].length() < width) {
-                throw new IllegalArgumentException(format("lines %d must have size %d (%d)", i + 1, width, lines[i].length()));
+        for (int i = 0; i < RadarMapTest.WIDTH; i++) {
+            if (lines[i].length() < RadarMapTest.WIDTH) {
+                throw new IllegalArgumentException(format("lines %d must have size %d (%d)", i + 1, RadarMapTest.WIDTH, lines[i].length()));
             }
-            double y = (height / 2 - i) * size;
-            for (int j = 0; j < width; j++) {
-                double x = (j - width / 2) * size;
+            double y = (RadarMapTest.HEIGHT / 2 - i) * RadarMapTest.GRID_SIZE;
+            for (int j = 0; j < RadarMapTest.WIDTH; j++) {
+                double x = (j - RadarMapTest.WIDTH / 2) * RadarMapTest.GRID_SIZE;
                 String ch = lines[i].substring(j, j + 1);
                 if (p.test(ch)) {
                     result.add(new Point2D.Double(x, y));
@@ -138,10 +140,10 @@ class RadarMapTest {
         return result;
     }
 
-    static RadarMap parseRadarMap(int width, int height, double size, String text) {
-        List<Point2D> echos = parseRadarMap(width, height, size, "O", text);
-        RadarMap radarMap = RadarMap.create(width, height, new Point2D.Double(), size,
-                MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
+    static RadarMap parseRadarMap(double size, String text) {
+        List<Point2D> echos = parseRadarMap("O", text);
+        RadarMap radarMap = RadarMap.create(RadarMapTest.WIDTH, RadarMapTest.HEIGHT, new Point2D.Double(), size,
+                MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, size, RECEPTIVE_ANGLE);
         for (Point2D p : echos) {
             radarMap = radarMap.updateCell(radarMap.indexOf(p.getX(), p.getY()),
                     c -> c.addEchogenic(ECHO_TIME));
@@ -312,35 +314,158 @@ class RadarMapTest {
     }
 
     @Test
-    void setContactsAt() {
+    void setFrontContactsAt0DEG() {
+        // Given a radar map
         RadarMap map = createRadarMap();
         Point2D point = new Point2D.Double();
         long timestamp = System.currentTimeMillis();
 
-        map = map.setContactsAt(point, GRID_SIZE + MM1, timestamp);
+        // When setting front and rear contact
+        map = map.setContactsAt(point, 0, true, false, GRID_SIZE + MM1, timestamp);
 
-        Optional<MapCell> sectorOpt = map.cell(0, 0);
-        assertTrue(sectorOpt.isPresent());
+        // Then map should have expected contact cells
+        List<Point2D> contacts = parseRadarMap("O", """
+                ...........
+                ...........
+                ...........
+                ...........
+                .....O.....
+                ....OOO....
+                ...........
+                ...........
+                ...........
+                ...........
+                ...........""");
+        int contactsNumber = (int) map.cellStream().filter(MapCell::hasContact).count();
+        assertEquals(contacts.size(), contactsNumber);
+        for (Point2D pt : contacts) {
+            assertThat(format("Point %s does not match", pt), map.cell(pt.getX(), pt.getY()).filter(MapCell::hasContact),
+                    optionalOf(any(MapCell.class)));
+        }
+    }
 
-        sectorOpt = map.cell(GRID_SIZE, 0);
-        assertTrue(sectorOpt.isPresent());
-        assertTrue(sectorOpt.orElseThrow().hasContact());
+    @Test
+    void setFrontContactsAt45DEG() {
+        // Given a radar map
+        RadarMap map = createRadarMap();
+        Point2D point = new Point2D.Double();
+        long timestamp = System.currentTimeMillis();
 
-        sectorOpt = map.cell(-GRID_SIZE, 0);
-        assertTrue(sectorOpt.isPresent());
-        assertTrue(sectorOpt.orElseThrow().hasContact());
+        // When setting front and rear contact
+        map = map.setContactsAt(point, PI / 4, true, false, GRID_SIZE + MM1, timestamp);
 
-        sectorOpt = map.cell(0, GRID_SIZE);
-        assertTrue(sectorOpt.isPresent());
-        assertTrue(sectorOpt.orElseThrow().hasContact());
+        // Then map should have expected contact cells
+        List<Point2D> contacts = parseRadarMap("O", """
+                ...........
+                ...........
+                ...........
+                ...........
+                .....O.....
+                .....OO....
+                ...........
+                ...........
+                ...........
+                ...........
+                ...........""");
+        for (Point2D pt : contacts) {
+            assertThat(format("Point %s does not match", pt), map.cell(pt.getX(), pt.getY()).filter(MapCell::hasContact),
+                    optionalOf(any(MapCell.class)));
+        }
+        int contactsNumber = (int) map.cellStream().filter(MapCell::hasContact).count();
+        assertEquals(contacts.size(), contactsNumber);
+    }
 
-        sectorOpt = map.cell(GRID_SIZE * 2, 0);
-        assertTrue(sectorOpt.isPresent());
-        assertFalse(sectorOpt.orElseThrow().hasContact());
+    @Test
+    void setFrontRearContactsAt() {
+        // Given a radar map
+        RadarMap map = createRadarMap();
+        Point2D point = new Point2D.Double();
+        long timestamp = System.currentTimeMillis();
 
-        sectorOpt = map.cell(-GRID_SIZE * 2, 0);
-        assertTrue(sectorOpt.isPresent());
-        assertFalse(sectorOpt.orElseThrow().hasContact());
+        // When setting front and rear contact
+        map = map.setContactsAt(point, 0, true, true, GRID_SIZE + MM1, timestamp);
+
+        // Then map should have expected contact cells
+        List<Point2D> contacts = parseRadarMap("O", """
+                ...........
+                ...........
+                ...........
+                ...........
+                .....O.....
+                ....OOO....
+                .....O.....
+                ...........
+                ...........
+                ...........
+                ...........""");
+        int contactsNumber = (int) map.cellStream().filter(MapCell::hasContact).count();
+        assertEquals(contacts.size(), contactsNumber);
+        for (Point2D pt : contacts) {
+            assertThat(format("Point %s does not match", pt), map.cell(pt.getX(), pt.getY()).filter(MapCell::hasContact),
+                    optionalOf(any(MapCell.class)));
+        }
+    }
+
+    @Test
+    void setRearContactsAt0DEG() {
+        // Given a radar map
+        RadarMap map = createRadarMap();
+        Point2D point = new Point2D.Double();
+        long timestamp = System.currentTimeMillis();
+
+        // When setting front and rear contact
+        map = map.setContactsAt(point, 0, false, true, GRID_SIZE + MM1, timestamp);
+
+        // Then map should have expected contact cells
+        List<Point2D> contacts = parseRadarMap("O", """
+                ...........
+                ...........
+                ...........
+                ...........
+                ...........
+                ....OOO....
+                .....O.....
+                ...........
+                ...........
+                ...........
+                ...........""");
+        for (Point2D pt : contacts) {
+            assertThat(format("Point %s does not match", pt), map.cell(pt.getX(), pt.getY()).filter(MapCell::hasContact),
+                    optionalOf(any(MapCell.class)));
+        }
+        int contactsNumber = (int) map.cellStream().filter(MapCell::hasContact).count();
+        assertEquals(contacts.size(), contactsNumber);
+    }
+
+    @Test
+    void setRearContactsAt45DEG() {
+        // Given a radar map
+        RadarMap map = createRadarMap();
+        Point2D point = new Point2D.Double();
+        long timestamp = System.currentTimeMillis();
+
+        // When setting front and rear contact
+        map = map.setContactsAt(point, PI / 4, false, true, GRID_SIZE + MM1, timestamp);
+
+        // Then map should have expected contact cells
+        List<Point2D> contacts = parseRadarMap("O", """
+                ...........
+                ...........
+                ...........
+                ...........
+                ...........
+                ....OO.....
+                .....O.....
+                ...........
+                ...........
+                ...........
+                ...........""");
+        for (Point2D pt : contacts) {
+            assertThat(format("Point %s does not match", pt), map.cell(pt.getX(), pt.getY()).filter(MapCell::hasContact),
+                    optionalOf(any(MapCell.class)));
+        }
+        int contactsNumber = (int) map.cellStream().filter(MapCell::hasContact).count();
+        assertEquals(contacts.size(), contactsNumber);
     }
 
     @Test
