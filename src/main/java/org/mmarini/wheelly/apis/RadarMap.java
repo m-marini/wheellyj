@@ -38,8 +38,7 @@ import java.util.function.UnaryOperator;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static java.lang.Math.PI;
-import static java.lang.Math.abs;
+import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.Utils.direction;
 import static org.mmarini.wheelly.apis.Utils.normalizeAngle;
@@ -340,14 +339,21 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
      * Returns the radar map with the filled cells at contacts point
      *
      * @param location          contact point (m)
+     * @param direction         robot direction (RAD)
+     * @param frontContact      true if front contact
+     * @param rearContact       true if rear contact
      * @param contactsRadius    the radius of contacts receptive area (m)
      * @param contactsTimestamp the contacts timestamp (ms)
      */
-    public RadarMap setContactsAt(Point2D location, double contactsRadius, long contactsTimestamp) {
+    public RadarMap setContactsAt(Point2D location, double direction, boolean frontContact, boolean rearContact, double contactsRadius, long contactsTimestamp) {
         return map(
                 cell -> {
                     double distance = cell.location().distance(location);
-                    return distance <= contactsRadius
+                    double da = abs(normalizeAngle(direction(location, cell.location()) - direction));
+                    return (distance == 0
+                            || (distance <= contactsRadius
+                            && (frontContact && da <= PI / 2
+                            || rearContact && da >= PI / 2)))
                             ? cell.setContact(contactsTimestamp)
                             : cell;
                 }
@@ -369,8 +375,10 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
                 status.echoDirection(),
                 distance, time);
         RadarMap hinderedMap = update(signal);
-        RadarMap contactMap = !status.frontSensor() || !status.rearSensor() || !status.canMoveBackward() || !status.canMoveForward()
-                ? hinderedMap.setContactsAt(location, contactRadius, time)
+        boolean frontContact = !status.frontSensor() || !status.canMoveForward();
+        boolean rearContact = !status.rearSensor() || !status.canMoveBackward();
+        RadarMap contactMap = frontContact || rearContact
+                ? hinderedMap.setContactsAt(location, toRadians(status.direction()), frontContact, rearContact, contactRadius, time)
                 : hinderedMap;
         return contactMap.clean(time);
     }
