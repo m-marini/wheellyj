@@ -63,7 +63,7 @@ public interface DumpRecord {
     }
 
     /**
-     * Returns the communication direction [RX, TX]
+     * Returns the communication directionDeg [RX, TX]
      */
     String comDirection();
 
@@ -88,11 +88,11 @@ public interface DumpRecord {
         }
     }
 
-    record ReadDumpRecord(Instant instant, String data) implements ReadDumpRecordIntf {
-    }
-
     record MessageDumpRecord<T extends WheellyMessage>(Instant instant, String data,
                                                        T message) implements ReadDumpRecordIntf {
+    }
+
+    record ReadDumpRecord(Instant instant, String data) implements ReadDumpRecordIntf {
     }
 
     /**

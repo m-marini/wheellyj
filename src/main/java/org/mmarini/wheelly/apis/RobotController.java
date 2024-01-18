@@ -77,7 +77,7 @@ import static org.mmarini.wheelly.apps.AppYaml.loadIntArray;
  *     <dd>
  *         If controller is closed it move to closing state.
  *         If no robot status has received move to waitingCommandInterval state.
- *         If robot sensor direction is different from the required or command timed out it sends the scan command
+ *         If robot sensor directionDeg is different from the required or command timed out it sends the scan command
  *         If robot status has received and move command has required send the move command
  *         Moves to waitingCommandInterval state.
  *         In case of IO errors moves to closing state
@@ -116,7 +116,7 @@ public class RobotController implements RobotControllerApi {
     public static final String HANDLING_COMMANDS = "handlingCommands";
     public static final String CONFIGURING = "configuring";
     public static final String WAITING_COMMAND_INTERVAL = "waitingCommandInterval";
-    public static final long MIN_SYNCH_INTERVAL = 3;
+    public static final long MIN_SYNC_INTERVAL = 3;
     private static final Logger logger = LoggerFactory.getLogger(RobotController.class);
 
     /**
@@ -147,42 +147,42 @@ public class RobotController implements RobotControllerApi {
     }
 
     private final long commandInterval;
+    private final PublishProcessor<RobotCommands> commandsProcessor;
     private final long connectionRetryInterval;
-    private final RobotApi robot;
-    private final long interval;
-    private final long reactionInterval;
-    private final CompletableSubject shutdownCompletable;
-    private final long watchdogInterval;
+    private final PublishProcessor<RobotStatus> contactsProcessor;
+    private final PublishProcessor<String> controllerStatusProcessor;
+    private final PublishProcessor<Throwable> errorsProcessor;
     private final PublishProcessor<RobotStatus> inferencesProcessor;
+    private final long interval;
     private final PublishProcessor<RobotStatus> motionProcessor;
     private final PublishProcessor<RobotStatus> proxyProcessor;
-    private final PublishProcessor<RobotStatus> contactsProcessor;
-    private final PublishProcessor<RobotStatus> supplyProcessor;
-    private final PublishProcessor<String> controllerStatusProcessor;
-    private final PublishProcessor<RobotCommands> commandsProcessor;
-    private final PublishProcessor<Throwable> errorsProcessor;
+    private final long reactionInterval;
     private final PublishProcessor<String> readLinesProcessor;
-    private final PublishProcessor<String> writeLinesProcessor;
-    private final Flowable<RobotStatus> statusFlow;
+    private final RobotApi robot;
+    private final CompletableSubject shutdownCompletable;
     private final double simSpeed;
-    private Runnable statusTransition;
-    private boolean isStarted;
-    private RobotCommands moveCommand;
-    private int sensorDir;
+    private final Flowable<RobotStatus> statusFlow;
+    private final PublishProcessor<RobotStatus> supplyProcessor;
+    private final long watchdogInterval;
+    private final PublishProcessor<String> writeLinesProcessor;
+    private boolean close;
+    private boolean connected;
     private boolean end;
-    private RobotStatus robotStatus;
-    private int prevSensorDir;
-    private long lastSensorMoveTimestamp;
+    private boolean isInference;
+    private boolean isReady;
+    private boolean isStarted;
+    private long lastInference;
     private RobotCommands lastMoveCommand;
     private long lastRobotMoveTimestamp;
-    private boolean close;
-    private boolean isReady;
-    private long lastInference;
+    private long lastSensorMoveTimestamp;
+    private long lastTick;
+    private RobotCommands moveCommand;
     private Consumer<RobotStatus> onInference;
     private Consumer<RobotStatus> onLatch;
-    private boolean isInference;
-    private boolean connected;
-    private long lastTick;
+    private Complex prevSensorDir;
+    private RobotStatus robotStatus;
+    private Complex sensorDir;
+    private Runnable statusTransition;
 
     /**
      * Creates the robot controller
@@ -205,6 +205,8 @@ public class RobotController implements RobotControllerApi {
         this.watchdogInterval = watchdogInterval;
         this.simSpeed = simSpeed;
         this.end = false;
+        this.prevSensorDir = Complex.DEG0;
+        this.sensorDir = Complex.DEG0;
         this.motionProcessor = PublishProcessor.create();
         this.contactsProcessor = PublishProcessor.create();
         this.proxyProcessor = PublishProcessor.create();
@@ -283,18 +285,18 @@ public class RobotController implements RobotControllerApi {
     public void execute(RobotCommands command) {
         // Validates the command
         if (command.halt() || command.move()) {
-            if (command.move() && !(command.moveDirection() >= -180 && command.moveDirection() <= 179
-                    && command.speed() >= -MAX_PPS && command.speed() <= MAX_PPS)) {
+            if (command.move()
+                    && !(command.speed() >= -MAX_PPS && command.speed() <= MAX_PPS)) {
                 logger.atError().setMessage("Wrong move command {}").addArgument(command).log();
             } else {
                 moveCommand = command.clearScan();
             }
         }
         if (command.scan()) {
-            if (command.scanDirection() >= -90 && command.scanDirection() <= 90) {
+            if (command.scanDirection().y() >= 0) {
                 sensorDir = command.scanDirection();
             } else {
-                logger.atError().setMessage("Wrong scan direction {}").addArgument(command.scanDirection()).log();
+                logger.atError().log("Wrong scan directionDeg {}", command.scanDirection());
             }
         }
         commandsProcessor.onNext(command);
@@ -316,12 +318,12 @@ public class RobotController implements RobotControllerApi {
         RobotStatus status = robotStatus;
         if (status != null) {
             long time = robot.simulationTime();
-            int dir = sensorDir;
+            Complex dir = sensorDir;
             try {
                 logger.atDebug().log("Scan dir={}, prevSensorDir={}", dir, prevSensorDir);
                 // Checks for scan command required
-                if (dir != this.prevSensorDir
-                        || dir != 0 && time >= lastSensorMoveTimestamp + commandInterval) {
+                if (!dir.equals(this.prevSensorDir)
+                        || !dir.equals(Complex.DEG0) && time >= lastSensorMoveTimestamp + commandInterval) {
                     logger.atDebug().log("Scan {}", dir);
                     robot.scan(dir);
                     lastSensorMoveTimestamp = time;
@@ -494,7 +496,7 @@ public class RobotController implements RobotControllerApi {
                 prev = t0;
                 lastTick = robotT0;
                 long expectedElapsed = round(robotElapsed / simSpeed);
-                long waitTime = expectedElapsed - realElapsed - MIN_SYNCH_INTERVAL;
+                long waitTime = expectedElapsed - realElapsed - MIN_SYNC_INTERVAL;
 
                 logger.atDebug().log("Robot elapsed {} ms", robotElapsed);
                 logger.atDebug().log("Real elapsed {} ms", realElapsed);

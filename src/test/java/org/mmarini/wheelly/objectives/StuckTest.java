@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
+import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WithRobotStatus;
 import org.mmarini.wheelly.envs.RobotEnvironment;
@@ -44,7 +45,8 @@ import static org.hamcrest.Matchers.closeTo;
 class StuckTest {
     static MockEnvironment createEnvironment(int sensorDir, double distance, boolean canMoveForward, boolean canMoveBackward) {
         RobotStatus status = RobotStatus.create(x -> 12d)
-                .setSensorDirection(sensorDir)
+                // Use complex
+                .setSensorDirection(Complex.fromDeg(sensorDir))
                 .setCanMoveBackward(canMoveBackward)
                 .setCanMoveForward(canMoveForward)
                 .setEchoDistance(distance);

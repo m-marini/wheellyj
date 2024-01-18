@@ -27,29 +27,29 @@ package org.mmarini.wheelly.apis;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.yaml.Locator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.UnaryOperator;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static java.lang.Math.*;
+import static java.lang.Math.abs;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.apis.Utils.direction;
-import static org.mmarini.wheelly.apis.Utils.normalizeAngle;
 
 /**
  * The RadarMap keeps the obstacle signal results of the space round the center
  */
 public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
                        long cleanInterval, long echoPersistence, long contactPersistence, long cleanTimestamp,
-                       double contactRadius, int receptiveAngle) {
+                       double contactRadius, Complex receptiveAngle) {
     public static final double MAX_SIGNAL_DISTANCE = 3;
+    private static final Logger logger = LoggerFactory.getLogger(RadarMap.class);
 
     /**
      * Returns the empty radar from definition
@@ -65,7 +65,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
         long echoPersistence = locator.path("echoPersistence").getNode(root).asLong();
         long contactPersistence = locator.path("contactPersistence").getNode(root).asLong();
         double contactRadius = locator.path("contactRadius").getNode(root).asDouble();
-        int radarReceptiveAngle = locator.path("radarReceptiveAngle").getNode(root).asInt();
+        Complex radarReceptiveAngle = Complex.fromDeg(locator.path("radarReceptiveAngle").getNode(root).asInt());
         return RadarMap.create(radarWidth, radarHeight, new Point2D.Float(), radarGrid,
                 radarCleanInterval, echoPersistence,
                 contactPersistence, contactRadius, radarReceptiveAngle);
@@ -82,11 +82,11 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
      * @param echoPersistence    the echo persistence (ms)
      * @param contactPersistence the contact persistence (ms)
      * @param contactRadius      the contact radius (m)
-     * @param receptiveAngle     receptive angle (DEG)
+     * @param receptiveAngle     receptive angle
      */
     public static RadarMap create(int width, int height, Point2D center, double gridSize,
                                   long radarCleanInterval, long echoPersistence, long contactPersistence,
-                                  double contactRadius, int receptiveAngle) {
+                                  double contactRadius, Complex receptiveAngle) {
         return create(width, height, center, new GridTopology(gridSize), radarCleanInterval, echoPersistence, contactPersistence, contactRadius, receptiveAngle);
     }
 
@@ -101,11 +101,11 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
      * @param echoPersistence    the echo persistence (ms)
      * @param contactPersistence the contact persistence (ms)
      * @param contactRadius      the contact radius (m)
-     * @param receptiveAngle     receptive angle (DEG)
+     * @param receptiveAngle     receptive angle
      */
     private static RadarMap create(int width, int height, Point2D center, GridTopology topology,
                                    long radarCleanInterval, long echoPersistence, long contactPersistence,
-                                   double contactRadius, int receptiveAngle) {
+                                   double contactRadius, Complex receptiveAngle) {
         MapCell[] map1 = new MapCell[width * height];
         double gridSize = topology.gridSize();
         double x0 = center.getX() - (width - 1) * gridSize / 2;
@@ -134,9 +134,9 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
      * @param contactPersistence the contact persistence (ms)
      * @param cleanTimestamp     the next clean instant (ms)
      * @param contactRadius      the receptive distance (m)
-     * @param receptiveAngle     the receptive angle (DEG)
+     * @param receptiveAngle     the receptive angle
      */
-    public RadarMap(GridTopology topology, MapCell[] cells, int stride, long cleanInterval, long echoPersistence, long contactPersistence, long cleanTimestamp, double contactRadius, int receptiveAngle) {
+    public RadarMap(GridTopology topology, MapCell[] cells, int stride, long cleanInterval, long echoPersistence, long contactPersistence, long cleanTimestamp, double contactRadius, Complex receptiveAngle) {
         this.topology = requireNonNull(topology);
         this.cells = requireNonNull(cells);
         this.stride = stride;
@@ -145,7 +145,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
         this.contactPersistence = contactPersistence;
         this.cleanTimestamp = cleanTimestamp;
         this.contactRadius = contactRadius;
-        this.receptiveAngle = receptiveAngle;
+        this.receptiveAngle = requireNonNull(receptiveAngle);
     }
 
     /**
@@ -197,30 +197,34 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
     }
 
     /**
-     * Returns the safe point from location toward escape direction at safe distance
+     * Returns the safe point from location toward escape direction at safe distance but less than max distance
      *
      * @param location     the location
-     * @param escapeDir    the escape dir (RAD)
+     * @param escapeDir    the escape dir
      * @param safeDistance the safe distance (m)
+     * @param maxDistance  the maximum distance of targets
      */
-    public Optional<Point2D> findSafeTarget(Point2D location, double escapeDir, double safeDistance) {
+    public Optional<Point2D> findSafeTarget(Point2D location, Complex escapeDir, double safeDistance, double maxDistance) {
+        long t0 = System.currentTimeMillis();
         double safeDistance2 = safeDistance * safeDistance;
+        double maxDistance2 = maxDistance * maxDistance;
         // Extracts the empty cell
-        List<Point2D> points1 = cellStream().filter(c ->
+        Optional<Point2D> result = cellStream().filter(c ->
                         (c.empty() || c.unknown()))
                 .map(MapCell::location)
                 // Filter the points to the direction
-                .filter(p -> abs(normalizeAngle(direction(location, p) - escapeDir)) <= PI / 2)
-                .toList();
-        List<Point2D> points2 = points1.stream()
-                // Filters cell at a distance no longer maxDistance and with free trajectory
+                // and at a distance no longer maxDistance
+                // and with free trajectory
                 .filter(p -> {
-                    double d2 = location.distanceSq(p);
-                    return d2 >= safeDistance2
+                    double dist2 = location.distanceSq(p);
+                    return !Complex.direction(p, location).isCloseTo(escapeDir, Complex.DEG90)
+                            && dist2 >= safeDistance2
+                            && dist2 >= maxDistance2
                             && freeTrajectory(location, p, safeDistance);
-                }).toList();
-        return points2.stream()
+                })
                 .min(Comparator.comparingDouble(location::distanceSq));
+        logger.atDebug().log("findSafeTarget completed in {} ms", System.currentTimeMillis() - t0);
+        return result;
     }
 
     /**
@@ -269,7 +273,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
      */
     boolean freeTrajectory(Point2D from, Point2D to, double safeDistance) {
         double size = topology.gridSize();
-        double dir = direction(from, to);
+        Complex dir = Complex.direction(from, to);
         double distance = from.distance(to);
         double maxDistance = distance + safeDistance;
         return cellStream().filter(MapCell::hindered)
@@ -339,21 +343,22 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
      * Returns the radar map with the filled cells at contacts point
      *
      * @param location          contact point (m)
-     * @param direction         robot direction (RAD)
+     * @param direction         robot directionDeg
      * @param frontContact      true if front contact
      * @param rearContact       true if rear contact
      * @param contactsRadius    the radius of contacts receptive area (m)
      * @param contactsTimestamp the contacts timestamp (ms)
      */
-    public RadarMap setContactsAt(Point2D location, double direction, boolean frontContact, boolean rearContact, double contactsRadius, long contactsTimestamp) {
+    public RadarMap setContactsAt(Point2D location, Complex direction, boolean frontContact, boolean rearContact, double contactsRadius, long contactsTimestamp) {
         return map(
                 cell -> {
                     double distance = cell.location().distance(location);
-                    double da = abs(normalizeAngle(direction(location, cell.location()) - direction));
+                    // cell directionDeg relative to robot head
+                    Complex cellDirRelative = Complex.direction(location, cell.location()).sub(direction);
                     return (distance == 0
                             || (distance <= contactsRadius
-                            && (frontContact && da <= PI / 2
-                            || rearContact && da >= PI / 2)))
+                            && (frontContact && cellDirRelative.y() >= 0
+                            || rearContact && cellDirRelative.y() <= 0)))
                             ? cell.setContact(contactsTimestamp)
                             : cell;
                 }
@@ -378,7 +383,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
         boolean frontContact = !status.frontSensor() || !status.canMoveForward();
         boolean rearContact = !status.rearSensor() || !status.canMoveBackward();
         RadarMap contactMap = frontContact || rearContact
-                ? hinderedMap.setContactsAt(location, toRadians(status.direction()), frontContact, rearContact, contactRadius, time)
+                ? hinderedMap.setContactsAt(location, status.direction(), frontContact, rearContact, contactRadius, time)
                 : hinderedMap;
         return contactMap.clean(time);
     }
@@ -410,11 +415,11 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
      * Sensor signal information
      *
      * @param sensorLocation  the sensor location
-     * @param sensorDirection the sensor direction (DEG)
+     * @param sensorDirection the sensor directionDeg
      * @param distance        the distance (m)
      * @param timestamp       the timestamp (ms)
      */
-    public record SensorSignal(Point2D sensorLocation, int sensorDirection, double distance, long timestamp) {
+    public record SensorSignal(Point2D sensorLocation, Complex sensorDirection, double distance, long timestamp) {
         public boolean isEcho() {
             return distance > 0 && distance < MAX_SIGNAL_DISTANCE;
         }

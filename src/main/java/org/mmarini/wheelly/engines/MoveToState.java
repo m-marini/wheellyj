@@ -2,6 +2,7 @@ package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
+import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.yaml.Locator;
@@ -11,20 +12,19 @@ import org.slf4j.LoggerFactory;
 import java.awt.geom.Point2D;
 import java.util.Map;
 
-import static java.lang.Math.*;
+import static java.lang.Math.min;
+import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.defuzzy;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.positive;
 import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
 import static org.mmarini.wheelly.apis.RobotCommands.moveAndFrontScan;
-import static org.mmarini.wheelly.apis.Utils.direction;
-import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 
 /**
  * Generates the behavior to move roboto to target position
  * <p>
  * Turns the sensor front<br>
- * Turns the robot toward the target direction<br>
+ * Turns the robot toward the target directionDeg<br>
  * Moves ahead till obstacles or target position.<br/>
  * <p>
  * Parameters are:
@@ -103,9 +103,10 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
         }
         double echoDistance = robotStatus.echoDistance();
         // Computes the direction of target
-        int dir = (int) normalizeDegAngle(round(toDegrees(direction(current, target))));
+        Complex dir = Complex.direction(current, target);
+        //int dir = (int) normalizeDegAngle(round(toDegrees(direction(current, target))));
         // Computes the speed basing on distance between target and obstacle
-        double isFar = (echoDistance > 0 && echoDistance < distance && robotStatus.sensorDirection() == 0)
+        double isFar = (echoDistance > 0 && echoDistance < distance && robotStatus.sensorDirection().toIntDeg() == 0)
                 ? positive(min(distance, echoDistance) - stopDistance, NEAR_DISTANCE)
                 : positive(distance - stopDistance, NEAR_DISTANCE);
 

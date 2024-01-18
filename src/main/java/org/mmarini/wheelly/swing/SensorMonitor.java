@@ -109,7 +109,7 @@ public class SensorMonitor extends MatrixTable {
      */
     public void onCommand(RobotCommands command) {
         if (command.move()) {
-            printf(MOVE_HEAD, "%4d", command.moveDirection());
+            printf(MOVE_HEAD, "%4d", command.moveDirection().toIntDeg());
             printf(MOVE_SPEED, "%3d", command.speed());
         }
     }
@@ -138,8 +138,8 @@ public class SensorMonitor extends MatrixTable {
      * @param status the robot status
      */
     public void onStatus(RobotStatus status) {
-        printf(HEAD_KEY, "%4d", status.direction());
-        printf(SENSOR_DIR_KEY, "%4d", status.sensorDirection());
+        printf(HEAD_KEY, "%4d", status.direction().toIntDeg());
+        printf(SENSOR_DIR_KEY, "%4d", status.sensorDirection().toIntDeg());
         printf(ECHO_DIST_KEY, "%3.1f", status.echoDistance());
         printf(LEFT_PPS_KEY, "%3.0f", status.leftPps());
         printf(RIGHT_PPS_KEY, "%3.0f", status.rightPps());

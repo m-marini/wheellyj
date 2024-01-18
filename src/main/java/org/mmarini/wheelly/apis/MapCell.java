@@ -25,9 +25,9 @@
 
 package org.mmarini.wheelly.apis;
 
-import java.awt.geom.Point2D;
+import org.mmarini.Tuple2;
 
-import static java.lang.Math.toRadians;
+import java.awt.geom.Point2D;
 
 /**
  * MapCell keeps the presence of obstacles in the sector
@@ -146,23 +146,25 @@ public record MapCell(Point2D location, long echoTime, int echoCounter, long con
      * @param signal         the signal
      * @param maxDistance    maximum distance of cell (m)
      * @param gridSize       receptive distance (m)
-     * @param receptiveAngle receptive angle (DEG)
+     * @param receptiveAngle receptive angle
      */
-    public MapCell update(RadarMap.SensorSignal signal, double maxDistance, double gridSize, int receptiveAngle) {
+    public MapCell update(RadarMap.SensorSignal signal, double maxDistance, double gridSize, Complex receptiveAngle) {
         long t0 = signal.timestamp();
         Point2D q = signal.sensorLocation();
         double distance = signal.distance();
-        return Geometry.squareArcInterval(location, gridSize, q,
-                        toRadians(signal.sensorDirection()), toRadians(receptiveAngle))
-                .map(t -> {
-                    double near = t.getV1().distance(q);
-                    double far = t.getV2().distance(q);
-                    return near == 0 || near > maxDistance || (near > distance && signal.isEcho())
-                            ? this
-                            : far >= distance && signal.isEcho()
-                            ? addEchogenic(t0)
-                            : addAnechoic(t0);
-                })
-                .orElse(this);
+        // TODO
+        Tuple2<Point2D, Point2D> interval = Geometry.squareArcInterval(location, gridSize, q,
+                signal.sensorDirection(),
+                receptiveAngle);
+        if (interval == null) {
+            return this;
+        }
+        double near = interval._1.distance(q);
+        double far = interval._2.distance(q);
+        return near == 0 || near > maxDistance || (near > distance && signal.isEcho())
+                ? this
+                : far >= distance && signal.isEcho()
+                ? addEchogenic(t0)
+                : addAnechoic(t0);
     }
 }

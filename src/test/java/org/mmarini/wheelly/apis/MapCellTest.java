@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class MapCellTest {
 
     public static final double GRID_SIZE = 0.1;
-    public static final int RECEPTIVE_ANGLE = 15;
+    public static final Complex RECEPTIVE_ANGLE = Complex.fromDeg(15);
     public static final double MAX_SIGNAL_DISTANCE = 3;
 
     @Test
@@ -160,7 +160,7 @@ class MapCellTest {
 
     /**
      * Given a signal at 2m
-     * And an unknown sector at 2m, 3 DEG from sensor direction (in direction) (sector at 0 DEG, sensor to -3 DEG)
+     * And an unknown sector at 2m, 3 DEG from sensor directionDeg (in directionDeg) (sector at 0 DEG, sensor to -3 DEG)
      * When update the sector status
      * Than the sector should be filled (sector in the signal range)
      */
@@ -170,7 +170,7 @@ class MapCellTest {
             "0,0, 0,2.99, 0,0, false, true, false", // 2. No echo -> empty
             "0,0, 0,2.99, -15,0, false, true, false", // 3. No echo left -> empty
             "0,0, 0,2.99, 15,0, false, true, false", // 4. No echo right -> empty
-            "0,0, 0,1, 30,2, true, false, false", // 5. cell not in direction of echo -> unknown
+            "0,0, 0,1, 30,2, true, false, false", // 5. cell not in directionDeg of echo -> unknown
             "0,0, 0,1, -6,2, false, true, false", // 6. Cell before echo -> unknown
             "0,0, 0,2.21, 0,2, true, false, false", // 7. Cell far away echo -> unknown
             "0,0, 0,3.2, 0,0, true, false, false", // 8. Cell far away no echo -> unknown
@@ -185,7 +185,7 @@ class MapCellTest {
         // Given ...
         Point2D sensLocation = new Point2D.Double(xSens, ySens);
         long timestamp = System.currentTimeMillis();
-        RadarMap.SensorSignal signal = new RadarMap.SensorSignal(sensLocation, sensDir, distance, timestamp);
+        RadarMap.SensorSignal signal = new RadarMap.SensorSignal(sensLocation, Complex.fromDeg(sensDir), distance, timestamp);
         Point2D cellLocation = new Point2D.Double(xCell, yCell);
 
         // When ...

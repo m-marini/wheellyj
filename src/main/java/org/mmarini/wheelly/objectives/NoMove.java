@@ -76,7 +76,7 @@ public interface NoMove {
                     ? -1
                     : (abs(status.leftPps()) < velocityThreshold
                     && abs(status.rightPps()) < velocityThreshold
-                    && status.sensorDirection() == 0) ? 1
+                    && status.sensorDirection().toIntDeg() == 0) ? 1
                     : 0;
         };
 

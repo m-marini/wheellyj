@@ -70,21 +70,21 @@ public interface RobotApi extends Closeable, WithStatusCallback {
     void halt() throws IOException;
 
     /**
-     * Moves robot to direction at speed
+     * Moves robot to directionDeg at speed
      *
-     * @param dir   the direction in DEG
+     * @param dir   the direction
      * @param speed the speed in pps
      * @throws IOException in case of error
      */
-    void move(int dir, int speed) throws IOException;
+    void move(Complex dir, int speed) throws IOException;
 
     /**
-     * Moves the sensor to a direction
+     * Moves the sensor to a directionDeg
      *
-     * @param dir the direction in DEG
+     * @param dir the direction
      * @throws IOException in case of error
      */
-    void scan(int dir) throws IOException;
+    void scan(Complex dir) throws IOException;
 
     /**
      * Returns the robot localTime

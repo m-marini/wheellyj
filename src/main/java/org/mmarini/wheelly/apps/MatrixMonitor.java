@@ -33,6 +33,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.swing.GridLayoutHelper;
+import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotControllerApi;
 import org.mmarini.wheelly.apis.RobotStatus;
@@ -53,7 +54,6 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.Math.max;
-import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 import static org.mmarini.wheelly.swing.Utils.createFrame;
 import static org.mmarini.wheelly.swing.Utils.layHorizontally;
 
@@ -102,28 +102,28 @@ public class MatrixMonitor {
         }
     }
 
+    private final ComMonitor comMonitor;
     private final Container commandPanel;
     private final JButton haltButton;
-    private final JSlider sensorDirSlider;
-    private final JFormattedTextField sensorDirField;
-    private final JButton runButton;
-    private final JSlider robotDirSlider;
-    private final JSlider speedSlider;
     private final JFormattedTextField robotDirField;
-    private final JFormattedTextField speedField;
-    private final JSlider timeSlider;
-    private final JFormattedTextField timeField;
-    private final ComMonitor comMonitor;
+    private final JSlider robotDirSlider;
+    private final JButton runButton;
+    private final JFormattedTextField sensorDirField;
+    private final JSlider sensorDirSlider;
     private final SensorMonitor sensorMonitor;
+    private final JFormattedTextField speedField;
+    private final JSlider speedSlider;
+    private final JFormattedTextField timeField;
+    private final JSlider timeSlider;
+    private JFrame comFrame;
+    private JFrame commandFrame;
+    private RobotControllerApi controller;
     private ComDumper dumper;
+    private boolean halt;
     private Namespace parseArgs;
     //    private int commandDuration;
     private long runTimestamp;
-    private RobotControllerApi controller;
-    private boolean halt;
-    private JFrame commandFrame;
     private JFrame sensorFrame;
-    private JFrame comFrame;
 
     /**
      * Creates the check
@@ -215,7 +215,7 @@ public class MatrixMonitor {
                 .modify("at,0,0 insets,2 weight,1,0 hfill").add(sensorDirSlider)
                 .modify("at,0,1 noweight nofill").add(sensorDirField)
                 .getContainer();
-        sensorCmdPanel.setBorder(BorderFactory.createTitledBorder("Sensor direction (DEG)"));
+        sensorCmdPanel.setBorder(BorderFactory.createTitledBorder("Sensor directionDeg (DEG)"));
 
         JPanel otherPanel = new GridLayoutHelper<>(new JPanel())
                 .modify("at,0,0 insets,4 span,2,1").add("Direction (DEG)")
@@ -256,7 +256,7 @@ public class MatrixMonitor {
             controller.execute(RobotCommands.haltCommand());
         } else {
             controller.execute(RobotCommands.move(
-                    normalizeDegAngle(robotDirSlider.getValue()),
+                    Complex.fromDeg(robotDirSlider.getValue()),
                     speedSlider.getValue()));
         }
     }
@@ -302,7 +302,7 @@ public class MatrixMonitor {
     private void handleSensorDirSlider(ChangeEvent changeEvent) {
         int sensorDir = sensorDirSlider.getValue();
         sensorDirField.setValue(sensorDir);
-        controller.execute(RobotCommands.scan(sensorDir));
+        controller.execute(RobotCommands.scan(Complex.fromDeg(sensorDir)));
     }
 
     private void handleShutdown() {

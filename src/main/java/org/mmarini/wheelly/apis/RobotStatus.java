@@ -32,7 +32,8 @@ import java.awt.geom.Point2D;
 import java.util.Optional;
 import java.util.function.IntToDoubleFunction;
 
-import static java.lang.Math.*;
+import static java.lang.Math.PI;
+import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -62,7 +63,8 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
     public static RobotStatus create(IntToDoubleFunction decodeVoltage) {
         long now = System.currentTimeMillis();
         return new RobotStatus(0,
-                new WheellyMotionMessage(now, 0, 0, 0, 0, 0, 0, 0, 0, true, 0, 0, 0, 0),
+                new WheellyMotionMessage(now, 0, 0, 0, 0,
+                        0, 0, 0, 0, true, 0, 0, 0, 0),
                 new WheellyProxyMessage(now, 0, 0, 0, 0, 0, 0, 0),
                 new WheellyContactsMessage(now, 0, 0, true, true, true, true),
                 new WheellySupplyMessage(now, 0, 0, 0), decodeVoltage);
@@ -95,18 +97,24 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
         return contactsMessage.canMoveForward();
     }
 
-    public int direction() {
+    /**
+     * Returns the robot directionDeg
+     */
+    public Complex direction() {
         return motionMessage.direction();
     }
 
+    /**
+     * Returns the echo delay (us)
+     */
     public long echoDelay() {
         return proxyMessage.echoDelay();
     }
 
     /**
-     * Returns the echo absolute direction (DEG)
+     * Returns the echo absolute directionDeg
      */
-    public int echoDirection() {
+    public Complex echoDirection() {
         return proxyMessage.echoDirection();
     }
 
@@ -186,7 +194,10 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
         return motionMessage.rightTargetPps();
     }
 
-    public int sensorDirection() {
+    /**
+     * Returns the sensor directionDeg
+     */
+    public Complex sensorDirection() {
         return proxyMessage.sensorDirection();
     }
 
@@ -197,10 +208,10 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
         double sampleDistance = echoDistance();
         if (sampleDistance > 0) {
             float d = (float) (sampleDistance + OBSTACLE_SIZE / 2);
-            double angle = toRadians(90 - proxyMessage.echoDirection());
             Point2D location = location();
-            float x = (float) (d * cos(angle) + location.getX());
-            float y = (float) (d * sin(angle) + location.getY());
+            Complex angle = Complex.DEG90.sub(proxyMessage.echoDirection());
+            float x = (float) (d * angle.cos() + location.getX());
+            float y = (float) (d * angle.sin() + location.getY());
             return Optional.of(new Point2D.Float(x, y));
         } else {
             return Optional.empty();
@@ -228,9 +239,14 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
         return new RobotStatus(simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage);
     }
 
-    public RobotStatus setDirection(int direction) {
+    /**
+     * Returns the robot status with directionDeg set
+     *
+     * @param direction the directionDeg
+     */
+    public RobotStatus setDirection(Complex direction) {
         return setMotionMessage(
-                motionMessage.setDirection(direction)
+                motionMessage.setDirection(direction.toIntDeg())
                         .setSimulationTime(simulationTime));
     }
 
@@ -282,8 +298,13 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
         return new RobotStatus(simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage);
     }
 
-    public RobotStatus setSensorDirection(int dir) {
-        return setProxyMessage(proxyMessage.setSensorDirection(dir)
+    /**
+     * Returns the roboto status with sensor directionDeg set
+     *
+     * @param dir the sensor directionDeg
+     */
+    public RobotStatus setSensorDirection(Complex dir) {
+        return setProxyMessage(proxyMessage.setSensorDirection(dir.toIntDeg())
                 .setSimulationTime(simulationTime));
     }
 

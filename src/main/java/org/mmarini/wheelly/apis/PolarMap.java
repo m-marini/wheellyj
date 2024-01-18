@@ -33,27 +33,25 @@ import org.mmarini.Tuple2;
 
 import java.awt.geom.Point2D;
 import java.util.Arrays;
-import java.util.Optional;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static java.lang.Math.*;
+import static java.lang.Math.floor;
+import static java.lang.Math.max;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.Geometry.squareArcInterval;
-import static org.mmarini.wheelly.apis.Utils.normalizeAngle;
-import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 
 /**
  * The polar map keeps the status of the circle area round a center point.
  */
-public record PolarMap(CircularSector[] sectors, Point2D center, int direction) {
+public record PolarMap(CircularSector[] sectors, Point2D center, Complex direction) {
     /**
      * Returns the unknown status polar map
      *
      * @param sectorNumbers number of cells
      */
     public static PolarMap create(int sectorNumbers) {
-        return new PolarMap(createUnknownSectors(sectorNumbers), new Point2D.Double(), 0);
+        return new PolarMap(createUnknownSectors(sectorNumbers), new Point2D.Double(), Complex.DEG0);
     }
 
     /**
@@ -73,12 +71,12 @@ public record PolarMap(CircularSector[] sectors, Point2D center, int direction) 
      *
      * @param sectors   the cells
      * @param center    the map center in world coordinate
-     * @param direction the map direction (DEG) in world compass
+     * @param direction the map directionDeg in world compass
      */
-    public PolarMap(CircularSector[] sectors, Point2D center, int direction) {
-        this.center = requireNonNull(center);
-        this.direction = direction;
+    public PolarMap(CircularSector[] sectors, Point2D center, Complex direction) {
         this.sectors = requireNonNull(sectors);
+        this.center = requireNonNull(center);
+        this.direction = requireNonNull(direction);
     }
 
     /**
@@ -90,24 +88,23 @@ public record PolarMap(CircularSector[] sectors, Point2D center, int direction) 
     }
 
     /**
-     * Returns the circular sector in a direction
+     * Returns the circular sector in a directionDeg
      *
-     * @param direction the direction (DEG)
+     * @param direction the directionDeg
      */
-    public CircularSector directionSector(int direction) {
+    public CircularSector directionSector(Complex direction) {
         return sectors[sectorIndex(direction)];
     }
 
     /**
-     * Returns the radar sector direction (DEG) relative to polar map
+     * Returns the radar sector directionDeg relative to polar map
      *
      * @param sectorIndex the sector index
      */
-    public int indexDirection(int sectorIndex) {
+    public Complex indexDirection(int sectorIndex) {
+        // TODO check for complex usage
         Point2D point = sectors[sectorIndex].location();
-        return (int) round(normalizeDegAngle(
-                toDegrees(Utils.direction(center, point))
-                        - direction));
+        return Complex.direction(center, point).sub(direction);
     }
 
     public CircularSector sector(int i) {
@@ -122,22 +119,23 @@ public record PolarMap(CircularSector[] sectors, Point2D center, int direction) 
     }
 
     /**
-     * Returns the direction of sector (RAD)
+     * Returns the directionDeg of sector
      *
      * @param i the sector index
      */
-    public double sectorDirection(int i) {
-        return normalizeAngle(i * sectorAngle());
+    public Complex sectorDirection(int i) {
+        return Complex.fromRad(i * sectorAngle());
     }
 
     /**
-     * Returns the index of sector in a given direction
+     * Returns the index of sector in a given directionDeg
      *
-     * @param direction the direction
+     * @param direction the directionDeg
      */
-    public int sectorIndex(int direction) {
+    public int sectorIndex(Complex direction) {
+        // TODO check for complex usage
         int n = sectors.length;
-        double rad = toRadians(direction);
+        double rad = direction.toRad();
         double idx2 = rad / sectorAngle() + 0.5;
         int idx1 = (int) floor(idx2);
         return (idx1 + n) % n;
@@ -159,11 +157,12 @@ public record PolarMap(CircularSector[] sectors, Point2D center, int direction) 
      *
      * @param map         the radar map
      * @param center      the center of polar map
-     * @param direction   the direction of polar map (DEG)
+     * @param direction   the directionDeg of polar map
      * @param minDistance thi min distance (m)
      * @param maxDistance the max distance (m)
      */
-    public PolarMap update(RadarMap map, Point2D center, int direction, double minDistance, double maxDistance) {
+    public PolarMap update(RadarMap map, Point2D center, Complex direction, double minDistance, double maxDistance) {
+        // TODO
         double gridSize = map.topology().gridSize();
         int sectorsNum = this.sectors.length;
 
@@ -179,36 +178,36 @@ public record PolarMap(CircularSector[] sectors, Point2D center, int direction) 
         double[] unknownDistances = Arrays.copyOf(emptyDistances, sectors.length);
 
         double thresholdDistance = max(minDistance, gridSize);
-        double dAlpha = sectorAngle() * 1.25 / 2;
-        double directionRad = toRadians(direction);
+        Complex dAlpha = Complex.fromRad(sectorAngle() * 1.25 / 2);
         map.cellStream()
                 .filter(cell -> cell.location().distance(center) < maxDistance)
                 .forEach(cell -> { // For each radar sector
                     for (int i = 0; i < this.sectorsNumber(); i++) { // for each polar sector
-                        int sector = i;
-                        double sectorDir = normalizeAngle(this.sectorDirection(i) + directionRad);
+                        Complex sectorDir = this.sectorDirection(i).add(direction);
                         // Computes the contact point
-                        Optional<Point2D> point = squareArcInterval(cell.location(), gridSize, center, sectorDir, dAlpha).map(Tuple2::getV1);
-                        point.ifPresent(s -> {
+                        Tuple2<Point2D, Point2D> interval = squareArcInterval(cell.location(), gridSize, center,
+                                sectorDir, dAlpha);
+                        if (interval != null) {
+                            Point2D s = interval._1;
                             double distance = s.distance(center);
                             if (distance >= thresholdDistance && distance < maxDistance) {
                                 if (cell.unknown()) {
-                                    if (distance < unknownDistances[sector]) {
-                                        unknownDistances[sector] = distance;
+                                    if (distance < unknownDistances[i]) {
+                                        unknownDistances[i] = distance;
                                     }
                                 } else if (cell.empty()) {
-                                    if (distance < emptyDistances[sector]) {
-                                        emptyDistances[sector] = distance;
-                                        emptyTimestamps[sector] = cell.echoTime();
-                                        emptyPoints[sector] = s;
+                                    if (distance < emptyDistances[i]) {
+                                        emptyDistances[i] = distance;
+                                        emptyTimestamps[i] = cell.echoTime();
+                                        emptyPoints[i] = s;
                                     }
-                                } else if (distance < notEmptyDistances[sector]) {
-                                    notEmptyDistances[sector] = distance;
-                                    notEmptyTimestamps[sector] = cell.echoTime();
-                                    notEmptyPoints[sector] = s;
+                                } else if (distance < notEmptyDistances[i]) {
+                                    notEmptyDistances[i] = distance;
+                                    notEmptyTimestamps[i] = cell.echoTime();
+                                    notEmptyPoints[i] = s;
                                 }
                             }
-                        });
+                        }
                     }
                 });
         CircularSector[] sectors = IntStream.range(0, this.sectors.length)

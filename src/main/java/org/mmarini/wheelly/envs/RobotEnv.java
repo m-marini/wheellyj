@@ -28,6 +28,7 @@ package org.mmarini.wheelly.envs;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.NotImplementedException;
 import org.mmarini.rl.envs.*;
+import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.yaml.Locator;
@@ -42,7 +43,6 @@ import java.util.function.ToDoubleFunction;
 import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.Utils.linear;
-import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 
 public class RobotEnv implements Environment {
 
@@ -71,7 +71,6 @@ public class RobotEnv implements Environment {
             "canMoveForward", new IntSignalSpec(new long[]{1}, 2),
             "canMoveBackward", new IntSignalSpec(new long[]{1}, 2),
             "contacts", new IntSignalSpec(new long[]{1}, NUM_CONTACT_VALUES));
-
 
     /**
      * Returns a robot environment
@@ -114,8 +113,8 @@ public class RobotEnv implements Environment {
      * @param interval           the interval
      * @param reactionInterval   the reaction interval
      * @param commandInterval    the command interval
-     * @param numDirectionValues number of direction values
-     * @param numSensorValues    number of sensor direction values
+     * @param numDirectionValues number of directionDeg values
+     * @param numSensorValues    number of sensor directionDeg values
      * @param numSpeedValues     number of speed values
      */
     public static RobotEnv create(RobotApi robot, ToDoubleFunction<RobotEnvironment> reward,
@@ -123,7 +122,7 @@ public class RobotEnv implements Environment {
                                   int numDirectionValues, int numSensorValues, int numSpeedValues) {
         Map<String, SignalSpec> actions1 = Map.of(
                 "haltCommand", new IntSignalSpec(new long[]{1}, 2),
-                "direction", new IntSignalSpec(new long[]{1}, numDirectionValues),
+                "directionDeg", new IntSignalSpec(new long[]{1}, numDirectionValues),
                 "speed", new IntSignalSpec(new long[]{1}, numSpeedValues),
                 "sensorAction", new IntSignalSpec(new long[]{1}, numSensorValues)
         );
@@ -131,28 +130,27 @@ public class RobotEnv implements Environment {
         return new RobotEnv(robot, reward, interval, reactionInterval, commandInterval, actions1);
     }
 
-    private final RobotApi robot;
-    private final ToDoubleFunction<RobotEnvironment> reward;
-    private final long interval;
-    private final long reactionInterval;
-    private final long commandInterval;
     private final Map<String, SignalSpec> actions;
-    private final int prevSensor;
-    private final long lastScanTimestamp;
+    private final long commandInterval;
+    private final long interval;
     private final long lastMoveTimestamp;
+    private final long lastScanTimestamp;
     private final boolean prevHalt;
+    private final int prevSensor;
+    private final long reactionInterval;
+    private final ToDoubleFunction<RobotEnvironment> reward;
+    private final RobotApi robot;
     private final boolean started;
-    private INDArray contacts;
+    private INDArray canMoveBackward;
     private INDArray canMoveForward;
+    private INDArray contacts;
+    private Complex currentDirection;
+    private boolean currentHalted;
+    private Complex currentSensor;
+    private float currentSpeed;
     private INDArray distance;
     private INDArray robotDir;
     private INDArray sensor;
-    private INDArray canMoveBackward;
-    private float currentSpeed;
-    private boolean currentHalted;
-    private int currentSensor;
-    private int currentDirection;
-
 
     /**
      * Creates the robot environment
@@ -187,8 +185,8 @@ public class RobotEnv implements Environment {
         this.lastMoveTimestamp = 0L;
         this.lastScanTimestamp = 0L;
         this.currentHalted = true;
-        this.currentSensor = 0;
-        this.currentDirection = 0;
+        this.currentSensor = Complex.DEG0;
+        this.currentDirection = Complex.DEG0;
         this.currentSpeed = 0;
     }
 
@@ -200,14 +198,14 @@ public class RobotEnv implements Environment {
     }
 
     /**
-     * Returns the delta direction in DEG
+     * Returns the delta direction
      *
      * @param actions the actions
      */
-    int deltaDir(Map<String, Signal> actions) {
-        int action = actions.get("direction").getInt(0);
-        int n = ((IntSignalSpec) getActions().get("direction")).getNumValues();
-        return round(linear(action,
+    Complex deltaDir(Map<String, Signal> actions) {
+        int action = actions.get("directionDeg").getInt(0);
+        int n = ((IntSignalSpec) getActions().get("directionDeg")).getNumValues();
+        return Complex.fromDeg(linear(action,
                 0, n - 1,
                 MIN_DIRECTION_ACTION, MAX_DIRECTION_ACTION));
     }
@@ -260,8 +258,8 @@ public class RobotEnv implements Environment {
         float speed1 = speed(actions);
         currentSpeed = round(speed1 * 10f) * 0.1f;
         currentSensor = sensorDir(actions);
-        int dDir = deltaDir(actions);
-        currentDirection = normalizeDegAngle(round(robotDir.getFloat(0)) + dDir);
+        Complex dDir = deltaDir(actions);
+        currentDirection = Complex.fromDeg(robotDir.getFloat(0)).add(dDir);
     }
 
     /*
@@ -331,14 +329,14 @@ public class RobotEnv implements Environment {
     }
 
     /**
-     * Returns the sensor direction in DEG from actions
+     * Returns the sensor directionDeg in DEG from actions
      *
      * @param actions the actions
      */
-    int sensorDir(Map<String, Signal> actions) {
+    Complex sensorDir(Map<String, Signal> actions) {
         int action = actions.get("sensorAction").getInt(0);
         int n = ((IntSignalSpec) getActions().get("sensorAction")).getNumValues();
-        return round(linear(action,
+        return Complex.fromDeg(linear(action,
                 0, n - 1,
                 MIN_SENSOR_DIR, MAX_SENSOR_DIR));
     }
@@ -362,8 +360,8 @@ public class RobotEnv implements Environment {
      * @param status the status from robot
      */
     private void storeStatus(RobotStatus status) {
-        robotDir = Nd4j.createFromArray((float) status.direction());
-        sensor = Nd4j.createFromArray((float) status.sensorDirection());
+        robotDir = Nd4j.createFromArray((float) status.direction().toIntDeg());
+        sensor = Nd4j.createFromArray((float) status.sensorDirection().toIntDeg());
         distance = Nd4j.createFromArray((float) status.echoDistance());
         canMoveForward = Nd4j.createFromArray(status.canMoveForward() ? 1F : 0F);
         canMoveBackward = Nd4j.createFromArray(status.canMoveBackward() ? 1F : 0F);

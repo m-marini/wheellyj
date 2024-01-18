@@ -30,6 +30,7 @@ package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
+import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.yaml.Locator;
@@ -39,12 +40,8 @@ import org.slf4j.LoggerFactory;
 import java.awt.geom.Point2D;
 import java.util.Optional;
 
-import static java.lang.Math.toDegrees;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
-import static org.mmarini.wheelly.apis.Utils.direction;
-import static org.mmarini.wheelly.apis.Utils.toNormalRadians;
-import static org.nd4j.common.util.MathUtils.round;
 
 /**
  * Generates the behavior to avoid contact obstacle.
@@ -69,15 +66,19 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
     public static final String CONTACT_POINT = "contactPoint";
     public static final String FRONT_CONTACT = "frontContact";
     public static final double SAFE_DISTANCE_GAP = 0.2;
+    public static final String MAX_DISTANCE = "MAX_DISTANCE";
     private static final Logger logger = LoggerFactory.getLogger(AvoidingState.class);
     private static final double DEFAULT_SAFE_DISTANCE = 0.3;
+    private static final double DEFAULT_MAX_DISTANCE = 1;
 
     public static AvoidingState create(JsonNode root, Locator locator, String id) {
         double safeDistance = locator.path(SAFE_DISTANCE).getNode(root).asDouble(DEFAULT_SAFE_DISTANCE);
+        double maxDistance = locator.path(MAX_DISTANCE).getNode(root).asDouble(DEFAULT_MAX_DISTANCE);
         int speed = locator.path(SPEED).getNode(root).asInt(MAX_PPS);
         ProcessorCommand onInit = ProcessorCommand.concat(
                 ExtendedStateNode.loadTimeout(root, locator, id),
                 ProcessorCommand.put(id + "." + SAFE_DISTANCE, safeDistance),
+                ProcessorCommand.put(id + "." + MAX_DISTANCE, maxDistance),
                 ProcessorCommand.put(id + "." + SPEED, speed),
                 ProcessorCommand.create(root, locator.path("onInit")));
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
@@ -100,7 +101,7 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
      */
     private Optional<Tuple2<String, RobotCommands>> computeReaction(ProcessorContext context) {
         RobotStatus status = context.robotStatus();
-        int direction = status.direction();
+        Complex direction = status.direction();
         int speed = getInt(context, SPEED);
         Point2D robotLocation = status.location();
         if (!status.canMoveForward()) {
@@ -109,7 +110,7 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
             logger.atDebug().log("Avoid front contact at {}", robotLocation);
             if (status.canMoveBackward()) {
                 // Robot can move backward
-                // Set escape direction the robot direction and backward speed
+                // Set escape directionDeg the robot directionDeg and backward speed
                 // move robot backward
                 put(context, CONTACT_DIRECTION, direction);
                 put(context, FRONT_CONTACT, true);
@@ -164,8 +165,8 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
                 logger.atDebug().log("Avoided contact at {} m", contactDistance);
                 return COMPLETED_RESULT;
             }
-            // Check for escape direction
-            Integer contactsDir = get(ctx, CONTACT_DIRECTION);
+            // Check for escape directionDeg
+            Complex contactsDir = get(ctx, CONTACT_DIRECTION);
             if (contactsDir == null) {
                 // robot in safe location without movement
                 logger.atDebug()
@@ -180,12 +181,13 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
             Point2D safePoint = get(ctx, SAFE_POINT);
             if (safePoint == null) {
                 //  No free point set: search for it
+                double maxDistance = getDouble(ctx, MAX_DISTANCE);
                 Optional<Point2D> target = ctx.radarMap().findSafeTarget(
                         robotLocation,
                         frontContact
-                                ? toNormalRadians(contactsDir + 180)
-                                : toNormalRadians(contactsDir),
-                        safeDistance + SAFE_DISTANCE_GAP);
+                                ? contactsDir.opposite()
+                                : contactsDir,
+                        safeDistance + SAFE_DISTANCE_GAP, maxDistance);
                 target.ifPresent(p -> {
                     put(ctx, SAFE_POINT, p);
                     logger.atDebug().log("Safe point at {}", p);
@@ -193,7 +195,7 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
                 safePoint = target.orElse(null);
             }
 
-            int escapeDir;
+            Complex escapeDir;
             int escapeSpeed;
             int speed = getInt(ctx, SPEED);
             if (safePoint == null) {
@@ -205,12 +207,12 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
                 logger.atDebug().log("Avoiding without safe point to {} DEG at {} pps", escapeDir, escapeSpeed);
             } else if (frontContact) {
                 // escape from front contact
-                escapeDir = round(toDegrees(direction(safePoint, robotLocation)));
+                escapeDir = Complex.direction(safePoint, robotLocation);
                 escapeSpeed = -speed;
                 logger.atDebug().log("Avoiding front contact safe point to {} DEG at {} pps", escapeDir, escapeSpeed);
             } else {
                 // escape from rear contact
-                escapeDir = round(toDegrees(direction(robotLocation, safePoint)));
+                escapeDir = Complex.direction(robotLocation, safePoint);
                 escapeSpeed = speed;
                 logger.atDebug().log("Avoiding rear contact to {} DEG at {} pps", escapeDir, escapeSpeed);
             }

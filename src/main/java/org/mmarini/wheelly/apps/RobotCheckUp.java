@@ -33,10 +33,10 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
+import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotControllerApi;
 import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.Utils;
 import org.mmarini.wheelly.swing.ComMonitor;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.wheelly.swing.SensorMonitor;
@@ -55,10 +55,9 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-import static java.lang.Math.*;
+import static java.lang.Math.abs;
 import static java.lang.String.format;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
-import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 import static org.mmarini.wheelly.swing.Utils.createFrame;
 import static org.mmarini.wheelly.swing.Utils.layHorizontally;
 
@@ -69,7 +68,7 @@ public class RobotCheckUp {
     public static final long ROTATION_TIMEOUT = 3000;
     public static final long HALT_TIMEOUT = 500;
     public static final long MOVEMENT_DURATION = 2000;
-    public static final int ROTATION_TOLERANCE = 5;
+    public static final Complex ROTATION_TOLERANCE = Complex.fromDeg(5);
     public static final double DISTANCE_TOLERANCE = 0.1;
     public static final Dimension RESULT_SIZE = new Dimension(800, 600);
     public static final String CHECKUP_SCHEMA_YML = "https://mmarini.org/wheelly/checkup-schema-1.0";
@@ -110,15 +109,15 @@ public class RobotCheckUp {
         }
     }
 
-    private final SensorsPanel sensorPanel;
     private final ComMonitor comMonitor;
     private final JFrame frame;
     private final JFrame monitorFrame;
-    private final SensorMonitor sensorMonitor;
     private final JFrame sensorFrame;
-    private Namespace parseArgs;
-    private RobotControllerApi controller;
+    private final SensorMonitor sensorMonitor;
+    private final SensorsPanel sensorPanel;
     private Function<RobotStatus, FinalResult> checkupProcess;
+    private RobotControllerApi controller;
+    private Namespace parseArgs;
 
     /**
      * Creates the check
@@ -149,25 +148,25 @@ public class RobotCheckUp {
     /**
      * Returns the polling process for a scanner test.
      * <p>
-     * Measures the signal for the scanner direction between -90 and 90 by 15 DEG
-     * Each test takes 1.5 sec and tracks the direction and distance of each single measure
+     * Measures the signal for the scanner directionDeg between -90 and 90 by 15 DEG
+     * Each test takes 1.5 sec and tracks the directionDeg and distance of each single measure
      *
      * @param directions the test directions
      */
-    private Function<RobotStatus, List<ScannerResult>> createCheckUpScanner(int... directions) {
+    private Function<RobotStatus, List<ScannerResult>> createCheckUpScanner(Complex... directions) {
         return new Function<>() {
             private final List<ScannerResult> results = new ArrayList<>();
-            private int sampleCount;
-            private int measureCount;
             private int currentTest = -1;
+            private int measureCount;
             private long measureStart;
+            private int sampleCount;
             private long scannerMoveTime;
             private double totDistance;
 
             @Override
             public List<ScannerResult> apply(RobotStatus status) {
                 long time = status.simulationTime();
-                RobotCommands command = RobotCommands.haltCommand().setScan(0);
+                RobotCommands command = RobotCommands.haltCommand();
                 if (currentTest < 0) {
                     // First sample
                     currentTest = 0;
@@ -183,12 +182,12 @@ public class RobotCheckUp {
                     measureCount = 0;
                     scannerMoveTime = 0;
                     command = command.setScan(directions[currentTest]);
-                    logger.atInfo().setMessage("Checking sensor to {} DEG ...").addArgument(directions[currentTest]).log();
-                    sensorPanel.setInfo(format("Checking sensor to %d DEG ...", directions[currentTest]));
+                    logger.atInfo().log("Checking sensor to {} DEG ...", directions[currentTest]);
+                    sensorPanel.setInfo(format("Checking sensor to %d DEG ...", directions[currentTest].toIntDeg()));
                 }
-                int sensDir = directions[currentTest];
-                int dir = status.sensorDirection();
-                if (dir == sensDir) {
+                Complex sensDir = directions[currentTest];
+                Complex dir = status.sensorDirection();
+                if (dir.equals(sensDir)) {
                     sampleCount++;
                     if (scannerMoveTime == 0) {
                         scannerMoveTime = time - measureStart;
@@ -207,13 +206,13 @@ public class RobotCheckUp {
                             status.imuFailure()));
                     currentTest++;
                     if (currentTest >= directions.length) {
-                        controller.execute(command.setScan(0));
+                        controller.execute(command.setScan(Complex.DEG0));
                         sensorPanel.setInfo("");
                         return results;
                     }
                     controller.execute(command.setScan(directions[currentTest]));
-                    logger.atInfo().setMessage("Checking sensor to {} DEG ...").addArgument(directions[currentTest]).log();
-                    sensorPanel.setInfo(format("Checking sensor to %d DEG ...", directions[currentTest]));
+                    logger.atInfo().log("Checking sensor to {} DEG ...", directions[currentTest].toIntDeg());
+                    sensorPanel.setInfo(format("Checking sensor to %d DEG ...", directions[currentTest].toIntDeg()));
                     measureStart = time;
                     totDistance = 0;
                     sampleCount = 0;
@@ -327,33 +326,39 @@ public class RobotCheckUp {
      */
     private void startCheckUp() {
         checkupProcess = createCheckUpProcess(
-                createCheckUpScanner(-90, -60, -30, 0, 30, 60, 90)
-        ).addRotateTest(0)
-                .addRotateTest(90)
-                .addRotateTest(180)
-                .addRotateTest(-90)
-                .addRotateTest(0)
-                .addRotateTest(-90)
-                .addRotateTest(-180)
-                .addRotateTest(90)
+                createCheckUpScanner(Complex.DEG270,
+                        Complex.fromDeg(-60),
+                        Complex.fromDeg(-30),
+                        Complex.DEG0,
+                        Complex.fromDeg(30),
+                        Complex.fromDeg(60),
+                        Complex.DEG90)
+        ).addRotateTest(Complex.DEG0)
+                .addRotateTest(Complex.DEG90)
+                .addRotateTest(Complex.DEG180)
+                .addRotateTest(Complex.DEG270)
+                .addRotateTest(Complex.DEG0)
+                .addRotateTest(Complex.DEG270)
+                .addRotateTest(Complex.DEG180)
+                .addRotateTest(Complex.DEG90)
 
-                .addRotateTest(0)
-                .addMoveTest(0, TEST_SPEED)
-                .addMoveTest(0, -TEST_SPEED)
+                .addRotateTest(Complex.DEG0)
+                .addMoveTest(Complex.DEG0, TEST_SPEED)
+                .addMoveTest(Complex.DEG0, -TEST_SPEED)
 
-                .addRotateTest(90)
-                .addMoveTest(90, TEST_SPEED)
-                .addMoveTest(90, -TEST_SPEED)
+                .addRotateTest(Complex.DEG90)
+                .addMoveTest(Complex.DEG90, TEST_SPEED)
+                .addMoveTest(Complex.DEG90, -TEST_SPEED)
 
-                .addRotateTest(-180)
-                .addMoveTest(-180, TEST_SPEED)
-                .addMoveTest(-180, -TEST_SPEED)
+                .addRotateTest(Complex.DEG180)
+                .addMoveTest(Complex.DEG180, TEST_SPEED)
+                .addMoveTest(Complex.DEG180, -TEST_SPEED)
 
-                .addRotateTest(-90)
-                .addMoveTest(-90, TEST_SPEED)
-                .addMoveTest(-90, -TEST_SPEED)
+                .addRotateTest(Complex.DEG270)
+                .addMoveTest(Complex.DEG270, TEST_SPEED)
+                .addMoveTest(Complex.DEG270, -TEST_SPEED)
 
-                .addRotateTest(0);
+                .addRotateTest(Complex.DEG0);
     }
 
     record FinalResult(List<ScannerResult> scannerResults, List<RotateResult> rotateResults,
@@ -365,7 +370,7 @@ public class RobotCheckUp {
             builder.add("Check up details");
             builder.add("");
             for (ScannerResult scannerResult : scannerResults) {
-                builder.add(format("Sensor direction check %d DEG", scannerResult.direction));
+                builder.add(format("Sensor directionDeg check %d DEG", scannerResult.direction));
                 builder.add(format("    %s", scannerResult.valid ? "valid" : "invalid"));
                 builder.add(format("    duration %d ms", scannerResult.testDuration));
                 builder.add(format("    move localTime %d ms", scannerResult.moveTime));
@@ -373,18 +378,18 @@ public class RobotCheckUp {
             }
 
             for (RotateResult result : rotateResults) {
-                builder.add(format("Rotate direction %d DEG", result.targetDir));
+                builder.add(format("Rotate directionDeg %d DEG", result.targetDir));
                 builder.add(format("    rotation %d DEG", result.rotationAngle));
                 builder.add(format("    duration %d ms", result.testDuration));
-                builder.add(format("    direction error %d DEG", result.directionError));
+                builder.add(format("    directionDeg error %d DEG", result.directionError));
                 builder.add(format("    location error %.2f m", result.locationError));
             }
             for (MovementResult result : moveResults) {
-                builder.add(format("Movement direction %d DEG, speed %.1f", result.direction, result.speed));
+                builder.add(format("Movement directionDeg %d DEG, speed %.1f", result.direction, result.speed));
                 builder.add(format("    distance %.2f m", result.distance));
                 builder.add(format("    duration %d ms", result.testDuration));
                 builder.add(format("    distance error %.2f m", result.distanceError));
-                builder.add(format("    direction error %d DEG", result.directionError));
+                builder.add(format("    directionDeg error %d DEG", result.directionError));
             }
             return builder.build();
         }
@@ -410,9 +415,9 @@ public class RobotCheckUp {
                     .orElse(0);
 
             double minDistance = Double.MAX_VALUE;
-            int minDistanceDirection = 0;
+            Complex minDistanceDirection = Complex.DEG0;
             double maxDistance = 0;
-            int maxDistanceDirection = 0;
+            Complex maxDistanceDirection = Complex.DEG0;
             boolean validSamples = false;
             for (int i = 1; i < scannerResults.size(); i++) {
                 ScannerResult r = scannerResults.get(i);
@@ -438,25 +443,27 @@ public class RobotCheckUp {
             builder.add(format("    move localTime <= %d ms", maxMoveDuration));
             if (validSamples) {
                 builder.add(format("    min distance = %.1f at %d DEG",
-                        minDistance, minDistanceDirection));
+                        minDistance, minDistanceDirection.toIntDeg()));
                 builder.add(format("    max distance = %.1f at %d DEG",
-                        maxDistance, maxDistanceDirection));
+                        maxDistance, maxDistanceDirection.toIntDeg()));
             }
 
-            long numRotationFailure = rotateResults.stream().filter(result -> result.directionError > ROTATION_TOLERANCE || result.imuFailure != 0).count();
-            int maxDirectionError = 0;
+            long numRotationFailure = rotateResults.stream()
+                    .filter(result -> result.directionError.sub(ROTATION_TOLERANCE).positive()
+                            || result.imuFailure != 0).count();
+            Complex maxDirectionError = Complex.DEG0;
             double maxLocationError = 0;
             double maxRotationSpeed = 0;
             for (RotateResult r : rotateResults) {
                 if (r.imuFailure == 0) {
-                    if (r.directionError > maxDirectionError) {
+                    if (r.directionError.sub(maxDirectionError).positive()) {
                         maxDirectionError = r.directionError;
                     }
                     if (r.locationError > maxLocationError) {
                         maxLocationError = r.locationError;
                     }
                     if (r.testDuration > 0) {
-                        double speed = (double) abs(r.rotationAngle) / r.testDuration * 1000;
+                        double speed = abs(r.rotationAngle.toDeg()) / r.testDuration * 1000;
                         if (speed > maxRotationSpeed) {
                             maxRotationSpeed = speed;
                         }
@@ -464,10 +471,11 @@ public class RobotCheckUp {
                 }
             }
 
-            long numMovementFailure = moveResults.stream().filter(result -> result.directionError > ROTATION_TOLERANCE
-                    || result.distanceError > DISTANCE_TOLERANCE
-                    || result.imuFailure != 0).count();
-            int maxMoveDirectionError = 0;
+            long numMovementFailure = moveResults.stream()
+                    .filter(result -> result.directionError.sub(ROTATION_TOLERANCE).positive()
+                            || result.distanceError > DISTANCE_TOLERANCE
+                            || result.imuFailure != 0).count();
+            Complex maxMoveDirectionError = Complex.DEG0;
             double maxMoveDistanceError = 0;
             double maxSpeed = 0;
             double maxMoveDistance = 0;
@@ -479,7 +487,7 @@ public class RobotCheckUp {
                     if (r.distanceError > maxMoveDistanceError) {
                         maxMoveDistanceError = r.distanceError;
                     }
-                    if (r.directionError > maxMoveDirectionError) {
+                    if (r.directionError.sub(maxMoveDirectionError).positive()) {
                         maxMoveDirectionError = r.directionError;
                     }
                     double speed = r.distance / r.testDuration * 1000;
@@ -495,7 +503,7 @@ public class RobotCheckUp {
                 builder.add("Rotation checks passed");
             }
 
-            builder.add(format("    direction error <= %d DEG", maxDirectionError));
+            builder.add(format("    directionDeg error <= %d DEG", maxDirectionError));
             builder.add(format("    location error <= %.2f m", maxLocationError));
             builder.add(format("    rotation speed <= %.2f DEG/s", maxRotationSpeed));
 
@@ -508,29 +516,29 @@ public class RobotCheckUp {
             builder.add(format("    distance <= %.2f m", maxMoveDistance));
             builder.add(format("    speed <= %.2f m/s", maxSpeed));
             builder.add(format("    distance error <= %.2f m", maxMoveDistanceError));
-            builder.add(format("    direction error <=  %d DEG", maxMoveDirectionError));
+            builder.add(format("    directionDeg error <=  %d DEG", maxMoveDirectionError));
 
             return builder.build();
         }
     }
 
-    record MovementResult(int direction, double speed, long testDuration, double distance, double distanceError,
-                          int directionError, int imuFailure) {
+    record MovementResult(Complex direction, double speed, long testDuration, double distance, double distanceError,
+                          Complex directionError, int imuFailure) {
     }
 
     /**
      * Rotation result
      */
     static class RotateResult {
-        public final int directionError;
+        public final Complex directionError;
         public final int imuFailure;
         public final double locationError;
-        public final int rotationAngle;
-        public final int targetDir;
+        public final Complex rotationAngle;
+        public final Complex targetDir;
         public final long testDuration;
 
 
-        RotateResult(long testDuration, int targetDir, int directionError, double distanceError, int rotationAngle, int imuFailure) {
+        RotateResult(long testDuration, Complex targetDir, Complex directionError, double distanceError, Complex rotationAngle, int imuFailure) {
             this.testDuration = testDuration;
             this.targetDir = targetDir;
             this.directionError = directionError;
@@ -543,17 +551,17 @@ public class RobotCheckUp {
     /**
      * Scanner result
      */
-    record ScannerResult(int direction, long testDuration, boolean valid, long moveTime, double averageDistance,
+    record ScannerResult(Complex direction, long testDuration, boolean valid, long moveTime, double averageDistance,
                          int imuFailure) {
     }
 
     class CompositeCheckupProcess implements Function<RobotStatus, FinalResult> {
-        private final Function<RobotStatus, List<ScannerResult>> checkUpScanner;
         private final List<Predicate<RobotStatus>> checkList;
-        private final List<RotateResult> rotateResults;
+        private final Function<RobotStatus, List<ScannerResult>> checkUpScanner;
         private final List<MovementResult> moveResults;
-        private List<ScannerResult> scannerResults;
+        private final List<RotateResult> rotateResults;
         private int currentCheck;
+        private List<ScannerResult> scannerResults;
 
         CompositeCheckupProcess(Function<RobotStatus, List<ScannerResult>> checkUpScanner) {
             this.checkUpScanner = checkUpScanner;
@@ -562,7 +570,7 @@ public class RobotCheckUp {
             checkList = new ArrayList<>();
         }
 
-        public CompositeCheckupProcess addMoveTest(int direction, int speed) {
+        public CompositeCheckupProcess addMoveTest(Complex direction, int speed) {
             checkList.add(new Predicate<>() {
                 private long moveStart;
                 private Point2D startLocation;
@@ -575,26 +583,26 @@ public class RobotCheckUp {
                         startLocation = status.location();
                         moveStart = time;
                         controller.execute(command.setMove(direction, speed));
-                        sensorPanel.setInfo(format("Checking movement to %d DEG, speed %d ...", direction, speed));
+                        sensorPanel.setInfo(format("Checking movement to %d DEG, speed %d ...", direction.toIntDeg(), speed));
                     }
                     if (time >= moveStart + MOVEMENT_DURATION) {
                         // Move timeout
                         Point2D pos = status.location();
                         double distance = pos.distance(startLocation);
                         Point2D targetLocation = new Point2D.Double(
-                                startLocation.getX() + distance * sin(toRadians(direction)),
-                                startLocation.getY() + distance * cos(toRadians(direction)));
+                                startLocation.getX() + distance * direction.sin(),
+                                startLocation.getY() + distance * direction.cos());
                         double distanceError = targetLocation.distance(pos);
 
-                        int realDirection = (int) round(toDegrees(Utils.direction(startLocation, pos)));
-                        int directionError = normalizeDegAngle(realDirection - direction);
+                        Complex realDirection = Complex.direction(startLocation, pos);
+                        Complex directionError = realDirection.sub(direction);
                         sensorPanel.setInfo("");
                         moveResults.add(new MovementResult(direction,
                                 speed,
                                 time - moveStart,
                                 distance,
                                 distanceError,
-                                abs(directionError),
+                                directionError.abs(),
                                 status.imuFailure()));
                         sensorPanel.setInfo("");
                         controller.execute(command.setHalt());
@@ -606,29 +614,29 @@ public class RobotCheckUp {
             return this;
         }
 
-        public CompositeCheckupProcess addRotateTest(int direction) {
+        public CompositeCheckupProcess addRotateTest(Complex direction) {
             checkList.add(new Predicate<>() {
-                private long rotationStart;
                 private long haltTime;
+                private long rotationStart;
+                private Complex startAngle;
                 private Point2D startLocation;
-                private int startAngle;
 
                 @Override
                 public boolean test(RobotStatus status) {
                     long time = status.simulationTime();
-                    int dir = status.direction();
+                    Complex dir = status.direction();
                     RobotCommands command = RobotCommands.none();
                     if (startLocation == null) {
                         controller.execute(command.setMove(direction, 0));
                         startLocation = status.location();
                         rotationStart = time;
                         startAngle = dir;
-                        sensorPanel.setInfo(format("Checking rotation to %d DEG ...", direction));
+                        sensorPanel.setInfo(format("Checking rotation to %d DEG ...", direction.toIntDeg()));
                     }
                     if (time >= rotationStart + ROTATION_TIMEOUT) {
                         // Rotation timeout
-                        int directionError = abs(normalizeDegAngle(dir - direction));
-                        int rotationAngle = normalizeDegAngle(dir - startAngle);
+                        Complex directionError = dir.sub(direction);
+                        Complex rotationAngle = dir.sub(startAngle);
                         double distanceError = status.location().distance(startLocation);
                         rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.imuFailure()));
                         controller.execute(command.setHalt());
@@ -641,8 +649,8 @@ public class RobotCheckUp {
                         }
                         if (time >= haltTime + HALT_TIMEOUT) {
                             // Halt timeout
-                            int directionError = abs(normalizeDegAngle(dir - direction));
-                            int rotationAngle = normalizeDegAngle(dir - startAngle);
+                            Complex directionError = dir.sub(direction);
+                            Complex rotationAngle = dir.sub(startAngle);
                             double distanceError = status.location().distance(startLocation);
                             rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.imuFailure()));
                             controller.execute(command.setHalt());

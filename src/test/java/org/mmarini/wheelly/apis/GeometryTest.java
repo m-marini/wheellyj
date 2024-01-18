@@ -37,15 +37,13 @@ import org.mmarini.Tuple2;
 
 import java.awt.geom.Point2D;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Stream;
 
-import static java.lang.Math.toRadians;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.closeTo;
-import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mmarini.Matchers.*;
+import static org.mmarini.Matchers.pointCloseTo;
+import static org.mmarini.Matchers.tupleOf;
 
 class GeometryTest {
 
@@ -53,7 +51,7 @@ class GeometryTest {
 
     /**
      * Returns the dataset for test
-     * center, from, direction, expected list
+     * center, from, directionDeg, expected list
      */
     public static Stream<Arguments> lineSquareProjectionsDataset() {
         return Stream.of(
@@ -143,9 +141,13 @@ class GeometryTest {
             "-1,-1, -2, -45,1, -inf,inf",
             "-1,-1, -2, 45,1, -inf,inf",
             "-1,-1, -2, -180,90, -inf,inf",
+
+            "0,1, 1, 90,30, 0,inf",
+            "0,1, 1, -90,30, -inf,0",
     })
     void horizontalIntersectTest(double xq, double yq, double y, double alpha, double dAlpha, String xl, String xr) {
-        double[] result = Geometry.horizontalArcIntersect(new Point2D.Double(xq, yq), y, toRadians(alpha), toRadians(dAlpha));
+        double[] result = Geometry.horizontalArcIntersect(new Point2D.Double(xq, yq), y,
+                Complex.fromDeg(alpha), Complex.fromDeg(dAlpha));
         if ("inf".equals(xl)) {
             assertEquals(Double.POSITIVE_INFINITY, result[0]);
         } else if ("-inf".equals(xl)) {
@@ -187,14 +189,15 @@ class GeometryTest {
             "0,1, 110,10, -1,1, 0, false, 0,0, 0,0",
     })
     void horizontalIntervalTest(double xq, double yq, double alpha, double dAlpha, double xl, double xr, double y, boolean exists, double xn, double yn, double xf, double yf) {
-        Optional<Tuple2<Point2D, Point2D>> result = Geometry.horizontalArcInterval(new Point2D.Double(xq, yq), xl, xr, y, toRadians(alpha), toRadians(dAlpha));
+        Tuple2<Point2D, Point2D> result = Geometry.horizontalArcInterval(new Point2D.Double(xq, yq),
+                xl, xr, y,
+                Complex.fromDeg(alpha), Complex.fromDeg(dAlpha));
         assertThat(result, exists ?
-                optionalOf(
-                        tupleOf(
-                                pointCloseTo(xn, yn, 1e-3),
-                                pointCloseTo(xf, yf, 1e-3)
-                        ))
-                : emptyOptional()
+                tupleOf(
+                        pointCloseTo(xn, yn, 1e-3),
+                        pointCloseTo(xf, yf, 1e-3)
+                )
+                : nullValue()
         );
     }
 
@@ -207,7 +210,8 @@ class GeometryTest {
         double size = 1;
 
         // When computes squareLineInterval
-        List<Point2D> result = Geometry.lineSquareProjections(from, toRadians(direction), center, size);
+        List<Point2D> result = Geometry.lineSquareProjections(from,
+                Complex.fromDeg(direction), center, size);
 
         // Then the result should match the existence
         Matcher<Point2D>[] matchers = (Matcher<Point2D>[]) expected.stream()
@@ -218,7 +222,7 @@ class GeometryTest {
 
     @ParameterizedTest
     @CsvSource({
-            // xc,yc, direction,  xt,yt, xp,yp
+            // xc,yc, directionDeg,  xt,yt, xp,yp
             "0,0, 0, 0,1, 0,1",
             "0,0, 90, 1,0, 0,1",
             "0,0, -90, -1,0, 0,1",
@@ -231,13 +235,13 @@ class GeometryTest {
             "1,1, 45, 2,2, 0,1.414",
     })
     void projectLineTest(double xc, double yc, int direction, double xt, double yt, double xp, double yp) {
-        // Given a center point and a direction
+        // Given a center point and a directionDeg
         Point2D center = new Point2D.Double(xc, yc);
         // And a target point
         Point2D to = new Point2D.Double(xt, yt);
 
         // When projectLine
-        Point2D p = Geometry.projectLine(center, toRadians(direction), to);
+        Point2D p = Geometry.projectLine(center, Complex.fromDeg(direction), to);
 
         // Then result should be ...
         assertThat(p, pointCloseTo(xp, yp, 1e-3));
@@ -249,7 +253,7 @@ class GeometryTest {
             "-0.1,0, 0,0, 90,45, true, -0.1,0, 0.5,-0.5",
             "0.1,0, 0,0, 90,45, true, 0.1,0, 0.5,-0.4",
             "0.1,0, 0,0, -90,45, true, 0.1,0, -0.5,-0.5",
-            "-0.1,0, 0,0, -90,45, true, -0.1,0, -0.5,0.4",
+            "-0.1,0, 0,0, -90,45, true, -0.1,0, -0.5,-0.4",
 
             "0,-0.1, 0,0, 0,45, true, 0,-0.1, -0.5,0.5",
             "0,0.1, 0,0, 0,45, true, 0,0.1, -0.4,0.5",
@@ -258,7 +262,7 @@ class GeometryTest {
 
             "-0.5,0.5, 0,0, 90,1, true, -0.5,0.5, 0.5,0.483",
             "-1,0, 0,0, 90,1, true, -0.5,0, 0.5,-0.026",
-            "1,0, 0,0, -90,1, true, 0.5,0, -0.5,0.026",
+            "1,0, 0,0, -90,1, true, 0.5,0, -0.5,-0.026",
             "0,-1, 0,0, 0,1, true, 0,-0.5, -0.026,0.5",
             "0,1, 0,0, -180,1, true, 0,0.5, -0.026,-0.5",
             "-1,-1, 0,0, 45,1, true, -0.5,-0.5, 0.5,0.5",
@@ -269,12 +273,15 @@ class GeometryTest {
     void squareIntervalTest(double xq, double yq, double xp, double yp, double alpha, double dAlpha, boolean exists,
                             double xn, double yn, double xf, double yf) {
         double size = 1;
-        Optional<Tuple2<Point2D, Point2D>> result = Geometry.squareArcInterval(new Point2D.Double(xp, yp), size, new Point2D.Double(xq, yq), toRadians(alpha), toRadians(dAlpha));
+        Tuple2<Point2D, Point2D> result = Geometry.squareArcInterval(
+                new Point2D.Double(xp, yp), size,
+                new Point2D.Double(xq, yq),
+                Complex.fromDeg(alpha), Complex.fromDeg(dAlpha));
         assertThat(result, exists
-                ? optionalOf(tupleOf(
+                ? tupleOf(
                 pointCloseTo(xn, yn, 1e-3),
-                pointCloseTo(xf, yf, 1e-3)))
-                : emptyOptional());
+                pointCloseTo(xf, yf, 1e-3))
+                : nullValue());
     }
 
     @ParameterizedTest
@@ -297,9 +304,12 @@ class GeometryTest {
             "-1,-1, -2, 45,1, -inf,inf",
             "-1,-1, -2, 135,1, -inf,inf",
             "-1,-1, -2, 90,90, -inf,inf",
+
+            "1,0, 0, -90,30, -0.577,0.577",
     })
     void verticalIntersectTest(double xq, double yq, double x, double alpha, double dAlpha, String yr, String yf) {
-        double[] result = Geometry.verticalArcIntersect(new Point2D.Double(xq, yq), x, toRadians(alpha), toRadians(dAlpha));
+        double[] result = Geometry.verticalArcIntersect(new Point2D.Double(xq, yq), x,
+                Complex.fromDeg(alpha), Complex.fromDeg(dAlpha));
         if ("inf".equals(yr)) {
             assertEquals(Double.POSITIVE_INFINITY, result[0]);
         } else if ("-inf".equals(yr)) {
@@ -331,7 +341,7 @@ class GeometryTest {
             "1,0, 20,10, -1,1, 2, false, 0,0, 2,0",
             "1,0, 160,10, -1,1, 2, false, 0,0, 2,0",
 
-            "1,0, -90,30, -1,1, 0, true, 0,0, 0,0.577",
+            "1,0, -90,30, -1,1, 0, true, 0,0, 0,-0.577",
             "1,0, -90,60, -1,1, 0, true, 0,0, 0,-1",
             "1,0, -150,30, -1,1, 0, true, 0,-0.577, 0,-1",
             "1,0, -30,30, -1,1, 0, true, 0,0.577, 0,1",
@@ -341,11 +351,13 @@ class GeometryTest {
             "1,0, -160,10, -1,1, 0, false, 0,0, 2,0",
     })
     void verticalIntervalTest(double xq, double yq, double alpha, double dAlpha, double yr, double yf, double x, boolean exists, double xn, double yn, double xft, double yft) {
-        Optional<Tuple2<Point2D, Point2D>> result = Geometry.verticalArcInterval(new Point2D.Double(xq, yq), yr, yf, x, toRadians(alpha), toRadians(dAlpha));
+        Tuple2<Point2D, Point2D> result = Geometry.verticalArcInterval(
+                new Point2D.Double(xq, yq), yr, yf, x,
+                Complex.fromDeg(alpha), Complex.fromDeg(dAlpha));
         assertThat(result, exists
-                ? optionalOf(tupleOf(
+                ? tupleOf(
                 pointCloseTo(xn, yn, 1e-3),
-                pointCloseTo(xft, yft, 1e-3)))
-                : emptyOptional());
+                pointCloseTo(xft, yft, 1e-3))
+                : nullValue());
     }
 }

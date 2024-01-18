@@ -30,6 +30,7 @@ package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
+import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.yaml.Locator;
@@ -39,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 import java.util.OptionalLong;
 
+import static java.lang.Math.abs;
 import static java.lang.Math.max;
 import static java.lang.String.format;
 import static org.mmarini.wheelly.apis.Utils.clip;
@@ -62,10 +64,12 @@ public interface ExtendedStateNode extends StateNode {
      * @param id      the node id
      */
     static ProcessorCommand loadAutoScanOnInit(JsonNode root, Locator locator, String id) {
+        Complex minSensorDir = Complex.fromDeg(clip(locator.path("minSensorDir").getNode(root).asInt(), -90, 90));
+        Complex maxSensorDir = Complex.fromDeg(clip(locator.path("maxSensorDir").getNode(root).asInt(), -90, 90));
         return ProcessorCommand.setProperties(Map.of(
                 id + ".scanInterval", locator.path("scanInterval").getNode(root).asLong(),
-                id + ".minSensorDir", locator.path("minSensorDir").getNode(root).asInt(),
-                id + ".maxSensorDir", locator.path("maxSensorDir").getNode(root).asInt(),
+                id + ".minSensorDir", minSensorDir,
+                id + ".maxSensorDir", maxSensorDir,
                 id + ".sensorDirNumber", locator.path("sensorDirNumber").getNode(root).asInt()));
     }
 
@@ -230,7 +234,7 @@ public interface ExtendedStateNode extends StateNode {
 
     /**
      * Performs the auto scan behaviors.
-     * Moves the sensor to a random direction within a range at given steps on given localTime interval
+     * Moves the sensor to a random directionDeg within a range at given steps on given localTime interval
      *
      * @param context the processor context
      */
@@ -249,10 +253,10 @@ public interface ExtendedStateNode extends StateNode {
                     t0 - scanTime,
                     scanTime + scanInterval - time);
             if (scanTime < 0 || time > scanTime + scanInterval) {
-                int minSensorDir = clip(getInt(context, "minSensorDir"), -90, 90);
-                int maxSensorDir = clip(getInt(context, "maxSensorDir"), -90, 90);
+                Complex minSensorDir = get(context, "minSensorDir");
+                Complex maxSensorDir = get(context, "maxSensorDir");
                 int sensorDirNumber = max(getInt(context, "sensorDirNumber"), 1);
-                // Check for random scan direction
+                // Check for random scan directionDeg
                 RobotCommands command;
                 if (sensorDirNumber > 1) {
                     int scanIndex = getInt(context, "scanIndex");
@@ -261,12 +265,16 @@ public interface ExtendedStateNode extends StateNode {
                     if (x >= sensorDirNumber) {
                         x = mod - x;
                     }
-                    int dir = x * (maxSensorDir - minSensorDir) / (sensorDirNumber - 1) + minSensorDir;
+                    // The range may be equal 180 DEG
+                    double range = abs(maxSensorDir.sub(minSensorDir).toRad());
+                    Complex dDir = Complex.fromRad(x * range / (sensorDirNumber - 1));
+                    Complex dir = minSensorDir.add(dDir);
                     put(context, "scanIndex", (scanIndex + 1) % mod);
                     command = RobotCommands.scan(dir);
                 } else {
                     // Fix scan direction
-                    command = RobotCommands.scan((minSensorDir + maxSensorDir) / 2);
+                    Complex midDir = minSensorDir.add(maxSensorDir).mul(0.5);
+                    command = RobotCommands.scan(midDir);
                 }
                 put(context, "scanTime", time);
                 logger.atDebug().log("sensor scan {}", command.scanDirection());

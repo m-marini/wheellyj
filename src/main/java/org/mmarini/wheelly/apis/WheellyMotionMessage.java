@@ -42,7 +42,8 @@ import static java.lang.String.format;
  * @param remoteTime     the remote status instant (ms)
  * @param xPulses        the x robot location pulses
  * @param yPulses        the y robot location pulses
- * @param direction      the robot direction DEG
+ * @param directionDeg   the robot direction DEG
+ * @param direction      the robot direction
  * @param leftPps        the left motor speed (pulse per seconds)
  * @param rightPps       the right motor speed (pulse per seconds)
  * @param imuFailure     true if imu failure
@@ -53,7 +54,7 @@ import static java.lang.String.format;
  * @param rightPower     the right power
  */
 public record WheellyMotionMessage(long localTime, long simulationTime, long remoteTime, double xPulses, double yPulses,
-                                   int direction,
+                                   int directionDeg, Complex direction,
                                    double leftPps, double rightPps,
                                    int imuFailure, boolean halt, int leftTargetPps, int rightTargetPps, int leftPower,
                                    int rightPower)
@@ -73,7 +74,7 @@ public record WheellyMotionMessage(long localTime, long simulationTime, long rem
      *     [rightSpeed]
      *     [imuFailure]
      *     [haltCommand]
-     *     [move direction]
+     *     [move directionDeg]
      *     [move speed]
      *     [left target pps]
      *     [right target pps]
@@ -82,7 +83,7 @@ public record WheellyMotionMessage(long localTime, long simulationTime, long rem
      * </pre>
      *
      * @param line           the status string
-     * @param clockConverter the clock coverter
+     * @param clockConverter the clock converter
      */
 
     public static WheellyMotionMessage create(Timed<String> line, ClockConverter clockConverter) {
@@ -116,13 +117,41 @@ public record WheellyMotionMessage(long localTime, long simulationTime, long rem
     }
 
     /**
-     * Returns the motion message with direction set
+     * Creates a motion message
      *
-     * @param direction the direction (DEG)
+     * @param localTime      the status localTime (ms)
+     * @param simulationTime the simulation time (ms)
+     * @param remoteTime     the remote status instant (ms)
+     * @param xPulses        the x robot location pulses
+     * @param yPulses        the y robot location pulses
+     * @param directionDeg   the robot direction DEG
+     * @param leftPps        the left motor speed (pulse per seconds)
+     * @param rightPps       the right motor speed (pulse per seconds)
+     * @param imuFailure     true if imu failure
+     * @param halt           true if in haltCommand
+     * @param leftTargetPps  the left target pps
+     * @param rightTargetPps the right target pps
+     * @param leftPower      the left power
+     * @param rightPower     the right power
      */
-    public WheellyMotionMessage setDirection(int direction) {
-        return direction != this.direction
-                ? new WheellyMotionMessage(localTime, simulationTime, remoteTime, xPulses, yPulses, direction, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower)
+    public WheellyMotionMessage(long localTime, long simulationTime, long remoteTime, double xPulses, double yPulses, int directionDeg, double leftPps, double rightPps, int imuFailure, boolean halt, int leftTargetPps, int rightTargetPps, int leftPower, int rightPower) {
+        this(localTime, simulationTime, remoteTime, xPulses, yPulses,
+                directionDeg, Complex.fromDeg(directionDeg),
+                leftPps, rightPps, imuFailure, halt,
+                leftTargetPps, rightTargetPps, leftPower, rightPower);
+    }
+
+    /**
+     * Returns the motion message with directionDeg set
+     *
+     * @param directionDeg the directionDeg (DEG)
+     */
+    public WheellyMotionMessage setDirection(int directionDeg) {
+        return directionDeg != this.directionDeg
+                ? new WheellyMotionMessage(localTime, simulationTime, remoteTime,
+                xPulses, yPulses, directionDeg,
+                leftPps, rightPps, imuFailure, halt,
+                leftTargetPps, rightTargetPps, leftPower, rightPower)
                 : this;
     }
 
@@ -133,7 +162,7 @@ public record WheellyMotionMessage(long localTime, long simulationTime, long rem
      */
     public WheellyMotionMessage setHalt(boolean halt) {
         return halt != this.halt
-                ? new WheellyMotionMessage(localTime, simulationTime, remoteTime, xPulses, yPulses, direction, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower)
+                ? new WheellyMotionMessage(localTime, simulationTime, remoteTime, xPulses, yPulses, directionDeg, direction, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower)
                 : this;
     }
 
@@ -141,11 +170,11 @@ public record WheellyMotionMessage(long localTime, long simulationTime, long rem
      * Returns the status with robot location set
      *
      * @param xPulses the location abscissa (pulses)
-     * @param yPulses the location ordinata (pulses)
+     * @param yPulses the location ordinate (pulses)
      */
     public WheellyMotionMessage setPulses(double xPulses, double yPulses) {
         return xPulses != this.xPulses || yPulses != this.yPulses
-                ? new WheellyMotionMessage(localTime, simulationTime, remoteTime, xPulses, yPulses, direction, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower)
+                ? new WheellyMotionMessage(localTime, simulationTime, remoteTime, xPulses, yPulses, directionDeg, direction, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower)
                 : this;
     }
 
@@ -156,7 +185,7 @@ public record WheellyMotionMessage(long localTime, long simulationTime, long rem
      */
     public WheellyMotionMessage setSimulationTime(long simulationTime) {
         return simulationTime != this.simulationTime
-                ? new WheellyMotionMessage(localTime, simulationTime, remoteTime, xPulses, yPulses, direction, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower)
+                ? new WheellyMotionMessage(localTime, simulationTime, remoteTime, xPulses, yPulses, directionDeg, direction, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower)
                 : this;
     }
 
@@ -168,7 +197,7 @@ public record WheellyMotionMessage(long localTime, long simulationTime, long rem
      */
     public WheellyMotionMessage setSpeeds(double leftPps, double rightPps) {
         return leftPps != this.leftPps || rightPps != this.rightPps
-                ? new WheellyMotionMessage(localTime, simulationTime, remoteTime, xPulses, yPulses, direction, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower)
+                ? new WheellyMotionMessage(localTime, simulationTime, remoteTime, xPulses, yPulses, directionDeg, direction, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower)
                 : this;
     }
 }

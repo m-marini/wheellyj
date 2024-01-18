@@ -32,11 +32,11 @@ import org.mmarini.Tuple2;
 
 import java.awt.geom.Point2D;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.Math.*;
-import static org.mmarini.wheelly.apis.Utils.normalizeAngle;
+import static org.mmarini.wheelly.apis.Complex.DEG270;
+import static org.mmarini.wheelly.apis.Complex.DEG90;
 
 /**
  * Utilities geometry functions
@@ -44,14 +44,21 @@ import static org.mmarini.wheelly.apis.Utils.normalizeAngle;
 public interface Geometry {
 
     double HALF_MM = 500e-6;
-    double HALF_DEG = toRadians(0.5);
+    double BROAD_EPSILON = sin(toRadians(89.5)); // 89.5 DEG
+    Complex HALF_DEG_COMPLEX = Complex.fromDeg(0.5);
 
-    static Point2D getFarthest(Point2D q, Optional<Tuple2<Point2D, Point2D>>... pts) {
+    /**
+     * Returns the farthest point from the give point or null if none
+     *
+     * @param q   the reference point
+     * @param pts the points list (can be null)
+     */
+    static Point2D getFarthest(Point2D q, Tuple2<Point2D, Point2D>... pts) {
         double distance2 = Double.NEGATIVE_INFINITY;
         Point2D farthest = null;
-        for (Optional<Tuple2<Point2D, Point2D>> pt : pts) {
-            Point2D p = pt.map(Tuple2::getV2).orElse(null);
-            if (p != null) {
+        for (Tuple2<Point2D, Point2D> pt : pts) {
+            if (pt != null) {
+                Point2D p = pt._2;
                 double d2 = q.distanceSq(p);
                 if (d2 > distance2) {
                     farthest = p;
@@ -62,12 +69,18 @@ public interface Geometry {
         return farthest;
     }
 
-    static Point2D getNearest(Point2D q, Optional<Tuple2<Point2D, Point2D>>... pts) {
+    /**
+     * Returns the nearest point from the give point or null if none
+     *
+     * @param q   the reference point
+     * @param pts the points list (can be null)
+     */
+    static Point2D getNearest(Point2D q, Tuple2<Point2D, Point2D>... pts) {
         double distance2 = Double.POSITIVE_INFINITY;
         Point2D nearest = null;
-        for (Optional<Tuple2<Point2D, Point2D>> pt : pts) {
-            Point2D p = pt.map(Tuple2::getV1).orElse(null);
-            if (p != null) {
+        for (Tuple2<Point2D, Point2D> pt : pts) {
+            if (pt != null) {
+                Point2D p = pt._1;
                 double d2 = q.distanceSq(p);
                 if (d2 < distance2) {
                     nearest = p;
@@ -84,41 +97,43 @@ public interface Geometry {
      *
      * @param q      the point Q
      * @param y      the horizontal line ordinate
-     * @param alpha  the direction from Q (RAD)
-     * @param dAlpha the size of direction interval (RAD)
+     * @param alpha  the directionDeg from Q
+     * @param dAlpha the size of directionDeg interval
      */
-    static double[] horizontalArcIntersect(Point2D q, double y, double alpha, double dAlpha) {
+    static double[] horizontalArcIntersect(Point2D q, double y, Complex alpha, Complex dAlpha) {
         double xq = q.getX();
         double yq = q.getY();
         if (abs(y - yq) <= HALF_MM) {
-            double dar = abs(normalizeAngle(PI / 2 - alpha));
-            if (dar <= dAlpha + HALF_DEG) {
+            // y ~= yq
+            Complex dar = DEG90.sub(alpha).abs();
+            if (!dar.sub(dAlpha).sub(HALF_DEG_COMPLEX).positive()) {
                 return new double[]{xq, Double.POSITIVE_INFINITY};
             }
-            double dal = abs(normalizeAngle(-PI / 2 - alpha));
-            if (dal <= dAlpha + HALF_DEG) {
+            Complex dal = DEG270.sub(alpha).abs();
+            if (!dal.sub(dAlpha).sub(HALF_DEG_COMPLEX).positive()) {
                 return new double[]{Double.NEGATIVE_INFINITY, xq};
             }
             return new double[]{xq, xq};
         }
-        double al = normalizeAngle(alpha - dAlpha);
-        double ar = normalizeAngle(alpha + dAlpha);
-        double v = (y - yq) * tan(al) + xq;
-        double v1 = (y - yq) * tan(ar) + xq;
+        Complex al = alpha.sub(dAlpha);
+        Complex ar = alpha.add(dAlpha);
+        double v = (y - yq) * al.tan() + xq;
+        double v1 = (y - yq) * ar.tan() + xq;
         double xl;
         double xr;
         if (y > yq) {
-            xl = al > -PI / 2 && al < PI / 2
+            // front intersection
+            xl = al.isFront(BROAD_EPSILON)
                     ? v
                     : Double.NEGATIVE_INFINITY;
-            xr = ar > -PI / 2 && ar < PI / 2
+            xr = ar.isFront(BROAD_EPSILON)
                     ? v1
                     : Double.POSITIVE_INFINITY;
         } else {
-            xl = ar >= -PI / 2 && ar <= PI / 2
+            xl = !ar.isRear(BROAD_EPSILON)
                     ? Double.NEGATIVE_INFINITY
                     : v1;
-            xr = al >= -PI / 2 && al <= PI / 2
+            xr = !al.isRear(BROAD_EPSILON)
                     ? Double.POSITIVE_INFINITY
                     : v;
         }
@@ -126,24 +141,24 @@ public interface Geometry {
     }
 
     /**
-     * Returns the nearest and farthest points of segment (xl,y) (xr,y) from Q in the direction range of alpha +- dAlpha
+     * Returns the nearest and farthest points of segment (xl,y) (xr,y) from Q in the directionDeg range of alpha +- dAlpha
      *
      * @param q      the Q point
      * @param xl     the left abscissa of segment
      * @param xr     the right abscissa of segment
      * @param y      the ordinate of segment
-     * @param alpha  the direction from point Q (RDA)
-     * @param dAlpha the direction range (RAD)
+     * @param alpha  the directionDeg from point Q
+     * @param dAlpha the directionDeg range
      */
-    static Optional<Tuple2<Point2D, Point2D>> horizontalArcInterval(Point2D q, double xl, double xr, double y, double alpha, double dAlpha) {
+    static Tuple2<Point2D, Point2D> horizontalArcInterval(Point2D q, double xl, double xr, double y, Complex alpha, Complex dAlpha) {
         double[] x0 = horizontalArcIntersect(q, y, alpha, dAlpha);
         if (x0[0] == Double.NEGATIVE_INFINITY && x0[1] == Double.POSITIVE_INFINITY) {
-            return Optional.empty();
+            return null;
         }
         double x1l = max(xl, x0[0]);
         double x1r = min(xr, x0[1]);
         if (x1l > x1r) {
-            return Optional.empty();
+            return null;
         }
         double xm = (x1l + x1r) / 2;
         double xq = q.getX();
@@ -155,19 +170,19 @@ public interface Geometry {
         Point2D farthest = xq < xm
                 ? new Point2D.Double(x1r, y)
                 : new Point2D.Double(x1l, y);
-        return Optional.of(Tuple2.of(nearest, farthest));
+        return Tuple2.of(nearest, farthest);
     }
 
     /**
      * Returns the  vertex's projections and intersection points of the square and line from given point
-     * in the given direction
+     * in the given directionDeg
      *
      * @param from      the point (m)
-     * @param direction the direction (RAD)
+     * @param direction the directionDeg
      * @param center    the square center (m)
      * @param size      the square size (m)
      */
-    static List<Point2D> lineSquareProjections(Point2D from, double direction, Point2D center, double size) {
+    static List<Point2D> lineSquareProjections(Point2D from, Complex direction, Point2D center, double size) {
         double xl = center.getX() - size / 2;
         double xr = center.getX() + size / 2;
         double yr = center.getY() - size / 2;
@@ -208,38 +223,38 @@ public interface Geometry {
     }
 
     /**
-     * Returns the projection of line from - to in the give direction
-     * abscissa = distance from direction (cross product, positive = to at right of direction)
+     * Returns the projection of line from - to in the give directionDeg
+     * abscissa = distance from directionDeg (cross product, positive = to at right of directionDeg)
      * ordinate = distance from projection (scalar product)
      *
      * @param center    the center point
-     * @param direction the direction (DEG)
+     * @param direction the directionDeg
      * @param to        the give point
      */
-    static Point2D projectLine(Point2D center, double direction, Point2D to) {
+    static Point2D projectLine(Point2D center, Complex direction, Point2D to) {
         double x0 = center.getX();
         double y0 = center.getY();
         double x1 = to.getX();
         double y1 = to.getY();
         double dx = x1 - x0;
         double dy = y1 - y0;
-        double sa = sin(direction);
-        double ca = cos(direction);
+        double sa = direction.x();
+        double ca = direction.y();
         double y = dx * sa + dy * ca;
         double x = dx * ca - dy * sa;
         return new Point2D.Double(x, y);
     }
 
     /**
-     * Returns the nearest and farthest points of square from Q and in the direction range of alpha +- dAlpha
+     * Returns the nearest and farthest points of square from Q and in the directionDeg range of alpha +- dAlpha
      *
      * @param p      square center
      * @param size   the size of square l
      * @param q      the point Q
-     * @param alpha  the direction from point Q
-     * @param dAlpha the direction range from point Q
+     * @param alpha  the directionDeg from point Q
+     * @param dAlpha the directionDeg range from point Q
      */
-    static Optional<Tuple2<Point2D, Point2D>> squareArcInterval(Point2D p, double size, Point2D q, double alpha, double dAlpha) {
+    static Tuple2<Point2D, Point2D> squareArcInterval(Point2D p, double size, Point2D q, Complex alpha, Complex dAlpha) {
         double xp = p.getX();
         double yp = p.getY();
         double xq = q.getX();
@@ -248,10 +263,10 @@ public interface Geometry {
         double xr = xp + size / 2; // square right x
         double yr = yp - size / 2; // square rear y
         double yf = yp + size / 2; // square front y
-        Optional<Tuple2<Point2D, Point2D>> svl = verticalArcInterval(q, yr, yf, xl, alpha, dAlpha);
-        Optional<Tuple2<Point2D, Point2D>> svr = verticalArcInterval(q, yr, yf, xr, alpha, dAlpha);
-        Optional<Tuple2<Point2D, Point2D>> shr = horizontalArcInterval(q, xl, xr, yr, alpha, dAlpha);
-        Optional<Tuple2<Point2D, Point2D>> shf = horizontalArcInterval(q, xl, xr, yf, alpha, dAlpha);
+        Tuple2<Point2D, Point2D> svl = verticalArcInterval(q, yr, yf, xl, alpha, dAlpha);
+        Tuple2<Point2D, Point2D> svr = verticalArcInterval(q, yr, yf, xr, alpha, dAlpha);
+        Tuple2<Point2D, Point2D> shr = horizontalArcInterval(q, xl, xr, yr, alpha, dAlpha);
+        Tuple2<Point2D, Point2D> shf = horizontalArcInterval(q, xl, xr, yf, alpha, dAlpha);
 
         Point2D nearest = (xq >= xl && xq <= xr && yq >= yr && yq <= yf)
                 ? q
@@ -259,8 +274,8 @@ public interface Geometry {
         Point2D farthest = getFarthest(q, svl, svr, shr, shf);
 
         return farthest != null && nearest != null
-                ? Optional.of(Tuple2.of(nearest, farthest))
-                : Optional.empty();
+                ? Tuple2.of(nearest, farthest)
+                : null;
     }
 
     /**
@@ -269,41 +284,41 @@ public interface Geometry {
      *
      * @param q      the point Q
      * @param x      the horizontal line abscissa
-     * @param alpha  the direction from Q (RAD)
-     * @param dAlpha the size of direction interval (RAD)
+     * @param alpha  the directionDeg from Q
+     * @param dAlpha the size of directionDeg interval (RAD)
      */
-    static double[] verticalArcIntersect(Point2D q, double x, double alpha, double dAlpha) {
+    static double[] verticalArcIntersect(Point2D q, double x, Complex alpha, Complex dAlpha) {
         double xq = q.getX();
         double yq = q.getY();
         if (abs(x - xq) < HALF_MM) {
-            double dar = abs(alpha);
-            if (dar <= dAlpha + HALF_DEG) {
+            Complex dar = alpha.abs();
+            if (!dar.sub(dAlpha).sub(HALF_DEG_COMPLEX).positive()) {
                 return new double[]{yq, Double.POSITIVE_INFINITY};
             }
-            double dal = abs(normalizeAngle(-PI - alpha));
-            if (dal <= dAlpha + HALF_DEG) {
+            Complex dal = alpha.opposite().abs();
+            if (!dal.sub(dAlpha).sub(HALF_DEG_COMPLEX).positive()) {
                 return new double[]{Double.NEGATIVE_INFINITY, yq};
             }
             return new double[]{yq, yq};
         }
-        double al = normalizeAngle(alpha - dAlpha);
-        double ar = normalizeAngle(alpha + dAlpha);
+        Complex al = alpha.sub(dAlpha);
+        Complex ar = alpha.add(dAlpha);
         double yr;
         double yf;
-        double v = (x - xq) * tan(PI / 2 - ar) + yq;
-        double v1 = (x - xq) * tan(PI / 2 - al) + yq;
+        double v = (x - xq) * DEG90.sub(ar).tan() + yq;
+        double v1 = (x - xq) * DEG90.sub(al).tan() + yq;
         if (x > xq) {
-            yr = ar <= 0
+            yr = !ar.isRight(BROAD_EPSILON)
                     ? Double.NEGATIVE_INFINITY
                     : v;
-            yf = al <= 0
+            yf = !al.isRight(BROAD_EPSILON)
                     ? Double.POSITIVE_INFINITY
                     : v1;
         } else {
-            yr = al < 0 && al > -PI
+            yr = al.isLeft(BROAD_EPSILON) && al.y() > -1
                     ? v1
                     : Double.NEGATIVE_INFINITY;
-            yf = ar < 0 && ar > -PI
+            yf = ar.isLeft(BROAD_EPSILON) && ar.y() > -1
                     ? v
                     : Double.POSITIVE_INFINITY;
         }
@@ -311,24 +326,24 @@ public interface Geometry {
     }
 
     /**
-     * Returns the nearest and farthest points of segment (x,yr) (x,yf) from Q in the direction range of alpha +- dAlpha
+     * Returns the nearest and farthest points of segment (x,yr) (x,yf) from Q in the directionDeg range of alpha +- dAlpha
      *
      * @param q      the Q point
      * @param yr     the rear ordinate of segment
      * @param yf     the front ordinate of segment
      * @param x      the abscissa of segment
-     * @param alpha  the direction from point Q (RDA)
-     * @param dAlpha the direction range (RAD)
+     * @param alpha  the directionDeg from point Q
+     * @param dAlpha the directionDeg range
      */
-    static Optional<Tuple2<Point2D, Point2D>> verticalArcInterval(Point2D q, double yr, double yf, double x, double alpha, double dAlpha) {
+    static Tuple2<Point2D, Point2D> verticalArcInterval(Point2D q, double yr, double yf, double x, Complex alpha, Complex dAlpha) {
         double[] y0 = verticalArcIntersect(q, x, alpha, dAlpha);
         if (y0[0] == Double.NEGATIVE_INFINITY && y0[1] == Double.POSITIVE_INFINITY) {
-            return Optional.empty();
+            return null;
         }
         double y1r = max(yr, y0[0]);
         double y1f = min(yf, y0[1]);
         if (y1r > y1f) {
-            return Optional.empty();
+            return null;
         }
         double ym = (y1r + y1f) / 2;
         double yq = q.getY();
@@ -340,6 +355,6 @@ public interface Geometry {
         Point2D farthest = yq < ym
                 ? new Point2D.Double(x, y1f)
                 : new Point2D.Double(x, y1r);
-        return Optional.of(Tuple2.of(nearest, farthest));
+        return Tuple2.of(nearest, farthest);
     }
 }
