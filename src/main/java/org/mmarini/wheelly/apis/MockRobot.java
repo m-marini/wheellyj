@@ -40,27 +40,26 @@ public class MockRobot implements RobotApi {
         float x = (float) locator.path("x").getNode(root).asDouble(0);
         float y = (float) locator.path("y").getNode(root).asDouble(0);
         Point2D robotPos1 = new Point2D.Float(x, y);
-        int robotDir1 = locator.path("direction").getNode(root).asInt(0);
-        int sensorDir1 = locator.path("sensor").getNode(root).asInt(0);
+        Complex robotDir1 = Complex.fromDeg(locator.path("directionDeg").getNode(root).asInt(0));
+        Complex sensorDir1 = Complex.fromDeg(locator.path("sensor").getNode(root).asInt(0));
         float sensorDistance1 = (float) locator.path("distance").getNode(root).asDouble(0);
         return new MockRobot(robotPos1, robotDir1, sensorDir1, sensorDistance1);
     }
-
+    private final Point2D robotPos;
+    private final Complex robotDir;
+    private final Complex sensorDir;
+    private final float sensorDistance;
     protected Consumer<WheellyMotionMessage> onMotion;
     protected Consumer<WheellyProxyMessage> onProxy;
     protected Consumer<WheellyContactsMessage> onContacts;
     protected Consumer<ClockSyncEvent> onClock;
     private long simulationTime;
-    private Point2D robotPos;
-    private int robotDir;
-    private int sensorDir;
-    private float sensorDistance;
 
     public MockRobot() {
-        this(new Point2D.Float(), 0, 0, 0);
+        this(new Point2D.Float(), Complex.DEG0, Complex.DEG0, 0);
     }
 
-    public MockRobot(Point2D robotPos, int robotDir, int sensorDir, float sensorDistance) {
+    public MockRobot(Point2D robotPos, Complex robotDir, Complex sensorDir, float sensorDistance) {
         this.robotPos = requireNonNull(robotPos);
         this.robotDir = robotDir;
         this.sensorDir = sensorDir;
@@ -98,12 +97,12 @@ public class MockRobot implements RobotApi {
     }
 
     @Override
-    public void move(int dir, int speed) throws IOException {
+    public void move(Complex dir, int speed) throws IOException {
 
     }
 
     @Override
-    public void scan(int dir) {
+    public void scan(Complex dir) {
     }
 
     protected void sendContacts() {
@@ -124,7 +123,7 @@ public class MockRobot implements RobotApi {
                             System.currentTimeMillis(), simulationTime, simulationTime,
                             robotPos.getX() / RobotStatus.DISTANCE_PER_PULSE,
                             robotPos.getY() / RobotStatus.DISTANCE_PER_PULSE,
-                            robotDir,
+                            robotDir.toIntDeg(),
                             0, 0,
                             0, true,
                             0, 0,
@@ -138,10 +137,10 @@ public class MockRobot implements RobotApi {
             onProxy.accept(
                     new WheellyProxyMessage(
                             System.currentTimeMillis(), simulationTime, simulationTime,
-                            sensorDir, round(sensorDistance / RobotStatus.DISTANCE_SCALE),
+                            sensorDir.toIntDeg(), round(sensorDistance / RobotStatus.DISTANCE_SCALE),
                             robotPos.getX() / RobotStatus.DISTANCE_PER_PULSE,
                             robotPos.getY() / RobotStatus.DISTANCE_PER_PULSE,
-                            robotDir)
+                            robotDir.toIntDeg())
             );
         }
     }
@@ -168,22 +167,6 @@ public class MockRobot implements RobotApi {
 
     @Override
     public void setOnSupply(Consumer<WheellySupplyMessage> callback) {
-    }
-
-    public void setRobotDir(int robotDir) {
-        this.robotDir = robotDir;
-    }
-
-    public void setRobotPos(Point2D robotPos) {
-        this.robotPos = robotPos;
-    }
-
-    public void setSensorDir(int sensorDir) {
-        this.sensorDir = sensorDir;
-    }
-
-    public void setSensorDistance(float sensorDistance) {
-        this.sensorDistance = sensorDistance;
     }
 
     public void setSimulationTime(long simulationTime) {

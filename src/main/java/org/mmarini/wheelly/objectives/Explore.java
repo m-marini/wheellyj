@@ -80,7 +80,7 @@ public interface Explore {
             // encourages the linear speed
             double linSpeed = (status.rightPps() + status.leftPps()) / MAX_PPS / 2;
             double isLinearSpeed = clip(linSpeed, 0, 1);
-            int sensor = status.sensorDirection();
+            int sensor = status.sensorDirection().toIntDeg();
             double isFrontSensor = not(positive(abs(sensor), sensorRange));
             return defuzzy(0, 1, and(isLinearSpeed, isKnown, isFrontSensor));
         };

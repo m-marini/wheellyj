@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
+import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.envs.RobotEnvironment;
@@ -50,10 +51,11 @@ class ExploreTest {
 
     static RobotEnvironment createEnvironment(int sensorDir, double leftSpeed, double rightSpeed, boolean canMoveForward, boolean canMoveBackward, int knownCount) {
         long timestamp = System.currentTimeMillis();
-        RadarMap radarMap = RadarMap.create(10, 10, new Point2D.Double(), 0.2, MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, 15)
+        RadarMap radarMap = RadarMap.create(10, 10, new Point2D.Double(), 0.2, MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, Complex.fromDeg(15))
                 .map((i, sector) -> i < knownCount ? sector.addAnechoic(timestamp) : sector);
         RobotStatus status = RobotStatus.create(x -> 12d)
-                .setSensorDirection(sensorDir)
+                // TODO use complex
+                .setSensorDirection(Complex.fromDeg(sensorDir))
                 .setSpeeds(leftSpeed * MAX_VELOCITY / RobotStatus.DISTANCE_PER_PULSE,
                         rightSpeed * MAX_VELOCITY / RobotStatus.DISTANCE_PER_PULSE)
                 .setCanMoveForward(canMoveForward)

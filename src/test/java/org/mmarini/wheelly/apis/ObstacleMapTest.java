@@ -26,40 +26,46 @@
 package org.mmarini.wheelly.apis;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.nd4j.linalg.factory.Nd4j;
 
 import java.awt.geom.Point2D;
 
-import static java.lang.Math.PI;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.*;
 
 class ObstacleMapTest {
-
-    public static final float RAD30 = (float) PI / 6;
-    public static final float RAD90 = (float) PI / 2;
 
     static {
         Nd4j.zeros(0);
     }
 
-    @Test
-    void nearest() {
+    @ParameterizedTest
+    @CsvSource({
+            "-1,0, 90,30, 0",
+            "-1,0, -90,30, -1",
+            "0,0, 0,90, 0",
+            "0,0, -180,90, 0",
+            "3,2, 45,10, 1",
+            "3,2, -135,12, 0",
+            "3,2, -135,11, -1",
+            "3,2, 135,10, -1",
+    })
+    void nearest(double x, double y, int dir, int dDir, int expected) {
+        // Given an obstacle map with 2 obstacle at (0,0), (4,3)
         ObstacleMap map = ObstacleMap.create(Nd4j.create(new float[][]{
                 {0, 0},
                 {4, 3}
         }), 0.2f);
 
-        int i = map.indexOfNearest(-1, 0, 0, RAD30);
-        assertThat(i, equalTo(0));
+        // When find nearest cell from (x, y) to dìr DEG within +- dDir DEG
+        int i1 = map.indexOfNearest(x, y, Complex.fromDeg(dir), Complex.fromDeg(dDir));
 
-        i = map.indexOfNearest(-1, 0, (float) PI, RAD30);
-        assertThat(i, lessThan(0));
-
-        i = map.indexOfNearest(8, 0, (float) PI, RAD90);
-        assertThat(i, equalTo(1));
+        // Then should be expected
+        assertEquals(expected, i1);
     }
 
     @Test

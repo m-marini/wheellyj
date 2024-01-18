@@ -49,7 +49,7 @@ import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_PER_PULSE;
 import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_SCALE;
-import static org.mmarini.wheelly.apis.Utils.*;
+import static org.mmarini.wheelly.apis.Utils.clip;
 
 /**
  * Simulated robot
@@ -86,13 +86,14 @@ public class SimRobot implements RobotApi {
     private static final float ROBOT_RADIUS = 0.15f;
     private static final double ROBOT_DENSITY = ROBOT_MASS / (ROBOT_RADIUS * ROBOT_RADIUS * PI);
     private static final int DEFAULT_SENSOR_RECEPTIVE_ANGLE = 15;
+    private static final double DEG89_5_EPSILON = sin(toDegrees(89.5));
 
     public static SimRobot create(JsonNode root, Locator locator) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         long mapSeed = locator.path("mapSeed").getNode(root).asLong(0);
         long robotSeed = locator.path("robotSeed").getNode(root).asLong(0);
         int numObstacles = locator.path("numObstacles").getNode(root).asInt();
-        double sensorReceptiveAngle = toRadians(locator.path("sensorReceptiveAngle").getNode(root).asInt(DEFAULT_SENSOR_RECEPTIVE_ANGLE));
+        Complex sensorReceptiveAngle = Complex.fromDeg(locator.path("sensorReceptiveAngle").getNode(root).asInt(DEFAULT_SENSOR_RECEPTIVE_ANGLE));
         Random mapRandom = mapSeed > 0L ? new Random(mapSeed) : new Random();
         Random robotRandom = robotSeed > 0L ? new Random(robotSeed) : new Random();
         ObstacleMap obstacleMap = MapBuilder.create(GRID_SIZE)
@@ -133,31 +134,32 @@ public class SimRobot implements RobotApi {
         obs.createFixture(obsFixDef);
     }
 
-    private final World world;
-    private final Body robot;
-    private final double errSigma;
     private final double errSensor;
-    private final double sensorReceptiveAngle;
-    private final Random random;
-    private final ObstacleMap obstacleMap;
+    private final double errSigma;
     private final int maxAngularSpeed;
     private final long motionInterval;
+    private final ObstacleMap obstacleMap;
     private final long proxyInterval;
-    private long proxyTimeout;
-    private int speed;
-    private int direction;
-    private int sensorDirection;
+    private final Random random;
+    private final Body robot;
+    private final Fixture robotFixture;
+    private final Complex sensorReceptiveAngle;
+    private final World world;
+    private Complex direction;
+    private double echoDistance;
+    private boolean frontSensor;
+    private double leftPps;
+    private long motionTimeout;
+    private Consumer<ClockSyncEvent> onClock;
+    private Consumer<WheellyContactsMessage> onContacts;
     private Consumer<WheellyMotionMessage> onMotion;
     private Consumer<WheellyProxyMessage> onProxy;
-    private Consumer<WheellyContactsMessage> onContacts;
-    private Consumer<ClockSyncEvent> onClock;
-    private double leftPps;
-    private double rightPps;
-    private boolean frontSensor;
+    private long proxyTimeout;
     private boolean rearSensor;
+    private double rightPps;
+    private Complex sensorDirection;
     private long simulationTime;
-    private double echoDistance;
-    private long motionTimeout;
+    private int speed;
 
     /**
      * Creates a simulated robot
@@ -171,13 +173,15 @@ public class SimRobot implements RobotApi {
      * @param motionInterval       the interval between motion messages
      * @param proxyInterval        the interval between proxy messages
      */
-    public SimRobot(ObstacleMap obstacleMap, Random random, double errSigma, double errSensor, double sensorReceptiveAngle, int maxAngularSpeed, long motionInterval, long proxyInterval) {
+    public SimRobot(ObstacleMap obstacleMap, Random random, double errSigma, double errSensor, Complex sensorReceptiveAngle, int maxAngularSpeed, long motionInterval, long proxyInterval) {
         logger.atDebug().log("Created");
         this.random = requireNonNull(random);
         this.errSigma = errSigma;
         this.errSensor = errSensor;
         this.obstacleMap = requireNonNull(obstacleMap);
-        this.sensorReceptiveAngle = sensorReceptiveAngle;
+        this.sensorReceptiveAngle = requireNonNull(sensorReceptiveAngle);
+        this.sensorDirection = Complex.DEG0;
+        this.direction = Complex.DEG0;
         this.maxAngularSpeed = maxAngularSpeed;
         this.motionInterval = motionInterval;
         this.proxyInterval = proxyInterval;
@@ -218,7 +222,7 @@ public class SimRobot implements RobotApi {
         fixDef.friction = (float) ROBOT_FRICTION;
         fixDef.density = (float) ROBOT_DENSITY;
         fixDef.restitution = (float) ROBOT_RESTITUTION;
-        robot.createFixture(fixDef);
+        this.robotFixture = robot.createFixture(fixDef);
 
         // Create obstacle fixture
         for (Point2D point : obstacleMap.getPoints()) {
@@ -241,7 +245,7 @@ public class SimRobot implements RobotApi {
     }
 
     /**
-     * Halt the robot if it is moving in forbidden direction
+     * Halt the robot if it is moving in forbidden directionDeg
      */
     private void checkForSpeed() {
         if (((speed > 0 || leftPps > 0 || rightPps > 0) && !canMoveForward())
@@ -269,19 +273,18 @@ public class SimRobot implements RobotApi {
     }
 
     /**
-     * Returns the contact direction relative to the robot (RAD)
+     * Returns the contact directionDeg relative to the robot (RAD)
      *
      * @param contact the contact
      */
-    private double contactRelativeDirection(Contact contact) {
+    private Complex contactRelativeDirection(Contact contact) {
         WorldManifold worldManifold = new WorldManifold();
         contact.getWorldManifold(worldManifold);
         Point2D contactAt = new Point2D.Double(worldManifold.points[0].x,
                 worldManifold.points[0].y);
-        Point2D location = this.getLocation();
-        double contactDirection = Utils.direction(location, contactAt);
-        float angle = robot.getAngle();
-        return normalizeDegAngle(contactDirection - angle);
+        Point2D location = this.location();
+        Complex contactDirection = Complex.direction(location, contactAt);
+        return contactDirection.sub(direction());
     }
 
     /**
@@ -289,8 +292,9 @@ public class SimRobot implements RobotApi {
      */
     private void controller(double dt) {
         // Direction difference
-        double dAngle = Utils.normalizeAngle(toRadians(90 - direction) - robot.getAngle());
-        // Relative angular speed to fix the direction
+        double dAngle = direction().sub(direction).toRad();
+
+        // Relative angular speed to fix the directionDeg
         double angularVelocityPps = Utils.clip(Utils.linear(dAngle, -RAD_10, RAD_10, -maxAngularSpeed, maxAngularSpeed), -maxAngularSpeed, maxAngularSpeed);
         // Relative linear speed to fix the speed
 
@@ -328,7 +332,7 @@ public class SimRobot implements RobotApi {
         double angularVelocity1 = (right - left) / ROBOT_TRACK;
         // Limits rotation to max allowed rotation
         double angularVelocity = clip(angularVelocity1, -MAX_ANGULAR_VELOCITY, MAX_ANGULAR_VELOCITY);
-        // Angular impulse to fix direction
+        // Angular impulse to fix directionDeg
         double robotAngularVelocity = robot.getAngularVelocity();
         double angularTorque = (angularVelocity - robotAngularVelocity) * robot.getInertia() / dt;
         // Add a random factor to angular impulse
@@ -345,87 +349,110 @@ public class SimRobot implements RobotApi {
     }
 
     /**
-     * Returns the robot direction (DEG)
+     * Returns the robot directionDeg (DEG)
      */
-    public int getDirection() {
-        return normalizeDegAngle((int) round(90 - toDegrees(robot.getAngle())));
+    public Complex direction() {
+        return Complex.fromRad(PI / 2 - robot.getAngle());
     }
 
     /**
      * Returns the echo distance (m)
      */
-    public double getEchoDistance() {
+    public double echoDistance() {
         return echoDistance;
     }
 
     /**
-     * Returns the robot location (m)
+     * Returns true if front sensor is clear
      */
-    public Point2D getLocation() {
-        Vec2 pos = robot.getPosition();
-        return new Point2D.Double(pos.x, pos.y);
-    }
-
-    /**
-     * Returns the obstacles map
-     */
-    public Optional<ObstacleMap> getObstaclesMap() {
-        return Optional.ofNullable(obstacleMap);
-    }
-
-    /**
-     * Returns the sensor direction (DEG)
-     */
-    public int getSensorDirection() {
-        return sensorDirection;
+    boolean frontSensor() {
+        return frontSensor;
     }
 
     @Override
     public void halt() {
         speed = 0;
+        direction = direction();
         leftPps = 0;
         rightPps = 0;
     }
 
     private void handleBeginContact(Contact contact) {
-        if (abs(contactRelativeDirection(contact)) <= PI / 2) {
-            frontSensor = false;
-        } else {
-            rearSensor = false;
+        if (contact.m_fixtureA.equals(robotFixture) || contact.m_fixtureB.equals(robotFixture)) {
+            // Contact with robot fixture
+            Complex contactDirection = contactRelativeDirection(contact);
+            logger.atDebug().setMessage("Begin contact at {}")
+                    .addArgument(() -> {
+                        WorldManifold worldManifold = new WorldManifold();
+                        contact.getWorldManifold(worldManifold);
+                        return new Point2D.Double(worldManifold.points[0].x,
+                                worldManifold.points[0].y);
+                    }).log();
+            logger.atDebug().setMessage("        robot at {} {} DEG")
+                    .addArgument(this::location)
+                    .addArgument(() -> direction().toIntDeg())
+                    .log();
+            logger.atDebug().setMessage("      contact at {} DEG")
+                    .addArgument(contactDirection::toIntDeg)
+                    .log();
+            if (contactDirection.isFront(DEG89_5_EPSILON)) {
+                // contact at +-89.5 DEG from the front
+                frontSensor = false;
+                halt();
+            }
+            if (contactDirection.isRear(DEG89_5_EPSILON)) {
+                // contact at +-89.5 DEG from the rear
+                rearSensor = false;
+                halt();
+            }
         }
         sendContacts();
     }
 
     private void handleEndContact(Contact contact) {
+        logger.atDebug().log("End contact");
+        WorldManifold worldManifold = new WorldManifold();
+        contact.getWorldManifold(worldManifold);
         frontSensor = true;
         rearSensor = true;
         sendContacts();
     }
 
     /**
-     * Returns true if front sensor is clear
+     * Returns the robot location (m)
      */
-    boolean isFrontSensor() {
-        return frontSensor;
+    public Point2D location() {
+        Vec2 pos = robot.getPosition();
+        return new Point2D.Double(pos.x, pos.y);
+    }
+
+    @Override
+    public void move(Complex dir, int speed) {
+        this.direction = dir;
+        this.speed = min(max(speed, -MAX_PPS), MAX_PPS);
+        checkForSpeed();
+    }
+
+    /**
+     * Returns the obstacles map
+     */
+    public Optional<ObstacleMap> obstaclesMap() {
+        return Optional.ofNullable(obstacleMap);
     }
 
     /**
      * Returns true if rear sensor is clear
      */
-    boolean isRearSensor() {
+    boolean rearSensor() {
         return rearSensor;
     }
 
     @Override
-    public void move(int dir, int speed) {
-        this.direction = normalizeDegAngle(dir);
-        this.speed = min(max(speed, -MAX_PPS), MAX_PPS);
-        checkForSpeed();
-    }
-
-    @Override
-    public void scan(int dir) {
-        this.sensorDirection = min(max(dir, -90), 90);
+    public void scan(Complex dir) {
+        this.sensorDirection = dir.y() >= 0
+                ? dir
+                : dir.x() >= 0
+                ? Complex.DEG90 : Complex.DEG270;
     }
 
     /**
@@ -440,6 +467,7 @@ public class SimRobot implements RobotApi {
                     canMoveBackward()
             );
             onContacts.accept(msg);
+            logger.atDebug().log("On contacts {}", msg);
         }
     }
 
@@ -451,10 +479,10 @@ public class SimRobot implements RobotApi {
             Vec2 pos = robot.getPosition();
             double xPulses = pos.x / DISTANCE_PER_PULSE;
             double yPulses = pos.y / DISTANCE_PER_PULSE;
-            int robotDir = getDirection();
+            Complex robotDir = direction();
             WheellyMotionMessage msg = new WheellyMotionMessage(
                     System.currentTimeMillis(), simulationTime, simulationTime,
-                    xPulses, yPulses, robotDir,
+                    xPulses, yPulses, robotDir.toIntDeg(),
                     leftPps, rightPps,
                     0, speed == 0,
                     (int) round(leftPps), (int) round(rightPps),
@@ -472,14 +500,21 @@ public class SimRobot implements RobotApi {
             Vec2 pos = robot.getPosition();
             double xPulses = pos.x / DISTANCE_PER_PULSE;
             double yPulses = pos.y / DISTANCE_PER_PULSE;
-            int echoYaw = getDirection();
+            Complex echoYaw = direction();
             long echoDelay = round(echoDistance / DISTANCE_SCALE);
             WheellyProxyMessage msg = new WheellyProxyMessage(
                     System.currentTimeMillis(), simulationTime, simulationTime,
-                    sensorDirection, echoDelay, xPulses, yPulses, echoYaw);
+                    sensorDirection.toIntDeg(), echoDelay, xPulses, yPulses, echoYaw.toIntDeg());
             onProxy.accept(msg);
         }
         proxyTimeout = simulationTime + proxyInterval;
+    }
+
+    /**
+     * Returns the sensor directionDeg (DEG)
+     */
+    public Complex sensorDirection() {
+        return sensorDirection;
     }
 
     @Override
@@ -507,13 +542,14 @@ public class SimRobot implements RobotApi {
     }
 
     /**
-     * Sets the robot direction
+     * Sets the robot directionDeg
      *
-     * @param direction the direction in DEG
+     * @param direction the directionDeg in DEG
      */
-    public void setRobotDir(int direction) {
+    public void setRobotDir(Complex direction) {
         this.direction = direction;
-        robot.setTransform(robot.getPosition(), (float) Utils.toNormalRadians(90 - direction));
+        robot.setTransform(robot.getPosition(),
+                (float) Complex.DEG90.sub(direction).toRad());
     }
 
     /**
@@ -534,7 +570,7 @@ public class SimRobot implements RobotApi {
 
     @Override
     public void tick(long dt) {
-        long t0 = System.currentTimeMillis();
+        //long t0 = System.currentTimeMillis();
         this.simulationTime += dt;
 
         // Simulate robot motion
@@ -545,7 +581,8 @@ public class SimRobot implements RobotApi {
         double x = pos.x;
         double y = pos.y;
         Point2D position = new Point2D.Double(x, y);
-        double sensorRad = normalizeAngle(robot.getAngle() - toRadians(sensorDirection));
+        Complex sensorRad = direction().add(sensorDirection);
+        boolean prevEchoAlarm = echoDistance > 0 && echoDistance <= SAFE_DISTANCE;
         this.echoDistance = 0;
         // Finds the nearest obstacle in proxy sensor range
         int obsIdx = obstacleMap.indexOfNearest(x, y, sensorRad, sensorReceptiveAngle);
@@ -556,11 +593,14 @@ public class SimRobot implements RobotApi {
                     + random.nextGaussian() * errSensor;
             echoDistance = dist > 0 && dist < MAX_DISTANCE ? dist : 0;
         }
-
+        boolean echoAlarm = echoDistance > 0 && echoDistance <= SAFE_DISTANCE;
+        if (echoAlarm != prevEchoAlarm) {
+            sendContacts();
+        }
         // Check for movement constraints
         checkForSpeed();
         updateProxy();
-        logger.atDebug().log("Tick elapsed {} ms", System.currentTimeMillis() - t0);
+        //logger.atDebug().log("Tick elapsed {} ms", System.currentTimeMillis() - t0);
     }
 
     /**

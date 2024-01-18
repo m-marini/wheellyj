@@ -143,6 +143,7 @@ public class StateMachineAgent implements ProcessorContext, WithIOFlowable, With
     private void handleInference(RobotStatus status) {
         long t0 = System.currentTimeMillis();
         logger.atDebug().log("Handle inference");
+        // TODO complex usage
         polarMap = polarMap.update(radarMap, status.location(), status.direction(), minRadarDistance, maxRadarDistance);
         logger.atDebug().log("Polar map updated in {} ms", System.currentTimeMillis() - t0);
         robotStatus = status;

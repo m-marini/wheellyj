@@ -32,47 +32,20 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.awt.geom.Point2D;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import static java.lang.Math.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mmarini.ArgumentsGenerator.*;
-import static org.mmarini.wheelly.apis.Utils.direction;
-import static org.mmarini.wheelly.apis.Utils.normalizeAngle;
+import static org.mmarini.ArgumentsGenerator.createStream;
+import static org.mmarini.ArgumentsGenerator.uniform;
 
 class UtilsTest {
 
     static final double MAX_COORD = 3d;
-    static double MIN_DIST = 0.1;
-    static double MAX_DIST = 3;
-
-    static Stream<Arguments> directionArgs() {
-        return createStream(1234,
-                uniform(-MAX_COORD, MAX_COORD),
-                uniform(-MAX_COORD, MAX_COORD),
-                exponential(MIN_DIST, MAX_DIST),
-                uniform(-180, 179)
-        );
-    }
-
-    static Stream<Arguments> normalAngleSet() {
-        return Stream.of(
-                Arguments.of(0D, 0D),
-                Arguments.of(PI, -PI),
-                Arguments.of(-PI, -PI),
-                Arguments.of(PI * 3 / 2, -PI / 2),
-                Arguments.of(-PI * 3 / 2, PI / 2),
-                Arguments.of(PI * 5 / 2, PI / 2),
-                Arguments.of(-PI * 5 / 2, -PI / 2)
-        );
-    }
 
     static Stream<Arguments> vect2dArgs() {
         return createStream(1234,
@@ -123,34 +96,6 @@ class UtilsTest {
         assertEquals(expected, Utils.linear(value, minX, maxX, minY, maxY));
     }
 
-    @ParameterizedTest
-    @CsvSource(value = {
-            "0,0",
-            "179,179",
-            "-179,-179",
-            "450,90",
-            "-450,-90",
-            "270,-90",
-            "-270,90",
-    })
-    void normalizeDegAngle(int angle, int expected) {
-        assertEquals(expected, Utils.normalizeDegAngle(angle));
-    }
-
-    @ParameterizedTest
-    @CsvSource(value = {
-            "0,0",
-            "179,179",
-            "-179,-179",
-            "450,90",
-            "-450,-90",
-            "270,-90",
-            "-270,90",
-    })
-    void normalizeDegAngleDouble(double angle, double expected) {
-        assertEquals(expected, Utils.normalizeDegAngle(angle));
-    }
-
     @Test
     void regex() {
         String className = Utils.class.getCanonicalName();
@@ -164,47 +109,6 @@ class UtilsTest {
         assertThat(m.groupCount(), equalTo(2));
         assertThat(m.group(2), equalTo(method));
         assertThat(className1, equalTo(className));
-    }
-
-    @ParameterizedTest
-    @MethodSource("directionArgs")
-    void testDirection(double x, double y, double dist, int deg) {
-        Point2D offset = new Point2D.Double(x, y);
-        double rad = toRadians(deg);
-        Point2D location = new Point2D.Double(
-                x + dist * sin(rad),
-                y + dist * cos(rad)
-        );
-
-        double dir = direction(offset, location);
-
-        assertThat(normalizeAngle(dir - rad), closeTo(0, 1e-2));
-    }
-
-    @ParameterizedTest
-    @CsvSource(value = {
-            "0,1,0",
-            "1,1,45",
-            "1,0,90",
-            "1,-1,135",
-            "0,-1,180",
-            "-1,1,-45",
-            "-1,0,-90",
-            "-1,-1,-135",
-    })
-    void testDirection1(double x1, double y1, int deg) {
-        Point2D offset = new Point2D.Double();
-        Point2D location = new Point2D.Double(x1, y1);
-
-        double dir = toDegrees(direction(offset, location));
-
-        assertThat(dir, closeTo(deg, 1e-2));
-    }
-
-    @ParameterizedTest
-    @MethodSource("normalAngleSet")
-    void testNormalizeAngle(double angle, double expected) {
-        assertEquals(expected, Utils.normalizeAngle(angle));
     }
 
     @ParameterizedTest

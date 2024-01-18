@@ -28,7 +28,6 @@
 
 package org.mmarini.wheelly.apis;
 
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -48,7 +47,7 @@ class PolarMapTest {
     public static final double EPSILON = 1e-3;
     public static final float GRID_SIZE = 0.2F;
     public static final int MAX_INTERVAL = 1000;
-    private static final int RECEPTIVE_ANGLE = 15;
+    private static final Complex RECEPTIVE_ANGLE = Complex.fromDeg(15);
 
     @Test
     void create() {
@@ -59,7 +58,6 @@ class PolarMapTest {
         assertTrue(map.sectorStream().allMatch(Predicate.not(CircularSector::knownHindered)));
     }
 
-    @NotNull
     private RadarMap createRadarMap() {
         return RadarMap.create(31, 31, new Point2D.Double(), GRID_SIZE, MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
     }
@@ -85,7 +83,7 @@ class PolarMapTest {
     })
     void sectorIndex(short expectedIdx, int numSectors, int direction) {
         PolarMap polarMap = PolarMap.create(numSectors);
-        int idx = polarMap.sectorIndex(direction);
+        int idx = polarMap.sectorIndex(Complex.fromDeg(direction));
 
         assertEquals(expectedIdx, idx);
     }
@@ -117,26 +115,26 @@ class PolarMapTest {
 
         // When create a polar map from center directed to mapDir limited by GRID_SIZE and 3m
         PolarMap polarMap = PolarMap.create(4)
-                .update(radarMap, center, mapDir, GRID_SIZE, 3);
+                .update(radarMap, center, Complex.fromDeg(mapDir), GRID_SIZE, 3);
 
         /*
          Then polar map at 0 DEG should be hindered as obsAt0
          */
-        assertEquals(obsAt0, polarMap.directionSector(0).knownHindered());
-        assertEquals(obsAt90, polarMap.directionSector(90).knownHindered());
-        assertEquals(obsAt180, polarMap.directionSector(180).knownHindered());
-        assertEquals(obsAt270, polarMap.directionSector(-90).knownHindered());
+        assertEquals(obsAt0, polarMap.directionSector(Complex.DEG0).knownHindered());
+        assertEquals(obsAt90, polarMap.directionSector(Complex.DEG90).knownHindered());
+        assertEquals(obsAt180, polarMap.directionSector(Complex.DEG180).knownHindered());
+        assertEquals(obsAt270, polarMap.directionSector(Complex.DEG270).knownHindered());
         if (obsAt0) {
-            assertThat(polarMap.directionSector(0).distance(center), closeTo(distanceAt0, EPSILON));
+            assertThat(polarMap.directionSector(Complex.DEG0).distance(center), closeTo(distanceAt0, EPSILON));
         }
         if (obsAt90) {
-            assertThat(polarMap.directionSector(90).distance(center), closeTo(distanceAt90, EPSILON));
+            assertThat(polarMap.directionSector(Complex.DEG90).distance(center), closeTo(distanceAt90, EPSILON));
         }
         if (obsAt180) {
-            assertThat(polarMap.directionSector(180).distance(center), closeTo(distanceAt180, EPSILON));
+            assertThat(polarMap.directionSector(Complex.DEG180).distance(center), closeTo(distanceAt180, EPSILON));
         }
         if (obsAt270) {
-            assertThat(polarMap.directionSector(-90).distance(center), closeTo(distanceAt270, EPSILON));
+            assertThat(polarMap.directionSector(Complex.DEG270).distance(center), closeTo(distanceAt270, EPSILON));
         }
     }
 
@@ -160,21 +158,21 @@ class PolarMapTest {
 
         // When update the polar map at 0.2, 0.2 directed to 90 DEG with radar map
         PolarMap polarMap = polarMap1.update(radarMap,
-                new Point2D.Double(0.2, 0.2), 90,
+                new Point2D.Double(0.2, 0.2), Complex.DEG90,
                 0.4, 3);
 
         // Then polar map should be centered at 0.2, 0.2
         assertEquals(new Point2D.Double(0.2, 0.2), polarMap.center());
 
-        // And directied to 90 DEG
-        assertEquals(90, polarMap.direction());
+        // And directed to 90 DEG
+        assertEquals(90, polarMap.direction().toIntDeg());
 
         // And sector at -90 DEG should be unknown
-        CircularSector sector = polarMap.directionSector(-90);
+        CircularSector sector = polarMap.directionSector(Complex.DEG270);
         assertTrue(sector.known());
         // The sector point location should be close to 0.2,1.5
         assertThat(sector.location(), pointCloseTo(0.2, 1.5, 1e-3));
-        assertEquals(-90, polarMap.indexDirection(18));
+        assertEquals(-90, polarMap.indexDirection(18).toIntDeg());
 
         for (int i = 0; i < polarMap.sectorsNumber(); i++) {
             if (i == 18) {
@@ -202,19 +200,19 @@ class PolarMapTest {
         assertTrue(radarMap.cell(index).echogenic());
 
         PolarMap polarMap = PolarMap.create(24).update(radarMap,
-                new Point2D.Double(0.2, 0.2), 90,
+                new Point2D.Double(0.2, 0.2), Complex.DEG90,
                 0.4, 3);
         Point2D center = polarMap.center();
 
         assertEquals(new Point2D.Double(0.2, 0.2), polarMap.center());
-        assertEquals(90, polarMap.direction());
+        assertEquals(90, polarMap.direction().toIntDeg());
 
-        CircularSector sector = polarMap.directionSector(-90);
+        CircularSector sector = polarMap.directionSector(Complex.DEG270);
         assertTrue(sector.knownHindered());
         assertThat(sector.distance(center), closeTo(1.3, 1e-3));
         assertThat(new Point2D.Double(0.2, 1.5).distance(sector.location()),
                 closeTo(0, 1e-3));
-        assertEquals(-90, polarMap.indexDirection(18));
+        assertEquals(-90, polarMap.indexDirection(18).toIntDeg());
 
         for (int i = 0; i < polarMap.sectorsNumber(); i++) {
             if (i == 18) {
@@ -242,12 +240,12 @@ class PolarMapTest {
         PolarMap polarMap1 = PolarMap.create(24);
         // When update the polar map  at 0.2, 0.2 directed to 90 DEG with radar map
         PolarMap polarMap = polarMap1.update(radarMap,
-                new Point2D.Double(0.2, 0.2), 90,
+                new Point2D.Double(0.2, 0.2), Complex.DEG90,
                 0.4, 3);
 
         // Then the polar map should be centered at 0.2, 0.2
         assertThat(polarMap.center(), pointCloseTo(0.2, 0.2, 1e-3));
-        assertEquals(90, polarMap.direction());
+        assertEquals(90, polarMap.direction().toIntDeg());
 
         // And should have all cells empty
         for (int i = 0; i < polarMap.sectorsNumber(); i++) {

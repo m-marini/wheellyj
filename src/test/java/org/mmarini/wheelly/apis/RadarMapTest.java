@@ -40,7 +40,6 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import static java.lang.Math.PI;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.any;
@@ -54,7 +53,7 @@ class RadarMapTest {
     public static final int HEIGHT = 11;
     public static final double MM1 = 0.001;
     public static final int MAX_INTERVAL = 10000;
-    public static final int RECEPTIVE_ANGLE = 15;
+    public static final Complex RECEPTIVE_ANGLE = Complex.fromDeg(15);
     public static final int ECHO_TIME = 100;
 
     public static Stream<Arguments> findTargetDataset() {
@@ -321,7 +320,7 @@ class RadarMapTest {
         long timestamp = System.currentTimeMillis();
 
         // When setting front and rear contact
-        map = map.setContactsAt(point, 0, true, false, GRID_SIZE + MM1, timestamp);
+        map = map.setContactsAt(point, Complex.DEG0, true, false, GRID_SIZE + MM1, timestamp);
 
         // Then map should have expected contact cells
         List<Point2D> contacts = parseRadarMap("O", """
@@ -352,7 +351,7 @@ class RadarMapTest {
         long timestamp = System.currentTimeMillis();
 
         // When setting front and rear contact
-        map = map.setContactsAt(point, PI / 4, true, false, GRID_SIZE + MM1, timestamp);
+        map = map.setContactsAt(point, Complex.fromDeg(45), true, false, GRID_SIZE + MM1, timestamp);
 
         // Then map should have expected contact cells
         List<Point2D> contacts = parseRadarMap("O", """
@@ -383,7 +382,7 @@ class RadarMapTest {
         long timestamp = System.currentTimeMillis();
 
         // When setting front and rear contact
-        map = map.setContactsAt(point, 0, true, true, GRID_SIZE + MM1, timestamp);
+        map = map.setContactsAt(point, Complex.DEG0, true, true, GRID_SIZE + MM1, timestamp);
 
         // Then map should have expected contact cells
         List<Point2D> contacts = parseRadarMap("O", """
@@ -399,11 +398,11 @@ class RadarMapTest {
                 ...........
                 ...........""");
         int contactsNumber = (int) map.cellStream().filter(MapCell::hasContact).count();
-        assertEquals(contacts.size(), contactsNumber);
         for (Point2D pt : contacts) {
             assertThat(format("Point %s does not match", pt), map.cell(pt.getX(), pt.getY()).filter(MapCell::hasContact),
                     optionalOf(any(MapCell.class)));
         }
+        assertEquals(contacts.size(), contactsNumber);
     }
 
     @Test
@@ -414,7 +413,7 @@ class RadarMapTest {
         long timestamp = System.currentTimeMillis();
 
         // When setting front and rear contact
-        map = map.setContactsAt(point, 0, false, true, GRID_SIZE + MM1, timestamp);
+        map = map.setContactsAt(point, Complex.DEG0, false, true, GRID_SIZE + MM1, timestamp);
 
         // Then map should have expected contact cells
         List<Point2D> contacts = parseRadarMap("O", """
@@ -445,7 +444,7 @@ class RadarMapTest {
         long timestamp = System.currentTimeMillis();
 
         // When setting front and rear contact
-        map = map.setContactsAt(point, PI / 4, false, true, GRID_SIZE + MM1, timestamp);
+        map = map.setContactsAt(point, Complex.fromDeg(45), false, true, GRID_SIZE + MM1, timestamp);
 
         // Then map should have expected contact cells
         List<Point2D> contacts = parseRadarMap("O", """
@@ -472,7 +471,7 @@ class RadarMapTest {
     void update() {
         RadarMap map = createRadarMap();
         Point2D sensor = new Point2D.Double();
-        int direction = 0;
+        Complex direction = Complex.DEG0;
         double distance = 0.8;
         long timestamp = System.currentTimeMillis();
         RadarMap.SensorSignal signal = new RadarMap.SensorSignal(sensor, direction, distance, timestamp);

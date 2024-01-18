@@ -37,7 +37,6 @@ import java.util.Random;
 import java.util.function.Consumer;
 
 import static java.lang.Math.round;
-import static java.lang.Math.toRadians;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -63,7 +62,7 @@ class SimRobotControllerTest {
                 .add(0, 1)
                 .build();
         SimRobot robot = new SimRobot(obstacles,
-                random, 0, 0, toRadians(15), MAX_PPS,
+                random, 0, 0, Complex.fromDeg(15), MAX_PPS,
                 INTERVAL, INTERVAL);
         return new RobotController(robot,
                 INTERVAL, REACTION_INTERVAL, COMMAND_INTERVAL, CONNECTION_RETRY_INTERVAL, WATCHDOG_INTERVAL,
@@ -221,7 +220,7 @@ class SimRobotControllerTest {
         rc.readControllerStatus().doOnNext(onController).subscribe();
 
         // And executing scan command to 90 DEG
-        rc.execute(RobotCommands.scan(90));
+        rc.execute(RobotCommands.scan(Complex.DEG90));
 
         // And stepping twice the controller
         rc.stepUp(); // Handle command

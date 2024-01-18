@@ -39,7 +39,7 @@ class RobotEnvTest {
     private Map<String, Signal> createActions(int direction, int sensorAction, int speed) {
         return Map.of(
                 "haltCommand", IntSignal.create(0),
-                "direction", IntSignal.create(direction),
+                "directionDeg", IntSignal.create(direction),
                 "sensorAction", IntSignal.create(sensorAction),
                 "speed", IntSignal.create(speed)
         );
@@ -49,27 +49,27 @@ class RobotEnvTest {
     void deltaDir() {
         RobotEnv env = RobotEnv.create(new MockRobot(), noMove());
 
-        int dDir = env.deltaDir(createActions(0, 0, 0));
+        int dDir = env.deltaDir(createActions(0, 0, 0)).toIntDeg();
         assertEquals(RobotEnv.MIN_DIRECTION_ACTION, dDir);
 
-        dDir = env.deltaDir(createActions(RobotEnv.DEFAULT_NUM_DIRECTION_VALUES / 2, 0, 0));
+        dDir = env.deltaDir(createActions(RobotEnv.DEFAULT_NUM_DIRECTION_VALUES / 2, 0, 0)).toIntDeg();
         assertEquals(0, dDir);
 
-        dDir = env.deltaDir(createActions(24, 0, 0));
-        assertEquals(RobotEnv.MAX_DIRECTION_ACTION, dDir);
+        dDir = env.deltaDir(createActions(24, 0, 0)).toIntDeg();
+        assertEquals(-RobotEnv.MAX_DIRECTION_ACTION, dDir);
     }
 
     @Test
     void sensor() {
         RobotEnv env = RobotEnv.create(new MockRobot(), noMove());
 
-        int sensor = env.sensorDir(createActions(0, 0, 0));
+        int sensor = env.sensorDir(createActions(0, 0, 0)).toIntDeg();
         assertEquals(RobotEnv.MIN_SENSOR_DIR, sensor);
 
-        sensor = env.sensorDir(createActions(0, RobotEnv.DEFAULT_NUM_SENSOR_VALUES / 2, 0));
+        sensor = env.sensorDir(createActions(0, RobotEnv.DEFAULT_NUM_SENSOR_VALUES / 2, 0)).toIntDeg();
         assertEquals(0, sensor);
 
-        sensor = env.sensorDir(createActions(0, RobotEnv.DEFAULT_NUM_SENSOR_VALUES - 1, 0));
+        sensor = env.sensorDir(createActions(0, RobotEnv.DEFAULT_NUM_SENSOR_VALUES - 1, 0)).toIntDeg();
         assertEquals(RobotEnv.MAX_SENSOR_DIR, sensor);
     }
 

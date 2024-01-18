@@ -83,12 +83,12 @@ public class PolarPanel extends JComponent {
         return new Ellipse2D.Double(location.getX(), location.getY(), PING_SIZE, PING_SIZE);
     }
 
-    private double radarMaxDistance;
-    private List<Shape> gridShapes;
     private List<Shape> emptyShapes;
     private List<Shape> filledShapes;
-    private List<Shape> pingShapes;
+    private List<Shape> gridShapes;
     private int numSector;
+    private List<Shape> pingShapes;
+    private double radarMaxDistance;
 
     public PolarPanel() {
         setBackground(Color.BLACK);
@@ -161,11 +161,11 @@ public class PolarPanel extends JComponent {
 
         double sectorAngle = toDegrees(polarMap.sectorAngle());
         Point2D center = polarMap.center();
-        AffineTransform transform = AffineTransform.getRotateInstance(toRadians(polarMap.direction()));
+        AffineTransform transform = AffineTransform.getRotateInstance(polarMap.direction().toRad());
         transform.translate(-center.getX(), -center.getY());
         for (int i = 0; i < n; i++) {
             CircularSector sector = polarMap.sector(i);
-            double angle = -90 + toDegrees(polarMap.sectorDirection(i));
+            double angle = polarMap.sectorDirection(i).toDeg() - 90;
             if (sector.known()) {
                 double distance = sector.distance(center);
                 if (distance == 0 || sector.empty()) {

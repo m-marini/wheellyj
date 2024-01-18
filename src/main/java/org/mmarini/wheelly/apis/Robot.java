@@ -219,8 +219,8 @@ public class Robot implements RobotApi, WithIOCallback {
     }
 
     @Override
-    public void move(int dir, int speed) throws IOException {
-        writeCommand(format(Locale.ENGLISH, "mv %d %d", dir, speed));
+    public void move(Complex dir, int speed) throws IOException {
+        writeCommand(format(Locale.ENGLISH, "mv %d %d", dir.toIntDeg(), speed));
     }
 
     /**
@@ -276,8 +276,8 @@ public class Robot implements RobotApi, WithIOCallback {
     }
 
     @Override
-    public void scan(int dir) throws IOException {
-        writeCommand("sc " + dir);
+    public void scan(Complex dir) throws IOException {
+        writeCommand("sc " + dir.toIntDeg());
     }
 
     @Override

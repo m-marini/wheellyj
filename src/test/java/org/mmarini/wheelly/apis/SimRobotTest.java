@@ -33,7 +33,8 @@ import java.awt.geom.Point2D;
 import java.util.Random;
 import java.util.function.Consumer;
 
-import static java.lang.Math.*;
+import static java.lang.Math.min;
+import static java.lang.Math.toDegrees;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_PER_PULSE;
@@ -124,10 +125,10 @@ class SimRobotTest {
     void connectTest() {
         SimRobot robot = createRobot();
         robot.connect();
-        assertEquals(new Point2D.Float(), robot.getLocation());
-        assertEquals(0, robot.getDirection());
-        assertEquals(0, robot.getSensorDirection());
-        assertEquals(0f, robot.getEchoDistance());
+        assertEquals(new Point2D.Float(), robot.location());
+        assertEquals(0, robot.direction().toIntDeg());
+        assertEquals(0, robot.sensorDirection().toIntDeg());
+        assertEquals(0f, robot.echoDistance());
         assertEquals(0L, robot.simulationTime());
     }
 
@@ -137,17 +138,17 @@ class SimRobotTest {
     private SimRobot createRobot() {
         Random random = new Random(SEED);
         return new SimRobot(new MapBuilder(new GridTopology(GRID_SIZE)).build(),
-                random, 0, 0, toRadians(15), MAX_PPS,
+                random, 0, 0, Complex.fromDeg(15), MAX_PPS,
                 INTERVAL, INTERVAL);
     }
 
     @Test
     void createTest() {
         SimRobot robot = createRobot();
-        assertEquals(new Point2D.Float(), robot.getLocation());
-        assertEquals(0, robot.getDirection());
-        assertEquals(0, robot.getSensorDirection());
-        assertEquals(0f, robot.getEchoDistance());
+        assertEquals(new Point2D.Float(), robot.location());
+        assertEquals(0, robot.direction().toIntDeg());
+        assertEquals(0, robot.sensorDirection().toIntDeg());
+        assertEquals(0f, robot.echoDistance());
         assertEquals(0L, robot.simulationTime());
     }
 
@@ -162,7 +163,7 @@ class SimRobotTest {
 
         // When move to 0 DEG at max speed
         int speed = MAX_PPS;
-        robot.move(0, speed);
+        robot.move(Complex.DEG0, speed);
         // And ticks 100 ms by 5 times
         long dt = 100;
         for (int i = 0; i < 5; i++) {
@@ -178,7 +179,7 @@ class SimRobotTest {
                         field("remoteTime", equalTo(rt)),
                         field("yPulses", closeTo(yPulses, dPulses)),
                         field("xPulses", closeTo(0, PULSES_EPSILON)),
-                        field("direction", equalTo(0))
+                        field("directionDeg", equalTo(0))
                 )
         ));
         // And remote localTime should be 500L
@@ -196,7 +197,7 @@ class SimRobotTest {
 
         // When move to 0 DEG at max speed
         int speed = MAX_PPS;
-        robot.move(0, -speed);
+        robot.move(Complex.DEG0, -speed);
         // And ticks 100 ms by 5 times
         long dt = 100;
         for (int i = 0; i < 5; i++) {
@@ -212,7 +213,7 @@ class SimRobotTest {
                         field("remoteTime", equalTo(rt)),
                         field("yPulses", closeTo(yPulses, dPulses)),
                         field("xPulses", closeTo(0, PULSES_EPSILON)),
-                        field("direction", equalTo(0))
+                        field("directionDeg", equalTo(0))
                 )
         ));
         // And remote localTime should be 500L
@@ -230,7 +231,7 @@ class SimRobotTest {
 
         // When move to 5 DEG at 0 speed
         int dir = 5;
-        robot.move(dir, 0);
+        robot.move(Complex.fromDeg(dir), 0);
         // And ticks 5 localTime for 100 ms
         long dt = 100;
         for (int i = 0; i < 5; i++) {
@@ -249,8 +250,8 @@ class SimRobotTest {
                         field("remoteTime", equalTo(500L)),
                         field("xPulses", closeTo(0, PULSES_EPSILON)),
                         field("yPulses", closeTo(0, PULSES_EPSILON)),
-                        field("direction", greaterThanOrEqualTo(minDir)),
-                        field("direction", lessThanOrEqualTo(maxDir))
+                        field("directionDeg", greaterThanOrEqualTo(minDir)),
+                        field("directionDeg", lessThanOrEqualTo(maxDir))
                 )
         ));
         // And remote localTime should be 500L
@@ -268,7 +269,7 @@ class SimRobotTest {
 
         // When move to 90 DEG at 0 speed
         int dir = 90;
-        robot.move(dir, 0);
+        robot.move(Complex.fromDeg(dir), 0);
         // And ticks 5 localTime for 100 ms
         long dt = 100;
         for (int i = 0; i < 5; i++) {
@@ -287,8 +288,8 @@ class SimRobotTest {
                         field("remoteTime", equalTo(500L)),
                         field("xPulses", closeTo(0, PULSES_EPSILON)),
                         field("yPulses", closeTo(0, PULSES_EPSILON)),
-                        field("direction", greaterThanOrEqualTo(minDir)),
-                        field("direction", lessThanOrEqualTo(maxDir))
+                        field("directionDeg", greaterThanOrEqualTo(minDir)),
+                        field("directionDeg", lessThanOrEqualTo(maxDir))
                 )
         ));
         // And remote localTime should be 500L
@@ -307,7 +308,7 @@ class SimRobotTest {
         robot.setOnProxy(onProxy);
 
         // When scan 90 DEG
-        robot.scan(90);
+        robot.scan(Complex.DEG90);
         // And tick for 500ms
         robot.tick(500);
 
@@ -315,7 +316,7 @@ class SimRobotTest {
         verify(onProxy, times(1)).accept(MockitoHamcrest.argThat(
                 allOf(
                         field("remoteTime", equalTo(500L)),
-                        field("sensorDirection", equalTo(90))
+                        field("sensorDirectionDeg", equalTo(90))
                 )));
         // And remote localTime should be 500L
         assertEquals(500L, robot.simulationTime());

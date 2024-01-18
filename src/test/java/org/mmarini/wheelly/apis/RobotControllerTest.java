@@ -302,12 +302,12 @@ class RobotControllerTest {
         rc.readRobotStatus().doOnNext(onStatus).subscribe();
 
         // When executing move to 90 DEB at speed 10
-        rc.execute(RobotCommands.move(90, 10));
+        rc.execute(RobotCommands.move(Complex.DEG90, 10));
         // and stepping up
         rc.stepUp(); // Handle move
 
         // Then the move method of robot should be invoked
-        verify(robot).move(90, 10);
+        verify(robot).move(Complex.DEG90, 10);
 
         // And the waiting command interval status should be emitted
         verify(onController).accept(RobotController.WAITING_COMMAND_INTERVAL);
@@ -321,7 +321,7 @@ class RobotControllerTest {
         Mock1Robot robot = spy(new Mock1Robot());
         robot.setSimulationTime(System.currentTimeMillis());
         IOException error = new IOException("Error");
-        doThrow(error).when(robot).move(anyInt(), anyInt());
+        doThrow(error).when(robot).move(any(), anyInt());
 
         // and a controller connected and configured
         RobotController rc = createController(robot);
@@ -337,12 +337,12 @@ class RobotControllerTest {
         rc.readErrors().doOnNext(onError).subscribe();
 
         // When move command
-        rc.execute(RobotCommands.move(90, 10));
+        rc.execute(RobotCommands.move(Complex.DEG90, 10));
         // and step up controller
         rc.stepUp(); // Handle move
 
         // Then the move method of roboto should be invoked
-        verify(robot).move(90, 10);
+        verify(robot).move(Complex.DEG90, 10);
 
         // And closing status should be emitted
         verify(onController).accept(RobotController.CLOSING);
@@ -395,10 +395,10 @@ class RobotControllerTest {
         rc.stepUp(); // Connect
         rc.stepUp(); // Configure
 
-        rc.execute(RobotCommands.scan(90));
+        rc.execute(RobotCommands.scan(Complex.DEG90));
         rc.stepUp(); // Handle scan
 
-        verify(robot).scan(90);
+        verify(robot).scan(Complex.DEG90);
         rc.shutdown();
     }
 
@@ -407,7 +407,7 @@ class RobotControllerTest {
         Mock1Robot robot = spy(new Mock1Robot());
         robot.setSimulationTime(System.currentTimeMillis());
         IOException error = new IOException("Error");
-        doThrow(error).when(robot).scan(anyInt());
+        doThrow(error).when(robot).scan(any());
 
         RobotController rc = createController(robot);
         Consumer<Throwable> consumer = mock();
@@ -415,11 +415,11 @@ class RobotControllerTest {
         rc.stepUp(); // Connect
         rc.stepUp(); // Configure
 
-        rc.execute(RobotCommands.scan(90));
+        rc.execute(RobotCommands.scan(Complex.DEG90));
         rc.stepUp(); // Handle scan
         rc.stepUp(); // Close
 
-        verify(robot).scan(90);
+        verify(robot).scan(Complex.DEG90);
         verify(robot).close();
         verify(consumer, times(1)).accept(error);
         rc.shutdown();
@@ -452,7 +452,7 @@ class RobotControllerTest {
         rc.readControllerStatus().doOnNext(onController).subscribe();
 
         // And executing scan command to 90 DEG
-        rc.execute(RobotCommands.scan(90));
+        rc.execute(RobotCommands.scan(Complex.DEG90));
 
         // And stepping the controller
         rc.stepUp(); // Handle command
@@ -473,13 +473,13 @@ class RobotControllerTest {
         onControllerOrder.verify(onController).accept(RobotController.HANDLING_COMMANDS);
 
         // When execute a scan command to -90 DEG
-        rc.execute(RobotCommands.scan(-90));
+        rc.execute(RobotCommands.scan(Complex.DEG270));
         // And stepping controller
         rc.stepUp(); // Handle command
 
         InOrder inOrder = inOrder(robot);
-        inOrder.verify(robot).scan(90);
-        inOrder.verify(robot).scan(-90);
+        inOrder.verify(robot).scan(Complex.DEG90);
+        inOrder.verify(robot).scan(Complex.DEG270);
         rc.shutdown();
     }
 

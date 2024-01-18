@@ -131,6 +131,8 @@ $defs:
         maximum: 60
       safeDistance:
         exclusiveMinimum: 0
+      maxDistance:
+        exclusiveMinimum: 0
     required:
       - class
   ExploringPointState:

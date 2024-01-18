@@ -271,7 +271,7 @@ public class RobotExecutor {
         agent.init();
         RobotApi robot = agent.getController().getRobot();
         if (robot instanceof SimRobot) {
-            Optional<ObstacleMap> obstaclesMap = ((SimRobot) robot).getObstaclesMap();
+            Optional<ObstacleMap> obstaclesMap = ((SimRobot) robot).obstaclesMap();
             obstaclesMap.map(ObstacleMap::getPoints)
                     .ifPresent(envPanel::setObstacleMap);
             obstaclesMap.map(ObstacleMap::topology)

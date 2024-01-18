@@ -76,7 +76,7 @@ public interface Stuck {
             if (!status.canMoveBackward() || !status.canMoveForward() || dist == 0 || dist >= MAX_DISTANCE) {
                 return -1;
             } else {
-                int sensor = status.sensorDirection();
+                int sensor = status.sensorDirection().toIntDeg();
                 double isInRange = between(dist, x1, x2, x3, x4);
                 double isInDirection = not(positive(abs(sensor), sensorRange));
                 double isTarget = and(isInRange, isInDirection);

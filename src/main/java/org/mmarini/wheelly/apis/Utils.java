@@ -29,10 +29,6 @@ import org.jbox2d.common.Vec2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.geom.Point2D;
-
-import static java.lang.Math.*;
-
 public class Utils {
 
     private static final Logger logger = LoggerFactory.getLogger(Utils.class);
@@ -49,72 +45,12 @@ public class Utils {
         return Math.min(Math.max(value, min), max);
     }
 
-    /**
-     * Returns the direction (RAD) of to point relative to other point (compass direction)
-     *
-     * @param from the start point
-     * @param to   the end point
-     */
-    public static double direction(Point2D from, Point2D to) {
-        double dx = to.getX() - from.getX();
-        double dy = to.getY() - from.getY();
-        return atan2(dx, dy);
-    }
-
     public static double linear(double x, double xmin, double xmax, double ymin, double ymax) {
         return (x - xmin) * (ymax - ymin) / (xmax - xmin) + ymin;
     }
 
     public static float linear(float x, float xmin, float xmax, float ymin, float ymax) {
         return (x - xmin) * (ymax - ymin) / (xmax - xmin) + ymin;
-    }
-
-    /**
-     * Returns the normalized angle (-PI <= x < PI)
-     *
-     * @param x the angle
-     */
-    public static double normalizeAngle(double x) {
-        while (x < -PI) {
-            x += 2 * PI;
-        }
-        while (x >= PI) {
-            x -= 2 * PI;
-        }
-        return x;
-    }
-
-    /**
-     * Returns the normalized angle (-PI <= x < PI)
-     *
-     * @param x the angle
-     */
-    public static double normalizeDegAngle(double x) {
-        while (x < -180) {
-            x += 360;
-        }
-        while (x >= 180) {
-            x -= 360;
-        }
-        return x;
-    }
-
-    public static int normalizeDegAngle(int x) {
-        while (x < -180) {
-            x += 360;
-        }
-        while (x >= 180) {
-            x -= 360;
-        }
-        return x;
-    }
-
-    public static double toNormalDeg(double x) {
-        return normalizeDegAngle(toDegrees(x));
-    }
-
-    public static double toNormalRadians(double x) {
-        return normalizeAngle(toRadians(x));
     }
 
     public static Vec2 vec2(double x, double y) {

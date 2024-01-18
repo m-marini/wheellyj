@@ -44,7 +44,7 @@ import static org.mmarini.wheelly.apis.Utils.clip;
 /**
  * Polar robot environment generates the following signals:
  * <ul>
- *     <li>sensor direction (discrete) </li>
+ *     <li>sensor directionDeg (discrete) </li>
  *     <li>sensor distance (discrete) </li>
  *     <li>movement enable flags (forward and backward)</li>
  *     <li>known polar sector flags</li>
@@ -54,9 +54,9 @@ import static org.mmarini.wheelly.apis.Utils.clip;
  *      The robot actions are divided in two concurrent actions: robot movement and sensor movement<br>
  *      The robot movement are
  *      <ul>
- *          <li>move robot to a direction at specific speed or haltCommand (speedFeature == numSpeedValues)</li>
+ *          <li>move robot to a directionDeg at specific speed or haltCommand (speedFeature == numSpeedValues)</li>
  *      </ul>
- *      The sensor movement determines the direction of sensor
+ *      The sensor movement determines the directionDeg of sensor
  * </p>
  * <p>
  *     The environment is parametrized by:
@@ -65,9 +65,9 @@ import static org.mmarini.wheelly.apis.Utils.clip;
  *         <li><code>interval</code> the minimum interval of localTime tick (ms) (10 suggested)</li>
  *         <li><code>reactionInterval</code> the reaction interval (ms) between inference steps (suggested 300)</li>
  *         <li><code>commandInterval</code> the maximum interval (ms) between robot commands (suggested 600)</li>
- *         <li><code>numDirectionValues</code> the number of values for robot direction action (suggested 24 = 15 DEG)</li>
+ *         <li><code>numDirectionValues</code> the number of values for robot directionDeg action (suggested 24 = 15 DEG)</li>
  *         <li><code>numSpeedValues</code> the number of values for robot speed action (suggested 9)</li>
- *         <li><code>numSensorValues</code> the number of values for sensor direction action (suggested 7 = 30 DEG)</li>
+ *         <li><code>numSensorValues</code> the number of values for sensor directionDeg action (suggested 7 = 30 DEG)</li>
  *         <li><code>numRadarSectors</code> the number of sector of polar radar (suggested 25 = 15 DEG)</li>
  *         <li><code>minRadarDistance</code> the minimum sensitivity distance (m) of radar (suggested 0.3)</li>
  *         <li><code>maxRadarDistance</code> the minimum sensitivity distance (m) of radar (suggested 3)</li>
@@ -112,8 +112,8 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
      *
      * @param robot              the robot api
      * @param reward             the reward function
-     * @param numDirectionValues number of direction values
-     * @param numSensorValues    number of sensor direction values
+     * @param numDirectionValues number of directionDeg values
+     * @param numSensorValues    number of sensor directionDeg values
      * @param numSpeedValues     number of speed values
      * @param numRadarSectors    the number of radar cells
      * @param minRadarDistance   the min radar distance (m)
@@ -124,7 +124,7 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
                                        int numDirectionValues, int numSensorValues, int numSpeedValues,
                                        int numRadarSectors, double minRadarDistance, double maxRadarDistance, RadarMap radarMap) {
         Map<String, SignalSpec> actions1 = Map.of(
-                "direction", new IntSignalSpec(new long[]{1}, numDirectionValues),
+                "directionDeg", new IntSignalSpec(new long[]{1}, numDirectionValues),
                 "speed", new IntSignalSpec(new long[]{1}, numSpeedValues + 1), //number of speed values + haltCommand command
                 "sensorAction", new IntSignalSpec(new long[]{1}, numSensorValues)
         );
@@ -179,10 +179,6 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
         return this.actions;
     }
 
-    public CompositeStatus getCurrentStatus() {
-        return currentStatus;
-    }
-
     public double getMaxRadarDistance() {
         return maxRadarDistance;
     }
@@ -190,10 +186,6 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
     @Override
     public PolarMap getPolarMap() {
         return currentStatus.polarMap;
-    }
-
-    public CompositeStatus getPreviousStatus() {
-        return previousStatus;
     }
 
     @Override
@@ -209,7 +201,7 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
     @Override
     protected Map<String, Signal> getSignals() {
         RobotStatus status = currentStatus.status;
-        INDArray sensor = Nd4j.createFromArray((float) status.sensorDirection());
+        INDArray sensor = Nd4j.createFromArray((float) status.sensorDirection().toIntDeg());
         INDArray distance = Nd4j.createFromArray((float) status.echoDistance());
         INDArray canMoveForward = Nd4j.createFromArray(status.canMoveForward() ? 1F : 0F);
         INDArray canMoveBackward = Nd4j.createFromArray(status.canMoveBackward() ? 1F : 0F);
@@ -251,6 +243,7 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
         RobotStatus robotStatus = currentStatus.status;
         RadarMap radarMap = currentStatus.radarMap;
         PolarMap polarMap = currentStatus.polarMap;
+        // TODO complex usage
         polarMap = polarMap.update(radarMap, robotStatus.location(), robotStatus.direction(), minRadarDistance, maxRadarDistance);
         currentStatus = currentStatus.setPolarMap(polarMap);
     }

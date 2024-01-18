@@ -28,14 +28,13 @@ package org.mmarini.wheelly.apis;
 import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.ops.transforms.Transforms;
 
 import java.awt.geom.Point2D;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static java.lang.Math.cos;
-import static java.lang.Math.sin;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -114,37 +113,57 @@ public record ObstacleMap(INDArray coordinates, GridTopology topology) {
     }
 
     /**
-     * Returns the index of nearest obstacle from point to a direction range
+     * Returns the index of nearest obstacle from the given point to the given direction with given direction range
      *
      * @param x              the x point coordinate
      * @param y              the y point coordinate
-     * @param direction      the direction in RAD
-     * @param directionRange the direction range in RAD
+     * @param direction      the direction
+     * @param directionRange the direction range
      */
-    public int indexOfNearest(double x, double y, double direction, double directionRange) {
+    public int indexOfNearest(double x, double y, Complex direction, Complex directionRange) {
         int n = getSize();
         if (n == 0) {
             return -1;
         }
         INDArray point = Nd4j.createFromArray(x, y).reshape(1, 2);
+
         // Computes the vectors of obstacles relative the given position (x,y)
         INDArray vect = coordinates.sub(point);
+
         // Computes the distances of obstacles relative the given position
-        INDArray n1 = vect.norm2(1).reshape(vect.shape()[0], 1);
-        // Computes the versor of the given direction
-        INDArray dirVersor = Nd4j.createFromArray((float) cos(direction), (float) sin(direction)).reshape(1, 2);
-        // calculates the cosine of the direction of the obstacles with respect to the given position
-        INDArray cosDir = vect.mmul(dirVersor.transpose()).div(n1);
+        INDArray distances = vect.norm2(1).reshape(vect.shape()[0], 1);
+
+        // Computes the direction vectors obstacle relative to position
+        INDArray directions = vect.div(distances);
+
+        // Computes the direction vector of the given direction
+        INDArray dirVector = Nd4j.createFromArray((float) direction.x(), (float) direction.y()).reshape(1, 2);
+
+        // Computes the scalar product of direction vectors by direction vector (versus of points through the given direction)
+        INDArray cosDir = directions.mmul(dirVector.transpose());
+
+        // Computes the right orthogonal direction vector of the given direction
+        INDArray orthoVector = Nd4j.createFromArray((float) direction.y(), -(float) direction.x()).reshape(1, 2);
+
+        // Computes the vector product of direction vectors by direction vector (scalar product by orthogonal direction vector)
+        // (cos of point direction to respect the give direction)
+        INDArray sinDir = directions.mmul(orthoVector.transpose());
+        Transforms.abs(sinDir, false);
+
         // Calculates the limit cosine of direction range
-        float cosThreshold = (float) cos(directionRange);
+        float sinThreshold = (float) directionRange.sin();
+
         // Finds the eligible obstacle points
-        INDArray valid = cosDir.gte(cosThreshold);
+        INDArray validCos = cosDir.gte(0);
+        INDArray validSin = sinDir.lte(sinThreshold);
+        INDArray valid = Transforms.and(validSin, validCos);
+
         int index = -1;
-        Float minDist = Float.MAX_VALUE;
+        float minDist = Float.MAX_VALUE;
         // Find for nearest valid obstacles
         for (int i = 0; i < n; i++) {
             int val = valid.getInt(i, 0);
-            float dist = n1.getFloat(i, 0);
+            float dist = distances.getFloat(i, 0);
             if (dist == 0) {
                 // the obstacle coincides with the given position
                 return i;

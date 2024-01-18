@@ -32,10 +32,7 @@ import io.reactivex.rxjava3.core.Completable;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.RobotControllerApi;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WithRobotStatus;
+import org.mmarini.wheelly.apis.*;
 
 import java.util.Map;
 import java.util.function.Consumer;
@@ -46,7 +43,6 @@ import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
 import static org.mmarini.wheelly.apis.Utils.linear;
-import static org.mmarini.wheelly.apis.Utils.normalizeDegAngle;
 
 /**
  * Implements general functionalities of RobotEnvironment
@@ -68,10 +64,10 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
     private final RobotControllerApi controller;
     private final ToDoubleFunction<RobotEnvironment> rewardFunc;
     private UnaryOperator<Map<String, Signal>> onAct;
+    private Consumer<RobotStatus> onInference;
     private Consumer<Environment.ExecutionResult> onResult;
     private Map<String, Signal> prevActions;
     private Map<String, Signal> signals0;
-    private Consumer<RobotStatus> onInference;
 
     /**
      * Creates the abstract environment
@@ -88,14 +84,14 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
     }
 
     /**
-     * Returns the delta direction in DEG
+     * Returns the delta direction
      *
      * @param actions the actions
      */
-    int deltaDir(Map<String, Signal> actions) {
-        int action = actions.get("direction").getInt(0);
-        int n = ((IntSignalSpec) getActions().get("direction")).getNumValues();
-        return round(linear(action,
+    Complex deltaDir(Map<String, Signal> actions) {
+        int action = actions.get("directionDeg").getInt(0);
+        int n = ((IntSignalSpec) getActions().get("directionDeg")).getNumValues();
+        return Complex.fromDeg(linear(action,
                 0, n - 1,
                 MIN_DIRECTION_ACTION, MAX_DIRECTION_ACTION));
     }
@@ -106,10 +102,6 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
     @Override
     public RobotControllerApi getController() {
         return controller;
-    }
-
-    public Map<String, Signal> getPrevActions() {
-        return prevActions;
     }
 
     /**
@@ -177,9 +169,9 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
     protected void latchStatus(RobotStatus status) {
     }
 
-    public int moveDirection(Map<String, Signal> actions, int currentDirection) {
-        int dDir = deltaDir(actions);
-        return normalizeDegAngle(currentDirection + dDir);
+    public Complex moveDirection(Map<String, Signal> actions, Complex currentDirection) {
+        Complex dDir = deltaDir(actions);
+        return currentDirection.add(dDir);
     }
 
     /**
@@ -197,7 +189,7 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
      */
     protected void processActions(Map<String, Signal> actions) {
         RobotControllerApi controller = getController();
-        int sensorDirection = sensorDir(actions);
+        Complex sensorDirection = sensorDir(actions);
         RobotCommands command = isHalt(actions)
                 ? RobotCommands.haltAndScan(sensorDirection)
                 : RobotCommands.moveAndScan(moveDirection(actions, getRobotStatus().direction()),
@@ -212,14 +204,14 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
     }
 
     /**
-     * Returns the sensor direction in DEG from actions
+     * Returns the sensor direction from actions
      *
      * @param actions the actions
      */
-    public int sensorDir(Map<String, Signal> actions) {
+    public Complex sensorDir(Map<String, Signal> actions) {
         int action = actions.get("sensorAction").getInt(0);
         int n = ((IntSignalSpec) getActions().get("sensorAction")).getNumValues();
-        return round(linear(action,
+        return Complex.fromDeg(linear(action,
                 0, n - 1,
                 MIN_SENSOR_DIR, MAX_SENSOR_DIR));
     }

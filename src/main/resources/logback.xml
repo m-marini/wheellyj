@@ -11,47 +11,28 @@
         </encoder>
     </appender>
 
-    <logger name="org.mmarini.wheelly.apis.RobotSocket" level="INFO">
-    </logger>
+    <logger name="org.mmarini.wheelly.apis.RobotSocket" level="INFO"/>
 
-    <logger name="org.mmarini.wheelly.engines.ExploringPointState" level="INFO">
-    </logger>
+    <logger name="org.mmarini.wheelly.engines.ExploringPointState" level="INFO"/>
 
-    <logger name="org.mmarini.wheelly.engines.AvoidingState" level="INFO">
-    </logger>
+    <logger name="org.mmarini.wheelly.apis.Robot" level="INFO"/>
+    <logger name="org.mmarini.wheelly.apis.SimRobot" level="INFO"/>
 
-    <logger name="org.mmarini.wheelly.apis.Robot" level="INFO">
-    </logger>
+    <logger name="org.mmarini.wheelly.apis.RobotController" level="INFO"/>
 
-    <logger name="org.mmarini.wheelly.engines.ExtendedStateNode" level="INFO">
-    </logger>
+    <logger name="org.mmarini.wheelly.apis.RadarMap" level="DEBUG"/>
 
-    <logger name="org.mmarini.wheelly.engines.StateMachineAgent" level="INFO">
-    </logger>
+    <logger name="org.mmarini.wheelly.engines.StateMachineAgent" level="INFO"/>
+    <logger name="org.mmarini.wheelly.engines.ExtendedStateNode" level="INFO"/>
+    <logger name="org.mmarini.wheelly.engines.AvoidingState" level="INFO"/>
+    <logger name="org.mmarini.wheelly.engines.MoveToState" level="INFO"/>
+    <logger name="org.mmarini.wheelly.engines.HaltState" level="INFO"/>
+    <logger name="org.mmarini.wheelly.engines.ClearMapState" level="INFO"/>
 
-    <logger name="org.mmarini.wheelly.apis.RobotController" level="INFO">
-    </logger>
+    <logger name="org.mmarini.wheelly.apps.MatrixMonitor" level="INFO"/>
+    <logger name="org.mmarini.wheelly.apps.RobotCheckUp" level="INFO"/>
 
-    <logger name="org.mmarini.wheelly.engines.MoveToState" level="INFO">
-    </logger>
-
-    <logger name="org.mmarini.wheelly.engines.HaltState" level="INFO">
-    </logger>
-
-    <logger name="org.mmarini.wheelly.engines.ClearMapState" level="INFO">
-    </logger>
-
-    <logger name="org.mmarini.wheelly.apps.MatrixMonitor" level="INFO">
-    </logger>
-
-    <logger name="org.mmarini.wheelly.apps.RobotCheckUp" level="INFO">
-    </logger>
-
-    <logger name="org.mmarini.wheelly.apis.SimRobot" level="INFO">
-    </logger>
-
-    <logger name="com.networknt.schema" level="INFO">
-    </logger>
+    <logger name="com.networknt.schema" level="INFO"/>
 
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>

@@ -35,18 +35,18 @@ import java.util.Optional;
  * Store the possible commands combination haltCommand, move, scan
  *
  * @param scan          true if scan command
- * @param scanDirection the scan direction (DEG)
+ * @param scanDirection the scan direction
  * @param move          true if movement command
  * @param halt          true if haltCommand command
- * @param moveDirection the move direction (DEG)
+ * @param moveDirection the move direction
  * @param speed         the speed (pps)
  */
-public record RobotCommands(boolean scan, int scanDirection, boolean move, boolean halt, int moveDirection,
+public record RobotCommands(boolean scan, Complex scanDirection, boolean move, boolean halt, Complex moveDirection,
                             int speed) {
 
-    private static final RobotCommands NONE = new RobotCommands(false, 0, false, false, 0, 0);
-    private static final RobotCommands HALT = new RobotCommands(false, 0, false, true, 0, 0);
-    private static final RobotCommands IDLE = new RobotCommands(true, 0, false, true, 0, 0);
+    private static final RobotCommands NONE = new RobotCommands(false, Complex.DEG0, false, false, Complex.DEG0, 0);
+    private static final RobotCommands HALT = new RobotCommands(false, Complex.DEG0, false, true, Complex.DEG0, 0);
+    private static final RobotCommands IDLE = new RobotCommands(true, Complex.DEG0, false, true, Complex.DEG0, 0);
 
     /**
      * Returns the concatenation of commands
@@ -68,8 +68,8 @@ public record RobotCommands(boolean scan, int scanDirection, boolean move, boole
      *
      * @param direction the scanner direction
      */
-    public static RobotCommands haltAndScan(int direction) {
-        return new RobotCommands(true, direction, false, true, 0, 0);
+    public static RobotCommands haltAndScan(Complex direction) {
+        return new RobotCommands(true, direction, false, true, Complex.DEG0, 0);
     }
 
     /**
@@ -89,31 +89,31 @@ public record RobotCommands(boolean scan, int scanDirection, boolean move, boole
     /**
      * Returns the only move command
      *
-     * @param direction the move direction (DEG)
+     * @param direction the move direction
      * @param speed     the speed (pps)
      */
-    public static RobotCommands move(int direction, int speed) {
-        return new RobotCommands(false, 0, true, false, direction, speed);
+    public static RobotCommands move(Complex direction, int speed) {
+        return new RobotCommands(false, Complex.DEG0, true, false, direction, speed);
     }
 
     /**
      * Returns the move command and front scan
      *
-     * @param direction the move direction (DEG)
+     * @param direction the move direction
      * @param speed     the speed (pps)
      */
-    public static RobotCommands moveAndFrontScan(int direction, int speed) {
-        return new RobotCommands(true, 0, true, false, direction, speed);
+    public static RobotCommands moveAndFrontScan(Complex direction, int speed) {
+        return new RobotCommands(true, Complex.DEG0, true, false, direction, speed);
     }
 
     /**
      * Returns the move command and scan
      *
-     * @param direction     the move direction (DEG)
+     * @param direction     the move direction
      * @param speed         the speed (pps)
-     * @param scanDirection the scan direction (DEG)
+     * @param scanDirection the scan direction
      */
-    public static RobotCommands moveAndScan(int direction, int speed, int scanDirection) {
+    public static RobotCommands moveAndScan(Complex direction, int speed, Complex scanDirection) {
         return new RobotCommands(true, scanDirection, true, false, direction, speed);
     }
 
@@ -129,22 +129,15 @@ public record RobotCommands(boolean scan, int scanDirection, boolean move, boole
      *
      * @param direction the scanner direction
      */
-    public static RobotCommands scan(int direction) {
-        return new RobotCommands(true, direction, false, false, 0, 0);
-    }
-
-    /**
-     * Returns the command with cleared movement
-     */
-    public RobotCommands clearMovement() {
-        return new RobotCommands(scan, scanDirection, false, false, 0, 0);
+    public static RobotCommands scan(Complex direction) {
+        return new RobotCommands(true, direction, false, false, Complex.DEG0, 0);
     }
 
     /**
      * Returns the command with cleared scan
      */
     public RobotCommands clearScan() {
-        return new RobotCommands(false, 0, move, halt, moveDirection, speed);
+        return new RobotCommands(false, Complex.DEG0, move, halt, moveDirection, speed);
     }
 
     /**
@@ -158,25 +151,25 @@ public record RobotCommands(boolean scan, int scanDirection, boolean move, boole
      * Returns the command with haltCommand command
      */
     public RobotCommands setHalt() {
-        return new RobotCommands(scan, scanDirection, false, true, 0, 0);
+        return new RobotCommands(scan, scanDirection, false, true, Complex.DEG0, 0);
     }
 
     /**
      * Returns the command with move command
      *
-     * @param direction the move direction (DEG)
+     * @param direction the move directionDeg
      * @param speed     the speed (pps)
      */
-    public RobotCommands setMove(int direction, int speed) {
+    public RobotCommands setMove(Complex direction, int speed) {
         return new RobotCommands(scan, scanDirection, true, false, direction, speed);
     }
 
     /**
      * Returns the command with set scan
      *
-     * @param scanDirection the scan direction (DEG)
+     * @param scanDirection the scan directionDeg (DEG)
      */
-    public RobotCommands setScan(int scanDirection) {
+    public RobotCommands setScan(Complex scanDirection) {
         return new RobotCommands(true, scanDirection, move, halt, moveDirection, speed);
     }
 

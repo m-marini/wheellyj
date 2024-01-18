@@ -287,7 +287,7 @@ public class Wheelly {
         Nd4j.zeros(1);
         RobotApi robot = environment.getController().getRobot();
         if (robot instanceof SimRobot) {
-            Optional<ObstacleMap> obstaclesMap = ((SimRobot) robot).getObstaclesMap();
+            Optional<ObstacleMap> obstaclesMap = ((SimRobot) robot).obstaclesMap();
             obstaclesMap.map(ObstacleMap::getPoints)
                     .ifPresent(envPanel::setObstacleMap);
             obstaclesMap.map(ObstacleMap::topology)
