@@ -34,10 +34,12 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -154,13 +156,12 @@ class RadarMapTest {
     void cleanNoTimeout() {
         long timestamp = System.currentTimeMillis();
         RadarMap map = createRadarMap()
-                .map((i, sector) -> i >= 10 && i < 20
-                        ? sector.addEchogenic(timestamp)
-                        : sector);
+                .map(IntStream.range(10, 20),
+                        sector -> sector.addEchogenic(timestamp));
 
         map = map.clean(timestamp);
 
-        assertEquals(10L, map.cellStream()
+        assertEquals(10L, Arrays.stream(map.cells())
                 .filter(Predicate.not(MapCell::unknown))
                 .count());
         assertEquals(timestamp + MAX_INTERVAL, map.cleanTimestamp());
@@ -170,11 +171,12 @@ class RadarMapTest {
     void cleanTimeout() {
         long timestamp = System.currentTimeMillis();
         RadarMap map = createRadarMap()
-                .map((i, sector) -> i >= 10 && i < 20 ? sector.addEchogenic(timestamp - MAX_INTERVAL - 1) : sector);
+                .map(IntStream.range(10, 20),
+                        cell -> cell.addEchogenic(timestamp - MAX_INTERVAL - 1));
 
         map = map.clean(timestamp);
 
-        assertTrue(map.cellStream()
+        assertTrue(Arrays.stream(map.cells())
                 .allMatch(MapCell::unknown));
         assertEquals(timestamp + MAX_INTERVAL, map.cleanTimestamp());
     }
@@ -335,7 +337,7 @@ class RadarMapTest {
                 ...........
                 ...........
                 ...........""");
-        int contactsNumber = (int) map.cellStream().filter(MapCell::hasContact).count();
+        int contactsNumber = (int) Arrays.stream(map.cells()).filter(MapCell::hasContact).count();
         assertEquals(contacts.size(), contactsNumber);
         for (Point2D pt : contacts) {
             assertThat(format("Point %s does not match", pt), map.cell(pt.getX(), pt.getY()).filter(MapCell::hasContact),
@@ -370,7 +372,7 @@ class RadarMapTest {
             assertThat(format("Point %s does not match", pt), map.cell(pt.getX(), pt.getY()).filter(MapCell::hasContact),
                     optionalOf(any(MapCell.class)));
         }
-        int contactsNumber = (int) map.cellStream().filter(MapCell::hasContact).count();
+        int contactsNumber = (int) Arrays.stream(map.cells()).filter(MapCell::hasContact).count();
         assertEquals(contacts.size(), contactsNumber);
     }
 
@@ -397,7 +399,7 @@ class RadarMapTest {
                 ...........
                 ...........
                 ...........""");
-        int contactsNumber = (int) map.cellStream().filter(MapCell::hasContact).count();
+        int contactsNumber = (int) Arrays.stream(map.cells()).filter(MapCell::hasContact).count();
         for (Point2D pt : contacts) {
             assertThat(format("Point %s does not match", pt), map.cell(pt.getX(), pt.getY()).filter(MapCell::hasContact),
                     optionalOf(any(MapCell.class)));
@@ -432,7 +434,7 @@ class RadarMapTest {
             assertThat(format("Point %s does not match", pt), map.cell(pt.getX(), pt.getY()).filter(MapCell::hasContact),
                     optionalOf(any(MapCell.class)));
         }
-        int contactsNumber = (int) map.cellStream().filter(MapCell::hasContact).count();
+        int contactsNumber = (int) Arrays.stream(map.cells()).filter(MapCell::hasContact).count();
         assertEquals(contacts.size(), contactsNumber);
     }
 
@@ -463,7 +465,7 @@ class RadarMapTest {
             assertThat(format("Point %s does not match", pt), map.cell(pt.getX(), pt.getY()).filter(MapCell::hasContact),
                     optionalOf(any(MapCell.class)));
         }
-        int contactsNumber = (int) map.cellStream().filter(MapCell::hasContact).count();
+        int contactsNumber = (int) Arrays.stream(map.cells()).filter(MapCell::hasContact).count();
         assertEquals(contacts.size(), contactsNumber);
     }
 

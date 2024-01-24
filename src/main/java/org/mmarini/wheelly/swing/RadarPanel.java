@@ -32,6 +32,7 @@ import org.mmarini.wheelly.apis.RadarMap;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.*;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -92,7 +93,7 @@ public class RadarPanel extends JComponent {
      */
     public static List<Tuple2<Point2D, Color>> createMap(RadarMap radarMap) {
         if (radarMap != null) {
-            return radarMap.cellStream()
+            return Arrays.stream(radarMap.cells())
                     .filter(Predicate.not(MapCell::unknown))
                     .map(sector -> Tuple2.of(sector.location(),
                             sector.hasContact()
