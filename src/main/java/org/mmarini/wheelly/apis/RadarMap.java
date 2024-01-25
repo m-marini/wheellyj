@@ -99,7 +99,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
                         i * gridSize + y0));
             }
         }
-        return new RadarMap(new GridTopology(gridSize), map1, width,
+        return new RadarMap(new GridTopology(center, width, height, gridSize), map1, width,
                 radarCleanInterval, echoPersistence, contactPersistence,
                 0, contactRadius, receptiveAngle);
     }
@@ -280,13 +280,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
      * @param y y coordinate of point
      */
     public int indexOf(double x, double y) {
-        Point2D offset = cells[0].location();
-        int[] indices = topology.toGridCoords(x - offset.getX(), y - offset.getY());
-        if (indices[0] < 0 || indices[0] >= stride || indices[1] < 0) {
-            return -1;
-        }
-        int idx = indices[0] + indices[1] * stride;
-        return idx < cells.length ? idx : -1;
+        return topology.indexOf(x, y);
     }
 
     /**

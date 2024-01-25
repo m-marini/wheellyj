@@ -22,7 +22,7 @@ class GridTopologyTest {
     })
     void indexOfTest(double x0, double y0, int width, int height, double gridSize, double x, double y, int expected) {
         Point2D center = new Point2D.Double(x0, y0);
-        GridTopology1 topology = new GridTopology1(center, width, height, gridSize);
+        GridTopology topology = new GridTopology(center, width, height, gridSize);
 
         int idxOfXY = topology.indexOf(x, y);
         int idxOfPt = topology.indexOf(new Point2D.Double(x, y));
@@ -38,7 +38,7 @@ class GridTopologyTest {
     void locationTest(double x0, double y0, int width, int height, double gridSize, int index,
                       boolean exist, double x, double y) {
         Point2D center = new Point2D.Double(x0, y0);
-        GridTopology1 topology = new GridTopology1(center, width, height, gridSize);
+        GridTopology topology = new GridTopology(center, width, height, gridSize);
 
         Point2D p = topology.location(index);
 
@@ -53,7 +53,7 @@ class GridTopologyTest {
                   double x, double y,
                   boolean exist, double xs, double ys) {
         Point2D center = new Point2D.Double(x0, y0);
-        GridTopology1 topology = new GridTopology1(center, width, height, gridSize);
+        GridTopology topology = new GridTopology(center, width, height, gridSize);
 
         Point2D p = topology.snap(new Point2D.Double(x, y));
 
