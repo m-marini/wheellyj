@@ -26,6 +26,7 @@
 package org.mmarini.wheelly.apis;
 
 import java.awt.*;
+import java.awt.geom.Point2D;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
@@ -37,20 +38,25 @@ import static java.lang.Math.signum;
  * The builder of point Map
  */
 public class MapBuilder {
+    /**
+     * Returns the obstacle map builder
+     *
+     * @param gridSize the grid size
+     */
     public static MapBuilder create(double gridSize) {
-        return new MapBuilder(new GridTopology(gridSize));
+        return new MapBuilder(gridSize);
     }
 
-    private final GridTopology topology;
+    private final double gridSize;
     private final Set<Point> points;
 
     /**
      * Creates the map builder
      *
-     * @param topology the size of map grid
+     * @param gridSize the size of map grid
      */
-    public MapBuilder(GridTopology topology) {
-        this.topology = topology;
+    public MapBuilder(double gridSize) {
+        this.gridSize = gridSize;
         points = new HashSet<>();
     }
 
@@ -61,7 +67,7 @@ public class MapBuilder {
      * @param y y coordinate
      */
     public MapBuilder add(double x, double y) {
-        points.add(ObstacleMap.toIndex(x, y, topology.gridSize()));
+        points.add(ObstacleMap.toIndex(x, y, gridSize));
         return this;
     }
 
@@ -74,20 +80,19 @@ public class MapBuilder {
      * @param dx x stepping vector
      * @param dy y stepping vector
      */
-    private MapBuilder add(int n, double x, double y, double dx, double dy) {
+    private void add(int n, double x, double y, double dx, double dy) {
         for (int i = 0; i < n; i++) {
             add(x, y);
             x += dx;
             y += dy;
         }
-        return this;
     }
 
     /**
      * Returns the obstacle map
      */
     public ObstacleMap build() {
-        return ObstacleMap.create(points, topology.gridSize());
+        return ObstacleMap.create(points, gridSize);
     }
 
     /**
@@ -99,20 +104,18 @@ public class MapBuilder {
      * @param y1 y end coordinate
      */
     public MapBuilder line(double x0, double y0, double x1, double y1) {
-        double[] start = topology.snap(x0, y0);
-        double[] end = topology.snap(x1, y1);
-        double x = start[0];
-        double y = start[1];
-        double dx = end[0] - x;
-        double dy = end[1] - y;
+        Point2D start = snap(x0, y0);
+        Point2D end = snap(x1, y1);
+        double x = start.getX();
+        double y = start.getY();
+        double dx = end.getX() - x;
+        double dy = end.getY() - y;
         if (dx == 0 && dy == 0) {
             add(x, y);
         } else if (abs(dx) >= abs(dy)) {
-            double gridSize = this.topology.gridSize();
             int n = (int) (abs(dx) / gridSize) + 1;
             add(n, x, y, signum(dx) * gridSize, dy / abs(dx) * gridSize);
         } else {
-            double gridSize = this.topology.gridSize();
             int n = (int) (abs(dy) / gridSize) + 1;
             add(n, x, y, dx / abs(dy) * gridSize, signum(dy) * gridSize);
         }
@@ -159,9 +162,9 @@ public class MapBuilder {
                 if (sqr_dist >= min_sqr_dist && sqr_dist <= max_sqr_dist) {
                     double xo = x + x0;
                     double yo = y + y0;
-
-                    if (!points.contains(topology.toGridPoint(xo, yo))) {
-                        add(xo, yo);
+                    Point index = ObstacleMap.toIndex(xo, yo, gridSize);
+                    if (!points.contains(index)) {
+                        points.add(index);
                         break;
                     }
                 }
@@ -186,5 +189,15 @@ public class MapBuilder {
                 x0, y1,
                 x0, y0
         );
+    }
+
+    /**
+     * Returns point snap to grid
+     *
+     * @param x0 the point abscissa (m)
+     * @param y0 the point ordinate (m)
+     */
+    private Point2D snap(double x0, double y0) {
+        return ObstacleMap.toPoint(ObstacleMap.toIndex(x0, y0, gridSize), gridSize);
     }
 }

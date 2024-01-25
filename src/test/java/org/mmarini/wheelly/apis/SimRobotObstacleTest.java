@@ -251,7 +251,7 @@ class SimRobotObstacleTest {
      */
     private SimRobot createRobot() {
         Random random = new Random(SEED);
-        SimRobot simRobot = new SimRobot(new MapBuilder(new GridTopology(GRID_SIZE)).add(XO, 0).build(),
+        SimRobot simRobot = new SimRobot(MapBuilder.create(GRID_SIZE).add(XO, 0).build(),
                 random, 0, 0, Complex.fromDeg(15), MAX_PPS, 500, 500);
         simRobot.connect();
         simRobot.configure();
