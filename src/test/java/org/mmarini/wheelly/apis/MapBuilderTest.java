@@ -34,6 +34,7 @@ import java.util.List;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
+import static org.mmarini.Matchers.pointCloseTo;
 
 class MapBuilderTest {
     static {
@@ -109,15 +110,15 @@ class MapBuilderTest {
         List<Point2D> points = builder.lines(
                         0, 0,
                         1, 0)
-                .build().getPoints();
+                .build().points();
 
         assertThat(points, containsInAnyOrder(
-                new Point2D.Float(0, 0),
-                new Point2D.Float(0.2f, 0),
-                new Point2D.Float(0.4f, 0),
-                new Point2D.Float(0.6f, 0),
-                new Point2D.Float(0.8f, 0),
-                new Point2D.Float(1f, 0)
+                pointCloseTo(0, 0, 1e-3),
+                pointCloseTo(0.2f, 0, 1e-3),
+                pointCloseTo(0.4f, 0, 1e-3),
+                pointCloseTo(0.6f, 0, 1e-3),
+                pointCloseTo(0.8f, 0, 1e-3),
+                pointCloseTo(1f, 0, 1e-3)
         ));
     }
 
@@ -127,14 +128,13 @@ class MapBuilderTest {
                 .lines(0.09f, 0,
                         0.91f, 0.01f);
         ObstacleMap map = builder.build();
-        map = builder.build();
-        assertThat(map.getPoints(), containsInAnyOrder(
-                new Point2D.Float(0, 0),
-                new Point2D.Float(0.2f, 0),
-                new Point2D.Float(0.4f, 0),
-                new Point2D.Float(0.6f, 0),
-                new Point2D.Float(0.8f, 0),
-                new Point2D.Float(1f, 0)
+        assertThat(map.points(), containsInAnyOrder(
+                pointCloseTo(0, 0, 1e-3),
+                pointCloseTo(0.2f, 0, 1e-3),
+                pointCloseTo(0.4f, 0, 1e-3),
+                pointCloseTo(0.6f, 0, 1e-3),
+                pointCloseTo(0.8f, 0, 1e-3),
+                pointCloseTo(1f, 0, 1e-3)
         ));
     }
 
@@ -143,14 +143,14 @@ class MapBuilderTest {
         MapBuilder builder = MapBuilder.create(0.2f);
         List<Point2D> map = builder.lines(
                 0, 0,
-                1, 0.2f).build().getPoints();
+                1, 0.2f).build().points();
         assertThat(map, containsInAnyOrder(
-                new Point2D.Float(0, 0),
-                new Point2D.Float(0.2f, 0),
-                new Point2D.Float(0.4f, 0),
-                new Point2D.Float(0.6f, 0.2f),
-                new Point2D.Float(0.8f, 0.2f),
-                new Point2D.Float(1f, 0.2f)
+                pointCloseTo(0, 0, 1e-3),
+                pointCloseTo(0.2f, 0, 1e-3),
+                pointCloseTo(0.4f, 0, 1e-3),
+                pointCloseTo(0.6f, 0.2f, 1e-3),
+                pointCloseTo(0.8f, 0.2f, 1e-3),
+                pointCloseTo(1f, 0.2f, 1e-3)
         ));
     }
 
@@ -160,14 +160,13 @@ class MapBuilderTest {
                 .line(1, 0.2f,
                         0, 0);
         ObstacleMap map = builder.build();
-        map = builder.build();
-        assertThat(map.getPoints(), containsInAnyOrder(
-                new Point2D.Float(0, 0),
-                new Point2D.Float(0.2f, 0),
-                new Point2D.Float(0.4f, 0),
-                new Point2D.Float(0.6f, 0.2f),
-                new Point2D.Float(0.8f, 0.2f),
-                new Point2D.Float(1f, 0.2f)
+        assertThat(map.points(), containsInAnyOrder(
+                pointCloseTo(0, 0, 1e-3),
+                pointCloseTo(0.2f, 0, 1e-3),
+                pointCloseTo(0.4f, 0, 1e-3),
+                pointCloseTo(0.6f, 0.2f, 1e-3),
+                pointCloseTo(0.8f, 0.2f, 1e-3),
+                pointCloseTo(1f, 0.2f, 1e-3)
         ));
     }
 
@@ -188,20 +187,20 @@ class MapBuilderTest {
         List<Point2D> points = builder.rect(
                         0, 0,
                         0.4f, 0.4f)
-                .build().getPoints();
+                .build().points();
 
         assertThat(points, containsInAnyOrder(
-                new Point2D.Float(0, 0),
-                new Point2D.Float(0.2f, 0),
-                new Point2D.Float(0.4f, 0),
+                pointCloseTo(0, 0, 1e-3),
+                pointCloseTo(0.2f, 0, 1e-3),
+                pointCloseTo(0.4f, 0, 1e-3),
 
-                new Point2D.Float(0, 0.4f),
-                new Point2D.Float(0.2f, 0.4f),
-                new Point2D.Float(0.4f, 0.4f),
+                pointCloseTo(0, 0.4f, 1e-3),
+                pointCloseTo(0.2f, 0.4f, 1e-3),
+                pointCloseTo(0.4f, 0.4f, 1e-3),
 
-                new Point2D.Float(0, 0.2f),
+                pointCloseTo(0, 0.2, 1e-3),
 
-                new Point2D.Float(0.4f, 0.2f)
+                pointCloseTo(0.4f, 0.2f, 1e-3)
         ));
     }
 
@@ -212,15 +211,15 @@ class MapBuilderTest {
         List<Point2D> points = builder.lines(
                         0, 0,
                         0, 1)
-                .build().getPoints();
+                .build().points();
 
         assertThat(points, containsInAnyOrder(
-                new Point2D.Float(0, 0),
-                new Point2D.Float(0, 0.2f),
-                new Point2D.Float(0, 0.4f),
-                new Point2D.Float(0, 0.6f),
-                new Point2D.Float(0, 0.8f),
-                new Point2D.Float(0, 1)
+                pointCloseTo(0, 0, 1e-3),
+                pointCloseTo(0, 0.2f, 1e-3),
+                pointCloseTo(0, 0.4f, 1e-3),
+                pointCloseTo(0, 0.6f, 1e-3),
+                pointCloseTo(0, 0.8f, 1e-3),
+                pointCloseTo(0, 1, 1e-3)
         ));
     }
 
@@ -231,15 +230,15 @@ class MapBuilderTest {
         List<Point2D> points = builder.lines(
                         0.09f, 0,
                         0.01f, 0.91f)
-                .build().getPoints();
+                .build().points();
 
         assertThat(points, containsInAnyOrder(
-                new Point2D.Float(0, 0),
-                new Point2D.Float(0, 0.2f),
-                new Point2D.Float(0, 0.4f),
-                new Point2D.Float(0, 0.6f),
-                new Point2D.Float(0, 0.8f),
-                new Point2D.Float(0, 1)
+                pointCloseTo(0, 0, 1e-3),
+                pointCloseTo(0, 0.2f, 1e-3),
+                pointCloseTo(0, 0.4f, 1e-3),
+                pointCloseTo(0, 0.6f, 1e-3),
+                pointCloseTo(0, 0.8f, 1e-3),
+                pointCloseTo(0, 1, 1e-3)
         ));
     }
 
@@ -250,15 +249,15 @@ class MapBuilderTest {
         List<Point2D> points = builder.lines(
                         0, 0,
                         0.2f, 1)
-                .build().getPoints();
+                .build().points();
 
         assertThat(points, containsInAnyOrder(
-                new Point2D.Float(0, 0),
-                new Point2D.Float(0, 0.2f),
-                new Point2D.Float(0, 0.4f),
-                new Point2D.Float(0.2f, 0.6f),
-                new Point2D.Float(0.2f, 0.8f),
-                new Point2D.Float(0.2f, 1)
+                pointCloseTo(0, 0, 1e-3),
+                pointCloseTo(0, 0.2f, 1e-3),
+                pointCloseTo(0, 0.4f, 1e-3),
+                pointCloseTo(0.2f, 0.6f, 1e-3),
+                pointCloseTo(0.2f, 0.8f, 1e-3),
+                pointCloseTo(0.2f, 1, 1e-3)
         ));
     }
 
@@ -269,15 +268,15 @@ class MapBuilderTest {
         List<Point2D> points = builder.lines(
                         0.2f, 1,
                         0, 0)
-                .build().getPoints();
+                .build().points();
 
         assertThat(points, containsInAnyOrder(
-                new Point2D.Float(0, 0),
-                new Point2D.Float(0, 0.2f),
-                new Point2D.Float(0, 0.4f),
-                new Point2D.Float(0.2f, 0.6f),
-                new Point2D.Float(0.2f, 0.8f),
-                new Point2D.Float(0.2f, 1)
+                pointCloseTo(0, 0, 1e-3),
+                pointCloseTo(0, 0.2f, 1e-3),
+                pointCloseTo(0, 0.4f, 1e-3),
+                pointCloseTo(0.2f, 0.6f, 1e-3),
+                pointCloseTo(0.2f, 0.8f, 1e-3),
+                pointCloseTo(0.2f, 1, 1e-3)
         ));
     }
 }

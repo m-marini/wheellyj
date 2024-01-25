@@ -25,8 +25,6 @@
 
 package org.mmarini.wheelly.apis;
 
-import org.nd4j.linalg.factory.Nd4j;
-
 import java.awt.*;
 import java.util.HashSet;
 import java.util.Random;
@@ -63,7 +61,7 @@ public class MapBuilder {
      * @param y y coordinate
      */
     public MapBuilder add(double x, double y) {
-        points.add(topology.toGridPoint(x, y));
+        points.add(ObstacleMap.toIndex(x, y, topology.gridSize()));
         return this;
     }
 
@@ -89,15 +87,7 @@ public class MapBuilder {
      * Returns the obstacle map
      */
     public ObstacleMap build() {
-        if (points.isEmpty()) {
-            return new ObstacleMap(Nd4j.zeros(0, 2), topology);
-        } else {
-            float[][] ary = points.stream()
-                    .map(topology::toWorldCoords)
-                    .map(coords -> new float[]{(float) coords[0], (float) coords[1]})
-                    .toArray(float[][]::new);
-            return new ObstacleMap(Nd4j.create(ary), topology);
-        }
+        return ObstacleMap.create(points, topology.gridSize());
     }
 
     /**

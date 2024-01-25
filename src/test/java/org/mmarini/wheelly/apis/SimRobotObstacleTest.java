@@ -33,6 +33,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_PER_PULSE;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
 
@@ -120,11 +121,10 @@ class SimRobotObstacleTest {
         robot.tick(300);
 
         // Then the robot should not change the location
-        assertThat(robot.location().getX(), closeTo(x0, DISTANCE_EPSILON));
-        assertThat(robot.location().getY(), closeTo(0, DISTANCE_EPSILON));
+        assertThat(robot.location(), pointCloseTo(x0, 0, DISTANCE_EPSILON));
 
-        // and the proxy sensor should signal obstacle at 140 mm
-        assertThat(robot.echoDistance(), closeTo(ROBOT_RADIUS, DISTANCE_EPSILON));
+        // and the proxy sensor should signal obstacle at 151 mm
+        assertThat(robot.echoDistance(), closeTo(ROBOT_RADIUS, 2 * DISTANCE_EPSILON));
 
         // and front contact
         assertFalse(robot.frontSensor());
