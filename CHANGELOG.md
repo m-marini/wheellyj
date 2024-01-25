@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#316](https://github.com/m-marini/wheellyj/issues/316): Updating polar map takes too much cpu
 - Issue [#320](https://github.com/m-marini/wheellyj/issues/320): Differentiate contact updates in the radar map
 - Issue [#322](https://github.com/m-marini/wheellyj/issues/322): Monitoring distance while moving to
+- Issue [#330](https://github.com/m-marini/wheellyj/issues/330): Add quadratic inequality
 
 ### Fixed
 

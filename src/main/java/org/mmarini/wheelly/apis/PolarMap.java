@@ -179,9 +179,10 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
 
         double thresholdDistance = max(minDistance, gridSize);
         Complex dAlpha = Complex.fromRad(sectorAngle() * 1.25 / 2);
-        double maxDistance2 = maxDistance * maxDistance;
-        Arrays.stream(map.cells())
-                .filter(cell -> cell.location().distanceSq(center) < maxDistance2)
+
+        map.indices()
+                .filter(map.filterForCenter(QIneq.circle(center, maxDistance)))
+                .mapToObj(map::cell)
                 .forEach(cell -> { // For each radar sector
                     for (int i = 0; i < this.sectorsNumber(); i++) { // for each polar sector
                         Complex sectorDir = this.sectorDirection(i).add(direction);

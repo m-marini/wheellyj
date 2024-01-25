@@ -1,0 +1,7 @@
+px, py, dir, x, y, expected, oppositeExpected
+0,0, 45, 0.001,-0.001, true, false
+0,0, 45, -0.001,0.001, false, true
+0,0, 45, 0,1, false, true
+0,0, 45, 1,0, true, false
+0,0, 45, 1.001,0.999, true, false
+0,0, 45, 0.999,1.001, false, true

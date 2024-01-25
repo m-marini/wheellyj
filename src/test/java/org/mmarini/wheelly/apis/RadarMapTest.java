@@ -79,11 +79,11 @@ class RadarMapTest {
                         ...........
                         ...........
                         ...........
-                        .....X.....
+                        T....X.....
                         ...........
                         ...........
                         ...........
-                        ..T........
+                        ...........
                         .....O....."""),
                 parseRadarMap("""
                         .....T.....
@@ -105,8 +105,8 @@ class RadarMapTest {
                         ....OOOOOOO
                         .....X....O
                         ..........O
-                        ..........O
                         .T........O
+                        ..........O
                         ...OOOOOOOO
                         ...........""")
         );
@@ -181,32 +181,32 @@ class RadarMapTest {
         assertEquals(timestamp + MAX_INTERVAL, map.cleanTimestamp());
     }
 
-    @Test
-    void create() {
-        RadarMap map = createRadarMap();
-
-        assertEquals(GRID_SIZE, map.topology().gridSize());
-
-        MapCell sector0 = map.cell(0);
-        assertThat(sector0.location(), pointCloseTo(-1, -1, 1e-3));
-        assertTrue(sector0.unknown());
-
-        MapCell sector1 = map.cell(HEIGHT * WIDTH - 1);
-        assertThat(sector1.location(), pointCloseTo(1, 1, 1e-3));
-        assertTrue(sector1.unknown());
-
-        MapCell sector2 = map.cell(HEIGHT * WIDTH / 2);
-        assertThat(sector2.location(), pointCloseTo(0, 0, 1e-3));
-        assertTrue(sector2.unknown());
-    }
-
     @NotNull
     private RadarMap createRadarMap() {
         return RadarMap.create(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE,
                 MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
     }
 
-    @ParameterizedTest
+    @Test
+    void createTest() {
+        RadarMap map = createRadarMap();
+
+        assertEquals(GRID_SIZE, map.topology().gridSize());
+
+        MapCell cell0 = map.cells()[0];
+        assertThat(cell0.location(), pointCloseTo(-1, -1, 1e-3));
+        assertTrue(cell0.unknown());
+
+        MapCell cell1 = map.cells()[HEIGHT * WIDTH - 1];
+        assertThat(cell1.location(), pointCloseTo(1, 1, 1e-3));
+        assertTrue(cell1.unknown());
+
+        MapCell cells2 = map.cells()[HEIGHT * WIDTH / 2];
+        assertThat(cells2.location(), pointCloseTo(0, 0, 1e-3));
+        assertTrue(cells2.unknown());
+    }
+
+    @ParameterizedTest(name = "[{index}] at {1} max {2} m {0}")
     @MethodSource("findTargetDataset")
     void findTargetTest(RadarMap map, Point2D location, double maxDistance, Point2D expected) {
         // Given a radar map with obstacles
