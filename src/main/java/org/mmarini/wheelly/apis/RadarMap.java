@@ -67,7 +67,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
         long contactPersistence = locator.path("contactPersistence").getNode(root).asLong();
         double contactRadius = locator.path("contactRadius").getNode(root).asDouble();
         Complex radarReceptiveAngle = Complex.fromDeg(locator.path("radarReceptiveAngle").getNode(root).asInt());
-        return RadarMap.create(radarWidth, radarHeight, new Point2D.Float(), radarGrid,
+        return RadarMap.create(new Point2D.Float(), radarWidth, radarHeight, radarGrid,
                 radarCleanInterval, echoPersistence,
                 contactPersistence, contactRadius, radarReceptiveAngle);
     }
@@ -75,9 +75,9 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
     /**
      * Returns the empty radar map
      *
+     * @param center             the center of map
      * @param width              the number of horizontal sector
      * @param height             the number of vertical sector
-     * @param center             the center of map
      * @param gridSize           the grid size
      * @param radarCleanInterval the clean interval (ms)
      * @param echoPersistence    the echo persistence (ms)
@@ -85,30 +85,10 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
      * @param contactRadius      the contact radius (m)
      * @param receptiveAngle     receptive angle
      */
-    public static RadarMap create(int width, int height, Point2D center, double gridSize,
+    public static RadarMap create(Point2D center, int width, int height, double gridSize,
                                   long radarCleanInterval, long echoPersistence, long contactPersistence,
                                   double contactRadius, Complex receptiveAngle) {
-        return create(width, height, center, new GridTopology(gridSize), radarCleanInterval, echoPersistence, contactPersistence, contactRadius, receptiveAngle);
-    }
-
-    /**
-     * Returns the empty radar map
-     *
-     * @param width              the width of map
-     * @param height             the height of map
-     * @param center             the center of map
-     * @param topology           the topology
-     * @param radarCleanInterval the clean interval (ms)
-     * @param echoPersistence    the echo persistence (ms)
-     * @param contactPersistence the contact persistence (ms)
-     * @param contactRadius      the contact radius (m)
-     * @param receptiveAngle     receptive angle
-     */
-    private static RadarMap create(int width, int height, Point2D center, GridTopology topology,
-                                   long radarCleanInterval, long echoPersistence, long contactPersistence,
-                                   double contactRadius, Complex receptiveAngle) {
         MapCell[] map1 = new MapCell[width * height];
-        double gridSize = topology.gridSize();
         double x0 = center.getX() - (width - 1) * gridSize / 2;
         double y0 = center.getY() - (height - 1) * gridSize / 2;
         int idx = 0;
@@ -119,7 +99,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
                         i * gridSize + y0));
             }
         }
-        return new RadarMap(topology, map1, width,
+        return new RadarMap(new GridTopology(gridSize), map1, width,
                 radarCleanInterval, echoPersistence, contactPersistence,
                 0, contactRadius, receptiveAngle);
     }
@@ -160,6 +140,11 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
         return idx >= 0 ? Optional.of(cells[idx]) : Optional.empty();
     }
 
+    /**
+     * Returns the cell at index
+     *
+     * @param index the cell index
+     */
     public MapCell cell(int index) {
         return cells[index];
     }
@@ -426,15 +411,25 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
     }
 
     /**
-     * Returns the radar map with a changed sector
+     * Returns the radar map with a changed cell at point
      *
-     * @param index  the sector index
+     * @param x      the cell abscissa
+     * @param y      the cell ordinate
      * @param mapper the unary operator that changes the sector
      */
-    public RadarMap updateCell(int index, UnaryOperator<MapCell> mapper) {
-        MapCell[] sectors = Arrays.copyOf(this.cells, this.cells.length);
-        sectors[index] = mapper.apply(sectors[index]);
-        return setCells(sectors);
+    public RadarMap updateCellAt(double x, double y, UnaryOperator<MapCell> mapper) {
+        int index = indexOf(x, y);
+        return index >= 0 ? map(IntStream.of(index), mapper) : this;
+    }
+
+    /**
+     * Returns the radar map with a changed cell at point
+     *
+     * @param location the cell location
+     * @param mapper   the unary operator that changes the sector
+     */
+    public RadarMap updateCellAt(Point2D location, UnaryOperator<MapCell> mapper) {
+        return updateCellAt(location.getX(), location.getY(), mapper);
     }
 
     /**

@@ -143,10 +143,10 @@ class RadarMapTest {
 
     static RadarMap parseRadarMap(double size, String text) {
         List<Point2D> echos = parseRadarMap("O", text);
-        RadarMap radarMap = RadarMap.create(RadarMapTest.WIDTH, RadarMapTest.HEIGHT, new Point2D.Double(), size,
+        RadarMap radarMap = RadarMap.create(new Point2D.Double(), RadarMapTest.WIDTH, RadarMapTest.HEIGHT, size,
                 MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, size, RECEPTIVE_ANGLE);
         for (Point2D p : echos) {
-            radarMap = radarMap.updateCell(radarMap.indexOf(p.getX(), p.getY()),
+            radarMap = radarMap.updateCellAt(p,
                     c -> c.addEchogenic(ECHO_TIME));
         }
         return radarMap;
@@ -202,7 +202,7 @@ class RadarMapTest {
 
     @NotNull
     private RadarMap createRadarMap() {
-        return RadarMap.create(WIDTH, HEIGHT, new Point2D.Double(), GRID_SIZE,
+        return RadarMap.create(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE,
                 MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
     }
 
@@ -235,8 +235,7 @@ class RadarMapTest {
                             double yObstacle, boolean freeTrajectory) {
         // Given a map with obstacle at xObstacle, yObstacle
         RadarMap map = createRadarMap();
-        map = map.updateCell(
-                map.indexOf(xObstacle, yObstacle),
+        map = map.updateCellAt(xObstacle, yObstacle,
                 cell -> cell.addEchogenic(100)
         );
         // And the departure point

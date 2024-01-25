@@ -25,8 +25,6 @@
 
 package org.mmarini.wheelly.apis;
 
-import java.awt.*;
-
 import static java.lang.Math.round;
 
 /**
@@ -34,18 +32,8 @@ import static java.lang.Math.round;
  *
  * @param gridSize the grid size
  */
+@Deprecated
 public record GridTopology(double gridSize) {
-
-    /**
-     * Snap the point to grid
-     *
-     * @param x the x coordinate
-     * @param y the y coordinate
-     */
-    public double[] snap(double x, double y) {
-        int[] grid = toGridCoords(x, y);
-        return toWorldCoords(grid);
-    }
 
     /**
      * Returns the grid coordinates
@@ -59,42 +47,4 @@ public record GridTopology(double gridSize) {
                 (int) round(y / gridSize)};
     }
 
-    /**
-     * Returns the grid point
-     *
-     * @param x x world coordinate
-     * @param y y world coordinate
-     */
-    public Point toGridPoint(double x, double y) {
-        int[] grid = toGridCoords(x, y);
-        return new Point(grid[0], grid[1]);
-    }
-
-    /**
-     * Returns the world coordinate (the center point of the grid cell)
-     *
-     * @param x x grid coordinate
-     * @param y y grid coordinate
-     */
-    public double[] toWorldCoords(int x, int y) {
-        return new double[]{x * gridSize, y * gridSize};
-    }
-
-    /**
-     * Returns the world coordinate
-     *
-     * @param coords the grid coordinate
-     */
-    public double[] toWorldCoords(int[] coords) {
-        return toWorldCoords(coords[0], coords[1]);
-    }
-
-    /**
-     * Returns the world coordinate
-     *
-     * @param location the grid location
-     */
-    public double[] toWorldCoords(Point location) {
-        return toWorldCoords(location.x, location.y);
-    }
 }
