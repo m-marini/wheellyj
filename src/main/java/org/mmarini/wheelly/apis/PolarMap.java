@@ -179,8 +179,9 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
 
         double thresholdDistance = max(minDistance, gridSize);
         Complex dAlpha = Complex.fromRad(sectorAngle() * 1.25 / 2);
-        map.cellStream()
-                .filter(cell -> cell.location().distance(center) < maxDistance)
+        double maxDistance2 = maxDistance * maxDistance;
+        Arrays.stream(map.cells())
+                .filter(cell -> cell.location().distanceSq(center) < maxDistance2)
                 .forEach(cell -> { // For each radar sector
                     for (int i = 0; i < this.sectorsNumber(); i++) { // for each polar sector
                         Complex sectorDir = this.sectorDirection(i).add(direction);

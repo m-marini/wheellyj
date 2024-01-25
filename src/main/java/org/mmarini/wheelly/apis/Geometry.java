@@ -31,6 +31,7 @@ package org.mmarini.wheelly.apis;
 import org.mmarini.Tuple2;
 
 import java.awt.geom.Point2D;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -218,8 +219,14 @@ public interface Geometry {
                     return (Point2D) new Point2D.Double(0, y);
                 })
                 .toList();
+        List<Point2D> result = new ArrayList<>(projections);
+        result.addAll(intersections);
+        return result;
+/*
         return Stream.concat(projections.stream(), intersections.stream())
                 .toList();
+
+ */
     }
 
     /**

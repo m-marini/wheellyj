@@ -34,10 +34,12 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -141,10 +143,10 @@ class RadarMapTest {
 
     static RadarMap parseRadarMap(double size, String text) {
         List<Point2D> echos = parseRadarMap("O", text);
-        RadarMap radarMap = RadarMap.create(RadarMapTest.WIDTH, RadarMapTest.HEIGHT, new Point2D.Double(), size,
+        RadarMap radarMap = RadarMap.create(new Point2D.Double(), RadarMapTest.WIDTH, RadarMapTest.HEIGHT, size,
                 MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, size, RECEPTIVE_ANGLE);
         for (Point2D p : echos) {
-            radarMap = radarMap.updateCell(radarMap.indexOf(p.getX(), p.getY()),
+            radarMap = radarMap.updateCellAt(p,
                     c -> c.addEchogenic(ECHO_TIME));
         }
         return radarMap;
@@ -154,13 +156,12 @@ class RadarMapTest {
     void cleanNoTimeout() {
         long timestamp = System.currentTimeMillis();
         RadarMap map = createRadarMap()
-                .map((i, sector) -> i >= 10 && i < 20
-                        ? sector.addEchogenic(timestamp)
-                        : sector);
+                .map(IntStream.range(10, 20),
+                        sector -> sector.addEchogenic(timestamp));
 
         map = map.clean(timestamp);
 
-        assertEquals(10L, map.cellStream()
+        assertEquals(10L, Arrays.stream(map.cells())
                 .filter(Predicate.not(MapCell::unknown))
                 .count());
         assertEquals(timestamp + MAX_INTERVAL, map.cleanTimestamp());
@@ -170,11 +171,12 @@ class RadarMapTest {
     void cleanTimeout() {
         long timestamp = System.currentTimeMillis();
         RadarMap map = createRadarMap()
-                .map((i, sector) -> i >= 10 && i < 20 ? sector.addEchogenic(timestamp - MAX_INTERVAL - 1) : sector);
+                .map(IntStream.range(10, 20),
+                        cell -> cell.addEchogenic(timestamp - MAX_INTERVAL - 1));
 
         map = map.clean(timestamp);
 
-        assertTrue(map.cellStream()
+        assertTrue(Arrays.stream(map.cells())
                 .allMatch(MapCell::unknown));
         assertEquals(timestamp + MAX_INTERVAL, map.cleanTimestamp());
     }
@@ -200,7 +202,7 @@ class RadarMapTest {
 
     @NotNull
     private RadarMap createRadarMap() {
-        return RadarMap.create(WIDTH, HEIGHT, new Point2D.Double(), GRID_SIZE,
+        return RadarMap.create(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE,
                 MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
     }
 
@@ -233,8 +235,7 @@ class RadarMapTest {
                             double yObstacle, boolean freeTrajectory) {
         // Given a map with obstacle at xObstacle, yObstacle
         RadarMap map = createRadarMap();
-        map = map.updateCell(
-                map.indexOf(xObstacle, yObstacle),
+        map = map.updateCellAt(xObstacle, yObstacle,
                 cell -> cell.addEchogenic(100)
         );
         // And the departure point
@@ -335,7 +336,7 @@ class RadarMapTest {
                 ...........
                 ...........
                 ...........""");
-        int contactsNumber = (int) map.cellStream().filter(MapCell::hasContact).count();
+        int contactsNumber = (int) Arrays.stream(map.cells()).filter(MapCell::hasContact).count();
         assertEquals(contacts.size(), contactsNumber);
         for (Point2D pt : contacts) {
             assertThat(format("Point %s does not match", pt), map.cell(pt.getX(), pt.getY()).filter(MapCell::hasContact),
@@ -370,7 +371,7 @@ class RadarMapTest {
             assertThat(format("Point %s does not match", pt), map.cell(pt.getX(), pt.getY()).filter(MapCell::hasContact),
                     optionalOf(any(MapCell.class)));
         }
-        int contactsNumber = (int) map.cellStream().filter(MapCell::hasContact).count();
+        int contactsNumber = (int) Arrays.stream(map.cells()).filter(MapCell::hasContact).count();
         assertEquals(contacts.size(), contactsNumber);
     }
 
@@ -397,7 +398,7 @@ class RadarMapTest {
                 ...........
                 ...........
                 ...........""");
-        int contactsNumber = (int) map.cellStream().filter(MapCell::hasContact).count();
+        int contactsNumber = (int) Arrays.stream(map.cells()).filter(MapCell::hasContact).count();
         for (Point2D pt : contacts) {
             assertThat(format("Point %s does not match", pt), map.cell(pt.getX(), pt.getY()).filter(MapCell::hasContact),
                     optionalOf(any(MapCell.class)));
@@ -432,7 +433,7 @@ class RadarMapTest {
             assertThat(format("Point %s does not match", pt), map.cell(pt.getX(), pt.getY()).filter(MapCell::hasContact),
                     optionalOf(any(MapCell.class)));
         }
-        int contactsNumber = (int) map.cellStream().filter(MapCell::hasContact).count();
+        int contactsNumber = (int) Arrays.stream(map.cells()).filter(MapCell::hasContact).count();
         assertEquals(contacts.size(), contactsNumber);
     }
 
@@ -463,7 +464,7 @@ class RadarMapTest {
             assertThat(format("Point %s does not match", pt), map.cell(pt.getX(), pt.getY()).filter(MapCell::hasContact),
                     optionalOf(any(MapCell.class)));
         }
-        int contactsNumber = (int) map.cellStream().filter(MapCell::hasContact).count();
+        int contactsNumber = (int) Arrays.stream(map.cells()).filter(MapCell::hasContact).count();
         assertEquals(contacts.size(), contactsNumber);
     }
 

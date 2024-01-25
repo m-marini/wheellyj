@@ -30,32 +30,79 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.ops.transforms.Transforms;
 
+import java.awt.*;
 import java.awt.geom.Point2D;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import java.util.stream.DoubleStream;
 
+import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
 
 /**
  * Ths obstacle map defines the location of obstacle in a grid space
  *
+ * @param indices     the indices of obstacle
+ * @param gridSize    the grid size (m)
  * @param coordinates the coordinates array of n x 2 float
- * @param topology    the grid topology
  */
-public record ObstacleMap(INDArray coordinates, GridTopology topology) {
-    public static ObstacleMap create(INDArray indArray, double gridSize) {
-        return new ObstacleMap(indArray, new GridTopology(gridSize));
+public record ObstacleMap(List<Point> indices, double gridSize, INDArray coordinates) {
+
+    /**
+     * Returns the map of obstacles
+     *
+     * @param indices  the obstacle location indices
+     * @param gridSize the gridSize
+     */
+    public static ObstacleMap create(Collection<Point> indices, double gridSize) {
+        // Creates the unique indices
+        List<Point> uniqueIndices = indices.stream().distinct().collect(Collectors.toList());
+        // Creates the coordinates
+        double[] ary = uniqueIndices.stream()
+                .map(index -> toPoint(index, gridSize))
+                .flatMapToDouble(p -> DoubleStream.of(p.getX(), p.getY()))
+                .toArray();
+        // Creates the map
+        return new ObstacleMap(uniqueIndices,
+                gridSize,
+                Nd4j.createFromArray(ary).castTo(DataType.FLOAT).reshape(uniqueIndices.size(), 2));
+    }
+
+    /**
+     * Returns the indices of the point
+     *
+     * @param x        the abscissa of the point
+     * @param y        the ordinate of the point
+     * @param gridSize the grid size
+     */
+    public static Point toIndex(double x, double y, double gridSize) {
+        int i = (int) round(x / gridSize);
+        int j = (int) round(y / gridSize);
+        return new Point(i, j);
+    }
+
+    /**
+     * Returns the point for the given index
+     *
+     * @param point    the index
+     * @param gridSize the grid size
+     */
+    public static Point2D toPoint(Point point, double gridSize) {
+        return new Point2D.Double(point.x * gridSize, point.y * gridSize);
     }
 
     /**
      * Create the obstacle map
      *
+     * @param indices     the indices of obstacle
+     * @param gridSize    the grid size
      * @param coordinates the coordinates array of n x 2 float
-     * @param topology    the grid topology
      */
-    public ObstacleMap(INDArray coordinates, GridTopology topology) {
-        requireNonNull(coordinates);
+    public ObstacleMap(List<Point> indices, double gridSize, INDArray coordinates) {
+        this.indices = requireNonNull(indices);
+        this.coordinates = requireNonNull(coordinates);
+        this.gridSize = gridSize;
         if (coordinates.shape().length != 2) {
             throw new IllegalArgumentException("Wrong rank");
         }
@@ -65,8 +112,6 @@ public record ObstacleMap(INDArray coordinates, GridTopology topology) {
         if (coordinates.dataType() != DataType.FLOAT) {
             throw new IllegalArgumentException("Wrong data type");
         }
-        this.coordinates = coordinates;
-        this.topology = requireNonNull(topology);
     }
 
     /**
@@ -76,33 +121,7 @@ public record ObstacleMap(INDArray coordinates, GridTopology topology) {
      * @param y coordinate
      */
     public boolean contains(double x, double y) {
-        double[] location = topology.snap(x, y);
-        INDArray point = Nd4j.createFromArray(location).castTo(DataType.FLOAT);
-        int n = getSize();
-        for (int i = 0; i < n; i++) {
-            INDArray o = getCoordinates(i);
-            if (o.equals(point)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public INDArray getCoordinates(int i) {
-        return coordinates().getRow(i);
-    }
-
-    public Point2D getPoint(int index) {
-        return new Point2D.Float(coordinates.getFloat(index, 0), coordinates.getFloat(index, 1));
-    }
-
-    /**
-     * Returns the points of the map
-     */
-    public List<Point2D> getPoints() {
-        return IntStream.range(0, getSize()).mapToObj(i ->
-                new Point2D.Float(coordinates.getFloat(i, 0), coordinates.getFloat(i, 1))
-        ).collect(Collectors.toList());
+        return indices.contains(toIndex(x, y, gridSize));
     }
 
     /**
@@ -120,10 +139,10 @@ public record ObstacleMap(INDArray coordinates, GridTopology topology) {
      * @param direction      the direction
      * @param directionRange the direction range
      */
-    public int indexOfNearest(double x, double y, Complex direction, Complex directionRange) {
+    public Point2D nearest(double x, double y, Complex direction, Complex directionRange) {
         int n = getSize();
         if (n == 0) {
-            return -1;
+            return null;
         }
         INDArray point = Nd4j.createFromArray(x, y).reshape(1, 2);
 
@@ -166,13 +185,22 @@ public record ObstacleMap(INDArray coordinates, GridTopology topology) {
             float dist = distances.getFloat(i, 0);
             if (dist == 0) {
                 // the obstacle coincides with the given position
-                return i;
+                return toPoint(indices.get(i), gridSize);
             } else if (val == 1 && dist < minDist) {
                 // the obstacle is valid and is near the previous found
                 index = i;
                 minDist = dist;
             }
         }
-        return index;
+        return index >= 0 ? toPoint(indices.get(index), gridSize) : null;
+    }
+
+    /**
+     * Returns the points of the map
+     */
+    public List<Point2D> points() {
+        return indices.stream()
+                .map(index -> toPoint(index, gridSize))
+                .toList();
     }
 }

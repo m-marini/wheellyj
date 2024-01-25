@@ -59,7 +59,7 @@ class PolarMapTest {
     }
 
     private RadarMap createRadarMap() {
-        return RadarMap.create(31, 31, new Point2D.Double(), GRID_SIZE, MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
+        return RadarMap.create(new Point2D.Double(), 31, 31, GRID_SIZE, MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
     }
 
     @ParameterizedTest
@@ -110,8 +110,8 @@ class PolarMapTest {
          */
         Point2D center = new Point2D.Double();
         long timestamp = System.currentTimeMillis();
-        RadarMap radarMap = RadarMap.create(11, 11, center, GRID_SIZE, MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
-        radarMap = radarMap.updateCell(radarMap.indexOf(obsX, obsY), sect -> sect.addEchogenic(timestamp));
+        RadarMap radarMap = RadarMap.create(center, 11, 11, GRID_SIZE, MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
+        radarMap = radarMap.updateCellAt(obsX, obsY, sect -> sect.addEchogenic(timestamp));
 
         // When create a polar map from center directed to mapDir limited by GRID_SIZE and 3m
         PolarMap polarMap = PolarMap.create(4)
@@ -149,9 +149,8 @@ class PolarMapTest {
         // Given a completely empty radar map 31x31 except unknown at 0.2, 1.6
         long timestamp = System.currentTimeMillis();
         RadarMap radarMap = createRadarMap().map(s -> s.addAnechoic(timestamp));
-        int index = radarMap.indexOf(0.2, 1.6);
-        radarMap = radarMap.updateCell(index, s -> s.addEchogenic(timestamp));
-        assertFalse(radarMap.cell(index).unknown());
+        radarMap = radarMap.updateCellAt(0.2, 1.6, s -> s.addEchogenic(timestamp));
+        assertFalse(radarMap.cell(0.2, 1.6).filter(MapCell::unknown).isPresent());
 
         // And a polar map with 24 cells
         PolarMap polarMap1 = PolarMap.create(24);
@@ -195,9 +194,8 @@ class PolarMapTest {
         long timestamp = System.currentTimeMillis();
         RadarMap radarMap = createRadarMap();
 
-        int index = radarMap.indexOf(0.2, 1.6);
-        radarMap = radarMap.updateCell(index, s -> s.addEchogenic(timestamp));
-        assertTrue(radarMap.cell(index).echogenic());
+        radarMap = radarMap.updateCellAt(0.2, 1.6, s -> s.addEchogenic(timestamp));
+        assertTrue(radarMap.cell(0.2, 1.6).filter(MapCell::echogenic).isPresent());
 
         PolarMap polarMap = PolarMap.create(24).update(radarMap,
                 new Point2D.Double(0.2, 0.2), Complex.DEG90,

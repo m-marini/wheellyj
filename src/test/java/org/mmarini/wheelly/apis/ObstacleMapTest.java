@@ -27,15 +27,19 @@ package org.mmarini.wheelly.apis;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.CsvFileSource;
 import org.nd4j.linalg.factory.Nd4j;
 
+import java.awt.*;
 import java.awt.geom.Point2D;
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mmarini.Matchers.pointCloseTo;
 
 class ObstacleMapTest {
 
@@ -43,67 +47,55 @@ class ObstacleMapTest {
         Nd4j.zeros(0);
     }
 
-    @ParameterizedTest
-    @CsvSource({
-            "-1,0, 90,30, 0",
-            "-1,0, -90,30, -1",
-            "0,0, 0,90, 0",
-            "0,0, -180,90, 0",
-            "3,2, 45,10, 1",
-            "3,2, -135,12, 0",
-            "3,2, -135,11, -1",
-            "3,2, 135,10, -1",
+    static ObstacleMap createMap(int... indices) {
+        Set<Point> idx = new HashSet<>();
+        for (int i = 0; i < indices.length; i += 2) {
+            idx.add(new Point(indices[i], indices[i + 1]));
+        }
+        return ObstacleMap.create(idx, 0.2);
+    }
+
+    @ParameterizedTest(name = "[{index}] at({0},{1}) to {2} DEG ~{3} DEG")
+    @CsvFileSource(numLinesToSkip = 1, resources = {
+            "/org/mmarini/wheelly/apis/ObstacleMapTest/nearestTest.csv"
     })
-    void nearest(double x, double y, int dir, int dDir, int expected) {
+    void nearestTest(double x, double y, int dir, int dDir, boolean exist, double xo, double yo) {
         // Given an obstacle map with 2 obstacle at (0,0), (4,3)
-        ObstacleMap map = ObstacleMap.create(Nd4j.create(new float[][]{
-                {0, 0},
-                {4, 3}
-        }), 0.2f);
+        ObstacleMap map = createMap(
+                0, 0,
+                20, 15);
 
         // When find nearest cell from (x, y) to dìr DEG within +- dDir DEG
-        int i1 = map.indexOfNearest(x, y, Complex.fromDeg(dir), Complex.fromDeg(dDir));
+        Point2D i1 = map.nearest(x, y, Complex.fromDeg(dir), Complex.fromDeg(dDir));
 
         // Then should be expected
-        assertEquals(expected, i1);
+        assertThat(i1, exist ? pointCloseTo(xo, yo, 1e-3) : nullValue());
     }
 
     @Test
     void testContains() {
-        ObstacleMap map = ObstacleMap.create(Nd4j.create(new float[][]{
-                {0f, 0f},
-                {0.2f, 0.2f}
-        }), 0.2);
+        ObstacleMap map = createMap(
+                0, 0,
+                1, 1);
         assertTrue(map.contains(0.09, 0.09));
         assertFalse(map.contains(0.59, 0.59));
     }
 
     @Test
-    void testGet() {
-        ObstacleMap map = ObstacleMap.create(Nd4j.create(new float[][]{
-                {0f, 0f},
-                {0.2f, 0.2f}
-        }), 0.2f);
-        assertThat(map.getCoordinates(1), equalTo(Nd4j.createFromArray(0.2f, 0.2f)));
-    }
-
-    @Test
     void testGetPoints() {
-        ObstacleMap map = ObstacleMap.create(Nd4j.create(new float[][]{
-                {0f, 0f},
-                {0.2f, 0.2f}
-        }), 0.2f);
-        assertThat(map.getPoints(), contains(
-                new Point2D.Float(0, 0),
-                new Point2D.Float(0.2f, 0.2f)));
+        ObstacleMap map = createMap(
+                0, 0,
+                1, 1);
+        assertThat(map.points(), containsInAnyOrder(
+                pointCloseTo(0, 0, 1e-3),
+                pointCloseTo(0.2, 0.2, 1e-3)));
     }
 
     @Test
     void testSize() {
-        ObstacleMap map = ObstacleMap.create(Nd4j.create(new float[][]{
-                {0f, 0f},
-                {0.2f, 0.2f}
-        }), 0.2f);
+        ObstacleMap map = createMap(
+                0, 0,
+                1, 1);
         assertThat(map.getSize(), equalTo(2));
     }
 }

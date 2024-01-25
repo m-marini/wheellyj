@@ -33,11 +33,12 @@ import org.slf4j.LoggerFactory;
 import java.awt.geom.Point2D;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
-import java.util.function.BiFunction;
+import java.util.function.IntPredicate;
+import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import static java.lang.Math.abs;
 import static java.util.Objects.requireNonNull;
@@ -66,7 +67,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
         long contactPersistence = locator.path("contactPersistence").getNode(root).asLong();
         double contactRadius = locator.path("contactRadius").getNode(root).asDouble();
         Complex radarReceptiveAngle = Complex.fromDeg(locator.path("radarReceptiveAngle").getNode(root).asInt());
-        return RadarMap.create(radarWidth, radarHeight, new Point2D.Float(), radarGrid,
+        return RadarMap.create(new Point2D.Float(), radarWidth, radarHeight, radarGrid,
                 radarCleanInterval, echoPersistence,
                 contactPersistence, contactRadius, radarReceptiveAngle);
     }
@@ -74,9 +75,9 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
     /**
      * Returns the empty radar map
      *
+     * @param center             the center of map
      * @param width              the number of horizontal sector
      * @param height             the number of vertical sector
-     * @param center             the center of map
      * @param gridSize           the grid size
      * @param radarCleanInterval the clean interval (ms)
      * @param echoPersistence    the echo persistence (ms)
@@ -84,30 +85,10 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
      * @param contactRadius      the contact radius (m)
      * @param receptiveAngle     receptive angle
      */
-    public static RadarMap create(int width, int height, Point2D center, double gridSize,
+    public static RadarMap create(Point2D center, int width, int height, double gridSize,
                                   long radarCleanInterval, long echoPersistence, long contactPersistence,
                                   double contactRadius, Complex receptiveAngle) {
-        return create(width, height, center, new GridTopology(gridSize), radarCleanInterval, echoPersistence, contactPersistence, contactRadius, receptiveAngle);
-    }
-
-    /**
-     * Returns the empty radar map
-     *
-     * @param width              the width of map
-     * @param height             the height of map
-     * @param center             the center of map
-     * @param topology           the topology
-     * @param radarCleanInterval the clean interval (ms)
-     * @param echoPersistence    the echo persistence (ms)
-     * @param contactPersistence the contact persistence (ms)
-     * @param contactRadius      the contact radius (m)
-     * @param receptiveAngle     receptive angle
-     */
-    private static RadarMap create(int width, int height, Point2D center, GridTopology topology,
-                                   long radarCleanInterval, long echoPersistence, long contactPersistence,
-                                   double contactRadius, Complex receptiveAngle) {
         MapCell[] map1 = new MapCell[width * height];
-        double gridSize = topology.gridSize();
         double x0 = center.getX() - (width - 1) * gridSize / 2;
         double y0 = center.getY() - (height - 1) * gridSize / 2;
         int idx = 0;
@@ -118,7 +99,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
                         i * gridSize + y0));
             }
         }
-        return new RadarMap(topology, map1, width,
+        return new RadarMap(new GridTopology(center, width, height, gridSize), map1, width,
                 radarCleanInterval, echoPersistence, contactPersistence,
                 0, contactRadius, receptiveAngle);
     }
@@ -159,15 +140,13 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
         return idx >= 0 ? Optional.of(cells[idx]) : Optional.empty();
     }
 
+    /**
+     * Returns the cell at index
+     *
+     * @param index the cell index
+     */
     public MapCell cell(int index) {
         return cells[index];
-    }
-
-    /**
-     * Returns the cell stream
-     */
-    public Stream<MapCell> cellStream() {
-        return Arrays.stream(cells);
     }
 
     /**
@@ -197,6 +176,15 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
     }
 
     /**
+     * Returns the predicate relative to index of a cell predicate
+     *
+     * @param f the cell predicate
+     */
+    IntPredicate filter(Predicate<MapCell> f) {
+        return i -> f.test(cells[i]);
+    }
+
+    /**
      * Returns the safe point from location toward escape direction at safe distance but less than max distance
      *
      * @param location     the location
@@ -209,20 +197,20 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
         double safeDistance2 = safeDistance * safeDistance;
         double maxDistance2 = maxDistance * maxDistance;
         // Extracts the empty cell
-        Optional<Point2D> result = cellStream().filter(c ->
-                        (c.empty() || c.unknown()))
+        Optional<Point2D> result = Arrays.stream(cells)
+                .filter(c -> (c.empty() || c.unknown()))
                 .map(MapCell::location)
                 // Filter the points to the direction
                 // and at a distance no longer maxDistance
                 // and with free trajectory
                 .filter(p -> {
                     double dist2 = location.distanceSq(p);
-                    return !Complex.direction(p, location).isCloseTo(escapeDir, Complex.DEG90)
-                            && dist2 >= safeDistance2
-                            && dist2 >= maxDistance2
-                            && freeTrajectory(location, p, safeDistance);
+                    return dist2 >= safeDistance2 && dist2 >= maxDistance2;
                 })
-                .min(Comparator.comparingDouble(location::distanceSq));
+                .filter(p -> !Complex.direction(p, location).isCloseTo(escapeDir, Complex.DEG90))
+                .sorted(Comparator.comparingDouble(location::distanceSq))
+                .filter(p -> freeTrajectory(location, p, safeDistance))
+                .findFirst();
         logger.atDebug().log("findSafeTarget completed in {} ms", System.currentTimeMillis() - t0);
         return result;
     }
@@ -238,30 +226,29 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
         double maxDistance2 = maxDistance * maxDistance;
         double safeDistance2 = safeDistance * safeDistance;
         // Extracts the target unknown cells
-        return cellStream()
+        List<MapCell> eligibleCells = Arrays.stream(cells)
+                // Filters cell at a distance no longer maxDistance and with free trajectory
+                .filter(cell -> {
+                    double d2 = location.distanceSq(cell.location());
+                    return d2 >= safeDistance2
+                            && d2 <= maxDistance2;
+                })
+                .toList();
+        return eligibleCells.stream()
                 .filter(MapCell::unknown)
                 .map(MapCell::location)
-                // Filters cell at a distance no longer maxDistance and with free trajectory
-                .filter(p -> {
-                    double d2 = location.distanceSq(p);
-                    return d2 >= safeDistance2
-                            && d2 <= maxDistance2
-                            && freeTrajectory(location, p, safeDistance);
-                })
-                .max(Comparator.comparingDouble(location::distanceSq))
+                .sorted(Comparator.<Point2D>comparingDouble(location::distanceSq).reversed())
+                .filter(p -> freeTrajectory(location, p, safeDistance))
+                .findFirst()
                 .or(() ->
                         // unknown target not found: search for empty target cells
-                        cellStream()
+                        eligibleCells.stream()
                                 .filter(MapCell::empty)
                                 .map(MapCell::location)
+                                .sorted(Comparator.<Point2D>comparingDouble(location::distanceSq).reversed())
                                 // Filters cell at a distance no longer maxDistance and with free trajectory
-                                .filter(p -> {
-                                    double d2 = location.distanceSq(p);
-                                    return d2 >= safeDistance2
-                                            && d2 <= maxDistance2
-                                            && freeTrajectory(location, p, safeDistance);
-                                })
-                                .max(Comparator.comparingDouble(location::distanceSq)));
+                                .filter(p -> freeTrajectory(location, p, safeDistance))
+                                .findFirst());
     }
 
     /**
@@ -276,7 +263,8 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
         Complex dir = Complex.direction(from, to);
         double distance = from.distance(to);
         double maxDistance = distance + safeDistance;
-        return cellStream().filter(MapCell::hindered)
+        return Arrays.stream(cells())
+                .filter(MapCell::hindered)
                 // Get all projections of hindered cells
                 .flatMap(cell -> Geometry.lineSquareProjections(from, dir, cell.location(), size).stream())
                 // Check intersection of oll cells with trajectory
@@ -292,24 +280,14 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
      * @param y y coordinate of point
      */
     public int indexOf(double x, double y) {
-        Point2D offset = cells[0].location();
-        int[] indices = topology.toGridCoords(x - offset.getX(), y - offset.getY());
-        if (indices[0] < 0 || indices[0] >= stride || indices[1] < 0) {
-            return -1;
-        }
-        int idx = indices[0] + indices[1] * stride;
-        return idx < cells.length ? idx : -1;
+        return topology.indexOf(x, y);
     }
 
     /**
-     * Returns the radar map with cells mapped by function
-     *
-     * @param mapper the function map (index, sector)->sector
+     * Returns all the cells indices
      */
-    public RadarMap map(BiFunction<Integer, MapCell, MapCell> mapper) {
-        return setCells(IntStream.range(0, cells.length)
-                .mapToObj(i -> mapper.apply(i, cells[i]))
-                .toArray(MapCell[]::new));
+    IntStream indices() {
+        return IntStream.range(0, cells.length);
     }
 
     /**
@@ -318,11 +296,25 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
      * @param mapper the function map sector->sector
      */
     public RadarMap map(UnaryOperator<MapCell> mapper) {
-        return setCells(Arrays.stream(cells).map(mapper)
-                .toArray(MapCell[]::new));
+        return map(IntStream.range(0, cells.length), mapper);
     }
 
-    public int sectorsNumber() {
+    /**
+     * Returns the radar map with a changed cells set
+     *
+     * @param indices the cell indices
+     * @param mapper  the mapper function
+     */
+    public RadarMap map(IntStream indices, UnaryOperator<MapCell> mapper) {
+        MapCell[] sectors = Arrays.copyOf(this.cells, this.cells.length);
+        indices.forEach(index -> sectors[index] = mapper.apply(cells[index]));
+        return setCells(sectors);
+    }
+
+    /**
+     * Returns the number of cells
+     */
+    public int numCells() {
         return cells.length;
     }
 
@@ -350,20 +342,33 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
      * @param contactsTimestamp the contacts timestamp (ms)
      */
     public RadarMap setContactsAt(Point2D location, Complex direction, boolean frontContact, boolean rearContact, double contactsRadius, long contactsTimestamp) {
-        return map(
-                cell -> {
-                    double distance = cell.location().distance(location);
-                    // cell directionDeg relative to robot head
-                    Complex cellDirRelative = Complex.direction(location, cell.location()).sub(direction);
-                    return (distance == 0
-                            || (distance <= contactsRadius
-                            && (frontContact && cellDirRelative.y() >= 0
-                            || rearContact && cellDirRelative.y() <= 0)))
-                            ? cell.setContact(contactsTimestamp)
-                            : cell;
-                }
-        );
+        double contactRadius2 = contactsRadius * contactsRadius;
+        IntPredicate distancePredicate = filter(cell -> location.distanceSq(cell.location()) <= contactRadius2);
+        Predicate<MapCell> contactPredicate = frontContact
+                ? rearContact
+                // Both contacts
+                ? cell -> true
+                // Front contact only
+                : cell -> {
+            Complex cellDirRelative = Complex.direction(location, cell.location()).sub(direction);
+            return cellDirRelative.y() >= 0;
+        }
+                : rearContact
+                // Rear contact only
+                ? cell -> {
+            Complex cellDirRelative = Complex.direction(location, cell.location()).sub(direction);
+            return cellDirRelative.y() <= 0;
+        }
+                // None contact
+                : cell -> false;
+        IntStream indices = indices()
+                .filter(distancePredicate)
+                .filter(filter(cell ->
+                        location.equals(cell.location()) || contactPredicate.test(cell)
+                ));
+        return map(indices, cell -> cell.setContact(contactsTimestamp));
     }
+
 
     /**
      * Returns the radar map updated with the radar status.
@@ -400,15 +405,25 @@ public record RadarMap(GridTopology topology, MapCell[] cells, int stride,
     }
 
     /**
-     * Returns the radar map with a changed sector
+     * Returns the radar map with a changed cell at point
      *
-     * @param index the sector index
-     * @param f     the unary operator that changes the sector
+     * @param x      the cell abscissa
+     * @param y      the cell ordinate
+     * @param mapper the unary operator that changes the sector
      */
-    public RadarMap updateCell(int index, UnaryOperator<MapCell> f) {
-        MapCell[] sectors = Arrays.copyOf(this.cells, this.cells.length);
-        sectors[index] = f.apply(sectors[index]);
-        return setCells(sectors);
+    public RadarMap updateCellAt(double x, double y, UnaryOperator<MapCell> mapper) {
+        int index = indexOf(x, y);
+        return index >= 0 ? map(IntStream.of(index), mapper) : this;
+    }
+
+    /**
+     * Returns the radar map with a changed cell at point
+     *
+     * @param location the cell location
+     * @param mapper   the unary operator that changes the sector
+     */
+    public RadarMap updateCellAt(Point2D location, UnaryOperator<MapCell> mapper) {
+        return updateCellAt(location.getX(), location.getY(), mapper);
     }
 
     /**

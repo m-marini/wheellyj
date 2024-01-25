@@ -38,7 +38,10 @@ import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.KpiCSVSubscriber;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.SignalSpec;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apis.ObstacleMap;
+import org.mmarini.wheelly.apis.RobotApi;
+import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.SimRobot;
 import org.mmarini.wheelly.envs.PolarRobotEnv;
 import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.wheelly.envs.WithPolarMap;
@@ -288,10 +291,9 @@ public class Wheelly {
         RobotApi robot = environment.getController().getRobot();
         if (robot instanceof SimRobot) {
             Optional<ObstacleMap> obstaclesMap = ((SimRobot) robot).obstaclesMap();
-            obstaclesMap.map(ObstacleMap::getPoints)
+            obstaclesMap.map(ObstacleMap::points)
                     .ifPresent(envPanel::setObstacleMap);
-            obstaclesMap.map(ObstacleMap::topology)
-                    .map(GridTopology::gridSize)
+            obstaclesMap.map(ObstacleMap::gridSize)
                     .ifPresent(envPanel::setObstacleSize);
         }
         environment.start();

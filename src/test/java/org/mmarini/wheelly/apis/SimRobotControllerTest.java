@@ -58,7 +58,7 @@ class SimRobotControllerTest {
 
     static RobotController createController(double simSpeed) {
         Random random = new Random(SEED);
-        ObstacleMap obstacles = new MapBuilder(new GridTopology(GRID_SIZE))
+        ObstacleMap obstacles = MapBuilder.create(GRID_SIZE)
                 .add(0, 1)
                 .build();
         SimRobot robot = new SimRobot(obstacles,
