@@ -45,6 +45,7 @@ public class MockRobot implements RobotApi {
         float sensorDistance1 = (float) locator.path("distance").getNode(root).asDouble(0);
         return new MockRobot(robotPos1, robotDir1, sensorDir1, sensorDistance1);
     }
+
     private final Point2D robotPos;
     private final Complex robotDir;
     private final Complex sensorDir;

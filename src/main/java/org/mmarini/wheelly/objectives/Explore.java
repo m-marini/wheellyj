@@ -35,6 +35,7 @@ import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.wheelly.envs.WithRadarMap;
 import org.mmarini.yaml.Locator;
 
+import java.util.Arrays;
 import java.util.function.Predicate;
 import java.util.function.ToDoubleFunction;
 
@@ -72,11 +73,11 @@ public interface Explore {
                 return -1;
             }
             RadarMap radarMap = env.getRadarMap();
-            long knownSectorsNumber = radarMap.cellStream()
+            long knownSectorsNumber = Arrays.stream(radarMap.cells())
                     .filter(Predicate.not(MapCell::unknown))
                     .count();
             // encourages the exploration of unfamiliar areas
-            double isKnown = ((double) knownSectorsNumber) / radarMap.sectorsNumber();
+            double isKnown = ((double) knownSectorsNumber) / radarMap.numCells();
             // encourages the linear speed
             double linSpeed = (status.rightPps() + status.leftPps()) / MAX_PPS / 2;
             double isLinearSpeed = clip(linSpeed, 0, 1);

@@ -137,7 +137,7 @@ class SimRobotTest {
      */
     private SimRobot createRobot() {
         Random random = new Random(SEED);
-        return new SimRobot(new MapBuilder(new GridTopology(GRID_SIZE)).build(),
+        return new SimRobot(MapBuilder.create(GRID_SIZE).build(),
                 random, 0, 0, Complex.fromDeg(15), MAX_PPS,
                 INTERVAL, INTERVAL);
     }

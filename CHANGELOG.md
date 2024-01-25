@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 
 - Issue [#321](https://github.com/m-marini/wheellyj/issues/321) : Robot simulation stalls 
+- Issue [#327](https://github.com/m-marini/wheellyj/issues/327): Find free target method takes too much cpu
+
 
 ## [0.12.1] 2024-01-14
 

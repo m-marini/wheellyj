@@ -225,7 +225,7 @@ public class SimRobot implements RobotApi {
         this.robotFixture = robot.createFixture(fixDef);
 
         // Create obstacle fixture
-        for (Point2D point : obstacleMap.getPoints()) {
+        for (Point2D point : obstacleMap.points()) {
             createObstacle(world, point);
         }
     }
@@ -585,11 +585,10 @@ public class SimRobot implements RobotApi {
         boolean prevEchoAlarm = echoDistance > 0 && echoDistance <= SAFE_DISTANCE;
         this.echoDistance = 0;
         // Finds the nearest obstacle in proxy sensor range
-        int obsIdx = obstacleMap.indexOfNearest(x, y, sensorRad, sensorReceptiveAngle);
-        if (obsIdx >= 0) {
+        Point2D obs = obstacleMap.nearest(x, y, sensorRad, sensorReceptiveAngle);
+        if (obs != null) {
             // Computes the distance of obstacles
-            Point2D obs = obstacleMap.getPoint(obsIdx);
-            double dist = obs.distance(position) - obstacleMap.topology().gridSize() / 2
+            double dist = obs.distance(position) - obstacleMap.gridSize() / 2
                     + random.nextGaussian() * errSensor;
             echoDistance = dist > 0 && dist < MAX_DISTANCE ? dist : 0;
         }

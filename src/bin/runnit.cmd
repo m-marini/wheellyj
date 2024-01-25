@@ -6,10 +6,13 @@ rem set JAVA_HOME=...
 rem set PATH=%JAVA_HOME%\bin
 
 rem run
-cd ..
+rem cd ..
 echo 
 rem start javaw -jar "lib/${pom.build.finalName}.jar"
-java -jar "lib/${pom.build.finalName}.jar" %1 %2
+rem java -jar "lib/${pom.build.finalName}.jar" %1 %2
+
+java -cp "lib/*;../classes" org.mmarini.wheelly.apps.RobotExecutor %2 %3
+
 IF ERRORLEVEL 2 goto noJavaw
 goto end
 
