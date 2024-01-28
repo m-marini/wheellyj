@@ -5,6 +5,12 @@ The code of Arduino controller is at [Wheellino project](https://github.com/m-ma
 
 The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
+## Release 0.13.0
+
+- Simplified yaml file schema
+- Added filtering RadaMap cells by quadratic inequalities (performance improve)
+- Fixed robot simulation stall and performance issues
+
 ## Release 0.12.1
 
 - Set max speed on move state
