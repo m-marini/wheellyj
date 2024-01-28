@@ -14,12 +14,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#320](https://github.com/m-marini/wheellyj/issues/320): Differentiate contact updates in the radar map
 - Issue [#322](https://github.com/m-marini/wheellyj/issues/322): Monitoring distance while moving to
 - Issue [#330](https://github.com/m-marini/wheellyj/issues/330): Add quadratic inequality
+- Issue [#332](https://github.com/m-marini/wheellyj/issues/332): Filter cells by area
 
 ### Fixed
 
 - Issue [#321](https://github.com/m-marini/wheellyj/issues/321) : Robot simulation stalls 
 - Issue [#327](https://github.com/m-marini/wheellyj/issues/327): Find free target method takes too much cpu
-
 
 ## [0.12.1] 2024-01-14
 

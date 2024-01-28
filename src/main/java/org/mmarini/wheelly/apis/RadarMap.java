@@ -43,6 +43,7 @@ import java.util.stream.IntStream;
 import static java.lang.Math.abs;
 import static java.lang.Math.sqrt;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.AreaExpression.*;
 
 /**
  * The RadarMap keeps the obstacle signal results of the space round the center
@@ -55,11 +56,13 @@ import static java.util.Objects.requireNonNull;
  * @param cleanTimestamp     the next clean instant (ms)
  * @param contactRadius      the receptive distance (m)
  * @param receptiveAngle     the receptive angle
- * @param centers            the centers qVectors
+ * @param vertices           the vertices qVectors
+ * @param verticesByCells
  */
 public record RadarMap(GridTopology topology, MapCell[] cells,
                        long cleanInterval, long echoPersistence, long contactPersistence, long cleanTimestamp,
-                       double contactRadius, Complex receptiveAngle, QVect[] centers) {
+                       double contactRadius, Complex receptiveAngle,
+                       QVect[] vertices, int[][] verticesByCells) {
     public static final double MAX_SIGNAL_DISTANCE = 3;
     private static final Logger logger = LoggerFactory.getLogger(RadarMap.class);
 
@@ -100,16 +103,16 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
                                   long radarCleanInterval, long echoPersistence, long contactPersistence,
                                   double contactRadius, Complex receptiveAngle) {
         MapCell[] map1 = new MapCell[width * height];
-        QVect[] centers = new QVect[width * height];
         GridTopology topology1 = new GridTopology(center, width, height, gridSize);
+        QVect[] vertices = AreaExpression.createQVertices(topology1);
+        int[][] verticesByCell = AreaExpression.createVerticesIndices(topology1);
         for (int i = 0; i < map1.length; i++) {
             Point2D location = topology1.location(i);
             map1[i] = MapCell.unknown(location);
-            centers[i] = QVect.from(location);
         }
         return new RadarMap(topology1, map1,
                 radarCleanInterval, echoPersistence, contactPersistence,
-                0, contactRadius, receptiveAngle, centers);
+                0, contactRadius, receptiveAngle, vertices, verticesByCell);
     }
 
     /**
@@ -123,9 +126,13 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      * @param cleanTimestamp     the next clean instant (ms)
      * @param contactRadius      the receptive distance (m)
      * @param receptiveAngle     the receptive angle
-     * @param centers            the centers qVectors
+     * @param vertices           the vertices qVectors
+     * @param verticesByCells    the vertices indices by cell
      */
-    public RadarMap(GridTopology topology, MapCell[] cells, long cleanInterval, long echoPersistence, long contactPersistence, long cleanTimestamp, double contactRadius, Complex receptiveAngle, QVect[] centers) {
+    public RadarMap(GridTopology topology, MapCell[] cells,
+                    long cleanInterval, long echoPersistence, long contactPersistence, long cleanTimestamp,
+                    double contactRadius, Complex receptiveAngle,
+                    QVect[] vertices, int[][] verticesByCells) {
         this.topology = requireNonNull(topology);
         this.cells = requireNonNull(cells);
         this.cleanInterval = cleanInterval;
@@ -134,7 +141,8 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
         this.cleanTimestamp = cleanTimestamp;
         this.contactRadius = contactRadius;
         this.receptiveAngle = requireNonNull(receptiveAngle);
-        this.centers = requireNonNull(centers);
+        this.vertices = requireNonNull(vertices);
+        this.verticesByCells = requireNonNull(verticesByCells);
     }
 
     /**
@@ -184,21 +192,21 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
     }
 
     /**
+     * Returns the predicate that return true if cell at index is contained in the area
+     *
+     * @param area the cell predicate
+     */
+    IntPredicate filterByArea(AreaExpression area) {
+        return AreaExpression.filterByArea(area, vertices, verticesByCells);
+    }
+
+    /**
      * Returns the predicate relative to index of a cell predicate
      *
      * @param f the cell predicate
      */
-    IntPredicate filterForCell(Predicate<MapCell> f) {
+    IntPredicate filterByCell(Predicate<MapCell> f) {
         return i -> f.test(cells[i]);
-    }
-
-    /**
-     * Returns the predicate relative to index of the QVect center predicate
-     *
-     * @param f the cell predicate
-     */
-    IntPredicate filterForCenter(Predicate<QVect> f) {
-        return i -> f.test(centers[i]);
     }
 
     /**
@@ -211,16 +219,17 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      */
     public Optional<Point2D> findSafeTarget(Point2D location, Complex escapeDir, double safeDistance, double maxDistance) {
         long t0 = System.currentTimeMillis();
-        Predicate<QVect> sensibleArea = QIneq.circle(location, maxDistance)
-                .and(QIneq.circle(location, safeDistance).negate());
-        Predicate<QVect> directionArea = QIneq.rightHalfPlane(location, escapeDir.add(Complex.DEG270));
+        AreaExpression sensibleArea = and(
+                // Filter for distance no longer then maxDistance
+                circle(location, maxDistance),
+                not(circle(location, safeDistance)),
+                // Filter for direction
+                rightHalfPlane(location, escapeDir.add(Complex.DEG270)));
+
         // Extracts the empty cell
         Optional<Point2D> result = indices()
-                .filter(filterForCell(c -> c.empty() || c.unknown()))
-                // Filter for distance no longer then maxDistance
-                .filter(filterForCenter(sensibleArea))
-                // Filter for direction
-                .filter(filterForCenter(directionArea))
+                .filter(filterByCell(c -> c.empty() || c.unknown()))
+                .filter(filterByArea(sensibleArea))
                 .mapToObj(this::cell)
                 .map(MapCell::location)
                 .sorted(Comparator.comparingDouble(location::distanceSq))
@@ -242,11 +251,13 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
         long t0 = System.currentTimeMillis();
 
         // Extracts the target unknown cells
-        Predicate<QVect> sensibleArea = QIneq.circle(location, maxDistance)
-                .and(QIneq.circle(location, safeDistance).negate());
+        AreaExpression sensibleArea = and(
+                circle(location, maxDistance),
+                not(circle(location, safeDistance))
+        );
         List<MapCell> eligibleCells = indices()
                 // Filters cell at a distance no longer maxDistance and with free trajectory
-                .filter(filterForCenter(sensibleArea))
+                .filter(filterByArea(sensibleArea))
                 .mapToObj(this::cell)
                 .toList();
         Optional<Point2D> result = eligibleCells.stream()
@@ -281,12 +292,14 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
         double distance = from.distance(to);
         double maxDistance = distance + safeDistance;
         double width = safeDistance + topology.gridSize() * sqrt(2);
-        Predicate<QVect> sensibleArea = QIneq.rectangle(from, to, width)
-                .or(QIneq.circle(from, width))
-                .or(QIneq.circle(to, width));
+        AreaExpression sensibleArea = AreaExpression.or(
+                rectangle(from, to, width),
+                circle(from, width),
+                circle(to, width)
+        );
         return indices()
-                .filter(filterForCell(MapCell::hindered))
-                .filter(filterForCenter(sensibleArea))
+                .filter(filterByCell(MapCell::hindered))
+                .filter(filterByArea(sensibleArea))
                 .mapToObj(this::cell)
                 // Get all projections of hindered cells
                 .flatMap(cell -> Geometry.lineSquareProjections(from, dir, cell.location(), size).stream())
@@ -347,7 +360,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      * @param cells the cells
      */
     private RadarMap setCells(MapCell[] cells) {
-        return new RadarMap(topology, cells, cleanInterval, echoPersistence, contactPersistence, cleanTimestamp, contactRadius, receptiveAngle, centers);
+        return new RadarMap(topology, cells, cleanInterval, echoPersistence, contactPersistence, cleanTimestamp, contactRadius, receptiveAngle, vertices, verticesByCells);
     }
 
     /**
@@ -356,7 +369,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      * @param cleanTimestamp the next clean instant (ms)
      */
     private RadarMap setCleanTimestamp(long cleanTimestamp) {
-        return new RadarMap(topology, cells, cleanInterval, echoPersistence, contactPersistence, cleanTimestamp, contactRadius, receptiveAngle, centers);
+        return new RadarMap(topology, cells, cleanInterval, echoPersistence, contactPersistence, cleanTimestamp, contactRadius, receptiveAngle, vertices, verticesByCells);
     }
 
     /**
@@ -373,19 +386,19 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
         if (!frontContact && !rearContact) {
             return this;
         }
-        IntPredicate distancePredicate = filterForCenter(QIneq.circle(location, contactsRadius));
-        IntPredicate contactPredicate = frontContact && !rearContact
+        AreaExpression distanceArea = circle(location, contactsRadius);
+        AreaExpression contactArea = frontContact && !rearContact
                 // Front contact only
-                ? filterForCenter(QIneq.rightHalfPlane(location, direction.add(Complex.DEG270)))
+                ? rightHalfPlane(location, direction.add(Complex.DEG270))
                 : !frontContact
                 // Rear contact only
-                ? filterForCenter(QIneq.rightHalfPlane(location, direction.add(Complex.DEG90)))
+                ? rightHalfPlane(location, direction.add(Complex.DEG90))
                 : null;
-        IntStream indices0 = indices()
-                .filter(distancePredicate);
-        IntStream indices = contactPredicate != null
-                ? indices0.filter(contactPredicate)
-                : indices0;
+        AreaExpression sensibleArea = contactArea != null
+                ? and(distanceArea, contactArea)
+                : distanceArea;
+        IntStream indices = indices()
+                .filter(filterByArea(sensibleArea));
         return map(indices, cell -> cell.setContact(contactsTimestamp));
     }
 
@@ -418,10 +431,11 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      * @param signal the sensor signal
      */
     RadarMap update(SensorSignal signal) {
-        Predicate<QVect> sensibleArea = QIneq.circle(signal.sensorLocation(), MAX_SIGNAL_DISTANCE)
-                .and(QIneq.angle(signal.sensorLocation(), signal.sensorDirection(), receptiveAngle));
+        AreaExpression sensibleArea = and(
+                circle(signal.sensorLocation(), MAX_SIGNAL_DISTANCE),
+                angle(signal.sensorLocation(), signal.sensorDirection(), receptiveAngle));
         return map(indices()
-                        .filter(filterForCenter(sensibleArea)),
+                        .filter(filterByArea(sensibleArea)),
                 cell ->
                         cell.update(signal, MAX_SIGNAL_DISTANCE, topology.gridSize(), receptiveAngle)
         );
