@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.13.0] 2024-01-28
+
 ### Changed
 
 - Issue [#314](https://github.com/m-marini/wheellyj/issues/314): Simplify yaml file schema
