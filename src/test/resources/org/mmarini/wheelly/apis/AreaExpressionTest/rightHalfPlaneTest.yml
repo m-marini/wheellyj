@@ -1,0 +1,40 @@
+---
+- map: "
+........
+........
+........
+........
+oooooooo
+oooooooo
+oooooooo
+oooooooo
+"
+  x0: 0
+  y0: -0.001
+  direction: 90
+- map: "
+oooooooo
+oooooooo
+oooooooo
+oooooooo
+........
+........
+........
+........
+"
+  x0: 0
+  y0: 0.001
+  direction: -90
+- map: "
+.......o
+......oo
+.....ooo
+....oooo
+...ooooo
+..oooooo
+.ooooooo
+oooooooo
+"
+  x0: 0.001
+  y0: -0.001
+  direction: 45

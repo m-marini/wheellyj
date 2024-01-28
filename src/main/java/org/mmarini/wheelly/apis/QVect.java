@@ -1,6 +1,7 @@
 package org.mmarini.wheelly.apis;
 
 import java.awt.geom.Point2D;
+import java.util.Arrays;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -61,6 +62,19 @@ public record QVect(double[] coords) {
         return ZEROS;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        QVect qVect = (QVect) o;
+        return Arrays.equals(coords, qVect.coords);
+    }
+
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(coords);
+    }
+
     /**
      * Retruns the scalar product
      *
@@ -79,5 +93,12 @@ public record QVect(double[] coords) {
      */
     public Point2D toPoint() {
         return new Point2D.Double(coords[1] / coords[0], coords[2] / coords[0]);
+    }
+
+    @Override
+    public String toString() {
+        String sb = "QVect{" + "coords=" + Arrays.toString(coords) +
+                '}';
+        return sb;
     }
 }

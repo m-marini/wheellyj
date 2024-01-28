@@ -31,125 +31,77 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mmarini.Tuple2;
 
+import java.awt.*;
 import java.awt.geom.Point2D;
-import java.util.ArrayList;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
-import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.any;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.*;
+import static org.mmarini.wheelly.TestFunctions.ArgumentJsonParser.*;
+import static org.mmarini.wheelly.TestFunctions.jsonFileArguments;
 
 class RadarMapTest {
 
     public static final double GRID_SIZE = 0.2;
     public static final int WIDTH = 11;
     public static final int HEIGHT = 11;
+    public static final GridTopology GRID_TOPOLOGY = new GridTopology(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
     public static final double MM1 = 0.001;
     public static final int MAX_INTERVAL = 10000;
     public static final Complex RECEPTIVE_ANGLE = Complex.fromDeg(15);
     public static final int ECHO_TIME = 100;
 
-    public static Stream<Arguments> findTargetDataset() {
-        // List<Point2D> obstacles, Point2D location, double maxDistance, Optional<Point2D> expected        return Stream.of(
-        return Stream.of(
-                parseRadarMap("""
-                        ...........
-                        ...........
-                        ...........
-                        ...........
-                        ...........
-                        .....X.....
-                        ...........
-                        ...........
-                        ...........
-                        ...........
-                        .....T....."""),
-                parseRadarMap("""
-                        ...........
-                        ...........
-                        ...........
-                        ...........
-                        ...........
-                        T....X.....
-                        ...........
-                        ...........
-                        ...........
-                        ...........
-                        .....O....."""),
-                parseRadarMap("""
-                        .....T.....
-                        ...........
-                        ...........
-                        ...........
-                        ...O...O...
-                        ...O.X.O...
-                        ...O.O.O...
-                        ...........
-                        ...........
-                        ...........
-                        ..........."""),
-                parseRadarMap("""
-                        ...........
-                        ...........
-                        ...........
-                        ...........
-                        ....OOOOOOO
-                        .....X....O
-                        ..........O
-                        .T........O
-                        ..........O
-                        ...OOOOOOOO
-                        ...........""")
-        );
-    }
+    static RadarMap createRadarMap(Stream<Tuple2<Point, String>> obstacles) {
+        List<Point2D> echos = allPointsOfValue(GRID_TOPOLOGY, "O").apply(obstacles)
+                .map(o -> (Point2D) o[0])
+                .toList();
 
-    static Arguments parseRadarMap(String text) {
-        Point2D location = parseRadarMap("X", text).getFirst();
-        Point2D target = parseRadarMap("T", text).getFirst();
-        return Arguments.of(parseRadarMap(GRID_SIZE, text), location, 1, target);
-    }
-
-    static List<Point2D> parseRadarMap(String pattern, String text) {
-        List<Point2D> result = new ArrayList<>();
-        String[] lines = text.split("\n");
-        if (lines.length < RadarMapTest.HEIGHT) {
-            throw new IllegalArgumentException(format("text must have %d line (%d", RadarMapTest.HEIGHT, lines.length));
-        }
-        Predicate<String> p = Pattern.compile(pattern).asMatchPredicate();
-        for (int i = 0; i < RadarMapTest.WIDTH; i++) {
-            if (lines[i].length() < RadarMapTest.WIDTH) {
-                throw new IllegalArgumentException(format("lines %d must have size %d (%d)", i + 1, RadarMapTest.WIDTH, lines[i].length()));
-            }
-            double y = (RadarMapTest.HEIGHT / 2 - i) * RadarMapTest.GRID_SIZE;
-            for (int j = 0; j < RadarMapTest.WIDTH; j++) {
-                double x = (j - RadarMapTest.WIDTH / 2) * RadarMapTest.GRID_SIZE;
-                String ch = lines[i].substring(j, j + 1);
-                if (p.test(ch)) {
-                    result.add(new Point2D.Double(x, y));
-                }
-            }
-        }
-        return result;
-    }
-
-    static RadarMap parseRadarMap(double size, String text) {
-        List<Point2D> echos = parseRadarMap("O", text);
-        RadarMap radarMap = RadarMap.create(new Point2D.Double(), RadarMapTest.WIDTH, RadarMapTest.HEIGHT, size,
-                MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, size, RECEPTIVE_ANGLE);
+        RadarMap radarMap = RadarMap.create(RadarMapTest.GRID_TOPOLOGY.center(), RadarMapTest.GRID_TOPOLOGY.width(), RadarMapTest.GRID_TOPOLOGY.height(), RadarMapTest.GRID_TOPOLOGY.gridSize(),
+                MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, RadarMapTest.GRID_TOPOLOGY.gridSize(), RECEPTIVE_ANGLE);
         for (Point2D p : echos) {
             radarMap = radarMap.updateCellAt(p,
                     c -> c.addEchogenic(ECHO_TIME));
         }
         return radarMap;
+    }
+
+    public static Stream<Arguments> findSafeTargetDataset() throws IOException {
+        return jsonFileArguments("/org/mmarini/wheelly/apis/RadarMapTest/findSafeTargetTest.yml")
+                .addMap("map", stream -> Stream.of(new Object[]{createRadarMap(stream)}))
+                .addMap("map", anyPointOfValue(GRID_TOPOLOGY, "X"))
+                .addDouble("escapeDir")
+                .addDouble("safeDistance")
+                .addDouble("maxDistance")
+                .addMap("map", anyPointOfValue(GRID_TOPOLOGY, "T"))
+                .parse();
+    }
+
+    public static Stream<Arguments> findTargetDataset() throws IOException {
+        // List<Point2D> obstacles, Optional<Point2D> location, double maxDistance, Optional<Point2D> expected        return Stream.of(
+        return jsonFileArguments("/org/mmarini/wheelly/apis/RadarMapTest/findTargetTest.yml")
+                .addMap("map", stream -> Stream.of(new Object[]{createRadarMap(stream)}))
+                .addMap("map", anyPointOfValue(GRID_TOPOLOGY, "X"))
+                .addDouble("maxDistance")
+                .addMap("map", anyPointOfValue(GRID_TOPOLOGY, "T"))
+                .parse();
+    }
+
+    public static Stream<Arguments> setContactsDataset() throws IOException {
+        return jsonFileArguments("/org/mmarini/wheelly/apis/RadarMapTest/setContactsTest.yml")
+                .forEachCell("map", allIndicesByValue(GRID_TOPOLOGY, "O"))
+                .addDouble("direction")
+                .addBoolean("front")
+                .addBoolean("rear")
+                .parse();
     }
 
     @Test
@@ -206,12 +158,30 @@ class RadarMapTest {
         assertTrue(cells2.unknown());
     }
 
+    @ParameterizedTest(name = "[{index}] at ({1}) to({2} DEG) min({3} m) max({4} m) {0}")
+    @MethodSource("findSafeTargetDataset")
+    void findSafeTargetTest(RadarMap map, Point2D location, double escapeDir, double safeDistance, double maxDistance, Point2D expected) {
+        // Given a radar map with obstacles
+        // And max distance
+        // And safe distance
+        assertNotNull(location);
+
+        // When find target
+        Optional<Point2D> result = map.findSafeTarget(location, Complex.fromDeg(escapeDir), safeDistance, maxDistance);
+
+        // Then ...
+        assertThat(result, expected != null
+                ? optionalOf(pointCloseTo(expected, 1e-3))
+                : emptyOptional());
+    }
+
     @ParameterizedTest(name = "[{index}] at {1} max {2} m {0}")
     @MethodSource("findTargetDataset")
     void findTargetTest(RadarMap map, Point2D location, double maxDistance, Point2D expected) {
         // Given a radar map with obstacles
         // And max distance
         // And safe distance
+        assertNotNull(location);
         double safeDistance = 0.15;
 
         // When find target
@@ -313,159 +283,19 @@ class RadarMapTest {
         assertEquals(WIDTH * HEIGHT - 1, idx);
     }
 
-    @Test
-    void setFrontContactsAt0DEG() {
+    @ParameterizedTest(name = "[{index}] front({3}) rear=({4}) toward {2} DEG cell({0}) ")
+    @MethodSource("setContactsDataset")
+    void setContactsTest(int index, boolean expected, double direction, boolean frontContact, boolean rearContact) {
         // Given a radar map
         RadarMap map = createRadarMap();
         Point2D point = new Point2D.Double();
         long timestamp = System.currentTimeMillis();
 
         // When setting front and rear contact
-        map = map.setContactsAt(point, Complex.DEG0, true, false, GRID_SIZE + MM1, timestamp);
+        map = map.setContactsAt(point, Complex.fromDeg(direction), frontContact, rearContact, GRID_SIZE + MM1, timestamp);
 
         // Then map should have expected contact cells
-        List<Point2D> contacts = parseRadarMap("O", """
-                ...........
-                ...........
-                ...........
-                ...........
-                .....O.....
-                ....OOO....
-                ...........
-                ...........
-                ...........
-                ...........
-                ...........""");
-        int contactsNumber = (int) Arrays.stream(map.cells()).filter(MapCell::hasContact).count();
-        assertEquals(contacts.size(), contactsNumber);
-        for (Point2D pt : contacts) {
-            assertThat(format("Point %s does not match", pt), map.cell(pt.getX(), pt.getY()).filter(MapCell::hasContact),
-                    optionalOf(any(MapCell.class)));
-        }
-    }
-
-    @Test
-    void setFrontContactsAt45DEG() {
-        // Given a radar map
-        RadarMap map = createRadarMap();
-        Point2D point = new Point2D.Double();
-        long timestamp = System.currentTimeMillis();
-
-        // When setting front and rear contact
-        map = map.setContactsAt(point, Complex.fromDeg(45), true, false, GRID_SIZE + MM1, timestamp);
-
-        // Then map should have expected contact cells
-        List<Point2D> contacts = parseRadarMap("O", """
-                ...........
-                ...........
-                ...........
-                ...........
-                .....O.....
-                .....OO....
-                ...........
-                ...........
-                ...........
-                ...........
-                ...........""");
-        for (Point2D pt : contacts) {
-            assertThat(format("Point %s does not match", pt), map.cell(pt.getX(), pt.getY()).filter(MapCell::hasContact),
-                    optionalOf(any(MapCell.class)));
-        }
-        int contactsNumber = (int) Arrays.stream(map.cells()).filter(MapCell::hasContact).count();
-        assertEquals(contacts.size(), contactsNumber);
-    }
-
-    @Test
-    void setFrontRearContactsAt() {
-        // Given a radar map
-        RadarMap map = createRadarMap();
-        Point2D point = new Point2D.Double();
-        long timestamp = System.currentTimeMillis();
-
-        // When setting front and rear contact
-        map = map.setContactsAt(point, Complex.DEG0, true, true, GRID_SIZE + MM1, timestamp);
-
-        // Then map should have expected contact cells
-        List<Point2D> contacts = parseRadarMap("O", """
-                ...........
-                ...........
-                ...........
-                ...........
-                .....O.....
-                ....OOO....
-                .....O.....
-                ...........
-                ...........
-                ...........
-                ...........""");
-        int contactsNumber = (int) Arrays.stream(map.cells()).filter(MapCell::hasContact).count();
-        for (Point2D pt : contacts) {
-            assertThat(format("Point %s does not match", pt), map.cell(pt.getX(), pt.getY()).filter(MapCell::hasContact),
-                    optionalOf(any(MapCell.class)));
-        }
-        assertEquals(contacts.size(), contactsNumber);
-    }
-
-    @Test
-    void setRearContactsAt0DEG() {
-        // Given a radar map
-        RadarMap map = createRadarMap();
-        Point2D point = new Point2D.Double();
-        long timestamp = System.currentTimeMillis();
-
-        // When setting front and rear contact
-        map = map.setContactsAt(point, Complex.DEG0, false, true, GRID_SIZE + MM1, timestamp);
-
-        // Then map should have expected contact cells
-        List<Point2D> contacts = parseRadarMap("O", """
-                ...........
-                ...........
-                ...........
-                ...........
-                ...........
-                ....OOO....
-                .....O.....
-                ...........
-                ...........
-                ...........
-                ...........""");
-        for (Point2D pt : contacts) {
-            assertThat(format("Point %s does not match", pt), map.cell(pt.getX(), pt.getY()).filter(MapCell::hasContact),
-                    optionalOf(any(MapCell.class)));
-        }
-        int contactsNumber = (int) Arrays.stream(map.cells()).filter(MapCell::hasContact).count();
-        assertEquals(contacts.size(), contactsNumber);
-    }
-
-    @Test
-    void setRearContactsAt45DEG() {
-        // Given a radar map
-        RadarMap map = createRadarMap();
-        Point2D point = new Point2D.Double();
-        long timestamp = System.currentTimeMillis();
-
-        // When setting front and rear contact
-        map = map.setContactsAt(point, Complex.fromDeg(45), false, true, GRID_SIZE + MM1, timestamp);
-
-        // Then map should have expected contact cells
-        List<Point2D> contacts = parseRadarMap("O", """
-                ...........
-                ...........
-                ...........
-                ...........
-                ...........
-                ....OO.....
-                .....O.....
-                ...........
-                ...........
-                ...........
-                ...........""");
-        for (Point2D pt : contacts) {
-            assertThat(format("Point %s does not match", pt), map.cell(pt.getX(), pt.getY()).filter(MapCell::hasContact),
-                    optionalOf(any(MapCell.class)));
-        }
-        int contactsNumber = (int) Arrays.stream(map.cells()).filter(MapCell::hasContact).count();
-        assertEquals(contacts.size(), contactsNumber);
+        assertEquals(expected, map.cell(index).hasContact());
     }
 
     @Test

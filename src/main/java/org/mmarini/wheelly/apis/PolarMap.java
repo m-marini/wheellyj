@@ -39,6 +39,7 @@ import java.util.stream.Stream;
 import static java.lang.Math.floor;
 import static java.lang.Math.max;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.AreaExpression.circle;
 import static org.mmarini.wheelly.apis.Geometry.squareArcInterval;
 
 /**
@@ -181,7 +182,7 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
         Complex dAlpha = Complex.fromRad(sectorAngle() * 1.25 / 2);
 
         map.indices()
-                .filter(map.filterForCenter(QIneq.circle(center, maxDistance)))
+                .filter(map.filterByArea(circle(center, maxDistance)))
                 .mapToObj(map::cell)
                 .forEach(cell -> { // For each radar sector
                     for (int i = 0; i < this.sectorsNumber(); i++) { // for each polar sector

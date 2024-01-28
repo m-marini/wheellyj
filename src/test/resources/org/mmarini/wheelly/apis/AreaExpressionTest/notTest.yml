@@ -1,0 +1,39 @@
+---
+- map: "
+oooooooo
+oooooooo
+ooo..ooo
+ooo..ooo
+oooooooo
+oooooooo
+oooooooo
+"
+  x0: 0
+  y0: 0
+  radius: 0.1
+- map: "
+oooooooo
+oooooooo
+oooooooo
+oooooooo
+o...oooo
+o...oooo
+o...oooo
+oooooooo
+"
+  x0: -1.5
+  y0: -1.5
+  radius: 0.708
+- map: "
+oooooooo
+ooo..ooo
+oo....oo
+o......o
+o......o
+oo....oo
+ooo..ooo
+oooooooo
+"
+  x0: 0
+  y0: 0
+  radius: 2
