@@ -65,7 +65,7 @@ public interface Agent extends Closeable, WithSignalsSpec {
     /**
      * Returns the agent specification json node
      */
-    JsonNode getJson();
+    JsonNode json();
 
     /**
      * Observes the execution result training the agent

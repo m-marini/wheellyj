@@ -215,7 +215,7 @@ public class MatrixMonitor {
                 .modify("at,0,0 insets,2 weight,1,0 hfill").add(sensorDirSlider)
                 .modify("at,0,1 noweight nofill").add(sensorDirField)
                 .getContainer();
-        sensorCmdPanel.setBorder(BorderFactory.createTitledBorder("Sensor directionDeg (DEG)"));
+        sensorCmdPanel.setBorder(BorderFactory.createTitledBorder("Sensor direction (DEG)"));
 
         JPanel otherPanel = new GridLayoutHelper<>(new JPanel())
                 .modify("at,0,0 insets,4 span,2,1").add("Direction (DEG)")

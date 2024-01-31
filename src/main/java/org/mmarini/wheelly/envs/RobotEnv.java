@@ -113,8 +113,8 @@ public class RobotEnv implements Environment {
      * @param interval           the interval
      * @param reactionInterval   the reaction interval
      * @param commandInterval    the command interval
-     * @param numDirectionValues number of directionDeg values
-     * @param numSensorValues    number of sensor directionDeg values
+     * @param numDirectionValues number of direction values
+     * @param numSensorValues    number of sensor direction values
      * @param numSpeedValues     number of speed values
      */
     public static RobotEnv create(RobotApi robot, ToDoubleFunction<RobotEnvironment> reward,
@@ -122,7 +122,7 @@ public class RobotEnv implements Environment {
                                   int numDirectionValues, int numSensorValues, int numSpeedValues) {
         Map<String, SignalSpec> actions1 = Map.of(
                 "haltCommand", new IntSignalSpec(new long[]{1}, 2),
-                "directionDeg", new IntSignalSpec(new long[]{1}, numDirectionValues),
+                "direction", new IntSignalSpec(new long[]{1}, numDirectionValues),
                 "speed", new IntSignalSpec(new long[]{1}, numSpeedValues),
                 "sensorAction", new IntSignalSpec(new long[]{1}, numSensorValues)
         );
@@ -203,8 +203,8 @@ public class RobotEnv implements Environment {
      * @param actions the actions
      */
     Complex deltaDir(Map<String, Signal> actions) {
-        int action = actions.get("directionDeg").getInt(0);
-        int n = ((IntSignalSpec) getActions().get("directionDeg")).getNumValues();
+        int action = actions.get("direction").getInt(0);
+        int n = ((IntSignalSpec) getActions().get("direction")).getNumValues();
         return Complex.fromDeg(linear(action,
                 0, n - 1,
                 MIN_DIRECTION_ACTION, MAX_DIRECTION_ACTION));
@@ -329,7 +329,7 @@ public class RobotEnv implements Environment {
     }
 
     /**
-     * Returns the sensor directionDeg in DEG from actions
+     * Returns the sensor direction in DEG from actions
      *
      * @param actions the actions
      */

@@ -48,54 +48,55 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.wheelly.TestFunctions.text;
 import static org.mmarini.yaml.Utils.fromText;
 
-class AgentTranspilerTest {
+class AgentSingleNNTranspilerTest {
     private static final String YAML = text(
             "---",
             "version: \"0.1\"",
-            "policyAlpha: 1e-3",
-            "criticAlpha: 1e-3",
+            "trainingAlpha: 1e-3",
             "lambda: 0.8",
             "rewardAlpha: 0.1",
-            "critic:",
-            "  output:",
-            "    layers:",
-            "    - type: dense",
-            "      outputSize: 1",
-            "    - type: relu",
-            "    - type: tanh",
-            "policy:",
-            "  output:",
+            "network:",
+            "  layer0:",
             "    layers:",
             "    - type: dense",
             "      outputSize: 3",
+            "    - type: relu",
             "    - type: tanh",
+            "  output:",
+            "    input: layer0",
+            "    layers:",
             "    - type: softmax",
-            "      temperature: 0.8"
+            "      temperature: 0.8",
+            "  critic:",
+            "    input: layer0",
+            "    layers:",
+            "    - type: dense",
+            "      outputSize: 1"
     );
     private static final String YAML1 = text(
             "---",
             "version: \"0.1\"",
-            "policyAlpha: 1e-3",
-            "criticAlpha: 1e-3",
+            "trainingAlpha: 1e-3",
             "lambda: 0.8",
             "rewardAlpha: 0.1",
-            "critic:",
-            "  output:",
-            "    input: tiles",
-            "    layers:",
-            "    - type: dense",
-            "      outputSize: 1",
-            "    - type: relu",
-            "    - type: tanh",
-            "policy:",
-            "  output:",
+            "network:",
+            "  layer0:",
             "    input: tiles",
             "    layers:",
             "    - type: dense",
             "      outputSize: 3",
+            "    - type: relu",
             "    - type: tanh",
+            "  output:",
+            "    input: layer0",
+            "    layers:",
             "    - type: softmax",
             "      temperature: 0.8",
+            "  critic:",
+            "    input: layer0",
+            "    layers:",
+            "    - type: dense",
+            "      outputSize: 1",
             "inputProcess:",
             "  - class: org.mmarini.rl.processors.TilesProcessor",
             "    name: tiles",
@@ -115,52 +116,44 @@ class AgentTranspilerTest {
         );
         Random random = Nd4j.getRandom();
         random.setSeed(1234);
-        AgentTranspiler tr = new AgentTranspiler(agentSpec, Locator.root(), null, Integer.MAX_VALUE, stateSpec, actionSpec, random);
+        AgentSingleNNTranspiler tr = new AgentSingleNNTranspiler(agentSpec, Locator.root(), null, Integer.MAX_VALUE, stateSpec, actionSpec, random);
 
-        TDAgent agent = tr.build();
+        TDAgentSingleNN agent = tr.build();
 
-        assertEquals(0.1f, agent.getRewardAlpha());
+        assertEquals(0.1f, agent.rewardAlpha());
 
-        assertThat(agent.getPolicy().forwardSeq(), contains(
-                "output[0]",
-                "output[1]",
-                "output"
+        assertThat(agent.network().forwardSeq(), contains(
+                "layer0[0]",
+                "layer0[1]",
+                "layer0",
+                "output",
+                "critic"
         ));
 
-        assertEquals(0.1f, agent.getRewardAlpha());
-        assertThat(agent.getPolicy().layers(), hasEntry(
-                equalTo("output[0]"),
+        assertEquals(0.1f, agent.rewardAlpha());
+        assertEquals(1e-3f, agent.trainingAlpha());
+        assertThat(agent.network().layers(), hasEntry(
+                equalTo("layer0[0]"),
                 isA(TDDense.class)));
-        assertThat(agent.getPolicy().layers(), hasEntry(
-                equalTo("output[1]"),
+        assertThat(agent.network().layers(), hasEntry(
+                equalTo("layer0[1]"),
+                isA(TDRelu.class)));
+        assertThat(agent.network().layers(), hasEntry(
+                equalTo("layer0"),
                 isA(TDTanh.class)));
-        assertThat(agent.getPolicy().layers(), hasEntry(
+        assertThat(agent.network().layers(), hasEntry(
                 equalTo("output"),
                 isA(TDSoftmax.class)));
+        assertThat(agent.network().layers(), hasEntry(
+                equalTo("critic"),
+                isA(TDDense.class)));
 
         assertArrayEquals(new long[]{2, 3},
-                ((TDDense) agent.getPolicy().layers().get("output[0]")).getW().shape());
+                ((TDDense) agent.network().layers().get("layer0[0]")).getW().shape());
         assertEquals(0.8f,
-                ((TDSoftmax) agent.getPolicy().layers().get("output")).getTemperature());
-
-        assertThat(agent.getCritic().forwardSeq(), contains(
-                "output[0]",
-                "output[1]",
-                "output"
-        ));
-
-        assertThat(agent.getCritic().layers(), hasEntry(
-                equalTo("output[0]"),
-                isA(TDDense.class)));
-        assertThat(agent.getCritic().layers(), hasEntry(
-                equalTo("output[1]"),
-                isA(TDRelu.class)));
-        assertThat(agent.getCritic().layers(), hasEntry(
-                equalTo("output"),
-                isA(TDTanh.class)));
-
-        assertArrayEquals(new long[]{2, 1},
-                ((TDDense) agent.getCritic().layers().get("output[0]")).getW().shape());
+                ((TDSoftmax) agent.network().layers().get("output")).getTemperature());
+        assertArrayEquals(new long[]{3, 1},
+                ((TDDense) agent.network().layers().get("critic")).getW().shape());
     }
 
     @Test
@@ -174,51 +167,44 @@ class AgentTranspilerTest {
         );
         Random random = Nd4j.getRandom();
         random.setSeed(1234);
-        AgentTranspiler tr = new AgentTranspiler(agentSpec, Locator.root(), null, Integer.MAX_VALUE, stateSpec, actionSpec, random);
+        AgentSingleNNTranspiler tr = new AgentSingleNNTranspiler(agentSpec, Locator.root(), null, Integer.MAX_VALUE, stateSpec, actionSpec, random);
 
-        TDAgent agent = tr.build();
+        TDAgentSingleNN agent = tr.build();
 
-        assertEquals(0.1f, agent.getRewardAlpha());
+        assertEquals(0.1f, agent.rewardAlpha());
+        assertEquals(1e-3f, agent.trainingAlpha());
 
-        assertThat(agent.getPolicy().forwardSeq(), contains(
-                "output[0]",
-                "output[1]",
-                "output"
+        assertThat(agent.network().forwardSeq(), contains(
+                "layer0[0]",
+                "layer0[1]",
+                "layer0",
+                "output",
+                "critic"
         ));
 
-        assertEquals(0.1f, agent.getRewardAlpha());
-        assertThat(agent.getPolicy().layers(), hasEntry(
-                equalTo("output[0]"),
+        assertEquals(0.1f, agent.rewardAlpha());
+        assertThat(agent.network().layers(), hasEntry(
+                equalTo("layer0[0]"),
                 isA(TDDense.class)));
-        assertThat(agent.getPolicy().layers(), hasEntry(
-                equalTo("output[1]"),
+        assertThat(agent.network().layers(), hasEntry(
+                equalTo("layer0[1]"),
+                isA(TDRelu.class)));
+        assertThat(agent.network().layers(), hasEntry(
+                equalTo("layer0"),
                 isA(TDTanh.class)));
-        assertThat(agent.getPolicy().layers(), hasEntry(
+        assertThat(agent.network().layers(), hasEntry(
                 equalTo("output"),
                 isA(TDSoftmax.class)));
+        assertThat(agent.network().layers(), hasEntry(
+                equalTo("critic"),
+                isA(TDDense.class)));
 
         assertArrayEquals(new long[]{3 * 3 * 8, 3},
-                ((TDDense) agent.getPolicy().layers().get("output[0]")).getW().shape());
+                ((TDDense) agent.network().layers().get("layer0[0]")).getW().shape());
         assertEquals(0.8f,
-                ((TDSoftmax) agent.getPolicy().layers().get("output")).getTemperature());
+                ((TDSoftmax) agent.network().layers().get("output")).getTemperature());
 
-        assertThat(agent.getCritic().forwardSeq(), contains(
-                "output[0]",
-                "output[1]",
-                "output"
-        ));
-
-        assertThat(agent.getCritic().layers(), hasEntry(
-                equalTo("output[0]"),
-                isA(TDDense.class)));
-        assertThat(agent.getCritic().layers(), hasEntry(
-                equalTo("output[1]"),
-                isA(TDRelu.class)));
-        assertThat(agent.getCritic().layers(), hasEntry(
-                equalTo("output"),
-                isA(TDTanh.class)));
-
-        assertArrayEquals(new long[]{3 * 3 * 8, 1},
-                ((TDDense) agent.getCritic().layers().get("output[0]")).getW().shape());
+        assertArrayEquals(new long[]{3, 1},
+                ((TDDense) agent.network().layers().get("critic")).getW().shape());
     }
 }

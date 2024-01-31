@@ -115,7 +115,7 @@ class TDAgentCreateTest {
         assertEquals(1e-3f, agent.getCriticAlpha());
         assertEquals(0.5f, agent.getLambda());
 
-        JsonNode json = agent.getJson();
+        JsonNode json = agent.json();
         assertTrue(json.path("inputProcess").isMissingNode());
     }
 
@@ -134,7 +134,7 @@ class TDAgentCreateTest {
         assertEquals(1e-3f, agent.getPolicyAlpha());
         assertEquals(1e-3f, agent.getCriticAlpha());
         assertEquals(0.5f, agent.getLambda());
-        assertThat(((TDDense) agent.getCritic().getLayers().get("layer1")).getB(),
+        assertThat(((TDDense) agent.getCritic().layers().get("layer1")).getB(),
                 matrixCloseTo(new float[][]{
                         {0.5f}
                 }, EPSILON));

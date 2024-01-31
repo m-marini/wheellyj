@@ -89,8 +89,8 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
      * @param actions the actions
      */
     Complex deltaDir(Map<String, Signal> actions) {
-        int action = actions.get("directionDeg").getInt(0);
-        int n = ((IntSignalSpec) getActions().get("directionDeg")).getNumValues();
+        int action = actions.get("direction").getInt(0);
+        int n = ((IntSignalSpec) getActions().get("direction")).getNumValues();
         return Complex.fromDeg(linear(action,
                 0, n - 1,
                 MIN_DIRECTION_ACTION, MAX_DIRECTION_ACTION));

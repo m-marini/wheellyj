@@ -72,7 +72,7 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
      *
      * @param sectors   the cells
      * @param center    the map center in world coordinate
-     * @param direction the map directionDeg in world compass
+     * @param direction the map direction in world compass
      */
     public PolarMap(CircularSector[] sectors, Point2D center, Complex direction) {
         this.sectors = requireNonNull(sectors);
@@ -89,16 +89,16 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
     }
 
     /**
-     * Returns the circular sector in a directionDeg
+     * Returns the circular sector in a direction
      *
-     * @param direction the directionDeg
+     * @param direction the direction
      */
     public CircularSector directionSector(Complex direction) {
         return sectors[sectorIndex(direction)];
     }
 
     /**
-     * Returns the radar sector directionDeg relative to polar map
+     * Returns the radar sector direction relative to polar map
      *
      * @param sectorIndex the sector index
      */
@@ -120,7 +120,7 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
     }
 
     /**
-     * Returns the directionDeg of sector
+     * Returns the direction of sector
      *
      * @param i the sector index
      */
@@ -129,9 +129,9 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
     }
 
     /**
-     * Returns the index of sector in a given directionDeg
+     * Returns the index of sector in a given direction
      *
-     * @param direction the directionDeg
+     * @param direction the direction
      */
     public int sectorIndex(Complex direction) {
         // TODO check for complex usage
@@ -158,7 +158,7 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
      *
      * @param map         the radar map
      * @param center      the center of polar map
-     * @param direction   the directionDeg of polar map
+     * @param direction   the direction of polar map
      * @param minDistance thi min distance (m)
      * @param maxDistance the max distance (m)
      */

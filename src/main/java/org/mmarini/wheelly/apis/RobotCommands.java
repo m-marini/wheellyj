@@ -157,7 +157,7 @@ public record RobotCommands(boolean scan, Complex scanDirection, boolean move, b
     /**
      * Returns the command with move command
      *
-     * @param direction the move directionDeg
+     * @param direction the move direction
      * @param speed     the speed (pps)
      */
     public RobotCommands setMove(Complex direction, int speed) {
@@ -167,7 +167,7 @@ public record RobotCommands(boolean scan, Complex scanDirection, boolean move, b
     /**
      * Returns the command with set scan
      *
-     * @param scanDirection the scan directionDeg (DEG)
+     * @param scanDirection the scan direction (DEG)
      */
     public RobotCommands setScan(Complex scanDirection) {
         return new RobotCommands(true, scanDirection, move, halt, moveDirection, speed);

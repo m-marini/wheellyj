@@ -17,7 +17,7 @@ public record Complex(double x, double y) {
     public static final Complex DEG270 = new Complex(-1, -0D);
 
     /**
-     * Returns the directionDeg from the given point to the other
+     * Returns the direction from the given point to the other
      *
      * @param from the departure point
      * @param to   the destination point

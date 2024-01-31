@@ -100,7 +100,7 @@ public class KpiCSVSubscriber implements Subscriber<Map<String, INDArray>> {
         Map<String, INDArray> filtered = Tuple2.stream(data)
                 .filter(t -> matchers.stream().anyMatch(t1 -> t1.test(t.getV1())))
                 .collect(Tuple2.toMap());
-        if (!data.isEmpty()) {
+        if (!filtered.isEmpty()) {
             if (consumers == null) {
                 this.consumers = filtered.keySet().stream()
                         .map(name -> Tuple2.of(name, CSVConsumer.create(new File(path, name))))

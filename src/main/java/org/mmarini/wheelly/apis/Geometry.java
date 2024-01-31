@@ -98,8 +98,8 @@ public interface Geometry {
      *
      * @param q      the point Q
      * @param y      the horizontal line ordinate
-     * @param alpha  the directionDeg from Q
-     * @param dAlpha the size of directionDeg interval
+     * @param alpha  the direction from Q
+     * @param dAlpha the size of direction interval
      */
     static double[] horizontalArcIntersect(Point2D q, double y, Complex alpha, Complex dAlpha) {
         double xq = q.getX();
@@ -142,14 +142,14 @@ public interface Geometry {
     }
 
     /**
-     * Returns the nearest and farthest points of segment (xl,y) (xr,y) from Q in the directionDeg range of alpha +- dAlpha
+     * Returns the nearest and farthest points of segment (xl,y) (xr,y) from Q in the direction range of alpha +- dAlpha
      *
      * @param q      the Q point
      * @param xl     the left abscissa of segment
      * @param xr     the right abscissa of segment
      * @param y      the ordinate of segment
-     * @param alpha  the directionDeg from point Q
-     * @param dAlpha the directionDeg range
+     * @param alpha  the direction from point Q
+     * @param dAlpha the direction range
      */
     static Tuple2<Point2D, Point2D> horizontalArcInterval(Point2D q, double xl, double xr, double y, Complex alpha, Complex dAlpha) {
         double[] x0 = horizontalArcIntersect(q, y, alpha, dAlpha);
@@ -176,10 +176,10 @@ public interface Geometry {
 
     /**
      * Returns the  vertex's projections and intersection points of the square and line from given point
-     * in the given directionDeg
+     * in the given direction
      *
      * @param from      the point (m)
-     * @param direction the directionDeg
+     * @param direction the direction
      * @param center    the square center (m)
      * @param size      the square size (m)
      */
@@ -230,12 +230,12 @@ public interface Geometry {
     }
 
     /**
-     * Returns the projection of line from - to in the give directionDeg
-     * abscissa = distance from directionDeg (cross product, positive = to at right of directionDeg)
+     * Returns the projection of line from - to in the give direction
+     * abscissa = distance from direction (cross product, positive = to at right of direction)
      * ordinate = distance from projection (scalar product)
      *
      * @param center    the center point
-     * @param direction the directionDeg
+     * @param direction the direction
      * @param to        the give point
      */
     static Point2D projectLine(Point2D center, Complex direction, Point2D to) {
@@ -253,13 +253,13 @@ public interface Geometry {
     }
 
     /**
-     * Returns the nearest and farthest points of square from Q and in the directionDeg range of alpha +- dAlpha
+     * Returns the nearest and farthest points of square from Q and in the direction range of alpha +- dAlpha
      *
      * @param p      square center
      * @param size   the size of square l
      * @param q      the point Q
-     * @param alpha  the directionDeg from point Q
-     * @param dAlpha the directionDeg range from point Q
+     * @param alpha  the direction from point Q
+     * @param dAlpha the direction range from point Q
      */
     static Tuple2<Point2D, Point2D> squareArcInterval(Point2D p, double size, Point2D q, Complex alpha, Complex dAlpha) {
         double xp = p.getX();
@@ -291,8 +291,8 @@ public interface Geometry {
      *
      * @param q      the point Q
      * @param x      the horizontal line abscissa
-     * @param alpha  the directionDeg from Q
-     * @param dAlpha the size of directionDeg interval (RAD)
+     * @param alpha  the direction from Q
+     * @param dAlpha the size of direction interval (RAD)
      */
     static double[] verticalArcIntersect(Point2D q, double x, Complex alpha, Complex dAlpha) {
         double xq = q.getX();
@@ -333,14 +333,14 @@ public interface Geometry {
     }
 
     /**
-     * Returns the nearest and farthest points of segment (x,yr) (x,yf) from Q in the directionDeg range of alpha +- dAlpha
+     * Returns the nearest and farthest points of segment (x,yr) (x,yf) from Q in the direction range of alpha +- dAlpha
      *
      * @param q      the Q point
      * @param yr     the rear ordinate of segment
      * @param yf     the front ordinate of segment
      * @param x      the abscissa of segment
-     * @param alpha  the directionDeg from point Q
-     * @param dAlpha the directionDeg range
+     * @param alpha  the direction from point Q
+     * @param dAlpha the direction range
      */
     static Tuple2<Point2D, Point2D> verticalArcInterval(Point2D q, double yr, double yf, double x, Complex alpha, Complex dAlpha) {
         double[] y0 = verticalArcIntersect(q, x, alpha, dAlpha);

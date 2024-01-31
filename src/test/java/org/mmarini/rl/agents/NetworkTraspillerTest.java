@@ -154,11 +154,11 @@ class NetworkTraspillerTest {
 
         TDNetwork net = tr.build();
 
-        assertThat(net.getLayers(), hasEntry(
+        assertThat(net.layers(), hasEntry(
                 equalTo("output"),
                 isA(TDTanh.class)
         ));
-        assertThat(net.getForwardSeq(), contains(
+        assertThat(net.forwardSeq(), contains(
                 "output"));
         assertThat(net.getInputs(), hasEntry(
                 equalTo("output"),
@@ -221,7 +221,7 @@ class NetworkTraspillerTest {
                 hasProperty("dropOut", equalTo(0.5F))
         ));
         assertArrayEquals(new long[]{2, 3},
-                ((TDDense) tr.layers.get(0)).getW().shape()
+                ((TDDense) tr.layers.getFirst()).getW().shape()
         );
     }
 
@@ -247,7 +247,7 @@ class NetworkTraspillerTest {
                 hasProperty("maxAbsWeights", equalTo(10F))
         ));
         assertArrayEquals(new long[]{2, 3},
-                ((TDDense) tr.layers.get(0)).getW().shape()
+                ((TDDense) tr.layers.getFirst()).getW().shape()
         );
     }
 
@@ -383,7 +383,7 @@ class NetworkTraspillerTest {
                         isA(TDRelu.class)
                 )));
         assertArrayEquals(new long[]{2, 2},
-                ((TDDense) tr.layers.get(0)).getW().shape()
+                ((TDDense) tr.layers.getFirst()).getW().shape()
         );
     }
 
@@ -466,7 +466,7 @@ class NetworkTraspillerTest {
                         isA(TDTanh.class)
                 )));
         assertArrayEquals(new long[]{2, 2},
-                ((TDDense) tr.layers.get(0)).getW().shape()
+                ((TDDense) tr.layers.getFirst()).getW().shape()
         );
     }
 

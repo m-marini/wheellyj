@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- Issue #337: Add agent with single nn
+
+
 ## [0.13.0] 2024-01-28
 
 ### Changed

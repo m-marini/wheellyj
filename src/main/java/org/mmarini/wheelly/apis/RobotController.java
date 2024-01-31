@@ -77,7 +77,7 @@ import static org.mmarini.wheelly.apps.AppYaml.loadIntArray;
  *     <dd>
  *         If controller is closed it move to closing state.
  *         If no robot status has received move to waitingCommandInterval state.
- *         If robot sensor directionDeg is different from the required or command timed out it sends the scan command
+ *         If robot sensor direction is different from the required or command timed out it sends the scan command
  *         If robot status has received and move command has required send the move command
  *         Moves to waitingCommandInterval state.
  *         In case of IO errors moves to closing state
@@ -296,7 +296,7 @@ public class RobotController implements RobotControllerApi {
             if (command.scanDirection().y() >= 0) {
                 sensorDir = command.scanDirection();
             } else {
-                logger.atError().log("Wrong scan directionDeg {}", command.scanDirection());
+                logger.atError().log("Wrong scan direction {}", command.scanDirection());
             }
         }
         commandsProcessor.onNext(command);

@@ -55,7 +55,7 @@ import static java.util.Objects.requireNonNull;
  * <ul>
  *     <li><code>timeout</code> the timeout interval (ms)</li>
  *     <li><code>stopDistance</code> the stop distance (m)</li>
- *     <li><code>turnDirectionRange</code> the turn directionDeg range (DEG)</li>
+ *     <li><code>turnDirectionRange</code> the turn direction range (DEG)</li>
  * </ul>
  * <p>
  * Returns are:

@@ -107,7 +107,7 @@ public class ConstantAgent implements Agent {
     }
 
     @Override
-    public JsonNode getJson() {
+    public JsonNode json() {
         return null;
     }
 

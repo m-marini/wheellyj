@@ -55,6 +55,7 @@ public class JsonSchemas {
 
     private static final JsonSchemas singleton = create(
             "/agent-schema.yml",
+            "/agent-single-nn-schema.yml",
             "/checkup-schema.yml",
             "/objective-nomove-schema.yml",
             "/objective-explore-schema.yml",
@@ -69,7 +70,8 @@ public class JsonSchemas {
             "/sim-robot-schema.yml",
             "/signal-schema.yml",
             "/state-agent-schema.yml",
-            "/wheelly-schema.yml"
+            "/wheelly-schema.yml",
+            "/batch-schema.yml"
     );
 
     private static JsonSchemas create(String... schemas) {
