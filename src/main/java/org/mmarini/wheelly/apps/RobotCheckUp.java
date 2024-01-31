@@ -148,8 +148,8 @@ public class RobotCheckUp {
     /**
      * Returns the polling process for a scanner test.
      * <p>
-     * Measures the signal for the scanner directionDeg between -90 and 90 by 15 DEG
-     * Each test takes 1.5 sec and tracks the directionDeg and distance of each single measure
+     * Measures the signal for the scanner direction between -90 and 90 by 15 DEG
+     * Each test takes 1.5 sec and tracks the direction and distance of each single measure
      *
      * @param directions the test directions
      */
@@ -370,7 +370,7 @@ public class RobotCheckUp {
             builder.add("Check up details");
             builder.add("");
             for (ScannerResult scannerResult : scannerResults) {
-                builder.add(format("Sensor directionDeg check %d DEG", scannerResult.direction));
+                builder.add(format("Sensor direction check %d DEG", scannerResult.direction));
                 builder.add(format("    %s", scannerResult.valid ? "valid" : "invalid"));
                 builder.add(format("    duration %d ms", scannerResult.testDuration));
                 builder.add(format("    move localTime %d ms", scannerResult.moveTime));
@@ -378,18 +378,18 @@ public class RobotCheckUp {
             }
 
             for (RotateResult result : rotateResults) {
-                builder.add(format("Rotate directionDeg %d DEG", result.targetDir));
+                builder.add(format("Rotate direction %d DEG", result.targetDir));
                 builder.add(format("    rotation %d DEG", result.rotationAngle));
                 builder.add(format("    duration %d ms", result.testDuration));
-                builder.add(format("    directionDeg error %d DEG", result.directionError));
+                builder.add(format("    direction error %d DEG", result.directionError));
                 builder.add(format("    location error %.2f m", result.locationError));
             }
             for (MovementResult result : moveResults) {
-                builder.add(format("Movement directionDeg %d DEG, speed %.1f", result.direction, result.speed));
+                builder.add(format("Movement direction %d DEG, speed %.1f", result.direction, result.speed));
                 builder.add(format("    distance %.2f m", result.distance));
                 builder.add(format("    duration %d ms", result.testDuration));
                 builder.add(format("    distance error %.2f m", result.distanceError));
-                builder.add(format("    directionDeg error %d DEG", result.directionError));
+                builder.add(format("    direction error %d DEG", result.directionError));
             }
             return builder.build();
         }
@@ -503,7 +503,7 @@ public class RobotCheckUp {
                 builder.add("Rotation checks passed");
             }
 
-            builder.add(format("    directionDeg error <= %d DEG", maxDirectionError));
+            builder.add(format("    direction error <= %d DEG", maxDirectionError));
             builder.add(format("    location error <= %.2f m", maxLocationError));
             builder.add(format("    rotation speed <= %.2f DEG/s", maxRotationSpeed));
 
@@ -516,7 +516,7 @@ public class RobotCheckUp {
             builder.add(format("    distance <= %.2f m", maxMoveDistance));
             builder.add(format("    speed <= %.2f m/s", maxSpeed));
             builder.add(format("    distance error <= %.2f m", maxMoveDistanceError));
-            builder.add(format("    directionDeg error <=  %d DEG", maxMoveDirectionError));
+            builder.add(format("    direction error <=  %d DEG", maxMoveDirectionError));
 
             return builder.build();
         }

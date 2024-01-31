@@ -10,30 +10,31 @@ rem cd ..
 echo 
 rem start javaw -jar "lib/${pom.build.finalName}.jar"
 rem java -jar "lib/${pom.build.finalName}.jar" %1 %2
-
-java -cp "lib/*;../classes" org.mmarini.wheelly.apps.RobotExecutor %2 %3
-
+java -version > nul
 IF ERRORLEVEL 2 goto noJavaw
-goto end
+javaw > nul
+IF ERRORLEVEL 2 goto noJavaw
 
+rem java -cp "lib/*;../classes" org.mmarini.wheelly.apps.RobotExecutor %1 %2 %3 %4 %5 %6 %7 %8
+java -cp "lib/*;../classes" %1 %2 %3 %4 %5 %6 %7 %8
+goto end
 
 :noJavaw
 echo.
 echo Failed to run java.
-echo Java runtime environment is required to run Railways.
+echo Java runtime environment is required to run the application.
 echo Setup Java environment at first.
 echo.
-echo Railways tries to run javaw. It should be in PATH system environment variable.
+echo The java command should be in PATH system environment variable.
 echo.
 echo If you would like to run java in your specified folder, you can edit runnit.bat
-echo like followings and set your JAVA_HOME.
+echo setting your JAVA_HOME as followings.
 echo     before:
 echo       rem set JAVA_HOME=...
-echo       rem set PATH=%JAVA_HOME%\bin
+echo       rem set PATH=%%JAVA_HOME%%\bin
 echo     after:
 echo       set JAVA_HOME=...
-echo       set PATH=%JAVA_HOME%\bin
-echo.
+echo       set PATH=%%JAVA_HOME%%\bin
 echo.
 pause
 goto end

@@ -218,8 +218,8 @@ public class StictionMeasures {
     /**
      * Returns the report from socket
      *
-     * @param leftDir  the left directionDeg
-     * @param rightDir the right directionDeg
+     * @param leftDir  the left direction
+     * @param rightDir the right direction
      */
     private Report readReport(int leftDir, int rightDir) throws IOException {
         int[][] leftMeasures = readMeasureSet("l");

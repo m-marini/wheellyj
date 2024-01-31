@@ -29,11 +29,11 @@
 package org.mmarini.wheelly.apps;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.wheelly.apis.NullController;
 import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotControllerApi;
 import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.yaml.Locator;
-import org.mmarini.yaml.Utils;
 
 import java.io.IOException;
 
@@ -80,31 +80,19 @@ public interface AppYaml {
     }
 
     /**
-     * Returns an object instance from configuration file
+     * Returns the environment
      *
-     * @param <T>        the returned object class
-     * @param file       the filename
-     * @param schema     the validation schema
-     * @param args       the builder additional arguments
-     * @param argClasses the builder additional argument classes
+     * @param config  the json document
+     * @param locator the config locator
+     * @param schema  the schema
      */
-    static <T> T fromConfig(String file, String schema, Object[] args, Class<?>[] argClasses) {
-        try {
-            JsonNode config = org.mmarini.yaml.Utils.fromFile(file);
-            JsonSchemas.instance().validateOrThrow(config, schema);
-            String active = Locator.locate("active").getNode(config).asText();
-            Locator baseLocator = Locator.locate("configurations").path(active);
-            return Utils.createObject(config, baseLocator, args, argClasses);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+    static RobotEnvironment envNullControllerFromJson(JsonNode config, Locator locator, String schema) {
+        JsonSchemas.instance().validateOrThrow(config, schema);
+        Locator envLocator = locator.path(locator.path("environment").getNode(config).asText());
+        if (envLocator.getNode(config).isMissingNode()) {
+            throw new IllegalArgumentException(format("Missing node %s", envLocator));
         }
-    }
-
-    static <T> T fromConfig(JsonNode config, Locator locator, String schema, Object[] args, Class<?>[] argClasses) {
-        JsonSchemas.instance().validateOrThrow(locator.getNode(config), schema);
-        String active = locator.path("active").getNode(config).asText();
-        Locator baseLocator = locator.path("configurations").path(active);
-        return Utils.createObject(config, baseLocator, args, argClasses);
+        return RobotEnvironment.fromConfig(config, envLocator, new NullController());
     }
 
     /**

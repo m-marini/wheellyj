@@ -1,0 +1,31 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/batch-schema-0.1
+title: Wheelly application
+
+# monitor schema
+type: object
+properties:
+  $schema:
+    type: string
+    const: https://mmarini.org/wheelly/batch-schema-0.1
+  robot:
+    type: string
+  controller:
+    type: string
+  environment:
+    type: string
+  agent:
+    type: string
+  numTrainIterations1:
+    multipleOf: 1
+    minimum: 1
+  numTrainIterations2:
+    multipleOf: 1
+    minimum: 1
+required:
+  - $schema
+  - environment
+  - agent
+  - numTrainIterations1
+  - numTrainIterations2

@@ -234,7 +234,7 @@ public interface ExtendedStateNode extends StateNode {
 
     /**
      * Performs the auto scan behaviors.
-     * Moves the sensor to a random directionDeg within a range at given steps on given localTime interval
+     * Moves the sensor to a random direction within a range at given steps on given localTime interval
      *
      * @param context the processor context
      */
@@ -256,7 +256,7 @@ public interface ExtendedStateNode extends StateNode {
                 Complex minSensorDir = get(context, "minSensorDir");
                 Complex maxSensorDir = get(context, "maxSensorDir");
                 int sensorDirNumber = max(getInt(context, "sensorDirNumber"), 1);
-                // Check for random scan directionDeg
+                // Check for random scan direction
                 RobotCommands command;
                 if (sensorDirNumber > 1) {
                     int scanIndex = getInt(context, "scanIndex");

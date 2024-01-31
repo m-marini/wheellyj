@@ -1,49 +1,9 @@
 ---
-$schema: https://mmarini.org/wheelly/wheelly-schema-1.0
-robot: robots/simRobot
-controller: controllers/controller
+$schema: https://mmarini.org/wheelly/batch-schema-0.1
 environment: environments/explorerEnv
 agent: agents/polarRadarAgent
-
-robots:
-  simRobot:
-    $schema: https://mmarini.org/wheelly/sim-robot-schema-0.1
-    class: org.mmarini.wheelly.apis.SimRobot
-    # robotSeed: 1234
-    mapSeed: 1234
-    numObstacles: 10
-    errSigma: 0.05
-    errSensor: 0.05
-    sensorReceptiveAngle: 15
-    maxAngularSpeed: 5
-  realRobot:
-    class: org.mmarini.wheelly.apis.Robot
-    #host: wheelly
-    host: 192.168.1.43
-    connectionTimeout: 10000
-    readTimeout: 10000
-    configureTimeout: 2000
-    configCommands:
-      - cs 500
-      - cc 10 45 20
-      - tcsl 30 107 180 -32 -81 -180 400 50
-      - tcsr 39 78 180 -32 -92 -180 400 50
-      - fl 10000 10000
-      - fr 10000 10000
-      - ci 500 500
-
-controllers:
-  controller:
-    $schema: https://mmarini.org/wheelly/controller-schema-1.0
-    class: org.mmarini.wheelly.apis.RobotController
-    interval: 100
-    reactionInterval: 300
-    commandInterval: 600
-    connectionRetryInterval: 1000
-    watchdogInterval: 5000
-    simulationSpeed: 2
-    supplyValues: [ 1762, 2878 ]
-    voltages: [ 8.3, 11.9 ]
+numTrainIterations1: 10
+numTrainIterations2: 10
 
 environments:
   explorerEnv:
@@ -82,13 +42,14 @@ agents:
   # Polar radar agent
   ######################################
   polarRadarAgent:
-    $schema: https://mmarini.org/wheelly/agent-single-nn-schema-0.1
-    class: org.mmarini.rl.agents.TDAgentSingleNN
+    $schema: https://mmarini.org/wheelly/agent-schema-1.0
+    class: org.mmarini.rl.agents.TDAgent
     seed: 1234
-    modelPath: models/polarRadarAgent
+    modelPath: models/polarRadarAgentTiles
     savingIntervalSteps: 1000
     rewardAlpha: 5e-3
-    trainingAlpha: 100e-6
+    policyAlpha: 1e-3
+    criticAlpha: 100e-6
     lambda: 0.5
     inputProcess:
       - name: canMoveFeatures
@@ -111,7 +72,7 @@ agents:
         input: sectorDistances
         numTiles: 8
         mask: distanceMask
-    network:
+    policy:
       layer0:
         inputs:
           type: concat
@@ -122,13 +83,13 @@ agents:
             - distanceFeatures
         layers:
           - type: dense
-            outputSize: 64
+            outputSize: 100
           - type: relu
       hidden0:
         input: layer0
         layers:
           - type: dense
-            outputSize: 64
+            outputSize: 100
           - type: relu
       hidden1:
         inputs:
@@ -138,7 +99,7 @@ agents:
             - hidden0
         layers:
           - type: dense
-            outputSize: 64
+            outputSize: 100
           - type: relu
       hidden2:
         inputs:
@@ -148,7 +109,7 @@ agents:
             - hidden1
         layers:
           - type: dense
-            outputSize: 64
+            outputSize: 100
           - type: relu
       direction:
         input: hidden2
@@ -174,7 +135,46 @@ agents:
           - type: tanh
           - type: softmax
             temperature: 0.313
-      critic:
+    critic:
+      layer0:
+        inputs:
+          type: concat
+          inputs:
+            - canMoveFeatures
+            - knownSectors
+            - emptySectors
+            - distanceFeatures
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden0:
+        input: layer0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden1:
+        inputs:
+          type: sum
+          inputs:
+            - layer0
+            - hidden0
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      hidden2:
+        inputs:
+          type: sum
+          inputs:
+            - hidden0
+            - hidden1
+        layers:
+          - type: dense
+            outputSize: 100
+          - type: relu
+      output:
         input: hidden2
         layers:
           - type: dense

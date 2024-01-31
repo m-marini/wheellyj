@@ -44,7 +44,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.wheelly.TestFunctions.text;
 
-class TDAgentSaveTest {
+class TDAgentSingleNNSaveTest {
 
     public static final float REWARD_ALPHA = 1e-3f;
     public static final long AGENT_SEED = 1234L;
@@ -56,7 +56,7 @@ class TDAgentSaveTest {
     );
     public static final float ALPHA = 1e-3f;
     public static final float LAMBDA = 0.5f;
-    private static final String POLICY_YAML = text("---",
+    private static final String NETWORK_YAML = text("---",
             "layers:",
             "- name: layer1",
             "  type: dense",
@@ -82,6 +82,10 @@ class TDAgentSaveTest {
             "- name: output.b",
             "  type: softmax",
             "  temperature: 0.8",
+            "- name: critic",
+            "  type: dense",
+            "  inputSize: 2",
+            "  outputSize: 1",
             "inputs:",
             "  layer1: [input]",
             "  layer2: [layer1]",
@@ -90,47 +94,35 @@ class TDAgentSaveTest {
             "  output.a: [layer4]",
             "  layer5: [layer2]",
             "  layer6: [layer5]",
-            "  output.b: [layer6]"
-    );
-    private static final String CRITIC_YAML = text("---",
-            "layers:",
-            "- name: layer1",
-            "  type: dense",
-            "  inputSize: 2",
-            "  outputSize: 1",
-            "- name: output",
-            "  type: tanh",
-            "inputs:",
-            "  layer1: [input]",
-            "  output: [layer1]"
+            "  output.b: [layer6]",
+            "  critic: [layer6]"
     );
 
-    static TDAgent createAgent() throws IOException {
-        JsonNode policySpec = Utils.fromText(POLICY_YAML);
+    static TDAgentSingleNN createAgent() throws IOException {
+        JsonNode networkSpec = Utils.fromText(NETWORK_YAML);
         Random random = Nd4j.getRandom();
         random.setSeed(AGENT_SEED);
-        TDNetwork policy = TDNetwork.create(policySpec, Locator.root(), "", Map.of(), random);
-        JsonNode criticSpec = Utils.fromText(CRITIC_YAML);
-        TDNetwork critic = TDNetwork.create(criticSpec, Locator.root(), "", Map.of(), random);
-        return new TDAgent(STATE_SPEC, ACTIONS_SPEC,
-                0, REWARD_ALPHA, ALPHA, ALPHA, LAMBDA,
-                policy, critic, null,
+        TDNetwork network = TDNetwork.create(networkSpec, Locator.root(), "", Map.of(), random);
+        return new TDAgentSingleNN(STATE_SPEC, ACTIONS_SPEC,
+                0, REWARD_ALPHA, ALPHA, LAMBDA,
+                network, null,
                 random, null, Integer.MAX_VALUE);
     }
 
     @Test
     void save() throws IOException {
-        try (TDAgent agent = createAgent()) {
+        try (TDAgentSingleNN agent = createAgent()) {
             File pathFile = new File("models/test");
             agent.save(pathFile);
 
             Random random = Nd4j.getRandom();
             random.setSeed(1234);
-            TDAgent newAgent = TDAgent.load(pathFile, Integer.MAX_VALUE, random);
-            assertEquals(newAgent.getAvgReward(), agent.getAvgReward());
-            assertEquals(newAgent.getRewardAlpha(), agent.getRewardAlpha());
-            assertEquals(((TDDense) newAgent.getCritic().layers().get("layer1")).getW(),
-                    ((TDDense) agent.getCritic().layers().get("layer1")).getW());
+            TDAgentSingleNN newAgent = TDAgentSingleNN.load(pathFile, Integer.MAX_VALUE, random);
+            assertEquals(agent.avgReward(), newAgent.avgReward());
+            assertEquals(agent.rewardAlpha(), newAgent.rewardAlpha());
+            assertEquals(agent.trainingAlpha(), newAgent.trainingAlpha());
+            assertEquals(((TDDense) agent.network().layers().get("layer1")).getW(),
+                    ((TDDense) newAgent.network().layers().get("layer1")).getW());
         }
     }
 }

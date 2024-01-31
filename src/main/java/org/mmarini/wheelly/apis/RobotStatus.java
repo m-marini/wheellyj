@@ -98,7 +98,7 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
     }
 
     /**
-     * Returns the robot directionDeg
+     * Returns the robot direction
      */
     public Complex direction() {
         return motionMessage.direction();
@@ -112,7 +112,7 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
     }
 
     /**
-     * Returns the echo absolute directionDeg
+     * Returns the echo absolute direction
      */
     public Complex echoDirection() {
         return proxyMessage.echoDirection();
@@ -195,7 +195,7 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
     }
 
     /**
-     * Returns the sensor directionDeg
+     * Returns the sensor direction
      */
     public Complex sensorDirection() {
         return proxyMessage.sensorDirection();
@@ -240,9 +240,9 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
     }
 
     /**
-     * Returns the robot status with directionDeg set
+     * Returns the robot status with direction set
      *
-     * @param direction the directionDeg
+     * @param direction the direction
      */
     public RobotStatus setDirection(Complex direction) {
         return setMotionMessage(
@@ -299,9 +299,9 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
     }
 
     /**
-     * Returns the roboto status with sensor directionDeg set
+     * Returns the roboto status with sensor direction set
      *
-     * @param dir the sensor directionDeg
+     * @param dir the sensor direction
      */
     public RobotStatus setSensorDirection(Complex dir) {
         return setProxyMessage(proxyMessage.setSensorDirection(dir.toIntDeg())

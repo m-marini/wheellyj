@@ -245,7 +245,7 @@ public class SimRobot implements RobotApi {
     }
 
     /**
-     * Halt the robot if it is moving in forbidden directionDeg
+     * Halt the robot if it is moving in forbidden direction
      */
     private void checkForSpeed() {
         if (((speed > 0 || leftPps > 0 || rightPps > 0) && !canMoveForward())
@@ -273,7 +273,7 @@ public class SimRobot implements RobotApi {
     }
 
     /**
-     * Returns the contact directionDeg relative to the robot (RAD)
+     * Returns the contact direction relative to the robot (RAD)
      *
      * @param contact the contact
      */
@@ -294,7 +294,7 @@ public class SimRobot implements RobotApi {
         // Direction difference
         double dAngle = direction().sub(direction).toRad();
 
-        // Relative angular speed to fix the directionDeg
+        // Relative angular speed to fix the direction
         double angularVelocityPps = Utils.clip(Utils.linear(dAngle, -RAD_10, RAD_10, -maxAngularSpeed, maxAngularSpeed), -maxAngularSpeed, maxAngularSpeed);
         // Relative linear speed to fix the speed
 
@@ -332,7 +332,7 @@ public class SimRobot implements RobotApi {
         double angularVelocity1 = (right - left) / ROBOT_TRACK;
         // Limits rotation to max allowed rotation
         double angularVelocity = clip(angularVelocity1, -MAX_ANGULAR_VELOCITY, MAX_ANGULAR_VELOCITY);
-        // Angular impulse to fix directionDeg
+        // Angular impulse to fix direction
         double robotAngularVelocity = robot.getAngularVelocity();
         double angularTorque = (angularVelocity - robotAngularVelocity) * robot.getInertia() / dt;
         // Add a random factor to angular impulse
@@ -349,7 +349,7 @@ public class SimRobot implements RobotApi {
     }
 
     /**
-     * Returns the robot directionDeg (DEG)
+     * Returns the robot direction (DEG)
      */
     public Complex direction() {
         return Complex.fromRad(PI / 2 - robot.getAngle());
@@ -511,7 +511,7 @@ public class SimRobot implements RobotApi {
     }
 
     /**
-     * Returns the sensor directionDeg (DEG)
+     * Returns the sensor direction (DEG)
      */
     public Complex sensorDirection() {
         return sensorDirection;
@@ -542,9 +542,9 @@ public class SimRobot implements RobotApi {
     }
 
     /**
-     * Sets the robot directionDeg
+     * Sets the robot direction
      *
-     * @param direction the directionDeg in DEG
+     * @param direction the direction in DEG
      */
     public void setRobotDir(Complex direction) {
         this.direction = direction;

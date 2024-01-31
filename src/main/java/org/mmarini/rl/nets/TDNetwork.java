@@ -200,7 +200,7 @@ public class TDNetwork {
         return backwardSeq;
     }
 
-    public List<String> getForwardSeq() {
+    public List<String> forwardSeq() {
         return forwardSeq;
     }
 
@@ -208,7 +208,7 @@ public class TDNetwork {
         return inputs;
     }
 
-    public Map<String, TDLayer> getLayers() {
+    public Map<String, TDLayer> layers() {
         return layers;
     }
 
@@ -307,14 +307,14 @@ public class TDNetwork {
             String key = entry.getKey();
             if (!(layerSizes.containsKey(key))) {
                 throw new IllegalArgumentException(format(
-                        "output %s does not correspond to a network layer",
+                        "network must contain \"%s\" output layer",
                         key
                 ));
             }
             long outSize = entry.getValue();
             if (!(layerSizes.get(key)[1] == outSize)) {
                 throw new IllegalArgumentException(format(
-                        "layer \"%s\" size must be %d (%d)",
+                        "size of layer \"%s\" must be %d (%d)",
                         key, outSize, layerSizes.get(key)[1]
                 ));
             }

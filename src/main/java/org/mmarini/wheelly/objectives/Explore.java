@@ -45,7 +45,12 @@ import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
 import static org.mmarini.wheelly.apis.Utils.clip;
 
 /**
- * Explore objective
+ * The explore objective returns
+ * a negative reward (-1) if the robot comes into contact with obstacles
+ * otherwise returns a positive reward (0 ... 1)
+ * the higher the number of known cells of the radar view
+ * and whether it is moving forward
+ * and whether the position of the proximity sensor is frontal in a given angle range
  */
 public interface Explore {
 
@@ -59,11 +64,16 @@ public interface Explore {
      */
     static ToDoubleFunction<RobotEnvironment> create(JsonNode root, Locator locator) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-        double sensorRange = locator.path("sensorRange").getNode(root).asDouble();
+        int sensorRange = locator.path("sensorRange").getNode(root).asInt();
         return explore(sensorRange);
     }
 
-    static ToDoubleFunction<RobotEnvironment> explore(double sensorRange) {
+    /**
+     * Returns the function of reward for the given environment
+     *
+     * @param sensorRange the sensor sensitivity angle range (DEG)
+     */
+    static ToDoubleFunction<RobotEnvironment> explore(int sensorRange) {
         return environment -> {
             WithRadarMap env = (WithRadarMap) environment;
 

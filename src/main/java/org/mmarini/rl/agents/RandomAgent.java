@@ -110,7 +110,7 @@ public class RandomAgent implements Agent {
     }
 
     @Override
-    public JsonNode getJson() {
+    public JsonNode json() {
         return null;
     }
 

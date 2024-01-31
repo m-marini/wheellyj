@@ -165,7 +165,7 @@ public class PrintNetChart {
             this.network = network;
             this.state = state;
             Set<String> labels = new HashSet<>(network.getSourceLabels());
-            labels.addAll(network.getLayers().keySet());
+            labels.addAll(network.layers().keySet());
             this.dictionary = org.mmarini.Utils.zipWithIndex(List.copyOf(labels))
                     .map(t -> Tuple2.of(t._2, "L" + t._1))
                     .collect(Tuple2.toMap());
@@ -192,7 +192,7 @@ public class PrintNetChart {
             output.print(dictionary.get(name));
             output.print("[\"");
             output.print(name);
-            TDLayer layer = network.getLayers().get(name);
+            TDLayer layer = network.layers().get(name);
             if (layer != null) {
                 if (layer instanceof TDDense) {
                     output.printf("\\nDense(%d)",

@@ -110,7 +110,7 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
             logger.atDebug().log("Avoid front contact at {}", robotLocation);
             if (status.canMoveBackward()) {
                 // Robot can move backward
-                // Set escape directionDeg the robot directionDeg and backward speed
+                // Set escape direction the robot direction and backward speed
                 // move robot backward
                 put(context, CONTACT_DIRECTION, direction);
                 put(context, FRONT_CONTACT, true);
@@ -165,7 +165,7 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
                 logger.atDebug().log("Avoided contact at {} m", contactDistance);
                 return COMPLETED_RESULT;
             }
-            // Check for escape directionDeg
+            // Check for escape direction
             Complex contactsDir = get(ctx, CONTACT_DIRECTION);
             if (contactsDir == null) {
                 // robot in safe location without movement

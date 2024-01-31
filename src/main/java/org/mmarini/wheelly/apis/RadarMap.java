@@ -376,7 +376,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      * Returns the radar map with the filled cells at contacts point
      *
      * @param location          contact point (m)
-     * @param direction         robot directionDeg
+     * @param direction         robot direction
      * @param frontContact      true if front contact
      * @param rearContact       true if rear contact
      * @param contactsRadius    the radius of contacts receptive area (m)
@@ -467,7 +467,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      * Sensor signal information
      *
      * @param sensorLocation  the sensor location
-     * @param sensorDirection the sensor directionDeg
+     * @param sensorDirection the sensor direction
      * @param distance        the distance (m)
      * @param timestamp       the timestamp (ms)
      */

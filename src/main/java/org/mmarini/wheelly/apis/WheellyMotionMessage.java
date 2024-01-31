@@ -142,9 +142,9 @@ public record WheellyMotionMessage(long localTime, long simulationTime, long rem
     }
 
     /**
-     * Returns the motion message with directionDeg set
+     * Returns the motion message with direction set
      *
-     * @param directionDeg the directionDeg (DEG)
+     * @param directionDeg the direction (DEG)
      */
     public WheellyMotionMessage setDirection(int directionDeg) {
         return directionDeg != this.directionDeg

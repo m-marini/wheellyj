@@ -24,7 +24,7 @@ import static org.mmarini.wheelly.apis.RobotCommands.moveAndFrontScan;
  * Generates the behavior to move roboto to target position
  * <p>
  * Turns the sensor front<br>
- * Turns the robot toward the target directionDeg<br>
+ * Turns the robot toward the target direction<br>
  * Moves ahead till obstacles or target position.<br/>
  * <p>
  * Parameters are:

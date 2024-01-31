@@ -63,7 +63,7 @@ public interface DumpRecord {
     }
 
     /**
-     * Returns the communication directionDeg [RX, TX]
+     * Returns the communication direction [RX, TX]
      */
     String comDirection();
 

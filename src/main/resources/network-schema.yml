@@ -39,9 +39,9 @@ $defs:
         multipleOf: 1
         minimum: 1
       maxAbsWeights:
-        exclusiveMinimun: 0
+        exclusiveMinimum: 0
       dropOut:
-        exclusiveMinimun: 0
+        exclusiveMinimum: 0
         maximum: 1
     required:
       - type
