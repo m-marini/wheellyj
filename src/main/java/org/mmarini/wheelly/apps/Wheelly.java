@@ -75,7 +75,14 @@ public class Wheelly {
             "^avgReward$",
             "^delta$",
             "^v0$",
-            "^trainedCritic.output$",
+            "^trainedCritic.output$"
+    };
+    public static final String[] BATCH_KPIS = {
+            "^reward$",
+            "^terminal",
+            "^s0",
+            "^s1",
+            "^actions"
     };
     public static final String WHEELLY_SCHEMA_YML = "https://mmarini.org/wheelly/wheelly-schema-1.0";
     private static final Logger logger = LoggerFactory.getLogger(Wheelly.class);
@@ -102,6 +109,9 @@ public class Wheelly {
         } else if ("all".equals(labels)) {
             // full kpis
             sub = KpiCSVSubscriber.create(file);
+        } else if ("batch".equals(labels)) {
+            // batch kpis
+            sub = KpiCSVSubscriber.create(file, BATCH_KPIS);
         } else {
             // filtered kpis
             sub = KpiCSVSubscriber.create(file, labels.split(","));
@@ -126,7 +136,7 @@ public class Wheelly {
                 .help("specify kpis path");
         parser.addArgument("-l", "--labels")
                 .setDefault("")
-                .help("specify kpi labels comma separated (all for all kpi)");
+                .help("specify kpi label regex comma separated (all for all kpi, batch for batch training kpis)");
         parser.addArgument("-s", "--silent")
                 .action(Arguments.storeTrue())
                 .help("specify silent closing (no window messages)");

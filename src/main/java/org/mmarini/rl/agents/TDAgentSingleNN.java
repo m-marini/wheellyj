@@ -466,7 +466,7 @@ public class TDAgentSingleNN implements Agent {
             kpi.put("s1", s1);
             kpi.put("avgReward", avgReward0);
             kpi.put("trainedAvgReward", avgReward);
-            kpi.put("netResults0", netResults0);
+            kpi.put("netResult", netResults0);
             kpi.put("v0", v0);
             kpi.put("v1", v1);
             kpi.put("delta", delta);

@@ -1,9 +1,9 @@
 ---
 $schema: https://mmarini.org/wheelly/batch-schema-0.1
 environment: environments/explorerEnv
-modelPath: models/polarRadarAgentTiles
+modelPath: models/polarRadarAgent
 numTrainIterations1: 10
-numTrainIterations2: 1
-batchSize: 60
+numTrainIterations2: 10
+batchSize: 300
 learningRate: 1e-3
 seed: 1234
