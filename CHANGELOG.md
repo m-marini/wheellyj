@@ -9,11 +9,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
-- Issue [#337(https://github.com/m-marini/wheellyj/issues/337)]: Add agent with single nn
 - Issue [#334](https://github.com/m-marini/wheellyj/issues/334): Add batch training
+- Issue [#337](https://github.com/m-marini/wheellyj/issues/337): Add agent with single nn
 
 ### Fixed
 
+- Issue [#340](https://github.com/m-marini/wheellyj/issues/340): Fix robot env failed test
 - Issue [#343](https://github.com/m-marini/wheellyj/issues/343): Fix pattern match for kpi label
 
 ## [0.13.0] 2024-01-28

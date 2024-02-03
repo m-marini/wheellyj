@@ -302,7 +302,7 @@ class TDDenseTest {
                 {ew102, ew112, ew122}
         }, EPSILON));
         assertThat(layer.getW(), matrixCloseTo(new float[][]{
-                { w002, w012, w022},
+                {w002, w012, w022},
                 {w102, w112, w122}
         }, EPSILON));
     }

@@ -59,6 +59,7 @@ import static java.util.Objects.requireNonNull;
  * Agent based on Temporal Difference Actor-Critic
  */
 public class TDAgent implements Agent {
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/agent-schema-0.5";
     private static final Logger logger = LoggerFactory.getLogger(TDAgent.class);
 
     /**
@@ -268,7 +269,6 @@ public class TDAgent implements Agent {
         }
         return node;
     }
-
     private final Map<String, SignalSpec> state;
     private final Map<String, SignalSpec> actions;
     private final float rewardAlpha;
@@ -396,23 +396,6 @@ public class TDAgent implements Agent {
         return criticState.get("output").getFloat(0, 0);
     }
 
-    @Override
-    public JsonNode json() {
-        ObjectNode spec = Utils.objectMapper.createObjectNode()
-                .put("rewardAlpha", rewardAlpha)
-                .put("policyAlpha", policyAlpha)
-                .put("criticAlpha", criticAlpha)
-                .put("lambda", lambda);
-        spec.set("state", specFromSignalMap(state));
-        spec.set("actions", specFromSignalMap(actions));
-        spec.set("policy", policy.getSpec());
-        spec.set("critic", critic.getSpec());
-        if (processor != null) {
-            spec.set("inputProcess", processor.getJson());
-        }
-        return spec;
-    }
-
     public float getLambda() {
         return lambda;
     }
@@ -446,6 +429,23 @@ public class TDAgent implements Agent {
     }
 
     @Override
+    public JsonNode json() {
+        ObjectNode spec = Utils.objectMapper.createObjectNode()
+                .put("rewardAlpha", rewardAlpha)
+                .put("policyAlpha", policyAlpha)
+                .put("criticAlpha", criticAlpha)
+                .put("lambda", lambda);
+        spec.set("state", specFromSignalMap(state));
+        spec.set("actions", specFromSignalMap(actions));
+        spec.set("policy", policy.getSpec());
+        spec.set("critic", critic.getSpec());
+        if (processor != null) {
+            spec.set("inputProcess", processor.getJson());
+        }
+        return spec;
+    }
+
+    @Override
     public void observe(Environment.ExecutionResult result) {
         train(result);
     }
@@ -460,7 +460,6 @@ public class TDAgent implements Agent {
                 .filter(t -> actions.containsKey(t._1))
                 .collect(Tuple2.toMap());
     }
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/agent-schema-0.5";
 
     /**
      * Returns the probability distribution of actions
@@ -589,23 +588,4 @@ public class TDAgent implements Agent {
         }
     }
 
-    /**
-     * Executes a batch training cycle
-     *
-     * @param s0      the input status
-     * @param v       the exptected state value
-     * @param actions the actions selected
-     */
-    public void trainBatch(Map<String, INDArray> s0, float v, Map<String, Signal> actions) {
-        Map<String, INDArray> c0 = critic.forward(s0, true, random);
-        INDArray v0 = c0.get("output");
-
-        INDArray delta = v0.sub(v).neg();
-        INDArray dv = delta.mul(criticAlpha);
-        critic.train(c0, dc, dv, lambda, null);
-
-        Map<String, INDArray> pi = policy.forward(s0, true, random);
-        Map<String, INDArray> dp = gradLogPi(pi, actions);
-        policy.train(pi, dp, delta.mul(policyAlpha), lambda, null);
-    }
 }

@@ -110,13 +110,13 @@ public class RandomAgent implements Agent {
     }
 
     @Override
-    public JsonNode json() {
-        return null;
+    public Map<String, SignalSpec> getState() {
+        return state;
     }
 
     @Override
-    public Map<String, SignalSpec> getState() {
-        return state;
+    public JsonNode json() {
+        return null;
     }
 
     @Override

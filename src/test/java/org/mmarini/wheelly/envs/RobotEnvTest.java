@@ -39,7 +39,7 @@ class RobotEnvTest {
     private Map<String, Signal> createActions(int direction, int sensorAction, int speed) {
         return Map.of(
                 "haltCommand", IntSignal.create(0),
-                "directionDeg", IntSignal.create(direction),
+                "direction", IntSignal.create(direction),
                 "sensorAction", IntSignal.create(sensorAction),
                 "speed", IntSignal.create(speed)
         );
@@ -47,16 +47,22 @@ class RobotEnvTest {
 
     @Test
     void deltaDir() {
+        // Given a robot environment
         RobotEnv env = RobotEnv.create(new MockRobot(), noMove());
+        // And actions signals for min direction, half direction, max diretion
+        Map<String, Signal> actions0 = createActions(0, 0, 0);
+        Map<String, Signal> actions1 = createActions(RobotEnv.DEFAULT_NUM_DIRECTION_VALUES / 2, 0, 0);
+        Map<String, Signal> actions2 = createActions(24, 0, 0);
 
-        int dDir = env.deltaDir(createActions(0, 0, 0)).toIntDeg();
-        assertEquals(RobotEnv.MIN_DIRECTION_ACTION, dDir);
+        // When get delta direction
+        int dDir0 = env.deltaDir(actions0).toIntDeg();
+        int dDir1 = env.deltaDir(actions1).toIntDeg();
+        int dDir2 = env.deltaDir(actions2).toIntDeg();
 
-        dDir = env.deltaDir(createActions(RobotEnv.DEFAULT_NUM_DIRECTION_VALUES / 2, 0, 0)).toIntDeg();
-        assertEquals(0, dDir);
-
-        dDir = env.deltaDir(createActions(24, 0, 0)).toIntDeg();
-        assertEquals(-RobotEnv.MAX_DIRECTION_ACTION, dDir);
+        // Then ...
+        assertEquals(RobotEnv.MIN_DIRECTION_ACTION, dDir0);
+        assertEquals(0, dDir1);
+        assertEquals(-RobotEnv.MAX_DIRECTION_ACTION, dDir2);
     }
 
     @Test
