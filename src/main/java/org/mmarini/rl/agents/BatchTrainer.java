@@ -238,7 +238,7 @@ public class BatchTrainer {
 
         // Loads s1
         Map<String, INDArray> s1Data = loadMapCSVFile(datasetPath, "s1");
-        if (s0Data.isEmpty()) {
+        if (s1Data.isEmpty()) {
             throw new IllegalArgumentException("Missing s1 datasets");
         }
         err = Tuple2.stream(s0Data)
@@ -258,7 +258,7 @@ public class BatchTrainer {
 
         // Loads actions
         Map<String, INDArray> actionsData = loadMapCSVFile(datasetPath, "actions");
-        if (s0Data.isEmpty()) {
+        if (actionsData.isEmpty()) {
             throw new IllegalArgumentException("Missing actions datasets");
         }
         err = Tuple2.stream(s0Data)
