@@ -67,15 +67,15 @@ class TDDenseTest {
         Random random = Nd4j.getRandom();
         random.setSeed(SEED);
         return createStream(SEED,
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 2)), // inputs
+                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)), // inputs
                 createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 3)), // eb
                 createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 3)), // ew
                 createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 3)), // b
                 createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 3)), // w
                 exponential(1e-3f, 100e-3f), // alpha
                 uniform(0f, 0.5f), // lambda
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1)), // delta
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 3)) // grad
+                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 1)), // delta
+                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 3)) // grad
         );
     }
 
@@ -125,8 +125,10 @@ class TDDenseTest {
                  INDArray delta,
                  INDArray grad) {
         TDDense layer = new TDDense("name", eb, ew, b, w, Float.MAX_VALUE, DROP_OUT);
-        float in0 = inputs.getFloat(0, 0);
-        float in1 = inputs.getFloat(0, 1);
+        float in00 = inputs.getFloat(0, 0);
+        float in01 = inputs.getFloat(0, 1);
+        float in10 = inputs.getFloat(1, 0);
+        float in11 = inputs.getFloat(1, 1);
         float b0 = b.getFloat(0, 0);
         float b1 = b.getFloat(0, 1);
         float b2 = b.getFloat(0, 2);
@@ -137,11 +139,18 @@ class TDDenseTest {
         float w11 = w.getFloat(1, 1);
         float w12 = w.getFloat(1, 2);
         INDArray out = layer.forward(new INDArray[]{inputs}, null);
-        assertThat(out, matrixCloseTo(new float[][]{{
-                in0 * w00 + in1 * w10 + b0,
-                in0 * w01 + in1 * w11 + b1,
-                in0 * w02 + in1 * w12 + b2
-        }}, EPSILON));
+        assertThat(out, matrixCloseTo(new float[][]{
+                {
+                        in00 * w00 + in01 * w10 + b0,
+                        in00 * w01 + in01 * w11 + b1,
+                        in00 * w02 + in01 * w12 + b2
+                },
+                {
+                        in10 * w00 + in11 * w10 + b0,
+                        in10 * w01 + in11 * w11 + b1,
+                        in10 * w02 + in11 * w12 + b2
+                },
+        }, EPSILON));
     }
 
     @Test
@@ -192,74 +201,109 @@ class TDDenseTest {
                float lambda,
                INDArray delta,
                INDArray grad) {
+        // Given the layer
         TDDense layer = new TDDense("name", eb, ew, b, w, Float.MAX_VALUE, DROP_OUT);
-        float in0 = inputs.getFloat(0, 0);
-        float in1 = inputs.getFloat(0, 1);
-        float b0 = b.getFloat(0, 0);
-        float b1 = b.getFloat(0, 1);
-        float b2 = b.getFloat(0, 2);
-        float w00 = w.getFloat(0, 0);
-        float w01 = w.getFloat(0, 1);
-        float w02 = w.getFloat(0, 2);
-        float w10 = w.getFloat(1, 0);
-        float w11 = w.getFloat(1, 1);
-        float w12 = w.getFloat(1, 2);
-        float eb0 = eb.getFloat(0, 0);
-        float eb1 = eb.getFloat(0, 1);
-        float eb2 = eb.getFloat(0, 2);
-        float ew00 = ew.getFloat(0, 0);
-        float ew01 = ew.getFloat(0, 1);
-        float ew02 = ew.getFloat(0, 2);
-        float ew10 = ew.getFloat(1, 0);
-        float ew11 = ew.getFloat(1, 1);
-        float ew12 = ew.getFloat(1, 2);
-        float grad0 = grad.getFloat(0, 0);
-        float grad1 = grad.getFloat(0, 1);
-        float grad2 = grad.getFloat(0, 2);
-        float post_eb0 = eb0 * lambda + grad0;
-        float post_eb1 = eb1 * lambda + grad1;
-        float post_eb2 = eb2 * lambda + grad2;
-        float post_ew00 = ew00 * lambda + in0 * grad0;
-        float post_ew01 = ew01 * lambda + in0 * grad1;
-        float post_ew02 = ew02 * lambda + in0 * grad2;
-        float post_ew10 = ew10 * lambda + in1 * grad0;
-        float post_ew11 = ew11 * lambda + in1 * grad1;
-        float post_ew12 = ew12 * lambda + in1 * grad2;
-        float fdelta = delta.getFloat(0, 0);
-        float post_b0 = b0 + fdelta * alpha * post_eb0;
-        float post_b1 = b1 + fdelta * alpha * post_eb1;
-        float post_b2 = b2 + fdelta * alpha * post_eb2;
-        float post_w00 = w00 + fdelta * alpha * post_ew00;
-        float post_w01 = w01 + fdelta * alpha * post_ew01;
-        float post_w02 = w02 + fdelta * alpha * post_ew02;
-        float post_w10 = w10 + fdelta * alpha * post_ew10;
-        float post_w11 = w11 + fdelta * alpha * post_ew11;
-        float post_w12 = w12 + fdelta * alpha * post_ew12;
-
         INDArray[] in = new INDArray[]{inputs};
         INDArray out = layer.forward(in, null);
-        float post_grad0 = w00 * grad0 + w01 * grad1 + w02 * grad2;
-        float post_grad1 = w10 * grad0 + w11 * grad1 + w12 * grad2;
 
+        // Then ...
+        float in00 = inputs.getFloat(0, 0);
+        float in10 = inputs.getFloat(0, 1);
+        float in01 = inputs.getFloat(1, 0);
+        float in11 = inputs.getFloat(1, 1);
+        float b00 = b.getFloat(0, 0);
+        float b10 = b.getFloat(0, 1);
+        float b20 = b.getFloat(0, 2);
+        float w000 = w.getFloat(0, 0);
+        float w010 = w.getFloat(0, 1);
+        float w020 = w.getFloat(0, 2);
+        float w100 = w.getFloat(1, 0);
+        float w110 = w.getFloat(1, 1);
+        float w120 = w.getFloat(1, 2);
+        float eb00 = eb.getFloat(0, 0);
+        float eb10 = eb.getFloat(0, 1);
+        float eb20 = eb.getFloat(0, 2);
+        float ew000 = ew.getFloat(0, 0);
+        float ew010 = ew.getFloat(0, 1);
+        float ew020 = ew.getFloat(0, 2);
+        float ew100 = ew.getFloat(1, 0);
+        float ew110 = ew.getFloat(1, 1);
+        float ew120 = ew.getFloat(1, 2);
+
+        float grad00 = grad.getFloat(0, 0);
+        float grad10 = grad.getFloat(0, 1);
+        float grad20 = grad.getFloat(0, 2);
+        float grad01 = grad.getFloat(1, 0);
+        float grad11 = grad.getFloat(1, 1);
+        float grad21 = grad.getFloat(1, 2);
+
+        float eb01 = eb00 * lambda + grad00; // eb0 at t=1
+        float eb02 = eb01 * lambda + grad01; // eb0 at t=2
+        float eb11 = eb10 * lambda + grad10; // eb1 at t=1
+        float eb12 = eb11 * lambda + grad11; // eb1 at t=2
+        float eb21 = eb20 * lambda + grad20; // eb2 at t=1
+        float eb22 = eb21 * lambda + grad21; // eb2 at t=2
+        float ew001 = ew000 * lambda + in00 * grad00;
+        float ew002 = ew001 * lambda + in01 * grad01;
+        float ew011 = ew010 * lambda + in00 * grad10;
+        float ew012 = ew011 * lambda + in01 * grad11;
+        float ew021 = ew020 * lambda + in00 * grad20;
+        float ew022 = ew021 * lambda + in01 * grad21;
+        float ew101 = ew100 * lambda + in10 * grad00;
+        float ew102 = ew101 * lambda + in11 * grad01;
+        float ew111 = ew110 * lambda + in10 * grad10;
+        float ew112 = ew111 * lambda + in11 * grad11;
+        float ew121 = ew120 * lambda + in10 * grad20;
+        float ew122 = ew121 * lambda + in11 * grad21;
+        float fdelta0 = delta.getFloat(0, 0);
+        float fdelta1 = delta.getFloat(1, 0);
+        float b01 = b00 + fdelta0 * alpha * eb01; // b0 at t=1
+        float b02 = b01 + fdelta1 * alpha * eb02; // b0 at t=2
+        float b11 = b10 + fdelta0 * alpha * eb11; // b1 at t=1
+        float b12 = b11 + fdelta1 * alpha * eb12; // b1 at t=2
+        float b21 = b20 + fdelta0 * alpha * eb21; // b2 at t=1
+        float b22 = b21 + fdelta1 * alpha * eb22; // b2 at t=1
+        float w001 = w000 + fdelta0 * alpha * ew001;
+        float w002 = w001 + fdelta1 * alpha * ew002;
+        float w011 = w010 + fdelta0 * alpha * ew011;
+        float w012 = w011 + fdelta1 * alpha * ew012;
+        float w021 = w020 + fdelta0 * alpha * ew021;
+        float w022 = w021 + fdelta1 * alpha * ew022;
+        float w101 = w100 + fdelta0 * alpha * ew101;
+        float w102 = w101 + fdelta1 * alpha * ew102;
+        float w111 = w110 + fdelta0 * alpha * ew111;
+        float w112 = w111 + fdelta1 * alpha * ew112;
+        float w121 = w120 + fdelta0 * alpha * ew121;
+        float w122 = w121 + fdelta1 * alpha * ew122;
+
+        float post_grad00 = w000 * grad00 + w010 * grad10 + w020 * grad20;
+        float post_grad01 = w100 * grad00 + w110 * grad10 + w120 * grad20;
+
+        float post_grad10 = w000 * grad01 + w010 * grad11 + w020 * grad21;
+        float post_grad11 = w100 * grad01 + w110 * grad11 + w120 * grad21;
+
+        // When train
         INDArray[] post_grads = layer.train(in, out, grad, delta.mul(alpha), lambda, null);
 
+        // Then
         assertThat(post_grads, arrayWithSize(1));
-        assertThat(post_grads[0], matrixCloseTo(new float[][]{{
-                post_grad0, post_grad1
-        }}, EPSILON));
+        assertThat(post_grads[0], matrixCloseTo(new float[][]{
+                {post_grad00, post_grad01},
+                {post_grad10, post_grad11}
+        }, EPSILON));
         assertThat(layer.getEb(), matrixCloseTo(new float[][]{{
-                post_eb0, post_eb1, post_eb2
+                eb02, eb12, eb22
         }}, EPSILON));
         assertThat(layer.getB(), matrixCloseTo(new float[][]{{
-                post_b0, post_b1, post_b2
+                b02, b12, b22
         }}, EPSILON));
         assertThat(layer.getEw(), matrixCloseTo(new float[][]{
-                {post_ew00, post_ew01, post_ew02},
-                {post_ew10, post_ew11, post_ew12}
+                {ew002, ew012, ew022},
+                {ew102, ew112, ew122}
         }, EPSILON));
         assertThat(layer.getW(), matrixCloseTo(new float[][]{
-                {post_w00, post_w01, post_w02},
-                {post_w10, post_w11, post_w12}
+                { w002, w012, w022},
+                {w102, w112, w122}
         }, EPSILON));
     }
 

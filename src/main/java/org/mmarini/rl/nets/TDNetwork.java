@@ -119,7 +119,12 @@ public class TDNetwork {
                 .collect(Collectors.toSet());
     }
 
-    Map<String, long[]> createLayerSizes(Map<String, Long> inputSizes) {
+    /**
+     * Returns the layer sizes by layer given the input size
+     *
+     * @param inputSizes the input size
+     */
+    public Map<String, long[]> createLayerSizes(Map<String, Long> inputSizes) {
         Map<String, long[]> sizes = new HashMap<>();
         ToLongFunction<String> getSize = (String label) -> sizes.containsKey(label)
                 ? sizes.get(label)[1]
@@ -132,13 +137,13 @@ public class TDNetwork {
                 // TODO check for size
             } else if (layer instanceof TDSum) {
                 List<String> inList = inputs.get(label);
-                long size = getSize.applyAsLong(inList.get(0));
+                long size = getSize.applyAsLong(inList.getFirst());
                 for (String s : inList) {
                     long sizen = getSize.applyAsLong(s);
                     if (sizen != size) {
                         throw new IllegalArgumentException(format(
                                 "layer %s must have the same size of layer %s, (%d) != (%d)",
-                                s, inList.get(0), sizen, size
+                                s, inList.getFirst(), sizen, size
                         ));
                     }
                 }
@@ -149,7 +154,7 @@ public class TDNetwork {
                         .sum();
                 layerSizes = new long[]{size, size};
             } else {
-                long size = getSize.applyAsLong(inputs.get(label).get(0));
+                long size = getSize.applyAsLong(inputs.get(label).getFirst());
                 layerSizes = new long[]{size, size};
             }
             sizes.put(label, layerSizes);
@@ -196,20 +201,16 @@ public class TDNetwork {
         return outs;
     }
 
-    public List<String> getBackwardSeq() {
-        return backwardSeq;
-    }
-
     public List<String> forwardSeq() {
         return forwardSeq;
     }
 
-    public Map<String, List<String>> getInputs() {
-        return inputs;
+    public List<String> getBackwardSeq() {
+        return backwardSeq;
     }
 
-    public Map<String, TDLayer> layers() {
-        return layers;
+    public Map<String, List<String>> getInputs() {
+        return inputs;
     }
 
     public Map<String, List<String>> getOutputs() {
@@ -261,6 +262,10 @@ public class TDNetwork {
         }
         node.set("inputs", inputs);
         return node;
+    }
+
+    public Map<String, TDLayer> layers() {
+        return layers;
     }
 
     /**
@@ -319,5 +324,14 @@ public class TDNetwork {
                 ));
             }
         }
+    }
+
+    /**
+     * Validate input and output sizes specification
+     *
+     * @param inputSizes the input size specifications
+     */
+    public void validateInputs(Map<String, Long> inputSizes) {
+        createLayerSizes(inputSizes);
     }
 }

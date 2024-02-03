@@ -53,8 +53,8 @@ class TDTanhTest {
         Random random = Nd4j.getRandom();
         random.setSeed(SEED);
         return createStream(SEED,
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 2)), // inputs
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 2)) // grad
+                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)), // inputs
+                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)) // grad
         );
     }
 
@@ -63,13 +63,15 @@ class TDTanhTest {
     void forward(INDArray inputs,
                  INDArray grad) {
         TDTanh layer = new TDTanh("name");
-        float in0 = inputs.getFloat(0, 0);
-        float in1 = inputs.getFloat(0, 1);
+        float in00 = inputs.getFloat(0, 0);
+        float in01 = inputs.getFloat(0, 1);
+        float in10 = inputs.getFloat(1, 0);
+        float in11 = inputs.getFloat(1, 1);
         INDArray out = layer.forward(new INDArray[]{inputs}, null);
-        assertThat(out, matrixCloseTo(new float[][]{{
-                (float) tanh(in0),
-                (float) tanh(in1)
-        }}, EPSILON));
+        assertThat(out, matrixCloseTo(new float[][]{
+                {(float) tanh(in00), (float) tanh(in01)},
+                {(float) tanh(in10), (float) tanh(in11)}
+        }, EPSILON));
     }
 
     @Test
@@ -84,23 +86,37 @@ class TDTanhTest {
     @MethodSource("cases")
     void train(INDArray inputs,
                INDArray grad) {
+        // Given the layer
         TDTanh layer = new TDTanh("name");
-        float in0 = inputs.getFloat(0, 0);
-        float in1 = inputs.getFloat(0, 1);
-        float grad0 = grad.getFloat(0, 0);
-        float grad1 = grad.getFloat(0, 1);
-        float out0 = (float) tanh(in0);
-        float out1 = (float) tanh(in1);
-
         INDArray[] in = new INDArray[]{inputs};
         INDArray out = layer.forward(in, null);
-        float post_grad0 = (1 - out0 * out0) * grad0;
-        float post_grad1 = (1 - out1 * out1) * grad1;
+
+        // When train
         INDArray[] post_grads = layer.train(in, out, grad, null, 0, null);
 
+        // Then
+        float in00 = inputs.getFloat(0, 0);
+        float in01 = inputs.getFloat(0, 1);
+        float in10 = inputs.getFloat(1, 0);
+        float in11 = inputs.getFloat(1, 1);
+        float grad00 = grad.getFloat(0, 0);
+        float grad01 = grad.getFloat(0, 1);
+        float grad10 = grad.getFloat(1, 0);
+        float grad11 = grad.getFloat(1, 1);
+        float out00 = (float) tanh(in00);
+        float out01 = (float) tanh(in01);
+        float post_grad00 = (1 - out00 * out00) * grad00;
+        float post_grad01 = (1 - out01 * out01) * grad01;
+
+        float out10 = (float) tanh(in10);
+        float out11 = (float) tanh(in11);
+        float post_grad10 = (1 - out10 * out10) * grad10;
+        float post_grad11 = (1 - out11 * out11) * grad11;
+
         assertThat(post_grads, arrayWithSize(1));
-        assertThat(post_grads[0], matrixCloseTo(new float[][]{{
-                post_grad0, post_grad1
-        }}, EPSILON));
+        assertThat(post_grads[0], matrixCloseTo(new float[][]{
+                {post_grad00, post_grad01},
+                {post_grad10, post_grad11}
+        }, EPSILON));
     }
 }

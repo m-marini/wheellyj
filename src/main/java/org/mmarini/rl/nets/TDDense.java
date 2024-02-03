@@ -33,6 +33,8 @@ import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.INDArrayIndex;
+import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.ops.transforms.Transforms;
 
 import java.util.Arrays;
@@ -187,28 +189,34 @@ public class TDDense extends TDLayer {
 
     @Override
     public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
+        // gradIn = grad * w'
         INDArray gradIn = grad.mmul(w.transpose());
 
-        eb.muli(lambda).addi(grad);
+        for (long i = 0; i < output.size(0); i++) {
+            // Single sample (on line training)
+            // eb = eb * lambda + grad;
+            INDArrayIndex index = NDArrayIndex.indices(i);
+            INDArray gradi = grad.get(index);
+            eb.muli(lambda).addi(gradi);
 
-        INDArray bgrad = grad.broadcast(w.shape());
-        INDArray bin = inputs[0].transpose().broadcast(w.shape());
-        INDArray grad_dw = bin.mul(bgrad);
-        ew.muli(lambda).addi(grad_dw);
+            INDArray bgrad = gradi.broadcast(w.shape());
+            INDArray bin = inputs[0].get(index).transpose().broadcast(w.shape());
+            INDArray grad_dw = bin.mul(bgrad);
+            ew.muli(lambda).addi(grad_dw);
 
-        INDArray db = eb.mul(delta);
-        INDArray dw = ew.mul(delta);
+            INDArray deltai = delta.get(index);
+            INDArray db = eb.mul(deltai);
+            INDArray dw = ew.mul(deltai);
 
-        b.addi(db);
-        w.addi(dw);
-        w.assign(Transforms.min(Transforms.max(w, -maxAbsWeights), maxAbsWeights));
+            b.addi(db);
+            w.addi(dw);
+            w.assign(Transforms.min(Transforms.max(w, -maxAbsWeights), maxAbsWeights));
 
-        if (kpiCallback != null) {
-            kpiCallback.accept(Tuple2.of(format("%s_db", getName()), db));
-            kpiCallback.accept(Tuple2.of(format("%s_dw", getName()), dw));
+            if (kpiCallback != null) {
+                kpiCallback.accept(Tuple2.of(format("%s_db", getName()), db));
+                kpiCallback.accept(Tuple2.of(format("%s_dw", getName()), dw));
+            }
         }
-        return new INDArray[]{
-                gradIn
-        };
+        return new INDArray[]{gradIn};
     }
 }

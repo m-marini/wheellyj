@@ -52,9 +52,9 @@ class TDConcatTest {
         Random random = Nd4j.getRandom();
         random.setSeed(SEED);
         return createStream(SEED,
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 2)), // inputs0
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 3)), // inputs1
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 5)) // grad
+                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)), // inputs0
+                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 3)), // inputs1
+                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 5)) // grad
         );
     }
 
@@ -64,16 +64,22 @@ class TDConcatTest {
                  INDArray input1,
                  INDArray grad) {
         TDConcat layer = new TDConcat("name");
-        float in00 = input0.getFloat(0, 0);
-        float in01 = input0.getFloat(0, 1);
-        float in10 = input1.getFloat(0, 0);
-        float in11 = input1.getFloat(0, 1);
-        float in12 = input1.getFloat(0, 2);
+        float in000 = input0.getFloat(0, 0);
+        float in010 = input0.getFloat(0, 1);
+        float in100 = input1.getFloat(0, 0);
+        float in110 = input1.getFloat(0, 1);
+        float in120 = input1.getFloat(0, 2);
+        float in001 = input0.getFloat(1, 0);
+        float in011 = input0.getFloat(1, 1);
+        float in101 = input1.getFloat(1, 0);
+        float in111 = input1.getFloat(1, 1);
+        float in121 = input1.getFloat(1, 2);
         INDArray[] in = {input0, input1};
         INDArray out = layer.forward(in, null);
-        assertThat(out, matrixCloseTo(new float[][]{{
-                in00, in01, in10, in11, in12
-        }}, EPSILON));
+        assertThat(out, matrixCloseTo(new float[][]{
+                {in000, in010, in100, in110, in120},
+                {in001, in011, in101, in111, in121}
+        }, EPSILON));
     }
 
     @Test
@@ -89,11 +95,16 @@ class TDConcatTest {
     void train(INDArray input0,
                INDArray input1,
                INDArray grad) {
-        float grad0 = grad.getFloat(0, 0);
-        float grad1 = grad.getFloat(0, 1);
-        float grad2 = grad.getFloat(0, 2);
-        float grad3 = grad.getFloat(0, 3);
-        float grad4 = grad.getFloat(0, 4);
+        float grad00 = grad.getFloat(0, 0);
+        float grad10 = grad.getFloat(0, 1);
+        float grad20 = grad.getFloat(0, 2);
+        float grad30 = grad.getFloat(0, 3);
+        float grad40 = grad.getFloat(0, 4);
+        float grad01 = grad.getFloat(1, 0);
+        float grad11 = grad.getFloat(1, 1);
+        float grad21 = grad.getFloat(1, 2);
+        float grad31 = grad.getFloat(1, 3);
+        float grad41 = grad.getFloat(1, 4);
         INDArray[] in = {input0, input1};
 
         TDConcat layer = new TDConcat("name");
@@ -101,11 +112,13 @@ class TDConcatTest {
         INDArray[] post_grads = layer.train(in, out, grad, Nd4j.zeros(1), 0, null);
 
         assertThat(post_grads, arrayWithSize(2));
-        assertThat(post_grads[0], matrixCloseTo(new float[][]{{
-                grad0, grad1
-        }}, EPSILON));
-        assertThat(post_grads[1], matrixCloseTo(new float[][]{{
-                grad2, grad3, grad4
-        }}, EPSILON));
+        assertThat(post_grads[0], matrixCloseTo(new float[][]{
+                {grad00, grad10},
+                {grad01, grad11},
+        }, EPSILON));
+        assertThat(post_grads[1], matrixCloseTo(new float[][]{
+                {grad20, grad30, grad40},
+                {grad21, grad31, grad41},
+        }, EPSILON));
     }
 }

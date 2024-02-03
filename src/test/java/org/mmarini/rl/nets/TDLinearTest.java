@@ -56,10 +56,10 @@ class TDLinearTest {
         Random random = Nd4j.getRandom();
         random.setSeed(SEED);
         return createStream(SEED,
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 2)), // inputs
+                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)), // inputs
                 gaussian(0f, 1f), // b
                 gaussian(0f, 1f), // w
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 2)) // grad
+                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)) // grad
         );
     }
 
@@ -85,13 +85,15 @@ class TDLinearTest {
                  float b, float w,
                  INDArray grad) {
         TDLinear layer = new TDLinear("name", b, w);
-        float in0 = inputs.getFloat(0, 0);
-        float in1 = inputs.getFloat(0, 1);
+        float in00 = inputs.getFloat(0, 0);
+        float in01 = inputs.getFloat(0, 1);
+        float in10 = inputs.getFloat(1, 0);
+        float in11 = inputs.getFloat(1, 1);
         INDArray out = layer.forward(new INDArray[]{inputs}, null);
-        assertThat(out, matrixCloseTo(new float[][]{{
-                in0 * w + b,
-                in1 * w + b
-        }}, EPSILON));
+        assertThat(out, matrixCloseTo(new float[][]{
+                {in00 * w + b, in01 * w + b},
+                {in10 * w + b, in11 * w + b}
+        }, EPSILON));
     }
 
     @ParameterizedTest
@@ -112,19 +114,29 @@ class TDLinearTest {
     void train(INDArray inputs,
                float b, float w,
                INDArray grad) {
+        // Given the layer
         TDLinear layer = new TDLinear("name", b, w);
-        float grad0 = grad.getFloat(0, 0);
-        float grad1 = grad.getFloat(0, 1);
 
+        // When train
         INDArray[] in = new INDArray[]{inputs};
         INDArray out = layer.forward(in, null);
-        float post_grad0 = w * grad0;
-        float post_grad1 = w * grad1;
         INDArray[] post_grads = layer.train(in, out, grad, Nd4j.zeros(1), 0, null);
 
+        // Then ...
+        float grad00 = grad.getFloat(0, 0);
+        float grad01 = grad.getFloat(0, 1);
+        float grad10 = grad.getFloat(1, 0);
+        float grad11 = grad.getFloat(1, 1);
+
+        float post_grad00 = w * grad00;
+        float post_grad01 = w * grad01;
+        float post_grad10 = w * grad10;
+        float post_grad11 = w * grad11;
+
         assertThat(post_grads, arrayWithSize(1));
-        assertThat(post_grads[0], matrixCloseTo(new float[][]{{
-                post_grad0, post_grad1
-        }}, EPSILON));
+        assertThat(post_grads[0], matrixCloseTo(new float[][]{
+                {post_grad00, post_grad01},
+                {post_grad10, post_grad11}
+        }, EPSILON));
     }
 }

@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 - Issue #337: Add agent with single nn
-
+- Issue #334: Add batch training
 
 ## [0.13.0] 2024-01-28
 

@@ -52,8 +52,8 @@ class TDReluTest {
         Random random = Nd4j.getRandom();
         random.setSeed(SEED);
         return createStream(SEED,
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 2)), // inputs
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 2)) // grad
+                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)), // inputs
+                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)) // grad
         );
     }
 
@@ -62,13 +62,15 @@ class TDReluTest {
     void forward(INDArray inputs,
                  INDArray grad) {
         TDRelu layer = new TDRelu("name");
-        float in0 = inputs.getFloat(0, 0);
-        float in1 = inputs.getFloat(0, 1);
+        float in00 = inputs.getFloat(0, 0);
+        float in01 = inputs.getFloat(0, 1);
+        float in10 = inputs.getFloat(1, 0);
+        float in11 = inputs.getFloat(1, 1);
         INDArray out = layer.forward(new INDArray[]{inputs}, null);
-        assertThat(out, matrixCloseTo(new float[][]{{
-                in0 > 0 ? in0 : 0f,
-                in1 > 0 ? in1 : 0f
-        }}, EPSILON));
+        assertThat(out, matrixCloseTo(new float[][]{
+                {in00 > 0 ? in00 : 0f, in01 > 0 ? in01 : 0f},
+                {in10 > 0 ? in10 : 0f, in11 > 0 ? in11 : 0f}
+        }, EPSILON));
     }
 
     @Test
@@ -83,21 +85,33 @@ class TDReluTest {
     @MethodSource("cases")
     void train(INDArray inputs,
                INDArray grad) {
+        // Given the layer
         TDRelu layer = new TDRelu("name");
-        float in0 = inputs.getFloat(0, 0);
-        float in1 = inputs.getFloat(0, 1);
-        float grad0 = grad.getFloat(0, 0);
-        float grad1 = grad.getFloat(0, 1);
-
         INDArray[] in = new INDArray[]{inputs};
         INDArray out = layer.forward(in, null);
-        float post_grad0 = in0 > 0 ? grad0 : 0;
-        float post_grad1 = in1 > 0 ? grad1 : 0;
+
+        // When train
         INDArray[] post_grads = layer.train(in, out, grad, null, 0, null);
 
+        // Then
+        float in00 = inputs.getFloat(0, 0);
+        float in01 = inputs.getFloat(0, 1);
+        float in10 = inputs.getFloat(1, 0);
+        float in11 = inputs.getFloat(1, 1);
+        float grad00 = grad.getFloat(0, 0);
+        float grad01 = grad.getFloat(0, 1);
+        float grad10 = grad.getFloat(1, 0);
+        float grad11 = grad.getFloat(1, 1);
+
+        float post_grad00 = in00 > 0 ? grad00 : 0;
+        float post_grad01 = in01 > 0 ? grad01 : 0;
+        float post_grad10 = in10 > 0 ? grad10 : 0;
+        float post_grad11 = in11 > 0 ? grad11 : 0;
+
         assertThat(post_grads, arrayWithSize(1));
-        assertThat(post_grads[0], matrixCloseTo(new float[][]{{
-                post_grad0, post_grad1
-        }}, EPSILON));
+        assertThat(post_grads[0], matrixCloseTo(new float[][]{
+                {post_grad00, post_grad01},
+                {post_grad10, post_grad11},
+        }, EPSILON));
     }
 }
