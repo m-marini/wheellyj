@@ -32,6 +32,8 @@ import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.INDArrayIndex;
+import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.ops.transforms.Transforms;
 
 import java.util.function.Consumer;
@@ -80,10 +82,16 @@ public class TDSoftmax extends TDLayer {
 
     @Override
     public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
-        INDArray lo = grad.mul(output).divi(temperature);
-        long n = output.shape()[1];
-        INDArray yit = Nd4j.eye(n).subi(output);
-        INDArray grad1 = lo.mmul(yit);
+        long n = output.size(0);
+        long m = output.size(1);
+        INDArray grad1 = grad.mul(output).divi(temperature);
+
+        // yit(i,j,k) = (I(j,k) - out(i,j))
+        for (int i = 0; i < n; i++) {
+            INDArray yit = Nd4j.eye(m).sub(output.getRow(i));
+            INDArray row = grad1.get(NDArrayIndex.indices(i));
+            grad1.put(new INDArrayIndex[]{NDArrayIndex.indices(i)}, row.mmul(yit));
+        }
         return new INDArray[]{grad1};
     }
 }

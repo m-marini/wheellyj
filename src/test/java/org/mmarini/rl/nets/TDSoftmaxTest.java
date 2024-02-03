@@ -57,9 +57,9 @@ class TDSoftmaxTest {
         Random random = Nd4j.getRandom();
         random.setSeed(SEED);
         return createStream(SEED,
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 3)), // inputs
+                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 3)), // inputs
                 exponential(0.3f, 3f), // temperature
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 3)) // grad
+                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 3)) // grad
         );
     }
 
@@ -82,21 +82,37 @@ class TDSoftmaxTest {
     void forward(INDArray inputs,
                  float temperature,
                  INDArray grad) {
+        // Given the layer
         TDSoftmax layer = new TDSoftmax("name", temperature);
-        float in0 = inputs.getFloat(0, 0);
-        float in1 = inputs.getFloat(0, 1);
-        float in2 = inputs.getFloat(0, 2);
-        double ez0 = exp(in0 / temperature);
-        double ez1 = exp(in1 / temperature);
-        double ez2 = exp(in2 / temperature);
-        double ez = ez0 + ez1 + ez2;
-        float out0 = (float) (ez0 / ez);
-        float out1 = (float) (ez1 / ez);
-        float out2 = (float) (ez2 / ez);
+
+        // When formward propagate
         INDArray out = layer.forward(new INDArray[]{inputs}, null);
-        assertThat(out, matrixCloseTo(new float[][]{{
-                out0, out1, out2
-        }}, EPSILON));
+
+        // Then output must be ...
+        float in00 = inputs.getFloat(0, 0);
+        float in01 = inputs.getFloat(0, 1);
+        float in02 = inputs.getFloat(0, 2);
+        double ez00 = exp(in00 / temperature);
+        double ez01 = exp(in01 / temperature);
+        double ez02 = exp(in02 / temperature);
+        double ez0 = ez00 + ez01 + ez02;
+        float out00 = (float) (ez00 / ez0);
+        float out01 = (float) (ez01 / ez0);
+        float out02 = (float) (ez02 / ez0);
+        float in10 = inputs.getFloat(1, 0);
+        float in11 = inputs.getFloat(1, 1);
+        float in12 = inputs.getFloat(1, 2);
+        double ez10 = exp(in10 / temperature);
+        double ez11 = exp(in11 / temperature);
+        double ez12 = exp(in12 / temperature);
+        double ez1 = ez10 + ez11 + ez12;
+        float out10 = (float) (ez10 / ez1);
+        float out11 = (float) (ez11 / ez1);
+        float out12 = (float) (ez12 / ez1);
+        assertThat(out, matrixCloseTo(new float[][]{
+                {out00, out01, out02},
+                {out10, out11, out12}
+        }, EPSILON));
     }
 
     @ParameterizedTest
@@ -116,32 +132,55 @@ class TDSoftmaxTest {
     void train(INDArray inputs,
                float temperature,
                INDArray grad) {
-        float in0 = inputs.getFloat(0, 0);
-        float in1 = inputs.getFloat(0, 1);
-        float in2 = inputs.getFloat(0, 2);
-        float grad0 = grad.getFloat(0, 0);
-        float grad1 = grad.getFloat(0, 1);
-        float grad2 = grad.getFloat(0, 2);
-        double ez0 = exp(in0 / temperature);
-        double ez1 = exp(in1 / temperature);
-        double ez2 = exp(in2 / temperature);
-        double ez = ez0 + ez1 + ez2;
-        float pi0 = (float) (ez0 / ez);
-        float pi1 = (float) (ez1 / ez);
-        float pi2 = (float) (ez2 / ez);
-
-        float post_grad0 = (grad0 * pi0 * (1 - pi0) - grad1 * pi1 * pi0 - grad2 * pi2 * pi0) / temperature;
-        float post_grad1 = (-grad0 * pi0 * pi1 + grad1 * pi1 * (1 - pi1) - grad2 * pi2 * pi1) / temperature;
-        float post_grad2 = (-grad0 * pi0 * pi2 - grad1 * pi1 * pi2 + grad2 * pi2 * (1 - pi2)) / temperature;
-
-        INDArray[] in = new INDArray[]{inputs};
+        // Given the layer
         TDSoftmax layer = new TDSoftmax("name", temperature);
+
+        // When train
+        INDArray[] in = new INDArray[]{inputs};
         INDArray out = layer.forward(in, null);
-        INDArray[] post_grads = layer.train(in, out, grad, Nd4j.zeros(1), 0, null);
+        INDArray[] post_grads = layer.train(in, out, grad, Nd4j.scalar(1), 0, null);
+
+        // Then post grads must be ...
+        float in00 = inputs.getFloat(0, 0);
+        float in01 = inputs.getFloat(0, 1);
+        float in02 = inputs.getFloat(0, 2);
+        float grad00 = grad.getFloat(0, 0);
+        float grad01 = grad.getFloat(0, 1);
+        float grad02 = grad.getFloat(0, 2);
+        double ez00 = exp(in00 / temperature);
+        double ez01 = exp(in01 / temperature);
+        double ez02 = exp(in02 / temperature);
+        double ez0 = ez00 + ez01 + ez02;
+        float pi00 = (float) (ez00 / ez0);
+        float pi01 = (float) (ez01 / ez0);
+        float pi02 = (float) (ez02 / ez0);
+
+        float post_grad00 = (grad00 * pi00 * (1 - pi00) - grad01 * pi01 * pi00 - grad02 * pi02 * pi00) / temperature;
+        float post_grad01 = (-grad00 * pi00 * pi01 + grad01 * pi01 * (1 - pi01) - grad02 * pi02 * pi01) / temperature;
+        float post_grad02 = (-grad00 * pi00 * pi02 - grad01 * pi01 * pi02 + grad02 * pi02 * (1 - pi02)) / temperature;
+
+        float in10 = inputs.getFloat(1, 0);
+        float in11 = inputs.getFloat(1, 1);
+        float in12 = inputs.getFloat(1, 2);
+        float grad10 = grad.getFloat(1, 0);
+        float grad11 = grad.getFloat(1, 1);
+        float grad12 = grad.getFloat(1, 2);
+        double ez10 = exp(in10 / temperature);
+        double ez11 = exp(in11 / temperature);
+        double ez12 = exp(in12 / temperature);
+        double ez1 = ez10 + ez11 + ez12;
+        float pi10 = (float) (ez10 / ez1);
+        float pi11 = (float) (ez11 / ez1);
+        float pi12 = (float) (ez12 / ez1);
+
+        float post_grad10 = (grad10 * pi10 * (1 - pi10) - grad11 * pi11 * pi10 - grad12 * pi12 * pi10) / temperature;
+        float post_grad11 = (-grad10 * pi10 * pi11 + grad11 * pi11 * (1 - pi11) - grad12 * pi12 * pi11) / temperature;
+        float post_grad12 = (-grad10 * pi10 * pi12 - grad11 * pi11 * pi12 + grad12 * pi12 * (1 - pi12)) / temperature;
 
         assertThat(post_grads, arrayWithSize(1));
-        assertThat(post_grads[0], matrixCloseTo(new float[][]{{
-                post_grad0, post_grad1, post_grad2
-        }}, EPSILON));
+        assertThat(post_grads[0], matrixCloseTo(new float[][]{
+                {post_grad00, post_grad01, post_grad02},
+                {post_grad10, post_grad11, post_grad12}
+        }, EPSILON));
     }
 }

@@ -2,13 +2,12 @@ package org.mmarini.rl.agents;
 
 import au.com.bytecode.opencsv.CSVReader;
 import org.mmarini.Tuple2;
-import org.mmarini.rl.envs.IntSignal;
-import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.rl.envs.SignalSpec;
+import org.mmarini.rl.nets.TDNetwork;
 import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,13 +16,17 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
-import java.util.stream.LongStream;
 
+import static java.lang.Math.min;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
+/**
+ * Trains the network with a batch of data samples
+ */
 public class BatchTrainer {
 
     private static final Logger logger = LoggerFactory.getLogger(BatchTrainer.class);
@@ -31,14 +34,40 @@ public class BatchTrainer {
     /**
      * Returns the batch trainer
      *
-     * @param agent              the agent
+     * @param network            the network to train
+     * @param learningRate       the learning rate parameter
+     * @param lambda             the lambda TD parameter
      * @param numTrainIteration1 the number of iterations of rl training
      * @param numTrainIteration2 the number of iterations of networks training
+     * @param batchSize          the batch size
+     * @param random             the random number generator
+     * @param onTrained          the on trained callback
      */
-    public static BatchTrainer create(TDAgent agent, int numTrainIteration1, int numTrainIteration2) {
-        return new BatchTrainer(agent, numTrainIteration1, numTrainIteration2);
+    public static BatchTrainer create(TDNetwork network, float learningRate, float lambda, int numTrainIteration1, int numTrainIteration2, long batchSize, Random random, Consumer<TDNetwork> onTrained) {
+        return new BatchTrainer(network, learningRate, lambda, numTrainIteration1, numTrainIteration2, batchSize, random, onTrained);
     }
 
+    /**
+     * Returns the pi gradients
+     *
+     * @param results     the results
+     * @param actionsMask the action mask
+     */
+    private static Map<String, INDArray> gradLogPi(Map<String, INDArray> results, Map<String, INDArray> actionsMask) {
+        return Tuple2.stream(actionsMask)
+                .map(t -> {
+                    String key = t._1;
+                    INDArray out = results.get(key).mul(t._2);
+                    return t.setV2(out);
+                }).collect(Tuple2.toMap());
+    }
+
+    /**
+     * Returns the array of data loaded from file prefix (load the data and the shape of array)
+     *
+     * @param filePrefix the file prefix
+     * @throws IOException in case of error
+     */
     private static INDArray loadCSVArray(String filePrefix) throws IOException {
         long[] shape = loadCSVShape(new File(filePrefix + "_shape.csv"));
         INDArray data = loadCSVData(new File(filePrefix + "_data.csv"));
@@ -56,7 +85,7 @@ public class BatchTrainer {
     }
 
     /**
-     * Returns the Array of data from csv file
+     * Returns the array of data from csv file
      *
      * @param file the file
      * @throws IOException in case of error
@@ -93,7 +122,6 @@ public class BatchTrainer {
      * @param pattern the pattern filename
      */
     private static Map<String, INDArray> loadMapCSVFile(File path, String pattern) {
-        //Predicate<String> validFilename = Pattern.compile(pattern + "(\\.?.*)_.data.csv").asMatchPredicate();
         int suffixLen = "_data.csv".length();
         Predicate<String> validFilename = Pattern.compile(pattern + "(.*)_data\\.csv").asMatchPredicate();
         File[] files = path.listFiles(f -> validFilename.test(f.getName()));
@@ -114,82 +142,50 @@ public class BatchTrainer {
                 .collect(Tuple2.toMap());
     }
 
-    /**
-     * Returns the list of row map of the given array map
-     *
-     * @param s0Data the array map
-     */
-    private static List<Map<String, INDArray>> mapToMapRowList(Map<String, INDArray> s0Data) {
-        // Validate size
-        long refSize = -1;
-        String refKey = null;
-        for (Map.Entry<String, INDArray> entry : s0Data.entrySet()) {
-            if (refSize < 0) {
-                refSize = entry.getValue().size(0);
-                refKey = entry.getKey();
-            } else if (entry.getValue().size(0) != refSize) {
-                throw new IllegalArgumentException(format(
-                        "# row of %s must be equal to # row of %s (%d)!=(%d)",
-                        entry.getKey(), refKey,
-                        entry.getValue().size(0), refSize
-                ));
-            }
-        }
-        return LongStream.range(0, refSize)
-                .mapToObj(i ->
-                        Tuple2.stream(s0Data)
-                                .map(t -> t.setV2(
-                                        t._2.get(NDArrayIndex.indices(i))))
-                                .collect(Tuple2.toMap())
-                )
-                .toList();
-    }
-
-    /**
-     * Returns the list of signals from the list of values and signal specs
-     *
-     * @param signalValues the signal value
-     * @param signalSpec   the signal spec
-     */
-    private static List<Map<String, Signal>> mapToMapSignals(List<Map<String, INDArray>> signalValues, Map<String, SignalSpec> signalSpec) {
-        return signalValues.stream()
-                .map(actMap ->
-                        Tuple2.stream(signalSpec)
-                                .map(specTuple -> {
-                                    String key = specTuple._1;
-                                    Signal signal = switch (specTuple._2) {
-                                        case IntSignalSpec ignored -> IntSignal.create(actMap.get(key).getInt(0));
-                                        default -> throw new IllegalArgumentException("Signal spec not implemented");
-                                    };
-                                    return specTuple.setV2(signal);
-                                })
-                                .collect(Tuple2.toMap()))
-                .toList();
-    }
-
-    private final TDAgent agent;
+    private final TDNetwork network;
     private final int numTrainIterations1;
     private final int numTrainIterations2;
-    private List<Map<String, INDArray>> s0;
-    private List<Map<String, INDArray>> s1;
+    private final Random random;
+    private final float trainingAlpha;
+    private final float lambda;
+    private final Consumer<TDNetwork> onTrained;
+    private final long batchSize;
+    private Map<String, INDArray> s0;
+    private Map<String, INDArray> s1;
     private INDArray v;
-    private List<Map<String, Signal>> actions;
+    private Map<String, INDArray> actionsMask;
     private INDArray residualAdvantage;
     private INDArray terminals;
     private INDArray v0;
     private INDArray v1;
+    private INDArray criticGrad;
+    private float avgReward;
 
     /**
      * Creates the batch trainer
      *
-     * @param agent               the agent
+     * @param network             the network to train
+     * @param learningRate        the learning rate
+     * @param lambda              the lambda TD parameter
      * @param numTrainIterations1 the number of iterations of rl training
      * @param numTrainIterations2 the number of iterations of networks training
+     * @param batchSize           the batch size
+     * @param random              the random number generator
+     * @param onTrained           the on trained call back
      */
-    protected BatchTrainer(TDAgent agent, int numTrainIterations1, int numTrainIterations2) {
-        this.agent = requireNonNull(agent);
+    protected BatchTrainer(TDNetwork network, float learningRate, float lambda, int numTrainIterations1, int numTrainIterations2, long batchSize, Random random, Consumer<TDNetwork> onTrained) {
+        this.network = requireNonNull(network);
         this.numTrainIterations1 = numTrainIterations1;
         this.numTrainIterations2 = numTrainIterations2;
+        this.random = requireNonNull(random);
+        this.trainingAlpha = learningRate;
+        this.lambda = lambda;
+        this.onTrained = onTrained;
+        this.batchSize = batchSize;
+    }
+
+    public float avgReward() {
+        return avgReward;
     }
 
     /**
@@ -206,41 +202,110 @@ public class BatchTrainer {
         if (rewards == null) {
             throw new IllegalArgumentException("Missing reward dataset");
         }
-        float avgReward = rewards.sum().getFloat(0) / rewards.size(0);
+        long n = rewards.size(0);
+        this.avgReward = rewards.sum().getFloat(0) / n;
         this.residualAdvantage = rewards.sub(avgReward);
 
-        // Loads s0
-        Map<String, INDArray> s0Data = loadMapCSVFile(datasetPath, "s0");
-        s0Data = Tuple2.stream(s0Data)
-                .map(t -> t.setV1(t._1.substring(3)))
-                .collect(Tuple2.toMap());
-        s0 = mapToMapRowList(s0Data);
-
-        // Loads s1
-        Map<String, INDArray> s1Data = loadMapCSVFile(datasetPath, "s1");
-        s1Data = Tuple2.stream(s1Data)
-                .map(t -> t.setV1(t._1.substring(3)))
-                .collect(Tuple2.toMap());
-        s1 = mapToMapRowList(s1Data);
-
-        // Loads actions
-        Map<String, INDArray> actions = loadMapCSVFile(datasetPath, "actions");
-        actions = Tuple2.stream(actions)
-                .map(t -> t.setV1(t._1.substring(8)))
-                .collect(Tuple2.toMap());
-        List<Map<String, INDArray>> actionRows = mapToMapRowList(actions);
-        this.actions = mapToMapSignals(actionRows, agent.getActions());
-
         // Loads terminals
-        INDArray terminals = loadMapCSVFile(datasetPath, "terminal").get("terminal");
+        terminals = loadMapCSVFile(datasetPath, "terminal").get("terminal");
         if (terminals == null) {
             throw new IllegalArgumentException("Missing terminal dataset");
         }
-        this.terminals = terminals.neq(0);
+        if (terminals.size(0) != n) {
+            throw new IllegalArgumentException(format(
+                    "Terminal dataset must have %d values (%d)", n, terminals.size(0)));
+        }
 
-        this.v = Nd4j.zeros(s0.size(), 1);
-        this.v0 = Nd4j.zeros(s0.size(), 1);
-        this.v1 = Nd4j.zeros(s0.size(), 1);
+        // Loads s0
+        Map<String, INDArray> s0Data = loadMapCSVFile(datasetPath, "s0");
+        if (s0Data.isEmpty()) {
+            throw new IllegalArgumentException("Missing s0 datasets");
+        }
+        Optional<IllegalArgumentException> err = Tuple2.stream(s0Data)
+                .filter(t -> t._2.size(0) != n)
+                .findAny()
+                .map(t -> new IllegalArgumentException(format(
+                        "%s dataset must have %d values (%d)", t._1, n, t._2.size(0))));
+        if (err.isPresent()) {
+            throw err.get();
+        }
+        s0 = Tuple2.stream(s0Data)
+                .map(t -> t.setV1(t._1.substring(3)))
+                .collect(Tuple2.toMap());
+        network.validateInputs(Tuple2.stream(s0)
+                .map(t1 -> t1.setV2(t1._2.size(1)))
+                .collect(Tuple2.toMap()));
+
+        // Loads s1
+        Map<String, INDArray> s1Data = loadMapCSVFile(datasetPath, "s1");
+        if (s0Data.isEmpty()) {
+            throw new IllegalArgumentException("Missing s1 datasets");
+        }
+        err = Tuple2.stream(s0Data)
+                .filter(t -> t._2.size(0) != n)
+                .findAny()
+                .map(t -> new IllegalArgumentException(format(
+                        "%s dataset must have %d values (%d)", t._1, n, t._2.size(0))));
+        if (err.isPresent()) {
+            throw err.get();
+        }
+        s1 = Tuple2.stream(s1Data)
+                .map(t -> t.setV1(t._1.substring(3)))
+                .collect(Tuple2.toMap());
+        network.validateInputs(Tuple2.stream(s1)
+                .map(t1 -> t1.setV2(t1._2.size(1)))
+                .collect(Tuple2.toMap()));
+
+        // Loads actions
+        Map<String, INDArray> actionsData = loadMapCSVFile(datasetPath, "actions");
+        if (s0Data.isEmpty()) {
+            throw new IllegalArgumentException("Missing actions datasets");
+        }
+        err = Tuple2.stream(s0Data)
+                .filter(t -> t._2.size(0) != n)
+                .findAny()
+                .map(t -> new IllegalArgumentException(format(
+                        "%s dataset must have %d values (%d)", t._1, n, t._2.size(0))));
+        if (err.isPresent()) {
+            throw err.get();
+        }
+        // Convert to actions mask
+        Map<String, Long> inputSizes = Tuple2.stream(s0)
+                .map(t -> t.setV2(t._2.size(1)))
+                .collect(Tuple2.toMap());
+        Map<String, long[]> layerSizes = network.createLayerSizes(inputSizes);
+        this.actionsMask = Tuple2.stream(actionsData)
+                .map(t -> {
+                    String key = t._1.substring(8);
+                    INDArray actions = t._2;
+                    INDArray mask = Nd4j.zeros(n, layerSizes.get(key)[1]);
+                    for (long i = 0; i < mask.size(0); i++) {
+                        long j = actions.getLong(i, 0);
+                        mask.putScalar(i, j, 1);
+                    }
+                    return Tuple2.of(key, mask);
+                })
+                .collect(Tuple2.toMap());
+
+        // Create critic gradients
+        this.criticGrad = Nd4j.ones(n, 1);
+    }
+
+    /**
+     * Runs a mini batch training
+     *
+     * @param s0          the states
+     * @param actionsMask the actions
+     */
+    private void runMiniBatch(Map<String, INDArray> s0, Map<String, INDArray> actionsMask, INDArray v, INDArray criticGrad) {
+        Map<String, INDArray> netResults0 = network.forward(s0, true, random);
+        INDArray v0 = netResults0.get("critic");
+        INDArray delta = v.sub(v0).muli(trainingAlpha);
+
+        Map<String, INDArray> grads = new HashMap<>(gradLogPi(netResults0, actionsMask));
+        // Computes output gradients for network (merges critic and policy grads)
+        grads.put("critic", criticGrad);
+        network.train(netResults0, grads, delta, lambda, null);
     }
 
     /**
@@ -259,16 +324,12 @@ public class BatchTrainer {
         v = residualAdv + v1 + (terminal ? v0-v1 : 0)
  */
         for (int i = 0; i < s0.size(); i++) {
-            v0.putScalar(i, agent.getCriticValue(s0.get(i)));
-            v1.putScalar(i, agent.getCriticValue(s1.get(i)));
+            v0 = network.forward(s0).get("critic");
+            v1 = network.forward(s1).get("critic");
         }
-        v.assign(residualAdvantage).addi(v1);
-        for (int i = 0; i < s0.size(); i++) {
-            if (terminals.getInt(i, 0) != 0) {
-                v.put(new int[]{i},
-                        v.getScalar(i).add(v0.getScalar(i)).sub(v1.getScalar(i)));
-            }
-        }
+        v = residualAdvantage
+                .add(terminals.mul(v0))
+                .addi(terminals.neg().add(1).mul(v1));
     }
 
     /**
@@ -276,22 +337,45 @@ public class BatchTrainer {
      * Trains over all the input samples
      */
     private void runPhase2() {
-        for (int i = 0; i < s0.size(); i++) {
-            agent.trainBatch(s0.get(i), v.getFloat(i, 0), actions.get(i));
+        long n = terminals.size(0);
+        if (n <= batchSize) {
+            runMiniBatch(s0, actionsMask, v, criticGrad);
+        } else {
+            for (long idx = 0; idx < n; idx += batchSize) {
+                long m = min(n - idx, batchSize);
+                INDArrayIndex index = NDArrayIndex.interval(idx, idx + m);
+                Map<String, INDArray> batchS0 = Tuple2.stream(s0)
+                        .map(t -> t.setV2(t._2.get(index)))
+                        .collect(Tuple2.toMap());
+                Map<String, INDArray> batchActionsMask = Tuple2.stream(actionsMask)
+                        .map(t -> t.setV2(t._2.get(index)))
+                        .collect(Tuple2.toMap());
+                runMiniBatch(batchS0, batchActionsMask,
+                        v.get(index),
+                        criticGrad.get(index)
+                );
+            }
         }
     }
 
     /**
-     * Train cycle
+     * Trains the network
      */
     public void train() {
+        long n = terminals.size(0);
+        logger.atInfo().log("Training on {} samples with {} batch size",
+                n, min(n, batchSize));
+        logger.atInfo().log(" {} x {} iterations",
+                numTrainIterations1, numTrainIterations2);
         for (int j = 0; j < numTrainIterations1; j++) {
-            runPhase1(); // ~200 ms to run phase1
+            runPhase1();
             for (int i = 0; i < numTrainIterations2; i++) {
                 logger.info("Step {}.{} ...", j, i);
-                runPhase2(); // ~7.2 to run phase 2
+                runPhase2();
             }
-            agent.autosave();
+            if (onTrained != null) {
+                onTrained.accept(network);
+            }
         }
     }
 }

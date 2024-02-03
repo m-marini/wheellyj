@@ -26,29 +26,30 @@
 package org.mmarini.wheelly.apps;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import hu.akarnokd.rxjava3.swing.SwingObservable;
-import io.reactivex.rxjava3.core.Observable;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
-import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.BatchTrainer;
-import org.mmarini.rl.agents.TDAgent;
-import org.mmarini.wheelly.envs.RobotEnvironment;
+import org.mmarini.rl.agents.Serde;
+import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.yaml.Locator;
+import org.mmarini.yaml.Utils;
+import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.api.rng.Random;
+import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.swing.*;
-import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
 
 import static java.lang.String.format;
-import static org.mmarini.wheelly.swing.Utils.createFrame;
 import static org.mmarini.yaml.Utils.fromFile;
 
 /**
@@ -82,67 +83,96 @@ public class BatchTraining {
         new BatchTraining().start(args);
     }
 
-    protected final JFrame frame;
     protected Namespace args;
-    private RobotEnvironment environment;
+    private String pathFile;
+    private BatchTrainer trainer;
 
     /**
+     * Returns the network from agent path
      *
+     * @param random the ranom number generator
+     * @throws IOException in case of error
      */
-    public BatchTraining() {
-        this.frame = createFrame(Messages.getString("Wheelly.title"), new JPanel());
-        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
-                .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
-                .doOnNext(this::handleWindowOpened)
-                .subscribe();
-        Observable.mergeArray(
-                        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE))
-                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
-                .doOnNext(this::handleWindowClosing)
-                .subscribe();
-    }
-
-    private void handleWindowClosing(WindowEvent windowEvent) {
-        environment.shutdown();
-        frame.dispose();
+    private TDNetwork loadNetwork(Random random) throws IOException {
+        JsonNode spec = Utils.fromFile(new File(pathFile, "agent.yml"));
+        File file = new File(pathFile, "agent.bin");
+        Map<String, INDArray> props = Serde.deserialize(file);
+        String backupFileName = format("agent-%1$tY%1$tm%1$td-%1$tH%1$tM%1$tS.bin", Calendar.getInstance());
+        file.renameTo(new File(file.getParentFile(), backupFileName));
+        logger.atInfo().log("Backup at {}", backupFileName);
+        Locator locator = Locator.root();
+        return TDNetwork.create(spec, locator.path("network"), "network", props, random);
     }
 
     /**
-     * Handles the windows opened
-     * Initializes the agent
+     * Saves the network
      *
-     * @param e the event
+     * @param network the network
      */
-    private void handleWindowOpened(WindowEvent e) {
+    private void saveNetwork(TDNetwork network) {
+        logger.atInfo().log("Saving network ...");
+        Map<String, INDArray> props = new HashMap<>(network.getProps("network"));
+        props.put("avgReward", Nd4j.createFromArray(trainer.avgReward()));
+        try {
+            File file = new File(pathFile, "agent.bin");
+            Serde.serizalize(file, props);
+            logger.atInfo().log("Saved network in {}", file.getCanonicalPath());
+        } catch (IOException e) {
+            logger.atError().setCause(e).log("Error saving network");
+        }
     }
 
+    /**
+     * Starts the training
+     *
+     * @param args the command line arguments
+     */
     protected void start(String[] args) {
         ArgumentParser parser = createParser();
         try {
+            // Parses the arguments
             this.args = parser.parseArgs(args);
-            logger.atInfo().log("Creating environment ...");
+
+            // Load configuration
             JsonNode config = fromFile(this.args.getString("config"));
-            this.environment = AppYaml.envNullControllerFromJson(config, Locator.root(), BATCH_SCHEMA_YML);
-            Locator agentLocator = Locator.locate(Locator.locate("agent").getNode(config).asText());
-            if (agentLocator.getNode(config).isMissingNode()) {
-                throw new IllegalArgumentException(format("Missing node %s", agentLocator));
+            JsonSchemas.instance().validateOrThrow(config, BATCH_SCHEMA_YML);
+
+            // Creates random number generator
+            Random random = Nd4j.getRandom();
+            long seed = Locator.locate("seed").getNode(config).asLong(0);
+            if (seed > 0) {
+                random.setSeed(seed);
             }
-            logger.atInfo().log("Creating agent ...");
-            Agent agent = Agent.fromConfig(config, agentLocator, environment);
+
+            // Loads network
+            logger.atInfo().log("Load network ...");
+            this.pathFile = Locator.locate("modelPath").getNode(config).asText();
+            TDNetwork network = loadNetwork(random);
+
+            // Create the batch trainer
             int numTrainIterations1 = Locator.locate("numTrainIterations1").getNode(config).asInt();
             int numTrainIterations2 = Locator.locate("numTrainIterations2").getNode(config).asInt();
-            BatchTrainer trainer = BatchTrainer.create((TDAgent) agent,
+            float learningRate = (float) Locator.locate("learningRate").getNode(config).asDouble();
+            long batchSize = Locator.locate("batchSize").getNode(config).asLong(Long.MAX_VALUE);
+            this.trainer = BatchTrainer.create(network,
+                    learningRate,
+                    0,
                     numTrainIterations1,
-                    numTrainIterations2);
-            logger.atInfo().log("Preparing for train ...");
-//            frame.setVisible(true);
+                    numTrainIterations2,
+                    batchSize,
+                    random,
+                    this::saveNetwork);
+
+            // Preapare for training
+            logger.atInfo().log("Preparing for training ...");
             trainer.prepare(new File(this.args.getString("dataset")));
+
+            // Runs the training session
             logger.atInfo().log("Training ...");
-            for (int i = 0; i < 10; i++) {
-                trainer.train();
-            }
+            trainer.train();
+
             logger.atInfo().log("Completed.");
-            frame.dispose();
+
         } catch (ArgumentParserException e) {
             parser.handleError(e);
             System.exit(1);

@@ -63,7 +63,7 @@ class TDDropOutTest {
         Random random = Nd4j.getRandom();
         random.setSeed(SEED);
         return createStream(SEED,
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 2)) // inputs
+                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)) // inputs
         );
     }
 
@@ -71,11 +71,11 @@ class TDDropOutTest {
         Random random = Nd4j.getRandom();
         random.setSeed(SEED);
         return createStream(SEED,
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 2)), // inputs
+                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)), // inputs
                 exponential(1e-3f, 100e-3f), // alpha
                 uniform(0f, 0.5f), // lambda
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1)), // delta
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 2)) // grad
+                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 1)), // delta
+                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)) // grad
         );
     }
 
@@ -94,11 +94,14 @@ class TDDropOutTest {
     @MethodSource("forwardCases")
     void forward(INDArray inputs) {
         TDDropOut layer = new TDDropOut("name", DROP_OUT);
-        float in0 = inputs.getFloat(0, 0);
-        float in1 = inputs.getFloat(0, 1);
+        float in00 = inputs.getFloat(0, 0);
+        float in10 = inputs.getFloat(0, 1);
+        float in01 = inputs.getFloat(1, 0);
+        float in11 = inputs.getFloat(1, 1);
         INDArray out = layer.forward(new INDArray[]{inputs}, null);
         assertThat(out, matrixCloseTo(new float[][]{
-                {in0, in1}
+                {in00, in10},
+                {in01, in11}
         }, EPSILON));
     }
 
@@ -119,8 +122,10 @@ class TDDropOutTest {
                INDArray delta,
                INDArray grad) {
         TDDropOut layer = new TDDropOut("name", DROP_OUT);
-        float grad0 = grad.getFloat(0, 0);
-        float grad1 = grad.getFloat(0, 1);
+        float grad00 = grad.getFloat(0, 0);
+        float grad10 = grad.getFloat(0, 1);
+        float grad01 = grad.getFloat(1, 0);
+        float grad11 = grad.getFloat(1, 1);
 
         INDArray[] in = new INDArray[]{inputs};
         INDArray out = layer.forward(in, null);
@@ -128,8 +133,9 @@ class TDDropOutTest {
         INDArray[] post_grads = layer.train(in, out, grad, delta.mul(alpha), lambda, null);
 
         assertThat(post_grads, arrayWithSize(1));
-        assertThat(post_grads[0], matrixCloseTo(new float[][]{{
-                grad0, grad1
-        }}, EPSILON));
+        assertThat(post_grads[0], matrixCloseTo(new float[][]{
+                {grad00, grad10},
+                {grad01, grad11}
+        }, EPSILON));
     }
 }

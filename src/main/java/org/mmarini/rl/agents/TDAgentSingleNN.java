@@ -29,7 +29,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
-import org.mmarini.NotImplementedException;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.Signal;
@@ -220,6 +219,9 @@ public class TDAgentSingleNN implements Agent {
         return TDAgent.chooseActions(pis, random);
     }
 
+    /**
+     * Saves the model
+     */
     public void autosave() {
         if (modelPath != null) {
             try {
@@ -231,6 +233,9 @@ public class TDAgentSingleNN implements Agent {
         }
     }
 
+    /**
+     * Returns the average reward
+     */
     public float avgReward() {
         return avgReward;
     }
@@ -243,6 +248,9 @@ public class TDAgentSingleNN implements Agent {
         autosave();
     }
 
+    /**
+     * Creates the kpi flow
+     */
     private void createKpiFlowable() {
         indicatorsPub = PublishProcessor.create();
         indicators = indicatorsPub
@@ -252,6 +260,11 @@ public class TDAgentSingleNN implements Agent {
         kpiListener = indicatorsPub::onNext;
     }
 
+    /**
+     * Returns the critical value for state inputs
+     *
+     * @param state the state inputs
+     */
     float criticValue(Map<String, INDArray> state) {
         Map<String, INDArray> criticState = network.forward(state);
         return criticState.get("critic").getFloat(0, 0);
@@ -282,6 +295,9 @@ public class TDAgentSingleNN implements Agent {
         return spec;
     }
 
+    /**
+     * Returns the lambda TD parameter
+     */
     public float lambda() {
         return lambda;
     }
@@ -468,31 +484,8 @@ public class TDAgentSingleNN implements Agent {
     }
 
     /**
-     * Executes a batch training cycle
-     *
-     * @param s0      the input status
-     * @param v       the expected state value
-     * @param actions the actions selected
+     * Returns the training alpha parameter
      */
-    public void trainBatch(Map<String, INDArray> s0, float v, Map<String, Signal> actions) {
-        Map<String, INDArray> netResults0 = network.forward(s0, true, random);
-        INDArray v0 = netResults0.get("critic");
-
-        INDArray delta = v0.sub(v).neg();
-//        INDArray dv = delta.mul(criticAlpha);
-
-        Map<String, INDArray> pi = network.forward(s0, true, random);
-        Map<String, INDArray> dp = TDAgent.gradLogPi(pi, actions);
-        // Compose    for gradients dp + dv
-
-        // Computes output gradients for network (merges critic and policy grads)
-        if (true) {
-            throw new NotImplementedException();
-        }
-
-        network.train(pi, dp, delta.mul(trainingAlpha), lambda, null);
-    }
-
     public float trainingAlpha() {
         return trainingAlpha;
     }

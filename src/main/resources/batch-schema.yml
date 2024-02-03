@@ -9,23 +9,24 @@ properties:
   $schema:
     type: string
     const: https://mmarini.org/wheelly/batch-schema-0.1
-  robot:
+  modelPath:
     type: string
-  controller:
-    type: string
-  environment:
-    type: string
-  agent:
-    type: string
+  seed:
+    multipleOf: 1
+  learningRate:
+    minimum: 0
   numTrainIterations1:
     multipleOf: 1
     minimum: 1
   numTrainIterations2:
     multipleOf: 1
     minimum: 1
+  batchSize:
+    multipleOf: 1
+    minimum: 1
 required:
   - $schema
-  - environment
-  - agent
+  - modelPath
+  - learningRate
   - numTrainIterations1
   - numTrainIterations2

@@ -88,6 +88,7 @@ public class TDDropOut extends TDLayer {
 
     @Override
     public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
+        // TODO to be implemented the dropping out of signals
         return new INDArray[]{grad};
     }
 }

@@ -52,9 +52,9 @@ class TDSumTest {
         Random random = Nd4j.getRandom();
         random.setSeed(SEED);
         return createStream(SEED,
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 2)), // inputs0
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 2)), // inputs1
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 2)) // grad
+                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)), // inputs0
+                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)), // inputs1
+                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)) // grad
         );
     }
 
@@ -64,15 +64,20 @@ class TDSumTest {
                  INDArray input1,
                  INDArray grad) {
         TDSum layer = new TDSum("name");
-        float in00 = input0.getFloat(0, 0);
-        float in01 = input0.getFloat(0, 1);
-        float in10 = input1.getFloat(0, 0);
-        float in11 = input1.getFloat(0, 1);
+        float in000 = input0.getFloat(0, 0);
+        float in010 = input0.getFloat(0, 1);
+        float in100 = input1.getFloat(0, 0);
+        float in110 = input1.getFloat(0, 1);
+        float in001 = input0.getFloat(1, 0);
+        float in011 = input0.getFloat(1, 1);
+        float in101 = input1.getFloat(1, 0);
+        float in111 = input1.getFloat(1, 1);
         INDArray[] in = {input0, input1};
         INDArray out = layer.forward(in, null);
-        assertThat(out, matrixCloseTo(new float[][]{{
-                in00 + in10, in01 + in11
-        }}, EPSILON));
+        assertThat(out, matrixCloseTo(new float[][]{
+                {in000 + in100, in010 + in110},
+                {in001 + in101, in011 + in111},
+        }, EPSILON));
     }
 
     @Test
@@ -88,8 +93,10 @@ class TDSumTest {
     void train(INDArray input0,
                INDArray input1,
                INDArray grad) {
-        float grad0 = grad.getFloat(0, 0);
-        float grad1 = grad.getFloat(0, 1);
+        float grad00 = grad.getFloat(0, 0);
+        float grad10 = grad.getFloat(0, 1);
+        float grad01 = grad.getFloat(1, 0);
+        float grad11 = grad.getFloat(1, 1);
         INDArray[] in = {input0, input1};
 
         TDSum layer = new TDSum("name");
@@ -97,11 +104,13 @@ class TDSumTest {
         INDArray[] post_grads = layer.train(in, out, grad, Nd4j.zeros(1), 0, null);
 
         assertThat(post_grads, arrayWithSize(2));
-        assertThat(post_grads[0], matrixCloseTo(new float[][]{{
-                grad0, grad1
-        }}, EPSILON));
-        assertThat(post_grads[1], matrixCloseTo(new float[][]{{
-                grad0, grad1
-        }}, EPSILON));
+        assertThat(post_grads[0], matrixCloseTo(new float[][]{
+                {grad00, grad10},
+                {grad01, grad11}
+        }, EPSILON));
+        assertThat(post_grads[1], matrixCloseTo(new float[][]{
+                {grad00, grad10},
+                {grad01, grad11}
+        }, EPSILON));
     }
 }
