@@ -1,34 +1,57 @@
 package org.mmarini.rl.agents;
 
-import au.com.bytecode.opencsv.CSVReader;
+import org.datavec.api.records.reader.RecordReader;
+import org.datavec.api.records.reader.impl.csv.CSVRecordReader;
+import org.datavec.api.records.writer.impl.csv.CSVRecordWriter;
+import org.datavec.api.split.FileSplit;
+import org.datavec.api.split.partition.NumberOfRecordsPartitioner;
+import org.datavec.api.split.partition.Partitioner;
+import org.datavec.api.transform.MathOp;
+import org.datavec.api.transform.TransformProcess;
+import org.datavec.api.transform.condition.ConditionOp;
+import org.datavec.api.transform.condition.column.FloatColumnCondition;
+import org.datavec.api.transform.schema.Schema;
+import org.datavec.api.writable.IntWritable;
+import org.datavec.api.writable.NDArrayWritable;
+import org.datavec.api.writable.Writable;
+import org.datavec.local.transforms.LocalTransformExecutor;
+import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.nets.TDNetwork;
-import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
+import org.nd4j.linalg.dataset.api.preprocessor.NormalizerStandardize;
 import org.nd4j.linalg.factory.Nd4j;
-import org.nd4j.linalg.indexing.INDArrayIndex;
-import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
+import java.util.stream.LongStream;
 
-import static java.lang.Math.min;
-import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 /**
  * Trains the network with a batch of data samples
+ * <p>
+ * Runs phase2
+ * Trains over all the input samples
+ * <p>
+ * Runs phase2
+ * Trains over all the input samples
+ * <p>
+ * Runs phase2
+ * Trains over all the input samples
  */
 public class BatchTrainer {
-
+    private static final String TMP_ADVANTAGE_PATH = "./tmp/advantage";
+    private static final String TMP_V_PATH = "tmp/v";
+    private static final String TMP_MASKS_PATH = "./tmp/masks";
     private static final Logger logger = LoggerFactory.getLogger(BatchTrainer.class);
 
     /**
@@ -43,8 +66,24 @@ public class BatchTrainer {
      * @param random             the random number generator
      * @param onTrained          the on trained callback
      */
-    public static BatchTrainer create(TDNetwork network, float learningRate, float lambda, int numTrainIteration1, int numTrainIteration2, long batchSize, Random random, Consumer<TDNetwork> onTrained) {
-        return new BatchTrainer(network, learningRate, lambda, numTrainIteration1, numTrainIteration2, batchSize, random, onTrained);
+    public static BatchTrainer create(TDNetwork network, float learningRate, float lambda,
+                                      int numTrainIteration1, int numTrainIteration2, int batchSize,
+                                      Random random, Consumer<TDNetwork> onTrained) {
+        return new BatchTrainer(network, learningRate, lambda,
+                numTrainIteration1, numTrainIteration2, batchSize,
+                random, onTrained);
+    }
+
+    /**
+     * Returns the map after run consumer for each map value
+     *
+     * @param map the map
+     * @param run the consumer
+     * @param <K> the key type
+     * @param <V> the value type
+     */
+    private static <K, V> void forEachValue(Map<K, V> map, Consumer<V> run) {
+        map.values().forEach(run);
     }
 
     /**
@@ -63,83 +102,80 @@ public class BatchTrainer {
     }
 
     /**
-     * Returns the array of data loaded from file prefix (load the data and the shape of array)
+     * Returns the record reader
      *
-     * @param filePrefix the file prefix
-     * @throws IOException in case of error
+     * @param file the file name
+     * @throws IOException          in case of error
+     * @throws InterruptedException in case of error
      */
-    private static INDArray loadCSVArray(String filePrefix) throws IOException {
-        long[] shape = loadCSVShape(new File(filePrefix + "_shape.csv"));
-        INDArray data = loadCSVData(new File(filePrefix + "_data.csv"));
-        long[] shape1 = data.shape();
-        long[] newShape;
-        if (shape[0] <= 1) {
-            // Flatten first dimension
-            newShape = Arrays.copyOf(shape, shape.length);
-        } else {
-            newShape = new long[1 + shape.length];
-            System.arraycopy(shape, 0, newShape, 1, shape.length);
+    private static RecordReader loadRecordReader(File file) throws IOException, InterruptedException {
+        CSVRecordReader recordReader = new CSVRecordReader();
+        recordReader.initialize(new FileSplit(file));
+        return recordReader;
+    }
+
+    /**
+     * Returns the mapped map
+     *
+     * @param map    the map
+     * @param mapper the entry mapper
+     * @param <K>    the key type
+     * @param <V>    the value type
+     * @param <K1>   the mapped key type
+     * @param <V1>   the mapped value type
+     */
+    private static <K, V, K1, V1> Map<K1, V1> mapMap(Map<K, V> map,
+                                                     Function<? super Tuple2<K, V>, Tuple2<K1, V1>> mapper) {
+        return Tuple2.stream(map).map(mapper).collect(Tuple2.toMap());
+    }
+
+    /**
+     * Returns the map with mapped values
+     *
+     * @param map    the map
+     * @param mapper the mapper function
+     * @param <K>    the key type
+     * @param <V>    the value type
+     * @param <R>    the mapped value type
+     */
+    private static <K, V, R> Map<K, R> mapValues(Map<K, V> map, Function<V, R> mapper) {
+        return mapMap(map, Tuple2.map2(mapper));
+    }
+
+    /**
+     * Returns the dataset iterator of processed reader
+     *
+     * @param input   the input record reader
+     * @param process the process
+     * @param outPath the output file path
+     */
+    static RecordReader runProcess(RecordReader input, TransformProcess process, File outPath) throws Exception {
+        outPath.mkdirs();
+        CSVRecordWriter out = new CSVRecordWriter();
+        Partitioner p = new NumberOfRecordsPartitioner();
+        out.initialize(new FileSplit(outPath), p);
+        input.reset();
+        while (input.hasNext()) {
+            List<Writable> record = input.next();
+            List<List<Writable>> results = LocalTransformExecutor.execute(List.of(record), process);
+            out.writeBatch(results);
         }
-        newShape[0] = shape1[0];
-        return data.reshape(newShape);
+        out.close();
+        return loadRecordReader(outPath);
     }
 
     /**
-     * Returns the array of data from csv file
+     * Returns the list of writable from NDArray
      *
-     * @param file the file
-     * @throws IOException in case of error
+     * @param array the array
      */
-    private static INDArray loadCSVData(File file) throws IOException {
-        List<String[]> lines = new CSVReader(new FileReader(file))
-                .readAll();
-        double[][] data = lines.stream()
-                .map(t -> Arrays.stream(t).mapToDouble(Double::parseDouble)
-                        .toArray())
-                .toArray(double[][]::new);
-        return Nd4j.createFromArray(data).castTo(DataType.FLOAT);
-    }
-
-    /**
-     * Returns the Array of data from csv file
-     *
-     * @param file the file
-     * @throws IOException in case of error
-     */
-    private static long[] loadCSVShape(File file) throws IOException {
-        List<String[]> lines = new CSVReader(new FileReader(file))
-                .readAll();
-        return lines.stream()
-                .flatMapToLong(t -> Arrays.stream(t).mapToLong(x ->
-                        (long) Double.parseDouble(x)))
-                .toArray();
-    }
-
-    /**
-     * Return the map csv file
-     *
-     * @param path    the dataset path
-     * @param pattern the pattern filename
-     */
-    private static Map<String, INDArray> loadMapCSVFile(File path, String pattern) {
-        int suffixLen = "_data.csv".length();
-        Predicate<String> validFilename = Pattern.compile(pattern + "(.*)_data\\.csv").asMatchPredicate();
-        File[] files = path.listFiles(f -> validFilename.test(f.getName()));
-        return Optional.ofNullable(files).stream().flatMap(Arrays::stream)
-                .map(File::getName)
-                .map(f ->
-                        f.substring(0, f.length() - suffixLen))
-                .map(name -> {
-                    try {
-                        INDArray data = loadCSVArray(path.getCanonicalPath() + File.separator + name);
-                        return Tuple2.of(name, data);
-                    } catch (IOException e) {
-                        logger.atError().setCause(e).log(e.getMessage());
-                        return null;
-                    }
-                })
-                .filter(Objects::nonNull)
-                .collect(Tuple2.toMap());
+    private static List<List<Writable>> toWritable(INDArray array) {
+        return LongStream.range(0, array.size(0))
+                .mapToObj(i -> LongStream.range(0, array.size(1))
+                        .mapToObj(j ->
+                                (Writable) new NDArrayWritable(array.getScalar(i, j)))
+                        .toList())
+                .toList();
     }
 
     private final TDNetwork network;
@@ -149,17 +185,14 @@ public class BatchTrainer {
     private final float trainingAlpha;
     private final float lambda;
     private final Consumer<TDNetwork> onTrained;
-    private final long batchSize;
-    private Map<String, INDArray> s0;
-    private Map<String, INDArray> s1;
-    private INDArray v;
-    private Map<String, INDArray> actionsMask;
-    private INDArray residualAdvantage;
-    private INDArray terminals;
-    private INDArray v0;
-    private INDArray v1;
-    private INDArray criticGrad;
+    private final int batchSize;
+    private Map<String, RecordReaderDataSetIterator> s0Iterators;
+    private Map<String, RecordReaderDataSetIterator> s1Iterators;
+    private RecordReaderDataSetIterator advantageIterators;
+    private RecordReaderDataSetIterator terminalsIterators;
+    private Map<String, RecordReaderDataSetIterator> actionsMaskIterators;
     private float avgReward;
+    private RecordReaderDataSetIterator vIterator;
 
     /**
      * Creates the batch trainer
@@ -173,7 +206,7 @@ public class BatchTrainer {
      * @param random              the random number generator
      * @param onTrained           the on trained call back
      */
-    protected BatchTrainer(TDNetwork network, float learningRate, float lambda, int numTrainIterations1, int numTrainIterations2, long batchSize, Random random, Consumer<TDNetwork> onTrained) {
+    protected BatchTrainer(TDNetwork network, float learningRate, float lambda, int numTrainIterations1, int numTrainIterations2, int batchSize, Random random, Consumer<TDNetwork> onTrained) {
         this.network = requireNonNull(network);
         this.numTrainIterations1 = numTrainIterations1;
         this.numTrainIterations2 = numTrainIterations2;
@@ -189,106 +222,145 @@ public class BatchTrainer {
     }
 
     /**
+     * Returns the action mask iterators by reading actions
+     *
+     * @param datasetPath the actions path
+     */
+    private Map<String, RecordReaderDataSetIterator> loadActionMask(File datasetPath) {
+        // Convert to actions mask
+        Map<String, Long> inputSizes = mapValues(s0Iterators, t -> (long) t.next().numOutcomes());
+        Map<String, long[]> layerSizes = network.createLayerSizes(inputSizes);
+        // Loads actions
+        Map<String, RecordReader> actions = loadRecordReaderMap(datasetPath, "actions");
+        return Tuple2.stream(actions)
+                .map(t -> {
+                    try {
+                        return t.setV2(processActionToMask(t._1, t._2, layerSizes.get(t._1)[1]));
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .collect(Tuple2.toMap());
+    }
+
+    /**
+     * Returns the residual advantage record reader dataset iterator by processing rewards
+     *
+     * @param datasetPath the data set path
+     * @throws Exception in case of error
+     */
+    private RecordReaderDataSetIterator loadAdvantage(File datasetPath) throws Exception {
+        // Loads rewards
+        RecordReader rewardReader = loadRecordReader(new File(datasetPath, "reward_data.csv"));
+        // Computes average
+        RecordReaderDataSetIterator iter = new RecordReaderDataSetIterator(rewardReader, batchSize);
+        NormalizerStandardize preProcessor = new NormalizerStandardize();
+        preProcessor.fit(iter);
+        INDArray avg = preProcessor.getMean();
+        avgReward = avg.getFloat(0);
+
+        // Computes residual advantage process
+        Schema schema = new Schema.Builder().addColumnFloat("reward").build();
+        TransformProcess tp = new TransformProcess.Builder(schema)
+                .floatMathOp("reward", MathOp.Subtract, avgReward)
+                .build();
+
+        return new RecordReaderDataSetIterator(
+                runProcess(rewardReader, tp, new File(TMP_ADVANTAGE_PATH)),
+                batchSize);
+    }
+
+    /**
+     * Returns the dataset map
+     *
+     * @param path    the path
+     * @param pattern the pattern
+     */
+    private Map<String, RecordReader> loadRecordReaderMap(File path, String pattern) {
+        int suffixLen = "_data.csv".length();
+        int prefixLen = pattern.length() + 1;
+        Predicate<String> validFilename = Pattern.compile(pattern + "(.*)_data\\.csv").asMatchPredicate();
+        File[] files = path.listFiles(f -> validFilename.test(f.getName()));
+        return Optional.ofNullable(files).stream().flatMap(Arrays::stream)
+                .map(File::getName)
+                .map(name -> {
+                    try {
+                        RecordReader data = loadRecordReader(new File(path.getCanonicalPath(), name));
+                        return Tuple2.of(name, data);
+                    } catch (IOException | InterruptedException e) {
+                        logger.atError().setCause(e).log(e.getMessage());
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .map(Tuple2.map1(t -> t.substring(prefixLen, t.length() - suffixLen)))
+                .collect(Tuple2.toMap());
+    }
+
+    /**
      * Prepare data for training.
      * Load the dataset of s0,s1,reward,terminal,actions
      *
      * @param datasetPath the path of dataset
      */
-    public void prepare(File datasetPath) throws IOException {
-        logger.atInfo().log("Loading {} ...", datasetPath);
-
-        // Loads rewards
-        INDArray rewards = loadMapCSVFile(datasetPath, "reward").get("reward");
-        if (rewards == null) {
-            throw new IllegalArgumentException("Missing reward dataset");
-        }
-        long n = rewards.size(0);
-        this.avgReward = rewards.sum().getFloat(0) / n;
-        this.residualAdvantage = rewards.sub(avgReward);
+    public void prepare(File datasetPath) throws Exception {
+        logger.atInfo().log("Loading advantage from \"{}\" ...", datasetPath.getCanonicalFile());
+        this.advantageIterators = loadAdvantage(datasetPath);
 
         // Loads terminals
-        terminals = loadMapCSVFile(datasetPath, "terminal").get("terminal");
-        if (terminals == null) {
-            throw new IllegalArgumentException("Missing terminal dataset");
-        }
-        if (terminals.size(0) != n) {
-            throw new IllegalArgumentException(format(
-                    "Terminal dataset must have %d values (%d)", n, terminals.size(0)));
-        }
+        logger.atInfo().log("Loading terminal from \"{}\" ...", datasetPath.getCanonicalFile());
+        this.terminalsIterators = new RecordReaderDataSetIterator(loadRecordReader(new File(datasetPath, "terminal_data.csv")), batchSize);
 
         // Loads s0
-        Map<String, INDArray> s0Data = loadMapCSVFile(datasetPath, "s0");
-        if (s0Data.isEmpty()) {
+        logger.atInfo().log("Loading s0 from \"{}\" ...", datasetPath.getCanonicalFile());
+        s0Iterators = mapMap(
+                loadRecordReaderMap(datasetPath, "s0"),
+                Tuple2.map2(t -> new RecordReaderDataSetIterator(t, batchSize)));
+        if (s0Iterators.isEmpty()) {
             throw new IllegalArgumentException("Missing s0 datasets");
         }
-        Optional<IllegalArgumentException> err = Tuple2.stream(s0Data)
-                .filter(t -> t._2.size(0) != n)
-                .findAny()
-                .map(t -> new IllegalArgumentException(format(
-                        "%s dataset must have %d values (%d)", t._1, n, t._2.size(0))));
-        if (err.isPresent()) {
-            throw err.get();
-        }
-        s0 = Tuple2.stream(s0Data)
-                .map(t -> t.setV1(t._1.substring(3)))
-                .collect(Tuple2.toMap());
-        network.validateInputs(Tuple2.stream(s0)
-                .map(t1 -> t1.setV2(t1._2.size(1)))
-                .collect(Tuple2.toMap()));
 
-        // Loads s1
-        Map<String, INDArray> s1Data = loadMapCSVFile(datasetPath, "s1");
-        if (s1Data.isEmpty()) {
+        // Load s1
+        logger.atInfo().log("Loading s1 from \"{}\" ...", datasetPath.getCanonicalFile());
+        s1Iterators = mapMap(
+                loadRecordReaderMap(datasetPath, "s1"),
+                Tuple2.map2(t -> new RecordReaderDataSetIterator(t, batchSize)));
+        if (s1Iterators.isEmpty()) {
             throw new IllegalArgumentException("Missing s1 datasets");
         }
-        err = Tuple2.stream(s0Data)
-                .filter(t -> t._2.size(0) != n)
-                .findAny()
-                .map(t -> new IllegalArgumentException(format(
-                        "%s dataset must have %d values (%d)", t._1, n, t._2.size(0))));
-        if (err.isPresent()) {
-            throw err.get();
-        }
-        s1 = Tuple2.stream(s1Data)
-                .map(t -> t.setV1(t._1.substring(3)))
-                .collect(Tuple2.toMap());
-        network.validateInputs(Tuple2.stream(s1)
-                .map(t1 -> t1.setV2(t1._2.size(1)))
-                .collect(Tuple2.toMap()));
 
         // Loads actions
-        Map<String, INDArray> actionsData = loadMapCSVFile(datasetPath, "actions");
-        if (actionsData.isEmpty()) {
+        logger.atInfo().log("Loading action from \"{}\" ...", datasetPath.getCanonicalFile());
+        actionsMaskIterators = loadActionMask(datasetPath);
+        if (actionsMaskIterators.isEmpty()) {
             throw new IllegalArgumentException("Missing actions datasets");
         }
-        err = Tuple2.stream(s0Data)
-                .filter(t -> t._2.size(0) != n)
-                .findAny()
-                .map(t -> new IllegalArgumentException(format(
-                        "%s dataset must have %d values (%d)", t._1, n, t._2.size(0))));
-        if (err.isPresent()) {
-            throw err.get();
-        }
-        // Convert to actions mask
-        Map<String, Long> inputSizes = Tuple2.stream(s0)
-                .map(t -> t.setV2(t._2.size(1)))
-                .collect(Tuple2.toMap());
-        Map<String, long[]> layerSizes = network.createLayerSizes(inputSizes);
-        this.actionsMask = Tuple2.stream(actionsData)
-                .map(t -> {
-                    String key = t._1.substring(8);
-                    INDArray actions = t._2;
-                    INDArray mask = Nd4j.zeros(n, layerSizes.get(key)[1]);
-                    for (long i = 0; i < mask.size(0); i++) {
-                        long j = actions.getLong(i, 0);
-                        mask.putScalar(i, j, 1);
-                    }
-                    return Tuple2.of(key, mask);
-                })
-                .collect(Tuple2.toMap());
+    }
 
-        // Create critic gradients
-        this.criticGrad = Nd4j.ones(n, 1);
+    /**
+     * Returns the dataset of action mask from dataset of action
+     *
+     * @param actionName   the name of action used to build output filepath
+     * @param actionReader the action dataset
+     * @param numActions   the number of possible action values
+     */
+    private RecordReaderDataSetIterator processActionToMask(String actionName, RecordReader actionReader, long numActions) throws Exception {
+        // Creates the process to transform the action value to action mask
+        Schema schema = new Schema.Builder().addColumnFloat("action").build();
+        TransformProcess.Builder processBuilder = new TransformProcess.Builder(schema);
+        for (int i = 0; i < numActions; i++) {
+            processBuilder = processBuilder
+                    .addConstantIntegerColumn("mask_" + i, 0)
+                    .conditionalReplaceValueTransformWithDefault("mask_" + i,
+                            new IntWritable(1),
+                            new IntWritable(0),
+                            new FloatColumnCondition("action", ConditionOp.Equal, i)
+                    );
+        }
+        TransformProcess tp = processBuilder.removeColumns("action").build();
+        return new RecordReaderDataSetIterator(
+                runProcess(actionReader, tp, new File(TMP_MASKS_PATH, actionName)),
+                batchSize);
     }
 
     /**
@@ -312,8 +384,8 @@ public class BatchTrainer {
      * Runs phase1
      * Computes the delta error for each sample
      */
-    private void runPhase1() {
-        // Compute deltas
+    private void runPhase1() throws Exception {
+        // Computes v
 /*
         delta = terminal ? reward - avgReward: reward - avgReward + v1 - v0
         delta = (terminal ? reward - avgReward: reward - avgReward + v1 - v0) + v0 - v0
@@ -323,13 +395,35 @@ public class BatchTrainer {
         v = residualAdv + (terminal ? v0: v1)
         v = residualAdv + v1 + (terminal ? v0-v1 : 0)
  */
-        for (int i = 0; i < s0.size(); i++) {
-            v0 = network.forward(s0).get("critic");
-            v1 = network.forward(s1).get("critic");
+        logger.atInfo().log("Computing v ...");
+        File outPath = new File(TMP_V_PATH);
+        outPath.mkdirs();
+        CSVRecordWriter out = new CSVRecordWriter();
+        Partitioner p = new NumberOfRecordsPartitioner();
+        out.initialize(new FileSplit(outPath), p);
+
+        // Reset iterators
+        forEachValue(s0Iterators, RecordReaderDataSetIterator::reset);
+        forEachValue(s1Iterators, RecordReaderDataSetIterator::reset);
+        advantageIterators.reset();
+        terminalsIterators.reset();
+        // Run for all batches
+        while (advantageIterators.hasNext()
+                && terminalsIterators.hasNext()
+                && Tuple2.stream(s0Iterators).allMatch(t -> t._2.hasNext())
+                && Tuple2.stream(s1Iterators).allMatch(t -> t._2.hasNext())) {
+            Map<String, INDArray> s0 = mapMap(s0Iterators, Tuple2.map2(iter -> iter.next().getFeatures()));
+            Map<String, INDArray> s1 = mapMap(s1Iterators, Tuple2.map2(iter -> iter.next().getFeatures()));
+            INDArray v0 = network.forward(s0).get("critic");
+            INDArray v1 = network.forward(s1).get("critic");
+            INDArray adv = advantageIterators.next().getFeatures();
+            INDArray term = terminalsIterators.next().getFeatures();
+            INDArray v = adv.add(term.mul(v0))
+                    .addi(term.neg().add(1).mul(v1));
+            out.writeBatch(toWritable(v));
         }
-        v = residualAdvantage
-                .add(terminals.mul(v0))
-                .addi(terminals.neg().add(1).mul(v1));
+        out.close();
+        this.vIterator = new RecordReaderDataSetIterator(loadRecordReader(outPath), batchSize);
     }
 
     /**
@@ -337,44 +431,39 @@ public class BatchTrainer {
      * Trains over all the input samples
      */
     private void runPhase2() {
-        long n = terminals.size(0);
-        if (n <= batchSize) {
-            runMiniBatch(s0, actionsMask, v, criticGrad);
-        } else {
-            for (long idx = 0; idx < n; idx += batchSize) {
-                long m = min(n - idx, batchSize);
-                INDArrayIndex index = NDArrayIndex.interval(idx, idx + m);
-                Map<String, INDArray> batchS0 = Tuple2.stream(s0)
-                        .map(t -> t.setV2(t._2.get(index)))
-                        .collect(Tuple2.toMap());
-                Map<String, INDArray> batchActionsMask = Tuple2.stream(actionsMask)
-                        .map(t -> t.setV2(t._2.get(index)))
-                        .collect(Tuple2.toMap());
-                runMiniBatch(batchS0, batchActionsMask,
-                        v.get(index),
-                        criticGrad.get(index)
-                );
-            }
+        // Reset all iterators
+        forEachValue(s0Iterators, RecordReaderDataSetIterator::reset);
+        forEachValue(actionsMaskIterators, RecordReaderDataSetIterator::reset);
+        vIterator.reset();
+
+        // Iterates for all mini batches
+        while (vIterator.hasNext()
+                && Tuple2.stream(s0Iterators).allMatch(t -> t._2.hasNext())
+                && Tuple2.stream(actionsMaskIterators).allMatch(t -> t._2.hasNext())) {
+
+            Map<String, INDArray> s0 = mapMap(s0Iterators, Tuple2.map2(t -> t.next().getFeatures()));
+            Map<String, INDArray> actions = mapMap(actionsMaskIterators, Tuple2.map2(t -> t.next().getFeatures()));
+            INDArray v = vIterator.next().getFeatures();
+            runMiniBatch(s0, actions, v, Nd4j.onesLike(v));
         }
     }
 
     /**
      * Trains the network
      */
-    public void train() {
-        long n = terminals.size(0);
-        logger.atInfo().log("Training on {} samples with {} batch size",
-                n, min(n, batchSize));
+    public void train() throws Exception {
+        logger.atInfo().log("Training {} batch size", batchSize);
         logger.atInfo().log(" {} x {} iterations",
                 numTrainIterations1, numTrainIterations2);
-        for (int j = 0; j < numTrainIterations1; j++) {
+        for (int i = 0; i < numTrainIterations1; i++) {
             runPhase1();
-            for (int i = 0; i < numTrainIterations2; i++) {
+            for (int j = 0; j < numTrainIterations2; j++) {
+                // Iterate for all mini batches
                 logger.info("Step {}.{} ...", j, i);
                 runPhase2();
-            }
-            if (onTrained != null) {
-                onTrained.accept(network);
+                if (onTrained != null) {
+                    onTrained.accept(network);
+                }
             }
         }
     }

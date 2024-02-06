@@ -269,6 +269,7 @@ public class TDAgent implements Agent {
         }
         return node;
     }
+
     private final Map<String, SignalSpec> state;
     private final Map<String, SignalSpec> actions;
     private final float rewardAlpha;
