@@ -88,7 +88,11 @@ agents:
     modelPath: models/polarRadarAgent
     savingIntervalSteps: 1000
     rewardAlpha: 5e-3
-    trainingAlpha: 100e-6
+    alphas:
+      critic: 100e-6
+      sensorAction: 100e-6
+      speed: 100e-6
+      direction: 100e-6
     lambda: 0.5
     inputProcess:
       - name: canMoveFeatures

@@ -54,7 +54,6 @@ class TDAgentSingleNNSaveTest {
             "output.a", new IntSignalSpec(new long[]{1}, 2),
             "output.b", new IntSignalSpec(new long[]{1}, 2)
     );
-    public static final float ALPHA = 1e-3f;
     public static final float LAMBDA = 0.5f;
     private static final String NETWORK_YAML = text("---",
             "layers:",
@@ -103,8 +102,14 @@ class TDAgentSingleNNSaveTest {
         Random random = Nd4j.getRandom();
         random.setSeed(AGENT_SEED);
         TDNetwork network = TDNetwork.create(networkSpec, Locator.root(), "", Map.of(), random);
+
+        Map<String, Float> alphas = Map.of(
+                "critic", 1e-3f,
+                "output.a", 3e-3f,
+                "output.b", 10e-3f
+        );
         return new TDAgentSingleNN(STATE_SPEC, ACTIONS_SPEC,
-                0, REWARD_ALPHA, ALPHA, LAMBDA,
+                0, REWARD_ALPHA, alphas, LAMBDA,
                 network, null,
                 random, null, Integer.MAX_VALUE);
     }
@@ -120,7 +125,7 @@ class TDAgentSingleNNSaveTest {
             TDAgentSingleNN newAgent = TDAgentSingleNN.load(pathFile, Integer.MAX_VALUE, random);
             assertEquals(agent.avgReward(), newAgent.avgReward());
             assertEquals(agent.rewardAlpha(), newAgent.rewardAlpha());
-            assertEquals(agent.trainingAlpha(), newAgent.trainingAlpha());
+            assertEquals(agent.alphas(), newAgent.alphas());
             assertEquals(((TDDense) agent.network().layers().get("layer1")).getW(),
                     ((TDDense) newAgent.network().layers().get("layer1")).getW());
         }

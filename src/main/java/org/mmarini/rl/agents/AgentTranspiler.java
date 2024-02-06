@@ -38,6 +38,7 @@ import java.util.Map;
 /**
  * Transpiler of simplified agent specification to internal agent specification
  */
+@Deprecated
 public class AgentTranspiler {
     private final JsonNode spec;
     private final Map<String, SignalSpec> stateSpec;

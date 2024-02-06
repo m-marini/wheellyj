@@ -58,6 +58,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * Agent based on Temporal Difference Actor-Critic
  */
+@Deprecated
 public class TDAgent implements Agent {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/agent-schema-0.5";
     private static final Logger logger = LoggerFactory.getLogger(TDAgent.class);
@@ -158,6 +159,11 @@ public class TDAgent implements Agent {
         }
     }
 
+    /**
+     * Returns the flat kpi stream for the given kpi
+     *
+     * @param kpi the kpi
+     */
     private static Stream<Tuple2<String, INDArray>> flat(Tuple2<String, Object> kpi) {
         String key = kpi._1;
         return switch (kpi._2) {
@@ -171,12 +177,22 @@ public class TDAgent implements Agent {
         };
     }
 
+    /**
+     * Returns the flat kpis the given kpis
+     *
+     * @param kpis the kpis
+     */
     static Map<String, INDArray> flatKpis(Map<String, Object> kpis) {
         return Tuple2.stream(kpis)
                 .flatMap(TDAgent::flat)
                 .collect(Tuple2.toMap());
     }
 
+    /**
+     * Returns the action sizes for the given action spec
+     *
+     * @param actions the action spec
+     */
     static Map<String, Long> getActionSizes(Map<String, SignalSpec> actions) {
         return Tuple2.stream(actions)
                 .map(t -> {
@@ -196,6 +212,11 @@ public class TDAgent implements Agent {
                 .collect(Tuple2.toMap());
     }
 
+    /**
+     * Returns the state inputs for the given state signals
+     *
+     * @param state the state signals
+     */
     static Map<String, INDArray> getInput(Map<String, Signal> state) {
         return Tuple2.stream(state)
                 .map(t -> {
@@ -210,6 +231,11 @@ public class TDAgent implements Agent {
                 .collect(Tuple2.toMap());
     }
 
+    /**
+     * Returns the state sizes of signal spec
+     *
+     * @param state the signal spec
+     */
     static Map<String, Long> getStateSizes(Map<String, SignalSpec> state) {
         return Tuple2.stream(state)
                 .map(t -> {
@@ -242,6 +268,12 @@ public class TDAgent implements Agent {
                 .collect(Tuple2.toMap());
     }
 
+    /**
+     * Returns the gradients of log policy pi
+     *
+     * @param pi     the policy
+     * @param action the selected action
+     */
     static INDArray gradLogPi(INDArray pi, int action) {
         INDArray x = Nd4j.zeros(pi.shape());
         x.putScalar(new int[]{0, action}, 1f);
@@ -262,9 +294,14 @@ public class TDAgent implements Agent {
         return create(spec, Locator.root(), props, path, savingIntervalSteps, random);
     }
 
-    static JsonNode specFromSignalMap(Map<String, SignalSpec> actions) {
+    /**
+     * Returns the json node of signal spec
+     *
+     * @param signals the signals spec
+     */
+    static JsonNode specFromSignalMap(Map<String, SignalSpec> signals) {
         ObjectNode node = Utils.objectMapper.createObjectNode();
-        for (Map.Entry<String, SignalSpec> entry : actions.entrySet()) {
+        for (Map.Entry<String, SignalSpec> entry : signals.entrySet()) {
             node.set(entry.getKey(), entry.getValue().getJson());
         }
         return node;
@@ -334,6 +371,11 @@ public class TDAgent implements Agent {
         critic.validate(stateSizes, Map.of("output", 1L));
     }
 
+    /**
+     * Returns the action signals for the given state
+     *
+     * @param state the state
+     */
     @Override
     public Map<String, Signal> act(Map<String, Signal> state) {
         Map<String, Signal> procState = processState(state);
@@ -343,6 +385,9 @@ public class TDAgent implements Agent {
         return chooseActions(pis, random);
     }
 
+    /**
+     * Save the agent model
+     */
     public void autosave() {
         if (modelPath != null) {
             try {

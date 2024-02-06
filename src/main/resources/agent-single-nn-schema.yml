@@ -18,8 +18,15 @@ properties:
     minimum: 1
   rewardAlpha:
     exclusiveMinimum: 0
-  trainingAlpha:
-    exclusiveMinimum: 0
+  alphas:
+    type: object
+    properties:
+      critic:
+        minimum: 0
+    additionalProperties:
+      minimum: 0
+    required:
+      - critic
   lambda:
     minimum: 0
   inputProcess:
@@ -31,7 +38,7 @@ required:
   - class
   - modelPath
   - rewardAlpha
-  - trainingAlpha
+  - alphas
   - lambda
   - network
 $defs:
@@ -49,7 +56,7 @@ $defs:
       class:
         const: org.mmarini.rl.processors.FeatureVectorProcessor
       name:
-        minLenght: 1
+        minLength: 1
       inputs:
         type: array
         items:
@@ -64,11 +71,11 @@ $defs:
       class:
         const: org.mmarini.rl.processors.MaskedTilesVectorProcessor
       name:
-        minLenght: 1
+        minLength: 1
       input:
-        minLenght: 1
+        minLength: 1
       mask:
-        minLenght: 1
+        minLength: 1
       numTiles:
         multipleOf: 1
         minimum: 1
@@ -84,14 +91,14 @@ $defs:
       class:
         const: org.mmarini.rl.processors.TilesProcessor
       name:
-        minLenght: 1
+        minLength: 1
       inputs:
         type: array
         items:
           type: object
           properties:
             name:
-              minLenght: 1
+              minLength: 1
             numTiles:
               multipleOf: 1
               minimum: 1
@@ -108,9 +115,9 @@ $defs:
       class:
         const: org.mmarini.rl.processors.NotProcessor
       name:
-        minLenght: 1
+        minLength: 1
       input:
-        minLenght: 1
+        minLength: 1
     required:
       - class
       - name
@@ -121,7 +128,7 @@ $defs:
       class:
         const: org.mmarini.rl.processors.AndProcessor
       name:
-        minLenght: 1
+        minLength: 1
       inputs:
         type: array
         items:
@@ -136,14 +143,14 @@ $defs:
       class:
         const: org.mmarini.rl.processors.PartitionProcessor
       name:
-        minLenght: 1
+        minLength: 1
       inputs:
         type: array
         items:
           type: object
           properties:
             name:
-              minLenght: 1
+              minLength: 1
             numTiles:
               multipleOf: 1
               minimum: 1

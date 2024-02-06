@@ -50,7 +50,6 @@ class TDAgentSingleNNTrainKpiTest {
     public static final Map<String, SignalSpec> STATE_SPEC = Map.of("input", new FloatSignalSpec(new long[]{3}, 0, 1));
     public static final Map<String, SignalSpec> ACTIONS_SPEC = Map.of("output", new IntSignalSpec(new long[]{1}, 3));
     public static final int NUM_EPISODES = 100;
-    public static final float ALPHA = 10e-3f;
     public static final float LAMBDA = 0f;
     private static final String NETWORK_YAML = text("---",
             "layers:",
@@ -79,8 +78,12 @@ class TDAgentSingleNNTrainKpiTest {
         Random random = Nd4j.getRandom();
         random.setSeed(AGENT_SEED);
         TDNetwork network = TDNetwork.create(policySpec, Locator.root(), "", Map.of(), random);
+        Map<String, Float> alphas = Map.of(
+                "critic", 1e-3f,
+                "output", 3e-3f
+        );
         return new TDAgentSingleNN(STATE_SPEC, ACTIONS_SPEC,
-                1f, REWARD_ALPHA, ALPHA, LAMBDA,
+                1f, REWARD_ALPHA, alphas, LAMBDA,
                 network, null,
                 random, null, Integer.MAX_VALUE);
     }
@@ -97,8 +100,8 @@ class TDAgentSingleNNTrainKpiTest {
                     .subscribe(KpiCSVSubscriber.create(new File("data/test")));
             Map<String, Signal> s0 = Map.of("input", ArraySignal.create(1, 0, 0));
             Map<String, Signal> s1 = Map.of("input", ArraySignal.create(0, 1, 0));
-            Map<String, INDArray> n0 = TDAgent.getInput(s0);
-            Map<String, INDArray> n1 = TDAgent.getInput(s1);
+            Map<String, INDArray> n0 = TDAgentSingleNN.getInput(s0);
+            Map<String, INDArray> n1 = TDAgentSingleNN.getInput(s1);
             INDArray pis00 = agent.network().forward(n0).get("output");
             INDArray pis01 = agent.network().forward(n1).get("output");
 

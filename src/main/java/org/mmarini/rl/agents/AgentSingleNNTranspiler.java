@@ -26,6 +26,7 @@
 package org.mmarini.rl.agents;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.rl.processors.InputProcessor;
@@ -48,9 +49,9 @@ public class AgentSingleNNTranspiler {
     private final int savingIntervalStep;
     private float rewardAlpha;
     private TDNetwork network;
-    private float trainingAlpha;
     private float lambda;
     private InputProcessor processor;
+    private Map<String, Float> alphas;
 
     public AgentSingleNNTranspiler(JsonNode spec,
                                    Locator locator,
@@ -72,20 +73,22 @@ public class AgentSingleNNTranspiler {
     public TDAgentSingleNN build() {
         parse();
         return new TDAgentSingleNN(stateSpec, actionsSpec, 0,
-                rewardAlpha, trainingAlpha, lambda,
+                rewardAlpha, alphas, lambda,
                 network, processor,
                 random, path, savingIntervalStep);
     }
 
     void parse() {
         this.rewardAlpha = (float) locator.path("rewardAlpha").getNode(spec).asDouble();
-        this.trainingAlpha = (float) locator.path("trainingAlpha").getNode(spec).asDouble();
+        this.alphas = locator.path("alphas").propertyNames(spec)
+                .map(Tuple2.map2(l -> (float) l.getNode(spec).asDouble()))
+                .collect(Tuple2.toMap());
         this.lambda = (float) locator.path("lambda").getNode(spec).asDouble();
         this.processor = !locator.path("inputProcess").getNode(spec).isMissingNode()
                 ? InputProcessor.create(spec, locator.path("inputProcess"), this.stateSpec)
                 : null;
         Map<String, SignalSpec> postProcSpec = processor != null ? processor.getSpec() : stateSpec;
-        Map<String, Long> stateSizes = TDAgent.getStateSizes(postProcSpec);
+        Map<String, Long> stateSizes = TDAgentSingleNN.getStateSizes(postProcSpec);
         this.network = new NetworkTranspiler(spec, locator.path("network"), stateSizes, random).build();
     }
 }

@@ -52,7 +52,6 @@ class TDAgentSingleNNTrainTest {
             "input", new FloatSignalSpec(new long[]{2}, -1, 1));
     public static final Map<String, SignalSpec> ACTIONS_SPEC0 = Map.of(
             "output", new IntSignalSpec(new long[]{1}, 2));
-    public static final float ALPHA = 1e-3f;
     public static final float LAMBDA = 0.5f;
     private static final String NETWORK_SPEC = text("---",
             "layers:",
@@ -89,8 +88,13 @@ class TDAgentSingleNNTrainTest {
         Random random = Nd4j.getRandom();
         random.setSeed(AGENT_SEED);
         TDNetwork network = TDNetwork.create(networkSpec, Locator.root(), "", Map.of(), random);
+
+        Map<String, Float> alphas = Map.of(
+                "critic", 1e-3f,
+                "output", 3e-3f
+        );
         return new TDAgentSingleNN(STATE_SPEC, ACTIONS_SPEC0,
-                0, REWARD_ALPHA, ALPHA, LAMBDA,
+                0, REWARD_ALPHA, alphas, LAMBDA,
                 network, null,
                 random, null, Integer.MAX_VALUE);
     }
@@ -114,7 +118,7 @@ class TDAgentSingleNNTrainTest {
                 "input", ArraySignal.create(0f, 1f)
         );
 
-        Map<String, INDArray> input = TDAgent.getInput(s0);
+        Map<String, INDArray> input = TDAgentSingleNN.getInput(s0);
         Map<String, INDArray> netResults = agent.network().forward(input);
         float v00 = netResults.get("critic").getFloat(0);
         INDArray pi0 = netResults.get("output");
@@ -177,7 +181,7 @@ class TDAgentSingleNNTrainTest {
                 "input", ArraySignal.create(0f, 1f)
         );
 
-        Map<String, INDArray> input = TDAgent.getInput(s0);
+        Map<String, INDArray> input = TDAgentSingleNN.getInput(s0);
         Map<String, INDArray> netResults = agent.network().forward(input);
         float v00 = netResults.get("critic").getFloat(0);
         INDArray pi0 = netResults.get("output");
