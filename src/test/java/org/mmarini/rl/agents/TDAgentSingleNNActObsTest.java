@@ -102,7 +102,7 @@ class TDAgentSingleNNActObsTest {
         Random random = Nd4j.getRandom();
         random.setSeed(AGENT_SEED);
         TDNetwork network = TDNetwork.create(policySpec, Locator.root(), "", Map.of(), random);
-        Map<String, Float> alphas=Map.of(
+        Map<String, Float> alphas = Map.of(
                 "critic", 1e-3f,
                 "output.a", 3e-3f,
                 "output.b", 10e-3f
