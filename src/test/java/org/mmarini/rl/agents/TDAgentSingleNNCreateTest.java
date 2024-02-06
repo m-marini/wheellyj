@@ -49,7 +49,54 @@ class TDAgentSingleNNCreateTest {
     private static final float EPSILON = 1e-6f;
     private static final String AGENT_YAML = text("---",
             "rewardAlpha: 0.001",
-            "trainingAlpha: 1e-3",
+            "alphas:",
+            "  critic: 1e-3",
+            "  output: 3e-3",
+            "lambda: 0.5",
+            "state:",
+            "  input:",
+            "    type: float",
+            "    minValue: -1.0",
+            "    maxValue: 1.0",
+            "    shape:",
+            "      - 2",
+            "actions:",
+            "  output:",
+            "    type: int",
+            "    numValues: 2",
+            "    shape:",
+            "      - 1",
+            "network:",
+            "  alpha: 0.001",
+            "  lambda: 0.5",
+            "  layers:",
+            "    - name: layer1",
+            "      type: dense",
+            "      inputSize: 2",
+            "      outputSize: 2",
+            "    - name: layer2",
+            "      type: tanh",
+            "    - name: output",
+            "      type: softmax",
+            "      temperature: 0.8",
+            "    - name: critic",
+            "      type: dense",
+            "      inputSize: 2",
+            "      outputSize: 1",
+            "  inputs:",
+            "    layer1:",
+            "      - input",
+            "    layer2:",
+            "      - layer1",
+            "    output:",
+            "      - layer2",
+            "    critic1:",
+            "      - layer2"
+    );
+    private static final String AGENT_NO_ACTION_ALPHAS_YAML = text("---",
+            "rewardAlpha: 0.001",
+            "alphas:",
+            "  critic: 1e-3",
             "lambda: 0.5",
             "state:",
             "  input:",
@@ -93,7 +140,9 @@ class TDAgentSingleNNCreateTest {
     );
     private static final String AGENT_ACTION_CRITIC_YAML = text("---",
             "rewardAlpha: 0.001",
-            "trainingAlpha: 1e-3",
+            "alphas:",
+            "  critic: 1e-3",
+            "  output: 3e-3",
             "lambda: 0.5",
             "state:",
             "  input:",
@@ -142,7 +191,9 @@ class TDAgentSingleNNCreateTest {
     );
     private static final String AGENT_NO_CRITIC_YAML = text("---",
             "rewardAlpha: 0.001",
-            "trainingAlpha: 1e-3",
+            "alphas:",
+            "  critic: 1e-3",
+            "  output: 3e-3",
             "lambda: 0.5",
             "state:",
             "  input:",
@@ -188,7 +239,8 @@ class TDAgentSingleNNCreateTest {
         TDAgentSingleNN agent = TDAgentSingleNN.create(spec, Locator.root(), props, null, Integer.MAX_VALUE, random);
         assertEquals(0.001f, agent.rewardAlpha());
         assertEquals(0f, agent.avgReward());
-        assertEquals(1e-3f, agent.trainingAlpha());
+        assertEquals(1e-3f, agent.alphas().get("critic"));
+        assertEquals(3e-3f, agent.alphas().get("output"));
         assertEquals(0.5f, agent.lambda());
 
         JsonNode json = agent.json();
@@ -205,6 +257,18 @@ class TDAgentSingleNNCreateTest {
                 TDAgentSingleNN.create(spec, Locator.root(), props, null, Integer.MAX_VALUE, random)
         );
         assertThat(ex.getMessage(), matchesPattern("actions must not contain \"critic\" key"));
+    }
+
+    @Test
+    void createNoActionAlphas() throws IOException {
+        JsonNode spec = Utils.fromText(AGENT_NO_ACTION_ALPHAS_YAML);
+        Map<String, INDArray> props = Map.of();
+        Random random = Nd4j.getRandom();
+        random.setSeed(AGENT_SEED);
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                TDAgentSingleNN.create(spec, Locator.root(), props, null, Integer.MAX_VALUE, random)
+        );
+        assertThat(ex.getMessage(), matchesPattern("Missing alpha for actions \"output\""));
     }
 
     @Test
@@ -231,7 +295,8 @@ class TDAgentSingleNNCreateTest {
         TDAgentSingleNN agent = TDAgentSingleNN.create(spec, Locator.root(), props, null, Integer.MAX_VALUE, random);
         assertEquals(0.001f, agent.rewardAlpha());
         assertEquals(0.2f, agent.avgReward());
-        assertEquals(1e-3f, agent.trainingAlpha());
+        assertEquals(1e-3f, agent.alphas().get("critic"));
+        assertEquals(3e-3f, agent.alphas().get("output"));
         assertEquals(0.5f, agent.lambda());
         assertThat(((TDDense) agent.network().layers().get("layer1")).getB(),
                 matrixCloseTo(new float[][]{

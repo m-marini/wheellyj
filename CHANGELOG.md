@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#334](https://github.com/m-marini/wheellyj/issues/334): Add batch training
 - Issue [#337](https://github.com/m-marini/wheellyj/issues/337): Add agent with single nn
 - Issue [#346](https://github.com/m-marini/wheellyj/issues/346):  Datavec usage to train network
+- Issue [#342](https://github.com/m-marini/wheellyj/issues/342): Separate learning rates between actor and critic
 
 ### Fixed
 

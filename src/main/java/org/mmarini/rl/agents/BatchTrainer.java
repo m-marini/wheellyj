@@ -58,7 +58,7 @@ public class BatchTrainer {
      * Returns the batch trainer
      *
      * @param network            the network to train
-     * @param learningRate       the learning rate parameter
+     * @param alphas             the learning rates by output
      * @param lambda             the lambda TD parameter
      * @param numTrainIteration1 the number of iterations of rl training
      * @param numTrainIteration2 the number of iterations of networks training
@@ -66,12 +66,12 @@ public class BatchTrainer {
      * @param random             the random number generator
      * @param onTrained          the on trained callback
      */
-    public static BatchTrainer create(TDNetwork network, float learningRate, float lambda,
+    public static BatchTrainer create(TDNetwork network, Map<String, Float> alphas, float lambda,
                                       int numTrainIteration1, int numTrainIteration2, int batchSize,
                                       Random random, Consumer<TDNetwork> onTrained) {
-        return new BatchTrainer(network, learningRate, lambda,
+        return new BatchTrainer(network, lambda,
                 numTrainIteration1, numTrainIteration2, batchSize,
-                random, onTrained);
+                random, onTrained, alphas);
     }
 
     /**
@@ -130,19 +130,6 @@ public class BatchTrainer {
     }
 
     /**
-     * Returns the map with mapped values
-     *
-     * @param map    the map
-     * @param mapper the mapper function
-     * @param <K>    the key type
-     * @param <V>    the value type
-     * @param <R>    the mapped value type
-     */
-    private static <K, V, R> Map<K, R> mapValues(Map<K, V> map, Function<V, R> mapper) {
-        return mapMap(map, Tuple2.map2(mapper));
-    }
-
-    /**
      * Returns the dataset iterator of processed reader
      *
      * @param input   the input record reader
@@ -182,10 +169,10 @@ public class BatchTrainer {
     private final int numTrainIterations1;
     private final int numTrainIterations2;
     private final Random random;
-    private final float trainingAlpha;
     private final float lambda;
     private final Consumer<TDNetwork> onTrained;
     private final int batchSize;
+    private final Map<String, Float> alphas;
     private Map<String, RecordReaderDataSetIterator> s0Iterators;
     private Map<String, RecordReaderDataSetIterator> s1Iterators;
     private RecordReaderDataSetIterator advantageIterators;
@@ -198,23 +185,23 @@ public class BatchTrainer {
      * Creates the batch trainer
      *
      * @param network             the network to train
-     * @param learningRate        the learning rate
      * @param lambda              the lambda TD parameter
      * @param numTrainIterations1 the number of iterations of rl training
      * @param numTrainIterations2 the number of iterations of networks training
      * @param batchSize           the batch size
      * @param random              the random number generator
      * @param onTrained           the on trained call back
+     * @param alphas              the learning rate of outputs
      */
-    protected BatchTrainer(TDNetwork network, float learningRate, float lambda, int numTrainIterations1, int numTrainIterations2, int batchSize, Random random, Consumer<TDNetwork> onTrained) {
+    protected BatchTrainer(TDNetwork network, float lambda, int numTrainIterations1, int numTrainIterations2, int batchSize, Random random, Consumer<TDNetwork> onTrained, Map<String, Float> alphas) {
         this.network = requireNonNull(network);
         this.numTrainIterations1 = numTrainIterations1;
         this.numTrainIterations2 = numTrainIterations2;
         this.random = requireNonNull(random);
-        this.trainingAlpha = learningRate;
         this.lambda = lambda;
         this.onTrained = onTrained;
         this.batchSize = batchSize;
+        this.alphas = alphas;
     }
 
     public float avgReward() {
@@ -228,7 +215,7 @@ public class BatchTrainer {
      */
     private Map<String, RecordReaderDataSetIterator> loadActionMask(File datasetPath) {
         // Convert to actions mask
-        Map<String, Long> inputSizes = mapValues(s0Iterators, t -> (long) t.next().numOutcomes());
+        Map<String, Long> inputSizes = mapMap(s0Iterators, Tuple2.map2(t -> (long) t.next().numOutcomes()));
         Map<String, long[]> layerSizes = network.createLayerSizes(inputSizes);
         // Loads actions
         Map<String, RecordReader> actions = loadRecordReaderMap(datasetPath, "actions");
@@ -372,11 +359,12 @@ public class BatchTrainer {
     private void runMiniBatch(Map<String, INDArray> s0, Map<String, INDArray> actionsMask, INDArray v, INDArray criticGrad) {
         Map<String, INDArray> netResults0 = network.forward(s0, true, random);
         INDArray v0 = netResults0.get("critic");
-        INDArray delta = v.sub(v0).muli(trainingAlpha);
+        INDArray delta = v.sub(v0);
 
-        Map<String, INDArray> grads = new HashMap<>(gradLogPi(netResults0, actionsMask));
+        Map<String, INDArray> grads = new HashMap<>(mapMap(gradLogPi(netResults0, actionsMask),
+                t -> t.setV2(t._2.mul(alphas.get(t._1)))));
         // Computes output gradients for network (merges critic and policy grads)
-        grads.put("critic", criticGrad);
+        grads.put("critic", criticGrad.mul(alphas.get("critic")));
         network.train(netResults0, grads, delta, lambda, null);
     }
 

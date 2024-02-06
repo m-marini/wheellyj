@@ -54,7 +54,6 @@ class TDAgentSingleNNActObsTest {
             "output.a", new IntSignalSpec(new long[]{1}, 2),
             "output.b", new IntSignalSpec(new long[]{1}, 2)
     );
-    public static final float ALPHA = 1e-3f;
     public static final float LAMBDA = 0.5f;
     private static final String NETWORK_YAML = text("---",
             "layers:",
@@ -103,8 +102,13 @@ class TDAgentSingleNNActObsTest {
         Random random = Nd4j.getRandom();
         random.setSeed(AGENT_SEED);
         TDNetwork network = TDNetwork.create(policySpec, Locator.root(), "", Map.of(), random);
+        Map<String, Float> alphas=Map.of(
+                "critic", 1e-3f,
+                "output.a", 3e-3f,
+                "output.b", 10e-3f
+        );
         return new TDAgentSingleNN(STATE_SPEC, ACTIONS_SPEC,
-                0, REWARD_ALPHA, ALPHA, LAMBDA,
+                0, REWARD_ALPHA, alphas, LAMBDA,
                 network, null,
                 random, null, Integer.MAX_VALUE);
     }
@@ -141,7 +145,7 @@ class TDAgentSingleNNActObsTest {
             Map<String, Signal> actions = agent.act(state);
             ExecutionResult result = new ExecutionResult(state, actions, 1, state, false);
             agent.observe(result);
-            actions = agent.act(state);
+            agent.act(state);
             agent.observe(result);
             assertEquals(s0, s0Org);
         }

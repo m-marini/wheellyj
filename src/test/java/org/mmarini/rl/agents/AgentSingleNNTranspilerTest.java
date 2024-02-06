@@ -52,7 +52,9 @@ class AgentSingleNNTranspilerTest {
     private static final String YAML = text(
             "---",
             "version: \"0.1\"",
-            "trainingAlpha: 1e-3",
+            "alphas:",
+            "  critic: 1e-3",
+            "  output: 3e-3",
             "lambda: 0.8",
             "rewardAlpha: 0.1",
             "network:",
@@ -76,7 +78,9 @@ class AgentSingleNNTranspilerTest {
     private static final String YAML1 = text(
             "---",
             "version: \"0.1\"",
-            "trainingAlpha: 1e-3",
+            "alphas:",
+            "  critic: 1e-3",
+            "  output: 3e-3",
             "lambda: 0.8",
             "rewardAlpha: 0.1",
             "network:",
@@ -131,7 +135,8 @@ class AgentSingleNNTranspilerTest {
         ));
 
         assertEquals(0.1f, agent.rewardAlpha());
-        assertEquals(1e-3f, agent.trainingAlpha());
+        assertEquals(1e-3f, agent.alphas().get("critic"));
+        assertEquals(3e-3f, agent.alphas().get("output"));
         assertThat(agent.network().layers(), hasEntry(
                 equalTo("layer0[0]"),
                 isA(TDDense.class)));
@@ -172,7 +177,8 @@ class AgentSingleNNTranspilerTest {
         TDAgentSingleNN agent = tr.build();
 
         assertEquals(0.1f, agent.rewardAlpha());
-        assertEquals(1e-3f, agent.trainingAlpha());
+        assertEquals(1e-3f, agent.alphas().get("critic"));
+        assertEquals(3e-3f, agent.alphas().get("output"));
 
         assertThat(agent.network().forwardSeq(), contains(
                 "layer0[0]",

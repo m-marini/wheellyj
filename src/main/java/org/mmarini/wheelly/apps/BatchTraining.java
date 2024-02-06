@@ -31,6 +31,7 @@ import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
+import org.mmarini.Tuple2;
 import org.mmarini.rl.agents.BatchTrainer;
 import org.mmarini.rl.agents.Serde;
 import org.mmarini.rl.nets.TDNetwork;
@@ -88,6 +89,18 @@ public class BatchTraining {
     private BatchTrainer trainer;
 
     /**
+     * Returns the alphas from agent yaml file
+     *
+     * @throws IOException in case of error
+     */
+    private Map<String, Float> loadAlphas() throws IOException {
+        JsonNode spec = Utils.fromFile(new File(pathFile, "agent.yml"));
+        return Locator.locate("alphas").propertyNames(spec)
+                .map(Tuple2.map2(l -> (float) l.getNode(spec).asDouble()))
+                .collect(Tuple2.toMap());
+    }
+
+    /**
      * Returns the network from agent path
      *
      * @param random the ranom number generator
@@ -98,7 +111,7 @@ public class BatchTraining {
         File file = new File(pathFile, "agent.bin");
         Map<String, INDArray> props = Serde.deserialize(file);
         String backupFileName = format("agent-%1$tY%1$tm%1$td-%1$tH%1$tM%1$tS.bin", Calendar.getInstance());
-        //file.renameTo(new File(file.getParentFile(), backupFileName));
+        file.renameTo(new File(file.getParentFile(), backupFileName));
         logger.atInfo().log("Backup at {}", backupFileName);
         Locator locator = Locator.root();
         return TDNetwork.create(spec, locator.path("network"), "network", props, random);
@@ -148,14 +161,14 @@ public class BatchTraining {
             logger.atInfo().log("Load network ...");
             this.pathFile = Locator.locate("modelPath").getNode(config).asText();
             TDNetwork network = loadNetwork(random);
+            Map<String, Float> alphas = loadAlphas();
 
             // Create the batch trainer
             int numTrainIterations1 = Locator.locate("numTrainIterations1").getNode(config).asInt();
             int numTrainIterations2 = Locator.locate("numTrainIterations2").getNode(config).asInt();
-            float learningRate = (float) Locator.locate("learningRate").getNode(config).asDouble();
             long batchSize = Locator.locate("batchSize").getNode(config).asLong(Long.MAX_VALUE);
             this.trainer = BatchTrainer.create(network,
-                    learningRate,
+                    alphas,
                     0,
                     numTrainIterations1,
                     numTrainIterations2,

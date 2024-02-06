@@ -30,16 +30,14 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.Tuple2;
-import org.mmarini.rl.envs.Environment;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.rl.envs.SignalSpec;
-import org.mmarini.rl.envs.WithSignalsSpec;
+import org.mmarini.rl.envs.*;
 import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.rl.processors.InputProcessor;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.api.ops.impl.transforms.custom.CumSum;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
@@ -47,10 +45,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -63,31 +62,34 @@ public class TDAgentSingleNN implements Agent {
     private static final Logger logger = LoggerFactory.getLogger(TDAgentSingleNN.class);
 
     /**
-     * Create an agent from spec
+     * Returns a random action depending on probability distribution
      *
-     * @param spec                the specification
-     * @param locator             the locator of agent spec
-     * @param props               the properties to initialize the agent
-     * @param path                the saving path
-     * @param savingIntervalSteps the number of steps between each model saving
-     * @param random              the random number generator
+     * @param prob   probability distribution
+     * @param random the random number generator
      */
-    public static TDAgentSingleNN create(JsonNode spec, Locator locator, Map<String, INDArray> props, File path, int savingIntervalSteps, Random random) {
-        Map<String, SignalSpec> state = SignalSpec.createSignalSpecMap(spec, locator.path("state"));
-        Map<String, SignalSpec> actions = SignalSpec.createSignalSpecMap(spec, locator.path("actions"));
-        float avgReward = Optional.ofNullable(props.get("avgReward"))
-                .map(x -> x.getFloat(0))
-                .orElse(0f);
-        float rewardAlpha = (float) locator.path("rewardAlpha").getNode(spec).asDouble();
-        float trainingAlpha = (float) locator.path("trainingAlpha").getNode(spec).asDouble();
-        float lambda1 = (float) locator.path("lambda").getNode(spec).asDouble();
-        TDNetwork network = TDNetwork.create(spec, locator.path("network"), "network", props, random);
-        InputProcessor processor1 = !locator.path("inputProcess").getNode(spec).isMissingNode()
-                ? InputProcessor.create(spec, locator.path("inputProcess"), state)
-                : null;
+    static int chooseAction(INDArray prob, Random random) {
+        CumSum cumSum = new CumSum(prob, false, false, 1);
+        INDArray[] cum = Nd4j.getExecutioner().exec(cumSum);
+        float x = random.nextFloat();
+        int n = (int) prob.shape()[1];
+        for (int i = 0; i < n - 1; i++) {
+            if (x < cum[0].getFloat(0, i)) {
+                return i;
+            }
+        }
+        return n - 1;
+    }
 
-        return new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, trainingAlpha, lambda1,
-                network, processor1, random, path, savingIntervalSteps);
+    /**
+     * Returns random actions depending on probability distribution
+     *
+     * @param pis    probability distribution for each named action
+     * @param random the random number generator
+     */
+    static Map<String, Signal> chooseActions(Map<String, INDArray> pis, Random random) {
+        return Tuple2.stream(pis)
+                .map(t -> t.setV2((Signal) IntSignal.create(chooseAction(t._2, random))))
+                .collect(Tuple2.toMap());
     }
 
     /**
@@ -127,6 +129,167 @@ public class TDAgentSingleNN implements Agent {
     }
 
     /**
+     * Create an agent from spec
+     *
+     * @param spec                the specification
+     * @param locator             the locator of agent spec
+     * @param props               the properties to initialize the agent
+     * @param path                the saving path
+     * @param savingIntervalSteps the number of steps between each model saving
+     * @param random              the random number generator
+     */
+    public static TDAgentSingleNN create(JsonNode spec, Locator locator, Map<String, INDArray> props,
+                                         File path, int savingIntervalSteps, Random random) {
+        Map<String, SignalSpec> state = SignalSpec.createSignalSpecMap(spec, locator.path("state"));
+        Map<String, SignalSpec> actions = SignalSpec.createSignalSpecMap(spec, locator.path("actions"));
+        Map<String, Float> alphas = locator.path("alphas").propertyNames(spec)
+                .map(Tuple2.map2(l -> (float) l.getNode(spec).asDouble()))
+                .collect(Tuple2.toMap());
+        // Validate alphas against actions
+        List<String> missingAlphas = actions.keySet().stream()
+                .filter(Predicate.not(alphas::containsKey))
+                .toList();
+        if (!missingAlphas.isEmpty()) {
+            throw new IllegalArgumentException(format("Missing alpha for actions %s",
+                    missingAlphas.stream()
+                            .collect(Collectors.joining(", ", "\"", "\""))
+            ));
+        }
+        float avgReward = Optional.ofNullable(props.get("avgReward"))
+                .map(x -> x.getFloat(0))
+                .orElse(0f);
+        float rewardAlpha = (float) locator.path("rewardAlpha").getNode(spec).asDouble();
+        float lambda1 = (float) locator.path("lambda").getNode(spec).asDouble();
+        TDNetwork network = TDNetwork.create(spec, locator.path("network"), "network", props, random);
+        InputProcessor processor1 = !locator.path("inputProcess").getNode(spec).isMissingNode()
+                ? InputProcessor.create(spec, locator.path("inputProcess"), state)
+                : null;
+        return new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, alphas, lambda1,
+                network, processor1, random, path, savingIntervalSteps);
+    }
+
+    /**
+     * Returns the flat kpi stream for the given kpi
+     *
+     * @param kpi the kpi
+     */
+    private static Stream<Tuple2<String, INDArray>> flat(Tuple2<String, Object> kpi) {
+        String key = kpi._1;
+        return switch (kpi._2) {
+            case Boolean b -> Stream.of(kpi.setV2(Nd4j.create(new float[][]{{b ? 1f : 0f}})));
+            case Number num -> Stream.of(kpi.setV2(Nd4j.create(new float[][]{{num.floatValue()}})));
+            case INDArray ary -> Stream.of(kpi.setV2(ary));
+            case Signal sig -> Stream.of(kpi.setV2(sig.toINDArray()));
+            case Map<?, ?> map -> Tuple2.stream((Map<String, Object>) map)
+                    .flatMap(t -> flat(Tuple2.of(key + "." + t._1, t._2)));
+            default -> Stream.empty();
+        };
+    }
+
+    /**
+     * Returns the flat kpis the given kpis
+     *
+     * @param kpis the kpis
+     */
+    static Map<String, INDArray> flatKpis(Map<String, Object> kpis) {
+        return Tuple2.stream(kpis)
+                .flatMap(TDAgentSingleNN::flat)
+                .collect(Tuple2.toMap());
+    }
+
+    /**
+     * Returns the action sizes for the given action spec
+     *
+     * @param actions the action spec
+     */
+    static Map<String, Long> getActionSizes(Map<String, SignalSpec> actions) {
+        return Tuple2.stream(actions)
+                .map(t -> {
+                    if (!(t._2 instanceof IntSignalSpec)) {
+                        throw new IllegalArgumentException(format("Action \"%s\" must be %s (%s)",
+                                t._1,
+                                IntSignalSpec.class.getSimpleName(),
+                                t._2.getClass().getSimpleName()));
+                    }
+                    long[] shape = t._2.getShape();
+                    if (!(shape.length == 1 && shape[0] == 1)) {
+                        throw new IllegalArgumentException(format("Shape of action \"%s\" must be [1] (%s)",
+                                t._1, Arrays.toString(shape)));
+                    }
+                    return t.setV2((long) ((IntSignalSpec) t._2).getNumValues());
+                })
+                .collect(Tuple2.toMap());
+    }
+
+    /**
+     * Returns the state inputs for the given state signals
+     *
+     * @param state the state signals
+     */
+    static Map<String, INDArray> getInput(Map<String, Signal> state) {
+        return Tuple2.stream(state)
+                .map(t -> {
+                    INDArray value = t._2.toINDArray();
+                    // Reshape value
+                    long[] shape = value.shape();
+                    long[] newShape = new long[shape.length + 1];
+                    newShape[0] = 1;
+                    System.arraycopy(shape, 0, newShape, 1, shape.length);
+                    return t.setV2(value.reshape(newShape));
+                })
+                .collect(Tuple2.toMap());
+    }
+
+    /**
+     * Returns the state sizes of signal spec
+     *
+     * @param state the signal spec
+     */
+    static Map<String, Long> getStateSizes(Map<String, SignalSpec> state) {
+        return Tuple2.stream(state)
+                .map(t -> {
+                    long[] shape = t._2.getShape();
+                    if (!(shape.length == 1)) {
+                        throw new IllegalArgumentException(format("Shape of state \"%s\" must be [n] (%s)",
+                                t._1, Arrays.toString(shape)));
+                    }
+                    return t.setV2(shape[0]);
+                })
+                .collect(Tuple2.toMap());
+    }
+
+    /**
+     * Returns the gradient of log pi for a given pi and action
+     *
+     * @param pi            the probabilities of each action
+     * @param flattenAction the action applied
+     */
+    static Map<String, INDArray> gradLogPi(Map<String, INDArray> pi, Map<String, Signal> flattenAction) {
+        return Tuple2.stream(flattenAction)
+                .map(t -> {
+                    if (!(t._2 instanceof IntSignal)) {
+                        throw new IllegalArgumentException(format("action must be an integer (%s)", t._2.getClass().getSimpleName()));
+                    }
+                    INDArray grad = gradLogPi(pi.get(t._1),
+                            t._2.getInt(0));
+                    return t.setV2(grad);
+                })
+                .collect(Tuple2.toMap());
+    }
+
+    /**
+     * Returns the gradients of log policy pi
+     *
+     * @param pi     the policy
+     * @param action the selected action
+     */
+    static INDArray gradLogPi(INDArray pi, int action) {
+        INDArray x = Nd4j.zeros(pi.shape());
+        x.putScalar(new int[]{0, action}, 1f);
+        return x.divi(pi);
+    }
+
+    /**
      * Loads the agent from path
      *
      * @param path                the path
@@ -140,9 +303,14 @@ public class TDAgentSingleNN implements Agent {
         return create(spec, Locator.root(), props, path, savingIntervalSteps, random);
     }
 
-    static JsonNode specFromSignalMap(Map<String, SignalSpec> actions) {
+    /**
+     * Returns the json node of signal spec
+     *
+     * @param signals the signals spec
+     */
+    static JsonNode specFromSignalMap(Map<String, SignalSpec> signals) {
         ObjectNode node = Utils.objectMapper.createObjectNode();
-        for (Map.Entry<String, SignalSpec> entry : actions.entrySet()) {
+        for (Map.Entry<String, SignalSpec> entry : signals.entrySet()) {
             node.set(entry.getKey(), entry.getValue().getJson());
         }
         return node;
@@ -154,7 +322,7 @@ public class TDAgentSingleNN implements Agent {
     private final TDNetwork network;
     private final Random random;
     private final float lambda;
-    private final float trainingAlpha;
+    private final Map<String, Float> alphas;
     private final File modelPath;
     private final int savingIntervalSteps;
     private final InputProcessor processor;
@@ -172,7 +340,7 @@ public class TDAgentSingleNN implements Agent {
      * @param actions             the actions
      * @param avgReward           the average reward
      * @param rewardAlpha         the reward alpha parameter
-     * @param traninigAlpha       the network training alpha parameter
+     * @param alphas              the network training alpha parameter by output
      * @param lambda              the TD lambda factor
      * @param network             the network
      * @param processor           the input state processor
@@ -181,7 +349,7 @@ public class TDAgentSingleNN implements Agent {
      * @param savingIntervalSteps the number of steps between each model saving
      */
     public TDAgentSingleNN(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
-                           float avgReward, float rewardAlpha, float traninigAlpha, float lambda,
+                           float avgReward, float rewardAlpha, Map<String, Float> alphas, float lambda,
                            TDNetwork network, InputProcessor processor,
                            Random random, File modelPath, int savingIntervalSteps) {
         this.state = requireNonNull(state);
@@ -191,8 +359,8 @@ public class TDAgentSingleNN implements Agent {
         this.processor = processor;
         this.random = requireNonNull(random);
         this.lambda = lambda;
-        this.trainingAlpha = traninigAlpha;
         this.avgReward = avgReward;
+        this.alphas = requireNonNull(alphas);
         this.modelPath = modelPath;
         this.dc = Nd4j.ones(1, 1);
         if (actions.containsKey("critic")) {
@@ -200,8 +368,8 @@ public class TDAgentSingleNN implements Agent {
         }
         Map<String, SignalSpec> processedState = processor != null ? processor.getSpec() : state;
         this.savingIntervalSteps = savingIntervalSteps;
-        Map<String, Long> stateSizes = TDAgent.getStateSizes(processedState);
-        Map<String, Long> actionSizes = TDAgent.getActionSizes(actions);
+        Map<String, Long> stateSizes = getStateSizes(processedState);
+        Map<String, Long> actionSizes = getActionSizes(actions);
 
         // TODO new network validation merge policy and critic output
         HashMap<String, Long> networkSizes = new HashMap<>(actionSizes);
@@ -213,10 +381,17 @@ public class TDAgentSingleNN implements Agent {
     @Override
     public Map<String, Signal> act(Map<String, Signal> state) {
         Map<String, Signal> procState = processSignals(state);
-        Map<String, INDArray> inputs = TDAgent.getInput(procState);
+        Map<String, INDArray> inputs = getInput(procState);
         Map<String, INDArray> policyStatus = network.forward(inputs);
         Map<String, INDArray> pis = this.pis(policyStatus);
-        return TDAgent.chooseActions(pis, random);
+        return chooseActions(pis, random);
+    }
+
+    /**
+     * Returns the alpha parameters
+     */
+    public Map<String, Float> alphas() {
+        return alphas;
     }
 
     /**
@@ -254,7 +429,7 @@ public class TDAgentSingleNN implements Agent {
     private void createKpiFlowable() {
         indicatorsPub = PublishProcessor.create();
         indicators = indicatorsPub
-                .map(TDAgent::flatKpis)
+                .map(TDAgentSingleNN::flatKpis)
                 .publish()
                 .autoConnect();
         kpiListener = indicatorsPub::onNext;
@@ -282,10 +457,14 @@ public class TDAgentSingleNN implements Agent {
 
     @Override
     public JsonNode json() {
+        ObjectNode alphasSpec = Utils.objectMapper.createObjectNode();
+        for (Map.Entry<String, Float> alphaEntry : alphas.entrySet()) {
+            alphasSpec.put(alphaEntry.getKey(), alphaEntry.getValue());
+        }
         ObjectNode spec = Utils.objectMapper.createObjectNode()
                 .put("rewardAlpha", rewardAlpha)
-                .put("trainingAlpha", trainingAlpha)
-                .put("lambda", lambda);
+                .put("lambda", lambda)
+                .set("alphas", alphasSpec);
         spec.set("state", specFromSignalMap(state));
         spec.set("actions", specFromSignalMap(actions));
         spec.set("network", network.getSpec());
@@ -418,11 +597,11 @@ public class TDAgentSingleNN implements Agent {
     void train(Environment.ExecutionResult result) {
         // Process input signals of state 0 to produce input network s0
         Map<String, Signal> procState = processSignals(result.state0);
-        Map<String, INDArray> s0 = TDAgent.getInput(procState);
+        Map<String, INDArray> s0 = getInput(procState);
 
         // Process input signals of state 1 to produce input network s1
         procState = processSignals(result.state1);
-        Map<String, INDArray> s1 = TDAgent.getInput(procState);
+        Map<String, INDArray> s1 = getInput(procState);
 
         // forward network inputs s0 to produce outputs
         Map<String, INDArray> netResults0 = network.forward(s0, true, random);
@@ -440,7 +619,7 @@ public class TDAgentSingleNN implements Agent {
         // Extract the policy output values pi from network results
         Map<String, INDArray> pi = policyFromNetworkResults(netResults0);
         // Computes log(pi) gradients
-        Map<String, INDArray> dp = TDAgent.gradLogPi(pi, result.actions);
+        Map<String, INDArray> dp = gradLogPi(pi, result.actions);
 
         // Updates average rewards
         float avgReward0 = avgReward;
@@ -453,8 +632,13 @@ public class TDAgentSingleNN implements Agent {
         Map<String, INDArray> grads = new HashMap<>(dp);
         grads.put("critic", dc);
 
+        // Scale output gradients by learning rate
+        grads = Tuple2.stream(grads)
+                .map(t -> t.setV2(t._2.mul(alphas.get(t._1))))
+                .collect(Tuple2.toMap());
+
         // Trains network
-        Map<String, INDArray> netGrads = network.train(netResults0, grads, Nd4j.createFromArray(delta * trainingAlpha), lambda,
+        Map<String, INDArray> netGrads = network.train(netResults0, grads, Nd4j.createFromArray(delta), lambda,
                 kpiCallback);
 
         if (this.kpiListener != null) {
@@ -481,12 +665,5 @@ public class TDAgentSingleNN implements Agent {
             savingStepCounter = 0;
             autosave();
         }
-    }
-
-    /**
-     * Returns the training alpha parameter
-     */
-    public float trainingAlpha() {
-        return trainingAlpha;
     }
 }
