@@ -16,7 +16,7 @@ javaw > nul
 IF ERRORLEVEL 2 goto noJavaw
 
 rem java -cp "lib/*;../classes" org.mmarini.wheelly.apps.RobotExecutor %1 %2 %3 %4 %5 %6 %7 %8
-java -cp "lib/*;../classes" %1 %2 %3 %4 %5 %6 %7 %8
+java --add-opens=java.base/java.nio=ALL-UNNAMED -cp "lib/*;../classes" %1 %2 %3 %4 %5 %6 %7 %8
 goto end
 
 :noJavaw
