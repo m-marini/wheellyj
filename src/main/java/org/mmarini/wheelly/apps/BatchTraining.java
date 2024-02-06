@@ -98,7 +98,7 @@ public class BatchTraining {
         File file = new File(pathFile, "agent.bin");
         Map<String, INDArray> props = Serde.deserialize(file);
         String backupFileName = format("agent-%1$tY%1$tm%1$td-%1$tH%1$tM%1$tS.bin", Calendar.getInstance());
-        file.renameTo(new File(file.getParentFile(), backupFileName));
+        //file.renameTo(new File(file.getParentFile(), backupFileName));
         logger.atInfo().log("Backup at {}", backupFileName);
         Locator locator = Locator.root();
         return TDNetwork.create(spec, locator.path("network"), "network", props, random);
@@ -159,7 +159,7 @@ public class BatchTraining {
                     0,
                     numTrainIterations1,
                     numTrainIterations2,
-                    batchSize,
+                    (int) batchSize,
                     random,
                     this::saveNetwork);
 
@@ -176,8 +176,8 @@ public class BatchTraining {
         } catch (ArgumentParserException e) {
             parser.handleError(e);
             System.exit(1);
-        } catch (IOException e) {
-            logger.atError().setCause(e).log("IO exception");
+        } catch (Exception e) {
+            logger.atError().setCause(e).log("Exception");
             System.exit(1);
         }
     }

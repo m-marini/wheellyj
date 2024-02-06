@@ -12,3 +12,4 @@ docs/sonar-map.dxf~
 /output.md
 /data/**/*.csv
 /*.txt
+/tmp/**/*

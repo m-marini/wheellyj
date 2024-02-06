@@ -44,7 +44,7 @@
         <junit.version>5.5.2</junit.version>
         <hamcrest.version>2.2</hamcrest.version>
         <mockito.version>5.8.0</mockito.version>
-        <dl4j-master.version>1.0.0-M2</dl4j-master.version>
+        <dl4j-master.version>1.0.0-M2.1</dl4j-master.version>
         <maven-shade-plugin.version>3.3.0</maven-shade-plugin.version>
     </properties>
     <build>
@@ -270,6 +270,17 @@
             <groupId>org.deeplearning4j</groupId>
             <artifactId>deeplearning4j-ui</artifactId>
             <version>${dl4j-master.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.datavec</groupId>
+            <artifactId>datavec-local</artifactId>
+            <version>${dl4j-master.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.arrow</groupId>
+            <artifactId>arrow-memory-netty</artifactId>
+            <version>15.0.0</version>
+            <scope>runtime</scope>
         </dependency>
         <!--
         ND4J backend: every project needs one of these. The backend defines the hardware on which network training

@@ -13,6 +13,30 @@ import static java.util.Objects.requireNonNull;
 public class Tuple2<T1, T2> {
 
     /**
+     * Returns the function to map the second value
+     *
+     * @param mapper the mapper function
+     * @param <T1>   the value 1 type
+     * @param <T2>   the value 2 type
+     * @param <R>    the return value 1 type
+     */
+    public static <T1, T2, R> Function<Tuple2<T1, T2>, Tuple2<R, T2>> map1(Function<T1, R> mapper) {
+        return t -> t.setV1(mapper.apply(t._1));
+    }
+
+    /**
+     * Returns the function to map the second value
+     *
+     * @param mapper the mapper function
+     * @param <T1>   the value 1 type
+     * @param <T2>   the value 2 type
+     * @param <R>    the return value 2 type
+     */
+    public static <T1, T2, R> Function<Tuple2<T1, T2>, Tuple2<T1, R>> map2(Function<T2, R> mapper) {
+        return t -> t.setV2(mapper.apply(t._2));
+    }
+
+    /**
      * Returns the pair of value
      *
      * @param v1   first value

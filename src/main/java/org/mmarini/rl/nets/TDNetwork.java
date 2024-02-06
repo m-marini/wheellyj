@@ -126,9 +126,14 @@ public class TDNetwork {
      */
     public Map<String, long[]> createLayerSizes(Map<String, Long> inputSizes) {
         Map<String, long[]> sizes = new HashMap<>();
-        ToLongFunction<String> getSize = (String label) -> sizes.containsKey(label)
-                ? sizes.get(label)[1]
-                : inputSizes.get(label);
+        ToLongFunction<String> getSize = label -> {
+            if (sizes.containsKey(label)) {
+                return sizes.get(label)[1];
+            } else if (inputSizes.containsKey(label)) {
+                return inputSizes.get(label);
+            }
+            throw new IllegalArgumentException(format("Missing input \"%s\"", label));
+        };
         for (String label : forwardSeq) {
             TDLayer layer = layers.get(label);
             long[] layerSizes;
