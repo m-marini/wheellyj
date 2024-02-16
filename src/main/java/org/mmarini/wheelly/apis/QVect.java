@@ -31,21 +31,21 @@ public record QVect(double[] coords) {
     /**
      * Returns the vector from the point
      *
-     * @param point the point
-     */
-    public static QVect from(Point2D point) {
-        requireNonNull(point);
-        return from(point.getX(), point.getY());
-    }
-
-    /**
-     * Returns the vector from the point
-     *
      * @param x the point abscissa
      * @param y the point ordinate
      */
     public static QVect from(double x, double y) {
         return create(1, x, y, x * x, y * y);
+    }
+
+    /**
+     * Returns the vector from the point
+     *
+     * @param point the point
+     */
+    public static QVect from(Point2D point) {
+        requireNonNull(point);
+        return from(point.getX(), point.getY());
     }
 
     /**

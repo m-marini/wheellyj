@@ -57,12 +57,12 @@ public interface Utils {
         return stream.dropWhile(Predicate.not(test)).limit(1).findAny();
     }
 
-    static <K, V> Optional<V> getValue(Map<K, V> map, K value) {
-        return Optional.ofNullable(map.get(value));
-    }
-
     static <K, V> Function<K, Optional<V>> getValue(Map<K, V> map) {
         return key -> getValue(map, key);
+    }
+
+    static <K, V> Optional<V> getValue(Map<K, V> map, K value) {
+        return Optional.ofNullable(map.get(value));
     }
 
     /**

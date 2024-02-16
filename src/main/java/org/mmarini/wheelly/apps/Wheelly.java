@@ -28,16 +28,15 @@ package org.mmarini.wheelly.apps;
 import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
-import org.jetbrains.annotations.NotNull;
 import org.mmarini.rl.agents.Agent;
-import org.mmarini.rl.agents.KpiCSVSubscriber;
+import org.mmarini.rl.agents.KpiBinSubscriber;
 import org.mmarini.rl.envs.Environment;
-import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.wheelly.apis.ObstacleMap;
 import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotStatus;
@@ -57,7 +56,6 @@ import java.awt.*;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -70,56 +68,16 @@ import static org.mmarini.yaml.Utils.fromFile;
  */
 public class Wheelly {
     public static final Dimension DEFAULT_RADAR_DIMENSION = new Dimension(400, 400);
-    public static final String[] DEFAULT_KPIS = {
-            "^reward$",
-            "^avgReward$",
-            "^delta$",
-            "^v0$",
-            "^trainedCritic.output$"
-    };
-    public static final String[] BATCH_KPIS = {
-            "^reward$",
-            "^terminal",
-            "^s0",
-            "^s1",
-            "^actions"
-    };
     public static final String WHEELLY_SCHEMA_YML = "https://mmarini.org/wheelly/wheelly-schema-1.0";
     private static final Logger logger = LoggerFactory.getLogger(Wheelly.class);
 
-    /**
-     * Creates kpis process
-     *
-     * @param agent   the agent
-     * @param actions the action spec
-     * @param file    the path of kpis
-     * @param labels  the key labels to filter
-     */
-    private static void createKpis(Agent agent, Map<String, SignalSpec> actions, File file, String labels) {
-        KpiCSVSubscriber sub;
-
-        if (labels.isEmpty()) {
-            // Default kpis
-            String[] labs = Stream.concat(Stream.of(DEFAULT_KPIS),
-                    actions.keySet().stream()
-                            .flatMap(n -> Stream.of("^policy", "^trainedPolicy", "^gradPolicy").map(k -> k + "." + n + "$")
-                            )
-            ).toArray(String[]::new);
-            sub = KpiCSVSubscriber.create(file, labs);
-        } else if ("all".equals(labels)) {
-            // full kpis
-            sub = KpiCSVSubscriber.create(file);
-        } else if ("batch".equals(labels)) {
-            // batch kpis
-            sub = KpiCSVSubscriber.create(file, BATCH_KPIS);
-        } else {
-            // filtered kpis
-            sub = KpiCSVSubscriber.create(file, labels.split(","));
-        }
-        agent.readKpis().subscribe(sub);
+    static {
+        Nd4j.zeros(1);
     }
 
-    @NotNull
+    /**
+     * Returns the argument parser
+     */
     private static ArgumentParser createParser() {
         ArgumentParser parser = ArgumentParsers.newFor(Wheelly.class.getName()).build()
                 .defaultHelp(true)
@@ -135,7 +93,7 @@ public class Wheelly {
                 .setDefault("")
                 .help("specify kpis path");
         parser.addArgument("-l", "--labels")
-                .setDefault("")
+                .setDefault("default")
                 .help("specify kpi label regex comma separated (all for all kpi, batch for batch training kpis)");
         parser.addArgument("-s", "--silent")
                 .action(Arguments.storeTrue())
@@ -170,19 +128,20 @@ public class Wheelly {
     private Long sessionDuration;
     private PolarPanel polarPanel;
     private JFrame radarFrame;
-    private long start;
     private RobotEnvironment environment;
     private Agent agent;
     private long prevRobotStep;
     private long prevStep;
     private ComDumper dumper;
+    private KpiBinSubscriber kpiSubscriber;
 
     /**
      *
      */
     public Wheelly() {
         this.envPanel = new EnvironmentPanel();
-        this.frame = createFrame(Messages.getString("Wheelly.title"), envPanel);
+        JScrollPane scrollEnv = new JScrollPane(envPanel);
+        this.frame = createFrame(Messages.getString("Wheelly.title"), scrollEnv);
         this.comMonitor = new ComMonitor();
         comMonitor.setPrintTimestamp(true);
         this.comFrame = comMonitor.createFrame();
@@ -269,6 +228,11 @@ public class Wheelly {
                 logger.atError().setCause(e).log();
             }
         }
+        if (kpiSubscriber != null) {
+            logger.atInfo().log("Waiting for completion ...");
+            kpiSubscriber.readCompleted().blockingAwait();
+        }
+        logger.atInfo().log("Completed.");
         if (!args.getBoolean("silent")) {
             JOptionPane.showMessageDialog(null,
                     "Completed", "Information", JOptionPane.INFORMATION_MESSAGE);
@@ -280,7 +244,7 @@ public class Wheelly {
             robotStartTimestamp = status.simulationTime();
         }
         long robotElapsed = status.simulationTime() - robotStartTimestamp;
-        envPanel.setTimeRatio((double) robotElapsed / (System.currentTimeMillis() - start));
+        envPanel.setTimeRatio(environment.getController().simRealSpeed());
         if (robotElapsed > sessionDuration) {
             environment.shutdown();
         }
@@ -297,7 +261,6 @@ public class Wheelly {
      * @param e the event
      */
     private void handleWindowOpened(WindowEvent e) {
-        Nd4j.zeros(1);
         RobotApi robot = environment.getController().getRobot();
         if (robot instanceof SimRobot) {
             Optional<ObstacleMap> obstaclesMap = ((SimRobot) robot).obstaclesMap();
@@ -355,9 +318,9 @@ public class Wheelly {
 
             String kpis = this.args.getString("kpis");
             if (!kpis.isEmpty()) {
-                createKpis(agent, environment.getActions(), new File(kpis), this.args.getString("labels"));
+                this.kpiSubscriber = KpiBinSubscriber.createFromLabels(new File(kpis), this.args.getString("labels"));
+                agent.readKpis().observeOn(Schedulers.io(), true).subscribe(kpiSubscriber);
             }
-            this.start = System.currentTimeMillis();
             Optional.ofNullable(this.args.getString("dump"))
                     .ifPresent(file -> {
                         try {
@@ -367,23 +330,30 @@ public class Wheelly {
                         }
                     });
             environment.readRobotStatus()
+                    .observeOn(Schedulers.io())
                     .doOnNext(this::handleStatusReady)
                     .subscribe();
             environment.readReadLine()
+                    .observeOn(Schedulers.io())
                     .doOnNext(this::handleReadLine)
                     .subscribe();
             environment.readWriteLine()
+                    .observeOn(Schedulers.io())
                     .doOnNext(this::handleWrittenLine)
                     .subscribe();
             environment.readCommand()
+                    .observeOn(Schedulers.io())
                     .doOnNext(sensorMonitor::onCommand)
                     .subscribe();
-            environment.readErrors().doOnNext(err -> {
+            environment.readErrors()
+                    .observeOn(Schedulers.io())
+                    .doOnNext(err -> {
                         comMonitor.onError(err);
                         logger.atError().setCause(err).log();
                     })
                     .subscribe();
             environment.readControllerStatus()
+                    .observeOn(Schedulers.io())
                     .doOnNext(this::handleControllerStatus)
                     .subscribe();
             environment.readShutdown()

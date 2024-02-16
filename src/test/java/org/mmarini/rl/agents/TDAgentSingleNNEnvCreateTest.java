@@ -39,22 +39,20 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mmarini.wheelly.TestFunctions.text;
 
-class TDAgentEnvCreateTest {
+class TDAgentSingleNNEnvCreateTest {
 
-    private static final String YAML_LOAD = text(
-            "---",
-            "modelPath: models/test",
-            "seed: 1234"
-    );
     private static final String YAML = text(
             "---",
+            "$schema: " + TDAgentSingleNN.SCHEMA_NAME,
+            "class: " + TDAgentSingleNN.class.getName(),
             "modelPath: models/test",
             "seed: 1234",
             "rewardAlpha: 0.001",
-            "policyAlpha: 0.001",
-            "criticAlpha: 0.001",
+            "alphas:",
+            "  critic: 1e.3",
+            "  output: 1e.3",
             "lambda: 0.5",
-            "policy:",
+            "network:",
             "  output:",
             "    layers:",
             "      - type: dense",
@@ -62,8 +60,7 @@ class TDAgentEnvCreateTest {
             "      - type: tanh",
             "      - type: softmax",
             "        temperature: 0.8",
-            "critic:",
-            "  output:",
+            "  critic:",
             "    layers:",
             "      - type: dense",
             "        outputSize: 1",
@@ -115,7 +112,7 @@ class TDAgentEnvCreateTest {
         JsonNode spec = Utils.fromText(YAML);
         File path = new File("models/test");
         deleteRecursive(path);
-        TDAgent agent = TDAgent.create(spec, Locator.root(), MOCK_ENV);
+        TDAgentSingleNN agent = TDAgentSingleNN.create(spec, Locator.root(), MOCK_ENV);
         assertNotNull(agent);
     }
 
@@ -124,11 +121,11 @@ class TDAgentEnvCreateTest {
         JsonNode spec = Utils.fromText(YAML);
         File path = new File("models/test");
         deleteRecursive(path);
-        TDAgent agent = TDAgent.create(spec, Locator.root(), MOCK_ENV);
+        TDAgentSingleNN agent = TDAgentSingleNN.create(spec, Locator.root(), MOCK_ENV);
         assertNotNull(agent);
         agent.save(path);
-        JsonNode specLoad = Utils.fromText(YAML_LOAD);
-        TDAgent agent1 = TDAgent.create(specLoad, Locator.root(), MOCK_ENV);
+        JsonNode specLoad = Utils.fromText(YAML);
+        TDAgentSingleNN agent1 = TDAgentSingleNN.create(specLoad, Locator.root(), MOCK_ENV);
         assertNotNull(agent1);
     }
 }

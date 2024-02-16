@@ -53,8 +53,8 @@ public class Utils {
         return (x - xmin) * (ymax - ymin) / (xmax - xmin) + ymin;
     }
 
-    public static Vec2 vec2(double x, double y) {
-        return vec2((float) x, (float) y);
+    public static Vec2 vec2(float[] x) {
+        return vec2(x[0], x[1]);
     }
 
     public static Vec2 vec2(float x, float y) {
@@ -64,11 +64,11 @@ public class Utils {
         return vec2;
     }
 
-    public static Vec2 vec2(float[] x) {
+    public static Vec2 vec2(double[] x) {
         return vec2(x[0], x[1]);
     }
 
-    public static Vec2 vec2(double[] x) {
-        return vec2(x[0], x[1]);
+    public static Vec2 vec2(double x, double y) {
+        return vec2((float) x, (float) y);
     }
 }

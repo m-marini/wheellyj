@@ -96,6 +96,11 @@ public class NullController implements RobotControllerApi {
     }
 
     @Override
+    public double simRealSpeed() {
+        return 1;
+    }
+
+    @Override
     public void start() {
     }
 }

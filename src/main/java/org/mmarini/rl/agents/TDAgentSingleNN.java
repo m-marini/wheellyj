@@ -552,8 +552,8 @@ public class TDAgentSingleNN implements Agent {
      *     terminal - Boolean
      *     avgReward - Float
      *     trainedAvgReward - Float
-     *     v0 - Float
-     *     v1 - Float
+     *     adv0 - Float
+     *     adv1 - Float
      *     delta - Float
      *     critic - Map<String, INDArray>
      *     trainedCritic - Map<String, INDArray>
@@ -607,14 +607,14 @@ public class TDAgentSingleNN implements Agent {
         Map<String, INDArray> netResults0 = network.forward(s0, true, random);
 
         // Computes the state value v0 amd v1 from critic output
-        float v0 = netResults0.get("critic").getFloat(0, 0);
-        float v1 = criticValue(s1);
+        float adv0 = netResults0.get("critic").getFloat(0, 0);
+        float adv1 = criticValue(s1);
 
         // Computes error delta by backing up the state value and the reward
         float reward = (float) result.reward;
         float delta = result.terminal
                 ? reward - avgReward // If terminal state reward should be the average reward should be the reward
-                : reward - avgReward + v1 - v0;
+                : reward - avgReward + adv1 - adv0;
 
         // Extract the policy output values pi from network results
         Map<String, INDArray> pi = policyFromNetworkResults(netResults0);
@@ -651,8 +651,8 @@ public class TDAgentSingleNN implements Agent {
             kpi.put("avgReward", avgReward0);
             kpi.put("trainedAvgReward", avgReward);
             kpi.put("netResult", netResults0);
-            kpi.put("v0", v0);
-            kpi.put("v1", v1);
+            kpi.put("adv0", adv0);
+            kpi.put("adv1", adv1);
             kpi.put("delta", delta);
             kpi.put("policy", pi);
             kpi.put("netGrads", netGrads);

@@ -63,7 +63,6 @@ class TilesProcessorTest {
         return TilesProcessor.create(fromText(yaml), Locator.root(), inSpec);
     }
 
-
     @Test
     void computeDimensions() {
         assertEquals(2, TilesProcessor.computeInSpaceDim(Map.of(

@@ -33,6 +33,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 public interface Serde {
+    static Map<String, INDArray> deserialize(File file) throws IOException {
+        try (DataInputStream stream = new DataInputStream(new FileInputStream(file))) {
+            return deserialize(stream);
+        }
+    }
+
     /**
      * Returns the data map read from stream
      *
@@ -47,12 +53,6 @@ public interface Serde {
             result.put(key, value);
         }
         return result;
-    }
-
-    static Map<String, INDArray> deserialize(File file) throws IOException {
-        try (DataInputStream stream = new DataInputStream(new FileInputStream(file))) {
-            return deserialize(stream);
-        }
     }
 
     /**

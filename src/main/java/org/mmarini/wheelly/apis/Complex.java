@@ -38,15 +38,6 @@ public record Complex(double x, double y) {
     /**
      * Returns the angle from vector
      *
-     * @param vector the vector
-     */
-    public static Complex fromPoint(Point2D vector) {
-        return fromPoint(vector.getX(), vector.getY());
-    }
-
-    /**
-     * Returns the angle from vector
-     *
      * @param x the abscissa
      * @param y the ordinate
      */
@@ -59,6 +50,15 @@ public record Complex(double x, double y) {
             double length = sqrt(x * x + y * y);
             return new Complex(x / length, y / length);
         }
+    }
+
+    /**
+     * Returns the angle from vector
+     *
+     * @param vector the vector
+     */
+    public static Complex fromPoint(Point2D vector) {
+        return fromPoint(vector.getX(), vector.getY());
     }
 
     /**

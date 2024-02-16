@@ -148,6 +148,11 @@ public interface RobotControllerApi extends WithIOFlowable, WithStatusFlowable, 
     void shutdown();
 
     /**
+     * Returns the real simulation speed
+     */
+    double simRealSpeed();
+
+    /**
      * Starts the controller
      */
     void start();

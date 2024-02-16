@@ -13,8 +13,6 @@ properties:
     type: string
   seed:
     multipleOf: 1
-  learningRate:
-    minimum: 0
   numTrainIterations1:
     multipleOf: 1
     minimum: 1
@@ -27,6 +25,6 @@ properties:
 required:
   - $schema
   - modelPath
-  - learningRate
+  - batchSize
   - numTrainIterations1
   - numTrainIterations2

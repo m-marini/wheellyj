@@ -34,12 +34,13 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.agents.Agent;
-import org.mmarini.rl.agents.TDAgent;
+import org.mmarini.rl.agents.TDAgentSingleNN;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.rl.nets.*;
 import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.yaml.Locator;
+import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,6 +59,10 @@ import static org.mmarini.yaml.Utils.fromFile;
  */
 public class PrintNetChart {
     private static final Logger logger = LoggerFactory.getLogger(PrintNetChart.class);
+
+    static {
+        Nd4j.zeros(1);
+    }
 
     @NotNull
     private static ArgumentParser createParser() {
@@ -98,15 +103,11 @@ public class PrintNetChart {
      * Prints the agent
      */
     private void printAgent() {
-        TDAgent ag = (TDAgent) this.agent;
-        output.println("## Critic");
+        TDAgentSingleNN ag = (TDAgentSingleNN) this.agent;
+        output.println("## network");
         output.println();
-        Map<String, SignalSpec> state = ag.getProcessor().getSpec();
-        printNet(ag.getCritic(), state);
-        output.println();
-        output.println("## Policy");
-        output.println();
-        printNet(ag.getPolicy(), state);
+        Map<String, SignalSpec> state = ag.processor().getSpec();
+        printNet(ag.network(), state);
     }
 
     /**

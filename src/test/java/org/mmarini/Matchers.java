@@ -45,6 +45,10 @@ public interface Matchers {
         return equalTo(Optional.empty());
     }
 
+    static <T> Matcher<Optional<? extends T>> optionalOf(T exp) {
+        return optionalOf(equalTo(exp));
+    }
+
     static <T> Matcher<Optional<? extends T>> optionalOf(Matcher<? extends T> exp) {
         requireNonNull(exp);
         return new CustomMatcher<>(format("Optional containing  %s",
@@ -66,10 +70,6 @@ public interface Matchers {
                         && exp.matches(((Optional<T>) o).orElseThrow());
             }
         };
-    }
-
-    static <T> Matcher<Optional<? extends T>> optionalOf(T exp) {
-        return optionalOf(equalTo(exp));
     }
 
     static Matcher<Point2D> pointCloseTo(double x, double y, double epsilon) {

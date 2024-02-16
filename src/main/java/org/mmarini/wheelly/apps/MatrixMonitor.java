@@ -27,6 +27,7 @@ package org.mmarini.wheelly.apps;
 
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -378,15 +379,26 @@ public class MatrixMonitor {
         logger.info("Robot check started.");
         controller = AppYaml.fromFile(parseArgs.getString("config"), MONITOR_SCHEMA_YML);
         controller.readRobotStatus()
+                .observeOn(Schedulers.io())
                 .doOnNext(this::handleStatus).subscribe();
-        controller.readErrors().doOnNext(er -> {
-            comMonitor.onError(er);
-            logger.atError().setCause(er).log();
-        }).subscribe();
-        controller.readReadLine().doOnNext(this::handleReadLine).subscribe();
-        controller.readWriteLine().doOnNext(this::handleWriteLine).subscribe();
-        controller.readShutdown().doOnComplete(this::handleShutdown).subscribe();
-        controller.readControllerStatus().doOnNext(this::handleControlStatus).subscribe();
+        controller.readErrors()
+                .observeOn(Schedulers.io())
+                .doOnNext(er -> {
+                    comMonitor.onError(er);
+                    logger.atError().setCause(er).log();
+                }).subscribe();
+        controller.readReadLine()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::handleReadLine).subscribe();
+        controller.readWriteLine()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::handleWriteLine).subscribe();
+        controller.readShutdown()
+                .observeOn(Schedulers.io())
+                .doOnComplete(this::handleShutdown).subscribe();
+        controller.readControllerStatus()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::handleControlStatus).subscribe();
         controller.setOnInference(this::handleCommands);
         Optional.ofNullable(parseArgs.getString("dump"))
                 .ifPresent(file -> {

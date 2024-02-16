@@ -183,6 +183,7 @@ public class RobotController implements RobotControllerApi {
     private RobotStatus robotStatus;
     private Complex sensorDir;
     private Runnable statusTransition;
+    private double simRealSpeed;
 
     /**
      * Creates the robot controller
@@ -204,6 +205,7 @@ public class RobotController implements RobotControllerApi {
         this.connectionRetryInterval = connectionRetryInterval;
         this.watchdogInterval = watchdogInterval;
         this.simSpeed = simSpeed;
+        this.simRealSpeed = simSpeed;
         this.end = false;
         this.prevSensorDir = Complex.DEG0;
         this.sensorDir = Complex.DEG0;
@@ -484,6 +486,8 @@ public class RobotController implements RobotControllerApi {
         logger.atDebug().setMessage("Status process started").log();
         long prev = System.currentTimeMillis();
         lastTick = robot.simulationTime();
+        long startTime = prev;
+        long startSimTime = lastTick;
         while (!end && isReady) {
             try {
                 // Advance clock of interval
@@ -491,6 +495,7 @@ public class RobotController implements RobotControllerApi {
                 // Computes the real elapsed localTime and robot elapsed localTime
                 long t0 = System.currentTimeMillis();
                 long robotT0 = robot.simulationTime();
+                this.simRealSpeed = (double) (robotT0 - startSimTime) / (t0 - startTime);
                 long robotElapsed = robotT0 - lastTick;
                 long realElapsed = t0 - prev;
                 prev = t0;
@@ -594,6 +599,11 @@ public class RobotController implements RobotControllerApi {
     }
 
     @Override
+    public double simRealSpeed() {
+        return simRealSpeed;
+    }
+
+    @Override
     public synchronized void start() {
         if (!isStarted) {
             isStarted = true;
@@ -640,7 +650,8 @@ public class RobotController implements RobotControllerApi {
         if (close) {
             setStatusTransition(this::closing, CLOSING);
         } else {
-            long waitTime = round(commandInterval / simSpeed);
+//            long waitTime = round(commandInterval / simSpeed);
+            long waitTime = round(commandInterval / simRealSpeed);
             if (waitTime >= 1) {
                 try {
                     logger.atDebug().log("Sleep thread for {} ms", waitTime);

@@ -74,6 +74,15 @@ public interface ProcessorContext {
     <T> T get(String key);
 
     /**
+     * Returns a double value by key or 0 if not exits
+     *
+     * @param key the key
+     */
+    default double getDouble(String key) {
+        return getDouble(key, 0D);
+    }
+
+    /**
      * Returns a double value by key
      *
      * @param key          the key
@@ -91,8 +100,8 @@ public interface ProcessorContext {
      *
      * @param key the key
      */
-    default double getDouble(String key) {
-        return getDouble(key, 0D);
+    default float getFloat(String key) {
+        return getFloat(key, 0F);
     }
 
     /**
@@ -109,12 +118,12 @@ public interface ProcessorContext {
     }
 
     /**
-     * Returns a double value by key or 0 if not exits
+     * Returns an int value by key or 0 if not exits
      *
      * @param key the key
      */
-    default float getFloat(String key) {
-        return getFloat(key, 0F);
+    default int getInt(String key) {
+        return getInt(key, 0);
     }
 
     /**
@@ -131,12 +140,12 @@ public interface ProcessorContext {
     }
 
     /**
-     * Returns an int value by key or 0 if not exits
+     * Returns a long value by key or 0 if not exits
      *
      * @param key the key
      */
-    default int getInt(String key) {
-        return getInt(key, 0);
+    default long getLong(String key) {
+        return getLong(key, 0);
     }
 
     /**
@@ -150,15 +159,6 @@ public interface ProcessorContext {
             case Number n -> n.longValue();
             case null, default -> defaultValue;
         };
-    }
-
-    /**
-     * Returns a long value by key or 0 if not exits
-     *
-     * @param key the key
-     */
-    default long getLong(String key) {
-        return getLong(key, 0);
     }
 
     /**

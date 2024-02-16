@@ -57,6 +57,15 @@ public record GridTopology(Point2D center, int width, int height, double gridSiz
     /**
      * Returns the index of cell or -1 if not found
      *
+     * @param p the point
+     */
+    public int indexOf(Point2D p) {
+        return indexOf(p.getX(), p.getY());
+    }
+
+    /**
+     * Returns the index of cell or -1 if not found
+     *
      * @param x the location abscissa (m)
      * @param y the location ordinate (m)
      */
@@ -68,15 +77,6 @@ public record GridTopology(Point2D center, int width, int height, double gridSiz
         return (i >= 0 && i < height && j >= 0 && j < width)
                 ? i * width + j
                 : -1;
-    }
-
-    /**
-     * Returns the index of cell or -1 if not found
-     *
-     * @param p the point
-     */
-    public int indexOf(Point2D p) {
-        return indexOf(p.getX(), p.getY());
     }
 
     /**

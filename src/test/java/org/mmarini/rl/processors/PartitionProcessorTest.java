@@ -172,7 +172,6 @@ class PartitionProcessorTest {
         assertThat(result, matrixCloseTo(new float[]{1, 0, 0}, EPSILON));
     }
 
-
     @Test
     void encoder2d() {
         UnaryOperator<INDArray> f = PartitionProcessor.createPartitionEncoder(new long[]{2, 3});

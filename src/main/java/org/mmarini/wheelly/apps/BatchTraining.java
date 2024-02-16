@@ -26,6 +26,7 @@
 package org.mmarini.wheelly.apps;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -33,6 +34,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.agents.BatchTrainer;
+import org.mmarini.rl.agents.KpiBinSubscriber;
 import org.mmarini.rl.agents.Serde;
 import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.wheelly.swing.Messages;
@@ -60,6 +62,10 @@ public class BatchTraining {
     public static final String BATCH_SCHEMA_YML = "https://mmarini.org/wheelly/batch-schema-0.1";
     private static final Logger logger = LoggerFactory.getLogger(BatchTraining.class);
 
+    static {
+        Nd4j.zeros(1);
+    }
+
     private static ArgumentParser createParser() {
         ArgumentParser parser = ArgumentParsers.newFor(BatchTraining.class.getName()).build()
                 .defaultHelp(true)
@@ -68,9 +74,18 @@ public class BatchTraining {
         parser.addArgument("-v", "--version")
                 .action(Arguments.version())
                 .help("show current version");
+        parser.addArgument("-k", "--kpis")
+                .setDefault("")
+                .help("specify kpis path");
         parser.addArgument("-c", "--config")
                 .setDefault("batch.yml")
                 .help("specify yaml configuration file");
+        parser.addArgument("-l", "--labels")
+                .setDefault("default")
+                .help("specify kpi label regex comma separated (all for all kpi, batch for batch training kpis)");
+        parser.addArgument("-n", "--no-backup")
+                .action(Arguments.storeTrue())
+                .help("no backup of network file");
         parser.addArgument("dataset")
                 .required(true)
                 .help("specify dataset path");
@@ -87,6 +102,7 @@ public class BatchTraining {
     protected Namespace args;
     private String pathFile;
     private BatchTrainer trainer;
+    private boolean backUp;
 
     /**
      * Returns the alphas from agent yaml file
@@ -103,16 +119,13 @@ public class BatchTraining {
     /**
      * Returns the network from agent path
      *
-     * @param random the ranom number generator
+     * @param random the random number generator
      * @throws IOException in case of error
      */
     private TDNetwork loadNetwork(Random random) throws IOException {
         JsonNode spec = Utils.fromFile(new File(pathFile, "agent.yml"));
         File file = new File(pathFile, "agent.bin");
         Map<String, INDArray> props = Serde.deserialize(file);
-        String backupFileName = format("agent-%1$tY%1$tm%1$td-%1$tH%1$tM%1$tS.bin", Calendar.getInstance());
-        file.renameTo(new File(file.getParentFile(), backupFileName));
-        logger.atInfo().log("Backup at {}", backupFileName);
         Locator locator = Locator.root();
         return TDNetwork.create(spec, locator.path("network"), "network", props, random);
     }
@@ -123,11 +136,19 @@ public class BatchTraining {
      * @param network the network
      */
     private void saveNetwork(TDNetwork network) {
+        File file = new File(pathFile, "agent.bin");
+        if (!args.getBoolean("no_backup") && !backUp) {
+            // rename network file to back up
+            String backupFileName = format("agent-%1$tY%1$tm%1$td-%1$tH%1$tM%1$tS.bin", Calendar.getInstance());
+            file.renameTo(new File(file.getParentFile(), backupFileName));
+            backUp = true;
+            logger.atInfo().log("Backup at {}", backupFileName);
+        }
+
         logger.atInfo().log("Saving network ...");
         Map<String, INDArray> props = new HashMap<>(network.getProps("network"));
         props.put("avgReward", Nd4j.createFromArray(trainer.avgReward()));
         try {
-            File file = new File(pathFile, "agent.bin");
             Serde.serizalize(file, props);
             logger.atInfo().log("Saved network in {}", file.getCanonicalPath());
         } catch (IOException e) {
@@ -174,9 +195,22 @@ public class BatchTraining {
                     numTrainIterations2,
                     (int) batchSize,
                     random,
-                    this::saveNetwork);
+                    this::saveNetwork
+            );
 
-            // Preapare for training
+            // reads kpis if activated
+            String kpiPath = this.args.getString("kpis");
+            KpiBinSubscriber kpiSubscriber = null;
+            if (!kpiPath.isEmpty()) {
+                kpiSubscriber = KpiBinSubscriber.createFromLabels(
+                        new File(kpiPath),
+                        this.args.getString("label"));
+                this.trainer.readKpis()
+                        .observeOn(Schedulers.io())
+                        .subscribe(kpiSubscriber);
+            }
+
+            // Prepares for training
             logger.atInfo().log("Preparing for training ...");
             trainer.prepare(new File(this.args.getString("dataset")));
 
@@ -184,6 +218,10 @@ public class BatchTraining {
             logger.atInfo().log("Training ...");
             trainer.train();
 
+            if (kpiSubscriber != null) {
+                logger.atInfo().log("Waiting for completion ...");
+                kpiSubscriber.readCompleted().blockingAwait();
+            }
             logger.atInfo().log("Completed.");
 
         } catch (ArgumentParserException e) {

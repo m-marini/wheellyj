@@ -444,6 +444,16 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
     /**
      * Returns the radar map with a changed cell at point
      *
+     * @param location the cell location
+     * @param mapper   the unary operator that changes the sector
+     */
+    public RadarMap updateCellAt(Point2D location, UnaryOperator<MapCell> mapper) {
+        return updateCellAt(location.getX(), location.getY(), mapper);
+    }
+
+    /**
+     * Returns the radar map with a changed cell at point
+     *
      * @param x      the cell abscissa
      * @param y      the cell ordinate
      * @param mapper the unary operator that changes the sector
@@ -451,16 +461,6 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
     public RadarMap updateCellAt(double x, double y, UnaryOperator<MapCell> mapper) {
         int index = indexOf(x, y);
         return index >= 0 ? map(IntStream.of(index), mapper) : this;
-    }
-
-    /**
-     * Returns the radar map with a changed cell at point
-     *
-     * @param location the cell location
-     * @param mapper   the unary operator that changes the sector
-     */
-    public RadarMap updateCellAt(Point2D location, UnaryOperator<MapCell> mapper) {
-        return updateCellAt(location.getX(), location.getY(), mapper);
     }
 
     /**
