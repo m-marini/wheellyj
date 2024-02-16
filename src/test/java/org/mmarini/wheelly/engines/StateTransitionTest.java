@@ -79,8 +79,8 @@ class StateTransitionTest {
         List<StateTransition> st = StateTransition.createList(root, Locator.root());
         assertThat(st, hasSize(2));
 
-        assertThat(st.get(0), field("from", equalTo("a")));
-        assertThat(st.get(0), field("to", equalTo("b")));
+        assertThat(st.getFirst(), field("from", equalTo("a")));
+        assertThat(st.getFirst(), field("to", equalTo("b")));
         assertTrue(st.get(0).isTriggered("armed"));
         assertThat(st.get(0), field("onTransition", nullValue()));
 

@@ -112,15 +112,11 @@ public interface ArgumentsGenerator<T> {
     }
 
     /**
-     * @param n
-     * @param random
+     * @param seed
      * @param generators
      */
-    static Stream<Arguments> createStream(int n, Random random, ArgumentsGenerator<?>... generators) {
-        return IntStream.range(0, n).mapToObj(i ->
-                Arguments.of(Arrays.stream(generators)
-                        .map(gen -> gen.apply(i, random))
-                        .toArray()));
+    static Stream<Arguments> createStream(long seed, ArgumentsGenerator<?>... generators) {
+        return createStream(DEFAULT_NUM_TESTS, seed, generators);
     }
 
     /**
@@ -133,20 +129,23 @@ public interface ArgumentsGenerator<T> {
     }
 
     /**
-     * @param seed
+     * @param n
+     * @param random
      * @param generators
      */
-    static Stream<Arguments> createStream(long seed, ArgumentsGenerator<?>... generators) {
-        return createStream(DEFAULT_NUM_TESTS, seed, generators);
+    static Stream<Arguments> createStream(int n, Random random, ArgumentsGenerator<?>... generators) {
+        return IntStream.range(0, n).mapToObj(i ->
+                Arguments.of(Arrays.stream(generators)
+                        .map(gen -> gen.apply(i, random))
+                        .toArray()));
     }
 
     /**
-     * @param n
-     * @param random
+     * @param seed
      * @param generator
      */
-    static Stream<Arguments> createStreamFromGenerator(int n, Random random, ArgumentsGenerator<Object[]> generator) {
-        return IntStream.range(0, n).mapToObj(i -> Arguments.of(generator.apply(i, random)));
+    static Stream<Arguments> createStreamFromGenerator(long seed, ArgumentsGenerator<Object[]> generator) {
+        return createStreamFromGenerator(DEFAULT_NUM_TESTS, seed, generator);
     }
 
     /**
@@ -159,11 +158,12 @@ public interface ArgumentsGenerator<T> {
     }
 
     /**
-     * @param seed
+     * @param n
+     * @param random
      * @param generator
      */
-    static Stream<Arguments> createStreamFromGenerator(long seed, ArgumentsGenerator<Object[]> generator) {
-        return createStreamFromGenerator(DEFAULT_NUM_TESTS, seed, generator);
+    static Stream<Arguments> createStreamFromGenerator(int n, Random random, ArgumentsGenerator<Object[]> generator) {
+        return IntStream.range(0, n).mapToObj(i -> Arguments.of(generator.apply(i, random)));
     }
 
     /**

@@ -85,27 +85,6 @@ public class RobotEnv implements Environment {
     }
 
     /**
-     * Returns the environment from json node spec
-     *
-     * @param root    the json node
-     * @param locator the locator of environment
-     * @param robot   the robot interface
-     */
-    public static RobotEnv create(JsonNode root, Locator locator, RobotApi robot) {
-        ToDoubleFunction<RobotEnvironment> reward = Utils.createObject(root, locator.path("objective"), new Object[0], new Class[0]);
-        long interval = locator.path("interval").getNode(root).asLong();
-        long reactionInterval = locator.path("reactionInterval").getNode(root).asLong();
-        long commandInterval = locator.path("commandInterval").getNode(root).asLong();
-        int numDirectionValues = locator.path("numDirectionValues").getNode(root).asInt();
-        int numSensorValues = locator.path("numSensorValues").getNode(root).asInt();
-        int numSpeedValues = locator.path("numSpeedValues").getNode(root).asInt();
-
-        return RobotEnv.create(robot, reward,
-                interval, reactionInterval, commandInterval,
-                numDirectionValues, numSensorValues, numSpeedValues);
-    }
-
-    /**
      * Returns the robot environment
      *
      * @param robot              the robot api
@@ -128,6 +107,27 @@ public class RobotEnv implements Environment {
         );
 
         return new RobotEnv(robot, reward, interval, reactionInterval, commandInterval, actions1);
+    }
+
+    /**
+     * Returns the environment from json node spec
+     *
+     * @param root    the json node
+     * @param locator the locator of environment
+     * @param robot   the robot interface
+     */
+    public static RobotEnv create(JsonNode root, Locator locator, RobotApi robot) {
+        ToDoubleFunction<RobotEnvironment> reward = Utils.createObject(root, locator.path("objective"), new Object[0], new Class[0]);
+        long interval = locator.path("interval").getNode(root).asLong();
+        long reactionInterval = locator.path("reactionInterval").getNode(root).asLong();
+        long commandInterval = locator.path("commandInterval").getNode(root).asLong();
+        int numDirectionValues = locator.path("numDirectionValues").getNode(root).asInt();
+        int numSensorValues = locator.path("numSensorValues").getNode(root).asInt();
+        int numSpeedValues = locator.path("numSpeedValues").getNode(root).asInt();
+
+        return RobotEnv.create(robot, reward,
+                interval, reactionInterval, commandInterval,
+                numDirectionValues, numSensorValues, numSpeedValues);
     }
 
     private final Map<String, SignalSpec> actions;

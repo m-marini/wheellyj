@@ -228,6 +228,7 @@ public class RadarPanel extends JComponent {
      */
     public void setScale(float scale) {
         this.scale = scale;
+        repaint();
     }
 
     @Override
@@ -254,6 +255,13 @@ public class RadarPanel extends JComponent {
     public void setRadarMap(RadarMap radarMap) {
         this.radarMap = createMap(radarMap);
         this.sectorShape = createSectorShape(radarMap);
+        /*
+        GridTopology topology = radarMap.topology();
+        setPreferredSize(new Dimension(
+                (int) (scale * topology.width() / topology.gridSize() / DEFAULT_WORLD_SIZE),
+                (int) (scale * topology.height() / topology.gridSize() / DEFAULT_WORLD_SIZE)));
+
+         */
         repaint();
     }
 

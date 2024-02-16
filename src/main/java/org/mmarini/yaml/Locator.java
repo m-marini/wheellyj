@@ -114,9 +114,9 @@ public class Locator {
     /**
      * @param path the path
      */
-    public Locator path(Locator path) {
+    public Locator path(String path) {
         requireNonNull(path);
-        return path(path.pointer);
+        return path(JsonPointer.valueOf("/" + path));
     }
 
     /**
@@ -130,9 +130,9 @@ public class Locator {
     /**
      * @param path the path
      */
-    public Locator path(String path) {
+    public Locator path(Locator path) {
         requireNonNull(path);
-        return path(JsonPointer.valueOf("/" + path));
+        return path(path.pointer);
     }
 
     /**

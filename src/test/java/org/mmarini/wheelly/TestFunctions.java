@@ -57,6 +57,10 @@ public interface TestFunctions {
         return new ArgumentJsonParser(fromResource(resource));
     }
 
+    static Matcher<INDArray> matrixCloseTo(float[][] exp, double epsilon) {
+        return matrixCloseTo(Nd4j.create(exp), epsilon);
+    }
+
     static Matcher<INDArray> matrixCloseTo(INDArray exp, double epsilon) {
         requireNonNull(exp);
         return new CustomMatcher<>(format("INDArray close to %s within +- %f",
@@ -68,10 +72,6 @@ public interface TestFunctions {
                         && ((INDArray) o).equalsWithEps(exp, epsilon);
             }
         };
-    }
-
-    static Matcher<INDArray> matrixCloseTo(float[][] exp, double epsilon) {
-        return matrixCloseTo(Nd4j.create(exp), epsilon);
     }
 
     static Matcher<INDArray> matrixCloseTo(float[] exp, double epsilon) {

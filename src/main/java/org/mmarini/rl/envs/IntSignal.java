@@ -108,7 +108,6 @@ public class IntSignal implements Signal {
         return shape;
     }
 
-
     @Override
     public long getSize() {
         return Arrays.stream(shape).reduce(1, (a, b) -> a * b);

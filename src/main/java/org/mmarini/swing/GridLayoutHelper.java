@@ -263,6 +263,13 @@ public class GridLayoutHelper<T extends Container> {
     private GridBagConstraints constraints;
 
     /**
+     * @param container
+     */
+    public GridLayoutHelper(final T container) {
+        this(null, container);
+    }
+
+    /**
      * @param bundle
      * @param container
      */
@@ -272,13 +279,6 @@ public class GridLayoutHelper<T extends Container> {
         layout = new GridBagLayout();
         constraints = new GridBagConstraints();
         container.setLayout(layout);
-    }
-
-    /**
-     * @param container
-     */
-    public GridLayoutHelper(final T container) {
-        this(null, container);
     }
 
     public GridLayoutHelper<T> add(final Component c) {
@@ -385,13 +385,13 @@ public class GridLayoutHelper<T extends Container> {
         return this;
     }
 
+    public GridLayoutHelper<T> insets(int size) {
+        return insets(size, size, size, size);
+    }
+
     public GridLayoutHelper<T> insets(int top, int left, int bottom, int right) {
         constraints.insets = new Insets(top, left, bottom, right);
         return this;
-    }
-
-    public GridLayoutHelper<T> insets(int size) {
-        return insets(size, size, size, size);
     }
 
     public GridLayoutHelper<T> insets(int hSize, int vSize) {

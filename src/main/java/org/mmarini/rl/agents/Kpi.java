@@ -71,6 +71,11 @@ public class Kpi {
         return Transforms.exp(linearRegression(numSamples, expPoly));
     }
 
+    public static float[] linearPolynomial(INDArray data) {
+        long n = data.shape()[0];
+        return linearPolynomial(Nd4j.linspace(0, n - 1, n).reshape(n, 1), data);
+    }
+
     public static float[] linearPolynomial(INDArray x, INDArray y) {
         float xm = x.meanNumber().floatValue();
         float ym = y.meanNumber().floatValue();
@@ -84,17 +89,12 @@ public class Kpi {
         return new float[]{c0, c1};
     }
 
-    public static float[] linearPolynomial(INDArray data) {
-        long n = data.shape()[0];
-        return linearPolynomial(Nd4j.linspace(0, n - 1, n).reshape(n, 1), data);
+    public static INDArray linearRegression(int numSamples, float[] linPoly) {
+        return linearRegression(Nd4j.linspace(0, numSamples - 1, numSamples).reshape(numSamples, 1), linPoly);
     }
 
     public static INDArray linearRegression(INDArray x, float[] linPoly) {
         return x.mul(linPoly[1]).addi(linPoly[0]);
-    }
-
-    public static INDArray linearRegression(int numSamples, float[] linPoly) {
-        return linearRegression(Nd4j.linspace(0, numSamples - 1, numSamples).reshape(numSamples, 1), linPoly);
     }
 
     public static float rms(INDArray x, INDArray y) {

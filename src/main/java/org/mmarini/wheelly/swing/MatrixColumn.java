@@ -65,6 +65,18 @@ public class MatrixColumn extends JComponent {
     private boolean highlightLast;
 
     /**
+     * Creates a matrix column
+     *
+     * @param title the column title
+     * @param size  the size (chars)
+     */
+    public MatrixColumn(String title, int size) {
+        this();
+        this.title = requireNonNull(title);
+        setColumns(size);
+    }
+
+    /**
      * Creates the matrix panel
      */
     public MatrixColumn() {
@@ -84,18 +96,6 @@ public class MatrixColumn extends JComponent {
         this.titleBackgroundColor = Color.WHITE;
         this.title = "";
         this.highlightLast = true;
-    }
-
-    /**
-     * Creates a matrix column
-     *
-     * @param title the column title
-     * @param size  the size (chars)
-     */
-    public MatrixColumn(String title, int size) {
-        this();
-        this.title = requireNonNull(title);
-        setColumns(size);
     }
 
     /**

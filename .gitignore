@@ -11,5 +11,10 @@ docs/sonar-map.dxf~
 /dependency-reduced-pom.xml
 /output.md
 /data/**/*.csv
+/data/**/*.bin
+/batch/*
 /*.txt
 /tmp/**/*
+/reports/**/*
+/report/**/*
+/kpis/*

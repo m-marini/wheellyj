@@ -59,13 +59,6 @@ public interface NoMove {
 
     /**
      * Returns the function that rewards the no move behavior
-     */
-    static ToDoubleFunction<RobotEnvironment> noMove() {
-        return NO_MOVE;
-    }
-
-    /**
-     * Returns the function that rewards the no move behavior
      *
      * @param velocityThreshold the velocity threshold
      */
@@ -80,5 +73,12 @@ public interface NoMove {
                     : 0;
         };
 
+    }
+
+    /**
+     * Returns the function that rewards the no move behavior
+     */
+    static ToDoubleFunction<RobotEnvironment> noMove() {
+        return NO_MOVE;
     }
 }

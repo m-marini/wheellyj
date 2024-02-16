@@ -78,6 +78,18 @@ public class MatrixTable extends JPanel {
     }
 
     /**
+     * Returns the matrix column by adding a named columns
+     *
+     * @param key   the column key
+     * @param title the column title
+     * @param size  the size of column (chars)
+     */
+    public MatrixColumn addColumn(String key, String title, int size) {
+        MatrixColumn column = new MatrixColumn(title, size);
+        return addColumn(key, column);
+    }
+
+    /**
      * Adds a named columns and returns the changed matrix table
      *
      * @param key    the column key
@@ -89,18 +101,6 @@ public class MatrixTable extends JPanel {
         add(column);
         invalidate();
         return column;
-    }
-
-    /**
-     * Returns the matrix column by adding a named columns
-     *
-     * @param key   the column key
-     * @param title the column title
-     * @param size  the size of column (chars)
-     */
-    public MatrixColumn addColumn(String key, String title, int size) {
-        MatrixColumn column = new MatrixColumn(title, size);
-        return addColumn(key, column);
     }
 
     /**

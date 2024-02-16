@@ -18,19 +18,21 @@ function handleSelectReportPath(h, ev)
   endif
 endfunction
 
+# Handles the report button event
 function handleReport(h, ev)
+  # Opens progress bar
   hProgress = waitbar(0, "Loading ...");
-  gamma = 0.999;
   hPanel = get(h, "parent");
   data = guidata(hPanel);
+  # Gets the data and report path from panel
   dataPath = get(data.hPath, "string");
   reportPath = get(data.hReport, "string");
-  generateReport(dataPath, reportPath, gamma);
+  generateReport(dataPath, reportPath);
   waitbar(1, hProgress,  "Completed.");
   close(hProgress);
 endfunction
 
-
+# Creates the user interface
 function createUI()
   f = figure("position", centerPosition(630, 510));
   p = uipanel(f, "position", [0 0 1 1]);

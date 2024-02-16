@@ -40,7 +40,7 @@ import static org.hamcrest.Matchers.lessThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 
-class TDAgentStaticTest {
+class TDAgentSingleNNStaticTest {
 
     private static final float EPSILON = 1e-6f;
 
@@ -49,15 +49,15 @@ class TDAgentStaticTest {
         Random random = Nd4j.getRandom();
         random.setSeed(1234);
         INDArray pi = Nd4j.createFromArray(0f, 1f, 0f).reshape(1, 3);
-        int action = TDAgent.chooseAction(pi, random);
+        int action = TDAgentSingleNN.chooseAction(pi, random);
         assertEquals(1, action);
 
         pi = Nd4j.createFromArray(1f, 0f, 0f).reshape(1, 3);
-        action = TDAgent.chooseAction(pi, random);
+        action = TDAgentSingleNN.chooseAction(pi, random);
         assertEquals(0, action);
 
         pi = Nd4j.createFromArray(0f, 0f, 1f).reshape(1, 3);
-        action = TDAgent.chooseAction(pi, random);
+        action = TDAgentSingleNN.chooseAction(pi, random);
         assertEquals(2, action);
 
 
@@ -65,7 +65,7 @@ class TDAgentStaticTest {
         int n = 1000;
         int[] ct = new int[3];
         for (int i = 0; i < n; i++) {
-            action = TDAgent.chooseAction(pi, random);
+            action = TDAgentSingleNN.chooseAction(pi, random);
             ct[action]++;
         }
         assertThat(ct[0], greaterThan(200 - 20));
@@ -85,7 +85,7 @@ class TDAgentStaticTest {
                 "c", all.reshape(3, 1, 3).slice(2)
         );
         Random random = Nd4j.getRandom();
-        Map<String, Signal> actions = TDAgent.chooseActions(pis, random);
+        Map<String, Signal> actions = TDAgentSingleNN.chooseActions(pis, random);
 
         assertEquals(0, actions.get("a").getInt(0));
         assertEquals(1, actions.get("b").getInt(0));
@@ -95,17 +95,17 @@ class TDAgentStaticTest {
     @Test
     void gradLogPi() {
         INDArray pi = Nd4j.createFromArray(1f / 7, 2f / 7, 4f / 7).reshape(1, 3);
-        INDArray grad = TDAgent.gradLogPi(pi, 0);
+        INDArray grad = TDAgentSingleNN.gradLogPi(pi, 0);
         assertThat(grad, matrixCloseTo(new float[][]{
                 {7f, 0, 0}
         }, EPSILON));
 
-        grad = TDAgent.gradLogPi(pi, 1);
+        grad = TDAgentSingleNN.gradLogPi(pi, 1);
         assertThat(grad, matrixCloseTo(new float[][]{
                 {0, 7f / 2, 0}
         }, EPSILON));
 
-        grad = TDAgent.gradLogPi(pi, 2);
+        grad = TDAgentSingleNN.gradLogPi(pi, 2);
         assertThat(grad, matrixCloseTo(new float[][]{
                 {0, 0, 7f / 4}
         }, EPSILON));
@@ -122,7 +122,7 @@ class TDAgentStaticTest {
                 "output.a", IntSignal.create(1),
                 "output.b", IntSignal.create(0)
         );
-        Map<String, INDArray> result = TDAgent.gradLogPi(pis, actions);
+        Map<String, INDArray> result = TDAgentSingleNN.gradLogPi(pis, actions);
         assertThat(result.get("output.a"), matrixCloseTo(new float[][]{
                 {0, 5}
         }, EPSILON));

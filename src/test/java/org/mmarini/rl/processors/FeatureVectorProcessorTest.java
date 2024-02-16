@@ -63,7 +63,8 @@ class FeatureVectorProcessorTest {
 
     @Test
     void createEncoder() {
-        UnaryOperator<Map<String, Signal>> encoder = FeatureVectorProcessor.createEncoder(INPUT_SPEC, "p", List.of("a", "b"));
+        UnaryOperator<Map<String, Signal>> encoder = FeatureVectorProcessor.createEncoder(INPUT_SPEC, "p",
+                List.of("a", "b"));
         Map<String, Signal> signal = Map.of(
                 "a", new IntSignal(new int[]{1, 0, 0}, new int[]{3}),
                 "b", new IntSignal(new int[]{2, 1}, new int[]{2})
@@ -96,7 +97,8 @@ class FeatureVectorProcessorTest {
 
     @Test
     void createSpec() {
-        Map<String, SignalSpec> result = FeatureVectorProcessor.createSpec(INPUT_SPEC, "p", List.of("a", "b"));
+        Map<String, SignalSpec> result = FeatureVectorProcessor.createSpec(INPUT_SPEC, "p",
+                List.of("a", "b"));
         assertThat(result, hasEntry(
                 equalTo("p"),
                 isA(FloatSignalSpec.class)

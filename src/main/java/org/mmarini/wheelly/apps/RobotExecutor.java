@@ -28,6 +28,7 @@ package org.mmarini.wheelly.apps;
 import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -341,21 +342,37 @@ public class RobotExecutor {
             polarPanel.setRadarMaxDistance(radarMaxDistance);
             logger.atInfo().setMessage("Session are running for {} sec...").addArgument(sessionDuration).log();
             this.start = System.currentTimeMillis();
-            agent.readStepUp().doOnNext(this::handleStepUp).subscribe();
-            agent.readTargets().doOnNext(this::handleTarget).subscribe();
+            agent.readStepUp()
+                    .observeOn(Schedulers.io())
+                    .doOnNext(this::handleStepUp).subscribe();
+            agent.readTargets()
+                    .observeOn(Schedulers.io())
+                    .doOnNext(this::handleTarget).subscribe();
             agent.readShutdown().doOnComplete(this::handleShutdown).subscribe();
-            agent.readErrors().doOnNext(err -> {
-                comMonitor.onError(err);
-                logger.atError().setCause(err).log();
-            }).subscribe();
-            agent.readReadLine().doOnNext(this::handleReadLine).subscribe();
-            agent.readWriteLine().doOnNext(this::handleWrittenLine).subscribe();
-            agent.readControllerStatus().doOnNext(this::handleControllerStatus).subscribe();
-            agent.readCommand().doOnNext(sensorMonitor::onCommand).subscribe();
+            agent.readErrors()
+                    .observeOn(Schedulers.io())
+                    .doOnNext(err -> {
+                        comMonitor.onError(err);
+                        logger.atError().setCause(err).log();
+                    }).subscribe();
+            agent.readReadLine()
+                    .observeOn(Schedulers.io())
+                    .doOnNext(this::handleReadLine).subscribe();
+            agent.readWriteLine()
+                    .observeOn(Schedulers.io())
+                    .doOnNext(this::handleWrittenLine).subscribe();
+            agent.readControllerStatus()
+                    .observeOn(Schedulers.io())
+                    .doOnNext(this::handleControllerStatus).subscribe();
+            agent.readCommand()
+                    .observeOn(Schedulers.io())
+                    .doOnNext(sensorMonitor::onCommand).subscribe();
             agent.readTriggers()
+                    .observeOn(Schedulers.io())
                     .doOnNext(this::handleTrigger)
                     .subscribe();
             agent.readState()
+                    .observeOn(Schedulers.io())
                     .doOnNext(this::handleState)
                     .subscribe();
             Stream.of(comFrame, engineFrame, sensorFrame, radarFrame, frame)

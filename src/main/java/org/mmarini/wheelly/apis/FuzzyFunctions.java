@@ -167,6 +167,12 @@ public class FuzzyFunctions {
             this.field = field;
         }
 
+        public T defuzzy(T v1, double a1, T v2, double a2) {
+            requireNonNull(v1);
+            requireNonNull(v2);
+            return defuzzy(Tuple2.of(v1, a1), Tuple2.of(v2, a2));
+        }
+
         public T defuzzy(Tuple2<T, Double>... values) {
             requireNonNull(values);
             if (values.length < 1) {
@@ -179,12 +185,6 @@ public class FuzzyFunctions {
                 norm += t._2;
             }
             return field.mul(1 / norm, result);
-        }
-
-        public T defuzzy(T v1, double a1, T v2, double a2) {
-            requireNonNull(v1);
-            requireNonNull(v2);
-            return defuzzy(Tuple2.of(v1, a1), Tuple2.of(v2, a2));
         }
 
         public T defuzzy(T v1, double a1, T v2, double a2, T v3, double a3) {

@@ -31,7 +31,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
-import org.mmarini.rl.agents.TDAgent;
+import org.mmarini.rl.agents.TDAgentSingleNN;
 import org.mmarini.wheelly.swing.Messages;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
@@ -48,6 +48,10 @@ import java.util.Map;
  */
 public class WeightsStats {
     private static final Logger logger = LoggerFactory.getLogger(WeightsStats.class);
+
+    static {
+        Nd4j.zeros(1);
+    }
 
     @NotNull
     private static ArgumentParser createParser() {
@@ -83,12 +87,12 @@ public class WeightsStats {
         String modelPath = this.args.getString("modelPath");
         Random random = Nd4j.getRandom();
         try {
-            TDAgent agent = TDAgent.load(new File(modelPath), Integer.MAX_VALUE, random);
+            TDAgentSingleNN agent = TDAgentSingleNN.load(new File(modelPath), Integer.MAX_VALUE, random);
             Stats criticWeightStats = new Stats();
             Stats criticBiasStats = new Stats();
             Stats policyWeightStats = new Stats();
             Stats policyBiasStats = new Stats();
-            for (Map.Entry<String, INDArray> entry : agent.getProps().entrySet()) {
+            for (Map.Entry<String, INDArray> entry : agent.props().entrySet()) {
                 String key = entry.getKey();
                 if (key.startsWith("policy.")) {
                     if (key.endsWith(".w")) {
@@ -134,19 +138,19 @@ public class WeightsStats {
         public float max;
         public int count;
 
+        public Stats() {
+            this(Float.MAX_VALUE, -Float.MAX_VALUE, 0);
+        }
+
         public Stats(float min, float max, int count) {
             this.min = min;
             this.max = max;
             this.count = count;
         }
 
-        public Stats() {
-            this(Float.MAX_VALUE, -Float.MAX_VALUE, 0);
-        }
-
         public void update(INDArray values) {
             INDArray v = Nd4j.toFlattened(values);
-            count += v.length();
+            count += (int) v.length();
             max = Math.max(max, v.maxNumber().floatValue());
             min = Math.min(min, v.minNumber().floatValue());
         }
