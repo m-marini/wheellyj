@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Issue [#340](https://github.com/m-marini/wheellyj/issues/340): Fix robot env failed test
 - Issue [#343](https://github.com/m-marini/wheellyj/issues/343): Fix pattern match for kpi label
+- Issue [#350](https://github.com/m-marini/wheellyj/issues/350): Fix octave report generator
 
 ## [0.13.0] 2024-01-28
 
