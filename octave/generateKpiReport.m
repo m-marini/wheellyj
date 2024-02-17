@@ -13,9 +13,6 @@ function generateKpiReport(hFile, dataPath, reportPath, id, kpiTitle, mode, vert
     n = stats(1);
     yMin = stats(2);
     yMax = stats(3);
-    dy = (yMax - yMin);
-    scale = (floor(log10(dy) / 3) + 1) * 3;
-    scale = 10 ^ -scale;
 
     fprintf(hFile, "## %s\n", kpiTitle);
     fprintf(hFile, "\n");
@@ -96,9 +93,16 @@ function generateKpiReport(hFile, dataPath, reportPath, id, kpiTitle, mode, vert
       endif
     endfor
 
+    # Generate scale legend
+    dy = (yMax - yMin);
+    scale = floor(log10(dy) / 3) * 3;
+    #scaleLegend = sprintf('10^%d', scale);
+    scaleLegend=sprintf("x 10^{%d}", scale);
+    scale = 10 ^ -scale;
+
     # Generate values chart
     clf();
-    if expTrend && (yMax / yMin) > 10
+    if yMin > 0 && (yMax / yMin) > 100
       semilogy(xm, z * scale);
     else
       plot(xm, z * scale);
@@ -108,9 +112,11 @@ function generateKpiReport(hFile, dataPath, reportPath, id, kpiTitle, mode, vert
     legend("location", "northwest");
     legend(legends);
     title(kpiTitle);
-    ylabel(sprintf("x %8.0e", 1 / scale));
+    if scale != 1
+      ylabel(scaleLegend);
+    endif
     file = [reportPath "/" plotFile];
-    print(file, "-dpng", "-S800,600");
+    print(file, "-dpng", "-S1200,800");
 
     # Generate histogram chart
     clf();
@@ -118,8 +124,10 @@ function generateKpiReport(hFile, dataPath, reportPath, id, kpiTitle, mode, vert
     grid on;
     grid minor on;
     title(kpiTitle);
-    xlabel(sprintf("x %8.0e", 1 / scale));
+    if scale != 1
+      xlabel(scaleLegend);
+    endif
     file = [reportPath "/" histFile];
-    print(file, "-dpng", "-S800,600");
+    print(file, "-dpng", "-S1200,800");
   endif
 endfunction
