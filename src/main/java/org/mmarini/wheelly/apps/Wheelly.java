@@ -35,7 +35,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.rl.agents.Agent;
-import org.mmarini.rl.agents.KpiBinSubscriber;
+import org.mmarini.rl.agents.KpiBinWriter;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.wheelly.apis.ObstacleMap;
 import org.mmarini.wheelly.apis.RobotApi;
@@ -133,7 +133,6 @@ public class Wheelly {
     private long prevRobotStep;
     private long prevStep;
     private ComDumper dumper;
-    private KpiBinSubscriber kpiSubscriber;
 
     /**
      *
@@ -228,10 +227,12 @@ public class Wheelly {
                 logger.atError().setCause(e).log();
             }
         }
+/*
         if (kpiSubscriber != null) {
             logger.atInfo().log("Waiting for completion ...");
             kpiSubscriber.readCompleted().blockingAwait();
         }
+*/
         logger.atInfo().log("Completed.");
         if (!args.getBoolean("silent")) {
             JOptionPane.showMessageDialog(null,
@@ -318,8 +319,12 @@ public class Wheelly {
 
             String kpis = this.args.getString("kpis");
             if (!kpis.isEmpty()) {
-                this.kpiSubscriber = KpiBinSubscriber.createFromLabels(new File(kpis), this.args.getString("labels"));
-                agent.readKpis().observeOn(Schedulers.io(), true).subscribe(kpiSubscriber);
+                KpiBinWriter kpiSubscriber = KpiBinWriter.createFromLabels(new File(kpis), this.args.getString("labels"));
+                agent.readKpis().observeOn(Schedulers.io(), true)
+                        .doOnNext(kpiSubscriber::write)
+                        .doOnComplete(kpiSubscriber::close)
+                        .doOnError(ex -> logger.atError().setCause(ex).log("Error writing kpis"))
+                        .subscribe();
             }
             Optional.ofNullable(this.args.getString("dump"))
                     .ifPresent(file -> {

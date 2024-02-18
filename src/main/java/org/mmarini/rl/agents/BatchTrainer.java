@@ -134,6 +134,7 @@ public class BatchTrainer {
     private final int batchSize;
     private final Map<String, Float> alphas;
     private final PublishProcessor<Map<String, INDArray>> kpisProcessor;
+    private final PublishProcessor<Tuple2<Integer, Integer>> stepsProcessor;
     private float avgReward;
     private BinArrayFileMap files;
     private INDArray criticGrad;
@@ -161,6 +162,7 @@ public class BatchTrainer {
         this.batchSize = batchSize;
         this.alphas = alphas;
         this.kpisProcessor = PublishProcessor.create();
+        this.stepsProcessor = PublishProcessor.create();
         this.files = BinArrayFileMap.empty();
     }
 
@@ -306,8 +308,7 @@ public class BatchTrainer {
         // Creates the process to transform the action value to action mask
         INDArray mask = Nd4j.zeros(1, numActions);
         actionFile.seek(0);
-        try (BinArrayFile maskFile = BinArrayFile.createBykey(TMP_MASKS_PATH, actionName)) {
-            maskFile.clear();
+        try (BinArrayFile maskFile = BinArrayFile.createBykey(TMP_MASKS_PATH, actionName).clear()) {
             for (; ; ) {
                 INDArray action = actionFile.read(1);
                 if (action == null) {
@@ -324,6 +325,13 @@ public class BatchTrainer {
      */
     public Flowable<Map<String, INDArray>> readKpis() {
         return kpisProcessor;
+    }
+
+    /**
+     * Returns the steps flow
+     */
+    public Flowable<Tuple2<Integer, Integer>> readSteps() {
+        return stepsProcessor;
     }
 
     /**
@@ -378,7 +386,7 @@ public class BatchTrainer {
         double delta = 0;
         long n = 0;
         files.close("v");
-        try (BinArrayFile out = BinArrayFile.createBykey(TMP_PATH, ADV_KEY)) {
+        try (BinArrayFile out = BinArrayFile.createBykey(TMP_PATH, ADV_KEY).clear()) {
 
             for (; ; ) {
                 Map<String, INDArray> records = vReaders.read(batchSize);
@@ -464,6 +472,7 @@ public class BatchTrainer {
         } finally {
             files.close();
             kpisProcessor.onComplete();
+            stepsProcessor.onComplete();
         }
     }
 }
