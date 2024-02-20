@@ -29,15 +29,18 @@
 package org.mmarini.wheelly.apis;
 
 import org.mmarini.Tuple2;
+import org.mmarini.Utils;
 
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.function.Predicate;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static java.lang.Math.*;
-import static org.mmarini.wheelly.apis.Complex.DEG270;
-import static org.mmarini.wheelly.apis.Complex.DEG90;
+import static org.mmarini.wheelly.apis.Complex.*;
 
 /**
  * Utilities geometry functions
@@ -47,6 +50,146 @@ public interface Geometry {
     double HALF_MM = 500e-6;
     double BROAD_EPSILON = sin(toRadians(89.5)); // 89.5 DEG
     Complex HALF_DEG_COMPLEX = Complex.fromDeg(0.5);
+
+    /**
+     * Returns all the safe points from the vertices with the direction from the nearest point
+     * Each safe point is located at same direction of vertex from the center and at a distance from vertex equals
+     * to the distance of the nearest vertices from center
+     *
+     * @param center   the center
+     * @param vertices the vertices
+     */
+    static Stream<Tuple2<Point2D, Complex>> computeAllSafePoints(Point2D center, List<Point2D> vertices) {
+        // Finds nearest
+        int nearestIndex = Utils.zipWithIndex(vertices)
+                .min(Comparator.comparingDouble(t -> center.distanceSq(t._2)))
+                .map(Tuple2::getV1)
+                .orElse(-1);
+
+        // Computes directions and safe locations
+        double distance = vertices.get(nearestIndex).distance(center);
+        double x0 = center.getX();
+        double y0 = center.getY();
+        int n = vertices.size();
+        return IntStream.range(0, n)
+                .map(i -> (i + nearestIndex) % n)
+                .mapToObj(i -> {
+                    Point2D point = vertices.get(i);
+                    Complex direction = direction(center, point);
+                    if (i == nearestIndex) {
+                        return Tuple2.of(center, direction);
+                    } else {
+                        double xb = point.getX();
+                        double yb = point.getY();
+                        double distance2 = center.distance(point);
+                        double distance1 = distance2 - distance;
+                        double x1 = (xb - x0) * distance1 / distance2 + x0;
+                        double y1 = (yb - y0) * distance1 / distance2 + y0;
+                        return Tuple2.of(new Point2D.Double(x1, y1),
+                                direction);
+                    }
+                });
+    }
+
+    /**
+     * Returns the centroid
+     *
+     * @param vertices the vertices
+     */
+    static Point2D computeCentroid(List<Point2D> vertices) {
+        double x = 0;
+        double y = 0;
+        for (Point2D vertex : vertices) {
+            x += vertex.getX();
+            y += vertex.getY();
+        }
+        int n = vertices.size();
+        return new Point2D.Double(x / n, y / n);
+    }
+
+    /**
+     * Returns the filtered safe points and half planes from the vertices
+     * Each safe point is located at same direction of vertex from the center and at a distance from vertex equals
+     * to the distance of the nearest vertices from center
+     * and must be contained in all the half planes passing from the safe points and directed orthogonally the
+     * direction from center
+     *
+     * @param center   the center
+     * @param vertices the vertices
+     */
+    static Stream<Tuple2<Point2D, QVect>> computeFilteredSafePoints(Point2D center, List<Point2D> vertices) {
+        List<Tuple2<Point2D, Complex>> safePointsDirections = computeAllSafePoints(center, vertices).toList();
+        List<Tuple2<Point2D, QVect>> safePoints = safePointsDirections.stream().map(t -> {
+                    QVect ineq = QVect.line(t._1, t._2.add(DEG90));
+                    return t.setV2(ineq);
+                })
+                .toList();
+        Predicate<QVect> exp = safePoints.stream()
+                .<Predicate<QVect>>map(t ->
+                        x ->
+                                t._2.mmult(x) >= 0)
+                .reduce(Predicate::and)
+                .orElse(null);
+        return Utils.zipWithIndex(safePoints)
+                .filter(p -> p._1 == 0 || exp.test(QVect.from(p._2._1)))
+                .map(Tuple2::getV2);
+    }
+
+    /**
+     * Returns the vertices of inner polygon
+     *
+     * @param center   the center
+     * @param vertices the vertices
+     */
+    static Stream<Point2D> computeInnerVertices(Point2D center, List<Point2D> vertices) {
+        List<Tuple2<Point2D, Complex>> safePointsDirections = computeAllSafePoints(center, vertices).toList();
+        List<Tuple2<Point2D, QVect>> safePoints = safePointsDirections.stream().map(t -> {
+                    QVect ineq = QVect.line(t._1, t._2.add(DEG90));
+                    return t.setV2(ineq);
+                })
+                .toList();
+        Predicate<QVect> exp = safePoints.stream()
+                .<Predicate<QVect>>map(t ->
+                        x ->
+                                t._2.mmult(x) >= -1e-4)
+                .reduce(Predicate::and)
+                .orElse(null);
+        int n = safePoints.size();
+        Stream.Builder<Point2D> pts = Stream.builder();
+        int i = 0;
+        QVect linei = safePoints.getFirst()._2;
+        do {
+            int j = i + 1;
+            do {
+                int jj = j % n;
+                QVect linej = safePoints.get(jj)._2;
+                Point2D p = linei.intersect(linej);
+                if (p != null && exp.test(QVect.from(p))) {
+                    // Add points
+                    pts.add(p);
+                    i = j;
+                    linei = linej;
+                    break;
+                }
+                j++;
+            } while (j <= n);
+            if (j > n) {
+                // ??
+                break;
+            }
+        } while (i < n);
+        return pts.build().distinct();
+    }
+
+    /**
+     * Returns the safe point location
+     *
+     * @param center   the center
+     * @param vertices the vertices
+     */
+    static Point2D computeSafePoint(Point2D center, List<Point2D> vertices) {
+        return computeCentroid(computeInnerVertices(center, vertices).toList());
+    }
 
     /**
      * Returns the farthest point from the give point or null if none
@@ -222,11 +365,6 @@ public interface Geometry {
         List<Point2D> result = new ArrayList<>(projections);
         result.addAll(intersections);
         return result;
-/*
-        return Stream.concat(projections.stream(), intersections.stream())
-                .toList();
-
- */
     }
 
     /**

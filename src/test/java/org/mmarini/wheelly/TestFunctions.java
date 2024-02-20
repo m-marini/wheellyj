@@ -41,6 +41,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
@@ -52,7 +53,6 @@ import static org.mmarini.Utils.zipWithIndex;
 import static org.mmarini.yaml.Utils.fromResource;
 
 public interface TestFunctions {
-
     static ArgumentJsonParser jsonFileArguments(String resource) throws IOException {
         return new ArgumentJsonParser(fromResource(resource));
     }
@@ -145,6 +145,30 @@ public interface TestFunctions {
             this.fieldParsers = new ArrayList<>();
         }
 
+        public <T> ArgumentJsonParser add(String key, BiFunction<Locator, JsonNode, T> func) {
+            fieldParsers.add(locator -> {
+                Locator fieldLocator = locator.path(key);
+                JsonNode node = fieldLocator.getNode(root);
+                if (node.isMissingNode()) {
+                    throw new IllegalArgumentException(format("Missing node %s", fieldLocator));
+                }
+                return new Object[][]{{func.apply(fieldLocator, root)}};
+            });
+            return this;
+        }
+
+        public <T> ArgumentJsonParser add(String key, Function<JsonNode, T> func) {
+            fieldParsers.add(locator -> {
+                Locator fieldLocator = locator.path(key);
+                JsonNode node = fieldLocator.getNode(root);
+                if (node.isMissingNode()) {
+                    throw new IllegalArgumentException(format("Missing node %s", fieldLocator));
+                }
+                return new Object[][]{{func.apply(node)}};
+            });
+            return this;
+        }
+
         public ArgumentJsonParser addBoolean(String key) {
             fieldParsers.add(locator -> {
                 Locator fieldLocator = locator.path(key);
@@ -192,6 +216,24 @@ public interface TestFunctions {
                         .toArray(Object[]::new)};
             });
             return this;
+        }
+
+        public ArgumentJsonParser addPoint(String key) {
+            return add(key, node -> new Point2D.Double(
+                    node.path("x").asDouble(),
+                    node.path("y").asDouble()
+            ));
+        }
+
+        public ArgumentJsonParser addPoints(String key) {
+            return add(key, (loc, root) ->
+                    loc.elements(root)
+                            .<Point2D>map(pLoc ->
+                                    new Point2D.Double(
+                                            pLoc.path("x").getNode(root).asDouble(),
+                                            pLoc.path("y").getNode(root).asDouble()
+                                    ))
+                            .toList());
         }
 
         public ArgumentJsonParser addString(String key) {

@@ -4,7 +4,8 @@ $schema: https://mmarini.org/wheelly/executor-schema-1.0
 robot: robots/simRobot
 #robot: robots/realRobot
 controller: controllers/controller
-agent: agents/explorerAgent
+#agent: agents/explorerAgent
+agent: agents/cautiousAgent
 
 robots:
   simRobot:
@@ -48,6 +49,90 @@ controllers:
     voltages: [ 8.3, 11.9 ]
 
 agents:
+  ######################################
+  # Cautious agent
+  ######################################
+  cautiousAgent:
+    $schema: https://mmarini.org/wheelly/state-agent-schema-1.1
+    class: org.mmarini.wheelly.engines.StateMachineAgent
+    numRadarSectors: 24
+    minRadarDistance: 0.3
+    maxRadarDistance: 3
+    radarWidth: 101
+    radarHeight: 101
+    radarGrid: 0.1
+    contactRadius: 0.2
+    radarReceptiveAngle: 15
+    echoPersistence: 120000
+    contactPersistence: 60000
+    radarCleanInterval: 15000
+    flow:
+      entry: scan
+      states:
+        scan:
+          class: org.mmarini.wheelly.engines.HaltState
+          timeout: 20000
+          scanInterval: 500
+          minSensorDir: -90
+          maxSensorDir: 90
+          sensorDirNumber: 9
+        target:
+          class: org.mmarini.wheelly.engines.CautiousPointState
+          maxDistance: 3
+        move:
+          class: org.mmarini.wheelly.engines.MoveToState
+          stopDistance: 0.1
+          x: 0
+          y: 0
+          onEntry:
+            - move.target
+            - target.target
+            - get
+            - put
+        avoid:
+          class: org.mmarini.wheelly.engines.AvoidingState
+          safeDistance: 0.2
+          speed: 20
+        clearMap:
+          class: org.mmarini.wheelly.engines.ClearMapState
+      transitions:
+        - from: scan
+          to: target
+          trigger: timeout
+        - from: scan
+          to: avoid
+          trigger: rearBlocked
+        - from: scan
+          to: avoid
+          trigger: frontBlocked
+        - from: scan
+          to: avoid
+          trigger: blocked
+
+        - from: target
+          to: move
+          trigger: completed
+
+        - from: move
+          to: scan
+          trigger: completed
+        - from: move
+          to: avoid
+          trigger: rearBlocked
+        - from: move
+          to: avoid
+          trigger: frontBlocked
+        - from: move
+          to: avoid
+          trigger: blocked
+
+        - from: avoid
+          to: scan
+          trigger: completed
+
+        - from: clearMap
+          to: scan
+          trigger: completed
   ######################################
   # Explorer agent
   ######################################

@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.apis;
 
 import org.hamcrest.Matcher;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -36,18 +37,53 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.Tuple2;
 
 import java.awt.geom.Point2D;
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.Matchers.tupleOf;
+import static org.mmarini.wheelly.TestFunctions.jsonFileArguments;
 
 class GeometryTest {
 
     public static final double EPSILON = 1e-3;
+
+    static Stream<Arguments> computeFilteredSafePointsDataset() throws IOException {
+        return jsonFileArguments("/org/mmarini/wheelly/apis/GeometryTest/computeFilteredSafePoints.yml")
+                .addPoint("center")
+                .addPoints("vertices")
+                .addPoints("expected")
+                .parse();
+    }
+
+    public static Stream<Arguments> computeInnerVerticesDataset() throws IOException {
+        return jsonFileArguments("/org/mmarini/wheelly/apis/GeometryTest/computeInnerVertices.yml")
+                .addPoint("center")
+                .addPoints("vertices")
+                .addPoints("expected")
+                .parse();
+    }
+
+    public static Stream<Arguments> computeSafePoint1Dataset() throws IOException {
+        return jsonFileArguments("/org/mmarini/wheelly/apis/GeometryTest/computeSafePoint1.yml")
+                .addPoint("center")
+                .addPoints("vertices")
+                .addPoint("expected")
+                .parse();
+    }
+
+    public static Stream<Arguments> computeSafePointDataset() throws IOException {
+        return jsonFileArguments("/org/mmarini/wheelly/apis/GeometryTest/computeSafePoint.yml")
+                .addPoint("center")
+                .addPoints("vertices")
+                .addPoint("expected")
+                .parse();
+    }
 
     /**
      * Returns the dataset for test
@@ -119,6 +155,110 @@ class GeometryTest {
                         )
                 )
         );
+    }
+
+    @Test
+    void computeAllSafePoints() {
+        // Given ...
+        Point2D center = new Point2D.Double(0, 0);
+        List<Point2D> vertices = List.of(
+                new Point2D.Double(0, 1.5),
+                new Point2D.Double(3, 0),
+                new Point2D.Double(0, -1),
+                new Point2D.Double(-2, 0)
+        );
+
+        // When ...
+        List<Tuple2<Point2D, Complex>> result = Geometry.computeAllSafePoints(center, vertices).toList();
+
+        // Then ...
+        assertNotNull(result);
+        assertThat(result.getFirst()._1, pointCloseTo(0, 0, 1e-3));
+        assertThat(result.get(1)._1, pointCloseTo(-1, 0, 1e-3));
+        assertThat(result.get(2)._1, pointCloseTo(0, 0.5, 1e-3));
+        assertThat(result.get(3)._1, pointCloseTo(2, 0, 1e-3));
+
+        assertThat(result.getFirst()._2.sub(Complex.DEG180).abs().toDeg(), lessThan(1.0));
+        assertThat(result.get(1)._2.sub(Complex.DEG270).abs().toDeg(), lessThan(1.0));
+        assertThat(result.get(2)._2.sub(Complex.DEG0).abs().toDeg(), lessThan(1.0));
+        assertThat(result.get(3)._2.sub(Complex.DEG90).abs().toDeg(), lessThan(1.0));
+    }
+
+    @Test
+    void computeCentroid() {
+        List<Point2D> vertices = List.of(
+                new Point2D.Double(-1, -1),
+                new Point2D.Double(-1, 1),
+                new Point2D.Double(1, 1),
+                new Point2D.Double(2, -1)
+        );
+        Point2D result = Geometry.computeCentroid(vertices);
+        assertThat(result, pointCloseTo(0.25, 0, 1e-3));
+    }
+
+    @ParameterizedTest
+    @MethodSource("computeFilteredSafePointsDataset")
+    void computeFilteredSafePoints(Point2D center, List<Point2D> vertices, List<Point2D> expected) {
+        // Given ...
+
+        // When ...
+        List<Tuple2<Point2D, QVect>> result = Geometry.computeFilteredSafePoints(center, vertices).toList();
+
+        // Then ...
+        assertEquals(expected.size(), result.size());
+        for (int i = 0; i < expected.size(); i++) {
+            assertThat(result.get(i)._1, pointCloseTo(expected.get(i), 1e-3));
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("computeInnerVerticesDataset")
+    void computeInnerVertices(Point2D center, List<Point2D> vertices, List<Point2D> expected) {
+        // Given ...
+
+        // When ...
+        List<Point2D> result = Geometry.computeInnerVertices(center, vertices).toList();
+
+        // Then ...
+        assertEquals(expected.size(), result.size());
+        for (int i = 0; i < expected.size(); i++) {
+            assertThat(result.get(i), pointCloseTo(expected.get(i), 1e-3));
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("computeSafePointDataset")
+    void computeSafePoint(Point2D center,
+                          List<Point2D> vertices,
+                          Point2D expected) {
+
+        for (Point2D vertex : vertices) {
+            assertThat(vertex.distance(center), lessThanOrEqualTo(3.001));
+        }
+
+        Point2D result = Geometry.computeSafePoint(center, vertices);
+
+        assertThat(result, pointCloseTo(expected, 1e-3));
+    }
+
+    @ParameterizedTest
+    @MethodSource("computeSafePoint1Dataset")
+    void computeSafePoint1(Point2D center,
+                           List<Point2D> vertices,
+                           Point2D expected) {
+
+        for (Point2D vertex : vertices) {
+            assertThat(vertex.distance(center), lessThanOrEqualTo(3.001));
+        }
+
+        List<Tuple2<Point2D, Complex>> result1 = Geometry.computeAllSafePoints(center, vertices).toList();
+
+        Point2D nearest = result1.getFirst()._1;
+        double minDistance = nearest.distance(center);
+        vertices.stream().skip(1).forEach(p -> assertThat(p.distance(center), lessThanOrEqualTo(3.001 - minDistance)));
+
+        List<Point2D> result3 = Geometry.computeInnerVertices(center, vertices).toList();
+        assertThat(result3, hasSize(10));
     }
 
     @ParameterizedTest
@@ -350,7 +490,8 @@ class GeometryTest {
             "1,0, -20,10, -1,1, 0, false, 0,0, 2,0",
             "1,0, -160,10, -1,1, 0, false, 0,0, 2,0",
     })
-    void verticalIntervalTest(double xq, double yq, double alpha, double dAlpha, double yr, double yf, double x, boolean exists, double xn, double yn, double xft, double yft) {
+    void verticalIntervalTest(double xq, double yq, double alpha, double dAlpha, double yr, double yf, double x,
+                              boolean exists, double xn, double yn, double xft, double yft) {
         Tuple2<Point2D, Point2D> result = Geometry.verticalArcInterval(
                 new Point2D.Double(xq, yq), yr, yf, x,
                 Complex.fromDeg(alpha), Complex.fromDeg(dAlpha));

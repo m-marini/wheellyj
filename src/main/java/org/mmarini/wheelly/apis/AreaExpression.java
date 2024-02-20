@@ -166,7 +166,7 @@ public interface AreaExpression {
         return i -> cellPredicate.test(cellQIneqFunc.apply(i));
     }
 
-    static AreaExpression ineq(QVect params) {
+    static AreaExpression.Leaf ineq(QVect params) {
         return new Leaf(params);
     }
 
@@ -250,12 +250,8 @@ public interface AreaExpression {
      * @param point     the point
      * @param direction the direction
      */
-    static AreaExpression rightHalfPlane(Point2D point, Complex direction) {
-        double px = point.getX();
-        double py = point.getY();
-        double dx = direction.x();
-        double dy = direction.y();
-        QVect matrix = QVect.create(py * dx - px * dy, dy, -dx, 0, 0);
+    static AreaExpression.Leaf rightHalfPlane(Point2D point, Complex direction) {
+        QVect matrix = QVect.line(point, direction);
         return ineq(matrix);
     }
 

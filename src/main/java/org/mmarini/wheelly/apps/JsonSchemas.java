@@ -56,6 +56,7 @@ public class JsonSchemas {
     private static final JsonSchemas singleton = create(
             "/agent-single-nn-schema.yml",
             "/checkup-schema.yml",
+            "/objective-cautious-schema.yml",
             "/objective-nomove-schema.yml",
             "/objective-explore-schema.yml",
             "/objective-stuck-schema.yml",
