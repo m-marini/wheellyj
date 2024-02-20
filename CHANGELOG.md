@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#346](https://github.com/m-marini/wheellyj/issues/346):  Datavec usage to train network
 - Issue [#341](https://github.com/m-marini/wheellyj/issues/341): Add batch training performance evaluation
 - Issue [#342](https://github.com/m-marini/wheellyj/issues/342): Separate learning rates between actor and critic
+- Issue [#352](https://github.com/m-marini/wheellyj/issues/352): Add cautious behavior and objective
 
 ### Fixed
 

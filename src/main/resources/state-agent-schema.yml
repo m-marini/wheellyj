@@ -1,13 +1,13 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/state-agent-schema-1.0
+$id: https://mmarini.org/wheelly/state-agent-schema-1.1
 title: State machine agent
 description: State Agent Schema
 type: object
 properties:
   $schema:
     type: string
-    const: https://mmarini.org/wheelly/state-agent-schema-1.0
+    const: https://mmarini.org/wheelly/state-agent-schema-1.1
   class:
     const: org.mmarini.wheelly.engines.StateMachineAgent
   flow:
@@ -66,6 +66,7 @@ $defs:
     anyOf:
       - $ref: "#/$defs/HaltState"
       - $ref: "#/$defs/ExploringPointState"
+      - $ref: "#/$defs/CautiousPointState"
       - $ref: "#/$defs/AvoidingState"
       - $ref: "#/$defs/MoveToState"
       - $ref: "#/$defs/ClearMapState"
@@ -156,6 +157,22 @@ $defs:
     required:
       - class
       - safeDistance
+      - maxDistance
+  CautiousPointState:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.wheelly.engines.CautiousPointState
+      onInit:
+        $ref: "#/$defs/Commands"
+      onEntry:
+        $ref: "#/$defs/Commands"
+      onExit:
+        $ref: "#/$defs/Commands"
+      maxDistance:
+        exclusiveMinimum: 0
+    required:
+      - class
       - maxDistance
   MoveToState:
     type: object

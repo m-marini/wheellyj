@@ -30,9 +30,12 @@ package org.mmarini.wheelly.apis;
 
 import org.jetbrains.annotations.NotNull;
 import org.mmarini.Tuple2;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -46,6 +49,8 @@ import static org.mmarini.wheelly.apis.Geometry.squareArcInterval;
  * The polar map keeps the status of the circle area round a center point.
  */
 public record PolarMap(CircularSector[] sectors, Point2D center, Complex direction) {
+    private static final Logger logger = LoggerFactory.getLogger(PolarMap.class);
+
     /**
      * Returns the unknown status polar map
      *
@@ -106,6 +111,65 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
         // TODO check for complex usage
         Point2D point = sectors[sectorIndex].location();
         return Complex.direction(center, point).sub(direction);
+    }
+
+    /**
+     * Returns the nearest hindered point or null if not exists
+     */
+    public Point2D nearestHindered() {
+        Point2D nearest = null;
+        double minDistance = Double.POSITIVE_INFINITY;
+        for (CircularSector sector : sectors) {
+            if (sector.knownHindered()) {
+                Point2D p = sector.location();
+                double distance = p.distance(center);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearest = p;
+                }
+            }
+        }
+        return nearest;
+    }
+
+    /**
+     * Returns the safe centroid of map
+     *
+     * @param maxDistance the maximum distance of polar map
+     */
+    public Point2D safeCentroid(double maxDistance) {
+        List<Point2D> vertices = IntStream.range(0, sectors.length)
+                .mapToObj(i -> {
+                    Complex dir = sectorDirection(i).add(direction);
+                    CircularSector sector = sector(i);
+                    if (sector.known()) {
+                        double distance = sector.distance(center);
+                        if (distance == 0 || sector.empty()) {
+                            // Handle empty sector
+                            double x = dir.x() * maxDistance + center.getX();
+                            double y = dir.y() * maxDistance + center.getY();
+                            return new Point2D.Double(x, y);
+                        } else {
+                            return sector.location();
+                        }
+                    } else {
+                        // Handle unknown sector
+                        double x = dir.x() * maxDistance + center.getX();
+                        double y = dir.y() * maxDistance + center.getY();
+                        return new Point2D.Double(x, y);
+                    }
+                })
+                .toList();
+        Point2D target = Geometry.computeSafePoint(center, vertices);
+        if (Double.isNaN(target.getX()) || Double.isNaN(target.getY())) {
+            logger.atError().log("bad target: {}", target);
+            logger.atError().log("  center: {}", center);
+        }
+        if (target.distance(center) > maxDistance) {
+            logger.atError().log("out of range target: {}", target);
+            logger.atError().log("  center: {}", center);
+        }
+        return target;
     }
 
     public CircularSector sector(int i) {

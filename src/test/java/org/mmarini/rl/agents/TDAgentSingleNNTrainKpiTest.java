@@ -96,8 +96,11 @@ class TDAgentSingleNNTrainKpiTest {
             agent.readKpis()
                     .concatMap(RXFunc.getProperty("reward"))
                     .subscribe(data);
+            KpiBinWriter kpiBinWriter = KpiBinWriter.create(new File("data/test"));
             agent.readKpis()
-                    .subscribe(KpiBinSubscriber.create(new File("data/test")));
+                    .doOnNext(kpiBinWriter::write)
+                    .doOnComplete(kpiBinWriter::close)
+                    .subscribe();
             Map<String, Signal> s0 = Map.of("input", ArraySignal.create(1, 0, 0));
             Map<String, Signal> s1 = Map.of("input", ArraySignal.create(0, 1, 0));
             Map<String, INDArray> n0 = TDAgentSingleNN.getInput(s0);

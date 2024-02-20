@@ -2,7 +2,7 @@
 $schema: https://mmarini.org/wheelly/wheelly-schema-1.0
 robot: robots/simRobot
 controller: controllers/controller
-environment: environments/explorerEnv
+environment: environments/polarMapEnv
 agent: agents/polarRadarAgent
 
 robots:
@@ -46,7 +46,7 @@ controllers:
     voltages: [ 8.3, 11.9 ]
 
 environments:
-  explorerEnv:
+  polarMapEnv:
     $schema: https://mmarini.org/wheelly/env-polar-schema-0.1
     class: org.mmarini.wheelly.envs.PolarRobotEnv
     objective: objectives/explore
@@ -76,6 +76,10 @@ objectives:
   noMove:
     $schema: https://mmarini.org/wheelly/objective-nomove-schema-0.1
     class: org.mmarini.wheelly.objectives.NoMove
+  cautious:
+    $schema: https://mmarini.org/wheelly/objective-cautious-schema-0.1
+    class: org.mmarini.wheelly.objectives.Cautious
+    maxDistance: 3
 
 agents:
   ######################################
