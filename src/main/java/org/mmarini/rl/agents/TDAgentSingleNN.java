@@ -129,7 +129,7 @@ public class TDAgentSingleNN implements Agent {
     }
 
     /**
-     * Create an agent from spec
+     * Creates an agent from spec
      *
      * @param spec                the specification
      * @param locator             the locator of agent spec
@@ -400,6 +400,14 @@ public class TDAgentSingleNN implements Agent {
     public void autosave() {
         if (modelPath != null) {
             try {
+                // rename network file to back up
+                String backupFileName = format("agent-%1$tY%1$tm%1$td-%1$tH%1$tM%1$tS.bin", Calendar.getInstance());
+                File file = new File(modelPath, "agent.bin");
+                if (file.exists() && file.canWrite()) {
+                    File backupFile = new File(file.getParentFile(), backupFileName);
+                    file.renameTo(backupFile);
+                    logger.atInfo().log("Backup {}", backupFile);
+                }
                 save(modelPath);
                 logger.atInfo().setMessage("Saved model into \"{}\"").addArgument(modelPath).log();
             } catch (IOException e) {
