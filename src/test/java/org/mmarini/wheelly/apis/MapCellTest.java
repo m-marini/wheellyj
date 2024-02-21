@@ -64,21 +64,23 @@ class MapCellTest {
         // Given a cell with echo and conctact set at 100 ms
         MapCell cell = MapCell.unknown(new Point2D.Float(0, 2F))
                 .addEchogenic(100)
+                .addEchogenic(100)
                 .setContact(100);
 
         // When clean echo before 100 ms (not expired) and contact before 99 ms (expiried)
         cell = cell.clean(101, 100);
 
-        // Then cell should not be echogenic
-        assertFalse(cell.echogenic());
+        // Then cell should be echogenic
+        assertTrue(cell.echogenic());
         // Then cell should not be anechoic
         assertFalse(cell.anechoic());
         // And should have contact
         assertTrue(cell.hasContact());
         // And echo time should be 100 ms
-        assertEquals(0, cell.echoTime());
+        assertEquals(100, cell.echoTime());
         // And contact time should be 0 ms
         assertEquals(100, cell.contactTime());
+        assertEquals(1, cell.echoCounter());
     }
 
     @Test
@@ -86,13 +88,17 @@ class MapCellTest {
         // Given a cell with echo and conctact set at 100 ms
         MapCell cell = MapCell.unknown(new Point2D.Float(0, 2F))
                 .addEchogenic(100)
+                .addEchogenic(100)
                 .setContact(100);
+        assertEquals(2, cell.echoCounter());
 
         // When clean before 100 ms (no expireations)
         cell = cell.clean(101, 101);
 
-        // Then cell should be unknown
-        assertTrue(cell.unknown());
+        // Then cell should be echogenic
+        assertTrue(cell.echogenic());
+        assertEquals(1, cell.echoCounter());
+        assertFalse(cell.hasContact());
     }
 
     @Test

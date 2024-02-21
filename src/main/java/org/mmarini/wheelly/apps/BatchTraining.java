@@ -115,6 +115,7 @@ public class BatchTraining {
             try {
                 kpiWriter.close();
             } catch (IOException e) {
+                logger.atError().setCause(e).log("Error closing kpi writer");
                 throw new RuntimeException(e);
             }
         }
