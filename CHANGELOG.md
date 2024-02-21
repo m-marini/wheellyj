@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#342](https://github.com/m-marini/wheellyj/issues/342): Separate learning rates between actor and critic
 - Issue [#352](https://github.com/m-marini/wheellyj/issues/352): Add cautious behavior and objective
 - Issue [#354](https://github.com/m-marini/wheellyj/issues/354): Create backup file in Wheelly app
+
+### Changed
+
+- Issue [#357](https://github.com/m-marini/wheellyj/issues/357): Change clean up radar map
+
 ### Fixed
 
 - Issue [#340](https://github.com/m-marini/wheellyj/issues/340): Fix robot env failed test

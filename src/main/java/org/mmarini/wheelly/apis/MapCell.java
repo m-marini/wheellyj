@@ -29,6 +29,9 @@ import org.mmarini.Tuple2;
 
 import java.awt.geom.Point2D;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+
 /**
  * MapCell keeps the presence of obstacles in the sector
  */
@@ -79,9 +82,9 @@ public record MapCell(Point2D location, long echoTime, int echoCounter, long con
         return echoTime < echoLimit
                 ? contactTime < contactLimit
                 // both times expired
-                ? unknown(location)
+                ? new MapCell(location, echoTime, min(max(echoCounter, -1), 0), 0)
                 // only echo expired
-                : new MapCell(location, 0, 0, contactTime)
+                : new MapCell(location, echoTime, min(max(echoCounter, -1), 0), contactTime)
                 : contactTime < contactLimit
                 // only contact expired
                 ? new MapCell(location, echoTime, echoCounter, 0)

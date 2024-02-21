@@ -86,14 +86,6 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
     }
 
     /**
-     * Clears the map.
-     * Sets all the sector as unknown and zero distance
-     */
-    public PolarMap clear() {
-        return create(sectors.length);
-    }
-
-    /**
      * Returns the circular sector in a direction
      *
      * @param direction the direction
