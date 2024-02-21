@@ -135,7 +135,7 @@ public class Wheelly {
     private ComDumper dumper;
 
     /**
-     *
+     * Creates the server reinforcement learning engine server
      */
     public Wheelly() {
         this.envPanel = new EnvironmentPanel();
@@ -165,11 +165,21 @@ public class Wheelly {
                 .subscribe();
     }
 
+    /**
+     * Handles the controller status event
+     *
+     * @param status the controller status text
+     */
     private void handleControllerStatus(String status) {
         sensorMonitor.onControllerStatus(status);
         comMonitor.onControllerStatus(status);
     }
 
+    /**
+     * Handles the inference event
+     *
+     * @param status the robot status
+     */
     private void handleInference(RobotStatus status) {
         long robotClock = status.simulationTime();
         envPanel.setRobotStatus(status);
@@ -208,6 +218,9 @@ public class Wheelly {
         agent.observe(result);
     }
 
+    /**
+     * Handles the application shutdown
+     */
     private void handleShutdown() {
         try {
             agent.close();
@@ -227,12 +240,6 @@ public class Wheelly {
                 logger.atError().setCause(e).log();
             }
         }
-/*
-        if (kpiSubscriber != null) {
-            logger.atInfo().log("Waiting for completion ...");
-            kpiSubscriber.readCompleted().blockingAwait();
-        }
-*/
         logger.atInfo().log("Completed.");
         if (!args.getBoolean("silent")) {
             JOptionPane.showMessageDialog(null,
@@ -285,6 +292,11 @@ public class Wheelly {
         }
     }
 
+    /**
+     * Starts the application
+     *
+     * @param args the command line argument
+     */
     protected void start(String[] args) {
         ArgumentParser parser = createParser();
         try {
@@ -314,7 +326,7 @@ public class Wheelly {
             }
             sessionDuration = this.args.getLong("localTime");
             logger.atInfo().log("Starting session ...");
-            logger.atInfo().setMessage("Session are running for {} sec...").addArgument(sessionDuration).log();
+            logger.atInfo().log("Session are running for {} sec...", sessionDuration);
             sessionDuration *= 1000;
 
             String kpis = this.args.getString("kpis");
@@ -331,7 +343,7 @@ public class Wheelly {
                         try {
                             this.dumper = ComDumper.fromFile(file);
                         } catch (IOException e) {
-                            logger.atError().setCause(e).log();
+                            logger.atError().setCause(e).log("Error dumping to {}", file);
                         }
                     });
             environment.readRobotStatus()

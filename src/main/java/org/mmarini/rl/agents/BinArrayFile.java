@@ -78,7 +78,6 @@ public class BinArrayFile implements Closeable {
      */
     public BinArrayFile(File file) {
         this.file = requireNonNull(file);
-//        dataFile = new RandomAccessFile(file, "rw");
     }
 
     /**

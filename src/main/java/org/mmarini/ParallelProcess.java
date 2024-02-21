@@ -29,6 +29,7 @@
 package org.mmarini;
 
 import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.functions.Supplier;
 import io.reactivex.rxjava3.schedulers.Schedulers;
@@ -36,20 +37,64 @@ import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Runs paralle processes
+ *
+ * @param <K> the key type of task
+ * @param <V> the result type of task
+ */
 public class ParallelProcess<K, V> {
 
+    /**
+     * Returns the parallel process scheduler running in given task scheduler
+     *
+     * @param <K> the task key
+     * @param <V> the task result
+     */
     public static <K, V> ParallelProcess<K, V> scheduler() {
-        return new ParallelProcess<>();
+        return scheduler(Schedulers.io());
     }
 
+    /**
+     * Returns the parallel process scheduler running in given task scheduler
+     *
+     * @param scheduler the task scheduler
+     * @param <K>       the task key
+     * @param <V>       the task result
+     */
+    public static <K, V> ParallelProcess<K, V> scheduler(Scheduler scheduler) {
+        return new ParallelProcess<>(scheduler);
+    }
+
+    /**
+     * Returns the scheduler with given tasks
+     *
+     * @param scheduler the task scheduler
+     * @param tasks     the tasks
+     * @param <K>       the task key
+     * @param <V>       the task result
+     */
+    public static <K, V> ParallelProcess<K, V> scheduler(Scheduler scheduler, Map<K, Supplier<V>> tasks) {
+        return new ParallelProcess<K, V>(scheduler).add(tasks);
+    }
+
+    /**
+     * Returns the scheduler with given tasks
+     *
+     * @param tasks the tasks
+     * @param <K>   the task key
+     * @param <V>   the task result
+     */
     public static <K, V> ParallelProcess<K, V> scheduler(Map<K, Supplier<V>> tasks) {
-        return new ParallelProcess<K, V>().add(tasks);
+        return new ParallelProcess<K, V>(Schedulers.io()).add(tasks);
     }
 
     private final Map<K, Supplier<V>> tasks;
+    private final Scheduler scheduler;
 
-    protected ParallelProcess() {
+    protected ParallelProcess(Scheduler scheduler) {
         this.tasks = new HashMap<>();
+        this.scheduler = scheduler;
     }
 
     public ParallelProcess<K, V> add(Map<K, Supplier<V>> map) {
@@ -69,7 +114,7 @@ public class ParallelProcess<K, V> {
         return Flowable.fromIterable(
                         Tuple2.stream(tasks).toList())
                 .parallel()
-                .runOn(Schedulers.io())
+                .runOn(scheduler)
                 .map(t -> {
                     Supplier<V> task = t._2;
                     return t.setV2(task.get());
@@ -81,7 +126,7 @@ public class ParallelProcess<K, V> {
     }
 
     /**
-     * Returns the result of process
+     * Returns the result of process run in computation schedulers
      */
     public Map<K, V> run() {
         return build().blockingGet();
