@@ -72,15 +72,19 @@ class BinArrayFileTest {
         INDArray records = Nd4j.arange(1, 13).castTo(DataType.FLOAT).reshape(3, 2, 2);
         File file1 = new File("tmp/test.bin");
         file1.delete();
-        try (BinArrayFile file = new BinArrayFile(file1)) {
+        BinArrayFile file = new BinArrayFile(file1);
+        try {
             file.write(records);
 
             assertEquals(3, file.size());
             assertEquals(3, file.position());
             assertEquals(0, file.available());
+        } finally {
+            file.close();
         }
 
-        try (BinArrayFile file = new BinArrayFile(file1)) {
+        file = new BinArrayFile(file1);
+        try {
             assertEquals(3, file.size());
             assertEquals(0, file.position());
             assertEquals(3, file.available());
@@ -101,6 +105,8 @@ class BinArrayFileTest {
             assertEquals(3, file.size());
             assertEquals(3, file.position());
             assertEquals(0, file.available());
+        } finally {
+            file.close();
         }
     }
 
@@ -109,7 +115,8 @@ class BinArrayFileTest {
         INDArray records = Nd4j.arange(1, 13).castTo(DataType.FLOAT).reshape(3, 2, 2);
         File file1 = new File("tmp/test.bin");
         file1.delete();
-        try (BinArrayFile file = new BinArrayFile(file1)) {
+        BinArrayFile file = new BinArrayFile(file1);
+        try {
             file.write(records);
             assertEquals(3, file.size());
             assertEquals(3, file.position());
@@ -143,6 +150,8 @@ class BinArrayFileTest {
             assertEquals(Nd4j.createFromArray(1f, 2f, 3f, 4f, 1f, 2f, 3f, 4f, 9f, 10f, 11f, 12f)
                             .reshape(3, 2, 2),
                     read);
+        } finally {
+            file.close();
         }
     }
 }
