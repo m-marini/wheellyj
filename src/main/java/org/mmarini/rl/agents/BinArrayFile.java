@@ -167,7 +167,7 @@ public class BinArrayFile {
     private void open() throws IOException {
         if (dataFile == null) {
             file.getParentFile().mkdirs();
-            dataFile = new RandomAccessFile(file, "rw");
+            dataFile = new RandomAccessFile(file, "rwd");
             logger.atDebug().log("Open file {}", file);
             readShape();
         }
