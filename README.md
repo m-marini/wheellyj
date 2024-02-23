@@ -5,6 +5,13 @@ The code of Arduino controller is at [Wheellino project](https://github.com/m-ma
 
 The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
+
+## Release 0.14.0
+
+- Batch training and performance evaluation
+- Agent with single neural network
+- Cautious behavior and objective
+
 ## Release 0.13.0
 
 - Simplified yaml file schema
