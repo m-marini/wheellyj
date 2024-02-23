@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.14.0] 2024-02-25
+
 ### Added
 
 - Issue [#334](https://github.com/m-marini/wheellyj/issues/334): Add batch training

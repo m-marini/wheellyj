@@ -26,21 +26,19 @@
 package org.mmarini.rl.agents;
 
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.factory.Nd4j;
-import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Closeable;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
 
 import static java.lang.Math.max;
 import static java.util.Objects.requireNonNull;
 
-public class CSVWriter implements Closeable {
+public class CSVWriter {
     private static final Logger logger = LoggerFactory.getLogger(CSVWriter.class);
-    private static final int BUFFER_SIZE = 1000;
 
     /**
      * Creates the writer by key name
@@ -57,9 +55,8 @@ public class CSVWriter implements Closeable {
     }
 
     private final File file;
-    private INDArray buffer;
-    private long currentBufferSize;
     private long recordSize;
+    private PrintWriter printer;
 
     public CSVWriter(File file) {
         this.file = requireNonNull(file);
@@ -67,14 +64,16 @@ public class CSVWriter implements Closeable {
         file.getParentFile().mkdirs();
     }
 
-    @Override
+    /**
+     * Close the file
+     *
+     * @throws IOException in case of error
+     */
     public void close() throws IOException {
-        try {
-            flush();
-        } finally {
-            buffer = null;
-            currentBufferSize = 0;
-        }
+        PrintWriter pw = printer;
+        printer = null;
+        pw.close();
+        logger.atDebug().log("Closed {}", file);
     }
 
     /**
@@ -85,20 +84,6 @@ public class CSVWriter implements Closeable {
     }
 
     /**
-     * Flushes the internal buffer
-     *
-     * @throws IOException in case of error
-     */
-    public void flush() throws IOException {
-        if (currentBufferSize > 0) {
-            INDArray data = buffer.get(NDArrayIndex.interval(0, currentBufferSize), NDArrayIndex.all()).dup();
-            logger.atDebug().log("Write {}/{} rows to {}", data.size(0), buffer.size(0), file);
-            Serde.toCsv(file, data, true);
-        }
-        currentBufferSize = 0;
-    }
-
-    /**
      * Writes a bunch of records
      *
      * @param data the data (n, ....)
@@ -106,8 +91,8 @@ public class CSVWriter implements Closeable {
      */
     public void write(INDArray data) throws IOException {
         long n = data.size(0);
-        if (buffer == null) {
-            // Allocate the buffer
+        if (printer == null) {
+            printer = new PrintWriter(file);
             long[] shape = data.shape();
             recordSize = switch (shape.length) {
                 case 0, 1 -> 1;
@@ -119,35 +104,53 @@ public class CSVWriter implements Closeable {
                     yield m;
                 }
             };
-            long numBufferRows = max(BUFFER_SIZE / recordSize, 1);
-            buffer = Nd4j.zeros(numBufferRows, recordSize);
-            INDArray shapeAry = shape.length > 1
-                    ? Nd4j.createFromArray(shape)
-                    .reshape(1, shape.length)
-                    .get(NDArrayIndex.point(0), NDArrayIndex.interval(1, shape.length))
-                    .get(NDArrayIndex.newAxis())
-                    : Nd4j.ones(1, 1);
-            Serde.toCsv(new File(file.getParentFile(), "shape.csv"),
-                    shapeAry,
-                    false);
+            long[] sh = new long[max(1, shape.length - 1)];
+            if (shape.length <= 1) {
+                sh[0] = 1;
+            } else {
+                System.arraycopy(shape, 1, sh, 0, sh.length);
+            }
+            writeShape(sh);
         }
         INDArray flatten = data.reshape(n, recordSize);
-        long bufferSize = buffer.size(0);
-        if (currentBufferSize + n > bufferSize) {
-            // Buffer overflow
-            flush();
-            if (n >= bufferSize) {
-                logger.atDebug().log("Write {} rows to {}", flatten.size(0), file);
-                Serde.toCsv(file, flatten, true);
-            } else {
-                buffer.get(NDArrayIndex.interval(currentBufferSize, currentBufferSize + n), NDArrayIndex.all())
-                        .assign(flatten);
-                currentBufferSize += n;
+        writeData(flatten);
+    }
+
+    /**
+     * Writes data to printer
+     *
+     * @param data the data
+     */
+    private void writeData(INDArray data) {
+        long n = data.size(0);
+        for (long i = 0; i < n; i++) {
+            long m = data.size(1);
+            for (long j = 0; j < m; j++) {
+                if (j > 0) {
+                    printer.print(",");
+                }
+                printer.print(data.getFloat(i, j));
             }
-        } else {
-            buffer.get(NDArrayIndex.interval(currentBufferSize, currentBufferSize + n), NDArrayIndex.all())
-                    .assign(flatten);
-            currentBufferSize += n;
+            printer.println();
+        }
+        printer.flush();
+    }
+
+    /**
+     * Write the shape file
+     *
+     * @param shape the shape
+     * @throws FileNotFoundException in case of error
+     */
+    private void writeShape(long[] shape) throws FileNotFoundException {
+        try (PrintWriter out = new PrintWriter(new File(file.getParentFile(), "shape.csv"))) {
+            for (int i = 0; i < shape.length; i++) {
+                if (i > 0) {
+                    out.print(",");
+                }
+                out.print(shape[i]);
+            }
+            out.println();
         }
     }
 }

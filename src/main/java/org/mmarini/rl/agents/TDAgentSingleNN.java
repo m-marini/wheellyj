@@ -332,6 +332,7 @@ public class TDAgentSingleNN implements Agent {
     private float avgReward;
     private int savingStepCounter;
     private Consumer<Map<String, Object>> kpiListener;
+    private boolean backedUp;
 
     /**
      * Creates a random behavior agent
@@ -400,10 +401,11 @@ public class TDAgentSingleNN implements Agent {
     public void autosave() {
         if (modelPath != null) {
             try {
-                // rename network file to back up
-                String backupFileName = format("agent-%1$tY%1$tm%1$td-%1$tH%1$tM%1$tS.bin", Calendar.getInstance());
                 File file = new File(modelPath, "agent.bin");
-                if (file.exists() && file.canWrite()) {
+                if (!backedUp && file.exists() && file.canWrite()) {
+                    // rename network file to back up
+                    backedUp = true;
+                    String backupFileName = format("agent-%1$tY%1$tm%1$td-%1$tH%1$tM%1$tS.bin", Calendar.getInstance());
                     File backupFile = new File(file.getParentFile(), backupFileName);
                     file.renameTo(backupFile);
                     logger.atInfo().log("Backup {}", backupFile);

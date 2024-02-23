@@ -29,7 +29,6 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -45,7 +44,7 @@ import static java.util.Objects.requireNonNull;
  * The data collector consumer accumulates data and returns the kpi of data
  */
 
-public class KpiBinWriter implements Closeable {
+public class KpiBinWriter {
     public static final String[] ANALYSIS_KPIS = {
             "^reward$",
             "^delta$",
@@ -137,7 +136,11 @@ public class KpiBinWriter implements Closeable {
         this.files = BinArrayFileMap.empty();
     }
 
-    @Override
+    /**
+     * Closes the writer
+     *
+     * @throws IOException in case of error
+     */
     public void close() throws IOException {
         files.close();
         logger.atInfo().log("Closed kpi files");

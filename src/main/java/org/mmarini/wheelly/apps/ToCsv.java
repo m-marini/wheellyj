@@ -112,19 +112,23 @@ public class ToCsv {
 
     protected void start() throws IOException {
         this.destPath = new File(args.getString("destPath"));
-        try (BinArrayFileMap sources = BinArrayFileMap.create(new File(args.getString("sourcePath")), "")) {
-            ParallelProcess.scheduler(
+        BinArrayFileMap sources = BinArrayFileMap.create(new File(args.getString("sourcePath")), "");
+        try {
+            ParallelProcess.collector(
                             Tuple2.stream(sources.files())
                                     .map(t -> t.setV2((toCsv(t._1, t._2))))
                                     .collect(Tuple2.toMap()))
                     .run();
+        } finally {
+            sources.close();
         }
     }
 
-    private Supplier<Object> toCsv(String key, BinArrayFile binFile1) {
+    private Supplier<Object> toCsv(String key, BinArrayFile binFile) {
         return () -> {
-            try (BinArrayFile binFile = binFile1) {
-                try (CSVWriter out = CSVWriter.createByKey(destPath, key)) {
+            try {
+                CSVWriter out = CSVWriter.createByKey(destPath, key);
+                try {
                     logger.atInfo().log("Converting {} to {}",
                             binFile.file(),
                             out.file());
@@ -138,9 +142,13 @@ public class ToCsv {
                     logger.atInfo().log("Converted {} to {}",
                             binFile.file(),
                             out.file());
+                } finally {
+                    out.close();
                 }
+                return this;
+            } finally {
+                binFile.close();
             }
-            return this;
         };
     }
 }

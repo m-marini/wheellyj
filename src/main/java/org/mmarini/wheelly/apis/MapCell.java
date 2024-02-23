@@ -82,9 +82,9 @@ public record MapCell(Point2D location, long echoTime, int echoCounter, long con
         return echoTime < echoLimit
                 ? contactTime < contactLimit
                 // both times expired
-                ? new MapCell(location, echoTime, min(max(echoCounter, -1), 0), 0)
+                ? new MapCell(location, echoTime, min(max(echoCounter, 0), 1), 0)
                 // only echo expired
-                : new MapCell(location, echoTime, min(max(echoCounter, -1), 0), contactTime)
+                : new MapCell(location, echoTime, min(max(echoCounter, 0), 1), contactTime)
                 : contactTime < contactLimit
                 // only contact expired
                 ? new MapCell(location, echoTime, echoCounter, 0)

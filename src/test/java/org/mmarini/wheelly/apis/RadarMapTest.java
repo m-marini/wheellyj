@@ -128,8 +128,15 @@ class RadarMapTest {
 
         map = map.clean(timestamp);
 
-        assertTrue(Arrays.stream(map.cells())
-                .allMatch(MapCell::unknown));
+        MapCell[] cells = map.cells();
+        for (int i = 0; i < cells.length; i++) {
+            MapCell cell = cells[i];
+            if (i >=10 && i < 20) {
+                assertTrue(cell.echogenic());
+            } else {
+                assertTrue(cell.unknown());
+            }
+        }
         assertEquals(timestamp + MAX_INTERVAL, map.cleanTimestamp());
     }
 

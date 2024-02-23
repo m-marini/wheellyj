@@ -194,7 +194,8 @@ public class BatchTrainer {
                 }));
         Map<String, long[]> layerSizes = network.createLayerSizes(inputSizes);
         // Loads actions
-        try (BinArrayFileMap actionFile = BinArrayFileMap.create(datasetPath, ACTIONS_KEY).children(ACTIONS_KEY)) {
+        BinArrayFileMap actionFile = BinArrayFileMap.create(datasetPath, ACTIONS_KEY).children(ACTIONS_KEY);
+        try {
             Map<String, Supplier<Object>> tasks = Tuple2.stream(actionFile.files())
                     .map(t -> {
                         BinArrayFile file = t._2;
@@ -205,8 +206,11 @@ public class BatchTrainer {
                         return t.setV2(supplier);
                     })
                     .collect(Tuple2.toMap());
-            ParallelProcess.scheduler(tasks).run();
+            ParallelProcess.collector(tasks).run();
+        } finally {
+            actionFile.close();
         }
+
     }
 
     /**
@@ -218,7 +222,8 @@ public class BatchTrainer {
     private void loadAdvantage(File datasetPath) throws Exception {
         // Loads rewards
         logger.atInfo().log("Loading advantage from \"{}\" ...", datasetPath.getCanonicalPath());
-        try (BinArrayFile rewardFile = BinArrayFile.createBykey(datasetPath, REWARD_KEY)) {
+        BinArrayFile rewardFile = BinArrayFile.createBykey(datasetPath, REWARD_KEY);
+        try {
             logger.atDebug().log("loadAdvantage {}", datasetPath);
             // Computes average
             double tot = 0;
@@ -228,14 +233,17 @@ public class BatchTrainer {
                 if (data == null) {
                     break;
                 }
-                tot += data.getFloat(0, 0);
+                try (data) {
+                    tot += data.getFloat(0, 0);
+                }
                 count++;
             }
             avgReward = (float) (tot / count);
 
             // Computes residual advantage process
             rewardFile.seek(0);
-            try (BinArrayFile advantageFile = BinArrayFile.createBykey(TMP_PATH, ADVANTAGE_KEY)) {
+            BinArrayFile advantageFile = BinArrayFile.createBykey(TMP_PATH, ADVANTAGE_KEY);
+            try {
                 advantageFile.clear();
                 for (; ; ) {
                     INDArray data = rewardFile.read(1);
@@ -245,7 +253,11 @@ public class BatchTrainer {
                     data.subi(avgReward);
                     advantageFile.write(data);
                 }
+            } finally {
+                advantageFile.close();
             }
+        } finally {
+            rewardFile.close();
         }
     }
 
@@ -272,7 +284,7 @@ public class BatchTrainer {
             throw new IllegalArgumentException("Missing s1 datasets");
         }
 
-        ParallelProcess.<String, Object>scheduler()
+        ParallelProcess.<String, Object>collector()
                 .add(ADVANTAGE_KEY, () -> {
                     loadAdvantage(datasetPath);
                     return this;
@@ -308,15 +320,21 @@ public class BatchTrainer {
         // Creates the process to transform the action value to action mask
         INDArray mask = Nd4j.zeros(1, numActions);
         actionFile.seek(0);
-        try (BinArrayFile maskFile = BinArrayFile.createBykey(TMP_MASKS_PATH, actionName).clear()) {
+        BinArrayFile maskFile = BinArrayFile.createBykey(TMP_MASKS_PATH, actionName);
+        try {
+            maskFile.clear();
             for (; ; ) {
                 INDArray action = actionFile.read(1);
                 if (action == null) {
                     break;
                 }
-                mask.assign(0).putScalar(action.getLong(0), 1f);
-                maskFile.write(mask);
+                try (action) {
+                    mask.assign(0).putScalar(action.getLong(0), 1f);
+                    maskFile.write(mask);
+                }
             }
+        } finally {
+            maskFile.close();
         }
     }
 
@@ -386,8 +404,9 @@ public class BatchTrainer {
         double delta = 0;
         long n = 0;
         files.close("v");
-        try (BinArrayFile out = BinArrayFile.createBykey(TMP_PATH, ADV_KEY).clear()) {
-
+        BinArrayFile out = BinArrayFile.createBykey(TMP_PATH, ADV_KEY);
+        try {
+            out.clear();
             for (; ; ) {
                 Map<String, INDArray> records = vReaders.read(batchSize);
                 if (records == null) {
@@ -405,6 +424,8 @@ public class BatchTrainer {
                 delta += v.sumNumber().doubleValue() - v0.sumNumber().doubleValue();
                 n += v.size(0);
             }
+        } finally {
+            out.close();
         }
         delta /= n;
         logger.atInfo().log("Samples {} - average delta {}", n, delta);

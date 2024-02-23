@@ -72,33 +72,31 @@ class BinArrayFileMapTest {
     }
 
     @Test
-    void testAdd() throws IOException {
-        try (BinArrayFileMap map1 = BinArrayFileMap.empty()) {
-            BinArrayFileMap map = map1.addRead(new File("src/test/resources"), "f");
-            assertThat(map.files(), hasKey("f.a"));
-            assertThat(map.files(), hasKey("f.b"));
-        }
+    void testAdd() {
+        BinArrayFileMap map1 = BinArrayFileMap.empty();
+        BinArrayFileMap map = map1.addRead(new File("src/test/resources"), "f");
+        assertThat(map.files(), hasKey("f.a"));
+        assertThat(map.files(), hasKey("f.b"));
+
     }
 
     @Test
-    void testChildren() throws IOException {
-        try (BinArrayFileMap map1 = BinArrayFileMap.create(new File("src/test/resources"), "f")) {
-            BinArrayFileMap map = map1.children("f");
-            assertThat(map.files(), hasKey("a"));
-            assertThat(map.files(), hasKey("b"));
-            assertThat(map.files(), hasKey("."));
-            assertEquals(3, map.files().size());
-        }
+    void testChildren() {
+        BinArrayFileMap map1 = BinArrayFileMap.create(new File("src/test/resources"), "f");
+        BinArrayFileMap map = map1.children("f");
+        assertThat(map.files(), hasKey("a"));
+        assertThat(map.files(), hasKey("b"));
+        assertThat(map.files(), hasKey("."));
+        assertEquals(3, map.files().size());
     }
 
     @Test
-    void testChildrena() throws IOException {
-        try (BinArrayFileMap map1 = BinArrayFileMap.create(new File("src/test/resources"), "f")) {
-            BinArrayFileMap map = map1.children("f.a");
+    void testChildrena() {
+        BinArrayFileMap map1 = BinArrayFileMap.create(new File("src/test/resources"), "f");
+        BinArrayFileMap map = map1.children("f.a");
 
-            assertThat(map.files(), hasKey("."));
-            assertEquals(1, map.files().size());
-        }
+        assertThat(map.files(), hasKey("."));
+        assertEquals(1, map.files().size());
     }
 
     @Test
@@ -178,9 +176,9 @@ class BinArrayFileMapTest {
     @Test
     void testReset() throws IOException {
         BinArrayFileMap map = BinArrayFileMap.create(new File("src/test/resources"), "f");
-        Map<String, INDArray> result = map.read(1);
+        map.read(1);
         map.reset();
-        result = map.read(1);
+        Map<String, INDArray> result = map.read(1);
 
         assertThat(result, hasKey("f"));
         assertThat(result, hasKey("f.a"));

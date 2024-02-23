@@ -34,7 +34,6 @@ import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -47,7 +46,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * Writes and reads arrays into binary file
  */
-public class BinArrayFile implements Closeable {
+public class BinArrayFile {
 
     private static final Logger logger = LoggerFactory.getLogger(BinArrayFile.class);
 
@@ -86,9 +85,7 @@ public class BinArrayFile implements Closeable {
      * @throws IOException in case of error
      */
     public long available() throws IOException {
-        if (dataFile == null) {
-            open();
-        }
+        open();
         if (shape == null) {
             throw new IOException(format("Missing shape in file %s", file));
         }
@@ -109,16 +106,20 @@ public class BinArrayFile implements Closeable {
         return this;
     }
 
-    @Override
+    /**
+     * Closes the file
+     *
+     * @throws IOException in case of error
+     */
     public void close() throws IOException {
-        if (dataFile != null) {
+        RandomAccessFile df = dataFile;
+        if (df != null) {
+            dataFile = null;
+            shape = null;
+            recordSize = 0;
+            dataOffset = 0;
             logger.atDebug().log("Close file {}", file);
-            try {
-                dataFile.close();
-            } finally {
-                dataFile = null;
-                shape = null;
-            }
+            df.close();
         }
     }
 
@@ -164,10 +165,12 @@ public class BinArrayFile implements Closeable {
      * @throws IOException in case of error
      */
     private void open() throws IOException {
-        file.getParentFile().mkdirs();
-        dataFile = new RandomAccessFile(file, "rw");
-        logger.atDebug().log("Open file {}", file);
-        readShape();
+        if (dataFile == null) {
+            file.getParentFile().mkdirs();
+            dataFile = new RandomAccessFile(file, "rwd");
+            logger.atDebug().log("Open file {}", file);
+            readShape();
+        }
     }
 
     /**
@@ -176,9 +179,7 @@ public class BinArrayFile implements Closeable {
      * @throws IOException in case of error
      */
     public long position() throws IOException {
-        if (dataFile == null) {
-            open();
-        }
+        open();
         if (shape == null) {
             throw new IOException(format("Missing shape in file %s", file));
         }
@@ -192,9 +193,7 @@ public class BinArrayFile implements Closeable {
      * @throws IOException in case of error
      */
     public INDArray read(long numRecords) throws IOException {
-        if (dataFile == null) {
-            open();
-        }
+        open();
         if (shape == null) {
             throw new IOException(format("Missing shape in file %s", file));
         }
@@ -203,13 +202,13 @@ public class BinArrayFile implements Closeable {
             return null;
         }
         long n = numRecords * recordSize;
-        INDArray result = Nd4j.create(DataType.FLOAT, n);
+        INDArray buffer = Nd4j.create(DataType.FLOAT, n);
         for (long i = 0; i < n; i++) {
             float value = dataFile.readFloat();
-            result.putScalar(i, value);
+            buffer.putScalar(i, value);
         }
         shape[0] = numRecords;
-        return result.reshape(shape);
+        return buffer.reshape(shape);
     }
 
     /**
@@ -217,24 +216,23 @@ public class BinArrayFile implements Closeable {
      *
      * @throws IOException in case of error
      */
-    private long[] readShape() throws IOException {
+    private void readShape() throws IOException {
         dataFile.seek(0);
         shape = null;
         if (dataFile.length() < 4) {
-            return null;
+            return;
         }
         int rank = dataFile.readInt();
         long[] shape = new long[rank];
         for (int i = 0; i < rank; i++) {
             if (dataFile.length() < 8) {
-                return null;
+                return;
             }
             shape[i] = dataFile.readLong();
         }
         this.shape = shape;
         this.dataOffset = dataFile.getFilePointer();
         computeRecordSize();
-        return shape;
     }
 
     /**
@@ -244,9 +242,7 @@ public class BinArrayFile implements Closeable {
      * @throws IOException in case of error
      */
     public void seek(long record) throws IOException {
-        if (dataFile == null) {
-            open();
-        }
+        open();
         if (shape == null) {
             throw new IOException(format("Missing shape in file %s", file));
         }
@@ -260,9 +256,7 @@ public class BinArrayFile implements Closeable {
      * @throws IOException in case of error
      */
     public long[] shape() throws IOException {
-        if (dataFile == null) {
-            open();
-        }
+        open();
         if (shape == null) {
             throw new IOException(format("Missing shape in file %s", file));
         }
@@ -275,9 +269,7 @@ public class BinArrayFile implements Closeable {
      * @throws IOException in case of error
      */
     public long size() throws IOException {
-        if (dataFile == null) {
-            open();
-        }
+        open();
         if (shape == null) {
             throw new IOException(format("Missing shape in file %s", file));
         }
@@ -291,9 +283,7 @@ public class BinArrayFile implements Closeable {
      * @throws IOException in case of error
      */
     public void write(INDArray data) throws IOException {
-        if (dataFile == null) {
-            open();
-        }
+        open();
         if (shape == null) {
             writeShape(data.shape());
         }
@@ -315,7 +305,7 @@ public class BinArrayFile implements Closeable {
      *
      * @throws IOException in case of error
      */
-    private long[] writeShape(long[] shape) throws IOException {
+    private void writeShape(long[] shape) throws IOException {
         this.shape = null;
         dataFile.setLength(0);
         dataFile.writeInt(shape.length);
@@ -325,6 +315,5 @@ public class BinArrayFile implements Closeable {
         this.shape = shape;
         this.dataOffset = dataFile.getFilePointer();
         computeRecordSize();
-        return shape;
     }
 }

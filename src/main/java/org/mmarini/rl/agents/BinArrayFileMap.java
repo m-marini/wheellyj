@@ -36,7 +36,6 @@ import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -53,7 +52,7 @@ import static java.util.Objects.requireNonNull;
  *
  * @param files the map of files
  */
-public record BinArrayFileMap(Map<String, BinArrayFile> files) implements Closeable {
+public record BinArrayFileMap(Map<String, BinArrayFile> files) {
     private static final BinArrayFileMap EMPTY = new BinArrayFileMap(Map.of());
     private static final Logger logger = LoggerFactory.getLogger(BinArrayFileMap.class);
 
@@ -231,7 +230,11 @@ public record BinArrayFileMap(Map<String, BinArrayFile> files) implements Closea
         }
     }
 
-    @Override
+    /**
+     * Closes the binary file map
+     *
+     * @throws IOException in case of error
+     */
     public void close() throws IOException {
         for (BinArrayFile file : files.values()) {
             file.close();
@@ -262,17 +265,6 @@ public record BinArrayFileMap(Map<String, BinArrayFile> files) implements Closea
      */
     public boolean contains(String key) {
         return files.containsKey(key);
-    }
-
-    /**
-     * Returns the duplication of readers
-     */
-    public BinArrayFileMap dup() {
-        return new BinArrayFileMap(
-                Tuple2.stream(files)
-                        .map(Tuple2.map2(BinArrayFile::dup))
-                        .collect(Tuple2.toMap())
-        );
     }
 
     /**
@@ -340,7 +332,7 @@ public record BinArrayFileMap(Map<String, BinArrayFile> files) implements Closea
                     return t.setV2(task);
                 })
                 .collect(Tuple2.toMap());
-        Map<String, INDArray> map = ParallelProcess.scheduler(tasks).run();
+        Map<String, INDArray> map = ParallelProcess.collector(tasks).run();
         return map.values().stream().allMatch(v -> v.size(0) > 0)
                 ? map : null;
     }
