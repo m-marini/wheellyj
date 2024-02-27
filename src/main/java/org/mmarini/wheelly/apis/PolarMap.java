@@ -100,7 +100,6 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
      * @param sectorIndex the sector index
      */
     public Complex indexDirection(int sectorIndex) {
-        // TODO check for complex usage
         Point2D point = sectors[sectorIndex].location();
         return Complex.direction(center, point).sub(direction);
     }
@@ -190,7 +189,6 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
      * @param direction the direction
      */
     public int sectorIndex(Complex direction) {
-        // TODO check for complex usage
         int n = sectors.length;
         double rad = direction.toRad();
         double idx2 = rad / sectorAngle() + 0.5;
@@ -219,7 +217,6 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
      * @param maxDistance the max distance (m)
      */
     public PolarMap update(RadarMap map, Point2D center, Complex direction, double minDistance, double maxDistance) {
-        // TODO
         double gridSize = map.topology().gridSize();
         int sectorsNum = this.sectors.length;
 

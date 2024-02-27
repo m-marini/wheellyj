@@ -29,67 +29,73 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.mmarini.Tuple2;
 import org.mmarini.yaml.Locator;
-import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
 import java.util.StringJoiner;
 import java.util.function.Consumer;
 
+import static java.util.Objects.requireNonNull;
+
 /**
- * The dense layer performs a linear transformation between the input and outputs.
+ * Apply a constant linear function to the input
  */
 public class TDLinear extends TDLayer {
 
     /**
-     * Returns a linear layer from json doc
+     * Creates the layer from json spec
      *
-     * @param root    json doc
-     * @param locator the locator of layer node
+     * @param root    the json document
+     * @param locator the layer locator
      */
-    public static TDLinear create(JsonNode root, Locator locator) {
+    public static TDLinear fromJson(JsonNode root, Locator locator) {
         String name = locator.path("name").getNode(root).asText();
-        float b = (float) locator.path("b").getNode(root).asDouble();
-        float w = (float) locator.path("w").getNode(root).asDouble();
-        return new TDLinear(name, b, w);
+        String input = locator.path("inputs").elements(root)
+                .findFirst()
+                .map(l -> l.getNode(root).asText())
+                .orElseThrow();
+        return new TDLinear(name, input,
+                (float) locator.path("b").getNode(root).asDouble(),
+                (float) locator.path("w").getNode(root).asDouble());
     }
 
     private final float b;
     private final float w;
 
     /**
-     * Creates a dense layer
+     * Creates the layer
      *
-     * @param name the name of layer
-     * @param b    the bias
-     * @param w    the weight
+     * @param name  the name of layer
+     * @param input the name of input
+     * @param b     the bias
+     * @param w     the weight
      */
-    public TDLinear(String name, float b, float w) {
-        super(name);
+    public TDLinear(String name, String input, float b, float w) {
+        super(name, requireNonNull(input));
         this.b = b;
         this.w = w;
     }
 
-    @Override
-    public INDArray forward(INDArray[] inputs, TDNetwork net) {
-        return inputs[0].mul(w).addi(b);
-    }
-
-    public float getB() {
+    /**
+     * Returns the b parameter
+     */
+    public float bias() {
         return b;
     }
 
     @Override
-    public JsonNode getSpec() {
-        ObjectNode node = Utils.objectMapper.createObjectNode();
-        node.put("name", getName());
+    public TDNetworkState forward(TDNetworkState state, boolean training) {
+        INDArray inputs = state.getValues(inputs()[0]);
+        INDArray output = inputs.mul(w).addi(b);
+        return state.putValues(name, output);
+    }
+
+    @Override
+    public ObjectNode spec() {
+        ObjectNode node = super.spec();
         node.put("type", "linear");
         node.put("b", b);
         node.put("w", w);
         return node;
-    }
-
-    public float getW() {
-        return w;
     }
 
     @Override
@@ -102,7 +108,16 @@ public class TDLinear extends TDLayer {
     }
 
     @Override
-    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
-        return new INDArray[]{grad.mul(w)};
+    public TDNetworkState train(TDNetworkState state, INDArray delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
+        INDArray grads = state.getGradients(name);
+        INDArray inputGrads = grads.mul(w);
+        return state.addGradients(inputs()[0], inputGrads);
+    }
+
+    /**
+     * Returns the w parameters
+     */
+    public float weight() {
+        return w;
     }
 }

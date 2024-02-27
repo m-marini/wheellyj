@@ -34,8 +34,8 @@ import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.ParallelProcess;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.nets.TDNetwork;
+import org.mmarini.rl.nets.TDNetworkState;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,15 +84,14 @@ public class BatchTrainer {
      * @param numTrainIteration1 the number of iterations of rl training
      * @param numTrainIteration2 the number of iterations of networks training
      * @param batchSize          the batch size
-     * @param random             the random number generator
      * @param onTrained          the on trained callback
      */
     public static BatchTrainer create(TDNetwork network, Map<String, Float> alphas, float lambda,
                                       int numTrainIteration1, int numTrainIteration2, int batchSize,
-                                      Random random, Consumer<TDNetwork> onTrained) {
+                                      Consumer<TDNetwork> onTrained) {
         return new BatchTrainer(network, lambda,
                 alphas, numTrainIteration1, numTrainIteration2, batchSize,
-                random, onTrained);
+                onTrained);
     }
 
     /**
@@ -101,11 +100,11 @@ public class BatchTrainer {
      * @param results     the results
      * @param actionsMask the action mask
      */
-    private static Map<String, INDArray> gradLogPi(Map<String, INDArray> results, Map<String, INDArray> actionsMask) {
+    private static Map<String, INDArray> gradLogPi(TDNetworkState results, Map<String, INDArray> actionsMask) {
         return Tuple2.stream(actionsMask)
                 .map(t -> {
                     String key = t._1;
-                    INDArray out = results.get(key).mul(t._2);
+                    INDArray out = results.getValues(key).mul(t._2);
                     return t.setV2(out);
                 }).collect(Tuple2.toMap());
     }
@@ -128,7 +127,6 @@ public class BatchTrainer {
     private final TDNetwork network;
     private final int numTrainIterations1;
     private final int numTrainIterations2;
-    private final Random random;
     private final float lambda;
     private final Consumer<TDNetwork> onTrained;
     private final int batchSize;
@@ -148,15 +146,13 @@ public class BatchTrainer {
      * @param numTrainIterations1 the number of iterations of rl training
      * @param numTrainIterations2 the number of iterations of networks training
      * @param batchSize           the batch size
-     * @param random              the random number generator
      * @param onTrained           the on trained call back
      */
     protected BatchTrainer(TDNetwork network, float lambda, Map<String, Float> alphas, int numTrainIterations1,
-                           int numTrainIterations2, int batchSize, Random random, Consumer<TDNetwork> onTrained) {
+                           int numTrainIterations2, int batchSize, Consumer<TDNetwork> onTrained) {
         this.network = requireNonNull(network);
         this.numTrainIterations1 = numTrainIterations1;
         this.numTrainIterations2 = numTrainIterations2;
-        this.random = requireNonNull(random);
         this.lambda = lambda;
         this.onTrained = onTrained;
         this.batchSize = batchSize;
@@ -183,16 +179,7 @@ public class BatchTrainer {
         logger.atInfo().log("Loading action from \"{}\" ...", datasetPath.getCanonicalPath());
 
         // Get the layer io size
-        BinArrayFileMap s0Readers = files.children(S0_KEY);
-        Map<String, Long> inputSizes = mapMap(s0Readers.files(),
-                Tuple2.map2(reader -> {
-                    try {
-                        return reader.shape()[1];
-                    } catch (IOException ex) {
-                        throw new RuntimeException(ex);
-                    }
-                }));
-        Map<String, long[]> layerSizes = network.createLayerSizes(inputSizes);
+        Map<String, Long> layerSizes = network.sizes();
         // Loads actions
         BinArrayFileMap actionFile = BinArrayFileMap.create(datasetPath, ACTIONS_KEY).children(ACTIONS_KEY);
         try {
@@ -200,7 +187,7 @@ public class BatchTrainer {
                     .map(t -> {
                         BinArrayFile file = t._2;
                         Supplier<Object> supplier = () -> {
-                            processActionToMask(t._1, file, layerSizes.get(t._1)[1]);
+                            processActionToMask(t._1, file, layerSizes.get(t._1));
                             return this;
                         };
                         return t.setV2(supplier);
@@ -364,10 +351,10 @@ public class BatchTrainer {
             adv, INDArray criticGrad) {
 
         Map<String, INDArray> kpis = new HashMap<>();
-        Map<String, INDArray> netResults0 = network.forward(s0, true, random);
-        actionsMask.keySet().forEach(key -> kpis.put("policy." + key, netResults0.get(key)));
+        TDNetworkState netResults0 = network.forward(s0, true);
+        actionsMask.keySet().forEach(key -> kpis.put("policy." + key, netResults0.getValues(key).dup()));
 
-        INDArray adv0 = netResults0.get(CRITIC_KEY);
+        INDArray adv0 = netResults0.getValues(CRITIC_KEY);
         INDArray delta = adv.sub(adv0);
 
         Map<String, INDArray> grads = new HashMap<>(mapMap(gradLogPi(netResults0, actionsMask),
@@ -375,9 +362,9 @@ public class BatchTrainer {
         // Computes output gradients for network (merges critic and policy grads)
         grads.put(CRITIC_KEY, criticGrad);
         kpis.put("delta", delta);
-        grads.forEach((key, value) -> kpis.put("netGrads." + key, value));
+        grads.forEach((key, value) -> kpis.put("netGrads." + key, value.dup()));
         kpisProcessor.onNext(kpis);
-        network.train(netResults0, grads, delta, lambda, null);
+        network.train(grads, delta, lambda, null);
         return delta.sumNumber().doubleValue();
     }
 
@@ -416,8 +403,8 @@ public class BatchTrainer {
                 Map<String, INDArray> s1 = BinArrayFileMap.children(records, S1_KEY);
                 INDArray adv = records.get(ADVANTAGE_KEY);
                 INDArray term = records.get(TERMINAL_KEY);
-                INDArray v0 = network.forward(s0).get(CRITIC_KEY);
-                INDArray v1 = network.forward(s1).get(CRITIC_KEY);
+                INDArray v0 = network.forward(s0).getValues(CRITIC_KEY);
+                INDArray v1 = network.forward(s1).getValues(CRITIC_KEY);
                 INDArray v = adv.add(term.mul(v0))
                         .addi(term.neg().addi(1).muli(v1));
                 out.write(v);

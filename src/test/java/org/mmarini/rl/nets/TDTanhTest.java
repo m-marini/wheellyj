@@ -25,7 +25,7 @@
 
 package org.mmarini.rl.nets;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -38,8 +38,7 @@ import java.util.stream.Stream;
 
 import static java.lang.Math.tanh;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.arrayWithSize;
-import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.ArgumentsGenerator.createArgumentGenerator;
 import static org.mmarini.ArgumentsGenerator.createStream;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
@@ -62,13 +61,17 @@ class TDTanhTest {
     @MethodSource("cases")
     void forward(INDArray inputs,
                  INDArray grad) {
-        TDTanh layer = new TDTanh("name");
+        // Given the layer
+        TDTanh layer = new TDTanh("name", "input");
         float in00 = inputs.getFloat(0, 0);
         float in01 = inputs.getFloat(0, 1);
         float in10 = inputs.getFloat(1, 0);
         float in11 = inputs.getFloat(1, 1);
-        INDArray out = layer.forward(new INDArray[]{inputs}, null);
-        assertThat(out, matrixCloseTo(new float[][]{
+        TDNetworkState state = TDNetworkStateImpl.create()
+                .putValues("input", inputs);
+        TDNetworkState result = layer.forward(state);
+        assertNotNull(result);
+        assertThat(result.getValues("name"), matrixCloseTo(new float[][]{
                 {(float) tanh(in00), (float) tanh(in01)},
                 {(float) tanh(in10), (float) tanh(in11)}
         }, EPSILON));
@@ -76,10 +79,13 @@ class TDTanhTest {
 
     @Test
     void spec() {
-        TDTanh layer = new TDTanh("name");
-        JsonNode node = layer.getSpec();
-        assertThat(node.path("name").asText(), equalTo("name"));
-        assertThat(node.path("type").asText(), equalTo("tanh"));
+        TDTanh layer = new TDTanh("name", "input");
+        ObjectNode node = layer.spec();
+        assertEquals("name", node.path("name").asText());
+        assertEquals("tanh", node.path("type").asText());
+        assertTrue(node.path("inputs").isArray());
+        assertEquals(1, node.path("inputs").size());
+        assertEquals("input", node.path("inputs").path(0).asText());
     }
 
     @ParameterizedTest
@@ -87,14 +93,16 @@ class TDTanhTest {
     void train(INDArray inputs,
                INDArray grad) {
         // Given the layer
-        TDTanh layer = new TDTanh("name");
-        INDArray[] in = new INDArray[]{inputs};
-        INDArray out = layer.forward(in, null);
+        TDTanh layer = new TDTanh("name", "input");
+        TDNetworkState state = TDNetworkStateImpl.create()
+                .putValues("input", inputs);
+        state = layer.forward(state, true).addGradients("name", grad);
 
         // When train
-        INDArray[] post_grads = layer.train(in, out, grad, null, 0, null);
+        TDNetworkState result = layer.train(state, null, 0, null);
 
         // Then
+        assertNotNull(result);
         float in00 = inputs.getFloat(0, 0);
         float in01 = inputs.getFloat(0, 1);
         float in10 = inputs.getFloat(1, 0);
@@ -113,8 +121,7 @@ class TDTanhTest {
         float post_grad10 = (1 - out10 * out10) * grad10;
         float post_grad11 = (1 - out11 * out11) * grad11;
 
-        assertThat(post_grads, arrayWithSize(1));
-        assertThat(post_grads[0], matrixCloseTo(new float[][]{
+        assertThat(result.getGradients("input"), matrixCloseTo(new float[][]{
                 {post_grad00, post_grad01},
                 {post_grad10, post_grad11}
         }, EPSILON));

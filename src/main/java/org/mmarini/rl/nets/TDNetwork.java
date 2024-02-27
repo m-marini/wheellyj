@@ -29,314 +29,371 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.mmarini.Tuple2;
-import org.mmarini.Utils;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
-import org.nd4j.linalg.factory.Nd4j;
-import org.nd4j.linalg.ops.transforms.Transforms;
 
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
+/**
+ * Infers to predict output base on input values
+ * Trains the parameters to fit the predicted output on the effective output
+ */
 public class TDNetwork {
-
-    public static final String NETWORK_SCHEMA_YML = "https://mmarini.org/wheelly/network-schema";
+    public static final String NETWORK_SCHEMA_YML = "https://mmarini.org/wheelly/network-schema-0.2";
 
     /**
-     * Returns the network from spec and props data
+     * Returns the neural network
      *
-     * @param spec    the document root
-     * @param locator the locator of network spec
-     * @param prefix  the prefix of network props
-     * @param props   the properties
-     * @param random  the random number generator
+     * @param layers     the layers (must be in forward sequence order)
+     * @param sizes      the layer sizes
+     * @param random     the randomizer
+     * @param parameters the network parameters
      */
-    public static TDNetwork create(JsonNode spec, Locator locator, String prefix, Map<String, INDArray> props, Random random) {
-        JsonSchemas.instance().validateOrThrow(locator.getNode(spec), NETWORK_SCHEMA_YML);
-        List<TDLayer> layerNodes = locator.path("layers").elements(spec)
-                .map(layerLocator -> TDLayer.create(spec, layerLocator, prefix, props, random))
+    public static TDNetwork create(List<TDLayer> layers,
+                                   Map<String, Long> sizes,
+                                   Random random, Map<String, INDArray> parameters) {
+        Map<String, TDLayer> layerMap = layers.stream().collect(
+                Collectors.toMap(
+                        TDLayer::name,
+                        Function.identity()
+                )
+        );
+        // Collects all layer name
+        Set<String> allLayers = Stream.concat(
+                        layerMap.keySet().stream(),
+                        layerMap.values().stream()
+                                .flatMap(layer ->
+                                        Arrays.stream(layer.inputs))
+                )
+                .collect(Collectors.toSet());
+        // Validate the sizes
+        List<String> missingSizes = allLayers.stream()
+                .filter(Predicate.not(sizes::containsKey))
+                .sorted()
                 .toList();
-        List<String> forward = layerNodes.stream().map(TDLayer::getName).collect(Collectors.toList());
-        Map<String, TDLayer> layers1 = layerNodes.stream().collect(Collectors.toMap(
-                TDLayer::getName,
-                l -> l
-        ));
-        Map<String, List<String>> inputs1 = Utils.stream(locator.path("inputs").getNode(spec).fieldNames())
-                .map(name -> {
-                    List<String> layerList = locator.path("inputs").path(name).elements(spec)
-                            .map(l -> l.getNode(spec).asText())
-                            .collect(Collectors.toList());
-                    return Tuple2.of(name, layerList);
-                })
+        if (!missingSizes.isEmpty()) {
+            throw new IllegalArgumentException(format("Missing layer sizes [%s]",
+                    String.join(",", missingSizes)));
+        }
+
+        // Validates the parameters
+        TDNetworkState state = TDNetworkStateImpl.create(random)
+                .setSizes(sizes);
+        for (Map.Entry<String, INDArray> parameter : parameters.entrySet()) {
+            state = state.put(parameter.getKey(), parameter.getValue());
+        }
+        // Loads and initializes the state
+        for (TDLayer layer : layerMap.values()) {
+            layer.validate(state);
+            state = layer.initVariables(state);
+        }
+
+        // Creates the forward orders
+        List<String> forwardSeq = layers.stream().map(TDLayer::name).toList();
+        List<String> backwardSeq = new ArrayList<>(forwardSeq);
+        Collections.reverse(backwardSeq);
+
+        // Extract source Layers
+        List<String> sourceLayers = allLayers.stream()
+                .filter(Predicate.not(layerMap::containsKey))
+                .toList();
+        Set<String> inputLayers = layers.stream()
+                .map(TDLayer::inputs)
+                .flatMap(Arrays::stream)
+                .collect(Collectors.toSet());
+        List<String> sinkLayers = layerMap.keySet().stream()
+                .filter(Predicate.not(inputLayers::contains))
+                .toList();
+
+        return new TDNetwork(layerMap, forwardSeq, backwardSeq, sinkLayers, sourceLayers, sizes, state);
+    }
+
+    /**
+     * Returns the network
+     *
+     * @param layers the layers (must be in forward sequence order)
+     * @param sizes  the layer sizes
+     * @param random the randomizer
+     */
+    public static TDNetwork create(List<TDLayer> layers, Map<String, Long> sizes, Random random) {
+        Map<String, TDLayer> layerMap = layers.stream().collect(
+                Collectors.toMap(
+                        TDLayer::name,
+                        Function.identity()
+                )
+        );
+        // Collects all layer name
+        Set<String> allLayers = Stream.concat(
+                        layerMap.keySet().stream(),
+                        layerMap.values().stream()
+                                .flatMap(layer ->
+                                        Arrays.stream(layer.inputs))
+                )
+                .collect(Collectors.toSet());
+        // Validate the sizes
+        List<String> missingSizes = allLayers.stream()
+                .filter(Predicate.not(sizes::containsKey))
+                .sorted()
+                .toList();
+        if (!missingSizes.isEmpty()) {
+            throw new IllegalArgumentException(format("Missing layer sizes [%s]",
+                    String.join(",", missingSizes)));
+        }
+
+        // Validates the parameters
+        TDNetworkState state = TDNetworkStateImpl.create(random)
+                .setSizes(sizes);
+        // Loads and initializes the state
+        for (TDLayer layer : layerMap.values()) {
+            state = layer.initVariables(state);
+            state = layer.initParameters(state);
+        }
+
+        // Creates the forward orders
+        List<String> forwardSeq = layers.stream().map(TDLayer::name).toList();
+        List<String> backwardSeq = new ArrayList<>(forwardSeq);
+        Collections.reverse(backwardSeq);
+
+        // Extract source Layers
+        List<String> sourceLayers = allLayers.stream()
+                .filter(Predicate.not(layerMap::containsKey))
+                .toList();
+        Set<String> inputLayers = layers.stream()
+                .map(TDLayer::inputs)
+                .flatMap(Arrays::stream)
+                .collect(Collectors.toSet());
+        List<String> sinkLayers = layerMap.keySet().stream()
+                .filter(Predicate.not(inputLayers::contains))
+                .toList();
+
+        return new TDNetwork(layerMap, forwardSeq, backwardSeq, sinkLayers, sourceLayers, sizes, state);
+    }
+
+    /**
+     * Returns the network from specification
+     *
+     * @param spec       the specification
+     * @param locator    the network locator
+     * @param parameters the parameters
+     * @param random     the random generator
+     */
+    public static TDNetwork fromJson(JsonNode spec, Locator locator, Map<String, INDArray> parameters, Random random) {
+        JsonSchemas.instance().validateOrThrow(locator.getNode(spec), NETWORK_SCHEMA_YML);
+        // Loads the layers
+        List<TDLayer> layers = locator.path("layers").elements(spec)
+                .map(l -> TDLayer.fromJson(spec, l)
+                )
+                .toList();
+        // Loads the sizes
+        Map<String, Long> sizes = locator.path("sizes").propertyNames(spec)
+                .map(t -> t.setV2(t._2.getNode(spec).asLong()))
                 .collect(Tuple2.toMap());
-        return new TDNetwork(layers1, forward, inputs1);
+        return create(layers, sizes, random, parameters);
     }
 
     private final Map<String, TDLayer> layers;
     private final List<String> forwardSeq;
-    private final Map<String, List<String>> inputs;
     private final List<String> backwardSeq;
-    private final Map<String, List<String>> outputs;
-    private final Set<String> sourceLabels;
-    private final Set<String> sinkLabels;
+    private final List<String> sinkLayers;
+    private final List<String> sourceLayers;
+    private final Map<String, Long> sizes;
+    private TDNetworkState state;
 
     /**
      * Creates the network
      *
-     * @param layers     the map of layers
-     * @param forwardSeq the forward sequence
-     * @param inputs     the map of inputs
+     * @param layers       the layer map
+     * @param forwardSeq   the forward sequence
+     * @param sinkLayers   the sink layers
+     * @param sourceLayers the source layers
+     * @param state        the initial state
      */
-    public TDNetwork(Map<String, TDLayer> layers, List<String> forwardSeq, Map<String, List<String>> inputs) {
+    protected TDNetwork(Map<String, TDLayer> layers, List<String> forwardSeq, List<String> backwardSeq, List<String> sinkLayers, List<String> sourceLayers, Map<String, Long> sizes, TDNetworkState state) {
         this.layers = requireNonNull(layers);
         this.forwardSeq = requireNonNull(forwardSeq);
-        this.inputs = requireNonNull(inputs);
-        backwardSeq = new ArrayList<>(forwardSeq);
-        Collections.reverse(backwardSeq);
-        this.outputs = layers.keySet().stream().map(key -> {
-            List<String> value = inputs.keySet().stream()
-                    .filter(out -> inputs.get(out).contains(key))
-                    .toList();
-            return Map.entry(key, value);
-        }).collect(Utils.entriesToMap());
-        this.sourceLabels = inputs.values()
-                .stream()
-                .flatMap(Collection::stream)
-                .filter(Predicate.not(layers::containsKey))
-                .collect(Collectors.toSet());
-        this.sinkLabels = outputs.entrySet()
-                .stream()
-                .filter(t -> t.getValue().isEmpty())
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toSet());
+        this.backwardSeq = requireNonNull(backwardSeq);
+        this.sinkLayers = requireNonNull(sinkLayers);
+        this.sourceLayers = requireNonNull(sourceLayers);
+        this.sizes = requireNonNull(sizes);
+        this.state = requireNonNull(state);
     }
 
     /**
-     * Returns the layer sizes by layer given the input size
-     *
-     * @param inputSizes the input size
+     * Returns the backward sequence
      */
-    public Map<String, long[]> createLayerSizes(Map<String, Long> inputSizes) {
-        Map<String, long[]> sizes = new HashMap<>();
-        ToLongFunction<String> getSize = label -> {
-            if (sizes.containsKey(label)) {
-                return sizes.get(label)[1];
-            } else if (inputSizes.containsKey(label)) {
-                return inputSizes.get(label);
-            }
-            throw new IllegalArgumentException(format("Missing input \"%s\"", label));
-        };
-        for (String label : forwardSeq) {
-            TDLayer layer = layers.get(label);
-            long[] layerSizes;
-            if (layer instanceof TDDense) {
-                layerSizes = ((TDDense) layer).getW().shape();
-                // TODO check for size
-            } else if (layer instanceof TDSum) {
-                List<String> inList = inputs.get(label);
-                long size = getSize.applyAsLong(inList.getFirst());
-                for (String s : inList) {
-                    long sizen = getSize.applyAsLong(s);
-                    if (sizen != size) {
-                        throw new IllegalArgumentException(format(
-                                "layer %s must have the same size of layer %s, (%d) != (%d)",
-                                s, inList.getFirst(), sizen, size
-                        ));
-                    }
-                }
-                layerSizes = new long[]{size, size};
-            } else if (layer instanceof TDConcat) {
-                long size = inputs.get(label).stream()
-                        .mapToLong(getSize)
-                        .sum();
-                layerSizes = new long[]{size, size};
-            } else {
-                long size = getSize.applyAsLong(inputs.get(label).getFirst());
-                layerSizes = new long[]{size, size};
-            }
-            sizes.put(label, layerSizes);
-        }
-        return sizes;
-    }
-
-    /**
-     * Returns network state by performing a forward pass to generate prediction
-     *
-     * @param inputs the inputs
-     */
-    public Map<String, INDArray> forward(Map<String, INDArray> inputs) {
-        return forward(inputs, false, null);
-    }
-
-    /**
-     * Returns network state by performing a forward pass to generate prediction
-     *
-     * @param inputs   the inputs
-     * @param training true if training forward
-     * @param random   the randomizer
-     */
-    public Map<String, INDArray> forward(Map<String, INDArray> inputs, boolean training, Random random) {
-        Map<String, INDArray> outs = new HashMap<>(inputs);
-        for (String id : forwardSeq) {
-            TDLayer layer = layers.get(id);
-            INDArray[] layerInputs = this.inputs.get(id).stream()
-                    .map(outs::get)
-                    .toArray(INDArray[]::new);
-            INDArray output = layer.forward(layerInputs, this);
-            float dropOut = layer.getDropOut();
-            if (training && dropOut < 1) {
-                long[] shape = output.shape();
-                INDArray retainSeed = random.nextDouble(shape);
-                INDArray notMask = Transforms.lessThanOrEqual(retainSeed,
-                        Nd4j.ones(shape).mul(dropOut));
-                INDArray mask = Transforms.not(notMask);
-                output.muli(mask).divi(dropOut);
-                outs.put(id + "_mask", mask);
-            }
-            outs.put(id, output);
-        }
-        return outs;
-    }
-
-    public List<String> forwardSeq() {
-        return forwardSeq;
-    }
-
-    public List<String> getBackwardSeq() {
+    public List<String> backwardSequence() {
         return backwardSeq;
     }
 
-    public Map<String, List<String>> getInputs() {
-        return inputs;
-    }
-
-    public Map<String, List<String>> getOutputs() {
-        return outputs;
-    }
-
     /**
-     * Returns the properties o network status
+     * Returns the network after performing a forward pass to generate prediction
      *
-     * @param prefix the prefix of property identifiers
+     * @param inputs the inputs
      */
-    public Map<String, INDArray> getProps(String prefix) {
-        return layers.values().stream()
-                .flatMap(l -> l.props(prefix).entrySet().stream())
-                .collect(Utils.entriesToMap());
+    public TDNetworkState forward(Map<String, INDArray> inputs) {
+        return forward(inputs, false);
     }
 
     /**
-     * Returns the list of sink labels
+     * Returns the network after performing a forward pass to generate prediction
+     *
+     * @param inputs   the inputs
+     * @param training true if training forward
      */
-    public Set<String> getSinkLabels() {
-        return sinkLabels;
-    }
-
-    /**
-     * Returns the list of source labels
-     */
-    public Set<String> getSourceLabels() {
-        return sourceLabels;
-    }
-
-    /**
-     * Return json node of the network specification
-     */
-    public JsonNode getSpec() {
-        ObjectNode node = org.mmarini.yaml.Utils.objectMapper.createObjectNode();
-        ArrayNode layers1 = org.mmarini.yaml.Utils.objectMapper.createArrayNode();
-        forwardSeq.stream()
-                .map(layers::get)
-                .map(TDLayer::getSpec)
-                .forEach(layers1::add);
-        node.set("layers", layers1);
-
-        ObjectNode inputs = org.mmarini.yaml.Utils.objectMapper.createObjectNode();
-        for (Map.Entry<String, List<String>> entry : getInputs().entrySet()) {
-            ArrayNode inputNodeList = org.mmarini.yaml.Utils.objectMapper.createArrayNode();
-            entry.getValue().forEach(inputNodeList::add);
-            inputs.set(entry.getKey(), inputNodeList);
+    public TDNetworkState forward(Map<String, INDArray> inputs, boolean training) {
+        for (String input : inputs.keySet()) {
+            state = state.putValues(input, inputs.get(input));
         }
-        node.set("inputs", inputs);
-        return node;
+        for (String id : forwardSeq) {
+            TDLayer layer = layers.get(id);
+            state = layer.forward(state, training);
+        }
+        return state;
     }
 
+    /**
+     * Returns the forward layer sequence
+     */
+    public List<String> forwardSequence() {
+        return forwardSeq;
+    }
+
+    /**
+     * Returns the layers
+     */
     public Map<String, TDLayer> layers() {
         return layers;
     }
 
     /**
-     * Returns the gradients at inputs and trains network
+     * Returns the parameters of the network
+     */
+    public Map<String, INDArray> parameters() {
+        return state.parameters();
+    }
+
+    /**
+     * Returns the network with a set state
      *
-     * @param outputs     the layer outputs
+     * @param state the state
+     */
+    public TDNetwork setState(TDNetworkState state) {
+        this.state = state;
+        return this;
+    }
+
+    /**
+     * Returns the sink layers
+     */
+    public List<String> sinkLayers() {
+        return sinkLayers;
+    }
+
+    /**
+     * Returns the size of layer
+     *
+     * @param key the layer key
+     */
+    public long size(String key) {
+        return sizes.getOrDefault(key, 0L);
+    }
+
+    /**
+     * Returns the layer size
+     */
+    public Map<String, Long> sizes() {
+        return sizes;
+    }
+
+    /**
+     * Returns the source layers
+     */
+    public List<String> sourceLayers() {
+        return sourceLayers;
+    }
+
+    /**
+     * Return json node of the network specification
+     */
+    public ObjectNode spec() {
+        ArrayNode layers1 = org.mmarini.yaml.Utils.objectMapper.createArrayNode();
+        forwardSeq.stream()
+                .map(layers::get)
+                .map(TDLayer::spec)
+                .forEach(layers1::add);
+        ObjectNode sizes = org.mmarini.yaml.Utils.objectMapper.createObjectNode();
+        for (Map.Entry<String, Long> entry : this.sizes.entrySet()) {
+            sizes.put(entry.getKey(), entry.getValue());
+        }
+        ObjectNode node = org.mmarini.yaml.Utils.objectMapper.createObjectNode();
+        node.put("$schema", NETWORK_SCHEMA_YML);
+        node.set("layers", layers1);
+        node.set("sizes", sizes);
+        return node;
+    }
+
+    /**
+     * Returns the current state
+     */
+    public TDNetworkState state() {
+        return state;
+    }
+
+    /**
+     * Trains network
+     *
      * @param grad        the network output gradient
      * @param delta       the delta parameter (error scaled by alpha factor)
      * @param lambda      the TD lambda factor
      * @param kpiCallback call bak function for kpi
      */
-    public Map<String, INDArray> train(Map<String, INDArray> outputs, Map<String, INDArray> grad, INDArray
+    public TDNetworkState train(Map<String, INDArray> grad, INDArray
             delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
-        Map<String, INDArray> grads = new HashMap<>(grad);
+        for (String s : layers.keySet()) {
+            state = state.remove(s + ".grads");
+        }
+        for (Map.Entry<String, INDArray> entry : grad.entrySet()) {
+            state = state.addGradients(entry.getKey(), entry.getValue());
+        }
         for (String id : backwardSeq) {
             TDLayer node = layers.get(id);
-            List<String> inputNames = inputs.get(id);
-            INDArray[] inputs = inputNames.stream().map(outputs::get).toArray(INDArray[]::new);
-            INDArray output = outputs.get(id);
-            INDArray outGrad = grads.get(id);
-            INDArray mask = outputs.get(id + "_mask");
-            if (mask != null) {
-                outGrad.muli(mask);
-            }
-            INDArray[] inGrad = node.train(inputs, output, outGrad, delta, lambda, kpiCallback);
-            for (int i = 0; i < inputNames.size(); i++) {
-                String name = inputNames.get(i);
-                INDArray value = inGrad[i];
-                grads.merge(name, value, INDArray::add);
-            }
+            node.train(state, delta, lambda, kpiCallback);
         }
-        return grads;
+        return state;
     }
 
     /**
-     * Validate input and output sizes specification
+     * Validates the network against the in/out sizes
      *
-     * @param inputSizes  the input size specifications
-     * @param outputSizes the output size specifications
+     * @param inputSizes  input sizes
+     * @param outputSizes output sizes
      */
-    public void validate(Map<String, Long> inputSizes, Map<String, Long> outputSizes) {
-        Map<String, long[]> layerSizes = createLayerSizes(inputSizes);
+    public void validate(Map<String, Long> inputSizes, HashMap<String, Long> outputSizes) {
         for (Map.Entry<String, Long> entry : outputSizes.entrySet()) {
             String key = entry.getKey();
-            if (!(layerSizes.containsKey(key))) {
+            if (!(sizes.containsKey(key))) {
                 throw new IllegalArgumentException(format(
                         "network must contain \"%s\" output layer",
                         key
                 ));
             }
             long outSize = entry.getValue();
-            if (!(layerSizes.get(key)[1] == outSize)) {
+            if (!(sizes.get(key) == outSize)) {
                 throw new IllegalArgumentException(format(
                         "size of layer \"%s\" must be %d (%d)",
-                        key, outSize, layerSizes.get(key)[1]
+                        key, outSize, sizes.get(key)
                 ));
             }
         }
-    }
-
-    /**
-     * Validate input and output sizes specification
-     *
-     * @param inputSizes the input size specifications
-     */
-    public void validateInputs(Map<String, Long> inputSizes) {
-        createLayerSizes(inputSizes);
     }
 }

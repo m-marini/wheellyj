@@ -25,24 +25,20 @@
 
 package org.mmarini.rl.agents;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import org.mmarini.rl.envs.*;
 import org.mmarini.rl.envs.Environment.ExecutionResult;
-import org.mmarini.rl.nets.TDNetwork;
-import org.mmarini.yaml.Locator;
-import org.mmarini.yaml.Utils;
+import org.mmarini.rl.nets.*;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
 
-import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.isA;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mmarini.wheelly.TestFunctions.text;
 
 class TDAgentSingleNNActObsTest {
 
@@ -55,53 +51,10 @@ class TDAgentSingleNNActObsTest {
             "output.b", new IntSignalSpec(new long[]{1}, 2)
     );
     public static final float LAMBDA = 0.5f;
-    private static final String NETWORK_YAML = text("---",
-            "layers:",
-            "- name: layer1",
-            "  type: dense",
-            "  inputSize: 2",
-            "  outputSize: 2",
-            "- name: layer2",
-            "  type: tanh",
-            "- name: layer3",
-            "  type: dense",
-            "  inputSize: 2",
-            "  outputSize: 2",
-            "- name: layer4",
-            "  type: tanh",
-            "- name: output.a",
-            "  type: softmax",
-            "  temperature: 0.8",
-            "- name: layer5",
-            "  type: dense",
-            "  inputSize: 2",
-            "  outputSize: 2",
-            "- name: layer6",
-            "  type: tanh",
-            "- name: output.b",
-            "  type: softmax",
-            "  temperature: 0.8",
-            "- name: critic",
-            "  type: dense",
-            "  inputSize: 2",
-            "  outputSize: 1",
-            "inputs:",
-            "  layer1: [input]",
-            "  layer2: [layer1]",
-            "  layer3: [layer2]",
-            "  layer4: [layer3]",
-            "  output.a: [layer4]",
-            "  layer5: [layer2]",
-            "  layer6: [layer5]",
-            "  output.b: [layer6]",
-            "  critic: [layer6]"
-    );
 
-    static TDAgentSingleNN createAgent() throws IOException {
-        JsonNode policySpec = Utils.fromText(NETWORK_YAML);
-        Random random = Nd4j.getRandom();
-        random.setSeed(AGENT_SEED);
-        TDNetwork network = TDNetwork.create(policySpec, Locator.root(), "", Map.of(), random);
+    static TDAgentSingleNN createAgent() {
+        Random random = Nd4j.getRandomFactory().getNewRandomInstance(AGENT_SEED);
+        TDNetwork network = createNetwork(random);
         Map<String, Float> alphas = Map.of(
                 "critic", 1e-3f,
                 "output.a", 3e-3f,
@@ -113,8 +66,35 @@ class TDAgentSingleNNActObsTest {
                 random, null, Integer.MAX_VALUE);
     }
 
+    private static TDNetwork createNetwork(Random random) {
+        List<TDLayer> layers = List.of(
+                new TDDense("layer1", "input", 1e3f, 1),
+                new TDTanh("layer2", "layer1"),
+                new TDDense("layer3", "layer2", 1e3f, 1),
+                new TDTanh("layer4", "layer3"),
+                new TDSoftmax("output.a", "layer4", 0.8f),
+                new TDDense("layer5", "layer2", 1e3f, 1),
+                new TDTanh("layer6", "layer5"),
+                new TDSoftmax("output.b", "layer6", 0.8f),
+                new TDDense("critic", "layer6", 1e3f, 1)
+        );
+        Map<String, Long> sizes = Map.of(
+                "input", 2L,
+                "layer1", 2L,
+                "layer2", 2L,
+                "layer3", 2L,
+                "layer4", 2L,
+                "layer5", 2L,
+                "layer6", 2L,
+                "output.a", 2L,
+                "output.b", 2L,
+                "critic", 1L
+        );
+        return TDNetwork.create(layers, sizes, random);
+    }
+
     @Test
-    void act() throws IOException {
+    void act() {
         try (TDAgentSingleNN agent = createAgent()) {
             INDArray s0 = Nd4j.rand(2);
             Map<String, Signal> state = Map.of(
@@ -135,7 +115,7 @@ class TDAgentSingleNNActObsTest {
     }
 
     @Test
-    void observe() throws IOException {
+    void observe() {
         try (TDAgentSingleNN agent = createAgent()) {
             INDArray s0 = Nd4j.rand(2);
             Map<String, Signal> state = Map.of(

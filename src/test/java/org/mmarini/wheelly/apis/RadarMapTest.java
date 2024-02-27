@@ -131,7 +131,7 @@ class RadarMapTest {
         MapCell[] cells = map.cells();
         for (int i = 0; i < cells.length; i++) {
             MapCell cell = cells[i];
-            if (i >=10 && i < 20) {
+            if (i >= 10 && i < 20) {
                 assertTrue(cell.echogenic());
             } else {
                 assertTrue(cell.unknown());

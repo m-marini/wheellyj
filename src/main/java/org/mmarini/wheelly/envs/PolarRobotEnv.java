@@ -243,7 +243,6 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
         RobotStatus robotStatus = currentStatus.status;
         RadarMap radarMap = currentStatus.radarMap;
         PolarMap polarMap = currentStatus.polarMap;
-        // TODO complex usage
         polarMap = polarMap.update(radarMap, robotStatus.location(), robotStatus.direction(), minRadarDistance, maxRadarDistance);
         currentStatus = currentStatus.setPolarMap(polarMap);
     }

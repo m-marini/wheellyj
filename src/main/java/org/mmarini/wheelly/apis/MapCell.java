@@ -155,7 +155,6 @@ public record MapCell(Point2D location, long echoTime, int echoCounter, long con
         long t0 = signal.timestamp();
         Point2D q = signal.sensorLocation();
         double distance = signal.distance();
-        // TODO
         Tuple2<Point2D, Point2D> interval = Geometry.squareArcInterval(location, gridSize, q,
                 signal.sensorDirection(),
                 receptiveAngle);

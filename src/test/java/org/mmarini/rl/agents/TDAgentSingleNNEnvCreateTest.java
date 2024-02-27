@@ -37,35 +37,33 @@ import java.nio.file.Files;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mmarini.wheelly.TestFunctions.text;
 
 class TDAgentSingleNNEnvCreateTest {
-
-    private static final String YAML = text(
-            "---",
-            "$schema: " + TDAgentSingleNN.SCHEMA_NAME,
-            "class: " + TDAgentSingleNN.class.getName(),
-            "modelPath: models/test",
-            "seed: 1234",
-            "rewardAlpha: 0.001",
-            "alphas:",
-            "  critic: 1e.3",
-            "  output: 1e.3",
-            "lambda: 0.5",
-            "network:",
-            "  output:",
-            "    layers:",
-            "      - type: dense",
-            "        outputSize: 3",
-            "      - type: tanh",
-            "      - type: softmax",
-            "        temperature: 0.8",
-            "  critic:",
-            "    layers:",
-            "      - type: dense",
-            "        outputSize: 1",
-            "      - type: tanh"
-    );
+    private static final String YAML = """
+            ---
+            $schema: https://mmarini.org/wheelly/agent-single-nn-schema-0.1
+            class: org.mmarini.rl.agents.TDAgentSingleNN
+            modelPath: models/test
+            seed: 1234
+            rewardAlpha: 0.001
+            alphas:
+              critic: 1e.3
+              output: 1e.3
+            lambda: 0.5
+            network:
+              output:
+                layers:
+                  - type: dense
+                    outputSize: 3
+                  - type: tanh
+                  - type: softmax
+                    temperature: 0.8
+              critic:
+                layers:
+                  - type: dense
+                    outputSize: 1
+                  - type: tanh
+            """;
     private static final Map<String, SignalSpec> STATE = Map.of(
             "input", new FloatSignalSpec(new long[]{2}, 0, 1)
     );
@@ -112,7 +110,7 @@ class TDAgentSingleNNEnvCreateTest {
         JsonNode spec = Utils.fromText(YAML);
         File path = new File("models/test");
         deleteRecursive(path);
-        TDAgentSingleNN agent = TDAgentSingleNN.create(spec, Locator.root(), MOCK_ENV);
+        TDAgentSingleNN agent = TDAgentSingleNN.fromJson(spec, Locator.root(), MOCK_ENV);
         assertNotNull(agent);
     }
 
@@ -121,11 +119,11 @@ class TDAgentSingleNNEnvCreateTest {
         JsonNode spec = Utils.fromText(YAML);
         File path = new File("models/test");
         deleteRecursive(path);
-        TDAgentSingleNN agent = TDAgentSingleNN.create(spec, Locator.root(), MOCK_ENV);
+        TDAgentSingleNN agent = TDAgentSingleNN.fromJson(spec, Locator.root(), MOCK_ENV);
         assertNotNull(agent);
         agent.save(path);
         JsonNode specLoad = Utils.fromText(YAML);
-        TDAgentSingleNN agent1 = TDAgentSingleNN.create(specLoad, Locator.root(), MOCK_ENV);
+        TDAgentSingleNN agent1 = TDAgentSingleNN.fromJson(specLoad, Locator.root(), MOCK_ENV);
         assertNotNull(agent1);
     }
 }

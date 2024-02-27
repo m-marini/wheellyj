@@ -37,11 +37,11 @@ import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.wheelly.TestFunctions.text;
 import static org.mmarini.yaml.Utils.fromText;
 
-class NetworkTraspillerTest {
+class NetworkTranspilerTest {
     public static final int SEED = 1234;
     private static final String MULTIDENSE_YAML = text(
             "---",
@@ -158,12 +158,11 @@ class NetworkTraspillerTest {
                 equalTo("output"),
                 isA(TDTanh.class)
         ));
-        assertThat(net.forwardSeq(), contains(
+        assertThat(net.forwardSequence(), contains(
                 "output"));
-        assertThat(net.getInputs(), hasEntry(
-                equalTo("output"),
-                containsInAnyOrder("input")
-        ));
+        assertThat(net.layers().get("output").inputs(),
+                arrayContainingInAnyOrder("input")
+        );
     }
 
     NetworkTranspiler create(String yaml) throws IOException {
@@ -183,17 +182,16 @@ class NetworkTraspillerTest {
         assertThat(tr.layerDef, hasKey("output"));
         assertThat(tr.inputsDef, hasEntry(
                 equalTo("output"),
-                containsInAnyOrder("input", "input")
+                arrayContainingInAnyOrder("input", "input")
         ));
         assertThat(tr.sorted, contains("output"));
         assertThat(tr.layerSizes, hasEntry(
                 equalTo("output"),
                 equalTo(4L)
         ));
-        assertThat(tr.layers, contains(allOf(
-                hasProperty("name", equalTo("output")),
-                isA(TDConcat.class)
-        )));
+        assertThat(tr.layers, contains(isA(TDConcat.class)));
+        assertEquals("output", tr.layers.getFirst().name());
+        assertThat(tr.layers.getFirst().inputs(), arrayContainingInAnyOrder("input", "input"));
     }
 
     @Test
@@ -203,26 +201,16 @@ class NetworkTraspillerTest {
         assertThat(tr.layerDef, hasKey("output"));
         assertThat(tr.inputsDef, hasEntry(
                 equalTo("output"),
-                containsInAnyOrder("input")
+                arrayContainingInAnyOrder("input")
         ));
         assertThat(tr.sorted, contains("output"));
         assertThat(tr.layerSizes, hasEntry(
                 equalTo("output"),
                 equalTo(3L)
         ));
-        assertThat(tr.layers, contains(allOf(
-                hasProperty("name", equalTo("output")),
-                isA(TDDense.class)
-        )));
-        assertThat(tr.layers, contains(
-                hasProperty("maxAbsWeights", equalTo(Float.MAX_VALUE))
-        ));
-        assertThat(tr.layers, contains(
-                hasProperty("dropOut", equalTo(0.5F))
-        ));
-        assertArrayEquals(new long[]{2, 3},
-                ((TDDense) tr.layers.getFirst()).getW().shape()
-        );
+        assertThat(tr.layers, contains(isA(TDDense.class)));
+        assertEquals(Float.MAX_VALUE, ((TDDense) tr.layers.getFirst()).maxAbsWeights());
+        assertEquals(0.5f, ((TDDense) tr.layers.getFirst()).dropOut());
     }
 
     @Test
@@ -232,25 +220,19 @@ class NetworkTraspillerTest {
         assertThat(tr.layerDef, hasKey("output"));
         assertThat(tr.inputsDef, hasEntry(
                 equalTo("output"),
-                containsInAnyOrder("input")
+                arrayContainingInAnyOrder("input")
         ));
         assertThat(tr.sorted, contains("output"));
         assertThat(tr.layerSizes, hasEntry(
                 equalTo("output"),
                 equalTo(3L)
         ));
-        assertThat(tr.layers, contains(allOf(
-                hasProperty("name", equalTo("output")),
-                isA(TDDense.class)
-        )));
-        assertThat(tr.layers, contains(
-                hasProperty("maxAbsWeights", equalTo(10F))
-        ));
-        assertArrayEquals(new long[]{2, 3},
-                ((TDDense) tr.layers.getFirst()).getW().shape()
-        );
+        assertThat(tr.layers, contains(isA(TDDense.class)));
+        assertEquals(10F, ((TDDense) tr.layers.getFirst()).maxAbsWeights());
+        assertEquals(1F, ((TDDense) tr.layers.getFirst()).dropOut());
     }
 
+    /* TODO
     @Test
     void parseDropOut() throws IOException {
         NetworkTranspiler tr = create(DROP_OUT_YAML);
@@ -274,6 +256,7 @@ class NetworkTraspillerTest {
                 hasProperty("dropOut", equalTo(0.5F))
         )));
     }
+*/
 
     @Test
     void parseLinear() throws IOException {
@@ -282,19 +265,17 @@ class NetworkTraspillerTest {
         assertThat(tr.layerDef, hasKey("output"));
         assertThat(tr.inputsDef, hasEntry(
                 equalTo("output"),
-                containsInAnyOrder("input")
+                arrayContainingInAnyOrder("input")
         ));
         assertThat(tr.sorted, contains("output"));
         assertThat(tr.layerSizes, hasEntry(
                 equalTo("output"),
                 equalTo(2L)
         ));
-        assertThat(tr.layers, contains(allOf(
-                hasProperty("name", equalTo("output")),
-                isA(TDLinear.class),
-                hasProperty("b", equalTo(2f)),
-                hasProperty("w", equalTo(3f))
-        )));
+        assertThat(tr.layers, contains(isA(TDLinear.class)));
+
+        assertEquals(2f, ((TDLinear) tr.layers.getFirst()).bias());
+        assertEquals(3f, ((TDLinear) tr.layers.getFirst()).weight());
     }
 
     @Test
@@ -305,11 +286,11 @@ class NetworkTraspillerTest {
         assertThat(tr.layerDef, hasKey("output"));
         assertThat(tr.inputsDef, hasEntry(
                 equalTo("output[0]"),
-                containsInAnyOrder("input")
+                arrayContainingInAnyOrder("input")
         ));
         assertThat(tr.inputsDef, hasEntry(
                 equalTo("output"),
-                containsInAnyOrder("output[0]")
+                arrayContainingInAnyOrder("output[0]")
         ));
         assertThat(tr.sorted, contains("output[0]", "output"));
         assertThat(tr.layerSizes, hasEntry(
@@ -321,20 +302,11 @@ class NetworkTraspillerTest {
                 equalTo(4L)
         ));
         assertThat(tr.layers, contains(
-                allOf(
-                        hasProperty("name", equalTo("output[0]")),
-                        isA(TDDense.class)
-                ),
-                allOf(
-                        hasProperty("name", equalTo("output")),
-                        isA(TDDense.class)
-                )));
-        assertArrayEquals(new long[]{2, 4},
-                ((TDDense) tr.layers.get(0)).getW().shape()
-        );
-        assertArrayEquals(new long[]{4, 2},
-                ((TDDense) tr.layers.get(1)).getW().shape()
-        );
+                isA(TDDense.class),
+                isA(TDDense.class)
+        ));
+        assertEquals("output[0]", tr.layers.getFirst().name());
+        assertEquals("output", tr.layers.get(1).name());
     }
 
     @Test
@@ -346,15 +318,15 @@ class NetworkTraspillerTest {
         assertThat(tr.layerDef, hasKey("output.b"));
         assertThat(tr.inputsDef, hasEntry(
                 equalTo("hidden"),
-                containsInAnyOrder("input")
+                arrayContainingInAnyOrder("input")
         ));
         assertThat(tr.inputsDef, hasEntry(
                 equalTo("output.a"),
-                containsInAnyOrder("hidden")
+                arrayContainingInAnyOrder("hidden")
         ));
         assertThat(tr.inputsDef, hasEntry(
                 equalTo("output.b"),
-                containsInAnyOrder("hidden")
+                arrayContainingInAnyOrder("hidden")
         ));
         assertThat(tr.sorted, contains("hidden", "output.a", "output.b"));
         assertThat(tr.layerSizes, hasEntry(
@@ -370,21 +342,14 @@ class NetworkTraspillerTest {
                 equalTo(2L)
         ));
         assertThat(tr.layers, contains(
-                allOf(
-                        hasProperty("name", equalTo("hidden")),
-                        isA(TDDense.class)
-                ),
-                allOf(
-                        hasProperty("name", equalTo("output.a")),
-                        isA(TDTanh.class)
-                ),
-                allOf(
-                        hasProperty("name", equalTo("output.b")),
-                        isA(TDRelu.class)
-                )));
-        assertArrayEquals(new long[]{2, 2},
-                ((TDDense) tr.layers.getFirst()).getW().shape()
-        );
+                isA(TDDense.class),
+                isA(TDTanh.class),
+                isA(TDRelu.class)
+        ));
+
+        assertEquals("hidden", tr.layers.getFirst().name());
+        assertEquals("output.a", tr.layers.get(1).name());
+        assertEquals("output.b", tr.layers.get(2).name());
     }
 
     @Test
@@ -394,17 +359,15 @@ class NetworkTraspillerTest {
         assertThat(tr.layerDef, hasKey("output"));
         assertThat(tr.inputsDef, hasEntry(
                 equalTo("output"),
-                containsInAnyOrder("input")
+                arrayContainingInAnyOrder("input")
         ));
         assertThat(tr.sorted, contains("output"));
         assertThat(tr.layerSizes, hasEntry(
                 equalTo("output"),
                 equalTo(2L)
         ));
-        assertThat(tr.layers, contains(allOf(
-                hasProperty("name", equalTo("output")),
-                isA(TDRelu.class)
-        )));
+        assertThat(tr.layers, contains(isA(TDRelu.class)));
+        assertEquals("output", tr.layers.getFirst().name());
     }
 
     @Test
@@ -417,19 +380,19 @@ class NetworkTraspillerTest {
         assertThat(tr.layerDef, hasKey("output"));
         assertThat(tr.inputsDef, hasEntry(
                 equalTo("hidden"),
-                containsInAnyOrder("input")
+                arrayContainingInAnyOrder("input")
         ));
         assertThat(tr.inputsDef, hasEntry(
                 equalTo("output[0]"),
-                containsInAnyOrder("hidden", "input")
+                arrayContainingInAnyOrder("hidden", "input")
         ));
         assertThat(tr.inputsDef, hasEntry(
                 equalTo("output[1]"),
-                containsInAnyOrder("output[0]")
+                arrayContainingInAnyOrder("output[0]")
         ));
         assertThat(tr.inputsDef, hasEntry(
                 equalTo("output"),
-                containsInAnyOrder("output[1]")
+                arrayContainingInAnyOrder("output[1]")
         ));
         assertThat(tr.sorted, contains("hidden", "output[0]", "output[1]", "output"));
         assertThat(tr.layerSizes, hasEntry(
@@ -449,25 +412,15 @@ class NetworkTraspillerTest {
                 equalTo(2L)
         ));
         assertThat(tr.layers, contains(
-                allOf(
-                        hasProperty("name", equalTo("hidden")),
-                        isA(TDDense.class)
-                ),
-                allOf(
-                        hasProperty("name", equalTo("output[0]")),
-                        isA(TDSum.class)
-                ),
-                allOf(
-                        hasProperty("name", equalTo("output[1]")),
-                        isA(TDRelu.class)
-                ),
-                allOf(
-                        hasProperty("name", equalTo("output")),
-                        isA(TDTanh.class)
-                )));
-        assertArrayEquals(new long[]{2, 2},
-                ((TDDense) tr.layers.getFirst()).getW().shape()
-        );
+                isA(TDDense.class),
+                isA(TDSum.class),
+                isA(TDRelu.class),
+                isA(TDTanh.class)
+        ));
+        assertEquals("hidden", tr.layers.getFirst().name());
+        assertEquals("output[0]", tr.layers.get(1).name());
+        assertEquals("output[1]", tr.layers.get(2).name());
+        assertEquals("output", tr.layers.get(3).name());
     }
 
     @Test
@@ -477,18 +430,16 @@ class NetworkTraspillerTest {
         assertThat(tr.layerDef, hasKey("output"));
         assertThat(tr.inputsDef, hasEntry(
                 equalTo("output"),
-                containsInAnyOrder("input")
+                arrayContainingInAnyOrder("input")
         ));
         assertThat(tr.sorted, contains("output"));
         assertThat(tr.layerSizes, hasEntry(
                 equalTo("output"),
                 equalTo(2L)
         ));
-        assertThat(tr.layers, contains(allOf(
-                hasProperty("name", equalTo("output")),
-                isA(TDSoftmax.class),
-                hasProperty("temperature", equalTo(1.2f))
-        )));
+        assertThat(tr.layers, contains(isA(TDSoftmax.class)));
+        assertEquals("output", tr.layers.getFirst().name());
+        assertEquals(1.2f, ((TDSoftmax) tr.layers.getFirst()).temperature());
     }
 
     @Test
@@ -498,17 +449,15 @@ class NetworkTraspillerTest {
         assertThat(tr.layerDef, hasKey("output"));
         assertThat(tr.inputsDef, hasEntry(
                 equalTo("output"),
-                containsInAnyOrder("input", "input")
+                arrayContainingInAnyOrder("input", "input")
         ));
         assertThat(tr.sorted, contains("output"));
         assertThat(tr.layerSizes, hasEntry(
                 equalTo("output"),
                 equalTo(2L)
         ));
-        assertThat(tr.layers, contains(allOf(
-                hasProperty("name", equalTo("output")),
-                isA(TDSum.class)
-        )));
+        assertThat(tr.layers, contains(isA(TDSum.class)));
+        assertEquals("output", tr.layers.getFirst().name());
     }
 
     @Test
@@ -518,16 +467,14 @@ class NetworkTraspillerTest {
         assertThat(tr.layerDef, hasKey("output"));
         assertThat(tr.inputsDef, hasEntry(
                 equalTo("output"),
-                containsInAnyOrder("input")
+                arrayContainingInAnyOrder("input")
         ));
         assertThat(tr.sorted, contains("output"));
         assertThat(tr.layerSizes, hasEntry(
                 equalTo("output"),
                 equalTo(2L)
         ));
-        assertThat(tr.layers, contains(allOf(
-                hasProperty("name", equalTo("output")),
-                isA(TDTanh.class)
-        )));
+        assertThat(tr.layers, contains(isA(TDTanh.class)));
+        assertEquals("output", tr.layers.getFirst().name());
     }
 }

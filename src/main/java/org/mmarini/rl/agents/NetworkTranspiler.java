@@ -26,7 +26,6 @@
 package org.mmarini.rl.agents;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.Tuple2;
 import org.mmarini.rl.nets.*;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.rng.Random;
@@ -36,33 +35,42 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 
+/**
+ * Creates the network from json definition
+ */
 public class NetworkTranspiler {
-    final HashMap<String, Long> layerSizes;
+    final Map<String, Long> layerSizes;
+    final Map<String, Locator> layerDef;
+    final Map<String, String[]> inputsDef;
     private final JsonNode spec;
     private final Locator locator;
     private final Random random;
-    private final Map<String, Long> stateSizes;
-    Map<String, Locator> layerDef;
-    Map<String, List<String>> inputsDef;
     List<String> sorted;
     List<TDLayer> layers;
 
+    /**
+     * Creates the transpiler
+     *
+     * @param spec       the document
+     * @param locator    the network locator
+     * @param stateSizes the state size (input)
+     * @param random     the randomizer
+     */
     public NetworkTranspiler(JsonNode spec, Locator locator, Map<String, Long> stateSizes, Random random) {
         this.spec = spec;
         this.locator = locator;
         this.random = random;
-        this.stateSizes = stateSizes;
         this.layerDef = new HashMap<>();
         this.inputsDef = new HashMap<>();
-        this.layerSizes = new HashMap<>();
+        this.layerSizes = new HashMap<>(stateSizes);
     }
 
+    /**
+     * Returns the network
+     */
     public TDNetwork build() {
         parse();
-        Map<String, TDLayer> layerMap = layers.stream()
-                .map(l -> Tuple2.of(l.getName(), l))
-                .collect(Tuple2.toMap());
-        return new TDNetwork(layerMap, this.sorted, this.inputsDef);
+        return TDNetwork.create(layers, layerSizes, random);
     }
 
     /**
@@ -71,13 +79,10 @@ public class NetworkTranspiler {
      * @param id the key
      */
     private long getSize(String id) {
-        if (layerSizes.containsKey(id)) {
-            return layerSizes.get(id);
-        } else if (stateSizes.containsKey(id)) {
-            return stateSizes.get(id);
-        } else {
+        if (!layerSizes.containsKey(id)) {
             throw new IllegalArgumentException(format("Undefined signal \"%s\"", id));
         }
+        return layerSizes.get(id);
     }
 
     /**
@@ -93,50 +98,60 @@ public class NetworkTranspiler {
     private TDLayer parseLayer(String id) {
         Locator locator = layerDef.get(id);
         String type = locator.path("type").getNode(spec).asText();
-        long[] inSizes = inputsDef.get(id).stream()
+        String[] inputs = inputsDef.get(id);
+        long[] inSizes = Arrays.stream(inputs)
                 .mapToLong(this::getSize)
                 .toArray();
 
-        switch (type) {
-            case "dense": {
+        return switch (type) {
+            case "dense" -> {
                 long outSize = locator.path("outputSize").getNode(spec).asLong();
                 float maxAbsWeights = (float) locator.path("maxAbsWeights").getNode(spec).asDouble(Float.MAX_VALUE);
                 float dropOut = (float) locator.path("dropOut").getNode(spec).asDouble(1);
                 layerSizes.put(id, outSize);
-                return TDDense.create(id, inSizes[0], outSize, maxAbsWeights, dropOut, random);
+                yield new TDDense(id, inputs[0], maxAbsWeights, dropOut);
             }
-            case "relu":
+            case "relu" -> {
                 layerSizes.put(id, inSizes[0]);
-                return new TDRelu(id);
-            case "tanh":
+                yield new TDRelu(id, inputs[0]);
+            }
+            case "tanh" -> {
                 layerSizes.put(id, inSizes[0]);
-                return new TDTanh(id);
-            case "dropout": {
+                yield new TDTanh(id, inputs[0]);
+            }
+            /*
+            case "dropout" -> {
                 layerSizes.put(id, inSizes[0]);
                 float dropOut = (float) locator.path("dropOut").getNode(spec).asDouble(1);
-                return new TDDropOut(id, dropOut);
+                yield new TDDropOut(id, dropOut);
             }
-            case "softmax":
+
+             */
+            case "softmax" -> {
                 layerSizes.put(id, inSizes[0]);
-                return new TDSoftmax(id, (float) locator.path("temperature").getNode(spec).asDouble());
-            case "linear":
+                yield new TDSoftmax(id, inputs[0], (float) locator.path("temperature").getNode(spec).asDouble());
+            }
+            case "linear" -> {
                 layerSizes.put(id, inSizes[0]);
                 float b = (float) locator.path("b").getNode(spec).asDouble();
                 float w = (float) locator.path("w").getNode(spec).asDouble();
-                return new TDLinear(id, b, w);
-            case "sum":
+                yield new TDLinear(id, inputs[0], b, w);
+            }
+            case "sum" -> {
                 layerSizes.put(id, inSizes[0]);
-                return new TDSum(id);
-            case "concat":
+                yield new TDSum(id, inputs);
+            }
+            case "concat" -> {
                 layerSizes.put(id, Arrays.stream(inSizes).sum());
-                return new TDConcat(id);
-            default:
-                throw new IllegalArgumentException(format("type \"%s\" unrecognized", type));
-        }
+                yield new TDConcat(id, inputs);
+            }
+            default -> throw new IllegalArgumentException(format("type \"%s\" unrecognized", type));
+        };
     }
 
     /**
-     * Parse the layer sequence definition
+     * Parses the layer sequence definition
+     * Produces layerDef (layer locator by name) and inputsDef (inputs names by layer name)
      *
      * @param name    the name of layer sequence
      * @param locator the layer sequence locator
@@ -144,10 +159,10 @@ public class NetworkTranspiler {
     private void parseLayerSeq(String name, Locator locator) {
         String input = locator.path("input").getNode(spec).asText(null);
         String inputsType = locator.path("inputs").path("type").getNode(spec).asText(null);
-        List<String> inputs = locator.path("inputs").path("inputs")
+        String[] inputs = locator.path("inputs").path("inputs")
                 .elements(spec)
                 .map(l -> l.getNode(spec).asText())
-                .collect(Collectors.toList());
+                .toArray(String[]::new);
         Locator layerLoc = locator.path("layers");
         int n = layerLoc.size(spec);
         int offset = inputsType != null ? 1 : 0;
@@ -167,11 +182,11 @@ public class NetworkTranspiler {
             for (int i = 0; i < n - 1; i++) {
                 String lName = name + "[" + (i + offset) + "]";
                 layerDef.put(lName, layerLoc.path(String.valueOf(i)));
-                inputsDef.put(lName, List.of(inputName));
+                inputsDef.put(lName, new String[]{inputName});
                 inputName = lName;
             }
             layerDef.put(name, layerLoc.path(String.valueOf(n - 1)));
-            inputsDef.put(name, List.of(inputName));
+            inputsDef.put(name, new String[]{inputName});
         } else if (inputsType != null) {
             layerDef.put(name, locator.path("inputs"));
             inputsDef.put(name, inputs);
@@ -181,18 +196,23 @@ public class NetworkTranspiler {
     }
 
     /**
-     * Parse the network definition
+     * Parses the network definition
      */
     private void parseNetwork() {
+        // Parses the layer sequence
         locator.propertyNames(spec)
                 .forEachOrdered(t -> parseLayerSeq(t._1, t._2));
-        // Sort for size definition
+        // Sorts the layer in forward order
         sortLayer();
+        // Parse the layers definition in forward order
         layers = sorted.stream()
                 .map(this::parseLayer)
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Produce the sorted layer names (forward order)
+     */
     void sortLayer() {
         this.sorted = new ArrayList<>();
         for (String id : inputsDef.keySet()) {
@@ -200,6 +220,13 @@ public class NetworkTranspiler {
         }
     }
 
+    /**
+     * Sorts the layer names by forward parse
+     *
+     * @param sorted the sorted names
+     * @param key    the layer
+     * @param fringe the fringe names
+     */
     private void sortLayer(List<String> sorted, String key, Set<String> fringe) {
         if (sorted.contains(key)) {
             fringe.remove(key);

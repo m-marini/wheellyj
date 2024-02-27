@@ -28,7 +28,6 @@
 
 package org.mmarini.rl.agents;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -48,27 +47,7 @@ class BinArrayFileMapTest {
 
     static {
         Nd4j.zeros(1, 1);
-    }
-
-    @BeforeEach
-    void setUp() {
-        /*
-        INDArray data = Nd4j.arange(0, 12).reshape(6, 2).castTo(DataType.FLOAT);
-        Stream.of("src/test/resources/f/data.bin",
-                        "src/test/resources/f/a/data.bin",
-                        "src/test/resources/f/b/data.bin")
-                .map(File::new)
-                .map(BinArrayFile::new)
-                .forEach(file -> {
-                    try {
-                        file.file().delete();
-                        file.write(data);
-                        file.close();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
-         */
+        logger.atDebug().log("OK");
     }
 
     @Test

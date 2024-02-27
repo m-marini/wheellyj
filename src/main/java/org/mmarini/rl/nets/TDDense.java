@@ -29,16 +29,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.mmarini.Tuple2;
 import org.mmarini.yaml.Locator;
-import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.ops.transforms.Transforms;
 
 import java.util.Arrays;
-import java.util.Map;
 import java.util.function.Consumer;
 
 import static java.lang.String.format;
@@ -48,45 +45,23 @@ import static java.util.Objects.requireNonNull;
  * The dense layer performs a linear transformation between the input and outputs.
  */
 public class TDDense extends TDLayer {
-
     /**
-     * Returns the layer from spec
+     * Returns the layer from json specification
      *
-     * @param root    the document
-     * @param locator the layer spec locator
-     * @param prefix  the prefix of data to load
-     * @param data    the data of restoring state
-     * @param random  the random number generator
+     * @param root    the json document
+     * @param locator the layer locator
      */
-    public static TDDense create(JsonNode root, Locator locator, String prefix, Map<String, INDArray> data, Random random) {
+    public static TDDense fromJson(JsonNode root, Locator locator) {
         String name = locator.path("name").getNode(root).asText();
-        int inpSize = locator.path("inputSize").getNode(root).asInt();
-        int outSize = locator.path("outputSize").getNode(root).asInt();
-        float maxAbsWeights = (float) locator.path("maxAbsWeights").getNode(root).asDouble(Float.MAX_VALUE);
-        float dropOut = (float) locator.path("dropOut").getNode(root).asDouble(1);
-        INDArray eb = Nd4j.zeros(1, outSize);
-        INDArray ew = Nd4j.zeros(inpSize, outSize);
-        String baseDataId = prefix + "." + name;
-        INDArray b = data.getOrDefault(baseDataId + ".b", Nd4j.zeros(1, outSize));
-        INDArray w = data.getOrDefault(baseDataId + ".w",
-                // Xavier initialization
-                random.nextGaussian(new int[]{inpSize, outSize}).divi((inpSize + outSize)));
-        return new TDDense(name, eb, ew, b, w, maxAbsWeights, dropOut);
+        String input = locator.path("inputs").elements(root)
+                .findFirst()
+                .map(l -> l.getNode(root).asText())
+                .orElseThrow();
+        return new TDDense(name, input,
+                (float) locator.path("maxAbsWeights").getNode(root).asDouble(),
+                (float) locator.path("dropOut").getNode(root).asDouble());
     }
 
-    public static TDDense create(String id, long inpSize, long outSize, float maxAbsWeights, float dropOut, Random random) {
-        INDArray eb = Nd4j.zeros(1, outSize);
-        INDArray ew = Nd4j.zeros(inpSize, outSize);
-        INDArray b = Nd4j.zeros(1, outSize);
-        // Xavier initialization
-        INDArray w = random.nextGaussian(new long[]{inpSize, outSize}).divi((inpSize + outSize));
-        return new TDDense(id, eb, ew, b, w, maxAbsWeights, dropOut);
-    }
-
-    private final INDArray eb;
-    private final INDArray ew;
-    private final INDArray b;
-    private final INDArray w;
     private final float maxAbsWeights;
     private final float dropOut;
 
@@ -94,129 +69,189 @@ public class TDDense extends TDLayer {
      * Creates a dense layer
      *
      * @param name          the name of layer
-     * @param eb            the eligible trace vector of bias
-     * @param ew            the eligible trace vector of weights
-     * @param b             the bias vector
-     * @param w             the weights matrix
+     * @param input         the input layer name
      * @param maxAbsWeights maximum absolute weight value
      * @param dropOut       the drop out value (retention probability)
      */
-    public TDDense(String name, INDArray eb, INDArray ew, INDArray b, INDArray w, float maxAbsWeights, float dropOut) {
-        super(name);
-        this.eb = requireNonNull(eb);
-        this.ew = requireNonNull(ew);
-        this.b = requireNonNull(b);
-        this.w = requireNonNull(w);
+    public TDDense(String name, String input,
+                   float maxAbsWeights, float dropOut) {
+        super(name, requireNonNull(input));
         this.maxAbsWeights = maxAbsWeights;
         this.dropOut = dropOut;
-        if (!(eb.shape().length == 2)) {
-            throw new IllegalArgumentException(format("eb rank should be 2 (%d)", eb.shape().length));
-        }
-        if (!(eb.shape()[0] == 1)) {
-            throw new IllegalArgumentException(format("eb shape should be [1, n] (%s)", Arrays.toString(eb.shape())));
-        }
-        if (!(ew.shape().length == 2)) {
-            throw new IllegalArgumentException(format("ew rank should be 2 (%d)", ew.shape().length));
-        }
-        if (!(ew.shape()[1] == eb.shape()[1])) {
-            throw new IllegalArgumentException(format("ew should be [n, %d] (%s)",
-                    eb.shape()[1],
-                    Arrays.toString(ew.shape())));
-        }
-        if (!(b.equalShapes(eb))) {
-            throw new IllegalArgumentException(format("b shape should be equals to eb shape (%s) != (%s)",
-                    Arrays.toString(b.shape()),
-                    Arrays.toString(eb.shape())));
-        }
-        if (!(w.equalShapes(ew))) {
-            throw new IllegalArgumentException(format("w shape should be equals to ew shape (%s) != (%s)",
-                    Arrays.toString(w.shape()),
-                    Arrays.toString(ew.shape())));
-        }
     }
 
-    @Override
-    public INDArray forward(INDArray[] inputs, TDNetwork net) {
-        return inputs[0].mmul(w).addi(b);
-    }
-
-    public INDArray getB() {
-        return b;
-    }
-
-    @Override
-    public float getDropOut() {
+    /**
+     * Returns the drop out parameter (1 => keep all node)
+     */
+    public float dropOut() {
         return dropOut;
     }
 
-    public INDArray getEb() {
-        return eb;
+    @Override
+    public TDNetworkState forward(TDNetworkState state, boolean training) {
+        INDArray inputs = state.getValues(inputs()[0]);
+        INDArray w = state.getWeights(name);
+        INDArray b = state.getBias(name);
+        if (training && dropOut < 1) {
+            INDArray mask = Nd4j.rand(state.random(), inputs.shape()).lt(dropOut);
+            INDArray maskedInput = inputs.mul(mask).divi(dropOut);
+            INDArray outputs = maskedInput.mmul(w).addi(b);
+            return state.putValues(name, outputs)
+                    .putMask(name, mask);
+        } else {
+            INDArray outputs = inputs.mmul(w).addi(b);
+            return state.putValues(name, outputs);
+        }
     }
 
-    public INDArray getEw() {
-        return ew;
+    @Override
+    public TDNetworkState initParameters(TDNetworkState state) {
+        long inputSize = state.getSize(inputs[0]);
+        long outputSize = state.getSize(name);
+        INDArray bias = Nd4j.zeros(1, outputSize);
+        // Xavier initialization
+        INDArray weights = state.random()
+                .nextGaussian(new long[]{inputSize, outputSize})
+                .divi((inputSize + outputSize));
+        return state.putBias(name, bias)
+                .putWeights(name, weights);
+    }
+
+    @Override
+    public TDNetworkState initVariables(TDNetworkState state) {
+        long inputSize = state.getSize(inputs[0]);
+        long outputSize = state.getSize(name);
+        INDArray traceBias = Nd4j.zeros(1, outputSize);
+        INDArray traceWeights = Nd4j.zeros(inputSize, outputSize);
+        return state.putBiasTrace(name, traceBias).
+                putWeightsTrace(name, traceWeights);
     }
 
     /**
      * Returns the max absolute weights
      */
-    public float getMaxAbsWeights() {
+    public float maxAbsWeights() {
         return maxAbsWeights;
     }
 
     @Override
-    public JsonNode getSpec() {
-        ObjectNode node = Utils.objectMapper.createObjectNode();
-        node.put("name", getName());
+    public ObjectNode spec() {
+        ObjectNode node = super.spec();
         node.put("type", "dense");
-        node.put("inputSize", w.shape()[0]);
-        node.put("outputSize", w.shape()[1]);
-        node.put("maxAbsWeight", maxAbsWeights);
+        node.put("maxAbsWeights", maxAbsWeights);
         node.put("dropOut", this.dropOut);
         return node;
     }
 
-    public INDArray getW() {
-        return w;
-    }
-
     @Override
-    public Map<String, INDArray> props(String prefix) {
-        return Map.of(
-                prefix + "." + getName() + ".b", b,
-                prefix + "." + getName() + ".w", w);
-    }
-
-    @Override
-    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
+    public TDNetworkState train(TDNetworkState state, INDArray delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
         // gradIn = grad * w'
-        INDArray gradIn = grad.mmul(w.transpose());
+        INDArray grad = state.getGradients(name);
+        INDArray w = state.getWeights(name);
+        INDArray b = state.getBias(name);
+        INDArray ew = state.getWeightsTrace(name);
+        INDArray eb = state.getBiasTrace(name);
+        INDArray output = state.getValues(name);
+        INDArray inputs = state.getValues(inputs()[0]);
 
-        for (long i = 0; i < output.size(0); i++) {
-            // Single sample (on line training)
-            // eb = eb * lambda + grad;
-            INDArrayIndex index = NDArrayIndex.indices(i);
-            INDArray gradi = grad.get(index);
-            eb.muli(lambda).addi(gradi);
+        if (dropOut < 1) {
+            INDArray mask = state.getMask(name);
+            INDArray maskInp = inputs.mul(mask).divi(dropOut);
+            INDArray gradIn = grad.mmul(w.transpose()).divi(dropOut);
+            for (long i = 0; i < output.size(0); i++) {
+                // Single sample (on line training)
+                // eb = eb * lambda + grad;
+                INDArrayIndex index = NDArrayIndex.indices(i);
+                INDArray gradi = grad.get(index);
+                eb.muli(lambda).addi(gradi.div(dropOut));
 
-            INDArray bgrad = gradi.broadcast(w.shape());
-            INDArray bin = inputs[0].get(index).transpose().broadcast(w.shape());
-            INDArray grad_dw = bin.mul(bgrad);
-            ew.muli(lambda).addi(grad_dw);
+                INDArray bgrad = gradi.broadcast(w.shape());
+                INDArray bin = maskInp.get(index).transpose().broadcast(w.shape());
+                INDArray grad_dw = bin.mul(bgrad);
+                ew.muli(lambda).addi(grad_dw);
 
-            INDArray deltai = delta.get(index);
-            INDArray db = eb.mul(deltai);
-            INDArray dw = ew.mul(deltai);
+                INDArray deltai = delta.get(index);
+                INDArray db = eb.mul(deltai);
+                INDArray dw = ew.mul(deltai);
 
-            b.addi(db);
-            w.addi(dw);
-            w.assign(Transforms.min(Transforms.max(w, -maxAbsWeights), maxAbsWeights));
+                b.addi(db);
+                w.addi(dw);
+                // Limits the weights
+                w.assign(Transforms.min(Transforms.max(w, -maxAbsWeights), maxAbsWeights));
 
-            if (kpiCallback != null) {
-                kpiCallback.accept(Tuple2.of(format("%s_db", getName()), db));
-                kpiCallback.accept(Tuple2.of(format("%s_dw", getName()), dw));
+                if (kpiCallback != null) {
+                    kpiCallback.accept(Tuple2.of(format("%s_db", name()), db));
+                    kpiCallback.accept(Tuple2.of(format("%s_dw", name()), dw));
+                }
             }
+            return state.putWeights(name, w).
+                    putBias(name, b).
+                    putWeightsTrace(name, ew).
+                    putBiasTrace(name, eb).
+                    addGradients(inputs()[0], gradIn);
+        } else {
+            INDArray gradIn = grad.mmul(w.transpose());
+            for (long i = 0; i < output.size(0); i++) {
+                // Single sample (on line training)
+                // eb = eb * lambda + grad;
+                INDArrayIndex index = NDArrayIndex.indices(i);
+                INDArray gradi = grad.get(index);
+                eb.muli(lambda).addi(gradi);
+
+                INDArray bgrad = gradi.broadcast(w.shape());
+                INDArray bin = inputs.get(index).transpose().broadcast(w.shape());
+                INDArray grad_dw = bin.mul(bgrad);
+                ew.muli(lambda).addi(grad_dw);
+
+                INDArray deltai = delta.get(index);
+                INDArray db = eb.mul(deltai);
+                INDArray dw = ew.mul(deltai);
+
+                b.addi(db);
+                w.addi(dw);
+                // Limits the weights
+                w.assign(Transforms.min(Transforms.max(w, -maxAbsWeights), maxAbsWeights));
+
+                if (kpiCallback != null) {
+                    kpiCallback.accept(Tuple2.of(format("%s_db", name()), db));
+                    kpiCallback.accept(Tuple2.of(format("%s_dw", name()), dw));
+                }
+            }
+            return state.putWeights(name, w).
+                    putBias(name, b).
+                    putWeightsTrace(name, ew).
+                    putBiasTrace(name, eb).
+                    addGradients(inputs()[0], gradIn);
         }
-        return new INDArray[]{gradIn};
+    }
+
+    @Override
+    public void validate(TDNetworkState state) {
+        long inputSize = state.getSize(inputs[0]);
+        long outputSize = state.getSize(name);
+        INDArray w = state.getWeights(name);
+        if (w == null) {
+            throw new IllegalArgumentException(format("Missing weights for layer [%s]", name));
+        }
+        long[] wShape = w.shape();
+        if (!Arrays.equals(wShape, new long[]{inputSize, outputSize})) {
+            throw new IllegalArgumentException(format("Weights of layer [%s] must have shape %d x %d (%s)",
+                    name,
+                    inputSize, outputSize,
+                    Arrays.toString(wShape)
+            ));
+        }
+        INDArray b = state.getBias(name);
+        if (b == null) {
+            throw new IllegalArgumentException(format("Missing bias for layer [%s]", name));
+        }
+        long[] bShape = b.shape();
+        if (!Arrays.equals(bShape, new long[]{1, outputSize})) {
+            throw new IllegalArgumentException(format("Bias of layer [%s] must have shape 1 x %d (%s)",
+                    name,
+                    outputSize,
+                    Arrays.toString(bShape)
+            ));
+        }
     }
 }

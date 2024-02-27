@@ -7,11 +7,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Fixed
+
+- Issue [#77](https://github.com/m-marini/wheellyj/issues/77): Fixed drop out regularization
+
+
 ## [0.14.0] 2024-02-25
 
 ### Added
 
-- Issue [#334](https://github.com/m-marini/wheellyj/issues/334): Add batch training
 - Issue [#337](https://github.com/m-marini/wheellyj/issues/337): Add agent with single nn
 - Issue [#346](https://github.com/m-marini/wheellyj/issues/346):  Datavec usage to train network
 - Issue [#341](https://github.com/m-marini/wheellyj/issues/341): Add batch training performance evaluation

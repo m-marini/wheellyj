@@ -126,7 +126,7 @@ class AgentSingleNNTranspilerTest {
 
         assertEquals(0.1f, agent.rewardAlpha());
 
-        assertThat(agent.network().forwardSeq(), contains(
+        assertThat(agent.network().forwardSequence(), contains(
                 "layer0[0]",
                 "layer0[1]",
                 "layer0",
@@ -153,12 +153,12 @@ class AgentSingleNNTranspilerTest {
                 equalTo("critic"),
                 isA(TDDense.class)));
 
-        assertArrayEquals(new long[]{2, 3},
-                ((TDDense) agent.network().layers().get("layer0[0]")).getW().shape());
-        assertEquals(0.8f,
-                ((TDSoftmax) agent.network().layers().get("output")).getTemperature());
+        assertEquals(2, agent.network().size("input"));
+        assertEquals(3, agent.network().size("layer0[0]"));
+        assertEquals(0.8f, ((TDSoftmax) agent.network().layers().get("output")).temperature());
+        assertEquals(1, agent.network().size("critic"));
         assertArrayEquals(new long[]{3, 1},
-                ((TDDense) agent.network().layers().get("critic")).getW().shape());
+                agent.network().state().getWeights("critic").shape());
     }
 
     @Test
@@ -180,7 +180,7 @@ class AgentSingleNNTranspilerTest {
         assertEquals(1e-3f, agent.alphas().get("critic"));
         assertEquals(3e-3f, agent.alphas().get("output"));
 
-        assertThat(agent.network().forwardSeq(), contains(
+        assertThat(agent.network().forwardSequence(), contains(
                 "layer0[0]",
                 "layer0[1]",
                 "layer0",
@@ -205,12 +205,13 @@ class AgentSingleNNTranspilerTest {
                 equalTo("critic"),
                 isA(TDDense.class)));
 
-        assertArrayEquals(new long[]{3 * 3 * 8, 3},
-                ((TDDense) agent.network().layers().get("layer0[0]")).getW().shape());
+        assertEquals(3 * 3 * 8, agent.network().size("tiles"));
+        assertEquals(3, agent.network().size("layer0[0]"));
         assertEquals(0.8f,
-                ((TDSoftmax) agent.network().layers().get("output")).getTemperature());
+                ((TDSoftmax) agent.network().layers().get("output")).temperature());
+        assertEquals(1, agent.network().size("critic"));
 
         assertArrayEquals(new long[]{3, 1},
-                ((TDDense) agent.network().layers().get("critic")).getW().shape());
+                agent.network().state().getWeights("critic").shape());
     }
 }

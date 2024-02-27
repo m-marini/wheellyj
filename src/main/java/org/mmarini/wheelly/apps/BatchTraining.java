@@ -144,7 +144,7 @@ public class BatchTraining {
         File file = new File(pathFile, "agent.bin");
         Map<String, INDArray> props = Serde.deserialize(file);
         Locator locator = Locator.root();
-        return TDNetwork.create(spec, locator.path("network"), "network", props, random);
+        return TDNetwork.fromJson(spec, locator.path("network"), props, random);
     }
 
     /**
@@ -163,7 +163,7 @@ public class BatchTraining {
         }
 
         logger.atInfo().log("Saving network ...");
-        Map<String, INDArray> props = new HashMap<>(network.getProps("network"));
+        Map<String, INDArray> props = new HashMap<>(network.parameters());
         props.put("avgReward", Nd4j.createFromArray(trainer.avgReward()));
         try {
             Serde.serizalize(file, props);
@@ -211,7 +211,6 @@ public class BatchTraining {
                     numTrainIterations1,
                     numTrainIterations2,
                     (int) batchSize,
-                    random,
                     this::saveNetwork
             );
 
