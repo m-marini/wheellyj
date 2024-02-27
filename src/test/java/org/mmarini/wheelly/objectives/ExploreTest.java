@@ -55,7 +55,6 @@ class ExploreTest {
         RadarMap radarMap = RadarMap.create(new Point2D.Double(), 10, 10, 0.2, MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, Complex.fromDeg(15))
                 .map(IntStream.range(0, knownCount), cell -> cell.addAnechoic(timestamp));
         RobotStatus status = RobotStatus.create(x -> 12d)
-                // TODO use complex
                 .setSensorDirection(Complex.fromDeg(sensorDir))
                 .setSpeeds(leftSpeed * MAX_VELOCITY / RobotStatus.DISTANCE_PER_PULSE,
                         rightSpeed * MAX_VELOCITY / RobotStatus.DISTANCE_PER_PULSE)

@@ -1,22 +1,25 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/network-schema
+$id: https://mmarini.org/wheelly/network-schema-0.2
 title: Network
 type: object
 properties:
+  $schema:
+    type: string
+    const: https://mmarini.org/wheelly/network-schema-0.2
   layers:
     type: array
     items:
       $ref: "#/$defs/Layer"
-  inputs:
+  sizes:
     type: object
     additionalProperties:
-      type: array
-      items:
-        type: string
+      multipleOf: 1
+      minimum: 1
 required:
+  - $schema
   - layers
-  - inputs
+  - sizes
 $defs:
   Layer:
     anyOf:
@@ -24,7 +27,8 @@ $defs:
       - $ref: "#/$defs/Linear"
       - $ref: "#/$defs/Softmax"
       - $ref: "#/$defs/Dropout"
-      - $ref: "#/$defs/Others"
+      - $ref: "#/$defs/Activation"
+      - $ref: "#/$defs/Merger"
   Dense:
     type: object
     properties:
@@ -32,22 +36,23 @@ $defs:
         const: dense
       name:
         minLength: 1
-      inputSize:
-        multipleOf: 1
-        minimum: 1
-      outputSize:
-        multipleOf: 1
-        minimum: 1
       maxAbsWeights:
         exclusiveMinimum: 0
       dropOut:
         exclusiveMinimum: 0
         maximum: 1
+      inputs:
+        type: array
+        minItems: 1
+        maxItems: 1
+        items:
+          type: string
     required:
       - type
       - name
-      - inputSize
-      - outputSize
+      - inputs
+      - maxAbsWeights
+      - dropOut
   Linear:
     type: object
     properties:
@@ -59,11 +64,18 @@ $defs:
         type: number
       w:
         type: number
+      inputs:
+        type: array
+        minItems: 1
+        maxItems: 1
+        items:
+          type: string
     required:
       - type
       - name
       - b
       - w
+      - inputs
   Softmax:
     type: object
     properties:
@@ -73,10 +85,17 @@ $defs:
         minLength: 1
       temperature:
         exclusiveMinimum: 0
+      inputs:
+        type: array
+        minItems: 1
+        maxItems: 1
+        items:
+          type: string
     required:
       - type
       - name
       - temperature
+      - inputs
   Dropout:
     type: object
     properties:
@@ -87,11 +106,18 @@ $defs:
       dropOut:
         exclusiveMinimum: 0
         maximum: 1
+      inputs:
+        type: array
+        minItems: 1
+        maxItems: 1
+        items:
+          type: string
     required:
       - type
       - name
       - dropOut
-  Others:
+      - inputs
+  Activation:
     type: object
     properties:
       type:
@@ -102,6 +128,31 @@ $defs:
           - concat
       name:
         minLength: 1
+      inputs:
+        type: array
+        minItems: 1
+        maxItems: 1
+        items:
+          type: string
     required:
       - type
       - name
+      - inputs
+  Merger:
+    type: object
+    properties:
+      type:
+        enum:
+          - sum
+          - concat
+      name:
+        minLength: 1
+      inputs:
+        minItems: 1
+        type: array
+        items:
+          type: string
+    required:
+      - type
+      - name
+      - inputs

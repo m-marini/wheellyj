@@ -26,6 +26,7 @@
 package org.mmarini.rl.nets;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -41,12 +42,9 @@ import java.util.stream.Stream;
 
 import static java.lang.Math.exp;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.arrayWithSize;
-import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.ArgumentsGenerator.*;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
-import static org.mmarini.wheelly.TestFunctions.text;
 
 class TDSoftmaxTest {
 
@@ -65,16 +63,17 @@ class TDSoftmaxTest {
 
     @Test
     void create() throws IOException {
-        String yaml = text(
-                "---",
-                "name: name",
-                "type: softmax",
-                "temperature: 0.3"
-        );
+        String yaml = """
+                ---
+                name: name
+                type: softmax
+                inputs: [input]
+                temperature: 0.3
+                """;
         JsonNode root = Utils.fromText(yaml);
         Locator locator = Locator.root();
-        TDSoftmax layer = TDSoftmax.create(root, locator);
-        assertEquals(0.3f, layer.getTemperature());
+        TDSoftmax layer = TDSoftmax.fromJson(root, locator);
+        assertEquals(0.3f, layer.temperature());
     }
 
     @ParameterizedTest
@@ -83,12 +82,15 @@ class TDSoftmaxTest {
                  float temperature,
                  INDArray grad) {
         // Given the layer
-        TDSoftmax layer = new TDSoftmax("name", temperature);
+        TDSoftmax layer = new TDSoftmax("name", "input", temperature);
+        TDNetworkState state = TDNetworkStateImpl.create()
+                .putValues("input", inputs);
 
-        // When formward propagate
-        INDArray out = layer.forward(new INDArray[]{inputs}, null);
+        // When forward propagate
+        TDNetworkState result = layer.forward(state);
 
         // Then output must be ...
+        assertNotNull(result);
         float in00 = inputs.getFloat(0, 0);
         float in01 = inputs.getFloat(0, 1);
         float in02 = inputs.getFloat(0, 2);
@@ -109,7 +111,7 @@ class TDSoftmaxTest {
         float out10 = (float) (ez10 / ez1);
         float out11 = (float) (ez11 / ez1);
         float out12 = (float) (ez12 / ez1);
-        assertThat(out, matrixCloseTo(new float[][]{
+        assertThat(result.getValues("name"), matrixCloseTo(new float[][]{
                 {out00, out01, out02},
                 {out10, out11, out12}
         }, EPSILON));
@@ -120,11 +122,14 @@ class TDSoftmaxTest {
     void spec(INDArray inputs,
               float temperature,
               INDArray grad) {
-        TDSoftmax layer = new TDSoftmax("name", temperature);
-        JsonNode node = layer.getSpec();
-        assertThat(node.path("name").asText(), equalTo("name"));
-        assertThat(node.path("type").asText(), equalTo("softmax"));
-        assertThat((float) (node.path("temperature").asDouble()), equalTo(temperature));
+        TDSoftmax layer = new TDSoftmax("name", "input", temperature);
+        ObjectNode node = layer.spec();
+        assertEquals("name", node.path("name").asText());
+        assertEquals("softmax", node.path("type").asText());
+        assertTrue(node.path("inputs").isArray());
+        assertEquals(1, node.path("inputs").size());
+        assertEquals("input", node.path("inputs").path(0).asText());
+        assertEquals(temperature, (float) node.path("temperature").asDouble());
     }
 
     @ParameterizedTest
@@ -133,14 +138,17 @@ class TDSoftmaxTest {
                float temperature,
                INDArray grad) {
         // Given the layer
-        TDSoftmax layer = new TDSoftmax("name", temperature);
+        TDSoftmax layer = new TDSoftmax("name", "input", temperature);
+
+        TDNetworkState state = TDNetworkStateImpl.create()
+                .putValues("input", inputs);
+        state = layer.forward(state, true).addGradients("name", grad);
 
         // When train
-        INDArray[] in = new INDArray[]{inputs};
-        INDArray out = layer.forward(in, null);
-        INDArray[] post_grads = layer.train(in, out, grad, Nd4j.scalar(1), 0, null);
+        TDNetworkState result = layer.train(state, null, 0, null);
 
         // Then post grads must be ...
+        assertNotNull(result);
         float in00 = inputs.getFloat(0, 0);
         float in01 = inputs.getFloat(0, 1);
         float in02 = inputs.getFloat(0, 2);
@@ -177,8 +185,7 @@ class TDSoftmaxTest {
         float post_grad11 = (-grad10 * pi10 * pi11 + grad11 * pi11 * (1 - pi11) - grad12 * pi12 * pi11) / temperature;
         float post_grad12 = (-grad10 * pi10 * pi12 - grad11 * pi11 * pi12 + grad12 * pi12 * (1 - pi12)) / temperature;
 
-        assertThat(post_grads, arrayWithSize(1));
-        assertThat(post_grads[0], matrixCloseTo(new float[][]{
+        assertThat(result.getGradients("input"), matrixCloseTo(new float[][]{
                 {post_grad00, post_grad01, post_grad02},
                 {post_grad10, post_grad11, post_grad12}
         }, EPSILON));

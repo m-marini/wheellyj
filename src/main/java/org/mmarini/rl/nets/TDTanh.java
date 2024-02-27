@@ -28,43 +28,62 @@ package org.mmarini.rl.nets;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.mmarini.Tuple2;
-import org.mmarini.yaml.Utils;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.ops.transforms.Transforms;
 
 import java.util.function.Consumer;
 
+import static java.util.Objects.requireNonNull;
+
 /**
- * The dense layer performs a linear transformation between the input and outputs.
+ * Applys a TANH function activation to the inputs
  */
 public class TDTanh extends TDLayer {
+    /**
+     * Creates the layer from json spec
+     *
+     * @param root    the json document
+     * @param locator the layer locator
+     */
+    public static TDTanh fromJson(JsonNode root, Locator locator) {
+        String name = locator.path("name").getNode(root).asText();
+        String input = locator.path("inputs").elements(root)
+                .findFirst()
+                .map(l -> l.getNode(root).asText())
+                .orElseThrow();
+        return new TDTanh(name, input);
+    }
 
     /**
-     * Creates a relu layer
+     * Creates the layer
      *
-     * @param name the name of layer
+     * @param name   the layer name
+     * @param inputs the inputs
      */
-    public TDTanh(String name) {
-        super(name);
+    public TDTanh(String name, String inputs) {
+        super(name, requireNonNull(inputs));
     }
 
     @Override
-    public INDArray forward(INDArray[] inputs, TDNetwork net) {
-        return Transforms.tanh(inputs[0]);
+    public TDNetworkState forward(TDNetworkState state, boolean training) {
+        INDArray inputs = state.getValues(inputs()[0]);
+        INDArray outputs = Transforms.tanh(inputs);
+        return state.putValues(name, outputs);
     }
 
     @Override
-    public JsonNode getSpec() {
-        ObjectNode node = Utils.objectMapper.createObjectNode();
-        node.put("name", getName());
+    public ObjectNode spec() {
+        ObjectNode node = super.spec();
         node.put("type", "tanh");
         return node;
     }
 
     @Override
-    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
-        return new INDArray[]{
-                grad.mul(output.mul(output).subi(1)).negi()
-        };
+    public TDNetworkState train(TDNetworkState state, INDArray delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
+        INDArray grads = state.getGradients(name);
+        INDArray outputs = state.getValues(name);
+        INDArray inputGrads = grads.mul(outputs.mul(outputs).subi(1)).negi();
+        return state.addGradients(inputs()[0], inputGrads);
     }
 }

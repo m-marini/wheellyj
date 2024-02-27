@@ -25,24 +25,19 @@
 
 package org.mmarini.rl.agents;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import org.mmarini.rl.envs.*;
 import org.mmarini.rl.envs.Environment.ExecutionResult;
-import org.mmarini.rl.nets.TDDense;
-import org.mmarini.rl.nets.TDNetwork;
-import org.mmarini.yaml.Locator;
-import org.mmarini.yaml.Utils;
+import org.mmarini.rl.nets.*;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
 
-import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.mmarini.wheelly.TestFunctions.text;
 
 class TDAgentSingleNNTrainTest {
 
@@ -53,41 +48,28 @@ class TDAgentSingleNNTrainTest {
     public static final Map<String, SignalSpec> ACTIONS_SPEC0 = Map.of(
             "output", new IntSignalSpec(new long[]{1}, 2));
     public static final float LAMBDA = 0.5f;
-    private static final String NETWORK_SPEC = text("---",
-            "layers:",
-            "- name: critic1",
-            "  type: dense",
-            "  inputSize: 2",
-            "  outputSize: 2",
-            "- name: critic2",
-            "  type: tanh",
-            "- name: critic",
-            "  type: dense",
-            "  inputSize: 2",
-            "  outputSize: 1",
-            "- name: output1",
-            "  type: dense",
-            "  inputSize: 2",
-            "  outputSize: 2",
-            "- name: output2",
-            "  type: tanh",
-            "- name: output",
-            "  type: softmax",
-            "  temperature: 0.8",
-            "inputs:",
-            "  critic1: [input]",
-            "  critic2: [critic1]",
-            "  critic: [critic2]",
-            "  output1: [input]",
-            "  output2: [output1]",
-            "  output: [output2]"
-    );
 
-    static TDAgentSingleNN createAgent0() throws IOException {
-        JsonNode networkSpec = Utils.fromText(NETWORK_SPEC);
+    static TDAgentSingleNN createAgent0() {
         Random random = Nd4j.getRandom();
         random.setSeed(AGENT_SEED);
-        TDNetwork network = TDNetwork.create(networkSpec, Locator.root(), "", Map.of(), random);
+        List<TDLayer> layers = List.of(
+                new TDDense("critic1", "input", 1000, 1),
+                new TDTanh("critic2", "critic1"),
+                new TDDense("critic", "critic2", 1000, 1),
+                new TDDense("output1", "input", 1000, 1),
+                new TDTanh("output2", "output1"),
+                new TDSoftmax("output", "output2", 0.8f)
+        );
+        Map<String, Long> sizes = Map.of(
+                "input", 2L,
+                "critic1", 2L,
+                "critic2", 2L,
+                "critic", 1L,
+                "output1", 2L,
+                "output2", 2L,
+                "output", 2L
+        );
+        TDNetwork network = TDNetwork.create(layers, sizes, random);
 
         Map<String, Float> alphas = Map.of(
                 "critic", 1e-3f,
@@ -109,7 +91,7 @@ class TDAgentSingleNNTrainTest {
      * and critic estimation of value should decrease
      */
     @Test
-    void trainNegative() throws IOException {
+    void trainNegative() {
         TDAgentSingleNN agent = createAgent0();
         Map<String, Signal> s0 = Map.of(
                 "input", ArraySignal.create(1f, 0f)
@@ -119,9 +101,9 @@ class TDAgentSingleNNTrainTest {
         );
 
         Map<String, INDArray> input = TDAgentSingleNN.getInput(s0);
-        Map<String, INDArray> netResults = agent.network().forward(input);
-        float v00 = netResults.get("critic").getFloat(0);
-        INDArray pi0 = netResults.get("output");
+        TDNetworkState netResults = agent.network().forward(input);
+        float v00 = netResults.getValues("critic").getFloat(0);
+        INDArray pi0 = netResults.getValues("output");
         int action = 0;
         Map<String, Signal> actions = Map.of(
                 "output", IntSignal.create(action)
@@ -131,29 +113,29 @@ class TDAgentSingleNNTrainTest {
         agent.train(result);
 
         netResults = agent.network().forward(input);
-        float v10 = netResults.get("critic").getFloat(0);
-        INDArray pi1 = netResults.get("output");
+        float v10 = netResults.getValues("critic").getFloat(0);
+        INDArray pi1 = netResults.getValues("output");
 
         assertThat(agent.avgReward(), lessThan(0f));
 
         assertThat(pi1.getFloat(0, action), lessThan(pi0.getFloat(0, action)));
         assertThat(pi1.getFloat(0, 1 - action), greaterThan(pi0.getFloat(0, 1 - action)));
 
-        INDArray criticEb = ((TDDense) agent.network().layers().get("critic1")).getEb();
-        assertThat(criticEb.getFloat(0, 0), greaterThan(0f));
-        assertThat(criticEb.getFloat(0, 1), greaterThan(0f));
+        INDArray criticEb = agent.network().state().getBiasTrace("critic1");
+        assertThat(criticEb.getDouble(0, 0), not(closeTo(0, 1e-6)));
+        assertThat(criticEb.getDouble(0, 1), not(closeTo(0f, 1e-6)));
 
-        INDArray criticEw = ((TDDense) agent.network().layers().get("critic1")).getEw();
-        assertThat(criticEw.getFloat(0, 0), greaterThan(0f));
-        assertThat(criticEw.getFloat(0, 1), greaterThan(0f));
-        assertThat(criticEw.getFloat(1, 0), equalTo(0f));
-        assertThat(criticEw.getFloat(1, 1), equalTo(0f));
+        INDArray criticEw = agent.network().state().getWeightsTrace("critic1");
+        assertThat(criticEw.getDouble(0, 0), not(closeTo(0, 1e-6)));
+        assertThat(criticEw.getDouble(0, 1), not(closeTo(0, 1e-6)));
+        assertThat(criticEw.getDouble(1, 0), closeTo(0, 1e-6));
+        assertThat(criticEw.getDouble(1, 1), closeTo(0, 1e-6));
 
-        INDArray policyEb = ((TDDense) agent.network().layers().get("output1")).getEb();
+        INDArray policyEb = agent.network().state().getBiasTrace("output1");
         assertThat(policyEb.getFloat(0, 0), not(equalTo(0f)));
         assertThat(policyEb.getFloat(0, 1), not(equalTo(0f)));
 
-        INDArray policyEw = ((TDDense) agent.network().layers().get("output1")).getEw();
+        INDArray policyEw = agent.network().state().getWeightsTrace("output1");
         assertThat((double) policyEw.getFloat(0, 0), not(closeTo(0, 1e-6)));
         assertThat((double) policyEw.getFloat(0, 1), not(closeTo(0, 1e-6)));
         assertThat((double) policyEw.getFloat(1, 0), closeTo(0, 1e-6));
@@ -164,7 +146,7 @@ class TDAgentSingleNNTrainTest {
 
     /**
      * Given an agent
-     * When  with positive reward
+     * When trains with positive reward
      * Then average reward should increase
      * and probabilities of selected actions should increase
      * and probabilities of not selected actions should decrease
@@ -172,7 +154,7 @@ class TDAgentSingleNNTrainTest {
      * and critic estimation of value should increase
      */
     @Test
-    void trainPositive() throws IOException {
+    void trainPositive() {
         TDAgentSingleNN agent = createAgent0();
         Map<String, Signal> s0 = Map.of(
                 "input", ArraySignal.create(1f, 0f)
@@ -182,9 +164,9 @@ class TDAgentSingleNNTrainTest {
         );
 
         Map<String, INDArray> input = TDAgentSingleNN.getInput(s0);
-        Map<String, INDArray> netResults = agent.network().forward(input);
-        float v00 = netResults.get("critic").getFloat(0);
-        INDArray pi0 = netResults.get("output");
+        TDNetworkState netResults = agent.network().forward(input);
+        float v00 = netResults.getValues("critic").getFloat(0);
+        INDArray pi0 = netResults.getValues("output");
 
         int action = 0;
         Map<String, Signal> actions = Map.of(
@@ -192,38 +174,43 @@ class TDAgentSingleNNTrainTest {
         );
         ExecutionResult result = new ExecutionResult(s0, actions, 1, s1, false);
 
-
+        // When trains with positive reward
         agent.train(result);
 
+        // Then average reward should increase
         netResults = agent.network().forward(input);
-        float v10 = netResults.get("critic").getFloat(0);
-        INDArray pi1 = netResults.get("output");
-
+        float v10 = netResults.getValues("critic").getFloat(0);
+        INDArray pi1 = netResults.getValues("output");
         assertThat(agent.avgReward(), greaterThan(0f));
 
+        // and probabilities of selected actions should increase
         assertThat(pi1.getFloat(0, action), greaterThan(pi0.getFloat(0, action)));
+
+        // and probabilities of not selected actions should decrease
         assertThat(pi1.getFloat(0, 1 - action), lessThan(pi0.getFloat(0, 1 - action)));
 
-        INDArray criticEb = ((TDDense) agent.network().layers().get("critic1")).getEb();
-        assertThat(criticEb.getFloat(0, 0), greaterThan(0f));
-        assertThat(criticEb.getFloat(0, 1), greaterThan(0f));
+        // and eligibility vectors should not be zeros
+        INDArray criticEb = agent.network().state().getBiasTrace("critic1");
+        assertThat(criticEb.getDouble(0, 0), not(closeTo(0d, 1e-6)));
+        assertThat(criticEb.getDouble(0, 1), not(closeTo(0d, 1e-6)));
 
-        INDArray criticEw = ((TDDense) agent.network().layers().get("critic1")).getEw();
-        assertThat(criticEw.getFloat(0, 0), greaterThan(0f));
-        assertThat(criticEw.getFloat(0, 1), greaterThan(0f));
-        assertThat(criticEw.getFloat(1, 0), equalTo(0f));
-        assertThat(criticEw.getFloat(1, 1), equalTo(0f));
+        INDArray criticEw = agent.network().state().getWeightsTrace("critic1");
+        assertThat(criticEw.getDouble(0, 0), not(closeTo(0, 1e-6)));
+        assertThat(criticEw.getDouble(0, 1), not(closeTo(0, 1e-6)));
+        assertThat(criticEw.getDouble(1, 0), equalTo(0d));
+        assertThat(criticEw.getDouble(1, 1), equalTo(0d));
 
-        INDArray policyEb = ((TDDense) agent.network().layers().get("output1")).getEb();
+        INDArray policyEb = agent.network().state().getBiasTrace("output1");
         assertThat(policyEb.getFloat(0, 0), not(equalTo(0f)));
         assertThat(policyEb.getFloat(0, 1), not(equalTo(0f)));
 
-        INDArray policyEw = ((TDDense) agent.network().layers().get("output1")).getEw();
+        INDArray policyEw = agent.network().state().getWeightsTrace("output1");
         assertThat((double) policyEw.getFloat(0, 0), not(closeTo(0, 1e-6)));
         assertThat((double) policyEw.getFloat(0, 1), not(closeTo(0, 1e-6)));
         assertThat((double) policyEw.getFloat(1, 0), closeTo(0, 1e-6));
         assertThat((double) policyEw.getFloat(1, 1), closeTo(0, 1e-6));
 
+        // and critic estimation of value should increase
         assertThat(v10, greaterThan(v00));
     }
 }

@@ -32,10 +32,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.mmarini.Tuple2;
 import org.mmarini.yaml.Locator;
-import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.factory.Nd4j;
 
 import java.util.function.Consumer;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Performs the drop out regularization.
@@ -48,10 +50,14 @@ public class TDDropOut extends TDLayer {
      * @param root    the document
      * @param locator the layer spec locator
      */
-    public static TDDropOut create(JsonNode root, Locator locator) {
+    public static TDDropOut fromJson(JsonNode root, Locator locator) {
         String name = locator.path("name").getNode(root).asText();
+        String input = locator.path("inputs").elements(root)
+                .findFirst()
+                .map(l -> l.getNode(root).asText())
+                .orElseThrow();
         float dropOut = (float) locator.path("dropOut").getNode(root).asDouble(1);
-        return new TDDropOut(name, dropOut);
+        return new TDDropOut(name, input, dropOut);
     }
 
     private final float dropOut;
@@ -60,35 +66,51 @@ public class TDDropOut extends TDLayer {
      * Creates the dropout layer
      *
      * @param name    the name
+     * @param input   the input layer
      * @param dropOut the drop out parameter (the retention probability)
      */
-    public TDDropOut(String name, float dropOut) {
-        super(name);
+    public TDDropOut(String name, String input, float dropOut) {
+        super(name, requireNonNull(input));
         this.dropOut = dropOut;
     }
 
-    @Override
-    public INDArray forward(INDArray[] inputs, TDNetwork net) {
-        return inputs[0];
-    }
-
-    @Override
-    public float getDropOut() {
+    /**
+     * Returns the drop out value (retention probability)
+     */
+    public float dropOut() {
         return dropOut;
     }
 
     @Override
-    public JsonNode getSpec() {
-        ObjectNode node = Utils.objectMapper.createObjectNode();
-        node.put("name", getName());
+    public TDNetworkState forward(TDNetworkState state, boolean training) {
+        INDArray inputs = state.getValues(inputs()[0]);
+        if (training && dropOut < 1) {
+            INDArray mask = Nd4j.rand(state.random(), inputs.shape()).lt(dropOut);
+            INDArray output = inputs.mul(mask).divi(dropOut);
+            return state.putValues(name, output)
+                    .putMask(name, mask);
+        } else {
+            return state.putValues(name, inputs);
+        }
+    }
+
+    @Override
+    public ObjectNode spec() {
+        ObjectNode node = super.spec();
         node.put("type", "dropout");
         node.put("dropOut", this.dropOut);
         return node;
     }
 
     @Override
-    public INDArray[] train(INDArray[] inputs, INDArray output, INDArray grad, INDArray delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
-        // TODO to be implemented the dropping out of signals
-        return new INDArray[]{grad};
+    public TDNetworkState train(TDNetworkState state, INDArray delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
+        INDArray grads = state.getGradients(name);
+        if (dropOut < 1) {
+            INDArray mask = state.getMask(name);
+            INDArray inputGrads = grads.mul(mask).divi(dropOut);
+            return state.addGradients(inputs[0], inputGrads);
+        } else {
+            return state.addGradients(inputs[0], grads);
+        }
     }
 }

@@ -30,10 +30,10 @@ import org.junit.jupiter.api.Test;
 import org.mmarini.rl.envs.FloatSignalSpec;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.SignalSpec;
-import org.mmarini.rl.nets.TDDense;
 import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
+import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
 
@@ -42,7 +42,6 @@ import java.io.IOException;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mmarini.wheelly.TestFunctions.text;
 
 class TDAgentSingleNNSaveTest {
 
@@ -55,53 +54,75 @@ class TDAgentSingleNNSaveTest {
             "output.b", new IntSignalSpec(new long[]{1}, 2)
     );
     public static final float LAMBDA = 0.5f;
-    private static final String NETWORK_YAML = text("---",
-            "layers:",
-            "- name: layer1",
-            "  type: dense",
-            "  inputSize: 2",
-            "  outputSize: 2",
-            "- name: layer2",
-            "  type: tanh",
-            "- name: layer3",
-            "  type: dense",
-            "  inputSize: 2",
-            "  outputSize: 2",
-            "- name: layer4",
-            "  type: tanh",
-            "- name: output.a",
-            "  type: softmax",
-            "  temperature: 0.8",
-            "- name: layer5",
-            "  type: dense",
-            "  inputSize: 2",
-            "  outputSize: 2",
-            "- name: layer6",
-            "  type: tanh",
-            "- name: output.b",
-            "  type: softmax",
-            "  temperature: 0.8",
-            "- name: critic",
-            "  type: dense",
-            "  inputSize: 2",
-            "  outputSize: 1",
-            "inputs:",
-            "  layer1: [input]",
-            "  layer2: [layer1]",
-            "  layer3: [layer2]",
-            "  layer4: [layer3]",
-            "  output.a: [layer4]",
-            "  layer5: [layer2]",
-            "  layer6: [layer5]",
-            "  output.b: [layer6]",
-            "  critic: [layer6]"
-    );
+    private static final String NETWORK_YAML = """
+            ---
+            $schema: https://mmarini.org/wheelly/network-schema-0.2
+            sizes:
+              input: 2
+              layer1: 2
+              layer2: 2
+              layer3: 2
+              layer4: 2
+              layer5: 2
+              layer6: 2
+              output.a: 2
+              output.b: 2
+              critic: 1
+            layers:
+            - name: layer1
+              type: dense
+              inputs: [input]
+              maxAbsWeights: 100
+              dropOut: 1
+            - name: layer2
+              type: tanh
+              inputs: [layer1]
+            - name: layer3
+              type: dense
+              inputs: [layer2]
+              maxAbsWeights: 100
+              dropOut: 1
+            - name: layer4
+              type: tanh
+              inputs: [layer3]
+            - name: output.a
+              type: softmax
+              temperature: 0.8
+              inputs: [layer4]
+            - name: layer5
+              type: dense
+              inputs: [layer2]
+              maxAbsWeights: 100
+              dropOut: 1
+            - name: layer6
+              type: tanh
+              inputs: [layer5]
+            - name: output.b
+              type: softmax
+              inputs: [layer6]
+              temperature: 0.8
+            - name: critic
+              type: dense
+              inputs: [layer6]
+              maxAbsWeights: 100
+              dropOut: 1
+            """;
 
     static TDAgentSingleNN createAgent() throws IOException {
         JsonNode networkSpec = Utils.fromText(NETWORK_YAML);
         Random random = Nd4j.getRandom();
         random.setSeed(AGENT_SEED);
-        TDNetwork network = TDNetwork.create(networkSpec, Locator.root(), "", Map.of(), random);
+        Map<String, INDArray> params = Map.of(
+                "layer1.bias", Nd4j.randn(1, 2),
+                "layer1.weights", Nd4j.randn(2, 2),
+                "layer3.bias", Nd4j.randn(1, 2),
+                "layer3.weights", Nd4j.randn(2, 2),
+                "layer5.bias", Nd4j.randn(1, 2),
+                "layer5.weights", Nd4j.randn(2, 2),
+                "critic.bias", Nd4j.randn(1, 1),
+                "critic.weights", Nd4j.randn(2, 1)
+        );
+        TDNetwork network = TDNetwork.fromJson(networkSpec, Locator.root(), params, random);
 
         Map<String, Float> alphas = Map.of(
                 "critic", 1e-3f,
@@ -126,8 +147,11 @@ class TDAgentSingleNNSaveTest {
             assertEquals(agent.avgReward(), newAgent.avgReward());
             assertEquals(agent.rewardAlpha(), newAgent.rewardAlpha());
             assertEquals(agent.alphas(), newAgent.alphas());
-            assertEquals(((TDDense) agent.network().layers().get("layer1")).getW(),
-                    ((TDDense) newAgent.network().layers().get("layer1")).getW());
+            assertEquals(agent.network().state().getWeights("layer1"),
+                    newAgent.network().state().getWeights("layer1"));
+            assertEquals(
+                    agent.network().state().getWeights("layer1"),
+                    newAgent.network().state().getWeights("layer1"));
         }
     }
 }

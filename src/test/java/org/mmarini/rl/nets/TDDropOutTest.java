@@ -40,23 +40,21 @@ import java.io.IOException;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.arrayWithSize;
+import static org.hamcrest.Matchers.arrayContainingInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.ArgumentsGenerator.*;
-import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
-import static org.mmarini.wheelly.TestFunctions.text;
 
 class TDDropOutTest {
 
-    public static final long SEED = 1234L;
-    private static final double EPSILON = 1e-6;
-    private static final String YAML = text(
-            "---",
-            "name: name",
-            "type: dropout",
-            "dropOut: 0.5"
-    );
+    public static final long SEED = 1234578L;
+    private static final String YAML = """
+            ---
+            name: name
+            type: dropout
+            inputs: [input]
+            dropOut: 0.5
+            """;
     private static final float DROP_OUT = 0.5F;
 
     static Stream<Arguments> forwardCases() {
@@ -85,33 +83,38 @@ class TDDropOutTest {
         Locator locator = Locator.root();
         Random random = Nd4j.getRandom();
         random.setSeed(1234);
-        TDDropOut layer = TDDropOut.create(root, locator);
-        assertEquals(0.5F, layer.getDropOut());
-        assertEquals("name", layer.getName());
+        TDDropOut layer = TDDropOut.fromJson(root, locator);
+        assertEquals(0.5F, layer.dropOut());
+        assertEquals("name", layer.name());
+        assertThat(layer.inputs, arrayContainingInAnyOrder("input"));
     }
 
     @ParameterizedTest
     @MethodSource("forwardCases")
     void forward(INDArray inputs) {
-        TDDropOut layer = new TDDropOut("name", DROP_OUT);
-        float in00 = inputs.getFloat(0, 0);
-        float in10 = inputs.getFloat(0, 1);
-        float in01 = inputs.getFloat(1, 0);
-        float in11 = inputs.getFloat(1, 1);
-        INDArray out = layer.forward(new INDArray[]{inputs}, null);
-        assertThat(out, matrixCloseTo(new float[][]{
-                {in00, in10},
-                {in01, in11}
-        }, EPSILON));
+        TDDropOut layer = new TDDropOut("name", "input", DROP_OUT);
+
+        Random random = Nd4j.getRandomFactory().getNewRandomInstance(SEED);
+        TDNetworkState state = TDNetworkStateImpl.create(random)
+                .putValues("input", inputs);
+
+        // When ...
+        TDNetworkState result = layer.forward(state);
+
+        // Then ...
+        assertThat(result.getValues("name"), equalTo(inputs));
     }
 
     @Test
     void spec() {
-        TDDropOut layer = new TDDropOut("name", DROP_OUT);
-        JsonNode node = layer.getSpec();
-        assertThat(node.path("name").asText(), equalTo("name"));
-        assertThat(node.path("type").asText(), equalTo("dropout"));
+        TDDropOut layer = new TDDropOut("name", "input", DROP_OUT);
+        JsonNode node = layer.spec();
+        assertEquals("name", node.path("name").asText());
+        assertEquals("dropout", node.path("type").asText());
         assertEquals(DROP_OUT, node.path("dropOut").asDouble());
+        assertTrue(node.path("inputs").isArray());
+        assertEquals(1, node.path("inputs").size());
+        assertEquals("input", node.path("inputs").path(0).asText());
     }
 
     @ParameterizedTest
@@ -121,21 +124,57 @@ class TDDropOutTest {
                float lambda,
                INDArray delta,
                INDArray grad) {
-        TDDropOut layer = new TDDropOut("name", DROP_OUT);
-        float grad00 = grad.getFloat(0, 0);
-        float grad10 = grad.getFloat(0, 1);
-        float grad01 = grad.getFloat(1, 0);
-        float grad11 = grad.getFloat(1, 1);
+        TDDropOut layer = new TDDropOut("name", "input", DROP_OUT);
 
-        INDArray[] in = new INDArray[]{inputs};
-        INDArray out = layer.forward(in, null);
+        Random random = Nd4j.getRandomFactory().getNewRandomInstance(SEED);
+        TDNetworkState state = TDNetworkStateImpl.create(random)
+                .putValues("input", inputs);
 
-        INDArray[] post_grads = layer.train(in, out, grad, delta.mul(alpha), lambda, null);
+        // When ...
+        TDNetworkState result = layer.forward(state, true)
+                .addGradients("name", grad);
 
-        assertThat(post_grads, arrayWithSize(1));
-        assertThat(post_grads[0], matrixCloseTo(new float[][]{
-                {grad00, grad10},
-                {grad01, grad11}
-        }, EPSILON));
+        // Then ...
+        float m00 = 1;
+        float m10 = 0;
+        float m01 = 0;
+        float m11 = 1;
+        INDArray expectedMask = Nd4j.createFromArray(m00, m10, m01, m11).reshape(2, 2).neq(0);
+        assertThat(result.getMask("name"), equalTo(expectedMask));
+        assertThat(result.getValues("name"), equalTo(inputs.mul(expectedMask).divi(DROP_OUT)));
+
+        // When ...
+        TDNetworkState post = layer.train(result, delta.mul(alpha), lambda, null);
+
+        // Then ...
+        assertThat(post.getGradients("input"), equalTo(grad.mul(expectedMask).divi(DROP_OUT)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("trainCases")
+    void train1(INDArray inputs,
+                float alpha,
+                float lambda,
+                INDArray delta,
+                INDArray grad) {
+        TDDropOut layer = new TDDropOut("name", "input", 1);
+
+        Random random = Nd4j.getRandomFactory().getNewRandomInstance(SEED);
+        TDNetworkState state = TDNetworkStateImpl.create(random)
+                .putValues("input", inputs);
+
+        // When ...
+        TDNetworkState result = layer.forward(state, true)
+                .addGradients("name", grad);
+
+        // Then ...
+        assertThat(result.getValues("name"), equalTo(inputs));
+        assertNull(result.getMask("name"));
+
+        // When ...
+        TDNetworkState post = layer.train(result, delta.mul(alpha), lambda, null);
+
+        // Then ...
+        assertThat(post.getGradients("input"), equalTo(grad));
     }
 }

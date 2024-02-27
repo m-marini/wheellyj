@@ -25,7 +25,7 @@
 
 package org.mmarini.rl.nets;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -37,8 +37,7 @@ import org.nd4j.linalg.factory.Nd4j;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.arrayWithSize;
-import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.ArgumentsGenerator.createArgumentGenerator;
 import static org.mmarini.ArgumentsGenerator.createStream;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
@@ -61,13 +60,19 @@ class TDReluTest {
     @MethodSource("cases")
     void forward(INDArray inputs,
                  INDArray grad) {
-        TDRelu layer = new TDRelu("name");
+        TDRelu layer = new TDRelu("name", "input");
         float in00 = inputs.getFloat(0, 0);
         float in01 = inputs.getFloat(0, 1);
         float in10 = inputs.getFloat(1, 0);
         float in11 = inputs.getFloat(1, 1);
-        INDArray out = layer.forward(new INDArray[]{inputs}, null);
-        assertThat(out, matrixCloseTo(new float[][]{
+
+        TDNetworkState state = TDNetworkStateImpl.create()
+                .putValues("input", inputs);
+
+        TDNetworkState result = layer.forward(state);
+
+        assertNotNull(result);
+        assertThat(result.getValues("name"), matrixCloseTo(new float[][]{
                 {in00 > 0 ? in00 : 0f, in01 > 0 ? in01 : 0f},
                 {in10 > 0 ? in10 : 0f, in11 > 0 ? in11 : 0f}
         }, EPSILON));
@@ -75,10 +80,13 @@ class TDReluTest {
 
     @Test
     void spec() {
-        TDRelu layer = new TDRelu("name");
-        JsonNode node = layer.getSpec();
-        assertThat(node.path("name").asText(), equalTo("name"));
-        assertThat(node.path("type").asText(), equalTo("relu"));
+        TDRelu layer = new TDRelu("name", "input");
+        ObjectNode node = layer.spec();
+        assertEquals("name", node.path("name").asText());
+        assertEquals("relu", node.path("type").asText());
+        assertTrue(node.path("inputs").isArray());
+        assertEquals(1, node.path("inputs").size());
+        assertEquals("input", node.path("inputs").path(0).asText());
     }
 
     @ParameterizedTest
@@ -86,14 +94,17 @@ class TDReluTest {
     void train(INDArray inputs,
                INDArray grad) {
         // Given the layer
-        TDRelu layer = new TDRelu("name");
-        INDArray[] in = new INDArray[]{inputs};
-        INDArray out = layer.forward(in, null);
+        TDRelu layer = new TDRelu("name", "input");
+        TDNetworkState state = TDNetworkStateImpl.create()
+                .putValues("input", inputs);
+        state = layer.forward(state)
+                .addGradients("name", grad);
 
         // When train
-        INDArray[] post_grads = layer.train(in, out, grad, null, 0, null);
+        TDNetworkState result = layer.train(state, null, 0, null);
 
-        // Then
+        // Then ...
+        assertNotNull(result);
         float in00 = inputs.getFloat(0, 0);
         float in01 = inputs.getFloat(0, 1);
         float in10 = inputs.getFloat(1, 0);
@@ -108,8 +119,7 @@ class TDReluTest {
         float post_grad10 = in10 > 0 ? grad10 : 0;
         float post_grad11 = in11 > 0 ? grad11 : 0;
 
-        assertThat(post_grads, arrayWithSize(1));
-        assertThat(post_grads[0], matrixCloseTo(new float[][]{
+        assertThat(result.getGradients("input"), matrixCloseTo(new float[][]{
                 {post_grad00, post_grad01},
                 {post_grad10, post_grad11},
         }, EPSILON));

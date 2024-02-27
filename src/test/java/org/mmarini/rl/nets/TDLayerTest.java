@@ -30,157 +30,133 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
-import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.api.rng.Random;
-import org.nd4j.linalg.factory.Nd4j;
 
 import java.io.IOException;
-import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mmarini.wheelly.TestFunctions.text;
 
 
 class TDLayerTest {
-    private static final long SEED = 1234;
-
     @Test
     void createConcat() throws IOException {
-        String yaml = text(
-                "---",
-                "name: name",
-                "type: concat"
-        );
+        String yaml = """
+                ---
+                name: name
+                type: concat
+                inputs: [input]
+                """;
         JsonNode root = Utils.fromText(yaml);
         Locator locator = Locator.root();
-        Random random = Nd4j.getRandom();
-        random.setSeed(SEED);
-        TDLayer layer = TDLayer.create(root, locator, "", Map.of(), random);
+        TDLayer layer = TDLayer.fromJson(root, locator);
         assertThat(layer, Matchers.isA(TDConcat.class));
     }
 
     @Test
     void createDense() throws IOException {
-        String yaml = text(
-                "---",
-                "name: name",
-                "type: dense",
-                "inputSize: 2",
-                "outputSize: 3"
-        );
+        String yaml = """
+                ---
+                name: name
+                type: dense
+                inputs: [input]
+                maxAbsWeights: 10
+                dropOut: 10
+                """;
         JsonNode root = Utils.fromText(yaml);
         Locator locator = Locator.root();
-        Random random = Nd4j.getRandom();
-        random.setSeed(SEED);
-        TDLayer layer = TDLayer.create(root, locator, "", Map.of(), random);
+        TDLayer layer = TDLayer.fromJson(root, locator);
         assertThat(layer, Matchers.isA(TDDense.class));
     }
 
     @Test
-    void createLinear() throws IOException {
-        String yaml = text(
-                "---",
-                "name: name",
-                "type: linear",
-                "b: 0.4",
-                "w: 1.5"
-        );
+    void createDropOut() throws IOException {
+        String yaml = """
+                ---
+                name: name
+                type: dropout
+                inputs: [input]
+                dropOut: 0.5
+                """;
         JsonNode root = Utils.fromText(yaml);
         Locator locator = Locator.root();
-        Random random = Nd4j.getRandom();
-        random.setSeed(SEED);
-        TDLayer layer = TDLayer.create(root, locator, "", Map.of(), random);
+        TDLayer layer = TDLayer.fromJson(root, locator);
+        assertThat(layer, Matchers.isA(TDDropOut.class));
+        assertEquals(0.5F, ((TDDropOut) layer).dropOut());
+    }
+
+    @Test
+    void createLinear() throws IOException {
+        String yaml = """
+                ---
+                name: name
+                type: linear
+                inputs: [input]
+                b: 0.4
+                w: 1.5
+                """;
+        JsonNode root = Utils.fromText(yaml);
+        Locator locator = Locator.root();
+        TDLayer layer = TDLayer.fromJson(root, locator);
         assertThat(layer, Matchers.isA(TDLinear.class));
-        assertEquals(0.4f, ((TDLinear) layer).getB());
-        assertEquals(1.5f, ((TDLinear) layer).getW());
+        assertEquals(0.4f, ((TDLinear) layer).bias());
+        assertEquals(1.5f, ((TDLinear) layer).weight());
     }
 
     @Test
     void createRelu() throws IOException {
-        String yaml = text(
-                "---",
-                "name: name",
-                "type: relu"
-        );
+        String yaml = """
+                ---
+                name: name
+                type: relu
+                inputs: [input]
+                """;
         JsonNode root = Utils.fromText(yaml);
         Locator locator = Locator.root();
-        Random random = Nd4j.getRandom();
-        random.setSeed(SEED);
-        TDLayer layer = TDLayer.create(root, locator, "", Map.of(), random);
+        TDLayer layer = TDLayer.fromJson(root, locator);
         assertThat(layer, Matchers.isA(TDRelu.class));
     }
 
     @Test
     void createSoftmax() throws IOException {
-        String yaml = text(
-                "---",
-                "name: name",
-                "type: softmax",
-                "temperature: 0.4"
-        );
+        String yaml = """
+                ---
+                name: name
+                type: softmax
+                inputs: [input]
+                temperature: 0.4
+                """;
         JsonNode root = Utils.fromText(yaml);
         Locator locator = Locator.root();
-        Random random = Nd4j.getRandom();
-        random.setSeed(SEED);
-        TDLayer layer = TDLayer.create(root, locator, "", Map.of(), random);
+        TDLayer layer = TDLayer.fromJson(root, locator);
         assertThat(layer, Matchers.isA(TDSoftmax.class));
-        assertEquals(0.4f, ((TDSoftmax) layer).getTemperature());
+        assertEquals(0.4f, ((TDSoftmax) layer).temperature());
     }
 
     @Test
     void createSum() throws IOException {
-        String yaml = text(
-                "---",
-                "name: name",
-                "type: sum"
-        );
+        String yaml = """
+                ---
+                name: name
+                type: sum
+                inputs: [input]
+                """;
         JsonNode root = Utils.fromText(yaml);
         Locator locator = Locator.root();
-        Random random = Nd4j.getRandom();
-        random.setSeed(SEED);
-        TDLayer layer = TDLayer.create(root, locator, "", Map.of(), random);
+        TDLayer layer = TDLayer.fromJson(root, locator);
         assertThat(layer, Matchers.isA(TDSum.class));
     }
 
     @Test
     void createTanh() throws IOException {
-        String yaml = text(
-                "---",
-                "name: name",
-                "type: tanh"
-        );
+        String yaml = """
+                ---
+                name: name
+                type: tanh
+                inputs: [input]
+                """;
         JsonNode root = Utils.fromText(yaml);
         Locator locator = Locator.root();
-        Random random = Nd4j.getRandom();
-        random.setSeed(SEED);
-        TDLayer layer = TDLayer.create(root, locator, "", Map.of(), random);
+        TDLayer layer = TDLayer.fromJson(root, locator);
         assertThat(layer, Matchers.isA(TDTanh.class));
     }
-
-    @Test
-    void loadDense() throws IOException {
-        String yaml = text(
-                "---",
-                "name: name",
-                "type: dense",
-                "inputSize: 2",
-                "outputSize: 3"
-        );
-        JsonNode root = Utils.fromText(yaml);
-        Locator locator = Locator.root();
-        INDArray b = Nd4j.randn(1, 3);
-        INDArray w = Nd4j.randn(2, 3);
-        Map<String, INDArray> ata = Map.of(
-                "net.name.b", b,
-                "net.name.w", w
-        );
-        Random random = Nd4j.getRandom();
-        random.setSeed(SEED);
-        TDLayer layer = TDLayer.create(root, locator, "net", ata, random);
-        assertThat(layer, Matchers.isA(TDDense.class));
-        assertEquals(b, ((TDDense) layer).getB());
-        assertEquals(w, ((TDDense) layer).getW());
-    }
-
 }

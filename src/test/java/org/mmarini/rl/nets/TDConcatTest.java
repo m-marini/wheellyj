@@ -25,7 +25,7 @@
 
 package org.mmarini.rl.nets;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -37,8 +37,8 @@ import org.nd4j.linalg.factory.Nd4j;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.arrayWithSize;
-import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mmarini.ArgumentsGenerator.createArgumentGenerator;
 import static org.mmarini.ArgumentsGenerator.createStream;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
@@ -63,7 +63,8 @@ class TDConcatTest {
     void forward(INDArray input0,
                  INDArray input1,
                  INDArray grad) {
-        TDConcat layer = new TDConcat("name");
+        // Given ...
+        TDConcat layer = new TDConcat("name", "in0", "in1");
         float in000 = input0.getFloat(0, 0);
         float in010 = input0.getFloat(0, 1);
         float in100 = input1.getFloat(0, 0);
@@ -74,9 +75,15 @@ class TDConcatTest {
         float in101 = input1.getFloat(1, 0);
         float in111 = input1.getFloat(1, 1);
         float in121 = input1.getFloat(1, 2);
-        INDArray[] in = {input0, input1};
-        INDArray out = layer.forward(in, null);
-        assertThat(out, matrixCloseTo(new float[][]{
+        TDNetworkState state = TDNetworkStateImpl.create()
+                .putValues("in0", input0)
+                .putValues("in1", input1);
+
+        // When ...
+        TDNetworkState out = layer.forward(state);
+
+        // Then ...
+        assertThat(out.getValues("name"), matrixCloseTo(new float[][]{
                 {in000, in010, in100, in110, in120},
                 {in001, in011, in101, in111, in121}
         }, EPSILON));
@@ -84,10 +91,14 @@ class TDConcatTest {
 
     @Test
     void spec() {
-        TDConcat layer = new TDConcat("name");
-        JsonNode node = layer.getSpec();
-        assertThat(node.path("name").asText(), equalTo("name"));
-        assertThat(node.path("type").asText(), equalTo("concat"));
+        TDConcat layer = new TDConcat("name", "input0", "input1");
+        ObjectNode node = layer.spec();
+        assertEquals("name", node.path("name").asText());
+        assertEquals("concat", node.path("type").asText());
+        assertTrue(node.path("inputs").isArray());
+        assertEquals(2, node.path("inputs").size());
+        assertEquals("input0", node.path("inputs").path(0).asText());
+        assertEquals("input1", node.path("inputs").path(1).asText());
     }
 
     @ParameterizedTest
@@ -105,18 +116,20 @@ class TDConcatTest {
         float grad21 = grad.getFloat(1, 2);
         float grad31 = grad.getFloat(1, 3);
         float grad41 = grad.getFloat(1, 4);
-        INDArray[] in = {input0, input1};
+        TDConcat layer = new TDConcat("name", "in0", "in1");
+        TDNetworkState in = TDNetworkStateImpl.create()
+                .putValues("in0", input0)
+                .putValues("in1", input1);
 
-        TDConcat layer = new TDConcat("name");
-        INDArray out = layer.forward(in, null);
-        INDArray[] post_grads = layer.train(in, out, grad, Nd4j.zeros(1), 0, null);
+        in = layer.forward(in, true).addGradients("name", grad);
 
-        assertThat(post_grads, arrayWithSize(2));
-        assertThat(post_grads[0], matrixCloseTo(new float[][]{
+        TDNetworkState result = layer.train(in, Nd4j.zeros(1), 0, null);
+
+        assertThat(result.getGradients("in0"), matrixCloseTo(new float[][]{
                 {grad00, grad10},
                 {grad01, grad11},
         }, EPSILON));
-        assertThat(post_grads[1], matrixCloseTo(new float[][]{
+        assertThat(result.getGradients("in1"), matrixCloseTo(new float[][]{
                 {grad20, grad30, grad40},
                 {grad21, grad31, grad41},
         }, EPSILON));

@@ -165,7 +165,7 @@ public class PrintNetChart {
             this.output = output;
             this.network = network;
             this.state = state;
-            Set<String> labels = new HashSet<>(network.getSourceLabels());
+            Set<String> labels = new HashSet<>(network.sourceLayers());
             labels.addAll(network.layers().keySet());
             this.dictionary = org.mmarini.Utils.zipWithIndex(List.copyOf(labels))
                     .map(t -> Tuple2.of(t._2, "L" + t._1))
@@ -176,7 +176,7 @@ public class PrintNetChart {
             output.println("```mermaid");
             output.println("graph TB");
             dictionary.keySet().forEach(this::printLayer);
-
+/*
             network.getInputs().forEach((layer, inputs) -> {
                 String gLayer = dictionary.get(layer);
                 for (String input : inputs) {
@@ -185,7 +185,7 @@ public class PrintNetChart {
                     output.println();
                 }
             });
-
+ */
             output.println("```");
         }
 
@@ -195,30 +195,32 @@ public class PrintNetChart {
             output.print(name);
             TDLayer layer = network.layers().get(name);
             if (layer != null) {
-                if (layer instanceof TDDense) {
-                    output.printf("\\nDense(%d)",
-                            ((TDDense) layer).getEb().size(1));
-                } else if (layer instanceof TDConcat) {
-                    output.print("\\nConcat");
-                } else if (layer instanceof TDSum) {
-                    output.print("\\nSum");
-                } else if (layer instanceof TDTanh) {
-                    output.print("\\nTanh");
-                } else if (layer instanceof TDRelu) {
-                    output.print("\\nRelu");
-                } else if (layer instanceof TDLinear) {
-                    output.printf("\\nLin(%.3f, %.3f)",
-                            ((TDLinear) layer).getB(),
-                            ((TDLinear) layer).getW());
-                } else if (layer instanceof TDSoftmax) {
-                    output.printf("\\nSoftmax(%.3f)",
-                            ((TDSoftmax) layer).getTemperature());
+                switch (layer) {
+                    case TDDense tdDense2 -> {
+                        output.printf("\\nDense(%d)",
+                                network.size(name));
+                        float dropOut = tdDense2.dropOut();
+                        if (dropOut != 1F) {
+                            output.printf("\\ndropOut=%.3f", dropOut);
+                        }
+                    }
+                    case TDConcat ignored -> output.print("\\nConcat");
+                    case TDSum ignored -> output.print("\\nSum");
+                    case TDTanh ignored -> output.print("\\nTanh");
+                    case TDRelu ignored -> output.print("\\nRelu");
+                    case TDLinear tdLinear2 -> output.printf("\\nLin(%.3f, %.3f)",
+                            tdLinear2.bias(),
+                            tdLinear2.weight());
+                    case TDSoftmax tdSoftmax2 -> output.printf("\\nSoftmax(%.3f)",
+                            tdSoftmax2.temperature());
+
+/*
                 } else if (layer instanceof TDDropOut) {
                     output.print("\\nDropout");
-                }
-                float dropOut = layer.getDropOut();
-                if (dropOut != 1F) {
-                    output.printf("\\ndropOut=%.3f", dropOut);
+
+ */
+                    default -> {
+                    }
                 }
             } else {
                 SignalSpec spec = state.get(name);
