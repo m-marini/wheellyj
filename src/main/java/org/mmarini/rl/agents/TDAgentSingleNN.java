@@ -129,7 +129,7 @@ public class TDAgentSingleNN implements Agent {
      * @param locator the agent spec locator
      * @param env     the environment
      */
-    public static TDAgentSingleNN fromJson(JsonNode root, Locator locator, WithSignalsSpec env) {
+    public static TDAgentSingleNN create(JsonNode root, Locator locator, WithSignalsSpec env) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         File path = new File(locator.path("modelPath").getNode(root).asText());
         int savingIntervalStep = locator.path("savingIntervalSteps").getNode(root).asInt(Integer.MAX_VALUE);
