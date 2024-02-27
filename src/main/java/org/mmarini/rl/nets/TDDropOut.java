@@ -50,7 +50,7 @@ public class TDDropOut extends TDLayer {
      * @param root    the document
      * @param locator the layer spec locator
      */
-    public static TDDropOut create(JsonNode root, Locator locator) {
+    public static TDDropOut fromJson(JsonNode root, Locator locator) {
         String name = locator.path("name").getNode(root).asText();
         String input = locator.path("inputs").elements(root)
                 .findFirst()
@@ -75,7 +75,7 @@ public class TDDropOut extends TDLayer {
     }
 
     /**
-     * Returns the drop out value (retaintion probability)
+     * Returns the drop out value (retention probability)
      */
     public float dropOut() {
         return dropOut;
@@ -83,14 +83,13 @@ public class TDDropOut extends TDLayer {
 
     @Override
     public TDNetworkState forward(TDNetworkState state, boolean training) {
+        INDArray inputs = state.getValues(inputs()[0]);
         if (training && dropOut < 1) {
-            INDArray inputs = state.getValues(inputs()[0]);
             INDArray mask = Nd4j.rand(state.random(), inputs.shape()).lt(dropOut);
             INDArray output = inputs.mul(mask).divi(dropOut);
             return state.putValues(name, output)
                     .putMask(name, mask);
         } else {
-            INDArray inputs = state.getValues(inputs()[0]);
             return state.putValues(name, inputs);
         }
     }
@@ -105,13 +104,12 @@ public class TDDropOut extends TDLayer {
 
     @Override
     public TDNetworkState train(TDNetworkState state, INDArray delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
+        INDArray grads = state.getGradients(name);
         if (dropOut < 1) {
-            INDArray grads = state.getGradients(name);
             INDArray mask = state.getMask(name);
             INDArray inputGrads = grads.mul(mask).divi(dropOut);
             return state.addGradients(inputs[0], inputGrads);
         } else {
-            INDArray grads = state.getGradients(name);
             return state.addGradients(inputs[0], grads);
         }
     }

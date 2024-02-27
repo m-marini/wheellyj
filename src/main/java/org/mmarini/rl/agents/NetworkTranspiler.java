@@ -119,14 +119,11 @@ public class NetworkTranspiler {
                 layerSizes.put(id, inSizes[0]);
                 yield new TDTanh(id, inputs[0]);
             }
-            /*
             case "dropout" -> {
                 layerSizes.put(id, inSizes[0]);
                 float dropOut = (float) locator.path("dropOut").getNode(spec).asDouble(1);
-                yield new TDDropOut(id, dropOut);
+                yield new TDDropOut(id, inputs[0], dropOut);
             }
-
-             */
             case "softmax" -> {
                 layerSizes.put(id, inSizes[0]);
                 yield new TDSoftmax(id, inputs[0], (float) locator.path("temperature").getNode(spec).asDouble());

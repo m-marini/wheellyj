@@ -36,7 +36,6 @@ import org.nd4j.linalg.factory.Nd4j;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Predicate;
-import java.util.regex.Pattern;
 
 import static java.util.Objects.requireNonNull;
 
@@ -44,7 +43,6 @@ import static java.util.Objects.requireNonNull;
  * Contains the values, gradient and masks of each layer output
  */
 public class TDNetworkStateImpl implements TDNetworkState {
-    private static final Predicate<String> parameterPredicate = Pattern.compile("^.*\\.(weights|bias)$").asMatchPredicate();
 
     /**
      * Returns the default network state
@@ -88,13 +86,25 @@ public class TDNetworkStateImpl implements TDNetworkState {
 
     @Override
     public TDNetworkState dup() {
-        Map<String, INDArray> newVars = new HashMap<>();
-        for (Map.Entry<String, INDArray> entry : variables.entrySet()) {
-            newVars.put(entry.getKey(), entry.getValue().dup());
-        }
-        Random newRnd = Nd4j.getRandom();
-        newRnd.setSeed(random.getSeed());
-        return new TDNetworkStateImpl(newVars, newRnd, sizes);
+        Map<String, INDArray> newVars = new HashMap<>(variables);
+        Random newRnd = Nd4j.getRandomFactory().getNewRandomInstance(random.getSeed());
+        HashMap<String, Long> newSizes = new HashMap<>(sizes);
+        return new TDNetworkStateImpl(newVars, newRnd, newSizes);
+    }
+
+    @Override
+    public Map<String, INDArray> filterKeys(Predicate<String> predicate) {
+        return Tuple2.stream(variables)
+                .filter(t -> predicate.test(t.getV1()))
+                .collect(Tuple2.toMap());
+    }
+
+    @Override
+    public Map<String, INDArray> filterKeysAndDup(Predicate<String> predicate) {
+        return Tuple2.stream(variables)
+                .filter(t -> predicate.test(t.getV1()))
+                .map(Tuple2.map2(INDArray::dup))
+                .collect(Tuple2.toMap());
     }
 
     @Override
@@ -105,13 +115,6 @@ public class TDNetworkStateImpl implements TDNetworkState {
     @Override
     public long getSize(String layer) {
         return sizes.getOrDefault(layer, 0L);
-    }
-
-    @Override
-    public Map<String, INDArray> parameters() {
-        return Tuple2.stream(variables)
-                .filter(t -> parameterPredicate.test(t._1))
-                .collect(Tuple2.toMap());
     }
 
     @Override
@@ -126,8 +129,11 @@ public class TDNetworkStateImpl implements TDNetworkState {
     }
 
     @Override
-    public TDNetworkState remove(String key) {
-        variables.remove(key);
+    public TDNetworkState remove(Predicate<String> filter) {
+        variables.keySet().stream()
+                .filter(filter)
+                .toList()
+                .forEach(variables::remove);
         return this;
     }
 

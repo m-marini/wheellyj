@@ -614,10 +614,10 @@ public class TDAgentSingleNN implements Agent {
         Map<String, INDArray> s1 = getInput(procState);
 
         // forward network inputs s0 to produce outputs
-        TDNetworkState netResults0 = network.forward(s0, true).dup();
+        TDNetworkState state0 = network.forward(s0, true).dup();
 
         // Computes the state value v0 amd v1 from critic output
-        float adv0 = netResults0.getValues("critic").getFloat(0, 0);
+        float adv0 = state0.getValues("critic").getFloat(0, 0);
         float adv1 = criticValue(s1);
 
         // Computes error delta by backing up the state value and the reward
@@ -627,7 +627,7 @@ public class TDAgentSingleNN implements Agent {
                 : reward - avgReward + adv1 - adv0;
 
         // Extract the policy output values pi from network results
-        Map<String, INDArray> pi = policyFromNetworkResults(netResults0);
+        Map<String, INDArray> pi = policyFromNetworkResults(state0);
         // Computes log(pi) gradients
         Map<String, INDArray> dp = gradLogPi(pi, result.actions);
 
@@ -648,11 +648,11 @@ public class TDAgentSingleNN implements Agent {
                 .collect(Tuple2.toMap());
 
         // Trains network
-        TDNetworkState netGrads = network.setState(netResults0)
+        TDNetworkState trainedState = network.setState(state0)
                 .train(grads, Nd4j.createFromArray(delta), lambda, kpiCallback);
 
         if (this.kpiListener != null) {
-            TDNetworkState trainedResults = network.forward(s0);
+            Map<String, INDArray> trainedResults = network.forward(s0).values();
             kpi.put("s0", s0);
             kpi.put("reward", reward);
             kpi.put("terminal", result.terminal);
@@ -660,12 +660,12 @@ public class TDAgentSingleNN implements Agent {
             kpi.put("s1", s1);
             kpi.put("avgReward", avgReward0);
             kpi.put("trainedAvgReward", avgReward);
-            kpi.put("netResult", netResults0);
+            kpi.put("netResult", state0.values());
             kpi.put("adv0", adv0);
             kpi.put("adv1", adv1);
             kpi.put("delta", delta);
             kpi.put("policy", pi);
-            kpi.put("netGrads", netGrads);
+            kpi.put("grads", trainedState.gradients());
             kpi.put("trainedResults", trainedResults);
             kpiListener.accept(kpi);
             indicatorsPub.onNext(kpi);

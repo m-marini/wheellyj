@@ -69,6 +69,22 @@ class TDLayerTest {
     }
 
     @Test
+    void createDropOut() throws IOException {
+        String yaml = """
+                ---
+                name: name
+                type: dropout
+                inputs: [input]
+                dropOut: 0.5
+                """;
+        JsonNode root = Utils.fromText(yaml);
+        Locator locator = Locator.root();
+        TDLayer layer = TDLayer.fromJson(root, locator);
+        assertThat(layer, Matchers.isA(TDDropOut.class));
+        assertEquals(0.5F, ((TDDropOut) layer).dropOut());
+    }
+
+    @Test
     void createLinear() throws IOException {
         String yaml = """
                 ---

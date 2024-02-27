@@ -359,9 +359,7 @@ public class TDNetwork {
      */
     public TDNetworkState train(Map<String, INDArray> grad, INDArray
             delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
-        for (String s : layers.keySet()) {
-            state = state.remove(s + ".grads");
-        }
+        state = state.removeGradients();
         for (Map.Entry<String, INDArray> entry : grad.entrySet()) {
             state = state.addGradients(entry.getKey(), entry.getValue());
         }

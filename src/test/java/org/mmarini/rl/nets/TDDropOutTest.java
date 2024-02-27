@@ -83,7 +83,7 @@ class TDDropOutTest {
         Locator locator = Locator.root();
         Random random = Nd4j.getRandom();
         random.setSeed(1234);
-        TDDropOut layer = TDDropOut.create(root, locator);
+        TDDropOut layer = TDDropOut.fromJson(root, locator);
         assertEquals(0.5F, layer.dropOut());
         assertEquals("name", layer.name());
         assertThat(layer.inputs, arrayContainingInAnyOrder("input"));

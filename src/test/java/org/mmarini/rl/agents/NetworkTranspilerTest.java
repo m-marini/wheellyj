@@ -232,7 +232,6 @@ class NetworkTranspilerTest {
         assertEquals(1F, ((TDDense) tr.layers.getFirst()).dropOut());
     }
 
-    /* TODO
     @Test
     void parseDropOut() throws IOException {
         NetworkTranspiler tr = create(DROP_OUT_YAML);
@@ -240,23 +239,17 @@ class NetworkTranspilerTest {
         assertThat(tr.layerDef, hasKey("output"));
         assertThat(tr.inputsDef, hasEntry(
                 equalTo("output"),
-                containsInAnyOrder("input")
+                arrayContainingInAnyOrder("input")
         ));
         assertThat(tr.sorted, contains("output"));
         assertThat(tr.layerSizes, hasEntry(
                 equalTo("output"),
                 equalTo(2L)
         ));
-        assertThat(tr.layers, contains(allOf(
-                hasProperty("name", equalTo("output")),
-                isA(TDDropOut.class)
-        )));
-        assertThat(tr.layers, contains(allOf(
-                hasProperty("name", equalTo("output")),
-                hasProperty("dropOut", equalTo(0.5F))
-        )));
+        assertThat(tr.layers, contains(isA(TDDropOut.class)));
+        assertEquals("output", tr.layers.getFirst().name());
+        assertEquals(0.5F, ((TDDropOut) tr.layers.getFirst()).dropOut());
     }
-*/
 
     @Test
     void parseLinear() throws IOException {

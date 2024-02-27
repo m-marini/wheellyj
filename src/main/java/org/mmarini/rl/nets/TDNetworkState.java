@@ -32,11 +32,16 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 
 import java.util.Map;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 
 /**
  * Contains the values, gradient and masks of each layer output
  */
 public interface TDNetworkState {
+    Predicate<String> PARAMETERS_PREDICATE = Pattern.compile("^.*\\.(weights|bias)$").asMatchPredicate();
+    Predicate<String> VALUES_PREDICATE = Pattern.compile("^.*\\.(values)$").asMatchPredicate();
+    Predicate<String> GRADIENTS_PREDICATE = Pattern.compile("^.*\\.(grads)$").asMatchPredicate();
 
     /**
      * Returns the state with added variables values
@@ -60,6 +65,20 @@ public interface TDNetworkState {
      * Returns the duplication of the state
      */
     TDNetworkState dup();
+
+    /**
+     * Returns the variables filterer by key
+     *
+     * @param predicate the filter predicate
+     */
+    Map<String, INDArray> filterKeys(Predicate<String> predicate);
+
+    /**
+     * Returns the copy of variables filterer by key
+     *
+     * @param predicate the filter predicate
+     */
+    Map<String, INDArray> filterKeysAndDup(Predicate<String> predicate);
 
     /**
      * Returns the variables
@@ -117,7 +136,7 @@ public interface TDNetworkState {
      * @param layer the layer key
      */
     default INDArray getValues(String layer) {
-        return get(layer);
+        return get(layer + ".values");
     }
 
     /**
@@ -139,9 +158,18 @@ public interface TDNetworkState {
     }
 
     /**
+     * Returns the copy of all gradients
+     */
+    default Map<String, INDArray> gradients() {
+        return filterKeys(GRADIENTS_PREDICATE);
+    }
+
+    /**
      * Returns the parameters of the network
      */
-    Map<String, INDArray> parameters();
+    default Map<String, INDArray> parameters() {
+        return filterKeysAndDup(PARAMETERS_PREDICATE);
+    }
 
     /**
      * Returns the state with variables changed
@@ -178,7 +206,7 @@ public interface TDNetworkState {
      * @param mask  the mask
      */
     default TDNetworkState putMask(String layer, INDArray mask) {
-        return putValues(layer + ".mask", mask);
+        return put(layer + ".mask", mask);
     }
 
     /**
@@ -188,7 +216,7 @@ public interface TDNetworkState {
      * @param values the values
      */
     default TDNetworkState putValues(String layer, INDArray values) {
-        return put(layer, values);
+        return put(layer + ".values", values);
     }
 
     /**
@@ -217,11 +245,18 @@ public interface TDNetworkState {
     Random random();
 
     /**
-     * Returns the state without the variable
+     * Returns the state without the filtered key variables
      *
-     * @param key the variable key
+     * @param filter the key filter
      */
-    TDNetworkState remove(String key);
+    TDNetworkState remove(Predicate<String> filter);
+
+    /**
+     * Returns the state without the gradients
+     */
+    default TDNetworkState removeGradients() {
+        return remove(GRADIENTS_PREDICATE);
+    }
 
     /**
      * Returns the state with set sizes
@@ -229,4 +264,11 @@ public interface TDNetworkState {
      * @param sizes the sizes by layer
      */
     TDNetworkState setSizes(Map<String, Long> sizes);
+
+    /**
+     * Returns a copy of values the values
+     */
+    default Map<String, INDArray> values() {
+        return filterKeys(VALUES_PREDICATE);
+    }
 }

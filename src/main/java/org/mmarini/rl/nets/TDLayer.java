@@ -62,6 +62,7 @@ public abstract class TDLayer {
             case "tanh" -> TDTanh.fromJson(root, locator);
             case "sum" -> TDSum.fromJson(root, locator);
             case "concat" -> TDConcat.fromJson(root, locator);
+            case "dropout" -> TDDropOut.fromJson(root, locator);
             default -> throw new IllegalArgumentException(format("type \"%s\" unrecognized", type));
         };
     }
