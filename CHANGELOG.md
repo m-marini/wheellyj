@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Issue [#77](https://github.com/m-marini/wheellyj/issues/77): Fixed drop out regularization
 - Issue [#362](https://github.com/m-marini/wheellyj/issues/362): Error loading tdagent
+- Issue [#364](https://github.com/m-marini/wheellyj/issues/364): Wrong scale computation in octave report
 
 ## [0.14.0] 2024-02-25
 
