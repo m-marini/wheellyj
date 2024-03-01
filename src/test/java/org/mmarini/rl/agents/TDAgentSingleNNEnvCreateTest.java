@@ -110,7 +110,7 @@ class TDAgentSingleNNEnvCreateTest {
         JsonNode spec = Utils.fromText(YAML);
         File path = new File("models/test");
         deleteRecursive(path);
-        TDAgentSingleNN agent = TDAgentSingleNN.fromJson(spec, Locator.root(), MOCK_ENV);
+        TDAgentSingleNN agent = TDAgentSingleNN.create(spec, Locator.root(), MOCK_ENV);
         assertNotNull(agent);
     }
 
@@ -119,11 +119,11 @@ class TDAgentSingleNNEnvCreateTest {
         JsonNode spec = Utils.fromText(YAML);
         File path = new File("models/test");
         deleteRecursive(path);
-        TDAgentSingleNN agent = TDAgentSingleNN.fromJson(spec, Locator.root(), MOCK_ENV);
+        TDAgentSingleNN agent = TDAgentSingleNN.create(spec, Locator.root(), MOCK_ENV);
         assertNotNull(agent);
         agent.save(path);
         JsonNode specLoad = Utils.fromText(YAML);
-        TDAgentSingleNN agent1 = TDAgentSingleNN.fromJson(specLoad, Locator.root(), MOCK_ENV);
+        TDAgentSingleNN agent1 = TDAgentSingleNN.create(specLoad, Locator.root(), MOCK_ENV);
         assertNotNull(agent1);
     }
 }

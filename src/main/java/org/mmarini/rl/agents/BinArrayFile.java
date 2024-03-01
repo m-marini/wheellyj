@@ -65,6 +65,7 @@ public class BinArrayFile {
     }
 
     private final File file;
+    private final String mode;
     private RandomAccessFile dataFile;
     private long[] shape;
     private long recordSize;
@@ -76,7 +77,18 @@ public class BinArrayFile {
      * @param file the file
      */
     public BinArrayFile(File file) {
+        this(file, "rw");
+    }
+
+    /**
+     * Creates the file
+     *
+     * @param file the file
+     * @param mode the open file mode
+     */
+    public BinArrayFile(File file, String mode) {
         this.file = requireNonNull(file);
+        this.mode = requireNonNull(mode);
     }
 
     /**
@@ -167,7 +179,7 @@ public class BinArrayFile {
     private void open() throws IOException {
         if (dataFile == null) {
             file.getParentFile().mkdirs();
-            dataFile = new RandomAccessFile(file, "rwd");
+            dataFile = new RandomAccessFile(file, mode);
             logger.atDebug().log("Open file {}", file);
             readShape();
         }

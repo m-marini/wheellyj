@@ -184,6 +184,7 @@ public class RobotController implements RobotControllerApi {
     private Complex sensorDir;
     private Runnable statusTransition;
     private double simRealSpeed;
+    private boolean isRunningStatus;
 
     /**
      * Creates the robot controller
@@ -470,7 +471,7 @@ public class RobotController implements RobotControllerApi {
             ((WithIOCallback) robot).setOnWriteLine(writeLinesProcessor::onNext);
         }
         // Loops till the controller is running
-        while (!end || connected) {
+        while (!end || connected || isInference || isRunningStatus) {
             stepUp();
         }
         logger.atInfo().setMessage("Control process ended").log();
@@ -488,6 +489,7 @@ public class RobotController implements RobotControllerApi {
         lastTick = robot.simulationTime();
         long startTime = prev;
         long startSimTime = lastTick;
+        this.isRunningStatus = true;
         while (!end && isReady) {
             try {
                 // Advance clock of interval
@@ -520,7 +522,8 @@ public class RobotController implements RobotControllerApi {
                 break;
             }
         }
-        logger.atDebug().setMessage("Status process ended").log();
+        this.isRunningStatus = false;
+        logger.atInfo().setMessage("Status process ended").log();
     }
 
     /**
@@ -669,13 +672,13 @@ public class RobotController implements RobotControllerApi {
      */
     private void waitingRetry() {
         logger.atDebug().setMessage("Waiting retry {} ms").addArgument(connectionRetryInterval).log();
-        if (!end) {
-            try {
-                Thread.sleep(round(connectionRetryInterval / simSpeed));
-            } catch (InterruptedException ex) {
-                sendError(ex);
-            }
+        try {
+            Thread.sleep(round(connectionRetryInterval / simRealSpeed));
+        } catch (InterruptedException ex) {
+            sendError(ex);
         }
-        setStatusTransition(this::connecting, CONNECTING);
+        if (!end) {
+            setStatusTransition(this::connecting, CONNECTING);
+        }
     }
 }

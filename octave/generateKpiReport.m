@@ -94,11 +94,8 @@ function generateKpiReport(hFile, dataPath, reportPath, id, kpiTitle, mode, vert
     endfor
 
     # Generate scale legend
-    dy = (yMax - yMin);
-    scale = floor(log10(dy) / 3) * 3;
-    #scaleLegend = sprintf('10^%d', scale);
-    scaleLegend=sprintf("x 10^{%d}", scale);
-    scale = 10 ^ -scale;
+    [scale, ord] = computeScale(yMin, yMax);
+    scaleLegend = sprintf("x 10^{%d}", ord);
 
     # Generate values chart
     clf();

@@ -26,8 +26,8 @@
 package org.mmarini.wheelly.apps;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
+import io.reactivex.rxjava3.subjects.CompletableSubject;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -61,6 +61,7 @@ import static org.mmarini.yaml.Utils.fromFile;
  */
 public class BatchTraining {
     public static final String BATCH_SCHEMA_YML = "https://mmarini.org/wheelly/batch-schema-0.1";
+    public static final int KPIS_CAPACITY = 1000;
     private static final Logger logger = LoggerFactory.getLogger(BatchTraining.class);
 
     static {
@@ -100,25 +101,25 @@ public class BatchTraining {
         new BatchTraining().start(args);
     }
 
+    private final CompletableSubject completed;
     protected Namespace args;
     private String pathFile;
     private BatchTrainer trainer;
     private boolean backUp;
     private KpiBinWriter kpiWriter;
 
+    public BatchTraining() {
+        this.completed = CompletableSubject.create();
+    }
+
     /**
      * Handles shutdown
      */
     private void handleShutdown() {
-        if (kpiWriter != null) {
-            logger.atInfo().log("Running shutdown hook");
-            try {
-                kpiWriter.close();
-            } catch (IOException e) {
-                logger.atError().setCause(e).log("Error closing kpi writer");
-                throw new RuntimeException(e);
-            }
-        }
+        logger.atInfo().log("Shutting down ...");
+        trainer.stop();
+        completed.blockingAwait();
+        logger.atInfo().log("Shutting down completed");
     }
 
     /**
@@ -214,6 +215,10 @@ public class BatchTraining {
                     this::saveNetwork
             );
 
+            // Prepares for training
+            logger.atInfo().log("Preparing for training ...");
+            trainer.prepare(new File(this.args.getString("dataset")));
+
             // reads kpis if activated
             String kpiPath = this.args.getString("kpis");
             this.kpiWriter = kpiPath.isEmpty()
@@ -223,13 +228,14 @@ public class BatchTraining {
                     this.args.getString("label"));
 
             if (kpiWriter != null) {
-                Flowable<Map<String, INDArray>> onNext = this.trainer.readKpis()
-                        .doOnNext(kpiWriter::write);
-                Flowable<Tuple2<Integer, Integer>> onFlush = this.trainer.readSteps()
-                        .doOnNext(ignored -> kpiWriter.flush());
-                Flowable.merge(onNext, onFlush)
+                this.trainer.readKpis()
                         .observeOn(Schedulers.io())
-                        .doOnComplete(kpiWriter::close)
+                        .onBackpressureBuffer(KPIS_CAPACITY, true)
+                        .doOnNext(kpiWriter::write)
+                        .doOnComplete(() -> {
+                            kpiWriter.close();
+                            completed.onComplete();
+                        })
                         .doOnError(ex -> logger.atError().setCause(ex).log("Error on kpis"))
                         .subscribe();
 
@@ -237,14 +243,10 @@ public class BatchTraining {
                 Runtime.getRuntime().addShutdownHook(hook);
             }
 
-            // Prepares for training
-            logger.atInfo().log("Preparing for training ...");
-            trainer.prepare(new File(this.args.getString("dataset")));
-
             // Runs the training session
             logger.atInfo().log("Training ...");
             trainer.train();
-            logger.atInfo().log("Completed.");
+            logger.atInfo().log("Training completed.");
             // Wait for completion
             this.trainer.readSteps()
                     .ignoreElements()

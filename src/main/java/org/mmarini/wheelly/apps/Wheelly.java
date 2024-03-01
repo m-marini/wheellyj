@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
+import io.reactivex.rxjava3.subjects.CompletableSubject;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -37,6 +38,7 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.KpiBinWriter;
 import org.mmarini.rl.envs.Environment;
+import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.wheelly.apis.ObstacleMap;
 import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotStatus;
@@ -123,6 +125,7 @@ public class Wheelly {
     private final JFrame comFrame;
     private final SensorMonitor sensorMonitor;
     private final JFrame sensorFrame;
+    private final CompletableSubject completion;
     protected Namespace args;
     private long robotStartTimestamp;
     private Long sessionDuration;
@@ -152,6 +155,7 @@ public class Wheelly {
         this.reactionRealTime = AverageValue.create();
         this.prevRobotStep = -1;
         this.prevStep = -1;
+        this.completion = CompletableSubject.create();
         SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
                 .doOnNext(this::handleWindowOpened)
@@ -222,17 +226,32 @@ public class Wheelly {
      * Handles the application shutdown
      */
     private void handleShutdown() {
-        try {
-            agent.close();
-        } catch (IOException e) {
-            logger.atError().setCause(e).log();
-        }
+        // Close all frame
         frame.dispose();
         if (radarFrame != null) {
             radarFrame.dispose();
         }
         sensorFrame.dispose();
         comFrame.dispose();
+
+        // Open wait frame
+        logger.atInfo().log("Shutdown");
+        JProgressBar progressBar = new JProgressBar();
+        progressBar.setIndeterminate(true);
+        progressBar.setString("   Waiting for completion ...   ");
+        progressBar.setStringPainted(true);
+        Container panel = new GridLayoutHelper<>(new JPanel())
+                .add(progressBar)
+                .getContainer();
+        JFrame waitFrame = center(createFrame("Shutdown", new Dimension(300, 100), panel));
+        waitFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        waitFrame.setVisible(true);
+        // Shuting down
+        try {
+            agent.close();
+        } catch (IOException e) {
+            logger.atError().setCause(e).log();
+        }
         if (dumper != null) {
             try {
                 dumper.close();
@@ -240,11 +259,18 @@ public class Wheelly {
                 logger.atError().setCause(e).log();
             }
         }
-        logger.atInfo().log("Completed.");
-        if (!args.getBoolean("silent")) {
-            JOptionPane.showMessageDialog(null,
-                    "Completed", "Information", JOptionPane.INFORMATION_MESSAGE);
-        }
+        // Wait for completion
+        completion.doOnComplete(() -> {
+            logger.atInfo().log("Shutdown completed.");
+            // Close waiting frame
+            waitFrame.dispose();
+            // Notify completion
+            if (!args.getBoolean("silent")) {
+                JOptionPane.showMessageDialog(null,
+                        "Completed", "Information", JOptionPane.INFORMATION_MESSAGE);
+            }
+            logger.atInfo().log("completed.");
+        }).subscribe();
     }
 
     private void handleStatusReady(RobotStatus status) {
@@ -331,12 +357,20 @@ public class Wheelly {
 
             String kpis = this.args.getString("kpis");
             if (!kpis.isEmpty()) {
-                KpiBinWriter kpiSubscriber = KpiBinWriter.createFromLabels(new File(kpis), this.args.getString("labels"));
-                agent.readKpis().observeOn(Schedulers.io(), true)
-                        .doOnNext(kpiSubscriber::write)
-                        .doOnComplete(kpiSubscriber::close)
+                KpiBinWriter kpiWriter = KpiBinWriter.createFromLabels(new File(kpis), this.args.getString("labels"));
+                agent.readKpis()
+                        .observeOn(Schedulers.io(), true)
+                        .doOnNext(kpiWriter::write)
                         .doOnError(ex -> logger.atError().setCause(ex).log("Error writing kpis"))
-                        .subscribe();
+                        .doOnComplete(() -> {
+                                    logger.atInfo().log("Closing kpis writer ...");
+                                    kpiWriter.close();
+                                    logger.atInfo().log("Kpis writer closed");
+                                    completion.onComplete();
+                                }
+                        ).subscribe();
+            } else {
+                completion.onComplete();
             }
             Optional.ofNullable(this.args.getString("dump"))
                     .ifPresent(file -> {
