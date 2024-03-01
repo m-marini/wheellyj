@@ -60,6 +60,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class TDAgentSingleNN implements Agent {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/agent-single-nn-schema-0.1";
+    public static final int KPIS_CAPACITY = 1000;
     private static final Logger logger = LoggerFactory.getLogger(TDAgentSingleNN.class);
 
     /**
@@ -90,35 +91,6 @@ public class TDAgentSingleNN implements Agent {
     static Map<String, Signal> chooseActions(Map<String, INDArray> pis, Random random) {
         return Tuple2.stream(pis)
                 .map(t -> t.setV2((Signal) IntSignal.create(chooseAction(t._2, random))))
-                .collect(Tuple2.toMap());
-    }
-
-    /**
-     * Returns the flat kpi stream for the given kpi
-     *
-     * @param kpi the kpi
-     */
-    private static Stream<Tuple2<String, INDArray>> flat(Tuple2<String, Object> kpi) {
-        String key = kpi._1;
-        return switch (kpi._2) {
-            case Boolean b -> Stream.of(kpi.setV2(Nd4j.create(new float[][]{{b ? 1f : 0f}})));
-            case Number num -> Stream.of(kpi.setV2(Nd4j.create(new float[][]{{num.floatValue()}})));
-            case INDArray ary -> Stream.of(kpi.setV2(ary));
-            case Signal sig -> Stream.of(kpi.setV2(sig.toINDArray()));
-            case Map<?, ?> map -> Tuple2.stream((Map<String, Object>) map)
-                    .flatMap(t -> flat(Tuple2.of(key + "." + t._1, t._2)));
-            default -> Stream.empty();
-        };
-    }
-
-    /**
-     * Returns the flat kpis the given kpis
-     *
-     * @param kpis the kpis
-     */
-    static Map<String, INDArray> flatKpis(Map<String, Object> kpis) {
-        return Tuple2.stream(kpis)
-                .flatMap(TDAgentSingleNN::flat)
                 .collect(Tuple2.toMap());
     }
 
@@ -155,6 +127,35 @@ public class TDAgentSingleNN implements Agent {
                     env.getState(), env.getActions(), random)
                     .build();
         }
+    }
+
+    /**
+     * Returns the flat kpi stream for the given kpi
+     *
+     * @param kpi the kpi
+     */
+    private static Stream<Tuple2<String, INDArray>> flat(Tuple2<String, Object> kpi) {
+        String key = kpi._1;
+        return switch (kpi._2) {
+            case Boolean b -> Stream.of(kpi.setV2(Nd4j.create(new float[][]{{b ? 1f : 0f}})));
+            case Number num -> Stream.of(kpi.setV2(Nd4j.create(new float[][]{{num.floatValue()}})));
+            case INDArray ary -> Stream.of(kpi.setV2(ary));
+            case Signal sig -> Stream.of(kpi.setV2(sig.toINDArray()));
+            case Map<?, ?> map -> Tuple2.stream((Map<String, Object>) map)
+                    .flatMap(t -> flat(Tuple2.of(key + "." + t._1, t._2)));
+            default -> Stream.empty();
+        };
+    }
+
+    /**
+     * Returns the flat kpis the given kpis
+     *
+     * @param kpis the kpis
+     */
+    static Map<String, INDArray> flatKpis(Map<String, Object> kpis) {
+        return Tuple2.stream(kpis)
+                .flatMap(TDAgentSingleNN::flat)
+                .collect(Tuple2.toMap());
     }
 
     /**
@@ -327,8 +328,7 @@ public class TDAgentSingleNN implements Agent {
     private final int savingIntervalSteps;
     private final InputProcessor processor;
     private final INDArray dc;
-    private PublishProcessor<Map<String, Object>> indicatorsPub;
-    private Flowable<Map<String, INDArray>> indicators;
+    private final PublishProcessor<Map<String, INDArray>> indicatorsPub;
     private float avgReward;
     private int savingStepCounter;
     private Consumer<Map<String, Object>> kpiListener;
@@ -363,6 +363,7 @@ public class TDAgentSingleNN implements Agent {
         this.avgReward = avgReward;
         this.alphas = requireNonNull(alphas);
         this.modelPath = modelPath;
+        this.indicatorsPub = PublishProcessor.create();
         this.dc = Nd4j.ones(1, 1);
         if (actions.containsKey("critic")) {
             throw new IllegalArgumentException("actions must not contain \"critic\" key");
@@ -383,8 +384,8 @@ public class TDAgentSingleNN implements Agent {
     public Map<String, Signal> act(Map<String, Signal> state) {
         Map<String, Signal> procState = processSignals(state);
         Map<String, INDArray> inputs = getInput(procState);
-        TDNetworkState netState = network.forward(inputs);
-        Map<String, INDArray> pis = this.pis(netState);
+        network().forward(inputs);
+        Map<String, INDArray> pis = this.policy();
         return chooseActions(pis, random);
     }
 
@@ -427,32 +428,8 @@ public class TDAgentSingleNN implements Agent {
 
     @Override
     public void close() {
-        if (indicatorsPub != null) {
-            indicatorsPub.onComplete();
-        }
         autosave();
-    }
-
-    /**
-     * Creates the kpi flow
-     */
-    private void createKpiFlowable() {
-        indicatorsPub = PublishProcessor.create();
-        indicators = indicatorsPub
-                .map(TDAgentSingleNN::flatKpis)
-                .publish()
-                .autoConnect();
-        kpiListener = indicatorsPub::onNext;
-    }
-
-    /**
-     * Returns the critical value for state inputs
-     *
-     * @param state the state inputs
-     */
-    float criticValue(Map<String, INDArray> state) {
-        TDNetworkState netState = network.forward(state);
-        return netState.getValues("critic").getFloat(0, 0);
+        indicatorsPub.onComplete();
     }
 
     @Override
@@ -504,24 +481,12 @@ public class TDAgentSingleNN implements Agent {
     }
 
     /**
-     * Returns the probability distribution of actions
-     *
-     * @param policyStatus the policy network status
+     * Returns the policy outputs from network state
      */
-    Map<String, INDArray> pis(TDNetworkState policyStatus) {
+    private Map<String, INDArray> policy() {
+        TDNetworkState state = network().state();
         return actions.keySet().stream()
-                .map(key -> Tuple2.of(key, policyStatus.getValues(key)))
-                .collect(Tuple2.toMap());
-    }
-
-    /**
-     * Returns the policy outputs from network results
-     *
-     * @param results the network results
-     */
-    private Map<String, INDArray> policyFromNetworkResults(TDNetworkState results) {
-        return actions.keySet().stream()
-                .map(key -> Tuple2.of(key, results.getValues(key)))
+                .map(key -> Tuple2.of(key, state.getValues(key)))
                 .collect(Tuple2.toMap());
     }
 
@@ -576,10 +541,10 @@ public class TDAgentSingleNN implements Agent {
      */
     @Override
     public Flowable<Map<String, INDArray>> readKpis() {
-        if (indicators == null) {
-            createKpiFlowable();
+        if (kpiListener == null) {
+            kpiListener = kpis -> indicatorsPub.onNext(flatKpis(kpis));
         }
-        return indicators;
+        return indicatorsPub.onBackpressureBuffer(KPIS_CAPACITY);
     }
 
     public float rewardAlpha() {
@@ -609,16 +574,18 @@ public class TDAgentSingleNN implements Agent {
         Map<String, Signal> procState = processSignals(result.state0);
         Map<String, INDArray> s0 = getInput(procState);
 
+        // forward network inputs s0 to produce outputs
+        TDNetworkState state0 = network.forward(s0, true);
+        Map<String, INDArray> pi0 = policy();
+
+        // Computes the state value v0 from critic output
+        float adv0 = state0.getValues("critic").getFloat(0, 0);
+
         // Process input signals of state 1 to produce input network s1
         procState = processSignals(result.state1);
         Map<String, INDArray> s1 = getInput(procState);
-
-        // forward network inputs s0 to produce outputs
-        TDNetworkState state0 = network.forward(s0, true).dup();
-
-        // Computes the state value v0 amd v1 from critic output
-        float adv0 = state0.getValues("critic").getFloat(0, 0);
-        float adv1 = criticValue(s1);
+        // Computes the state value v1 from critic output
+        float adv1 = network.forward(s1).getValues("critic").getFloat(0, 0);
 
         // Computes error delta by backing up the state value and the reward
         float reward = (float) result.reward;
@@ -627,9 +594,8 @@ public class TDAgentSingleNN implements Agent {
                 : reward - avgReward + adv1 - adv0;
 
         // Extract the policy output values pi from network results
-        Map<String, INDArray> pi = policyFromNetworkResults(state0);
         // Computes log(pi) gradients
-        Map<String, INDArray> dp = gradLogPi(pi, result.actions);
+        Map<String, INDArray> dp = gradLogPi(pi0, result.actions);
 
         // Updates average rewards
         float avgReward0 = avgReward;
@@ -664,11 +630,10 @@ public class TDAgentSingleNN implements Agent {
             kpi.put("adv0", adv0);
             kpi.put("adv1", adv1);
             kpi.put("delta", delta);
-            kpi.put("policy", pi);
+            kpi.put("policy", pi0);
             kpi.put("grads", trainedState.gradients());
             kpi.put("trainedResults", trainedResults);
             kpiListener.accept(kpi);
-            indicatorsPub.onNext(kpi);
         }
 
         if (++savingStepCounter >= savingIntervalSteps) {

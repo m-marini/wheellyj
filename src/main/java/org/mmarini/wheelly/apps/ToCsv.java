@@ -25,7 +25,7 @@
 
 package org.mmarini.wheelly.apps;
 
-import io.reactivex.rxjava3.functions.Supplier;
+import io.reactivex.rxjava3.functions.Action;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -34,8 +34,8 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.ParallelProcess;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.agents.BinArrayFile;
-import org.mmarini.rl.agents.BinArrayFileMap;
 import org.mmarini.rl.agents.CSVWriter;
+import org.mmarini.rl.agents.KeyFileMap;
 import org.mmarini.wheelly.swing.Messages;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -44,6 +44,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Runs the process to produce report data about learning kpis
@@ -71,6 +73,9 @@ public class ToCsv {
                 .setDefault(DEFAULT_BATCH_SIZE)
                 .type(Long.class)
                 .help("batch size");
+        parser.addArgument("-p", "--parallel")
+                .action(Arguments.storeTrue())
+                .help("run parallel tasks");
         parser.addArgument("sourcePath")
                 .required(true)
                 .help("specify the source path");
@@ -90,7 +95,7 @@ public class ToCsv {
         } catch (ArgumentParserException e) {
             parser.handleError(e);
             System.exit(1);
-        } catch (IOException e) {
+        } catch (Throwable e) {
             logger.atError().setCause(e).log("Error generating report");
             System.exit(2);
         }
@@ -110,45 +115,43 @@ public class ToCsv {
         this.batchSize = args.getLong("batchSize");
     }
 
-    protected void start() throws IOException {
+    protected void start() throws Throwable {
         this.destPath = new File(args.getString("destPath"));
-        BinArrayFileMap sources = BinArrayFileMap.create(new File(args.getString("sourcePath")), "");
-        try {
-            ParallelProcess.collector(
-                            Tuple2.stream(sources.files())
-                                    .map(t -> t.setV2((toCsv(t._1, t._2))))
-                                    .collect(Tuple2.toMap()))
-                    .run();
-        } finally {
-            sources.close();
+        Map<String, BinArrayFile> sources = KeyFileMap.create(new File(args.getString("sourcePath")), "");
+        List<Action> tasks = Tuple2.stream(sources)
+                .<Action>map(t -> () -> toCsv(t._1, t._2))
+                .toList();
+        if (args.getBoolean("parallel")) {
+            ParallelProcess.scheduler(tasks).run();
+        } else {
+            for (Action task : tasks) {
+                task.run();
+            }
         }
     }
 
-    private Supplier<Object> toCsv(String key, BinArrayFile binFile) {
-        return () -> {
+    private void toCsv(String key, BinArrayFile binFile) throws IOException {
+        try {
+            CSVWriter out = CSVWriter.createByKey(destPath, key);
             try {
-                CSVWriter out = CSVWriter.createByKey(destPath, key);
-                try {
-                    logger.atInfo().log("Converting {} to {}",
-                            binFile.file(),
-                            out.file());
-                    for (; ; ) {
-                        INDArray data = binFile.read(batchSize);
-                        if (data == null) {
-                            break;
-                        }
-                        out.write(data);
+                logger.atInfo().log("Converting {} to {}",
+                        binFile.file(),
+                        out.file());
+                for (; ; ) {
+                    INDArray data = binFile.read(batchSize);
+                    if (data == null) {
+                        break;
                     }
-                    logger.atInfo().log("Converted {} to {}",
-                            binFile.file(),
-                            out.file());
-                } finally {
-                    out.close();
+                    out.write(data);
                 }
-                return this;
+                logger.atInfo().log("Converted {} to {}",
+                        binFile.file(),
+                        out.file());
             } finally {
-                binFile.close();
+                out.close();
             }
-        };
+        } finally {
+            binFile.close();
+        }
     }
 }

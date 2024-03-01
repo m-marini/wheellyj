@@ -251,13 +251,15 @@ public class TDNetwork {
      * @param training true if training forward
      */
     public TDNetworkState forward(Map<String, INDArray> inputs, boolean training) {
+        TDNetworkState newState = state.dup();
         for (String input : inputs.keySet()) {
-            state = state.putValues(input, inputs.get(input));
+            newState = newState.putValues(input, inputs.get(input));
         }
         for (String id : forwardSeq) {
             TDLayer layer = layers.get(id);
-            state = layer.forward(state, training);
+            newState = layer.forward(newState, training);
         }
+        state = newState;
         return state;
     }
 
@@ -359,14 +361,15 @@ public class TDNetwork {
      */
     public TDNetworkState train(Map<String, INDArray> grad, INDArray
             delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
-        state = state.removeGradients();
+        TDNetworkState newState = state.dup().removeGradients();
         for (Map.Entry<String, INDArray> entry : grad.entrySet()) {
-            state = state.addGradients(entry.getKey(), entry.getValue());
+            newState = newState.addGradients(entry.getKey(), entry.getValue());
         }
         for (String id : backwardSeq) {
             TDLayer node = layers.get(id);
-            node.train(state, delta, lambda, kpiCallback);
+            newState = node.train(newState, delta, lambda, kpiCallback);
         }
+        state = newState;
         return state;
     }
 

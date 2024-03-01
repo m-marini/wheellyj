@@ -25,6 +25,8 @@
 
 package org.mmarini.rl.agents;
 
+import io.reactivex.rxjava3.functions.Action;
+import org.mmarini.ParallelProcess;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
@@ -93,7 +96,7 @@ public class KpiBinWriter {
 
     /**
      * Returns the subscriber for the given labels string
-     * The label string may be ("all", "batch", "analysis", "", comma separated regexs)
+     * The label string may be ("all", "batch", "analysis", "", comma separated regex)
      *
      * @param path   the files path
      * @param labels the labels string
@@ -112,19 +115,18 @@ public class KpiBinWriter {
      */
     static String[] parseLabels(String labels) {
         return switch (labels) {
-            case "all" -> null;
             case null -> null;
+            case "all" -> null;
             case "analysis" -> ANALYSIS_KPIS;
             case "batch" -> BATCH_KPIS;
-            case "default" -> DEFAULT_KPIS;
-            case "" -> DEFAULT_KPIS;
+            case "default", "" -> DEFAULT_KPIS;
             default -> labels.split(",");
         };
     }
 
     private final Predicate<String> matcher;
     private final File path;
-    private BinArrayFileMap files;
+    private final Map<String, BinArrayFile> files;
 
     /**
      * @param path   the path of kpis
@@ -133,7 +135,7 @@ public class KpiBinWriter {
     public KpiBinWriter(File path, Predicate<String> filter) {
         this.path = requireNonNull(path);
         this.matcher = requireNonNull(filter);
-        this.files = BinArrayFileMap.empty();
+        this.files = new HashMap<>();
     }
 
     /**
@@ -142,36 +144,39 @@ public class KpiBinWriter {
      * @throws IOException in case of error
      */
     public void close() throws IOException {
-        files.close();
+        KeyFileMap.close(files);
         logger.atInfo().log("Closed kpi files");
     }
 
     /**
-     * Flushes the files
+     * Writes the dataset
      *
+     * @param data the dataset
      * @throws IOException in case of error
      */
-    public void flush() throws IOException {
-        files.flush();
-    }
-
-    public void write(Map<String, INDArray> data) {
+    public void write(Map<String, INDArray> data) throws IOException {
         List<String> keys = data.keySet().stream()
                 .filter(matcher)
                 .toList();
         if (!keys.isEmpty()) {
+            // Add file
             for (String key : keys) {
-                try {
-                    BinArrayFile file = files.get(key);
-                    if (file == null) {
-                        files = files.addWrite(path, key);
-                        file = files.get(key).clear();
-                    }
-                    file.write(data.get(key));
-                } catch (IOException e) {
-                    logger.atError().setCause(e).log("Error writing kpi \"{}\"", key);
+                BinArrayFile file = files.get(key);
+                if (file == null) {
+                    file = BinArrayFile.createBykey(path, key).clear();
+                    files.put(key, file);
                 }
             }
+            List<Action> tasks = keys.stream().<Action>map(key -> () -> {
+                        try {
+                            files.get(key).write(data.get(key));
+                        } catch (IOException e) {
+                            logger.atError().setCause(e).log("Error writing kpi \"{}\"", key);
+                        }
+                    })
+                    .toList();
+            ParallelProcess.scheduler(tasks)
+                    .run();
         }
     }
 }

@@ -199,7 +199,7 @@ class SimRobotControllerTest {
         rc.readRobotStatus().doOnNext(consumer::accept).subscribe();
 
         // When waiting for 2 simulated intervals
-        Thread.sleep(round(INTERVAL / simSpeed * 2));
+        Thread.sleep(round(INTERVAL));
 
         // Then the status should be emitted at least 2 times
         verify(consumer, atLeast(2)).accept(any());

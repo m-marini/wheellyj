@@ -24,7 +24,7 @@
 
     <logger name="org.mmarini.wheelly.apis.RobotController" level="INFO"/>
 
-    <logger name="org.mmarini.wheelly.apis.RadarMap" level="DEBUG"/>
+    <logger name="org.mmarini.wheelly.apis.RadarMap" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.engines.StateMachineAgent" level="INFO"/>
     <logger name="org.mmarini.wheelly.engines.ExtendedStateNode" level="INFO"/>
@@ -37,8 +37,8 @@
     <logger name="org.mmarini.wheelly.apps.RobotCheckUp" level="INFO"/>
     <logger name="org.mmarini.wheelly.apps.Report" level="INFO"/>
 
-    <logger name="org.mmarini.rl.agents.BinArrayFile" level="DEBUG"/>
-    <logger name="org.mmarini.rl.agents.CSVWriter" level="DEBUG"/>
+    <logger name="org.mmarini.rl.agents.BinArrayFile" level="INFO"/>
+    <logger name="org.mmarini.rl.agents.CSVWriter" level="INFO"/>
 
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>

@@ -1,7 +1,7 @@
 ---
 $schema: https://mmarini.org/wheelly/batch-schema-0.1
 modelPath: models/polarRadarAgent
-numTrainIterations1: 1
-numTrainIterations2: 1
+numTrainIterations1: 10
+numTrainIterations2: 10
 batchSize: 32
 seed: 1234
