@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- Issue [#366](https://github.com/m-marini/wheellyj/issues/366): Merge kpis
+
 ### Fixed
 
 - Issue [#77](https://github.com/m-marini/wheellyj/issues/77): Fixed drop out regularization
