@@ -126,8 +126,9 @@ public class BatchTraining {
     protected final Namespace args;
     private final CompletableSubject completed;
     private final JFrame frame;
-    private final JTextField infoField;
+    private final JProgressBar infoBar;
     private final JFormattedTextField deltaField;
+    private final JFormattedTextField counterField;
     private final JFormattedTextField sensorActionGradField;
     private final JFormattedTextField directionGradField;
     private final JFormattedTextField speedGradField;
@@ -153,7 +154,8 @@ public class BatchTraining {
     public BatchTraining(Namespace args) {
         this.args = requireNonNull(args);
         this.completed = CompletableSubject.create();
-        this.infoField = new JTextField();
+        this.infoBar = new JProgressBar(JProgressBar.HORIZONTAL);
+        this.counterField = new JFormattedTextField();
         this.deltaField = new JFormattedTextField();
         this.sensorActionGradField = new JFormattedTextField();
         this.speedGradField = new JFormattedTextField();
@@ -174,19 +176,21 @@ public class BatchTraining {
     private Component createContent() {
         JPanel keys = new GridLayoutHelper<>(Messages.RESOURCE_BUNDLE, new JPanel())
                 .modify("insets,2")
-                .modify("at,0,0 e").add("BatchTraining.deltaField.label")
-                .modify("at,1,0 w").add(deltaField)
-                .modify("at,0,1 e").add("BatchTraining.sensorActionGradField.label")
-                .modify("at,1,1 w").add(sensorActionGradField)
-                .modify("at,0,2 e").add("BatchTraining.speedGradField.label")
-                .modify("at,1,2 w").add(speedGradField)
-                .modify("at,0,3 e").add("BatchTraining.directionGradField.label")
-                .modify("at,1,3 w").add(directionGradField)
+                .modify("at,0,0 e").add("BatchTraining.counterField.label")
+                .modify("at,1,0 w").add(counterField)
+                .modify("at,0,1 e").add("BatchTraining.deltaField.label")
+                .modify("at,1,1 w").add(deltaField)
+                .modify("at,0,2 e").add("BatchTraining.sensorActionGradField.label")
+                .modify("at,1,2 w").add(sensorActionGradField)
+                .modify("at,0,3 e").add("BatchTraining.speedGradField.label")
+                .modify("at,1,3 w").add(speedGradField)
+                .modify("at,0,4 e").add("BatchTraining.directionGradField.label")
+                .modify("at,1,4 w").add(directionGradField)
                 .getContainer();
         JPanel content = new JPanel();
         content.setLayout(new BorderLayout());
         content.add(keys, BorderLayout.CENTER);
-        content.add(infoField, BorderLayout.SOUTH);
+        content.add(infoBar, BorderLayout.SOUTH);
         return content;
     }
 
@@ -247,7 +251,7 @@ public class BatchTraining {
      */
     private void info(String fmt, Object... args) {
         String msg = format(fmt, args);
-        infoField.setText(msg);
+        infoBar.setString(msg);
         logger.atInfo().log(msg);
     }
 
@@ -256,10 +260,10 @@ public class BatchTraining {
      */
     private void init() {
         Stream.of(
-                infoField,
                 deltaField,
                 sensorActionGradField,
                 speedGradField,
+                counterField,
                 directionGradField
         ).forEach(f -> f.setEditable(false));
 
@@ -267,6 +271,7 @@ public class BatchTraining {
                 deltaField,
                 sensorActionGradField,
                 speedGradField,
+                counterField,
                 directionGradField
         ).forEach(f -> {
             f.setColumns(10);
@@ -279,7 +284,10 @@ public class BatchTraining {
                 directionGradField
         ).forEach(f -> f.setValue(0D));
 
-        infoField.setHorizontalAlignment(JTextField.CENTER);
+        counterField.setValue(0L);
+
+        infoBar.setIndeterminate(true);
+        infoBar.setStringPainted(true);
 
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
@@ -425,6 +433,7 @@ public class BatchTraining {
                 this::saveNetwork
         );
         trainer.readInfo()
+                .observeOn(Schedulers.io())
                 .doOnNext(this::info)
                 .subscribe();
         trainer.readKpis()
@@ -433,9 +442,14 @@ public class BatchTraining {
                 .filter(kpis -> handlers.containsKey(kpis.getKey()))
                 .doOnNext(t -> handlers.get(t.getKey()).accept(t.getValue()))
                 .subscribe();
+        trainer.readCounter()
+                .observeOn(Schedulers.io())
+                .doOnNext(counterField::setValue)
+                .subscribe();
 
         frame.setVisible(true);
         center(frame);
+        frame.pack();
         Completable.fromAction(this::runBatch)
                 .subscribeOn(Schedulers.computation())
                 .subscribe();

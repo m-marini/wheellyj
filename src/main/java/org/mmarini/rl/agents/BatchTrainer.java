@@ -133,6 +133,7 @@ public class BatchTrainer {
     private final PublishProcessor<Map<String, INDArray>> kpisProcessor;
     private final PublishProcessor<Tuple2<Integer, Integer>> stepsProcessor;
     private final PublishProcessor<String> infoProcessor;
+    private final PublishProcessor<Long> counterProcessor;
     private float avgReward;
     private INDArray criticGrad;
     private boolean stopped;
@@ -165,6 +166,7 @@ public class BatchTrainer {
         this.kpisProcessor = PublishProcessor.create();
         this.stepsProcessor = PublishProcessor.create();
         this.infoProcessor = PublishProcessor.create();
+        this.counterProcessor = PublishProcessor.create();
     }
 
     /**
@@ -324,6 +326,13 @@ public class BatchTrainer {
     }
 
     /**
+     * Returns the counter flow
+     */
+    public Flowable<Long> readCounter() {
+        return counterProcessor;
+    }
+
+    /**
      * Return the info flow
      */
     public Flowable<String> readInfo() {
@@ -447,6 +456,7 @@ public class BatchTrainer {
         advantageFile.seek(0);
         try {
             long last = System.currentTimeMillis();
+            counterProcessor.onNext(n);
             for (; ; ) {
                 if (stopped) {
                     return;
@@ -468,6 +478,7 @@ public class BatchTrainer {
                 }
                 double dTot = runMiniBatch(s0, actionsMasks, adv, criticGrad);
                 n += adv.size(0);
+                counterProcessor.onNext(n);
                 delta += dTot;
             }
         } finally {
