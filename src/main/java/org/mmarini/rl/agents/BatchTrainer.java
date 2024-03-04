@@ -45,6 +45,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -131,6 +132,7 @@ public class BatchTrainer {
     private final Map<String, Float> alphas;
     private final PublishProcessor<Map<String, INDArray>> kpisProcessor;
     private final PublishProcessor<Tuple2<Integer, Integer>> stepsProcessor;
+    private final PublishProcessor<String> infoProcessor;
     private float avgReward;
     private INDArray criticGrad;
     private boolean stopped;
@@ -162,6 +164,7 @@ public class BatchTrainer {
         this.alphas = alphas;
         this.kpisProcessor = PublishProcessor.create();
         this.stepsProcessor = PublishProcessor.create();
+        this.infoProcessor = PublishProcessor.create();
     }
 
     /**
@@ -178,7 +181,7 @@ public class BatchTrainer {
      */
     private Map<String, BinArrayFile> createActionMasks(File path) throws Exception {
         // Converts to actions mask
-        logger.atInfo().log("Loading action from \"{}\" ...", path.getCanonicalPath());
+        info("Loading action from \"%s\" ...", path.getCanonicalPath());
 
         // Get the layer io size
         Map<String, Long> layerSizes = network.sizes();
@@ -237,7 +240,7 @@ public class BatchTrainer {
      */
     private BinArrayFile createAdvantage(File datasetPath) throws Exception {
         // Loads rewards
-        logger.atInfo().log("Loading advantage from \"{}\" ...", datasetPath.getCanonicalPath());
+        info("Loading advantage from \"%s\" ...", datasetPath.getCanonicalPath());
         BinArrayFile rewardFile = BinArrayFile.createBykey(datasetPath, REWARD_KEY);
         try {
             logger.atDebug().log("loadAdvantage {}", datasetPath);
@@ -279,6 +282,18 @@ public class BatchTrainer {
     }
 
     /**
+     * Send an info message
+     *
+     * @param fmt  the format
+     * @param args the arguments
+     */
+    private void info(String fmt, Object... args) {
+        String msg = format(fmt, args);
+        logger.atInfo().log(msg);
+        infoProcessor.onNext(msg);
+    }
+
+    /**
      * Prepare data for training.
      * Load the dataset of s0,s1,reward,terminal,actions
      *
@@ -306,6 +321,13 @@ public class BatchTrainer {
         }
         this.advantageFile = createAdvantage(datasetPath);
         this.masksFiles = createActionMasks(datasetPath);
+    }
+
+    /**
+     * Return the info flow
+     */
+    public Flowable<String> readInfo() {
+        return infoProcessor;
     }
 
     /**
@@ -366,7 +388,7 @@ public class BatchTrainer {
         v = residualAdv + (terminal ? v0: v1)
         v = residualAdv + v1 + (terminal ? v0-v1 : 0)
         */
-        logger.atInfo().log("Computing advantage prediction ...");
+        info("Computing advantage prediction ...");
         KeyFileMap.seek(s0Files, 0);
         KeyFileMap.seek(s1Files, 0);
         advantageFile.seek(0);
@@ -400,7 +422,7 @@ public class BatchTrainer {
                 predictionFile.close();
             }
             delta /= n;
-            logger.atInfo().log("Samples {} - average delta {}", n, delta);
+            info("Samples %d - average delta %g", n, delta);
             kpisProcessor.onNext(Map.of(
                     "deltaPhase1", Nd4j.createFromArray((float) delta).reshape(1, 1)
             ));
@@ -438,7 +460,7 @@ public class BatchTrainer {
 
                 long t0 = System.currentTimeMillis();
                 if (t0 >= last + BATCH_MONITOR_INTERVAL) {
-                    logger.atInfo().log("Processed {} records", n);
+                    info("Processed %d records", n);
                     last = t0;
                 }
                 if (this.criticGrad == null || !this.criticGrad.equalShapes(adv)) {
@@ -450,12 +472,11 @@ public class BatchTrainer {
             }
         } finally {
             KeyFileMap.close(s0Files);
-            //          KeyFileMap.close(s1Files);
             KeyFileMap.close(masksFiles);
             advantageFile.close();
         }
         delta /= n;
-        logger.atInfo().log("Samples {} - average delta {}", n, delta);
+        info("Samples %d - average delta %g", n, delta);
     }
 
     public void stop() {
@@ -466,15 +487,15 @@ public class BatchTrainer {
      * Trains the network
      */
     public void train() throws Exception {
-        logger.atInfo().log("Training batch size {}", batchSize);
-        logger.atInfo().log(" {} x {} iterations",
+        info("Training batch size %d", batchSize);
+        info(" %d x %d iterations",
                 numTrainIterations1, numTrainIterations2);
         try {
             for (int i = 0; i < numTrainIterations1 && !stopped; i++) {
                 runPhase1();
                 for (int j = 0; j < numTrainIterations2 && !stopped; j++) {
                     // Iterate for all mini batches
-                    logger.info("Step {}.{} ...", i, j);
+                    info("Step %d.%d ...", i, j);
                     runPhase2();
                     if (onTrained != null) {
                         onTrained.accept(network);
