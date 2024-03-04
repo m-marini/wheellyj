@@ -26,6 +26,9 @@
 package org.mmarini.wheelly.apps;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.functions.Consumer;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.CompletableSubject;
 import net.sourceforge.argparse4j.ArgumentParsers;
@@ -38,30 +41,40 @@ import org.mmarini.rl.agents.BatchTrainer;
 import org.mmarini.rl.agents.KpiBinWriter;
 import org.mmarini.rl.agents.Serde;
 import org.mmarini.rl.nets.TDNetwork;
+import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.ops.transforms.Transforms;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.swing.*;
+import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.swing.Utils.center;
+import static org.mmarini.wheelly.swing.Utils.createFrame;
 import static org.mmarini.yaml.Utils.fromFile;
 
 /**
  * Run a test to check for robot environment with random behavior agent
  */
 public class BatchTraining {
-    public static final String BATCH_SCHEMA_YML = "https://mmarini.org/wheelly/batch-schema-0.1";
-    public static final int KPIS_CAPACITY = 1000;
+    private static final String BATCH_SCHEMA_YML = "https://mmarini.org/wheelly/batch-schema-0.1";
+    private static final int KPIS_CAPACITY = 1000;
+    private static final double DISCOUNT = 0.999;
+    private static final double PPM_SCALE = 1e6;
     private static final Logger logger = LoggerFactory.getLogger(BatchTraining.class);
 
     static {
@@ -98,28 +111,185 @@ public class BatchTraining {
      * @param args command line arguments
      */
     public static void main(String[] args) {
-        new BatchTraining().start(args);
+        ArgumentParser parser = createParser();
+        try {
+            new BatchTraining(parser.parseArgs(args)).start();
+        } catch (ArgumentParserException e) {
+            parser.handleError(e);
+            System.exit(1);
+        } catch (Throwable e) {
+            logger.atError().setCause(e).log("Exception");
+            System.exit(1);
+        }
     }
 
+    protected final Namespace args;
     private final CompletableSubject completed;
-    protected Namespace args;
+    private final JFrame frame;
+    private final JProgressBar infoBar;
+    private final JFormattedTextField deltaField;
+    private final JFormattedTextField counterField;
+    private final JFormattedTextField sensorActionGradField;
+    private final JFormattedTextField directionGradField;
+    private final JFormattedTextField speedGradField;
+    private final AverageValue sensorActionGrad;
+    private final AverageValue directionGrad;
+    private final AverageValue speedGrad;
+    private final AverageValue delta;
+    private final Map<String, Consumer<INDArray>> handlers = Map.of(
+            "delta", this::handleDelta,
+            "netGrads.direction", this::handleDirectionGrads,
+            "netGrads.sensorAction", this::handleSensorActionGrads,
+            "netGrads.speed", this::handleSpeedGrads);
     private String pathFile;
     private BatchTrainer trainer;
     private boolean backUp;
     private KpiBinWriter kpiWriter;
 
-    public BatchTraining() {
+    /**
+     * Creates the application
+     *
+     * @param args the parsed command line arguments
+     */
+    public BatchTraining(Namespace args) {
+        this.args = requireNonNull(args);
         this.completed = CompletableSubject.create();
+        this.infoBar = new JProgressBar(JProgressBar.HORIZONTAL);
+        this.counterField = new JFormattedTextField();
+        this.deltaField = new JFormattedTextField();
+        this.sensorActionGradField = new JFormattedTextField();
+        this.speedGradField = new JFormattedTextField();
+        this.directionGradField = new JFormattedTextField();
+        this.delta = new AverageValue(0, DISCOUNT);
+        this.sensorActionGrad = new AverageValue(0, DISCOUNT);
+        this.directionGrad = new AverageValue(0, DISCOUNT);
+        this.speedGrad = new AverageValue(0, DISCOUNT);
+        this.frame = createFrame(Messages.getString("BatchTraining.title"),
+                new Dimension(400, 300),
+                createContent());
+        init();
+    }
+
+    /**
+     * Returns the content
+     */
+    private Component createContent() {
+        JPanel keys = new GridLayoutHelper<>(Messages.RESOURCE_BUNDLE, new JPanel())
+                .modify("insets,2")
+                .modify("at,0,0 e").add("BatchTraining.counterField.label")
+                .modify("at,1,0 w").add(counterField)
+                .modify("at,0,1 e").add("BatchTraining.deltaField.label")
+                .modify("at,1,1 w").add(deltaField)
+                .modify("at,0,2 e").add("BatchTraining.sensorActionGradField.label")
+                .modify("at,1,2 w").add(sensorActionGradField)
+                .modify("at,0,3 e").add("BatchTraining.speedGradField.label")
+                .modify("at,1,3 w").add(speedGradField)
+                .modify("at,0,4 e").add("BatchTraining.directionGradField.label")
+                .modify("at,1,4 w").add(directionGradField)
+                .getContainer();
+        JPanel content = new JPanel();
+        content.setLayout(new BorderLayout());
+        content.add(keys, BorderLayout.CENTER);
+        content.add(infoBar, BorderLayout.SOUTH);
+        return content;
+    }
+
+    /**
+     * Handles delta values
+     *
+     * @param delta the delta values
+     */
+    private void handleDelta(INDArray delta) {
+        for (long i = 0; i < delta.size(0); i++) {
+            this.delta.add(delta.getDouble(i));
+        }
+        this.deltaField.setValue(updateAvg(this.delta, delta) * PPM_SCALE);
+    }
+
+    /**
+     * Handle direction gradients
+     *
+     * @param grads the gradient
+     */
+    private void handleDirectionGrads(INDArray grads) {
+        directionGradField.setValue(maxAvg(directionGrad, grads) * PPM_SCALE);
+    }
+
+    /**
+     * Handle sensor action gradients
+     *
+     * @param grads the gradient
+     */
+    private void handleSensorActionGrads(INDArray grads) {
+        sensorActionGradField.setValue(maxAvg(sensorActionGrad, grads) * PPM_SCALE);
     }
 
     /**
      * Handles shutdown
      */
     private void handleShutdown() {
-        logger.atInfo().log("Shutting down ...");
+        info("Shutting down ...");
         trainer.stop();
         completed.blockingAwait();
-        logger.atInfo().log("Shutting down completed");
+        info("Shutting down completed");
+    }
+
+    /**
+     * Handle speed gradients
+     *
+     * @param grads the gradient
+     */
+    private void handleSpeedGrads(INDArray grads) {
+        speedGradField.setValue(maxAvg(speedGrad, grads) * PPM_SCALE);
+    }
+
+    /**
+     * Show info
+     *
+     * @param fmt  the format text
+     * @param args the arguments
+     */
+    private void info(String fmt, Object... args) {
+        String msg = format(fmt, args);
+        infoBar.setString(msg);
+        logger.atInfo().log(msg);
+    }
+
+    /**
+     * Initializes the application
+     */
+    private void init() {
+        Stream.of(
+                deltaField,
+                sensorActionGradField,
+                speedGradField,
+                counterField,
+                directionGradField
+        ).forEach(f -> f.setEditable(false));
+
+        Stream.of(
+                deltaField,
+                sensorActionGradField,
+                speedGradField,
+                counterField,
+                directionGradField
+        ).forEach(f -> {
+            f.setColumns(10);
+            f.setHorizontalAlignment(JTextField.RIGHT);
+        });
+        Stream.of(
+                deltaField,
+                sensorActionGradField,
+                speedGradField,
+                directionGradField
+        ).forEach(f -> f.setValue(0D));
+
+        counterField.setValue(0L);
+
+        infoBar.setIndeterminate(true);
+        infoBar.setStringPainted(true);
+
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
 
     /**
@@ -149,6 +319,60 @@ public class BatchTraining {
     }
 
     /**
+     * Returns the average max value
+     *
+     * @param average the average accumulator
+     * @param values  the values
+     */
+    private double maxAvg(AverageValue average, INDArray values) {
+        return updateAvg(average, Transforms.abs(values).max(1));
+    }
+
+    /**
+     * Runs the batch
+     *
+     * @throws Exception in case of error
+     */
+    private void runBatch() throws Exception {
+        // Prepares for training
+        info("Preparing for training ...");
+        trainer.prepare(new File(this.args.getString("dataset")));
+
+        // reads kpis if activated
+        String kpiPath = this.args.getString("kpis");
+        this.kpiWriter = kpiPath.isEmpty()
+                ? null
+                : KpiBinWriter.createFromLabels(
+                new File(kpiPath),
+                this.args.getString("label"));
+
+        if (kpiWriter != null) {
+            this.trainer.readKpis()
+                    .observeOn(Schedulers.io())
+                    .onBackpressureBuffer(KPIS_CAPACITY, true)
+                    .doOnNext(kpiWriter::write)
+                    .doOnComplete(() -> {
+                        kpiWriter.close();
+                        completed.onComplete();
+                    })
+                    .doOnError(ex -> logger.atError().setCause(ex).log("Error on kpis"))
+                    .subscribe();
+
+            Thread hook = new Thread(this::handleShutdown);
+            Runtime.getRuntime().addShutdownHook(hook);
+        }
+
+        // Runs the training session
+        info("Training ...");
+        trainer.train();
+        info("Training completed.");
+        // Wait for completion
+        this.trainer.readSteps()
+                .ignoreElements()
+                .blockingAwait();
+    }
+
+    /**
      * Saves the network
      *
      * @param network the network
@@ -163,7 +387,7 @@ public class BatchTraining {
             logger.atInfo().log("Backup at {}", backupFileName);
         }
 
-        logger.atInfo().log("Saving network ...");
+        info("Saving network ...");
         Map<String, INDArray> props = new HashMap<>(network.parameters());
         props.put("avgReward", Nd4j.createFromArray(trainer.avgReward()));
         try {
@@ -176,87 +400,71 @@ public class BatchTraining {
 
     /**
      * Starts the training
-     *
-     * @param args the command line arguments
      */
-    protected void start(String[] args) {
-        ArgumentParser parser = createParser();
-        try {
-            // Parses the arguments
-            this.args = parser.parseArgs(args);
+    protected void start() throws Exception {
 
-            // Load configuration
-            JsonNode config = fromFile(this.args.getString("config"));
-            JsonSchemas.instance().validateOrThrow(config, BATCH_SCHEMA_YML);
+        // Load configuration
+        JsonNode config = fromFile(this.args.getString("config"));
+        JsonSchemas.instance().validateOrThrow(config, BATCH_SCHEMA_YML);
 
-            // Creates random number generator
-            Random random = Nd4j.getRandom();
-            long seed = Locator.locate("seed").getNode(config).asLong(0);
-            if (seed > 0) {
-                random.setSeed(seed);
-            }
-
-            // Loads network
-            logger.atInfo().log("Load network ...");
-            this.pathFile = Locator.locate("modelPath").getNode(config).asText();
-            TDNetwork network = loadNetwork(random);
-            Map<String, Float> alphas = loadAlphas();
-
-            // Create the batch trainer
-            int numTrainIterations1 = Locator.locate("numTrainIterations1").getNode(config).asInt();
-            int numTrainIterations2 = Locator.locate("numTrainIterations2").getNode(config).asInt();
-            long batchSize = Locator.locate("batchSize").getNode(config).asLong(Long.MAX_VALUE);
-            this.trainer = BatchTrainer.create(network,
-                    alphas,
-                    0,
-                    numTrainIterations1,
-                    numTrainIterations2,
-                    (int) batchSize,
-                    this::saveNetwork
-            );
-
-            // Prepares for training
-            logger.atInfo().log("Preparing for training ...");
-            trainer.prepare(new File(this.args.getString("dataset")));
-
-            // reads kpis if activated
-            String kpiPath = this.args.getString("kpis");
-            this.kpiWriter = kpiPath.isEmpty()
-                    ? null
-                    : KpiBinWriter.createFromLabels(
-                    new File(kpiPath),
-                    this.args.getString("label"));
-
-            if (kpiWriter != null) {
-                this.trainer.readKpis()
-                        .observeOn(Schedulers.io())
-                        .onBackpressureBuffer(KPIS_CAPACITY, true)
-                        .doOnNext(kpiWriter::write)
-                        .doOnComplete(() -> {
-                            kpiWriter.close();
-                            completed.onComplete();
-                        })
-                        .doOnError(ex -> logger.atError().setCause(ex).log("Error on kpis"))
-                        .subscribe();
-
-                Thread hook = new Thread(this::handleShutdown);
-                Runtime.getRuntime().addShutdownHook(hook);
-            }
-
-            // Runs the training session
-            logger.atInfo().log("Training ...");
-            trainer.train();
-            logger.atInfo().log("Training completed.");
-            // Wait for completion
-            this.trainer.readSteps()
-                    .ignoreElements()
-                    .blockingAwait();
-        } catch (ArgumentParserException e) {
-            parser.handleError(e);
-            System.exit(1);
-        } catch (Exception e) {
-            logger.atError().setCause(e).log("Exception");
-            System.exit(1);
+        // Creates random number generator
+        Random random = Nd4j.getRandom();
+        long seed = Locator.locate("seed").getNode(config).asLong(0);
+        if (seed > 0) {
+            random.setSeed(seed);
         }
+
+        // Loads network
+        info("Load network ...");
+        this.pathFile = Locator.locate("modelPath").getNode(config).asText();
+        TDNetwork network = loadNetwork(random);
+        Map<String, Float> alphas = loadAlphas();
+
+        // Create the batch trainer
+        int numTrainIterations1 = Locator.locate("numTrainIterations1").getNode(config).asInt();
+        int numTrainIterations2 = Locator.locate("numTrainIterations2").getNode(config).asInt();
+        long batchSize = Locator.locate("batchSize").getNode(config).asLong(Long.MAX_VALUE);
+        this.trainer = BatchTrainer.create(network,
+                alphas,
+                0,
+                numTrainIterations1,
+                numTrainIterations2,
+                (int) batchSize,
+                this::saveNetwork
+        );
+        trainer.readInfo()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::info)
+                .subscribe();
+        trainer.readKpis()
+                .observeOn(Schedulers.io())
+                .flatMap(kpis -> Flowable.fromIterable(kpis.entrySet()))
+                .filter(kpis -> handlers.containsKey(kpis.getKey()))
+                .doOnNext(t -> handlers.get(t.getKey()).accept(t.getValue()))
+                .subscribe();
+        trainer.readCounter()
+                .observeOn(Schedulers.io())
+                .doOnNext(counterField::setValue)
+                .subscribe();
+
+        frame.setVisible(true);
+        center(frame);
+        frame.pack();
+        Completable.fromAction(this::runBatch)
+                .subscribeOn(Schedulers.computation())
+                .subscribe();
+    }
+
+    /**
+     * Returns the updated average
+     *
+     * @param average the average value
+     * @param values  the values
+     */
+    private double updateAvg(AverageValue average, INDArray values) {
+        for (long i = 0; i < values.size(0); i++) {
+            average.add(values.getDouble(i));
+        }
+        return average.getValue();
     }
 }
