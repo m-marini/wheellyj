@@ -58,7 +58,7 @@ import static java.lang.String.format;
  * Merges different kpis folders into a merged kpis folder
  */
 public class MergeKpis {
-    public static final long DEFAULT_BATCH_SIZE = 300L;
+    public static final long DEFAULT_BATCH_SIZE = 256;
     private static final Logger logger = LoggerFactory.getLogger(MergeKpis.class);
 
     static {
@@ -130,26 +130,21 @@ public class MergeKpis {
      * @param binArrayFiles the source files
      */
     private void merge(String key, List<BinArrayFile> binArrayFiles) throws IOException {
-        BinArrayFile output = BinArrayFile.createBykey(outputFile, key);
-        try {
+        try (BinArrayFile output = BinArrayFile.createByKey(outputFile, key)) {
             output.clear();
             for (BinArrayFile source : binArrayFiles) {
                 logger.atInfo().log("Merging {} -> {}", source.file(), output.file());
-                try {
-                    source.seek(0);
+                source.seek(0);
+                try (BinArrayFile source1 = source) {
                     for (; ; ) {
-                        INDArray data = source.read(batchSize);
+                        INDArray data = source1.read(batchSize);
                         if (data == null) {
                             break;
                         }
                         output.write(data);
                     }
-                } finally {
-                    source.close();
                 }
             }
-        } finally {
-            output.close();
         }
     }
 

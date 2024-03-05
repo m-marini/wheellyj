@@ -32,7 +32,10 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.Arrays;
 
 /**
@@ -40,7 +43,7 @@ import java.util.Arrays;
  * The reader allows to read data from csv file
  * If the file shape.csv is present it is used to reshape the output array
  */
-public class CSVReader implements Closeable {
+public class CSVReader implements AutoCloseable {
     /**
      * Creates the writer by key name
      *
@@ -87,12 +90,10 @@ public class CSVReader implements Closeable {
 
     @Override
     public void close() throws IOException {
-        if (reader != null) {
-            try {
-                reader.close();
-            } finally {
-                reader = null;
-            }
+        BufferedReader rd = reader;
+        reader = null;
+        if (rd != null) {
+            rd.close();
         }
     }
 

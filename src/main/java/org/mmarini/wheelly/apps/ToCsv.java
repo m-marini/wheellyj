@@ -37,13 +37,11 @@ import org.mmarini.rl.agents.BinArrayFile;
 import org.mmarini.rl.agents.CSVWriter;
 import org.mmarini.rl.agents.KeyFileMap;
 import org.mmarini.wheelly.swing.Messages;
-import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -51,7 +49,7 @@ import java.util.Map;
  * Runs the process to produce report data about learning kpis
  */
 public class ToCsv {
-    public static final long DEFAULT_BATCH_SIZE = 300L;
+    public static final long DEFAULT_BATCH_SIZE = 256;
     private static final Logger logger = LoggerFactory.getLogger(ToCsv.class);
 
     static {
@@ -119,7 +117,18 @@ public class ToCsv {
         this.destPath = new File(args.getString("destPath"));
         Map<String, BinArrayFile> sources = KeyFileMap.create(new File(args.getString("sourcePath")), "");
         List<Action> tasks = Tuple2.stream(sources)
-                .<Action>map(t -> () -> toCsv(t._1, t._2))
+                .<Action>map(t -> () -> {
+                    CSVWriter output = CSVWriter.createByKey(destPath, t._1);
+                    logger.atInfo().log("Converting {} to {} ...",
+                            t._2.file(),
+                            output.file());
+                    Batches.copy(output,
+                            t._2,
+                            batchSize);
+                    logger.atInfo().log("Converted {} to {}",
+                            t._2.file(),
+                            output.file());
+                })
                 .toList();
         if (args.getBoolean("parallel")) {
             ParallelProcess.scheduler(tasks).run();
@@ -128,30 +137,6 @@ public class ToCsv {
                 task.run();
             }
         }
-    }
-
-    private void toCsv(String key, BinArrayFile binFile) throws IOException {
-        try {
-            CSVWriter out = CSVWriter.createByKey(destPath, key);
-            try {
-                logger.atInfo().log("Converting {} to {}",
-                        binFile.file(),
-                        out.file());
-                for (; ; ) {
-                    INDArray data = binFile.read(batchSize);
-                    if (data == null) {
-                        break;
-                    }
-                    out.write(data);
-                }
-                logger.atInfo().log("Converted {} to {}",
-                        binFile.file(),
-                        out.file());
-            } finally {
-                out.close();
-            }
-        } finally {
-            binFile.close();
-        }
+        logger.atInfo().log("Completed.");
     }
 }
