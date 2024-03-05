@@ -34,9 +34,9 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Map;
 import java.util.function.Predicate;
-import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 
 /**
@@ -67,14 +67,45 @@ public interface KeyFileMap {
     }
 
     /**
-     * Returns the files afetr closing them
+     * Closes all resources
+     *
+     * @param resources the resources
+     * @throws Exception first thrown exception
+     */
+    static void close(AutoCloseable... resources) throws Exception {
+        Exception ex = null;
+        for (AutoCloseable resource : resources) {
+            try {
+                resource.close();
+            } catch (Exception e) {
+                ex = ex == null ? e : ex;
+            }
+        }
+        if (ex != null) {
+            throw ex;
+        }
+    }
+
+    /**
+     * Returns the files after closing them
      *
      * @param files the file
      */
-    static void close(Map<String, BinArrayFile> files) throws IOException {
-        for (BinArrayFile file : files.values()) {
-            file.close();
-        }
+    static void close(Map<String, BinArrayFile>... files) throws Exception {
+        BinArrayFile[] resources = Arrays.stream(files)
+                .flatMap(m -> m.values().stream())
+                .toArray(BinArrayFile[]::new);
+        close(resources);
+    }
+
+    /**
+     * Close all the resources
+     *
+     * @param resources the file
+     * @throws Exception in case of errors
+     */
+    static void close(Collection<? extends AutoCloseable> resources) throws Exception {
+        close(resources.toArray(AutoCloseable[]::new));
     }
 
     /**
@@ -85,19 +116,6 @@ public interface KeyFileMap {
      */
     static Map<String, BinArrayFile> create(File path, String... keys) {
         return streamBinArrayFile(path, keys).collect(Tuple2.toMap());
-    }
-
-    /**
-     * Returns the function that map the children key pattern of tuple
-     *
-     * @param key the key pattern
-     * @param <T> The type of second value of tuple
-     */
-    static <T> UnaryOperator<Tuple2<String, T>> mapChildren(String key) {
-        String prefix = key.endsWith(".") ? key : key + ".";
-        int prefixLen = prefix.length();
-        return t -> t.setV1(t._1.startsWith(prefix)
-                ? t._1.substring(prefixLen) : ".");
     }
 
     /**
@@ -118,17 +136,6 @@ public interface KeyFileMap {
                 })
                 .reduce(Predicate::or)
                 .orElse(ignored -> false);
-    }
-
-    /**
-     * Returns the predicate that match keys
-     * Return true if key is equals to pattern of key start with pattern + "."
-     *
-     * @param pattern the pattern to match
-     */
-    static <T> Predicate<Tuple2<String, T>> matchesTuple(String pattern) {
-        Predicate<String> matches = matchesKey(pattern);
-        return t -> matches.test(t._1);
     }
 
     /**

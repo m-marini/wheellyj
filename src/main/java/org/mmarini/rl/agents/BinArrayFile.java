@@ -31,6 +31,7 @@ package org.mmarini.rl.agents;
 import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,7 +47,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * Writes and reads arrays into binary file
  */
-public class BinArrayFile {
+public class BinArrayFile implements ArrayWriter, ArrayReader {
 
     private static final Logger logger = LoggerFactory.getLogger(BinArrayFile.class);
 
@@ -56,7 +57,7 @@ public class BinArrayFile {
      * @param path the base path
      * @param key  the key
      */
-    public static BinArrayFile createBykey(File path, String key) {
+    public static BinArrayFile createByKey(File path, String key) {
         String[] names = key.split("\\.");
         for (String name : names) {
             path = new File(path, name);
@@ -70,6 +71,7 @@ public class BinArrayFile {
     private long[] shape;
     private long recordSize;
     private long dataOffset;
+    private INDArray buffer;
 
     /**
      * Creates the file
@@ -109,29 +111,38 @@ public class BinArrayFile {
      *
      * @throws IOException in case of error
      */
-    public BinArrayFile clear() throws IOException {
+    public void clear() throws IOException {
         if (dataFile == null) {
             open();
         }
         dataFile.setLength(0);
         shape = null;
-        return this;
     }
 
-    /**
-     * Closes the file
-     *
-     * @throws IOException in case of error
-     */
+    @Override
     public void close() throws IOException {
         RandomAccessFile df = dataFile;
+        INDArray bf = buffer;
+        buffer = null;
+        dataFile = null;
+        shape = null;
+        recordSize = 0;
+        dataOffset = 0;
+        IOException ex = null;
         if (df != null) {
-            dataFile = null;
-            shape = null;
-            recordSize = 0;
-            dataOffset = 0;
-            logger.atDebug().log("Close file {}", file);
-            df.close();
+            try {
+                logger.atDebug().log("Close file {}", file);
+                df.close();
+            } catch (IOException e) {
+                ex = e;
+            }
+        }
+        if (bf != null) {
+            logger.atDebug().log("Close buffer {}", file);
+            bf.close();
+        }
+        if (ex != null) {
+            throw ex;
         }
     }
 
@@ -145,30 +156,9 @@ public class BinArrayFile {
         }
     }
 
-    /**
-     * Returns the duplication of file
-     */
-    public BinArrayFile dup() {
-        return new BinArrayFile(file);
-    }
-
-    /**
-     * Returns the file
-     */
+    @Override
     public File file() {
         return file;
-    }
-
-    /**
-     * Flushes the file
-     */
-    public void flush() throws IOException {
-        if (dataFile != null) {
-            long pos = position();
-            close();
-            open();
-            seek(pos);
-        }
     }
 
     /**
@@ -198,12 +188,7 @@ public class BinArrayFile {
         return (dataFile.getFilePointer() - dataOffset) / recordSize / 4;
     }
 
-    /**
-     * Returns the array read from file or null if no records available
-     *
-     * @param numRecords the maximum number of record
-     * @throws IOException in case of error
-     */
+    @Override
     public INDArray read(long numRecords) throws IOException {
         open();
         if (shape == null) {
@@ -214,13 +199,21 @@ public class BinArrayFile {
             return null;
         }
         long n = numRecords * recordSize;
-        INDArray buffer = Nd4j.create(DataType.FLOAT, n);
+        if (buffer == null || buffer.length() < n) {
+            buffer = Nd4j.create(DataType.FLOAT, n);
+        }
         for (long i = 0; i < n; i++) {
             float value = dataFile.readFloat();
             buffer.putScalar(i, value);
         }
         shape[0] = numRecords;
-        return buffer.reshape(shape);
+        if (n < buffer.length()) {
+            // Shrink to n
+            return buffer.get(NDArrayIndex.interval(0, n))
+                    .reshape(shape);
+        } else {
+            return buffer.reshape(shape);
+        }
     }
 
     /**
@@ -247,12 +240,7 @@ public class BinArrayFile {
         computeRecordSize();
     }
 
-    /**
-     * Positions the file to a specific record
-     *
-     * @param record record number
-     * @throws IOException in case of error
-     */
+    @Override
     public void seek(long record) throws IOException {
         open();
         if (shape == null) {
@@ -288,12 +276,7 @@ public class BinArrayFile {
         return (dataFile.length() - dataOffset) / recordSize / 4;
     }
 
-    /**
-     * Writes records to current position
-     *
-     * @param data the records
-     * @throws IOException in case of error
-     */
+    @Override
     public void write(INDArray data) throws IOException {
         open();
         if (shape == null) {

@@ -47,7 +47,7 @@ import static java.util.Objects.requireNonNull;
  * The data collector consumer accumulates data and returns the kpi of data
  */
 
-public class KpiBinWriter {
+public class KpiBinWriter implements AutoCloseable {
     public static final String[] ANALYSIS_KPIS = {
             "^reward$",
             "^delta$",
@@ -143,9 +143,9 @@ public class KpiBinWriter {
      *
      * @throws IOException in case of error
      */
-    public void close() throws IOException {
-        KeyFileMap.close(files);
+    public void close() throws Exception {
         logger.atInfo().log("Closed kpi files");
+        KeyFileMap.close(files);
     }
 
     /**
@@ -163,7 +163,8 @@ public class KpiBinWriter {
             for (String key : keys) {
                 BinArrayFile file = files.get(key);
                 if (file == null) {
-                    file = BinArrayFile.createBykey(path, key).clear();
+                    file = BinArrayFile.createByKey(path, key);
+                    file.clear();
                     files.put(key, file);
                 }
             }

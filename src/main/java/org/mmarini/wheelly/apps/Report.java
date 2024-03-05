@@ -46,20 +46,21 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.UnaryOperator;
 
 import static java.lang.Math.*;
+import static java.lang.String.format;
 
 /**
  * Runs the process to produce report data about learning kpis
  */
 public class Report {
     public static final int ERROR_INDEX = 2;
+    public static final int SIGMA_INDEX = 4;
     private static final int DEFAULT_NUM_BINS = 11;
-    private static final long DEFAULT_BATCH_SIZE = 300;
+    private static final long DEFAULT_BATCH_SIZE = 256;
     private static final Logger logger = LoggerFactory.getLogger(Report.class);
     private static final int N_INDEX = 0;
     private static final int MIN_INDEX = 1;
@@ -71,16 +72,16 @@ public class Report {
     private static final long Y_MIN_INDEX = ERROR_INDEX;
     private static final long Y_MAX_INDEX = 3;
     private static final File TEMP_PATH = new File("tmp");
-    private static final Map<String, Optional<UnaryOperator<INDArray>>> KPIS = Map.of(
-            "deltaPhase1", Optional.empty(),
-            "netGrads.direction", Optional.of(Report::maxAbs),
-            "netGrads.speed", Optional.of(Report::maxAbs),
-            "netGrads.sensorAction", Optional.of(Report::maxAbs),
-            "policy.direction", Optional.of(Report::maxAbs),
-            "policy.speed", Optional.of(Report::maxAbs),
-            "policy.sensorAction", Optional.of(Report::maxAbs),
-            "delta", Optional.empty(),
-            "reward", Optional.empty()
+    private static final List<Tuple2<String, Optional<UnaryOperator<INDArray>>>> KPIS = List.of(
+            Tuple2.of("reward", Optional.empty()),
+            Tuple2.of("delta", Optional.empty()),
+            Tuple2.of("deltaPhase1", Optional.empty()),
+            Tuple2.of("netGrads.direction", Optional.of(Report::maxAbs)),
+            Tuple2.of("netGrads.speed", Optional.of(Report::maxAbs)),
+            Tuple2.of("netGrads.sensorAction", Optional.of(Report::maxAbs)),
+            Tuple2.of("policy.direction", Optional.of(Report::maxAbs)),
+            Tuple2.of("policy.speed", Optional.of(Report::maxAbs)),
+            Tuple2.of("policy.sensorAction", Optional.of(Report::maxAbs))
     );
 
     static {
@@ -121,7 +122,7 @@ public class Report {
      * @param params the parameters (m,q)
      */
     private static INDArray exponential(INDArray x, INDArray params) {
-        return Transforms.exp(linear(x, params));
+        return Transforms.exp(linear(x, params), false);
     }
 
     /**
@@ -156,15 +157,15 @@ public class Report {
      * @param records the records
      */
     static INDArray maxAbs(INDArray records) {
-        INDArray result = Transforms.abs(records).max(1);
-        return result.reshape(records.size(0), 1);
+        try (INDArray abs = Transforms.abs(records)) {
+            return abs.max(true, 1);
+        }
     }
 
     private final int numBins;
     private final long numChartPoints;
     private final long batchSize;
     protected Namespace args;
-    // Second pass computes distribution
     private File reportPath;
     private File kpisPath;
 
@@ -187,45 +188,44 @@ public class Report {
      * @param key  the out key
      */
     private void chart(BinArrayFile file, String key, INDArray stats) throws IOException {
-        CSVWriter out = CSVWriter.createByKey(reportPath, key);
-        try {
-            logger.atInfo().log("Creating {} ...", out.file());
-            long n = stats.getLong(N_INDEX);
-            long numPoints = min(n, numChartPoints);
-            long stride = max(n / (numPoints + 1), 1);
-            long len = n - (numPoints - 1) * stride;
-            INDArray chart = Nd4j.tile(
-                            Nd4j.createFromArray(0f, 0f, Float.MAX_VALUE, -Float.MAX_VALUE),
-                            (int) numPoints)
-                    .reshape(numPoints, 4);
-            for (long idx = 0; idx < numPoints; idx++) {
-                file.seek(idx * stride);
-                long j = 0;
-                double mean = 0;
-                double min = Double.MAX_VALUE;
-                double max = -Double.MAX_VALUE;
-                // sample: (x, mean, min, max)
-                while (j < len) {
-                    long m = min(len, batchSize);
-                    logger.atDebug().log("Reading chart {} at {}", file.file(), file.position());
-                    INDArray data = file.read(m);
-                    if (data == null) {
-                        break;
+        Batches.Monitor monitor = new Batches.Monitor();
+        try (file) {
+            try (CSVWriter out = CSVWriter.createByKey(reportPath, key)) {
+                logger.atInfo().log("Creating {} ...", out.file());
+                long n = stats.getLong(N_INDEX);
+                long numPoints = min(n, numChartPoints);
+                long stride = max(n / (numPoints + 1), 1);
+                long len = n - (numPoints - 1) * stride;
+                try (INDArray chart = Nd4j.zeros(numPoints, 4)) {
+                    for (long idx = 0; idx < numPoints; idx++) {
+                        file.seek(idx * stride);
+                        long j = 0;
+                        float mean = 0;
+                        float min = Float.MAX_VALUE;
+                        float max = -Float.MAX_VALUE;
+                        // sample: (x, mean, min, max)
+                        while (j < len) {
+                            long m = min(len, batchSize);
+                            logger.atDebug().log("Reading chart {} at {}", file.file(), file.position());
+                            INDArray data = file.read(m);
+                            if (data == null) {
+                                break;
+                            }
+                            j += data.size(0);
+                            monitor.wakeUp(file.file(), j);
+                            mean += data.sumNumber().floatValue();
+                            min = min(min, data.minNumber().floatValue());
+                            max = max(max, data.maxNumber().floatValue());
+                        }
+                        chart.putScalar(idx, X_INDEX, idx * stride + j / 2f);
+                        chart.putScalar(idx, Y_MEAN_INDEX, mean / j);
+                        chart.putScalar(idx, Y_MIN_INDEX, min);
+                        chart.putScalar(idx, Y_MAX_INDEX, max);
                     }
-                    mean += data.sumNumber().floatValue();
-                    min = min(min, data.minNumber().floatValue());
-                    max = max(max, data.maxNumber().floatValue());
-                    j += data.size(0);
+                    out.write(chart);
                 }
-                chart.putScalar(idx, X_INDEX, idx * stride + j / 2f);
-                chart.putScalar(idx, Y_MEAN_INDEX, mean / j);
-                chart.putScalar(idx, Y_MIN_INDEX, min);
-                chart.putScalar(idx, Y_MAX_INDEX, max);
+                logger.atInfo().log("Created {}", out.file());
             }
-            out.write(chart);
-            logger.atInfo().log("Created {}", out.file());
-        } finally {
-            out.close();
         }
     }
 
@@ -237,38 +237,39 @@ public class Report {
      * @param stats the statistic of dataset
      * @throws IOException in case of error
      */
-    void hist(BinArrayFile file, String key, INDArray stats) throws IOException {
-        CSVWriter out = CSVWriter.createByKey(reportPath, key);
-        try {
-            logger.atInfo().log("Creating {} ...", out.file());
-            INDArray hist = Nd4j.zeros(2, numBins);
-            double min = stats.getDouble(MIN_INDEX);
-            double max = stats.getDouble(MAX_INDEX);
-            if ((max - min) < 1e-20) {
-                min = (max - min) - 1e-20;
-                max = (max - min) + 1e-20;
-            }
+    void hist(BinArrayFile file, String key, INDArray stats) throws Exception {
+        logger.atInfo().log("Computing histogram {} ...", file.file());
+        long[] counters = new long[numBins];
+        double min1 = stats.getDouble(MIN_INDEX);
+        double max1 = stats.getDouble(MAX_INDEX);
+        double min = (max1 - min1) < 1e-20 ? (max1 - min1) - 1e-20 : min1;
+        double max = (max1 - min1) < 1e-20 ? (max1 - min1) + 1e-20 : max1;
+        Batches.reduce(file, counters, batchSize,
+                (counters1, data, ignored) -> {
+                    try (INDArray bins = Transforms.round(data.sub(min).muli(numBins / (max - min)), false)) {
+                        for (long i = 0; i < bins.size(0); i++) {
+                            int binIndex = (int) bins.getLong(i);
+                            int bin = min(binIndex, numBins - 1);
+                            counters1[bin]++;
+                        }
+                    }
+                    return counters1;
+                });
+        try (INDArray hist = Nd4j.zeros(2, numBins)) {
+            // Initialize histogram seed
             double dx = (max - min) / (numBins - 1);
-            hist.get(NDArrayIndex.point(1), NDArrayIndex.all()).assign(Nd4j.arange(min, max + dx, dx));
-            file.seek(0);
-            for (; ; ) {
-                logger.atDebug().log("Reading hist {} {} at {}", file.hashCode(), file.file(), file.position());
-                INDArray data = file.read(batchSize);
-                if (data == null) {
-                    break;
-                }
-                // bin = (v - min) / (min-max) * m
-                INDArray bins = Transforms.round(
-                        data.sub(min).muli(numBins / (max - min)));
-                for (long i = 0; i < bins.size(0); i++) {
-                    long bin = min(round(bins.getLong(i)), numBins - 1);
-                    hist.getScalar(0, bin).addi(1);
-                }
+            try (INDArray x = Nd4j.arange(min1, max1 + dx, dx)) {
+                hist.get(NDArrayIndex.point(1), NDArrayIndex.all()).assign(x);
             }
-            out.write(hist);
-            logger.atInfo().log("Created {}", out.file());
-        } finally {
-            out.close();
+            for (int i = 0; i < counters.length; i++) {
+                hist.putScalar(0, i, counters[i]);
+            }
+            try (CSVWriter out = CSVWriter.createByKey(reportPath, key)) {
+                logger.atInfo().log("Creating {} ...", out.file());
+                out.clear();
+                out.write(hist);
+                logger.atInfo().log("Created {}", out.file());
+            }
         }
     }
 
@@ -277,55 +278,37 @@ public class Report {
      *
      * @param key     the key
      * @param reducer the data reducer
-     * @throws IOException in case of error
+     * @throws Exception in case of error
      */
-    private void process(String key, UnaryOperator<INDArray> reducer) throws IOException {
+    private void process(String key, UnaryOperator<INDArray> reducer) throws Exception {
         BinArrayFile file = reducer != null
                 ? reduce(key, reducer)
-                : BinArrayFile.createBykey(kpisPath, key);
-        try {
-            if (file.file().canRead()) {
-                // First pass compute min, max, tot, sqTot
-                INDArray stats;
-                try {
-                    CSVWriter out = CSVWriter.createByKey(reportPath, key + ".stats");
-                    try {
-                        logger.atInfo().log("Creating {} ...", out.file());
-                        stats = stats(file);
-                        out.write(stats);
-                        logger.atInfo().log("Created {}", out.file());
-                    } finally {
-                        out.close();
-                    }
-                } finally {
-                    file.close();
-                }
-                // Computes linear regression
-                regression(file,
-                        key + ".linear",
-                        stats.getLong(N_INDEX),
-                        stats.getDouble(AVG_INDEX),
-                        UnaryOperator.identity(),
-                        Report::linear);
-                // Computes histogram
-                hist(file, key + ".histogram", stats);
-                // Computes chart
-                chart(file, key + ".chart", stats);
+                : BinArrayFile.createByKey(kpisPath, key);
+        // First pass compute min, max, tot, sqTot
+        try (INDArray stats = stats(key, file)) {
+            // Computes histogram
+            hist(file, key + ".histogram", stats);
+            // Computes chart
+            chart(file, key + ".chart", stats);
+            // Computes linear regression
+            regression(file,
+                    key + ".linear",
+                    stats.getLong(N_INDEX),
+                    stats.getFloat(AVG_INDEX),
+                    UnaryOperator.identity(),
+                    Report::linear);
 
-                // Computes exponential regression
-                if (stats.getDouble(MIN_INDEX) > 0) {
-                    regression(file,
-                            key + ".exponential",
-                            stats.getLong(N_INDEX),
-                            stats.getDouble(AVGLOG_INDEX),
-                            Transforms::log,
-                            Report::exponential);
-                }
+            // Computes exponential regression
+            if (stats.getDouble(MIN_INDEX) > 0) {
+                regression(file,
+                        key + ".exponential",
+                        stats.getLong(N_INDEX),
+                        stats.getFloat(AVGLOG_INDEX),
+                        Transforms::log,
+                        Report::exponential);
             }
-            logger.atInfo().log("Completed key {}", key);
-        } finally {
-            file.close();
         }
+        logger.atInfo().log("Completed key {}", key);
     }
 
     /**
@@ -336,31 +319,15 @@ public class Report {
      * @throws IOException in case of error
      */
     private BinArrayFile reduce(String key, UnaryOperator<INDArray> reducer) throws IOException {
-        BinArrayFile file = BinArrayFile.createBykey(kpisPath, key);
-        try {
-            if (file.file().canRead()) {
-                BinArrayFile result = BinArrayFile.createBykey(TEMP_PATH, key);
-                try {
-                    result.clear();
-                    file.seek(0);
-                    for (; ; ) {
-                        INDArray data = file.read(batchSize);
-                        if (data == null) {
-                            break;
-                        }
-                        INDArray reduced = reducer.apply(data);
-                        result.write(reduced);
-                    }
-                    return result;
-                } finally {
-                    result.close();
-                }
-            } else {
-                return file;
-            }
-        } finally {
-            file.close();
+        logger.atInfo().log("Reducing {} ...", key);
+        BinArrayFile file = BinArrayFile.createByKey(kpisPath, key);
+        if (!file.file().canRead()) {
+            throw new IOException(format("File %s cannot be read", file.file()));
         }
+        BinArrayFile result = BinArrayFile.createByKey(TEMP_PATH, key);
+        Batches.map(result, file, batchSize, reducer);
+        logger.atInfo().log("Reduced {}.", key);
+        return result;
     }
 
     /**
@@ -373,57 +340,72 @@ public class Report {
      * @param mapper     the data mapper
      * @param regression the regression function
      */
-    void regression(BinArrayFile file, String key, long n, double ym,
+    void regression(BinArrayFile file, String key, long n, float ym,
                     UnaryOperator<INDArray> mapper,
-                    BiFunction<INDArray, INDArray, INDArray> regression) throws IOException {
-        CSVWriter out = CSVWriter.createByKey(reportPath, key);
-        try {
-            logger.atInfo().log("Creating ... {}", out.file());
-            double sxx = 0;
-            double sxy = 0;
-            double xm = (n - 1) / 2d;
-            file.seek(0);
-            for (long i = 0; ; ) {
-                logger.atDebug().log("Reading regression {} {} at {}", file.hashCode(), file.file(), file.position());
-                INDArray data = file.read(batchSize);
-                if (data == null) {
-                    break;
-                }
-                INDArray y = mapper.apply(data);
-                long m = y.size(0);
-                INDArray dy = y.sub(ym);
-                INDArray dx = Nd4j.arange(i, i + m);
-                dx = dx.reshape(m, 1).subi(xm);
-                sxx += dx.mul(dx).sumNumber().doubleValue();
-                sxy += dy.mul(dx).sumNumber().doubleValue();
-                i += data.size(0);
-                data.close();
-            }
-            double mm = sxy / sxx;
-            double qq = ym - mm * xm;
-            INDArray reg = Nd4j.createFromArray(mm, qq, 0).reshape(1, 3);
+                    BiFunction<INDArray, INDArray, INDArray> regression) throws Exception {
+        logger.atInfo().log("Computing regression {} ...", key);
+        try (INDArray reg = Nd4j.zeros(1, 3)) {
+            float xm = (n - 1) / 2f;
+            Batches.reduce(file, reg,
+                    batchSize,
+                    (reg1, data, i) -> {
+                        // Computes the mapped dy value dy = f(y) - ym
+                        try (INDArray dy = mapper.apply(data).sub(ym)) {
+                            long m = dy.size(0);
+                            // Computes the dx value
+                            try (INDArray dx = Nd4j.arange(i, i + m).subi(xm).reshape(m, 1)) {
+                                // Accumulates sxx and sxy
+                                float sxx = dx.mul(dx).sumNumber().floatValue();
+                                float sxy = dy.mul(dx).sumNumber().floatValue();
+                                try (INDArray tmp = reg1.getScalar(0)) {
+                                    tmp.addi(sxx);
+                                }
+                                try (INDArray tmp = reg1.getScalar(1)) {
+                                    tmp.addi(sxy);
+                                }
+                            }
+                        }
+                        return reg1;
+                    }
+            );
+            // Computes the regression parameters
+            float mm = reg.getFloat(1) / reg.getFloat(0); // sxy / sxx
+            float qq = ym - mm * xm;
+            reg.putScalar(0, mm);
+            reg.putScalar(1, qq);
 
-            // Computes the average error
-            double error = 0;
-            file.seek(0);
-            for (long i = 0; ; ) {
-                INDArray data = file.read(batchSize);
-                if (data == null) {
-                    break;
-                }
-                long m = data.size(0);
-                INDArray x = Nd4j.arange(i, i + m).reshape(m, 1);
-                INDArray y = regression.apply(x, reg);
-                INDArray err2 = data.sub(y);
-                err2.muli(err2);
-                error += err2.sumNumber().doubleValue();
-                i += data.size(0);
+            // Computes the RMS error
+            logger.atInfo().log("Computing RMS error {} ...", key);
+            Batches.reduce(file, reg,
+                    batchSize,
+                    (reg1, data, i) -> {
+                        // Computes mapped y
+                        try (INDArray y = mapper.apply(data)) {
+                            long m = y.size(0);
+                            // Compute x
+                            try (INDArray x = Nd4j.arange(i, i + m).reshape(m, 1)) {
+                                // Compute the regression
+                                try (INDArray y1 = regression.apply(x, reg)) {
+                                    // Computes the error
+                                    try (INDArray err2 = data.sub(y1)) {
+                                        float errSq = err2.muli(err2).sumNumber().floatValue();
+                                        try (INDArray tmp = reg1.getScalar(ERROR_INDEX)) {
+                                            tmp.addi(errSq);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        return reg1;
+                    }
+            );
+            reg.putScalar(ERROR_INDEX, sqrt(reg.getDouble(ERROR_INDEX) / (n - 1)));
+            try (CSVWriter out = CSVWriter.createByKey(reportPath, key)) {
+                logger.atInfo().log("Creating {} ...", out.file());
+                out.clear();
+                out.write(reg);
+                logger.atInfo().log("Created {}", out.file());
             }
-            reg.putScalar(ERROR_INDEX, sqrt(error / (n - 1)));
-            out.write(reg);
-            logger.atInfo().log("Created {}", out.file());
-        } finally {
-            out.close();
         }
     }
 
@@ -435,7 +417,8 @@ public class Report {
     protected void start() throws Throwable {
         this.kpisPath = new File(args.getString("kpis"));
         this.reportPath = new File(args.getString("reportPath"));
-        List<Action> tasks = Tuple2.stream(KPIS)
+        List<Action> tasks = KPIS.stream()
+                .filter(t -> BinArrayFile.createByKey(kpisPath, t._1).file().canRead())
                 .<Action>map(t -> () -> process(t._1, t._2.orElse(null)))
                 .toList();
         if (args.getBoolean("parallel")) {
@@ -451,47 +434,58 @@ public class Report {
     /**
      * Returns the statistic of reader (n, min, max, avg, sigma, avg(log))
      *
+     * @param key  the key of kpi
      * @param file the file
      * @throws IOException in case of error
      */
-    INDArray stats(BinArrayFile file) throws IOException {
-        // we use
-        double minValue = Double.MAX_VALUE;
-        double maxValue = -Double.MAX_VALUE;
-        double t1 = 0;
-        double t2 = 0;
-        double t3 = 0;
-        long n = 0;
-        file = file.dup();
-        try {
-            file.seek(0);
-            /*
-             * Each workspace is tied to a JVM Thread via ID. So, same ID in different threads will point to different actual workspaces
-             * Each workspace is created using some configuration, and different workspaces can either share the same config, or have their own
-             */
-
-            // we create config with 10MB memory space pre allocated
-            for (; ; ) {
-                INDArray data = file.read(batchSize);
-                if (data == null) {
-                    break;
-                }
-                minValue = min(minValue, data.minNumber().doubleValue());
-                maxValue = max(maxValue, data.maxNumber().doubleValue());
-                double sum = data.sumNumber().doubleValue();
-                t1 += sum;
-                t2 += sum * sum;
-                if (minValue > 0) {
-                    t3 += Transforms.log(data).sumNumber().doubleValue();
-                }
-                n += data.size(0);
-            }
-            double avg = t1 / n;
-            double sigma = sqrt((t2 - t1 * t1 / n) / (n - 1));
-            double avglog = t3 / n;
-            return Nd4j.createFromArray((double) n, minValue, maxValue, avg, sigma, minValue > 0 ? avglog : 0).reshape(1, 6);
-        } finally {
-            file.close();
+    INDArray stats(String key, BinArrayFile file) throws Exception {
+        logger.atInfo().log("Computing stats {} ...", file.file());
+        INDArray stats = Nd4j.zeros(6);
+        stats.putScalar(MIN_INDEX, Double.MAX_VALUE);
+        stats.putScalar(MAX_INDEX, -Double.MAX_VALUE);
+        Batches.reduce(file, stats, batchSize,
+                (stats1, data, ignored) -> {
+                    float minValue = min(stats1.getFloat(MIN_INDEX), data.minNumber().floatValue());
+                    float maxValue = max(stats1.getFloat(MAX_INDEX), data.maxNumber().floatValue());
+                    float sum = data.sumNumber().floatValue();
+                    stats1.putScalar(MIN_INDEX, minValue);
+                    stats1.putScalar(MAX_INDEX, maxValue);
+                    try (INDArray tmp = stats1.getScalar(AVG_INDEX)) {
+                        tmp.addi(sum);
+                    }
+                    try (INDArray tmp = stats1.getScalar(SIGMA_INDEX)) {
+                        tmp.addi(sum * sum);
+                    }
+                    if (minValue > 0) {
+                        try (INDArray log = Transforms.log(data)) {
+                            try (INDArray tmp = stats1.getScalar(AVGLOG_INDEX)) {
+                                tmp.addi(log.sumNumber().floatValue());
+                            }
+                        }
+                    }
+                    return stats1;
+                });
+        // Computes the final averages
+        long n;
+        try (file) {
+            n = file.size();
         }
+        float t1 = stats.getFloat(AVG_INDEX);
+        float t2 = stats.getFloat(SIGMA_INDEX);
+        double sigma = sqrt((t2 - t1 * t1 / n) / (n - 1));
+        stats.putScalar(N_INDEX, (float) n);
+        try (INDArray tmp = stats.getScalar(AVG_INDEX)) {
+            tmp.divi(n);
+        }
+        stats.putScalar(SIGMA_INDEX, sigma);
+        try (INDArray tmp = stats.getScalar(AVGLOG_INDEX)) {
+            tmp.divi(n);
+        }
+        try (CSVWriter out = CSVWriter.createByKey(reportPath, key + ".stats")) {
+            logger.atInfo().log("Creating {} ...", out.file());
+            out.write(stats);
+            logger.atInfo().log("Created {}", out.file());
+        }
+        return stats;
     }
 }

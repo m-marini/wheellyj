@@ -37,7 +37,7 @@ import java.io.PrintWriter;
 import static java.lang.Math.max;
 import static java.util.Objects.requireNonNull;
 
-public class CSVWriter {
+public class CSVWriter implements ArrayWriter {
     private static final Logger logger = LoggerFactory.getLogger(CSVWriter.class);
 
     /**
@@ -64,16 +64,21 @@ public class CSVWriter {
         file.getParentFile().mkdirs();
     }
 
+    @Override
+    public void clear() throws IOException {
+        file.delete();
+    }
+
     /**
      * Close the file
-     *
-     * @throws IOException in case of error
      */
-    public void close() throws IOException {
+    public void close() {
         PrintWriter pw = printer;
         printer = null;
-        pw.close();
-        logger.atDebug().log("Closed {}", file);
+        if (pw != null) {
+            logger.atDebug().log("Closed {}", file);
+            pw.close();
+        }
     }
 
     /**

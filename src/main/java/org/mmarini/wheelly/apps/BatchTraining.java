@@ -358,18 +358,11 @@ public class BatchTraining {
                     .doOnError(ex -> logger.atError().setCause(ex).log("Error on kpis"))
                     .subscribe();
 
-            Thread hook = new Thread(this::handleShutdown);
-            Runtime.getRuntime().addShutdownHook(hook);
         }
-
         // Runs the training session
         info("Training ...");
         trainer.train();
         info("Training completed.");
-        // Wait for completion
-        this.trainer.readSteps()
-                .ignoreElements()
-                .blockingAwait();
     }
 
     /**
@@ -447,11 +440,15 @@ public class BatchTraining {
                 .doOnNext(counterField::setValue)
                 .subscribe();
 
+        Thread hook = new Thread(this::handleShutdown);
+        Runtime.getRuntime().addShutdownHook(hook);
+
         frame.setVisible(true);
         center(frame);
         frame.pack();
         Completable.fromAction(this::runBatch)
                 .subscribeOn(Schedulers.computation())
+                .doOnComplete(frame::dispose)
                 .subscribe();
     }
 

@@ -33,6 +33,7 @@ import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.rl.nets.TDNetworkState;
+import org.mmarini.wheelly.apps.Batches;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
@@ -67,7 +68,6 @@ public class BatchTrainer {
     public static final String TERMINAL_KEY = "terminal";
     public static final String PREDICTION_KEY = "prediction";
     public static final String CRITIC_KEY = "critic";
-    private static final long BATCH_MONITOR_INTERVAL = 30000;
     private static final String ADVANTAGE_KEY = "advantage";
     private static final String ACTIONS_MASKS_KEY = "masks";
     private static final File TMP_PATH = new File("tmp");
@@ -131,10 +131,8 @@ public class BatchTrainer {
     private final int batchSize;
     private final Map<String, Float> alphas;
     private final PublishProcessor<Map<String, INDArray>> kpisProcessor;
-    private final PublishProcessor<Tuple2<Integer, Integer>> stepsProcessor;
     private final PublishProcessor<String> infoProcessor;
     private final PublishProcessor<Long> counterProcessor;
-    private float avgReward;
     private INDArray criticGrad;
     private boolean stopped;
     private Map<String, BinArrayFile> masksFiles;
@@ -142,6 +140,7 @@ public class BatchTrainer {
     private BinArrayFile terminalFile;
     private Map<String, BinArrayFile> s0Files;
     private Map<String, BinArrayFile> s1Files;
+    private float avgReward;
 
     /**
      * Creates the batch trainer
@@ -164,7 +163,6 @@ public class BatchTrainer {
         this.batchSize = batchSize;
         this.alphas = alphas;
         this.kpisProcessor = PublishProcessor.create();
-        this.stepsProcessor = PublishProcessor.create();
         this.infoProcessor = PublishProcessor.create();
         this.counterProcessor = PublishProcessor.create();
     }
@@ -209,78 +207,45 @@ public class BatchTrainer {
      */
     private BinArrayFile createActionToMask(String actionName,
                                             BinArrayFile actionFile,
-                                            long numActions) throws Exception {
+                                            long numActions) throws IOException {
         // Creates the process to transform the action value to action mask
-        actionFile.seek(0);
-        try {
-            BinArrayFile maskFile = BinArrayFile.createBykey(TMP_MASKS_PATH, actionName);
-            try {
-                maskFile.clear();
-                INDArray mask = Nd4j.zeros(1, numActions);
-                for (; ; ) {
-                    INDArray action = actionFile.read(1);
-                    if (action == null) {
-                        break;
+        BinArrayFile maskFile = BinArrayFile.createByKey(TMP_MASKS_PATH, actionName);
+        Batches.map(maskFile, actionFile, batchSize,
+                action -> {
+                    INDArray mask = Nd4j.zeros(action.size(0), numActions);
+                    for (long i = 0; i < action.size(0); i++) {
+                        mask.putScalar(i, action.getLong(i), 1f);
                     }
-                    mask.assign(0).putScalar(action.getLong(0), 1f);
-                    maskFile.write(mask);
+                    return mask;
                 }
-                return maskFile;
-            } finally {
-                maskFile.close();
-            }
-        } finally {
-            actionFile.close();
-        }
+        );
+        return maskFile;
     }
 
     /**
      * Returns the residual advantage record reader dataset iterator by processing rewards
      *
      * @param datasetPath the data set path
-     * @throws Exception in case of error
+     * @throws IOException in case of error
      */
     private BinArrayFile createAdvantage(File datasetPath) throws Exception {
         // Loads rewards
-        info("Loading advantage from \"%s\" ...", datasetPath.getCanonicalPath());
-        BinArrayFile rewardFile = BinArrayFile.createBykey(datasetPath, REWARD_KEY);
-        try {
-            logger.atDebug().log("loadAdvantage {}", datasetPath);
-            // Computes average
-            double tot = 0;
-            long count = 0;
-            for (; ; ) {
-                INDArray data = rewardFile.read(1);
-                if (data == null) {
-                    break;
-                }
-                try (data) {
-                    tot += data.getFloat(0, 0);
-                }
-                count++;
-            }
-            avgReward = (float) (tot / count);
-
-            // Computes residual advantage process
-            rewardFile.seek(0);
-            BinArrayFile advantageFile = BinArrayFile.createBykey(TMP_PATH, ADVANTAGE_KEY);
-            try {
-                advantageFile.clear();
-                for (; ; ) {
-                    INDArray data = rewardFile.read(1);
-                    if (data == null) {
-                        break;
-                    }
-                    data.subi(avgReward);
-                    advantageFile.write(data);
-                }
-                return advantageFile;
-            } finally {
-                advantageFile.close();
-            }
-        } finally {
-            rewardFile.close();
+        info("Computing average reward from \"%s\" ...", datasetPath);
+        BinArrayFile rewardFile = BinArrayFile.createByKey(datasetPath, REWARD_KEY);
+        avgReward = Batches.reduce(rewardFile, 0F, 256,
+                (tot1, data, ignored) ->
+                        tot1 + data.sumNumber().floatValue());
+        long n;
+        try (rewardFile) {
+            n = rewardFile.size();
         }
+        avgReward /= n;
+
+        info("Computing advantage from \"%s\" ...", datasetPath);
+        BinArrayFile advantageFile = BinArrayFile.createByKey(TMP_PATH, ADVANTAGE_KEY);
+        float finalAvgReward = avgReward;
+        Batches.map(advantageFile, rewardFile, 256, data -> data.sub(finalAvgReward));
+        return advantageFile;
     }
 
     /**
@@ -303,7 +268,7 @@ public class BatchTrainer {
      */
     public void prepare(File datasetPath) throws Exception {
         // Check for terminal
-        this.terminalFile = BinArrayFile.createBykey(datasetPath, TERMINAL_KEY);
+        this.terminalFile = BinArrayFile.createByKey(datasetPath, TERMINAL_KEY);
         if (!terminalFile.file().canRead()) {
             throw new IllegalArgumentException("Missing terminal datasets");
         }
@@ -344,13 +309,6 @@ public class BatchTrainer {
      */
     public Flowable<Map<String, INDArray>> readKpis() {
         return kpisProcessor;
-    }
-
-    /**
-     * Returns the steps flow
-     */
-    public Flowable<Tuple2<Integer, Integer>> readSteps() {
-        return stepsProcessor;
     }
 
     /**
@@ -400,46 +358,46 @@ public class BatchTrainer {
         info("Computing advantage prediction ...");
         KeyFileMap.seek(s0Files, 0);
         KeyFileMap.seek(s1Files, 0);
-        advantageFile.seek(0);
-        terminalFile.seek(0);
         try {
-            // Run for all batches
-            double delta = 0;
-            long n = 0;
-            BinArrayFile predictionFile = BinArrayFile.createBykey(TMP_PATH, PREDICTION_KEY);
-            try {
-                predictionFile.clear();
-                for (; ; ) {
-                    // Read dataset
-                    Map<String, INDArray> s0 = KeyFileMap.read(s0Files, batchSize);
-                    Map<String, INDArray> s1 = KeyFileMap.read(s1Files, batchSize);
-                    INDArray adv = advantageFile.read(batchSize);
-                    INDArray term = terminalFile.read(batchSize);
-                    if (s0 == null || s1 == null || adv == null || term == null) {
-                        break;
-                    }
+            try (BinArrayFile advantageFile = this.advantageFile) {
+                advantageFile.seek(0);
+                try (BinArrayFile terminalFile = this.terminalFile) {
+                    terminalFile.seek(0);
+                    // Run for all batches
+                    double delta = 0;
+                    long n = 0;
+                    try (BinArrayFile predictionFile = BinArrayFile.createByKey(TMP_PATH, PREDICTION_KEY)) {
+                        predictionFile.clear();
+                        for (; ; ) {
+                            // Read dataset
+                            Map<String, INDArray> s0 = KeyFileMap.read(s0Files, batchSize);
+                            Map<String, INDArray> s1 = KeyFileMap.read(s1Files, batchSize);
+                            INDArray adv = this.advantageFile.read(batchSize);
+                            INDArray term = terminalFile.read(batchSize);
+                            if (s0 == null || s1 == null || adv == null || term == null) {
+                                break;
+                            }
 
-                    INDArray v0 = network.forward(s0).getValues(CRITIC_KEY);
-                    INDArray v1 = network.forward(s1).getValues(CRITIC_KEY);
-                    INDArray v = adv.add(term.mul(v0))
-                            .addi(term.neg().addi(1).muli(v1));
-                    predictionFile.write(v);
-                    delta += v.sumNumber().doubleValue() - v0.sumNumber().doubleValue();
-                    n += v.size(0);
+                            try (INDArray v0 = network.forward(s0).getValues(CRITIC_KEY)) {
+                                try (INDArray v1 = network.forward(s1).getValues(CRITIC_KEY)) {
+                                    try (INDArray v = adv.add(term.mul(v0)).addi(term.neg().addi(1).muli(v1))) {
+                                        predictionFile.write(v);
+                                        delta += v.sumNumber().doubleValue() - v0.sumNumber().doubleValue();
+                                        n += v.size(0);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    delta /= n;
+                    info("Samples %d - average delta %g", n, delta);
+                    kpisProcessor.onNext(Map.of(
+                            "deltaPhase1", Nd4j.createFromArray((float) delta).reshape(1, 1)
+                    ));
                 }
-            } finally {
-                predictionFile.close();
             }
-            delta /= n;
-            info("Samples %d - average delta %g", n, delta);
-            kpisProcessor.onNext(Map.of(
-                    "deltaPhase1", Nd4j.createFromArray((float) delta).reshape(1, 1)
-            ));
         } finally {
-            KeyFileMap.close(s0Files);
-            KeyFileMap.close(s1Files);
-            advantageFile.close();
-            terminalFile.close();
+            KeyFileMap.close(s0Files, s1Files);
         }
     }
 
@@ -447,47 +405,45 @@ public class BatchTrainer {
      * Runs phase2
      * Trains over all the input samples
      */
-    private void runPhase2() throws IOException {
-        double delta = 0;
-        long n = 0;
+    private void runPhase2() throws Exception {
+        Batches.Monitor monitor = new Batches.Monitor();
         // Reset all iterators
         KeyFileMap.seek(s0Files, 0);
         KeyFileMap.seek(masksFiles, 0);
-        advantageFile.seek(0);
         try {
-            long last = System.currentTimeMillis();
-            counterProcessor.onNext(n);
-            for (; ; ) {
-                if (stopped) {
-                    return;
-                }
-                Map<String, INDArray> s0 = KeyFileMap.read(s0Files, batchSize);
-                Map<String, INDArray> actionsMasks = KeyFileMap.read(masksFiles, batchSize);
-                INDArray adv = advantageFile.read(batchSize);
-                if (s0 == null || actionsMasks == null || adv == null) {
-                    break;
-                }
-
-                long t0 = System.currentTimeMillis();
-                if (t0 >= last + BATCH_MONITOR_INTERVAL) {
-                    info("Processed %d records", n);
-                    last = t0;
-                }
-                if (this.criticGrad == null || !this.criticGrad.equalShapes(adv)) {
-                    this.criticGrad = Nd4j.onesLike(adv).muli(alphas.get(CRITIC_KEY));
-                }
-                double dTot = runMiniBatch(s0, actionsMasks, adv, criticGrad);
-                n += adv.size(0);
+            advantageFile.seek(0);
+            try (BinArrayFile advantageFile = this.advantageFile) {
+                double delta = 0;
+                long n = 0;
                 counterProcessor.onNext(n);
-                delta += dTot;
+                for (; ; ) {
+                    if (stopped) {
+                        return;
+                    }
+                    Map<String, INDArray> s0 = KeyFileMap.read(s0Files, batchSize);
+                    Map<String, INDArray> actionsMasks = KeyFileMap.read(masksFiles, batchSize);
+                    INDArray adv = advantageFile.read(batchSize);
+                    if (s0 == null || actionsMasks == null || adv == null) {
+                        break;
+                    }
+
+                    if (this.criticGrad == null || !this.criticGrad.equalShapes(adv)) {
+                        this.criticGrad = Nd4j.onesLike(adv).muli(alphas.get(CRITIC_KEY));
+                    }
+                    double dTot = runMiniBatch(s0, actionsMasks, adv, criticGrad);
+                    counterProcessor.onNext(n);
+                    n += adv.size(0);
+                    long finalN = n;
+                    monitor.wakeUp(() -> format("Processed %d records", finalN));
+                    counterProcessor.onNext(n);
+                    delta += dTot;
+                }
+                delta /= n;
+                info("Samples %d - average delta %g", n, delta);
             }
         } finally {
-            KeyFileMap.close(s0Files);
-            KeyFileMap.close(masksFiles);
-            advantageFile.close();
+            KeyFileMap.close(s0Files, masksFiles);
         }
-        delta /= n;
-        info("Samples %d - average delta %g", n, delta);
     }
 
     public void stop() {
@@ -518,7 +474,7 @@ public class BatchTrainer {
             }
         } finally {
             kpisProcessor.onComplete();
-            stepsProcessor.onComplete();
+            counterProcessor.onComplete();
         }
     }
 }
