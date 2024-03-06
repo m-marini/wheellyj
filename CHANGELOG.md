@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Issue [#366](https://github.com/m-marini/wheellyj/issues/366): Merge kpis
 - Issue [#368](https://github.com/m-marini/wheellyj/issues/368): Add batch training UI
+- Issue [#372](https://github.com/m-marini/wheellyj/issues/372): Add performance fields in batch training window
 
 ### Changed
 

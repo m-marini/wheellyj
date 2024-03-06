@@ -58,7 +58,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -73,7 +75,7 @@ import static org.mmarini.yaml.Utils.fromFile;
 public class BatchTraining {
     private static final String BATCH_SCHEMA_YML = "https://mmarini.org/wheelly/batch-schema-0.1";
     private static final int KPIS_CAPACITY = 1000;
-    private static final double DISCOUNT = 0.999;
+    private static final double DISCOUNT = 0.977;
     private static final double PPM_SCALE = 1e6;
     private static final Logger logger = LoggerFactory.getLogger(BatchTraining.class);
 
@@ -125,26 +127,17 @@ public class BatchTraining {
 
     protected final Namespace args;
     private final CompletableSubject completed;
-    private final JFrame frame;
     private final JProgressBar infoBar;
     private final JFormattedTextField deltaField;
     private final JFormattedTextField counterField;
     private final JFormattedTextField sensorActionGradField;
     private final JFormattedTextField directionGradField;
     private final JFormattedTextField speedGradField;
-    private final AverageValue sensorActionGrad;
-    private final AverageValue directionGrad;
-    private final AverageValue speedGrad;
-    private final AverageValue delta;
-    private final Map<String, Consumer<INDArray>> handlers = Map.of(
-            "delta", this::handleDelta,
-            "netGrads.direction", this::handleDirectionGrads,
-            "netGrads.sensorAction", this::handleSensorActionGrads,
-            "netGrads.speed", this::handleSpeedGrads);
     private String pathFile;
     private BatchTrainer trainer;
     private boolean backUp;
     private KpiBinWriter kpiWriter;
+    private Map<String, Consumer<INDArray>> handlers;
 
     /**
      * Creates the application
@@ -160,68 +153,102 @@ public class BatchTraining {
         this.sensorActionGradField = new JFormattedTextField();
         this.speedGradField = new JFormattedTextField();
         this.directionGradField = new JFormattedTextField();
-        this.delta = new AverageValue(0, DISCOUNT);
-        this.sensorActionGrad = new AverageValue(0, DISCOUNT);
-        this.directionGrad = new AverageValue(0, DISCOUNT);
-        this.speedGrad = new AverageValue(0, DISCOUNT);
-        this.frame = createFrame(Messages.getString("BatchTraining.title"),
-                new Dimension(400, 300),
-                createContent());
         init();
+    }
+
+    /**
+     * Returns the action UI and kpi handlers
+     *
+     * @param key the action key
+     */
+    private Tuple2<Container, Map<String, Consumer<INDArray>>> createActionUIHandlers(String key) {
+        JFormattedTextField gradField = new JFormattedTextField();
+        gradField.setValue(0D);
+        gradField.setColumns(10);
+        gradField.setEditable(false);
+        gradField.setHorizontalAlignment(JTextField.RIGHT);
+
+        JFormattedTextField probField = new JFormattedTextField();
+        probField.setValue(0D);
+        probField.setColumns(10);
+        probField.setEditable(false);
+        probField.setHorizontalAlignment(JTextField.RIGHT);
+
+        JFormattedTextField probRatioField = new JFormattedTextField();
+        probRatioField.setValue(1D);
+        probRatioField.setColumns(10);
+        probRatioField.setEditable(false);
+        probRatioField.setHorizontalAlignment(JTextField.RIGHT);
+
+        JPanel panel = new GridLayoutHelper<>(Messages.RESOURCE_BUNDLE, new JPanel())
+                .modify("insets,4, e weight,1,1 nofill")
+                .modify("at,0,0").add("BatchTraining.gradField.label")
+                .modify("at,0,1").add(gradField)
+                .modify("at,0,2").add("BatchTraining.probField.label")
+                .modify("at,0,3").add(probField)
+                .modify("at,0,4").add("BatchTraining.probRatioField.label")
+                .modify("at,0,5").add(probRatioField)
+                .getContainer();
+        panel.setBorder(BorderFactory.createTitledBorder(key));
+        AverageValue gradAverage = new AverageValue(0, DISCOUNT);
+        AverageValue probAverage = new AverageValue(0, DISCOUNT);
+        AverageValue probRatioAverage = new AverageValue(1, DISCOUNT);
+        Map<String, Consumer<INDArray>> handlers = Map.of(
+                "netGrads." + key, grads -> gradField.setValue(maxAvg(gradAverage, grads) * PPM_SCALE),
+                "policy." + key, policy -> {
+                    try (INDArray max = policy.max(0)) {
+                        try (INDArray min = policy.min(0)) {
+                            try (INDArray ratio = max.div(min)) {
+                                probField.setValue(updateAvg(probAverage, max) * 100);
+                                probRatioField.setValue(updateAvg(probRatioAverage, ratio));
+                            }
+                        }
+                    }
+                }
+        );
+        return Tuple2.of(panel, handlers);
     }
 
     /**
      * Returns the content
      */
-    private Component createContent() {
-        JPanel keys = new GridLayoutHelper<>(Messages.RESOURCE_BUNDLE, new JPanel())
-                .modify("insets,2")
-                .modify("at,0,0 e").add("BatchTraining.counterField.label")
-                .modify("at,1,0 w").add(counterField)
-                .modify("at,0,1 e").add("BatchTraining.deltaField.label")
-                .modify("at,1,1 w").add(deltaField)
-                .modify("at,0,2 e").add("BatchTraining.sensorActionGradField.label")
-                .modify("at,1,2 w").add(sensorActionGradField)
-                .modify("at,0,3 e").add("BatchTraining.speedGradField.label")
-                .modify("at,1,3 w").add(speedGradField)
-                .modify("at,0,4 e").add("BatchTraining.directionGradField.label")
-                .modify("at,1,4 w").add(directionGradField)
+    private Component createContent(List<String> outputs) {
+        List<Tuple2<String, Tuple2<Container, Map<String, Consumer<INDArray>>>>> actions = outputs.stream()
+                .filter(Predicate.not("critic"::equals))
+                .sorted()
+                .map(key -> Tuple2.of(key, createActionUIHandlers(key)))
+                .toList();
+        JPanel criticPanel = new GridLayoutHelper<>(Messages.RESOURCE_BUNDLE, new JPanel())
+                .modify("insets,4 e weight,1,1 nofill")
+                .modify("at,0,0").add("BatchTraining.counterField.label")
+                .modify("at,0,1").add(counterField)
+                .modify("at,0,2").add("BatchTraining.deltaField.label")
+                .modify("at,0,3").add(deltaField)
                 .getContainer();
+        criticPanel.setBorder(BorderFactory.createTitledBorder(Messages.getString("BatchTraining.criticPanel.title")));
+
+        GridLayoutHelper<JPanel> panelBuilder = new GridLayoutHelper<>(Messages.RESOURCE_BUNDLE, new JPanel())
+                .modify("insets,2 center fill weight,1,1")
+                .modify("at,0,0").add(criticPanel);
+        for (int i = 0; i < actions.size(); i++) {
+            panelBuilder.at(i + 1, 0).add(actions.get(i)._2._1);
+        }
         JPanel content = new JPanel();
         content.setLayout(new BorderLayout());
-        content.add(keys, BorderLayout.CENTER);
+        content.add(panelBuilder.getContainer(), BorderLayout.CENTER);
         content.add(infoBar, BorderLayout.SOUTH);
+
+        Stream<Tuple2<String, Consumer<INDArray>>> actionHandlers = actions.stream()
+                .flatMap(t -> Tuple2.stream(t._2._2));
+
+        AverageValue delta = new AverageValue(0, DISCOUNT);
+        this.handlers = Stream.concat(
+                        actionHandlers,
+                        Stream.<Tuple2<String, Consumer<INDArray>>>of(
+                                Tuple2.of("delta", grads ->
+                                        deltaField.setValue(maxAvg(delta, grads) * PPM_SCALE))))
+                .collect(Tuple2.toMap());
         return content;
-    }
-
-    /**
-     * Handles delta values
-     *
-     * @param delta the delta values
-     */
-    private void handleDelta(INDArray delta) {
-        for (long i = 0; i < delta.size(0); i++) {
-            this.delta.add(delta.getDouble(i));
-        }
-        this.deltaField.setValue(updateAvg(this.delta, delta) * PPM_SCALE);
-    }
-
-    /**
-     * Handle direction gradients
-     *
-     * @param grads the gradient
-     */
-    private void handleDirectionGrads(INDArray grads) {
-        directionGradField.setValue(maxAvg(directionGrad, grads) * PPM_SCALE);
-    }
-
-    /**
-     * Handle sensor action gradients
-     *
-     * @param grads the gradient
-     */
-    private void handleSensorActionGrads(INDArray grads) {
-        sensorActionGradField.setValue(maxAvg(sensorActionGrad, grads) * PPM_SCALE);
     }
 
     /**
@@ -232,15 +259,6 @@ public class BatchTraining {
         trainer.stop();
         completed.blockingAwait();
         info("Shutting down completed");
-    }
-
-    /**
-     * Handle speed gradients
-     *
-     * @param grads the gradient
-     */
-    private void handleSpeedGrads(INDArray grads) {
-        speedGradField.setValue(maxAvg(speedGrad, grads) * PPM_SCALE);
     }
 
     /**
@@ -288,8 +306,6 @@ public class BatchTraining {
 
         infoBar.setIndeterminate(true);
         infoBar.setStringPainted(true);
-
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
 
     /**
@@ -411,7 +427,14 @@ public class BatchTraining {
         info("Load network ...");
         this.pathFile = Locator.locate("modelPath").getNode(config).asText();
         TDNetwork network = loadNetwork(random);
+        List<String> outputs = network.sinkLayers();
         Map<String, Float> alphas = loadAlphas();
+
+        // Create the frame
+        JFrame frame = createFrame(Messages.getString("BatchTraining.title"),
+                new Dimension(400, 300),
+                createContent(outputs));
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         // Create the batch trainer
         int numTrainIterations1 = Locator.locate("numTrainIterations1").getNode(config).asInt();
