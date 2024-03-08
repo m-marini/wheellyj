@@ -32,7 +32,6 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.ParallelProcess;
-import org.mmarini.Tuple2;
 import org.mmarini.rl.agents.BinArrayFile;
 import org.mmarini.rl.agents.CSVWriter;
 import org.mmarini.wheelly.swing.Messages;
@@ -46,7 +45,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.UnaryOperator;
 
@@ -72,16 +70,19 @@ public class Report {
     private static final long Y_MIN_INDEX = ERROR_INDEX;
     private static final long Y_MAX_INDEX = 3;
     private static final File TEMP_PATH = new File("tmp");
-    private static final List<Tuple2<String, Optional<UnaryOperator<INDArray>>>> KPIS = List.of(
-            Tuple2.of("reward", Optional.empty()),
-            Tuple2.of("delta", Optional.empty()),
-            Tuple2.of("deltaPhase1", Optional.empty()),
-            Tuple2.of("netGrads.direction", Optional.of(Report::maxAbs)),
-            Tuple2.of("netGrads.speed", Optional.of(Report::maxAbs)),
-            Tuple2.of("netGrads.sensorAction", Optional.of(Report::maxAbs)),
-            Tuple2.of("policy.direction", Optional.of(Report::maxAbs)),
-            Tuple2.of("policy.speed", Optional.of(Report::maxAbs)),
-            Tuple2.of("policy.sensorAction", Optional.of(Report::maxAbs))
+    private static final List<ReportProcess> reports = List.of(
+            ReportProcess.scalar("reward"),
+            ReportProcess.scalar("delta"),
+            ReportProcess.scalar("deltaPhase1"),
+            ReportProcess.maxAbs("netGrads.direction.grads"),
+            ReportProcess.maxAbs("netGrads.speed.grads"),
+            ReportProcess.maxAbs("netGrads.sensorAction.grads"),
+            ReportProcess.maxAbs("policy.direction"),
+            ReportProcess.maxMinRatio("policy.direction"),
+            ReportProcess.maxAbs("policy.speed"),
+            ReportProcess.maxMinRatio("policy.speed"),
+            ReportProcess.maxAbs("policy.sensorAction"),
+            ReportProcess.maxMinRatio("policy.sensorAction")
     );
 
     static {
@@ -148,17 +149,6 @@ public class Report {
         } catch (Throwable e) {
             logger.atError().setCause(e).log("Error generating report");
             System.exit(2);
-        }
-    }
-
-    /**
-     * Returns the max of absolute value of columns
-     *
-     * @param records the records
-     */
-    static INDArray maxAbs(INDArray records) {
-        try (INDArray abs = Transforms.abs(records)) {
-            return abs.max(true, 1);
         }
     }
 
@@ -244,9 +234,10 @@ public class Report {
         double max1 = stats.getDouble(MAX_INDEX);
         double min = (max1 - min1) < 1e-20 ? (max1 - min1) - 1e-20 : min1;
         double max = (max1 - min1) < 1e-20 ? (max1 - min1) + 1e-20 : max1;
+        double dx = (max - min) / numBins;
         Batches.reduce(file, counters, batchSize,
                 (counters1, data, ignored) -> {
-                    try (INDArray bins = Transforms.round(data.sub(min).muli(numBins / (max - min)), false)) {
+                    try (INDArray bins = Transforms.floor(data.sub(min).divi(dx), false)) {
                         for (long i = 0; i < bins.size(0); i++) {
                             int binIndex = (int) bins.getLong(i);
                             int bin = min(binIndex, numBins - 1);
@@ -257,8 +248,7 @@ public class Report {
                 });
         try (INDArray hist = Nd4j.zeros(2, numBins)) {
             // Initialize histogram seed
-            double dx = (max - min) / (numBins - 1);
-            try (INDArray x = Nd4j.arange(min1, max1 + dx, dx)) {
+            try (INDArray x = Nd4j.arange(0, numBins).addi(0.5).muli(dx).addi(min)) {
                 hist.get(NDArrayIndex.point(1), NDArrayIndex.all()).assign(x);
             }
             for (int i = 0; i < counters.length; i++) {
@@ -271,44 +261,6 @@ public class Report {
                 logger.atInfo().log("Created {}", out.file());
             }
         }
-    }
-
-    /**
-     * Processes a key data file
-     *
-     * @param key     the key
-     * @param reducer the data reducer
-     * @throws Exception in case of error
-     */
-    private void process(String key, UnaryOperator<INDArray> reducer) throws Exception {
-        BinArrayFile file = reducer != null
-                ? reduce(key, reducer)
-                : BinArrayFile.createByKey(kpisPath, key);
-        // First pass compute min, max, tot, sqTot
-        try (INDArray stats = stats(key, file)) {
-            // Computes histogram
-            hist(file, key + ".histogram", stats);
-            // Computes chart
-            chart(file, key + ".chart", stats);
-            // Computes linear regression
-            regression(file,
-                    key + ".linear",
-                    stats.getLong(N_INDEX),
-                    stats.getFloat(AVG_INDEX),
-                    UnaryOperator.identity(),
-                    Report::linear);
-
-            // Computes exponential regression
-            if (stats.getDouble(MIN_INDEX) > 0) {
-                regression(file,
-                        key + ".exponential",
-                        stats.getLong(N_INDEX),
-                        stats.getFloat(AVGLOG_INDEX),
-                        Transforms::log,
-                        Report::exponential);
-            }
-        }
-        logger.atInfo().log("Completed key {}", key);
     }
 
     /**
@@ -410,6 +362,45 @@ public class Report {
     }
 
     /**
+     * Processes the report
+     *
+     * @param report the report
+     * @throws Exception in case of error
+     */
+    private void process(ReportProcess report) throws Exception {
+        UnaryOperator<INDArray> reducer = report.reducer();
+        String kpiKey = report.kpiKey();
+        BinArrayFile file = reducer != null
+                ? reduce(kpiKey, reducer)
+                : BinArrayFile.createByKey(kpisPath, kpiKey);
+        String reportKey = report.reportKey();
+        try (INDArray stats = stats(reportKey, file)) {
+            // Computes histogram
+            hist(file, reportKey + ".histogram", stats);
+            // Computes chart
+            chart(file, reportKey + ".chart", stats);
+            // Computes linear regression
+            regression(file,
+                    reportKey + ".linear",
+                    stats.getLong(N_INDEX),
+                    stats.getFloat(AVG_INDEX),
+                    UnaryOperator.identity(),
+                    Report::linear);
+
+            // Computes exponential regression
+            if (stats.getDouble(MIN_INDEX) > 0) {
+                regression(file,
+                        reportKey + ".exponential",
+                        stats.getLong(N_INDEX),
+                        stats.getFloat(AVGLOG_INDEX),
+                        Transforms::log,
+                        Report::exponential);
+            }
+        }
+        logger.atInfo().log("Completed key {}", kpiKey);
+    }
+
+    /**
      * Start to produce the report
      *
      * @throws IOException in case of error
@@ -417,9 +408,9 @@ public class Report {
     protected void start() throws Throwable {
         this.kpisPath = new File(args.getString("kpis"));
         this.reportPath = new File(args.getString("reportPath"));
-        List<Action> tasks = KPIS.stream()
-                .filter(t -> BinArrayFile.createByKey(kpisPath, t._1).file().canRead())
-                .<Action>map(t -> () -> process(t._1, t._2.orElse(null)))
+        List<Action> tasks = reports.stream()
+                .filter(t -> BinArrayFile.createByKey(kpisPath, t.kpiKey()).file().canRead())
+                .<Action>map(t -> () -> this.process(t))
                 .toList();
         if (args.getBoolean("parallel")) {
             ParallelProcess.scheduler(tasks).run();
@@ -440,7 +431,7 @@ public class Report {
      */
     INDArray stats(String key, BinArrayFile file) throws Exception {
         logger.atInfo().log("Computing stats {} ...", file.file());
-        INDArray stats = Nd4j.zeros(6);
+        INDArray stats = Nd4j.zeros(1, 6);
         stats.putScalar(MIN_INDEX, Double.MAX_VALUE);
         stats.putScalar(MAX_INDEX, -Double.MAX_VALUE);
         Batches.reduce(file, stats, batchSize,
@@ -453,8 +444,10 @@ public class Report {
                     try (INDArray tmp = stats1.getScalar(AVG_INDEX)) {
                         tmp.addi(sum);
                     }
-                    try (INDArray tmp = stats1.getScalar(SIGMA_INDEX)) {
-                        tmp.addi(sum * sum);
+                    try (INDArray data2 = data.mul(data)) {
+                        try (INDArray tmp = stats1.getScalar(SIGMA_INDEX)) {
+                            tmp.addi(data2.sumNumber());
+                        }
                     }
                     if (minValue > 0) {
                         try (INDArray log = Transforms.log(data)) {

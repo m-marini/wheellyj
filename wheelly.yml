@@ -88,7 +88,6 @@ agents:
   polarRadarAgent:
     $schema: https://mmarini.org/wheelly/agent-single-nn-schema-0.1
     class: org.mmarini.rl.agents.TDAgentSingleNN
-    seed: 1234
     modelPath: models/polarRadarAgent
     savingIntervalSteps: 1000
     rewardAlpha: 5e-3
@@ -130,13 +129,15 @@ agents:
             - distanceFeatures
         layers:
           - type: dense
-            outputSize: 64
+            outputSize: 128
+            dropOut: 0.8
           - type: relu
       hidden0:
         input: layer0
         layers:
           - type: dense
-            outputSize: 64
+            outputSize: 128
+            dropOut: 0.5
           - type: relu
       hidden1:
         inputs:
@@ -146,7 +147,8 @@ agents:
             - hidden0
         layers:
           - type: dense
-            outputSize: 64
+            outputSize: 128
+            dropOut: 0.5
           - type: relu
       hidden2:
         inputs:
@@ -156,7 +158,8 @@ agents:
             - hidden1
         layers:
           - type: dense
-            outputSize: 64
+            outputSize: 128
+            dropOut: 0.5
           - type: relu
       direction:
         input: hidden2

@@ -51,6 +51,7 @@ public class PolarPanel extends JComponent {
     private static final Color PING_COLOR = new Color(255, 128, 128);
     private static final double DEFAULT_MAX_DISTANCE = 3;
     private static final double PING_SIZE = 0.05;
+    public static final int DEFAULT_SIZE = 400;
 
     static List<Shape> createGridShapes(double radarMaxDistance, double gridSize, int sectorNumber) {
         List<Shape> gridShapes = new ArrayList<>();
@@ -100,6 +101,7 @@ public class PolarPanel extends JComponent {
         this.emptyShapes = new ArrayList<>();
         this.filledShapes = new ArrayList<>();
         this.pingShapes = new ArrayList<>();
+        setPreferredSize(new Dimension(DEFAULT_SIZE, DEFAULT_SIZE));
     }
 
     /**

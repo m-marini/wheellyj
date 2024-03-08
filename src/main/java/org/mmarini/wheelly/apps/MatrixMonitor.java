@@ -62,7 +62,6 @@ import static org.mmarini.wheelly.swing.Utils.layHorizontally;
 public class MatrixMonitor {
     public static final int TIME_MAJOR_TICK_SPACING = 10;
     public static final String MONITOR_SCHEMA_YML = "https://mmarini.org/wheelly/monitor-schema-1.0";
-    private static final Dimension COMMAND_FRAME_SIZE = new Dimension(400, 800);
     private static final Logger logger = LoggerFactory.getLogger(MatrixMonitor.class);
     private static final int MAX_SPEED = 40;
     private static final int MAX_TIME = 60;
@@ -409,7 +408,7 @@ public class MatrixMonitor {
                     }
                 });
 
-        this.commandFrame = createFrame(Messages.getString("MatrixMonitor.title"), COMMAND_FRAME_SIZE, commandPanel);
+        this.commandFrame = createFrame(Messages.getString("MatrixMonitor.title"), commandPanel);
         this.sensorFrame = sensorMonitor.createFrame();
         this.comFrame = comMonitor.createFrame();
         layHorizontally(commandFrame, sensorFrame, comFrame);

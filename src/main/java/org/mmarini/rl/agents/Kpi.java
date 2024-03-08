@@ -25,17 +25,39 @@
 
 package org.mmarini.rl.agents;
 
+import org.mmarini.Tuple2;
+import org.mmarini.rl.envs.Signal;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.ops.transforms.Transforms;
 
 import java.util.Arrays;
+import java.util.Map;
 import java.util.StringJoiner;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 public class Kpi {
+
+    /**
+     * Returns the INDArray of boolean
+     *
+     * @param value the value
+     */
+    public static INDArray create(boolean value) {
+        return Nd4j.createFromArray(value ? 1f : 0f).reshape(1, 1);
+    }
+
+    /**
+     * Returns the INDArray of number
+     *
+     * @param value the value
+     */
+    public static INDArray create(Number value) {
+        return Nd4j.createFromArray(value.floatValue()).reshape(1, 1);
+    }
+
     static Kpi create(INDArray data) {
         requireNonNull(data);
         long[] shape = data.shape();
@@ -59,6 +81,21 @@ public class Kpi {
 
         return new Kpi(numSamples, mean, std, minValue, maxValue, linPoly, linRms, expPoly, expRms);
 
+    }
+
+    /**
+     * Returns the kpis of signals
+     *
+     * @param actions the signals
+     * @param prefix  the prefix key
+     */
+    public static Map<String, INDArray> create(Map<String, Signal> actions, String prefix) {
+        return Tuple2.stream(actions)
+                .map(t -> Tuple2.of(
+                        prefix + t._1,
+                        t._2.toINDArray()
+                ))
+                .collect(Tuple2.toMap());
     }
 
     public static float[] expPolynomial(INDArray y) {
@@ -139,28 +176,8 @@ public class Kpi {
         this.expRms = expRms;
     }
 
-    public float[] getExpPoly() {
-        return expPoly;
-    }
-
-    public float getExpRms() {
-        return expRms;
-    }
-
-    public float[] getLinPoly() {
-        return linPoly;
-    }
-
-    public float getLinRms() {
-        return linRms;
-    }
-
     public float getMean() {
         return mean;
-    }
-
-    public int getNumSamples() {
-        return numSamples;
     }
 
     public float getStd() {

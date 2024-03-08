@@ -34,7 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
-import java.util.stream.Stream;
+import java.util.List;
 
 /**
  * Displays the robot status, controller status and roboto commands as matrix table
@@ -48,7 +48,6 @@ public class SensorMonitor extends MatrixTable {
     public static final String RIGHT_PPS_KEY = "rightPps";
     public static final String CAN_MOVE_FORWARD_KEY = "canMoveForward";
     public static final String CAN_MOVE_BACKWARD_KEY = "canMoveBackward";
-    public static final String CONTACTS_KEY = "contacts";
     public static final String X_LOCATION_KEY = "xLocation";
     public static final String Y_LOCATION_KEY = "yLocation";
     public static final String IMU_FAILURE_KEY = "imuFailure";
@@ -69,7 +68,7 @@ public class SensorMonitor extends MatrixTable {
      * Create the sensor monitor
      */
     public SensorMonitor() {
-        Stream.of(
+        List.of(
                         addColumn(HEAD_KEY, Messages.getString("SensorMonitor.head"), 4),
                         addColumn(SENSOR_DIR_KEY, Messages.getString("SensorMonitor.sensorDir"), 3),
                         addColumn(ECHO_DIST_KEY, Messages.getString("SensorMonitor.echoDistance"), 3),
