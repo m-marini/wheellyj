@@ -38,7 +38,6 @@ import static java.util.Objects.requireNonNull;
  * Swing utilities functions
  */
 public interface Utils {
-    Dimension DEFAULT_SIZE = new Dimension(800, 800);
 
     /**
      * Returns the desktop centered frame
@@ -58,44 +57,26 @@ public interface Utils {
      * Returns a non-resizable frame
      *
      * @param title   the title
-     * @param size    the size
      * @param content the content
      */
-    static JFrame createFixFrame(String title, Dimension size, Component content) {
-        return createFrame(title, size, content, false);
+    static JFrame createFixFrame(String title, Component content) {
+        return createFrame(title, content, false);
     }
 
     /**
      * Create a frame
      *
      * @param title     the title
-     * @param size      the size of frame
      * @param content   the content of frame
      * @param resizable true if resizable
      */
-    static JFrame createFrame(String title, Dimension size, Component content, boolean resizable) {
+    static JFrame createFrame(String title, Component content, boolean resizable) {
         JFrame frame = new JFrame(title);
-        frame.setSize(size);
         frame.setResizable(resizable);
         Container content1 = frame.getContentPane();
         content1.setLayout(new BorderLayout());
         content1.add(content, BorderLayout.CENTER);
-        return frame;
-    }
-
-    /**
-     * Create a resizable frame
-     *
-     * @param title   the title
-     * @param size    the size of frame
-     * @param content the content of frame
-     */
-    static JFrame createFrame(String title, Dimension size, Component content) {
-        JFrame frame = new JFrame(title);
-        frame.setSize(size);
-        Container content1 = frame.getContentPane();
-        content1.setLayout(new BorderLayout());
-        content1.add(content, BorderLayout.CENTER);
+        frame.pack();
         return frame;
     }
 
@@ -106,7 +87,13 @@ public interface Utils {
      * @param content the content
      */
     static JFrame createFrame(String title, Component content) {
-        return createFrame(title, DEFAULT_SIZE, content, true);
+        JFrame frame = new JFrame(title);
+        frame.setResizable(true);
+        Container content1 = frame.getContentPane();
+        content1.setLayout(new BorderLayout());
+        content1.add(content, BorderLayout.CENTER);
+        frame.pack();
+        return frame;
     }
 
     /**

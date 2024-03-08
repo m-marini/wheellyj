@@ -70,7 +70,6 @@ public class RobotCheckUp {
     public static final long MOVEMENT_DURATION = 2000;
     public static final Complex ROTATION_TOLERANCE = Complex.fromDeg(5);
     public static final double DISTANCE_TOLERANCE = 0.1;
-    public static final Dimension RESULT_SIZE = new Dimension(800, 600);
     public static final String CHECKUP_SCHEMA_YML = "https://mmarini.org/wheelly/checkup-schema-1.0";
     private static final Logger logger = LoggerFactory.getLogger(RobotCheckUp.class);
     private static final int TEST_SPEED = MAX_PPS / 2;
@@ -127,7 +126,7 @@ public class RobotCheckUp {
         this.comMonitor = new ComMonitor();
         this.sensorMonitor = new SensorMonitor();
         comMonitor.setPrintTimestamp(true);
-        this.frame = createFrame(Messages.getString("RobotCheckUp.title"), RESULT_SIZE, sensorPanel);
+        this.frame = createFrame(Messages.getString("RobotCheckUp.title"), sensorPanel);
         this.monitorFrame = comMonitor.createFrame();
         this.sensorFrame = sensorMonitor.createFrame();
         layHorizontally(frame, sensorFrame, monitorFrame);
@@ -293,7 +292,7 @@ public class RobotCheckUp {
             view.append(line + System.lineSeparator());
         });
 
-        JFrame resultFrame = createFrame(Messages.getString("Result.title"), RESULT_SIZE, new JScrollPane(view));
+        JFrame resultFrame = createFrame(Messages.getString("Result.title"), new JScrollPane(view));
         resultFrame.setLocation(50, 50);
         resultFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         resultFrame.setVisible(true);
@@ -370,7 +369,7 @@ public class RobotCheckUp {
             builder.add("Check up details");
             builder.add("");
             for (ScannerResult scannerResult : scannerResults) {
-                builder.add(format("Sensor direction check %d DEG", scannerResult.direction));
+                builder.add(format("Sensor direction check %d DEG", scannerResult.direction.toIntDeg()));
                 builder.add(format("    %s", scannerResult.valid ? "valid" : "invalid"));
                 builder.add(format("    duration %d ms", scannerResult.testDuration));
                 builder.add(format("    move localTime %d ms", scannerResult.moveTime));
@@ -378,18 +377,18 @@ public class RobotCheckUp {
             }
 
             for (RotateResult result : rotateResults) {
-                builder.add(format("Rotate direction %d DEG", result.targetDir));
-                builder.add(format("    rotation %d DEG", result.rotationAngle));
+                builder.add(format("Rotate direction %d DEG", result.targetDir.toIntDeg()));
+                builder.add(format("    rotation %d DEG", result.rotationAngle.toIntDeg()));
                 builder.add(format("    duration %d ms", result.testDuration));
-                builder.add(format("    direction error %d DEG", result.directionError));
+                builder.add(format("    direction error %d DEG", result.directionError.toIntDeg()));
                 builder.add(format("    location error %.2f m", result.locationError));
             }
             for (MovementResult result : moveResults) {
-                builder.add(format("Movement direction %d DEG, speed %.1f", result.direction, result.speed));
+                builder.add(format("Movement direction %d DEG, speed %.1f", result.direction.toIntDeg(), result.speed));
                 builder.add(format("    distance %.2f m", result.distance));
                 builder.add(format("    duration %d ms", result.testDuration));
                 builder.add(format("    distance error %.2f m", result.distanceError));
-                builder.add(format("    direction error %d DEG", result.directionError));
+                builder.add(format("    direction error %d DEG", result.directionError.toIntDeg()));
             }
             return builder.build();
         }
@@ -503,7 +502,7 @@ public class RobotCheckUp {
                 builder.add("Rotation checks passed");
             }
 
-            builder.add(format("    direction error <= %d DEG", maxDirectionError));
+            builder.add(format("    direction error <= %d DEG", maxDirectionError.toIntDeg()));
             builder.add(format("    location error <= %.2f m", maxLocationError));
             builder.add(format("    rotation speed <= %.2f DEG/s", maxRotationSpeed));
 
@@ -516,7 +515,7 @@ public class RobotCheckUp {
             builder.add(format("    distance <= %.2f m", maxMoveDistance));
             builder.add(format("    speed <= %.2f m/s", maxSpeed));
             builder.add(format("    distance error <= %.2f m", maxMoveDistanceError));
-            builder.add(format("    direction error <=  %d DEG", maxMoveDirectionError));
+            builder.add(format("    direction error <=  %d DEG", maxMoveDirectionError.toIntDeg()));
 
             return builder.build();
         }

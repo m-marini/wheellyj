@@ -45,7 +45,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
-import java.awt.*;
 import java.awt.event.WindowEvent;
 import java.awt.geom.Point2D;
 import java.io.IOException;
@@ -59,7 +58,6 @@ import static org.mmarini.wheelly.swing.Utils.*;
  * Run a test to check for robot environment with random behavior agent
  */
 public class RobotExecutor {
-    public static final Dimension DEFALT_RADAR_DIMENSION = new Dimension(400, 400);
     public static final String EXECUTOR_SCHEMA_YML = "https://mmarini.org/wheelly/executor-schema-1.0";
     private static final Logger logger = LoggerFactory.getLogger(RobotExecutor.class);
 
@@ -155,7 +153,7 @@ public class RobotExecutor {
         this.comFrame = comMonitor.createFrame();
         this.sensorMonitor = new SensorMonitor();
         this.frame = createFrame(Messages.getString("RobotExecutor.title"), envPanel);
-        this.radarFrame = createFixFrame(Messages.getString("Radar.title"), DEFALT_RADAR_DIMENSION, polarPanel);
+        this.radarFrame = createFixFrame(Messages.getString("Radar.title"), polarPanel);
         this.engineFrame = engineMonitor.createFrame();
         this.sensorFrame = sensorMonitor.createFrame();
         init();

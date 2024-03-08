@@ -62,7 +62,6 @@ import static org.mmarini.wheelly.swing.Utils.createFrame;
 
 
 public class DumpReader {
-    public static final Dimension WIDNOW_SIZE = new Dimension(1200, 800);
     //    private static final Dimension COMMAND_FRAME_SIZE = new Dimension(400, 800);
     private static final Logger logger = LoggerFactory.getLogger(DumpReader.class);
 
@@ -300,7 +299,7 @@ public class DumpReader {
         }
         bufferedReader.close();
         if (!lineRecords.isEmpty()) {
-            Instant offset = lineRecords.get(0).instant();
+            Instant offset = lineRecords.getFirst().instant();
             recordsTable.setTimestampOffset(offset);
             detailPanel.setOffset(offset);
             filterMenu.setOffset(offset);
@@ -315,7 +314,6 @@ public class DumpReader {
         logger.info("Dump reader started.");
 
         this.dumpReaderFrame = center(createFrame(Messages.getString("DumpReader.title"),
-                WIDNOW_SIZE,
                 createContentPane()));
 
         JMenu fileMenu = SwingUtils.createMenu("DumpReader.fileMenu");

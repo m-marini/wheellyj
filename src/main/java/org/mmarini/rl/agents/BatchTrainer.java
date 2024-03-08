@@ -43,11 +43,13 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.rl.agents.MapUtils.keyPrefix;
 
 /**
  * Trains the network with a batch of data samples.
@@ -141,6 +143,7 @@ public class BatchTrainer {
     private Map<String, BinArrayFile> s0Files;
     private Map<String, BinArrayFile> s1Files;
     private float avgReward;
+    private File datasetPath;
 
     /**
      * Creates the batch trainer
@@ -210,12 +213,15 @@ public class BatchTrainer {
                                             long numActions) throws IOException {
         // Creates the process to transform the action value to action mask
         BinArrayFile maskFile = BinArrayFile.createByKey(TMP_MASKS_PATH, actionName);
+        AtomicLong n = new AtomicLong();
+        counterProcessor.onNext(0L);
         Batches.map(maskFile, actionFile, batchSize,
                 action -> {
                     INDArray mask = Nd4j.zeros(action.size(0), numActions);
                     for (long i = 0; i < action.size(0); i++) {
                         mask.putScalar(i, action.getLong(i), 1f);
                     }
+                    counterProcessor.onNext(n.addAndGet(action.size(0)));
                     return mask;
                 }
         );
@@ -232,9 +238,12 @@ public class BatchTrainer {
         // Loads rewards
         info("Computing average reward from \"%s\" ...", datasetPath);
         BinArrayFile rewardFile = BinArrayFile.createByKey(datasetPath, REWARD_KEY);
+        counterProcessor.onNext(0L);
         avgReward = Batches.reduce(rewardFile, 0F, 256,
-                (tot1, data, ignored) ->
-                        tot1 + data.sumNumber().floatValue());
+                (tot1, data, n) -> {
+                    counterProcessor.onNext(n + data.size(0));
+                    return tot1 + data.sumNumber().floatValue();
+                });
         long n;
         try (rewardFile) {
             n = rewardFile.size();
@@ -244,7 +253,12 @@ public class BatchTrainer {
         info("Computing advantage from \"%s\" ...", datasetPath);
         BinArrayFile advantageFile = BinArrayFile.createByKey(TMP_PATH, ADVANTAGE_KEY);
         float finalAvgReward = avgReward;
-        Batches.map(advantageFile, rewardFile, 256, data -> data.sub(finalAvgReward));
+        AtomicLong m = new AtomicLong();
+        counterProcessor.onNext(0L);
+        Batches.map(advantageFile, rewardFile, 256, data -> {
+            counterProcessor.onNext(m.addAndGet(data.size(0)));
+            return data.sub(finalAvgReward);
+        });
         return advantageFile;
     }
 
@@ -261,31 +275,23 @@ public class BatchTrainer {
     }
 
     /**
+     * Returns the number of record
+     */
+    public long numRecords() {
+        try {
+            return terminalFile != null ? terminalFile.size() : 0;
+        } catch (IOException ex) {
+            logger.atError().setCause(ex).log("Error getting number of records");
+            return 0;
+        }
+    }
+
+    /**
      * Prepare data for training.
      * Load the dataset of s0,s1,reward,terminal,actions
-     *
-     * @param datasetPath the path of dataset
      */
-    public void prepare(File datasetPath) throws Exception {
+    public void prepare() throws Exception {
         // Check for terminal
-        this.terminalFile = BinArrayFile.createByKey(datasetPath, TERMINAL_KEY);
-        if (!terminalFile.file().canRead()) {
-            throw new IllegalArgumentException("Missing terminal datasets");
-        }
-        this.s0Files = KeyFileMap.children(KeyFileMap.create(datasetPath, S0_KEY), S0_KEY);
-        if (s0Files.isEmpty()) {
-            throw new IllegalArgumentException("Missing s0 datasets");
-        }
-        this.s1Files = KeyFileMap.children(KeyFileMap.create(datasetPath, S1_KEY), S1_KEY);
-        if (s1Files.isEmpty()) {
-            throw new IllegalArgumentException("Missing s1 datasets");
-        }
-        if (KeyFileMap.create(datasetPath, REWARD_KEY).isEmpty()) {
-            throw new IllegalArgumentException("Missing reward datasets");
-        }
-        if (KeyFileMap.create(datasetPath, ACTIONS_KEY).isEmpty()) {
-            throw new IllegalArgumentException("Missing actions datasets");
-        }
         this.advantageFile = createAdvantage(datasetPath);
         this.masksFiles = createActionMasks(datasetPath);
     }
@@ -333,10 +339,10 @@ public class BatchTrainer {
                 t -> t.setV2(t._2.mul(alphas.get(t._1)))));
         // Computes output gradients for network (merges critic and policy grads)
         grads.put(CRITIC_KEY, criticGrad);
+        TDNetworkState result = network.train(grads, delta, lambda, null);
         kpis.put("delta", delta);
-        grads.forEach((key, value) -> kpis.put("netGrads." + key, value));
+        kpis.putAll(keyPrefix(result.gradients(), "netGrads."));
         kpisProcessor.onNext(kpis);
-        network.train(grads, delta, lambda, null);
         return delta.sumNumber().doubleValue();
     }
 
@@ -366,6 +372,7 @@ public class BatchTrainer {
                     // Run for all batches
                     double delta = 0;
                     long n = 0;
+                    counterProcessor.onNext(n);
                     try (BinArrayFile predictionFile = BinArrayFile.createByKey(TMP_PATH, PREDICTION_KEY)) {
                         predictionFile.clear();
                         for (; ; ) {
@@ -387,6 +394,7 @@ public class BatchTrainer {
                                     }
                                 }
                             }
+                            counterProcessor.onNext(n);
                         }
                     }
                     delta /= n;
@@ -431,8 +439,8 @@ public class BatchTrainer {
                         this.criticGrad = Nd4j.onesLike(adv).muli(alphas.get(CRITIC_KEY));
                     }
                     double dTot = runMiniBatch(s0, actionsMasks, adv, criticGrad);
-                    counterProcessor.onNext(n);
                     n += adv.size(0);
+                    counterProcessor.onNext(n);
                     long finalN = n;
                     monitor.wakeUp(() -> format("Processed %d records", finalN));
                     counterProcessor.onNext(n);
@@ -462,7 +470,7 @@ public class BatchTrainer {
                 runPhase1();
                 for (int j = 0; j < numTrainIterations2 && !stopped; j++) {
                     // Iterate for all mini batches
-                    info("Step %d.%d ...", i, j);
+                    info("Step %d.%d of %d.%d ...", i + 1, j + 1, numTrainIterations1, numTrainIterations2);
                     runPhase2();
                     if (onTrained != null) {
                         onTrained.accept(network);
@@ -475,6 +483,33 @@ public class BatchTrainer {
         } finally {
             kpisProcessor.onComplete();
             counterProcessor.onComplete();
+        }
+    }
+
+    /**
+     * Validate the dataset path
+     *
+     * @param datasetPath the dataset path
+     */
+    public void validate(File datasetPath) {
+        this.datasetPath = datasetPath;
+        this.terminalFile = BinArrayFile.createByKey(datasetPath, TERMINAL_KEY);
+        if (!terminalFile.file().canRead()) {
+            throw new IllegalArgumentException("Missing terminal datasets");
+        }
+        this.s0Files = KeyFileMap.children(KeyFileMap.create(datasetPath, S0_KEY), S0_KEY);
+        if (s0Files.isEmpty()) {
+            throw new IllegalArgumentException("Missing s0 datasets");
+        }
+        this.s1Files = KeyFileMap.children(KeyFileMap.create(datasetPath, S1_KEY), S1_KEY);
+        if (s1Files.isEmpty()) {
+            throw new IllegalArgumentException("Missing s1 datasets");
+        }
+        if (KeyFileMap.create(datasetPath, REWARD_KEY).isEmpty()) {
+            throw new IllegalArgumentException("Missing reward datasets");
+        }
+        if (KeyFileMap.create(datasetPath, ACTIONS_KEY).isEmpty()) {
+            throw new IllegalArgumentException("Missing actions datasets");
         }
     }
 }

@@ -58,8 +58,9 @@ import java.awt.*;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.mmarini.wheelly.swing.Utils.*;
@@ -69,7 +70,6 @@ import static org.mmarini.yaml.Utils.fromFile;
  * Run a test to check for robot environment with random behavior agent
  */
 public class Wheelly {
-    public static final Dimension DEFAULT_RADAR_DIMENSION = new Dimension(400, 400);
     public static final String WHEELLY_SCHEMA_YML = "https://mmarini.org/wheelly/wheelly-schema-1.0";
     private static final Logger logger = LoggerFactory.getLogger(Wheelly.class);
 
@@ -125,6 +125,8 @@ public class Wheelly {
     private final JFrame comFrame;
     private final SensorMonitor sensorMonitor;
     private final JFrame sensorFrame;
+    private final KpisPanel kpisPanel;
+    private JFrame kpisFrame;
     private final CompletableSubject completion;
     protected Namespace args;
     private long robotStartTimestamp;
@@ -142,6 +144,7 @@ public class Wheelly {
      */
     public Wheelly() {
         this.envPanel = new EnvironmentPanel();
+        this.kpisPanel = new KpisPanel();
         JScrollPane scrollEnv = new JScrollPane(envPanel);
         this.frame = createFrame(Messages.getString("Wheelly.title"), scrollEnv);
         this.comMonitor = new ComMonitor();
@@ -227,12 +230,15 @@ public class Wheelly {
      */
     private void handleShutdown() {
         // Close all frame
-        frame.dispose();
+        comFrame.dispose();
+        sensorFrame.dispose();
+        if (kpisFrame != null) {
+            kpisFrame.dispose();
+        }
         if (radarFrame != null) {
             radarFrame.dispose();
         }
-        sensorFrame.dispose();
-        comFrame.dispose();
+        frame.dispose();
 
         // Open wait frame
         logger.atInfo().log("Shutdown");
@@ -243,10 +249,10 @@ public class Wheelly {
         Container panel = new GridLayoutHelper<>(new JPanel())
                 .add(progressBar)
                 .getContainer();
-        JFrame waitFrame = center(createFrame("Shutdown", new Dimension(300, 100), panel));
+        JFrame waitFrame = center(createFrame("Shutdown", panel));
         waitFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         waitFrame.setVisible(true);
-        // Shuting down
+        // Shutting down
         try {
             agent.close();
         } catch (IOException e) {
@@ -335,21 +341,20 @@ public class Wheelly {
                 throw new IllegalArgumentException(format("Missing node %s", agentLocator));
             }
             this.agent = Agent.fromConfig(config, agentLocator, environment);
+            kpisPanel.setKeys(agent.getActions().keySet().toArray(String[]::new));
 
             logger.atInfo().log("Creating agent");
             if (environment instanceof PolarRobotEnv) {
                 this.polarPanel = new PolarPanel();
                 double radarMaxDistance = ((PolarRobotEnv) environment).getMaxRadarDistance();
                 polarPanel.setRadarMaxDistance(radarMaxDistance);
-                radarFrame = createFixFrame(Messages.getString("Radar.title"), DEFAULT_RADAR_DIMENSION, polarPanel);
+                radarFrame = createFixFrame(Messages.getString("Radar.title"), polarPanel);
                 SwingObservable.window(radarFrame, SwingObservable.WINDOW_ACTIVE)
                         .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
                         .doOnNext(this::handleWindowClosing)
                         .subscribe();
-                layHorizontally(frame, radarFrame, sensorFrame, comFrame);
-            } else {
-                layHorizontally(frame, sensorFrame, comFrame);
             }
+
             sessionDuration = this.args.getLong("localTime");
             logger.atInfo().log("Starting session ...");
             logger.atInfo().log("Session are running for {} sec...", sessionDuration);
@@ -357,9 +362,16 @@ public class Wheelly {
 
             String kpis = this.args.getString("kpis");
             if (!kpis.isEmpty()) {
+                // Create kpis frame
+                this.kpisFrame = kpisPanel.createFrame();
+                SwingObservable.window(kpisFrame, SwingObservable.WINDOW_ACTIVE)
+                        .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
+                        .doOnNext(this::handleWindowClosing)
+                        .subscribe();
                 KpiBinWriter kpiWriter = KpiBinWriter.createFromLabels(new File(kpis), this.args.getString("labels"));
                 agent.readKpis()
                         .observeOn(Schedulers.io(), true)
+                        .doOnNext(kpisPanel::addKpis)
                         .doOnNext(kpiWriter::write)
                         .doOnError(ex -> logger.atError().setCause(ex).log("Error writing kpis"))
                         .doOnComplete(() -> {
@@ -415,10 +427,22 @@ public class Wheelly {
             environment.setOnAct(agent::act);
             environment.setOnResult(this::handleResult);
 
-            frame.setVisible(true);
-            (radarFrame != null
-                    ? Stream.of(comFrame, sensorFrame, radarFrame, frame)
-                    : Stream.of(comFrame, sensorFrame, frame)).forEach(f -> f.setVisible(true));
+            // Collects all frames
+            List<JFrame> allFrames = new ArrayList<>();
+            allFrames.add(frame);
+            if (radarFrame != null) {
+                allFrames.add(radarFrame);
+            }
+            if (kpisFrame != null) {
+                allFrames.add(kpisFrame);
+            }
+            allFrames.add(sensorFrame);
+            allFrames.add(comFrame);
+
+            // Open all the windows
+            allFrames.forEach(f -> f.setVisible(true));
+            layHorizontally(allFrames.toArray(JFrame[]::new));
+
             comFrame.setState(JFrame.ICONIFIED);
 
             environment.start();

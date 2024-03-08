@@ -50,7 +50,6 @@ import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -127,35 +126,6 @@ public class TDAgentSingleNN implements Agent {
                     env.getState(), env.getActions(), random)
                     .build();
         }
-    }
-
-    /**
-     * Returns the flat kpi stream for the given kpi
-     *
-     * @param kpi the kpi
-     */
-    private static Stream<Tuple2<String, INDArray>> flat(Tuple2<String, Object> kpi) {
-        String key = kpi._1;
-        return switch (kpi._2) {
-            case Boolean b -> Stream.of(kpi.setV2(Nd4j.create(new float[][]{{b ? 1f : 0f}})));
-            case Number num -> Stream.of(kpi.setV2(Nd4j.create(new float[][]{{num.floatValue()}})));
-            case INDArray ary -> Stream.of(kpi.setV2(ary));
-            case Signal sig -> Stream.of(kpi.setV2(sig.toINDArray()));
-            case Map<?, ?> map -> Tuple2.stream((Map<String, Object>) map)
-                    .flatMap(t -> flat(Tuple2.of(key + "." + t._1, t._2)));
-            default -> Stream.empty();
-        };
-    }
-
-    /**
-     * Returns the flat kpis the given kpis
-     *
-     * @param kpis the kpis
-     */
-    static Map<String, INDArray> flatKpis(Map<String, Object> kpis) {
-        return Tuple2.stream(kpis)
-                .flatMap(TDAgentSingleNN::flat)
-                .collect(Tuple2.toMap());
     }
 
     /**
@@ -331,7 +301,7 @@ public class TDAgentSingleNN implements Agent {
     private final PublishProcessor<Map<String, INDArray>> indicatorsPub;
     private float avgReward;
     private int savingStepCounter;
-    private Consumer<Map<String, Object>> kpiListener;
+    private Consumer<Map<String, INDArray>> kpiListener;
     private boolean backedUp;
 
     /**
@@ -542,7 +512,7 @@ public class TDAgentSingleNN implements Agent {
     @Override
     public Flowable<Map<String, INDArray>> readKpis() {
         if (kpiListener == null) {
-            kpiListener = kpis -> indicatorsPub.onNext(flatKpis(kpis));
+            kpiListener = indicatorsPub::onNext;
         }
         return indicatorsPub.onBackpressureBuffer(KPIS_CAPACITY);
     }
@@ -601,7 +571,7 @@ public class TDAgentSingleNN implements Agent {
         float avgReward0 = avgReward;
         avgReward += reward * rewardAlpha;
 
-        Map<String, Object> kpi = kpiListener != null ? new HashMap<>() : null;
+        Map<String, INDArray> kpi = kpiListener != null ? new HashMap<>() : null;
         Consumer<Tuple2<String, INDArray>> kpiCallback = kpiListener != null ? t -> kpi.put("weights.network." + t._1, t._2) : null;
 
         // Computes output gradients for network (merges critic and policy grads)
@@ -619,20 +589,20 @@ public class TDAgentSingleNN implements Agent {
 
         if (this.kpiListener != null) {
             Map<String, INDArray> trainedResults = network.forward(s0).values();
-            kpi.put("s0", s0);
-            kpi.put("reward", reward);
-            kpi.put("terminal", result.terminal);
-            kpi.put("actions", result.actions);
-            kpi.put("s1", s1);
-            kpi.put("avgReward", avgReward0);
-            kpi.put("trainedAvgReward", avgReward);
-            kpi.put("netResult", state0.values());
-            kpi.put("adv0", adv0);
-            kpi.put("adv1", adv1);
-            kpi.put("delta", delta);
-            kpi.put("policy", pi0);
-            kpi.put("grads", trainedState.gradients());
-            kpi.put("trainedResults", trainedResults);
+            kpi.putAll(MapUtils.keyPrefix(s0, "s0."));
+            kpi.put("reward", Kpi.create(reward));
+            kpi.put("terminal", Kpi.create(result.terminal));
+            kpi.putAll(Kpi.create(result.actions, "actions."));
+            kpi.putAll(MapUtils.keyPrefix(s1, "s1."));
+            kpi.put("avgReward", Kpi.create(avgReward0));
+            kpi.put("trainedAvgReward", Kpi.create(avgReward));
+            kpi.putAll(MapUtils.keyPrefix(state0.values(), "netResult."));
+            kpi.put("adv0", Kpi.create(adv0));
+            kpi.put("adv1", Kpi.create(adv1));
+            kpi.put("delta", Kpi.create(delta));
+            kpi.putAll(MapUtils.keyPrefix(pi0, "policy."));
+            kpi.putAll(MapUtils.keyPrefix(trainedState.gradients(), "netGrads."));
+            kpi.putAll(MapUtils.keyPrefix(trainedResults, "trainedResults."));
             kpiListener.accept(kpi);
         }
 

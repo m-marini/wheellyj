@@ -26,6 +26,7 @@
 package org.mmarini.wheelly.swing;
 
 import org.mmarini.Tuple2;
+import org.mmarini.wheelly.apis.GridTopology;
 import org.mmarini.wheelly.apis.MapCell;
 import org.mmarini.wheelly.apis.RadarMap;
 
@@ -43,7 +44,8 @@ import java.util.stream.Collectors;
 public class RadarPanel extends JComponent {
     public static final BasicStroke BORDER_STROKE = new BasicStroke(0);
     static final float DEFAULT_WORLD_SIZE = 11;
-    static final float DEFAULT_SCALE = 400 / DEFAULT_WORLD_SIZE;
+    public static final int DEFAULT_WINDOW_SIZE = 800;
+    static final float DEFAULT_SCALE = DEFAULT_WINDOW_SIZE / DEFAULT_WORLD_SIZE / 2;
     static final float GRID_SIZE = 1f;
 
     static final Color GRID_COLOR = new Color(50, 50, 50);
@@ -134,6 +136,7 @@ public class RadarPanel extends JComponent {
         setFont(Font.decode("Monospaced"));
         scale = DEFAULT_SCALE;
         centerLocation = new Point2D.Float();
+        setPreferredSize(new Dimension(DEFAULT_WINDOW_SIZE, DEFAULT_WINDOW_SIZE));
     }
 
     /**
@@ -255,13 +258,10 @@ public class RadarPanel extends JComponent {
     public void setRadarMap(RadarMap radarMap) {
         this.radarMap = createMap(radarMap);
         this.sectorShape = createSectorShape(radarMap);
-        /*
         GridTopology topology = radarMap.topology();
         setPreferredSize(new Dimension(
                 (int) (scale * topology.width() / topology.gridSize() / DEFAULT_WORLD_SIZE),
                 (int) (scale * topology.height() / topology.gridSize() / DEFAULT_WORLD_SIZE)));
-
-         */
         repaint();
     }
 

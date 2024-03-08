@@ -110,12 +110,11 @@ public class MatrixTable extends JPanel {
      */
     public JFrame createFrame(String title) {
         JScrollPane scroll = new JScrollPane(this);
-        Dimension size = scroll.getPreferredSize();
         JFrame frame = new JFrame(title);
-        frame.setSize(size);
         Container contentPane = frame.getContentPane();
         contentPane.setLayout(new BorderLayout());
         contentPane.add(scroll, BorderLayout.CENTER);
+        frame.pack();
         return frame;
     }
 
