@@ -293,7 +293,7 @@ public class TDAgentSingleNN implements Agent {
     private final TDNetwork network;
     private final Random random;
     private final float lambda;
-    private final Map<String, Float> alphas;
+    private Map<String, Float> alphas;
     private final File modelPath;
     private final int savingIntervalSteps;
     private final InputProcessor processor;
@@ -364,6 +364,15 @@ public class TDAgentSingleNN implements Agent {
      */
     public Map<String, Float> alphas() {
         return alphas;
+    }
+
+    /**
+     * Sets the alpha parameters
+     *
+     * @param alphas the alpha parameters
+     */
+    public void alphas(Map<String, Float> alphas) {
+        this.alphas = alphas;
     }
 
     /**
