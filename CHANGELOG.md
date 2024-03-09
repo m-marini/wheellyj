@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 
 - Issue [#370](https://github.com/m-marini/wheellyj/issues/370): Buffering read binary file
+- Issue [#378](https://github.com/m-marini/wheellyj/issues/378): Change kpis to monitor delta eta
 
 ### Fixed
 

@@ -29,9 +29,10 @@ function generateReport(dataPath, reportPath)
   generateKpiReport(hFile, [dataPath "/policy/speed/maxMinRatio"], reportPath, "policy_speed_ratio", "Speed max/min ratio.", mode);
   generateKpiReport(hFile, [dataPath "/policy/sensorAction/maxAbs"], reportPath, "policy_sensorAction", "Sensor direction max prob.", mode);
   generateKpiReport(hFile, [dataPath "/policy/sensorAction/maxMinRatio"], reportPath, "policy_sensorAction_ratio", "Sensor direction  max/min ratio.", mode);
-  generateKpiReport(hFile, [dataPath "/netGrads/direction/grads/maxAbs"], reportPath, "grad_direction", "Direction Gradient", mode);
-  generateKpiReport(hFile, [dataPath "/netGrads/speed/grads/maxAbs"], reportPath, "grad_speed", "Speed Gradient", mode);
-  generateKpiReport(hFile, [dataPath "/netGrads/sensorAction/grads/maxAbs"], reportPath, "grad_sensorAction", "Sensor direction Gradient", mode);
+  generateKpiReport(hFile, [dataPath "/deltas/critic/maxAbs"], reportPath, "eta_delta_critic", "Critic delta", mode);
+  generateKpiReport(hFile, [dataPath "/deltas/direction/maxAbs"], reportPath, "eta_delta_direction", "Direction delta", mode);
+  generateKpiReport(hFile, [dataPath "/deltas/speed/maxAbs"], reportPath, "eta_delta_speed", "Speed delta", mode);
+  generateKpiReport(hFile, [dataPath "/deltas/sensorAction/maxAbs"], reportPath, "eta_delta_sensorAction", "Sensor direction delta", mode);
 
   fclose(hFile);
 

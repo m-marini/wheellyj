@@ -612,6 +612,14 @@ public class TDAgentSingleNN implements Agent {
             kpi.putAll(MapUtils.keyPrefix(pi0, "policy."));
             kpi.putAll(MapUtils.keyPrefix(trainedState.gradients(), "netGrads."));
             kpi.putAll(MapUtils.keyPrefix(trainedResults, "trainedResults."));
+            Map<String, INDArray> deltas = Tuple2.stream(grads).map(t ->
+                            Tuple2.of(
+                                    "deltas." + t._1,
+                                    t._2.mul(delta)
+                            )
+                    )
+                    .collect(Tuple2.toMap());
+            kpi.putAll(deltas);
             kpiListener.accept(kpi);
         }
 

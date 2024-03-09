@@ -350,6 +350,14 @@ public class BatchTrainer {
         TDNetworkState result = network.train(grads, delta, lambda, null);
         kpis.put("delta", delta);
         kpis.putAll(keyPrefix(result.gradients(), "netGrads."));
+        Map<String, INDArray> deltas = Tuple2.stream(grads).map(t ->
+                        Tuple2.of(
+                                "deltas." + t._1,
+                                t._2.mul(delta)
+                        )
+                )
+                .collect(Tuple2.toMap());
+        kpis.putAll(deltas);
         kpisProcessor.onNext(kpis);
         return delta.sumNumber().doubleValue();
     }

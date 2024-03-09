@@ -28,20 +28,23 @@
 
 package org.mmarini.wheelly.apps;
 
+import org.nd4j.linalg.api.ndarray.INDArray;
+
 import static java.lang.Math.exp;
+import static java.lang.Math.sqrt;
 
 /**
  * Computes the discount average of values set
  */
-public class AverageValue {
+public class RMSValue {
     public static final double DEFAULT_DISCOUNT = exp(-1 / 29.7);
 
     /**
      * Returns the default average value
      * The discount factor is about 0.9669 (21 steps to 0.5 factor)
      */
-    public static AverageValue create() {
-        return new AverageValue(0, DEFAULT_DISCOUNT);
+    public static RMSValue create() {
+        return new RMSValue(0, DEFAULT_DISCOUNT);
     }
 
     private final double discount;
@@ -53,7 +56,7 @@ public class AverageValue {
      * @param value    the initial value
      * @param discount the discount
      */
-    public AverageValue(double value, double discount) {
+    public RMSValue(double value, double discount) {
         this.value = value;
         this.discount = discount;
     }
@@ -63,15 +66,29 @@ public class AverageValue {
      *
      * @param value the added value
      */
-    public double add(double value) {
-        return this.value = discount * (this.value - value) + value;
+    public RMSValue add(double value) {
+        double sqrValue = value * value;
+        this.value = discount * (this.value - sqrValue) + sqrValue;
+        return this;
     }
 
     /**
      * Returns the average value adding a value
+     *
+     * @param values the added values
      */
-    public double getValue() {
-        return value;
+    public RMSValue add(INDArray values) {
+        for (long i = 0; i < values.length(); i++) {
+            add(values.getDouble(i));
+        }
+        return this;
+    }
+
+    /**
+     * Returns the rms value adding a value
+     */
+    public double value() {
+        return sqrt(value);
     }
 
 }

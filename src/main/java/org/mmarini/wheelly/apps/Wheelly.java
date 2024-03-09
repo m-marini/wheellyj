@@ -121,9 +121,9 @@ public class Wheelly {
     }
 
     protected final EnvironmentPanel envPanel;
-    private final AverageValue avgRewards;
-    private final AverageValue reactionRobotTime;
-    private final AverageValue reactionRealTime;
+    private final MeanValue avgRewards;
+    private final MeanValue reactionRobotTime;
+    private final MeanValue reactionRealTime;
     private final ComMonitor comMonitor;
     private final SensorMonitor sensorMonitor;
     private final KpisPanel kpisPanel;
@@ -153,6 +153,37 @@ public class Wheelly {
     }
 
     /**
+     * Creates the server reinforcement learning engine server
+     */
+    public Wheelly() {
+        this.envPanel = new EnvironmentPanel();
+        this.kpisPanel = new KpisPanel();
+        this.comMonitor = new ComMonitor();
+        comMonitor.setPrintTimestamp(true);
+        this.learnPanel = new LearnPanel();
+        this.sensorMonitor = new SensorMonitor();
+        this.robotStartTimestamp = -1;
+        this.avgRewards = MeanValue.create();
+        this.reactionRobotTime = MeanValue.create();
+        this.reactionRealTime = MeanValue.create();
+        this.prevRobotStep = -1;
+        this.prevStep = -1;
+        this.completion = CompletableSubject.create();
+    }
+
+    /**
+     * Handles read line
+     *
+     * @param line read line
+     */
+    private void handleReadLine(String line) {
+        comMonitor.onReadLine(line);
+        if (dumper != null) {
+            dumper.dumpReadLine(line);
+        }
+    }
+
+    /**
      * Handles the inference event
      *
      * @param status the robot status
@@ -169,49 +200,18 @@ public class Wheelly {
         }
         long time = System.currentTimeMillis();
         if (prevRobotStep >= 0) {
-            envPanel.setReactionRealTime(reactionRealTime.add(time - prevStep) * 1e-3);
-            envPanel.setReactionRobotTime(reactionRobotTime.add(robotClock - prevRobotStep) * 1e-3);
+            envPanel.setReactionRealTime(reactionRealTime.add(time - prevStep).value() * 1e-3);
+            envPanel.setReactionRobotTime(reactionRobotTime.add(robotClock - prevRobotStep).value() * 1e-3);
         }
         prevRobotStep = robotClock;
         prevStep = time;
     }
 
-    /**
-     * Handles read line
-     *
-     * @param line read line
-     */
-    private void handleReadLine(String line) {
-        comMonitor.onReadLine(line);
-        if (dumper != null) {
-            dumper.dumpReadLine(line);
-        }
-    }
-
     private void handleResult(Environment.ExecutionResult result) {
         double reward = result.getReward();
-        envPanel.setReward(avgRewards.add(reward));
+        envPanel.setReward(avgRewards.add(reward).value());
         sensorMonitor.onReward(reward);
         agent.observe(result);
-    }
-
-    /**
-     * Creates the server reinforcement learning engine server
-     */
-    public Wheelly() {
-        this.envPanel = new EnvironmentPanel();
-        this.kpisPanel = new KpisPanel();
-        this.comMonitor = new ComMonitor();
-        comMonitor.setPrintTimestamp(true);
-        this.learnPanel = new LearnPanel();
-        this.sensorMonitor = new SensorMonitor();
-        this.robotStartTimestamp = -1;
-        this.avgRewards = AverageValue.create();
-        this.reactionRobotTime = AverageValue.create();
-        this.reactionRealTime = AverageValue.create();
-        this.prevRobotStep = -1;
-        this.prevStep = -1;
-        this.completion = CompletableSubject.create();
     }
 
     /**

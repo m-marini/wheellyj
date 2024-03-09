@@ -123,8 +123,8 @@ public class RobotExecutor {
     private final JFrame engineFrame;
     private final EnvironmentPanel envPanel;
     private final PolarPanel polarPanel;
-    private final AverageValue reactionRobotTime;
-    private final AverageValue reactionRealTime;
+    private final MeanValue reactionRobotTime;
+    private final MeanValue reactionRealTime;
     private final ComMonitor comMonitor;
     private final SensorMonitor sensorMonitor;
     private final StateEngineMonitor engineMonitor;
@@ -145,8 +145,8 @@ public class RobotExecutor {
         this.polarPanel = new PolarPanel();
         this.comMonitor = new ComMonitor();
         this.engineMonitor = new StateEngineMonitor();
-        this.reactionRobotTime = AverageValue.create();
-        this.reactionRealTime = AverageValue.create();
+        this.reactionRobotTime = MeanValue.create();
+        this.reactionRealTime = MeanValue.create();
         this.robotStartTimestamp = -1;
         this.prevRobotStep = -1;
         this.prevRealStep = -1;
@@ -226,8 +226,8 @@ public class RobotExecutor {
         envPanel.setTimeRatio((double) robotElapsed / (System.currentTimeMillis() - start));
         long clock = System.currentTimeMillis();
         if (prevRobotStep >= 0) {
-            envPanel.setReactionRealTime(reactionRealTime.add(clock - prevRealStep) * 1e-3);
-            envPanel.setReactionRobotTime(reactionRobotTime.add(robotClock - prevRobotStep) * 1e-3);
+            envPanel.setReactionRealTime(reactionRealTime.add(clock - prevRealStep).value() * 1e-3);
+            envPanel.setReactionRobotTime(reactionRobotTime.add(robotClock - prevRobotStep).value() * 1e-3);
         }
         prevRobotStep = robotClock;
         this.prevRealStep = clock;
