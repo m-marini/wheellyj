@@ -30,14 +30,18 @@ package org.mmarini.wheelly.swing;
 
 import io.reactivex.rxjava3.functions.Consumer;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apps.AverageValue;
+import org.mmarini.wheelly.apps.MeanValue;
+import org.mmarini.wheelly.apps.RMSValue;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.ops.transforms.Transforms;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**
@@ -47,12 +51,12 @@ public class KpisPanel extends MatrixTable {
     public static final double DISCOUNT = 0.977;
     public static final double PPM = 1e6;
     private static final Logger logger = LoggerFactory.getLogger(KpisPanel.class);
-    private final AverageValue deltaAvg;
+    private final RMSValue criticRms;
     private Map<String, Consumer<INDArray>> handlers;
 
     public KpisPanel() {
         this.handlers = Map.of();
-        this.deltaAvg = new AverageValue(0, DISCOUNT);
+        this.criticRms = new RMSValue(0, DISCOUNT);
         setPrintTimestamp(false);
     }
 
@@ -89,17 +93,14 @@ public class KpisPanel extends MatrixTable {
      * @param key the key
      */
     private Stream<Tuple2<String, Consumer<INDArray>>> createHandler(String key) {
-        AverageValue grads = new AverageValue(0, DISCOUNT);
-        AverageValue prob = new AverageValue(0, DISCOUNT);
-        AverageValue probRatio = new AverageValue(1, DISCOUNT);
+        RMSValue delta = new RMSValue(0, DISCOUNT);
+        MeanValue prob = new MeanValue(0, DISCOUNT);
+        MeanValue probRatio = new MeanValue(1, DISCOUNT);
         return Stream.of(
                 Tuple2.of(
-                        "netGrads." + key + ".grads", data -> {
-                            try (INDArray max = data.max(1)) {
-                                for (long i = 0; i < data.size(0); i++) {
-                                    grads.add(max.getDouble(i, 0));
-                                }
-                                printf(key + ".grads", "%,10.0f", grads.getValue() * PPM);
+                        "deltas." + key, data -> {
+                            try (INDArray max = Transforms.abs(data).max(true, 1)) {
+                                printf(key + ".delta", "%,10.0f", delta.add(max).value() * PPM);
                             }
                         }),
                 Tuple2.of(
@@ -107,12 +108,8 @@ public class KpisPanel extends MatrixTable {
                             try (INDArray max = data.max(1)) {
                                 try (INDArray min = data.min(1)) {
                                     try (INDArray ratio = max.div(min)) {
-                                        for (long i = 0; i < data.size(0); i++) {
-                                            prob.add(max.getDouble(i, 0));
-                                            probRatio.add(ratio.getDouble(i, 0));
-                                        }
-                                        printf(key + ".prob", "%,10.1f", prob.getValue() * 100);
-                                        printf(key + ".probRatio", "%,10.2f", probRatio.getValue());
+                                        printf(key + ".prob", "%,10.1f", prob.add(max).value() * 100);
+                                        printf(key + ".probRatio", "%,10.2f", probRatio.add(ratio).value());
                                     }
                                 }
                             }
@@ -120,11 +117,8 @@ public class KpisPanel extends MatrixTable {
         );
     }
 
-    private void handleDelta(INDArray delta) {
-        for (long i = 0; i < delta.size(0); i++) {
-            deltaAvg.add(delta.getDouble(i, 0));
-        }
-        printf("delta", "%,10.3f", deltaAvg.getValue());
+    private void handleCritic(INDArray delta) {
+        printf("critic.delta", "%,10.0f", criticRms.add(delta).value() * PPM);
     }
 
     /**
@@ -135,24 +129,34 @@ public class KpisPanel extends MatrixTable {
     public void setKeys(String... keys) {
         // Creates the handlers
         handlers = Stream.concat(
-                        Stream.of(Tuple2.<String, Consumer<INDArray>>of("delta", this::handleDelta)),
+                        Stream.of(Tuple2.<String, Consumer<INDArray>>of("deltas.critic", this::handleCritic)),
                         Arrays.stream(keys)
                                 .flatMap(this::createHandler))
                 .collect(Tuple2.toMap());
 
-        addColumn("delta", Messages.getString("KpisPanel.delta.label"), 10)
+        addColumn("critic.delta", Messages.getString("KpisPanel.critic.label"), 10)
                 .setScrollOnChange(true)
                 .setPrintTimestamp(false);
-        Arrays.stream(keys)
+        List<String> colKeys = Arrays.stream(keys)
+                .filter(Predicate.not("critic"::equals))
                 .sorted()
-                .flatMap(key -> Stream.of(
-                        key + ".grads",
-                        key + ".prob",
-                        key + ".probRatio"
-                ))
-                .forEach(key ->
-                        addColumn(key,
-                                Messages.getStringOpt("KpisPanel." + key + ".label").orElse(key), 10)
+                .toList();
+
+        colKeys.forEach(key ->
+                addColumn(key + ".delta",
+                        Messages.getStringOpt("KpisPanel." + key + ".delta.label").orElse(key), 10)
+                        .setScrollOnChange(true)
+                        .setPrintTimestamp(false)
+        );
+        colKeys.forEach(key ->
+                addColumn(key + ".prob",
+                        Messages.getStringOpt("KpisPanel." + key + ".prob.label").orElse(key), 10)
+                        .setScrollOnChange(true)
+                        .setPrintTimestamp(false)
+        );
+        colKeys.forEach(key ->
+                        addColumn(key + ".probRatio",
+                                Messages.getStringOpt("KpisPanel." + key + ".probRatio.label").orElse(key), 10)
                                 .setScrollOnChange(true)
                                 .setPrintTimestamp(false)
                 );

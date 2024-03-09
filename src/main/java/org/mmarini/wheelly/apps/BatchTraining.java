@@ -185,7 +185,7 @@ public class BatchTraining {
 
         Completable.fromAction(this::runBatch)
                 .subscribeOn(Schedulers.computation())
-                .doOnComplete(frame::dispose)
+                .doOnComplete(() -> allFrames.forEach(Window::dispose))
                 .subscribe();
     }
     /**
