@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#368](https://github.com/m-marini/wheellyj/issues/368): Add batch training UI
 - Issue [#372](https://github.com/m-marini/wheellyj/issues/372): Add performance fields in batch training window
 - Issue [#374](https://github.com/m-marini/wheellyj/issues/374): Add training kpis monitor panel
+- Issue [#376](https://github.com/m-marini/wheellyj/issues/376): Add learning rates panel
 
 ### Changed
 

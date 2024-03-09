@@ -37,6 +37,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.KpiBinWriter;
+import org.mmarini.rl.agents.TDAgentSingleNN;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.wheelly.apis.ObstacleMap;
@@ -61,7 +62,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
+import static io.reactivex.rxjava3.core.Flowable.interval;
 import static java.lang.String.format;
 import static org.mmarini.wheelly.swing.Utils.*;
 import static org.mmarini.yaml.Utils.fromFile;
@@ -72,6 +75,7 @@ import static org.mmarini.yaml.Utils.fromFile;
 public class Wheelly {
     public static final String WHEELLY_SCHEMA_YML = "https://mmarini.org/wheelly/wheelly-schema-1.0";
     private static final Logger logger = LoggerFactory.getLogger(Wheelly.class);
+    public static final int LAYOUT_INTERVAL = 300;
 
     static {
         Nd4j.zeros(1);
@@ -116,15 +120,12 @@ public class Wheelly {
         new Wheelly().start(args);
     }
 
-    protected final JFrame frame;
     protected final EnvironmentPanel envPanel;
     private final AverageValue avgRewards;
     private final AverageValue reactionRobotTime;
     private final AverageValue reactionRealTime;
     private final ComMonitor comMonitor;
-    private final JFrame comFrame;
     private final SensorMonitor sensorMonitor;
-    private final JFrame sensorFrame;
     private final KpisPanel kpisPanel;
     private JFrame kpisFrame;
     private final CompletableSubject completion;
@@ -138,39 +139,8 @@ public class Wheelly {
     private long prevRobotStep;
     private long prevStep;
     private ComDumper dumper;
-
-    /**
-     * Creates the server reinforcement learning engine server
-     */
-    public Wheelly() {
-        this.envPanel = new EnvironmentPanel();
-        this.kpisPanel = new KpisPanel();
-        JScrollPane scrollEnv = new JScrollPane(envPanel);
-        this.frame = createFrame(Messages.getString("Wheelly.title"), scrollEnv);
-        this.comMonitor = new ComMonitor();
-        comMonitor.setPrintTimestamp(true);
-        this.comFrame = comMonitor.createFrame();
-        this.sensorMonitor = new SensorMonitor();
-        this.sensorFrame = sensorMonitor.createFrame();
-        this.robotStartTimestamp = -1;
-        this.avgRewards = AverageValue.create();
-        this.reactionRobotTime = AverageValue.create();
-        this.reactionRealTime = AverageValue.create();
-        this.prevRobotStep = -1;
-        this.prevStep = -1;
-        this.completion = CompletableSubject.create();
-        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
-                .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
-                .doOnNext(this::handleWindowOpened)
-                .subscribe();
-        Observable.mergeArray(
-                        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE),
-                        SwingObservable.window(sensorFrame, SwingObservable.WINDOW_ACTIVE),
-                        SwingObservable.window(comFrame, SwingObservable.WINDOW_ACTIVE))
-                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
-                .doOnNext(this::handleWindowClosing)
-                .subscribe();
-    }
+    private final LearnPanel learnPanel;
+    private List<JFrame> allFrames;
 
     /**
      * Handles the controller status event
@@ -226,19 +196,78 @@ public class Wheelly {
     }
 
     /**
+     * Creates the server reinforcement learning engine server
+     */
+    public Wheelly() {
+        this.envPanel = new EnvironmentPanel();
+        this.kpisPanel = new KpisPanel();
+        this.comMonitor = new ComMonitor();
+        comMonitor.setPrintTimestamp(true);
+        this.learnPanel = new LearnPanel();
+        this.sensorMonitor = new SensorMonitor();
+        this.robotStartTimestamp = -1;
+        this.avgRewards = AverageValue.create();
+        this.reactionRobotTime = AverageValue.create();
+        this.reactionRealTime = AverageValue.create();
+        this.prevRobotStep = -1;
+        this.prevStep = -1;
+        this.completion = CompletableSubject.create();
+    }
+
+    /**
+     * Creates all the frames
+     */
+    private void createFrames() {
+        JScrollPane scrollEnv = new JScrollPane(envPanel);
+        JFrame frame = createFrame(Messages.getString("Wheelly.title"), scrollEnv);
+        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
+                .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
+                .doOnNext(this::handleWindowOpened)
+                .subscribe();
+        JFrame comFrame = comMonitor.createFrame();
+        JFrame sensorFrame = sensorMonitor.createFrame();
+
+        // Collects all frames
+        allFrames = new ArrayList<>();
+        allFrames.add(frame);
+        if (radarFrame != null) {
+            allFrames.add(radarFrame);
+        }
+        if (kpisFrame != null) {
+            allFrames.add(kpisFrame);
+        }
+        allFrames.add(learnPanel.createFrame());
+        allFrames.add(sensorFrame);
+        allFrames.add(comFrame);
+
+        // Open all the windows
+        JFrame[] frameAry = this.allFrames.toArray(JFrame[]::new);
+
+        Observable<WindowEvent>[] x = allFrames.stream()
+                .map(f -> SwingObservable.window(f, SwingObservable.WINDOW_ACTIVE))
+                .toArray(Observable[]::new);
+
+        Observable.mergeArray(x)
+                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
+                .doOnNext(this::handleWindowClosing)
+                .subscribe();
+
+        layHorizontally(frameAry);
+        interval(LAYOUT_INTERVAL, TimeUnit.MILLISECONDS)
+                .limit(allFrames.size())
+                .doOnNext(i ->
+                        allFrames.get(allFrames.size() - 1 - Math.toIntExact(i)).setVisible(true))
+                .subscribe();
+
+        comFrame.setState(JFrame.ICONIFIED);
+    }
+
+    /**
      * Handles the application shutdown
      */
     private void handleShutdown() {
         // Close all frame
-        comFrame.dispose();
-        sensorFrame.dispose();
-        if (kpisFrame != null) {
-            kpisFrame.dispose();
-        }
-        if (radarFrame != null) {
-            radarFrame.dispose();
-        }
-        frame.dispose();
+        allFrames.forEach(JFrame::dispose);
 
         // Open wait frame
         logger.atInfo().log("Shutdown");
@@ -342,6 +371,7 @@ public class Wheelly {
             }
             this.agent = Agent.fromConfig(config, agentLocator, environment);
             kpisPanel.setKeys(agent.getActions().keySet().toArray(String[]::new));
+            learnPanel.setLearningRates(((TDAgentSingleNN) agent).alphas());
 
             logger.atInfo().log("Creating agent");
             if (environment instanceof PolarRobotEnv) {
@@ -427,23 +457,11 @@ public class Wheelly {
             environment.setOnAct(agent::act);
             environment.setOnResult(this::handleResult);
 
-            // Collects all frames
-            List<JFrame> allFrames = new ArrayList<>();
-            allFrames.add(frame);
-            if (radarFrame != null) {
-                allFrames.add(radarFrame);
-            }
-            if (kpisFrame != null) {
-                allFrames.add(kpisFrame);
-            }
-            allFrames.add(sensorFrame);
-            allFrames.add(comFrame);
+            learnPanel.readLearningRates()
+                    .doOnNext(t -> ((TDAgentSingleNN) agent).alphas(t))
+                    .subscribe();
 
-            // Open all the windows
-            allFrames.forEach(f -> f.setVisible(true));
-            layHorizontally(allFrames.toArray(JFrame[]::new));
-
-            comFrame.setState(JFrame.ICONIFIED);
+            createFrames();
 
             environment.start();
         } catch (ArgumentParserException e) {

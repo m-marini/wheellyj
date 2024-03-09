@@ -40,6 +40,7 @@ import org.mmarini.rl.agents.KpiBinWriter;
 import org.mmarini.rl.agents.Serde;
 import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.wheelly.swing.KpisPanel;
+import org.mmarini.wheelly.swing.LearnPanel;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
@@ -61,8 +62,8 @@ import java.util.function.Predicate;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.swing.Utils.center;
 import static org.mmarini.wheelly.swing.Utils.createFrame;
+import static org.mmarini.wheelly.swing.Utils.layHorizontally;
 import static org.mmarini.yaml.Utils.fromFile;
 
 /**
@@ -124,24 +125,12 @@ public class BatchTraining {
     private final JTextField infoBar;
     private final KpisPanel kpisPanel;
     private final JProgressBar recordBar;
+    private final LearnPanel learnPanel;
     private String pathFile;
     private BatchTrainer trainer;
     private boolean backUp;
     private KpiBinWriter kpiWriter;
-
-    /**
-     * Creates the application
-     *
-     * @param args the parsed command line arguments
-     */
-    public BatchTraining(Namespace args) {
-        this.args = requireNonNull(args);
-        this.completed = CompletableSubject.create();
-        this.infoBar = new JTextField();
-        this.kpisPanel = new KpisPanel();
-        this.recordBar = new JProgressBar(JProgressBar.HORIZONTAL);
-        init();
-    }
+    private TDNetwork network;
 
     /**
      * Returns the content
@@ -158,15 +147,47 @@ public class BatchTraining {
     }
 
     /**
-     * Handles shutdown
+     * Creates the application
+     *
+     * @param args the parsed command line arguments
      */
-    private void handleShutdown() {
-        info("Shutting down ...");
-        trainer.stop();
-        completed.blockingAwait();
-        info("Shutting down completed");
+    public BatchTraining(Namespace args) {
+        this.args = requireNonNull(args);
+        this.completed = CompletableSubject.create();
+        this.learnPanel = new LearnPanel();
+        this.infoBar = new JTextField();
+        this.kpisPanel = new KpisPanel();
+        this.recordBar = new JProgressBar(JProgressBar.HORIZONTAL);
+        init();
     }
 
+    private void createFrames() {
+        List<String> outputs = network.sinkLayers();
+
+        // Create the frame
+        String[] actions = outputs.stream()
+                .filter(Predicate.not("critic"::equals))
+                .toArray(String[]::new);
+
+        JFrame frame = createFrame(Messages.getString("BatchTraining.title"),
+                createContent(actions));
+
+        JFrame learnFrame = learnPanel.createFrame();
+
+        List<JFrame> allFrames = List.of(frame, learnFrame);
+
+        layHorizontally(frame, learnFrame);
+
+        allFrames.forEach(f -> {
+            f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            f.setVisible(true);
+        });
+
+        Completable.fromAction(this::runBatch)
+                .subscribeOn(Schedulers.computation())
+                .doOnComplete(frame::dispose)
+                .subscribe();
+    }
     /**
      * Show info
      *
@@ -282,6 +303,16 @@ public class BatchTraining {
     }
 
     /**
+     * Handles shutdown
+     */
+    private void handleShutdown() {
+        info("Shutting down ...");
+        trainer.stop();
+        completed.blockingAwait();
+        info("Shutting down completed");
+    }
+
+    /**
      * Starts the training
      */
     protected void start() throws Exception {
@@ -300,22 +331,13 @@ public class BatchTraining {
         // Loads network
         info("Load network ...");
         this.pathFile = Locator.locate("modelPath").getNode(config).asText();
-        TDNetwork network = loadNetwork(random);
-        List<String> outputs = network.sinkLayers();
-        Map<String, Float> alphas = loadAlphas();
-
-        // Create the frame
-        String[] actions = outputs.stream()
-                .filter(Predicate.not("critic"::equals))
-                .toArray(String[]::new);
-        JFrame frame = createFrame(Messages.getString("BatchTraining.title"),
-                createContent(actions));
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.network = loadNetwork(random);
 
         // Create the batch trainer
         int numTrainIterations1 = Locator.locate("numTrainIterations1").getNode(config).asInt();
         int numTrainIterations2 = Locator.locate("numTrainIterations2").getNode(config).asInt();
         long batchSize = Locator.locate("batchSize").getNode(config).asLong(Long.MAX_VALUE);
+        Map<String, Float> alphas = loadAlphas();
         this.trainer = BatchTrainer.create(network,
                 alphas,
                 0,
@@ -324,6 +346,7 @@ public class BatchTraining {
                 (int) batchSize,
                 this::saveNetwork
         );
+        learnPanel.setLearningRates(alphas);
         trainer.readInfo()
                 .observeOn(Schedulers.io())
                 .doOnNext(this::info)
@@ -337,17 +360,14 @@ public class BatchTraining {
                 .map(Number::intValue)
                 .doOnNext(recordBar::setValue)
                 .subscribe();
+        learnPanel.readLearningRates()
+                .doOnNext(rates -> trainer.alphas(rates))
+                .subscribe();
 
         Thread hook = new Thread(this::handleShutdown);
         Runtime.getRuntime().addShutdownHook(hook);
 
-        frame.setVisible(true);
-        center(frame);
-        frame.pack();
-        Completable.fromAction(this::runBatch)
-                .subscribeOn(Schedulers.computation())
-                .doOnComplete(frame::dispose)
-                .subscribe();
+        createFrames();
     }
 
 }

@@ -131,11 +131,10 @@ public class BatchTrainer {
     private final float lambda;
     private final Consumer<TDNetwork> onTrained;
     private final int batchSize;
-    private final Map<String, Float> alphas;
+    private Map<String, Float> alphas;
     private final PublishProcessor<Map<String, INDArray>> kpisProcessor;
     private final PublishProcessor<String> infoProcessor;
     private final PublishProcessor<Long> counterProcessor;
-    private INDArray criticGrad;
     private boolean stopped;
     private Map<String, BinArrayFile> masksFiles;
     private BinArrayFile advantageFile;
@@ -168,6 +167,15 @@ public class BatchTrainer {
         this.kpisProcessor = PublishProcessor.create();
         this.infoProcessor = PublishProcessor.create();
         this.counterProcessor = PublishProcessor.create();
+    }
+
+    /**
+     * Sets the learning rates
+     *
+     * @param alphas the rates
+     */
+    public void alphas(Map<String, Float> alphas) {
+        this.alphas = alphas;
     }
 
     /**
@@ -435,9 +443,7 @@ public class BatchTrainer {
                         break;
                     }
 
-                    if (this.criticGrad == null || !this.criticGrad.equalShapes(adv)) {
-                        this.criticGrad = Nd4j.onesLike(adv).muli(alphas.get(CRITIC_KEY));
-                    }
+                    INDArray criticGrad = Nd4j.onesLike(adv).muli(alphas.get(CRITIC_KEY));
                     double dTot = runMiniBatch(s0, actionsMasks, adv, criticGrad);
                     n += adv.size(0);
                     counterProcessor.onNext(n);
