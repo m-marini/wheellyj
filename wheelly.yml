@@ -131,6 +131,7 @@ agents:
           - type: dense
             outputSize: 128
             dropOut: 0.8
+            maxAbsWeights: 1E2
           - type: relu
       hidden0:
         input: layer0
@@ -138,6 +139,7 @@ agents:
           - type: dense
             outputSize: 128
             dropOut: 0.5
+            maxAbsWeights: 1E2
           - type: relu
       hidden1:
         inputs:
@@ -148,6 +150,7 @@ agents:
         layers:
           - type: dense
             outputSize: 128
+            maxAbsWeights: 1E2
             dropOut: 0.5
           - type: relu
       hidden2:
@@ -159,6 +162,7 @@ agents:
         layers:
           - type: dense
             outputSize: 128
+            maxAbsWeights: 1E2
             dropOut: 0.5
           - type: relu
       direction:
@@ -166,30 +170,34 @@ agents:
         layers:
           - type: dense
             outputSize: 24
+            maxAbsWeights: 1E2
           - type: tanh
           - type: softmax
-            temperature: 0.257
+            temperature: 0.434
       speed:
         input: hidden2
         layers:
           - type: dense
+            maxAbsWeights: 1E2
             outputSize: 10
           - type: tanh
           - type: softmax
-            temperature: 0.3
+            temperature: 0.434
       sensorAction:
         input: hidden2
         layers:
           - type: dense
+            maxAbsWeights: 1E2
             outputSize: 7
           - type: tanh
           - type: softmax
-            temperature: 0.313
+            temperature: 0.434
       critic:
         input: hidden2
         layers:
           - type: dense
             outputSize: 1
+            maxAbsWeights: 1E2
           - type: tanh
           - type: linear
             b: 0
