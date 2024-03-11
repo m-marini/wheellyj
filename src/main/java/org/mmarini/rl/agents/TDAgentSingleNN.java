@@ -578,7 +578,7 @@ public class TDAgentSingleNN implements Agent {
 
         // Updates average rewards
         float avgReward0 = avgReward;
-        avgReward += reward * rewardAlpha;
+        avgReward += delta * rewardAlpha;
 
         Map<String, INDArray> kpi = kpiListener != null ? new HashMap<>() : null;
         Consumer<Tuple2<String, INDArray>> kpiCallback = kpiListener != null ? t -> kpi.put("weights.network." + t._1, t._2) : null;
