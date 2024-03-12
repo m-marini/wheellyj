@@ -266,8 +266,6 @@ public class Wheelly {
      * Handles the application shutdown
      */
     private void handleShutdown() {
-        // Close all frame
-        allFrames.forEach(JFrame::dispose);
 
         // Open wait frame
         logger.atInfo().log("Shutdown");
@@ -299,11 +297,13 @@ public class Wheelly {
             logger.atInfo().log("Shutdown completed.");
             // Close waiting frame
             waitFrame.dispose();
-            // Notify completion
             if (!args.getBoolean("silent")) {
                 JOptionPane.showMessageDialog(null,
                         "Completed", "Information", JOptionPane.INFORMATION_MESSAGE);
             }
+            // Close all frame
+            allFrames.forEach(JFrame::dispose);
+            // Notify completion
             logger.atInfo().log("completed.");
         }).subscribe();
     }
