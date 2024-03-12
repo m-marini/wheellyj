@@ -78,12 +78,12 @@ public class Report {
             ReportProcess.maxAbs("deltas.direction"),
             ReportProcess.maxAbs("deltas.speed"),
             ReportProcess.maxAbs("deltas.sensorAction"),
-            ReportProcess.maxAbs("policy.direction"),
-            ReportProcess.maxMinRatio("policy.direction"),
-            ReportProcess.maxAbs("policy.speed"),
-            ReportProcess.maxMinRatio("policy.speed"),
-            ReportProcess.maxAbs("policy.sensorAction"),
-            ReportProcess.maxMinRatio("policy.sensorAction")
+            ReportProcess.maxAbs("layers0.direction.values"),
+            ReportProcess.maxMinRatio("layers0.direction.values"),
+            ReportProcess.maxAbs("layers0.speed.values"),
+            ReportProcess.maxMinRatio("layers0.speed.values"),
+            ReportProcess.maxAbs("layers0.sensorAction.values"),
+            ReportProcess.maxMinRatio("layers0.sensorAction.values")
     );
 
     static {

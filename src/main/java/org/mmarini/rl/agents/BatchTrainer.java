@@ -257,6 +257,7 @@ public class BatchTrainer {
             n = rewardFile.size();
         }
         avgReward /= n;
+        kpisProcessor.onNext(Map.of("avgReward", Kpi.create(avgReward)));
 
         info("Computing advantage from \"%s\" ...", datasetPath);
         BinArrayFile advantageFile = BinArrayFile.createByKey(TMP_PATH, ADVANTAGE_KEY);
@@ -338,7 +339,6 @@ public class BatchTrainer {
 
         Map<String, INDArray> kpis = new HashMap<>();
         TDNetworkState netResults0 = network.forward(s0, true);
-        actionsMask.keySet().forEach(key -> kpis.put("policy." + key, netResults0.getValues(key)));
 
         INDArray adv0 = netResults0.getValues(CRITIC_KEY);
         INDArray delta = adv.sub(adv0);
@@ -349,7 +349,8 @@ public class BatchTrainer {
         grads.put(CRITIC_KEY, criticGrad);
         TDNetworkState result = network.train(grads, delta, lambda, null);
         kpis.put("delta", delta);
-        kpis.putAll(keyPrefix(result.gradients(), "netGrads."));
+        kpis.putAll(keyPrefix(result.gradients(), "grads0."));
+        kpis.putAll(keyPrefix(netResults0.values(), "layers0."));
         Map<String, INDArray> deltas = Tuple2.stream(grads).map(t ->
                         Tuple2.of(
                                 "deltas." + t._1,
@@ -358,6 +359,8 @@ public class BatchTrainer {
                 )
                 .collect(Tuple2.toMap());
         kpis.putAll(deltas);
+        TDNetworkState netResults1 = network.forward(s0, true);
+        kpis.putAll(keyPrefix(netResults1.values(), "trainedLayers."));
         kpisProcessor.onNext(kpis);
         return delta.sumNumber().doubleValue();
     }

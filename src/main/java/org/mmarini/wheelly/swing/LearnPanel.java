@@ -61,6 +61,7 @@ public class LearnPanel extends JPanel {
             1,
     };
     private static final Dictionary<Integer, JComponent> LABELS = createLabels();
+    public static final Dimension DEFAULT_PREFERED_SIZE = new Dimension(500, 300);
 
     private static Dictionary<Integer, JComponent> createLabels() {
         Dictionary<Integer, JComponent> labels = new Hashtable<>();
@@ -120,7 +121,7 @@ public class LearnPanel extends JPanel {
      */
     public LearnPanel() {
         this.learningRatesProcessor = PublishProcessor.create();
-        setPreferredSize(new Dimension(800, 300));
+        setPreferredSize(DEFAULT_PREFERED_SIZE);
     }
 
     /**

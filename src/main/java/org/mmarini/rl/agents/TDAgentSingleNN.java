@@ -564,7 +564,8 @@ public class TDAgentSingleNN implements Agent {
         procState = processSignals(result.state1);
         Map<String, INDArray> s1 = getInput(procState);
         // Computes the state value v1 from critic output
-        float adv1 = network.forward(s1).getValues("critic").getFloat(0, 0);
+        TDNetworkState state1 = network.forward(s1);
+        float adv1 = state1.getValues("critic").getFloat(0, 0);
 
         // Computes error delta by backing up the state value and the reward
         float reward = (float) result.reward;
@@ -581,7 +582,6 @@ public class TDAgentSingleNN implements Agent {
         avgReward += delta * rewardAlpha;
 
         Map<String, INDArray> kpi = kpiListener != null ? new HashMap<>() : null;
-        Consumer<Tuple2<String, INDArray>> kpiCallback = kpiListener != null ? t -> kpi.put("weights.network." + t._1, t._2) : null;
 
         // Computes output gradients for network (merges critic and policy grads)
         Map<String, INDArray> grads = new HashMap<>(dp);
@@ -594,24 +594,22 @@ public class TDAgentSingleNN implements Agent {
 
         // Trains network
         TDNetworkState trainedState = network.setState(state0)
-                .train(grads, Nd4j.createFromArray(delta), lambda, kpiCallback);
+                .train(grads, Nd4j.createFromArray(delta), lambda, null);
 
         if (this.kpiListener != null) {
-            Map<String, INDArray> trainedResults = network.forward(s0).values();
+            TDNetworkState postTrainedState = network.forward(s0);
             kpi.putAll(MapUtils.keyPrefix(s0, "s0."));
             kpi.put("reward", Kpi.create(reward));
             kpi.put("terminal", Kpi.create(result.terminal));
             kpi.putAll(Kpi.create(result.actions, "actions."));
             kpi.putAll(MapUtils.keyPrefix(s1, "s1."));
             kpi.put("avgReward", Kpi.create(avgReward0));
-            kpi.put("trainedAvgReward", Kpi.create(avgReward));
-            kpi.putAll(MapUtils.keyPrefix(state0.values(), "netResult."));
-            kpi.put("adv0", Kpi.create(adv0));
-            kpi.put("adv1", Kpi.create(adv1));
+            kpi.put("avgReward1", Kpi.create(avgReward));
             kpi.put("delta", Kpi.create(delta));
-            kpi.putAll(MapUtils.keyPrefix(pi0, "policy."));
-            kpi.putAll(MapUtils.keyPrefix(trainedState.gradients(), "netGrads."));
-            kpi.putAll(MapUtils.keyPrefix(trainedResults, "trainedResults."));
+            kpi.putAll(MapUtils.keyPrefix(state0.values(), "layers0."));
+            kpi.putAll(MapUtils.keyPrefix(state1.values(), "layers1."));
+            kpi.putAll(MapUtils.keyPrefix(postTrainedState.values(), "trainedLayers."));
+            kpi.putAll(MapUtils.keyPrefix(trainedState.gradients(), "grads0."));
             Map<String, INDArray> deltas = Tuple2.stream(grads).map(t ->
                             Tuple2.of(
                                     "deltas." + t._1,
@@ -619,6 +617,7 @@ public class TDAgentSingleNN implements Agent {
                             )
                     )
                     .collect(Tuple2.toMap());
+            kpi.putAll(MapUtils.keyPrefix(trainedState.parameters(), "trainedParams."));
             kpi.putAll(deltas);
             kpiListener.accept(kpi);
         }
