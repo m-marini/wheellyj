@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#362](https://github.com/m-marini/wheellyj/issues/362): Error loading tdagent
 - Issue [#364](https://github.com/m-marini/wheellyj/issues/364): Wrong scale computation in octave report
 - Issue [#380](https://github.com/m-marini/wheellyj/issues/380): Fix average advantage
+- Issue [#384](https://github.com/m-marini/wheellyj/issues/384): Inconsistent report
 
 ## [0.14.0] 2024-02-25
 

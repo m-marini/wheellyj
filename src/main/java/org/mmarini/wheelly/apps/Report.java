@@ -268,16 +268,17 @@ public class Report {
      * Returns the reduced input records file
      *
      * @param key     the key
+     * @param outKey the reduced key
      * @param reducer the reducer
      * @throws IOException in case of error
      */
-    private BinArrayFile reduce(String key, UnaryOperator<INDArray> reducer) throws IOException {
+    private BinArrayFile reduce(String key, String outKey, UnaryOperator<INDArray> reducer) throws IOException {
         logger.atInfo().log("Reducing {} ...", key);
         BinArrayFile file = BinArrayFile.createByKey(kpisPath, key);
         if (!file.file().canRead()) {
             throw new IOException(format("File %s cannot be read", file.file()));
         }
-        BinArrayFile result = BinArrayFile.createByKey(TEMP_PATH, key);
+        BinArrayFile result = BinArrayFile.createByKey(TEMP_PATH, outKey);
         Batches.map(result, file, batchSize, reducer);
         logger.atInfo().log("Reduced {}.", key);
         return result;
@@ -372,7 +373,7 @@ public class Report {
         UnaryOperator<INDArray> reducer = report.reducer();
         String kpiKey = report.kpiKey();
         BinArrayFile file = reducer != null
-                ? reduce(kpiKey, reducer)
+                ? reduce(kpiKey, report.reportKey(), reducer)
                 : BinArrayFile.createByKey(kpisPath, kpiKey);
         String reportKey = report.reportKey();
         try (INDArray stats = stats(reportKey, file)) {
