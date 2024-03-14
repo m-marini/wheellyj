@@ -373,6 +373,12 @@ public class RobotExecutor {
                     .observeOn(Schedulers.io())
                     .doOnNext(this::handleState)
                     .subscribe();
+            if (agent.getController().getRobot() instanceof SimRobot simRobot) {
+                simRobot.setOnObstacleChanged(sim -> {
+                    sim.obstaclesMap().map(ObstacleMap::points)
+                            .ifPresent(envPanel::setObstacleMap);
+                });
+            }
             Stream.of(comFrame, engineFrame, sensorFrame, radarFrame, frame)
                     .forEach(f -> f.setVisible(true));
             comFrame.setState(JFrame.ICONIFIED);

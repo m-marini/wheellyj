@@ -7,11 +7,12 @@ agent: agents/polarRadarAgent
 
 robots:
   simRobot:
-    $schema: https://mmarini.org/wheelly/sim-robot-schema-0.1
+    $schema: https://mmarini.org/wheelly/sim-robot-schema-0.2
     class: org.mmarini.wheelly.apis.SimRobot
     # robotSeed: 1234
     mapSeed: 1234
     numObstacles: 10
+    changeObstaclesPeriod: 300000
     errSigma: 0.05
     errSensor: 0.05
     sensorReceptiveAngle: 15

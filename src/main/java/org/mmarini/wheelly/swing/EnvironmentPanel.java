@@ -312,6 +312,11 @@ public class EnvironmentPanel extends RadarPanel {
         }
     }
 
+    /**
+     * Sets the obstacle map
+     *
+     * @param obstacleMap the obstacle map
+     */
     public void setObstacleMap(List<Point2D> obstacleMap) {
         this.obstacleMap = obstacleMap;
         repaint();

@@ -44,6 +44,7 @@ public class PolarPanel extends JComponent {
     public static final BasicStroke BORDER_STROKE = new BasicStroke(0);
     public static final double SECTOR_SIZE = 0.2F;
     public static final int DEFAULT_NUM_SECTOR = 24;
+    public static final int DEFAULT_SIZE = 400;
     static final double GRID_SIZE = 1f;
     static final Color GRID_COLOR = new Color(50, 50, 50);
     static final Color EMPTY_COLOR = new Color(64, 64, 64, 128);
@@ -51,7 +52,6 @@ public class PolarPanel extends JComponent {
     private static final Color PING_COLOR = new Color(255, 128, 128);
     private static final double DEFAULT_MAX_DISTANCE = 3;
     private static final double PING_SIZE = 0.05;
-    public static final int DEFAULT_SIZE = 400;
 
     static List<Shape> createGridShapes(double radarMaxDistance, double gridSize, int sectorNumber) {
         List<Shape> gridShapes = new ArrayList<>();

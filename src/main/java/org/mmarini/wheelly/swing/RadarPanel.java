@@ -43,8 +43,8 @@ import java.util.stream.Collectors;
  */
 public class RadarPanel extends JComponent {
     public static final BasicStroke BORDER_STROKE = new BasicStroke(0);
-    static final float DEFAULT_WORLD_SIZE = 11;
     public static final int DEFAULT_WINDOW_SIZE = 800;
+    static final float DEFAULT_WORLD_SIZE = 11;
     static final float DEFAULT_SCALE = DEFAULT_WINDOW_SIZE / DEFAULT_WORLD_SIZE / 2;
     static final float GRID_SIZE = 1f;
 

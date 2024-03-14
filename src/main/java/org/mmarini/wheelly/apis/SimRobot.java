@@ -41,6 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
+import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.function.Consumer;
@@ -57,15 +58,13 @@ import static org.mmarini.wheelly.apis.Utils.clip;
 public class SimRobot implements RobotApi {
     public static final double GRID_SIZE = 0.2;
     public static final double WORLD_SIZE = 10;
-    public static final double X_CENTER = 0;
-    public static final double Y_CENTER = 0;
     public static final double MAX_OBSTACLE_DISTANCE = 3;
     public static final double MAX_DISTANCE = 3;
     public static final double MAX_VELOCITY = MAX_PPS * DISTANCE_PER_PULSE;
     public static final double MAX_ANGULAR_PPS = 20;
     public static final double ROBOT_TRACK = 0.136;
     public static final double MAX_ANGULAR_VELOCITY = MAX_ANGULAR_PPS * DISTANCE_PER_PULSE / ROBOT_TRACK * 2; // RAD/s
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/sim-robot-schema-0.1";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/sim-robot-schema-0.2";
     private static final int DEFAULT_MAX_ANGULAR_SPEED = 5;
     private static final long DEFAULT_MOTION_INTERVAL = 500;
     private static final long DEFAULT_PROXY_INTERVAL = 500;
@@ -88,6 +87,12 @@ public class SimRobot implements RobotApi {
     private static final int DEFAULT_SENSOR_RECEPTIVE_ANGLE = 15;
     private static final double DEG89_5_EPSILON = sin(toDegrees(89.5));
 
+    /**
+     * Returns the simulated robot from json configuration
+     *
+     * @param root    the json document
+     * @param locator the simulated robot locator
+     */
     public static SimRobot create(JsonNode root, Locator locator) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         long mapSeed = locator.path("mapSeed").getNode(root).asLong(0);
@@ -96,20 +101,17 @@ public class SimRobot implements RobotApi {
         Complex sensorReceptiveAngle = Complex.fromDeg(locator.path("sensorReceptiveAngle").getNode(root).asInt(DEFAULT_SENSOR_RECEPTIVE_ANGLE));
         Random mapRandom = mapSeed > 0L ? new Random(mapSeed) : new Random();
         Random robotRandom = robotSeed > 0L ? new Random(robotSeed) : new Random();
-        ObstacleMap obstacleMap = MapBuilder.create(GRID_SIZE)
-                .rect(-WORLD_SIZE / 2,
-                        -WORLD_SIZE / 2, WORLD_SIZE / 2, WORLD_SIZE / 2)
-                .rand(numObstacles, X_CENTER, Y_CENTER, MIN_OBSTACLE_DISTANCE, MAX_OBSTACLE_DISTANCE, mapRandom)
-                .build();
+        ObstacleMap obstacleMap = createObstacleMap(numObstacles, mapRandom, new Point2D.Double());
         double errSigma = locator.path("errSigma").getNode(root).asDouble();
         double errSensor = locator.path("errSensor").getNode(root).asDouble();
         int maxAngularSpeed = locator.path("maxAngularSpeed").getNode(root).asInt(DEFAULT_MAX_ANGULAR_SPEED);
         long motionInterval = locator.path("motionInterval").getNode(root).asLong(DEFAULT_MOTION_INTERVAL);
         long proxyInterval = locator.path("proxyInterval").getNode(root).asLong(DEFAULT_PROXY_INTERVAL);
+        long changeObstaclesPeriod = locator.path("changeObstaclesPeriod").getNode(root).asLong(0);
         return new SimRobot(obstacleMap,
-                robotRandom,
+                robotRandom, mapRandom,
                 errSigma, errSensor,
-                sensorReceptiveAngle, maxAngularSpeed, motionInterval, proxyInterval);
+                sensorReceptiveAngle, maxAngularSpeed, motionInterval, proxyInterval, numObstacles, changeObstaclesPeriod);
     }
 
     /**
@@ -118,7 +120,7 @@ public class SimRobot implements RobotApi {
      * @param world    thr world
      * @param location the obstacle location
      */
-    protected static void createObstacle(World world, Point2D location) {
+    protected static Body createObstacleBodies(World world, Point2D location) {
         PolygonShape obsShape = new PolygonShape();
         obsShape.setAsBox(RobotStatus.OBSTACLE_SIZE / 2, RobotStatus.OBSTACLE_SIZE / 2);
 
@@ -132,19 +134,38 @@ public class SimRobot implements RobotApi {
         obsDef.position.y = (float) location.getY();
         Body obs = world.createBody(obsDef);
         obs.createFixture(obsFixDef);
+        return obs;
     }
 
-    private final double errSensor;
-    private final double errSigma;
-    private final int maxAngularSpeed;
-    private final long motionInterval;
-    private final ObstacleMap obstacleMap;
+    /**
+     * Returns the obstacle map
+     *
+     * @param numObstacles  the number of obstacles
+     * @param mapRandom     the randomizer
+     * @param robotLocation the robot location
+     */
+    private static ObstacleMap createObstacleMap(int numObstacles, Random mapRandom, Point2D robotLocation) {
+        return MapBuilder.create(GRID_SIZE)
+                .rect(-WORLD_SIZE / 2,
+                        -WORLD_SIZE / 2, WORLD_SIZE / 2, WORLD_SIZE / 2)
+                .rand(numObstacles, new Point2D.Double(), MAX_OBSTACLE_DISTANCE,
+                        robotLocation, MIN_OBSTACLE_DISTANCE, mapRandom)
+                .build();
+    }
+
     private final long proxyInterval;
     private final Random random;
+    private final Random mapRandom;
     private final Body robot;
     private final Fixture robotFixture;
     private final Complex sensorReceptiveAngle;
     private final World world;
+    private final int numObstacles;
+    private final long changeObstaclesPeriod;
+    private final double errSensor;
+    private final double errSigma;
+    private final int maxAngularSpeed;
+    private final long motionInterval;
     private Complex direction;
     private double echoDistance;
     private boolean frontSensor;
@@ -160,20 +181,29 @@ public class SimRobot implements RobotApi {
     private Complex sensorDirection;
     private long simulationTime;
     private int speed;
+    private Consumer<SimRobot> onObstacleChanged;
+    private List<Body> obstacleBodies;
+    private ObstacleMap obstacleMap;
 
     /**
      * Creates a simulated robot
      *
-     * @param obstacleMap          the obstacle map
-     * @param random               the random generator
-     * @param errSigma             sigma of errors in physic simulation (U)
-     * @param errSensor            sensor error (m)
-     * @param sensorReceptiveAngle sensor receptive angle (DEG)
-     * @param maxAngularSpeed      the maximum angular speed
-     * @param motionInterval       the interval between motion messages
-     * @param proxyInterval        the interval between proxy messages
+     * @param obstacleMap           the obstacle map
+     * @param random                the random generator
+     * @param mapRandom             the map random generator
+     * @param errSigma              sigma of errors in physic simulation (U)
+     * @param errSensor             sensor error (m)
+     * @param sensorReceptiveAngle  sensor receptive angle (DEG)
+     * @param maxAngularSpeed       the maximum angular speed
+     * @param motionInterval        the interval between motion messages
+     * @param proxyInterval         the interval between proxy messages
+     * @param numObstacles          the number of obstacles
+     * @param changeObstaclesPeriod the period of change obstacles
      */
-    public SimRobot(ObstacleMap obstacleMap, Random random, double errSigma, double errSensor, Complex sensorReceptiveAngle, int maxAngularSpeed, long motionInterval, long proxyInterval) {
+    public SimRobot(ObstacleMap obstacleMap, Random random, Random mapRandom, double errSigma, double errSensor, Complex sensorReceptiveAngle, int maxAngularSpeed, long motionInterval, long proxyInterval, int numObstacles, long changeObstaclesPeriod) {
+        this.mapRandom = mapRandom;
+        this.numObstacles = numObstacles;
+        this.changeObstaclesPeriod = changeObstaclesPeriod;
         logger.atDebug().log("Created");
         this.random = requireNonNull(random);
         this.errSigma = errSigma;
@@ -223,11 +253,10 @@ public class SimRobot implements RobotApi {
         fixDef.density = (float) ROBOT_DENSITY;
         fixDef.restitution = (float) ROBOT_RESTITUTION;
         this.robotFixture = robot.createFixture(fixDef);
+        this.obstacleBodies = List.of();
 
-        // Create obstacle fixture
-        for (Point2D point : obstacleMap.points()) {
-            createObstacle(world, point);
-        }
+        // Create obstacle bodies
+        createObstacleBodies();
     }
 
     /**
@@ -346,6 +375,16 @@ public class SimRobot implements RobotApi {
 
         // Update robot status
         updateMotion();
+    }
+
+    /**
+     * Creates the obstacles bodies
+     */
+    private void createObstacleBodies() {
+        obstacleBodies.forEach(world::destroyBody);
+        this.obstacleBodies = obstacleMap.points().stream()
+                .map(p -> createObstacleBodies(world, p))
+                .toList();
     }
 
     /**
@@ -532,6 +571,15 @@ public class SimRobot implements RobotApi {
         this.onMotion = callback;
     }
 
+    /**
+     * Sets the callback on obstacle changed
+     *
+     * @param callback the call back
+     */
+    public void setOnObstacleChanged(Consumer<SimRobot> callback) {
+        onObstacleChanged = callback;
+    }
+
     @Override
     public void setOnProxy(Consumer<WheellyProxyMessage> callback) {
         this.onProxy = callback;
@@ -572,6 +620,19 @@ public class SimRobot implements RobotApi {
     public void tick(long dt) {
         //long t0 = System.currentTimeMillis();
         this.simulationTime += dt;
+
+        // Change obstacles
+        if (changeObstaclesPeriod > 0) {
+            double lambda = 1D / changeObstaclesPeriod;
+            double p = 1 - exp(-lambda * dt);
+            if (mapRandom.nextDouble() < p) {
+                obstacleMap = createObstacleMap(numObstacles, mapRandom, location());
+                createObstacleBodies();
+                if (onObstacleChanged != null) {
+                    onObstacleChanged.accept(this);
+                }
+            }
+        }
 
         // Simulate robot motion
         controller(dt * 1e-3F);

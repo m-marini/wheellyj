@@ -293,12 +293,12 @@ public class TDAgentSingleNN implements Agent {
     private final TDNetwork network;
     private final Random random;
     private final float lambda;
-    private Map<String, Float> alphas;
     private final File modelPath;
     private final int savingIntervalSteps;
     private final InputProcessor processor;
     private final INDArray dc;
     private final PublishProcessor<Map<String, INDArray>> indicatorsPub;
+    private Map<String, Float> alphas;
     private float avgReward;
     private int savingStepCounter;
     private Consumer<Map<String, INDArray>> kpiListener;

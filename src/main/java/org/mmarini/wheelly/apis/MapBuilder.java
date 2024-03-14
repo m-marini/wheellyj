@@ -174,6 +174,39 @@ public class MapBuilder {
     }
 
     /**
+     * Generates random obstacles round a center in within a distance range
+     *
+     * @param n                 the number of obstacles
+     * @param center            the center position
+     * @param maxDistance       the maximum distance (m)
+     * @param forbiddenCenter   the center of forbidden area
+     * @param forbiddenDistance the forbidden area distance (m)
+     * @param random            the random generator
+     */
+    public MapBuilder rand(int n,
+                           Point2D center, double maxDistance,
+                           Point2D forbiddenCenter, double forbiddenDistance,
+                           Random random) {
+        double distSquare = forbiddenDistance * forbiddenDistance;
+        for (int i = 0; i < n; i++) {
+            for (; ; ) {
+                Point2D p = new Point2D.Double(
+                        random.nextDouble() * 2 * maxDistance - maxDistance + center.getX(),
+                        random.nextDouble() * 2 * maxDistance - maxDistance + center.getY()
+                );
+                if (p.distanceSq(forbiddenCenter) > distSquare) {
+                    Point index = ObstacleMap.toIndex(p.getX(), p.getY(), gridSize);
+                    if (!points.contains(index)) {
+                        points.add(index);
+                        break;
+                    }
+                }
+            }
+        }
+        return this;
+    }
+
+    /**
      * Adds obstacle by creating a rectangle
      *
      * @param x0 left coordinate

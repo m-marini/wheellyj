@@ -1,15 +1,15 @@
 ---
 $schema: https://mmarini.org/wheelly/executor-schema-1.0
 
-#robot: robots/simRobot
-robot: robots/realRobot
+robot: robots/simRobot
+#robot: robots/realRobot
 controller: controllers/controller
 #agent: agents/explorerAgent
 agent: agents/cautiousAgent
 
 robots:
   simRobot:
-    $schema: https://mmarini.org/wheelly/sim-robot-schema-0.1
+    $schema: https://mmarini.org/wheelly/sim-robot-schema-0.2
     class: org.mmarini.wheelly.apis.SimRobot
     robotSeed: 1234
     mapSeed: 1234
@@ -18,6 +18,7 @@ robots:
     errSensor: 0.05
     sensorReceptiveAngle: 15
     maxAngularSpeed: 5
+    changeObstaclesPeriod: 300000
   realRobot:
     $schema: https://mmarini.org/wheelly/robot-schema-1.0
     class: org.mmarini.wheelly.apis.Robot
