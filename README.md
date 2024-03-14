@@ -5,6 +5,14 @@ The code of Arduino controller is at [Wheellino project](https://github.com/m-ma
 
 The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
+## Release 0.15.0
+
+- Merge kpis
+- Batch training UI
+- Training kpis monitor panel
+- Learning rates panel
+- Fixed drop out regularization
+- Minor fixs
 
 ## Release 0.14.0
 
