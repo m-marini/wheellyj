@@ -138,8 +138,8 @@ class SimRobotTest {
     private SimRobot createRobot() {
         Random random = new Random(SEED);
         return new SimRobot(MapBuilder.create(GRID_SIZE).build(),
-                random, 0, 0, Complex.fromDeg(15), MAX_PPS,
-                INTERVAL, INTERVAL);
+                random, mapRandom, 0, 0, Complex.fromDeg(15), MAX_PPS,
+                INTERVAL, INTERVAL, numObstacles, 0);
     }
 
     @Test

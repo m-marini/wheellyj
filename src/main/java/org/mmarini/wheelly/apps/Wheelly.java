@@ -41,7 +41,6 @@ import org.mmarini.rl.agents.TDAgentSingleNN;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.wheelly.apis.ObstacleMap;
-import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.SimRobot;
 import org.mmarini.wheelly.envs.PolarRobotEnv;
@@ -61,6 +60,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -324,21 +324,14 @@ public class Wheelly {
     }
 
     /**
-     * Handles the windows opened
-     * Initializes the agent
+     * Handles obstacle changed
      *
-     * @param e the event
+     * @param simRobot the sim robot
      */
-    private void handleWindowOpened(WindowEvent e) {
-        RobotApi robot = environment.getController().getRobot();
-        if (robot instanceof SimRobot) {
-            Optional<ObstacleMap> obstaclesMap = ((SimRobot) robot).obstaclesMap();
-            obstaclesMap.map(ObstacleMap::points)
-                    .ifPresent(envPanel::setObstacleMap);
-            obstaclesMap.map(ObstacleMap::gridSize)
-                    .ifPresent(envPanel::setObstacleSize);
-        }
-        environment.start();
+    private void handleObstacleChanged(SimRobot simRobot) {
+        simRobot.obstaclesMap()
+                .map(ObstacleMap::points)
+                .ifPresent(envPanel::setObstacleMap);
     }
 
     /**
@@ -351,6 +344,23 @@ public class Wheelly {
         if (dumper != null) {
             dumper.dumpWrittenLine(line);
         }
+    }
+
+    /**
+     * Handles the windows opened
+     * Initializes the agent
+     *
+     * @param e the event
+     */
+    private void handleWindowOpened(WindowEvent e) {
+        Optional.ofNullable(environment.getController().getRobot())
+                .filter(r -> r instanceof SimRobot)
+                .flatMap(r -> ((SimRobot) r).obstaclesMap())
+                .ifPresent(map -> {
+                    envPanel.setObstacleMap(map.points());
+                    envPanel.setObstacleSize(map.gridSize());
+                });
+        environment.start();
     }
 
     /**
@@ -374,15 +384,18 @@ public class Wheelly {
             learnPanel.setLearningRates(((TDAgentSingleNN) agent).alphas());
 
             logger.atInfo().log("Creating agent");
-            if (environment instanceof PolarRobotEnv) {
+            if (Objects.requireNonNull(environment) instanceof PolarRobotEnv env) {
                 this.polarPanel = new PolarPanel();
-                double radarMaxDistance = ((PolarRobotEnv) environment).getMaxRadarDistance();
+                double radarMaxDistance = env.getMaxRadarDistance();
                 polarPanel.setRadarMaxDistance(radarMaxDistance);
                 radarFrame = createFixFrame(Messages.getString("Radar.title"), polarPanel);
                 SwingObservable.window(radarFrame, SwingObservable.WINDOW_ACTIVE)
                         .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
                         .doOnNext(this::handleWindowClosing)
                         .subscribe();
+            }
+            if (Objects.requireNonNull(environment.getController().getRobot()) instanceof SimRobot robot) {
+                robot.setOnObstacleChanged(this::handleObstacleChanged);
             }
 
             sessionDuration = this.args.getLong("localTime");
