@@ -74,8 +74,8 @@ import static org.mmarini.yaml.Utils.fromFile;
  */
 public class Wheelly {
     public static final String WHEELLY_SCHEMA_YML = "https://mmarini.org/wheelly/wheelly-schema-1.0";
-    private static final Logger logger = LoggerFactory.getLogger(Wheelly.class);
     public static final int LAYOUT_INTERVAL = 300;
+    private static final Logger logger = LoggerFactory.getLogger(Wheelly.class);
 
     static {
         Nd4j.zeros(1);
@@ -127,9 +127,10 @@ public class Wheelly {
     private final ComMonitor comMonitor;
     private final SensorMonitor sensorMonitor;
     private final KpisPanel kpisPanel;
-    private JFrame kpisFrame;
     private final CompletableSubject completion;
+    private final LearnPanel learnPanel;
     protected Namespace args;
+    private JFrame kpisFrame;
     private long robotStartTimestamp;
     private Long sessionDuration;
     private PolarPanel polarPanel;
@@ -139,18 +140,7 @@ public class Wheelly {
     private long prevRobotStep;
     private long prevStep;
     private ComDumper dumper;
-    private final LearnPanel learnPanel;
     private List<JFrame> allFrames;
-
-    /**
-     * Handles the controller status event
-     *
-     * @param status the controller status text
-     */
-    private void handleControllerStatus(String status) {
-        sensorMonitor.onControllerStatus(status);
-        comMonitor.onControllerStatus(status);
-    }
 
     /**
      * Creates the server reinforcement learning engine server
@@ -169,49 +159,6 @@ public class Wheelly {
         this.prevRobotStep = -1;
         this.prevStep = -1;
         this.completion = CompletableSubject.create();
-    }
-
-    /**
-     * Handles read line
-     *
-     * @param line read line
-     */
-    private void handleReadLine(String line) {
-        comMonitor.onReadLine(line);
-        if (dumper != null) {
-            dumper.dumpReadLine(line);
-        }
-    }
-
-    /**
-     * Handles the inference event
-     *
-     * @param status the robot status
-     */
-    private void handleInference(RobotStatus status) {
-        long robotClock = status.simulationTime();
-        envPanel.setRobotStatus(status);
-        sensorMonitor.onStatus(status);
-        if (environment instanceof WithRadarMap) {
-            envPanel.setRadarMap(((WithRadarMap) environment).getRadarMap());
-        }
-        if (environment instanceof WithPolarMap) {
-            polarPanel.setPolarMap(((WithPolarMap) environment).getPolarMap());
-        }
-        long time = System.currentTimeMillis();
-        if (prevRobotStep >= 0) {
-            envPanel.setReactionRealTime(reactionRealTime.add(time - prevStep).value() * 1e-3);
-            envPanel.setReactionRobotTime(reactionRobotTime.add(robotClock - prevRobotStep).value() * 1e-3);
-        }
-        prevRobotStep = robotClock;
-        prevStep = time;
-    }
-
-    private void handleResult(Environment.ExecutionResult result) {
-        double reward = result.getReward();
-        envPanel.setReward(avgRewards.add(reward).value());
-        sensorMonitor.onReward(reward);
-        agent.observe(result);
     }
 
     /**
@@ -260,6 +207,70 @@ public class Wheelly {
                 .subscribe();
 
         comFrame.setState(JFrame.ICONIFIED);
+    }
+
+    /**
+     * Handles the controller status event
+     *
+     * @param status the controller status text
+     */
+    private void handleControllerStatus(String status) {
+        sensorMonitor.onControllerStatus(status);
+        comMonitor.onControllerStatus(status);
+    }
+
+    /**
+     * Handles the inference event
+     *
+     * @param status the robot status
+     */
+    private void handleInference(RobotStatus status) {
+        long robotClock = status.simulationTime();
+        envPanel.setRobotStatus(status);
+        sensorMonitor.onStatus(status);
+        if (environment instanceof WithRadarMap) {
+            envPanel.setRadarMap(((WithRadarMap) environment).getRadarMap());
+        }
+        if (environment instanceof WithPolarMap) {
+            polarPanel.setPolarMap(((WithPolarMap) environment).getPolarMap());
+        }
+        long time = System.currentTimeMillis();
+        if (prevRobotStep >= 0) {
+            envPanel.setReactionRealTime(reactionRealTime.add(time - prevStep).value() * 1e-3);
+            envPanel.setReactionRobotTime(reactionRobotTime.add(robotClock - prevRobotStep).value() * 1e-3);
+        }
+        prevRobotStep = robotClock;
+        prevStep = time;
+    }
+
+    /**
+     * Handles obstacle changed
+     *
+     * @param simRobot the sim robot
+     */
+    private void handleObstacleChanged(SimRobot simRobot) {
+        simRobot.obstaclesMap()
+                .map(ObstacleMap::points)
+                .ifPresent(envPanel::setObstacleMap);
+    }
+
+    /**
+     * Handles read line
+     *
+     * @param line read line
+     */
+    private void handleReadLine(String line) {
+        comMonitor.onReadLine(line);
+        if (dumper != null) {
+            dumper.dumpReadLine(line);
+        }
+    }
+
+    private void handleResult(Environment.ExecutionResult result) {
+        double reward = result.getReward();
+        envPanel.setReward(avgRewards.add(reward).value());
+        sensorMonitor.onReward(reward);
+        agent.observe(result);
     }
 
     /**
@@ -324,29 +335,6 @@ public class Wheelly {
     }
 
     /**
-     * Handles obstacle changed
-     *
-     * @param simRobot the sim robot
-     */
-    private void handleObstacleChanged(SimRobot simRobot) {
-        simRobot.obstaclesMap()
-                .map(ObstacleMap::points)
-                .ifPresent(envPanel::setObstacleMap);
-    }
-
-    /**
-     * Handles written line
-     *
-     * @param line written line
-     */
-    private void handleWrittenLine(String line) {
-        comMonitor.onWriteLine(line);
-        if (dumper != null) {
-            dumper.dumpWrittenLine(line);
-        }
-    }
-
-    /**
      * Handles the windows opened
      * Initializes the agent
      *
@@ -361,6 +349,18 @@ public class Wheelly {
                     envPanel.setObstacleSize(map.gridSize());
                 });
         environment.start();
+    }
+
+    /**
+     * Handles written line
+     *
+     * @param line written line
+     */
+    private void handleWrittenLine(String line) {
+        comMonitor.onWriteLine(line);
+        if (dumper != null) {
+            dumper.dumpWrittenLine(line);
+        }
     }
 
     /**

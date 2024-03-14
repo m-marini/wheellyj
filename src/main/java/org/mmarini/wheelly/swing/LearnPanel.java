@@ -47,6 +47,7 @@ import static org.mmarini.Utils.zipWithIndex;
  * Controls the learning parameters via UI
  */
 public class LearnPanel extends JPanel {
+    public static final Dimension DEFAULT_PREFERED_SIZE = new Dimension(500, 300);
     private static final double[] VALUES = new double[]{
             10e-6,
             30e-6,
@@ -61,7 +62,6 @@ public class LearnPanel extends JPanel {
             1,
     };
     private static final Dictionary<Integer, JComponent> LABELS = createLabels();
-    public static final Dimension DEFAULT_PREFERED_SIZE = new Dimension(500, 300);
 
     private static Dictionary<Integer, JComponent> createLabels() {
         Dictionary<Integer, JComponent> labels = new Hashtable<>();

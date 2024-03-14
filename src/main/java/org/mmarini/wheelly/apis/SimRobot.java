@@ -163,6 +163,9 @@ public class SimRobot implements RobotApi {
     private final int numObstacles;
     private final long changeObstaclesPeriod;
     private final double errSensor;
+    private final double errSigma;
+    private final int maxAngularSpeed;
+    private final long motionInterval;
     private Complex direction;
     private double echoDistance;
     private boolean frontSensor;
@@ -172,15 +175,12 @@ public class SimRobot implements RobotApi {
     private Consumer<WheellyContactsMessage> onContacts;
     private Consumer<WheellyMotionMessage> onMotion;
     private Consumer<WheellyProxyMessage> onProxy;
-    private final double errSigma;
     private long proxyTimeout;
     private boolean rearSensor;
     private double rightPps;
     private Complex sensorDirection;
     private long simulationTime;
     private int speed;
-    private final int maxAngularSpeed;
-    private final long motionInterval;
     private Consumer<SimRobot> onObstacleChanged;
     private List<Body> obstacleBodies;
     private ObstacleMap obstacleMap;
@@ -197,7 +197,7 @@ public class SimRobot implements RobotApi {
      * @param maxAngularSpeed       the maximum angular speed
      * @param motionInterval        the interval between motion messages
      * @param proxyInterval         the interval between proxy messages
-     * @param numObstacles the number of obstacles
+     * @param numObstacles          the number of obstacles
      * @param changeObstaclesPeriod the period of change obstacles
      */
     public SimRobot(ObstacleMap obstacleMap, Random random, Random mapRandom, double errSigma, double errSensor, Complex sensorReceptiveAngle, int maxAngularSpeed, long motionInterval, long proxyInterval, int numObstacles, long changeObstaclesPeriod) {
@@ -375,6 +375,16 @@ public class SimRobot implements RobotApi {
 
         // Update robot status
         updateMotion();
+    }
+
+    /**
+     * Creates the obstacles bodies
+     */
+    private void createObstacleBodies() {
+        obstacleBodies.forEach(world::destroyBody);
+        this.obstacleBodies = obstacleMap.points().stream()
+                .map(p -> createObstacleBodies(world, p))
+                .toList();
     }
 
     /**
@@ -561,6 +571,15 @@ public class SimRobot implements RobotApi {
         this.onMotion = callback;
     }
 
+    /**
+     * Sets the callback on obstacle changed
+     *
+     * @param callback the call back
+     */
+    public void setOnObstacleChanged(Consumer<SimRobot> callback) {
+        onObstacleChanged = callback;
+    }
+
     @Override
     public void setOnProxy(Consumer<WheellyProxyMessage> callback) {
         this.onProxy = callback;
@@ -568,16 +587,6 @@ public class SimRobot implements RobotApi {
 
     @Override
     public void setOnSupply(Consumer<WheellySupplyMessage> callback) {
-    }
-
-    /**
-     * Creates the obstacles bodies
-     */
-    private void createObstacleBodies() {
-        obstacleBodies.forEach(world::destroyBody);
-        this.obstacleBodies = obstacleMap.points().stream()
-                .map(p -> createObstacleBodies(world, p))
-                .toList();
     }
 
     /**
@@ -605,15 +614,6 @@ public class SimRobot implements RobotApi {
     @Override
     public long simulationTime() {
         return simulationTime;
-    }
-
-    /**
-     * Sets the callback on obstacle changed
-     *
-     * @param callback the call back
-     */
-    public void setOnObstacleChanged(Consumer<SimRobot> callback) {
-        onObstacleChanged = callback;
     }
 
     @Override

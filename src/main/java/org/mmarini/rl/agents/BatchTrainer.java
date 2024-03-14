@@ -131,10 +131,10 @@ public class BatchTrainer {
     private final float lambda;
     private final Consumer<TDNetwork> onTrained;
     private final int batchSize;
-    private Map<String, Float> alphas;
     private final PublishProcessor<Map<String, INDArray>> kpisProcessor;
     private final PublishProcessor<String> infoProcessor;
     private final PublishProcessor<Long> counterProcessor;
+    private Map<String, Float> alphas;
     private boolean stopped;
     private Map<String, BinArrayFile> masksFiles;
     private BinArrayFile advantageFile;

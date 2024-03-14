@@ -62,8 +62,8 @@ class SimRobotControllerTest {
                 .add(0, 1)
                 .build();
         SimRobot robot = new SimRobot(obstacles,
-                random, mapRandom, 0, 0, Complex.fromDeg(15), MAX_PPS,
-                INTERVAL, INTERVAL, numObstacles, 0);
+                random, null, 0, 0, Complex.fromDeg(15), MAX_PPS,
+                INTERVAL, INTERVAL, 0, 0);
         return new RobotController(robot,
                 INTERVAL, REACTION_INTERVAL, COMMAND_INTERVAL, CONNECTION_RETRY_INTERVAL, WATCHDOG_INTERVAL,
                 simSpeed, x -> 12d);

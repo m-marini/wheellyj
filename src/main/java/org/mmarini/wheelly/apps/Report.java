@@ -265,10 +265,49 @@ public class Report {
     }
 
     /**
+     * Processes the report
+     *
+     * @param report the report
+     * @throws Exception in case of error
+     */
+    private void process(ReportProcess report) throws Exception {
+        UnaryOperator<INDArray> reducer = report.reducer();
+        String kpiKey = report.kpiKey();
+        BinArrayFile file = reducer != null
+                ? reduce(kpiKey, report.reportKey(), reducer)
+                : BinArrayFile.createByKey(kpisPath, kpiKey);
+        String reportKey = report.reportKey();
+        try (INDArray stats = stats(reportKey, file)) {
+            // Computes histogram
+            hist(file, reportKey + ".histogram", stats);
+            // Computes chart
+            chart(file, reportKey + ".chart", stats);
+            // Computes linear regression
+            regression(file,
+                    reportKey + ".linear",
+                    stats.getLong(N_INDEX),
+                    stats.getFloat(AVG_INDEX),
+                    UnaryOperator.identity(),
+                    Report::linear);
+
+            // Computes exponential regression
+            if (stats.getDouble(MIN_INDEX) > 0) {
+                regression(file,
+                        reportKey + ".exponential",
+                        stats.getLong(N_INDEX),
+                        stats.getFloat(AVGLOG_INDEX),
+                        Transforms::log,
+                        Report::exponential);
+            }
+        }
+        logger.atInfo().log("Completed key {}", kpiKey);
+    }
+
+    /**
      * Returns the reduced input records file
      *
      * @param key     the key
-     * @param outKey the reduced key
+     * @param outKey  the reduced key
      * @param reducer the reducer
      * @throws IOException in case of error
      */
@@ -361,45 +400,6 @@ public class Report {
                 logger.atInfo().log("Created {}", out.file());
             }
         }
-    }
-
-    /**
-     * Processes the report
-     *
-     * @param report the report
-     * @throws Exception in case of error
-     */
-    private void process(ReportProcess report) throws Exception {
-        UnaryOperator<INDArray> reducer = report.reducer();
-        String kpiKey = report.kpiKey();
-        BinArrayFile file = reducer != null
-                ? reduce(kpiKey, report.reportKey(), reducer)
-                : BinArrayFile.createByKey(kpisPath, kpiKey);
-        String reportKey = report.reportKey();
-        try (INDArray stats = stats(reportKey, file)) {
-            // Computes histogram
-            hist(file, reportKey + ".histogram", stats);
-            // Computes chart
-            chart(file, reportKey + ".chart", stats);
-            // Computes linear regression
-            regression(file,
-                    reportKey + ".linear",
-                    stats.getLong(N_INDEX),
-                    stats.getFloat(AVG_INDEX),
-                    UnaryOperator.identity(),
-                    Report::linear);
-
-            // Computes exponential regression
-            if (stats.getDouble(MIN_INDEX) > 0) {
-                regression(file,
-                        reportKey + ".exponential",
-                        stats.getLong(N_INDEX),
-                        stats.getFloat(AVGLOG_INDEX),
-                        Transforms::log,
-                        Report::exponential);
-            }
-        }
-        logger.atInfo().log("Completed key {}", kpiKey);
     }
 
     /**

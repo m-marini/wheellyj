@@ -133,20 +133,6 @@ public class BatchTraining {
     private TDNetwork network;
 
     /**
-     * Returns the content
-     * @param actions the action keys
-     */
-    private Component createContent(String... actions) {
-        JPanel content = new JPanel();
-        content.setLayout(new BorderLayout());
-        kpisPanel.setKeys(actions);
-        content.add(kpisPanel, BorderLayout.CENTER);
-        content.add(infoBar, BorderLayout.NORTH);
-        content.add(recordBar, BorderLayout.SOUTH);
-        return content;
-    }
-
-    /**
      * Creates the application
      *
      * @param args the parsed command line arguments
@@ -159,6 +145,21 @@ public class BatchTraining {
         this.kpisPanel = new KpisPanel();
         this.recordBar = new JProgressBar(JProgressBar.HORIZONTAL);
         init();
+    }
+
+    /**
+     * Returns the content
+     *
+     * @param actions the action keys
+     */
+    private Component createContent(String... actions) {
+        JPanel content = new JPanel();
+        content.setLayout(new BorderLayout());
+        kpisPanel.setKeys(actions);
+        content.add(kpisPanel, BorderLayout.CENTER);
+        content.add(infoBar, BorderLayout.NORTH);
+        content.add(recordBar, BorderLayout.SOUTH);
+        return content;
     }
 
     private void createFrames() {
@@ -188,6 +189,17 @@ public class BatchTraining {
                 .doOnComplete(() -> allFrames.forEach(Window::dispose))
                 .subscribe();
     }
+
+    /**
+     * Handles shutdown
+     */
+    private void handleShutdown() {
+        info("Shutting down ...");
+        trainer.stop();
+        completed.blockingAwait();
+        info("Shutting down completed");
+    }
+
     /**
      * Show info
      *
@@ -300,16 +312,6 @@ public class BatchTraining {
         } catch (IOException e) {
             logger.atError().setCause(e).log("Error saving network");
         }
-    }
-
-    /**
-     * Handles shutdown
-     */
-    private void handleShutdown() {
-        info("Shutting down ...");
-        trainer.stop();
-        completed.blockingAwait();
-        info("Shutting down completed");
     }
 
     /**
