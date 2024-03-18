@@ -117,19 +117,19 @@ public abstract class SignalSpec {
     /**
      * Returns the json node of spec
      */
-    public abstract JsonNode getJson();
+    public abstract JsonNode json();
 
     /**
      * Returns the shape of signal
      */
-    public long[] getShape() {
+    public long[] shape() {
         return this.shape;
     }
 
     /**
      * Returns the number of elements
      */
-    public long getSize() {
+    public long size() {
         return Arrays.stream(shape).reduce(1, (a, b) -> a * b);
     }
 

@@ -32,7 +32,6 @@ robots:
       - fl 10000 10000
       - fr 10000 10000
       - ci 500 500
-
 controllers:
   controller:
     $schema: https://mmarini.org/wheelly/controller-schema-1.0
@@ -87,7 +86,7 @@ agents:
   # Polar radar agent
   ######################################
   polarRadarAgent:
-    $schema: https://mmarini.org/wheelly/agent-single-nn-schema-0.2
+    $schema: https://mmarini.org/wheelly/agent-single-nn-schema-0.1
     class: org.mmarini.rl.agents.TDAgentSingleNN
     modelPath: models/polarRadarAgent
     savingIntervalSteps: 1000
@@ -99,32 +98,23 @@ agents:
       direction: 100e-6
     lambda: 0.5
     inputProcess:
+      - name: canMoveFeatures
+        class: org.mmarini.rl.processors.PartitionProcessor
+        inputs:
+          - name: canMoveStates
+            numTiles: 6
       - name: emptySectors
         class: org.mmarini.rl.processors.NotProcessor
         input: sectorDistances
-      - name: sectorStateCodes
-        class: org.mmarini.rl.processors.DecodeProcessor
-        inputs:
-          - emptySectors
-          - knownSectors
-      - name: sectorStateFeatures
-        class: org.mmarini.rl.processors.FeaturesProcessor
-        input: sectorStateCodes
-      - name: canMoveFeatures
-        class: org.mmarini.rl.processors.FeaturesProcessor
-        input: canMoveStates
       - name: distanceMask
         class: org.mmarini.rl.processors.AndProcessor
         inputs:
           - sectorDistances
           - knownSectors
-      - name: unmaskDistanceFeatures
-        class: org.mmarini.rl.processors.TilesProcessor
+      - name: distanceFeatures
+        class: org.mmarini.rl.processors.MaskedTilesVectorProcessor
         input: sectorDistances
         numTiles: 8
-      - name: distanceFeatures
-        class: org.mmarini.rl.processors.MaskProcessor
-        input: unmaskDistanceFeatures
         mask: distanceMask
     network:
       layer0:
@@ -132,7 +122,8 @@ agents:
           type: concat
           inputs:
             - canMoveFeatures
-            - sectorStateFeatures
+            - knownSectors
+            - emptySectors
             - distanceFeatures
         layers:
           - type: dense
@@ -148,40 +139,32 @@ agents:
             dropOut: 0.5
             maxAbsWeights: 1E2
           - type: relu
-          - type: dense
-            outputSize: 128
-            dropOut: 0.5
-            maxAbsWeights: 1E2
-      resnet0:
+      hidden1:
         inputs:
           type: sum
           inputs:
             - layer0
             - hidden0
         layers:
-          - type: relu
-      hidden1:
-        input: resnet0
-        layers:
           - type: dense
             outputSize: 128
             maxAbsWeights: 1E2
             dropOut: 0.5
           - type: relu
-          - type: dense
-            outputSize: 128
-            maxAbsWeights: 1E2
-            dropOut: 0.5
-      resnet1:
+      hidden2:
         inputs:
           type: sum
           inputs:
-            - resnet0
+            - hidden0
             - hidden1
         layers:
+          - type: dense
+            outputSize: 128
+            maxAbsWeights: 1E2
+            dropOut: 0.5
           - type: relu
       direction:
-        input: resnet1
+        input: hidden2
         layers:
           - type: dense
             outputSize: 24
@@ -190,7 +173,7 @@ agents:
           - type: softmax
             temperature: 0.434
       speed:
-        input: resnet1
+        input: hidden2
         layers:
           - type: dense
             maxAbsWeights: 1E2
@@ -199,7 +182,7 @@ agents:
           - type: softmax
             temperature: 0.434
       sensorAction:
-        input: resnet1
+        input: hidden2
         layers:
           - type: dense
             maxAbsWeights: 1E2
@@ -208,7 +191,7 @@ agents:
           - type: softmax
             temperature: 0.434
       critic:
-        input: resnet1
+        input: hidden2
         layers:
           - type: dense
             outputSize: 1

@@ -58,7 +58,7 @@ import static java.util.Objects.requireNonNull;
  * Agent based on Temporal Difference Actor-Critic with single neural network
  */
 public class TDAgentSingleNN implements Agent {
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/agent-single-nn-schema-0.1";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/agent-single-nn-schema-0.2";
     public static final int KPIS_CAPACITY = 1000;
     private static final Logger logger = LoggerFactory.getLogger(TDAgentSingleNN.class);
 
@@ -182,12 +182,12 @@ public class TDAgentSingleNN implements Agent {
                                 IntSignalSpec.class.getSimpleName(),
                                 t._2.getClass().getSimpleName()));
                     }
-                    long[] shape = t._2.getShape();
+                    long[] shape = t._2.shape();
                     if (!(shape.length == 1 && shape[0] == 1)) {
                         throw new IllegalArgumentException(format("Shape of action \"%s\" must be [1] (%s)",
                                 t._1, Arrays.toString(shape)));
                     }
-                    return t.setV2((long) ((IntSignalSpec) t._2).getNumValues());
+                    return t.setV2((long) ((IntSignalSpec) t._2).numValues());
                 })
                 .collect(Tuple2.toMap());
     }
@@ -200,7 +200,7 @@ public class TDAgentSingleNN implements Agent {
     static Map<String, INDArray> getInput(Map<String, Signal> state) {
         return Tuple2.stream(state)
                 .map(t -> {
-                    INDArray value = t._2.toINDArray();
+                    INDArray value = Nd4j.toFlattened(t._2.toINDArray());
                     // Reshape value
                     long[] shape = value.shape();
                     long[] newShape = new long[shape.length + 1];
@@ -219,12 +219,9 @@ public class TDAgentSingleNN implements Agent {
     static Map<String, Long> getStateSizes(Map<String, SignalSpec> state) {
         return Tuple2.stream(state)
                 .map(t -> {
-                    long[] shape = t._2.getShape();
-                    if (!(shape.length == 1)) {
-                        throw new IllegalArgumentException(format("Shape of state \"%s\" must be [n] (%s)",
-                                t._1, Arrays.toString(shape)));
-                    }
-                    return t.setV2(shape[0]);
+                    long[] shape = t._2.shape();
+                    long size = Arrays.stream(shape).reduce((a, b) -> a * b).orElseThrow();
+                    return t.setV2(size);
                 })
                 .collect(Tuple2.toMap());
     }
@@ -282,7 +279,7 @@ public class TDAgentSingleNN implements Agent {
     static JsonNode specFromSignalMap(Map<String, SignalSpec> signals) {
         ObjectNode node = Utils.objectMapper.createObjectNode();
         for (Map.Entry<String, SignalSpec> entry : signals.entrySet()) {
-            node.set(entry.getKey(), entry.getValue().getJson());
+            node.set(entry.getKey(), entry.getValue().json());
         }
         return node;
     }
@@ -338,7 +335,7 @@ public class TDAgentSingleNN implements Agent {
         if (actions.containsKey("critic")) {
             throw new IllegalArgumentException("actions must not contain \"critic\" key");
         }
-        Map<String, SignalSpec> processedState = processor != null ? processor.getSpec() : state;
+        Map<String, SignalSpec> processedState = processor != null ? processor.spec() : state;
         this.savingIntervalSteps = savingIntervalSteps;
         Map<String, Long> stateSizes = getStateSizes(processedState);
         Map<String, Long> actionSizes = getActionSizes(actions);
@@ -435,7 +432,7 @@ public class TDAgentSingleNN implements Agent {
         spec.set("actions", specFromSignalMap(actions));
         spec.set("network", network.spec());
         if (processor != null) {
-            spec.set("inputProcess", processor.getJson());
+            spec.set("inputProcess", processor.json());
         }
         return spec;
     }

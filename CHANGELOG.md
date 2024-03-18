@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 - Issue [#356](https://github.com/m-marini/wheellyj/issues/356): Generate dynamic simulated environment
+- Issue [#359](https://github.com/m-marini/wheellyj/issues/359): Change td environment to handle the radar map tiles
+- Issue [#388](https://github.com/m-marini/wheellyj/issues/388): Encode can move state
 
 ## [0.15.0] 2024-03-14
 

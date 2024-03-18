@@ -104,9 +104,8 @@ class AgentSingleNNTranspilerTest {
             "inputProcess:",
             "  - class: org.mmarini.rl.processors.TilesProcessor",
             "    name: tiles",
-            "    inputs:",
-            "      - name: input",
-            "        numTiles: 2"
+            "    input: input",
+            "    numTiles: 2"
     );
 
     @Test
@@ -205,7 +204,7 @@ class AgentSingleNNTranspilerTest {
                 equalTo("critic"),
                 isA(TDDense.class)));
 
-        assertEquals(3 * 3 * 8, agent.network().size("tiles"));
+        assertEquals(13, agent.network().size("tiles"));
         assertEquals(3, agent.network().size("layer0[0]"));
         assertEquals(0.8f,
                 ((TDSoftmax) agent.network().layers().get("output")).temperature());

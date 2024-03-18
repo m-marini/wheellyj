@@ -25,266 +25,184 @@
 
 package org.mmarini.rl.processors;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
-import org.mmarini.Tuple2;
-import org.mmarini.rl.envs.ArraySignal;
-import org.mmarini.rl.envs.FloatSignalSpec;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.rl.envs.SignalSpec;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.mmarini.rl.envs.*;
 import org.mmarini.yaml.Locator;
+import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 import java.util.function.UnaryOperator;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
-import static org.mmarini.wheelly.TestFunctions.text;
-import static org.mmarini.yaml.Utils.fromText;
 
 class PartitionProcessorTest {
     public static final double EPSILON = 1e-6;
-    private static final String YAML = text(
-            "---",
-            "name: p",
-            "inputs:",
-            "  - name: a",
-            "    numTiles: 3"
-    );
-    private static final Map<String, SignalSpec> INPUT_SPEC = Map.of(
-            "a", new FloatSignalSpec(new long[]{1}, -1, 1)
-    );
-    private static final Map<String, SignalSpec> INPUT_SPEC2D = Map.of(
-            "a", new FloatSignalSpec(new long[]{2}, -1, 1)
-    );
+    private static final String YAML = """
+            ---
+            - name: p
+              class: org.mmarini.rl.processors.PartitionProcessor
+              input: a
+              numTiles: 4
+            """;
 
-    private static InputProcessor createProcessor(String yaml, Map<String, SignalSpec> inSpec) throws IOException {
-        return PartitionProcessor.create(fromText(yaml), Locator.root(), inSpec);
+    @ParameterizedTest
+    @CsvSource({
+            "1,2, 0,2",
+            "1,3, 0,3",
+            "1.4999,1.5, 0,1",
+            "1.9999,2.9999, 1,3",
+            "2.4999,2.5, 2,3",
+    })
+    void createEncoderTest(float x0, float x1, float y0, float y1) {
+        Map<String, SignalSpec> spec = Map.of(
+                "a", new FloatSignalSpec(new long[]{2}, 1, 3)
+        );
+        UnaryOperator<Map<String, Signal>> encoder = PartitionProcessor.createEncoder(spec,
+                "p",
+                "a",
+                4);
+        Map<String, Signal> x = Map.of(
+                "a", ArraySignal.create(x0, x1)
+        );
+
+        Map<String, Signal> result = encoder.apply(x);
+
+        assertThat(result, hasKey("a"));
+        assertThat(result, hasKey("p"));
+
+        INDArray y = result.get("p").toINDArray();
+        assertThat(y, matrixCloseTo(new float[]{y0, y1}, EPSILON));
     }
 
-    @Test
-    void computeOutputSpaceSize1d() {
-        long[] sizes = PartitionProcessor.computeNumTilesByDim(Map.of(
-                "a", new FloatSignalSpec(new long[]{1}, 0, 1)
-        ), List.of(
-                Tuple2.of("a", 3L)
-        ));
-        assertArrayEquals(new long[]{3}, sizes);
-    }
+    @ParameterizedTest
+    @CsvSource({
+            "1,2, 0,2",
+            "1,3, 0,3",
+            "1.4999,1.5, 0,1",
+            "1.9999,2.9999, 1,3",
+            "2.4999,2.5, 2,3",
+    })
+    void createFromJsonTest(float x0, float x1, float y0, float y1) throws IOException {
+        Map<String, SignalSpec> spec = Map.of(
+                "a", new FloatSignalSpec(new long[]{2}, 1, 3)
+        );
 
-    @Test
-    void computeOutputSpaceSize2d() {
-        long[] sizes = PartitionProcessor.computeNumTilesByDim(Map.of(
-                "a", new FloatSignalSpec(new long[]{2}, 0, 1)
-        ), List.of(
-                Tuple2.of("a", 3L)
-        ));
-        assertArrayEquals(new long[]{3, 3}, sizes);
-    }
+        JsonNode root = Utils.fromText(YAML);
+        InputProcessor proc = InputProcessor.create(root, Locator.root(), spec);
 
-    @Test
-    void computeOutputSpaceSize2d1() {
-        long[] size = PartitionProcessor.computeNumTilesByDim(Map.of(
-                "a", new FloatSignalSpec(new long[]{1}, 0, 1),
-                "b", new FloatSignalSpec(new long[]{2}, 0, 1)
-        ), List.of(
-                Tuple2.of("a", 2L),
-                Tuple2.of("b", 3L)
-        ));
-        assertArrayEquals(new long[]{2, 3, 3}, size);
+        JsonNode json = proc.json();
+        assertTrue(json.isArray());
+        assertEquals(1, json.size());
+
+        assertEquals("p", json.path(0).path("name").asText());
+        assertEquals(PartitionProcessor.class.getName(), json.path(0).path("class").asText());
+        assertEquals("a", json.path(0).path("input").asText());
+        assertEquals(4, json.path(0).path("numTiles").asInt());
+
+        Map<String, Signal> x = Map.of(
+                "a", ArraySignal.create(x0, x1)
+        );
+        Map<String, Signal> result = proc.apply(x);
+
+        assertThat(result, hasKey("a"));
+        assertThat(result, hasKey("p"));
+
+        INDArray y = result.get("p").toINDArray();
+        assertThat(y, matrixCloseTo(new float[]{y0, y1}, EPSILON));
     }
 
     @Test
     void createSpec1d() {
         Map<String, SignalSpec> spec = PartitionProcessor.createSpec(Map.of(
                 "a", new FloatSignalSpec(new long[]{1}, 0, 1)
-        ), "p", new long[]{3});
+        ), "p", "a", 3);
         assertThat(spec, hasKey("a"));
         assertThat(spec, hasEntry(
                 equalTo("p"),
-                isA(FloatSignalSpec.class)));
-        assertArrayEquals(new long[]{3}, spec.get("p").getShape());
-        assertEquals(0F, ((FloatSignalSpec) spec.get("p")).getMinValue());
-        assertEquals(1F, ((FloatSignalSpec) spec.get("p")).getMaxValue());
+                isA(IntSignalSpec.class)));
+        assertArrayEquals(new long[]{1}, spec.get("p").shape());
+        assertEquals(3, ((IntSignalSpec) spec.get("p")).numValues());
     }
 
     @Test
     void createSpec2d() {
         Map<String, SignalSpec> spec = PartitionProcessor.createSpec(Map.of(
-                "a", new FloatSignalSpec(new long[]{1}, 0, 1)
-        ), "p", new long[]{3, 3});
+                "a", new FloatSignalSpec(new long[]{2}, 0, 1)
+        ), "p", "a", 3);
         assertThat(spec, hasKey("a"));
         assertThat(spec, hasEntry(
                 equalTo("p"),
-                isA(FloatSignalSpec.class)));
-        assertArrayEquals(new long[]{3 * 3}, spec.get("p").getShape());
-        assertEquals(0F, ((FloatSignalSpec) spec.get("p")).getMinValue());
-        assertEquals(1F, ((FloatSignalSpec) spec.get("p")).getMaxValue());
+                isA(IntSignalSpec.class)));
+        assertArrayEquals(new long[]{2}, spec.get("p").shape());
+        assertEquals(3, ((IntSignalSpec) spec.get("p")).numValues());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "1,2, 0,2",
+            "1,3, 0,3",
+            "1.4999,1.5, 0,1",
+            "1.9999,2.9999, 1,3",
+            "2.4999,2.5, 2,3",
+    })
+    void floatCreateClassifierTest(float x0, float x1, float y0, float y1) {
+        SignalSpec spec = new FloatSignalSpec(new long[]{2}, 1, 3);
+        UnaryOperator<INDArray> f = PartitionProcessor.createClassifier(spec, 4);
+        INDArray result = f.apply(Nd4j.createFromArray(x0, x1));
+        assertThat(result, matrixCloseTo(new float[]{y0, y1}, EPSILON));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,1, 0,1",
+            "2,3, 2,3",
+            "4,5, 4,5",
+            "6,7, 6,7",
+    })
+    void intCreateClassifier1Test(float x0, float x1, float y0, float y1) {
+        SignalSpec spec = new IntSignalSpec(new long[]{2}, 8);
+        UnaryOperator<INDArray> f = PartitionProcessor.createClassifier(spec, 8);
+        INDArray result = f.apply(Nd4j.createFromArray(x0, x1));
+        assertThat(result, matrixCloseTo(new float[]{y0, y1}, EPSILON));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,1, 0,2",
+            "0,2, 0,3",
+            "0.4999,0.5, 0,1",
+            "0.9999,1.9999, 1,3",
+            "1.4999,1.5, 2,3",
+    })
+    void intCreateClassifierTest(float x0, float x1, float y0, float y1) {
+        SignalSpec spec = new IntSignalSpec(new long[]{2}, 3);
+        UnaryOperator<INDArray> f = PartitionProcessor.createClassifier(spec, 4);
+        INDArray result = f.apply(Nd4j.createFromArray(x0, x1));
+        assertThat(result, matrixCloseTo(new float[]{y0, y1}, EPSILON));
     }
 
     @Test
-    void createSpec2d1() {
-        Map<String, SignalSpec> spec = PartitionProcessor.createSpec(Map.of(
-                "a", new FloatSignalSpec(new long[]{1}, 0, 1),
-                "b", new FloatSignalSpec(new long[]{2}, 0, 1)
-        ), "p", new long[]{2, 3, 3});
-        assertThat(spec, hasKey("a"));
-        assertThat(spec, hasKey("b"));
-        assertThat(spec, hasEntry(
-                equalTo("p"),
-                isA(FloatSignalSpec.class)));
-        assertArrayEquals(new long[]{3 * 3 * 2}, spec.get("p").getShape());
-        assertEquals(0F, ((FloatSignalSpec) spec.get("p")).getMinValue());
-        assertEquals(1F, ((FloatSignalSpec) spec.get("p")).getMaxValue());
+    void validateTest() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                PartitionProcessor.validate(Map.of(
+                                "a", new FloatSignalSpec(new long[]{2}, -1, 1)),
+                        "a", "a"));
+        assertEquals("Signal \"a\" already defined in signal specification", ex.getMessage());
+
+        ex = assertThrows(IllegalArgumentException.class, () ->
+                PartitionProcessor.validate(Map.of(
+                                "a", new FloatSignalSpec(new long[]{2}, -1, 1)),
+                        "out", "b"));
+        assertEquals("Missing signals \"b\" in signal specification", ex.getMessage());
     }
 
-    @Test
-    void encoder1d() {
-        UnaryOperator<INDArray> f = PartitionProcessor.createPartitionEncoder(new long[]{3});
-        INDArray result = f.apply(Nd4j.zeros(1));
-        assertArrayEquals(new long[]{3}, result.shape());
-        assertThat(result, matrixCloseTo(new float[]{1, 0, 0}, EPSILON));
-
-        result = f.apply(Nd4j.createFromArray(3F));
-        assertArrayEquals(new long[]{3}, result.shape());
-        assertThat(result, matrixCloseTo(new float[]{0, 0, 1}, EPSILON));
-
-        result = f.apply(Nd4j.createFromArray(1F));
-        assertArrayEquals(new long[]{3}, result.shape());
-        assertThat(result, matrixCloseTo(new float[]{0, 1, 0}, EPSILON));
-
-        result = f.apply(Nd4j.createFromArray(1.99F));
-        assertArrayEquals(new long[]{3}, result.shape());
-        assertThat(result, matrixCloseTo(new float[]{0, 1, 0}, EPSILON));
-
-        result = f.apply(Nd4j.createFromArray(2F));
-        assertArrayEquals(new long[]{3}, result.shape());
-        assertThat(result, matrixCloseTo(new float[]{0, 0, 1}, EPSILON));
-
-        result = f.apply(Nd4j.createFromArray(0.999F));
-        assertArrayEquals(new long[]{3}, result.shape());
-        assertThat(result, matrixCloseTo(new float[]{1, 0, 0}, EPSILON));
-    }
-
-    @Test
-    void encoder2d() {
-        UnaryOperator<INDArray> f = PartitionProcessor.createPartitionEncoder(new long[]{2, 3});
-        INDArray result = f.apply(Nd4j.zeros(1, 2));
-        assertArrayEquals(new long[]{6}, result.shape());
-        assertThat(result, matrixCloseTo(new float[]{
-                1, 0, 0,
-                0, 0, 0
-        }, EPSILON));
-
-        result = f.apply(Nd4j.createFromArray(2F, 3F).reshape(new long[]{1, 2}));
-        assertArrayEquals(new long[]{6}, result.shape());
-        assertThat(result, matrixCloseTo(new float[]{
-                0, 0, 0,
-                0, 0, 1
-        }, EPSILON));
-
-        result = f.apply(Nd4j.createFromArray(0F, 1F).reshape(new long[]{1, 2}));
-        assertArrayEquals(new long[]{6}, result.shape());
-        assertThat(result, matrixCloseTo(new float[]{
-                0, 1, 0,
-                0, 0, 0
-        }, EPSILON));
-
-        result = f.apply(Nd4j.createFromArray(1F, 0F).reshape(new long[]{1, 2}));
-        assertArrayEquals(new long[]{6}, result.shape());
-        assertThat(result, matrixCloseTo(new float[]{
-                0, 0, 0,
-                1, 0, 0
-        }, EPSILON));
-
-        result = f.apply(Nd4j.createFromArray(1F, 2F).reshape(new long[]{1, 2}));
-        assertArrayEquals(new long[]{6}, result.shape());
-        assertThat(result, matrixCloseTo(new float[]{
-                0, 0, 0,
-                0, 0, 1
-        }, EPSILON));
-    }
-
-    @Test
-    void partition1d() throws IOException {
-        InputProcessor p = createProcessor(YAML, INPUT_SPEC);
-
-        Map<String, SignalSpec> specMap = p.getSpec();
-        assertThat(specMap, hasEntry(
-                equalTo("p"),
-                isA(FloatSignalSpec.class)));
-        FloatSignalSpec spec = (FloatSignalSpec) specMap.get("p");
-        assertArrayEquals(new long[]{3}, spec.getShape());
-        assertEquals(0F, spec.getMinValue());
-        assertEquals(1F, spec.getMaxValue());
-
-        Map<String, Signal> signal_1 = Map.of("a", ArraySignal.create(-1));
-        Map<String, Signal> s1_1 = p.apply(signal_1);
-        assertThat(s1_1, hasEntry(
-                equalTo("p"),
-                isA(ArraySignal.class)));
-
-        assertThat(s1_1.get("p").toINDArray(), matrixCloseTo(new float[]{
-                1F, 0, 0
-        }, EPSILON));
-    }
-
-    @Test
-    void partition2d() throws IOException {
-        InputProcessor p = createProcessor(YAML, INPUT_SPEC2D);
-
-        Map<String, SignalSpec> specMap = p.getSpec();
-        assertThat(specMap, hasEntry(
-                equalTo("p"),
-                isA(FloatSignalSpec.class)));
-        FloatSignalSpec spec = (FloatSignalSpec) specMap.get("p");
-        assertArrayEquals(new long[]{9}, spec.getShape());
-        assertEquals(0F, spec.getMinValue());
-        assertEquals(1F, spec.getMaxValue());
-
-        Map<String, Signal> signal_1 = Map.of("a", ArraySignal.create(-1, -1));
-        Map<String, Signal> s1_1 = p.apply(signal_1);
-
-        assertThat(s1_1, hasEntry(
-                equalTo("p"),
-                isA(ArraySignal.class)));
-        assertThat(s1_1.get("p").toINDArray(), matrixCloseTo(new float[]{
-                1, 0, 0,
-                0, 0, 0,
-                0, 0, 0
-        }, EPSILON));
-
-        signal_1 = Map.of("a", ArraySignal.create(1, 1));
-        s1_1 = p.apply(signal_1);
-
-        assertThat(s1_1, hasEntry(
-                equalTo("p"),
-                isA(ArraySignal.class)));
-
-        assertThat(s1_1.get("p").toINDArray(), matrixCloseTo(new float[]{
-                0, 0, 0,
-                0, 0, 0,
-                0, 0, 1
-        }, EPSILON));
-
-
-        signal_1 = Map.of("a", ArraySignal.create(0, 0));
-        s1_1 = p.apply(signal_1);
-
-        assertThat(s1_1, hasEntry(
-                equalTo("p"),
-                isA(ArraySignal.class)));
-
-        assertThat(s1_1.get("p").toINDArray(), matrixCloseTo(new float[]{
-                0, 0, 0,
-                0, 1, 0,
-                0, 0, 0
-        }, EPSILON));
-    }
 }
