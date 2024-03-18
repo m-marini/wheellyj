@@ -1,11 +1,11 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/agent-single-nn-schema-0.1
+$id: https://mmarini.org/wheelly/agent-single-nn-schema-0.2
 title: Agent
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/agent-single-nn-schema-0.1
+    const: https://mmarini.org/wheelly/agent-single-nn-schema-0.2
   class:
     const: org.mmarini.rl.agents.TDAgentSingleNN
   modelPath:
@@ -46,35 +46,35 @@ $defs:
     anyOf:
       - $ref: "#/$defs/AndProcessor"
       - $ref: "#/$defs/NotProcessor"
-      - $ref: "#/$defs/MaskedTilesVectorProcessor"
-      - $ref: "#/$defs/TilesProcessor"
       - $ref: "#/$defs/PartitionProcessor"
-      - $ref: "#/$defs/FeatureVectorProcessor"
-  FeatureVectorProcessor:
+      - $ref: "#/$defs/DecodeProcessor"
+      - $ref: "#/$defs/FeaturesProcessor"
+      - $ref: "#/$defs/TilesProcessor"
+      - $ref: "#/$defs/MaskProcessor"
+  MaskProcessor:
     type: object
     properties:
       class:
-        const: org.mmarini.rl.processors.FeatureVectorProcessor
-      name:
-        minLength: 1
-      inputs:
-        type: array
-        items:
-          type: string
-    required:
-      - class
-      - name
-      - inputs
-  MaskedTilesVectorProcessor:
-    type: object
-    properties:
-      class:
-        const: org.mmarini.rl.processors.MaskedTilesVectorProcessor
+        const: org.mmarini.rl.processors.MaskProcessor
       name:
         minLength: 1
       input:
         minLength: 1
       mask:
+        minLength: 1
+    required:
+      - class
+      - name
+      - input
+      - mask
+  TilesProcessor:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.rl.processors.TilesProcessor
+      name:
+        minLength: 1
+      input:
         minLength: 1
       numTiles:
         multipleOf: 1
@@ -83,32 +83,35 @@ $defs:
       - class
       - name
       - input
-      - mask
       - numTiles
-  TilesProcessor:
+  DecodeProcessor:
     type: object
     properties:
       class:
-        const: org.mmarini.rl.processors.TilesProcessor
+        const: org.mmarini.rl.processors.DecodeProcessor
       name:
         minLength: 1
       inputs:
         type: array
         items:
-          type: object
-          properties:
-            name:
-              minLength: 1
-            numTiles:
-              multipleOf: 1
-              minimum: 1
-          required:
-            - name
-            - numTiles
+          minLength: 1
     required:
       - class
       - name
       - inputs
+  FeaturesProcessor:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.rl.processors.FeaturesProcessor
+      name:
+        minLength: 1
+      input:
+        minLength: 1
+    required:
+      - class
+      - name
+      - input
   NotProcessor:
     type: object
     properties:
@@ -132,7 +135,7 @@ $defs:
       inputs:
         type: array
         items:
-          type: string
+          minLength: 1
     required:
       - class
       - name

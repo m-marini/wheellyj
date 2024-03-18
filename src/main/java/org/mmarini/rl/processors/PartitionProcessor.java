@@ -26,48 +26,23 @@
 package org.mmarini.rl.processors;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.jetbrains.annotations.NotNull;
-import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.*;
 import org.mmarini.yaml.Locator;
-import org.mmarini.yaml.Utils;
-import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.ops.transforms.Transforms;
 
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.UnaryOperator;
-import java.util.stream.Collectors;
-import java.util.stream.LongStream;
 
-import static org.mmarini.rl.processors.InputProcessor.validateNames;
+import static java.lang.String.format;
+import static org.mmarini.rl.processors.InputProcessor.validateAlreadyDefinedName;
+import static org.mmarini.rl.processors.InputProcessor.validateExistingNames;
 
 /**
  * The processor creates a tile coding signal from float signals
  */
 public interface PartitionProcessor {
-
-    /**
-     * Returns the number of values for each partition space dimension
-     *
-     * @param inSpec the input specification
-     * @param inputs the number of values by input
-     */
-    static long[] computeNumTilesByDim(Map<String, SignalSpec> inSpec, List<Tuple2<String, Long>> inputs) {
-        return inputs.stream()
-                .flatMapToLong(t -> {
-                    long numDimValues = t._2;
-                    long nDims = inSpec.get(t._1).getSize();
-                    return LongStream.range(0, nDims).map(ignored -> numDimValues);
-                })
-                .toArray();
-    }
 
     /**
      * Returns the environment from json node spec
@@ -78,80 +53,77 @@ public interface PartitionProcessor {
      */
     static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpec> inSpec) {
         String outName = locator.path("name").getNode(root).asText();
-        List<Tuple2<String, Long>> tilesInfo = createTilesInfo(root, locator);
-        validateNames(inSpec, tilesInfo.stream().map(Tuple2::getV1).collect(Collectors.toList()));
+        String inName = locator.path("input").getNode(root).asText();
+        int numTiles = locator.path("numTiles").getNode(root).asInt();
+        // Validates
+        validate(inSpec, outName, inName);
 
-        // Creates processor json spec
-        ObjectNode jsonNode = createJsonNode(outName, tilesInfo);
-        jsonNode.put("class", PartitionProcessor.class.
-                getName());
-
-        long[] numTilesByDim = computeNumTilesByDim(inSpec, tilesInfo);
-
-        // Creates output spec
-        Map<String, SignalSpec> outputSpec = createSpec(inSpec, outName, numTilesByDim);
-
-        // Creates the encode function
-        UnaryOperator<Map<String, Signal>> encode = createEncoder(inSpec, outName, tilesInfo, numTilesByDim);
-
-        return new InputProcessor(encode, outputSpec, jsonNode);
+        return new InputProcessor(createEncoder(inSpec, outName, inName, numTiles),
+                createSpec(inSpec, outName, inName, numTiles),
+                locator.getNode(root));
     }
 
     /**
-     * Returns the partition signal encoder
+     * Returns the classifier of signal of x
+     * The output values are mapped from input range to (0, numValues - 1) range
+     * <p>
+     * E.g.
+     * <code>
+     * <pre>
+     *     inSpec.shape = (3)
+     *     inSpec.minValue = 1
+     *     inSpec.maxValue = 3
      *
-     * @param inSpec        the input specification
-     * @param outName       the name of partition output property
-     * @param numTiles      the number of values by input
-     * @param numTilesByDim the output space sizes by dimension
+     *     numValues = 5
+     *
+     *     in = (1, 2, 3)
+     *
+     *     out = (0, 2, 4)
+     * </pre>
+     * </code>
+     * </p>
+     *
+     * @param inSpec    the input specification
+     * @param numValues the number of output value
      */
-    static UnaryOperator<Map<String, Signal>> createEncoder(Map<String, SignalSpec> inSpec, String outName, List<Tuple2<String, Long>> numTiles, long[] numTilesByDim) {
-        List<Tuple2<String, UnaryOperator<INDArray>>> normalizers = createNormalizers(inSpec, numTiles);
-        UnaryOperator<INDArray> encoder = createPartitionEncoder(numTilesByDim);
-        return (Map<String, Signal> x) -> {
-            INDArray[] y2 = normalizers.stream().map(t -> {
-                INDArray y0 = x.get(t._1).toINDArray();
-                return t._2.apply(y0);
-            }).toArray(INDArray[]::new);
-            INDArray y3 = Nd4j.hstack(y2);
-            INDArray y4 = encoder.apply(y3);
-            Map<String, Signal> result = new HashMap<>(x);
-            result.put(outName, new ArraySignal(y4));
-            return result;
+    static UnaryOperator<INDArray> createClassifier(SignalSpec inSpec, long numValues) {
+        return switch (inSpec) {
+            case FloatSignalSpec floatSpec -> {
+                float minValue = floatSpec.minValue();
+                float scale = numValues / (floatSpec.maxValue() - minValue);
+                // scale and offset the signal
+                yield x ->
+                        Transforms.min(
+                                Transforms.floor(x.sub(minValue).muli(scale), false),
+                                numValues - 1, false);
+            }
+            case IntSignalSpec intSpec -> {
+                float scale = (float) numValues / (intSpec.numValues() - 1);
+                // scale the signal
+                yield x ->
+                        Transforms.min(
+                                Transforms.floor(x.mul(scale), false),
+                                numValues - 1, false);
+            }
+            default -> throw new IllegalArgumentException(format("Wrong input specification %s",
+                    inSpec.getClass()));
         };
     }
 
-    static ObjectNode createJsonNode(String outName, List<Tuple2<String, Long>> tilesInfo) {
-        ObjectNode jsonNode = Utils.objectMapper.createObjectNode();
-        jsonNode.put("name", outName);
-        ArrayNode inputsNode = Utils.objectMapper.createArrayNode();
-        for (Tuple2<String, Long> t : tilesInfo) {
-            ObjectNode inputSpec = Utils.objectMapper.createObjectNode();
-            inputSpec.put("name", t._1);
-            inputSpec.put("numTiles", t._2);
-            inputsNode.add(inputSpec);
-        }
-        jsonNode.set("inputs", inputsNode);
-        return jsonNode;
-    }
-
-    @NotNull
-    static List<Tuple2<String, UnaryOperator<INDArray>>> createNormalizers(Map<String, SignalSpec> inSpec, List<Tuple2<String, Long>> numTiles) {
-        return numTiles.stream()
-                .map(t -> {
-                    UnaryOperator<INDArray> fn = normalize(inSpec.get(t._1), t._2);
-                    return t.setV2(fn);
-                }).collect(Collectors.toList());
-    }
-
-    static UnaryOperator<INDArray> createPartitionEncoder(long[] outSpaceSizes) {
-        INDArray maxValues = Nd4j.createFromArray(outSpaceSizes).castTo(DataType.FLOAT).subi(1);
-        return x -> {
-            INDArray indices = Transforms.min(Transforms.max(x, 0), maxValues);
-            INDArray result = Nd4j.zeros(outSpaceSizes);
-            long[] cellIndices = indices.toLongVector();
-            result.getScalar(cellIndices).assign(1F);
-            return Nd4j.toFlattened(result);
+    /**
+     * Returns the signal encoder
+     * @param inSpec the input specification
+     * @param outName the output name
+     * @param inName the input name
+     * @param numTiles the number of tiles
+     */
+    static UnaryOperator<Map<String, Signal>> createEncoder(Map<String, SignalSpec> inSpec, String outName, String inName, int numTiles) {
+        UnaryOperator<INDArray> part = createClassifier(inSpec.get(inName), numTiles);
+        return in -> {
+            Map<String, Signal> result = new HashMap<>(in);
+            INDArray out = part.apply(in.get(inName).toINDArray());
+            result.put(outName, new ArraySignal(out));
+            return result;
         };
     }
 
@@ -160,41 +132,25 @@ public interface PartitionProcessor {
      *
      * @param inSpec        the input specification
      * @param name          the name of property
-     * @param outSpaceSizes the output space sizes
+     * @param inName  the input name
+     * @param numTiles the number of tiles
      */
-    static Map<String, SignalSpec> createSpec(Map<String, SignalSpec> inSpec, String name, long[] outSpaceSizes) {
+    static Map<String, SignalSpec> createSpec(Map<String, SignalSpec> inSpec, String name, String inName, int numTiles) {
         Map<String, SignalSpec> outSpec = new HashMap<>(inSpec);
-        long partitionDims = Arrays.stream(outSpaceSizes).reduce(1L, (a, b) -> a * b);
-        FloatSignalSpec spec = new FloatSignalSpec(new long[]{partitionDims}, 0, 1);
+        IntSignalSpec spec = new IntSignalSpec(inSpec.get(inName).shape(), numTiles);
         outSpec.put(name, spec);
         return outSpec;
     }
 
-    static List<Tuple2<String, Long>> createTilesInfo(JsonNode root, Locator locator) {
-        return locator.path("inputs").elements(root)
-                .map(l -> l.getNode(root))
-                .map(json -> Tuple2.of(json.path("name").asText(),
-                        json.path("numTiles").asLong()))
-                .collect(Collectors.toList());
-    }
-
     /**
-     * Returns the normalized signal of x
-     * The output values are within (0, numValues - 1) range
+     * Validates the processor arguments
      *
-     * @param inSpec    the input specification
-     * @param numValues the number of output value
+     * @param inSpec the input specification
+     * @param outName the output name
+     * @param inName the input name
      */
-    static UnaryOperator<INDArray> normalize(SignalSpec inSpec, long numValues) {
-        if (inSpec instanceof FloatSignalSpec) {
-            float minValue = ((FloatSignalSpec) inSpec).getMinValue();
-            float scale = (((FloatSignalSpec) inSpec).getMaxValue() - minValue) / (numValues - 1);
-            return x ->
-                    x.sub(minValue).mul(scale);
-        } else {
-            float scale = (((IntSignalSpec) inSpec).getNumValues() - 1) / (numValues - 1);
-            return x ->
-                    x.mul(scale);
-        }
+    static void validate(Map<String, SignalSpec> inSpec, String outName, String inName) {
+        validateAlreadyDefinedName(inSpec, outName);
+        validateExistingNames(inSpec, inName);
     }
 }

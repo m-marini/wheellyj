@@ -87,7 +87,7 @@ public class AgentSingleNNTranspiler {
         this.processor = !locator.path("inputProcess").getNode(spec).isMissingNode()
                 ? InputProcessor.create(spec, locator.path("inputProcess"), this.stateSpec)
                 : null;
-        Map<String, SignalSpec> postProcSpec = processor != null ? processor.getSpec() : stateSpec;
+        Map<String, SignalSpec> postProcSpec = processor != null ? processor.spec() : stateSpec;
         Map<String, Long> stateSizes = TDAgentSingleNN.getStateSizes(postProcSpec);
         this.network = new NetworkTranspiler(spec, locator.path("network"), stateSizes, random).build();
     }

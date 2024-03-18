@@ -26,27 +26,22 @@
 package org.mmarini.rl.processors;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.mmarini.rl.envs.ArraySignal;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.yaml.Locator;
-import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
-import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.rl.processors.InputProcessor.validateNames;
+import static org.mmarini.rl.processors.InputProcessor.*;
 
 /**
  * And processor creates a new property by logical and of properties
@@ -68,51 +63,24 @@ public interface AndProcessor {
                 .elements(root)
                 .map(l -> l.getNode(root).asText())
                 .collect(Collectors.toList());
-        return create(outName, inNames, inSpec);
+        validate(inSpec, outName, inNames);
+        return new InputProcessor(createSignalEncoder(outName, inNames),
+                createSpec(inSpec, outName, inNames),
+                locator.getNode(root));
     }
 
-    /**
-     * Returns the input processor
-     *
-     * @param outName the output property name
-     * @param inNames the input names
-     * @param inSpec  the input spec
-     */
-    static InputProcessor create(String outName, List<String> inNames, Map<String, SignalSpec> inSpec) {
-        requireNonNull(outName);
-        requireNonNull(inNames);
-        requireNonNull(inSpec);
-        validate(inSpec, inNames);
-        ObjectNode jsonNode = createJsonNode(outName, inNames);
-        Map<String, SignalSpec> spec = createSpec(inSpec, outName, inNames);
-        long[] shape = spec.get(outName).getShape();
-        UnaryOperator<Map<String, Signal>> encoder = x -> {
+    static UnaryOperator<Map<String, Signal>> createSignalEncoder(String outName, List<String> inNames) {
+        return x -> {
             Map<String, Signal> y = new HashMap<>(x);
-            INDArray newValue = Nd4j.ones(shape);
+            INDArray newValue = Nd4j.onesLike(x.get(inNames.getFirst()).toINDArray());
             for (String inName : inNames) {
-                INDArray in = x.get(inName).toINDArray().neq(0);
-                newValue.muli(in);
+                try (INDArray in = x.get(inName).toINDArray().neq(0)) {
+                    newValue.muli(in);
+                }
             }
             y.put(outName, new ArraySignal(newValue));
             return y;
         };
-        return new InputProcessor(encoder, spec, jsonNode);
-    }
-
-    /**
-     * Returns the spec json node
-     *
-     * @param outName    the output name
-     * @param inputNames the input names
-     */
-    static ObjectNode createJsonNode(String outName, List<String> inputNames) {
-        ObjectNode jsonNode = Utils.objectMapper.createObjectNode();
-        jsonNode.put("name", outName);
-        jsonNode.put("class", AndProcessor.class.getName());
-        ArrayNode names = Utils.objectMapper.createArrayNode();
-        inputNames.forEach(names::add);
-        jsonNode.set("inputs", names);
-        return jsonNode;
     }
 
     /**
@@ -123,7 +91,7 @@ public interface AndProcessor {
      * @param inNames the input names
      */
     static Map<String, SignalSpec> createSpec(Map<String, SignalSpec> inSpec, String outName, List<String> inNames) {
-        IntSignalSpec newSpec = new IntSignalSpec(inSpec.get(inNames.get(0)).getShape(), 2);
+        IntSignalSpec newSpec = new IntSignalSpec(inSpec.get(inNames.getFirst()).shape(), 2);
         Map<String, SignalSpec> result = new HashMap<>(inSpec);
         result.put(outName, newSpec);
         return result;
@@ -133,28 +101,15 @@ public interface AndProcessor {
      * Validates the input types
      *
      * @param inSpec  input spec
+     * @param outName the output name
      * @param inNames input names
      */
-    static void validate(Map<String, SignalSpec> inSpec, List<String> inNames) {
-        validateNames(inSpec, inNames);
+    static void validate(Map<String, SignalSpec> inSpec, String outName, List<String> inNames) {
+        validateAlreadyDefinedName(inSpec, outName);
+        validateExistingNames(inSpec, inNames);
         if (inNames.isEmpty()) {
-            throw new IllegalArgumentException("At least 1 input required");
+            throw new IllegalArgumentException("At least one input required");
         }
-        SignalSpec refSpec = null;
-        String refName = null;
-        for (String name : inNames) {
-            SignalSpec spec = inSpec.get(name);
-            if (refSpec == null) {
-                refSpec = spec;
-                refName = name;
-            } else if (!Arrays.equals(refSpec.getShape(), spec.getShape())) {
-                throw new IllegalArgumentException(format(
-                        "the shapes of %s and %s must be equals (%s) != (%s)",
-                        name, refName,
-                        Arrays.toString(spec.getShape()),
-                        Arrays.toString(refSpec.getShape())
-                ));
-            }
-        }
+        validateSameShape(inSpec, inNames);
     }
 }

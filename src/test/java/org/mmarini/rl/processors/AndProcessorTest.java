@@ -25,10 +25,9 @@
 
 package org.mmarini.rl.processors;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import org.mmarini.rl.envs.*;
-import org.mmarini.wheelly.TestFunctions;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.factory.Nd4j;
@@ -38,7 +37,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.hasKey;
+import static org.hamcrest.Matchers.isA;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 
@@ -48,54 +48,40 @@ class AndProcessorTest {
             "in1", new FloatSignalSpec(new long[]{2, 2}, 0, 2),
             "in2", new FloatSignalSpec(new long[]{2, 2}, 0, 2)
     );
-    private static final String YAML = TestFunctions.text("---",
-            "name: out",
-            "inputs:",
-            "  - in1",
-            "  - in2"
-    );
-
-    @Test
-    void create() {
-        InputProcessor processor = AndProcessor.create("out", List.of("in1", "in2"), IN_SPEC);
-        Map<String, Signal> in = Map.of(
-                "in1", new ArraySignal(Nd4j.createFromArray(new float[][]{{0, 0}, {-0.5F, 2}})),
-                "in2", new ArraySignal(Nd4j.createFromArray(new float[][]{{0, 0.5F}, {0, 2}}))
-        );
-        Map<String, Signal> out = processor.apply(in);
-        assertThat(out, hasKey("in1"));
-        assertThat(out, hasKey("in2"));
-        assertThat(out, hasKey("out"));
-        assertThat(out.get("out").toINDArray(), matrixCloseTo(new float[][]{
-                {0, 0}, {0, 1}
-        }, EPSILON));
-    }
+    private static final String YAML = """
+            ---
+            - name: out
+              class: org.mmarini.rl.processors.AndProcessor
+              inputs:
+              - in1
+              - in2
+            """;
 
     @Test
     void createFromYaml() throws IOException {
-        InputProcessor processor = AndProcessor.create(Utils.fromText(YAML), Locator.root(), IN_SPEC);
+        InputProcessor processor = InputProcessor.create(Utils.fromText(YAML), Locator.root(), IN_SPEC);
         Map<String, Signal> in = Map.of(
                 "in1", new ArraySignal(Nd4j.createFromArray(new float[][]{{0, 0}, {-0.5F, 2}})),
                 "in2", new ArraySignal(Nd4j.createFromArray(new float[][]{{0, 0.5F}, {0, 2}}))
         );
         Map<String, Signal> out = processor.apply(in);
+
         assertThat(out, hasKey("in1"));
         assertThat(out, hasKey("in2"));
         assertThat(out, hasKey("out"));
         assertThat(out.get("out").toINDArray(), matrixCloseTo(new float[][]{
                 {0, 0}, {0, 1}
         }, EPSILON));
-    }
 
-    @Test
-    void createJsonNode() {
-        ObjectNode node = AndProcessor.createJsonNode("out", List.of("in1", "in2"));
-        assertEquals("out", node.get("name").asText());
-        assertEquals(AndProcessor.class.getName(), node.get("class").asText());
-        assertTrue(node.get("inputs").isArray());
-        assertEquals(2, node.get("inputs").size());
-        assertEquals("in1", node.get("inputs").get(0).asText());
-        assertEquals("in2", node.get("inputs").get(1).asText());
+        JsonNode json = processor.json();
+        assertTrue(json.isArray());
+        assertEquals(1, json.size());
+        assertEquals("out", json.path(0).path("name").asText());
+        assertEquals(AndProcessor.class.getName(), json.path(0).path("class").asText());
+        assertTrue(json.path(0).path("inputs").isArray());
+        assertEquals(2, json.path(0).path("inputs").size());
+        assertEquals("in1", json.path(0).path("inputs").path(0).asText());
+        assertEquals("in2", json.path(0).path("inputs").path(1).asText());
     }
 
     @Test
@@ -104,8 +90,46 @@ class AndProcessorTest {
         assertThat(spec, hasKey("in1"));
         assertThat(spec, hasKey("in2"));
         assertThat(spec, hasKey("out"));
-        assertThat(spec.get("out"), isA(IntSignalSpec.class));
-        assertArrayEquals(new long[]{2, 2}, spec.get("out").getShape());
-        assertThat(spec.get("out"), hasProperty("numValues", equalTo(2)));
+        SignalSpec outSpec = spec.get("out");
+        assertThat(outSpec, isA(IntSignalSpec.class));
+        assertArrayEquals(new long[]{2, 2}, outSpec.shape());
+        assertEquals(2, ((IntSignalSpec) outSpec).numValues());
     }
+
+
+    @Test
+    void validateTest() {
+        IllegalArgumentException ex1 = assertThrows(IllegalArgumentException.class,
+                () -> AndProcessor.validate(Map.of(
+                                "a", new FloatSignalSpec(new long[]{2, 2}, 0, 2),
+                                "b", new FloatSignalSpec(new long[]{2, 2}, 0, 2)),
+                        "a",
+                        List.of("a", "b")));
+        assertEquals("Signal \"a\" already defined in signal specification", ex1.getMessage());
+
+        IllegalArgumentException ex2 = assertThrows(IllegalArgumentException.class,
+                () -> AndProcessor.validate(Map.of(
+                                "a", new FloatSignalSpec(new long[]{2, 2}, 0, 2),
+                                "b", new FloatSignalSpec(new long[]{2, 2}, 0, 2)),
+                        "out",
+                        List.of("c", "d")));
+        assertEquals("Missing signals \"c\", \"d\" in signal specification", ex2.getMessage());
+
+        IllegalArgumentException ex3 = assertThrows(IllegalArgumentException.class,
+                () -> AndProcessor.validate(Map.of(
+                                "a", new FloatSignalSpec(new long[]{2, 2}, 0, 2),
+                                "b", new FloatSignalSpec(new long[]{2, 3}, 0, 2)),
+                        "out",
+                        List.of("a", "b")));
+        assertEquals("Signal shapes must be [2, 2] (\"b\"=[2, 3])", ex3.getMessage());
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> AndProcessor.validate(Map.of(
+                                "a", new FloatSignalSpec(new long[]{2, 2}, 0, 2),
+                                "b", new FloatSignalSpec(new long[]{2, 3}, 0, 2)),
+                        "out",
+                        List.of()));
+        assertEquals("At least one input required", ex.getMessage());
+    }
+
 }

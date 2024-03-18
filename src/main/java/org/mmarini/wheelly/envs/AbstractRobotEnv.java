@@ -90,7 +90,7 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
      */
     Complex deltaDir(Map<String, Signal> actions) {
         int action = actions.get("direction").getInt(0);
-        int n = ((IntSignalSpec) getActions().get("direction")).getNumValues();
+        int n = ((IntSignalSpec) getActions().get("direction")).numValues();
         return Complex.fromDeg(linear(action,
                 0, n - 1,
                 MIN_DIRECTION_ACTION, MAX_DIRECTION_ACTION));
@@ -157,7 +157,7 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
 
     public boolean isHalt(Map<String, Signal> actions) {
         int speedAction = actions.get("speed").getInt(0);
-        int n = ((IntSignalSpec) getActions().get("speed")).getNumValues();
+        int n = ((IntSignalSpec) getActions().get("speed")).numValues();
         return speedAction == n - 1;
     }
 
@@ -210,7 +210,7 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
      */
     public Complex sensorDir(Map<String, Signal> actions) {
         int action = actions.get("sensorAction").getInt(0);
-        int n = ((IntSignalSpec) getActions().get("sensorAction")).getNumValues();
+        int n = ((IntSignalSpec) getActions().get("sensorAction")).numValues();
         return Complex.fromDeg(linear(action,
                 0, n - 1,
                 MIN_SENSOR_DIR, MAX_SENSOR_DIR));
@@ -238,7 +238,7 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
 
     public int speed(Map<String, Signal> actions) {
         int speedAction = actions.get("speed").getInt(0);
-        int n = ((IntSignalSpec) getActions().get("speed")).getNumValues();
+        int n = ((IntSignalSpec) getActions().get("speed")).numValues();
         return round(linear(speedAction,
                 0, n - 2,
                 -MAX_PPS, MAX_PPS));

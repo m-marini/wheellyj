@@ -32,12 +32,10 @@ import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -45,7 +43,9 @@ import static java.util.Objects.requireNonNull;
 /**
  * The processor processes the signals to produce new coding signals
  */
-public class InputProcessor implements UnaryOperator<Map<String, Signal>> {
+public record InputProcessor(UnaryOperator<Map<String, Signal>> encode,
+                             Map<String, SignalSpec> spec,
+                             JsonNode json) implements UnaryOperator<Map<String, Signal>> {
 
     public static InputProcessor concat(List<InputProcessor> list) {
         requireNonNull(list);
@@ -61,9 +61,9 @@ public class InputProcessor implements UnaryOperator<Map<String, Signal>> {
         };
         ArrayNode json = Utils.objectMapper.createArrayNode();
         for (InputProcessor processor : list) {
-            json.add(processor.getJson());
+            json.add(processor.json());
         }
-        Map<String, SignalSpec> spec1 = list.get(list.size() - 1).getSpec();
+        Map<String, SignalSpec> spec1 = list.getLast().spec();
 
         return new InputProcessor(encode1, spec1, json);
     }
@@ -78,33 +78,122 @@ public class InputProcessor implements UnaryOperator<Map<String, Signal>> {
     public static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpec> spec) {
         List<InputProcessor> processors = new ArrayList<>();
         Class<?>[] classes = new Class[]{Map.class};
-        List<Locator> processorLocators = locator.elements(root).collect(Collectors.toList());
+        List<Locator> processorLocators = locator.elements(root).toList();
         for (Locator loc : processorLocators) {
             InputProcessor processor = Utils.createObject(root, loc, new Object[]{spec}, classes);
-            spec = processor.getSpec();
+            spec = processor.spec();
             processors.add(processor);
         }
         return InputProcessor.concat(processors);
     }
 
-    public static void validateNames(Map<String, SignalSpec> spec, Collection<String> names) {
-        validateNames(spec, names.toArray(String[]::new));
-    }
-
-    public static void validateNames(Map<String, SignalSpec> inSpec, String... names) {
-        // Validate inputs
-        for (String name : names) {
-            if (!inSpec.containsKey(name)) {
-                throw new IllegalArgumentException(format(
-                        "Input \"%s\" undefined", name
-                ));
-            }
+    /**
+     * Validates the names for exisiting input
+     *
+     * @param spec the input specification
+     * @param name the name
+     */
+    public static void validateAlreadyDefinedName(Map<String, SignalSpec> spec, String name) {
+        // Verify for output name overlap
+        if (spec.containsKey(name)) {
+            throw new IllegalArgumentException(format("Signal \"%s\" already defined in signal specification",
+                    name));
         }
     }
 
-    private final Map<String, SignalSpec> spec;
-    private final UnaryOperator<Map<String, Signal>> encode;
-    private final JsonNode json;
+    /**
+     * Validates the names for exisiting input
+     *
+     * @param spec  the input specification
+     * @param names the names
+     */
+    public static void validateExistingNames(Map<String, SignalSpec> spec, Collection<String> names) {
+        validateExistingNames(spec, names.toArray(String[]::new));
+    }
+
+    /**
+     * Validates the names for exisiting input
+     *
+     * @param inSpec the input specification
+     * @param names  the names
+     */
+    public static void validateExistingNames(Map<String, SignalSpec> inSpec, String... names) {
+        // Verify for missing input names
+        List<String> missingNames = Arrays.stream(names)
+                .filter(Predicate.not(inSpec::containsKey))
+                .map(key -> "\"" + key + "\"")
+                .toList();
+        if (!missingNames.isEmpty()) {
+            throw new IllegalArgumentException(format("Missing signals %s in signal specification",
+                    String.join(", ", missingNames)));
+        }
+    }
+
+    /**
+     * Validates inputs for same shape
+     *
+     * @param spec  inpus specification
+     * @param names the names
+     */
+    static void validateSameShape(Map<String, SignalSpec> spec, List<String> names) {
+        long[] shape = spec.get(names.getFirst()).shape();
+        List<String> wrongShapes = names.stream()
+                .filter(name -> !Arrays.equals(shape, spec.get(name).shape()))
+                .map(name -> format("\"%s\"=%s",
+                        name,
+                        Arrays.toString(spec.get(name).shape())))
+                .toList();
+        if (!wrongShapes.isEmpty()) {
+            throw new IllegalArgumentException(format("Signal shapes must be %s (%s)",
+                    Arrays.toString(shape),
+                    String.join(", ", wrongShapes)));
+        }
+    }
+
+    /**
+     * Validates inputs for same shape
+     *
+     * @param spec  inpus specification
+     * @param clazz the signal specificatin class
+     * @param names the names
+     */
+    static void validateTypes(Map<String, SignalSpec> spec, Class<? extends SignalSpec> clazz, List<String> names) {
+        validateTypes(spec, clazz, names.stream());
+    }
+
+    /**
+     * Validates inputs for same shape
+     *
+     * @param spec  inpus specification
+     * @param clazz the signal specificatin class
+     * @param names the names
+     */
+    static void validateTypes(Map<String, SignalSpec> spec, Class<? extends SignalSpec> clazz, String... names) {
+        // Verify for wrong input types
+        validateTypes(spec, clazz, Arrays.stream(names));
+    }
+
+    /**
+     * Validates inputs for same shape
+     *
+     * @param spec  inpus specification
+     * @param clazz the signal specificatin class
+     * @param names the names
+     */
+    static void validateTypes(Map<String, SignalSpec> spec, Class<? extends SignalSpec> clazz, Stream<String> names) {
+        // Verify for wrong input types
+        List<String> wrongTypes = names.filter(name ->
+                        !(spec.get(name).getClass().equals(clazz)))
+                .map(name ->
+                        format("\"%s\"=%s",
+                                name,
+                                spec.get(name).getClass().getSimpleName()))
+                .toList();
+        if (!wrongTypes.isEmpty()) {
+            throw new IllegalArgumentException(format("Signal spec must be IntSignalSpec (%s)",
+                    String.join(", ", wrongTypes)));
+        }
+    }
 
     /**
      * Creates the tile processor
@@ -124,17 +213,4 @@ public class InputProcessor implements UnaryOperator<Map<String, Signal>> {
         return encode.apply(signals);
     }
 
-    /**
-     * Returns the json node
-     */
-    public JsonNode getJson() {
-        return json;
-    }
-
-    /**
-     * Returns the signal spec of the processed signal
-     */
-    public Map<String, SignalSpec> getSpec() {
-        return spec;
-    }
 }

@@ -31,6 +31,7 @@ import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
@@ -78,7 +79,7 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
 
     public static final double MIN_DISTANCE = 0;
     public static final double MAX_DISTANCE = 10;
-    public static final int NUM_CONTACT_VALUES = 16;
+    public static final int NUM_CAN_MOVE_STATES = 6;
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/env-polar-schema-0.1";
 
     /**
@@ -142,6 +143,46 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
     private CompositeStatus previousStatus;
 
     /**
+     * Returns the coded value of bits
+     *
+     * @param bits in little indian order
+     */
+    private static int encodeBits(boolean... bits) {
+        int code = 0;
+        int mask = 1;
+        for (int i = 0; i < bits.length; i++) {
+            if (bits[0]) {
+                code += mask;
+            }
+            mask += mask;
+        }
+        return code;
+    }
+
+    /**
+     * Returns the can move state by sensor state
+     * <pre>
+     * | Value | Description                                |
+     * |-------|--------------------------------------------|
+     * |   0   | Cannot move anywhere with front contact    |
+     * |   1   | Can move backward with front contact       |
+     * |   2   | Can move forward with front contact        |
+     * |   3   | Can move anywhere                          |
+     * |   4   | Cannot move anywhere without front contact |
+     * |   5   | Can move backward without front contact    |
+     * </pre>
+     *
+     * @param status the robot status
+     */
+    private static int encodeCanMoveStates(RobotStatus status) {
+        return status.canMoveForward()
+                ? status.canMoveBackward() ? 3 : 2
+                : status.canMoveBackward() ?
+                status.frontSensor() ? 5 : 1
+                : status.frontSensor() ? 4 : 0;
+    }
+
+    /**
      * Creates the controller environment
      *
      * @param controller       the controller api
@@ -165,9 +206,7 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
         this.states = Map.of(
                 "sensor", new FloatSignalSpec(new long[]{1}, MIN_SENSOR_DIR, MAX_SENSOR_DIR),
                 "distance", new FloatSignalSpec(new long[]{1}, (float) MIN_DISTANCE, (float) MAX_DISTANCE),
-                "canMoveForward", new IntSignalSpec(new long[]{1}, 2),
-                "canMoveBackward", new IntSignalSpec(new long[]{1}, 2),
-                "contacts", new IntSignalSpec(new long[]{1}, NUM_CONTACT_VALUES),
+                "canMoveStates", new IntSignalSpec(new long[]{1}, NUM_CAN_MOVE_STATES),
                 "knownSectors", new IntSignalSpec(new long[]{n}, 2),
                 "sectorDistances", new FloatSignalSpec(new long[]{n}, 0, (float) maxRadarDistance)
         );
@@ -203,11 +242,9 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
         RobotStatus status = currentStatus.status;
         INDArray sensor = Nd4j.createFromArray((float) status.sensorDirection().toIntDeg());
         INDArray distance = Nd4j.createFromArray((float) status.echoDistance());
-        INDArray canMoveForward = Nd4j.createFromArray(status.canMoveForward() ? 1F : 0F);
-        INDArray canMoveBackward = Nd4j.createFromArray(status.canMoveBackward() ? 1F : 0F);
-        // TODO fix contacts
-        INDArray contacts = Nd4j.createFromArray(status.frontSensor() ? 1F : 0F, status.rearSensor() ? 1F : 0F);
-        double maxDistance = ((FloatSignalSpec) states.get("sectorDistances")).getMaxValue();
+        INDArray canMoveStates = Nd4j.createFromArray(encodeCanMoveStates(status))
+                .castTo(DataType.FLOAT);
+        double maxDistance = ((FloatSignalSpec) states.get("sectorDistances")).maxValue();
 
         PolarMap polarMap = currentStatus.polarMap;
         int n = polarMap.sectorsNumber();
@@ -224,9 +261,7 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
         return Map.of(
                 "sensor", new ArraySignal(sensor),
                 "distance", new ArraySignal(distance),
-                "canMoveForward", new ArraySignal(canMoveForward),
-                "canMoveBackward", new ArraySignal(canMoveBackward),
-                "contacts", new ArraySignal(contacts),
+                "canMoveStates", new ArraySignal(canMoveStates),
                 "knownSectors", new ArraySignal(knownSectors),
                 "sectorDistances", new ArraySignal(sectorDistances)
         );

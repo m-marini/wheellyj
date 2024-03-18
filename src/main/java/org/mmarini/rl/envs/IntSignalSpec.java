@@ -75,12 +75,12 @@ public class IntSignalSpec extends SignalSpec {
     }
 
     @Override
-    public JsonNode getJson() {
+    public JsonNode json() {
         ObjectNode spec = Utils.objectMapper.createObjectNode();
         spec.put("type", "int");
         spec.put("numValues", numValues);
         ArrayNode shapeNode = Utils.objectMapper.createArrayNode();
-        for (long i : getShape()) {
+        for (long i : shape()) {
             shapeNode.add(i);
         }
         spec.set("shape", shapeNode);
@@ -90,7 +90,7 @@ public class IntSignalSpec extends SignalSpec {
     /**
      * Returns the number of values
      */
-    public int getNumValues() {
+    public int numValues() {
         return numValues;
     }
 
@@ -103,7 +103,7 @@ public class IntSignalSpec extends SignalSpec {
     public String toString() {
         return new StringJoiner(", ", "{", "}")
                 .add("type=int")
-                .add("shape=" + Arrays.toString(getShape()))
+                .add("shape=" + Arrays.toString(shape()))
                 .add("numValues=" + numValues)
                 .toString();
     }

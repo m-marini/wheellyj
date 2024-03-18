@@ -82,7 +82,7 @@ public class ConstantAgent implements Agent {
                         key, spec.getClass().getSimpleName()
                 ));
             }
-            long[] shape = spec.getShape();
+            long[] shape = spec.shape();
             if (!(Arrays.equals(shape, new long[]{1}))) {
                 throw new IllegalArgumentException(format(
                         "Action \"%s\" shape must be [1]] (%s)",

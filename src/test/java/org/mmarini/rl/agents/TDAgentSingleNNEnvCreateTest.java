@@ -41,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class TDAgentSingleNNEnvCreateTest {
     private static final String YAML = """
             ---
-            $schema: https://mmarini.org/wheelly/agent-single-nn-schema-0.1
+            $schema: https://mmarini.org/wheelly/agent-single-nn-schema-0.2
             class: org.mmarini.rl.agents.TDAgentSingleNN
             modelPath: models/test
             seed: 1234

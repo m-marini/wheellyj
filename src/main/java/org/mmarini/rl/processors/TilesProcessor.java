@@ -26,45 +26,43 @@
 package org.mmarini.rl.processors;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.jetbrains.annotations.NotNull;
-import org.mmarini.Tuple2;
-import org.mmarini.rl.envs.ArraySignal;
-import org.mmarini.rl.envs.FloatSignalSpec;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.rl.envs.SignalSpec;
+import org.mmarini.NotImplementedException;
+import org.mmarini.rl.envs.*;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.ops.transforms.Transforms;
 
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.UnaryOperator;
-import java.util.stream.Collectors;
 
-import static java.lang.Math.ceil;
-import static java.lang.Math.log;
-import static org.mmarini.rl.processors.InputProcessor.validateNames;
-import static org.mmarini.rl.processors.PartitionProcessor.*;
+import static org.mmarini.rl.processors.InputProcessor.validateAlreadyDefinedName;
+import static org.mmarini.rl.processors.InputProcessor.validateExistingNames;
 
 /**
- * The processor creates a tile coding signal from float signals
+ * The processor creates a one dimension space tiles coding signal from input signals
+ * Each value of input signal is transformed into tiles features with 4 tiling
  */
 public interface TilesProcessor {
+    int NUM_TILING = 4;
 
-    static long computeInSpaceDim(Map<String, SignalSpec> inSpec, Map<String, Integer> inputs) {
-        return inputs.keySet().stream()
-                .map(inSpec::get)
-                .map(SignalSpec::getShape)
-                .mapToLong(l -> l[0])
-                .sum();
+    /**
+     * Returns the output shape
+     *
+     * @param spec     the signal specification
+     * @param numTiles the number of tiles
+     */
+    static long[] computeOutShape(SignalSpec spec, int numTiles) {
+        int rank = spec.shape().length;
+        long[] result = new long[rank + 1];
+        System.arraycopy(spec.shape(), 0, result, 0, rank);
+        result[rank] = (long) NUM_TILING * numTiles + NUM_TILING - 1;
+        return result;
     }
 
     /**
-     * Returns the environment from json node spec
+     * Returns the input processor from json node spec
      *
      * @param root    the json node
      * @param locator the locator of environment
@@ -72,139 +70,118 @@ public interface TilesProcessor {
      */
     static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpec> inSpec) {
         String outName = locator.path("name").getNode(root).asText();
-        List<Tuple2<String, Long>> tilesInfo = createTilesInfo(root, locator);
-        // Validate inputs
-        validateNames(inSpec, tilesInfo.stream().map(Tuple2::getV1).toArray(String[]::new));
-        // Creates processor json spec
-        ObjectNode jsonNode = createJsonNode(outName, tilesInfo);
-        jsonNode.put("class", TilesProcessor.class.
-                getName());
-
-        // Creates processor json spec
-        long[] numTilesByDim = computeNumTilesByDim(inSpec, tilesInfo);
-
-        // Creates output spec
-        Map<String, SignalSpec> outputSpec = createSpec(inSpec, outName, numTilesByDim);
-
-        // Creates the encode function
-        UnaryOperator<Map<String, Signal>> encode1 = createEncoder(inSpec, outName, tilesInfo, numTilesByDim);
-
-        return new InputProcessor(encode1, outputSpec, jsonNode);
+        String input = locator.path("input").getNode(root).asText();
+        int numTiles = locator.path("numTiles").getNode(root).asInt();
+        validate(inSpec, outName, input);
+        return new InputProcessor(
+                createSignalEncoder(outName, input, inSpec.get(input), numTiles),
+                createSpec(inSpec, outName, input, numTiles),
+                locator.getNode(root)
+        );
     }
 
     /**
-     * Creates the encode function
-     *
-     * @param inSpec   input specification
-     * @param outName  the signal name
-     * @param numTiles the num of tiles
+     * Returns the encoder of value matrix
+     * @param spec the signal specification
+     * @param numTiles the number of tiles
      */
-    static UnaryOperator<Map<String, Signal>> createEncoder(Map<String, SignalSpec> inSpec, String outName, List<Tuple2<String, Long>> numTiles, long[] numTilesByDim) {
-        UnaryOperator<INDArray> encoder = createTileEncoder(numTilesByDim);
-        List<Tuple2<String, UnaryOperator<INDArray>>> normalizers = createNormalizers(inSpec, numTiles);
-
-        return (Map<String, Signal> x) -> {
-            INDArray[] y2 = normalizers.stream()
-                    .map(t -> t._2.apply(x.get(t._1).toINDArray()))
-                    .toArray(INDArray[]::new);
-            INDArray y3 = Nd4j.hstack(y2);
-            INDArray y4 = encoder.apply(y3);
-            Map<String, Signal> result = new HashMap<>(x);
-            result.put(outName, new ArraySignal(y4));
+    static UnaryOperator<INDArray> createEncoder(SignalSpec spec, int numTiles) {
+        UnaryOperator<INDArray> part = createPartitioner(spec, numTiles);
+        long[] shape = computeOutShape(spec, numTiles);
+        long stride = shape[shape.length - 1];
+        return x -> {
+            INDArray result = Nd4j.zeros(shape);
+            try (INDArray indices = part.apply(x)) {
+                long n = indices.length();
+                for (long i = 0; i < n; i++) {
+                    long offset = indices.getLong(i);
+                    for (int j = 0; j < NUM_TILING; j++) {
+                        result.putScalar(i * stride + offset + j, 1F);
+                    }
+                }
+            }
             return result;
         };
     }
 
-    @NotNull
-    static List<Tuple2<String, UnaryOperator<INDArray>>> createNormalizers(Map<String, SignalSpec> inSpec, List<Tuple2<String, Long>> numTiles) {
-        return numTiles.stream()
-                .map(t -> {
-                    UnaryOperator<INDArray> fn = normalize((FloatSignalSpec) inSpec.get(t._1), t._2);
-                    return t.setV2(fn);
-                }).collect(Collectors.toList());
-    }
-
     /**
-     * Returns the offsets vectors of tiling
+     * Returns the partitioner of signal
+     * The partitioner returns the array of indices of each dimension tiles
+     * The receptive field of each tile will be input range / numTiles
      *
-     * @param dims number of dimensions
+     * @param spec     the signal spec
+     * @param numTiles the number of tiles
      */
-    static INDArray createOffsets(long dims) {
-        long k = numTiling(dims);
-        INDArray result = Nd4j.zeros(k, dims);
-        for (int j = 0; j < dims; j++) {
-            int stride = j * 2 + 1;
-            for (int i = 0; i < k; i++) {
-                result.getScalar(i, j).assign(((long) i * stride) % k);
+    static UnaryOperator<INDArray> createPartitioner(SignalSpec spec, int numTiles) {
+        int maxIndex = NUM_TILING * numTiles - 1;
+        return switch (spec) {
+            case FloatSignalSpec fSpec -> {
+                float minValue = fSpec.minValue();
+                float maxValue = fSpec.maxValue();
+                float scale = (maxIndex + 1) / (maxValue - minValue);
+                // Creates the linear transformation of input to produce the tile index
+                yield x ->
+                        Transforms.min(
+                                Transforms.max(
+                                        Transforms.floor(
+                                                x.sub(minValue).muli(scale), false),
+                                        0, false),
+                                maxIndex, false);
             }
-        }
-        return result.divi(k);
-    }
-
-    /**
-     * Returns the dimension
-     *
-     * @param inSpec        the input specifications
-     * @param name          name of signal
-     * @param numTilesByDim the number of tiles by dimension
-     */
-    static Map<String, SignalSpec> createSpec(Map<String, SignalSpec> inSpec, String name, long[] numTilesByDim) {
-        // Compute input space dimension
-        long n = numTiling(numTilesByDim.length);
-        long numFeatures = Arrays.stream(numTilesByDim).map(a -> a + 1).reduce(1L, (a, b) -> a * b) * n;
-        Map<String, SignalSpec> result = new HashMap<>(inSpec);
-        result.put(name, new FloatSignalSpec(new long[]{numFeatures}, 0, 1));
-        return result;
-    }
-
-    /**
-     * Returns the tiles encoder
-     *
-     * @param numTiles the number of concrete tiles (n_i + 1)
-     */
-    static UnaryOperator<INDArray> createTileEncoder(long[] numTiles) {
-        long n = numTiling(numTiles.length);
-        INDArray maxIndices = Nd4j.createFromArray(numTiles);
-        long[] featuresShape = new long[numTiles.length + 1];
-        featuresShape[0] = n;
-        for (int i = 0; i < numTiles.length; ++i) {
-            featuresShape[i + 1] = numTiles[i] + 1;
-        }
-        INDArray offsets = createOffsets(numTiles.length);
-        INDArray tilingIndices = Nd4j.arange(0, n).reshape(new long[]{n, 1});
-        return x -> {
-            INDArray tilesIndices = Transforms.min(Transforms.max(Transforms.floor(x.add(offsets)), 0), maxIndices);
-            INDArray indices = Nd4j.hstack(tilingIndices, tilesIndices);
-            INDArray result = Nd4j.zeros(featuresShape);
-            for (int i = 0; i < n; i++) {
-                long[] cellIndices = indices.getRow(i).toLongVector();
-                result.getScalar(cellIndices).assign(1F);
+            case IntSignalSpec iSpec -> {
+                float maxValue = iSpec.numValues() - 1;
+                float scale = (maxIndex + 1) / maxValue;
+                // Creates the linear transformation of input to produce the tile index
+                yield x -> Transforms.min(
+                        Transforms.max(
+                                Transforms.floor(
+                                        x.mul(scale), false),
+                                0, false),
+                        maxIndex, false);
             }
-            return Nd4j.toFlattened(result);
+            default -> throw new NotImplementedException();
         };
     }
 
     /**
-     * Returns the normalized signal of x
-     * The output values are within (0, numValues - 1) range
+     * Returns the signal encoder
      *
-     * @param inSpec    the input specification
-     * @param numValues the number of output value
+     * @param outName   the output name
+     * @param inputName the input name
+     * @param spec      the input specification
+     * @param numTiles  the number of tiles
      */
-    static UnaryOperator<INDArray> normalize(FloatSignalSpec inSpec, long numValues) {
-        float minValue = inSpec.getMinValue();
-        float scale = (inSpec.getMaxValue() - minValue) / numValues;
-        return x ->
-                x.sub(minValue).mul(scale);
+    static UnaryOperator<Map<String, Signal>> createSignalEncoder(String outName, String inputName, SignalSpec spec, int numTiles) {
+        UnaryOperator<INDArray> encoder = createEncoder(spec, numTiles);
+        return in -> {
+            Map<String, Signal> result = new HashMap<>(in);
+            result.put(outName, new ArraySignal(encoder.apply(in.get(inputName).toINDArray())));
+            return result;
+        };
     }
 
     /**
-     * Returns the number of tiling
-     *
-     * @param numDims number of space dimensions
+     * Returns the signal spec
+     * @param spec the input signal spec
+     * @param outName the output name
+     * @param inputName the input name
+     * @param numTiles the number of tiles
      */
-    static long numTiling(long numDims) {
-        long ex = (long) ceil(log(4 * numDims) / log(2));
-        return 1L << ex;
+    static Map<String, SignalSpec> createSpec(Map<String, SignalSpec> spec, String outName, String inputName, int numTiles) {
+        Map<String, SignalSpec> result = new HashMap<>(spec);
+        result.put(outName, new IntSignalSpec(computeOutShape(spec.get(inputName), numTiles), 2));
+        return result;
+    }
+
+    /**
+     * Validate processor arguments
+     *
+     * @param spec      the input specification
+     * @param outName   the output name
+     * @param inputName the input name
+     */
+    static void validate(Map<String, SignalSpec> spec, String outName, String inputName) {
+        validateAlreadyDefinedName(spec, outName);
+        validateExistingNames(spec, inputName);
     }
 }

@@ -25,10 +25,9 @@
 
 package org.mmarini.rl.processors;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import org.mmarini.rl.envs.*;
-import org.mmarini.wheelly.TestFunctions;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.factory.Nd4j;
@@ -37,9 +36,9 @@ import java.io.IOException;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.hamcrest.Matchers.hasKey;
+import static org.hamcrest.Matchers.isA;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 
 class NotProcessorTest {
@@ -47,28 +46,17 @@ class NotProcessorTest {
     private static final Map<String, SignalSpec> IN_SPEC = Map.of(
             "in", new FloatSignalSpec(new long[]{2, 2}, 0, 2)
     );
-    private static final String YAML = TestFunctions.text("---",
-            "name: out",
-            "input: in"
-    );
-
-    @Test
-    void create() {
-        InputProcessor processor = NotProcessor.create("out", "in", IN_SPEC);
-        Map<String, Signal> in = Map.of(
-                "in", new ArraySignal(Nd4j.createFromArray(new float[][]{{0, 0.5F}, {-0.5F, 2}}))
-        );
-        Map<String, Signal> out = processor.apply(in);
-        assertThat(out, hasKey("in"));
-        assertThat(out, hasKey("out"));
-        assertThat(out.get("out").toINDArray(), matrixCloseTo(new float[][]{
-                {1, 0}, {0, 0}
-        }, EPSILON));
-    }
+    private static final String YAML = """
+            ---
+            - name: out
+              class: org.mmarini.rl.processors.NotProcessor
+              input: in
+              
+            """;
 
     @Test
     void createFromYaml() throws IOException {
-        InputProcessor processor = NotProcessor.create(Utils.fromText(YAML), Locator.root(), IN_SPEC);
+        InputProcessor processor = InputProcessor.create(Utils.fromText(YAML), Locator.root(), IN_SPEC);
         Map<String, Signal> in = Map.of(
                 "in", new ArraySignal(Nd4j.createFromArray(new float[][]{{0, 0.5F}, {-0.5F, 2}}))
         );
@@ -78,23 +66,37 @@ class NotProcessorTest {
         assertThat(out.get("out").toINDArray(), matrixCloseTo(new float[][]{
                 {1, 0}, {0, 0}
         }, EPSILON));
+
+        JsonNode json = processor.json();
+        assertTrue(json.isArray());
+        assertEquals(1, json.size());
+        assertEquals("out", json.path(0).path("name").asText());
+        assertEquals("in", json.path(0).path("input").asText());
+        assertEquals(NotProcessor.class.getName(), json.path(0).path("class").asText());
     }
 
-    @Test
-    void createJsonNode() {
-        ObjectNode node = NotProcessor.createJsonNode("out", "in");
-        assertEquals("out", node.get("name").asText());
-        assertEquals("in", node.get("input").asText());
-        assertEquals(NotProcessor.class.getName(), node.get("class").asText());
-    }
 
     @Test
     void createSpec() {
         Map<String, SignalSpec> spec = NotProcessor.createSpec(IN_SPEC, "out", "in");
         assertThat(spec, hasKey("in"));
         assertThat(spec, hasKey("out"));
-        assertThat(spec.get("out"), isA(IntSignalSpec.class));
-        assertArrayEquals(new long[]{2, 2}, spec.get("out").getShape());
-        assertThat(spec.get("out"), hasProperty("numValues", equalTo(2)));
+        SignalSpec outSpec = spec.get("out");
+        assertThat(outSpec, isA(IntSignalSpec.class));
+        assertArrayEquals(new long[]{2, 2}, outSpec.shape());
+        assertEquals(2, ((IntSignalSpec) outSpec).numValues());
+    }
+
+    @Test
+    void validateTest() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> NotProcessor.validate(Map.of(
+                        "a", new FloatSignalSpec(new long[]{2}, -1, 1)),
+                "a", "a"));
+        assertEquals("Signal \"a\" already defined in signal specification", ex.getMessage());
+
+        ex = assertThrows(IllegalArgumentException.class, () -> NotProcessor.validate(Map.of(
+                        "a", new FloatSignalSpec(new long[]{2}, -1, 1)),
+                "out", "b"));
+        assertEquals("Missing signals \"b\" in signal specification", ex.getMessage());
     }
 }

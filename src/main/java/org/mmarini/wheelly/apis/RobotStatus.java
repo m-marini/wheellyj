@@ -89,10 +89,17 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
         this.decodeVoltage = decodeVoltage;
     }
 
+    /**
+     * Returns true if can move backward
+     */
     public boolean canMoveBackward() {
         return contactsMessage.canMoveBackward();
     }
 
+
+    /**
+     * Returns true if can move forward
+     */
     public boolean canMoveForward() {
         return contactsMessage.canMoveForward();
     }

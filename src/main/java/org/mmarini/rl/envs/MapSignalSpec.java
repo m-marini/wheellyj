@@ -70,7 +70,7 @@ public class MapSignalSpec {
     /**
      * Returns the components of signal spec
      */
-    public Map<String, SignalSpec> getComponents() {
+    public Map<String, SignalSpec> components() {
         return components;
     }
 
@@ -83,7 +83,7 @@ public class MapSignalSpec {
         ObjectNode spec = Utils.objectMapper.createObjectNode();
         spec.put("type", "map");
         for (Map.Entry<String, SignalSpec> entry : components.entrySet()) {
-            spec.set(entry.getKey(), entry.getValue().getJson());
+            spec.set(entry.getKey(), entry.getValue().json());
         }
         return spec;
 

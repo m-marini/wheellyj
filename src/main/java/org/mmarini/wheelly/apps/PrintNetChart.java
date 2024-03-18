@@ -31,7 +31,6 @@ import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
-import org.jetbrains.annotations.NotNull;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.TDAgentSingleNN;
@@ -47,15 +46,15 @@ import org.slf4j.LoggerFactory;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
+import static java.lang.String.format;
 import static org.mmarini.yaml.Utils.fromFile;
 
 /**
- * Run a test to check for robot environment with random behavior agent
+ * Application to generate network graph with mermaid syntax
  */
 public class PrintNetChart {
     private static final Logger logger = LoggerFactory.getLogger(PrintNetChart.class);
@@ -64,7 +63,9 @@ public class PrintNetChart {
         Nd4j.zeros(1);
     }
 
-    @NotNull
+    /**
+     * Returns the comand line argument parser
+     */
     private static ArgumentParser createParser() {
         ArgumentParser parser = ArgumentParsers.newFor(PrintNetChart.class.getName()).build()
                 .defaultHelp(true)
@@ -83,6 +84,7 @@ public class PrintNetChart {
     }
 
     /**
+     * Application entry point
      * @param args command line arguments
      */
     public static void main(String[] args) {
@@ -94,7 +96,7 @@ public class PrintNetChart {
     private PrintWriter output;
 
     /**
-     *
+     * Creates the application
      */
     public PrintNetChart() {
     }
@@ -104,9 +106,9 @@ public class PrintNetChart {
      */
     private void printAgent() {
         TDAgentSingleNN ag = (TDAgentSingleNN) this.agent;
-        output.println("## network");
+        output.println("## Network");
         output.println();
-        Map<String, SignalSpec> state = ag.processor().getSpec();
+        Map<String, SignalSpec> state = ag.processor().spec();
         printNet(ag.network(), state);
     }
 
@@ -134,7 +136,12 @@ public class PrintNetChart {
             RobotEnvironment environment = AppYaml.envFromJson(config, Locator.root(), Wheelly.WHEELLY_SCHEMA_YML);
 
             logger.atInfo().log("Creating agent");
-            this.agent = Agent.fromConfig(config, Locator.locate("agent"), environment);
+            Locator agentLocator = Locator.locate(Locator.locate("agent").getNode(config).asText());
+            if (agentLocator.getNode(config).isMissingNode()) {
+                throw new IllegalArgumentException(format("Missing node %s", agentLocator));
+            }
+            this.agent = Agent.fromConfig(config, agentLocator, environment);
+
             String outputFilename = this.args.getString("output");
             logger.atInfo().log("Creating {}", outputFilename);
             try {
@@ -155,76 +162,93 @@ public class PrintNetChart {
         }
     }
 
+    /**
+     * Prints the network
+     */
     static class NetworkPrinter {
         final PrintWriter output;
         final TDNetwork network;
         final Map<String, String> dictionary;
         final Map<String, SignalSpec> state;
+        private final List<String> labels;
 
+        /**
+         * Creates the network printer
+         *
+         * @param output  the output writer
+         * @param network the network
+         * @param state   the input state specification
+         */
         NetworkPrinter(PrintWriter output, TDNetwork network, Map<String, SignalSpec> state) {
             this.output = output;
             this.network = network;
             this.state = state;
-            Set<String> labels = new HashSet<>(network.sourceLayers());
-            labels.addAll(network.layers().keySet());
+            // Sorts the layer in forward order
+            this.labels = new ArrayList<>(network.sourceLayers().stream().sorted().toList());
+            labels.addAll(network.forwardSequence());
+            // Create the dictionary to map the layer to graph layer node id
             this.dictionary = org.mmarini.Utils.zipWithIndex(List.copyOf(labels))
                     .map(t -> Tuple2.of(t._2, "L" + t._1))
                     .collect(Tuple2.toMap());
         }
 
+        /**
+         * Prints the network
+         */
         void print() {
+            // Prints the preamble
             output.println("```mermaid");
             output.println("graph TB");
-            dictionary.keySet().forEach(this::printLayer);
-/*
-            network.getInputs().forEach((layer, inputs) -> {
-                String gLayer = dictionary.get(layer);
-                for (String input : inputs) {
-                    String gInput = dictionary.get(input);
-                    output.printf("%s --> %s", gInput, gLayer);
+            // Prints the layer node
+            labels.forEach(this::printLayer);
+            // Print the node connections
+            for (TDLayer layer : network.layers().values()) {
+                String layerId = dictionary.get(layer.name());
+                for (String input : layer.inputs()) {
+                    String inputId = dictionary.get(input);
+                    output.printf("%s --> %s", inputId, layerId);
                     output.println();
                 }
-            });
- */
+            }
+            // Prints the epilogue
             output.println("```");
         }
 
+        /**
+         * Print the layer graph node
+         *
+         * @param name the layer id
+         */
         private void printLayer(String name) {
             output.print(dictionary.get(name));
             output.print("[\"");
             output.print(name);
             TDLayer layer = network.layers().get(name);
-            if (layer != null) {
-                switch (layer) {
-                    case TDDense tdDense2 -> {
-                        output.printf("\\nDense(%d)",
+            switch (layer) {
+                case TDDense tdDense2 -> {
+                    output.printf("\\nDense(%d)",
                                 network.size(name));
                         float dropOut = tdDense2.dropOut();
                         if (dropOut != 1F) {
                             output.printf("\\ndropOut=%.3f", dropOut);
                         }
                     }
-                    case TDConcat ignored -> output.print("\\nConcat");
-                    case TDSum ignored -> output.print("\\nSum");
-                    case TDTanh ignored -> output.print("\\nTanh");
-                    case TDRelu ignored -> output.print("\\nRelu");
-                    case TDLinear tdLinear2 -> output.printf("\\nLin(%.3f, %.3f)",
+                case TDConcat ignored -> output.print("\\nConcat");
+                case TDSum ignored -> output.print("\\nSum");
+                case TDTanh ignored -> output.print("\\nTanh");
+                case TDRelu ignored -> output.print("\\nRelu");
+                case TDLinear tdLinear2 -> output.printf("\\nLin(%.3f, %.3f)",
                             tdLinear2.bias(),
                             tdLinear2.weight());
-                    case TDSoftmax tdSoftmax2 -> output.printf("\\nSoftmax(%.3f)",
+                case TDSoftmax tdSoftmax2 -> output.printf("\\nSoftmax(%.3f)",
                             tdSoftmax2.temperature());
-
-/*
-                } else if (layer instanceof TDDropOut) {
-                    output.print("\\nDropout");
-
- */
-                    default -> {
-                    }
+                case TDDropOut tdDropout -> output.printf("\\nDropout(%.3f)", tdDropout.dropOut());
+                case null -> {
+                    SignalSpec spec = state.get(name);
+                    output.printf("\\nInput(%d)", spec.size());
                 }
-            } else {
-                SignalSpec spec = state.get(name);
-                output.printf("\\nInput(%d)", spec.getSize());
+                default -> {
+                }
             }
             output.println("\"]");
         }

@@ -26,13 +26,11 @@
 package org.mmarini.rl.processors;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.mmarini.rl.envs.ArraySignal;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.yaml.Locator;
-import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
@@ -40,7 +38,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.UnaryOperator;
 
-import static org.mmarini.rl.processors.InputProcessor.validateNames;
+import static org.mmarini.rl.processors.InputProcessor.validateAlreadyDefinedName;
+import static org.mmarini.rl.processors.InputProcessor.validateExistingNames;
 
 /**
  * The processor creates a new property by logical negation of other property
@@ -56,33 +55,26 @@ public interface NotProcessor {
     static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpec> inSpec) {
         String outName = locator.path("name").getNode(root).asText();
         String inName = locator.path("input").getNode(root).asText();
-        return create(outName, inName, inSpec);
+        validate(inSpec, outName, inName);
+        return new InputProcessor(createSignalEncoder(outName, inName),
+                createSpec(inSpec, outName, inName),
+                locator.getNode(root));
     }
 
-    static InputProcessor create(String outName, String inName, Map<String, SignalSpec> inSpec) {
-        validateNames(inSpec, inName);
-        // Creates processor json spec
-        ObjectNode jsonNode = createJsonNode(outName, inName);
-
-        // Creates output spec
-        Map<String, SignalSpec> outputSpec = createSpec(inSpec, outName, inName);
-
-        UnaryOperator<Map<String, Signal>> encoder = x -> {
-            INDArray mask = x.get(inName).toINDArray().eq(0);
-            INDArray newValue = Nd4j.ones(mask.shape()).mul(mask);
-            Map<String, Signal> result = new HashMap<>(x);
-            result.put(outName, new ArraySignal(newValue));
-            return result;
+    static UnaryOperator<Map<String, Signal>> createSignalEncoder(String outName, String inName) {
+        return x -> {
+            try (INDArray mask = x.get(inName).toINDArray().eq(0)) {
+                INDArray newValue = Nd4j.ones(mask.shape()).muli(mask);
+                Map<String, Signal> result = new HashMap<>(x);
+                result.put(outName, new ArraySignal(newValue));
+                return result;
+            }
         };
-        return new InputProcessor(encoder, outputSpec, jsonNode);
     }
 
-    static ObjectNode createJsonNode(String outName, String inName) {
-        ObjectNode jsonNode = Utils.objectMapper.createObjectNode();
-        jsonNode.put("name", outName);
-        jsonNode.put("input", inName);
-        jsonNode.put("class", NotProcessor.class.getName());
-        return jsonNode;
+    static void validate(Map<String, SignalSpec> inSpec, String outName, String inName) {
+        validateAlreadyDefinedName(inSpec, outName);
+        validateExistingNames(inSpec, inName);
     }
 
     /**
@@ -93,7 +85,7 @@ public interface NotProcessor {
      * @param inName  the input name
      */
     static Map<String, SignalSpec> createSpec(Map<String, SignalSpec> inSpec, String outName, String inName) {
-        IntSignalSpec newSpec = new IntSignalSpec(inSpec.get(inName).getShape(), 2);
+        IntSignalSpec newSpec = new IntSignalSpec(inSpec.get(inName).shape(), 2);
         Map<String, SignalSpec> outSpec = new HashMap<>(inSpec);
         outSpec.put(outName, newSpec);
         return outSpec;

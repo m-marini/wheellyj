@@ -61,13 +61,13 @@ class SignalSpecTest {
 
         SignalSpec a = spec.get("a");
         assertThat(a, isA(IntSignalSpec.class));
-        assertEquals(2, ((IntSignalSpec) a).getNumValues());
-        assertArrayEquals(new long[]{1, 2}, a.getShape());
+        assertEquals(2, ((IntSignalSpec) a).numValues());
+        assertArrayEquals(new long[]{1, 2}, a.shape());
 
         SignalSpec b = spec.get("b");
         assertThat(b, isA(FloatSignalSpec.class));
-        assertEquals(0f, ((FloatSignalSpec) b).getMinValue());
-        assertEquals(1f, ((FloatSignalSpec) b).getMaxValue());
-        assertArrayEquals(new long[]{2, 1}, b.getShape());
+        assertEquals(0f, ((FloatSignalSpec) b).minValue());
+        assertEquals(1f, ((FloatSignalSpec) b).maxValue());
+        assertArrayEquals(new long[]{2, 1}, b.shape());
     }
 }
