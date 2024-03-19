@@ -41,7 +41,7 @@ import static org.mmarini.wheelly.apis.Utils.linear;
  */
 public class ActivityMap extends JComponent {
 
-    public static final int PREFERRED_SIZE = 100;
+    public static final int PREFERRED_SIZE = 30;
     public static final int MIN_DOT_SIZE = 3;
     public static final float MIN_RANGE = 1e-6F;
     public static final float DECAY_1 = 100e-3F;
@@ -60,7 +60,6 @@ public class ActivityMap extends JComponent {
 
     private int activityWidth;
     private int activityHeight;
-    private int dotSize;
     private Color[] activity;
     private INDArray avg;
 
@@ -68,7 +67,6 @@ public class ActivityMap extends JComponent {
      * Creates the activity map
      */
     public ActivityMap() {
-        this.dotSize = 8;
         this.activity = new Color[0];
         setBackground(Color.BLACK);
     }
@@ -150,10 +148,14 @@ public class ActivityMap extends JComponent {
         }
         this.activityWidth = width;
         this.activityHeight = height;
-        dotSize = max(PREFERRED_SIZE / max(activityWidth, activityHeight), MIN_DOT_SIZE);
-        setPreferredSize(new Dimension(
-                activityWidth * dotSize + insets.left + insets.right,
-                activityHeight * dotSize + insets.top + insets.bottom));
+        int pWidth = max(activityWidth * MIN_DOT_SIZE, PREFERRED_SIZE);
+        int pHeight = max(activityHeight * MIN_DOT_SIZE, PREFERRED_SIZE);
+        //dotSize = max(PREFERRED_SIZE / max(activityWidth, activityHeight), MIN_DOT_SIZE);
+        Dimension size = new Dimension(
+                pWidth + insets.left + insets.right,
+                pHeight + insets.top + insets.bottom);
+        setPreferredSize(size);
+        doLayout();
         repaint();
     }
 }

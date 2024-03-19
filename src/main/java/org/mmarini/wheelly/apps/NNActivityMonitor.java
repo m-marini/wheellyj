@@ -188,12 +188,12 @@ public class NNActivityMonitor {
      * Returns the command bar
      */
     private Container createCommandBar() {
-        return new GridLayoutHelper<>(new JPanel()).modify("insets,5 center")
+        return new GridLayoutHelper<>(new JPanel()).modify("insets,2 center")
                 .modify("at,0,0").add(rewind)
                 .modify("at,1,0").add(stop)
                 .modify("at,2,0").add(play)
                 .modify("at,3,0").add(fastPlay)
-                .modify("at,4,0 hfill hw,1").add(timeLine)
+                .modify("at,4,0 hfill weight,1,0").add(timeLine)
                 .getContainer();
     }
 
@@ -201,7 +201,10 @@ public class NNActivityMonitor {
      * Returns the content panel
      */
     private Component createContentPanel() {
-        return new GridLayoutHelper<>(new JPanel()).modify("insets,5 center").modify("at,0,0 weight,1,1").add(activityPanel).modify("at,0,1 hw,1 fill").add(createCommandBar()).getContainer();
+        return new GridLayoutHelper<>(new JPanel()).modify("insets,5 center fill")
+                .modify("at,0,0 weight,1,1").add(activityPanel)
+                .modify("at,0,1 weight,1,0").add(createCommandBar())
+                .getContainer();
     }
 
     /**

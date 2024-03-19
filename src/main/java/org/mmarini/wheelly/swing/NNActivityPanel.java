@@ -123,10 +123,10 @@ public class NNActivityPanel extends JPanel {
         for (int i = 0; i < sinkLayers.size(); i++) {
             sinksPanelBuilder.at(i, 0).add(sinkLayers.get(i)._2);
         }
-        new GridLayoutHelper<>(this).modify("insets,5 center")
-                .modify("at,0,0 fill hw,1").add(sinksPanelBuilder.getContainer())
-                .modify("at,0,1 fill weight,1,1").add(hiddensPanelBuilder.getContainer())
-                .modify("at,0,2 fill hw,1").add(sourcePanelBuilder.getContainer());
+        new GridLayoutHelper<>(this).modify("insets,5 center fill")
+                .modify("at,0,0 weight,1,0").add(sinksPanelBuilder.getContainer())
+                .modify("at,0,1 weight,1,1").add(hiddensPanelBuilder.getContainer())
+                .modify("at,0,2 weight,1,0").add(sourcePanelBuilder.getContainer());
         doLayout();
     }
 
