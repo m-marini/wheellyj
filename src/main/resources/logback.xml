@@ -37,8 +37,11 @@
     <logger name="org.mmarini.wheelly.apps.RobotCheckUp" level="INFO"/>
     <logger name="org.mmarini.wheelly.apps.Report" level="INFO"/>
 
+    <logger name="org.mmarini.wheelly.swing.NNActivityPanel" level="INFO"/>
+
     <logger name="org.mmarini.rl.agents.BinArrayFile" level="INFO"/>
     <logger name="org.mmarini.rl.agents.CSVWriter" level="INFO"/>
+
 
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>
