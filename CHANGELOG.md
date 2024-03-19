@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#388](https://github.com/m-marini/wheellyj/issues/388): Encode can move state
 - Issue [#390](https://github.com/m-marini/wheellyj/issues/390): Added neural activity map application
 
+### Fixed
+
+- Issue [#392](https://github.com/m-marini/wheellyj/issues/392): Fix NNActivityMonitor UI
+
 ## [0.15.0] 2024-03-14
 
 ### Added
