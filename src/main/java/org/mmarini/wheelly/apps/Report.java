@@ -34,6 +34,7 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.ParallelProcess;
 import org.mmarini.rl.agents.BinArrayFile;
 import org.mmarini.rl.agents.CSVWriter;
+import org.mmarini.rl.agents.KeyFileMap;
 import org.mmarini.wheelly.swing.Messages;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -410,8 +411,16 @@ public class Report {
     protected void start() throws Throwable {
         this.kpisPath = new File(args.getString("kpis"));
         this.reportPath = new File(args.getString("reportPath"));
-        List<Action> tasks = reports.stream()
+        List<ReportProcess> activeReports = reports.stream()
                 .filter(t -> BinArrayFile.createByKey(kpisPath, t.kpiKey()).file().canRead())
+                .toList();
+        // Verify kpis size
+        List<BinArrayFile> files = activeReports.stream()
+                .map(t -> BinArrayFile.createByKey(kpisPath, t.kpiKey()))
+                .toList();
+        KeyFileMap.validateSize(files);
+
+        List<Action> tasks = activeReports.stream()
                 .<Action>map(t -> () -> this.process(t))
                 .toList();
         if (args.getBoolean("parallel")) {

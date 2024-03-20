@@ -69,7 +69,7 @@ public class MergeKpis {
      * Returns the argument parser
      */
     private static ArgumentParser createParser() {
-        ArgumentParser parser = ArgumentParsers.newFor(ToCsv.class.getName()).build()
+        ArgumentParser parser = ArgumentParsers.newFor(MergeKpis.class.getName()).build()
                 .defaultHelp(true)
                 .version(Messages.getString("Wheelly.title"))
                 .description("Run a session of batch training.");
@@ -106,6 +106,8 @@ public class MergeKpis {
         } catch (ArgumentParserException ex) {
             parser.handleError(ex);
             System.exit(1);
+        } catch (IOException e) {
+            logger.atError().setCause(e).log("Error merging kpis");
         }
     }
 
@@ -151,10 +153,13 @@ public class MergeKpis {
     /**
      * Runs the application
      */
-    private void run() {
+    private void run() throws IOException {
         this.outputFile = new File(args.getString("output"));
         this.batchSize = args.getLong("batchSize");
         validateSources();
+        for (List<BinArrayFile> files : sources.values()) {
+            KeyFileMap.validateSize(files);
+        }
         List<Action> tasks = Tuple2.stream(sources)
                 .<Action>map(t -> () -> merge(t._1, t._2))
                 .toList();

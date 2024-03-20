@@ -41,11 +41,14 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -508,7 +511,7 @@ public class BatchTrainer {
      *
      * @param datasetPath the dataset path
      */
-    public void validate(File datasetPath) {
+    public void validate(File datasetPath) throws IOException {
         this.datasetPath = datasetPath;
         this.terminalFile = BinArrayFile.createByKey(datasetPath, TERMINAL_KEY);
         if (!terminalFile.file().canRead()) {
@@ -522,11 +525,21 @@ public class BatchTrainer {
         if (s1Files.isEmpty()) {
             throw new IllegalArgumentException("Missing s1 datasets");
         }
-        if (KeyFileMap.create(datasetPath, REWARD_KEY).isEmpty()) {
+        BinArrayFile rewardFile = BinArrayFile.createByKey(datasetPath, REWARD_KEY);
+        if (!rewardFile.file().canRead()) {
             throw new IllegalArgumentException("Missing reward datasets");
         }
-        if (KeyFileMap.create(datasetPath, ACTIONS_KEY).isEmpty()) {
+        Map<String, BinArrayFile> actionFiles = KeyFileMap.create(datasetPath, ACTIONS_KEY);
+        if (actionFiles.isEmpty()) {
             throw new IllegalArgumentException("Missing actions datasets");
         }
+        List<BinArrayFile> files = Stream.of(
+                        List.of(rewardFile, terminalFile),
+                        actionFiles.values(),
+                        s0Files.values(),
+                        s1Files.values())
+                .flatMap(Collection::stream)
+                .toList();
+        KeyFileMap.validateSize(files);
     }
 }

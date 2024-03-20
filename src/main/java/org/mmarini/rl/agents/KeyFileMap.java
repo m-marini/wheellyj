@@ -35,9 +35,12 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
+
+import static java.lang.String.format;
 
 /**
  * Collects a set of file by key
@@ -156,6 +159,42 @@ public interface KeyFileMap {
                 })
                 .collect(Tuple2.toMap());
         return result.size() == files.size() ? result : null;
+    }
+
+    /**
+     * Validate for same size
+     *
+     * @param files the files
+     * @throws IOException in case of error
+     */
+    static void validateSize(Collection<BinArrayFile> files) throws IOException {
+        if (!files.isEmpty()) {
+            BinArrayFile refFile = files.iterator().next();
+            long size = refFile.size();
+            List<String> wrongSizes = files.stream()
+                    .filter(f -> {
+                        try {
+                            return f.size() != size;
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    })
+                    .map(f -> {
+                        try {
+                            return format("%s (%d)",
+                                    f.file().getName(),
+                                    f.size());
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    })
+                    .toList();
+            if (!wrongSizes.isEmpty()) {
+                throw new RuntimeException(format("Wrong files size %s reffered to %s (%d)",
+                        String.join(", ", wrongSizes),
+                        refFile, size));
+            }
+        }
     }
 
     /**
