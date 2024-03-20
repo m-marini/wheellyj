@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#392](https://github.com/m-marini/wheellyj/issues/392): Fix NNActivityMonitor UI
 - Issue [#394](https://github.com/m-marini/wheellyj/issues/394): Fix labels on kpis panel
 - Issue [#395](https://github.com/m-marini/wheellyj/issues/395):  Change predictability kpi
+- Issue [#396](https://github.com/m-marini/wheellyj/issues/396): Verify file size on batch, report, nna
 
 ## [0.15.0] 2024-03-14
 

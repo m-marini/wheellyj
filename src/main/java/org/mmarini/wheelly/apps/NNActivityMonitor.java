@@ -85,7 +85,7 @@ public class NNActivityMonitor {
      * Returns the argument parser
      */
     private static ArgumentParser createParser() {
-        ArgumentParser parser = ArgumentParsers.newFor(ToCsv.class.getName()).build()
+        ArgumentParser parser = ArgumentParsers.newFor(NNActivityMonitor.class.getName()).build()
                 .defaultHelp(true)
                 .version(Messages.getString("Wheelly.title"))
                 .description("Run a session of batch training.");
@@ -224,7 +224,7 @@ public class NNActivityMonitor {
     /**
      * Loads the signals
      */
-    private void loadSignals() {
+    private void loadSignals() throws IOException {
         String source = args.getString("kpis");
         String[] sourceKeys = network.sourceLayers().stream()
                 .map(name -> "s0." + name)
@@ -236,9 +236,11 @@ public class NNActivityMonitor {
                 .filter(Predicate.not(signalFiles::containsKey))
                 .toList();
         if (!missingFiles.isEmpty()) {
-            throw new RuntimeException(format("Missing kpis files %s",
-                    String.join(", ", missingFiles)));
+            throw new RuntimeException(format("Missing kpis files %s in %s",
+                    String.join(", ", missingFiles),
+                    sourcePath));
         }
+        KeyFileMap.validateSize(signalFiles.values());
         this.signalFiles = KeyFileMap.children(signalFiles, "s0");
     }
 

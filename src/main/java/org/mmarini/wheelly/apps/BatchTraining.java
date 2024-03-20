@@ -131,6 +131,7 @@ public class BatchTraining {
     private boolean backUp;
     private KpiBinWriter kpiWriter;
     private TDNetwork network;
+    private List<JFrame> allFrames;
 
     /**
      * Creates the application
@@ -175,7 +176,7 @@ public class BatchTraining {
 
         JFrame learnFrame = learnPanel.createFrame();
 
-        List<JFrame> allFrames = List.of(frame, learnFrame);
+        this.allFrames = List.of(frame, learnFrame);
 
         layHorizontally(frame, learnFrame);
 
@@ -281,6 +282,8 @@ public class BatchTraining {
                     .doOnError(ex -> logger.atError().setCause(ex).log("Error on kpis"))
                     .subscribe();
 
+        } else {
+            completed.onComplete();
         }
         // Runs the training session
         info("Training ...");
