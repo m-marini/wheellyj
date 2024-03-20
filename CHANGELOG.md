@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 
 - Issue [#392](https://github.com/m-marini/wheellyj/issues/392): Fix NNActivityMonitor UI
+- Issue [#394](https://github.com/m-marini/wheellyj/issues/394): Fix labels on kpis panel
 
 ## [0.15.0] 2024-03-14
 
