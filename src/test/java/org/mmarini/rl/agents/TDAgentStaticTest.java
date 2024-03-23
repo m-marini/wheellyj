@@ -26,7 +26,6 @@
 package org.mmarini.rl.agents;
 
 import org.junit.jupiter.api.Test;
-import org.mmarini.rl.envs.IntSignal;
 import org.mmarini.rl.envs.Signal;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
@@ -38,7 +37,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.lessThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 
 class TDAgentSingleNNStaticTest {
 
@@ -90,44 +88,5 @@ class TDAgentSingleNNStaticTest {
         assertEquals(0, actions.get("a").getInt(0));
         assertEquals(1, actions.get("b").getInt(0));
         assertEquals(2, actions.get("c").getInt(0));
-    }
-
-    @Test
-    void gradLogPi() {
-        INDArray pi = Nd4j.createFromArray(1f / 7, 2f / 7, 4f / 7).reshape(1, 3);
-        INDArray grad = TDAgentSingleNN.gradLogPi(pi, 0);
-        assertThat(grad, matrixCloseTo(new float[][]{
-                {7f, 0, 0}
-        }, EPSILON));
-
-        grad = TDAgentSingleNN.gradLogPi(pi, 1);
-        assertThat(grad, matrixCloseTo(new float[][]{
-                {0, 7f / 2, 0}
-        }, EPSILON));
-
-        grad = TDAgentSingleNN.gradLogPi(pi, 2);
-        assertThat(grad, matrixCloseTo(new float[][]{
-                {0, 0, 7f / 4}
-        }, EPSILON));
-    }
-
-    @Test
-    void gradLogPi1() {
-        INDArray data = Nd4j.createFromArray(0.8f, 0.2f, 0.4f, 0.6f);
-        Map<String, INDArray> pis = Map.of(
-                "output.a", data.reshape(2, 1, 2).slice(0),
-                "output.b", data.reshape(2, 1, 2).slice(1)
-        );
-        Map<String, Signal> actions = Map.of(
-                "output.a", IntSignal.create(1),
-                "output.b", IntSignal.create(0)
-        );
-        Map<String, INDArray> result = TDAgentSingleNN.gradLogPi(pis, actions);
-        assertThat(result.get("output.a"), matrixCloseTo(new float[][]{
-                {0, 5}
-        }, EPSILON));
-        assertThat(result.get("output.b"), matrixCloseTo(new float[][]{
-                {2.5f, 0}
-        }, EPSILON));
     }
 }

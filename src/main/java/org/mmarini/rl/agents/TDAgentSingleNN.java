@@ -37,10 +37,12 @@ import org.mmarini.rl.processors.InputProcessor;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.ops.impl.transforms.custom.CumSum;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,6 +55,7 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.rl.agents.MapUtils.addKeyPrefix;
 
 /**
  * Agent based on Temporal Difference Actor-Critic with single neural network
@@ -227,37 +230,6 @@ public class TDAgentSingleNN implements Agent {
     }
 
     /**
-     * Returns the gradient of log pi for a given pi and action
-     *
-     * @param pi            the probabilities of each action
-     * @param flattenAction the action applied
-     */
-    static Map<String, INDArray> gradLogPi(Map<String, INDArray> pi, Map<String, Signal> flattenAction) {
-        return Tuple2.stream(flattenAction)
-                .map(t -> {
-                    if (!(t._2 instanceof IntSignal)) {
-                        throw new IllegalArgumentException(format("action must be an integer (%s)", t._2.getClass().getSimpleName()));
-                    }
-                    INDArray grad = gradLogPi(pi.get(t._1),
-                            t._2.getInt(0));
-                    return t.setV2(grad);
-                })
-                .collect(Tuple2.toMap());
-    }
-
-    /**
-     * Returns the gradients of log policy pi
-     *
-     * @param pi     the policy
-     * @param action the selected action
-     */
-    static INDArray gradLogPi(INDArray pi, int action) {
-        INDArray x = Nd4j.zeros(pi.shape());
-        x.putScalar(new int[]{0, action}, 1f);
-        return x.divi(pi);
-    }
-
-    /**
      * Loads the agent from path
      *
      * @param path                the path
@@ -293,7 +265,6 @@ public class TDAgentSingleNN implements Agent {
     private final File modelPath;
     private final int savingIntervalSteps;
     private final InputProcessor processor;
-    private final INDArray dc;
     private final PublishProcessor<Map<String, INDArray>> indicatorsPub;
     private Map<String, Float> alphas;
     private float avgReward;
@@ -331,7 +302,6 @@ public class TDAgentSingleNN implements Agent {
         this.alphas = requireNonNull(alphas);
         this.modelPath = modelPath;
         this.indicatorsPub = PublishProcessor.create();
-        this.dc = Nd4j.ones(1, 1);
         if (actions.containsKey("critic")) {
             throw new IllegalArgumentException("actions must not contain \"critic\" key");
         }
@@ -541,6 +511,18 @@ public class TDAgentSingleNN implements Agent {
     }
 
     /**
+     * Returns the gradient of policies for given actin mask
+     *
+     * @param pi          the policies
+     * @param actionMasks the actin masks
+     */
+    private static Map<String, INDArray> gradLogPiByMask(Map<String, INDArray> pi, Map<String, INDArray> actionMasks) {
+        return MapUtils.mapValues(pi, (key, value) ->
+                actionMasks.get(key).div(value)
+        );
+    }
+
+    /**
      * Trains the agent
      *
      * @param result the environment execution result
@@ -549,73 +531,43 @@ public class TDAgentSingleNN implements Agent {
         // Process input signals of state 0 to produce input network s0
         Map<String, Signal> procState = processSignals(result.state0);
         Map<String, INDArray> s0 = getInput(procState);
-
-        // forward network inputs s0 to produce outputs
-        TDNetworkState state0 = network.forward(s0, true);
-        Map<String, INDArray> pi0 = policy();
-
-        // Computes the state value v0 from critic output
-        float adv0 = state0.getValues("critic").getFloat(0, 0);
-
         // Process input signals of state 1 to produce input network s1
         procState = processSignals(result.state1);
         Map<String, INDArray> s1 = getInput(procState);
-        // Computes the state value v1 from critic output
-        TDNetworkState state1 = network.forward(s1);
-        float adv1 = state1.getValues("critic").getFloat(0, 0);
+        // Merge the states
+        Map<String, INDArray> states = MapUtils.mapValues(s0, (k, v) ->
+                Nd4j.vstack(v, s1.get(k))
+        );
+        // Create the action masks
+        Map<String, INDArray> actionMasks = MapUtils.mapValues(result.actions, (key, action) -> {
+            INDArray mask = Nd4j.zeros(1, ((IntSignalSpec) this.actions.get(key)).numValues());
+            mask.putScalar(0, action.getInt(0), 1F);
+            return mask;
+        });
+        // Create the advantage
+        INDArray advantage = Nd4j.createFromArray((float) (result.reward - avgReward)).reshape(1, 1);
+        // Create the terminal flag
+        INDArray terminal = Nd4j.createFromArray(result.terminal).castTo(DataType.FLOAT).reshape(1, 1);
+        // Train the network
+        INDArray delta = trainWithMask(states, actionMasks, advantage, terminal);
+        TDNetworkState trainedState = network.state().dup();
 
-        // Computes error delta by backing up the state value and the reward
-        float reward = (float) result.reward;
-        float delta = result.terminal
-                ? reward - avgReward // If terminal state reward should be the average reward should be the reward
-                : reward - avgReward + adv1 - adv0;
-
-        // Extract the policy output values pi from network results
-        // Computes log(pi) gradients
-        Map<String, INDArray> dp = gradLogPi(pi0, result.actions);
-
-        // Updates average rewards
+        // Update the average reword
         float avgReward0 = avgReward;
-        avgReward += delta * rewardAlpha;
+        avgReward += delta.getFloat(0, 0) * rewardAlpha;
 
         Map<String, INDArray> kpi = kpiListener != null ? new HashMap<>() : null;
-
-        // Computes output gradients for network (merges critic and policy grads)
-        Map<String, INDArray> grads = new HashMap<>(dp);
-        grads.put("critic", dc);
-
-        // Scale output gradients by learning rate
-        grads = Tuple2.stream(grads)
-                .map(t -> t.setV2(t._2.mul(alphas.get(t._1))))
-                .collect(Tuple2.toMap());
-
-        // Trains network
-        TDNetworkState trainedState = network.setState(state0)
-                .train(grads, Nd4j.createFromArray(delta), lambda, null);
-
         if (this.kpiListener != null) {
             TDNetworkState postTrainedState = network.forward(s0);
-            kpi.putAll(MapUtils.keyPrefix(s0, "s0."));
-            kpi.put("reward", Kpi.create(reward));
+            kpi.putAll(MapUtils.addKeyPrefix(s0, "s0."));
+            kpi.put("reward", Kpi.create(result.reward));
             kpi.put("terminal", Kpi.create(result.terminal));
             kpi.putAll(Kpi.create(result.actions, "actions."));
-            kpi.putAll(MapUtils.keyPrefix(s1, "s1."));
+            kpi.putAll(MapUtils.addKeyPrefix(s1, "s1."));
             kpi.put("avgReward", Kpi.create(avgReward0));
             kpi.put("avgReward1", Kpi.create(avgReward));
-            kpi.put("delta", Kpi.create(delta));
-            kpi.putAll(MapUtils.keyPrefix(state0.values(), "layers0."));
-            kpi.putAll(MapUtils.keyPrefix(state1.values(), "layers1."));
-            kpi.putAll(MapUtils.keyPrefix(postTrainedState.values(), "trainedLayers."));
-            kpi.putAll(MapUtils.keyPrefix(trainedState.gradients(), "grads0."));
-            Map<String, INDArray> deltas = Tuple2.stream(grads).map(t ->
-                            Tuple2.of(
-                                    "deltas." + t._1,
-                                    t._2.mul(delta)
-                            )
-                    )
-                    .collect(Tuple2.toMap());
-            kpi.putAll(MapUtils.keyPrefix(trainedState.parameters(), "trainedParams."));
-            kpi.putAll(deltas);
+            kpi.putAll(MapUtils.addKeyPrefix(postTrainedState.values(), "trainedLayers."));
+            kpi.putAll(MapUtils.addKeyPrefix(trainedState.parameters(), "trainedParams."));
             kpiListener.accept(kpi);
         }
 
@@ -623,5 +575,61 @@ public class TDAgentSingleNN implements Agent {
             savingStepCounter = 0;
             autosave();
         }
+    }
+
+    /**
+     * Returns the errors training the agent
+     *
+     * @param states      the states (size=n+1)
+     * @param actionMasks the action masks (size=n)
+     * @param advantage   the advantages (size=n)
+     * @param terminal    the episode terminal flag
+     */
+    public INDArray trainWithMask(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray advantage, INDArray terminal) {
+        // Predict the advantage
+        INDArray pred = network.forward(states).values().get("critic.values");
+        // Separate the prediction from t and t + 1
+        long n = pred.size(0);
+        INDArray pred0 = pred.get(NDArrayIndex.interval(0, n - 1), NDArrayIndex.all());
+        INDArray pred1 = pred.get(NDArrayIndex.interval(1, n), NDArrayIndex.all());
+        // Compute delta = adv + (term - 1) (v1 - v0)
+        INDArray dv = pred0.sub(pred1);
+        INDArray delta = terminal.sub(1).muli(dv).addi(advantage);
+        Map<String, INDArray> s0 = MapUtils.mapValues(states, (ignored, value) -> value.get(NDArrayIndex.interval(0, n - 1), NDArrayIndex.all()));
+
+        // Runs a forward pass for training
+        TDNetworkState result0 = network.forward(s0, true);
+
+        // Extract the policy output values pi from network results
+        Map<String, INDArray> pi = policy();
+
+        // Computes log(pi) gradients
+        Map<String, INDArray> gradPi = gradLogPiByMask(pi, actionMasks);
+
+        // Creates the gradients
+        Map<String, INDArray> grads = new HashMap<>(MapUtils.mapValues(gradPi, (key, v) ->
+                v.mul(alphas.get(key))));
+
+        // Computes output gradients for network (merges critic and policy grads)
+        INDArray criticGrad = Nd4j.onesLike(delta).muli(alphas.get("critic"));
+        grads.put("critic", criticGrad);
+
+        network.train(grads, delta, lambda, null);
+
+        if (kpiListener != null) {
+            Map<String, INDArray> kpis = new HashMap<>();
+            kpis.put("delta", delta);
+            kpis.putAll(addKeyPrefix(result0.gradients(), "grads0."));
+            kpis.putAll(addKeyPrefix(result0.values(), "layers0."));
+            Map<String, INDArray> deltas = Tuple2.stream(grads).map(t ->
+                            Tuple2.of(
+                                    "deltas." + t._1,
+                                    t._2.mul(delta)
+                            ))
+                    .collect(Tuple2.toMap());
+            kpis.putAll(deltas);
+            kpiListener.accept(kpis);
+        }
+        return delta;
     }
 }

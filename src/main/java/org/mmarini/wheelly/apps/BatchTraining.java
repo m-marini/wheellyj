@@ -34,17 +34,15 @@ import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
-import org.mmarini.Tuple2;
+import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.BatchTrainer;
 import org.mmarini.rl.agents.KpiBinWriter;
-import org.mmarini.rl.agents.Serde;
-import org.mmarini.rl.nets.TDNetwork;
+import org.mmarini.rl.agents.TDAgentSingleNN;
+import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.wheelly.swing.KpisPanel;
 import org.mmarini.wheelly.swing.LearnPanel;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.yaml.Locator;
-import org.mmarini.yaml.Utils;
-import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
@@ -53,11 +51,7 @@ import org.slf4j.LoggerFactory;
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
-import java.io.IOException;
-import java.util.Calendar;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Predicate;
 
 import static java.lang.String.format;
@@ -67,10 +61,10 @@ import static org.mmarini.wheelly.swing.Utils.layHorizontally;
 import static org.mmarini.yaml.Utils.fromFile;
 
 /**
- * Run a test to check for robot environment with random behavior agent
+ * Run the batch training of agent from kpis files
  */
 public class BatchTraining {
-    private static final String BATCH_SCHEMA_YML = "https://mmarini.org/wheelly/batch-schema-0.1";
+    private static final String BATCH_SCHEMA_YML = "https://mmarini.org/wheelly/batch-schema-0.2";
     private static final int KPIS_CAPACITY = 1000;
     private static final Logger logger = LoggerFactory.getLogger(BatchTraining.class);
 
@@ -126,12 +120,10 @@ public class BatchTraining {
     private final KpisPanel kpisPanel;
     private final JProgressBar recordBar;
     private final LearnPanel learnPanel;
-    private String pathFile;
     private BatchTrainer trainer;
-    private boolean backUp;
     private KpiBinWriter kpiWriter;
-    private TDNetwork network;
     private List<JFrame> allFrames;
+    private TDAgentSingleNN agent;
 
     /**
      * Creates the application
@@ -164,7 +156,7 @@ public class BatchTraining {
     }
 
     private void createFrames() {
-        List<String> outputs = network.sinkLayers();
+        List<String> outputs = agent.network().sinkLayers();
 
         // Create the frame
         String[] actions = outputs.stream()
@@ -225,32 +217,6 @@ public class BatchTraining {
     }
 
     /**
-     * Returns the alphas from agent yaml file
-     *
-     * @throws IOException in case of error
-     */
-    private Map<String, Float> loadAlphas() throws IOException {
-        JsonNode spec = Utils.fromFile(new File(pathFile, "agent.yml"));
-        return Locator.locate("alphas").propertyNames(spec)
-                .map(Tuple2.map2(l -> (float) l.getNode(spec).asDouble()))
-                .collect(Tuple2.toMap());
-    }
-
-    /**
-     * Returns the network from agent path
-     *
-     * @param random the random number generator
-     * @throws IOException in case of error
-     */
-    private TDNetwork loadNetwork(Random random) throws IOException {
-        JsonNode spec = Utils.fromFile(new File(pathFile, "agent.yml"));
-        File file = new File(pathFile, "agent.bin");
-        Map<String, INDArray> props = Serde.deserialize(file);
-        Locator locator = Locator.root();
-        return TDNetwork.fromJson(spec, locator.path("network"), props, random);
-    }
-
-    /**
      * Runs the batch
      *
      * @throws Exception in case of error
@@ -294,27 +260,11 @@ public class BatchTraining {
     /**
      * Saves the network
      *
-     * @param network the network
+     * @param agent the agent
      */
-    private void saveNetwork(TDNetwork network) {
-        File file = new File(pathFile, "agent.bin");
-        if (!args.getBoolean("no_backup") && !backUp) {
-            // rename network file to back up
-            String backupFileName = format("agent-%1$tY%1$tm%1$td-%1$tH%1$tM%1$tS.bin", Calendar.getInstance());
-            file.renameTo(new File(file.getParentFile(), backupFileName));
-            backUp = true;
-            logger.atInfo().log("Backup at {}", backupFileName);
-        }
-
+    private void saveNetwork(TDAgentSingleNN agent) {
         info("Saving network ...");
-        Map<String, INDArray> props = new HashMap<>(network.parameters());
-        props.put("avgReward", Nd4j.createFromArray(trainer.avgReward()));
-        try {
-            Serde.serizalize(file, props);
-            logger.atInfo().log("Saved network in {}", file.getCanonicalPath());
-        } catch (IOException e) {
-            logger.atError().setCause(e).log("Error saving network");
-        }
+        agent.autosave();
     }
 
     /**
@@ -332,26 +282,23 @@ public class BatchTraining {
         if (seed > 0) {
             random.setSeed(seed);
         }
-
-        // Loads network
-        info("Load network ...");
-        this.pathFile = Locator.locate("modelPath").getNode(config).asText();
-        this.network = loadNetwork(random);
+        RobotEnvironment environment = AppYaml.envFromJson(config, Locator.root(), BATCH_SCHEMA_YML);
+        Locator agentLocator = Locator.locate(Locator.locate("agent").getNode(config).asText());
+        if (agentLocator.getNode(config).isMissingNode()) {
+            throw new IllegalArgumentException(format("Missing node %s", agentLocator));
+        }
+        // Loads agent
+        this.agent = (TDAgentSingleNN) Agent.fromConfig(config, agentLocator, environment);
 
         // Create the batch trainer
-        int numTrainIterations1 = Locator.locate("numTrainIterations1").getNode(config).asInt();
-        int numTrainIterations2 = Locator.locate("numTrainIterations2").getNode(config).asInt();
+        int numEpochs = Locator.locate("numEpochs").getNode(config).asInt();
         long batchSize = Locator.locate("batchSize").getNode(config).asLong(Long.MAX_VALUE);
-        Map<String, Float> alphas = loadAlphas();
-        this.trainer = BatchTrainer.create(network,
-                alphas,
-                0,
-                numTrainIterations1,
-                numTrainIterations2,
+        this.trainer = BatchTrainer.create(agent,
+                numEpochs,
                 (int) batchSize,
                 this::saveNetwork
         );
-        learnPanel.setLearningRates(alphas);
+        learnPanel.setLearningRates(agent.alphas());
         trainer.readInfo()
                 .observeOn(Schedulers.io())
                 .doOnNext(this::info)

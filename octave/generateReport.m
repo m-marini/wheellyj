@@ -21,7 +21,6 @@ function generateReport(dataPath, reportPath)
 
   fprintf(hFile, "\n");
   generateKpiReport(hFile, [dataPath "/reward"], reportPath, "reward", "Reward", mode);
-  generateKpiReport(hFile, [dataPath "/deltaPhase1"], reportPath, "deltaPhase1", "Delta Phase 1", mode);
   generateKpiReport(hFile, [dataPath "/delta"], reportPath, "delta", "Delta", mode);
   generateKpiReport(hFile, [dataPath "/layers0/direction/values/maxAbs"], reportPath, "policy_direction", "Direction max prob.", mode);
   generateKpiReport(hFile, [dataPath "/layers0/direction/values/maxMinRatio"], reportPath, "policy_direction_ratio", "Direction max/min ratio", mode);

@@ -31,6 +31,7 @@ package org.mmarini.rl.agents;
 import org.mmarini.Tuple2;
 
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
@@ -44,7 +45,7 @@ public interface MapUtils {
      * @param prefix the prefix
      * @param <T>    the map type
      */
-    static <T> Map<String, T> keyPrefix(Map<String, T> map, String prefix) {
+    static <T> Map<String, T> addKeyPrefix(Map<String, T> map, String prefix) {
         return mapKey(map, k -> prefix + k);
     }
 
@@ -60,6 +61,21 @@ public interface MapUtils {
     static <K1, K2, V> Map<K2, V> mapKey(Map<K1, V> map, Function<K1, K2> mapper) {
         return Tuple2.stream(map)
                 .map(Tuple2.map1(mapper))
+                .collect(Tuple2.toMap());
+    }
+
+    /**
+     * Return the map with values mapped by mapper function
+     *
+     * @param map    the map
+     * @param mapper the mapper function
+     * @param <K>    the type of key
+     * @param <V1>   the type of input value
+     * @param <V2>   the type of output value
+     */
+    static <K, V1, V2> Map<K, V2> mapValues(Map<K, V1> map, BiFunction<K, V1, V2> mapper) {
+        return Tuple2.stream(map)
+                .map(t -> t.setV2(mapper.apply(t._1, t._2)))
                 .collect(Tuple2.toMap());
     }
 }

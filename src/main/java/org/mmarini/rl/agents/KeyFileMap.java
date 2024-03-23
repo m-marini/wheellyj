@@ -182,7 +182,7 @@ public interface KeyFileMap {
                     .map(f -> {
                         try {
                             return format("%s (%d)",
-                                    f.file().getName(),
+                                    f.file(),
                                     f.size());
                         } catch (IOException e) {
                             throw new RuntimeException(e);
@@ -192,7 +192,7 @@ public interface KeyFileMap {
             if (!wrongSizes.isEmpty()) {
                 throw new RuntimeException(format("Wrong files size %s reffered to %s (%d)",
                         String.join(", ", wrongSizes),
-                        refFile, size));
+                        refFile.file(), size));
             }
         }
     }

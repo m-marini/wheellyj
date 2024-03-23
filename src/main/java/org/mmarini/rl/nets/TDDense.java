@@ -38,6 +38,7 @@ import org.nd4j.linalg.ops.transforms.Transforms;
 import java.util.Arrays;
 import java.util.function.Consumer;
 
+import static java.lang.Math.sqrt;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
@@ -110,9 +111,10 @@ public class TDDense extends TDLayer {
         long outputSize = state.getSize(name);
         INDArray bias = Nd4j.zeros(1, outputSize);
         // Xavier initialization
+        double sigma = sqrt(2D / (inputSize + outputSize));
         INDArray weights = state.random()
                 .nextGaussian(new long[]{inputSize, outputSize})
-                .divi((inputSize + outputSize));
+                .muli(sigma);
         return state.putBias(name, bias)
                 .putWeights(name, weights);
     }
@@ -163,12 +165,16 @@ public class TDDense extends TDLayer {
                 // eb = eb * lambda + grad;
                 INDArrayIndex index = NDArrayIndex.indices(i);
                 INDArray gradi = grad.get(index);
-                eb.muli(lambda).addi(gradi.div(dropOut));
+                try (INDArray gradDrop = gradi.div(dropOut)) {
+                    eb.muli(lambda).addi(gradDrop);
+                }
 
                 INDArray bgrad = gradi.broadcast(w.shape());
-                INDArray bin = maskInp.get(index).transpose().broadcast(w.shape());
-                INDArray grad_dw = bin.mul(bgrad);
-                ew.muli(lambda).addi(grad_dw);
+                try (INDArray bin = maskInp.get(index).transpose().broadcast(w.shape())) {
+                    try (INDArray grad_dw = bin.mul(bgrad)) {
+                        ew.muli(lambda).addi(grad_dw);
+                    }
+                }
 
                 INDArray deltai = delta.get(index);
                 INDArray db = eb.mul(deltai);
