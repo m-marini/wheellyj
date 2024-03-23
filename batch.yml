@@ -4,7 +4,7 @@ robot: robots/simRobot
 controller: controllers/controller
 environment: environments/polarMapEnv
 agent: agents/polarRadarAgent
-numEpochs: 3
+numEpochs: 10
 batchSize: 32
 seed: 1234
 
