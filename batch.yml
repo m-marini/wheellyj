@@ -1,7 +1,200 @@
 ---
-$schema: https://mmarini.org/wheelly/batch-schema-0.1
-modelPath: models/polarRadarAgent
-numTrainIterations1: 3
-numTrainIterations2: 3
+$schema: https://mmarini.org/wheelly/batch-schema-0.2
+robot: robots/simRobot
+controller: controllers/controller
+environment: environments/polarMapEnv
+agent: agents/polarRadarAgent
+numEpochs: 10
 batchSize: 32
 seed: 1234
+
+robots:
+  simRobot:
+    $schema: https://mmarini.org/wheelly/sim-robot-schema-0.2
+    class: org.mmarini.wheelly.apis.SimRobot
+    # robotSeed: 1234
+    mapSeed: 1234
+    numObstacles: 10
+    changeObstaclesPeriod: 300000
+    errSigma: 0.05
+    errSensor: 0.05
+    sensorReceptiveAngle: 15
+    maxAngularSpeed: 5
+
+controllers:
+  controller:
+    $schema: https://mmarini.org/wheelly/controller-schema-1.0
+    class: org.mmarini.wheelly.apis.RobotController
+    interval: 100
+    reactionInterval: 300
+    commandInterval: 600
+    connectionRetryInterval: 1000
+    watchdogInterval: 5000
+    simulationSpeed: 10
+    supplyValues: [ 1762, 2878 ]
+    voltages: [ 8.3, 11.9 ]
+
+environments:
+  polarMapEnv:
+    $schema: https://mmarini.org/wheelly/env-polar-schema-0.1
+    class: org.mmarini.wheelly.envs.PolarRobotEnv
+    objective: objectives/cautious
+    interval: 10
+    commandInterval: 600
+    reactionInterval: 300
+    numDirectionValues: 24
+    numSpeedValues: 9
+    numSensorValues: 7
+    radarWidth: 51
+    radarHeight: 51
+    radarGrid: 0.2
+    contactRadius: 0.28
+    radarReceptiveAngle: 15
+    echoPersistence: 300000
+    contactPersistence: 300000
+    radarCleanInterval: 30000
+    numRadarSectors: 24
+    minRadarDistance: 0.3
+    maxRadarDistance: 3
+
+objectives:
+  cautious:
+    $schema: https://mmarini.org/wheelly/objective-cautious-schema-0.1
+    class: org.mmarini.wheelly.objectives.Cautious
+    maxDistance: 3
+
+agents:
+  ######################################
+  # Polar radar agent
+  ######################################
+  polarRadarAgent:
+    $schema: https://mmarini.org/wheelly/agent-single-nn-schema-0.2
+    class: org.mmarini.rl.agents.TDAgentSingleNN
+    modelPath: models/polarRadarAgent
+    savingIntervalSteps: 1000
+    rewardAlpha: 5e-3
+    alphas:
+      critic: 100e-6
+      sensorAction: 100e-6
+      speed: 100e-6
+      direction: 100e-6
+    lambda: 0.5
+    inputProcess:
+      - name: emptySectors
+        class: org.mmarini.rl.processors.NotProcessor
+        input: sectorDistances
+      - name: sectorStateCodes
+        class: org.mmarini.rl.processors.DecodeProcessor
+        inputs:
+          - emptySectors
+          - knownSectors
+      - name: sectorStateFeatures
+        class: org.mmarini.rl.processors.FeaturesProcessor
+        input: sectorStateCodes
+      - name: canMoveFeatures
+        class: org.mmarini.rl.processors.FeaturesProcessor
+        input: canMoveStates
+      - name: distanceMask
+        class: org.mmarini.rl.processors.AndProcessor
+        inputs:
+          - sectorDistances
+          - knownSectors
+      - name: unmaskDistanceFeatures
+        class: org.mmarini.rl.processors.TilesProcessor
+        input: sectorDistances
+        numTiles: 8
+      - name: distanceFeatures
+        class: org.mmarini.rl.processors.MaskProcessor
+        input: unmaskDistanceFeatures
+        mask: distanceMask
+    network:
+      layer0:
+        inputs:
+          type: concat
+          inputs:
+            - canMoveFeatures
+            - sectorStateFeatures
+            - distanceFeatures
+        layers:
+          - type: dense
+            outputSize: 128
+            dropOut: 0.8
+            maxAbsWeights: 1E2
+          - type: relu
+      hidden0:
+        input: layer0
+        layers:
+          - type: dense
+            outputSize: 128
+            dropOut: 0.5
+            maxAbsWeights: 1E2
+          - type: relu
+          - type: dense
+            outputSize: 128
+            dropOut: 0.5
+            maxAbsWeights: 1E2
+      resnet0:
+        inputs:
+          type: sum
+          inputs:
+            - layer0
+            - hidden0
+        layers:
+          - type: relu
+      hidden1:
+        input: resnet0
+        layers:
+          - type: dense
+            outputSize: 128
+            maxAbsWeights: 1E2
+            dropOut: 0.5
+          - type: relu
+          - type: dense
+            outputSize: 128
+            maxAbsWeights: 1E2
+            dropOut: 0.5
+      resnet1:
+        inputs:
+          type: sum
+          inputs:
+            - resnet0
+            - hidden1
+        layers:
+          - type: relu
+      direction:
+        input: resnet1
+        layers:
+          - type: dense
+            outputSize: 24
+            maxAbsWeights: 1E2
+          - type: tanh
+          - type: softmax
+            temperature: 0.434
+      speed:
+        input: resnet1
+        layers:
+          - type: dense
+            maxAbsWeights: 1E2
+            outputSize: 10
+          - type: tanh
+          - type: softmax
+            temperature: 0.434
+      sensorAction:
+        input: resnet1
+        layers:
+          - type: dense
+            maxAbsWeights: 1E2
+            outputSize: 7
+          - type: tanh
+          - type: softmax
+            temperature: 0.434
+      critic:
+        input: resnet1
+        layers:
+          - type: dense
+            outputSize: 1
+            maxAbsWeights: 1E2
+          - type: tanh
+          - type: linear
+            b: 0
+            w: 3

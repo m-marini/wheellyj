@@ -51,7 +51,6 @@ public class KpiBinWriter implements AutoCloseable {
     public static final String[] ANALYSIS_KPIS = {
             "^reward$",
             "^delta$",
-            "^deltaPhase1$",
             "^deltas\\..*$",
             "^layers0\\..*$",
             "^grads0\\..*$",
@@ -60,7 +59,6 @@ public class KpiBinWriter implements AutoCloseable {
             "^reward$",
             "^terminal$",
             "^s0\\..*$",
-            "^s1\\..*$",
             "^actions\\..*$"
     };
 

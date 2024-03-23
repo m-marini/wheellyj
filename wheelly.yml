@@ -50,7 +50,7 @@ environments:
   polarMapEnv:
     $schema: https://mmarini.org/wheelly/env-polar-schema-0.1
     class: org.mmarini.wheelly.envs.PolarRobotEnv
-    objective: objectives/explore
+    objective: objectives/cautious
     interval: 10
     commandInterval: 600
     reactionInterval: 300
