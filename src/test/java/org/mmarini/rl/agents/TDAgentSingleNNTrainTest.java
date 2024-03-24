@@ -110,7 +110,7 @@ class TDAgentSingleNNTrainTest {
         );
         ExecutionResult result = new ExecutionResult(s0, actions, -1, s1, false);
 
-        agent.train(result);
+        agent.trainOnLine(result);
 
         netResults = agent.network().forward(input);
         float v10 = netResults.getValues("critic").getFloat(0);
@@ -175,7 +175,7 @@ class TDAgentSingleNNTrainTest {
         ExecutionResult result = new ExecutionResult(s0, actions, 1, s1, false);
 
         // When trains with positive reward
-        agent.train(result);
+        agent.trainOnLine(result);
 
         // Then average reward should increase
         netResults = agent.network().forward(input);

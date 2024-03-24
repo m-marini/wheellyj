@@ -104,7 +104,7 @@ public class BatchTraining {
     public static void main(String[] args) {
         ArgumentParser parser = createParser();
         try {
-            new BatchTraining(parser.parseArgs(args)).start();
+            new BatchTraining(parser.parseArgs(args)).run();
         } catch (ArgumentParserException e) {
             parser.handleError(e);
             System.exit(1);
@@ -270,7 +270,7 @@ public class BatchTraining {
     /**
      * Starts the training
      */
-    protected void start() throws Exception {
+    protected void run() throws Exception {
 
         // Load configuration
         JsonNode config = fromFile(this.args.getString("config"));
@@ -289,6 +289,7 @@ public class BatchTraining {
         }
         // Loads agent
         this.agent = (TDAgentSingleNN) Agent.fromConfig(config, agentLocator, environment);
+        this.agent.setPostTrainKpis(true);
 
         // Create the batch trainer
         int numEpochs = Locator.locate("numEpochs").getNode(config).asInt();

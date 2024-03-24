@@ -305,7 +305,7 @@ public class BatchTrainer {
             if (term == null || adv == null || actionsMasks == null) {
                 break;
             }
-            agent.trainWithMask(s0, actionsMasks, adv, term);
+            agent.trainBatch(s0, actionsMasks, adv, term);
 
             n += m - 1;
             counterProcessor.onNext(n);

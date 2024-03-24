@@ -173,7 +173,7 @@ class TDAgentSingleNNBatchTest {
         double pi_s1a0t0 = pi_t0.getDouble(1, 0);
         double pi_s1a1t0 = pi_t0.getDouble(1, 1);
 
-        agent.trainWithMask(s0, masks, adv, term);
+        agent.trainBatch(s0, masks, adv, term);
         TDNetworkState result1 = agent.network().forward(sTest);
         INDArray pred_t1 = result1.getValues("critic");
         double pred_s0t1 = pred_t1.getDouble(0, 0);
@@ -187,7 +187,7 @@ class TDAgentSingleNNBatchTest {
         // And run n epochs
         int n = 100;
         for (int i = 0; i < n; i++) {
-            agent.trainWithMask(s0, masks, adv, term);
+            agent.trainBatch(s0, masks, adv, term);
         }
         TDNetworkState resultn = agent.network().forward(sTest);
         INDArray pred_tn = resultn.getValues("critic");

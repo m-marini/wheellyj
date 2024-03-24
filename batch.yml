@@ -117,7 +117,7 @@ agents:
             - distanceFeatures
         layers:
           - type: dense
-            outputSize: 128
+            outputSize: 144
             dropOut: 0.8
             maxAbsWeights: 1E2
           - type: relu
@@ -125,12 +125,12 @@ agents:
         input: layer0
         layers:
           - type: dense
-            outputSize: 128
+            outputSize: 144
             dropOut: 0.5
             maxAbsWeights: 1E2
           - type: relu
           - type: dense
-            outputSize: 128
+            outputSize: 144
             dropOut: 0.5
             maxAbsWeights: 1E2
       resnet0:
@@ -145,12 +145,12 @@ agents:
         input: resnet0
         layers:
           - type: dense
-            outputSize: 128
+            outputSize: 144
             maxAbsWeights: 1E2
             dropOut: 0.5
           - type: relu
           - type: dense
-            outputSize: 128
+            outputSize: 144
             maxAbsWeights: 1E2
             dropOut: 0.5
       resnet1:
@@ -161,8 +161,28 @@ agents:
             - hidden1
         layers:
           - type: relu
-      direction:
+      hidden2:
         input: resnet1
+        layers:
+          - type: dense
+            outputSize: 144
+            dropOut: 0.5
+            maxAbsWeights: 1E2
+          - type: relu
+          - type: dense
+            outputSize: 144
+            dropOut: 0.5
+            maxAbsWeights: 1E2
+      resnet2:
+        inputs:
+          type: sum
+          inputs:
+            - resnet1
+            - hidden2
+        layers:
+          - type: relu
+      direction:
+        input: resnet2
         layers:
           - type: dense
             outputSize: 24
@@ -171,7 +191,7 @@ agents:
           - type: softmax
             temperature: 0.434
       speed:
-        input: resnet1
+        input: resnet2
         layers:
           - type: dense
             maxAbsWeights: 1E2
@@ -180,7 +200,7 @@ agents:
           - type: softmax
             temperature: 0.434
       sensorAction:
-        input: resnet1
+        input: resnet2
         layers:
           - type: dense
             maxAbsWeights: 1E2
@@ -189,7 +209,7 @@ agents:
           - type: softmax
             temperature: 0.434
       critic:
-        input: resnet1
+        input: resnet2
         layers:
           - type: dense
             outputSize: 1
