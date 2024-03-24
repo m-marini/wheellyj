@@ -49,6 +49,8 @@ import static org.mmarini.Utils.zipWithIndex;
 public class LearnPanel extends JPanel {
     public static final Dimension DEFAULT_PREFERED_SIZE = new Dimension(500, 300);
     private static final double[] VALUES = new double[]{
+            1e-6,
+            3e-6,
             10e-6,
             30e-6,
             100e-6,
@@ -57,15 +59,15 @@ public class LearnPanel extends JPanel {
             3e-3,
             10e-3,
             30e-3,
-            100e-3,
-            300e-3,
-            1,
+            100e-3
     };
     private static final Dictionary<Integer, JComponent> LABELS = createLabels();
 
     private static Dictionary<Integer, JComponent> createLabels() {
         Dictionary<Integer, JComponent> labels = new Hashtable<>();
         zipWithIndex(List.of(
+                "1 ppm",
+                "3 ppm",
                 "10 ppm",
                 "30 ppm",
                 "100 ppm",
@@ -74,9 +76,7 @@ public class LearnPanel extends JPanel {
                 "0.003",
                 "0.010",
                 "0.030",
-                "0.100",
-                "0.300",
-                "1"
+                "0.100"
         )).forEach(t ->
                 labels.put(t._1, new JLabel(t._2)));
         return labels;

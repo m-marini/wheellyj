@@ -90,7 +90,7 @@ public class KpisPanel extends MatrixTable {
                 throw new RuntimeException(e);
             }
         }
-        handleDeltaAdvantage(kpis);
+        handleDelta(kpis);
     }
 
     /**
@@ -103,10 +103,18 @@ public class KpisPanel extends MatrixTable {
         return kpis -> {
             INDArray pi0 = kpis.get("layers0." + action + ".values");
             INDArray pi1 = kpis.get("trainedLayers." + action + ".values");
-            INDArray actions = kpis.get("actions." + action);
+            INDArray actions = kpis.get("actionsMasks." + action);
             if (pi0 != null && pi1 != null && actions != null) {
-                try (INDArray ratio = pi1.sub(pi0).divi(pi0)) {
-                    printf(action + ".deltaAction", "%,10.3f", deltaRms.add(ratio).value() * 100);
+                try (INDArray pi0a = pi0.mul(actions)) {
+                    try (INDArray pi0max = pi0a.max(true, 1)) {
+                        try (INDArray pi1a = pi1.mul(actions)) {
+                            try (INDArray pi1max = pi1a.max(true, 1)) {
+                                try (INDArray ratio = pi1max.sub(pi0max).divi(pi0max)) {
+                                    printf(action + ".deltaAction", "%,10.3f", deltaRms.add(ratio).value() * 100);
+                                }
+                            }
+                        }
+                    }
                 }
             }
         };
@@ -171,17 +179,14 @@ public class KpisPanel extends MatrixTable {
     }
 
     /**
-     * Returns the handler of delta critic policy kpis
+     * Returns the handler of delta critic kpis
      *
      * @param kpis the kpis
      */
-    private void handleDeltaAdvantage(Map<String, INDArray> kpis) {
-        INDArray adv0 = kpis.get("layers0.critic.values");
-        INDArray adv1 = kpis.get("trainedLayers.critic.values");
-        if (adv0 != null && adv1 != null) {
-            try (INDArray deltaAdv = adv1.sub(adv0)) {
-                printf("deltaAdv", "%,10.3f", deltaRms.add(deltaAdv).value());
-            }
+    private void handleDelta(Map<String, INDArray> kpis) {
+        INDArray delta = kpis.get("delta");
+        if (delta != null) {
+            printf("deltaAdv", "%,10.3f", deltaRms.add(delta).value());
         }
     }
 

@@ -49,7 +49,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -269,8 +268,21 @@ public class TDAgentSingleNN implements Agent {
     private Map<String, Float> alphas;
     private float avgReward;
     private int savingStepCounter;
-    private Consumer<Map<String, INDArray>> kpiListener;
     private boolean backedUp;
+
+    /**
+     * Returns the gradient of policies for given action mask
+     *
+     * @param pi          the policies
+     * @param actionMasks the action masks
+     */
+    private static Map<String, INDArray> gradLogPiByMask(Map<String, INDArray> pi, Map<String, INDArray> actionMasks) {
+        return MapUtils.mapValues(pi, (key, value) ->
+                actionMasks.get(key).div(value)
+        );
+    }
+
+    private Map<String, INDArray> kpis;
 
     /**
      * Creates a random behavior agent
@@ -316,6 +328,8 @@ public class TDAgentSingleNN implements Agent {
 
         network.validate(stateSizes, networkSizes);
     }
+
+    private boolean postTrainKpis;
 
     @Override
     public Map<String, Signal> act(Map<String, Signal> state) {
@@ -421,11 +435,6 @@ public class TDAgentSingleNN implements Agent {
         return network;
     }
 
-    @Override
-    public void observe(Environment.ExecutionResult result) {
-        train(result);
-    }
-
     /**
      * Returns the policy outputs from network state
      */
@@ -487,9 +496,6 @@ public class TDAgentSingleNN implements Agent {
      */
     @Override
     public Flowable<Map<String, INDArray>> readKpis() {
-        if (kpiListener == null) {
-            kpiListener = indicatorsPub::onNext;
-        }
         return indicatorsPub.onBackpressureBuffer(KPIS_CAPACITY);
     }
 
@@ -510,16 +516,39 @@ public class TDAgentSingleNN implements Agent {
         Serde.serizalize(new File(pathFile, "agent.bin"), props);
     }
 
+    @Override
+    public void observe(Environment.ExecutionResult result) {
+        trainOnLine(result);
+    }
+
     /**
-     * Returns the gradient of policies for given actin mask
+     * Sets the post train kpis flag
      *
-     * @param pi          the policies
-     * @param actionMasks the actin masks
+     * @param postTrainKpis true to activate pot train kpis
      */
-    private static Map<String, INDArray> gradLogPiByMask(Map<String, INDArray> pi, Map<String, INDArray> actionMasks) {
-        return MapUtils.mapValues(pi, (key, value) ->
-                actionMasks.get(key).div(value)
-        );
+    public void setPostTrainKpis(boolean postTrainKpis) {
+        this.postTrainKpis = postTrainKpis;
+    }
+
+    /**
+     * Returns the errors training the agent
+     *
+     * @param states      the states (size=n+1)
+     * @param actionMasks the action masks (size=n)
+     * @param advantage   the advantages (size=n)
+     * @param terminal    the episode terminal flag
+     */
+    public INDArray trainBatch(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray advantage, INDArray terminal) {
+        this.kpis = new HashMap<>();
+        INDArray result = trainWithMask(states, actionMasks, advantage, terminal);
+        if (postTrainKpis) {
+            long n = advantage.size(0);
+            Map<String, INDArray> s0 = MapUtils.mapValues(states, (ignored, value) -> value.get(NDArrayIndex.interval(0, n), NDArrayIndex.all()));
+            TDNetworkState postTrainedState = network.forward(s0);
+            kpis.putAll(MapUtils.addKeyPrefix(postTrainedState.values(), "trainedLayers."));
+        }
+        this.indicatorsPub.onNext(kpis);
+        return result;
     }
 
     /**
@@ -527,7 +556,8 @@ public class TDAgentSingleNN implements Agent {
      *
      * @param result the environment execution result
      */
-    void train(Environment.ExecutionResult result) {
+    void trainOnLine(Environment.ExecutionResult result) {
+        this.kpis = new HashMap<>();
         // Process input signals of state 0 to produce input network s0
         Map<String, Signal> procState = processSignals(result.state0);
         Map<String, INDArray> s0 = getInput(procState);
@@ -550,31 +580,25 @@ public class TDAgentSingleNN implements Agent {
         INDArray terminal = Nd4j.createFromArray(result.terminal).castTo(DataType.FLOAT).reshape(1, 1);
         // Train the network
         INDArray delta = trainWithMask(states, actionMasks, advantage, terminal);
-        TDNetworkState trainedState = network.state().dup();
 
         // Update the average reword
         float avgReward0 = avgReward;
         avgReward += delta.getFloat(0, 0) * rewardAlpha;
 
-        Map<String, INDArray> kpi = kpiListener != null ? new HashMap<>() : null;
-        if (this.kpiListener != null) {
+        kpis.put("reward", Kpi.create(result.reward));
+        kpis.put("terminal", Kpi.create(result.terminal));
+        kpis.putAll(Kpi.create(result.actions, "actions."));
+        kpis.put("avgReward", Kpi.create(avgReward0));
+        kpis.put("avgReward1", Kpi.create(avgReward));
+        if (postTrainKpis) {
             TDNetworkState postTrainedState = network.forward(s0);
-            kpi.putAll(MapUtils.addKeyPrefix(s0, "s0."));
-            kpi.put("reward", Kpi.create(result.reward));
-            kpi.put("terminal", Kpi.create(result.terminal));
-            kpi.putAll(Kpi.create(result.actions, "actions."));
-            kpi.putAll(MapUtils.addKeyPrefix(s1, "s1."));
-            kpi.put("avgReward", Kpi.create(avgReward0));
-            kpi.put("avgReward1", Kpi.create(avgReward));
-            kpi.putAll(MapUtils.addKeyPrefix(postTrainedState.values(), "trainedLayers."));
-            kpi.putAll(MapUtils.addKeyPrefix(trainedState.parameters(), "trainedParams."));
-            kpiListener.accept(kpi);
+            kpis.putAll(MapUtils.addKeyPrefix(postTrainedState.values(), "trainedLayers."));
         }
-
         if (++savingStepCounter >= savingIntervalSteps) {
             savingStepCounter = 0;
             autosave();
         }
+        indicatorsPub.onNext(kpis);
     }
 
     /**
@@ -585,9 +609,11 @@ public class TDAgentSingleNN implements Agent {
      * @param advantage   the advantages (size=n)
      * @param terminal    the episode terminal flag
      */
-    public INDArray trainWithMask(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray advantage, INDArray terminal) {
+    private INDArray trainWithMask(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray advantage, INDArray terminal) {
         // Predict the advantage
-        INDArray pred = network.forward(states).values().get("critic.values");
+        TDNetworkState forward = network.forward(states);
+        Map<String, INDArray> layerStates = forward.values();
+        INDArray pred = layerStates.get("critic.values");
         // Separate the prediction from t and t + 1
         long n = pred.size(0);
         INDArray pred0 = pred.get(NDArrayIndex.interval(0, n - 1), NDArrayIndex.all());
@@ -614,22 +640,30 @@ public class TDAgentSingleNN implements Agent {
         INDArray criticGrad = Nd4j.onesLike(delta).muli(alphas.get("critic"));
         grads.put("critic", criticGrad);
 
-        network.train(grads, delta, lambda, null);
+        TDNetworkState trainedState = network.train(grads, delta, lambda, null);
 
-        if (kpiListener != null) {
-            Map<String, INDArray> kpis = new HashMap<>();
-            kpis.put("delta", delta);
-            kpis.putAll(addKeyPrefix(result0.gradients(), "grads0."));
-            kpis.putAll(addKeyPrefix(result0.values(), "layers0."));
-            Map<String, INDArray> deltas = Tuple2.stream(grads).map(t ->
+        // Create kpis
+        kpis.putAll(MapUtils.addKeyPrefix(s0, "s0."));
+        kpis.putAll(MapUtils.addKeyPrefix(actionMasks, "actionsMasks."));
+        kpis.put("delta", delta);
+        Map<String, INDArray> layers0 = MapUtils.mapValues(layerStates, (k, v) ->
+                v.get(NDArrayIndex.interval(0, n - 1), NDArrayIndex.all())
+        );
+        kpis.putAll(addKeyPrefix(layers0, "layers0."));
+        kpis.putAll(addKeyPrefix(result0.gradients(), "grads0."));
+        Map<String, INDArray> deltas = Tuple2.stream(grads).map(t ->
                             Tuple2.of(
                                     "deltas." + t._1,
                                     t._2.mul(delta)
                             ))
                     .collect(Tuple2.toMap());
-            kpis.putAll(deltas);
-            kpiListener.accept(kpis);
+        kpis.putAll(deltas);
+        kpis.putAll(MapUtils.addKeyPrefix(trainedState.parameters(), "trainedParams."));
+        if (++savingStepCounter >= savingIntervalSteps) {
+            savingStepCounter = 0;
+            autosave();
         }
+
         return delta;
     }
 }

@@ -60,12 +60,12 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static io.reactivex.rxjava3.core.Flowable.interval;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.swing.Utils.*;
 import static org.mmarini.yaml.Utils.fromFile;
 
@@ -117,7 +117,16 @@ public class Wheelly {
      * @param args command line arguments
      */
     public static void main(String[] args) {
-        new Wheelly().start(args);
+        ArgumentParser parser = createParser();
+        try {
+            new Wheelly(parser.parseArgs(args)).start();
+        } catch (ArgumentParserException e) {
+            parser.handleError(e);
+            System.exit(1);
+        } catch (IOException e) {
+            logger.atError().setCause(e).log("IO exception");
+            System.exit(1);
+        }
     }
 
     protected final EnvironmentPanel envPanel;
@@ -129,7 +138,7 @@ public class Wheelly {
     private final KpisPanel kpisPanel;
     private final CompletableSubject completion;
     private final LearnPanel learnPanel;
-    protected Namespace args;
+    private final Namespace args;
     private JFrame kpisFrame;
     private long robotStartTimestamp;
     private Long sessionDuration;
@@ -144,8 +153,10 @@ public class Wheelly {
 
     /**
      * Creates the server reinforcement learning engine server
+     * @param args the parsed argument
      */
-    public Wheelly() {
+    public Wheelly(Namespace args) {
+        this.args = requireNonNull(args);
         this.envPanel = new EnvironmentPanel();
         this.kpisPanel = new KpisPanel();
         this.comMonitor = new ComMonitor();
@@ -365,13 +376,8 @@ public class Wheelly {
 
     /**
      * Starts the application
-     *
-     * @param args the command line argument
      */
-    protected void start(String[] args) {
-        ArgumentParser parser = createParser();
-        try {
-            this.args = parser.parseArgs(args);
+    protected void start() throws IOException {
             logger.atInfo().log("Creating environment");
             JsonNode config = fromFile(this.args.getString("config"));
             this.environment = AppYaml.envFromJson(config, Locator.root(), WHEELLY_SCHEMA_YML);
@@ -380,11 +386,14 @@ public class Wheelly {
                 throw new IllegalArgumentException(format("Missing node %s", agentLocator));
             }
             this.agent = Agent.fromConfig(config, agentLocator, environment);
+        if (agent instanceof TDAgentSingleNN tdagent) {
+            tdagent.setPostTrainKpis(true);
+        }
             kpisPanel.setKeys(agent.getActions().keySet().toArray(String[]::new));
             learnPanel.setLearningRates(((TDAgentSingleNN) agent).alphas());
 
             logger.atInfo().log("Creating agent");
-            if (Objects.requireNonNull(environment) instanceof PolarRobotEnv env) {
+        if (environment instanceof PolarRobotEnv env) {
                 this.polarPanel = new PolarPanel();
                 double radarMaxDistance = env.getMaxRadarDistance();
                 polarPanel.setRadarMaxDistance(radarMaxDistance);
@@ -394,7 +403,7 @@ public class Wheelly {
                         .doOnNext(this::handleWindowClosing)
                         .subscribe();
             }
-            if (Objects.requireNonNull(environment.getController().getRobot()) instanceof SimRobot robot) {
+        if (environment.getController().getRobot() instanceof SimRobot robot) {
                 robot.setOnObstacleChanged(this::handleObstacleChanged);
             }
 
@@ -477,12 +486,5 @@ public class Wheelly {
             createFrames();
 
             environment.start();
-        } catch (ArgumentParserException e) {
-            parser.handleError(e);
-            System.exit(1);
-        } catch (IOException e) {
-            logger.atError().setCause(e).log("IO exception");
-            System.exit(1);
-        }
     }
 }

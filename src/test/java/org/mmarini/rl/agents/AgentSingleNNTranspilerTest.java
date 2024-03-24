@@ -204,7 +204,7 @@ class AgentSingleNNTranspilerTest {
                 equalTo("critic"),
                 isA(TDDense.class)));
 
-        assertEquals(13, agent.network().size("tiles"));
+        assertEquals(2 * (4 * 3 - 1), agent.network().size("tiles"));
         assertEquals(3, agent.network().size("layer0[0]"));
         assertEquals(0.8f,
                 ((TDSoftmax) agent.network().layers().get("output")).temperature());
