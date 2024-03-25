@@ -123,8 +123,8 @@ public class RobotExecutor {
     private final JFrame engineFrame;
     private final EnvironmentPanel envPanel;
     private final PolarPanel polarPanel;
-    private final MeanValue reactionRobotTime;
-    private final MeanValue reactionRealTime;
+    private final MeanValues reactionRobotTime;
+    private final MeanValues reactionRealTime;
     private final ComMonitor comMonitor;
     private final SensorMonitor sensorMonitor;
     private final StateEngineMonitor engineMonitor;
@@ -145,8 +145,8 @@ public class RobotExecutor {
         this.polarPanel = new PolarPanel();
         this.comMonitor = new ComMonitor();
         this.engineMonitor = new StateEngineMonitor();
-        this.reactionRobotTime = MeanValue.create();
-        this.reactionRealTime = MeanValue.create();
+        this.reactionRobotTime = MeanValues.zeros();
+        this.reactionRealTime = MeanValues.zeros();
         this.robotStartTimestamp = -1;
         this.prevRobotStep = -1;
         this.prevRealStep = -1;
@@ -374,10 +374,9 @@ public class RobotExecutor {
                     .doOnNext(this::handleState)
                     .subscribe();
             if (agent.getController().getRobot() instanceof SimRobot simRobot) {
-                simRobot.setOnObstacleChanged(sim -> {
-                    sim.obstaclesMap().map(ObstacleMap::points)
-                            .ifPresent(envPanel::setObstacleMap);
-                });
+                simRobot.setOnObstacleChanged(sim ->
+                        sim.obstaclesMap().map(ObstacleMap::points)
+                                .ifPresent(envPanel::setObstacleMap));
             }
             Stream.of(comFrame, engineFrame, sensorFrame, radarFrame, frame)
                     .forEach(f -> f.setVisible(true));

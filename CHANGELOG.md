@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#395](https://github.com/m-marini/wheellyj/issues/395): Change predictability kpi
 - Issue [#396](https://github.com/m-marini/wheellyj/issues/396): Verify file size on batch, report, nna
 - Issue [#402](https://github.com/m-marini/wheellyj/issues/402): Fix training kpis
+- Issue [#404](https://github.com/m-marini/wheellyj/issues/404): Merge kpi does not run
 
 ## [0.15.0] 2024-03-14
 

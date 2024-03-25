@@ -418,7 +418,7 @@ public class Report {
         List<BinArrayFile> files = activeReports.stream()
                 .map(t -> BinArrayFile.createByKey(kpisPath, t.kpiKey()))
                 .toList();
-        KeyFileMap.validateSize(files);
+        KeyFileMap.validateSizes(files);
 
         List<Action> tasks = activeReports.stream()
                 .<Action>map(t -> () -> this.process(t))

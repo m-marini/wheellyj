@@ -162,12 +162,62 @@ public interface KeyFileMap {
     }
 
     /**
+     * Returns the files after seeks them to position
+     *
+     * @param files    the files
+     * @param position the  position
+     * @throws IOException in case of error
+     */
+    static Map<String, BinArrayFile> seek(Map<String, BinArrayFile> files, long position) throws IOException {
+        for (BinArrayFile file : files.values()) {
+            file.seek(position);
+        }
+        return files;
+    }
+
+    /**
+     * Validate for same shape
+     *
+     * @param files the files
+     * @throws IOException in case of error
+     */
+    static void validateShapes(Collection<BinArrayFile> files) throws IOException {
+        if (!files.isEmpty()) {
+            BinArrayFile refFile = files.iterator().next();
+            long[] shape = refFile.shape();
+            List<String> wrongSizes = files.stream()
+                    .filter(f -> {
+                        try {
+                            return !Arrays.equals(shape, f.shape());
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    })
+                    .map(f -> {
+                        try {
+                            return format("%s %s",
+                                    f.file(),
+                                    Arrays.toString(f.shape()));
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    })
+                    .toList();
+            if (!wrongSizes.isEmpty()) {
+                throw new RuntimeException(format("Wrong file shapes %s referred to %s %s",
+                        String.join(", ", wrongSizes),
+                        refFile.file(), Arrays.toString(shape)));
+            }
+        }
+    }
+
+    /**
      * Validate for same size
      *
      * @param files the files
      * @throws IOException in case of error
      */
-    static void validateSize(Collection<BinArrayFile> files) throws IOException {
+    static void validateSizes(Collection<BinArrayFile> files) throws IOException {
         if (!files.isEmpty()) {
             BinArrayFile refFile = files.iterator().next();
             long size = refFile.size();
@@ -190,25 +240,11 @@ public interface KeyFileMap {
                     })
                     .toList();
             if (!wrongSizes.isEmpty()) {
-                throw new RuntimeException(format("Wrong files size %s reffered to %s (%d)",
+                throw new RuntimeException(format("Wrong files size %s referred to %s (%d)",
                         String.join(", ", wrongSizes),
                         refFile.file(), size));
             }
         }
-    }
-
-    /**
-     * Returns the files after seeks them to position
-     *
-     * @param files    the files
-     * @param position the  position
-     * @throws IOException in case of error
-     */
-    static Map<String, BinArrayFile> seek(Map<String, BinArrayFile> files, long position) throws IOException {
-        for (BinArrayFile file : files.values()) {
-            file.seek(position);
-        }
-        return files;
     }
 
     /**

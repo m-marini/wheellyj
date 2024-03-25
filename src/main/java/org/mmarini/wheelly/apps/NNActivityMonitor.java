@@ -240,7 +240,7 @@ public class NNActivityMonitor {
                     String.join(", ", missingFiles),
                     sourcePath));
         }
-        KeyFileMap.validateSize(signalFiles.values());
+        KeyFileMap.validateSizes(signalFiles.values());
         this.signalFiles = KeyFileMap.children(signalFiles, "s0");
     }
 

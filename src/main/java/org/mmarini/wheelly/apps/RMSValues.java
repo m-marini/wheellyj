@@ -29,66 +29,64 @@
 package org.mmarini.wheelly.apps;
 
 import org.nd4j.linalg.api.ndarray.INDArray;
-
-import static java.lang.Math.exp;
-import static java.lang.Math.sqrt;
+import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.ops.transforms.Transforms;
 
 /**
  * Computes the discount average of values set
  */
-public class RMSValue {
-    public static final double DEFAULT_DISCOUNT = exp(-1 / 29.7);
+public class RMSValues extends MeanValues {
 
     /**
-     * Returns the default average value
-     * The discount factor is about 0.9669 (21 steps to 0.5 factor)
+     * Returns the average value
+     *
+     * @param value    the initial value
+     * @param discount the discount factor
+     * @param shape    the shape
      */
-    public static RMSValue create() {
-        return new RMSValue(0, DEFAULT_DISCOUNT);
+    public static RMSValues create(float value, float discount, int... shape) {
+        return new RMSValues(Nd4j.valueArrayOf(shape, value), discount);
     }
 
-    private final double discount;
-    private double value;
+    /**
+     * Returns the zero average value
+     * The discount factor is about 0.9669 (21 steps to halving)
+     *
+     * @param shape the shape
+     */
+    public static RMSValues zeros(int... shape) {
+        return create(0F, DEFAULT_DISCOUNT, shape);
+    }
+
+    /**
+     * Returns the zero average scalar value
+     * The discount factor is about 0.9669 (21 steps to halving)
+     */
+    public static RMSValues zeros() {
+        return zeros(1);
+    }
 
     /**
      * Creates the average value
      *
-     * @param value    the initial value
+     * @param values   the initial values
      * @param discount the discount
      */
-    public RMSValue(double value, double discount) {
-        this.value = value;
-        this.discount = discount;
+    protected RMSValues(INDArray values, float discount) {
+        super(values, discount);
     }
 
     /**
-     * Returns the average value adding a value
-     *
-     * @param value the added value
-     */
-    public RMSValue add(double value) {
-        double sqrValue = value * value;
-        this.value = discount * (this.value - sqrValue) + sqrValue;
-        return this;
-    }
-
-    /**
-     * Returns the average value adding a value
+     * Returns the mean value adding values
      *
      * @param values the added values
      */
-    public RMSValue add(INDArray values) {
-        for (long i = 0; i < values.length(); i++) {
-            add(values.getDouble(i));
+    public RMSValues add(INDArray values) {
+        this.values.muli(this.values);
+        try (INDArray sqrValue = values.mul(values)) {
+            super.add(sqrValue);
         }
+        this.values = Transforms.sqrt(this.values, false);
         return this;
     }
-
-    /**
-     * Returns the rms value adding a value
-     */
-    public double value() {
-        return sqrt(value);
-    }
-
 }
