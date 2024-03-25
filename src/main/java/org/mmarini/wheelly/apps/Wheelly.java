@@ -130,9 +130,9 @@ public class Wheelly {
     }
 
     protected final EnvironmentPanel envPanel;
-    private final MeanValue avgRewards;
-    private final MeanValue reactionRobotTime;
-    private final MeanValue reactionRealTime;
+    private final MeanValues avgRewards;
+    private final MeanValues reactionRobotTime;
+    private final MeanValues reactionRealTime;
     private final ComMonitor comMonitor;
     private final SensorMonitor sensorMonitor;
     private final KpisPanel kpisPanel;
@@ -164,9 +164,9 @@ public class Wheelly {
         this.learnPanel = new LearnPanel();
         this.sensorMonitor = new SensorMonitor();
         this.robotStartTimestamp = -1;
-        this.avgRewards = MeanValue.create();
-        this.reactionRobotTime = MeanValue.create();
-        this.reactionRealTime = MeanValue.create();
+        this.avgRewards = MeanValues.zeros();
+        this.reactionRobotTime = MeanValues.zeros();
+        this.reactionRealTime = MeanValues.zeros();
         this.prevRobotStep = -1;
         this.prevStep = -1;
         this.completion = CompletableSubject.create();
@@ -279,7 +279,7 @@ public class Wheelly {
 
     private void handleResult(Environment.ExecutionResult result) {
         double reward = result.getReward();
-        envPanel.setReward(avgRewards.add(reward).value());
+        envPanel.setReward(avgRewards.add((float) reward).value());
         sensorMonitor.onReward(reward);
         agent.observe(result);
     }

@@ -30,8 +30,8 @@ package org.mmarini.wheelly.swing;
 
 import io.reactivex.rxjava3.functions.Consumer;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apps.MeanValue;
-import org.mmarini.wheelly.apps.RMSValue;
+import org.mmarini.wheelly.apps.MeanValues;
+import org.mmarini.wheelly.apps.RMSValues;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.ops.transforms.Transforms;
 import org.slf4j.Logger;
@@ -48,20 +48,19 @@ import java.util.stream.Stream;
  * Shows the kpis average values
  */
 public class KpisPanel extends MatrixTable {
-    public static final double DISCOUNT = 0.977;
     public static final double PPM = 1e6;
     private static final Logger logger = LoggerFactory.getLogger(KpisPanel.class);
-    private final RMSValue criticRms;
-    private final MeanValue advantageMean;
-    private final RMSValue deltaRms;
+    private final RMSValues criticRms;
+    private final MeanValues advantageMean;
+    private final RMSValues deltaRms;
     private Map<String, Consumer<INDArray>> handlers;
     private Consumer<Map<String, INDArray>> deltaActionHandler;
 
     public KpisPanel() {
         this.handlers = Map.of();
-        this.criticRms = new RMSValue(0, DISCOUNT);
-        this.advantageMean = new MeanValue(0, DISCOUNT);
-        this.deltaRms = new RMSValue(0, DISCOUNT);
+        this.criticRms = RMSValues.zeros();
+        this.advantageMean = MeanValues.zeros();
+        this.deltaRms = RMSValues.zeros();
         setPrintTimestamp(false);
     }
 
@@ -99,7 +98,7 @@ public class KpisPanel extends MatrixTable {
      * @param action the key action
      */
     private Consumer<Map<String, INDArray>> createDeltaActionHandler(String action) {
-        RMSValue deltaRms = new RMSValue(0, DISCOUNT);
+        RMSValues deltaRms = RMSValues.zeros();
         return kpis -> {
             INDArray pi0 = kpis.get("layers0." + action + ".values");
             INDArray pi1 = kpis.get("trainedLayers." + action + ".values");
@@ -133,9 +132,9 @@ public class KpisPanel extends MatrixTable {
      * @param key the key
      */
     private Stream<Tuple2<String, Consumer<INDArray>>> createHandler(String key) {
-        RMSValue delta = new RMSValue(0, DISCOUNT);
-        MeanValue prob = new MeanValue(0, DISCOUNT);
-        MeanValue probRatio = new MeanValue(1, DISCOUNT);
+        RMSValues delta = RMSValues.zeros();
+        MeanValues prob = MeanValues.zeros();
+        MeanValues probRatio = MeanValues.zeros();
         return Stream.of(
                 Tuple2.of(
                         "deltas." + key, data -> {

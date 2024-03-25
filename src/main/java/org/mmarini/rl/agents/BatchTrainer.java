@@ -375,6 +375,6 @@ public class BatchTrainer {
                         s0Files.values())
                 .flatMap(Collection::stream)
                 .toList();
-        KeyFileMap.validateSize(files);
+        KeyFileMap.validateSizes(files);
     }
 }

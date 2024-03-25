@@ -158,7 +158,7 @@ public class MergeKpis {
         this.batchSize = args.getLong("batchSize");
         validateSources();
         for (List<BinArrayFile> files : sources.values()) {
-            KeyFileMap.validateSize(files);
+            KeyFileMap.validateShapes(files);
         }
         List<Action> tasks = Tuple2.stream(sources)
                 .<Action>map(t -> () -> merge(t._1, t._2))
