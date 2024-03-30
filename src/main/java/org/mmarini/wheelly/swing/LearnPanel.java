@@ -103,10 +103,13 @@ public class LearnPanel extends JPanel {
      */
     private static int indexOf(double value) {
         int idx = 0;
+        double diff = abs(value - VALUES[idx]);
         for (int i = 1; i < VALUES.length; i++) {
             double snap = VALUES[i];
-            if (abs(snap - value) < abs(snap - VALUES[idx])) {
+            double dValue = abs(snap - value);
+            if (dValue < diff) {
                 idx = i;
+                diff = dValue;
             }
         }
         return idx;

@@ -149,8 +149,8 @@ public class KpisPanel extends MatrixTable {
                                 try (INDArray log = Transforms.log(data)) {
                                     try (INDArray mean = Transforms.exp(log.mean(1), false)) {
                                         try (INDArray ratio = max.div(mean)) {
-                                            printf(key + ".prob", "%,10.1f", prob.add(max).value() * 100);
-                                            printf(key + ".probRatio", "%,10.2f", probRatio.add(ratio).value());
+                                            printf(key + ".prob", "%,6.1f", prob.add(max).value() * 100);
+                                            printf(key + ".probRatio", "%,7.2f", probRatio.add(ratio).value());
                                         }
                                     }
                                 }
@@ -225,13 +225,13 @@ public class KpisPanel extends MatrixTable {
         );
         colKeys.forEach(key ->
                 addColumn(key + ".prob",
-                        Messages.getStringOpt("KpisPanel." + key + ".prob.label").orElse(key), 10)
+                        Messages.getStringOpt("KpisPanel." + key + ".prob.label").orElse(key), 6)
                         .setScrollOnChange(true)
                         .setPrintTimestamp(false)
         );
         colKeys.forEach(key ->
                 addColumn(key + ".probRatio",
-                        Messages.getStringOpt("KpisPanel." + key + ".probRatio.label").orElse(key), 10)
+                        Messages.getStringOpt("KpisPanel." + key + ".probRatio.label").orElse(key), 7)
                         .setScrollOnChange(true)
                         .setPrintTimestamp(false)
         );

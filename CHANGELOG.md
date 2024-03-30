@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#396](https://github.com/m-marini/wheellyj/issues/396): Verify file size on batch, report, nna
 - Issue [#402](https://github.com/m-marini/wheellyj/issues/402): Fix training kpis
 - Issue [#404](https://github.com/m-marini/wheellyj/issues/404): Merge kpi does not run
+- Issue [#406](https://github.com/m-marini/wheellyj/issues/406): Wrong selection in learn panel
 
 ## [0.15.0] 2024-03-14
 
