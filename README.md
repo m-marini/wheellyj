@@ -5,6 +5,14 @@ The code of Arduino controller is at [Wheellino project](https://github.com/m-ma
 
 The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
+## Release 0.16.0
+
+- Generate dynamic simulated environment
+- Change td environment to handle the radar map tiles
+- Encode can move state
+- Added neural activity map application
+- Optimize batch trainer
+
 ## Release 0.15.0
 
 - Merge kpis
