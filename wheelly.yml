@@ -93,7 +93,7 @@ agents:
     savingIntervalSteps: 1000
     rewardAlpha: 5e-3
     alphas:
-      critic: 10e-6
+      critic: 1e-3
       sensorAction: 10e-6
       speed: 10e-6
       direction: 10e-6
