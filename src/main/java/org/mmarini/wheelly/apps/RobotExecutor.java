@@ -27,7 +27,6 @@ package org.mmarini.wheelly.apps;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
-import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
@@ -48,10 +47,11 @@ import javax.swing.*;
 import java.awt.event.WindowEvent;
 import java.awt.geom.Point2D;
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.swing.Utils.*;
 
 /**
@@ -98,6 +98,9 @@ public class RobotExecutor {
         parser.addArgument("-s", "--silent")
                 .action(Arguments.storeTrue())
                 .help("specify silent closing (no window messages)");
+        parser.addArgument("-w", "--windows")
+                .action(Arguments.storeTrue())
+                .help("use multiple windows");
         parser.addArgument("-t", "--localTime")
                 .setDefault(43200L)
                 .type(Long.class)
@@ -113,14 +116,23 @@ public class RobotExecutor {
      * @param args command line arguments
      */
     public static void main(String[] args) {
-        new RobotExecutor().start(args);
+        ArgumentParser parser = createParser();
+        try {
+            new RobotExecutor(parser.parseArgs(args)).run();
+        } catch (ArgumentParserException e) {
+            parser.handleError(e);
+            System.exit(1);
+        }
     }
 
-    private final JFrame frame;
-    private final JFrame radarFrame;
-    private final JFrame comFrame;
-    private final JFrame sensorFrame;
-    private final JFrame engineFrame;
+    /*
+        private final JFrame frame;
+        private final JFrame radarFrame;
+        private final JFrame comFrame;
+        private final JFrame sensorFrame;
+        private final JFrame engineFrame;
+
+     */
     private final EnvironmentPanel envPanel;
     private final PolarPanel polarPanel;
     private final MeanValues reactionRobotTime;
@@ -128,7 +140,7 @@ public class RobotExecutor {
     private final ComMonitor comMonitor;
     private final SensorMonitor sensorMonitor;
     private final StateEngineMonitor engineMonitor;
-    private Namespace args;
+    private final Namespace args;
     private long start;
     private long sessionDuration;
     private StateMachineAgent agent;
@@ -136,11 +148,15 @@ public class RobotExecutor {
     private long prevRobotStep;
     private long prevRealStep;
     private ComDumper dumper;
+    private List<JFrame> allFrames;
 
     /**
      * Creates the roboto executor
+     *
+     * @param args the line command parsed arguments
      */
-    public RobotExecutor() {
+    public RobotExecutor(Namespace args) {
+        this.args = requireNonNull(args);
         this.envPanel = new EnvironmentPanel();
         this.polarPanel = new PolarPanel();
         this.comMonitor = new ComMonitor();
@@ -150,15 +166,42 @@ public class RobotExecutor {
         this.robotStartTimestamp = -1;
         this.prevRobotStep = -1;
         this.prevRealStep = -1;
-        this.comFrame = comMonitor.createFrame();
         this.sensorMonitor = new SensorMonitor();
-        this.frame = createFrame(Messages.getString("RobotExecutor.title"), envPanel);
-        this.radarFrame = createFixFrame(Messages.getString("Radar.title"), polarPanel);
-        this.engineFrame = engineMonitor.createFrame();
-        this.sensorFrame = sensorMonitor.createFrame();
-        init();
     }
 
+    /**
+     * Creates the multi frames
+     */
+    private void createMultiFrames() {
+        this.allFrames = List.of(
+                createFrame(Messages.getString("RobotExecutor.title"), envPanel),
+                createFixFrame(Messages.getString("Radar.title"), polarPanel),
+                engineMonitor.createFrame(),
+                sensorMonitor.createFrame(),
+                comMonitor.createFrame()
+        );
+    }
+
+    /**
+     * Creates single application frame
+     */
+    private void createSingleFrames() {
+        JTabbedPane panel = new JTabbedPane();
+        panel.addTab(Messages.getString("RobotExecutor.tabPanel.envMap"), new JScrollPane(envPanel));
+        panel.addTab(Messages.getString("RobotExecutor.tabPanel.polarMap"), new JScrollPane(polarPanel));
+        panel.addTab(Messages.getString("RobotExecutor.tabPanel.engine"), new JScrollPane(engineMonitor));
+        panel.addTab(Messages.getString("RobotExecutor.tabPanel.sensor"), new JScrollPane(sensorMonitor));
+        panel.addTab(Messages.getString("RobotExecutor.tabPanel.com"), new JScrollPane(comMonitor));
+        allFrames = List.of(
+                createFrame(Messages.getString("RobotExecutor.title"), panel)
+        );
+    }
+
+    /**
+     * Handles controller status event
+     *
+     * @param status the controller status string
+     */
     private void handleControllerStatus(String status) {
         sensorMonitor.onControllerStatus(status);
         comMonitor.onControllerStatus(status);
@@ -181,11 +224,7 @@ public class RobotExecutor {
      */
     private void handleShutdown() {
         agent.shutdown();
-        frame.dispose();
-        radarFrame.dispose();
-        comFrame.dispose();
-        sensorFrame.dispose();
-        engineFrame.dispose();
+        allFrames.forEach(JFrame::dispose);
         if (dumper != null) {
             try {
                 dumper.close();
@@ -294,20 +333,16 @@ public class RobotExecutor {
      * Initializes the application
      */
     private void init() {
-        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
+        SwingObservable.window(allFrames.getFirst(), SwingObservable.WINDOW_ACTIVE)
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
                 .doOnNext(this::handleWindowOpened)
                 .subscribe();
-        Observable.mergeArray(
-                        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE),
-                        SwingObservable.window(comFrame, SwingObservable.WINDOW_ACTIVE),
-                        SwingObservable.window(sensorFrame, SwingObservable.WINDOW_ACTIVE),
-                        SwingObservable.window(engineFrame, SwingObservable.WINDOW_ACTIVE),
-                        SwingObservable.window(radarFrame, SwingObservable.WINDOW_ACTIVE))
+
+        allFrames.forEach(f -> SwingObservable.window(f, SwingObservable.WINDOW_ACTIVE)
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
                 .doOnNext(this::handleWindowClosing)
-                .subscribe();
-        layHorizontally(frame, radarFrame, engineFrame, sensorFrame, comFrame);
+                .subscribe());
+        layHorizontally(allFrames);
     }
 
     /**
@@ -316,74 +351,69 @@ public class RobotExecutor {
      * Creates the agent
      * Initializes the UI components
      * Opens the application frames (environment + radar)
-     *
-     * @param args the command line parameters
      */
-    private void start(String[] args) {
-        ArgumentParser parser = createParser();
-        try {
-            this.args = parser.parseArgs(args);
-            logger.atInfo().log("Creating Agent");
-            this.sessionDuration = this.args.getLong("localTime");
-            sessionDuration *= 1000;
-            logger.atInfo().log("Starting session ...");
-            this.agent = createAgent(this.args.getString("config"));
-            Optional.ofNullable(this.args.getString("dump"))
-                    .ifPresent(file -> {
-                        try {
-                            dumper = ComDumper.fromFile(file);
-                        } catch (IOException e) {
-                            logger.atError().setCause(e).log();
-                        }
-                    });
-            double radarMaxDistance = agent.getMaxRadarDistance();
-            polarPanel.setRadarMaxDistance(radarMaxDistance);
-            logger.atInfo().setMessage("Session are running for {} sec...").addArgument(sessionDuration).log();
-            this.start = System.currentTimeMillis();
-            agent.readStepUp()
-                    .observeOn(Schedulers.io())
-                    .doOnNext(this::handleStepUp).subscribe();
-            agent.readTargets()
-                    .observeOn(Schedulers.io())
-                    .doOnNext(this::handleTarget).subscribe();
-            agent.readShutdown().doOnComplete(this::handleShutdown).subscribe();
-            agent.readErrors()
-                    .observeOn(Schedulers.io())
-                    .doOnNext(err -> {
-                        comMonitor.onError(err);
-                        logger.atError().setCause(err).log();
-                    }).subscribe();
-            agent.readReadLine()
-                    .observeOn(Schedulers.io())
-                    .doOnNext(this::handleReadLine).subscribe();
-            agent.readWriteLine()
-                    .observeOn(Schedulers.io())
-                    .doOnNext(this::handleWrittenLine).subscribe();
-            agent.readControllerStatus()
-                    .observeOn(Schedulers.io())
-                    .doOnNext(this::handleControllerStatus).subscribe();
-            agent.readCommand()
-                    .observeOn(Schedulers.io())
-                    .doOnNext(sensorMonitor::onCommand).subscribe();
-            agent.readTriggers()
-                    .observeOn(Schedulers.io())
-                    .doOnNext(this::handleTrigger)
-                    .subscribe();
-            agent.readState()
-                    .observeOn(Schedulers.io())
-                    .doOnNext(this::handleState)
-                    .subscribe();
-            if (agent.getController().getRobot() instanceof SimRobot simRobot) {
-                simRobot.setOnObstacleChanged(sim ->
-                        sim.obstaclesMap().map(ObstacleMap::points)
-                                .ifPresent(envPanel::setObstacleMap));
-            }
-            Stream.of(comFrame, engineFrame, sensorFrame, radarFrame, frame)
-                    .forEach(f -> f.setVisible(true));
-            comFrame.setState(JFrame.ICONIFIED);
-        } catch (ArgumentParserException e) {
-            parser.handleError(e);
-            System.exit(1);
+    private void run() {
+        logger.atInfo().log("Creating Agent");
+        this.sessionDuration = this.args.getLong("localTime");
+        sessionDuration *= 1000;
+        logger.atInfo().log("Starting session ...");
+        this.agent = createAgent(this.args.getString("config"));
+        Optional.ofNullable(this.args.getString("dump"))
+                .ifPresent(file -> {
+                    try {
+                        dumper = ComDumper.fromFile(file);
+                    } catch (IOException e) {
+                        logger.atError().setCause(e).log();
+                    }
+                });
+        double radarMaxDistance = agent.getMaxRadarDistance();
+        polarPanel.setRadarMaxDistance(radarMaxDistance);
+        logger.atInfo().setMessage("Session are running for {} sec...").addArgument(sessionDuration).log();
+        this.start = System.currentTimeMillis();
+        agent.readStepUp()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::handleStepUp).subscribe();
+        agent.readTargets()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::handleTarget).subscribe();
+        agent.readShutdown().doOnComplete(this::handleShutdown).subscribe();
+        agent.readErrors()
+                .observeOn(Schedulers.io())
+                .doOnNext(err -> {
+                    comMonitor.onError(err);
+                    logger.atError().setCause(err).log();
+                }).subscribe();
+        agent.readReadLine()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::handleReadLine).subscribe();
+        agent.readWriteLine()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::handleWrittenLine).subscribe();
+        agent.readControllerStatus()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::handleControllerStatus).subscribe();
+        agent.readCommand()
+                .observeOn(Schedulers.io())
+                .doOnNext(sensorMonitor::onCommand).subscribe();
+        agent.readTriggers()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::handleTrigger)
+                .subscribe();
+        agent.readState()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::handleState)
+                .subscribe();
+        if (agent.getController().getRobot() instanceof SimRobot simRobot) {
+            simRobot.setOnObstacleChanged(sim ->
+                    sim.obstaclesMap().map(ObstacleMap::points)
+                            .ifPresent(envPanel::setObstacleMap));
         }
+        if (args.getBoolean("windows")) {
+            createMultiFrames();
+        } else {
+            createSingleFrames();
+        }
+        init();
+        allFrames.forEach(f -> f.setVisible(true));
     }
 }

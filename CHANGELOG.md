@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- Issue [#407](https://github.com/m-marini/wheellyj/issues/407): Add single window mode
+
 ## [0.16.0] 2024-03-30
 
 ### Added

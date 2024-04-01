@@ -30,6 +30,7 @@ package org.mmarini.wheelly.swing;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.Collection;
 
 import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
@@ -94,6 +95,16 @@ public interface Utils {
         content1.add(content, BorderLayout.CENTER);
         frame.pack();
         return frame;
+    }
+
+
+    /**
+     * Lays horizontally the frames
+     *
+     * @param frames the list of frames
+     */
+    static void layHorizontally(Collection<JFrame> frames) {
+        layHorizontally(frames.toArray(JFrame[]::new));
     }
 
     /**

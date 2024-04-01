@@ -38,6 +38,7 @@ import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.BatchTrainer;
 import org.mmarini.rl.agents.KpiBinWriter;
 import org.mmarini.rl.agents.TDAgentSingleNN;
+import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.wheelly.swing.KpisPanel;
 import org.mmarini.wheelly.swing.LearnPanel;
@@ -56,8 +57,7 @@ import java.util.function.Predicate;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.swing.Utils.createFrame;
-import static org.mmarini.wheelly.swing.Utils.layHorizontally;
+import static org.mmarini.wheelly.swing.Utils.*;
 import static org.mmarini.yaml.Utils.fromFile;
 
 /**
@@ -92,6 +92,9 @@ public class BatchTraining {
         parser.addArgument("-n", "--no-backup")
                 .action(Arguments.storeTrue())
                 .help("no backup of network file");
+        parser.addArgument("-w", "--windows")
+                .action(Arguments.storeTrue())
+                .help("use multiple windows");
         parser.addArgument("dataset")
                 .required(true)
                 .help("specify dataset path");
@@ -155,6 +158,9 @@ public class BatchTraining {
         return content;
     }
 
+    /**
+     * Creates multi frames
+     */
     private void createFrames() {
         List<String> outputs = agent.network().sinkLayers();
 
@@ -167,20 +173,9 @@ public class BatchTraining {
                 createContent(actions));
 
         JFrame learnFrame = learnPanel.createFrame();
-
         this.allFrames = List.of(frame, learnFrame);
 
         layHorizontally(frame, learnFrame);
-
-        allFrames.forEach(f -> {
-            f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            f.setVisible(true);
-        });
-
-        Completable.fromAction(this::runBatch)
-                .subscribeOn(Schedulers.computation())
-                .doOnComplete(() -> allFrames.forEach(Window::dispose))
-                .subscribe();
     }
 
     /**
@@ -268,6 +263,36 @@ public class BatchTraining {
     }
 
     /**
+     * Creates the application single frame
+     */
+    private void createSingleFrames() {
+        List<String> outputs = agent.network().sinkLayers();
+
+        // Create the frame
+        String[] actions = outputs.stream()
+                .filter(Predicate.not("critic"::equals))
+                .toArray(String[]::new);
+
+        JTabbedPane tabPanel = new JTabbedPane();
+        tabPanel.addTab(Messages.getString("BatchTraining.tabPanel.kpis"), createContent(actions));
+        tabPanel.addTab(Messages.getString("BatchTraining.tabPanel.learn"),
+                new GridLayoutHelper<>(new JPanel())
+                        .modify("insets,10 center").add(learnPanel)
+                        .getContainer());
+
+        JFrame frame = createFrame(Messages.getString("BatchTraining.title"), tabPanel);
+
+        this.allFrames = List.of(frame);
+
+        center(frame);
+
+        allFrames.forEach(f -> {
+            f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            f.setVisible(true);
+        });
+    }
+
+    /**
      * Starts the training
      */
     protected void run() throws Exception {
@@ -320,7 +345,21 @@ public class BatchTraining {
         Thread hook = new Thread(this::handleShutdown);
         Runtime.getRuntime().addShutdownHook(hook);
 
-        createFrames();
+        if (args.getBoolean("windows")) {
+            createFrames();
+        } else {
+            createSingleFrames();
+        }
+
+        Completable.fromAction(this::runBatch)
+                .subscribeOn(Schedulers.computation())
+                .doOnComplete(() -> allFrames.forEach(Window::dispose))
+                .subscribe();
+
+        allFrames.forEach(f -> {
+            f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            f.setVisible(true);
+        });
     }
 
 }
