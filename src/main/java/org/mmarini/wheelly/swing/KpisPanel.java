@@ -145,9 +145,9 @@ public class KpisPanel extends MatrixTable {
                 Tuple2.of(
                         "layers0." + key + ".values", data -> {
                             // prob = max(data) / exp(mean(log(data)))
-                            try (INDArray max = data.max(1)) {
+                            try (INDArray max = data.max(true, 1)) {
                                 try (INDArray log = Transforms.log(data)) {
-                                    try (INDArray mean = Transforms.exp(log.mean(1), false)) {
+                                    try (INDArray mean = Transforms.exp(log.mean(true, 1), false)) {
                                         try (INDArray ratio = max.div(mean)) {
                                             printf(key + ".prob", "%,6.1f", prob.add(max).value() * 100);
                                             printf(key + ".probRatio", "%,7.2f", probRatio.add(ratio).value());

@@ -104,6 +104,9 @@ public class Wheelly {
         parser.addArgument("-s", "--silent")
                 .action(Arguments.storeTrue())
                 .help("specify silent closing (no window messages)");
+        parser.addArgument("-w", "--windows")
+                .action(Arguments.storeTrue())
+                .help("use multiple windows");
         parser.addArgument("-t", "--localTime")
                 .setDefault(43200L)
                 .type(Long.class)
@@ -119,7 +122,7 @@ public class Wheelly {
     public static void main(String[] args) {
         ArgumentParser parser = createParser();
         try {
-            new Wheelly(parser.parseArgs(args)).start();
+            new Wheelly(parser.parseArgs(args)).run();
         } catch (ArgumentParserException e) {
             parser.handleError(e);
             System.exit(1);
@@ -173,51 +176,31 @@ public class Wheelly {
     }
 
     /**
-     * Creates all the frames
+     * Creates the flows of events
      */
-    private void createFrames() {
-        JScrollPane scrollEnv = new JScrollPane(envPanel);
-        JFrame frame = createFrame(Messages.getString("Wheelly.title"), scrollEnv);
-        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
-                .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
-                .doOnNext(this::handleWindowOpened)
+    private void createFlows() {
+        environment.readRobotStatus().observeOn(Schedulers.io()).doOnNext(this::handleStatusReady)
                 .subscribe();
-        JFrame comFrame = comMonitor.createFrame();
-        JFrame sensorFrame = sensorMonitor.createFrame();
-
-        // Collects all frames
-        allFrames = new ArrayList<>();
-        allFrames.add(frame);
-        if (radarFrame != null) {
-            allFrames.add(radarFrame);
-        }
-        if (kpisFrame != null) {
-            allFrames.add(kpisFrame);
-        }
-        allFrames.add(learnPanel.createFrame());
-        allFrames.add(sensorFrame);
-        allFrames.add(comFrame);
-
-        // Open all the windows
-        JFrame[] frameAry = this.allFrames.toArray(JFrame[]::new);
-
-        Observable<WindowEvent>[] x = allFrames.stream()
-                .map(f -> SwingObservable.window(f, SwingObservable.WINDOW_ACTIVE))
-                .toArray(Observable[]::new);
-
-        Observable.mergeArray(x)
-                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
-                .doOnNext(this::handleWindowClosing)
+        environment.readReadLine().observeOn(Schedulers.io()).doOnNext(this::handleReadLine)
+                .subscribe();
+        environment.readWriteLine().observeOn(Schedulers.io()).doOnNext(this::handleWrittenLine).subscribe();
+        environment.readCommand().observeOn(Schedulers.io()).doOnNext(sensorMonitor::onCommand).subscribe();
+        environment.readErrors().observeOn(Schedulers.io()).doOnNext(err -> {
+            comMonitor.onError(err);
+            logger.atError().setCause(err).log();
+        }).subscribe();
+        environment.readControllerStatus().observeOn(Schedulers.io()).doOnNext(this::handleControllerStatus).subscribe();
+        environment.readShutdown().doOnComplete(this::handleShutdown)
                 .subscribe();
 
-        layHorizontally(frameAry);
-        interval(LAYOUT_INTERVAL, TimeUnit.MILLISECONDS)
-                .limit(allFrames.size())
-                .doOnNext(i ->
-                        allFrames.get(allFrames.size() - 1 - Math.toIntExact(i)).setVisible(true))
-                .subscribe();
+        environment.setOnInference(this::handleInference);
+        environment.setOnAct(agent::act);
+        environment.setOnResult(this::handleResult);
 
-        comFrame.setState(JFrame.ICONIFIED);
+        learnPanel.readLearningRates().doOnNext(t -> ((TDAgentSingleNN) agent).alphas(t)).subscribe();
+
+        Observable<WindowEvent>[] x = allFrames.stream().map(f -> SwingObservable.window(f, SwingObservable.WINDOW_ACTIVE)).toArray(Observable[]::new);
+        Observable.mergeArray(x).filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING).doOnNext(this::handleWindowClosing).subscribe();
     }
 
     /**
@@ -288,7 +271,6 @@ public class Wheelly {
      * Handles the application shutdown
      */
     private void handleShutdown() {
-
         // Open wait frame
         logger.atInfo().log("Shutdown");
         JProgressBar progressBar = new JProgressBar();
@@ -330,19 +312,56 @@ public class Wheelly {
         }).subscribe();
     }
 
-    private void handleStatusReady(RobotStatus status) {
-        if (robotStartTimestamp < 0) {
-            robotStartTimestamp = status.simulationTime();
+    /**
+     * Creates all the frames
+     */
+    private void createMultiFrames() {
+        // Create multiple frame app
+        if (environment instanceof PolarRobotEnv) {
+            radarFrame = createFixFrame(Messages.getString("Radar.title"), polarPanel);
         }
-        long robotElapsed = status.simulationTime() - robotStartTimestamp;
-        envPanel.setTimeRatio(environment.getController().simRealSpeed());
-        if (robotElapsed > sessionDuration) {
-            environment.shutdown();
+
+        if (!this.args.getString("kpis").isEmpty()) {
+            // Create kpis frame
+            this.kpisFrame = kpisPanel.createFrame();
         }
+        JFrame frame = createFrame(Messages.getString("Wheelly.title"), new JScrollPane(envPanel));
+        JFrame comFrame = comMonitor.createFrame();
+        JFrame sensorFrame = sensorMonitor.createFrame();
+
+        // Collects all frames
+        allFrames = new ArrayList<>();
+        allFrames.add(frame);
+        if (radarFrame != null) {
+            allFrames.add(radarFrame);
+        }
+        if (kpisFrame != null) {
+            allFrames.add(kpisFrame);
+        }
+        allFrames.add(learnPanel.createFrame());
+        allFrames.add(sensorFrame);
+        allFrames.add(comFrame);
+
+        // Open all the windows
+        JFrame[] frameAry = this.allFrames.toArray(JFrame[]::new);
+
+        layHorizontally(frameAry);
+
+        comFrame.setState(JFrame.ICONIFIED);
+        interval(LAYOUT_INTERVAL, TimeUnit.MILLISECONDS).limit(allFrames.size()).doOnNext(i -> allFrames.get(allFrames.size() - 1 - Math.toIntExact(i)).setVisible(true)).subscribe();
     }
 
-    private void handleWindowClosing(WindowEvent windowEvent) {
-        environment.shutdown();
+    /**
+     * Creates the panels
+     */
+    private void createPanels() {
+        kpisPanel.setKeys(agent.getActions().keySet().toArray(String[]::new));
+        learnPanel.setLearningRates(((TDAgentSingleNN) agent).alphas());
+        if (environment instanceof PolarRobotEnv env) {
+            this.polarPanel = new PolarPanel();
+            double radarMaxDistance = env.getMaxRadarDistance();
+            polarPanel.setRadarMaxDistance(radarMaxDistance);
+        }
     }
 
     /**
@@ -375,116 +394,122 @@ public class Wheelly {
     }
 
     /**
+     * Creates the single application frame
+     */
+    private void createSingleFrame() {
+        JTabbedPane panel = new JTabbedPane();
+        panel.addTab(Messages.getString("Wheelly.tabPanel.envMap"), new JScrollPane(envPanel));
+
+        if (environment instanceof PolarRobotEnv) {
+            panel.addTab(Messages.getString("Wheelly.tabPanel.polarMap"), new JScrollPane(polarPanel));
+        }
+        if (!this.args.getString("kpis").isEmpty()) {
+            panel.addTab(Messages.getString("Wheelly.tabPanel.kpi"), new JScrollPane(kpisPanel));
+        }
+        JPanel panel1 = new GridLayoutHelper<>(new JPanel())
+                .modify("insets,10 center").add(learnPanel)
+                .getContainer();
+        panel.addTab(Messages.getString("Wheelly.tabPanel.learn"), panel1);
+        panel.addTab(Messages.getString("Wheelly.tabPanel.sensor"), new JScrollPane(sensorMonitor));
+        panel.addTab(Messages.getString("Wheelly.tabPanel.com"), new JScrollPane(comMonitor));
+        // Create single frame app
+        JFrame frame = createFrame(Messages.getString("Wheelly.title"), panel);
+        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
+                .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
+                .doOnNext(this::handleWindowOpened).subscribe();
+        center(frame);
+        allFrames = List.of(frame);
+        frame.setVisible(true);
+    }
+
+    /**
+     * Handles the status ready event
+     *
+     * @param status the status
+     */
+    private void handleStatusReady(RobotStatus status) {
+        if (robotStartTimestamp < 0) {
+            robotStartTimestamp = status.simulationTime();
+        }
+        long robotElapsed = status.simulationTime() - robotStartTimestamp;
+        envPanel.setTimeRatio(environment.getController().simRealSpeed());
+        if (robotElapsed > sessionDuration) {
+            environment.shutdown();
+        }
+    }
+
+    /**
+     * Handles the window closing events
+     *
+     * @param windowEvent the event
+     */
+    private void handleWindowClosing(WindowEvent windowEvent) {
+        environment.shutdown();
+    }
+
+    /**
      * Starts the application
      */
-    protected void start() throws IOException {
-            logger.atInfo().log("Creating environment");
-            JsonNode config = fromFile(this.args.getString("config"));
-            this.environment = AppYaml.envFromJson(config, Locator.root(), WHEELLY_SCHEMA_YML);
-            Locator agentLocator = Locator.locate(Locator.locate("agent").getNode(config).asText());
-            if (agentLocator.getNode(config).isMissingNode()) {
-                throw new IllegalArgumentException(format("Missing node %s", agentLocator));
-            }
-            this.agent = Agent.fromConfig(config, agentLocator, environment);
+    protected void run() throws IOException {
+        logger.atInfo().log("Creating environment");
+        JsonNode config = fromFile(this.args.getString("config"));
+        this.environment = AppYaml.envFromJson(config, Locator.root(), WHEELLY_SCHEMA_YML);
+
+        logger.atInfo().log("Creating agent");
+        Locator agentLocator = Locator.locate(Locator.locate("agent").getNode(config).asText());
+        if (agentLocator.getNode(config).isMissingNode()) {
+            throw new IllegalArgumentException(format("Missing node %s", agentLocator));
+        }
+        this.agent = Agent.fromConfig(config, agentLocator, environment);
         if (agent instanceof TDAgentSingleNN tdagent) {
             tdagent.setPostTrainKpis(true);
         }
-            kpisPanel.setKeys(agent.getActions().keySet().toArray(String[]::new));
-            learnPanel.setLearningRates(((TDAgentSingleNN) agent).alphas());
-
-            logger.atInfo().log("Creating agent");
-        if (environment instanceof PolarRobotEnv env) {
-                this.polarPanel = new PolarPanel();
-                double radarMaxDistance = env.getMaxRadarDistance();
-                polarPanel.setRadarMaxDistance(radarMaxDistance);
-                radarFrame = createFixFrame(Messages.getString("Radar.title"), polarPanel);
-                SwingObservable.window(radarFrame, SwingObservable.WINDOW_ACTIVE)
-                        .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
-                        .doOnNext(this::handleWindowClosing)
-                        .subscribe();
-            }
         if (environment.getController().getRobot() instanceof SimRobot robot) {
-                robot.setOnObstacleChanged(this::handleObstacleChanged);
-            }
+            // Add the obstacles location changes
+            robot.setOnObstacleChanged(this::handleObstacleChanged);
+        }
 
-            sessionDuration = this.args.getLong("localTime");
-            logger.atInfo().log("Starting session ...");
-            logger.atInfo().log("Session are running for {} sec...", sessionDuration);
-            sessionDuration *= 1000;
+        sessionDuration = this.args.getLong("localTime");
+        logger.atInfo().log("Starting session ...");
+        logger.atInfo().log("Session are running for {} sec...", sessionDuration);
+        sessionDuration *= 1000;
 
-            String kpis = this.args.getString("kpis");
-            if (!kpis.isEmpty()) {
-                // Create kpis frame
-                this.kpisFrame = kpisPanel.createFrame();
-                SwingObservable.window(kpisFrame, SwingObservable.WINDOW_ACTIVE)
-                        .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
-                        .doOnNext(this::handleWindowClosing)
-                        .subscribe();
-                KpiBinWriter kpiWriter = KpiBinWriter.createFromLabels(new File(kpis), this.args.getString("labels"));
-                agent.readKpis()
-                        .observeOn(Schedulers.io(), true)
-                        .doOnNext(kpisPanel::addKpis)
-                        .doOnNext(kpiWriter::write)
-                        .doOnError(ex -> logger.atError().setCause(ex).log("Error writing kpis"))
-                        .doOnComplete(() -> {
-                                    logger.atInfo().log("Closing kpis writer ...");
-                                    kpiWriter.close();
-                                    logger.atInfo().log("Kpis writer closed");
-                                    completion.onComplete();
-                                }
-                        ).subscribe();
-            } else {
+        // Create the kpis writer
+        String kpis = this.args.getString("kpis");
+        if (!kpis.isEmpty()) {
+            // Create kpis frame
+            KpiBinWriter kpiWriter = KpiBinWriter.createFromLabels(new File(kpis), this.args.getString("labels"));
+            agent.readKpis().observeOn(Schedulers.io(), true).doOnNext(kpisPanel::addKpis).doOnNext(kpiWriter::write).doOnError(ex -> logger.atError().setCause(ex).log("Error writing kpis")).doOnComplete(() -> {
+                logger.atInfo().log("Closing kpis writer ...");
+                kpiWriter.close();
+                logger.atInfo().log("Kpis writer closed");
                 completion.onComplete();
+            }).subscribe();
+        } else {
+            completion.onComplete();
+        }
+
+        // Creates the com line dumper
+        Optional.ofNullable(this.args.getString("dump")).ifPresent(file -> {
+            try {
+                this.dumper = ComDumper.fromFile(file);
+            } catch (IOException e) {
+                logger.atError().setCause(e).log("Error dumping to {}", file);
             }
-            Optional.ofNullable(this.args.getString("dump"))
-                    .ifPresent(file -> {
-                        try {
-                            this.dumper = ComDumper.fromFile(file);
-                        } catch (IOException e) {
-                            logger.atError().setCause(e).log("Error dumping to {}", file);
-                        }
-                    });
-            environment.readRobotStatus()
-                    .observeOn(Schedulers.io())
-                    .doOnNext(this::handleStatusReady)
-                    .subscribe();
-            environment.readReadLine()
-                    .observeOn(Schedulers.io())
-                    .doOnNext(this::handleReadLine)
-                    .subscribe();
-            environment.readWriteLine()
-                    .observeOn(Schedulers.io())
-                    .doOnNext(this::handleWrittenLine)
-                    .subscribe();
-            environment.readCommand()
-                    .observeOn(Schedulers.io())
-                    .doOnNext(sensorMonitor::onCommand)
-                    .subscribe();
-            environment.readErrors()
-                    .observeOn(Schedulers.io())
-                    .doOnNext(err -> {
-                        comMonitor.onError(err);
-                        logger.atError().setCause(err).log();
-                    })
-                    .subscribe();
-            environment.readControllerStatus()
-                    .observeOn(Schedulers.io())
-                    .doOnNext(this::handleControllerStatus)
-                    .subscribe();
-            environment.readShutdown()
-                    .doOnComplete(this::handleShutdown)
-                    .subscribe();
+        });
 
-            environment.setOnInference(this::handleInference);
-            environment.setOnAct(agent::act);
-            environment.setOnResult(this::handleResult);
+        // Create panels
+        createPanels();
 
-            learnPanel.readLearningRates()
-                    .doOnNext(t -> ((TDAgentSingleNN) agent).alphas(t))
-                    .subscribe();
-
-            createFrames();
-
-            environment.start();
+        // Creates frames
+        if (args.getBoolean("windows")) {
+            createMultiFrames();
+        } else {
+            createSingleFrame();
+        }
+        // Creates the flows
+        createFlows();
+        // Starts the environment interaction
+        environment.start();
     }
 }
