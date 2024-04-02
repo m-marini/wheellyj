@@ -125,14 +125,6 @@ public class RobotExecutor {
         }
     }
 
-    /*
-        private final JFrame frame;
-        private final JFrame radarFrame;
-        private final JFrame comFrame;
-        private final JFrame sensorFrame;
-        private final JFrame engineFrame;
-
-     */
     private final EnvironmentPanel envPanel;
     private final PolarPanel polarPanel;
     private final MeanValues reactionRobotTime;

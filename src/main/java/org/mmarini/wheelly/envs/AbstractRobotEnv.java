@@ -30,6 +30,7 @@ package org.mmarini.wheelly.envs;
 
 import io.reactivex.rxjava3.core.Completable;
 import org.mmarini.rl.envs.Environment;
+import org.mmarini.rl.envs.IntSignal;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.wheelly.apis.*;
@@ -155,6 +156,25 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
         onStatus(status);
     }
 
+    /**
+     * Returns the halt action
+     */
+    public Map<String, Signal> haltActions() {
+        Signal speedSignal = IntSignal.create(((IntSignalSpec) getActions().get("speed")).numValues() - 1);
+        Signal sensorAction = IntSignal.create(
+                ((IntSignalSpec) getActions().get("sensorAction")).numValues() / 2);
+        Signal directionAction = IntSignal.create(
+                ((IntSignalSpec) getActions().get("direction")).numValues() / 2);
+        return Map.of("speed", speedSignal,
+                "direction", directionAction,
+                "sensorAction", sensorAction);
+    }
+
+    /**
+     * Returns true if the actions in halt
+     *
+     * @param actions the actions
+     */
     public boolean isHalt(Map<String, Signal> actions) {
         int speedAction = actions.get("speed").getInt(0);
         int n = ((IntSignalSpec) getActions().get("speed")).numValues();

@@ -131,7 +131,7 @@ public class SwingUtils {
     public <T extends AbstractButton> T initButton(final T button, final String key) {
         final String name = Messages.getString(key + ".name"); //$NON-NLS-1$
         if (!name.startsWith("!")) { //$NON-NLS-1$
-            button.setName(name);
+            button.setText(name);
         }
         final String tooltip = Messages.getString(key + ".tooltip"); //$NON-NLS-1$
         if (!tooltip.startsWith("!")) { //$NON-NLS-1$
@@ -189,18 +189,5 @@ public class SwingUtils {
             }
         }
         return item;
-    }
-
-    /**
-     * Interpolates linearly the result from two levels depending on a control
-     * value.
-     *
-     * @param control   the control value
-     * @param zeroLevel the start value (associated to the 0 level of control value)
-     * @param oneLevel  the end value (associated to the 1 level of control value)
-     * @return the linear interpolated value
-     */
-    private double interpolate(final double control, final double zeroLevel, final double oneLevel) {
-        return control * (oneLevel - zeroLevel) + zeroLevel;
     }
 }
