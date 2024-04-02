@@ -80,6 +80,11 @@ public interface Agent extends Closeable, WithSignalsSpec {
     Flowable<Map<String, INDArray>> readKpis();
 
     /**
+     * Resets the inference engine
+     */
+    void init();
+
+    /**
      * Save the model
      *
      * @param path the path

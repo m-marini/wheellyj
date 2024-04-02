@@ -39,14 +39,12 @@ import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.KpiBinWriter;
 import org.mmarini.rl.agents.TDAgentSingleNN;
 import org.mmarini.rl.envs.Environment;
+import org.mmarini.rl.envs.Signal;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.wheelly.apis.ObstacleMap;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.SimRobot;
-import org.mmarini.wheelly.envs.PolarRobotEnv;
-import org.mmarini.wheelly.envs.RobotEnvironment;
-import org.mmarini.wheelly.envs.WithPolarMap;
-import org.mmarini.wheelly.envs.WithRadarMap;
+import org.mmarini.wheelly.envs.*;
 import org.mmarini.wheelly.swing.*;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.factory.Nd4j;
@@ -55,11 +53,13 @@ import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -142,6 +142,8 @@ public class Wheelly {
     private final CompletableSubject completion;
     private final LearnPanel learnPanel;
     private final Namespace args;
+    private final JButton stopButton;
+    private final JButton startButton;
     private JFrame kpisFrame;
     private long robotStartTimestamp;
     private Long sessionDuration;
@@ -153,9 +155,11 @@ public class Wheelly {
     private long prevStep;
     private ComDumper dumper;
     private List<JFrame> allFrames;
+    private boolean active;
 
     /**
      * Creates the server reinforcement learning engine server
+     *
      * @param args the parsed argument
      */
     public Wheelly(Namespace args) {
@@ -166,6 +170,8 @@ public class Wheelly {
         comMonitor.setPrintTimestamp(true);
         this.learnPanel = new LearnPanel();
         this.sensorMonitor = new SensorMonitor();
+        this.stopButton = new JButton();
+        this.startButton = new JButton();
         this.robotStartTimestamp = -1;
         this.avgRewards = MeanValues.zeros();
         this.reactionRobotTime = MeanValues.zeros();
@@ -173,6 +179,8 @@ public class Wheelly {
         this.prevRobotStep = -1;
         this.prevStep = -1;
         this.completion = CompletableSubject.create();
+        SwingUtils.getInstance().initButton(stopButton, "Wheelly.stopButton");
+        SwingUtils.getInstance().initButton(startButton, "Wheelly.runButton");
     }
 
     /**
@@ -194,13 +202,121 @@ public class Wheelly {
                 .subscribe();
 
         environment.setOnInference(this::handleInference);
-        environment.setOnAct(agent::act);
+        environment.setOnAct(this::handleAct);
         environment.setOnResult(this::handleResult);
 
         learnPanel.readLearningRates().doOnNext(t -> ((TDAgentSingleNN) agent).alphas(t)).subscribe();
 
         Observable<WindowEvent>[] x = allFrames.stream().map(f -> SwingObservable.window(f, SwingObservable.WINDOW_ACTIVE)).toArray(Observable[]::new);
         Observable.mergeArray(x).filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING).doOnNext(this::handleWindowClosing).subscribe();
+    }
+
+    /**
+     * Creates all the frames
+     */
+    private void createMultiFrames() {
+        // Create multiple frame app
+        if (environment instanceof PolarRobotEnv) {
+            radarFrame = createFixFrame(Messages.getString("Radar.title"), polarPanel);
+        }
+
+        if (!this.args.getString("kpis").isEmpty()) {
+            // Create kpis frame
+            this.kpisFrame = kpisPanel.createFrame();
+        }
+        JFrame frame = createFrame(Messages.getString("Wheelly.title"), new JScrollPane(envPanel));
+        frame.getContentPane().add(createToolBar(), BorderLayout.NORTH);
+        JFrame comFrame = comMonitor.createFrame();
+        JFrame sensorFrame = sensorMonitor.createFrame();
+
+        // Collects all frames
+        allFrames = new ArrayList<>();
+        allFrames.add(frame);
+        if (radarFrame != null) {
+            allFrames.add(radarFrame);
+        }
+        if (kpisFrame != null) {
+            allFrames.add(kpisFrame);
+        }
+        allFrames.add(learnPanel.createFrame());
+        allFrames.add(sensorFrame);
+        allFrames.add(comFrame);
+
+        // Open all the windows
+        JFrame[] frameAry = this.allFrames.toArray(JFrame[]::new);
+
+        layHorizontally(frameAry);
+
+        comFrame.setState(JFrame.ICONIFIED);
+        interval(LAYOUT_INTERVAL, TimeUnit.MILLISECONDS).limit(allFrames.size()).doOnNext(i -> allFrames.get(allFrames.size() - 1 - Math.toIntExact(i)).setVisible(true)).subscribe();
+    }
+
+    /**
+     * Creates the panels
+     */
+    private void createPanels() {
+        kpisPanel.setKeys(agent.getActions().keySet().toArray(String[]::new));
+        learnPanel.setLearningRates(((TDAgentSingleNN) agent).alphas());
+        if (environment instanceof PolarRobotEnv env) {
+            this.polarPanel = new PolarPanel();
+            double radarMaxDistance = env.getMaxRadarDistance();
+            polarPanel.setRadarMaxDistance(radarMaxDistance);
+        }
+    }
+
+    /**
+     * Creates the single application frame
+     */
+    private void createSingleFrame() {
+        JTabbedPane panel = new JTabbedPane();
+        panel.addTab(Messages.getString("Wheelly.tabPanel.envMap"), new JScrollPane(envPanel));
+
+        if (environment instanceof PolarRobotEnv) {
+            panel.addTab(Messages.getString("Wheelly.tabPanel.polarMap"), new JScrollPane(polarPanel));
+        }
+        if (!this.args.getString("kpis").isEmpty()) {
+            panel.addTab(Messages.getString("Wheelly.tabPanel.kpi"), new JScrollPane(kpisPanel));
+        }
+        JPanel panel1 = new GridLayoutHelper<>(new JPanel())
+                .modify("insets,10 center").add(learnPanel)
+                .getContainer();
+        panel.addTab(Messages.getString("Wheelly.tabPanel.learn"), panel1);
+        panel.addTab(Messages.getString("Wheelly.tabPanel.sensor"), new JScrollPane(sensorMonitor));
+        panel.addTab(Messages.getString("Wheelly.tabPanel.com"), new JScrollPane(comMonitor));
+        // Create single frame app
+        JFrame frame = createFrame(Messages.getString("Wheelly.title"), panel);
+        frame.getContentPane().add(createToolBar(), BorderLayout.NORTH);
+        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
+                .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
+                .doOnNext(this::handleWindowOpened).subscribe();
+        center(frame);
+        allFrames = List.of(frame);
+        frame.setVisible(true);
+    }
+
+    /**
+     * Returns the toolbar
+     */
+    private JToolBar createToolBar() {
+        JToolBar toolBar = new JToolBar();
+        JButton reset = new JButton();
+        SwingUtils.getInstance().initButton(reset, "Wheelly.resetButton");
+        toolBar.add(stopButton);
+        toolBar.add(startButton);
+        toolBar.add(reset);
+        stopButton.addActionListener(this::handleStopButton);
+        startButton.addActionListener(this::handleStartButton);
+        reset.addActionListener(this::handleResetButton);
+        return toolBar;
+    }
+
+    /**
+     * Returns the action signals resulting from the action of inference
+     *
+     * @param signals the input signals
+     */
+    private Map<String, Signal> handleAct(Map<String, Signal> signals) {
+        return active ? agent.act(signals) : ((AbstractRobotEnv) environment).haltActions();
     }
 
     /**
@@ -260,11 +376,22 @@ public class Wheelly {
         }
     }
 
+    /**
+     * Handles reset button
+     *
+     * @param actionEvent the action event
+     */
+    private void handleResetButton(ActionEvent actionEvent) {
+        agent.init();
+    }
+
     private void handleResult(Environment.ExecutionResult result) {
-        double reward = result.getReward();
-        envPanel.setReward(avgRewards.add((float) reward).value());
-        sensorMonitor.onReward(reward);
-        agent.observe(result);
+        if (active) {
+            double reward = result.getReward();
+            envPanel.setReward(avgRewards.add((float) reward).value());
+            sensorMonitor.onReward(reward);
+            agent.observe(result);
+        }
     }
 
     /**
@@ -313,55 +440,49 @@ public class Wheelly {
     }
 
     /**
-     * Creates all the frames
+     * Handles the start button event
+     * @param actionEvent the event
      */
-    private void createMultiFrames() {
-        // Create multiple frame app
-        if (environment instanceof PolarRobotEnv) {
-            radarFrame = createFixFrame(Messages.getString("Radar.title"), polarPanel);
-        }
-
-        if (!this.args.getString("kpis").isEmpty()) {
-            // Create kpis frame
-            this.kpisFrame = kpisPanel.createFrame();
-        }
-        JFrame frame = createFrame(Messages.getString("Wheelly.title"), new JScrollPane(envPanel));
-        JFrame comFrame = comMonitor.createFrame();
-        JFrame sensorFrame = sensorMonitor.createFrame();
-
-        // Collects all frames
-        allFrames = new ArrayList<>();
-        allFrames.add(frame);
-        if (radarFrame != null) {
-            allFrames.add(radarFrame);
-        }
-        if (kpisFrame != null) {
-            allFrames.add(kpisFrame);
-        }
-        allFrames.add(learnPanel.createFrame());
-        allFrames.add(sensorFrame);
-        allFrames.add(comFrame);
-
-        // Open all the windows
-        JFrame[] frameAry = this.allFrames.toArray(JFrame[]::new);
-
-        layHorizontally(frameAry);
-
-        comFrame.setState(JFrame.ICONIFIED);
-        interval(LAYOUT_INTERVAL, TimeUnit.MILLISECONDS).limit(allFrames.size()).doOnNext(i -> allFrames.get(allFrames.size() - 1 - Math.toIntExact(i)).setVisible(true)).subscribe();
+    private void handleStartButton(ActionEvent actionEvent) {
+        active = true;
+        stopButton.setEnabled(true);
+        startButton.setEnabled(false);
     }
 
     /**
-     * Creates the panels
+     * Handles the status ready event
+     *
+     * @param status the status
      */
-    private void createPanels() {
-        kpisPanel.setKeys(agent.getActions().keySet().toArray(String[]::new));
-        learnPanel.setLearningRates(((TDAgentSingleNN) agent).alphas());
-        if (environment instanceof PolarRobotEnv env) {
-            this.polarPanel = new PolarPanel();
-            double radarMaxDistance = env.getMaxRadarDistance();
-            polarPanel.setRadarMaxDistance(radarMaxDistance);
+    private void handleStatusReady(RobotStatus status) {
+        if (robotStartTimestamp < 0) {
+            robotStartTimestamp = status.simulationTime();
         }
+        long robotElapsed = status.simulationTime() - robotStartTimestamp;
+        envPanel.setTimeRatio(environment.getController().simRealSpeed());
+        if (robotElapsed > sessionDuration) {
+            environment.shutdown();
+        }
+    }
+
+    /**
+     * Handles stop button
+     *
+     * @param actionEvent the action event
+     */
+    private void handleStopButton(ActionEvent actionEvent) {
+        active = false;
+        stopButton.setEnabled(false);
+        startButton.setEnabled(true);
+    }
+
+    /**
+     * Handles the window closing events
+     *
+     * @param windowEvent the event
+     */
+    private void handleWindowClosing(WindowEvent windowEvent) {
+        environment.shutdown();
     }
 
     /**
@@ -391,60 +512,6 @@ public class Wheelly {
         if (dumper != null) {
             dumper.dumpWrittenLine(line);
         }
-    }
-
-    /**
-     * Creates the single application frame
-     */
-    private void createSingleFrame() {
-        JTabbedPane panel = new JTabbedPane();
-        panel.addTab(Messages.getString("Wheelly.tabPanel.envMap"), new JScrollPane(envPanel));
-
-        if (environment instanceof PolarRobotEnv) {
-            panel.addTab(Messages.getString("Wheelly.tabPanel.polarMap"), new JScrollPane(polarPanel));
-        }
-        if (!this.args.getString("kpis").isEmpty()) {
-            panel.addTab(Messages.getString("Wheelly.tabPanel.kpi"), new JScrollPane(kpisPanel));
-        }
-        JPanel panel1 = new GridLayoutHelper<>(new JPanel())
-                .modify("insets,10 center").add(learnPanel)
-                .getContainer();
-        panel.addTab(Messages.getString("Wheelly.tabPanel.learn"), panel1);
-        panel.addTab(Messages.getString("Wheelly.tabPanel.sensor"), new JScrollPane(sensorMonitor));
-        panel.addTab(Messages.getString("Wheelly.tabPanel.com"), new JScrollPane(comMonitor));
-        // Create single frame app
-        JFrame frame = createFrame(Messages.getString("Wheelly.title"), panel);
-        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
-                .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
-                .doOnNext(this::handleWindowOpened).subscribe();
-        center(frame);
-        allFrames = List.of(frame);
-        frame.setVisible(true);
-    }
-
-    /**
-     * Handles the status ready event
-     *
-     * @param status the status
-     */
-    private void handleStatusReady(RobotStatus status) {
-        if (robotStartTimestamp < 0) {
-            robotStartTimestamp = status.simulationTime();
-        }
-        long robotElapsed = status.simulationTime() - robotStartTimestamp;
-        envPanel.setTimeRatio(environment.getController().simRealSpeed());
-        if (robotElapsed > sessionDuration) {
-            environment.shutdown();
-        }
-    }
-
-    /**
-     * Handles the window closing events
-     *
-     * @param windowEvent the event
-     */
-    private void handleWindowClosing(WindowEvent windowEvent) {
-        environment.shutdown();
     }
 
     /**
@@ -510,6 +577,8 @@ public class Wheelly {
         // Creates the flows
         createFlows();
         // Starts the environment interaction
+        active = true;
+        startButton.setEnabled(false);
         environment.start();
     }
 }

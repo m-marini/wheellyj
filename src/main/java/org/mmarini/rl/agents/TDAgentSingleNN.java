@@ -499,6 +499,11 @@ public class TDAgentSingleNN implements Agent {
         return indicatorsPub.onBackpressureBuffer(KPIS_CAPACITY);
     }
 
+    @Override
+    public void init() {
+        network.init();
+    }
+
     public float rewardAlpha() {
         return rewardAlpha;
     }

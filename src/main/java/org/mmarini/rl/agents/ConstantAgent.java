@@ -126,6 +126,10 @@ public class ConstantAgent implements Agent {
     }
 
     @Override
+    public void init() {
+    }
+
+    @Override
     public void save(File path) {
         throw new RuntimeException("Not implemented");
     }

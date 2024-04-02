@@ -271,6 +271,16 @@ public class TDNetwork {
     }
 
     /**
+     * Initializes the network
+     */
+    public void init() {
+        for (TDLayer layer : layers.values()) {
+            state = layer.initVariables(state);
+            state = layer.initParameters(state);
+        }
+    }
+
+    /**
      * Returns the layers
      */
     public Map<String, TDLayer> layers() {
