@@ -417,8 +417,8 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
                 status.echoDirection(),
                 distance, time);
         RadarMap hinderedMap = update(signal);
-        boolean frontContact = !status.frontSensor() || !status.canMoveForward();
-        boolean rearContact = !status.rearSensor() || !status.canMoveBackward();
+        boolean frontContact = !status.frontSensor();
+        boolean rearContact = !status.rearSensor();
         RadarMap contactMap = frontContact || rearContact
                 ? hinderedMap.setContactsAt(location, status.direction(), frontContact, rearContact, contactRadius, time)
                 : hinderedMap;
