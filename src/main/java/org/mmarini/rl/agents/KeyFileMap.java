@@ -176,6 +176,71 @@ public interface KeyFileMap {
     }
 
     /**
+     * Returns the key file map with the existing file by key predicate
+     *
+     * @param path   the path
+     * @param filter the filter
+     */
+    static Stream<Tuple2<String, File>> stream(File path, Predicate<String> filter) {
+        return streamFolders(path)
+                .filter(t ->
+                        filter.test(t._1))
+                .map(Tuple2.map2(t -> new File(t, "data.bin")))
+                .filter(t ->
+                        t._2.isFile() && t._2.canRead());
+    }
+
+    /**
+     * Returns the reader map with the entries by keys
+     *
+     * @param path the base path
+     * @param keys the keys
+     */
+    static Stream<Tuple2<String, File>> stream(File path, String... keys) {
+        return stream(path, matchesKey(keys));
+    }
+
+    /**
+     * Returns the stream of binary files
+     *
+     * @param path the path
+     * @param keys the keys
+     */
+    static Stream<Tuple2<String, BinArrayFile>> streamBinArrayFile(File path, String... keys) {
+        return stream(path, keys).map(Tuple2.map2(BinArrayFile::new));
+    }
+
+    /**
+     * Returns the list of kpis and folders by deep traversing the filesystem tree
+     *
+     * @param acc    the accumulator
+     * @param path   the path to traverse
+     * @param prefix the key prefix
+     */
+    private static Stream.Builder<Tuple2<String, File>> streamFolders(Stream.Builder<Tuple2<String, File>> acc, File path, String prefix) {
+        File[] paths = path.listFiles(File::isDirectory);
+        if (paths != null) {
+            for (File file : paths) {
+                streamFolders(acc, file,
+                        prefix.isEmpty()
+                                ? file.getName()
+                                : prefix + "." + file.getName());
+            }
+            acc.add(Tuple2.of(prefix, path));
+        }
+        return acc;
+    }
+
+    /**
+     * Returns the list of kpis and folders by deep traversing the filesystem tree
+     *
+     * @param path the path to traverse
+     */
+    private static Stream<Tuple2<String, File>> streamFolders(File path) {
+        return streamFolders(Stream.builder(), path, "").build();
+    }
+
+    /**
      * Validate for same shape
      *
      * @param files the files
@@ -245,70 +310,5 @@ public interface KeyFileMap {
                         refFile.file(), size));
             }
         }
-    }
-
-    /**
-     * Returns the key file map with the existing file by key predicate
-     *
-     * @param path   the path
-     * @param filter the filter
-     */
-    static Stream<Tuple2<String, File>> stream(File path, Predicate<String> filter) {
-        return streamFolders(path)
-                .filter(t ->
-                        filter.test(t._1))
-                .map(Tuple2.map2(t -> new File(t, "data.bin")))
-                .filter(t ->
-                        t._2.isFile() && t._2.canRead());
-    }
-
-    /**
-     * Returns the reader map with the entries by keys
-     *
-     * @param path the base path
-     * @param keys the keys
-     */
-    static Stream<Tuple2<String, File>> stream(File path, String... keys) {
-        return stream(path, matchesKey(keys));
-    }
-
-    /**
-     * Returns the stream of binary files
-     *
-     * @param path the path
-     * @param keys the keys
-     */
-    static Stream<Tuple2<String, BinArrayFile>> streamBinArrayFile(File path, String... keys) {
-        return stream(path, keys).map(Tuple2.map2(BinArrayFile::new));
-    }
-
-    /**
-     * Returns the list of kpis and folders by deep traversing the filesystem tree
-     *
-     * @param acc    the accumulator
-     * @param path   the path to traverse
-     * @param prefix the key prefix
-     */
-    private static Stream.Builder<Tuple2<String, File>> streamFolders(Stream.Builder<Tuple2<String, File>> acc, File path, String prefix) {
-        File[] paths = path.listFiles(File::isDirectory);
-        if (paths != null) {
-            for (File file : paths) {
-                streamFolders(acc, file,
-                        prefix.isEmpty()
-                                ? file.getName()
-                                : prefix + "." + file.getName());
-            }
-            acc.add(Tuple2.of(prefix, path));
-        }
-        return acc;
-    }
-
-    /**
-     * Returns the list of kpis and folders by deep traversing the filesystem tree
-     *
-     * @param path the path to traverse
-     */
-    private static Stream<Tuple2<String, File>> streamFolders(File path) {
-        return streamFolders(Stream.builder(), path, "").build();
     }
 }

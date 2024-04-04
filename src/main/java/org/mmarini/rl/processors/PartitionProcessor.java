@@ -112,9 +112,10 @@ public interface PartitionProcessor {
 
     /**
      * Returns the signal encoder
-     * @param inSpec the input specification
-     * @param outName the output name
-     * @param inName the input name
+     *
+     * @param inSpec   the input specification
+     * @param outName  the output name
+     * @param inName   the input name
      * @param numTiles the number of tiles
      */
     static UnaryOperator<Map<String, Signal>> createEncoder(Map<String, SignalSpec> inSpec, String outName, String inName, int numTiles) {
@@ -130,9 +131,9 @@ public interface PartitionProcessor {
     /**
      * Returns the specification of new partition output property
      *
-     * @param inSpec        the input specification
-     * @param name          the name of property
-     * @param inName  the input name
+     * @param inSpec   the input specification
+     * @param name     the name of property
+     * @param inName   the input name
      * @param numTiles the number of tiles
      */
     static Map<String, SignalSpec> createSpec(Map<String, SignalSpec> inSpec, String name, String inName, int numTiles) {
@@ -145,9 +146,9 @@ public interface PartitionProcessor {
     /**
      * Validates the processor arguments
      *
-     * @param inSpec the input specification
+     * @param inSpec  the input specification
      * @param outName the output name
-     * @param inName the input name
+     * @param inName  the input name
      */
     static void validate(Map<String, SignalSpec> inSpec, String outName, String inName) {
         validateAlreadyDefinedName(inSpec, outName);

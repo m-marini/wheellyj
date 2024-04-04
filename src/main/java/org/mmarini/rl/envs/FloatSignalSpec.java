@@ -73,6 +73,11 @@ public class FloatSignalSpec extends SignalSpec {
     }
 
     @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), minValue, maxValue);
+    }
+
+    @Override
     public JsonNode json() {
         ObjectNode spec = Utils.objectMapper.createObjectNode();
         spec.put("type", "float");
@@ -98,11 +103,6 @@ public class FloatSignalSpec extends SignalSpec {
      */
     public float minValue() {
         return minValue;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(super.hashCode(), minValue, maxValue);
     }
 
     @Override

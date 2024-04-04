@@ -134,14 +134,6 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
                 radarMap, PolarMap.create(numRadarSectors), minRadarDistance, maxRadarDistance);
     }
 
-    private final Map<String, SignalSpec> actions;
-    private final Map<String, SignalSpec> states;
-    private final double maxRadarDistance;
-    private final double minRadarDistance;
-    private CompositeStatus status;
-    private CompositeStatus currentStatus;
-    private CompositeStatus previousStatus;
-
     /**
      * Returns the coded value of bits
      *
@@ -182,6 +174,13 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
                 : status.frontSensor() ? 4 : 0;
     }
 
+    private final Map<String, SignalSpec> actions;
+    private final Map<String, SignalSpec> states;
+    private final double maxRadarDistance;
+    private final double minRadarDistance;
+    private CompositeStatus status;
+    private CompositeStatus currentStatus;
+
     /**
      * Creates the controller environment
      *
@@ -211,6 +210,13 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
                 "sectorDistances", new FloatSignalSpec(new long[]{n}, 0, (float) maxRadarDistance)
         );
         readRobotStatus().doOnNext(this::handleStatus).subscribe();
+    }
+
+    /**
+     * Clears radar map
+     */
+    public void clearRadarMap() {
+        this.status = this.status.setRadarMap(this.status.radarMap.clean());
     }
 
     @Override
@@ -290,7 +296,7 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
 
     @Override
     protected void splitStatus() {
-        previousStatus = currentStatus;
+        CompositeStatus previousStatus = currentStatus;
     }
 
     public static class CompositeStatus {

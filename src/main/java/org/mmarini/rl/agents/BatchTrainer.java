@@ -73,10 +73,10 @@ public class BatchTrainer {
     /**
      * Returns the batch trainer
      *
-     * @param agent            the agent
+     * @param agent     the agent
      * @param numEpochs the number of epochs of rl training
-     * @param batchSize          the batch size
-     * @param onTrained          the on trained callback
+     * @param batchSize the batch size
+     * @param onTrained the on trained callback
      */
     public static BatchTrainer create(TDAgentSingleNN agent,
                                       int numEpochs, int batchSize,
@@ -103,10 +103,10 @@ public class BatchTrainer {
     /**
      * Creates the batch trainer
      *
-     * @param agent             the network to train
+     * @param agent     the network to train
      * @param numEpochs the number of iterations of rl training
-     * @param batchSize           the batch size
-     * @param onTrained           the on trained call back
+     * @param batchSize the batch size
+     * @param onTrained the on trained call back
      */
     protected BatchTrainer(TDAgentSingleNN agent, int numEpochs,
                            int batchSize, Consumer<TDAgentSingleNN> onTrained) {
@@ -329,16 +329,16 @@ public class BatchTrainer {
         info("Training batch size %d", batchSize);
         try {
             for (int i = 0; i < numEpochs && !stopped; i++) {
-                    // Iterate for all mini batches
+                // Iterate for all mini batches
                 info("Epoch %d of %d ...", i + 1, numEpochs);
                 runEpoque();
-                    if (onTrained != null) {
-                        onTrained.accept(agent);
-                    }
-                    if (stopped) {
-                        break;
-                    }
+                if (onTrained != null) {
+                    onTrained.accept(agent);
                 }
+                if (stopped) {
+                    break;
+                }
+            }
         } finally {
             agent.close();
             kpisProcessor.onComplete();

@@ -115,6 +115,10 @@ public class RandomAgent implements Agent {
     }
 
     @Override
+    public void init() {
+    }
+
+    @Override
     public JsonNode json() {
         return null;
     }
@@ -126,10 +130,6 @@ public class RandomAgent implements Agent {
     @Override
     public Flowable<Map<String, INDArray>> readKpis() {
         return Flowable.empty();
-    }
-
-    @Override
-    public void init() {
     }
 
     @Override

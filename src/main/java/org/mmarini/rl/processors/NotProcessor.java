@@ -72,11 +72,6 @@ public interface NotProcessor {
         };
     }
 
-    static void validate(Map<String, SignalSpec> inSpec, String outName, String inName) {
-        validateAlreadyDefinedName(inSpec, outName);
-        validateExistingNames(inSpec, inName);
-    }
-
     /**
      * Returns the specification of new partition output property
      *
@@ -89,5 +84,10 @@ public interface NotProcessor {
         Map<String, SignalSpec> outSpec = new HashMap<>(inSpec);
         outSpec.put(outName, newSpec);
         return outSpec;
+    }
+
+    static void validate(Map<String, SignalSpec> inSpec, String outName, String inName) {
+        validateAlreadyDefinedName(inSpec, outName);
+        validateExistingNames(inSpec, inName);
     }
 }
