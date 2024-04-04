@@ -26,6 +26,7 @@
 package org.mmarini.wheelly.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.mmarini.rl.envs.*;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.apps.JsonSchemas;
@@ -135,23 +136,6 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
     }
 
     /**
-     * Returns the coded value of bits
-     *
-     * @param bits in little indian order
-     */
-    private static int encodeBits(boolean... bits) {
-        int code = 0;
-        int mask = 1;
-        for (int i = 0; i < bits.length; i++) {
-            if (bits[0]) {
-                code += mask;
-            }
-            mask += mask;
-        }
-        return code;
-    }
-
-    /**
      * Returns the can move state by sensor state
      * <pre>
      * | Value | Description                                |
@@ -210,6 +194,12 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
                 "sectorDistances", new FloatSignalSpec(new long[]{n}, 0, (float) maxRadarDistance)
         );
         readRobotStatus().doOnNext(this::handleStatus).subscribe();
+        readControllerStatus()
+                .observeOn(Schedulers.io())
+                .filter(RobotController.CONFIGURING::equals)
+                .doOnNext(ignored -> clearRadarMap())
+                .subscribe();
+
     }
 
     /**
@@ -280,23 +270,18 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
 
     @Override
     protected void latchStatus(RobotStatus ignored) {
-        currentStatus = status;
+        CompositeStatus currentStatus = status;
         RobotStatus robotStatus = currentStatus.status;
         RadarMap radarMap = currentStatus.radarMap;
         PolarMap polarMap = currentStatus.polarMap;
         polarMap = polarMap.update(radarMap, robotStatus.location(), robotStatus.direction(), minRadarDistance, maxRadarDistance);
-        currentStatus = currentStatus.setPolarMap(polarMap);
+        this.currentStatus = currentStatus.setPolarMap(polarMap);
     }
 
     @Override
     protected void onStatus(RobotStatus status) {
         RadarMap newRadarMap = this.status.radarMap.update(status);
         this.status = this.status.setStatus(status).setRadarMap(newRadarMap);
-    }
-
-    @Override
-    protected void splitStatus() {
-        CompositeStatus previousStatus = currentStatus;
     }
 
     public static class CompositeStatus {
