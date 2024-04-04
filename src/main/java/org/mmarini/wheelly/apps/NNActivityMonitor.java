@@ -73,9 +73,9 @@ import static org.mmarini.yaml.Utils.fromFile;
  * Application to monitor neural network activity
  */
 public class NNActivityMonitor {
-    private static final Logger logger = LoggerFactory.getLogger(NNActivityMonitor.class);
     public static final int SIM_PERIOD = 100;
     public static final int PLAY_DIVIDER = 3;
+    private static final Logger logger = LoggerFactory.getLogger(NNActivityMonitor.class);
 
     static {
         Nd4j.zeros(1);
@@ -133,27 +133,6 @@ public class NNActivityMonitor {
     private boolean playing;
     private int timeDivider;
     private BinArrayFile refFile;
-
-    /**
-     * Loads the network
-     *
-     * @throws IOException in case of error
-     */
-    private void loadNetwork() throws IOException {
-        JsonNode config = fromFile(args.getString("config"));
-        RobotEnvironment environment = AppYaml.envFromJson(config, Locator.root(), WHEELLY_SCHEMA_YML);
-        Locator agentLocator = Locator.locate(Locator.locate("agent").getNode(config).asText());
-        if (agentLocator.getNode(config).isMissingNode()) {
-            throw new IllegalArgumentException(format("Missing node %s", agentLocator));
-        }
-        Agent agent = Agent.fromConfig(config, agentLocator, environment);
-        if (agent instanceof TDAgentSingleNN tdagent) {
-            this.network = tdagent.network();
-        } else {
-            throw new IllegalArgumentException(
-                    format("Wrong agent type %s", agent.getClass().getName()));
-        }
-    }
 
     /**
      * Creates the application
@@ -218,6 +197,27 @@ public class NNActivityMonitor {
             timeLine.setEnabled(false);
         } else {
             stop();
+        }
+    }
+
+    /**
+     * Loads the network
+     *
+     * @throws IOException in case of error
+     */
+    private void loadNetwork() throws IOException {
+        JsonNode config = fromFile(args.getString("config"));
+        RobotEnvironment environment = AppYaml.envFromJson(config, Locator.root(), WHEELLY_SCHEMA_YML);
+        Locator agentLocator = Locator.locate(Locator.locate("agent").getNode(config).asText());
+        if (agentLocator.getNode(config).isMissingNode()) {
+            throw new IllegalArgumentException(format("Missing node %s", agentLocator));
+        }
+        Agent agent = Agent.fromConfig(config, agentLocator, environment);
+        if (agent instanceof TDAgentSingleNN tdagent) {
+            this.network = tdagent.network();
+        } else {
+            throw new IllegalArgumentException(
+                    format("Wrong agent type %s", agent.getClass().getName()));
         }
     }
 

@@ -229,6 +229,18 @@ public class TDAgentSingleNN implements Agent {
     }
 
     /**
+     * Returns the gradient of policies for given action mask
+     *
+     * @param pi          the policies
+     * @param actionMasks the action masks
+     */
+    private static Map<String, INDArray> gradLogPiByMask(Map<String, INDArray> pi, Map<String, INDArray> actionMasks) {
+        return MapUtils.mapValues(pi, (key, value) ->
+                actionMasks.get(key).div(value)
+        );
+    }
+
+    /**
      * Loads the agent from path
      *
      * @param path                the path
@@ -254,7 +266,6 @@ public class TDAgentSingleNN implements Agent {
         }
         return node;
     }
-
     private final Map<String, SignalSpec> state;
     private final Map<String, SignalSpec> actions;
     private final float rewardAlpha;
@@ -269,20 +280,8 @@ public class TDAgentSingleNN implements Agent {
     private float avgReward;
     private int savingStepCounter;
     private boolean backedUp;
-
-    /**
-     * Returns the gradient of policies for given action mask
-     *
-     * @param pi          the policies
-     * @param actionMasks the action masks
-     */
-    private static Map<String, INDArray> gradLogPiByMask(Map<String, INDArray> pi, Map<String, INDArray> actionMasks) {
-        return MapUtils.mapValues(pi, (key, value) ->
-                actionMasks.get(key).div(value)
-        );
-    }
-
     private Map<String, INDArray> kpis;
+    private boolean postTrainKpis;
 
     /**
      * Creates a random behavior agent
@@ -328,8 +327,6 @@ public class TDAgentSingleNN implements Agent {
 
         network.validate(stateSizes, networkSizes);
     }
-
-    private boolean postTrainKpis;
 
     @Override
     public Map<String, Signal> act(Map<String, Signal> state) {
@@ -403,6 +400,11 @@ public class TDAgentSingleNN implements Agent {
     }
 
     @Override
+    public void init() {
+        network.init();
+    }
+
+    @Override
     public JsonNode json() {
         ObjectNode alphasSpec = Utils.objectMapper.createObjectNode();
         for (Map.Entry<String, Float> alphaEntry : alphas.entrySet()) {
@@ -433,6 +435,11 @@ public class TDAgentSingleNN implements Agent {
      */
     public TDNetwork network() {
         return network;
+    }
+
+    @Override
+    public void observe(Environment.ExecutionResult result) {
+        trainOnLine(result);
     }
 
     /**
@@ -499,11 +506,6 @@ public class TDAgentSingleNN implements Agent {
         return indicatorsPub.onBackpressureBuffer(KPIS_CAPACITY);
     }
 
-    @Override
-    public void init() {
-        network.init();
-    }
-
     public float rewardAlpha() {
         return rewardAlpha;
     }
@@ -519,11 +521,6 @@ public class TDAgentSingleNN implements Agent {
         Utils.objectMapper.writerWithDefaultPrettyPrinter().writeValue(new File(pathFile, "agent.yml"), spec);
         Map<String, INDArray> props = props();
         Serde.serizalize(new File(pathFile, "agent.bin"), props);
-    }
-
-    @Override
-    public void observe(Environment.ExecutionResult result) {
-        trainOnLine(result);
     }
 
     /**
@@ -657,11 +654,11 @@ public class TDAgentSingleNN implements Agent {
         kpis.putAll(addKeyPrefix(layers0, "layers0."));
         kpis.putAll(addKeyPrefix(result0.gradients(), "grads0."));
         Map<String, INDArray> deltas = Tuple2.stream(grads).map(t ->
-                            Tuple2.of(
-                                    "deltas." + t._1,
-                                    t._2.mul(delta)
-                            ))
-                    .collect(Tuple2.toMap());
+                        Tuple2.of(
+                                "deltas." + t._1,
+                                t._2.mul(delta)
+                        ))
+                .collect(Tuple2.toMap());
         kpis.putAll(deltas);
         kpis.putAll(MapUtils.addKeyPrefix(trainedState.parameters(), "trainedParams."));
         if (++savingStepCounter >= savingIntervalSteps) {

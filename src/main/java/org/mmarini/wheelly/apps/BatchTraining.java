@@ -179,6 +179,36 @@ public class BatchTraining {
     }
 
     /**
+     * Creates the application single frame
+     */
+    private void createSingleFrames() {
+        List<String> outputs = agent.network().sinkLayers();
+
+        // Create the frame
+        String[] actions = outputs.stream()
+                .filter(Predicate.not("critic"::equals))
+                .toArray(String[]::new);
+
+        JTabbedPane tabPanel = new JTabbedPane();
+        tabPanel.addTab(Messages.getString("BatchTraining.tabPanel.kpis"), createContent(actions));
+        tabPanel.addTab(Messages.getString("BatchTraining.tabPanel.learn"),
+                new GridLayoutHelper<>(new JPanel())
+                        .modify("insets,10 center").add(learnPanel)
+                        .getContainer());
+
+        JFrame frame = createFrame(Messages.getString("BatchTraining.title"), tabPanel);
+
+        this.allFrames = List.of(frame);
+
+        center(frame);
+
+        allFrames.forEach(f -> {
+            f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            f.setVisible(true);
+        });
+    }
+
+    /**
      * Handles shutdown
      */
     private void handleShutdown() {
@@ -209,87 +239,6 @@ public class BatchTraining {
         infoBar.setHorizontalAlignment(JTextField.CENTER);
         infoBar.setFont(infoBar.getFont().deriveFont(Font.BOLD));
         infoBar.setEditable(false);
-    }
-
-    /**
-     * Runs the batch
-     *
-     * @throws Exception in case of error
-     */
-    private void runBatch() throws Exception {
-        // Prepares for training
-        info("Preparing for training ...");
-        trainer.validate(new File(this.args.getString("dataset")));
-        recordBar.setMaximum((int) trainer.numRecords());
-        trainer.prepare();
-
-        // reads kpis if activated
-        String kpiPath = this.args.getString("kpis");
-        this.kpiWriter = kpiPath.isEmpty()
-                ? null
-                : KpiBinWriter.createFromLabels(
-                new File(kpiPath),
-                this.args.getString("label"));
-
-        if (kpiWriter != null) {
-            this.trainer.readKpis()
-                    .observeOn(Schedulers.io())
-                    .onBackpressureBuffer(KPIS_CAPACITY, true)
-                    .doOnNext(kpiWriter::write)
-                    .doOnComplete(() -> {
-                        kpiWriter.close();
-                        completed.onComplete();
-                    })
-                    .doOnError(ex -> logger.atError().setCause(ex).log("Error on kpis"))
-                    .subscribe();
-
-        } else {
-            completed.onComplete();
-        }
-        // Runs the training session
-        info("Training ...");
-        trainer.train();
-        info("Training completed.");
-    }
-
-    /**
-     * Saves the network
-     *
-     * @param agent the agent
-     */
-    private void saveNetwork(TDAgentSingleNN agent) {
-        info("Saving network ...");
-        agent.autosave();
-    }
-
-    /**
-     * Creates the application single frame
-     */
-    private void createSingleFrames() {
-        List<String> outputs = agent.network().sinkLayers();
-
-        // Create the frame
-        String[] actions = outputs.stream()
-                .filter(Predicate.not("critic"::equals))
-                .toArray(String[]::new);
-
-        JTabbedPane tabPanel = new JTabbedPane();
-        tabPanel.addTab(Messages.getString("BatchTraining.tabPanel.kpis"), createContent(actions));
-        tabPanel.addTab(Messages.getString("BatchTraining.tabPanel.learn"),
-                new GridLayoutHelper<>(new JPanel())
-                        .modify("insets,10 center").add(learnPanel)
-                        .getContainer());
-
-        JFrame frame = createFrame(Messages.getString("BatchTraining.title"), tabPanel);
-
-        this.allFrames = List.of(frame);
-
-        center(frame);
-
-        allFrames.forEach(f -> {
-            f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            f.setVisible(true);
-        });
     }
 
     /**
@@ -360,6 +309,57 @@ public class BatchTraining {
             f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             f.setVisible(true);
         });
+    }
+
+    /**
+     * Runs the batch
+     *
+     * @throws Exception in case of error
+     */
+    private void runBatch() throws Exception {
+        // Prepares for training
+        info("Preparing for training ...");
+        trainer.validate(new File(this.args.getString("dataset")));
+        recordBar.setMaximum((int) trainer.numRecords());
+        trainer.prepare();
+
+        // reads kpis if activated
+        String kpiPath = this.args.getString("kpis");
+        this.kpiWriter = kpiPath.isEmpty()
+                ? null
+                : KpiBinWriter.createFromLabels(
+                new File(kpiPath),
+                this.args.getString("label"));
+
+        if (kpiWriter != null) {
+            this.trainer.readKpis()
+                    .observeOn(Schedulers.io())
+                    .onBackpressureBuffer(KPIS_CAPACITY, true)
+                    .doOnNext(kpiWriter::write)
+                    .doOnComplete(() -> {
+                        kpiWriter.close();
+                        completed.onComplete();
+                    })
+                    .doOnError(ex -> logger.atError().setCause(ex).log("Error on kpis"))
+                    .subscribe();
+
+        } else {
+            completed.onComplete();
+        }
+        // Runs the training session
+        info("Training ...");
+        trainer.train();
+        info("Training completed.");
+    }
+
+    /**
+     * Saves the network
+     *
+     * @param agent the agent
+     */
+    private void saveNetwork(TDAgentSingleNN agent) {
+        info("Saving network ...");
+        agent.autosave();
     }
 
 }

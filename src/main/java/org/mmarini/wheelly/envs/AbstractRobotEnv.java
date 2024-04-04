@@ -111,6 +111,20 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
     protected abstract Map<String, Signal> getSignals();
 
     /**
+     * Returns the halt action
+     */
+    public Map<String, Signal> haltActions() {
+        Signal speedSignal = IntSignal.create(((IntSignalSpec) getActions().get("speed")).numValues() - 1);
+        Signal sensorAction = IntSignal.create(
+                ((IntSignalSpec) getActions().get("sensorAction")).numValues() / 2);
+        Signal directionAction = IntSignal.create(
+                ((IntSignalSpec) getActions().get("direction")).numValues() / 2);
+        return Map.of("speed", speedSignal,
+                "direction", directionAction,
+                "sensorAction", sensorAction);
+    }
+
+    /**
      * Processes the inference to produce the behaviour
      * The inference is composed by the sequence
      * <ul>
@@ -154,20 +168,6 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
      */
     protected void handleStatus(RobotStatus status) {
         onStatus(status);
-    }
-
-    /**
-     * Returns the halt action
-     */
-    public Map<String, Signal> haltActions() {
-        Signal speedSignal = IntSignal.create(((IntSignalSpec) getActions().get("speed")).numValues() - 1);
-        Signal sensorAction = IntSignal.create(
-                ((IntSignalSpec) getActions().get("sensorAction")).numValues() / 2);
-        Signal directionAction = IntSignal.create(
-                ((IntSignalSpec) getActions().get("direction")).numValues() / 2);
-        return Map.of("speed", speedSignal,
-                "direction", directionAction,
-                "sensorAction", sensorAction);
     }
 
     /**

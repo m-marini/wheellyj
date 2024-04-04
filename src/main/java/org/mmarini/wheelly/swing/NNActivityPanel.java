@@ -49,8 +49,6 @@ import static java.lang.Math.sqrt;
  */
 public class NNActivityPanel extends JPanel {
     private static final Logger logger = LoggerFactory.getLogger(NNActivityPanel.class);
-    private Map<String, ActivityMap> layerMaps;
-
     private final Map<String, Integer> SPECIAL_KEYS = Map.of(
             "canMoveFeatures", 1,
             "distanceFeatures", 24,
@@ -59,6 +57,7 @@ public class NNActivityPanel extends JPanel {
             "sensorAction", 1,
             "speed", 1
     );
+    private Map<String, ActivityMap> layerMaps;
 
     /**
      * Creates the neural network activity panel

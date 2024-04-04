@@ -82,7 +82,8 @@ public interface TilesProcessor {
 
     /**
      * Returns the encoder of value matrix
-     * @param spec the signal specification
+     *
+     * @param spec     the signal specification
      * @param numTiles the number of tiles
      */
     static UnaryOperator<INDArray> createEncoder(SignalSpec spec, int numTiles) {
@@ -162,10 +163,11 @@ public interface TilesProcessor {
 
     /**
      * Returns the signal spec
-     * @param spec the input signal spec
-     * @param outName the output name
+     *
+     * @param spec      the input signal spec
+     * @param outName   the output name
      * @param inputName the input name
-     * @param numTiles the number of tiles
+     * @param numTiles  the number of tiles
      */
     static Map<String, SignalSpec> createSpec(Map<String, SignalSpec> spec, String outName, String inputName, int numTiles) {
         Map<String, SignalSpec> result = new HashMap<>(spec);

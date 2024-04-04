@@ -75,6 +75,11 @@ public class IntSignalSpec extends SignalSpec {
     }
 
     @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), numValues);
+    }
+
+    @Override
     public JsonNode json() {
         ObjectNode spec = Utils.objectMapper.createObjectNode();
         spec.put("type", "int");
@@ -92,11 +97,6 @@ public class IntSignalSpec extends SignalSpec {
      */
     public int numValues() {
         return numValues;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(super.hashCode(), numValues);
     }
 
     @Override

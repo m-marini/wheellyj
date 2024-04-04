@@ -299,14 +299,16 @@ public class Wheelly {
      */
     private JToolBar createToolBar() {
         JToolBar toolBar = new JToolBar();
-        JButton reset = new JButton();
-        SwingUtils.getInstance().initButton(reset, "Wheelly.resetButton");
+        JButton resetButton = SwingUtils.getInstance().initButton(new JButton(), "Wheelly.resetButton");
+        JButton clearMapButton = SwingUtils.getInstance().initButton(new JButton(), "Wheelly.clearMapButton");
         toolBar.add(stopButton);
         toolBar.add(startButton);
-        toolBar.add(reset);
+        toolBar.add(resetButton);
+        toolBar.add(clearMapButton);
         stopButton.addActionListener(this::handleStopButton);
         startButton.addActionListener(this::handleStartButton);
-        reset.addActionListener(this::handleResetButton);
+        resetButton.addActionListener(this::handleResetButton);
+        clearMapButton.addActionListener(this::handleClearMapButton);
         return toolBar;
     }
 
@@ -317,6 +319,17 @@ public class Wheelly {
      */
     private Map<String, Signal> handleAct(Map<String, Signal> signals) {
         return active ? agent.act(signals) : ((AbstractRobotEnv) environment).haltActions();
+    }
+
+    /**
+     * Handles the clear map button event
+     *
+     * @param actionEvent the event
+     */
+    private void handleClearMapButton(ActionEvent actionEvent) {
+        if (environment instanceof PolarRobotEnv env) {
+            env.clearRadarMap();
+        }
     }
 
     /**
@@ -441,6 +454,7 @@ public class Wheelly {
 
     /**
      * Handles the start button event
+     *
      * @param actionEvent the event
      */
     private void handleStartButton(ActionEvent actionEvent) {

@@ -63,6 +63,11 @@ public interface Agent extends Closeable, WithSignalsSpec {
     Map<String, Signal> act(Map<String, Signal> state);
 
     /**
+     * Resets the inference engine
+     */
+    void init();
+
+    /**
      * Returns the agent specification json node
      */
     JsonNode json();
@@ -78,11 +83,6 @@ public interface Agent extends Closeable, WithSignalsSpec {
      * Returns the flowable kpis
      */
     Flowable<Map<String, INDArray>> readKpis();
-
-    /**
-     * Resets the inference engine
-     */
-    void init();
 
     /**
      * Save the model

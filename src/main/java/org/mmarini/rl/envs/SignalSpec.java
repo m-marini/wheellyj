@@ -114,6 +114,11 @@ public abstract class SignalSpec {
         return Arrays.equals(shape, that.shape);
     }
 
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(shape);
+    }
+
     /**
      * Returns the json node of spec
      */
@@ -131,10 +136,5 @@ public abstract class SignalSpec {
      */
     public long size() {
         return Arrays.stream(shape).reduce(1, (a, b) -> a * b);
-    }
-
-    @Override
-    public int hashCode() {
-        return Arrays.hashCode(shape);
     }
 }

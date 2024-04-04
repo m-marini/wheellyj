@@ -85,6 +85,7 @@ public class PrintNetChart {
 
     /**
      * Application entry point
+     *
      * @param args command line arguments
      */
     public static void main(String[] args) {
@@ -227,21 +228,21 @@ public class PrintNetChart {
             switch (layer) {
                 case TDDense tdDense2 -> {
                     output.printf("\\nDense(%d)",
-                                network.size(name));
-                        float dropOut = tdDense2.dropOut();
-                        if (dropOut != 1F) {
-                            output.printf("\\ndropOut=%.3f", dropOut);
-                        }
+                            network.size(name));
+                    float dropOut = tdDense2.dropOut();
+                    if (dropOut != 1F) {
+                        output.printf("\\ndropOut=%.3f", dropOut);
                     }
+                }
                 case TDConcat ignored -> output.print("\\nConcat");
                 case TDSum ignored -> output.print("\\nSum");
                 case TDTanh ignored -> output.print("\\nTanh");
                 case TDRelu ignored -> output.print("\\nRelu");
                 case TDLinear tdLinear2 -> output.printf("\\nLin(%.3f, %.3f)",
-                            tdLinear2.bias(),
-                            tdLinear2.weight());
+                        tdLinear2.bias(),
+                        tdLinear2.weight());
                 case TDSoftmax tdSoftmax2 -> output.printf("\\nSoftmax(%.3f)",
-                            tdSoftmax2.temperature());
+                        tdSoftmax2.temperature());
                 case TDDropOut tdDropout -> output.printf("\\nDropout(%.3f)", tdDropout.dropOut());
                 case null -> {
                     SignalSpec spec = state.get(name);

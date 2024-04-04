@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Issue [#407](https://github.com/m-marini/wheellyj/issues/407): Add single window mode
 - Issue [#408](https://github.com/m-marini/wheellyj/issues/408): Add reset network button
+- Issue [#413](https://github.com/m-marini/wheellyj/issues/413): Reset map button
 
 ## [0.16.0] 2024-03-30
 
