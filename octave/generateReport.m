@@ -23,11 +23,11 @@ function generateReport(dataPath, reportPath)
   generateKpiReport(hFile, [dataPath "/reward"], reportPath, "reward", "Reward", mode);
   generateKpiReport(hFile, [dataPath "/delta"], reportPath, "delta", "Delta", mode);
   generateKpiReport(hFile, [dataPath "/layers0/direction/values/maxAbs"], reportPath, "policy_direction", "Direction max prob.", mode);
-  generateKpiReport(hFile, [dataPath "/layers0/direction/values/maxMinRatio"], reportPath, "policy_direction_ratio", "Direction max/min ratio", mode);
+  generateKpiReport(hFile, [dataPath "/layers0/direction/values/maxMeanRatio"], reportPath, "policy_direction_ratio", "Direction max/mean ratio", mode);
   generateKpiReport(hFile, [dataPath "/layers0/speed/values/maxAbs"], reportPath, "policy_speed", "Speed max prob.", mode);
-  generateKpiReport(hFile, [dataPath "/layers0/speed/values/maxMinRatio"], reportPath, "policy_speed_ratio", "Speed max/min ratio", mode);
+  generateKpiReport(hFile, [dataPath "/layers0/speed/values/maxMeanRatio"], reportPath, "policy_speed_ratio", "Speed max/mean ratio", mode);
   generateKpiReport(hFile, [dataPath "/layers0/sensorAction/values/maxAbs"], reportPath, "policy_sensorAction", "Sensor direction max prob.", mode);
-  generateKpiReport(hFile, [dataPath "/layers0/sensorAction/values/maxMinRatio"], reportPath, "policy_sensorAction_ratio", "Sensor direction  max/min ratio", mode);
+  generateKpiReport(hFile, [dataPath "/layers0/sensorAction/values/maxMeanRatio"], reportPath, "policy_sensorAction_ratio", "Sensor direction  max/mean ratio", mode);
   generateKpiReport(hFile, [dataPath "/deltas/critic/maxAbs"], reportPath, "eta_delta_critic", "Critic delta", mode);
   generateKpiReport(hFile, [dataPath "/deltas/direction/maxAbs"], reportPath, "eta_delta_direction", "Direction delta", mode);
   generateKpiReport(hFile, [dataPath "/deltas/speed/maxAbs"], reportPath, "eta_delta_speed", "Speed delta", mode);

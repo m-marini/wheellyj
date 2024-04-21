@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Issue [#414](https://github.com/m-marini/wheellyj/issues/414): Reset map on connect
 - Issue [#415](https://github.com/m-marini/wheellyj/issues/415): Set radar map on contacts only
+- Issue [#419](https://github.com/m-marini/wheellyj/issues/419): Change action probability ratio
 
 ## [0.16.0] 2024-03-30
 
