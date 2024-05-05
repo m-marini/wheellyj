@@ -5,6 +5,14 @@ The code of Arduino controller is at [Wheellino project](https://github.com/m-ma
 
 The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
+## Release 0.16.1
+
+- Single window mode
+- Reset network button
+- Reset map button and on connect
+- Set radar map on contacts only
+- Change action probability ratio
+
 ## Release 0.16.0
 
 - Generate dynamic simulated environment
