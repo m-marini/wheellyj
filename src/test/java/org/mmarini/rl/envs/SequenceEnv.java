@@ -51,11 +51,11 @@ public class SequenceEnv implements Environment {
             Map<String, Signal> signals1 = getSignals();
             if (currentState >= numStates - 1) {
                 currentState = 0;
-                return new ExecutionResult(signals0, actions, 1, signals0, true);
+                return null;
             }
-            return new ExecutionResult(signals0, actions, 1, signals1, false);
+            return new ExecutionResult(signals0, actions, 1, signals1);
         } else {
-            return new ExecutionResult(signals0, actions, 0, signals0, false);
+            return new ExecutionResult(signals0, actions, 0, signals0);
         }
     }
 

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+
+- Issue #423: Manage continuing task only
+
 ## [0.16.1] 2024-05-05
 
 ### Added

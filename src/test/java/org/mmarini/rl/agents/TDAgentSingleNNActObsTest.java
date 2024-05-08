@@ -123,7 +123,7 @@ class TDAgentSingleNNActObsTest {
             );
             INDArray s0Org = s0.dup();
             Map<String, Signal> actions = agent.act(state);
-            ExecutionResult result = new ExecutionResult(state, actions, 1, state, false);
+            ExecutionResult result = new ExecutionResult(state, actions, 1, state);
             agent.observe(result);
             agent.act(state);
             agent.observe(result);

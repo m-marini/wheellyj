@@ -37,7 +37,6 @@ import org.mmarini.rl.processors.InputProcessor;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
-import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.ops.impl.transforms.custom.CumSum;
 import org.nd4j.linalg.api.rng.Random;
@@ -266,6 +265,7 @@ public class TDAgentSingleNN implements Agent {
         }
         return node;
     }
+
     private final Map<String, SignalSpec> state;
     private final Map<String, SignalSpec> actions;
     private final float rewardAlpha;
@@ -538,11 +538,10 @@ public class TDAgentSingleNN implements Agent {
      * @param states      the states (size=n+1)
      * @param actionMasks the action masks (size=n)
      * @param advantage   the advantages (size=n)
-     * @param terminal    the episode terminal flag
      */
-    public INDArray trainBatch(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray advantage, INDArray terminal) {
+    public INDArray trainBatch(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray advantage) {
         this.kpis = new HashMap<>();
-        INDArray result = trainWithMask(states, actionMasks, advantage, terminal);
+        INDArray result = trainWithMask(states, actionMasks, advantage);
         if (postTrainKpis) {
             long n = advantage.size(0);
             Map<String, INDArray> s0 = MapUtils.mapValues(states, (ignored, value) -> value.get(NDArrayIndex.interval(0, n), NDArrayIndex.all()));
@@ -561,35 +560,32 @@ public class TDAgentSingleNN implements Agent {
     void trainOnLine(Environment.ExecutionResult result) {
         this.kpis = new HashMap<>();
         // Process input signals of state 0 to produce input network s0
-        Map<String, Signal> procState = processSignals(result.state0);
+        Map<String, Signal> procState = processSignals(result.state0());
         Map<String, INDArray> s0 = getInput(procState);
         // Process input signals of state 1 to produce input network s1
-        procState = processSignals(result.state1);
+        procState = processSignals(result.state1());
         Map<String, INDArray> s1 = getInput(procState);
         // Merge the states
         Map<String, INDArray> states = MapUtils.mapValues(s0, (k, v) ->
                 Nd4j.vstack(v, s1.get(k))
         );
         // Create the action masks
-        Map<String, INDArray> actionMasks = MapUtils.mapValues(result.actions, (key, action) -> {
+        Map<String, INDArray> actionMasks = MapUtils.mapValues(result.actions(), (key, action) -> {
             INDArray mask = Nd4j.zeros(1, ((IntSignalSpec) this.actions.get(key)).numValues());
             mask.putScalar(0, action.getInt(0), 1F);
             return mask;
         });
         // Create the advantage
-        INDArray advantage = Nd4j.createFromArray((float) (result.reward - avgReward)).reshape(1, 1);
-        // Create the terminal flag
-        INDArray terminal = Nd4j.createFromArray(result.terminal).castTo(DataType.FLOAT).reshape(1, 1);
+        INDArray advantage = Nd4j.createFromArray((float) (result.reward() - avgReward)).reshape(1, 1);
         // Train the network
-        INDArray delta = trainWithMask(states, actionMasks, advantage, terminal);
+        INDArray delta = trainWithMask(states, actionMasks, advantage);
 
         // Update the average reword
         float avgReward0 = avgReward;
         avgReward += delta.getFloat(0, 0) * rewardAlpha;
 
-        kpis.put("reward", Kpi.create(result.reward));
-        kpis.put("terminal", Kpi.create(result.terminal));
-        kpis.putAll(Kpi.create(result.actions, "actions."));
+        kpis.put("reward", Kpi.create(result.reward()));
+        kpis.putAll(Kpi.create(result.actions(), "actions."));
         kpis.put("avgReward", Kpi.create(avgReward0));
         kpis.put("avgReward1", Kpi.create(avgReward));
         if (postTrainKpis) {
@@ -609,9 +605,8 @@ public class TDAgentSingleNN implements Agent {
      * @param states      the states (size=n+1)
      * @param actionMasks the action masks (size=n)
      * @param advantage   the advantages (size=n)
-     * @param terminal    the episode terminal flag
      */
-    private INDArray trainWithMask(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray advantage, INDArray terminal) {
+    private INDArray trainWithMask(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray advantage) {
         // Predict the advantage
         TDNetworkState forward = network.forward(states);
         Map<String, INDArray> layerStates = forward.values();
@@ -621,8 +616,11 @@ public class TDAgentSingleNN implements Agent {
         INDArray pred0 = pred.get(NDArrayIndex.interval(0, n - 1), NDArrayIndex.all());
         INDArray pred1 = pred.get(NDArrayIndex.interval(1, n), NDArrayIndex.all());
         // Compute delta = adv + (term - 1) (v1 - v0)
-        INDArray dv = pred0.sub(pred1);
-        INDArray delta = terminal.sub(1).muli(dv).addi(advantage);
+        //INDArray dv = pred0.sub(pred1);
+        //INDArray delta1 = terminal.sub(1).muli(dv).addi(advantage);
+        //INDArray delta = dv.neg().addi(advantage);
+        // Compute delta = adv + v1 - v0
+        INDArray delta = advantage.add(pred1).subi(pred0);
         Map<String, INDArray> s0 = MapUtils.mapValues(states, (ignored, value) -> value.get(NDArrayIndex.interval(0, n - 1), NDArrayIndex.all()));
 
         // Runs a forward pass for training

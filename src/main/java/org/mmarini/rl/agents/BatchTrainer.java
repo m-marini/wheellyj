@@ -63,7 +63,6 @@ public class BatchTrainer {
     public static final String S0_KEY = "s0";
     public static final String ACTIONS_KEY = "actions";
     public static final String REWARD_KEY = "reward";
-    public static final String TERMINAL_KEY = "terminal";
     private static final String ADVANTAGE_KEY = "advantage";
     private static final String ACTIONS_MASKS_KEY = "masks";
     private static final File TMP_PATH = new File("tmp");
@@ -96,7 +95,6 @@ public class BatchTrainer {
     private boolean stopped;
     private Map<String, BinArrayFile> masksFiles;
     private BinArrayFile advantageFile;
-    private BinArrayFile terminalFile;
     private Map<String, BinArrayFile> s0Files;
     private File datasetPath;
 
@@ -231,7 +229,7 @@ public class BatchTrainer {
      */
     public long numRecords() {
         try {
-            return terminalFile != null ? terminalFile.size() : 0;
+            return advantageFile != null ? advantageFile.size() : 0;
         } catch (IOException ex) {
             logger.atError().setCause(ex).log("Error getting number of records");
             return 0;
@@ -282,9 +280,6 @@ public class BatchTrainer {
         BinArrayFile advantageFile = this.advantageFile;
         advantageFile.seek(0);
 
-        BinArrayFile termFile = this.terminalFile;
-        termFile.seek(0);
-
         long n = 0;
         counterProcessor.onNext(n);
         for (; ; ) {
@@ -299,13 +294,12 @@ public class BatchTrainer {
             if (m <= 1) {
                 break;
             }
-            INDArray term = termFile.read(m - 1);
             INDArray adv = advantageFile.read(m - 1);
             Map<String, INDArray> actionsMasks = KeyFileMap.read(masksFiles, m - 1);
-            if (term == null || adv == null || actionsMasks == null) {
+            if (adv == null || actionsMasks == null) {
                 break;
             }
-            agent.trainBatch(s0, actionsMasks, adv, term);
+            agent.trainBatch(s0, actionsMasks, adv);
 
             n += m - 1;
             counterProcessor.onNext(n);
@@ -353,10 +347,6 @@ public class BatchTrainer {
      */
     public void validate(File datasetPath) throws IOException {
         this.datasetPath = datasetPath;
-        this.terminalFile = BinArrayFile.createByKey(datasetPath, TERMINAL_KEY);
-        if (!terminalFile.file().canRead()) {
-            throw new IllegalArgumentException("Missing terminal datasets");
-        }
         this.s0Files = KeyFileMap.children(KeyFileMap.create(datasetPath, S0_KEY), S0_KEY);
         if (s0Files.isEmpty()) {
             throw new IllegalArgumentException("Missing s0 datasets");
@@ -370,7 +360,7 @@ public class BatchTrainer {
             throw new IllegalArgumentException("Missing actions datasets");
         }
         List<BinArrayFile> files = Stream.of(
-                        List.of(rewardFile, terminalFile),
+                        List.of(rewardFile),
                         actionFiles.values(),
                         s0Files.values())
                 .flatMap(Collection::stream)

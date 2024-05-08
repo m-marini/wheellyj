@@ -102,11 +102,11 @@ class TDAgentSingleNNTrainKpiTest {
                 for (; ; ) {
                     Map<String, Signal> action = agent.act(state);
                     Environment.ExecutionResult result = env.execute(action);
-                    agent.observe(result);
-                    if (result.terminal) {
+                    if (result == null) {
                         break;
                     }
-                    state = result.state1;
+                    agent.observe(result);
+                    state = result.state1();
                 }
             }
 

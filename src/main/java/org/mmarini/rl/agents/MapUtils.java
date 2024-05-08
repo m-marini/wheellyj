@@ -30,9 +30,12 @@ package org.mmarini.rl.agents;
 
 import org.mmarini.Tuple2;
 
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Map utilities
@@ -47,6 +50,22 @@ public interface MapUtils {
      */
     static <T> Map<String, T> addKeyPrefix(Map<String, T> map, String prefix) {
         return mapKey(map, k -> prefix + k);
+    }
+
+    /**
+     * Returns the flat map with mapped values stream
+     *
+     * @param stream the input stream
+     * @param <K>    the key type
+     * @param <V1>   the input value type
+     * @param <V2>   the mapped values
+     */
+    static <K, V1, V2> Map<K, V2> flatMapValues(Stream<Map<K, V1>> stream, BiFunction<K, Stream<V1>, V2> mapper) {
+        Map<K, List<Tuple2<K, V1>>> grouped = stream.flatMap(Tuple2::stream)
+                .collect(Collectors.groupingBy(Tuple2::getV1));
+        return mapValues(grouped, (k, v) ->
+                mapper.apply(k, v.stream().map(Tuple2::getV2))
+        );
     }
 
     /**
