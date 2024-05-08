@@ -77,6 +77,15 @@ public record ReportProcess(String kpiKey, String reportKey, UnaryOperator<INDAr
     }
 
     /**
+     * Returns the max/min ratio report
+     *
+     * @param kpiKey the kpi key
+     */
+    public static ReportProcess maxMeanRatio(String kpiKey) {
+        return new ReportProcess(kpiKey, kpiKey + ".maxMeanRatio", ReportProcess::maxMeanRatio);
+    }
+
+    /**
      * Returns the max/min ratio
      *
      * @param records the records
@@ -86,15 +95,6 @@ public record ReportProcess(String kpiKey, String reportKey, UnaryOperator<INDAr
         try (INDArray min = records.min(true, 1)) {
             return max.divi(min);
         }
-    }
-
-    /**
-     * Returns the max/min ratio report
-     *
-     * @param kpiKey the kpi key
-     */
-    public static ReportProcess maxMeanRatio(String kpiKey) {
-        return new ReportProcess(kpiKey, kpiKey + ".maxMeanRatio", ReportProcess::maxMeanRatio);
     }
 
     /**

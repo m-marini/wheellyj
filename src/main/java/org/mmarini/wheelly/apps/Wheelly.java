@@ -400,7 +400,7 @@ public class Wheelly {
 
     private void handleResult(Environment.ExecutionResult result) {
         if (active) {
-            double reward = result.getReward();
+            double reward = result.reward();
             envPanel.setReward(avgRewards.add((float) reward).value());
             sensorMonitor.onReward(reward);
             agent.observe(result);

@@ -148,7 +148,7 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
         if (signals0 != null) {
             double reward = rewardFunc.applyAsDouble(this);
             Environment.ExecutionResult result = new Environment.ExecutionResult(
-                    signals0, prevActions, reward, signals1, false
+                    signals0, prevActions, reward, signals1
             );
             if (onResult != null) {
                 onResult.accept(result);

@@ -108,7 +108,7 @@ class TDAgentSingleNNTrainTest {
         Map<String, Signal> actions = Map.of(
                 "output", IntSignal.create(action)
         );
-        ExecutionResult result = new ExecutionResult(s0, actions, -1, s1, false);
+        ExecutionResult result = new ExecutionResult(s0, actions, -1, s1);
 
         agent.trainOnLine(result);
 
@@ -172,7 +172,7 @@ class TDAgentSingleNNTrainTest {
         Map<String, Signal> actions = Map.of(
                 "output", IntSignal.create(action)
         );
-        ExecutionResult result = new ExecutionResult(s0, actions, 1, s1, false);
+        ExecutionResult result = new ExecutionResult(s0, actions, 1, s1);
 
         // When trains with positive reward
         agent.trainOnLine(result);
