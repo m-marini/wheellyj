@@ -288,7 +288,7 @@ public class NNActivityMonitor {
         } else {
             long pos = refFile.position();
             timeLine.setValue((int) pos);
-            return network.forward(signals).values();
+            return network.forward(signals).state().values();
         }
     }
 

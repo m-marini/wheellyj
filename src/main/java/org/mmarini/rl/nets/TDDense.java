@@ -175,19 +175,18 @@ public class TDDense extends TDLayer {
                         ew.muli(lambda).addi(grad_dw);
                     }
                 }
+                try (INDArray deltai = delta.get(index)) {
+                    INDArray db = eb.mul(deltai);
+                    INDArray dw = ew.mul(deltai);
+                    b.addi(db);
+                    w.addi(dw);
+                    // Limits the weights
+                    w.assign(Transforms.min(Transforms.max(w, -maxAbsWeights), maxAbsWeights));
 
-                INDArray deltai = delta.get(index);
-                INDArray db = eb.mul(deltai);
-                INDArray dw = ew.mul(deltai);
-
-                b.addi(db);
-                w.addi(dw);
-                // Limits the weights
-                w.assign(Transforms.min(Transforms.max(w, -maxAbsWeights), maxAbsWeights));
-
-                if (kpiCallback != null) {
-                    kpiCallback.accept(Tuple2.of(format("%s_db", name()), db));
-                    kpiCallback.accept(Tuple2.of(format("%s_dw", name()), dw));
+                    if (kpiCallback != null) {
+                        kpiCallback.accept(Tuple2.of(format("%s_db", name()), db));
+                        kpiCallback.accept(Tuple2.of(format("%s_dw", name()), dw));
+                    }
                 }
             }
             return state.putWeights(name, w).
@@ -209,18 +208,20 @@ public class TDDense extends TDLayer {
                 INDArray grad_dw = bin.mul(bgrad);
                 ew.muli(lambda).addi(grad_dw);
 
-                INDArray deltai = delta.get(index);
-                INDArray db = eb.mul(deltai);
-                INDArray dw = ew.mul(deltai);
+                try (INDArray deltai = delta.get(index)) {
+                    INDArray db = eb.mul(deltai);
+                    INDArray dw = ew.mul(deltai);
 
-                b.addi(db);
-                w.addi(dw);
-                // Limits the weights
-                w.assign(Transforms.min(Transforms.max(w, -maxAbsWeights), maxAbsWeights));
+                    b.addi(db);
+                    w.addi(dw);
 
-                if (kpiCallback != null) {
-                    kpiCallback.accept(Tuple2.of(format("%s_db", name()), db));
-                    kpiCallback.accept(Tuple2.of(format("%s_dw", name()), dw));
+                    // Limits the weights
+                    w.assign(Transforms.min(Transforms.max(w, -maxAbsWeights), maxAbsWeights));
+
+                    if (kpiCallback != null) {
+                        kpiCallback.accept(Tuple2.of(format("%s_db", name()), db));
+                        kpiCallback.accept(Tuple2.of(format("%s_dw", name()), dw));
+                    }
                 }
             }
             return state.putWeights(name, w).

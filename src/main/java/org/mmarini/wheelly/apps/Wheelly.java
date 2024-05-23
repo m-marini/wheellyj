@@ -27,6 +27,7 @@ package org.mmarini.wheelly.apps;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
+import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.CompletableSubject;
@@ -104,6 +105,9 @@ public class Wheelly {
         parser.addArgument("-s", "--silent")
                 .action(Arguments.storeTrue())
                 .help("specify silent closing (no window messages)");
+        parser.addArgument("-a", "--alternate")
+                .action(Arguments.storeTrue())
+                .help("specify alternate act/training");
         parser.addArgument("-w", "--windows")
                 .action(Arguments.storeTrue())
                 .help("use multiple windows");
@@ -156,6 +160,8 @@ public class Wheelly {
     private ComDumper dumper;
     private List<JFrame> allFrames;
     private boolean active;
+    private boolean isTraining;
+    private boolean synchTraining;
 
     /**
      * Creates the server reinforcement learning engine server
@@ -205,7 +211,9 @@ public class Wheelly {
         environment.setOnAct(this::handleAct);
         environment.setOnResult(this::handleResult);
 
-        learnPanel.readLearningRates().doOnNext(t -> ((TDAgentSingleNN) agent).alphas(t)).subscribe();
+        learnPanel.readLearningRates()
+                .doOnNext(t -> agent = ((TDAgentSingleNN) agent).alphas(t))
+                .subscribe();
 
         Observable<WindowEvent>[] x = allFrames.stream().map(f -> SwingObservable.window(f, SwingObservable.WINDOW_ACTIVE)).toArray(Observable[]::new);
         Observable.mergeArray(x).filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING).doOnNext(this::handleWindowClosing).subscribe();
@@ -395,16 +403,119 @@ public class Wheelly {
      * @param actionEvent the action event
      */
     private void handleResetButton(ActionEvent actionEvent) {
-        agent.init();
+        agent = agent.init();
     }
 
+    /**
+     * Handle the result of execution contro step
+     * Lets the agent to observer and eventually
+     * runs the training process
+     *
+     * @param result the result
+     */
     private void handleResult(Environment.ExecutionResult result) {
         if (active) {
             double reward = result.reward();
+            // Update ui
             envPanel.setReward(avgRewards.add((float) reward).value());
             sensorMonitor.onReward(reward);
-            agent.observe(result);
+            // let the agent to pbserve the result
+            agent = agent.observe(result);
+            if (agent.isReadyForTrain() && !isTraining) {
+                this.isTraining = true;
+                Agent oldAgent = agent;
+                List<Environment.ExecutionResult> trajectory1 = oldAgent.trajectory();
+                List<Environment.ExecutionResult> trajectory = trajectory1.size() > oldAgent.numSteps()
+                        ? trajectory1.stream().skip(trajectory1.size() - oldAgent.numSteps()).toList()
+                        : trajectory1;
+                // Clear the trajectory
+                agent = oldAgent.trajectory(List.of());
+                if (synchTraining) {
+                    // Runs synchronously the train process
+                    train(oldAgent, trajectory, trajectory1);
+                } else {
+                    // Runs asynchronously the train process
+                    Completable.complete()
+                            .subscribeOn(Schedulers.computation())
+                            .doOnComplete(() ->
+                                    train(oldAgent, trajectory, trajectory1))
+                            .subscribe();
+                }
+            }
         }
+    }
+
+    /**
+     * Starts the application
+     */
+    protected void run() throws IOException {
+        logger.atInfo().log("Creating environment");
+        JsonNode config = fromFile(this.args.getString("config"));
+        this.environment = AppYaml.envFromJson(config, Locator.root(), WHEELLY_SCHEMA_YML);
+
+        logger.atInfo().log("Creating agent");
+        Locator agentLocator = Locator.locate(Locator.locate("agent").getNode(config).asText());
+        if (agentLocator.getNode(config).isMissingNode()) {
+            throw new IllegalArgumentException(format("Missing node %s", agentLocator));
+        }
+        this.agent = Agent.fromConfig(config, agentLocator, environment);
+        if (agent instanceof TDAgentSingleNN tdagent) {
+            this.agent = tdagent.setPostTrainKpis(true);
+        }
+        if (environment.getController().getRobot() instanceof SimRobot robot) {
+            // Add the obstacles location changes
+            robot.setOnObstacleChanged(this::handleObstacleChanged);
+        }
+        this.synchTraining = args.getBoolean("alternate");
+
+        sessionDuration = this.args.getLong("localTime");
+        logger.atInfo().log("Starting session ...");
+        logger.atInfo().log("Session are running for {} sec...", sessionDuration);
+        sessionDuration *= 1000;
+
+        // Create the kpis writer
+        String kpis = this.args.getString("kpis");
+        if (!kpis.isEmpty()) {
+            // Create kpis frame
+            KpiBinWriter kpiWriter = KpiBinWriter.createFromLabels(new File(kpis), this.args.getString("labels"));
+            agent.readKpis().observeOn(Schedulers.io(), true)
+                    .doOnNext(kpisPanel::addKpis)
+                    .doOnNext(kpiWriter::write)
+                    .doOnError(ex -> logger.atError().setCause(ex).log("Error writing kpis"))
+                    .doOnComplete(() -> {
+                        logger.atInfo().log("Closing kpis writer ...");
+                        kpiWriter.close();
+                        logger.atInfo().log("Kpis writer closed");
+                        completion.onComplete();
+                    }).subscribe();
+        } else {
+            completion.onComplete();
+        }
+
+        // Creates the com line dumper
+        Optional.ofNullable(this.args.getString("dump")).ifPresent(file -> {
+            try {
+                this.dumper = ComDumper.fromFile(file);
+            } catch (IOException e) {
+                logger.atError().setCause(e).log("Error dumping to {}", file);
+            }
+        });
+
+        // Create panels
+        createPanels();
+
+        // Creates frames
+        if (args.getBoolean("windows")) {
+            createMultiFrames();
+        } else {
+            createSingleFrame();
+        }
+        // Creates the flows
+        createFlows();
+        // Starts the environment interaction
+        active = true;
+        startButton.setEnabled(false);
+        environment.start();
     }
 
     /**
@@ -528,71 +639,14 @@ public class Wheelly {
         }
     }
 
-    /**
-     * Starts the application
-     */
-    protected void run() throws IOException {
-        logger.atInfo().log("Creating environment");
-        JsonNode config = fromFile(this.args.getString("config"));
-        this.environment = AppYaml.envFromJson(config, Locator.root(), WHEELLY_SCHEMA_YML);
-
-        logger.atInfo().log("Creating agent");
-        Locator agentLocator = Locator.locate(Locator.locate("agent").getNode(config).asText());
-        if (agentLocator.getNode(config).isMissingNode()) {
-            throw new IllegalArgumentException(format("Missing node %s", agentLocator));
-        }
-        this.agent = Agent.fromConfig(config, agentLocator, environment);
-        if (agent instanceof TDAgentSingleNN tdagent) {
-            tdagent.setPostTrainKpis(true);
-        }
-        if (environment.getController().getRobot() instanceof SimRobot robot) {
-            // Add the obstacles location changes
-            robot.setOnObstacleChanged(this::handleObstacleChanged);
-        }
-
-        sessionDuration = this.args.getLong("localTime");
-        logger.atInfo().log("Starting session ...");
-        logger.atInfo().log("Session are running for {} sec...", sessionDuration);
-        sessionDuration *= 1000;
-
-        // Create the kpis writer
-        String kpis = this.args.getString("kpis");
-        if (!kpis.isEmpty()) {
-            // Create kpis frame
-            KpiBinWriter kpiWriter = KpiBinWriter.createFromLabels(new File(kpis), this.args.getString("labels"));
-            agent.readKpis().observeOn(Schedulers.io(), true).doOnNext(kpisPanel::addKpis).doOnNext(kpiWriter::write).doOnError(ex -> logger.atError().setCause(ex).log("Error writing kpis")).doOnComplete(() -> {
-                logger.atInfo().log("Closing kpis writer ...");
-                kpiWriter.close();
-                logger.atInfo().log("Kpis writer closed");
-                completion.onComplete();
-            }).subscribe();
-        } else {
-            completion.onComplete();
-        }
-
-        // Creates the com line dumper
-        Optional.ofNullable(this.args.getString("dump")).ifPresent(file -> {
-            try {
-                this.dumper = ComDumper.fromFile(file);
-            } catch (IOException e) {
-                logger.atError().setCause(e).log("Error dumping to {}", file);
-            }
-        });
-
-        // Create panels
-        createPanels();
-
-        // Creates frames
-        if (args.getBoolean("windows")) {
-            createMultiFrames();
-        } else {
-            createSingleFrame();
-        }
-        // Creates the flows
-        createFlows();
-        // Starts the environment interaction
-        active = true;
-        startButton.setEnabled(false);
-        environment.start();
+    private void train(Agent oldAgent, List<Environment.ExecutionResult> trajectory, List<Environment.ExecutionResult> trajectory1) {
+        logger.atDebug().log("Training ...");
+        // Trains the agent
+        long t0 = System.currentTimeMillis();
+        this.agent = oldAgent.trainByTrajectory(trajectory)
+                .trajectory(this.agent.trajectory());
+        long elaps = System.currentTimeMillis() - t0;
+        logger.atInfo().log("Trained {}/{} steps in {} ms.", trajectory.size(), trajectory1.size(), elaps);
+        this.isTraining = false;
     }
 }

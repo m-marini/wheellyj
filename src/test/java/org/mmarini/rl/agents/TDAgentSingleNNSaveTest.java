@@ -129,9 +129,9 @@ class TDAgentSingleNNSaveTest {
                 "output.a", 3e-3f,
                 "output.b", 10e-3f
         );
-        return new TDAgentSingleNN(STATE_SPEC, ACTIONS_SPEC,
+        return TDAgentSingleNN.create(STATE_SPEC, ACTIONS_SPEC,
                 0, REWARD_ALPHA, alphas, LAMBDA,
-                network, null,
+                1, 1, 32, network, null,
                 random, null, Integer.MAX_VALUE);
     }
 

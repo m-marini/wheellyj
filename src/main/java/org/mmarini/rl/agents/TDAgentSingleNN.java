@@ -37,10 +37,12 @@ import org.mmarini.rl.processors.InputProcessor;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.ops.impl.transforms.custom.CumSum;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,17 +52,21 @@ import java.io.IOException;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import static java.lang.Math.min;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.rl.agents.MapUtils.addKeyPrefix;
 
 /**
  * Agent based on Temporal Difference Actor-Critic with single neural network
  */
 public class TDAgentSingleNN implements Agent {
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/agent-single-nn-schema-0.2";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/agent-single-nn-schema-0.3";
     public static final int KPIS_CAPACITY = 1000;
+    public static final int DEFAULT_NUM_STEPS = 2048;
+    public static final int DEFAULT_NUM_EPOCHS = 1;
+    public static final int DEFAULT_BATCH_SIZE = 32;
     private static final Logger logger = LoggerFactory.getLogger(TDAgentSingleNN.class);
 
     /**
@@ -70,16 +76,16 @@ public class TDAgentSingleNN implements Agent {
      * @param random the random number generator
      */
     static int chooseAction(INDArray prob, Random random) {
-        CumSum cumSum = new CumSum(prob, false, false, 1);
+        CumSum cumSum = new CumSum(prob, false, false, DEFAULT_NUM_EPOCHS);
         INDArray[] cum = Nd4j.getExecutioner().exec(cumSum);
         float x = random.nextFloat();
-        int n = (int) prob.shape()[1];
-        for (int i = 0; i < n - 1; i++) {
+        int n = (int) prob.shape()[DEFAULT_NUM_EPOCHS];
+        for (int i = 0; i < n - DEFAULT_NUM_EPOCHS; i++) {
             if (x < cum[0].getFloat(0, i)) {
                 return i;
             }
         }
-        return n - 1;
+        return n - DEFAULT_NUM_EPOCHS;
     }
 
     /**
@@ -92,6 +98,38 @@ public class TDAgentSingleNN implements Agent {
         return Tuple2.stream(pis)
                 .map(t -> t.setV2((Signal) IntSignal.create(chooseAction(t._2, random))))
                 .collect(Tuple2.toMap());
+    }
+
+    /**
+     * Returns a random behavior agent
+     *
+     * @param state               the states
+     * @param actions             the actions
+     * @param avgReward           the average reward
+     * @param rewardAlpha         the reward alpha parameter
+     * @param alphas              the network training alpha parameter by output
+     * @param lambda              the TD lambda factor
+     * @param numSteps            the number of step of trajectory
+     * @param numEpochs           the number of epochs
+     * @param batchSize           the batch size
+     * @param network             the network
+     * @param processor           the input state processor
+     * @param random              the random generator
+     * @param modelPath           the model saving path
+     * @param savingIntervalSteps the number of steps between each model saving
+     */
+    public static TDAgentSingleNN create(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
+                                         float avgReward, float rewardAlpha, Map<String, Float> alphas, float lambda,
+                                         int numSteps, int numEpochs, int batchSize, TDNetwork network,
+                                         InputProcessor processor, Random random, File modelPath,
+                                         int savingIntervalSteps) {
+        return new TDAgentSingleNN(
+                state, actions, avgReward, rewardAlpha, alphas, lambda, numSteps, numEpochs, batchSize, network,
+                List.of(), processor, random, modelPath,
+                savingIntervalSteps,
+                PublishProcessor.create(),
+                false,
+                0, false);
     }
 
     /**
@@ -160,13 +198,16 @@ public class TDAgentSingleNN implements Agent {
                 .map(x -> x.getFloat(0))
                 .orElse(0f);
         float rewardAlpha = (float) locator.path("rewardAlpha").getNode(spec).asDouble();
+        int numSteps = locator.path("numSteps").getNode(spec).asInt(DEFAULT_NUM_STEPS);
+        int numEpochs = locator.path("numEpochs").getNode(spec).asInt(DEFAULT_NUM_EPOCHS);
+        int batchSize = locator.path("batchSize").getNode(spec).asInt(DEFAULT_BATCH_SIZE);
         float lambda1 = (float) locator.path("lambda").getNode(spec).asDouble();
         TDNetwork network = TDNetwork.fromJson(spec, locator.path("network"), props, random);
         InputProcessor processor1 = !locator.path("inputProcess").getNode(spec).isMissingNode()
                 ? InputProcessor.create(spec, locator.path("inputProcess"), state)
                 : null;
-        return new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, alphas, lambda1,
-                network, processor1, random, path, savingIntervalSteps);
+        return TDAgentSingleNN.create(state, actions, avgReward, rewardAlpha, alphas, lambda1,
+                numSteps, numEpochs, batchSize, network, processor1, random, path, savingIntervalSteps);
     }
 
     /**
@@ -184,7 +225,7 @@ public class TDAgentSingleNN implements Agent {
                                 t._2.getClass().getSimpleName()));
                     }
                     long[] shape = t._2.shape();
-                    if (!(shape.length == 1 && shape[0] == 1)) {
+                    if (!(shape.length == DEFAULT_NUM_EPOCHS && shape[0] == DEFAULT_NUM_EPOCHS)) {
                         throw new IllegalArgumentException(format("Shape of action \"%s\" must be [1] (%s)",
                                 t._1, Arrays.toString(shape)));
                     }
@@ -204,9 +245,9 @@ public class TDAgentSingleNN implements Agent {
                     INDArray value = Nd4j.toFlattened(t._2.toINDArray());
                     // Reshape value
                     long[] shape = value.shape();
-                    long[] newShape = new long[shape.length + 1];
-                    newShape[0] = 1;
-                    System.arraycopy(shape, 0, newShape, 1, shape.length);
+                    long[] newShape = new long[shape.length + DEFAULT_NUM_EPOCHS];
+                    newShape[0] = DEFAULT_NUM_EPOCHS;
+                    System.arraycopy(shape, 0, newShape, DEFAULT_NUM_EPOCHS, shape.length);
                     return t.setV2(value.reshape(newShape));
                 })
                 .collect(Tuple2.toMap());
@@ -269,19 +310,22 @@ public class TDAgentSingleNN implements Agent {
     private final Map<String, SignalSpec> state;
     private final Map<String, SignalSpec> actions;
     private final float rewardAlpha;
-    private final TDNetwork network;
     private final Random random;
     private final float lambda;
     private final File modelPath;
     private final int savingIntervalSteps;
     private final InputProcessor processor;
     private final PublishProcessor<Map<String, INDArray>> indicatorsPub;
-    private Map<String, Float> alphas;
-    private float avgReward;
-    private int savingStepCounter;
+    private final boolean postTrainKpis;
+    private final TDNetwork network;
+    private final List<Environment.ExecutionResult> trajectory;
+    private final int numSteps;
+    private final int numEpochs;
+    private final int batchSize;
+    private final Map<String, Float> alphas;
+    private final float avgReward;
     private boolean backedUp;
-    private Map<String, INDArray> kpis;
-    private boolean postTrainKpis;
+    private int savingStepCounter;
 
     /**
      * Creates a random behavior agent
@@ -292,16 +336,26 @@ public class TDAgentSingleNN implements Agent {
      * @param rewardAlpha         the reward alpha parameter
      * @param alphas              the network training alpha parameter by output
      * @param lambda              the TD lambda factor
+     * @param numSteps            the number of step of trajectory
+     * @param numEpochs           the number of epochs
+     * @param batchSize           the batch size
      * @param network             the network
      * @param processor           the input state processor
      * @param random              the random generator
      * @param modelPath           the model saving path
      * @param savingIntervalSteps the number of steps between each model saving
+     * @param indicatorsPub       the indicator publisher
+     * @param postTrainKpis       true if post train kpi
+     * @param savingStepCounter   the saving step counter
+     * @param backedUp            true if the model has been backed up
      */
-    public TDAgentSingleNN(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
-                           float avgReward, float rewardAlpha, Map<String, Float> alphas, float lambda,
-                           TDNetwork network, InputProcessor processor,
-                           Random random, File modelPath, int savingIntervalSteps) {
+    protected TDAgentSingleNN(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
+                              float avgReward, float rewardAlpha, Map<String, Float> alphas, float lambda,
+                              int numSteps, int numEpochs, int batchSize, TDNetwork network,
+                              List<Environment.ExecutionResult> trajectory, InputProcessor processor, Random random,
+                              File modelPath, int savingIntervalSteps,
+                              PublishProcessor<Map<String, INDArray>> indicatorsPub, boolean postTrainKpis,
+                              int savingStepCounter, boolean backedUp) {
         this.state = requireNonNull(state);
         this.actions = requireNonNull(actions);
         this.rewardAlpha = rewardAlpha;
@@ -312,7 +366,14 @@ public class TDAgentSingleNN implements Agent {
         this.avgReward = avgReward;
         this.alphas = requireNonNull(alphas);
         this.modelPath = modelPath;
-        this.indicatorsPub = PublishProcessor.create();
+        this.indicatorsPub = indicatorsPub;
+        this.postTrainKpis = postTrainKpis;
+        this.trajectory = trajectory;
+        this.numSteps = numSteps;
+        this.numEpochs = numEpochs;
+        this.batchSize = batchSize;
+        this.savingStepCounter = savingStepCounter;
+        this.backedUp = backedUp;
         if (actions.containsKey("critic")) {
             throw new IllegalArgumentException("actions must not contain \"critic\" key");
         }
@@ -332,8 +393,7 @@ public class TDAgentSingleNN implements Agent {
     public Map<String, Signal> act(Map<String, Signal> state) {
         Map<String, Signal> procState = processSignals(state);
         Map<String, INDArray> inputs = getInput(procState);
-        network().forward(inputs);
-        Map<String, INDArray> pis = this.policy();
+        Map<String, INDArray> pis = policy(network.forward(inputs).state());
         return chooseActions(pis, random);
     }
 
@@ -349,8 +409,10 @@ public class TDAgentSingleNN implements Agent {
      *
      * @param alphas the alpha parameters
      */
-    public void alphas(Map<String, Float> alphas) {
-        this.alphas = alphas;
+    public TDAgentSingleNN alphas(Map<String, Float> alphas) {
+        return new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
+                savingIntervalSteps, indicatorsPub, postTrainKpis,
+                savingStepCounter, backedUp);
     }
 
     /**
@@ -383,6 +445,21 @@ public class TDAgentSingleNN implements Agent {
         return avgReward;
     }
 
+    /**
+     * Returns the agent with new average rewards
+     */
+    public TDAgentSingleNN avgReward(float avgReward) {
+        return new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
+                savingIntervalSteps, indicatorsPub, postTrainKpis, savingStepCounter, backedUp);
+    }
+
+    /**
+     * Returns the batch size for training
+     */
+    public int batchSize() {
+        return batchSize;
+    }
+
     @Override
     public void close() {
         autosave();
@@ -400,8 +477,13 @@ public class TDAgentSingleNN implements Agent {
     }
 
     @Override
-    public void init() {
-        network.init();
+    public TDAgentSingleNN init() {
+        return network(network.init());
+    }
+
+    @Override
+    public boolean isReadyForTrain() {
+        return trajectory.size() >= numSteps;
     }
 
     @Override
@@ -413,6 +495,9 @@ public class TDAgentSingleNN implements Agent {
         ObjectNode spec = Utils.objectMapper.createObjectNode()
                 .put("rewardAlpha", rewardAlpha)
                 .put("lambda", lambda)
+                .put("numSteps", numSteps)
+                .put("numEpochs", numEpochs)
+                .put("batchSize", batchSize)
                 .set("alphas", alphasSpec);
         spec.set("state", specFromSignalMap(state));
         spec.set("actions", specFromSignalMap(actions));
@@ -437,16 +522,59 @@ public class TDAgentSingleNN implements Agent {
         return network;
     }
 
+    /**
+     * Returns the agent with changed network
+     *
+     * @param network the network
+     */
+    TDAgentSingleNN network(TDNetwork network) {
+        return new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
+                savingIntervalSteps, indicatorsPub, postTrainKpis, savingStepCounter, backedUp);
+    }
+
+    /**
+     * Returns the number of epochs for training
+     */
+    public int numEpochs() {
+        return numEpochs;
+    }
+
     @Override
-    public void observe(Environment.ExecutionResult result) {
-        trainOnLine(result);
+    public int numSteps() {
+        return numSteps;
+    }
+
+    @Override
+    public TDAgentSingleNN observe(Environment.ExecutionResult result) {
+        List<Environment.ExecutionResult> newTrajectory = new ArrayList<>(trajectory);
+        newTrajectory.add(result);
+
+        Map<String, INDArray> states = getInput(processSignals(result.state0()));
+
+        // Extracts action masks
+        Map<String, INDArray> actions = MapUtils.mapValues(result.actions(), (k, signal) ->
+                signal.toINDArray());
+
+        // Extracts rewards
+        INDArray rewards = Nd4j.scalar((float) result.reward()).reshape(DEFAULT_NUM_EPOCHS, DEFAULT_NUM_EPOCHS);
+
+        // Generate kpis
+        Map<String, INDArray> kpis = new HashMap<>();
+        kpis.put("reward", rewards);
+        kpis.putAll(MapUtils.addKeyPrefix(actions, "actions."));
+        kpis.putAll(MapUtils.addKeyPrefix(states, "s0."));
+
+        indicatorsPub.onNext(kpis);
+
+        return trajectory(newTrajectory);
     }
 
     /**
      * Returns the policy outputs from network state
+     *
+     * @param state the network state
      */
-    private Map<String, INDArray> policy() {
-        TDNetworkState state = network().state();
+    Map<String, INDArray> policy(TDNetworkState state) {
         return actions.keySet().stream()
                 .map(key -> Tuple2.of(key, state.getValues(key)))
                 .collect(Tuple2.toMap());
@@ -457,7 +585,7 @@ public class TDAgentSingleNN implements Agent {
      *
      * @param state the base signals
      */
-    private Map<String, Signal> processSignals(Map<String, Signal> state) {
+    Map<String, Signal> processSignals(Map<String, Signal> state) {
         return processor != null ? processor.apply(state) : state;
     }
 
@@ -481,23 +609,15 @@ public class TDAgentSingleNN implements Agent {
      * Returns the performance indicators.
      * <pre>
      * <code>
-     *
-     *     s0 - Map<String, INDArray>
-     *     s1 - Map<String, INDArray>
-     *     actions - Map<String, INDArray>
-     *     reward - Float
-     *     terminal - Boolean
-     *     avgReward - Float
-     *     trainedAvgReward - Float
-     *     adv0 - Float
-     *     adv1 - Float
-     *     delta - Float
-     *     critic - Map<String, INDArray>
-     *     trainedCritic - Map<String, INDArray>
-     *     policy - Map<String, INDArray>
-     *     trainedPolicy -Map<String, INDArray>
-     *     gradCritic - Map<String, INDArray>
-     *     gradPolicy - Map<String, INDArray>
+     *     s0 - Map<String, INDArray> state signals
+     *     actions - Map<String, INDArray> action signals
+     *     reward - INDArray reward
+     *     avgReward - INDArray average reward
+     *     delta - INDArray training error
+     *     trainingLayers - Map<String, INDArray> the training layers
+     *     trainedLayers -Map<String, INDArray> the trained layers
+     *     grads - Map<String, INDArray> the output gradients
+     *     actionsMask - Map<String, INDArray> action masks
      * </code>
      * </pre>
      */
@@ -506,6 +626,9 @@ public class TDAgentSingleNN implements Agent {
         return indicatorsPub.onBackpressureBuffer(KPIS_CAPACITY);
     }
 
+    /**
+     * Returns the reward alpha discount meta-parameter
+     */
     public float rewardAlpha() {
         return rewardAlpha;
     }
@@ -524,110 +647,141 @@ public class TDAgentSingleNN implements Agent {
     }
 
     /**
-     * Sets the post train kpis flag
+     * Returns the agent with post train kpis flag set
      *
      * @param postTrainKpis true to activate pot train kpis
      */
-    public void setPostTrainKpis(boolean postTrainKpis) {
-        this.postTrainKpis = postTrainKpis;
+    public TDAgentSingleNN setPostTrainKpis(boolean postTrainKpis) {
+        return new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
+                savingIntervalSteps, indicatorsPub, postTrainKpis, savingStepCounter, backedUp);
     }
 
-    /**
-     * Returns the errors training the agent
-     *
-     * @param states      the states (size=n+1)
-     * @param actionMasks the action masks (size=n)
-     * @param advantage   the advantages (size=n)
-     */
-    public INDArray trainBatch(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray advantage) {
-        this.kpis = new HashMap<>();
-        INDArray result = trainWithMask(states, actionMasks, advantage);
-        if (postTrainKpis) {
-            long n = advantage.size(0);
-            Map<String, INDArray> s0 = MapUtils.mapValues(states, (ignored, value) -> value.get(NDArrayIndex.interval(0, n), NDArrayIndex.all()));
-            TDNetworkState postTrainedState = network.forward(s0);
-            kpis.putAll(MapUtils.addKeyPrefix(postTrainedState.values(), "trainedLayers."));
-        }
-        this.indicatorsPub.onNext(kpis);
-        return result;
-    }
-
-    /**
-     * Trains the agent
-     *
-     * @param result the environment execution result
-     */
-    void trainOnLine(Environment.ExecutionResult result) {
-        this.kpis = new HashMap<>();
-        // Process input signals of state 0 to produce input network s0
-        Map<String, Signal> procState = processSignals(result.state0());
-        Map<String, INDArray> s0 = getInput(procState);
-        // Process input signals of state 1 to produce input network s1
-        procState = processSignals(result.state1());
-        Map<String, INDArray> s1 = getInput(procState);
-        // Merge the states
-        Map<String, INDArray> states = MapUtils.mapValues(s0, (k, v) ->
-                Nd4j.vstack(v, s1.get(k))
-        );
-        // Create the action masks
-        Map<String, INDArray> actionMasks = MapUtils.mapValues(result.actions(), (key, action) -> {
-            INDArray mask = Nd4j.zeros(1, ((IntSignalSpec) this.actions.get(key)).numValues());
-            mask.putScalar(0, action.getInt(0), 1F);
-            return mask;
-        });
-        // Create the advantage
-        INDArray advantage = Nd4j.createFromArray((float) (result.reward() - avgReward)).reshape(1, 1);
-        // Train the network
-        INDArray delta = trainWithMask(states, actionMasks, advantage);
-
-        // Update the average reword
-        float avgReward0 = avgReward;
-        avgReward += delta.getFloat(0, 0) * rewardAlpha;
-
-        kpis.put("reward", Kpi.create(result.reward()));
-        kpis.putAll(Kpi.create(result.actions(), "actions."));
-        kpis.put("avgReward", Kpi.create(avgReward0));
-        kpis.put("avgReward1", Kpi.create(avgReward));
-        if (postTrainKpis) {
-            TDNetworkState postTrainedState = network.forward(s0);
-            kpis.putAll(MapUtils.addKeyPrefix(postTrainedState.values(), "trainedLayers."));
+    private TDAgentSingleNN trainBatch(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards) {
+        TDAgentSingleNN newAgent = this;
+        for (long i = 0; i < numEpochs; i++) {
+            newAgent = newAgent.avgReward(avgReward).trainEpoch(i, states, actionMasks, rewards);
         }
         if (++savingStepCounter >= savingIntervalSteps) {
             savingStepCounter = 0;
             autosave();
         }
-        indicatorsPub.onNext(kpis);
+        return newAgent;
+    }
+
+    @Override
+    public TDAgentSingleNN trainByTrajectory(List<Environment.ExecutionResult> trajectory) {
+        // Extracts states from trajectory
+        List<Map<String, INDArray>> state0 = trajectory.stream()
+                .map(res -> {
+                            Map<String, Signal> procState = processSignals(res.state0());
+                            return getInput(procState);
+                        }
+                ).toList();
+        Map<String, INDArray> finalState = getInput(processSignals(trajectory.getLast().state1()));
+        Stream<Map<String, INDArray>> stateStream = Stream.concat(state0.stream(), Stream.of(finalState));
+        Map<String, INDArray> states = MapUtils.flatMapValues(stateStream,
+                (k, list) -> Nd4j.vstack(list.toArray(INDArray[]::new))
+        );
+
+        // Extracts action masks
+        Map<String, INDArray> actions = MapUtils.flatMapValues(trajectory.stream()
+                        // Extract action signal
+                        .map(Environment.ExecutionResult::actions),
+                (key, list) -> Nd4j.vstack(list.map(Signal::toINDArray)
+                        .toArray(INDArray[]::new)));
+        int n = trajectory.size();
+        Map<String, INDArray> actionMasks = MapUtils.mapValues(actions,
+                (key, action) -> {
+                    INDArray mask = Nd4j.zeros(n, ((IntSignalSpec) this.actions.get(key)).numValues());
+                    for (int i = 0; i < n; i++) {
+                        mask.putScalar(i, action.getInt(i), 1F);
+                    }
+                    return mask;
+                });
+
+        // Extracts rewards
+        INDArray rewards = Nd4j.createFromArray(
+                        trajectory.stream()
+                                .mapToDouble(Environment.ExecutionResult::reward)
+                                .toArray())
+                .castTo(DataType.FLOAT)
+                .reshape(n, DEFAULT_NUM_EPOCHS);
+
+        return trainBatch(states, actionMasks, rewards);
     }
 
     /**
-     * Returns the errors training the agent
+     * Returns the agent trained for a single epoch
      *
+     * @param epoch       the epoch number
      * @param states      the states (size=n+1)
      * @param actionMasks the action masks (size=n)
-     * @param advantage   the advantages (size=n)
+     * @param rewards     the rewards (size=n)
      */
-    private INDArray trainWithMask(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray advantage) {
-        // Predict the advantage
-        TDNetworkState forward = network.forward(states);
-        Map<String, INDArray> layerStates = forward.values();
-        INDArray pred = layerStates.get("critic.values");
+    private TDAgentSingleNN trainEpoch(long epoch, Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards) {
+        long n = rewards.size(0);
+        if (batchSize == n) {
+            return trainMiniBatch(epoch, 0, n, states, actionMasks, rewards);
+        } else {
+            TDAgentSingleNN newAgent = this;
+            for (long startStep = 0; startStep < n; startStep += batchSize) {
+                long m = min(n - startStep, batchSize);
+                INDArrayIndex indices = NDArrayIndex.interval(startStep, startStep + m);
+                INDArrayIndex indices1 = NDArrayIndex.interval(startStep, startStep + m + DEFAULT_NUM_EPOCHS);
+                Map<String, INDArray> batchStates = MapUtils.mapValues(states, (k, v) -> v.get(indices1, NDArrayIndex.all()));
+                Map<String, INDArray> batchActionMasks = MapUtils.mapValues(actionMasks, (k, v) -> v.get(indices, NDArrayIndex.all()));
+                INDArray batchRewards = rewards.get(indices, NDArrayIndex.all());
+                newAgent = newAgent.avgReward(avgReward)
+                        .trainMiniBatch(epoch, startStep, n, batchStates, batchActionMasks, batchRewards);
+            }
+            return newAgent;
+        }
+    }
+
+    /**
+     * Returns the average step rewards after training a mini batch
+     *
+     * @param epoch        the current epoch number
+     * @param startStep    the current start step number
+     * @param numStepsParm the number of steps
+     * @param states       the states (size=n+1)
+     * @param actionMasks  the action masks (size=n)
+     * @param rewards      the rewards (size=n)
+     */
+    public TDAgentSingleNN trainMiniBatch(long epoch, long startStep, long numStepsParm, Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards) {
+        // Forward pass for differential value function prediction
+        Map<String, INDArray> layers = network.forward(states).state().values();
+        INDArray vPrediction = layers.get("critic.values");
+
         // Separate the prediction from t and t + 1
-        long n = pred.size(0);
-        INDArray pred0 = pred.get(NDArrayIndex.interval(0, n - 1), NDArrayIndex.all());
-        INDArray pred1 = pred.get(NDArrayIndex.interval(1, n), NDArrayIndex.all());
-        // Compute delta = adv + (term - 1) (v1 - v0)
-        //INDArray dv = pred0.sub(pred1);
-        //INDArray delta1 = terminal.sub(1).muli(dv).addi(advantage);
-        //INDArray delta = dv.neg().addi(advantage);
-        // Compute delta = adv + v1 - v0
-        INDArray delta = advantage.add(pred1).subi(pred0);
-        Map<String, INDArray> s0 = MapUtils.mapValues(states, (ignored, value) -> value.get(NDArrayIndex.interval(0, n - 1), NDArrayIndex.all()));
+        long n = rewards.size(0);
+
+        // Computes the deltas
+        INDArray deltas = rewards.dup();
+        INDArray avgRewards = rewards.dup();
+        float avgReward = this.avgReward;
+        for (long i = 0; i < n; i++) {
+            avgRewards.put((int) i, 0, avgReward);
+            float reward = rewards.getFloat(i, 0);
+            float adv = reward - avgReward;
+            float v0 = vPrediction.getFloat(i, 0);
+            float v1 = vPrediction.getFloat(i + DEFAULT_NUM_EPOCHS, 0);
+            // delta = R_t - R + v1 - v0
+            float delta = adv + v1 - v0;
+            deltas.put((int) i, 0, delta);
+            // R = R + delta alpha
+            // R = (1 - alpha) R + alpha R_t + alpha (v1 - v0)
+            avgReward += delta * rewardAlpha;
+        }
+        Map<String, INDArray> s0 = MapUtils.mapValues(states, (ignored, value) -> value.get(NDArrayIndex.interval(0, n), NDArrayIndex.all()));
+        Map<String, INDArray> trainingLayers = MapUtils.mapValues(layers, (ignored, value) -> value.get(NDArrayIndex.interval(0, n), NDArrayIndex.all()));
 
         // Runs a forward pass for training
-        TDNetworkState result0 = network.forward(s0, true);
+        TDNetwork trainingNet = network.forward(s0, true);
+        TDNetworkState result0 = trainingNet.state();
 
         // Extract the policy output values pi from network results
-        Map<String, INDArray> pi = policy();
+        Map<String, INDArray> pi = policy(result0);
 
         // Computes log(pi) gradients
         Map<String, INDArray> gradPi = gradLogPiByMask(pi, actionMasks);
@@ -637,33 +791,48 @@ public class TDAgentSingleNN implements Agent {
                 v.mul(alphas.get(key))));
 
         // Computes output gradients for network (merges critic and policy grads)
-        INDArray criticGrad = Nd4j.onesLike(delta).muli(alphas.get("critic"));
+        INDArray criticGrad = Nd4j.onesLike(deltas).muli(alphas.get("critic"));
         grads.put("critic", criticGrad);
 
-        TDNetworkState trainedState = network.train(grads, delta, lambda, null);
+        trainingNet = trainingNet.train(grads, deltas, lambda, null);
 
-        // Create kpis
-        kpis.putAll(MapUtils.addKeyPrefix(s0, "s0."));
-        kpis.putAll(MapUtils.addKeyPrefix(actionMasks, "actionsMasks."));
-        kpis.put("delta", delta);
-        Map<String, INDArray> layers0 = MapUtils.mapValues(layerStates, (k, v) ->
-                v.get(NDArrayIndex.interval(0, n - 1), NDArrayIndex.all())
-        );
-        kpis.putAll(addKeyPrefix(layers0, "layers0."));
-        kpis.putAll(addKeyPrefix(result0.gradients(), "grads0."));
-        Map<String, INDArray> deltas = Tuple2.stream(grads).map(t ->
-                        Tuple2.of(
-                                "deltas." + t._1,
-                                t._2.mul(delta)
-                        ))
-                .collect(Tuple2.toMap());
-        kpis.putAll(deltas);
-        kpis.putAll(MapUtils.addKeyPrefix(trainedState.parameters(), "trainedParams."));
-        if (++savingStepCounter >= savingIntervalSteps) {
-            savingStepCounter = 0;
-            autosave();
-        }
+        // Computes deltaGrads
+        Map<String, INDArray> deltaGrads = MapUtils.mapValues(grads,
+                (k, grad) ->
+                        grad.mul(deltas));
+        // Generates kpis
+        Map<String, INDArray> kpis = new HashMap<>(MapUtils.addKeyPrefix(trainingLayers, "trainingLayers."));
+        kpis.put("delta", deltas);
+        kpis.put("avgReward", avgRewards);
+        kpis.putAll(MapUtils.addKeyPrefix(actionMasks, "actionMasks."));
+        kpis.putAll(MapUtils.addKeyPrefix(grads, "grads."));
+        kpis.putAll(MapUtils.addKeyPrefix(deltaGrads, "deltaGrads."));
+        kpis.put("counters", Nd4j.createFromArray(
+                        (float) epoch,
+                        (float) numEpochs,
+                        (float) startStep,
+                        (float) numStepsParm)
+                .reshape(1, 4));
+        indicatorsPub.onNext(kpis);
 
-        return delta;
+        Map<String, INDArray> trainedLayers = trainingNet.forward(s0).state().values();
+        kpis.putAll(MapUtils.addKeyPrefix(trainedLayers, "trainedLayers."));
+        indicatorsPub.onNext(kpis);
+
+        return network(trainingNet).avgReward(avgReward);
+    }
+
+    @Override
+    public List<Environment.ExecutionResult> trajectory() {
+        return trajectory;
+    }
+
+    @Override
+    public TDAgentSingleNN trajectory(List<Environment.ExecutionResult> trajectory) {
+        return new TDAgentSingleNN(state, actions, avgReward,
+                rewardAlpha, alphas, lambda,
+                numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
+                savingIntervalSteps, indicatorsPub, postTrainKpis,
+                savingStepCounter, backedUp);
     }
 }

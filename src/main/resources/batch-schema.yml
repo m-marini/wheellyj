@@ -1,6 +1,6 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/batch-schema-0.2
+$id: https://mmarini.org/wheelly/batch-schema-0.3
 title: Wheelly application
 
 # monitor schema
@@ -8,15 +8,9 @@ type: object
 properties:
   $schema:
     type: string
-    const: https://mmarini.org/wheelly/batch-schema-0.2
+    const: https://mmarini.org/wheelly/batch-schema-0.3
   seed:
     multipleOf: 1
-  numEpochs:
-    multipleOf: 1
-    minimum: 1
-  batchSize:
-    multipleOf: 1
-    minimum: 1
   robot:
     type: string
   controller:
@@ -27,8 +21,6 @@ properties:
     type: string
 required:
   - $schema
-  - batchSize
-  - numEpochs
   - robot
   - controller
   - agent

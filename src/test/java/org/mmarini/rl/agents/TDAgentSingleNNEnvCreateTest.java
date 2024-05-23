@@ -36,16 +36,20 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class TDAgentSingleNNEnvCreateTest {
     private static final String YAML = """
             ---
-            $schema: https://mmarini.org/wheelly/agent-single-nn-schema-0.2
+            $schema: https://mmarini.org/wheelly/agent-single-nn-schema-0.3
             class: org.mmarini.rl.agents.TDAgentSingleNN
             modelPath: models/test
             seed: 1234
             rewardAlpha: 0.001
+            numSteps: 2048
+            numEpochs: 1
+            batchSize: 32
             alphas:
               critic: 1e.3
               output: 1e.3
@@ -112,6 +116,9 @@ class TDAgentSingleNNEnvCreateTest {
         deleteRecursive(path);
         TDAgentSingleNN agent = TDAgentSingleNN.create(spec, Locator.root(), MOCK_ENV);
         assertNotNull(agent);
+        assertEquals(2048, agent.numSteps());
+        assertEquals(1, agent.numEpochs());
+        assertEquals(32, agent.batchSize());
     }
 
     @Test
@@ -125,5 +132,9 @@ class TDAgentSingleNNEnvCreateTest {
         JsonNode specLoad = Utils.fromText(YAML);
         TDAgentSingleNN agent1 = TDAgentSingleNN.create(specLoad, Locator.root(), MOCK_ENV);
         assertNotNull(agent1);
+        assertEquals(2048, agent1.numSteps());
+        assertEquals(1, agent1.numEpochs());
+        assertEquals(32, agent1.batchSize());
+
     }
 }

@@ -85,6 +85,17 @@ public class TDNetworkStateImpl implements TDNetworkState {
     }
 
     @Override
+    public TDNetworkState deepDup() {
+        Map<String, INDArray> newVars = new HashMap<>(variables);
+        // Duplicate weight
+        newVars.putAll(filterKeysAndDup(PARAMETERS_PREDICATE));
+        newVars.putAll(filterKeysAndDup(TRACE_PREDICATE));
+        Random newRnd = Nd4j.getRandomFactory().getNewRandomInstance(random.getSeed());
+        HashMap<String, Long> newSizes = new HashMap<>(sizes);
+        return new TDNetworkStateImpl(newVars, newRnd, newSizes);
+    }
+
+    @Override
     public TDNetworkState dup() {
         Map<String, INDArray> newVars = new HashMap<>(variables);
         Random newRnd = Nd4j.getRandomFactory().getNewRandomInstance(random.getSeed());

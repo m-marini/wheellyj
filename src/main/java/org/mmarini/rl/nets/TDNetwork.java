@@ -207,7 +207,7 @@ public class TDNetwork {
     private final List<String> sinkLayers;
     private final List<String> sourceLayers;
     private final Map<String, Long> sizes;
-    private TDNetworkState state;
+    private final TDNetworkState state;
 
     /**
      * Creates the network
@@ -240,7 +240,7 @@ public class TDNetwork {
      *
      * @param inputs the inputs
      */
-    public TDNetworkState forward(Map<String, INDArray> inputs) {
+    public TDNetwork forward(Map<String, INDArray> inputs) {
         return forward(inputs, false);
     }
 
@@ -250,7 +250,7 @@ public class TDNetwork {
      * @param inputs   the inputs
      * @param training true if training forward
      */
-    public TDNetworkState forward(Map<String, INDArray> inputs, boolean training) {
+    public TDNetwork forward(Map<String, INDArray> inputs, boolean training) {
         TDNetworkState newState = state.dup();
         for (String input : inputs.keySet()) {
             newState = newState.putValues(input, inputs.get(input));
@@ -259,8 +259,7 @@ public class TDNetwork {
             TDLayer layer = layers.get(id);
             newState = layer.forward(newState, training);
         }
-        state = newState;
-        return state;
+        return state(newState);
     }
 
     /**
@@ -271,13 +270,15 @@ public class TDNetwork {
     }
 
     /**
-     * Initializes the network
+     * Returns the initialized the network
      */
-    public void init() {
+    public TDNetwork init() {
+        TDNetworkState state1 = state.dup();
         for (TDLayer layer : layers.values()) {
-            state = layer.initVariables(state);
-            state = layer.initParameters(state);
+            state1 = layer.initVariables(state1);
+            state1 = layer.initParameters(state1);
         }
+        return state(state1);
     }
 
     /**
@@ -292,16 +293,6 @@ public class TDNetwork {
      */
     public Map<String, INDArray> parameters() {
         return state.parameters();
-    }
-
-    /**
-     * Returns the network with a set state
-     *
-     * @param state the state
-     */
-    public TDNetwork setState(TDNetworkState state) {
-        this.state = state;
-        return this;
     }
 
     /**
@@ -355,6 +346,15 @@ public class TDNetwork {
     }
 
     /**
+     * Returns the network with a set state
+     *
+     * @param state the state
+     */
+    public TDNetwork state(TDNetworkState state) {
+        return new TDNetwork(layers, forwardSeq, backwardSeq, sinkLayers, sourceLayers, sizes, state);
+    }
+
+    /**
      * Returns the current state
      */
     public TDNetworkState state() {
@@ -362,16 +362,16 @@ public class TDNetwork {
     }
 
     /**
-     * Trains network
+     * Returns the trained network
      *
      * @param grad        the network output gradient
      * @param delta       the delta parameter (error scaled by alpha factor)
      * @param lambda      the TD lambda factor
      * @param kpiCallback call bak function for kpi
      */
-    public TDNetworkState train(Map<String, INDArray> grad, INDArray
+    public TDNetwork train(Map<String, INDArray> grad, INDArray
             delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
-        TDNetworkState newState = state.dup().removeGradients();
+        TDNetworkState newState = state.deepDup().removeGradients();
         for (Map.Entry<String, INDArray> entry : grad.entrySet()) {
             newState = newState.addGradients(entry.getKey(), entry.getValue());
         }
@@ -379,8 +379,7 @@ public class TDNetwork {
             TDLayer node = layers.get(id);
             newState = node.train(newState, delta, lambda, kpiCallback);
         }
-        state = newState;
-        return state;
+        return state(newState);
     }
 
     /**

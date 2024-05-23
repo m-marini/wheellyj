@@ -34,6 +34,7 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -115,7 +116,13 @@ public class RandomAgent implements Agent {
     }
 
     @Override
-    public void init() {
+    public RandomAgent init() {
+        return this;
+    }
+
+    @Override
+    public boolean isReadyForTrain() {
+        return false;
     }
 
     @Override
@@ -124,7 +131,13 @@ public class RandomAgent implements Agent {
     }
 
     @Override
-    public void observe(Environment.ExecutionResult result) {
+    public int numSteps() {
+        return 0;
+    }
+
+    @Override
+    public RandomAgent observe(Environment.ExecutionResult result) {
+        return this;
     }
 
     @Override
@@ -135,5 +148,20 @@ public class RandomAgent implements Agent {
     @Override
     public void save(File path) {
         throw new RuntimeException("Not implemented");
+    }
+
+    @Override
+    public Agent trainByTrajectory(List<Environment.ExecutionResult> trajectory) {
+        return null;
+    }
+
+    @Override
+    public List<Environment.ExecutionResult> trajectory() {
+        return null;
+    }
+
+    @Override
+    public Agent trajectory(List<Environment.ExecutionResult> trajectory) {
+        return null;
     }
 }

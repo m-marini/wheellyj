@@ -34,6 +34,7 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import static java.lang.String.format;
@@ -112,7 +113,13 @@ public class ConstantAgent implements Agent {
     }
 
     @Override
-    public void init() {
+    public ConstantAgent init() {
+        return this;
+    }
+
+    @Override
+    public boolean isReadyForTrain() {
+        return false;
     }
 
     @Override
@@ -121,7 +128,13 @@ public class ConstantAgent implements Agent {
     }
 
     @Override
-    public void observe(Environment.ExecutionResult result) {
+    public int numSteps() {
+        return 0;
+    }
+
+    @Override
+    public ConstantAgent observe(Environment.ExecutionResult result) {
+        return this;
     }
 
     @Override
@@ -132,5 +145,20 @@ public class ConstantAgent implements Agent {
     @Override
     public void save(File path) {
         throw new RuntimeException("Not implemented");
+    }
+
+    @Override
+    public Agent trainByTrajectory(List<Environment.ExecutionResult> trajectory) {
+        return null;
+    }
+
+    @Override
+    public List<Environment.ExecutionResult> trajectory() {
+        return null;
+    }
+
+    @Override
+    public Agent trajectory(List<Environment.ExecutionResult> trajectory) {
+        return null;
     }
 }

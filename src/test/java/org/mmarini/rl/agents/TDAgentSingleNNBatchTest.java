@@ -93,8 +93,8 @@ class TDAgentSingleNNBatchTest {
         );
         TDNetwork network = createNetwork();
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(1234);
-        return new TDAgentSingleNN(state, actions, 0.5F, 0.99F, alphas, 0,
-                network, null, random, null, 0);
+        return TDAgentSingleNN.create(state, actions, 0.5F, 0.99F, alphas, 0,
+                1, 1, 32, network, null, random, null, 0);
     }
 
     @BeforeEach
@@ -163,7 +163,7 @@ class TDAgentSingleNNBatchTest {
     @Test
     void testRunMiniBatch() {
         // When run single epoch
-        TDNetworkState result0 = agent.network().forward(sTest);
+        TDNetworkState result0 = agent.network().forward(sTest).state();
         INDArray pred_t0 = result0.getValues("critic");
         double pred_s0t0 = pred_t0.getDouble(0, 0);
         double pred_s1t0 = pred_t0.getDouble(1, 0);
@@ -173,8 +173,8 @@ class TDAgentSingleNNBatchTest {
         double pi_s1a0t0 = pi_t0.getDouble(1, 0);
         double pi_s1a1t0 = pi_t0.getDouble(1, 1);
 
-        agent.trainBatch(s0, masks, adv);
-        TDNetworkState result1 = agent.network().forward(sTest);
+        agent = agent.trainMiniBatch(0, 0, 0, s0, masks, adv);
+        TDNetworkState result1 = agent.network().forward(sTest).state();
         INDArray pred_t1 = result1.getValues("critic");
         double pred_s0t1 = pred_t1.getDouble(0, 0);
         double pred_s1t1 = pred_t1.getDouble(1, 0);
@@ -187,9 +187,9 @@ class TDAgentSingleNNBatchTest {
         // And run n epochs
         int n = 100;
         for (int i = 0; i < n; i++) {
-            agent.trainBatch(s0, masks, adv);
+            agent = agent.trainMiniBatch(i, n, 0, s0, masks, adv);
         }
-        TDNetworkState resultn = agent.network().forward(sTest);
+        TDNetworkState resultn = agent.network().forward(sTest).state();
         INDArray pred_tn = resultn.getValues("critic");
         double pred_s0tn = pred_tn.getDouble(0, 0);
         double pred_s1tn = pred_tn.getDouble(1, 0);

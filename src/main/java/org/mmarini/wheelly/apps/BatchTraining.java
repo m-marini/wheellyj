@@ -44,6 +44,7 @@ import org.mmarini.wheelly.swing.KpisPanel;
 import org.mmarini.wheelly.swing.LearnPanel;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.yaml.Locator;
+import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
@@ -53,6 +54,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
 
 import static java.lang.String.format;
@@ -64,7 +66,7 @@ import static org.mmarini.yaml.Utils.fromFile;
  * Run the batch training of agent from kpis files
  */
 public class BatchTraining {
-    private static final String BATCH_SCHEMA_YML = "https://mmarini.org/wheelly/batch-schema-0.2";
+    private static final String BATCH_SCHEMA_YML = "https://mmarini.org/wheelly/batch-schema-0.3";
     private static final int KPIS_CAPACITY = 1000;
     private static final Logger logger = LoggerFactory.getLogger(BatchTraining.class);
 
@@ -242,6 +244,28 @@ public class BatchTraining {
     }
 
     /**
+     * Handles the kpis
+     *
+     * @param kpis the kpis
+     */
+    private void handleKpis(Map<String, INDArray> kpis) {
+        kpisPanel.addKpis(kpis);
+        INDArray counters = kpis.get("counters");
+        if (counters != null) {
+            long epoch = counters.getLong(0, 0);
+            long numEpochs = counters.getLong(0, 1);
+            long step = counters.getLong(0, 2);
+            long numSteps = counters.getLong(0, 3);
+            info("Epoch.step %d.%d of %d.%d",
+                    epoch,
+                    step,
+                    numEpochs,
+                    numSteps
+            );
+        }
+    }
+
+    /**
      * Starts the training
      */
     protected void run() throws Exception {
@@ -262,17 +286,11 @@ public class BatchTraining {
             throw new IllegalArgumentException(format("Missing node %s", agentLocator));
         }
         // Loads agent
-        this.agent = (TDAgentSingleNN) Agent.fromConfig(config, agentLocator, environment);
-        this.agent.setPostTrainKpis(true);
+        this.agent = ((TDAgentSingleNN) Agent.fromConfig(config, agentLocator, environment))
+                .setPostTrainKpis(true);
 
         // Create the batch trainer
-        int numEpochs = Locator.locate("numEpochs").getNode(config).asInt();
-        long batchSize = Locator.locate("batchSize").getNode(config).asLong(Long.MAX_VALUE);
-        this.trainer = BatchTrainer.create(agent,
-                numEpochs,
-                (int) batchSize,
-                this::saveNetwork
-        );
+        this.trainer = BatchTrainer.create(agent, this::saveNetwork);
         learnPanel.setLearningRates(agent.alphas());
         trainer.readInfo()
                 .observeOn(Schedulers.io())
@@ -280,7 +298,7 @@ public class BatchTraining {
                 .subscribe();
         trainer.readKpis()
                 .observeOn(Schedulers.io())
-                .doOnNext(kpisPanel::addKpis)
+                .doOnNext(this::handleKpis)
                 .subscribe();
         trainer.readCounter()
                 .observeOn(Schedulers.io())

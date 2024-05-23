@@ -34,7 +34,6 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.ParallelProcess;
 import org.mmarini.rl.agents.BinArrayFile;
 import org.mmarini.rl.agents.CSVWriter;
-import org.mmarini.rl.agents.KeyFileMap;
 import org.mmarini.wheelly.swing.Messages;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -74,19 +73,18 @@ public class Report {
     private static final List<ReportProcess> reports = List.of(
             ReportProcess.scalar("reward"),
             ReportProcess.scalar("delta"),
-            ReportProcess.scalar("deltaPhase1"),
-            ReportProcess.maxAbs("deltas.critic"),
-            ReportProcess.maxAbs("deltas.direction"),
-            ReportProcess.maxAbs("deltas.speed"),
-            ReportProcess.maxAbs("deltas.sensorAction"),
-            ReportProcess.maxAbs("layers0.direction.values"),
-            ReportProcess.maxMinRatio("layers0.direction.values"),
-            ReportProcess.maxMeanRatio("layers0.direction.values"),
-            ReportProcess.maxAbs("layers0.speed.values"),
-            ReportProcess.maxMinRatio("layers0.speed.values"),
-            ReportProcess.maxMeanRatio("layers0.speed.values"),
-            ReportProcess.maxAbs("layers0.sensorAction.values"),
-            ReportProcess.maxMeanRatio("layers0.sensorAction.values")
+            ReportProcess.maxAbs("deltaGrads.critic"),
+            ReportProcess.maxAbs("deltaGrads.direction"),
+            ReportProcess.maxAbs("deltaGrads.speed"),
+            ReportProcess.maxAbs("deltaGrads.sensorAction"),
+            ReportProcess.maxAbs("trainingLayers.direction.values"),
+            ReportProcess.maxMinRatio("trainingLayers.direction.values"),
+            ReportProcess.maxMeanRatio("trainingLayers.direction.values"),
+            ReportProcess.maxAbs("trainingLayers.speed.values"),
+            ReportProcess.maxMinRatio("trainingLayers.speed.values"),
+            ReportProcess.maxMeanRatio("trainingLayers.speed.values"),
+            ReportProcess.maxAbs("trainingLayers.sensorAction.values"),
+            ReportProcess.maxMeanRatio("trainingLayers.sensorAction.values")
     );
 
     static {
@@ -417,10 +415,12 @@ public class Report {
                 .filter(t -> BinArrayFile.createByKey(kpisPath, t.kpiKey()).file().canRead())
                 .toList();
         // Verify kpis size
+        /*
         List<BinArrayFile> files = activeReports.stream()
                 .map(t -> BinArrayFile.createByKey(kpisPath, t.kpiKey()))
                 .toList();
         KeyFileMap.validateSizes(files);
+         */
 
         List<Action> tasks = activeReports.stream()
                 .<Action>map(t -> () -> this.process(t))

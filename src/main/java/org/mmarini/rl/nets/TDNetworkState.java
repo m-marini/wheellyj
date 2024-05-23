@@ -39,6 +39,7 @@ import java.util.regex.Pattern;
  * Contains the values, gradient and masks of each layer output
  */
 public interface TDNetworkState {
+    Predicate<String> TRACE_PREDICATE = Pattern.compile("^.*\\.(weights|bias)\\.trace$").asMatchPredicate();
     Predicate<String> PARAMETERS_PREDICATE = Pattern.compile("^.*\\.(weights|bias)$").asMatchPredicate();
     Predicate<String> VALUES_PREDICATE = Pattern.compile("^.*\\.(values)$").asMatchPredicate();
     Predicate<String> GRADIENTS_PREDICATE = Pattern.compile("^.*\\.(grads)$").asMatchPredicate();
@@ -60,6 +61,12 @@ public interface TDNetworkState {
     default TDNetworkState addGradients(String layer, INDArray values) {
         return add(layer + ".grads", values);
     }
+
+    /**
+     * Returns the deep duplication of the state
+     * All the variables are duplicated
+     */
+    TDNetworkState deepDup();
 
     /**
      * Returns the duplication of the state
