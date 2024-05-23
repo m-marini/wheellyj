@@ -40,6 +40,9 @@ import java.util.Map;
  * Transpiler of simplified agent specification to internal agent specification
  */
 public class AgentSingleNNTranspiler {
+    public static final int DEFAULT_NUM_STEPS = 2048;
+    public static final int DEFAULT_NUM_EPOCHS = 1;
+    public static final int DEFAULT_BATCH_SIZE = 32;
     private final JsonNode spec;
     private final Map<String, SignalSpec> stateSpec;
     private final Map<String, SignalSpec> actionsSpec;
@@ -52,6 +55,9 @@ public class AgentSingleNNTranspiler {
     private float lambda;
     private InputProcessor processor;
     private Map<String, Float> alphas;
+    private int numSteps;
+    private int numEpochs;
+    private int batchSize;
 
     public AgentSingleNNTranspiler(JsonNode spec,
                                    Locator locator,
@@ -72,9 +78,9 @@ public class AgentSingleNNTranspiler {
 
     public TDAgentSingleNN build() {
         parse();
-        return new TDAgentSingleNN(stateSpec, actionsSpec, 0,
+        return TDAgentSingleNN.create(stateSpec, actionsSpec, 0,
                 rewardAlpha, alphas, lambda,
-                network, processor,
+                numSteps, numEpochs, batchSize, network, processor,
                 random, path, savingIntervalStep);
     }
 
@@ -84,6 +90,9 @@ public class AgentSingleNNTranspiler {
                 .map(Tuple2.map2(l -> (float) l.getNode(spec).asDouble()))
                 .collect(Tuple2.toMap());
         this.lambda = (float) locator.path("lambda").getNode(spec).asDouble();
+        this.numSteps = locator.path("numSteps").getNode(spec).asInt(DEFAULT_NUM_STEPS);
+        this.numEpochs = locator.path("numEpochs").getNode(spec).asInt(DEFAULT_NUM_EPOCHS);
+        this.batchSize = locator.path("batchSize").getNode(spec).asInt(DEFAULT_BATCH_SIZE);
         this.processor = !locator.path("inputProcess").getNode(spec).isMissingNode()
                 ? InputProcessor.create(spec, locator.path("inputProcess"), this.stateSpec)
                 : null;

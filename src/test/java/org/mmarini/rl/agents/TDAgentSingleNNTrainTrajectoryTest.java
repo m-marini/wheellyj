@@ -39,7 +39,7 @@ import java.util.Map;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
-class TDAgentSingleNNTrainTest {
+class TDAgentSingleNNTrainTrajectoryTest {
 
     public static final float REWARD_ALPHA = 1e-3f;
     public static final long AGENT_SEED = 1234L;
@@ -49,9 +49,8 @@ class TDAgentSingleNNTrainTest {
             "output", new IntSignalSpec(new long[]{1}, 2));
     public static final float LAMBDA = 0.5f;
 
-    static TDAgentSingleNN createAgent0() {
-        Random random = Nd4j.getRandom();
-        random.setSeed(AGENT_SEED);
+    static TDAgentSingleNN createAgent0(int numSteps, int numEpochs, int batchSize) {
+        Random random = Nd4j.getRandomFactory().getNewRandomInstance(AGENT_SEED);
         List<TDLayer> layers = List.of(
                 new TDDense("critic1", "input", 1000, 1),
                 new TDTanh("critic2", "critic1"),
@@ -75,10 +74,59 @@ class TDAgentSingleNNTrainTest {
                 "critic", 1e-3f,
                 "output", 3e-3f
         );
-        return new TDAgentSingleNN(STATE_SPEC, ACTIONS_SPEC0,
+        return TDAgentSingleNN.create(STATE_SPEC, ACTIONS_SPEC0,
                 0, REWARD_ALPHA, alphas, LAMBDA,
-                network, null,
+                numSteps, numEpochs, batchSize, network, null,
                 random, null, Integer.MAX_VALUE);
+    }
+
+    /**
+     * Given an agent
+     * and a continuous task with observations:
+     * 0, 0, 0, -1
+     * 0, 1, 1, 1
+     * 1, 1, 1, -1
+     * 1, 0, 0, 1
+     * When trains for 100 epochs and 4 steps
+     * Then average reward should tend to 0
+     * and pi(s0=0, a=0) -> 0
+     * and pi(s0=0, a=1) -> 1
+     * and pi(s0=1, a=0) -> 1
+     * and pi(s0=1, a=1) -> 0
+     * and v(s=0) -> 0
+     * and v(s=1) -> 0
+     */
+    @Test
+    void train1() {
+        TDAgentSingleNN agent = createAgent0(4, 100, 4);
+        Map<String, Signal> s0 = Map.of(
+                "input", ArraySignal.create(1f, 0f)
+        );
+        Map<String, Signal> s1 = Map.of(
+                "input", ArraySignal.create(0f, 1f)
+        );
+
+        Map<String, INDArray> input0 = TDAgentSingleNN.getInput(s0);
+
+        Map<String, Signal> action0 = Map.of(
+                "output", IntSignal.create(0)
+        );
+        Map<String, Signal> action1 = Map.of(
+                "output", IntSignal.create(1)
+        );
+        List<ExecutionResult> trajectory = List.of(
+                new ExecutionResult(s0, action0, -1, s0),
+                new ExecutionResult(s0, action1, 1, s1),
+                new ExecutionResult(s1, action1, -1, s1),
+                new ExecutionResult(s1, action0, 1, s0)
+        );
+
+        // When trains with positive reward
+        TDAgentSingleNN trained = agent.trainByTrajectory(trajectory);
+        float avg = trained.avgReward();
+
+        // Then average reward should increase
+        assertThat((double) avg, closeTo(0, 1e-3));
     }
 
     /**
@@ -92,7 +140,8 @@ class TDAgentSingleNNTrainTest {
      */
     @Test
     void trainNegative() {
-        TDAgentSingleNN agent = createAgent0();
+        // Given ...
+        TDAgentSingleNN agent = createAgent0(1, 1, 1);
         Map<String, Signal> s0 = Map.of(
                 "input", ArraySignal.create(1f, 0f)
         );
@@ -101,7 +150,7 @@ class TDAgentSingleNNTrainTest {
         );
 
         Map<String, INDArray> input = TDAgentSingleNN.getInput(s0);
-        TDNetworkState netResults = agent.network().forward(input);
+        TDNetworkState netResults = agent.network().forward(input).state();
         float v00 = netResults.getValues("critic").getFloat(0);
         INDArray pi0 = netResults.getValues("output");
         int action = 0;
@@ -110,32 +159,35 @@ class TDAgentSingleNNTrainTest {
         );
         ExecutionResult result = new ExecutionResult(s0, actions, -1, s1);
 
-        agent.trainOnLine(result);
+        // When ...
+        TDAgentSingleNN trained = agent.trainByTrajectory(List.of(result));
+        float avg = trained.avgReward();
 
-        netResults = agent.network().forward(input);
+        // Then ...
+        netResults = trained.network().forward(input).state();
         float v10 = netResults.getValues("critic").getFloat(0);
         INDArray pi1 = netResults.getValues("output");
 
-        assertThat(agent.avgReward(), lessThan(0f));
+        assertThat(avg, lessThan(0f));
 
         assertThat(pi1.getFloat(0, action), lessThan(pi0.getFloat(0, action)));
         assertThat(pi1.getFloat(0, 1 - action), greaterThan(pi0.getFloat(0, 1 - action)));
 
-        INDArray criticEb = agent.network().state().getBiasTrace("critic1");
+        INDArray criticEb = trained.network().state().getBiasTrace("critic1");
         assertThat(criticEb.getDouble(0, 0), not(closeTo(0, 1e-6)));
         assertThat(criticEb.getDouble(0, 1), not(closeTo(0f, 1e-6)));
 
-        INDArray criticEw = agent.network().state().getWeightsTrace("critic1");
+        INDArray criticEw = trained.network().state().getWeightsTrace("critic1");
         assertThat(criticEw.getDouble(0, 0), not(closeTo(0, 1e-6)));
         assertThat(criticEw.getDouble(0, 1), not(closeTo(0, 1e-6)));
         assertThat(criticEw.getDouble(1, 0), closeTo(0, 1e-6));
         assertThat(criticEw.getDouble(1, 1), closeTo(0, 1e-6));
 
-        INDArray policyEb = agent.network().state().getBiasTrace("output1");
+        INDArray policyEb = trained.network().state().getBiasTrace("output1");
         assertThat(policyEb.getFloat(0, 0), not(equalTo(0f)));
         assertThat(policyEb.getFloat(0, 1), not(equalTo(0f)));
 
-        INDArray policyEw = agent.network().state().getWeightsTrace("output1");
+        INDArray policyEw = trained.network().state().getWeightsTrace("output1");
         assertThat((double) policyEw.getFloat(0, 0), not(closeTo(0, 1e-6)));
         assertThat((double) policyEw.getFloat(0, 1), not(closeTo(0, 1e-6)));
         assertThat((double) policyEw.getFloat(1, 0), closeTo(0, 1e-6));
@@ -155,7 +207,7 @@ class TDAgentSingleNNTrainTest {
      */
     @Test
     void trainPositive() {
-        TDAgentSingleNN agent = createAgent0();
+        TDAgentSingleNN agent = createAgent0(1, 1, 1);
         Map<String, Signal> s0 = Map.of(
                 "input", ArraySignal.create(1f, 0f)
         );
@@ -164,7 +216,7 @@ class TDAgentSingleNNTrainTest {
         );
 
         Map<String, INDArray> input = TDAgentSingleNN.getInput(s0);
-        TDNetworkState netResults = agent.network().forward(input);
+        TDNetworkState netResults = agent.network().forward(input).state();
         float v00 = netResults.getValues("critic").getFloat(0);
         INDArray pi0 = netResults.getValues("output");
 
@@ -175,13 +227,14 @@ class TDAgentSingleNNTrainTest {
         ExecutionResult result = new ExecutionResult(s0, actions, 1, s1);
 
         // When trains with positive reward
-        agent.trainOnLine(result);
+        TDAgentSingleNN trained = agent.trainByTrajectory(List.of(result));
+        float avg = trained.avgReward();
 
         // Then average reward should increase
-        netResults = agent.network().forward(input);
+        netResults = trained.network().forward(input).state();
         float v10 = netResults.getValues("critic").getFloat(0);
         INDArray pi1 = netResults.getValues("output");
-        assertThat(agent.avgReward(), greaterThan(0f));
+        assertThat(avg, greaterThan(0f));
 
         // and probabilities of selected actions should increase
         assertThat(pi1.getFloat(0, action), greaterThan(pi0.getFloat(0, action)));
@@ -190,21 +243,21 @@ class TDAgentSingleNNTrainTest {
         assertThat(pi1.getFloat(0, 1 - action), lessThan(pi0.getFloat(0, 1 - action)));
 
         // and eligibility vectors should not be zeros
-        INDArray criticEb = agent.network().state().getBiasTrace("critic1");
+        INDArray criticEb = trained.network().state().getBiasTrace("critic1");
         assertThat(criticEb.getDouble(0, 0), not(closeTo(0d, 1e-6)));
         assertThat(criticEb.getDouble(0, 1), not(closeTo(0d, 1e-6)));
 
-        INDArray criticEw = agent.network().state().getWeightsTrace("critic1");
+        INDArray criticEw = trained.network().state().getWeightsTrace("critic1");
         assertThat(criticEw.getDouble(0, 0), not(closeTo(0, 1e-6)));
         assertThat(criticEw.getDouble(0, 1), not(closeTo(0, 1e-6)));
         assertThat(criticEw.getDouble(1, 0), equalTo(0d));
         assertThat(criticEw.getDouble(1, 1), equalTo(0d));
 
-        INDArray policyEb = agent.network().state().getBiasTrace("output1");
+        INDArray policyEb = trained.network().state().getBiasTrace("output1");
         assertThat(policyEb.getFloat(0, 0), not(equalTo(0f)));
         assertThat(policyEb.getFloat(0, 1), not(equalTo(0f)));
 
-        INDArray policyEw = agent.network().state().getWeightsTrace("output1");
+        INDArray policyEw = trained.network().state().getWeightsTrace("output1");
         assertThat((double) policyEw.getFloat(0, 0), not(closeTo(0, 1e-6)));
         assertThat((double) policyEw.getFloat(0, 1), not(closeTo(0, 1e-6)));
         assertThat((double) policyEw.getFloat(1, 0), closeTo(0, 1e-6));

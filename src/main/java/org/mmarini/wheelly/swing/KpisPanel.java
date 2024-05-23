@@ -100,9 +100,9 @@ public class KpisPanel extends MatrixTable {
     private Consumer<Map<String, INDArray>> createDeltaActionHandler(String action) {
         RMSValues deltaRms = RMSValues.zeros();
         return kpis -> {
-            INDArray pi0 = kpis.get("layers0." + action + ".values");
+            INDArray pi0 = kpis.get("trainingLayers." + action + ".values");
             INDArray pi1 = kpis.get("trainedLayers." + action + ".values");
-            INDArray actions = kpis.get("actionsMasks." + action);
+            INDArray actions = kpis.get("actionMasks." + action);
             if (pi0 != null && pi1 != null && actions != null) {
                 try (INDArray pi0a = pi0.mul(actions)) {
                     try (INDArray pi0max = pi0a.max(true, 1)) {
@@ -137,13 +137,13 @@ public class KpisPanel extends MatrixTable {
         MeanValues probRatio = MeanValues.zeros();
         return Stream.of(
                 Tuple2.of(
-                        "deltas." + key, data -> {
+                        "deltaGrads." + key, data -> {
                             try (INDArray max = Transforms.abs(data).max(true, 1)) {
                                 printf(key + ".delta", "%,10.0f", delta.add(max).value() * PPM);
                             }
                         }),
                 Tuple2.of(
-                        "layers0." + key + ".values", data -> {
+                        "trainingLayers." + key + ".values", data -> {
                             // prob = max(data) / exp(mean(log(data)))
                             try (INDArray max = data.max(true, 1)) {
                                 try (INDArray log = Transforms.log(data)) {
@@ -197,7 +197,7 @@ public class KpisPanel extends MatrixTable {
     public void setKeys(String... keys) {
         // Creates the handlers
         handlers = Stream.concat(Stream.of(
-                                Tuple2.<String, Consumer<INDArray>>of("deltas.critic", this::handleCritic),
+                                Tuple2.<String, Consumer<INDArray>>of("deltaGrads.critic", this::handleCritic),
                                 Tuple2.<String, Consumer<INDArray>>of("avgReward", this::handleAvgReward)),
                         Arrays.stream(keys)
                                 .flatMap(this::createHandler))

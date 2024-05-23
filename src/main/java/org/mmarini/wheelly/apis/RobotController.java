@@ -511,12 +511,15 @@ public class RobotController implements RobotControllerApi {
                 logger.atDebug().log("Wait {} ms", waitTime);
 
                 // Checks for required sleep for synchronization
+                    /*
                 if (waitTime >= 1) {
                     try {
                         Thread.sleep(waitTime);
                     } catch (InterruptedException ignored) {
                     }
+
                 }
+                     */
             } catch (IOException e) {
                 logger.atError().setCause(e).log("Error on status thread");
                 break;
@@ -538,8 +541,7 @@ public class RobotController implements RobotControllerApi {
     private void scheduleInference(RobotStatus status) {
         if (isReady) {
             long time = robot.simulationTime();
-            logger.atDebug().log("scheduleInference {}", isInference);
-            if (time >= lastInference + reactionInterval && !isInference) {
+            if (time >= lastInference + reactionInterval) {
                 lastInference = time;
                 if (onLatch != null) {
                     try {
@@ -550,21 +552,16 @@ public class RobotController implements RobotControllerApi {
                     }
                 }
                 isInference = true;
-                Schedulers.computation().scheduleDirect(() -> {
-                    long t0 = System.currentTimeMillis();
-                    logger.atDebug().log("Inference process started");
-                    inferencesProcessor.onNext(status);
-                    if (onInference != null) {
-                        try {
-                            onInference.accept(status);
-                        } catch (Throwable ex) {
-                            sendError(ex);
-                            logger.atError().setCause(ex).log("Error on inference");
-                        }
+                inferencesProcessor.onNext(status);
+                if (onInference != null) {
+                    try {
+                        onInference.accept(status);
+                    } catch (Throwable ex) {
+                        sendError(ex);
+                        logger.atError().setCause(ex).log("Error on inference");
                     }
-                    isInference = false;
-                    logger.atDebug().log("Inference process ended, elapsed {} ms", System.currentTimeMillis() - t0);
-                });
+                }
+                isInference = false;
             }
         }
     }

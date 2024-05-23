@@ -53,6 +53,9 @@ class TDAgentSingleNNCreateTest {
               critic: 1e-3
               output: 3e-3
             lambda: 0.5
+            numSteps: 128
+            numEpochs: 10
+            batchSize: 16
             state:
               input:
                 type: float
@@ -258,6 +261,12 @@ class TDAgentSingleNNCreateTest {
 
         JsonNode json = agent.json();
         assertTrue(json.path("inputProcess").isMissingNode());
+        assertTrue(json.path("numSteps").isInt());
+        assertTrue(json.path("numEpochs").isInt());
+        assertTrue(json.path("batchSize").isInt());
+        assertEquals(128, json.path("numSteps").asInt());
+        assertEquals(10, json.path("numEpochs").asInt());
+        assertEquals(16, json.path("batchSize").asInt());
     }
 
     @Test

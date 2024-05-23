@@ -1,11 +1,11 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/agent-single-nn-schema-0.2
+$id: https://mmarini.org/wheelly/agent-single-nn-schema-0.3
 title: Agent
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/agent-single-nn-schema-0.2
+    const: https://mmarini.org/wheelly/agent-single-nn-schema-0.3
   class:
     const: org.mmarini.rl.agents.TDAgentSingleNN
   modelPath:
@@ -29,6 +29,15 @@ properties:
       - critic
   lambda:
     minimum: 0
+  numSteps:
+    multipleOf: 1
+    minimum: 1
+  numEpochs:
+    multipleOf: 1
+    minimum: 1
+  batchSize:
+    multipleOf: 1
+    minimum: 1
   inputProcess:
     $ref: "#/$defs/InputProcessors"
   network:

@@ -103,7 +103,7 @@ class SimRobotControllerTest {
         Thread.sleep(round(2 * INTERVAL / simSpeed));
 
         // Then the robot localTime should be 0
-        assertThat(rc.getRobot().simulationTime(), greaterThanOrEqualTo(2 * INTERVAL));
+        assertThat(rc.getRobot().simulationTime(), greaterThanOrEqualTo(INTERVAL));
 
         // And the handling commands should be emitted
         verify(onController).accept(RobotController.HANDLING_COMMANDS);

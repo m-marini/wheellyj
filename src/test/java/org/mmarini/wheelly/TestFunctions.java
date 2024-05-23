@@ -78,6 +78,18 @@ public interface TestFunctions {
         return matrixCloseTo(Nd4j.create(exp), epsilon);
     }
 
+    static Matcher<INDArray> matrixShape(long... expShape) {
+        requireNonNull(expShape);
+        return new CustomMatcher<>(format("INDArray with shape %s",
+                Arrays.toString(expShape))) {
+            @Override
+            public boolean matches(Object o) {
+                return o instanceof INDArray
+                        && Arrays.equals(((INDArray) o).shape(), expShape);
+            }
+        };
+    }
+
     static Stream<Tuple2<Point, String>> parseMap(String... lines) {
         Stream.Builder<Tuple2<Point, String>> builder = Stream.builder();
         for (int j = lines.length - 1; j >= 0; j--) {

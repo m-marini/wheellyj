@@ -63,7 +63,6 @@ public class BatchTrainer {
     public static final String S0_KEY = "s0";
     public static final String ACTIONS_KEY = "actions";
     public static final String REWARD_KEY = "reward";
-    private static final String ADVANTAGE_KEY = "advantage";
     private static final String ACTIONS_MASKS_KEY = "masks";
     private static final File TMP_PATH = new File("tmp");
     private static final File TMP_MASKS_PATH = new File(TMP_PATH, ACTIONS_MASKS_KEY);
@@ -73,45 +72,32 @@ public class BatchTrainer {
      * Returns the batch trainer
      *
      * @param agent     the agent
-     * @param numEpochs the number of epochs of rl training
-     * @param batchSize the batch size
      * @param onTrained the on trained callback
      */
-    public static BatchTrainer create(TDAgentSingleNN agent,
-                                      int numEpochs, int batchSize,
-                                      Consumer<TDAgentSingleNN> onTrained) {
-        return new BatchTrainer(agent,
-                numEpochs, batchSize,
-                onTrained);
+    public static BatchTrainer create(TDAgentSingleNN agent, Consumer<TDAgentSingleNN> onTrained) {
+        return new BatchTrainer(agent, onTrained);
     }
 
-    private final TDAgentSingleNN agent;
-    private final int numEpochs;
     private final Consumer<TDAgentSingleNN> onTrained;
-    private final int batchSize;
     private final PublishProcessor<Map<String, INDArray>> kpisProcessor;
     private final PublishProcessor<String> infoProcessor;
     private final PublishProcessor<Long> counterProcessor;
+    private TDAgentSingleNN agent;
     private boolean stopped;
     private Map<String, BinArrayFile> masksFiles;
-    private BinArrayFile advantageFile;
     private Map<String, BinArrayFile> s0Files;
     private File datasetPath;
+    private BinArrayFile rewardFile;
 
     /**
      * Creates the batch trainer
      *
      * @param agent     the network to train
-     * @param numEpochs the number of iterations of rl training
-     * @param batchSize the batch size
      * @param onTrained the on trained call back
      */
-    protected BatchTrainer(TDAgentSingleNN agent, int numEpochs,
-                           int batchSize, Consumer<TDAgentSingleNN> onTrained) {
+    protected BatchTrainer(TDAgentSingleNN agent, Consumer<TDAgentSingleNN> onTrained) {
         this.agent = requireNonNull(agent);
-        this.numEpochs = numEpochs;
         this.onTrained = onTrained;
-        this.batchSize = batchSize;
         this.kpisProcessor = PublishProcessor.create();
         this.infoProcessor = PublishProcessor.create();
         this.counterProcessor = PublishProcessor.create();
@@ -164,7 +150,7 @@ public class BatchTrainer {
         BinArrayFile maskFile = BinArrayFile.createByKey(TMP_MASKS_PATH, actionName);
         AtomicLong n = new AtomicLong();
         counterProcessor.onNext(0L);
-        Batches.map(maskFile, actionFile, batchSize,
+        Batches.map(maskFile, actionFile, agent.numSteps(),
                 action -> {
                     INDArray mask = Nd4j.zeros(action.size(0), numActions);
                     for (long i = 0; i < action.size(0); i++) {
@@ -175,41 +161,6 @@ public class BatchTrainer {
                 }
         );
         return maskFile;
-    }
-
-    /**
-     * Returns the residual advantage record reader dataset iterator by processing rewards
-     *
-     * @param datasetPath the data set path
-     * @throws IOException in case of error
-     */
-    private BinArrayFile createAdvantage(File datasetPath) throws Exception {
-        // Loads rewards
-        info("Computing average reward from \"%s\" ...", datasetPath);
-        BinArrayFile rewardFile = BinArrayFile.createByKey(datasetPath, REWARD_KEY);
-        counterProcessor.onNext(0L);
-        float avgReward = Batches.reduce(rewardFile, 0F, 256,
-                (tot1, data, n) -> {
-                    counterProcessor.onNext(n + data.size(0));
-                    return tot1 + data.sumNumber().floatValue();
-                });
-        long n;
-        try (rewardFile) {
-            n = rewardFile.size();
-        }
-        avgReward /= n;
-        kpisProcessor.onNext(Map.of("avgReward", Kpi.create(avgReward)));
-
-        info("Computing advantage from \"%s\" ...", datasetPath);
-        BinArrayFile advantageFile = BinArrayFile.createByKey(TMP_PATH, ADVANTAGE_KEY);
-        float finalAvgReward = avgReward;
-        AtomicLong m = new AtomicLong();
-        counterProcessor.onNext(0L);
-        Batches.map(advantageFile, rewardFile, 256, data -> {
-            counterProcessor.onNext(m.addAndGet(data.size(0)));
-            return data.sub(finalAvgReward);
-        });
-        return advantageFile;
     }
 
     /**
@@ -229,7 +180,7 @@ public class BatchTrainer {
      */
     public long numRecords() {
         try {
-            return advantageFile != null ? advantageFile.size() : 0;
+            return rewardFile != null ? rewardFile.size() : 0;
         } catch (IOException ex) {
             logger.atError().setCause(ex).log("Error getting number of records");
             return 0;
@@ -241,8 +192,6 @@ public class BatchTrainer {
      * Load the dataset of s0,s1,reward,terminal,actions
      */
     public void prepare() throws Exception {
-        // Check for terminal
-        this.advantageFile = createAdvantage(datasetPath);
         this.masksFiles = createActionMasks(datasetPath);
     }
 
@@ -269,47 +218,6 @@ public class BatchTrainer {
     }
 
     /**
-     * Runs phase2
-     * Trains over all the input samples
-     */
-    private void runEpoque() throws Exception {
-        Batches.Monitor monitor = new Batches.Monitor();
-        KeyFileMap.seek(s0Files, 0);
-        KeyFileMap.seek(masksFiles, 0);
-
-        BinArrayFile advantageFile = this.advantageFile;
-        advantageFile.seek(0);
-
-        long n = 0;
-        counterProcessor.onNext(n);
-        for (; ; ) {
-            if (stopped) {
-                return;
-            }
-            Map<String, INDArray> s0 = KeyFileMap.read(s0Files, batchSize + 1);
-            if (s0 == null) {
-                break;
-            }
-            long m = s0.values().iterator().next().size(0);
-            if (m <= 1) {
-                break;
-            }
-            INDArray adv = advantageFile.read(m - 1);
-            Map<String, INDArray> actionsMasks = KeyFileMap.read(masksFiles, m - 1);
-            if (adv == null || actionsMasks == null) {
-                break;
-            }
-            agent.trainBatch(s0, actionsMasks, adv);
-
-            n += m - 1;
-            counterProcessor.onNext(n);
-            long finalN = n;
-            monitor.wakeUp(() -> format("Processed %d records", finalN));
-            counterProcessor.onNext(n);
-        }
-    }
-
-    /**
      * Stops the batch trainer
      */
     public void stop() {
@@ -320,18 +228,45 @@ public class BatchTrainer {
      * Trains the network
      */
     public void train() throws Exception {
-        info("Training batch size %d", batchSize);
+        info("Training batch size %d", agent.batchSize());
         try {
-            for (int i = 0; i < numEpochs && !stopped; i++) {
-                // Iterate for all mini batches
-                info("Epoch %d of %d ...", i + 1, numEpochs);
-                runEpoque();
-                if (onTrained != null) {
-                    onTrained.accept(agent);
+            Batches.Monitor monitor = new Batches.Monitor();
+            long numSteps = rewardFile.size() - 1;
+            for (long epoch = 0; epoch < agent.numEpochs(); epoch++) {
+                KeyFileMap.seek(s0Files, 0);
+                KeyFileMap.seek(masksFiles, 0);
+                rewardFile.seek(0);
+
+                long n = 0;
+                counterProcessor.onNext(n);
+                for (; ; ) {
+                    if (stopped) {
+                        return;
+                    }
+                    Map<String, INDArray> s0 = KeyFileMap.read(s0Files, agent.batchSize() + 1);
+                    if (s0 == null) {
+                        break;
+                    }
+                    long m = s0.values().iterator().next().size(0);
+                    if (m <= 1) {
+                        break;
+                    }
+                    INDArray rewards = rewardFile.read(m - 1);
+                    Map<String, INDArray> actionsMasks = KeyFileMap.read(masksFiles, m - 1);
+                    if (rewards == null || actionsMasks == null) {
+                        break;
+                    }
+                    long finalN = n;
+                    monitor.wakeUp(() -> format("Processing %d records", finalN));
+                    agent = agent.trainMiniBatch(epoch, n, numSteps, s0, actionsMasks, rewards);
+
+                    n += m - 1;
+                    counterProcessor.onNext(n);
+                    if (onTrained != null) {
+                        onTrained.accept(agent);
+                    }
                 }
-                if (stopped) {
-                    break;
-                }
+                agent.autosave();
             }
         } finally {
             agent.close();
@@ -351,7 +286,7 @@ public class BatchTrainer {
         if (s0Files.isEmpty()) {
             throw new IllegalArgumentException("Missing s0 datasets");
         }
-        BinArrayFile rewardFile = BinArrayFile.createByKey(datasetPath, REWARD_KEY);
+        this.rewardFile = BinArrayFile.createByKey(datasetPath, REWARD_KEY);
         if (!rewardFile.file().canRead()) {
             throw new IllegalArgumentException("Missing reward datasets");
         }

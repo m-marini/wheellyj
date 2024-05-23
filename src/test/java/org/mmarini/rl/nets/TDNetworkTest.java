@@ -308,7 +308,7 @@ class TDNetworkTest {
         INDArray input0Org = input0.dup();
         INDArray input1Org = input1.dup();
 
-        TDNetworkState state = net.forward(in);
+        TDNetworkState state = net.forward(in).state();
 
         assertEquals(input0, input0Org);
         assertEquals(input1, input1Org);
@@ -663,7 +663,7 @@ class TDNetworkTest {
         Map<String, INDArray> in = Map.of(
                 "input0", input0,
                 "input1", input1);
-        TDNetworkState out = net.forward(in);
+        TDNetworkState out = net.forward(in).state();
         Map<String, INDArray> grads = Map.of("layer7", grad7,
                 "layer8", grad8);
 
@@ -679,8 +679,9 @@ class TDNetworkTest {
         INDArray grad7Org = grad7.dup();
         INDArray grad8Org = grad8.dup();
 
-        net.forward(in, true);
-        out = net.train(grads, delta.mul(alpha), lambda, null);
+        out = net.forward(in, true)
+                .train(grads, delta.mul(alpha), lambda, null)
+                .state();
 
         assertEquals(out.getValues("input0"), outInput0Org);
         assertEquals(out.getValues("input1"), outInput1Org);

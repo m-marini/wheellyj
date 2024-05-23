@@ -54,9 +54,9 @@ class TDAgentSingleNNTrainKpiTest {
                 "critic", 1e-3f,
                 "output", 3e-3f
         );
-        return new TDAgentSingleNN(STATE_SPEC, ACTIONS_SPEC,
+        return TDAgentSingleNN.create(STATE_SPEC, ACTIONS_SPEC,
                 1f, REWARD_ALPHA, alphas, LAMBDA,
-                network, null,
+                1, 1, 32, network, null,
                 random, null, Integer.MAX_VALUE);
     }
 
@@ -94,8 +94,8 @@ class TDAgentSingleNNTrainKpiTest {
             Map<String, Signal> s1 = Map.of("input", ArraySignal.create(0, 1, 0));
             Map<String, INDArray> n0 = TDAgentSingleNN.getInput(s0);
             Map<String, INDArray> n1 = TDAgentSingleNN.getInput(s1);
-            INDArray pis00 = agent.network().forward(n0).getValues("output");
-            INDArray pis01 = agent.network().forward(n1).getValues("output");
+            INDArray pis00 = agent.network().forward(n0).state().getValues("output");
+            INDArray pis01 = agent.network().forward(n1).state().getValues("output");
 
             for (int i = 0; i < NUM_EPISODES; i++) {
                 Map<String, Signal> state = env.reset();
@@ -105,13 +105,13 @@ class TDAgentSingleNNTrainKpiTest {
                     if (result == null) {
                         break;
                     }
-                    agent.observe(result);
+                    agent = agent.observe(result);
                     state = result.state1();
                 }
             }
 
-            INDArray pis10 = agent.network().forward(n0).getValues("output");
-            INDArray pis11 = agent.network().forward(n1).getValues("output");
+            INDArray pis10 = agent.network().forward(n0).state().getValues("output");
+            INDArray pis11 = agent.network().forward(n1).state().getValues("output");
 
             assertThat(pis10.getFloat(0, 0), greaterThan(pis00.getFloat(0, 0)));
             assertThat(pis11.getFloat(0, 1), greaterThan(pis01.getFloat(0, 1)));

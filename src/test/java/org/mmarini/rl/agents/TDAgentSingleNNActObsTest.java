@@ -60,9 +60,9 @@ class TDAgentSingleNNActObsTest {
                 "output.a", 3e-3f,
                 "output.b", 10e-3f
         );
-        return new TDAgentSingleNN(STATE_SPEC, ACTIONS_SPEC,
+        return TDAgentSingleNN.create(STATE_SPEC, ACTIONS_SPEC,
                 0, REWARD_ALPHA, alphas, LAMBDA,
-                network, null,
+                1, 1, 1, network, null,
                 random, null, Integer.MAX_VALUE);
     }
 
@@ -116,19 +116,18 @@ class TDAgentSingleNNActObsTest {
 
     @Test
     void observe() {
-        try (TDAgentSingleNN agent = createAgent()) {
-            INDArray s0 = Nd4j.rand(2);
-            Map<String, Signal> state = Map.of(
-                    "input", new ArraySignal(s0)
-            );
-            INDArray s0Org = s0.dup();
-            Map<String, Signal> actions = agent.act(state);
-            ExecutionResult result = new ExecutionResult(state, actions, 1, state);
-            agent.observe(result);
-            agent.act(state);
-            agent.observe(result);
-            assertEquals(s0, s0Org);
-        }
+        TDAgentSingleNN agent = createAgent();
+        INDArray s0 = Nd4j.rand(2);
+        Map<String, Signal> state = Map.of(
+                "input", new ArraySignal(s0)
+        );
+        INDArray s0Org = s0.dup();
+        Map<String, Signal> actions = agent.act(state);
+        ExecutionResult result = new ExecutionResult(state, actions, 1, state);
+        agent = agent.observe(result);
+        agent.act(state);
+        agent = agent.observe(result);
+        assertEquals(s0, s0Org);
     }
 
 }

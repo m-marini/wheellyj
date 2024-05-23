@@ -37,6 +37,7 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -65,7 +66,13 @@ public interface Agent extends Closeable, WithSignalsSpec {
     /**
      * Resets the inference engine
      */
-    void init();
+
+    Agent init();
+
+    /**
+     * Returns true if the agent is read for train
+     */
+    boolean isReadyForTrain();
 
     /**
      * Returns the agent specification json node
@@ -73,11 +80,16 @@ public interface Agent extends Closeable, WithSignalsSpec {
     JsonNode json();
 
     /**
+     * Returns the number of steps for training
+     */
+    int numSteps();
+
+    /**
      * Observes the execution result training the agent
      *
      * @param result the execution result
      */
-    void observe(Environment.ExecutionResult result);
+    Agent observe(Environment.ExecutionResult result);
 
     /**
      * Returns the flowable kpis
@@ -91,4 +103,23 @@ public interface Agent extends Closeable, WithSignalsSpec {
      * @throws IOException in case of error
      */
     void save(File path) throws IOException;
+
+    /**
+     * Returns the trained agent for the given trajectory
+     *
+     * @param trajectory the trajectory
+     */
+    Agent trainByTrajectory(List<Environment.ExecutionResult> trajectory);
+
+    /**
+     * Returns the current trajectory
+     */
+    List<Environment.ExecutionResult> trajectory();
+
+    /**
+     * Returns the agent with a trajectory set
+     *
+     * @param trajectory the trajectory
+     */
+    Agent trajectory(List<Environment.ExecutionResult> trajectory);
 }

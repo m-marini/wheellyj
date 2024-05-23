@@ -1,7 +1,7 @@
 ---
 $schema: https://mmarini.org/wheelly/wheelly-schema-1.0
-#robot: robots/simRobot
-robot: robots/realRobot
+robot: robots/simRobot
+#robot: robots/realRobot
 controller: controllers/controller
 environment: environments/polarMapEnv
 agent: agents/polarRadarAgent
@@ -44,7 +44,7 @@ controllers:
     commandInterval: 600
     connectionRetryInterval: 1000
     watchdogInterval: 5000
-    simulationSpeed: 10
+    simulationSpeed: 1
     supplyValues: [ 1762, 2878 ]
     voltages: [ 8.3, 11.9 ]
 
@@ -89,11 +89,14 @@ agents:
   # Polar radar agent
   ######################################
   polarRadarAgent:
-    $schema: https://mmarini.org/wheelly/agent-single-nn-schema-0.2
+    $schema: https://mmarini.org/wheelly/agent-single-nn-schema-0.3
     class: org.mmarini.rl.agents.TDAgentSingleNN
     modelPath: models/polarRadarAgent
     savingIntervalSteps: 1000
     rewardAlpha: 5e-3
+    numSteps: 128
+    numEpochs: 4
+    batchSize: 32
     alphas:
       critic: 1e-3
       sensorAction: 10e-6
