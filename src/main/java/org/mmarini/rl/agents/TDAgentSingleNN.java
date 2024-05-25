@@ -813,8 +813,6 @@ public class TDAgentSingleNN implements Agent {
                         (float) startStep,
                         (float) numStepsParm)
                 .reshape(1, 4));
-        indicatorsPub.onNext(kpis);
-
         Map<String, INDArray> trainedLayers = trainingNet.forward(s0).state().values();
         kpis.putAll(MapUtils.addKeyPrefix(trainedLayers, "trainedLayers."));
         indicatorsPub.onNext(kpis);

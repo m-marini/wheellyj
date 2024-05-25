@@ -127,8 +127,8 @@ public class RobotExecutor {
 
     private final EnvironmentPanel envPanel;
     private final PolarPanel polarPanel;
-    private final MeanValues reactionRobotTime;
-    private final MeanValues reactionRealTime;
+    private final MeanValue reactionRobotTime;
+    private final MeanValue reactionRealTime;
     private final ComMonitor comMonitor;
     private final SensorMonitor sensorMonitor;
     private final StateEngineMonitor engineMonitor;
@@ -153,8 +153,8 @@ public class RobotExecutor {
         this.polarPanel = new PolarPanel();
         this.comMonitor = new ComMonitor();
         this.engineMonitor = new StateEngineMonitor();
-        this.reactionRobotTime = MeanValues.zeros();
-        this.reactionRealTime = MeanValues.zeros();
+        this.reactionRobotTime = MeanValue.zeros();
+        this.reactionRealTime = MeanValue.zeros();
         this.robotStartTimestamp = -1;
         this.prevRobotStep = -1;
         this.prevRealStep = -1;

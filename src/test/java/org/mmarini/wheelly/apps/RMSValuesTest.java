@@ -5,35 +5,32 @@ import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
-import static java.lang.Math.sqrt;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
+import static org.hamcrest.Matchers.closeTo;
 
 class RMSValuesTest {
 
     @Test
     void add() {
-        RMSValues means = RMSValues.zeros(2);
-        INDArray x = Nd4j.createFromArray(-1, 1, 2, -2).reshape(2, 2).castTo(DataType.FLOAT);
-        float discount = MeanValues.DEFAULT_DISCOUNT;
-        float avg0 = (1 - discount) * discount;
-        float avg1 = (1 - discount);
-        INDArray expected = Nd4j.createFromArray(
-                (float) sqrt(1 * avg0 + 4 * avg1), (float) sqrt(1 * avg0 + 4 * avg1)
-        );
+        RMSValue means = RMSValue.zeros();
+        INDArray x = Nd4j.arange(-1, 2).reshape(3, 1).castTo(DataType.FLOAT).muli(2);
+        double discount = MeanValue.DEFAULT_DISCOUNT;
+
+        double a2 = (1 - discount);
+        double a1 = a2 * discount;
+        double a0 = a1 * discount;
+        double expected = Math.sqrt(4 * a0 + 4 * a2);
 
         means.add(x);
-        assertThat(means.values(), matrixCloseTo(expected, 1e-3));
+        assertThat(means.value(), closeTo(expected, 1e-3));
     }
 
     @Test
     void add1() {
-        RMSValues means = RMSValues.zeros(2);
+        RMSValue means = RMSValue.zeros();
         means.add(-1);
-        float discount = MeanValues.DEFAULT_DISCOUNT;
-        float avg1 = (1 - discount);
-        assertThat(means.values(), matrixCloseTo(new float[]{
-                (float) sqrt(avg1), (float) sqrt(avg1)
-        }, 1e-3));
+        double discount = MeanValue.DEFAULT_DISCOUNT;
+        double exp = Math.sqrt(1 - discount);
+        assertThat(means.value(), closeTo(exp, 1e-3));
     }
 }

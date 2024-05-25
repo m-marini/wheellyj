@@ -94,8 +94,8 @@ agents:
     modelPath: models/polarRadarAgent
     savingIntervalSteps: 1000
     rewardAlpha: 5e-3
-    numSteps: 128
-    numEpochs: 4
+    numSteps: 256
+    numEpochs: 2
     batchSize: 32
     alphas:
       critic: 1e-3
