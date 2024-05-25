@@ -48,6 +48,7 @@ import org.mmarini.wheelly.apis.SimRobot;
 import org.mmarini.wheelly.envs.*;
 import org.mmarini.wheelly.swing.*;
 import org.mmarini.yaml.Locator;
+import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -137,9 +138,9 @@ public class Wheelly {
     }
 
     protected final EnvironmentPanel envPanel;
-    private final MeanValues avgRewards;
-    private final MeanValues reactionRobotTime;
-    private final MeanValues reactionRealTime;
+    private final MeanValue avgRewards;
+    private final MeanValue reactionRobotTime;
+    private final MeanValue reactionRealTime;
     private final ComMonitor comMonitor;
     private final SensorMonitor sensorMonitor;
     private final KpisPanel kpisPanel;
@@ -162,6 +163,7 @@ public class Wheelly {
     private boolean active;
     private boolean isTraining;
     private boolean synchTraining;
+    private KpiBinWriter kpiWriter;
 
     /**
      * Creates the server reinforcement learning engine server
@@ -179,9 +181,9 @@ public class Wheelly {
         this.stopButton = new JButton();
         this.startButton = new JButton();
         this.robotStartTimestamp = -1;
-        this.avgRewards = MeanValues.zeros();
-        this.reactionRobotTime = MeanValues.zeros();
-        this.reactionRealTime = MeanValues.zeros();
+        this.avgRewards = MeanValue.zeros();
+        this.reactionRobotTime = MeanValue.zeros();
+        this.reactionRealTime = MeanValue.zeros();
         this.prevRobotStep = -1;
         this.prevStep = -1;
         this.completion = CompletableSubject.create();
@@ -215,8 +217,8 @@ public class Wheelly {
                 .doOnNext(t -> agent = ((TDAgentSingleNN) agent).alphas(t))
                 .subscribe();
 
-        Observable<WindowEvent>[] x = allFrames.stream().map(f -> SwingObservable.window(f, SwingObservable.WINDOW_ACTIVE)).toArray(Observable[]::new);
-        Observable.mergeArray(x).filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING).doOnNext(this::handleWindowClosing).subscribe();
+        Observable<WindowEvent>[] windowObs = allFrames.stream().map(f -> SwingObservable.window(f, SwingObservable.WINDOW_ACTIVE)).toArray(Observable[]::new);
+        Observable.mergeArray(windowObs).filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING).doOnNext(this::handleWindowClosing).subscribe();
     }
 
     /**
@@ -446,6 +448,17 @@ public class Wheelly {
     }
 
     /**
+     * Handles the kpis
+     *
+     * @param kpis the kpis
+     * @throws IOException in casoe of error
+     */
+    private void handleKpis(Map<String, INDArray> kpis) throws IOException {
+        kpisPanel.addKpis(kpis);
+        this.kpiWriter.write(kpis);
+    }
+
+    /**
      * Starts the application
      */
     protected void run() throws IOException {
@@ -477,10 +490,9 @@ public class Wheelly {
         String kpis = this.args.getString("kpis");
         if (!kpis.isEmpty()) {
             // Create kpis frame
-            KpiBinWriter kpiWriter = KpiBinWriter.createFromLabels(new File(kpis), this.args.getString("labels"));
+            this.kpiWriter = KpiBinWriter.createFromLabels(new File(kpis), this.args.getString("labels"));
             agent.readKpis().observeOn(Schedulers.io(), true)
-                    .doOnNext(kpisPanel::addKpis)
-                    .doOnNext(kpiWriter::write)
+                    .doOnNext(this::handleKpis)
                     .doOnError(ex -> logger.atError().setCause(ex).log("Error writing kpis"))
                     .doOnComplete(() -> {
                         logger.atInfo().log("Closing kpis writer ...");

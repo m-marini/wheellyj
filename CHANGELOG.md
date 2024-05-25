@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #421: Training on trajectory sampling
 - Issue #423: Manage continuing task only
 
+### Fixed
+
+- Issue #426: Wrong action probabilitites kpis
+
 ## [0.16.1] 2024-05-05
 
 ### Added
