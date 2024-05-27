@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 
 - Issue #426: Wrong action probabilitites kpis
+- Issue #428: Ignore trained agent in case of agent reset
 
 ## [0.16.1] 2024-05-05
 

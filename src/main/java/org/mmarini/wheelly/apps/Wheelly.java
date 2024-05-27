@@ -64,6 +64,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.reactivex.rxjava3.core.Flowable.interval;
 import static java.lang.String.format;
@@ -155,15 +156,14 @@ public class Wheelly {
     private PolarPanel polarPanel;
     private JFrame radarFrame;
     private RobotEnvironment environment;
-    private Agent agent;
     private long prevRobotStep;
     private long prevStep;
     private ComDumper dumper;
     private List<JFrame> allFrames;
     private boolean active;
-    private boolean isTraining;
     private boolean synchTraining;
     private KpiBinWriter kpiWriter;
+    private AtomicReference<AgentTraining> agent;
 
     /**
      * Creates the server reinforcement learning engine server
@@ -214,11 +214,16 @@ public class Wheelly {
         environment.setOnResult(this::handleResult);
 
         learnPanel.readLearningRates()
-                .doOnNext(t -> agent = ((TDAgentSingleNN) agent).alphas(t))
+                .doOnNext(t -> agent.updateAndGet(ag ->
+                        ag.agent(((TDAgentSingleNN) ag.agent()).alphas(t))))
                 .subscribe();
-
-        Observable<WindowEvent>[] windowObs = allFrames.stream().map(f -> SwingObservable.window(f, SwingObservable.WINDOW_ACTIVE)).toArray(Observable[]::new);
-        Observable.mergeArray(windowObs).filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING).doOnNext(this::handleWindowClosing).subscribe();
+        Observable<WindowEvent>[] windowObs = allFrames.stream()
+                .map(f -> SwingObservable.window(f, SwingObservable.WINDOW_ACTIVE))
+                .toArray(Observable[]::new);
+        Observable.mergeArray(windowObs)
+                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
+                .doOnNext(this::handleWindowClosing)
+                .subscribe();
     }
 
     /**
@@ -265,6 +270,7 @@ public class Wheelly {
      * Creates the panels
      */
     private void createPanels() {
+        Agent agent = this.agent.get().agent();
         kpisPanel.setKeys(agent.getActions().keySet().toArray(String[]::new));
         learnPanel.setLearningRates(((TDAgentSingleNN) agent).alphas());
         if (environment instanceof PolarRobotEnv env) {
@@ -328,7 +334,7 @@ public class Wheelly {
      * @param signals the input signals
      */
     private Map<String, Signal> handleAct(Map<String, Signal> signals) {
-        return active ? agent.act(signals) : ((AbstractRobotEnv) environment).haltActions();
+        return active ? agent.get().agent().act(signals) : ((AbstractRobotEnv) environment).haltActions();
     }
 
     /**
@@ -377,7 +383,18 @@ public class Wheelly {
     }
 
     /**
-     * Handles obstacle changed
+     * Handles the kpis
+     *
+     * @param kpis the kpis
+     * @throws IOException in case of error
+     */
+    private void handleKpis(Map<String, INDArray> kpis) throws IOException {
+        kpisPanel.addKpis(kpis);
+        this.kpiWriter.write(kpis);
+    }
+
+    /**
+     * Handles obstacle changeLock
      *
      * @param simRobot the sim robot
      */
@@ -405,11 +422,11 @@ public class Wheelly {
      * @param actionEvent the action event
      */
     private void handleResetButton(ActionEvent actionEvent) {
-        agent = agent.init();
+        agent.updateAndGet(ag -> ag.agent(ag.agent().init()).changeLock(true));
     }
 
     /**
-     * Handle the result of execution contro step
+     * Handle the result of execution control step
      * Lets the agent to observer and eventually
      * runs the training process
      *
@@ -421,113 +438,8 @@ public class Wheelly {
             // Update ui
             envPanel.setReward(avgRewards.add((float) reward).value());
             sensorMonitor.onReward(reward);
-            // let the agent to pbserve the result
-            agent = agent.observe(result);
-            if (agent.isReadyForTrain() && !isTraining) {
-                this.isTraining = true;
-                Agent oldAgent = agent;
-                List<Environment.ExecutionResult> trajectory1 = oldAgent.trajectory();
-                List<Environment.ExecutionResult> trajectory = trajectory1.size() > oldAgent.numSteps()
-                        ? trajectory1.stream().skip(trajectory1.size() - oldAgent.numSteps()).toList()
-                        : trajectory1;
-                // Clear the trajectory
-                agent = oldAgent.trajectory(List.of());
-                if (synchTraining) {
-                    // Runs synchronously the train process
-                    train(oldAgent, trajectory, trajectory1);
-                } else {
-                    // Runs asynchronously the train process
-                    Completable.complete()
-                            .subscribeOn(Schedulers.computation())
-                            .doOnComplete(() ->
-                                    train(oldAgent, trajectory, trajectory1))
-                            .subscribe();
-                }
-            }
+            agent.updateAndGet(ag -> observeResult(ag, result));
         }
-    }
-
-    /**
-     * Handles the kpis
-     *
-     * @param kpis the kpis
-     * @throws IOException in casoe of error
-     */
-    private void handleKpis(Map<String, INDArray> kpis) throws IOException {
-        kpisPanel.addKpis(kpis);
-        this.kpiWriter.write(kpis);
-    }
-
-    /**
-     * Starts the application
-     */
-    protected void run() throws IOException {
-        logger.atInfo().log("Creating environment");
-        JsonNode config = fromFile(this.args.getString("config"));
-        this.environment = AppYaml.envFromJson(config, Locator.root(), WHEELLY_SCHEMA_YML);
-
-        logger.atInfo().log("Creating agent");
-        Locator agentLocator = Locator.locate(Locator.locate("agent").getNode(config).asText());
-        if (agentLocator.getNode(config).isMissingNode()) {
-            throw new IllegalArgumentException(format("Missing node %s", agentLocator));
-        }
-        this.agent = Agent.fromConfig(config, agentLocator, environment);
-        if (agent instanceof TDAgentSingleNN tdagent) {
-            this.agent = tdagent.setPostTrainKpis(true);
-        }
-        if (environment.getController().getRobot() instanceof SimRobot robot) {
-            // Add the obstacles location changes
-            robot.setOnObstacleChanged(this::handleObstacleChanged);
-        }
-        this.synchTraining = args.getBoolean("alternate");
-
-        sessionDuration = this.args.getLong("localTime");
-        logger.atInfo().log("Starting session ...");
-        logger.atInfo().log("Session are running for {} sec...", sessionDuration);
-        sessionDuration *= 1000;
-
-        // Create the kpis writer
-        String kpis = this.args.getString("kpis");
-        if (!kpis.isEmpty()) {
-            // Create kpis frame
-            this.kpiWriter = KpiBinWriter.createFromLabels(new File(kpis), this.args.getString("labels"));
-            agent.readKpis().observeOn(Schedulers.io(), true)
-                    .doOnNext(this::handleKpis)
-                    .doOnError(ex -> logger.atError().setCause(ex).log("Error writing kpis"))
-                    .doOnComplete(() -> {
-                        logger.atInfo().log("Closing kpis writer ...");
-                        kpiWriter.close();
-                        logger.atInfo().log("Kpis writer closed");
-                        completion.onComplete();
-                    }).subscribe();
-        } else {
-            completion.onComplete();
-        }
-
-        // Creates the com line dumper
-        Optional.ofNullable(this.args.getString("dump")).ifPresent(file -> {
-            try {
-                this.dumper = ComDumper.fromFile(file);
-            } catch (IOException e) {
-                logger.atError().setCause(e).log("Error dumping to {}", file);
-            }
-        });
-
-        // Create panels
-        createPanels();
-
-        // Creates frames
-        if (args.getBoolean("windows")) {
-            createMultiFrames();
-        } else {
-            createSingleFrame();
-        }
-        // Creates the flows
-        createFlows();
-        // Starts the environment interaction
-        active = true;
-        startButton.setEnabled(false);
-        environment.start();
     }
 
     /**
@@ -548,7 +460,7 @@ public class Wheelly {
         waitFrame.setVisible(true);
         // Shutting down
         try {
-            agent.close();
+            agent.get().agent().close();
         } catch (IOException e) {
             logger.atError().setCause(e).log();
         }
@@ -573,6 +485,54 @@ public class Wheelly {
             // Notify completion
             logger.atInfo().log("completed.");
         }).subscribe();
+    }
+
+    /**
+     * Returns the agent after the observation of the result
+     *
+     * @param agentTraining the concurrent agent before the observation
+     * @param result        the observed result
+     */
+    private AgentTraining observeResult(AgentTraining agentTraining, Environment.ExecutionResult result) {
+        // Let the agent observe the result
+        Agent trainingAgent = agentTraining.agent().observe(result);
+        if (!trainingAgent.isReadyForTrain() || agentTraining.training()) {
+            // Training skipped because is not ready or is already training
+            return agentTraining.agent(trainingAgent);
+        }
+
+        // Agent ready to train
+        List<Environment.ExecutionResult> trajectory = trainingAgent.trajectory();
+        // Extract clipped trajectory
+        List<Environment.ExecutionResult> clippedTrajectory = trajectory.size() > trainingAgent.numSteps()
+                ? trajectory.stream().skip(trajectory.size() - trainingAgent.numSteps()).toList()
+                : trajectory;
+        // Generate new agent with cleared trajectory
+        Agent clearedAgent = trainingAgent.trajectory(List.of());
+        if (synchTraining) {
+            // Runs synchronously the train process if not lock for change
+            return agentTraining.changeLock()
+                    ? agentTraining.agent(clearedAgent).changeLock(false)
+                    : agentTraining.agent(train(clearedAgent, clippedTrajectory, trajectory.size()));
+        }
+        // Runs asynchronously the train process
+        Completable.complete()
+                .subscribeOn(Schedulers.computation())
+                .doOnComplete(() -> {
+                    // Concurrent train the cleared agent
+                    Agent trainedAgent = train(clearedAgent, clippedTrajectory, trajectory.size());
+                    this.agent.updateAndGet(ag1 -> {
+                        AgentTraining agentTraining1 = ag1.changeLock()
+                                // If lock for change then clears the lock and the training flag
+                                ? ag1.changeLock(false)
+                                // If not lock for change then sets the trained agent, clears the lock
+                                : ag1.agent(trainedAgent.trajectory(ag1.agent().trajectory()));
+                        // Clear training flag
+                        return agentTraining1.training(false);
+                    });
+                }).subscribe();
+        // Sets the cleared agent, unlock for change and set training flag
+        return agentTraining.agent(clearedAgent).changeLock(false).training(true);
     }
 
     /**
@@ -651,14 +611,108 @@ public class Wheelly {
         }
     }
 
-    private void train(Agent oldAgent, List<Environment.ExecutionResult> trajectory, List<Environment.ExecutionResult> trajectory1) {
+    /**
+     * Starts the application
+     */
+    protected void run() throws IOException {
+        logger.atInfo().log("Creating environment");
+        JsonNode config = fromFile(this.args.getString("config"));
+        this.environment = AppYaml.envFromJson(config, Locator.root(), WHEELLY_SCHEMA_YML);
+
+        logger.atInfo().log("Creating agent");
+        Locator agentLocator = Locator.locate(Locator.locate("agent").getNode(config).asText());
+        if (agentLocator.getNode(config).isMissingNode()) {
+            throw new IllegalArgumentException(format("Missing node %s", agentLocator));
+        }
+        Agent agent = Agent.fromConfig(config, agentLocator, environment);
+        if (agent instanceof TDAgentSingleNN tdAgent) {
+            agent = tdAgent.setPostTrainKpis(true);
+        }
+        this.agent = new AtomicReference<>(new AgentTraining(agent, false, false));
+        if (environment.getController().getRobot() instanceof SimRobot robot) {
+            // Add the obstacles location changes
+            robot.setOnObstacleChanged(this::handleObstacleChanged);
+        }
+        this.synchTraining = args.getBoolean("alternate");
+
+        sessionDuration = this.args.getLong("localTime");
+        logger.atInfo().log("Starting session ...");
+        logger.atInfo().log("Session are running for {} sec...", sessionDuration);
+        sessionDuration *= 1000;
+
+        // Create the kpis writer
+        String kpis = this.args.getString("kpis");
+        if (!kpis.isEmpty()) {
+            // Create kpis frame
+            this.kpiWriter = KpiBinWriter.createFromLabels(new File(kpis), this.args.getString("labels"));
+            agent.readKpis().observeOn(Schedulers.io(), true)
+                    .doOnNext(this::handleKpis)
+                    .doOnError(ex -> logger.atError().setCause(ex).log("Error writing kpis"))
+                    .doOnComplete(() -> {
+                        logger.atInfo().log("Closing kpis writer ...");
+                        kpiWriter.close();
+                        logger.atInfo().log("Kpis writer closed");
+                        completion.onComplete();
+                    }).subscribe();
+        } else {
+            completion.onComplete();
+        }
+
+        // Creates the com line dumper
+        Optional.ofNullable(this.args.getString("dump")).ifPresent(file -> {
+            try {
+                this.dumper = ComDumper.fromFile(file);
+            } catch (IOException e) {
+                logger.atError().setCause(e).log("Error dumping to {}", file);
+            }
+        });
+
+        // Create panels
+        createPanels();
+
+        // Creates frames
+        if (args.getBoolean("windows")) {
+            createMultiFrames();
+        } else {
+            createSingleFrame();
+        }
+        // Creates the flows
+        createFlows();
+        // Starts the environment interaction
+        active = true;
+        startButton.setEnabled(false);
+        environment.start();
+    }
+
+    /**
+     * Returns the agent after the training
+     *
+     * @param agent      the training agent
+     * @param trajectory the clipped trajectory
+     * @param size       the original trajectory size
+     */
+    private Agent train(Agent agent, List<Environment.ExecutionResult> trajectory, int size) {
         logger.atDebug().log("Training ...");
         // Trains the agent
         long t0 = System.currentTimeMillis();
-        this.agent = oldAgent.trainByTrajectory(trajectory)
-                .trajectory(this.agent.trajectory());
-        long elaps = System.currentTimeMillis() - t0;
-        logger.atInfo().log("Trained {}/{} steps in {} ms.", trajectory.size(), trajectory1.size(), elaps);
-        this.isTraining = false;
+        Agent trainedAgent = agent.trainByTrajectory(trajectory);
+        long elapsed = System.currentTimeMillis() - t0;
+        logger.atInfo().log("Trained {}/{} steps in {} ms.", trajectory.size(), size, elapsed);
+        return trainedAgent;
+    }
+
+    record AgentTraining(Agent agent, boolean changeLock, boolean training) {
+        public AgentTraining agent(Agent agent) {
+            return new AgentTraining(agent, changeLock, training);
+        }
+
+        public AgentTraining changeLock(boolean changeLock) {
+            return new AgentTraining(agent, changeLock, training);
+        }
+
+
+        public AgentTraining training(boolean training) {
+            return new AgentTraining(agent, changeLock, training);
+        }
     }
 }

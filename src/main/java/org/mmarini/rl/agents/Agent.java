@@ -37,13 +37,14 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
 /**
  * The agent interface
  */
-public interface Agent extends Closeable, WithSignalsSpec {
+public interface Agent extends Closeable, WithSignalsSpec, Serializable {
 
     /**
      * Returns the agent
