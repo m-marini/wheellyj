@@ -38,11 +38,13 @@ import org.mmarini.rl.processors.InputProcessor;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
+import org.nd4j.linalg.ops.transforms.Transforms;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,14 +61,12 @@ import static java.lang.Math.min;
 import static java.lang.String.format;
 
 /**
- * Agent based on Temporal Difference Actor-Critic with single neural network
+ * Agent based on Temporal Difference Actor-Critic with Proximal Policy Optimization (PPO)
  */
-public class TDAgentSingleNN extends AbstractAgentNN {
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/agent-single-nn-schema-0.3";
-    public static final String SPEC_SCHEMA_NAME = "https://mmarini.org/wheelly/tdagent-spec-schema-0.1";
-    public static final int DEFAULT_NUM_STEPS = 2048;
-    public static final int DEFAULT_BATCH_SIZE = 32;
-    private static final Logger logger = LoggerFactory.getLogger(TDAgentSingleNN.class);
+public class PPOAgent extends AbstractAgentNN {
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/ppo-agent-schema-0.1";
+    public static final String SPEC_SCHEMA_NAME = "https://mmarini.org/wheelly/ppo-agent-spec-schema-0.1";
+    private static final Logger logger = LoggerFactory.getLogger(PPOAgent.class);
 
     /**
      * Returns a random behavior agent
@@ -77,6 +77,7 @@ public class TDAgentSingleNN extends AbstractAgentNN {
      * @param rewardAlpha         the reward alpha parameter
      * @param alphas              the network training alpha parameter by output
      * @param lambda              the TD lambda factor
+     * @param ppoEpsilon          the ppo epsilon hyperparameter
      * @param numSteps            the number of step of trajectory
      * @param numEpochs           the number of epochs
      * @param batchSize           the batch size
@@ -86,18 +87,18 @@ public class TDAgentSingleNN extends AbstractAgentNN {
      * @param modelPath           the model saving path
      * @param savingIntervalSteps the number of steps between each model saving
      */
-    public static TDAgentSingleNN create(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
-                                         float avgReward, float rewardAlpha, Map<String, Float> alphas, float lambda,
-                                         int numSteps, int numEpochs, int batchSize, TDNetwork network,
-                                         InputProcessor processor, Random random, File modelPath,
-                                         int savingIntervalSteps) {
-        return new TDAgentSingleNN(
+    public static PPOAgent create(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
+                                  float avgReward, float rewardAlpha, Map<String, Float> alphas, float lambda,
+                                  float ppoEpsilon, int numSteps, int numEpochs, int batchSize, TDNetwork network,
+                                  InputProcessor processor, Random random, File modelPath,
+                                  int savingIntervalSteps) {
+        return new PPOAgent(
                 state, actions, avgReward, rewardAlpha, alphas, lambda, numSteps, numEpochs, batchSize, network,
                 List.of(), processor, random, modelPath,
                 savingIntervalSteps,
                 PublishProcessor.create(),
                 false,
-                0, false);
+                0, false, ppoEpsilon);
     }
 
     /**
@@ -107,7 +108,7 @@ public class TDAgentSingleNN extends AbstractAgentNN {
      * @param locator the agent spec locator
      * @param env     the environment
      */
-    public static TDAgentSingleNN create(JsonNode root, Locator locator, WithSignalsSpec env) {
+    public static PPOAgent create(JsonNode root, Locator locator, WithSignalsSpec env) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         File path = new File(locator.path("modelPath").getNode(root).asText());
         int savingIntervalStep = locator.path("savingIntervalSteps").getNode(root).asInt(Integer.MAX_VALUE);
@@ -120,7 +121,7 @@ public class TDAgentSingleNN extends AbstractAgentNN {
         if (path.exists()) {
             // Load agent
             try {
-                TDAgentSingleNN agent = TDAgentSingleNN.load(path, savingIntervalStep, random);
+                PPOAgent agent = PPOAgent.load(path, savingIntervalStep, random);
                 // Validate agent against env
                 SignalSpec.validateEqualsSpec(agent.getState(), stateSpec, "agent state", "environment state");
                 SignalSpec.validateEqualsSpec(agent.getState(), stateSpec, "agent actions", "environment actions");
@@ -135,6 +136,7 @@ public class TDAgentSingleNN extends AbstractAgentNN {
                     .map(Tuple2.map2(l -> (float) l.getNode(root).asDouble()))
                     .collect(Tuple2.toMap());
             float lambda = (float) locator.path("lambda").getNode(root).asDouble();
+            float ppoEpsilon = (float) locator.path("ppoEpsilon").getNode(root).asDouble();
             int numSteps = locator.path("numSteps").getNode(root).asInt(DEFAULT_NUM_STEPS);
             int numEpochs = locator.path("numEpochs").getNode(root).asInt(DEFAULT_NUM_EPOCHS);
             int batchSize = locator.path("batchSize").getNode(root).asInt(DEFAULT_BATCH_SIZE);
@@ -145,9 +147,9 @@ public class TDAgentSingleNN extends AbstractAgentNN {
             Map<String, Long> stateSizes = TDAgentSingleNN.getStateSizes(postProcSpec);
             TDNetwork network = new NetworkTranspiler(root, locator.path("network"), stateSizes, random).build();
             Map<String, SignalSpec> actionSpec = env.getActions();
-            return TDAgentSingleNN.create(stateSpec, actionSpec, 0,
+            return PPOAgent.create(stateSpec, actionSpec, 0,
                     rewardAlpha, alphas, lambda,
-                    numSteps, numEpochs, batchSize, network, processor,
+                    ppoEpsilon, numSteps, numEpochs, batchSize, network, processor,
                     random, path, savingIntervalStep);
         }
     }
@@ -162,8 +164,8 @@ public class TDAgentSingleNN extends AbstractAgentNN {
      * @param savingIntervalSteps the number of steps between each model saving
      * @param random              the random number generator
      */
-    public static TDAgentSingleNN fromJson(JsonNode spec, Locator locator, Map<String, INDArray> props,
-                                           File path, int savingIntervalSteps, Random random) {
+    public static PPOAgent fromJson(JsonNode spec, Locator locator, Map<String, INDArray> props,
+                                    File path, int savingIntervalSteps, Random random) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(spec), SPEC_SCHEMA_NAME);
         Map<String, SignalSpec> state = SignalSpec.createSignalSpecMap(spec, locator.path("state"));
         Map<String, SignalSpec> actions = SignalSpec.createSignalSpecMap(spec, locator.path("actions"));
@@ -187,13 +189,15 @@ public class TDAgentSingleNN extends AbstractAgentNN {
         int numSteps = locator.path("numSteps").getNode(spec).asInt(DEFAULT_NUM_STEPS);
         int numEpochs = locator.path("numEpochs").getNode(spec).asInt(DEFAULT_NUM_EPOCHS);
         int batchSize = locator.path("batchSize").getNode(spec).asInt(DEFAULT_BATCH_SIZE);
-        float lambda1 = (float) locator.path("lambda").getNode(spec).asDouble();
+        float lambda = (float) locator.path("lambda").getNode(spec).asDouble();
+        float ppoEpsilon = (float) locator.path("ppoEpsilon").getNode(spec).asDouble();
         TDNetwork network = TDNetwork.fromJson(spec, locator.path("network"), props, random);
         InputProcessor processor1 = !locator.path("inputProcess").getNode(spec).isMissingNode()
                 ? InputProcessor.create(spec, locator.path("inputProcess"), state)
                 : null;
-        return TDAgentSingleNN.create(state, actions, avgReward, rewardAlpha, alphas, lambda1,
-                numSteps, numEpochs, batchSize, network, processor1, random, path, savingIntervalSteps);
+        return PPOAgent.create(state, actions, avgReward, rewardAlpha, alphas, lambda,
+                ppoEpsilon, numSteps, numEpochs, batchSize, network, processor1,
+                random, path, savingIntervalSteps);
     }
 
     /**
@@ -204,23 +208,38 @@ public class TDAgentSingleNN extends AbstractAgentNN {
      * @param random              the random number generator
      * @throws IOException in case of error
      */
-    public static TDAgentSingleNN load(File path, int savingIntervalSteps, Random random) throws IOException {
+    public static PPOAgent load(File path, int savingIntervalSteps, Random random) throws IOException {
         JsonNode spec = Utils.fromFile(new File(path, "agent.yml"));
         Map<String, INDArray> props = Serde.deserialize(new File(path, "agent.bin"));
         return fromJson(spec, Locator.root(), props, path, savingIntervalSteps, random);
     }
 
     /**
-     * Returns the gradient of policies for given action mask
+     * Returns the ppo gradient of an action set
      *
-     * @param pi          the policies
-     * @param actionMasks the action masks
+     * @param prob       the probability
+     * @param prob0      the untrained probability
+     * @param ppoEpsilon the ppo epsilon hyperparameter
+     * @param posDelta   true if delta >= 0
+     * @param negDelta   true if delta < 0
      */
-    private static Map<String, INDArray> pgGrad(Map<String, INDArray> pi, Map<String, INDArray> actionMasks) {
-        return MapUtils.mapValues(pi, (key, value) ->
-                actionMasks.get(key).div(value)
-        );
+    static INDArray ppoGrad(INDArray prob, INDArray prob0, float ppoEpsilon, INDArray posDelta, INDArray negDelta) {
+        try (INDArray ratio = prob.div(prob0)) {
+            try (INDArray ratioMaskLower = ratio.gt(1 - ppoEpsilon)) {
+                try (INDArray ratioMaskUpper = ratio.lt(1 + ppoEpsilon)) {
+                    try (INDArray posMask = Transforms.and(posDelta, ratioMaskUpper)) {
+                        try (INDArray negMask = Transforms.and(negDelta, ratioMaskLower)) {
+                            try (INDArray gradMask = Transforms.or(posMask, negMask)) {
+                                return gradMask.castTo(DataType.FLOAT).divi(prob0);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
+
+    protected final float ppoEpsilon;
 
     /**
      * Creates a random behavior agent
@@ -243,14 +262,15 @@ public class TDAgentSingleNN extends AbstractAgentNN {
      * @param postTrainKpis       true if post train kpi
      * @param savingStepCounter   the saving step counter
      * @param backedUp            true if the model has been backed up
+     * @param ppoEpsilon          the ppo epsilon hyperparameter
      */
-    protected TDAgentSingleNN(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
-                              float avgReward, float rewardAlpha, Map<String, Float> alphas, float lambda,
-                              int numSteps, int numEpochs, int batchSize, TDNetwork network,
-                              List<Environment.ExecutionResult> trajectory, InputProcessor processor, Random random,
-                              File modelPath, int savingIntervalSteps,
-                              PublishProcessor<Map<String, INDArray>> indicatorsPub, boolean postTrainKpis,
-                              int savingStepCounter, boolean backedUp) {
+    protected PPOAgent(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
+                       float avgReward, float rewardAlpha, Map<String, Float> alphas, float lambda,
+                       int numSteps, int numEpochs, int batchSize, TDNetwork network,
+                       List<Environment.ExecutionResult> trajectory, InputProcessor processor, Random random,
+                       File modelPath, int savingIntervalSteps,
+                       PublishProcessor<Map<String, INDArray>> indicatorsPub, boolean postTrainKpis,
+                       int savingStepCounter, boolean backedUp, float ppoEpsilon) {
         super(state, actions,
                 avgReward, rewardAlpha, alphas, lambda,
                 numSteps, numEpochs, batchSize, network,
@@ -258,22 +278,23 @@ public class TDAgentSingleNN extends AbstractAgentNN {
                 modelPath, savingIntervalSteps,
                 indicatorsPub, postTrainKpis,
                 savingStepCounter, backedUp);
+        this.ppoEpsilon = ppoEpsilon;
     }
 
     @Override
-    public TDAgentSingleNN alphas(Map<String, Float> alphas) {
-        return new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
+    public PPOAgent alphas(Map<String, Float> alphas) {
+        return new PPOAgent(state, actions, avgReward, rewardAlpha, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
                 savingIntervalSteps, indicatorsPub, postTrainKpis,
-                savingStepCounter, backedUp);
+                savingStepCounter, backedUp, ppoEpsilon);
     }
 
     /**
      * Returns the agent with new average rewards
      */
     @Override
-    public TDAgentSingleNN avgReward(float avgReward) {
-        return new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
-                savingIntervalSteps, indicatorsPub, postTrainKpis, savingStepCounter, backedUp);
+    public PPOAgent avgReward(float avgReward) {
+        return new PPOAgent(state, actions, avgReward, rewardAlpha, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
+                savingIntervalSteps, indicatorsPub, postTrainKpis, savingStepCounter, backedUp, ppoEpsilon);
     }
 
     @Override
@@ -284,12 +305,13 @@ public class TDAgentSingleNN extends AbstractAgentNN {
         }
         ObjectNode spec = Utils.objectMapper.createObjectNode()
                 .put("$schema", SPEC_SCHEMA_NAME)
-                .put("class", TDAgentSingleNN.class.getCanonicalName())
+                .put("class", PPOAgent.class.getCanonicalName())
                 .put("rewardAlpha", rewardAlpha)
                 .put("lambda", lambda)
                 .put("numSteps", numSteps)
                 .put("numEpochs", numEpochs)
                 .put("batchSize", batchSize)
+                .put("ppoEpsilon", ppoEpsilon)
                 .set("alphas", alphasSpec);
         spec.set("state", specFromSignalMap(state));
         spec.set("actions", specFromSignalMap(actions));
@@ -301,22 +323,52 @@ public class TDAgentSingleNN extends AbstractAgentNN {
     }
 
     @Override
-    public TDAgentSingleNN network(TDNetwork network) {
-        return new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
-                savingIntervalSteps, indicatorsPub, postTrainKpis, savingStepCounter, backedUp);
+    public PPOAgent network(TDNetwork network) {
+        return new PPOAgent(state, actions, avgReward, rewardAlpha, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
+                savingIntervalSteps, indicatorsPub, postTrainKpis, savingStepCounter, backedUp, ppoEpsilon);
+    }
+
+    /**
+     * Returns the gradient of optimizer function for given action mask
+     *
+     * @param pi          the policies
+     * @param actionMasks the action masks
+     * @param p0          the probability of taken action at t
+     * @param deltas      the td error
+     */
+    private Map<String, INDArray> optimizerGrad(Map<String, INDArray> pi, Map<String, INDArray> actionMasks, Map<String, INDArray> p0, INDArray deltas) {
+        INDArray posDelta = deltas.gte(0f);
+        INDArray negDelta = Transforms.not(posDelta);
+        // Extract ratio
+        return MapUtils.mapValues(pi, (key, value) -> {
+                    INDArray mask = actionMasks.get(key);
+                    INDArray pik = value.mul(mask);
+                    INDArray prob = pik.sum(true, 1);
+                    INDArray prob0 = p0.get(key);
+                    return mask.mul(ppoGrad(prob, prob0, ppoEpsilon, posDelta, negDelta));
+                }
+        );
     }
 
     @Override
-    public TDAgentSingleNN setPostTrainKpis(boolean postTrainKpis) {
-        return new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
-                savingIntervalSteps, indicatorsPub, postTrainKpis, savingStepCounter, backedUp);
+    public PPOAgent setPostTrainKpis(boolean postTrainKpis) {
+        return new PPOAgent(state, actions, avgReward, rewardAlpha, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
+                savingIntervalSteps, indicatorsPub, postTrainKpis, savingStepCounter, backedUp, ppoEpsilon);
     }
 
     @Override
-    protected TDAgentSingleNN trainBatch(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards) {
-        TDAgentSingleNN newAgent = this;
+    protected PPOAgent trainBatch(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards) {
+        // Computes the base policy
+        long n = rewards.size(0);
+        Map<String, INDArray> states0 = MapUtils.mapValues(states, (k, v) ->
+                v.get(NDArrayIndex.interval(0, n), NDArrayIndex.all()));
+        Map<String, INDArray> pi0 = policy(network.forward(states0).state());
+        Map<String, INDArray> actionProb0 = MapUtils.mapValues(pi0, (k, v) ->
+                v.mul(actionMasks.get(k)).sum(true, 1));
+
+        PPOAgent newAgent = this;
         for (long i = 0; i < numEpochs; i++) {
-            newAgent = newAgent.avgReward(avgReward).trainEpoch(i, states, actionMasks, rewards);
+            newAgent = newAgent.avgReward(avgReward).trainEpoch(i, states, actionMasks, rewards, actionProb0);
         }
         if (++savingStepCounter >= savingIntervalSteps) {
             savingStepCounter = 0;
@@ -332,22 +384,26 @@ public class TDAgentSingleNN extends AbstractAgentNN {
      * @param states      the states (size=n+1)
      * @param actionMasks the action masks (size=n)
      * @param rewards     the rewards (size=n)
+     * @param actionProb0 the action probability at t (size=n)
      */
-    private TDAgentSingleNN trainEpoch(long epoch, Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards) {
+    private PPOAgent trainEpoch(long epoch, Map<String, INDArray> states, Map<String, INDArray> actionMasks,
+                                INDArray rewards, Map<String, INDArray> actionProb0) {
         long n = rewards.size(0);
         if (batchSize == n) {
-            return trainMiniBatch(epoch, 0, n, states, actionMasks, rewards);
+            return trainMiniBatch(epoch, 0, n, states, actionMasks, rewards, actionProb0);
         } else {
-            TDAgentSingleNN newAgent = this;
+            PPOAgent newAgent = this;
             for (long startStep = 0; startStep < n; startStep += batchSize) {
                 long m = min(n - startStep, batchSize);
                 INDArrayIndex indices = NDArrayIndex.interval(startStep, startStep + m);
                 INDArrayIndex indices1 = NDArrayIndex.interval(startStep, startStep + m + DEFAULT_NUM_EPOCHS);
                 Map<String, INDArray> batchStates = MapUtils.mapValues(states, (k, v) -> v.get(indices1, NDArrayIndex.all()));
                 Map<String, INDArray> batchActionMasks = MapUtils.mapValues(actionMasks, (k, v) -> v.get(indices, NDArrayIndex.all()));
+                Map<String, INDArray> batchPi0 = MapUtils.mapValues(actionProb0, (k, v) ->
+                        v.get(indices, NDArrayIndex.all()));
                 INDArray batchRewards = rewards.get(indices, NDArrayIndex.all());
                 newAgent = newAgent.avgReward(avgReward)
-                        .trainMiniBatch(epoch, startStep, n, batchStates, batchActionMasks, batchRewards);
+                        .trainMiniBatch(epoch, startStep, n, batchStates, batchActionMasks, batchRewards, batchPi0);
             }
             return newAgent;
         }
@@ -362,8 +418,10 @@ public class TDAgentSingleNN extends AbstractAgentNN {
      * @param states       the states (size=n+1)
      * @param actionMasks  the action masks (size=n)
      * @param rewards      the rewards (size=n)
+     * @param actionProb0  the probabilities before train of action a_t (size=n)
      */
-    public TDAgentSingleNN trainMiniBatch(long epoch, long startStep, long numStepsParm, Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards) {
+    public PPOAgent trainMiniBatch(long epoch, long startStep, long numStepsParm, Map<String, INDArray> states,
+                                   Map<String, INDArray> actionMasks, INDArray rewards, Map<String, INDArray> actionProb0) {
         // Forward pass for differential value function prediction
         Map<String, INDArray> layers = network.forward(states).state().values();
         INDArray vPrediction = layers.get("critic.values");
@@ -399,7 +457,7 @@ public class TDAgentSingleNN extends AbstractAgentNN {
         Map<String, INDArray> pi = policy(result0);
 
         // Computes log(pi) gradients
-        Map<String, INDArray> gradPi = pgGrad(pi, actionMasks);
+        Map<String, INDArray> gradPi = optimizerGrad(pi, actionMasks, actionProb0, deltas);
 
         // Creates the gradients
         Map<String, INDArray> grads = new HashMap<>(MapUtils.mapValues(gradPi, (key, v) ->
@@ -436,11 +494,11 @@ public class TDAgentSingleNN extends AbstractAgentNN {
     }
 
     @Override
-    public TDAgentSingleNN trajectory(List<Environment.ExecutionResult> trajectory) {
-        return new TDAgentSingleNN(state, actions, avgReward,
+    public PPOAgent trajectory(List<Environment.ExecutionResult> trajectory) {
+        return new PPOAgent(state, actions, avgReward,
                 rewardAlpha, alphas, lambda,
                 numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
                 savingIntervalSteps, indicatorsPub, postTrainKpis,
-                savingStepCounter, backedUp);
+                savingStepCounter, backedUp, ppoEpsilon);
     }
 }

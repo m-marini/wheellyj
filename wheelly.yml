@@ -89,11 +89,14 @@ agents:
   # Polar radar agent
   ######################################
   polarRadarAgent:
-    $schema: https://mmarini.org/wheelly/agent-single-nn-schema-0.3
-    class: org.mmarini.rl.agents.TDAgentSingleNN
+    #$schema: https://mmarini.org/wheelly/agent-single-nn-schema-0.3
+    #class: org.mmarini.rl.agents.TDAgentSingleNN
+    $schema: https://mmarini.org/wheelly/ppo-agent-schema-0.1
+    class: org.mmarini.rl.agents.PPOAgent
     modelPath: models/polarRadarAgent
     savingIntervalSteps: 1000
     rewardAlpha: 5e-3
+    ppoEpsilon: 0.2
     numSteps: 256
     numEpochs: 2
     batchSize: 32

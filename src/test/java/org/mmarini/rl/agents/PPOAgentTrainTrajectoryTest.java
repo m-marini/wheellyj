@@ -39,7 +39,7 @@ import java.util.Map;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
-class TDAgentSingleNNTrainTrajectoryTest {
+class PPOAgentTrainTrajectoryTest {
 
     public static final float REWARD_ALPHA = 1e-3f;
     public static final long AGENT_SEED = 1234L;
@@ -48,8 +48,9 @@ class TDAgentSingleNNTrainTrajectoryTest {
     public static final Map<String, SignalSpec> ACTIONS_SPEC0 = Map.of(
             "output", new IntSignalSpec(new long[]{1}, 2));
     public static final float LAMBDA = 0.5f;
+    private static final float PPO_EPSILON = 0.2f;
 
-    static TDAgentSingleNN createAgent0(int numSteps, int numEpochs, int batchSize) {
+    static PPOAgent createAgent0(int numSteps, int numEpochs, int batchSize) {
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(AGENT_SEED);
         List<TDLayer> layers = List.of(
                 new TDDense("critic1", "input", 1000, 1),
@@ -74,8 +75,8 @@ class TDAgentSingleNNTrainTrajectoryTest {
                 "critic", 1e-3f,
                 "output", 3e-3f
         );
-        return TDAgentSingleNN.create(STATE_SPEC, ACTIONS_SPEC0,
-                0, REWARD_ALPHA, alphas, LAMBDA,
+        return PPOAgent.create(STATE_SPEC, ACTIONS_SPEC0,
+                0, REWARD_ALPHA, alphas, PPO_EPSILON, LAMBDA,
                 numSteps, numEpochs, batchSize, network, null,
                 random, null, Integer.MAX_VALUE);
     }
@@ -98,7 +99,7 @@ class TDAgentSingleNNTrainTrajectoryTest {
      */
     @Test
     void train1() {
-        TDAgentSingleNN agent = createAgent0(4, 100, 4);
+        PPOAgent agent = createAgent0(4, 100, 4);
         Map<String, Signal> s0 = Map.of(
                 "input", ArraySignal.create(1f, 0f)
         );
@@ -141,7 +142,7 @@ class TDAgentSingleNNTrainTrajectoryTest {
     @Test
     void trainNegative() {
         // Given ...
-        TDAgentSingleNN agent = createAgent0(1, 1, 1);
+        PPOAgent agent = createAgent0(1, 1, 1);
         Map<String, Signal> s0 = Map.of(
                 "input", ArraySignal.create(1f, 0f)
         );
@@ -207,7 +208,7 @@ class TDAgentSingleNNTrainTrajectoryTest {
      */
     @Test
     void trainPositive() {
-        TDAgentSingleNN agent = createAgent0(1, 1, 1);
+        PPOAgent agent = createAgent0(1, 1, 1);
         Map<String, Signal> s0 = Map.of(
                 "input", ArraySignal.create(1f, 0f)
         );

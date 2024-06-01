@@ -36,6 +36,7 @@ import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
+import org.mmarini.rl.agents.AbstractAgentNN;
 import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.KpiBinWriter;
 import org.mmarini.rl.agents.TDAgentSingleNN;
@@ -272,7 +273,7 @@ public class Wheelly {
     private void createPanels() {
         Agent agent = this.agent.get().agent();
         kpisPanel.setKeys(agent.getActions().keySet().toArray(String[]::new));
-        learnPanel.setLearningRates(((TDAgentSingleNN) agent).alphas());
+        learnPanel.setLearningRates(((AbstractAgentNN) agent).alphas());
         if (environment instanceof PolarRobotEnv env) {
             this.polarPanel = new PolarPanel();
             double radarMaxDistance = env.getMaxRadarDistance();
@@ -488,54 +489,6 @@ public class Wheelly {
     }
 
     /**
-     * Returns the agent after the observation of the result
-     *
-     * @param agentTraining the concurrent agent before the observation
-     * @param result        the observed result
-     */
-    private AgentTraining observeResult(AgentTraining agentTraining, Environment.ExecutionResult result) {
-        // Let the agent observe the result
-        Agent trainingAgent = agentTraining.agent().observe(result);
-        if (!trainingAgent.isReadyForTrain() || agentTraining.training()) {
-            // Training skipped because is not ready or is already training
-            return agentTraining.agent(trainingAgent);
-        }
-
-        // Agent ready to train
-        List<Environment.ExecutionResult> trajectory = trainingAgent.trajectory();
-        // Extract clipped trajectory
-        List<Environment.ExecutionResult> clippedTrajectory = trajectory.size() > trainingAgent.numSteps()
-                ? trajectory.stream().skip(trajectory.size() - trainingAgent.numSteps()).toList()
-                : trajectory;
-        // Generate new agent with cleared trajectory
-        Agent clearedAgent = trainingAgent.trajectory(List.of());
-        if (synchTraining) {
-            // Runs synchronously the train process if not lock for change
-            return agentTraining.changeLock()
-                    ? agentTraining.agent(clearedAgent).changeLock(false)
-                    : agentTraining.agent(train(clearedAgent, clippedTrajectory, trajectory.size()));
-        }
-        // Runs asynchronously the train process
-        Completable.complete()
-                .subscribeOn(Schedulers.computation())
-                .doOnComplete(() -> {
-                    // Concurrent train the cleared agent
-                    Agent trainedAgent = train(clearedAgent, clippedTrajectory, trajectory.size());
-                    this.agent.updateAndGet(ag1 -> {
-                        AgentTraining agentTraining1 = ag1.changeLock()
-                                // If lock for change then clears the lock and the training flag
-                                ? ag1.changeLock(false)
-                                // If not lock for change then sets the trained agent, clears the lock
-                                : ag1.agent(trainedAgent.trajectory(ag1.agent().trajectory()));
-                        // Clear training flag
-                        return agentTraining1.training(false);
-                    });
-                }).subscribe();
-        // Sets the cleared agent, unlock for change and set training flag
-        return agentTraining.agent(clearedAgent).changeLock(false).training(true);
-    }
-
-    /**
      * Handles the start button event
      *
      * @param actionEvent the event
@@ -609,6 +562,54 @@ public class Wheelly {
         if (dumper != null) {
             dumper.dumpWrittenLine(line);
         }
+    }
+
+    /**
+     * Returns the agent after the observation of the result
+     *
+     * @param agentTraining the concurrent agent before the observation
+     * @param result        the observed result
+     */
+    private AgentTraining observeResult(AgentTraining agentTraining, Environment.ExecutionResult result) {
+        // Let the agent observe the result
+        Agent trainingAgent = agentTraining.agent().observe(result);
+        if (!trainingAgent.isReadyForTrain() || agentTraining.training()) {
+            // Training skipped because is not ready or is already training
+            return agentTraining.agent(trainingAgent);
+        }
+
+        // Agent ready to train
+        List<Environment.ExecutionResult> trajectory = trainingAgent.trajectory();
+        // Extract clipped trajectory
+        List<Environment.ExecutionResult> clippedTrajectory = trajectory.size() > trainingAgent.numSteps()
+                ? trajectory.stream().skip(trajectory.size() - trainingAgent.numSteps()).toList()
+                : trajectory;
+        // Generate new agent with cleared trajectory
+        Agent clearedAgent = trainingAgent.trajectory(List.of());
+        if (synchTraining) {
+            // Runs synchronously the train process if not lock for change
+            return agentTraining.changeLock()
+                    ? agentTraining.agent(clearedAgent).changeLock(false)
+                    : agentTraining.agent(train(clearedAgent, clippedTrajectory, trajectory.size()));
+        }
+        // Runs asynchronously the train process
+        Completable.complete()
+                .subscribeOn(Schedulers.computation())
+                .doOnComplete(() -> {
+                    // Concurrent train the cleared agent
+                    Agent trainedAgent = train(clearedAgent, clippedTrajectory, trajectory.size());
+                    this.agent.updateAndGet(ag1 -> {
+                        AgentTraining agentTraining1 = ag1.changeLock()
+                                // If lock for change then clears the lock and the training flag
+                                ? ag1.changeLock(false)
+                                // If not lock for change then sets the trained agent, clears the lock
+                                : ag1.agent(trainedAgent.trajectory(ag1.agent().trajectory()));
+                        // Clear training flag
+                        return agentTraining1.training(false);
+                    });
+                }).subscribe();
+        // Sets the cleared agent, unlock for change and set training flag
+        return agentTraining.agent(clearedAgent).changeLock(false).training(true);
     }
 
     /**

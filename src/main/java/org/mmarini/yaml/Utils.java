@@ -45,7 +45,30 @@ public class Utils {
 
     public static final ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
 
+    /**
+     * Returns the object created by invoking create method of class of "class" property
+     *
+     * @param root       the json document
+     * @param locator    the locator
+     * @param args       the arguments
+     * @param argClasses the method argument class
+     * @param <T>        the type of object
+     */
     public static <T> T createObject(JsonNode root, Locator locator, Object[] args, Class<?>[] argClasses) {
+        return createObject(root, locator, "create", args, argClasses);
+    }
+
+    /**
+     * Returns the object created by invoking method of class of "class" property
+     *
+     * @param root       the json document
+     * @param locator    the locator
+     * @param method     the method name
+     * @param args       the arguments
+     * @param argClasses the method argument class
+     * @param <T>        the type of object
+     */
+    public static <T> T createObject(JsonNode root, Locator locator, String method, Object[] args, Class<?>[] argClasses) {
         try {
             Locator classLocator = locator.path("class");
             String className = classLocator.getNode(root).asText();
@@ -53,9 +76,9 @@ public class Utils {
             Class[] argsType = Stream.concat(Stream.of(JsonNode.class, Locator.class),
                             Arrays.stream(argClasses))
                     .toArray(Class[]::new);
-            Method creator = clazz.getDeclaredMethod("create", argsType);
+            Method creator = clazz.getDeclaredMethod(method, argsType);
             if (!Modifier.isStatic(creator.getModifiers())) {
-                throw new IllegalArgumentException(format("Method %s.create is not static", className));
+                throw new IllegalArgumentException(format("Method %s.%s is not static", className, method));
             }
             Object[] builderArgs = Stream.concat(Stream.of(root, locator),
                             Arrays.stream(args))

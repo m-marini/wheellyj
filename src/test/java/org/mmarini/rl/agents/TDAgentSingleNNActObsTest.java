@@ -27,7 +27,6 @@ package org.mmarini.rl.agents;
 
 import org.junit.jupiter.api.Test;
 import org.mmarini.rl.envs.*;
-import org.mmarini.rl.envs.Environment.ExecutionResult;
 import org.mmarini.rl.nets.*;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
@@ -113,21 +112,4 @@ class TDAgentSingleNNActObsTest {
             assertEquals(s0, s0Org);
         }
     }
-
-    @Test
-    void observe() {
-        TDAgentSingleNN agent = createAgent();
-        INDArray s0 = Nd4j.rand(2);
-        Map<String, Signal> state = Map.of(
-                "input", new ArraySignal(s0)
-        );
-        INDArray s0Org = s0.dup();
-        Map<String, Signal> actions = agent.act(state);
-        ExecutionResult result = new ExecutionResult(state, actions, 1, state);
-        agent = agent.observe(result);
-        agent.act(state);
-        agent = agent.observe(result);
-        assertEquals(s0, s0Org);
-    }
-
 }
