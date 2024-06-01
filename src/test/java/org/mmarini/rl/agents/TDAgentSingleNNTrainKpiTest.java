@@ -81,7 +81,7 @@ class TDAgentSingleNNTrainKpiTest {
     void train() {
         DataCollectorSubscriber data = new DataCollectorSubscriber();
         try (SequenceEnv env = new SequenceEnv(3)) {
-            TDAgentSingleNN agent = createAgent();
+            AbstractAgentNN agent = createAgent();
             agent.readKpis()
                     .concatMap(RXFunc.getProperty("reward"))
                     .subscribe(data);

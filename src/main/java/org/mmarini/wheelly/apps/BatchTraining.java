@@ -211,6 +211,28 @@ public class BatchTraining {
     }
 
     /**
+     * Handles the kpis
+     *
+     * @param kpis the kpis
+     */
+    private void handleKpis(Map<String, INDArray> kpis) {
+        kpisPanel.addKpis(kpis);
+        INDArray counters = kpis.get("counters");
+        if (counters != null) {
+            long epoch = counters.getLong(0, 0);
+            long numEpochs = counters.getLong(0, 1);
+            long step = counters.getLong(0, 2);
+            long numSteps = counters.getLong(0, 3);
+            info("Epoch.step %d.%d of %d.%d",
+                    epoch,
+                    step,
+                    numEpochs,
+                    numSteps
+            );
+        }
+    }
+
+    /**
      * Handles shutdown
      */
     private void handleShutdown() {
@@ -241,28 +263,6 @@ public class BatchTraining {
         infoBar.setHorizontalAlignment(JTextField.CENTER);
         infoBar.setFont(infoBar.getFont().deriveFont(Font.BOLD));
         infoBar.setEditable(false);
-    }
-
-    /**
-     * Handles the kpis
-     *
-     * @param kpis the kpis
-     */
-    private void handleKpis(Map<String, INDArray> kpis) {
-        kpisPanel.addKpis(kpis);
-        INDArray counters = kpis.get("counters");
-        if (counters != null) {
-            long epoch = counters.getLong(0, 0);
-            long numEpochs = counters.getLong(0, 1);
-            long step = counters.getLong(0, 2);
-            long numSteps = counters.getLong(0, 3);
-            info("Epoch.step %d.%d of %d.%d",
-                    epoch,
-                    step,
-                    numEpochs,
-                    numSteps
-            );
-        }
     }
 
     /**

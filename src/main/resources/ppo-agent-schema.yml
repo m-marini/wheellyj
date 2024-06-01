@@ -1,0 +1,278 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/ppo-agent-schema-0.1
+title: Agent
+type: object
+properties:
+  $schema:
+    const: https://mmarini.org/wheelly/ppo-agent-schema-0.1
+  class:
+    const: org.mmarini.rl.agents.PPOAgent
+  modelPath:
+    minLength: 1
+  savingIntervalSteps:
+    multipleOf: 1
+    minimum: 1
+  seed:
+    multipleOf: 1
+    minimum: 1
+  ppoEpsilon:
+    exclusiveMinimum: 0
+  rewardAlpha:
+    exclusiveMinimum: 0
+  alphas:
+    type: object
+    properties:
+      critic:
+        minimum: 0
+    additionalProperties:
+      minimum: 0
+    required:
+      - critic
+  lambda:
+    minimum: 0
+  numSteps:
+    multipleOf: 1
+    minimum: 1
+  numEpochs:
+    multipleOf: 1
+    minimum: 1
+  batchSize:
+    multipleOf: 1
+    minimum: 1
+  inputProcess:
+    $ref: "#/$defs/InputProcessors"
+  network:
+    $ref: "#/$defs/Network"
+required:
+  - $schema
+  - class
+  - modelPath
+  - rewardAlpha
+  - ppoEpsilon
+  - alphas
+  - lambda
+  - network
+$defs:
+  InputProcessor:
+    anyOf:
+      - $ref: "#/$defs/AndProcessor"
+      - $ref: "#/$defs/NotProcessor"
+      - $ref: "#/$defs/PartitionProcessor"
+      - $ref: "#/$defs/DecodeProcessor"
+      - $ref: "#/$defs/FeaturesProcessor"
+      - $ref: "#/$defs/TilesProcessor"
+      - $ref: "#/$defs/MaskProcessor"
+  MaskProcessor:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.rl.processors.MaskProcessor
+      name:
+        minLength: 1
+      input:
+        minLength: 1
+      mask:
+        minLength: 1
+    required:
+      - class
+      - name
+      - input
+      - mask
+  TilesProcessor:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.rl.processors.TilesProcessor
+      name:
+        minLength: 1
+      input:
+        minLength: 1
+      numTiles:
+        multipleOf: 1
+        minimum: 1
+    required:
+      - class
+      - name
+      - input
+      - numTiles
+  DecodeProcessor:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.rl.processors.DecodeProcessor
+      name:
+        minLength: 1
+      inputs:
+        type: array
+        items:
+          minLength: 1
+    required:
+      - class
+      - name
+      - inputs
+  FeaturesProcessor:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.rl.processors.FeaturesProcessor
+      name:
+        minLength: 1
+      input:
+        minLength: 1
+    required:
+      - class
+      - name
+      - input
+  NotProcessor:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.rl.processors.NotProcessor
+      name:
+        minLength: 1
+      input:
+        minLength: 1
+    required:
+      - class
+      - name
+      - input
+  AndProcessor:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.rl.processors.AndProcessor
+      name:
+        minLength: 1
+      inputs:
+        type: array
+        items:
+          minLength: 1
+    required:
+      - class
+      - name
+      - inputs
+  PartitionProcessor:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.rl.processors.PartitionProcessor
+      name:
+        minLength: 1
+      inputs:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              minLength: 1
+            numTiles:
+              multipleOf: 1
+              minimum: 1
+          required:
+            - name
+            - numTiles
+    required:
+      - class
+      - name
+      - inputs
+  InputProcessors:
+    type: array
+    items:
+      $ref: "#/$defs/InputProcessor"
+    minItems: 1
+  Composer:
+    type: object
+    properties:
+      type:
+        enum: [ sum, concat ]
+      inputs:
+        type: array
+        items:
+          type: string
+    required:
+      - type
+      - inputs
+  Layer:
+    anyOf:
+      - $ref: "#/$defs/Linear"
+      - $ref: "#/$defs/Dense"
+      - $ref: "#/$defs/DropOut"
+      - $ref: "#/$defs/Softmax"
+      - $ref: "#/$defs/Others"
+  Others:
+    type: object
+    properties:
+      type:
+        enum:
+          - relu
+          - tanh
+    required:
+      - type
+  Dense:
+    type: object
+    properties:
+      type:
+        const: dense
+      outputSize:
+        multipleOf: 1
+        minimum: 1
+      maxAbsWeights:
+        exclusiveMinimum: 0
+      dropOut:
+        exclusiveMinimum: 0
+        maximum: 1
+    required:
+      - type
+      - outputSize
+  DropOut:
+    type: object
+    properties:
+      type:
+        const: dropout
+      dropOut:
+        exclusiveMinimum: 0
+        maximum: 1
+    required:
+      - type
+      - dropOut
+  Softmax:
+    type: object
+    properties:
+      type:
+        const: softmax
+      temperature:
+        exclusiveMinimum: 0
+    required:
+      - type
+      - temperature
+  Linear:
+    type: object
+    properties:
+      type:
+        const: linear
+      b:
+        type: number
+      w:
+        type: number
+    required:
+      - type
+      - b
+      - w
+  Layers:
+    type: object
+    properties:
+      input:
+        type: string
+      inputs:
+        $ref: "#/$defs/Composer"
+      layers:
+        type: array
+        items:
+          $ref: "#/$defs/Layer"
+    required:
+      - layers
+  Network:
+    type: object
+    additionalProperties:
+      $ref: "#/$defs/Layers"

@@ -43,6 +43,7 @@ import java.util.stream.IntStream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.junit.jupiter.api.Assertions.fail;
 
 class MDPTrajectoryTest {
     public static final long AGENT_SEED = 1234L;
@@ -116,7 +117,7 @@ class MDPTrajectoryTest {
         double pi11 = pi.getDouble(1, 1);
 
         // When train
-        TDAgentSingleNN trained = agent.trainByTrajectory(trajectory);
+        AbstractAgentNN trained = agent.trainByTrajectory(trajectory);
         float avgReward = trained.avgReward();
         // And get the policy
         INDArray pi1 = trained.network().forward(allStates).state().getValues("action");
@@ -156,7 +157,7 @@ class MDPTrajectoryTest {
         double pi11 = pi.getDouble(1, 1);
 
         // When train
-        TDAgentSingleNN trained = agent.trainByTrajectory(trajectory);
+        AbstractAgentNN trained = agent.trainByTrajectory(trajectory);
         float avgReward = trained.avgReward();
         // And get the policy
         INDArray trainedPi = trained.network().forward(allStates).state().getValues("action");
@@ -196,7 +197,7 @@ class MDPTrajectoryTest {
         double pi11 = pi.getDouble(1, 1);
 
         // When train
-        TDAgentSingleNN trained = agent.trainByTrajectory(trajectory);
+        AbstractAgentNN trained = agent.trainByTrajectory(trajectory);
         float avgReward = trained.avgReward();
         // And get the policy
         INDArray trainedPi = trained.network().forward(allStates).state().getValues("action");
@@ -216,7 +217,8 @@ class MDPTrajectoryTest {
      */
     @Test
     void fullTrainTest() {
-        // Give a mdp of 2 state
+        fail("Skiped");
+        // Given a mdp of 2 state
         int numIters = 4;
         int numSteps = 128;
         int numEpochs = 10;
@@ -237,7 +239,7 @@ class MDPTrajectoryTest {
         double pi11 = pi.getDouble(1, 1);
 
         // When train for n iterations
-        TDAgentSingleNN trained = agent;
+        AbstractAgentNN trained = agent;
         for (int j = 0; j < numIters; j++) {
             trained = trained.trainByTrajectory(trajectory);
             trajectory = trajectory(trained, numSteps);
@@ -295,7 +297,7 @@ class MDPTrajectoryTest {
         double pi11 = pi.getDouble(1, 1);
 
         // When train
-        TDAgentSingleNN trained = agent.trainByTrajectory(trajectory);
+        AbstractAgentNN trained = agent.trainByTrajectory(trajectory);
         float avgReward = trained.avgReward();
         INDArray trainedPi = trained.network().forward(allStates).state().getValues("action");
         double pi00Trained = trainedPi.getDouble(0, 0);
@@ -309,7 +311,7 @@ class MDPTrajectoryTest {
         assertThat(pi11Trained, greaterThan(pi11));
     }
 
-    List<Environment.ExecutionResult> trajectory(TDAgentSingleNN agent, int numSteps) {
+    List<Environment.ExecutionResult> trajectory(AbstractAgentNN agent, int numSteps) {
         // and the trajectory from current policy
         List<Environment.ExecutionResult> trajectory = new ArrayList<>(numSteps);
         int state = 0;

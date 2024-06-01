@@ -41,19 +41,20 @@ import static org.hamcrest.Matchers.matchesPattern;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 
-class TDAgentSingleNNCreateTest {
+class PPOAgentCreateTest {
 
     public static final long AGENT_SEED = 1234L;
     private static final float EPSILON = 1e-6f;
     private static final String AGENT_YAML = """
             ---
-            $schema: https://mmarini.org/wheelly/tdagent-spec-schema-0.1
-            class: org.mmarini.rl.agents.TDAgentSingleNN
+            $schema: https://mmarini.org/wheelly/ppo-agent-spec-schema-0.1
+            class: org.mmarini.rl.agents.PPOAgent
             rewardAlpha: 0.001
             alphas:
               critic: 1e-3
               output: 3e-3
             lambda: 0.5
+            ppoEpsilon: 0.2
             numSteps: 128
             numEpochs: 10
             batchSize: 16
@@ -99,12 +100,13 @@ class TDAgentSingleNNCreateTest {
             """;
     private static final String AGENT_NO_ACTION_ALPHAS_YAML = """
             ---
-            $schema: https://mmarini.org/wheelly/tdagent-spec-schema-0.1
-            class: org.mmarini.rl.agents.TDAgentSingleNN
+            $schema: https://mmarini.org/wheelly/ppo-agent-spec-schema-0.1
+            class: org.mmarini.rl.agents.PPOAgent
             rewardAlpha: 0.001
             alphas:
               critic: 1e-3
             lambda: 0.5
+            ppoEpsilon: 0.2
             state:
               input:
                 type: float
@@ -120,12 +122,6 @@ class TDAgentSingleNNCreateTest {
                   - 1
             network:
               $schema: https://mmarini.org/wheelly/network-schema-0.2
-              sizes:
-                input: 2
-                layer1: 2
-                layer2: 2
-                output: 2
-                critic: 1
               layers:
                 - name: layer1
                   type: dense
@@ -139,21 +135,22 @@ class TDAgentSingleNNCreateTest {
                   type: softmax
                   inputs: [layer2]
                   temperature: 0.8
-                - name: critic
-                  type: dense
-                  inputs: [layer2]
-                  maxAbsWeights: 100
-                  dropOut: 1
+              sizes:
+                input: 2
+                layer1: 2
+                layer2: 2
+                output: 2
             """;
     private static final String AGENT_ACTION_CRITIC_YAML = """
             ---
-            $schema: https://mmarini.org/wheelly/tdagent-spec-schema-0.1
-            class: org.mmarini.rl.agents.TDAgentSingleNN
+            $schema: https://mmarini.org/wheelly/ppo-agent-spec-schema-0.1
+            class: org.mmarini.rl.agents.PPOAgent
             rewardAlpha: 0.001
             alphas:
               critic: 1e-3
               output: 3e-3
             lambda: 0.5
+            ppoEpsilon: 0.2
             state:
               input:
                 type: float
@@ -201,13 +198,14 @@ class TDAgentSingleNNCreateTest {
             """;
     private static final String AGENT_NO_CRITIC_YAML = """
             ---
-            $schema: https://mmarini.org/wheelly/tdagent-spec-schema-0.1
-            class: org.mmarini.rl.agents.TDAgentSingleNN
+            $schema: https://mmarini.org/wheelly/ppo-agent-spec-schema-0.1
+            class: org.mmarini.rl.agents.PPOAgent
             rewardAlpha: 0.001
             alphas:
               critic: 1e-3
               output: 3e-3
             lambda: 0.5
+            ppoEpsilon: 0.2
             state:
               input:
                 type: float
@@ -255,7 +253,7 @@ class TDAgentSingleNNCreateTest {
         Random random = Nd4j.getRandom();
         random.setSeed(AGENT_SEED);
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                TDAgentSingleNN.fromJson(spec, Locator.root(), props, null, Integer.MAX_VALUE, random)
+                PPOAgent.fromJson(spec, Locator.root(), props, null, Integer.MAX_VALUE, random)
         );
         assertThat(ex.getMessage(), matchesPattern("actions must not contain \"critic\" key"));
     }
@@ -272,7 +270,7 @@ class TDAgentSingleNNCreateTest {
         Random random = Nd4j.getRandom();
         random.setSeed(AGENT_SEED);
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                TDAgentSingleNN.fromJson(spec, Locator.root(), props, null, Integer.MAX_VALUE, random)
+                PPOAgent.fromJson(spec, Locator.root(), props, null, Integer.MAX_VALUE, random)
         );
         assertThat(ex.getMessage(), matchesPattern("Missing alpha for actions \"output\""));
     }
@@ -289,7 +287,7 @@ class TDAgentSingleNNCreateTest {
         Random random = Nd4j.getRandom();
         random.setSeed(AGENT_SEED);
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                TDAgentSingleNN.fromJson(spec, Locator.root(), props, null, Integer.MAX_VALUE, random)
+                PPOAgent.fromJson(spec, Locator.root(), props, null, Integer.MAX_VALUE, random)
         );
         assertThat(ex.getMessage(), matchesPattern("network must contain \"critic\" output layer"));
     }
@@ -305,7 +303,7 @@ class TDAgentSingleNNCreateTest {
         );
         Random random = Nd4j.getRandom();
         random.setSeed(AGENT_SEED);
-        TDAgentSingleNN agent = TDAgentSingleNN.fromJson(spec, Locator.root(), props, null, Integer.MAX_VALUE, random);
+        PPOAgent agent = PPOAgent.fromJson(spec, Locator.root(), props, null, Integer.MAX_VALUE, random);
         assertEquals(0.001f, agent.rewardAlpha());
         assertEquals(0f, agent.avgReward());
         assertEquals(1e-3f, agent.alphas().get("critic"));
@@ -313,16 +311,18 @@ class TDAgentSingleNNCreateTest {
         assertEquals(0.5f, agent.lambda());
 
         JsonNode json = agent.json();
-
         assertTrue(json.path("inputProcess").isMissingNode());
         assertTrue(json.path("numSteps").isInt());
         assertTrue(json.path("numEpochs").isInt());
         assertTrue(json.path("batchSize").isInt());
-        assertEquals(TDAgentSingleNN.SPEC_SCHEMA_NAME, json.path("$schema").asText());
-        assertEquals(TDAgentSingleNN.class.getCanonicalName(), json.path("class").asText());
+        assertTrue(json.path("ppoEpsilon").isNumber());
+
+        assertEquals(PPOAgent.SPEC_SCHEMA_NAME, json.path("$schema").asText());
+        assertEquals(PPOAgent.class.getCanonicalName(), json.path("class").asText());
         assertEquals(128, json.path("numSteps").asInt());
         assertEquals(10, json.path("numEpochs").asInt());
         assertEquals(16, json.path("batchSize").asInt());
+        assertEquals(0.2f, (float) json.path("ppoEpsilon").asDouble());
     }
 
     @Test
@@ -337,7 +337,7 @@ class TDAgentSingleNNCreateTest {
         );
         Random random = Nd4j.getRandom();
         random.setSeed(AGENT_SEED);
-        TDAgentSingleNN agent = TDAgentSingleNN.fromJson(spec, Locator.root(), props, null, Integer.MAX_VALUE, random);
+        PPOAgent agent = PPOAgent.fromJson(spec, Locator.root(), props, null, Integer.MAX_VALUE, random);
         assertEquals(0.001f, agent.rewardAlpha());
         assertEquals(0.2f, agent.avgReward());
         assertEquals(1e-3f, agent.alphas().get("critic"));

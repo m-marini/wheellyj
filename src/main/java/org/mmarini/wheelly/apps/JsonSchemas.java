@@ -54,7 +54,10 @@ public class JsonSchemas {
     private static final Logger logger = LoggerFactory.getLogger(JsonSchemas.class);
 
     private static final JsonSchemas singleton = create(
+            "/ppo-agent-schema.yml",
             "/agent-single-nn-schema.yml",
+            "/ppo-agent-spec-schema.yml",
+            "/tdagent-spec-schema.yml",
             "/checkup-schema.yml",
             "/objective-cautious-schema.yml",
             "/objective-nomove-schema.yml",
