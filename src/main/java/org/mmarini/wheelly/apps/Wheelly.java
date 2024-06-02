@@ -213,9 +213,13 @@ public class Wheelly {
         environment.setOnAct(this::handleAct);
         environment.setOnResult(this::handleResult);
 
-        learnPanel.readLearningRates()
+        learnPanel.readActionAlphas()
                 .doOnNext(t -> agent.updateAndGet(ag ->
                         ag.agent(((AbstractAgentNN) ag.agent()).alphas(t))))
+                .subscribe();
+        learnPanel.readEtas()
+                .doOnNext(eta -> agent.updateAndGet(ag ->
+                        ag.agent(((AbstractAgentNN) ag.agent()).eta(eta))))
                 .subscribe();
         Observable<WindowEvent>[] windowObs = allFrames.stream()
                 .map(f -> SwingObservable.window(f, SwingObservable.WINDOW_ACTIVE))
@@ -272,7 +276,10 @@ public class Wheelly {
     private void createPanels() {
         Agent agent = this.agent.get().agent();
         kpisPanel.setKeys(agent.getActions().keySet().toArray(String[]::new));
-        learnPanel.setLearningRates(((AbstractAgentNN) agent).alphas());
+        if (agent instanceof AbstractAgentNN abstractAgent) {
+            learnPanel.setEta(abstractAgent.eta());
+            learnPanel.setActionAlphas(abstractAgent.alphas());
+        }
         if (environment instanceof PolarRobotEnv env) {
             this.polarPanel = new PolarPanel();
             double radarMaxDistance = env.getMaxRadarDistance();

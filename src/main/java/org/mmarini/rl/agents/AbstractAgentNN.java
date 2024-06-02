@@ -151,18 +151,6 @@ public abstract class AbstractAgentNN implements Agent {
     }
 
     /**
-     * Returns the gradient of policies for given action mask
-     *
-     * @param pi          the policies
-     * @param actionMasks the action masks
-     */
-    private static Map<String, INDArray> gradLogPiByMask(Map<String, INDArray> pi, Map<String, INDArray> actionMasks) {
-        return MapUtils.mapValues(pi, (key, value) ->
-                actionMasks.get(key).div(value)
-        );
-    }
-
-    /**
      * Returns the json node of signal spec
      *
      * @param signals the signals spec
@@ -194,6 +182,7 @@ public abstract class AbstractAgentNN implements Agent {
     protected final float avgReward;
     protected boolean backedUp;
     protected int savingStepCounter;
+    protected float eta;
 
     /**
      * Creates a random behavior agent
@@ -202,6 +191,7 @@ public abstract class AbstractAgentNN implements Agent {
      * @param actions             the actions
      * @param avgReward           the average reward
      * @param rewardAlpha         the reward alpha parameter
+     * @param eta                 the learning rate hyperparameter
      * @param alphas              the network training alpha parameter by output
      * @param lambda              the TD lambda factor
      * @param numSteps            the number of step of trajectory
@@ -218,7 +208,7 @@ public abstract class AbstractAgentNN implements Agent {
      * @param backedUp            true if the model has been backed up
      */
     protected AbstractAgentNN(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
-                              float avgReward, float rewardAlpha, Map<String, Float> alphas, float lambda,
+                              float avgReward, float rewardAlpha, float eta, Map<String, Float> alphas, float lambda,
                               int numSteps, int numEpochs, int batchSize, TDNetwork network,
                               List<Environment.ExecutionResult> trajectory, InputProcessor processor, Random random,
                               File modelPath, int savingIntervalSteps,
@@ -242,6 +232,7 @@ public abstract class AbstractAgentNN implements Agent {
         this.batchSize = batchSize;
         this.savingStepCounter = savingStepCounter;
         this.backedUp = backedUp;
+        this.eta = eta;
         if (actions.containsKey("critic")) {
             throw new IllegalArgumentException("actions must not contain \"critic\" key");
         }
@@ -282,7 +273,7 @@ public abstract class AbstractAgentNN implements Agent {
     /**
      * Saves the model
      */
-    public void autosave() {
+    public AbstractAgentNN autosave() {
         if (modelPath != null) {
             try {
                 File file = new File(modelPath, "agent.bin");
@@ -300,6 +291,7 @@ public abstract class AbstractAgentNN implements Agent {
                 logger.atError().setCause(e).log();
             }
         }
+        return this;
     }
 
     /**
@@ -326,6 +318,20 @@ public abstract class AbstractAgentNN implements Agent {
         autosave();
         indicatorsPub.onComplete();
     }
+
+    /**
+     * Returns the learning rate hyperparameter
+     */
+    public float eta() {
+        return eta;
+    }
+
+    /**
+     * Returns the learning rate hyperparameter
+     *
+     * @param eta the learning rate hyperparameter
+     */
+    public abstract AbstractAgentNN eta(float eta);
 
     @Override
     public Map<String, SignalSpec> getActions() {

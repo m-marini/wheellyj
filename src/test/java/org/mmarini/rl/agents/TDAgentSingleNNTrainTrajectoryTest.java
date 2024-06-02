@@ -49,6 +49,8 @@ class TDAgentSingleNNTrainTrajectoryTest {
             "output", new IntSignalSpec(new long[]{1}, 2));
     public static final float LAMBDA = 0.5f;
 
+    public static final float ETA = 1e-3f;
+
     static TDAgentSingleNN createAgent0(int numSteps, int numEpochs, int batchSize) {
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(AGENT_SEED);
         List<TDLayer> layers = List.of(
@@ -71,11 +73,10 @@ class TDAgentSingleNNTrainTrajectoryTest {
         TDNetwork network = TDNetwork.create(layers, sizes, random);
 
         Map<String, Float> alphas = Map.of(
-                "critic", 1e-3f,
-                "output", 3e-3f
+                "output", 3f
         );
         return TDAgentSingleNN.create(STATE_SPEC, ACTIONS_SPEC0,
-                0, REWARD_ALPHA, alphas, LAMBDA,
+                0, REWARD_ALPHA, ETA, alphas, LAMBDA,
                 numSteps, numEpochs, batchSize, network, null,
                 random, null, Integer.MAX_VALUE);
     }

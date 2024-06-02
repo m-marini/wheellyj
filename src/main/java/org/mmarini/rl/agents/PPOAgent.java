@@ -66,7 +66,6 @@ import static java.lang.String.format;
 public class PPOAgent extends AbstractAgentNN {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/ppo-agent-schema-0.1";
     public static final String SPEC_SCHEMA_NAME = "https://mmarini.org/wheelly/ppo-agent-spec-schema-0.1";
-    private static final Logger logger = LoggerFactory.getLogger(PPOAgent.class);
 
     /**
      * Returns a random behavior agent
@@ -75,6 +74,7 @@ public class PPOAgent extends AbstractAgentNN {
      * @param actions             the actions
      * @param avgReward           the average reward
      * @param rewardAlpha         the reward alpha parameter
+     * @param eta                 the learning rate hyperparameter
      * @param alphas              the network training alpha parameter by output
      * @param lambda              the TD lambda factor
      * @param ppoEpsilon          the ppo epsilon hyperparameter
@@ -88,12 +88,12 @@ public class PPOAgent extends AbstractAgentNN {
      * @param savingIntervalSteps the number of steps between each model saving
      */
     public static PPOAgent create(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
-                                  float avgReward, float rewardAlpha, Map<String, Float> alphas, float lambda,
+                                  float avgReward, float rewardAlpha, float eta, Map<String, Float> alphas, float lambda,
                                   float ppoEpsilon, int numSteps, int numEpochs, int batchSize, TDNetwork network,
                                   InputProcessor processor, Random random, File modelPath,
                                   int savingIntervalSteps) {
         return new PPOAgent(
-                state, actions, avgReward, rewardAlpha, alphas, lambda, numSteps, numEpochs, batchSize, network,
+                state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network,
                 List.of(), processor, random, modelPath,
                 savingIntervalSteps,
                 PublishProcessor.create(),
@@ -132,6 +132,7 @@ public class PPOAgent extends AbstractAgentNN {
         } else {
             // Creates agent
             float rewardAlpha = (float) locator.path("rewardAlpha").getNode(root).asDouble();
+            float eta = (float) locator.path("eta").getNode(root).asDouble();
             Map<String, Float> alphas = locator.path("alphas").propertyNames(root)
                     .map(Tuple2.map2(l -> (float) l.getNode(root).asDouble()))
                     .collect(Tuple2.toMap());
@@ -148,7 +149,7 @@ public class PPOAgent extends AbstractAgentNN {
             TDNetwork network = new NetworkTranspiler(root, locator.path("network"), stateSizes, random).build();
             Map<String, SignalSpec> actionSpec = env.getActions();
             return PPOAgent.create(stateSpec, actionSpec, 0,
-                    rewardAlpha, alphas, lambda,
+                    rewardAlpha, eta, alphas, lambda,
                     ppoEpsilon, numSteps, numEpochs, batchSize, network, processor,
                     random, path, savingIntervalStep);
         }
@@ -174,6 +175,7 @@ public class PPOAgent extends AbstractAgentNN {
                 .collect(Tuple2.toMap());
         // Validate alphas against actions
         List<String> missingAlphas = actions.keySet().stream()
+                .filter(Predicate.not("critic"::equals))
                 .filter(Predicate.not(alphas::containsKey))
                 .toList();
         if (!missingAlphas.isEmpty()) {
@@ -190,12 +192,13 @@ public class PPOAgent extends AbstractAgentNN {
         int numEpochs = locator.path("numEpochs").getNode(spec).asInt(DEFAULT_NUM_EPOCHS);
         int batchSize = locator.path("batchSize").getNode(spec).asInt(DEFAULT_BATCH_SIZE);
         float lambda = (float) locator.path("lambda").getNode(spec).asDouble();
+        float eta = (float) locator.path("eta").getNode(spec).asDouble();
         float ppoEpsilon = (float) locator.path("ppoEpsilon").getNode(spec).asDouble();
         TDNetwork network = TDNetwork.fromJson(spec, locator.path("network"), props, random);
         InputProcessor processor1 = !locator.path("inputProcess").getNode(spec).isMissingNode()
                 ? InputProcessor.create(spec, locator.path("inputProcess"), state)
                 : null;
-        return PPOAgent.create(state, actions, avgReward, rewardAlpha, alphas, lambda,
+        return PPOAgent.create(state, actions, avgReward, rewardAlpha, eta, alphas, lambda,
                 ppoEpsilon, numSteps, numEpochs, batchSize, network, processor1,
                 random, path, savingIntervalSteps);
     }
@@ -248,6 +251,7 @@ public class PPOAgent extends AbstractAgentNN {
      * @param actions             the actions
      * @param avgReward           the average reward
      * @param rewardAlpha         the reward alpha parameter
+     * @param eta                 the learning rate hyperparameter
      * @param alphas              the network training alpha parameter by output
      * @param lambda              the TD lambda factor
      * @param numSteps            the number of step of trajectory
@@ -265,14 +269,14 @@ public class PPOAgent extends AbstractAgentNN {
      * @param ppoEpsilon          the ppo epsilon hyperparameter
      */
     protected PPOAgent(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
-                       float avgReward, float rewardAlpha, Map<String, Float> alphas, float lambda,
+                       float avgReward, float rewardAlpha, float eta, Map<String, Float> alphas, float lambda,
                        int numSteps, int numEpochs, int batchSize, TDNetwork network,
                        List<Environment.ExecutionResult> trajectory, InputProcessor processor, Random random,
                        File modelPath, int savingIntervalSteps,
                        PublishProcessor<Map<String, INDArray>> indicatorsPub, boolean postTrainKpis,
                        int savingStepCounter, boolean backedUp, float ppoEpsilon) {
         super(state, actions,
-                avgReward, rewardAlpha, alphas, lambda,
+                avgReward, rewardAlpha, eta, alphas, lambda,
                 numSteps, numEpochs, batchSize, network,
                 trajectory, processor, random,
                 modelPath, savingIntervalSteps,
@@ -283,7 +287,7 @@ public class PPOAgent extends AbstractAgentNN {
 
     @Override
     public PPOAgent alphas(Map<String, Float> alphas) {
-        return new PPOAgent(state, actions, avgReward, rewardAlpha, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
+        return new PPOAgent(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
                 savingIntervalSteps, indicatorsPub, postTrainKpis,
                 savingStepCounter, backedUp, ppoEpsilon);
     }
@@ -293,8 +297,15 @@ public class PPOAgent extends AbstractAgentNN {
      */
     @Override
     public PPOAgent avgReward(float avgReward) {
-        return new PPOAgent(state, actions, avgReward, rewardAlpha, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
+        return new PPOAgent(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
                 savingIntervalSteps, indicatorsPub, postTrainKpis, savingStepCounter, backedUp, ppoEpsilon);
+    }
+
+    @Override
+    public PPOAgent eta(float eta) {
+        return new PPOAgent(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
+                savingIntervalSteps, indicatorsPub, postTrainKpis,
+                savingStepCounter, backedUp, ppoEpsilon);
     }
 
     @Override
@@ -307,6 +318,7 @@ public class PPOAgent extends AbstractAgentNN {
                 .put("$schema", SPEC_SCHEMA_NAME)
                 .put("class", PPOAgent.class.getCanonicalName())
                 .put("rewardAlpha", rewardAlpha)
+                .put("eta", eta)
                 .put("lambda", lambda)
                 .put("numSteps", numSteps)
                 .put("numEpochs", numEpochs)
@@ -324,7 +336,7 @@ public class PPOAgent extends AbstractAgentNN {
 
     @Override
     public PPOAgent network(TDNetwork network) {
-        return new PPOAgent(state, actions, avgReward, rewardAlpha, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
+        return new PPOAgent(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
                 savingIntervalSteps, indicatorsPub, postTrainKpis, savingStepCounter, backedUp, ppoEpsilon);
     }
 
@@ -352,7 +364,7 @@ public class PPOAgent extends AbstractAgentNN {
 
     @Override
     public PPOAgent setPostTrainKpis(boolean postTrainKpis) {
-        return new PPOAgent(state, actions, avgReward, rewardAlpha, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
+        return new PPOAgent(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
                 savingIntervalSteps, indicatorsPub, postTrainKpis, savingStepCounter, backedUp, ppoEpsilon);
     }
 
@@ -430,8 +442,8 @@ public class PPOAgent extends AbstractAgentNN {
         long n = rewards.size(0);
 
         // Computes the deltas
-        INDArray deltas = rewards.dup();
-        INDArray avgRewards = rewards.dup();
+        INDArray deltas = rewards.like();
+        INDArray avgRewards = rewards.like();
         float avgReward = this.avgReward;
         for (long i = 0; i < n; i++) {
             avgRewards.put((int) i, 0, avgReward);
@@ -456,30 +468,33 @@ public class PPOAgent extends AbstractAgentNN {
         // Extract the policy output values pi from network results
         Map<String, INDArray> pi = policy(result0);
 
-        // Computes log(pi) gradients
+        // Computes policy optimizer gradients
         Map<String, INDArray> gradPi = optimizerGrad(pi, actionMasks, actionProb0, deltas);
 
-        // Creates the gradients
-        Map<String, INDArray> grads = new HashMap<>(MapUtils.mapValues(gradPi, (key, v) ->
-                v.mul(alphas.get(key))));
-
         // Computes output gradients for network (merges critic and policy grads)
-        INDArray criticGrad = Nd4j.onesLike(deltas).muli(alphas.get("critic"));
-        grads.put("critic", criticGrad);
+        Map<String, INDArray> grads = new HashMap<>();
+        grads.put("critic", Nd4j.onesLike(deltas));
+        for (Map.Entry<String, INDArray> entry : gradPi.entrySet()) {
+            String key = entry.getKey();
+            INDArray gradPik = entry.getValue();
+            grads.put(key, gradPik.mul(alphas.get(key)));
+        }
 
-        trainingNet = trainingNet.train(grads, deltas, lambda, null);
+        // Trains network
+        INDArray deltaEta = deltas.mul(eta);
+        trainingNet = trainingNet.train(grads, deltaEta, lambda, null);
 
         // Computes deltaGrads
-        Map<String, INDArray> deltaGrads = MapUtils.mapValues(grads,
+        Map<String, INDArray> deltaEtaGrads = MapUtils.mapValues(grads,
                 (k, grad) ->
-                        grad.mul(deltas));
+                        grad.mul(deltaEta));
         // Generates kpis
         Map<String, INDArray> kpis = new HashMap<>(MapUtils.addKeyPrefix(trainingLayers, "trainingLayers."));
         kpis.put("delta", deltas);
         kpis.put("avgReward", avgRewards);
         kpis.putAll(MapUtils.addKeyPrefix(actionMasks, "actionMasks."));
         kpis.putAll(MapUtils.addKeyPrefix(grads, "grads."));
-        kpis.putAll(MapUtils.addKeyPrefix(deltaGrads, "deltaGrads."));
+        kpis.putAll(MapUtils.addKeyPrefix(deltaEtaGrads, "deltaGrads."));
         kpis.put("counters", Nd4j.createFromArray(
                         (float) epoch,
                         (float) numEpochs,
@@ -496,7 +511,7 @@ public class PPOAgent extends AbstractAgentNN {
     @Override
     public PPOAgent trajectory(List<Environment.ExecutionResult> trajectory) {
         return new PPOAgent(state, actions, avgReward,
-                rewardAlpha, alphas, lambda,
+                rewardAlpha, eta, alphas, lambda,
                 numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
                 savingIntervalSteps, indicatorsPub, postTrainKpis,
                 savingStepCounter, backedUp, ppoEpsilon);

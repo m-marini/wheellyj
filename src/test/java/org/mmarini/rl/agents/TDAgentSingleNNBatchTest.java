@@ -49,6 +49,7 @@ import static org.hamcrest.Matchers.lessThan;
 class TDAgentSingleNNBatchTest {
 
     public static final int SEED = 123;
+    public static final float ETA = 10e-3f;
 
     static TDNetwork createNetwork() {
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(SEED);
@@ -76,7 +77,6 @@ class TDAgentSingleNNBatchTest {
         );
         return TDNetwork.create(layers, sizes, random);
     }
-
     Map<String, INDArray> s0;
     Map<String, INDArray> sTest;
     Map<String, INDArray> masks;
@@ -88,12 +88,11 @@ class TDAgentSingleNNBatchTest {
         Map<String, SignalSpec> state = Map.of("s0", new IntSignalSpec(new long[]{2}, 2));
         Map<String, SignalSpec> actions = Map.of("action", new IntSignalSpec(new long[]{1}, 2));
         Map<String, Float> alphas = Map.of(
-                "critic", 10e-3f,
-                "action", 30e-3f
+                "action", 3f
         );
         TDNetwork network = createNetwork();
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(1234);
-        return TDAgentSingleNN.create(state, actions, 0.5F, 0.99F, alphas, 0,
+        return TDAgentSingleNN.create(state, actions, 0.5F, 0.99F, ETA, alphas, 0,
                 1, 1, 32, network, null, random, null, 0);
     }
 

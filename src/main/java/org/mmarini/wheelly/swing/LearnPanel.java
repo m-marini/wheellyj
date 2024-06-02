@@ -28,6 +28,8 @@
 
 package org.mmarini.wheelly.swing;
 
+import hu.akarnokd.rxjava3.swing.SwingObservable;
+import io.reactivex.rxjava3.core.BackpressureStrategy;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.Tuple2;
@@ -38,7 +40,6 @@ import javax.swing.event.ChangeEvent;
 import java.awt.*;
 import java.util.List;
 import java.util.*;
-import java.util.function.Predicate;
 
 import static java.lang.Math.abs;
 import static org.mmarini.Utils.zipWithIndex;
@@ -47,8 +48,21 @@ import static org.mmarini.Utils.zipWithIndex;
  * Controls the learning parameters via UI
  */
 public class LearnPanel extends JPanel {
-    public static final Dimension DEFAULT_PREFERED_SIZE = new Dimension(500, 300);
-    private static final double[] VALUES = new double[]{
+    public static final Dimension DEFAULT_PREFERRED_SIZE = new Dimension(500, 300);
+    private static final double[] ALPHA_VALUES = new double[]{
+            3e-3,
+            10e-3,
+            30e-3,
+            100e-3,
+            300e-3,
+            1,
+            3,
+            10,
+            30,
+            300,
+            100
+    };
+    private static final double[] ETA_VALUES = new double[]{
             1e-6,
             3e-6,
             10e-6,
@@ -59,25 +73,36 @@ public class LearnPanel extends JPanel {
             3e-3,
             10e-3,
             30e-3,
-            100e-3
+            100e-3,
     };
-    private static final Dictionary<Integer, JComponent> LABELS = createLabels();
+    private static final Dictionary<Integer, JComponent> ALPHA_LABELS = createLabels(new String[]{
+            "0.003",
+            "0.010",
+            "0.030",
+            "0.100",
+            "0.300",
+            "1",
+            "3",
+            "10",
+            "30",
+            "100",
+            "300"});
+    private static final Dictionary<Integer, JComponent> ETA_LABELS = createLabels(new String[]{
+            "1 ppm",
+            "3 ppm",
+            "10ppm",
+            "30 ppm",
+            "100 ppm",
+            "300 ppm",
+            "0.001",
+            "0.003",
+            "0.01",
+            "0.03",
+            "0.1"});
 
-    private static Dictionary<Integer, JComponent> createLabels() {
+    private static Dictionary<Integer, JComponent> createLabels(String[] labelKeys) {
         Dictionary<Integer, JComponent> labels = new Hashtable<>();
-        zipWithIndex(List.of(
-                "1 ppm",
-                "3 ppm",
-                "10 ppm",
-                "30 ppm",
-                "100 ppm",
-                "300 ppm",
-                "0.001",
-                "0.003",
-                "0.010",
-                "0.030",
-                "0.100"
-        )).forEach(t ->
+        zipWithIndex(List.of(labelKeys)).forEach(t ->
                 labels.put(t._1, new JLabel(t._2)));
         return labels;
     }
@@ -85,14 +110,14 @@ public class LearnPanel extends JPanel {
     /**
      * Returns the slider
      */
-    private static JSlider createSlider() {
+    private static JSlider createSlider(double[] values, Dictionary<Integer, JComponent> labels) {
         JSlider slider = new JSlider(JSlider.VERTICAL);
-        slider.setMaximum(VALUES.length - 1);
+        slider.setMaximum(values.length - 1);
         slider.setPaintLabels(true);
         slider.setPaintTicks(true);
         slider.setMajorTickSpacing(1);
         slider.setSnapToTicks(true);
-        slider.setLabelTable(LABELS);
+        slider.setLabelTable(labels);
         return slider;
     }
 
@@ -101,11 +126,11 @@ public class LearnPanel extends JPanel {
      *
      * @param value the value
      */
-    private static int indexOf(double value) {
+    private static int indexOf(double value, double[] values) {
         int idx = 0;
-        double diff = abs(value - VALUES[idx]);
-        for (int i = 1; i < VALUES.length; i++) {
-            double snap = VALUES[i];
+        double diff = abs(value - values[idx]);
+        for (int i = 1; i < values.length; i++) {
+            double snap = values[i];
             double dValue = abs(snap - value);
             if (dValue < diff) {
                 idx = i;
@@ -115,7 +140,8 @@ public class LearnPanel extends JPanel {
         return idx;
     }
 
-    private final PublishProcessor<Map<String, Float>> learningRatesProcessor;
+    private final PublishProcessor<Map<String, Float>> actionAlphasProcessor;
+    private final JSlider etaSlider;
     private Map<String, Float> learningRates;
     private Map<String, JSlider> learningRateSliders;
 
@@ -123,8 +149,12 @@ public class LearnPanel extends JPanel {
      * Creates the panel
      */
     public LearnPanel() {
-        this.learningRatesProcessor = PublishProcessor.create();
-        setPreferredSize(DEFAULT_PREFERED_SIZE);
+        this.etaSlider = createSlider(ETA_VALUES, ETA_LABELS);
+        this.actionAlphasProcessor = PublishProcessor.create();
+        etaSlider.setBorder(BorderFactory.createTitledBorder(
+                Messages.getStringOpt("LearnPanel.eta.label").orElse("eta")
+        ));
+        setPreferredSize(DEFAULT_PREFERRED_SIZE);
     }
 
     /**
@@ -144,51 +174,59 @@ public class LearnPanel extends JPanel {
      *
      * @param event the event
      */
-    private void handleSlider(ChangeEvent event) {
+    private void handleAlphaSliders(ChangeEvent event) {
         if (Objects.requireNonNull(event.getSource()) instanceof JSlider slider) {
             if (!slider.getValueIsAdjusting()) {
                 learningRates = Tuple2.stream(learningRates)
                         .map(t -> {
                             JSlider slider1 = learningRateSliders.get(t._1);
-                            return slider1 != null ? t.setV2((float) VALUES[slider1.getValue()]) : t;
+                            return slider1 != null ? t.setV2((float) ALPHA_VALUES[slider1.getValue()]) : t;
                         })
                         .collect(Tuple2.toMap());
-                learningRatesProcessor.onNext(learningRates);
+                actionAlphasProcessor.onNext(learningRates);
             }
         }
     }
 
     /**
-     * Returns the learning rate flows
+     * Returns the learning alphas flows
      */
-    public Flowable<Map<String, Float>> readLearningRates() {
-        return learningRatesProcessor;
+    public Flowable<Map<String, Float>> readActionAlphas() {
+        return actionAlphasProcessor;
     }
 
     /**
-     * Sets the learning rates
+     * Returns the learning rate flows
+     */
+    public Flowable<Float> readEtas() {
+        return SwingObservable.change(etaSlider).toFlowable(BackpressureStrategy.DROP)
+                .filter(event -> !etaSlider.getValueIsAdjusting())
+                .map(event -> (float) ETA_VALUES[etaSlider.getValue()]);
+    }
+
+    /**
+     * Sets the action alpha hyperparameters
      *
      * @param rates the rates
      */
-    public void setLearningRates(Map<String, Float> rates) {
+    public void setActionAlphas(Map<String, Float> rates) {
         this.learningRates = rates;
         this.learningRateSliders = Tuple2.stream(rates)
                 .map(t -> {
                     String key = t._1;
-                    JSlider slider = createSlider();
-                    slider.setValue(indexOf(t._2));
+                    JSlider slider = createSlider(ALPHA_VALUES, ALPHA_LABELS);
+                    slider.setValue(indexOf(t._2, ALPHA_VALUES));
                     slider.setBorder(BorderFactory.createTitledBorder(
                             Messages.getStringOpt("LearnPanel." + key + ".label").orElse(key)
                     ));
-                    slider.addChangeListener(this::handleSlider);
+                    slider.addChangeListener(this::handleAlphaSliders);
                     return t.setV2(slider);
                 })
                 .collect(Tuple2.toMap());
         GridLayoutHelper<LearnPanel> layoutBuilder = new GridLayoutHelper<>(this)
                 .modify("insets,15,5 fill weight,1,1 center")
-                .at(0, 0).add(learningRateSliders.get("critic"));
+                .at(0, 0).add(etaSlider);
         List<String> actions = this.learningRateSliders.keySet().stream()
-                .filter(Predicate.not("critic"::equals))
                 .sorted()
                 .toList();
         for (int i = 0; i < actions.size(); i++) {
@@ -197,5 +235,12 @@ public class LearnPanel extends JPanel {
         doLayout();
     }
 
-
+    /**
+     * Sets the learning rate hyperparameter
+     *
+     * @param eta the learning rate hyperparameter
+     */
+    public void setEta(float eta) {
+        etaSlider.setValue(indexOf(eta, ETA_VALUES));
+    }
 }

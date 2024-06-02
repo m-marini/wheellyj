@@ -164,6 +164,15 @@ public class BatchTrainer {
     }
 
     /**
+     * Set the learning rate hyperparameter
+     *
+     * @param eta learning rate hyperparameter
+     */
+    public void eta(float eta) {
+        this.agent.eta(eta);
+    }
+
+    /**
      * Send an info message
      *
      * @param fmt  the format

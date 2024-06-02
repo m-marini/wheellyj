@@ -51,16 +51,17 @@ class TDAgentSingleNNActObsTest {
     );
     public static final float LAMBDA = 0.5f;
 
+    public static final float ETA = 1e-3f;
+
     static TDAgentSingleNN createAgent() {
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(AGENT_SEED);
         TDNetwork network = createNetwork(random);
         Map<String, Float> alphas = Map.of(
-                "critic", 1e-3f,
                 "output.a", 3e-3f,
                 "output.b", 10e-3f
         );
         return TDAgentSingleNN.create(STATE_SPEC, ACTIONS_SPEC,
-                0, REWARD_ALPHA, alphas, LAMBDA,
+                0, REWARD_ALPHA, ETA, alphas, LAMBDA,
                 1, 1, 1, network, null,
                 random, null, Integer.MAX_VALUE);
     }

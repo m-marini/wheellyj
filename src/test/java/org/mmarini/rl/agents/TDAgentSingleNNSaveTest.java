@@ -108,6 +108,8 @@ class TDAgentSingleNNSaveTest {
               dropOut: 1
             """;
 
+    public static final float ETA = 1e-3f;
+
     static TDAgentSingleNN createAgent() throws IOException {
         JsonNode networkSpec = Utils.fromText(NETWORK_YAML);
         Random random = Nd4j.getRandom();
@@ -125,12 +127,11 @@ class TDAgentSingleNNSaveTest {
         TDNetwork network = TDNetwork.fromJson(networkSpec, Locator.root(), params, random);
 
         Map<String, Float> alphas = Map.of(
-                "critic", 1e-3f,
                 "output.a", 3e-3f,
                 "output.b", 10e-3f
         );
         return TDAgentSingleNN.create(STATE_SPEC, ACTIONS_SPEC,
-                0, REWARD_ALPHA, alphas, LAMBDA,
+                0, REWARD_ALPHA, ETA, alphas, LAMBDA,
                 1, 1, 32, network, null,
                 random, null, Integer.MAX_VALUE);
     }

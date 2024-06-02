@@ -50,8 +50,8 @@ class TDAgentSingleNNCreateTest {
             $schema: https://mmarini.org/wheelly/tdagent-spec-schema-0.1
             class: org.mmarini.rl.agents.TDAgentSingleNN
             rewardAlpha: 0.001
+            eta: 1e-3
             alphas:
-              critic: 1e-3
               output: 3e-3
             lambda: 0.5
             numSteps: 128
@@ -102,8 +102,8 @@ class TDAgentSingleNNCreateTest {
             $schema: https://mmarini.org/wheelly/tdagent-spec-schema-0.1
             class: org.mmarini.rl.agents.TDAgentSingleNN
             rewardAlpha: 0.001
-            alphas:
-              critic: 1e-3
+            eta: 1e-3
+            alphas: { }
             lambda: 0.5
             state:
               input:
@@ -150,8 +150,8 @@ class TDAgentSingleNNCreateTest {
             $schema: https://mmarini.org/wheelly/tdagent-spec-schema-0.1
             class: org.mmarini.rl.agents.TDAgentSingleNN
             rewardAlpha: 0.001
+            eta: 1e-3
             alphas:
-              critic: 1e-3
               output: 3e-3
             lambda: 0.5
             state:
@@ -204,8 +204,8 @@ class TDAgentSingleNNCreateTest {
             $schema: https://mmarini.org/wheelly/tdagent-spec-schema-0.1
             class: org.mmarini.rl.agents.TDAgentSingleNN
             rewardAlpha: 0.001
+            eta: 1e-3
             alphas:
-              critic: 1e-3
               output: 3e-3
             lambda: 0.5
             state:
@@ -308,7 +308,7 @@ class TDAgentSingleNNCreateTest {
         TDAgentSingleNN agent = TDAgentSingleNN.fromJson(spec, Locator.root(), props, null, Integer.MAX_VALUE, random);
         assertEquals(0.001f, agent.rewardAlpha());
         assertEquals(0f, agent.avgReward());
-        assertEquals(1e-3f, agent.alphas().get("critic"));
+        assertEquals(1e-3f, agent.eta());
         assertEquals(3e-3f, agent.alphas().get("output"));
         assertEquals(0.5f, agent.lambda());
 
@@ -318,11 +318,14 @@ class TDAgentSingleNNCreateTest {
         assertTrue(json.path("numSteps").isInt());
         assertTrue(json.path("numEpochs").isInt());
         assertTrue(json.path("batchSize").isInt());
+        assertTrue(json.path("eta").isNumber());
+
         assertEquals(TDAgentSingleNN.SPEC_SCHEMA_NAME, json.path("$schema").asText());
         assertEquals(TDAgentSingleNN.class.getCanonicalName(), json.path("class").asText());
         assertEquals(128, json.path("numSteps").asInt());
         assertEquals(10, json.path("numEpochs").asInt());
         assertEquals(16, json.path("batchSize").asInt());
+        assertEquals((float) 1e-3, (float) json.path("eta").asDouble());
     }
 
     @Test
@@ -340,7 +343,7 @@ class TDAgentSingleNNCreateTest {
         TDAgentSingleNN agent = TDAgentSingleNN.fromJson(spec, Locator.root(), props, null, Integer.MAX_VALUE, random);
         assertEquals(0.001f, agent.rewardAlpha());
         assertEquals(0.2f, agent.avgReward());
-        assertEquals(1e-3f, agent.alphas().get("critic"));
+        assertEquals(1e-3f, agent.eta());
         assertEquals(3e-3f, agent.alphas().get("output"));
         assertEquals(0.5f, agent.lambda());
         assertThat(agent.network().state().getBias("layer1"),

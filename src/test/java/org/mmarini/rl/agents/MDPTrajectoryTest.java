@@ -48,6 +48,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 class MDPTrajectoryTest {
     public static final long AGENT_SEED = 1234L;
     public static final float LAMBDA = 0F;
+    public static final float ETA = 10e-3f;
 
     /**
      * Returns the agent
@@ -80,11 +81,10 @@ class MDPTrajectoryTest {
         TDNetwork network = TDNetwork.create(layers, sizes, random);
 
         Map<String, Float> alphas = Map.of(
-                "critic", 10e-3f,
                 "action", 10e-3f
         );
         return TDAgentSingleNN.create(mdp.signalSpec(), mdp.actionSpec(),
-                0, rewardAlpha, alphas, LAMBDA,
+                0, rewardAlpha, ETA, alphas, LAMBDA,
                 numSteps, numEpochs, batchSize, network, null,
                 random, null, Integer.MAX_VALUE);
     }
