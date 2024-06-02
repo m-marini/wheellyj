@@ -77,6 +77,7 @@ class TDAgentSingleNNBatchTest {
         );
         return TDNetwork.create(layers, sizes, random);
     }
+
     Map<String, INDArray> s0;
     Map<String, INDArray> sTest;
     Map<String, INDArray> masks;

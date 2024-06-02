@@ -48,9 +48,8 @@ class PPOAgentTrainTrajectoryTest {
     public static final Map<String, SignalSpec> ACTIONS_SPEC0 = Map.of(
             "output", new IntSignalSpec(new long[]{1}, 2));
     public static final float LAMBDA = 0.5f;
-    private static final float PPO_EPSILON = 0.2f;
-
     public static final float ETA = 1e-3f;
+    private static final float PPO_EPSILON = 0.2f;
 
     static PPOAgent createAgent0(int numSteps, int numEpochs, int batchSize) {
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(AGENT_SEED);

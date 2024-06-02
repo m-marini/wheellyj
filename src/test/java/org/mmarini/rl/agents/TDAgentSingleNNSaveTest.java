@@ -54,6 +54,7 @@ class TDAgentSingleNNSaveTest {
             "output.b", new IntSignalSpec(new long[]{1}, 2)
     );
     public static final float LAMBDA = 0.5f;
+    public static final float ETA = 1e-3f;
     private static final String NETWORK_YAML = """
             ---
             $schema: https://mmarini.org/wheelly/network-schema-0.2
@@ -107,8 +108,6 @@ class TDAgentSingleNNSaveTest {
               maxAbsWeights: 100
               dropOut: 1
             """;
-
-    public static final float ETA = 1e-3f;
 
     static TDAgentSingleNN createAgent() throws IOException {
         JsonNode networkSpec = Utils.fromText(NETWORK_YAML);
