@@ -46,12 +46,13 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
-import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 import static org.mmarini.wheelly.TestFunctions.matrixShape;
 
 class KpisMDPTrajectoryTest {
     public static final long AGENT_SEED = 1234L;
     public static final float LAMBDA = 0F;
+
+    public static final float ETA = 1e-3f;
 
     /**
      * Returns the agent
@@ -88,7 +89,7 @@ class KpisMDPTrajectoryTest {
                 "action", 10e-3f
         );
         return TDAgentSingleNN.create(mdp.signalSpec(), mdp.actionSpec(),
-                0, rewardAlpha, alphas, LAMBDA,
+                0, rewardAlpha, ETA, alphas, LAMBDA,
                 numSteps, numEpochs, batchSize, network, null,
                 random, null, Integer.MAX_VALUE);
     }
@@ -139,12 +140,13 @@ class KpisMDPTrajectoryTest {
         // When train
         agent.trainByTrajectory(trajectory);
 
-        // Then the flowable should be subscribed, not completed, no errors and should generate (1 for batch, 2 for mini-batch)
+        // Then the flowable should be subscribed, not completed, no errors and should generate (2 for mini-batch)
         sub.assertSubscribed();
         sub.assertNotComplete();
         sub.assertNoErrors();
-        sub.assertValueCount(3);
+        sub.assertValueCount(2);
         // And first kpis must be the s0, action, reward kpis
+        /*
         Map<String, INDArray> kpis = sub.values().getFirst();
         assertThat(kpis, hasEntry(
                 equalTo("s0.input"),
@@ -157,9 +159,9 @@ class KpisMDPTrajectoryTest {
                 equalTo("actions.action"),
                 matrixCloseTo(expActions.get("action"), 1e-3)
         ));
-
+*/
         // And the second kpis shoud be the first  mini batch kpis
-        kpis = sub.values().get(1);
+        Map<String, INDArray> kpis = sub.values().getFirst();
         assertThat(kpis, hasEntry(
                 equalTo("trainingLayers.critic.values"),
                 matrixShape(4, 1)
@@ -205,7 +207,7 @@ class KpisMDPTrajectoryTest {
                 matrixShape(4, 2)
         ));
 
-        kpis = sub.values().get(2);
+        kpis = sub.values().get(1);
         assertThat(kpis, hasEntry(
                 equalTo("trainingLayers.critic.values"),
                 matrixShape(4, 1)
@@ -295,11 +297,12 @@ class KpisMDPTrajectoryTest {
         // When train
         agent.trainByTrajectory(trajectory);
 
-        // Then the flowable should be subscribed, not completed, no errors and should generate (1 for batch, 2 for mini-batch)
+        // Then the flowable should be subscribed, not completed, no errors and should generate (1 for batch, 1 for mini-batch)
+        // trajectory size / minibtahc size
         sub.assertSubscribed();
         sub.assertNotComplete();
         sub.assertNoErrors();
-        sub.assertValueCount(4);
+        sub.assertValueCount(2);
 
         // And the first kpis shoud be the first mini batch kpis
         Map<String, INDArray> kpis = sub.values().getFirst();

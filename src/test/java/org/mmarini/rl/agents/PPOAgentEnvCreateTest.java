@@ -50,9 +50,9 @@ class PPOAgentEnvCreateTest {
             numSteps: 2048
             numEpochs: 1
             batchSize: 32
+            eta: 1e-3
             alphas:
-              critic: 1e.3
-              output: 1e.3
+              output: 1
             lambda: 0.5
             ppoEpsilon: 0.2
             network:

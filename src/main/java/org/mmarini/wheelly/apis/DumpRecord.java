@@ -54,7 +54,7 @@ public interface DumpRecord {
         Instant timestamp = Instant.ofEpochMilli(Long.parseLong(matcher.group(1)));
         String dir = matcher.group(2);
         String data = matcher.group(3);
-        if (">" .equals(dir)) {
+        if (">".equals(dir)) {
             return new WriteDumpRecord(timestamp, data);
         }
         return WheellyMessage.fromLine(new Timed<>(data, timestamp.toEpochMilli(), TimeUnit.MILLISECONDS), ClockConverter.identity())

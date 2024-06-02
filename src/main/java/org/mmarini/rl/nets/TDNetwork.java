@@ -365,19 +365,19 @@ public class TDNetwork {
      * Returns the trained network
      *
      * @param grad        the network output gradient
-     * @param delta       the delta parameter (error scaled by alpha factor)
+     * @param deltaEta    the delta eta parameter
      * @param lambda      the TD lambda factor
      * @param kpiCallback call bak function for kpi
      */
     public TDNetwork train(Map<String, INDArray> grad, INDArray
-            delta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
+            deltaEta, float lambda, Consumer<Tuple2<String, INDArray>> kpiCallback) {
         TDNetworkState newState = state.deepDup().removeGradients();
         for (Map.Entry<String, INDArray> entry : grad.entrySet()) {
             newState = newState.addGradients(entry.getKey(), entry.getValue());
         }
         for (String id : backwardSeq) {
             TDLayer node = layers.get(id);
-            newState = node.train(newState, delta, lambda, kpiCallback);
+            newState = node.train(newState, deltaEta, lambda, kpiCallback);
         }
         return state(newState);
     }

@@ -291,7 +291,8 @@ public class BatchTraining {
 
         // Create the batch trainer
         this.trainer = BatchTrainer.create(agent, this::saveNetwork);
-        learnPanel.setLearningRates(agent.alphas());
+        learnPanel.setActionAlphas(agent.alphas());
+        learnPanel.setEta(agent.eta());
         trainer.readInfo()
                 .observeOn(Schedulers.io())
                 .doOnNext(this::info)
@@ -305,8 +306,11 @@ public class BatchTraining {
                 .map(Number::intValue)
                 .doOnNext(recordBar::setValue)
                 .subscribe();
-        learnPanel.readLearningRates()
+        learnPanel.readActionAlphas()
                 .doOnNext(rates -> trainer.alphas(rates))
+                .subscribe();
+        learnPanel.readEtas()
+                .doOnNext(eta -> trainer.eta(eta))
                 .subscribe();
 
         Thread hook = new Thread(this::handleShutdown);

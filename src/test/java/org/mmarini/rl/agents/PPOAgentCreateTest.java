@@ -50,9 +50,9 @@ class PPOAgentCreateTest {
             $schema: https://mmarini.org/wheelly/ppo-agent-spec-schema-0.1
             class: org.mmarini.rl.agents.PPOAgent
             rewardAlpha: 0.001
+            eta: 1e-3
             alphas:
-              critic: 1e-3
-              output: 3e-3
+              output: 3
             lambda: 0.5
             ppoEpsilon: 0.2
             numSteps: 128
@@ -103,8 +103,8 @@ class PPOAgentCreateTest {
             $schema: https://mmarini.org/wheelly/ppo-agent-spec-schema-0.1
             class: org.mmarini.rl.agents.PPOAgent
             rewardAlpha: 0.001
-            alphas:
-              critic: 1e-3
+            eta: 1e-3
+            alphas: { }
             lambda: 0.5
             ppoEpsilon: 0.2
             state:
@@ -146,8 +146,8 @@ class PPOAgentCreateTest {
             $schema: https://mmarini.org/wheelly/ppo-agent-spec-schema-0.1
             class: org.mmarini.rl.agents.PPOAgent
             rewardAlpha: 0.001
+            eta: 1e-3
             alphas:
-              critic: 1e-3
               output: 3e-3
             lambda: 0.5
             ppoEpsilon: 0.2
@@ -201,8 +201,8 @@ class PPOAgentCreateTest {
             $schema: https://mmarini.org/wheelly/ppo-agent-spec-schema-0.1
             class: org.mmarini.rl.agents.PPOAgent
             rewardAlpha: 0.001
+            eta: 1e-3
             alphas:
-              critic: 1e-3
               output: 3e-3
             lambda: 0.5
             ppoEpsilon: 0.2
@@ -306,8 +306,8 @@ class PPOAgentCreateTest {
         PPOAgent agent = PPOAgent.fromJson(spec, Locator.root(), props, null, Integer.MAX_VALUE, random);
         assertEquals(0.001f, agent.rewardAlpha());
         assertEquals(0f, agent.avgReward());
-        assertEquals(1e-3f, agent.alphas().get("critic"));
-        assertEquals(3e-3f, agent.alphas().get("output"));
+        assertEquals(1e-3f, agent.eta());
+        assertEquals(3f, agent.alphas().get("output"));
         assertEquals(0.5f, agent.lambda());
 
         JsonNode json = agent.json();
@@ -316,6 +316,7 @@ class PPOAgentCreateTest {
         assertTrue(json.path("numEpochs").isInt());
         assertTrue(json.path("batchSize").isInt());
         assertTrue(json.path("ppoEpsilon").isNumber());
+        assertTrue(json.path("eta").isNumber());
 
         assertEquals(PPOAgent.SPEC_SCHEMA_NAME, json.path("$schema").asText());
         assertEquals(PPOAgent.class.getCanonicalName(), json.path("class").asText());
@@ -323,6 +324,7 @@ class PPOAgentCreateTest {
         assertEquals(10, json.path("numEpochs").asInt());
         assertEquals(16, json.path("batchSize").asInt());
         assertEquals(0.2f, (float) json.path("ppoEpsilon").asDouble());
+        assertEquals(1e-3f, (float) json.path("eta").asDouble());
     }
 
     @Test
@@ -340,8 +342,8 @@ class PPOAgentCreateTest {
         PPOAgent agent = PPOAgent.fromJson(spec, Locator.root(), props, null, Integer.MAX_VALUE, random);
         assertEquals(0.001f, agent.rewardAlpha());
         assertEquals(0.2f, agent.avgReward());
-        assertEquals(1e-3f, agent.alphas().get("critic"));
-        assertEquals(3e-3f, agent.alphas().get("output"));
+        assertEquals(1e-3f, agent.eta());
+        assertEquals(3f, agent.alphas().get("output"));
         assertEquals(0.5f, agent.lambda());
         assertThat(agent.network().state().getBias("layer1"),
                 matrixCloseTo(new float[][]{

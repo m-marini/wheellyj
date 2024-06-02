@@ -16,15 +16,12 @@ properties:
     minimum: 1
   rewardAlpha:
     exclusiveMinimum: 0
+  eta:
+    minimum: 0
   alphas:
     type: object
-    properties:
-      critic:
-        minimum: 0
     additionalProperties:
       minimum: 0
-    required:
-      - critic
   lambda:
     minimum: 0
   numSteps:
@@ -44,6 +41,7 @@ required:
   - $schema
   - class
   - rewardAlpha
+  - eta
   - alphas
   - lambda
   - network

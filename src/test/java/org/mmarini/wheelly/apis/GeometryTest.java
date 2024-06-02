@@ -288,16 +288,16 @@ class GeometryTest {
     void horizontalIntersectTest(double xq, double yq, double y, double alpha, double dAlpha, String xl, String xr) {
         double[] result = Geometry.horizontalArcIntersect(new Point2D.Double(xq, yq), y,
                 Complex.fromDeg(alpha), Complex.fromDeg(dAlpha));
-        if ("inf" .equals(xl)) {
+        if ("inf".equals(xl)) {
             assertEquals(Double.POSITIVE_INFINITY, result[0]);
-        } else if ("-inf" .equals(xl)) {
+        } else if ("-inf".equals(xl)) {
             assertEquals(Double.NEGATIVE_INFINITY, result[0]);
         } else {
             assertThat(result[0], closeTo(Double.parseDouble(xl), 1e-3));
         }
-        if ("inf" .equals(xr)) {
+        if ("inf".equals(xr)) {
             assertEquals(Double.POSITIVE_INFINITY, result[1]);
-        } else if ("-inf" .equals(xr)) {
+        } else if ("-inf".equals(xr)) {
             assertEquals(Double.NEGATIVE_INFINITY, result[1]);
         } else {
             assertThat(result[1], closeTo(Double.parseDouble(xr), 1e-3));
@@ -450,16 +450,16 @@ class GeometryTest {
     void verticalIntersectTest(double xq, double yq, double x, double alpha, double dAlpha, String yr, String yf) {
         double[] result = Geometry.verticalArcIntersect(new Point2D.Double(xq, yq), x,
                 Complex.fromDeg(alpha), Complex.fromDeg(dAlpha));
-        if ("inf" .equals(yr)) {
+        if ("inf".equals(yr)) {
             assertEquals(Double.POSITIVE_INFINITY, result[0]);
-        } else if ("-inf" .equals(yr)) {
+        } else if ("-inf".equals(yr)) {
             assertEquals(Double.NEGATIVE_INFINITY, result[0]);
         } else {
             assertThat(result[0], closeTo(Double.parseDouble(yr), 1e-3));
         }
-        if ("inf" .equals(yf)) {
+        if ("inf".equals(yf)) {
             assertEquals(Double.POSITIVE_INFINITY, result[1]);
-        } else if ("-inf" .equals(yf)) {
+        } else if ("-inf".equals(yf)) {
             assertEquals(Double.NEGATIVE_INFINITY, result[1]);
         } else {
             assertThat(result[1], closeTo(Double.parseDouble(yf), 1e-3));

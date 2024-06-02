@@ -42,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class TDAgentSingleNNEnvCreateTest {
     private static final String YAML = """
             ---
-            $schema: https://mmarini.org/wheelly/agent-single-nn-schema-0.3
+            $schema: https://mmarini.org/wheelly/agent-single-nn-schema-0.4
             class: org.mmarini.rl.agents.TDAgentSingleNN
             modelPath: models/test
             seed: 1234
@@ -50,9 +50,9 @@ class TDAgentSingleNNEnvCreateTest {
             numSteps: 2048
             numEpochs: 1
             batchSize: 32
+            eta: 1e-3
             alphas:
-              critic: 1e.3
-              output: 1e.3
+              output: 1
             lambda: 0.5
             network:
               output:

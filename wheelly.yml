@@ -100,11 +100,11 @@ agents:
     numSteps: 256
     numEpochs: 2
     batchSize: 32
+    eta: 1e-3
     alphas:
-      critic: 1e-3
-      sensorAction: 10e-6
-      speed: 10e-6
-      direction: 10e-6
+      sensorAction: 30e-3
+      speed: 300e-3
+      direction: 30e-3
     lambda: 0.5
     inputProcess:
       - name: emptySectors

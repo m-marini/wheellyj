@@ -46,6 +46,7 @@ class TDAgentSingleNNTrainKpiTest {
     public static final Map<String, SignalSpec> ACTIONS_SPEC = Map.of("output", new IntSignalSpec(new long[]{1}, 3));
     public static final int NUM_EPISODES = 100;
     public static final float LAMBDA = 0f;
+    public static final float ETA = 1e-3f;
 
     static TDAgentSingleNN createAgent() {
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(AGENT_SEED);
@@ -55,7 +56,7 @@ class TDAgentSingleNNTrainKpiTest {
                 "output", 3e-3f
         );
         return TDAgentSingleNN.create(STATE_SPEC, ACTIONS_SPEC,
-                1f, REWARD_ALPHA, alphas, LAMBDA,
+                1f, REWARD_ALPHA, ETA, alphas, LAMBDA,
                 1, 1, 32, network, null,
                 random, null, Integer.MAX_VALUE);
     }

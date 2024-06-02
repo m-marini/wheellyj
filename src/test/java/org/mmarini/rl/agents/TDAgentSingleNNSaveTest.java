@@ -54,6 +54,7 @@ class TDAgentSingleNNSaveTest {
             "output.b", new IntSignalSpec(new long[]{1}, 2)
     );
     public static final float LAMBDA = 0.5f;
+    public static final float ETA = 1e-3f;
     private static final String NETWORK_YAML = """
             ---
             $schema: https://mmarini.org/wheelly/network-schema-0.2
@@ -125,12 +126,11 @@ class TDAgentSingleNNSaveTest {
         TDNetwork network = TDNetwork.fromJson(networkSpec, Locator.root(), params, random);
 
         Map<String, Float> alphas = Map.of(
-                "critic", 1e-3f,
                 "output.a", 3e-3f,
                 "output.b", 10e-3f
         );
         return TDAgentSingleNN.create(STATE_SPEC, ACTIONS_SPEC,
-                0, REWARD_ALPHA, alphas, LAMBDA,
+                0, REWARD_ALPHA, ETA, alphas, LAMBDA,
                 1, 1, 32, network, null,
                 random, null, Integer.MAX_VALUE);
     }
