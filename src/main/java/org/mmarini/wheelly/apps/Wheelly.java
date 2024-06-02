@@ -39,7 +39,6 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.rl.agents.AbstractAgentNN;
 import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.KpiBinWriter;
-import org.mmarini.rl.agents.TDAgentSingleNN;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.swing.GridLayoutHelper;
@@ -216,7 +215,7 @@ public class Wheelly {
 
         learnPanel.readLearningRates()
                 .doOnNext(t -> agent.updateAndGet(ag ->
-                        ag.agent(((TDAgentSingleNN) ag.agent()).alphas(t))))
+                        ag.agent(((AbstractAgentNN) ag.agent()).alphas(t))))
                 .subscribe();
         Observable<WindowEvent>[] windowObs = allFrames.stream()
                 .map(f -> SwingObservable.window(f, SwingObservable.WINDOW_ACTIVE))
@@ -626,7 +625,7 @@ public class Wheelly {
             throw new IllegalArgumentException(format("Missing node %s", agentLocator));
         }
         Agent agent = Agent.fromConfig(config, agentLocator, environment);
-        if (agent instanceof TDAgentSingleNN tdAgent) {
+        if (agent instanceof AbstractAgentNN tdAgent) {
             agent = tdAgent.setPostTrainKpis(true);
         }
         this.agent = new AtomicReference<>(new AgentTraining(agent, false, false));
