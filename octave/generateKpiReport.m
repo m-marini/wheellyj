@@ -127,5 +127,7 @@ function generateKpiReport(hFile, dataPath, reportPath, id, kpiTitle, mode, vert
     endif
     file = [reportPath "/" histFile];
     print(file, "-dpng", "-S1200,800");
+  else
+    disp(["File " dataPath "/stats/data.csv not found"]);
   endif
 endfunction

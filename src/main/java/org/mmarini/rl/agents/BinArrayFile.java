@@ -175,11 +175,7 @@ public class BinArrayFile implements ArrayWriter, ArrayReader {
         }
     }
 
-    /**
-     * Returns the file position (# records)
-     *
-     * @throws IOException in case of error
-     */
+    @Override
     public long position() throws IOException {
         open();
         if (shape == null) {
@@ -263,11 +259,7 @@ public class BinArrayFile implements ArrayWriter, ArrayReader {
         return shape;
     }
 
-    /**
-     * Returns the number of records
-     *
-     * @throws IOException in case of error
-     */
+    @Override
     public long size() throws IOException {
         open();
         if (shape == null) {

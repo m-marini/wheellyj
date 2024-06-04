@@ -17,4 +17,6 @@ docs/sonar-map.dxf~
 /tmp/**/*
 /reports/**/*
 /report/**/*
+/test/**/*
+/csv/**/*
 /kpis/*

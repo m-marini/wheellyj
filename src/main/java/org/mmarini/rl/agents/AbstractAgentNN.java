@@ -29,7 +29,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
-import org.mmarini.Tuple2;
+import org.mmarini.MapStream;
 import org.mmarini.rl.envs.*;
 import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.rl.nets.TDNetworkState;
@@ -87,9 +87,10 @@ public abstract class AbstractAgentNN implements Agent {
      * @param random the random number generator
      */
     static Map<String, Signal> chooseActions(Map<String, INDArray> pis, Random random) {
-        return Tuple2.stream(pis)
-                .map(t -> t.setV2((Signal) IntSignal.create(chooseAction(t._2, random))))
-                .collect(Tuple2.toMap());
+        return MapStream.of(pis)
+                .mapValues(value ->
+                        (Signal) IntSignal.create(chooseAction(value, random)))
+                .toMap();
     }
 
     /**
@@ -98,22 +99,22 @@ public abstract class AbstractAgentNN implements Agent {
      * @param actions the action spec
      */
     static Map<String, Long> getActionSizes(Map<String, SignalSpec> actions) {
-        return Tuple2.stream(actions)
-                .map(t -> {
-                    if (!(t._2 instanceof IntSignalSpec)) {
-                        throw new IllegalArgumentException(format("Action \"%s\" must be %s (%s)",
-                                t._1,
-                                IntSignalSpec.class.getSimpleName(),
-                                t._2.getClass().getSimpleName()));
+        return MapStream.of(actions)
+                .mapValues((key, value) -> {
+                    if (value instanceof IntSignalSpec intSignalSpec) {
+                        long[] shape = intSignalSpec.shape();
+                        if (!(shape.length == DEFAULT_NUM_EPOCHS && shape[0] == DEFAULT_NUM_EPOCHS)) {
+                            throw new IllegalArgumentException(format("Shape of action \"%s\" must be [1] (%s)",
+                                    key, Arrays.toString(shape)));
+                        }
+                        return (long) intSignalSpec.numValues();
                     }
-                    long[] shape = t._2.shape();
-                    if (!(shape.length == DEFAULT_NUM_EPOCHS && shape[0] == DEFAULT_NUM_EPOCHS)) {
-                        throw new IllegalArgumentException(format("Shape of action \"%s\" must be [1] (%s)",
-                                t._1, Arrays.toString(shape)));
-                    }
-                    return t.setV2((long) ((IntSignalSpec) t._2).numValues());
+                    throw new IllegalArgumentException(format("Action \"%s\" must be %s (%s)",
+                            key,
+                            IntSignalSpec.class.getSimpleName(),
+                            value.getClass().getSimpleName()));
                 })
-                .collect(Tuple2.toMap());
+                .toMap();
     }
 
     /**
@@ -122,17 +123,17 @@ public abstract class AbstractAgentNN implements Agent {
      * @param state the state signals
      */
     static Map<String, INDArray> getInput(Map<String, Signal> state) {
-        return Tuple2.stream(state)
-                .map(t -> {
-                    INDArray value = Nd4j.toFlattened(t._2.toINDArray());
+        return MapStream.of(state)
+                .mapValues(v -> {
+                    INDArray value = Nd4j.toFlattened(v.toINDArray());
                     // Reshape value
                     long[] shape = value.shape();
                     long[] newShape = new long[shape.length + DEFAULT_NUM_EPOCHS];
                     newShape[0] = DEFAULT_NUM_EPOCHS;
                     System.arraycopy(shape, 0, newShape, DEFAULT_NUM_EPOCHS, shape.length);
-                    return t.setV2(value.reshape(newShape));
+                    return value.reshape(newShape);
                 })
-                .collect(Tuple2.toMap());
+                .toMap();
     }
 
     /**
@@ -141,13 +142,14 @@ public abstract class AbstractAgentNN implements Agent {
      * @param state the signal spec
      */
     static Map<String, Long> getStateSizes(Map<String, SignalSpec> state) {
-        return Tuple2.stream(state)
-                .map(t -> {
-                    long[] shape = t._2.shape();
-                    long size = Arrays.stream(shape).reduce((a, b) -> a * b).orElseThrow();
-                    return t.setV2(size);
+        return MapStream.of(state)
+                .mapValues(t -> {
+                    long[] shape = t.shape();
+                    return Arrays.stream(shape)
+                            .reduce((a, b) -> a * b)
+                            .orElseThrow();
                 })
-                .collect(Tuple2.toMap());
+                .toMap();
     }
 
     /**
@@ -394,8 +396,10 @@ public abstract class AbstractAgentNN implements Agent {
         Map<String, INDArray> states = getInput(processSignals(result.state0()));
 
         // Extracts action masks
-        Map<String, INDArray> actions = MapUtils.mapValues(result.actions(), (k, signal) ->
-                signal.toINDArray());
+        Map<String, INDArray> actions = MapStream.of(result.actions())
+                .mapValues(Signal::toINDArray)
+                .mapValues(value -> value.reshape(1, 1))
+                .toMap();
 
         // Extracts rewards
         INDArray rewards = Nd4j.scalar((float) result.reward()).reshape(DEFAULT_NUM_EPOCHS, DEFAULT_NUM_EPOCHS);
@@ -417,9 +421,9 @@ public abstract class AbstractAgentNN implements Agent {
      * @param state the network state
      */
     Map<String, INDArray> policy(TDNetworkState state) {
-        return actions.keySet().stream()
-                .map(key -> Tuple2.of(key, state.getValues(key)))
-                .collect(Tuple2.toMap());
+        return MapStream.of(actions)
+                .mapValues((key, value) -> state.getValues(key))
+                .toMap();
     }
 
     /**
@@ -526,14 +530,14 @@ public abstract class AbstractAgentNN implements Agent {
                 (key, list) -> Nd4j.vstack(list.map(Signal::toINDArray)
                         .toArray(INDArray[]::new)));
         int n = trajectory.size();
-        Map<String, INDArray> actionMasks = MapUtils.mapValues(actions,
-                (key, action) -> {
+        Map<String, INDArray> actionMasks = MapStream.of(actions).mapValues((key, action) -> {
                     INDArray mask = Nd4j.zeros(n, ((IntSignalSpec) this.actions.get(key)).numValues());
                     for (int i = 0; i < n; i++) {
                         mask.putScalar(i, action.getInt(i), 1F);
                     }
                     return mask;
-                });
+                })
+                .toMap();
 
         // Extracts rewards
         INDArray rewards = Nd4j.createFromArray(

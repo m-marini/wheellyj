@@ -10,12 +10,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 - Issue #430: Add PPO alghorithm
+- Issue #437: Report action deltas kpi
 
 ### Changed
 
 - Issue #421: Training on trajectory sampling
 - Issue #423: Manage continuing task only
-- Issue #435: Separeate learning rate from action optimization hyperparm
+- Issue #435: Separate learning rate from action optimization hyperparm
 
 ### Fixed
 

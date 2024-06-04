@@ -27,7 +27,7 @@ package org.mmarini.rl.agents;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Flowable;
-import org.mmarini.Tuple2;
+import org.mmarini.MapStream;
 import org.mmarini.rl.envs.*;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -94,11 +94,13 @@ public class RandomAgent implements Agent {
 
     @Override
     public Map<String, Signal> act(Map<String, Signal> state) {
-        return Tuple2.stream(actions).map(t -> {
-            IntSignalSpec spec = ((IntSignalSpec) t._2);
-            int action = random.nextInt(spec.numValues());
-            return Tuple2.of(t._1, (Signal) IntSignal.create(action));
-        }).collect(Tuple2.toMap());
+        return MapStream.of(actions)
+                .mapValues(value -> {
+                    IntSignalSpec spec = ((IntSignalSpec) value);
+                    int action = random.nextInt(spec.numValues());
+                    return (Signal) IntSignal.create(action);
+                })
+                .toMap();
     }
 
     @Override

@@ -34,7 +34,6 @@ import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.yaml.Locator;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static org.mmarini.yaml.Utils.createObject;
 
@@ -74,8 +73,8 @@ public interface StateNode {
      */
     static List<StateNode> createNodes(JsonNode root, Locator locator) {
         return locator.propertyNames(root)
-                .map(t -> createNode(root, t._2, t._1))
-                .collect(Collectors.toList());
+                .mapToObj((key, value) -> createNode(root, value, key))
+                .toList();
     }
 
     /**

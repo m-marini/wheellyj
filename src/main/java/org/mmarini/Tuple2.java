@@ -6,7 +6,6 @@ import java.util.StringJoiner;
 import java.util.function.Function;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
 
@@ -46,17 +45,6 @@ public class Tuple2<T1, T2> {
      */
     public static <T1, T2> Tuple2<T1, T2> of(T1 v1, T2 v2) {
         return new Tuple2<>(v1, v2);
-    }
-
-    /**
-     * Returns the entries stream of a map
-     *
-     * @param map the map
-     * @param <K> the key type
-     * @param <V> the value type
-     */
-    public static <K, V> Stream<Tuple2<K, V>> stream(Map<K, V> map) {
-        return map.entrySet().stream().map(entry -> new Tuple2<>(entry.getKey(), entry.getValue()));
     }
 
     /**

@@ -28,7 +28,7 @@
 
 package org.mmarini.rl.nets;
 
-import org.mmarini.Tuple2;
+import org.mmarini.MapStream;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
@@ -105,17 +105,17 @@ public class TDNetworkStateImpl implements TDNetworkState {
 
     @Override
     public Map<String, INDArray> filterKeys(Predicate<String> predicate) {
-        return Tuple2.stream(variables)
-                .filter(t -> predicate.test(t.getV1()))
-                .collect(Tuple2.toMap());
+        return MapStream.of(variables)
+                .filterKeys(predicate)
+                .toMap();
     }
 
     @Override
     public Map<String, INDArray> filterKeysAndDup(Predicate<String> predicate) {
-        return Tuple2.stream(variables)
-                .filter(t -> predicate.test(t.getV1()))
-                .map(Tuple2.map2(INDArray::dup))
-                .collect(Tuple2.toMap());
+        return MapStream.of(variables)
+                .filterKeys(predicate)
+                .mapValues(v -> v.dup())
+                .toMap();
     }
 
     @Override

@@ -34,6 +34,7 @@ import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
+import org.mmarini.MapStream;
 import org.mmarini.ParallelProcess;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.agents.BinArrayFile;
@@ -160,7 +161,7 @@ public class MergeKpis {
         for (List<BinArrayFile> files : sources.values()) {
             KeyFileMap.validateShapes(files);
         }
-        List<Action> tasks = Tuple2.stream(sources)
+        List<Action> tasks = MapStream.of(sources).tuples()
                 .<Action>map(t -> () -> merge(t._1, t._2))
                 .toList();
         if (args.getBoolean("parallel")) {
@@ -216,12 +217,13 @@ public class MergeKpis {
         }
         Map<String, List<Tuple2<String, BinArrayFile>>> binFilesByKey = sources.stream()
                 .flatMap(t ->
-                        Tuple2.stream(t._2))
+                        MapStream.of(t._2).tuples())
                 .collect(Collectors.groupingBy(Tuple2::getV1));
-        this.sources = Tuple2.stream(binFilesByKey)
-                .map(t -> t.setV2(t._2.stream()
-                        .map(t1 -> t1._2)
-                        .toList()))
-                .collect(Tuple2.toMap());
+        this.sources = MapStream.of(binFilesByKey)
+                .mapValues(value ->
+                        value.stream()
+                                .map(Tuple2::getV2)
+                                .toList())
+                .toMap();
     }
 }

@@ -31,8 +31,8 @@ import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
+import org.mmarini.MapStream;
 import org.mmarini.ParallelProcess;
-import org.mmarini.Tuple2;
 import org.mmarini.rl.agents.BinArrayFile;
 import org.mmarini.rl.agents.CSVWriter;
 import org.mmarini.rl.agents.KeyFileMap;
@@ -116,7 +116,7 @@ public class ToCsv {
     protected void start() throws Throwable {
         this.destPath = new File(args.getString("destPath"));
         Map<String, BinArrayFile> sources = KeyFileMap.create(new File(args.getString("sourcePath")), "");
-        List<Action> tasks = Tuple2.stream(sources)
+        List<Action> tasks = MapStream.of(sources).tuples()
                 .<Action>map(t -> () -> {
                     CSVWriter output = CSVWriter.createByKey(destPath, t._1);
                     logger.atInfo().log("Converting {} to {} ...",

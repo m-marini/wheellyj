@@ -3,7 +3,6 @@ package org.mmarini.wheelly.apps;
 import io.reactivex.functions.Function3;
 import org.mmarini.rl.agents.ArrayReader;
 import org.mmarini.rl.agents.ArrayWriter;
-import org.mmarini.rl.agents.BinArrayFile;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -89,7 +88,7 @@ public interface Batches {
      * @param reducer   the reducer function
      * @throws IOException in case of error
      */
-    static <T> T reduce(BinArrayFile input, T seed, long batchSize, Function3<T, INDArray, Long, T> reducer) throws Exception {
+    static <T> T reduce(ArrayReader input, T seed, long batchSize, Function3<T, INDArray, Long, T> reducer) throws Exception {
         Monitor monitor = new Monitor();
         try (input) {
             input.seek(0);

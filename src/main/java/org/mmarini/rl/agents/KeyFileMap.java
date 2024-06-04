@@ -28,7 +28,7 @@
 
 package org.mmarini.rl.agents;
 
-import org.mmarini.Tuple2;
+import org.mmarini.MapStream;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
 import java.io.File;
@@ -48,12 +48,12 @@ import static java.lang.String.format;
 public interface KeyFileMap {
 
     static <T> Map<String, T> children(Map<String, T> map, String parent) {
-        return Tuple2.stream(map)
-                .flatMap(t -> {
-                    String key = children(t._1, parent);
-                    return key != null ? Stream.of(t.setV1(key)) : Stream.empty();
+        return MapStream.of(map)
+                .flatMap((key1, value) -> {
+                    String key = children(key1, parent);
+                    return key != null ? Map.of(key, value) : Map.of();
                 })
-                .collect(Tuple2.toMap());
+                .toMap();
     }
 
     /**
@@ -118,7 +118,7 @@ public interface KeyFileMap {
      * @param keys the keys
      */
     static Map<String, BinArrayFile> create(File path, String... keys) {
-        return streamBinArrayFile(path, keys).collect(Tuple2.toMap());
+        return streamBinArrayFile(path, keys).toMap();
     }
 
     /**
@@ -148,16 +148,16 @@ public interface KeyFileMap {
      * @param batchSize the size
      */
     static Map<String, INDArray> read(Map<String, BinArrayFile> files, long batchSize) {
-        Map<String, INDArray> result = Tuple2.stream(files)
-                .flatMap(t -> {
+        Map<String, INDArray> result = MapStream.of(files)
+                .flatMap((key, value) -> {
                     try {
-                        INDArray data = t._2.read(batchSize);
-                        return data != null ? Stream.of(t.setV2(data)) : Stream.empty();
+                        INDArray data = value.read(batchSize);
+                        return data != null ? Map.of(key, data) : Map.of();
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
                 })
-                .collect(Tuple2.toMap());
+                .toMap();
         return result.size() == files.size() ? result : null;
     }
 
@@ -181,13 +181,11 @@ public interface KeyFileMap {
      * @param path   the path
      * @param filter the filter
      */
-    static Stream<Tuple2<String, File>> stream(File path, Predicate<String> filter) {
+    static MapStream<String, File> stream(File path, Predicate<String> filter) {
         return streamFolders(path)
-                .filter(t ->
-                        filter.test(t._1))
-                .map(Tuple2.map2(t -> new File(t, "data.bin")))
-                .filter(t ->
-                        t._2.isFile() && t._2.canRead());
+                .filterKeys(filter)
+                .mapValues(path1 -> new File(path1, "data.bin"))
+                .filterValues(file -> file.isFile() && file.canRead());
     }
 
     /**
@@ -196,7 +194,7 @@ public interface KeyFileMap {
      * @param path the base path
      * @param keys the keys
      */
-    static Stream<Tuple2<String, File>> stream(File path, String... keys) {
+    static MapStream<String, File> stream(File path, String... keys) {
         return stream(path, matchesKey(keys));
     }
 
@@ -206,8 +204,8 @@ public interface KeyFileMap {
      * @param path the path
      * @param keys the keys
      */
-    static Stream<Tuple2<String, BinArrayFile>> streamBinArrayFile(File path, String... keys) {
-        return stream(path, keys).map(Tuple2.map2(BinArrayFile::new));
+    static MapStream<String, BinArrayFile> streamBinArrayFile(File path, String... keys) {
+        return stream(path, keys).mapValues(file -> new BinArrayFile(file));
     }
 
     /**
@@ -217,7 +215,7 @@ public interface KeyFileMap {
      * @param path   the path to traverse
      * @param prefix the key prefix
      */
-    private static Stream.Builder<Tuple2<String, File>> streamFolders(Stream.Builder<Tuple2<String, File>> acc, File path, String prefix) {
+    private static Stream.Builder<Map.Entry<String, File>> streamFolders(Stream.Builder<Map.Entry<String, File>> acc, File path, String prefix) {
         File[] paths = path.listFiles(File::isDirectory);
         if (paths != null) {
             for (File file : paths) {
@@ -226,7 +224,7 @@ public interface KeyFileMap {
                                 ? file.getName()
                                 : prefix + "." + file.getName());
             }
-            acc.add(Tuple2.of(prefix, path));
+            acc.add(Map.entry(prefix, path));
         }
         return acc;
     }
@@ -236,8 +234,8 @@ public interface KeyFileMap {
      *
      * @param path the path to traverse
      */
-    private static Stream<Tuple2<String, File>> streamFolders(File path) {
-        return streamFolders(Stream.builder(), path, "").build();
+    private static MapStream<String, File> streamFolders(File path) {
+        return new MapStream<>(streamFolders(Stream.builder(), path, "").build());
     }
 
     /**

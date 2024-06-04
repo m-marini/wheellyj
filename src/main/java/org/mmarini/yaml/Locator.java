@@ -30,6 +30,7 @@ package org.mmarini.yaml;
 
 import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.MapStream;
 import org.mmarini.Tuple2;
 
 import java.util.stream.IntStream;
@@ -62,10 +63,10 @@ public class Locator {
         this.pointer = requireNonNull(pointer);
     }
 
-    public Stream<Tuple2<Integer, Locator>> elementIndices(JsonNode root) {
+    public MapStream<Integer, Locator> elementIndices(JsonNode root) {
         requireNonNull(root);
-        return IntStream.range(0, getNode(root).size())
-                .mapToObj(idx -> Tuple2.of(idx, path(String.valueOf(idx))));
+        return MapStream.fromTuple2Stream(IntStream.range(0, getNode(root).size())
+                .mapToObj(idx -> Tuple2.of(idx, path(String.valueOf(idx)))));
     }
 
     /**
@@ -149,11 +150,11 @@ public class Locator {
      *
      * @param root the root element
      */
-    public Stream<Tuple2<String, Locator>> propertyNames(JsonNode root) {
+    public MapStream<String, Locator> propertyNames(JsonNode root) {
         requireNonNull(root);
-        return stream(getNode(root).fieldNames())
+        return MapStream.fromTuple2Stream(stream(getNode(root).fieldNames())
                 .map(name ->
-                        Tuple2.of(name, path(name)));
+                        Tuple2.of(name, path(name))));
     }
 
     /**

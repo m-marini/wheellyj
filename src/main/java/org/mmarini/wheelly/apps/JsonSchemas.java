@@ -79,6 +79,7 @@ public class JsonSchemas {
 
     private static JsonSchemas create(String... schemas) {
         JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
+
         Map<String, JsonSchema> schemaMap = Arrays.stream(schemas)
                 .flatMap(id -> {
                     try {

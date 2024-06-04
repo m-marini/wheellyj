@@ -32,7 +32,7 @@ import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.BackpressureStrategy;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
-import org.mmarini.Tuple2;
+import org.mmarini.MapStream;
 import org.mmarini.swing.GridLayoutHelper;
 
 import javax.swing.*;
@@ -177,12 +177,12 @@ public class LearnPanel extends JPanel {
     private void handleAlphaSliders(ChangeEvent event) {
         if (Objects.requireNonNull(event.getSource()) instanceof JSlider slider) {
             if (!slider.getValueIsAdjusting()) {
-                learningRates = Tuple2.stream(learningRates)
-                        .map(t -> {
-                            JSlider slider1 = learningRateSliders.get(t._1);
-                            return slider1 != null ? t.setV2((float) ALPHA_VALUES[slider1.getValue()]) : t;
+                learningRates = MapStream.of(learningRates)
+                        .mapValues((key, v) -> {
+                            JSlider slider1 = learningRateSliders.get(key);
+                            return slider1 != null ? (float) ALPHA_VALUES[slider1.getValue()] : v;
                         })
-                        .collect(Tuple2.toMap());
+                        .toMap();
                 actionAlphasProcessor.onNext(learningRates);
             }
         }
@@ -211,18 +211,17 @@ public class LearnPanel extends JPanel {
      */
     public void setActionAlphas(Map<String, Float> rates) {
         this.learningRates = rates;
-        this.learningRateSliders = Tuple2.stream(rates)
-                .map(t -> {
-                    String key = t._1;
+        this.learningRateSliders = MapStream.of(rates)
+                .mapValues((key, value) -> {
                     JSlider slider = createSlider(ALPHA_VALUES, ALPHA_LABELS);
-                    slider.setValue(indexOf(t._2, ALPHA_VALUES));
+                    slider.setValue(indexOf(value, ALPHA_VALUES));
                     slider.setBorder(BorderFactory.createTitledBorder(
                             Messages.getStringOpt("LearnPanel." + key + ".label").orElse(key)
                     ));
                     slider.addChangeListener(this::handleAlphaSliders);
-                    return t.setV2(slider);
+                    return slider;
                 })
-                .collect(Tuple2.toMap());
+                .toMap();
         GridLayoutHelper<LearnPanel> layoutBuilder = new GridLayoutHelper<>(this)
                 .modify("insets,15,5 fill weight,1,1 center")
                 .at(0, 0).add(etaSlider);
