@@ -30,7 +30,6 @@ package org.mmarini.rl.agents;
 
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
-import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apps.Batches;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -125,15 +124,15 @@ public class BatchTrainer {
         Map<String, Long> layerSizes = agent.network().sizes();
         // Loads actions
         return KeyFileMap.streamBinArrayFile(path, ACTIONS_KEY)
-                .map(t -> {
+                .mapKeys(key -> KeyFileMap.children(key, ACTIONS_KEY))
+                .mapValues((action, value) -> {
                     try {
-                        String action = KeyFileMap.children(t._1, ACTIONS_KEY);
-                        return Tuple2.of(action, createActionToMask(action, t._2, layerSizes.get(action)));
-                    } catch (Exception e) {
+                        return createActionToMask(action, value, layerSizes.get(action));
+                    } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
                 })
-                .collect(Tuple2.toMap());
+                .toMap();
     }
 
     /**

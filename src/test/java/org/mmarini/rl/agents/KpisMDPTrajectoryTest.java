@@ -28,6 +28,7 @@ package org.mmarini.rl.agents;
 import io.reactivex.subscribers.TestSubscriber;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mmarini.MapStream;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.TestSequenceMDP;
@@ -128,8 +129,9 @@ class KpisMDPTrajectoryTest {
                 .toArray()).reshape(numSteps, 1).castTo(DataType.FLOAT);
         // And expected actions
         Stream<Map<String, INDArray>> expActionStream = trajectory.stream()
-                .map(r -> MapUtils.mapValues(r.actions(),
-                        (k, v) -> v.toINDArray()));
+                .map(r -> MapStream.of(r.actions())
+                        .mapValues(Signal::toINDArray)
+                        .toMap());
         Map<String, INDArray> expActions = MapUtils.flatMapValues(expActionStream,
                 (k, s) -> Nd4j.vstack(s.toArray(INDArray[]::new)));
 
@@ -285,8 +287,9 @@ class KpisMDPTrajectoryTest {
                 .toArray()).reshape(numSteps, 1).castTo(DataType.FLOAT);
         // And expected actions
         Stream<Map<String, INDArray>> expActionStream = trajectory.stream()
-                .map(r -> MapUtils.mapValues(r.actions(),
-                        (k, v) -> v.toINDArray()));
+                .map(r -> MapStream.of(r.actions())
+                        .mapValues(Signal::toINDArray)
+                        .toMap());
         Map<String, INDArray> expActions = MapUtils.flatMapValues(expActionStream,
                 (k, s) -> Nd4j.vstack(s.toArray(INDArray[]::new)));
 

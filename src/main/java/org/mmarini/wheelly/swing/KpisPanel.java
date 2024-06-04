@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.swing;
 
 import io.reactivex.rxjava3.functions.Consumer;
+import org.mmarini.MapStream;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apps.MeanValue;
 import org.mmarini.wheelly.apps.RMSValue;
@@ -70,12 +71,12 @@ public class KpisPanel extends MatrixTable {
      * @param kpis the kpis
      */
     public void addKpis(Map<String, INDArray> kpis) {
-        Tuple2.stream(handlers)
-                .forEach(t -> {
-                    INDArray kpi = kpis.get(t._1);
+        MapStream.of(handlers)
+                .forEach((key, value) -> {
+                    INDArray kpi = kpis.get(key);
                     if (kpi != null) {
                         try {
-                            t._2.accept(kpi);
+                            value.accept(kpi);
                         } catch (Throwable e) {
                             logger.atError().setCause(e).log("Error adding kpis");
                             throw new RuntimeException(e);
@@ -95,21 +96,21 @@ public class KpisPanel extends MatrixTable {
     /**
      * Returns the handler of delta action policy kpis
      *
-     * @param action the key action
+     * @param actionKey the key action
      */
-    private Consumer<Map<String, INDArray>> createDeltaActionHandler(String action) {
+    private Consumer<Map<String, INDArray>> createDeltaActionHandler(String actionKey) {
         RMSValue deltaRms = RMSValue.zeros();
         return kpis -> {
-            INDArray pi0 = kpis.get("trainingLayers." + action + ".values");
-            INDArray pi1 = kpis.get("trainedLayers." + action + ".values");
-            INDArray actions = kpis.get("actionMasks." + action);
-            if (pi0 != null && pi1 != null && actions != null) {
-                try (INDArray pi0a = pi0.mul(actions)) {
-                    try (INDArray pi0max = pi0a.max(true, 1)) {
-                        try (INDArray pi1a = pi1.mul(actions)) {
-                            try (INDArray pi1max = pi1a.max(true, 1)) {
-                                try (INDArray ratio = pi1max.sub(pi0max).divi(pi0max)) {
-                                    printf(action + ".deltaAction", "%,10.3f", deltaRms.add(ratio).value() * 100);
+            INDArray pi0 = kpis.get("trainingLayers." + actionKey + ".values");
+            INDArray pi1 = kpis.get("trainedLayers." + actionKey + ".values");
+            INDArray actionMasks = kpis.get("actionMasks." + actionKey);
+            if (pi0 != null && pi1 != null && actionMasks != null) {
+                try (INDArray pi0a = pi0.mul(actionMasks)) {
+                    try (INDArray prob0 = pi0a.sum(true, 1)) {
+                        try (INDArray pi1a = pi1.mul(actionMasks)) {
+                            try (INDArray prob = pi1a.max(true, 1)) {
+                                try (INDArray deltaRatio = prob.div(prob).subi(1)) {
+                                    printf(actionKey + ".deltaAction", "%,10.3f", deltaRms.add(deltaRatio).value() * 100);
                                 }
                             }
                         }
@@ -196,12 +197,14 @@ public class KpisPanel extends MatrixTable {
      */
     public void setKeys(String... keys) {
         // Creates the handlers
-        handlers = Stream.concat(Stream.of(
-                                Tuple2.<String, Consumer<INDArray>>of("deltaGrads.critic", this::handleCritic),
-                                Tuple2.<String, Consumer<INDArray>>of("avgReward", this::handleAvgReward)),
-                        Arrays.stream(keys)
-                                .flatMap(this::createHandler))
-                .collect(Tuple2.toMap());
+        MapStream<String, Consumer<INDArray>> stream1 = MapStream.of(
+                Map.of("deltaGrads.critic", this::handleCritic,
+                        "avgReward", this::handleAvgReward));
+        MapStream<String, Consumer<INDArray>> stream2 = MapStream.fromTuple2Stream(Arrays.stream(keys).flatMap(this::createHandler));
+        handlers = MapStream.concat(
+                        stream1,
+                        stream2)
+                .toMap();
 
         addColumn("avgReward", Messages.getString("KpisPanel.avgReward.label"), 10)
                 .setScrollOnChange(true)

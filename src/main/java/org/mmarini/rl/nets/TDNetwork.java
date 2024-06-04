@@ -196,8 +196,8 @@ public class TDNetwork {
                 .toList();
         // Loads the sizes
         Map<String, Long> sizes = locator.path("sizes").propertyNames(spec)
-                .map(t -> t.setV2(t._2.getNode(spec).asLong()))
-                .collect(Tuple2.toMap());
+                .mapValues(l -> l.getNode(spec).asLong())
+                .toMap();
         return create(layers, sizes, random, parameters);
     }
 

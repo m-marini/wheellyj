@@ -26,7 +26,6 @@
 package org.mmarini.rl.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 
@@ -35,7 +34,6 @@ import java.util.Map;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.Utils.stream;
 
 /**
  *
@@ -61,9 +59,15 @@ public abstract class SignalSpec {
 
     public static Map<String, SignalSpec> createSignalSpecMap(JsonNode node, Locator locator) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(node), SIGNAL_SCHEMA_YML);
+        return locator.propertyNames(node)
+                .mapValues((name, l) -> SignalSpec.create(node, l))
+                .toMap();
+        /*
         return stream(locator.getNode(node).fieldNames())
                 .map(name -> Tuple2.of(name, SignalSpec.create(node, locator.path(name))))
                 .collect(Tuple2.toMap());
+
+         */
     }
 
     /**

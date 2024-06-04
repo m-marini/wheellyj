@@ -198,7 +198,7 @@ public class NetworkTranspiler {
     private void parseNetwork() {
         // Parses the layer sequence
         locator.propertyNames(spec)
-                .forEachOrdered(t -> parseLayerSeq(t._1, t._2));
+                .forEachOrdered(this::parseLayerSeq);
         // Sorts the layer in forward order
         sortLayer();
         // Parse the layers definition in forward order

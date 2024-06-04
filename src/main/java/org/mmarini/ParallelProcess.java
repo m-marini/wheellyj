@@ -158,7 +158,7 @@ public interface ParallelProcess {
          */
         public Single<Map<K, V>> build() {
             return Flowable.fromIterable(
-                            Tuple2.stream(tasks).toList())
+                            MapStream.of(tasks).tuples().toList())
                     .parallel()
                     .runOn(scheduler)
                     .map(t -> {

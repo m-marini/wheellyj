@@ -28,7 +28,7 @@ package org.mmarini.rl.agents;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.processors.PublishProcessor;
-import org.mmarini.Tuple2;
+import org.mmarini.MapStream;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.rl.envs.WithSignalsSpec;
@@ -132,8 +132,8 @@ public class PPOAgent extends AbstractAgentNN {
             float rewardAlpha = (float) locator.path("rewardAlpha").getNode(root).asDouble();
             float eta = (float) locator.path("eta").getNode(root).asDouble();
             Map<String, Float> alphas = locator.path("alphas").propertyNames(root)
-                    .map(Tuple2.map2(l -> (float) l.getNode(root).asDouble()))
-                    .collect(Tuple2.toMap());
+                    .mapValues(l -> (float) l.getNode(root).asDouble())
+                    .toMap();
             float lambda = (float) locator.path("lambda").getNode(root).asDouble();
             float ppoEpsilon = (float) locator.path("ppoEpsilon").getNode(root).asDouble();
             int numSteps = locator.path("numSteps").getNode(root).asInt(DEFAULT_NUM_STEPS);
@@ -169,8 +169,8 @@ public class PPOAgent extends AbstractAgentNN {
         Map<String, SignalSpec> state = SignalSpec.createSignalSpecMap(spec, locator.path("state"));
         Map<String, SignalSpec> actions = SignalSpec.createSignalSpecMap(spec, locator.path("actions"));
         Map<String, Float> alphas = locator.path("alphas").propertyNames(spec)
-                .map(Tuple2.map2(l -> (float) l.getNode(spec).asDouble()))
-                .collect(Tuple2.toMap());
+                .mapValues(l -> (float) l.getNode(spec).asDouble())
+                .toMap();
         // Validate alphas against actions
         List<String> missingAlphas = actions.keySet().stream()
                 .filter(Predicate.not("critic"::equals))
@@ -350,14 +350,15 @@ public class PPOAgent extends AbstractAgentNN {
         INDArray posDelta = deltas.gte(0f);
         INDArray negDelta = Transforms.not(posDelta);
         // Extract ratio
-        return MapUtils.mapValues(pi, (key, value) -> {
+        return MapStream.of(pi)
+                .mapValues((key, value) -> {
                     INDArray mask = actionMasks.get(key);
                     INDArray pik = value.mul(mask);
                     INDArray prob = pik.sum(true, 1);
                     INDArray prob0 = p0.get(key);
                     return mask.mul(ppoGrad(prob, prob0, ppoEpsilon, posDelta, negDelta));
-                }
-        );
+                })
+                .toMap();
     }
 
     @Override
@@ -370,11 +371,15 @@ public class PPOAgent extends AbstractAgentNN {
     protected PPOAgent trainBatch(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards) {
         // Computes the base policy
         long n = rewards.size(0);
-        Map<String, INDArray> states0 = MapUtils.mapValues(states, (k, v) ->
-                v.get(NDArrayIndex.interval(0, n), NDArrayIndex.all()));
+        Map<String, INDArray> states0 = MapStream.of(states)
+                .mapValues(v ->
+                        v.get(NDArrayIndex.interval(0, n), NDArrayIndex.all()))
+                .toMap();
         Map<String, INDArray> pi0 = policy(network.forward(states0).state());
-        Map<String, INDArray> actionProb0 = MapUtils.mapValues(pi0, (k, v) ->
-                v.mul(actionMasks.get(k)).sum(true, 1));
+        Map<String, INDArray> actionProb0 = MapStream.of(pi0)
+                .mapValues((key, v) ->
+                        v.mul(actionMasks.get(key)).sum(true, 1))
+                .toMap();
 
         PPOAgent newAgent = this;
         for (long i = 0; i < numEpochs; i++) {
@@ -407,10 +412,15 @@ public class PPOAgent extends AbstractAgentNN {
                 long m = min(n - startStep, batchSize);
                 INDArrayIndex indices = NDArrayIndex.interval(startStep, startStep + m);
                 INDArrayIndex indices1 = NDArrayIndex.interval(startStep, startStep + m + DEFAULT_NUM_EPOCHS);
-                Map<String, INDArray> batchStates = MapUtils.mapValues(states, (k, v) -> v.get(indices1, NDArrayIndex.all()));
-                Map<String, INDArray> batchActionMasks = MapUtils.mapValues(actionMasks, (k, v) -> v.get(indices, NDArrayIndex.all()));
-                Map<String, INDArray> batchPi0 = MapUtils.mapValues(actionProb0, (k, v) ->
-                        v.get(indices, NDArrayIndex.all()));
+                Map<String, INDArray> batchStates = MapStream.of(states)
+                        .mapValues(v -> v.get(indices1, NDArrayIndex.all()))
+                        .toMap();
+                Map<String, INDArray> batchActionMasks = MapStream.of(actionMasks)
+                        .mapValues(v -> v.get(indices, NDArrayIndex.all()))
+                        .toMap();
+                Map<String, INDArray> batchPi0 = MapStream.of(actionProb0)
+                        .mapValues(v -> v.get(indices, NDArrayIndex.all()))
+                        .toMap();
                 INDArray batchRewards = rewards.get(indices, NDArrayIndex.all());
                 newAgent = newAgent.avgReward(avgReward)
                         .trainMiniBatch(epoch, startStep, n, batchStates, batchActionMasks, batchRewards, batchPi0);
@@ -456,8 +466,12 @@ public class PPOAgent extends AbstractAgentNN {
             // R = (1 - alpha) R + alpha R_t + alpha (v1 - v0)
             avgReward += delta * rewardAlpha;
         }
-        Map<String, INDArray> s0 = MapUtils.mapValues(states, (ignored, value) -> value.get(NDArrayIndex.interval(0, n), NDArrayIndex.all()));
-        Map<String, INDArray> trainingLayers = MapUtils.mapValues(layers, (ignored, value) -> value.get(NDArrayIndex.interval(0, n), NDArrayIndex.all()));
+        Map<String, INDArray> s0 = MapStream.of(states)
+                .mapValues(value -> value.get(NDArrayIndex.interval(0, n), NDArrayIndex.all()))
+                .toMap();
+        Map<String, INDArray> trainingLayers = MapStream.of(layers)
+                .mapValues(value -> value.get(NDArrayIndex.interval(0, n), NDArrayIndex.all()))
+                .toMap();
 
         // Runs a forward pass for training
         TDNetwork trainingNet = network.forward(s0, true);
@@ -483,9 +497,10 @@ public class PPOAgent extends AbstractAgentNN {
         trainingNet = trainingNet.train(grads, deltaEta, lambda, null);
 
         // Computes deltaGrads
-        Map<String, INDArray> deltaEtaGrads = MapUtils.mapValues(grads,
-                (k, grad) ->
-                        grad.mul(deltaEta));
+        Map<String, INDArray> deltaEtaGrads = MapStream.of(grads)
+                .mapValues(grad ->
+                        grad.mul(deltaEta))
+                .toMap();
         // Generates kpis
         Map<String, INDArray> kpis = new HashMap<>(MapUtils.addKeyPrefix(trainingLayers, "trainingLayers."));
         kpis.put("delta", deltas);

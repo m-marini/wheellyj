@@ -28,12 +28,12 @@
 
 package org.mmarini.rl.agents;
 
+import org.mmarini.MapStream;
 import org.mmarini.Tuple2;
 
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -49,7 +49,9 @@ public interface MapUtils {
      * @param <T>    the map type
      */
     static <T> Map<String, T> addKeyPrefix(Map<String, T> map, String prefix) {
-        return mapKey(map, k -> prefix + k);
+        return MapStream.of(map)
+                .mapKeys(k -> prefix + k)
+                .toMap();
     }
 
     /**
@@ -61,40 +63,10 @@ public interface MapUtils {
      * @param <V2>   the mapped values
      */
     static <K, V1, V2> Map<K, V2> flatMapValues(Stream<Map<K, V1>> stream, BiFunction<K, Stream<V1>, V2> mapper) {
-        Map<K, List<Tuple2<K, V1>>> grouped = stream.flatMap(Tuple2::stream)
+        Map<K, List<Tuple2<K, V1>>> grouped = stream.flatMap(map -> MapStream.of(map).tuples())
                 .collect(Collectors.groupingBy(Tuple2::getV1));
-        return mapValues(grouped, (k, v) ->
-                mapper.apply(k, v.stream().map(Tuple2::getV2))
-        );
-    }
-
-    /**
-     * Return the map with keys mapped by mapper function
-     *
-     * @param map    the map
-     * @param mapper the mapper function
-     * @param <K1>   the type of input map key
-     * @param <K2>   the type of output map key
-     * @param <V>    the type of map value
-     */
-    static <K1, K2, V> Map<K2, V> mapKey(Map<K1, V> map, Function<K1, K2> mapper) {
-        return Tuple2.stream(map)
-                .map(Tuple2.map1(mapper))
-                .collect(Tuple2.toMap());
-    }
-
-    /**
-     * Return the map with values mapped by mapper function
-     *
-     * @param map    the map
-     * @param mapper the mapper function
-     * @param <K>    the type of key
-     * @param <V1>   the type of input value
-     * @param <V2>   the type of output value
-     */
-    static <K, V1, V2> Map<K, V2> mapValues(Map<K, V1> map, BiFunction<K, V1, V2> mapper) {
-        return Tuple2.stream(map)
-                .map(t -> t.setV2(mapper.apply(t._1, t._2)))
-                .collect(Tuple2.toMap());
+        return MapStream.of(grouped).mapValues((k, v) ->
+                        mapper.apply(k, v.stream().map(Tuple2::getV2)))
+                .toMap();
     }
 }
