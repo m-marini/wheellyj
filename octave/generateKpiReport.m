@@ -1,5 +1,6 @@
 function generateKpiReport(hFile, dataPath, reportPath, id, kpiTitle, mode, vertHist=false)
   if exist([dataPath "/stats/data.csv"], "file")
+    disp(["Creating report for " dataPath "/stats/data.csv ..."]);
     stats = csvread([dataPath "/stats/data.csv"]);
     histogram = csvread([dataPath "/histogram/data.csv"]);
     chart = csvread([dataPath "/chart/data.csv"]);
@@ -59,6 +60,7 @@ function generateKpiReport(hFile, dataPath, reportPath, id, kpiTitle, mode, vert
     fprintf(hFile, "### %s chart\n", kpiTitle);
 
     # Generate charts
+    disp(["Creating report for " dataPath "/chart/data.csv ..."]);
     plotFile = [id "_plot.png"];
     histFile = [id "_hist.png"];
     fprintf(hFile, "\n");
@@ -117,13 +119,16 @@ function generateKpiReport(hFile, dataPath, reportPath, id, kpiTitle, mode, vert
     print(file, "-dpng", "-S1200,800");
 
     # Generate histogram chart
+    disp(["Creating report for " dataPath "/histogram/data.csv ..."]);
+    [scaleHist, ordHist] = computeScale(histogram(2,1) , histogram(2,end));
+    scaleHistLegend = sprintf("x 10^{%d}", ordHist);
     clf();
-    bar(histogram(2, :) * scale, histogram(1, :));
+    bar(histogram(2, :) * scaleHist, histogram(1, :));
     grid on;
     grid minor on;
     title(kpiTitle);
-    if scale != 1
-      xlabel(scaleLegend);
+    if scaleHist != 1
+      xlabel(scaleHistLegend);
     endif
     file = [reportPath "/" histFile];
     print(file, "-dpng", "-S1200,800");

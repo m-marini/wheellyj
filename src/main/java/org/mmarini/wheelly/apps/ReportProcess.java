@@ -75,6 +75,8 @@ public record ReportProcess(String reportKey,
     private static final long Y_MIN_INDEX = 2;
     private static final long Y_MAX_INDEX = 3;
     private static final Logger logger = LoggerFactory.getLogger(ReportProcess.class);
+    public static final double MIN_DIFFERENCE_RATIO = 1e-2;
+    public static final double MIN_DIFFERENCE = 1e-12;
 
     /**
      * Returns a reducer from MapArray to ArrayReader
@@ -556,8 +558,10 @@ public record ReportProcess(String reportKey,
         long[] counters = new long[DEFAULT_NUM_BINS];
         double min1 = stats.getDouble(MIN_INDEX);
         double max1 = stats.getDouble(MAX_INDEX);
-        double min = (max1 - min1) < 1e-20 ? (max1 - min1) - 1e-20 : min1;
-        double max = (max1 - min1) < 1e-20 ? (max1 - min1) + 1e-20 : max1;
+        double minDiff = Math.max((max1 + min1) * MIN_DIFFERENCE_RATIO / 2, MIN_DIFFERENCE);
+        double diff = max1 - min1;
+        double min = diff < minDiff ? min1 - minDiff : min1;
+        double max = diff < minDiff ? max1 + minDiff : max1;
         double dx = (max - min) / DEFAULT_NUM_BINS;
         Batches.reduce(reader, counters, batchSize,
                 (counters1, data, ignored) -> {

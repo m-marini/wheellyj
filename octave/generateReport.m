@@ -20,7 +20,6 @@ function generateReport(dataPath, reportPath)
   fig = figure();
 
   fprintf(hFile, "\n");
-  generateKpiReport(hFile, [dataPath "/grads/critic/maxAbs"], reportPath, "eta_delta_critic", "Critic delta", mode);
   generateKpiReport(hFile, [dataPath "/reward"], reportPath, "reward", "Reward", mode);
   generateKpiReport(hFile, [dataPath "/delta"], reportPath, "delta", "Delta", mode);
   generateKpiReport(hFile, [dataPath "/trainingLayers/direction/values/max"], reportPath, "policy_direction", "Direction max prob.", mode);
