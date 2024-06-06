@@ -53,8 +53,6 @@ public class Report {
 
             ReportProcess.meanReport("delta"), // td error
 
-            ReportProcess.rmsReport("deltaGrads.critic"), // delta eta gradient for critic
-
             ReportProcess.maxReport("trainingLayers.direction.values"), // max probability for direction
             ReportProcess.maxMinRatioReport("trainingLayers.direction.values"), // max/min probability ratio for direction
             ReportProcess.maxGMRatioReport("trainingLayers.direction.values"), // max/mean probability for direction
@@ -67,6 +65,7 @@ public class Report {
             ReportProcess.maxMinRatioReport("trainingLayers.sensorAction.values"), // max probability for direction
             ReportProcess.maxGMRatioReport("trainingLayers.sensorAction.values"),
 
+            ReportProcess.rmsReport("deltaGrads.critic"), // delta eta gradient for critic
             ReportProcess.sumRmsReport("deltaGrads.direction"), // delta eta alpha gradient for direction
             ReportProcess.sumRmsReport("deltaGrads.speed"), // delta eta for critic for speed
             ReportProcess.sumRmsReport("deltaGrads.sensorAction"), // delta eta for critic for
