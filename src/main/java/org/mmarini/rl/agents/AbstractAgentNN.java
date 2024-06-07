@@ -30,6 +30,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.MapStream;
+import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.*;
 import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.rl.nets.TDNetworkState;
@@ -40,6 +41,8 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.ops.impl.transforms.custom.CumSum;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.INDArrayIndex;
+import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,6 +94,44 @@ public abstract class AbstractAgentNN implements Agent {
                 .mapValues(value ->
                         (Signal) IntSignal.create(chooseAction(value, random)))
                 .toMap();
+    }
+
+    /**
+     * Returns the td error (deltas), the average reward estimation (avgRewards) and the final average reward
+     *
+     * @param rewards          the reward (n)
+     * @param vPrediction      the advantage prediction (n+1)
+     * @param initialAvgReward the initial average reward
+     * @param rewardAlpha      the reward alpha hyperparameter
+     */
+    static Tuple2<Tuple2<INDArray, INDArray>, Float> computeTDError(INDArray rewards, INDArray vPrediction, float initialAvgReward, float rewardAlpha) {
+        // Computes the delta(t) (TD error)  and average reward R(t)
+        // delta(t) = r(t) - R(t) + v(t+1) - v(t)
+        // R(t+1) = R(t) + delta(t) alpha
+        // R(t+1) = R(t) + [r(t) - R(t) + v(t+1) - v(t)] alpha
+        // R(t+1) = (1 - alpha) R(t) + alpha [r(t) + v(t+1) - v(t)]
+        long n = rewards.size(0);
+        INDArrayIndex interval0n = NDArrayIndex.interval(0, n);
+        INDArrayIndex interval1np1 = NDArrayIndex.interval(1, n + 1);
+        INDArray deltas = rewards.like();
+        INDArray avgRewards = rewards.like();
+        float finalAvgReward = initialAvgReward;
+        INDArray v0 = vPrediction.get(interval0n, NDArrayIndex.all());
+        INDArray v1 = vPrediction.get(interval1np1, NDArrayIndex.all());
+        try (INDArray dv = v0.sub(v1)) {
+            for (long i = 0; i < n; i++) {
+                avgRewards.put((int) i, 0, finalAvgReward);
+                float delta = rewards.getFloat(i, 0) - finalAvgReward - dv.getFloat(i, 0);
+                deltas.put((int) i, 0, delta);
+                // R = R + delta alpha
+                // R = (1 - alpha) R + alpha R_t + alpha (v1 - v0)
+                finalAvgReward += delta * rewardAlpha;
+            }
+            return Tuple2.of(
+                    Tuple2.of(deltas, avgRewards),
+                    finalAvgReward
+            );
+        }
     }
 
     /**
