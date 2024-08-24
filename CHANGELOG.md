@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue #428: Ignore trained agent in case of agent reset
 - Issue #433: Exception when alpha changes in wheelly ui
 - Issue #439: Histogram report generates exception
+- Issue #441: Test ppo algorithm
 
 ## [0.16.1] 2024-05-05
 

@@ -291,6 +291,34 @@
             <artifactId>nd4j-native</artifactId>
             <version>${dl4j-master.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.nd4j</groupId>
+            <artifactId>nd4j-native</artifactId>
+            <version>${dl4j-master.version}</version>
+            <classifier>windows-x86_64-avx2</classifier>
+            <!--
+            <classifier>linux-x86_64-avx512</classifier>
+            -->
+        </dependency>
+        <!--
+        <dependency>
+            <groupId>org.bytedeco</groupId>
+            <artifactId>cuda-platform-redist</artifactId>
+            <version>12.3-8.9-1.5.10</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.nd4j</groupId>
+            <artifactId>nd4j-cuda-11.6</artifactId>
+            <version>${dl4j-master.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.nd4j</groupId>
+            <artifactId>nd4j-cuda-11.6</artifactId>
+            <version>${dl4j-master.version}</version>
+            <classifier>windows-x86_64-cudnn</classifier>
+        </dependency>
+        -->
         <!-- https://mvnrepository.com/artifact/org.jbox2d/jbox2d-library -->
         <dependency>
             <groupId>org.jbox2d</groupId>

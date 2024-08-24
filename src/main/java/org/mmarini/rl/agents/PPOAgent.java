@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.MapStream;
+import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.rl.envs.WithSignalsSpec;
@@ -338,29 +339,6 @@ public class PPOAgent extends AbstractAgentNN {
                 savingIntervalSteps, indicatorsPub, postTrainKpis, savingStepCounter, backedUp, ppoEpsilon);
     }
 
-    /**
-     * Returns the gradient of optimizer function for given action mask
-     *
-     * @param pi          the policies
-     * @param actionMasks the action masks
-     * @param p0          the probability of taken action at t
-     * @param deltas      the td error
-     */
-    private Map<String, INDArray> optimizerGrad(Map<String, INDArray> pi, Map<String, INDArray> actionMasks, Map<String, INDArray> p0, INDArray deltas) {
-        INDArray posDelta = deltas.gte(0f);
-        INDArray negDelta = Transforms.not(posDelta);
-        // Extract ratio
-        return MapStream.of(pi)
-                .mapValues((key, value) -> {
-                    INDArray mask = actionMasks.get(key);
-                    INDArray pik = value.mul(mask);
-                    INDArray prob = pik.sum(true, 1);
-                    INDArray prob0 = p0.get(key);
-                    return mask.mul(ppoGrad(prob, prob0, ppoEpsilon, posDelta, negDelta));
-                })
-                .toMap();
-    }
-
     @Override
     public PPOAgent setPostTrainKpis(boolean postTrainKpis) {
         return new PPOAgent(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
@@ -430,6 +408,57 @@ public class PPOAgent extends AbstractAgentNN {
     }
 
     /**
+     * Returns the advantage estimation
+     *
+     * @param rewards     the rewards (n)
+     * @param avgRewards  the average rewards (n)
+     * @param vPrediction the advantage prediction (n+1)
+     */
+    static INDArray computeAdvantage(INDArray rewards, INDArray avgRewards, INDArray vPrediction) {
+        // Computes the advantage A(t) for next n steps t = 0...n-1
+        // we known r(t), R(t) v(t), v(n)
+        // A(t,n) = r(t) - R(t) + r(t+1) - R(t+1) + ... + r(n-1) - R(n-1) + v(t) - v(n)
+        // A(t,n) = sum_i [r(i) - R(i)] + v(t) - v(n) for i = t...n-1
+        // lets returns be a(t,n) = sum_i [r(i) - R(i)] for i = t...n-1
+        // A(t,n) = a(t,n) + v(t) - v(n)
+        // lets a(n,n) = 0
+        // a(t,n) = r(t) - R(t) + a(t+1)
+        long n = rewards.size(0);
+        INDArray adv = rewards.sub(avgRewards); // r(t) - R(t)
+        // sum_i [r(i) - R(i)] for i = t...n-1
+        for (long i = n - 2; i >= 0; i--) {
+            adv.getScalar(i, 1).addi(adv.getScalar(i + 1, 1));
+        }
+        // A(t,n) = a(t,n) + v(t) - v(n)
+        adv.addi(vPrediction.getScalar(n, 0))
+                .subi(vPrediction.get(NDArrayIndex.interval(0, n), NDArrayIndex.all()));
+        return adv;
+    }
+
+    /**
+     * Returns the gradient of optimizer function for given action mask
+     *
+     * @param pi          the policies
+     * @param actionMasks the action masks
+     * @param p0          the probability of taken action at t
+     * @param adv         the advantage estimation
+     */
+    private Map<String, INDArray> optimizerGrad(Map<String, INDArray> pi, Map<String, INDArray> actionMasks, Map<String, INDArray> p0, INDArray adv) {
+        INDArray posDelta = adv.gte(0f);
+        INDArray negDelta = Transforms.not(posDelta);
+        // Extract ratio
+        return MapStream.of(pi)
+                .mapValues((key, value) -> {
+                    INDArray mask = actionMasks.get(key);
+                    INDArray pik = value.mul(mask);
+                    INDArray prob = pik.sum(true, 1);
+                    INDArray prob0 = p0.get(key);
+                    return mask.mul(ppoGrad(prob, prob0, ppoEpsilon, posDelta, negDelta));
+                })
+                .toMap();
+    }
+
+    /**
      * Returns the average step rewards after training a mini batch
      *
      * @param epoch        the current epoch number
@@ -446,26 +475,8 @@ public class PPOAgent extends AbstractAgentNN {
         Map<String, INDArray> layers = network.forward(states).state().values();
         INDArray vPrediction = layers.get("critic.values");
 
-        // Separate the prediction from t and t + 1
         long n = rewards.size(0);
 
-        // Computes the deltas
-        INDArray deltas = rewards.like();
-        INDArray avgRewards = rewards.like();
-        float avgReward = this.avgReward;
-        for (long i = 0; i < n; i++) {
-            avgRewards.put((int) i, 0, avgReward);
-            float reward = rewards.getFloat(i, 0);
-            float adv = reward - avgReward;
-            float v0 = vPrediction.getFloat(i, 0);
-            float v1 = vPrediction.getFloat(i + DEFAULT_NUM_EPOCHS, 0);
-            // delta = R_t - R + v1 - v0
-            float delta = adv + v1 - v0;
-            deltas.put((int) i, 0, delta);
-            // R = R + delta alpha
-            // R = (1 - alpha) R + alpha R_t + alpha (v1 - v0)
-            avgReward += delta * rewardAlpha;
-        }
         Map<String, INDArray> s0 = MapStream.of(states)
                 .mapValues(value -> value.get(NDArrayIndex.interval(0, n), NDArrayIndex.all()))
                 .toMap();
@@ -477,16 +488,25 @@ public class PPOAgent extends AbstractAgentNN {
         TDNetwork trainingNet = network.forward(s0, true);
         TDNetworkState result0 = trainingNet.state();
 
+        // Computes the TDError
+        Tuple2<Tuple2<INDArray, INDArray>, Float> t = computeTDError(rewards, vPrediction, avgReward, rewardAlpha);
+        INDArray deltas = t._1._1;
+        INDArray avgRewards = t._1._2;
+        float finalAvgReward = t._2;
+
+        // Computes the advantage prediction
+        INDArray adv = computeAdvantage(rewards, avgRewards, vPrediction);
+
         // Extract the policy output values pi from network results
         Map<String, INDArray> pi = policy(result0);
 
         // Computes policy optimizer gradients
-        Map<String, INDArray> gradPi = optimizerGrad(pi, actionMasks, actionProb0, deltas);
+        Map<String, INDArray> optGrad = optimizerGrad(pi, actionMasks, actionProb0, adv);
 
         // Computes output gradients for network (merges critic and policy grads)
         Map<String, INDArray> grads = new HashMap<>();
         grads.put("critic", Nd4j.onesLike(deltas));
-        for (Map.Entry<String, INDArray> entry : gradPi.entrySet()) {
+        for (Map.Entry<String, INDArray> entry : optGrad.entrySet()) {
             String key = entry.getKey();
             INDArray gradPik = entry.getValue();
             grads.put(key, gradPik.mul(alphas.get(key)));
@@ -518,7 +538,7 @@ public class PPOAgent extends AbstractAgentNN {
         kpis.putAll(MapUtils.addKeyPrefix(trainedLayers, "trainedLayers."));
         indicatorsPub.onNext(kpis);
 
-        return network(trainingNet).avgReward(avgReward);
+        return network(trainingNet).avgReward(finalAvgReward);
     }
 
     @Override

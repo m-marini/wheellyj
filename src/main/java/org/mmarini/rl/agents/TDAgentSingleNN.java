@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.MapStream;
+import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.rl.envs.WithSignalsSpec;
@@ -386,23 +387,12 @@ public class TDAgentSingleNN extends AbstractAgentNN {
         // Separate the prediction from t and t + 1
         long n = rewards.size(0);
 
-        // Computes the deltas
-        INDArray deltas = rewards.like();
-        INDArray avgRewards = rewards.like();
-        float avgReward = this.avgReward;
-        for (long i = 0; i < n; i++) {
-            avgRewards.put((int) i, 0, avgReward);
-            float reward = rewards.getFloat(i, 0);
-            float adv = reward - avgReward;
-            float v0 = vPrediction.getFloat(i, 0);
-            float v1 = vPrediction.getFloat(i + DEFAULT_NUM_EPOCHS, 0);
-            // delta = R_t - R + v1 - v0
-            float delta = adv + v1 - v0;
-            deltas.put((int) i, 0, delta);
-            // R = R + delta alpha
-            // R = (1 - alpha) R + alpha R_t + alpha (v1 - v0)
-            avgReward += delta * rewardAlpha;
-        }
+        // Computes the TDError
+        Tuple2<Tuple2<INDArray, INDArray>, Float> t = computeTDError(rewards, vPrediction, avgReward, rewardAlpha);
+        INDArray deltas = t._1._1;
+        INDArray avgRewards = t._1._2;
+        float finalAvgReward = t._2;
+
         Map<String, INDArray> s0 = MapStream.of(states)
                 .mapValues(value -> value.get(NDArrayIndex.interval(0, n), NDArrayIndex.all()))
                 .toMap();
@@ -455,7 +445,7 @@ public class TDAgentSingleNN extends AbstractAgentNN {
         kpis.putAll(MapUtils.addKeyPrefix(trainedLayers, "trainedLayers."));
         indicatorsPub.onNext(kpis);
 
-        return network(trainingNet).avgReward(avgReward);
+        return network(trainingNet).avgReward(finalAvgReward);
     }
 
     @Override
