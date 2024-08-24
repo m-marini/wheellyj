@@ -94,7 +94,7 @@ public class KpisPanel extends MatrixTable {
     }
 
     /**
-     * Returns the handler of delta action policy kpis
+     * Shows the action policy correction
      *
      * @param actionKey the key action
      */
@@ -109,7 +109,7 @@ public class KpisPanel extends MatrixTable {
                     try (INDArray prob0 = pi0a.sum(true, 1)) {
                         try (INDArray pi1a = pi1.mul(actionMasks)) {
                             try (INDArray prob = pi1a.max(true, 1)) {
-                                try (INDArray deltaRatio = prob.div(prob).subi(1)) {
+                                try (INDArray deltaRatio = prob.div(prob0).subi(1)) {
                                     printf(actionKey + ".deltaAction", "%,10.3f", deltaRms.add(deltaRatio).value() * 100);
                                 }
                             }
@@ -128,9 +128,9 @@ public class KpisPanel extends MatrixTable {
     }
 
     /**
-     * Returns the handlers of kpi
+     * Returns the handlers of kpi for an action
      *
-     * @param key the key
+     * @param key the action key
      */
     private Stream<Tuple2<String, Consumer<INDArray>>> createHandler(String key) {
         RMSValue delta = RMSValue.zeros();
@@ -139,17 +139,19 @@ public class KpisPanel extends MatrixTable {
         return Stream.of(
                 Tuple2.of(
                         "deltaGrads." + key, data -> {
+                            // Shows the correction error for the action (delta eta alpha grad)
                             try (INDArray max = Transforms.abs(data).max(true, 1)) {
                                 printf(key + ".delta", "%,10.0f", delta.add(max).value() * PPM);
                             }
                         }),
                 Tuple2.of(
                         "trainingLayers." + key + ".values", data -> {
-                            // prob = max(data) / exp(mean(log(data)))
+                            // shows the max of actin probabilities
+                            // and the ratio of max of action probabilities over the probabilities geometric mean value
                             try (INDArray max = data.max(true, 1)) {
                                 try (INDArray log = Transforms.log(data)) {
-                                    try (INDArray mean = Transforms.exp(log.mean(true, 1), false)) {
-                                        try (INDArray ratio = max.div(mean)) {
+                                    try (INDArray gm = Transforms.exp(log.mean(true, 1), false)) {
+                                        try (INDArray ratio = max.div(gm)) {
                                             printf(key + ".prob", "%,6.1f", prob.add(max).value() * 100);
                                             printf(key + ".probRatio", "%,7.2f", probRatio.add(ratio).value());
                                         }
@@ -161,7 +163,7 @@ public class KpisPanel extends MatrixTable {
     }
 
     /**
-     * Handles average reward
+     * Shows average reward
      *
      * @param avgReward the average reward
      */
@@ -170,7 +172,7 @@ public class KpisPanel extends MatrixTable {
     }
 
     /**
-     * Handles critic delta
+     * Shows critic error (delta eta grad)
      *
      * @param delta the critic delta
      */
@@ -179,7 +181,7 @@ public class KpisPanel extends MatrixTable {
     }
 
     /**
-     * Returns the handler of delta critic kpis
+     * Shows TD error
      *
      * @param kpis the kpis
      */
