@@ -5,6 +5,15 @@ The code of Arduino controller is at [Wheellino project](https://github.com/m-ma
 
 The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
+## Release 0.17.0
+
+- Add PPO alghorithm
+- Report action deltas kpi
+- Training on trajectory sampling
+- Manage continuing task only
+- Separate learning rate from action optimization hyperparm
+- Some fixs
+
 ## Release 0.16.1
 
 - Single window mode
