@@ -60,7 +60,7 @@ public record StateFlow(List<StateNode> states, List<StateTransition> transition
                 : ProcessorCommand.create(root, onInitLoc);
 
         List<StateNode> states = StateNode.createNodes(root, locator.path("states"));
-        List<StateTransition> transitions = StateTransition.createList(root, locator.path("transitions"));
+        List<StateTransition> transitions = StateTransition.createList(root, locator.path("states"));
         String entry = locator.path("entry").getNode(root).asText();
         validateTransitions(transitions, states, entry);
         StateNode entryNode = findState(states, entry).orElseThrow();
