@@ -1,11 +1,11 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/env-polar-schema-0.1
+$id: https://mmarini.org/wheelly/env-polar-schema-1.0
 title: Environment
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/env-polar-schema-0.1
+    const: https://mmarini.org/wheelly/env-polar-schema-1.0
   class:
     const: org.mmarini.wheelly.envs.PolarRobotEnv
   objective:
@@ -39,6 +39,9 @@ properties:
   radarReceptiveAngle:
     minimum: 0
   radarCleanInterval:
+    multipleOf: 1
+    minimum: 1
+  correlationInterval:
     multipleOf: 1
     minimum: 1
   echoPersistence:

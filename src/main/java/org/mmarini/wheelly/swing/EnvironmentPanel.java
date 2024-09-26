@@ -53,6 +53,7 @@ public class EnvironmentPanel extends RadarPanel {
     private static final double PING_SIZE = 0.1;
     private static final Color ROBOT_COLOR = new Color(255, 255, 0);
     private static final Color OBSTACLE_PHANTOM_COLOR = new Color(128, 128, 128);
+    private static final Color LABELED_PHANTOM_COLOR = new Color(0, 200, 200);
     private static final Color HUD_BACKGROUND_COLOR = new Color(32, 32, 32);
     private static final Color SENSOR_COLOR = new Color(200, 0, 0);
     private static final Color PING_COLOR = new Color(255, 192, 192);
@@ -121,7 +122,8 @@ public class EnvironmentPanel extends RadarPanel {
 
     private boolean hudAtBottom;
     private boolean hudAtRight;
-    private List<Point2D> obstacleMap;
+    private List<Point2D> hindereds;
+    private List<Point2D> labels;
     private Shape obstacleShape;
     private PanelData panelData;
     private double reactionRealTime;
@@ -193,33 +195,37 @@ public class EnvironmentPanel extends RadarPanel {
     }
 
     /**
-     * Draws the map
-     *
-     * @param gr the graphic context
-     */
-    private void drawMap(Graphics2D gr, List<Point2D> obstacleMap) {
-        if (obstacleMap != null) {
-            AffineTransform base = gr.getTransform();
-            gr.setStroke(BORDER_STROKE);
-            for (Point2D obstacle : obstacleMap) {
-                gr.setTransform(base);
-                drawObstacle(gr, obstacle);
-            }
-        }
-    }
-
-    /**
      * Draws an obstacle
      *
      * @param gr       the graphic context
      * @param location the location
+     * @param color    the obstacle color
      */
-    private void drawObstacle(Graphics2D gr, Point2D location) {
+    private void drawObstacle(Graphics2D gr, Point2D location, Color color) {
         if (location != null) {
             gr.transform(at(location));
-            gr.setColor(EnvironmentPanel.OBSTACLE_PHANTOM_COLOR);
+            gr.setColor(color);
             gr.setStroke(BORDER_STROKE);
             gr.fill(obstacleShape);
+        }
+    }
+
+    /**
+     * Draws the map
+     *
+     * @param gr        the graphic context
+     * @param obstacles the obstacle point list
+     * @param color     the obstacle color
+     */
+    private void drawObstacles(Graphics2D gr, List<Point2D> obstacles, Color color) {
+        if (obstacles != null) {
+            AffineTransform base = gr.getTransform();
+            gr.setStroke(BORDER_STROKE);
+            for (Point2D obstacle : obstacles) {
+                gr.setTransform(base);
+                drawObstacle(gr, obstacle, color);
+            }
+            gr.setTransform(base);
         }
     }
 
@@ -270,7 +276,8 @@ public class EnvironmentPanel extends RadarPanel {
         AffineTransform base = gr.getTransform();
         drawGrid(gr);
         gr.setTransform(base);
-        drawMap(gr, obstacleMap);
+        drawObstacles(gr, hindereds, OBSTACLE_PHANTOM_COLOR);
+        drawObstacles(gr, labels, LABELED_PHANTOM_COLOR);
         PanelData data = this.panelData;
 
         if (data != null) {
@@ -313,15 +320,30 @@ public class EnvironmentPanel extends RadarPanel {
     }
 
     /**
-     * Sets the obstacle map
+     * Sets the locations of obstacles
      *
-     * @param obstacleMap the obstacle map
+     * @param obstacles the locations of obstacles
      */
-    public void setObstacleMap(List<Point2D> obstacleMap) {
-        this.obstacleMap = obstacleMap;
+    public void setHinderedPoints(List<Point2D> obstacles) {
+        this.hindereds = obstacles;
         repaint();
     }
 
+    /**
+     * Sets the locations of labeled obstacles
+     *
+     * @param labels the locations of labeled obstacles
+     */
+    public void setLabeledPoints(List<Point2D> labels) {
+        this.labels = labels;
+        repaint();
+    }
+
+    /**
+     * Sets the size of obstacle
+     *
+     * @param obstacleSize the size (m)
+     */
     public void setObstacleSize(double obstacleSize) {
         this.obstacleShape = new Rectangle2D.Double(
                 -obstacleSize / 2, -obstacleSize / 2,

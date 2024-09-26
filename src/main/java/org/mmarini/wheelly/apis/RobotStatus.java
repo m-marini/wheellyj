@@ -45,10 +45,12 @@ import static java.util.Objects.requireNonNull;
  * @param contactsMessage the contacts message
  * @param supplyMessage   the supply message
  * @param decodeVoltage   the voltage decode function
+ * @param cameraEvent     the camera event
  */
 public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessage,
                           WheellyProxyMessage proxyMessage, WheellyContactsMessage contactsMessage,
-                          WheellySupplyMessage supplyMessage, IntToDoubleFunction decodeVoltage) {
+                          WheellySupplyMessage supplyMessage, IntToDoubleFunction decodeVoltage,
+                          CameraEvent cameraEvent) {
     public static final int PULSES_PER_ROOT = 40;
     public static final double WHEEL_DIAMETER = 0.067;
     public static final double DISTANCE_PER_PULSE = WHEEL_DIAMETER * PI / PULSES_PER_ROOT;
@@ -67,7 +69,10 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
                         0, 0, 0, 0, true, 0, 0, 0, 0),
                 new WheellyProxyMessage(now, 0, 0, 0, 0, 0, 0, 0),
                 new WheellyContactsMessage(now, 0, 0, true, true, true, true),
-                new WheellySupplyMessage(now, 0, 0, 0), decodeVoltage);
+                new WheellySupplyMessage(now, 0, 0, 0),
+                decodeVoltage,
+                CameraEvent.unknown(System.currentTimeMillis())
+        );
     }
 
     /**
@@ -80,17 +85,20 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
         return new Point2D.Double(xPulses * DISTANCE_PER_PULSE, yPulses * DISTANCE_PER_PULSE);
     }
 
-    public RobotStatus(long simulationTime, WheellyMotionMessage motionMessage, WheellyProxyMessage proxyMessage, WheellyContactsMessage contactsMessage, WheellySupplyMessage supplyMessage, IntToDoubleFunction decodeVoltage) {
+    public RobotStatus(long simulationTime, WheellyMotionMessage motionMessage, WheellyProxyMessage proxyMessage,
+                       WheellyContactsMessage contactsMessage, WheellySupplyMessage supplyMessage,
+                       IntToDoubleFunction decodeVoltage, CameraEvent cameraEvent) {
         this.motionMessage = requireNonNull(motionMessage);
         this.proxyMessage = requireNonNull(proxyMessage);
         this.contactsMessage = requireNonNull(contactsMessage);
         this.supplyMessage = requireNonNull(supplyMessage);
         this.simulationTime = simulationTime;
         this.decodeVoltage = decodeVoltage;
+        this.cameraEvent = cameraEvent;
     }
 
     /**
-     * Returns true if can move backward
+     * Returns true if robot can move backward
      */
     public boolean canMoveBackward() {
         return contactsMessage.canMoveBackward();
@@ -98,7 +106,7 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
 
 
     /**
-     * Returns true if can move forward
+     * Returns true if robot can move forward
      */
     public boolean canMoveForward() {
         return contactsMessage.canMoveForward();
@@ -155,6 +163,19 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
     }
 
     /**
+     * Returns true if the status contains the camera event correlated to proxy event
+     *
+     * @param correlationInterval the qrcode-proxy correlation interval
+     */
+    public boolean isCorrelated(long correlationInterval) {
+        if (cameraEvent == null) {
+            return false;
+        }
+        long correlation = cameraEvent.timestamp() - proxyMessage.simulationTime();
+        return correlation >= 0 && correlation <= correlationInterval;
+    }
+
+    /**
      * Returns the left target power (unit)
      */
     public int leftPower() {
@@ -180,6 +201,13 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
      */
     public Point2D location() {
         return pulses2Location(motionMessage.xPulses(), motionMessage.yPulses());
+    }
+
+    /**
+     * Returns the qr code captured by camera
+     */
+    public String qrCode() {
+        return cameraEvent != null ? cameraEvent.qrCode() : "?";
     }
 
     /**
@@ -225,12 +253,31 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
         }
     }
 
+    /**
+     * Returns the status with the set camera event
+     *
+     * @param cameraEvent the camera event
+     */
+    public RobotStatus setCameraMessage(CameraEvent cameraEvent) {
+        return new RobotStatus(simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent);
+    }
+
+    /**
+     * Returns the status with the set can move backward flag
+     *
+     * @param canMoveBackward true if the robot can move backward
+     */
     public RobotStatus setCanMoveBackward(boolean canMoveBackward) {
         return setContactsMessage(
                 contactsMessage.setCanMoveBackward(canMoveBackward)
                         .setSimulationTime(simulationTime));
     }
 
+    /**
+     * Returns the status with the set can move forward flag
+     *
+     * @param canMoveForward true if the robot can move forward
+     */
     public RobotStatus setCanMoveForward(boolean canMoveForward) {
         return setContactsMessage(
                 contactsMessage.setCanMoveForward(canMoveForward)
@@ -243,7 +290,7 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
      * @param contactsMessage the message
      */
     public RobotStatus setContactsMessage(WheellyContactsMessage contactsMessage) {
-        return new RobotStatus(simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage);
+        return new RobotStatus(simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent);
     }
 
     /**
@@ -293,7 +340,7 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
      * @param motionMessage the motion message
      */
     public RobotStatus setMotionMessage(WheellyMotionMessage motionMessage) {
-        return new RobotStatus(simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage);
+        return new RobotStatus(simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent);
     }
 
     /**
@@ -302,7 +349,7 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
      * @param proxyMessage the message
      */
     public RobotStatus setProxyMessage(WheellyProxyMessage proxyMessage) {
-        return new RobotStatus(simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage);
+        return new RobotStatus(simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent);
     }
 
     /**
@@ -322,7 +369,7 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
      */
     public RobotStatus setSimulationTime(long simulationTime) {
         return simulationTime != this.simulationTime ?
-                new RobotStatus(simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage)
+                new RobotStatus(simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent)
                 : this;
     }
 
@@ -344,7 +391,7 @@ public record RobotStatus(long simulationTime, WheellyMotionMessage motionMessag
      * @param supplyMessage the message
      */
     public RobotStatus setSupplyMessage(WheellySupplyMessage supplyMessage) {
-        return new RobotStatus(simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage);
+        return new RobotStatus(simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent);
     }
 
     /**

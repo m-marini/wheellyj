@@ -27,9 +27,9 @@ package org.mmarini.wheelly.apis;
 
 import java.awt.*;
 import java.awt.geom.Point2D;
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 
 import static java.lang.Math.abs;
 import static java.lang.Math.signum;
@@ -48,7 +48,7 @@ public class MapBuilder {
     }
 
     private final double gridSize;
-    private final Set<Point> points;
+    private final Map<Point, Boolean> points;
 
     /**
      * Creates the map builder
@@ -57,7 +57,7 @@ public class MapBuilder {
      */
     public MapBuilder(double gridSize) {
         this.gridSize = gridSize;
-        points = new HashSet<>();
+        points = new HashMap<>();
     }
 
     /**
@@ -66,8 +66,8 @@ public class MapBuilder {
      * @param x x coordinate
      * @param y y coordinate
      */
-    public MapBuilder add(double x, double y) {
-        points.add(ObstacleMap.toIndex(x, y, gridSize));
+    public MapBuilder add(boolean labeled, double x, double y) {
+        points.put(ObstacleMap.toIndex(x, y, gridSize), labeled);
         return this;
     }
 
@@ -80,9 +80,9 @@ public class MapBuilder {
      * @param dx x stepping vector
      * @param dy y stepping vector
      */
-    private void add(int n, double x, double y, double dx, double dy) {
+    private void add(boolean labeled, int n, double x, double y, double dx, double dy) {
         for (int i = 0; i < n; i++) {
-            add(x, y);
+            add(labeled, x, y);
             x += dx;
             y += dy;
         }
@@ -98,12 +98,13 @@ public class MapBuilder {
     /**
      * Adds obstacle by creating an obstacle line
      *
-     * @param x0 x start coordinate
-     * @param y0 y start coordinate
-     * @param x1 x end coordinate
-     * @param y1 y end coordinate
+     * @param labeled true if labeled obstacles
+     * @param x0      x start coordinate
+     * @param y0      y start coordinate
+     * @param x1      x end coordinate
+     * @param y1      y end coordinate
      */
-    public MapBuilder line(double x0, double y0, double x1, double y1) {
+    public MapBuilder line(boolean labeled, double x0, double y0, double x1, double y1) {
         Point2D start = snap(x0, y0);
         Point2D end = snap(x1, y1);
         double x = start.getX();
@@ -111,13 +112,13 @@ public class MapBuilder {
         double dx = end.getX() - x;
         double dy = end.getY() - y;
         if (dx == 0 && dy == 0) {
-            add(x, y);
+            add(labeled, x, y);
         } else if (abs(dx) >= abs(dy)) {
             int n = (int) (abs(dx) / gridSize) + 1;
-            add(n, x, y, signum(dx) * gridSize, dy / abs(dx) * gridSize);
+            add(labeled, n, x, y, signum(dx) * gridSize, dy / abs(dx) * gridSize);
         } else {
             int n = (int) (abs(dy) / gridSize) + 1;
-            add(n, x, y, dx / abs(dy) * gridSize, signum(dy) * gridSize);
+            add(labeled, n, x, y, dx / abs(dy) * gridSize, signum(dy) * gridSize);
         }
         return this;
     }
@@ -125,17 +126,18 @@ public class MapBuilder {
     /**
      * Adds obstacle by creating obstacle lines
      *
-     * @param coords the coordinates of points
+     * @param labeled true if labeled obstacles
+     * @param coords  the coordinates of points
      */
-    public MapBuilder lines(double... coords) {
+    public MapBuilder lines(boolean labeled, double... coords) {
         if (coords.length % 2 != 0) {
             throw new IllegalArgumentException("coordinates must be pairs");
         }
         if (coords.length == 2) {
-            add(coords[0], coords[1]);
+            add(labeled, coords[0], coords[1]);
         } else {
             for (int i = 0; i < coords.length - 2; i += 2) {
-                line(coords[i], coords[i + 1], coords[i + 2], coords[i + 3]);
+                line(labeled, coords[i], coords[i + 1], coords[i + 2], coords[i + 3]);
             }
         }
         return this;
@@ -144,51 +146,20 @@ public class MapBuilder {
     /**
      * Generates random obstacles round a center in within a distance range
      *
-     * @param n           the number of obstacles
-     * @param x0          the center position
-     * @param y0          the center position
-     * @param minDistance the minimum distance
-     * @param maxDistance the maximum distance
-     * @param random      the random generator
-     */
-    public MapBuilder rand(int n, double x0, double y0, double minDistance, double maxDistance, Random random) {
-        double min_sqr_dist = minDistance * minDistance;
-        double max_sqr_dist = maxDistance * maxDistance;
-        for (int i = 0; i < n; i++) {
-            for (; ; ) {
-                double x = random.nextDouble() * 2 * maxDistance - maxDistance;
-                double y = random.nextDouble() * 2 * maxDistance - maxDistance;
-                double sqr_dist = x * x + y * y;
-                if (sqr_dist >= min_sqr_dist && sqr_dist <= max_sqr_dist) {
-                    double xo = x + x0;
-                    double yo = y + y0;
-                    Point index = ObstacleMap.toIndex(xo, yo, gridSize);
-                    if (!points.contains(index)) {
-                        points.add(index);
-                        break;
-                    }
-                }
-            }
-        }
-        return this;
-    }
-
-    /**
-     * Generates random obstacles round a center in within a distance range
-     *
-     * @param n                 the number of obstacles
+     * @param numObstacles      the number of obstacles
+     * @param numLabels         the number of labels
      * @param center            the center position
      * @param maxDistance       the maximum distance (m)
      * @param forbiddenCenter   the center of forbidden area
      * @param forbiddenDistance the forbidden area distance (m)
      * @param random            the random generator
      */
-    public MapBuilder rand(int n,
-                           Point2D center, double maxDistance,
+    public MapBuilder rand(int numObstacles,
+                           int numLabels, Point2D center, double maxDistance,
                            Point2D forbiddenCenter, double forbiddenDistance,
                            Random random) {
         double distSquare = forbiddenDistance * forbiddenDistance;
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < numObstacles; i++) {
             for (; ; ) {
                 Point2D p = new Point2D.Double(
                         random.nextDouble() * 2 * maxDistance - maxDistance + center.getX(),
@@ -196,8 +167,23 @@ public class MapBuilder {
                 );
                 if (p.distanceSq(forbiddenCenter) > distSquare) {
                     Point index = ObstacleMap.toIndex(p.getX(), p.getY(), gridSize);
-                    if (!points.contains(index)) {
-                        points.add(index);
+                    if (!points.containsKey(index)) {
+                        points.put(index, false);
+                        break;
+                    }
+                }
+            }
+        }
+        for (int i = 0; i < numLabels; i++) {
+            for (; ; ) {
+                Point2D p = new Point2D.Double(
+                        random.nextDouble() * 2 * maxDistance - maxDistance + center.getX(),
+                        random.nextDouble() * 2 * maxDistance - maxDistance + center.getY()
+                );
+                if (p.distanceSq(forbiddenCenter) > distSquare) {
+                    Point index = ObstacleMap.toIndex(p.getX(), p.getY(), gridSize);
+                    if (!points.containsKey(index)) {
+                        points.put(index, true);
                         break;
                     }
                 }
@@ -209,13 +195,14 @@ public class MapBuilder {
     /**
      * Adds obstacle by creating a rectangle
      *
-     * @param x0 left coordinate
-     * @param y0 bottom coordinate
-     * @param x1 right coordinate
-     * @param y1 top coordinate
+     * @param labeled true if labeled obstacles
+     * @param x0      left coordinate
+     * @param y0      bottom coordinate
+     * @param x1      right coordinate
+     * @param y1      top coordinate
      */
-    public MapBuilder rect(double x0, double y0, double x1, double y1) {
-        return lines(
+    public MapBuilder rect(boolean labeled, double x0, double y0, double x1, double y1) {
+        return lines(labeled,
                 x0, y0,
                 x1, y0,
                 x1, y1,

@@ -64,7 +64,10 @@ public class SimRobot implements RobotApi {
     public static final double MAX_ANGULAR_PPS = 20;
     public static final double ROBOT_TRACK = 0.136;
     public static final double MAX_ANGULAR_VELOCITY = MAX_ANGULAR_PPS * DISTANCE_PER_PULSE / ROBOT_TRACK * 2; // RAD/s
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/sim-robot-schema-0.2";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/sim-robot-schema-0.3";
+    public static final int CAMERA_HEIGHT = 240;
+    public static final int CAMERA_WIDTH = 240;
+    public static final String QR_CODE = "A";
     private static final int DEFAULT_MAX_ANGULAR_SPEED = 5;
     private static final long DEFAULT_MOTION_INTERVAL = 500;
     private static final long DEFAULT_PROXY_INTERVAL = 500;
@@ -98,10 +101,11 @@ public class SimRobot implements RobotApi {
         long mapSeed = locator.path("mapSeed").getNode(root).asLong(0);
         long robotSeed = locator.path("robotSeed").getNode(root).asLong(0);
         int numObstacles = locator.path("numObstacles").getNode(root).asInt();
+        int numLabels = locator.path("numLabels").getNode(root).asInt();
         Complex sensorReceptiveAngle = Complex.fromDeg(locator.path("sensorReceptiveAngle").getNode(root).asInt(DEFAULT_SENSOR_RECEPTIVE_ANGLE));
         Random mapRandom = mapSeed > 0L ? new Random(mapSeed) : new Random();
         Random robotRandom = robotSeed > 0L ? new Random(robotSeed) : new Random();
-        ObstacleMap obstacleMap = createObstacleMap(numObstacles, mapRandom, new Point2D.Double());
+        ObstacleMap obstacleMap = createObstacleMap(numObstacles, numLabels, mapRandom, new Point2D.Double());
         double errSigma = locator.path("errSigma").getNode(root).asDouble();
         double errSensor = locator.path("errSensor").getNode(root).asDouble();
         int maxAngularSpeed = locator.path("maxAngularSpeed").getNode(root).asInt(DEFAULT_MAX_ANGULAR_SPEED);
@@ -111,7 +115,7 @@ public class SimRobot implements RobotApi {
         return new SimRobot(obstacleMap,
                 robotRandom, mapRandom,
                 errSigma, errSensor,
-                sensorReceptiveAngle, maxAngularSpeed, motionInterval, proxyInterval, numObstacles, changeObstaclesPeriod);
+                sensorReceptiveAngle, maxAngularSpeed, motionInterval, proxyInterval, numObstacles, numLabels, changeObstaclesPeriod);
     }
 
     /**
@@ -141,19 +145,21 @@ public class SimRobot implements RobotApi {
      * Returns the obstacle map
      *
      * @param numObstacles  the number of obstacles
+     * @param numLabels     the number of labels
      * @param mapRandom     the randomizer
      * @param robotLocation the robot location
      */
-    private static ObstacleMap createObstacleMap(int numObstacles, Random mapRandom, Point2D robotLocation) {
+    private static ObstacleMap createObstacleMap(int numObstacles, int numLabels, Random mapRandom, Point2D robotLocation) {
         return MapBuilder.create(GRID_SIZE)
-                .rect(-WORLD_SIZE / 2,
+                .rect(false, -WORLD_SIZE / 2,
                         -WORLD_SIZE / 2, WORLD_SIZE / 2, WORLD_SIZE / 2)
-                .rand(numObstacles, new Point2D.Double(), MAX_OBSTACLE_DISTANCE,
+                .rand(numObstacles, numLabels, new Point2D.Double(), MAX_OBSTACLE_DISTANCE,
                         robotLocation, MIN_OBSTACLE_DISTANCE, mapRandom)
                 .build();
     }
 
     private final long proxyInterval;
+    private final long cameraInterval;
     private final Random random;
     private final Random mapRandom;
     private final Body robot;
@@ -161,6 +167,7 @@ public class SimRobot implements RobotApi {
     private final Complex sensorReceptiveAngle;
     private final World world;
     private final int numObstacles;
+    private final int numLabels;
     private final long changeObstaclesPeriod;
     private final double errSensor;
     private final double errSigma;
@@ -175,7 +182,9 @@ public class SimRobot implements RobotApi {
     private Consumer<WheellyContactsMessage> onContacts;
     private Consumer<WheellyMotionMessage> onMotion;
     private Consumer<WheellyProxyMessage> onProxy;
+    private Consumer<CameraEvent> onCamera;
     private long proxyTimeout;
+    private long cameraTimeout;
     private boolean rearSensor;
     private double rightPps;
     private Complex sensorDirection;
@@ -184,6 +193,7 @@ public class SimRobot implements RobotApi {
     private Consumer<SimRobot> onObstacleChanged;
     private List<Body> obstacleBodies;
     private ObstacleMap obstacleMap;
+    private ObstacleMap.ObstacleCell nearestCell;
 
     /**
      * Creates a simulated robot
@@ -198,11 +208,15 @@ public class SimRobot implements RobotApi {
      * @param motionInterval        the interval between motion messages
      * @param proxyInterval         the interval between proxy messages
      * @param numObstacles          the number of obstacles
+     * @param numLabels             the number of labeld obstacles
      * @param changeObstaclesPeriod the period of change obstacles
      */
-    public SimRobot(ObstacleMap obstacleMap, Random random, Random mapRandom, double errSigma, double errSensor, Complex sensorReceptiveAngle, int maxAngularSpeed, long motionInterval, long proxyInterval, int numObstacles, long changeObstaclesPeriod) {
+    public SimRobot(ObstacleMap obstacleMap, Random random, Random mapRandom, double errSigma, double errSensor,
+                    Complex sensorReceptiveAngle, int maxAngularSpeed, long motionInterval, long proxyInterval,
+                    int numObstacles, int numLabels, long changeObstaclesPeriod) {
         this.mapRandom = mapRandom;
         this.numObstacles = numObstacles;
+        this.numLabels = numLabels;
         this.changeObstaclesPeriod = changeObstaclesPeriod;
         logger.atDebug().log("Created");
         this.random = requireNonNull(random);
@@ -215,6 +229,7 @@ public class SimRobot implements RobotApi {
         this.maxAngularSpeed = maxAngularSpeed;
         this.motionInterval = motionInterval;
         this.proxyInterval = proxyInterval;
+        this.cameraInterval = 1000; // TODO initialize cameraInterval
         this.frontSensor = this.rearSensor = true;
 
         // Creates the jbox2 physic world
@@ -382,8 +397,8 @@ public class SimRobot implements RobotApi {
      */
     private void createObstacleBodies() {
         obstacleBodies.forEach(world::destroyBody);
-        this.obstacleBodies = obstacleMap.points().stream()
-                .map(p -> createObstacleBodies(world, p))
+        this.obstacleBodies = obstacleMap.cells().stream()
+                .map(cell -> createObstacleBodies(world, cell.location()))
                 .toList();
     }
 
@@ -495,6 +510,20 @@ public class SimRobot implements RobotApi {
     }
 
     /**
+     * Sends the camera message
+     */
+    private void sendCamera() {
+        if (onCamera != null) {
+            Point2D[] points = new Point2D[0];
+            CameraEvent event = nearestCell != null && nearestCell.labeled()
+                    ? new CameraEvent(simulationTime, QR_CODE, CAMERA_WIDTH, CAMERA_HEIGHT, points)
+                    : CameraEvent.unknown(simulationTime);
+            onCamera.accept(event);
+        }
+        cameraTimeout = simulationTime + cameraInterval;
+    }
+
+    /**
      * Sends the contacts message
      */
     private void sendContacts() {
@@ -554,6 +583,11 @@ public class SimRobot implements RobotApi {
      */
     public Complex sensorDirection() {
         return sensorDirection;
+    }
+
+    @Override
+    public void setOnCamera(Consumer<CameraEvent> callback) {
+        onCamera = callback;
     }
 
     @Override
@@ -626,7 +660,7 @@ public class SimRobot implements RobotApi {
             double lambda = 1D / changeObstaclesPeriod;
             double p = 1 - exp(-lambda * dt);
             if (mapRandom.nextDouble() < p) {
-                obstacleMap = createObstacleMap(numObstacles, mapRandom, location());
+                obstacleMap = createObstacleMap(numObstacles, numLabels, mapRandom, location());
                 createObstacleBodies();
                 if (onObstacleChanged != null) {
                     onObstacleChanged.accept(this);
@@ -646,9 +680,10 @@ public class SimRobot implements RobotApi {
         boolean prevEchoAlarm = echoDistance > 0 && echoDistance <= SAFE_DISTANCE;
         this.echoDistance = 0;
         // Finds the nearest obstacle in proxy sensor range
-        Point2D obs = obstacleMap.nearest(x, y, sensorRad, sensorReceptiveAngle);
-        if (obs != null) {
+        this.nearestCell = obstacleMap.nearest(x, y, sensorRad, sensorReceptiveAngle);
+        if (nearestCell != null) {
             // Computes the distance of obstacles
+            Point2D obs = nearestCell.location();
             double dist = obs.distance(position) - obstacleMap.gridSize() / 2
                     + random.nextGaussian() * errSensor;
             echoDistance = dist > 0 && dist < MAX_DISTANCE ? dist : 0;
@@ -660,7 +695,17 @@ public class SimRobot implements RobotApi {
         // Check for movement constraints
         checkForSpeed();
         updateProxy();
+        updateCamera();
         //logger.atDebug().log("Tick elapsed {} ms", System.currentTimeMillis() - t0);
+    }
+
+    /**
+     * Sends the proxy message if interval has elapsed
+     */
+    private void updateCamera() {
+        if (simulationTime >= cameraTimeout) {
+            sendCamera();
+        }
     }
 
     /**

@@ -147,6 +147,11 @@ public class MockRobot implements RobotApi {
     }
 
     @Override
+    public void setOnCamera(Consumer<CameraEvent> callback) {
+
+    }
+
+    @Override
     public void setOnClock(Consumer<ClockSyncEvent> callback) {
         onClock = callback;
     }

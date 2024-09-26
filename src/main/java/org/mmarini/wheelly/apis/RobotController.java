@@ -165,6 +165,7 @@ public class RobotController implements RobotControllerApi {
     private final PublishProcessor<RobotStatus> supplyProcessor;
     private final long watchdogInterval;
     private final PublishProcessor<String> writeLinesProcessor;
+    private final PublishProcessor<RobotStatus> cameraProcessor;
     private boolean close;
     private boolean connected;
     private boolean end;
@@ -213,6 +214,7 @@ public class RobotController implements RobotControllerApi {
         this.motionProcessor = PublishProcessor.create();
         this.contactsProcessor = PublishProcessor.create();
         this.proxyProcessor = PublishProcessor.create();
+        this.cameraProcessor = PublishProcessor.create();
         this.supplyProcessor = PublishProcessor.create();
         this.controllerStatusProcessor = PublishProcessor.create();
         this.commandsProcessor = PublishProcessor.create();
@@ -228,6 +230,18 @@ public class RobotController implements RobotControllerApi {
         robot.setOnProxy(this::handleProxy);
         robot.setOnContacts(this::handleContacts);
         robot.setOnSupply(this::handleSupply);
+        robot.setOnCamera(this::handleCamera);
+    }
+
+    /**
+     * Handles camera event
+     *
+     * @param cameraEvent the camera event
+     */
+    private void handleCamera(CameraEvent cameraEvent) {
+        robotStatus = robotStatus.setCameraMessage(cameraEvent).setSimulationTime(robot.simulationTime());
+        cameraProcessor.onNext(robotStatus);
+        scheduleInference(robotStatus);
     }
 
     /**
@@ -444,6 +458,11 @@ public class RobotController implements RobotControllerApi {
     @Override
     public Flowable<RobotStatus> readRobotStatus() {
         return statusFlow;
+    }
+
+    @Override
+    public Flowable<RobotStatus> readCamera() {
+        return cameraProcessor;
     }
 
     @Override

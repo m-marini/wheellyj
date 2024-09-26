@@ -14,10 +14,11 @@ robots:
     sensorReceptiveAngle: 15
     maxAngularSpeed: 5
   realRobot:
-    $schema: https://mmarini.org/wheelly/robot-schema-1.0
+    $schema: https://mmarini.org/wheelly/robot-schema-2.0
     class: org.mmarini.wheelly.apis.Robot
     #host: wheelly
-    host: 192.168.1.43
+    robotHost: 192.168.1.43
+    cameraHost: localhost
     connectionTimeout: 10000
     readTimeout: 10000
     configureTimeout: 2000

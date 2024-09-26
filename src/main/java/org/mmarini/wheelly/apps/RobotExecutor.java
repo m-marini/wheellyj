@@ -34,7 +34,10 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apis.RobotApi;
+import org.mmarini.wheelly.apis.RobotControllerApi;
+import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.SimRobot;
 import org.mmarini.wheelly.engines.ProcessorContext;
 import org.mmarini.wheelly.engines.StateMachineAgent;
 import org.mmarini.wheelly.engines.StateNode;
@@ -300,12 +303,13 @@ public class RobotExecutor {
     private void handleWindowOpened(WindowEvent e) {
         agent.init();
         RobotApi robot = agent.getController().getRobot();
-        if (robot instanceof SimRobot) {
-            Optional<ObstacleMap> obstaclesMap = ((SimRobot) robot).obstaclesMap();
-            obstaclesMap.map(ObstacleMap::points)
-                    .ifPresent(envPanel::setObstacleMap);
-            obstaclesMap.map(ObstacleMap::gridSize)
-                    .ifPresent(envPanel::setObstacleSize);
+        if (robot instanceof SimRobot sim) {
+            sim.obstaclesMap()
+                    .ifPresent(map -> {
+                        envPanel.setHinderedPoints(map.hindered().toList());
+                        envPanel.setLabeledPoints(map.labeled().toList());
+                        envPanel.setObstacleSize(map.gridSize());
+                    });
         }
     }
 
@@ -397,8 +401,11 @@ public class RobotExecutor {
                 .subscribe();
         if (agent.getController().getRobot() instanceof SimRobot simRobot) {
             simRobot.setOnObstacleChanged(sim ->
-                    sim.obstaclesMap().map(ObstacleMap::points)
-                            .ifPresent(envPanel::setObstacleMap));
+                    sim.obstaclesMap()
+                            .ifPresent(map -> {
+                                envPanel.setHinderedPoints(map.hindered().toList());
+                                envPanel.setLabeledPoints(map.labeled().toList());
+                            }));
         }
         if (args.getBoolean("windows")) {
             createMultiFrames();

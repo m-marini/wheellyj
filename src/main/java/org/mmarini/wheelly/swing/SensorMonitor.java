@@ -42,6 +42,7 @@ import java.util.List;
 public class SensorMonitor extends MatrixTable {
 
     public static final String ECHO_DIST_KEY = "echoDistance";
+    public static final String QR_CODE_KEY = "qrCode";
     public static final String SENSOR_DIR_KEY = "sensorDir";
     public static final String HEAD_KEY = "head";
     public static final String LEFT_PPS_KEY = "leftPps";
@@ -72,6 +73,7 @@ public class SensorMonitor extends MatrixTable {
                         addColumn(HEAD_KEY, Messages.getString("SensorMonitor.head"), 4),
                         addColumn(SENSOR_DIR_KEY, Messages.getString("SensorMonitor.sensorDir"), 3),
                         addColumn(ECHO_DIST_KEY, Messages.getString("SensorMonitor.echoDistance"), 3),
+                        addColumn(QR_CODE_KEY, Messages.getString("SensorMonitor.qrCode"), 3),
                         addColumn(LEFT_PPS_KEY, Messages.getString("SensorMonitor.leftPps"), 3),
                         addColumn(RIGHT_PPS_KEY, Messages.getString("SensorMonitor.rightPps"), 3),
                         addColumn(CAN_MOVE_FORWARD_KEY, Messages.getString("SensorMonitor.canMoveForward"), 1),
@@ -140,6 +142,7 @@ public class SensorMonitor extends MatrixTable {
         printf(HEAD_KEY, "%4d", status.direction().toIntDeg());
         printf(SENSOR_DIR_KEY, "%4d", status.sensorDirection().toIntDeg());
         printf(ECHO_DIST_KEY, "%3.1f", status.echoDistance());
+        printf(QR_CODE_KEY, status.qrCode());
         printf(LEFT_PPS_KEY, "%3.0f", status.leftPps());
         printf(RIGHT_PPS_KEY, "%3.0f", status.rightPps());
         printf(CAN_MOVE_FORWARD_KEY, status.canMoveForward() ? "-" : "F");

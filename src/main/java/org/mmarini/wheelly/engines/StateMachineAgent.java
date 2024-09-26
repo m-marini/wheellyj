@@ -60,7 +60,7 @@ import static org.mmarini.wheelly.engines.StateNode.NONE_EXIT;
  */
 public class StateMachineAgent implements ProcessorContext, WithIOFlowable, WithStatusFlowable, WithErrorFlowable,
         WithCommandFlowable, WithControllerFlowable {
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-agent-schema-1.1";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-agent-schema-2.0";
     private static final Logger logger = LoggerFactory.getLogger(StateMachineAgent.class);
 
     /**
@@ -265,6 +265,11 @@ public class StateMachineAgent implements ProcessorContext, WithIOFlowable, With
     @Override
     public Flowable<RobotStatus> readProxy() {
         return controller.readProxy();
+    }
+
+    @Override
+    public Flowable<RobotStatus> readCamera() {
+        return controller.readCamera();
     }
 
     @Override

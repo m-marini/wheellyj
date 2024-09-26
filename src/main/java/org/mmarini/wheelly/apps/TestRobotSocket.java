@@ -1,7 +1,7 @@
 package org.mmarini.wheelly.apps;
 
 import io.reactivex.rxjava3.schedulers.Timed;
-import org.mmarini.wheelly.apis.RobotSocket;
+import org.mmarini.wheelly.apis.LineSocket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,7 +13,7 @@ public class TestRobotSocket {
     private static final Logger logger = LoggerFactory.getLogger(TestRobotSocket.class);
 
     public static void main(String[] args) throws IOException {
-        try (RobotSocket robot = new RobotSocket("192.168.1.11", 22, 10000, 3000)) {
+        try (LineSocket robot = new LineSocket("192.168.1.11", 22, 10000, 3000)) {
             logger.info("Connecting to robot...");
             robot.connect();
             long test_timeout = System.currentTimeMillis() + TEST_DURATION;

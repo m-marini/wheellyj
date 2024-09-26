@@ -59,7 +59,7 @@ class PolarMapTest {
     }
 
     private RadarMap createRadarMap() {
-        return RadarMap.create(new Point2D.Double(), 31, 31, GRID_SIZE, MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
+        return RadarMap.create(new Point2D.Double(), 31, 31, GRID_SIZE, MAX_INTERVAL, 2000, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
     }
 
     @ParameterizedTest
@@ -110,7 +110,7 @@ class PolarMapTest {
          */
         Point2D center = new Point2D.Double();
         long timestamp = System.currentTimeMillis();
-        RadarMap radarMap = RadarMap.create(center, 11, 11, GRID_SIZE, MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
+        RadarMap radarMap = RadarMap.create(center, 11, 11, GRID_SIZE, MAX_INTERVAL, 2000, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
         radarMap = radarMap.updateCellAt(obsX, obsY, sect -> sect.addEchogenic(timestamp));
 
         // When create a polar map from center directed to mapDir limited by GRID_SIZE and 3m

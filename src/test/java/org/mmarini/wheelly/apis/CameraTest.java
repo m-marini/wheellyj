@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2023 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -28,36 +28,29 @@
 
 package org.mmarini.wheelly.apis;
 
-import io.reactivex.rxjava3.core.Flowable;
+import org.junit.jupiter.api.Test;
 
-public interface WithStatusFlowable {
-    /**
-     * Returns the stream of proxy events
-     */
-    Flowable<RobotStatus> readContacts();
+import java.awt.geom.Point2D;
 
-    /**
-     * Returns the stream of motion events
-     */
-    Flowable<RobotStatus> readMotion();
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-    /**
-     * Returns the stream of proxy events
-     */
-    Flowable<RobotStatus> readProxy();
+class CameraTest {
+    @Test
+    void createTest() {
+        // Given a line
+        String line = "qr 1725192587504 A 320 240 90.0 108.8 182.0 107.0 184.0 203.0 90.0 203.0";
 
-    /**
-     * Returns the stream of camera events
-     */
-    Flowable<RobotStatus> readCamera();
+        // When create a camera event
+        CameraEvent event = CameraEvent.create(line);
 
-    /**
-     * Returns the stream of status
-     */
-    Flowable<RobotStatus> readRobotStatus();
-
-    /**
-     * Returns the stream of supply events
-     */
-    Flowable<RobotStatus> readSupply();
+        // Then
+        assertNotNull(event);
+        assertEquals(1725192587504L, event.timestamp());
+        assertEquals("A", event.qrCode());
+        assertEquals(new Point2D.Double(90, 108.8), event.points()[0]);
+        assertEquals(new Point2D.Double(182, 107), event.points()[1]);
+        assertEquals(new Point2D.Double(184, 203), event.points()[2]);
+        assertEquals(new Point2D.Double(90, 203), event.points()[3]);
+    }
 }
