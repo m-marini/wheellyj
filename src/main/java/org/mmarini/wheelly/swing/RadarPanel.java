@@ -52,6 +52,7 @@ public class RadarPanel extends JComponent {
     static final Color EMPTY_COLOR = new Color(64, 64, 64, 128);
     static final Color FILLED_COLOR = new Color(200, 0, 0, 128);
     static final Color CONTACT_COLOR = new Color(200, 0, 200, 128);
+    static final Color LABELED_COLOR = new Color(0, 128, 128, 128);
     static final Color TARGET_COLOR = new Color(0, 200, 0);
     static final Shape GRID_SHAPE = createGridShape();
     static final double TARGET_SIZE = 0.2;
@@ -101,7 +102,8 @@ public class RadarPanel extends JComponent {
                             sector.hasContact()
                                     ? CONTACT_COLOR
                                     : sector.echogenic()
-                                    ? FILLED_COLOR : EMPTY_COLOR
+                                    ? sector.labeled() ? LABELED_COLOR : FILLED_COLOR
+                                    : EMPTY_COLOR
 
                     ))
                     .collect(Collectors.toList());

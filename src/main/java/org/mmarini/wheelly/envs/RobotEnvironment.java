@@ -94,6 +94,11 @@ public interface RobotEnvironment extends WithStatusFlowable, WithErrorFlowable,
     }
 
     @Override
+    default Flowable<RobotStatus> readCamera() {
+        return getController().readCamera();
+    }
+
+    @Override
     default Flowable<String> readReadLine() {
         return getController().readReadLine();
     }

@@ -66,7 +66,7 @@ class RadarMapTest {
                 .toList();
 
         RadarMap radarMap = RadarMap.create(RadarMapTest.GRID_TOPOLOGY.center(), RadarMapTest.GRID_TOPOLOGY.width(), RadarMapTest.GRID_TOPOLOGY.height(), RadarMapTest.GRID_TOPOLOGY.gridSize(),
-                MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, RadarMapTest.GRID_TOPOLOGY.gridSize(), RECEPTIVE_ANGLE);
+                MAX_INTERVAL, 2000, MAX_INTERVAL, MAX_INTERVAL, RadarMapTest.GRID_TOPOLOGY.gridSize(), RECEPTIVE_ANGLE);
         for (Point2D p : echos) {
             radarMap = radarMap.updateCellAt(p,
                     c -> c.addEchogenic(ECHO_TIME));
@@ -143,7 +143,7 @@ class RadarMapTest {
     @NotNull
     private RadarMap createRadarMap() {
         return RadarMap.create(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE,
-                MAX_INTERVAL, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
+                MAX_INTERVAL, 2000, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
     }
 
     @Test
@@ -314,7 +314,7 @@ class RadarMapTest {
         long timestamp = System.currentTimeMillis();
         RadarMap.SensorSignal signal = new RadarMap.SensorSignal(sensor, direction, distance, timestamp);
 
-        map = map.update(signal);
+        map = map.update(signal, null);
 
         Optional<MapCell> sectorOpt = map.cell(0, 0);
 

@@ -1,16 +1,22 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/robot-schema-1.0
+$id: https://mmarini.org/wheelly/robot-schema-2.0
 title: Robot
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/robot-schema-1.0
+    const: https://mmarini.org/wheelly/robot-schema-2.0
   class:
     const: org.mmarini.wheelly.apis.Robot
-  host:
+  robotHost:
     type: string
-  port:
+  robotPort:
+    multipleOf: 1
+    minimum: 1
+    maximum: 32768
+  cameraHost:
+    type: string
+  cameraPort:
     multipleOf: 1
     minimum: 1
     maximum: 32768
@@ -31,7 +37,8 @@ properties:
 required:
   - $schema
   - class
-  - host
+  - robotHost
+  - cameraHost
   - connectionTimeout
   - readTimeout
   - configureTimeout

@@ -59,6 +59,11 @@ public class NullController implements RobotControllerApi {
     }
 
     @Override
+    public Flowable<RobotStatus> readCamera() {
+        throw new NotImplementedException();
+    }
+
+    @Override
     public Flowable<String> readReadLine() {
         throw new NotImplementedException();
     }

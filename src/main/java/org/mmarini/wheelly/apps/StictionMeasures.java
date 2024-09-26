@@ -32,7 +32,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
-import org.mmarini.wheelly.apis.RobotSocket;
+import org.mmarini.wheelly.apis.LineSocket;
 import org.mmarini.wheelly.swing.Messages;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -142,7 +142,7 @@ public class StictionMeasures {
     }
 
     private Namespace args;
-    private RobotSocket socket;
+    private LineSocket socket;
     private String outputPrefix;
     private long stepTime;
     private long thresholdPulses;
@@ -280,7 +280,7 @@ public class StictionMeasures {
             this.stepTime = this.args.getLong("interval");
             this.thresholdPulses = this.args.getLong("threshold");
             this.outputPrefix = this.args.getString("output");
-            this.socket = new RobotSocket(this.args.getString("server"), this.args.getInt("port"),
+            this.socket = new LineSocket(this.args.getString("server"), this.args.getInt("port"),
                     CONNECTION_TIMEOUT, READ_TIMEOUT);
             socket.connect();
 

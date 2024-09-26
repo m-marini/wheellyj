@@ -39,6 +39,16 @@ class MapCellTest {
     public static final Complex RECEPTIVE_ANGLE = Complex.fromDeg(15);
     public static final double MAX_SIGNAL_DISTANCE = 3;
 
+    private static MapCell createInitialCell(String initialCell, Point2D cellLocation) {
+        return switch (initialCell) {
+            case "labeled" -> new MapCell(cellLocation, System.currentTimeMillis(), 1, 0, 1);
+            case "hindered" -> new MapCell(cellLocation, System.currentTimeMillis(), 1, 0, 0);
+            case "unknown" -> MapCell.unknown(cellLocation);
+            case "empty" -> new MapCell(cellLocation, System.currentTimeMillis(), 0, 0, 0);
+            default -> throw new IllegalStateException("Unexpected value: " + initialCell);
+        };
+    }
+
     @Test
     void cleanContactTimeoutTest() {
         // Given a cell with echo and conctact set at 100 ms
@@ -170,40 +180,187 @@ class MapCellTest {
      * When update the sector status
      * Than the sector should be filled (sector in the signal range)
      */
-    @ParameterizedTest
+    @ParameterizedTest(name = "[{index}] {2}, label={5}, {9}")
     @CsvSource({
-            "0,0, 0,2, -3,2, false, false, true", // 1. Echo -> hindered
-            "0,0, 0,2.99, 0,0, false, true, false", // 2. No echo -> empty
-            "0,0, 0,2.99, -15,0, false, true, false", // 3. No echo left -> empty
-            "0,0, 0,2.99, 15,0, false, true, false", // 4. No echo right -> empty
-            "0,0, 0,1, 30,2, true, false, false", // 5. cell not in directionDeg of echo -> unknown
-            "0,0, 0,1, -6,2, false, true, false", // 6. Cell before echo -> unknown
-            "0,0, 0,2.21, 0,2, true, false, false", // 7. Cell far away echo -> unknown
-            "0,0, 0,3.2, 0,0, true, false, false", // 8. Cell far away no echo -> unknown
-            "0,0, 0,0.049, 0,0.5, true, false, false", // 9. Cell in sensor -> unknown
-    })
-    void updateTest(double xSens, double ySens,
-                    double xCell, double yCell,
-                    int sensDir, double distance,
-                    boolean unknown,
-                    boolean empty,
-                    boolean hindered) {
-        // Given ...
-        Point2D sensLocation = new Point2D.Double(xSens, ySens);
-        long timestamp = System.currentTimeMillis();
-        RadarMap.SensorSignal signal = new RadarMap.SensorSignal(sensLocation, Complex.fromDeg(sensDir), distance, timestamp);
-        Point2D cellLocation = new Point2D.Double(xCell, yCell);
+            "0,2,     unknown, -3,2,  ?, true,0,-1, Echo -> unknown",
+            "0,2.99,  unknown, 0,0,   ?, true,0,0,  No echo -> unknown",
+            "0,2.99,  unknown, -15,0, ?, true,0,0,  No echo left -> unknown",
+            "0,2.99,  unknown, 15,0,  ?, true,0,0,  No echo right -> unknown",
+            "0,1,     unknown, 30,2,  ?, true, 0,0, Cell not in directionDeg of echo -> unknown",
+            "0,1,     unknown, -6,2,  ?, true,0,0,  Cell before echo -> unknown",
+            "0,2.21,  unknown, 0,2,   ?, true, 0,0, Cell far away echo -> unknown",
+            "0,3.2,   unknown, 0,0,   ?, true, 0,0, Cell far away no echo -> unknown",
+            "0,0.049, unknown, 0,0.5, ?, true, 0,0, Cell in sensor -> unknown",
 
-        // When ...
-        MapCell cell = MapCell.unknown(cellLocation)
+            "0,2,     unknown, -3,2,  A, true,0,1,  Echo -> unknown",
+            "0,2.99,  unknown, 0,0,   A, true,0,0,  No echo -> unknown",
+            "0,2.99,  unknown, -15,0, A, true,0,0,  No echo left -> unknown",
+            "0,2.99,  unknown, 15,0,  A, true,0,0,  No echo right -> unknown",
+            "0,1,     unknown, 30,2,  A, true, 0,0, Cell not in directionDeg of echo -> unknown",
+            "0,1,     unknown, -6,2,  A, true,0,0,  Cell before echo -> unknown",
+            "0,2.21,  unknown, 0,2,   A, true, 0,0, Cell far away echo -> unknown",
+            "0,3.2,   unknown, 0,0,   A, true, 0,0, Cell far away no echo -> unknown",
+            "0,0.049, unknown, 0,0.5, A, true, 0,0, Cell in sensor -> unknown",
+
+            "0,2,     empty, -3,2,  ?, false,0,-1, Echo -> empty",
+            "0,2.99,  empty, 0,0,   ?, false,0,0, No echo -> empty",
+            "0,2.99,  empty, -15,0, ?, false,0,0, No echo left -> empty",
+            "0,2.99,  empty, 15,0,  ?, false,0,0, No echo right -> empty",
+            "0,1,     empty, 30,2,  ?, false,0,0, Cell not in directionDeg of echo -> empty",
+            "0,1,     empty, -6,2,  ?, false,0,0, Cell before echo -> empty",
+            "0,2.21,  empty, 0,2,   ?, false,0,0, Cell far away echo -> empty",
+            "0,3.2,   empty, 0,0,   ?, false,0,0, Cell far away no echo -> empty",
+            "0,0.049, empty, 0,0.5, ?, false,0,0, Cell in sensor -> empty",
+
+            "0,2,     empty, -3,2,  A, false,0,1, Echo -> empty",
+            "0,2.99,  empty, 0,0,   A, false,0,0, No echo -> empty",
+            "0,2.99,  empty, -15,0, A, false,0,0, No echo left -> empty",
+            "0,2.99,  empty, 15,0,  A, false,0,0, No echo right -> empty",
+            "0,1,     empty, 30,2,  A, false,0,0, Cell not in directionDeg of echo -> empty",
+            "0,1,     empty, -6,2,  A, false,0,0, Cell before echo -> empty",
+            "0,2.21,  empty, 0,2,   A, false,0,0, Cell far away echo -> empty",
+            "0,3.2,   empty, 0,0,   A, false,0,0, Cell far away no echo -> empty",
+            "0,0.049, empty, 0,0.5, A, false,0,0, Cell in sensor -> empty",
+
+            "0,2,     hindered, -3,2,  ?, false,1,-1, Echo -> unlabeled",
+            "0,2.99,  hindered, 0,0,   ?, false,1,0,  No echo -> hindered",
+            "0,2.99,  hindered, -15,0, ?, false,1,0,  No echo left -> hindered",
+            "0,2.99,  hindered, 15,0,  ?, false,1,0,  No echo right -> hindered",
+            "0,1,     hindered, 30,2,  ?, false,1,0,  Cell not in directionDeg of echo -> hindered",
+            "0,1,     hindered, -6,2,  ?, false,1,0,  Cell before echo -> hindered",
+            "0,2.21,  hindered, 0,2,   ?, false,1,0,  Cell far away echo -> hindered",
+            "0,3.2,   hindered, 0,0,   ?, false,1,0,  Cell far away no echo -> hindered",
+            "0,0.049, hindered, 0,0.5, ?, false,1,0,  Cell in sensor -> hindered",
+
+            "0,2,     hindered, -3,2,  A, false,1,1, Echo -> labeled",
+            "0,2.99,  hindered, 0,0,   A, false,1,0, No echo -> hindered",
+            "0,2.99,  hindered, -15,0, A, false,1,0, No echo left -> hindered",
+            "0,2.99,  hindered, 15,0,  A, false,1,0, No echo right -> hindered",
+            "0,1,     hindered, 30,2,  A, false,1,0, Cell not in directionDeg of echo -> hindered",
+            "0,1,     hindered, -6,2,  A, false,1,0, Cell before echo -> hindered",
+            "0,2.21,  hindered, 0,2,   A, false,1,0, Cell far away echo -> hindered",
+            "0,3.2,   hindered, 0,0,   A, false,1,0, Cell far away no echo -> hindered",
+            "0,0.049, hindered, 0,0.5, A, false,1,0, Cell in sensor -> hindered",
+
+            "0,2,     labeled, -3,2,  ?, false,1,0, Echo -> hindered",
+            "0,1,     labeled, 30,2,  ?, false,1,1, Cell not in directionDeg of echo -> labeled",
+            "0,1,     labeled, -6,2,  ?, false,1,1, Cell before echo -> labeled",
+            "0,2.21,  labeled, 0,2,   ?, false,1,1, Cell far away echo -> labeled",
+            "0,3.2,   labeled, 0,0,   ?, false,1,1, Cell far away no echo -> labeled",
+            "0,0.049, labeled, 0,0.5, ?, false,1,1, Cell in sensor -> labeled",
+
+            "0,2,     labeled, -3,2,  A, false,1,2, Echo -> labeled",
+            "0,1,     labeled, 30,2,  A, false,1,1, Cell not in directionDeg of echo -> labeled",
+            "0,1,     labeled, -6,2,  A, false,1,1, Cell before echo -> labeled",
+            "0,2.21,  labeled, 0,2,   A, false,1,1, Cell far away echo -> labeled",
+            "0,3.2,   labeled, 0,0,   A, false,1,1, Cell far away no echo -> labeled",
+            "0,0.049, labeled, 0,0.5, A, false,1,1, Cell in sensor -> labeled",
+    })
+    void updateLabelTest(double xCell, double yCell,
+                         String initialCell,
+                         int sensDir, double distance,
+                         String labelTxt,
+                         boolean expUnknown,
+                         int expEchoCounter,
+                         int expLabeledCounter) {
+        // Given a initial cell
+        Point2D cellLocation = new Point2D.Double(xCell, yCell);
+        MapCell cell0 = createInitialCell(initialCell, cellLocation);
+
+        // And a sensor signal
+        Point2D sensLocation = new Point2D.Double();
+        RadarMap.SensorSignal signal = new RadarMap.SensorSignal(sensLocation, Complex.fromDeg(sensDir), distance, cell0.echoTime());
+
+        // And label signal
+        String label = "null".equals(labelTxt) ? null : labelTxt;
+
+        // When update cell
+        MapCell cell = cell0
+                .updateLabel(signal, MAX_SIGNAL_DISTANCE, GRID_SIZE, RECEPTIVE_ANGLE, label);
+
+        // Then ...
+        assertEquals(expUnknown, cell.unknown());
+        assertEquals(expEchoCounter, cell.echoCounter());
+        assertEquals(expLabeledCounter, cell.labeledCounter());
+        assertEquals(cell0.echoTime(), cell.echoTime());
+    }
+
+    /**
+     * Given a signal at 2m
+     * And an unknown sector at 2m, 3 DEG from sensor directionDeg (in directionDeg) (sector at 0 DEG, sensor to -3 DEG)
+     * When update the sector status
+     * Than the sector should be filled (sector in the signal range)
+     */
+    @ParameterizedTest(name = "[{index}] {2}, {9}")
+    @CsvSource({
+            "0,2,    unknown, -3,2,  false,1,0, true,  Echo -> hindered",
+            "0,2.99, unknown, 0,0,   false,0,0, true,  No echo -> empty",
+            "0,2.99, unknown, -15,0, false,0,0, true,  No echo left -> empty",
+            "0,2.99, unknown, 15,0,  false,0,0, true,  No echo right -> empty",
+            "0,1,    unknown, 30,2,  true, 0,0, false, Cell not in directionDeg of echo -> unknown",
+            "0,1,    unknown, -6,2,  false,0,0, true,  Cell before echo -> empty",
+            "0,2.21, unknown, 0,2,   true, 0,0, false, Cell far away echo -> unknown",
+            "0,3.2,  unknown, 0,0,   true, 0,0, false, Cell far away no echo -> unknown",
+            "0,0.049,unknown, 0,0.5, true, 0,0, false, Cell in sensor -> unknown",
+
+            "0,2,    empty, -3,2,  false,1, 0, true,  Echo -> hindered",
+            "0,2.99, empty, 0,0,   false,-1,0, true,  No echo -> empty",
+            "0,2.99, empty, -15,0, false,-1,0, true,  No echo left -> empty",
+            "0,2.99, empty, 15,0,  false,-1,0, true,  No echo right -> empty",
+            "0,1,    empty, 30,2,  false,0, 0, false, Cell not in directionDeg of echo -> empty",
+            "0,1,    empty, -6,2,  false,-1,0, true,  Cell before echo -> empty",
+            "0,2.21, empty, 0,2,   false,0, 0, false, Cell far away echo -> empty",
+            "0,3.2,  empty, 0,0,   false,0, 0, false, Cell far away no echo -> empty",
+            "0,0.049,empty, 0,0.5, false,0, 0, false, Cell in sensor -> empty",
+
+            "0,2,    hindered, -3,2,  false,2,0, true,  Echo -> hindered",
+            "0,2.99, hindered, 0,0,   false,0,0, true,  No echo -> empty",
+            "0,2.99, hindered, -15,0, false,0,0, true,  No echo left -> empty",
+            "0,2.99, hindered, 15,0,  false,0,0, true,  No echo right -> empty",
+            "0,1,    hindered, 30,2,  false,1,0, false, Cell not in directionDeg of echo -> hindered",
+            "0,1,    hindered, -6,2,  false,0,0, true,  Cell before echo -> empty",
+            "0,2.21, hindered, 0,2,   false,1,0, false, Cell far away echo -> hindered",
+            "0,3.2,  hindered, 0,0,   false,1,0, false, Cell far away no echo -> hindered",
+            "0,0.049,hindered, 0,0.5, false,1,0, false, Cell in sensor -> hindered",
+
+            "0,2,    labeled, -3,2,  false,2,1, true,  Echo -> labeled",
+            "0,2.99, labeled, 0,0,   false,0,1, true,  No echo -> empty",
+            "0,2.99, labeled, -15,0, false,0,1, true,  No echo left -> empty",
+            "0,2.99, labeled, 15,0,  false,0,1, true,  No echo right -> empty",
+            "0,1,    labeled, 30,2,  false,1,1, false, Cell not in directionDeg of echo -> labeled",
+            "0,1,    labeled, -6,2,  false,0,1, true,  Cell before echo -> empty",
+            "0,2.21, labeled, 0,2,   false,1,1, false, Cell far away echo -> labeled",
+            "0,3.2,  labeled, 0,0,   false,1,1, false, Cell far away no echo -> labeled",
+            "0,0.049,labeled, 0,0.5, false,1,1, false, Cell in sensor -> labeled",
+    })
+    void updateTest(double xCell, double yCell,
+                    String initialCell,
+                    int sensDir, double distance,
+                    boolean expUnknown,
+                    int expEchoCounter,
+                    int expLabeledCounter,
+                    boolean updated) {
+        // Given a initial cell
+        Point2D cellLocation = new Point2D.Double(xCell, yCell);
+        MapCell cell0 = createInitialCell(initialCell, cellLocation);
+        long signalTimestamp = System.currentTimeMillis() + 100;
+
+        // And a sensor signal
+        Point2D sensLocation = new Point2D.Double();
+        RadarMap.SensorSignal signal = new RadarMap.SensorSignal(sensLocation, Complex.fromDeg(sensDir), distance, signalTimestamp);
+
+        // When update cell
+        MapCell cell = cell0
                 .update(signal, MAX_SIGNAL_DISTANCE, GRID_SIZE, RECEPTIVE_ANGLE);
 
         // Then ...
-        assertEquals(unknown, cell.unknown());
-        assertEquals(hindered, cell.echogenic());
-        assertEquals(empty, cell.anechoic());
-        if (!unknown) {
-            assertEquals(timestamp, cell.echoTime());
+        assertEquals(expUnknown, cell.unknown());
+        assertEquals(expEchoCounter, cell.echoCounter());
+        assertEquals(expLabeledCounter, cell.labeledCounter());
+        if (updated) {
+            assertEquals(signalTimestamp, cell.echoTime());
+        } else {
+            assertEquals(cell0.echoTime(), cell.echoTime());
         }
     }
 }

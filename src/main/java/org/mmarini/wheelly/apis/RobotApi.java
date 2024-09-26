@@ -35,7 +35,7 @@ import java.io.IOException;
 /**
  * API Interface for robot
  */
-public interface RobotApi extends Closeable, WithStatusCallback {
+public interface RobotApi extends Closeable, WithStatusCallback, WithCameraCallback {
     int MAX_PPS = 60;
 
     /**

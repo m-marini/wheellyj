@@ -1,13 +1,13 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/state-agent-schema-1.1
+$id: https://mmarini.org/wheelly/state-agent-schema-2.0
 title: State machine agent
 description: State Agent Schema
 type: object
 properties:
   $schema:
     type: string
-    const: https://mmarini.org/wheelly/state-agent-schema-1.1
+    const: https://mmarini.org/wheelly/state-agent-schema-2.0
   class:
     const: org.mmarini.wheelly.engines.StateMachineAgent
   flow:
@@ -34,6 +34,9 @@ properties:
   radarCleanInterval:
     multipleOf: 1
     minimum: 1
+  correlationInterval:
+    multipleOf: 1
+    minimum: 1
   echoPersistence:
     multipleOf: 1
     minimum: 1
@@ -53,6 +56,7 @@ required:
   - contactRadius
   - radarReceptiveAngle
   - radarCleanInterval
+  - correlationInterval
   - echoPersistence
   - contactPersistence
 $defs:

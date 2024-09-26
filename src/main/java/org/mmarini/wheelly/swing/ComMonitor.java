@@ -39,6 +39,7 @@ public class ComMonitor extends MatrixTable {
 
     public static final String MOTION = "motion";
     public static final String PROXY = "proxy";
+    public static final String CAMERA = "camera";
     public static final String CONTACTS = "contacts";
     public static final String SUPPLY = "supply";
     public static final String SCAN = "scan";
@@ -57,6 +58,7 @@ public class ComMonitor extends MatrixTable {
         addColumn(CONTROLLER_KEY, Messages.getString("ComMonitor.controller"), 3).setScrollOnChange(true);
         addColumn(MOTION, Messages.getString("ComMonitor.motion"), 70);
         addColumn(PROXY, Messages.getString("ComMonitor.proxy"), 40);
+        addColumn(CAMERA, Messages.getString("ComMonitor.camera"), 80);
         addColumn(CONTACTS, Messages.getString("ComMonitor.contacts"), 20);
         addColumn(SUPPLY, Messages.getString("ComMonitor.supply"), 16);
         addColumn(MOVE, Messages.getString("ComMonitor.move"), 11);
@@ -87,6 +89,7 @@ public class ComMonitor extends MatrixTable {
             case String l when l.startsWith("ct ") -> CONTACTS;
             case String l when l.startsWith("sv ") -> SUPPLY;
             case String l when l.startsWith("ck ") -> CONFIG;
+            case String l when l.startsWith("qr ") -> CAMERA;
             case String l when CONFIG_COMMANDS_ACK.test(l) -> CONFIG;
             case String l when l.startsWith("!!") -> ERROR_KEY;
             default -> OTHER;

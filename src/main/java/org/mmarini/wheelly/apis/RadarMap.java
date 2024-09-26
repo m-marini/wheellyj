@@ -48,19 +48,21 @@ import static org.mmarini.wheelly.apis.AreaExpression.*;
 /**
  * The RadarMap keeps the obstacle signal results of the space round the center
  *
- * @param topology           the topology
- * @param cells              the map cells
- * @param cleanInterval      the clean interval (ms)
- * @param echoPersistence    the echo persistence (ms)
- * @param contactPersistence the contact persistence (ms)
- * @param cleanTimestamp     the next clean instant (ms)
- * @param contactRadius      the receptive distance (m)
- * @param receptiveAngle     the receptive angle
- * @param vertices           the vertices qVectors
- * @param verticesByCells
+ * @param topology            the topology
+ * @param cells               the map cells
+ * @param cleanInterval       the clean interval (ms)
+ * @param correlationInterval the qrcode-proxy correlation interval (ms)
+ * @param echoPersistence     the echo persistence (ms)
+ * @param contactPersistence  the contact persistence (ms)
+ * @param cleanTimestamp      the next clean instant (ms)
+ * @param contactRadius       the receptive distance (m)
+ * @param receptiveAngle      the receptive angle
+ * @param vertices            the vertices qVectors
+ * @param verticesByCells     the vertices by cell
  */
 public record RadarMap(GridTopology topology, MapCell[] cells,
-                       long cleanInterval, long echoPersistence, long contactPersistence, long cleanTimestamp,
+                       long cleanInterval, long correlationInterval, long echoPersistence, long contactPersistence,
+                       long cleanTimestamp,
                        double contactRadius, Complex receptiveAngle,
                        QVect[] vertices, int[][] verticesByCells) {
     public static final double MAX_SIGNAL_DISTANCE = 3;
@@ -77,30 +79,32 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
         int radarHeight = locator.path("radarHeight").getNode(root).asInt();
         double radarGrid = locator.path("radarGrid").getNode(root).asDouble();
         long radarCleanInterval = locator.path("radarCleanInterval").getNode(root).asLong();
+        long correlationInterval1 = locator.path("correlationInterval").getNode(root).asLong();
         long echoPersistence = locator.path("echoPersistence").getNode(root).asLong();
         long contactPersistence = locator.path("contactPersistence").getNode(root).asLong();
         double contactRadius = locator.path("contactRadius").getNode(root).asDouble();
         Complex radarReceptiveAngle = Complex.fromDeg(locator.path("radarReceptiveAngle").getNode(root).asInt());
         return RadarMap.create(new Point2D.Float(), radarWidth, radarHeight, radarGrid,
-                radarCleanInterval, echoPersistence,
+                radarCleanInterval, correlationInterval1, echoPersistence,
                 contactPersistence, contactRadius, radarReceptiveAngle);
     }
 
     /**
      * Returns the empty radar map
      *
-     * @param center             the center of map
-     * @param width              the number of horizontal sector
-     * @param height             the number of vertical sector
-     * @param gridSize           the grid size
-     * @param radarCleanInterval the clean interval (ms)
-     * @param echoPersistence    the echo persistence (ms)
-     * @param contactPersistence the contact persistence (ms)
-     * @param contactRadius      the contact radius (m)
-     * @param receptiveAngle     receptive angle
+     * @param center              the center of map
+     * @param width               the number of horizontal sector
+     * @param height              the number of vertical sector
+     * @param gridSize            the grid size
+     * @param radarCleanInterval  the clean interval (ms)
+     * @param correlationInterval the qrcode-proxy correlation interval (ms)
+     * @param echoPersistence     the echo persistence (ms)
+     * @param contactPersistence  the contact persistence (ms)
+     * @param contactRadius       the contact radius (m)
+     * @param receptiveAngle      receptive angle
      */
     public static RadarMap create(Point2D center, int width, int height, double gridSize,
-                                  long radarCleanInterval, long echoPersistence, long contactPersistence,
+                                  long radarCleanInterval, long correlationInterval, long echoPersistence, long contactPersistence,
                                   double contactRadius, Complex receptiveAngle) {
         MapCell[] map1 = new MapCell[width * height];
         GridTopology topology1 = new GridTopology(center, width, height, gridSize);
@@ -111,26 +115,27 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
             map1[i] = MapCell.unknown(location);
         }
         return new RadarMap(topology1, map1,
-                radarCleanInterval, echoPersistence, contactPersistence,
+                radarCleanInterval, correlationInterval, echoPersistence, contactPersistence,
                 0, contactRadius, receptiveAngle, vertices, verticesByCell);
     }
 
     /**
      * Creates the radar map
      *
-     * @param topology           the topology
-     * @param cells              the map cells
-     * @param cleanInterval      the clean interval (ms)
-     * @param echoPersistence    the echo persistence (ms)
-     * @param contactPersistence the contact persistence (ms)
-     * @param cleanTimestamp     the next clean instant (ms)
-     * @param contactRadius      the receptive distance (m)
-     * @param receptiveAngle     the receptive angle
-     * @param vertices           the vertices qVectors
-     * @param verticesByCells    the vertices indices by cell
+     * @param topology            the topology
+     * @param cells               the map cells
+     * @param cleanInterval       the clean interval (ms)
+     * @param correlationInterval the qrcode-proxy correlation interval (ms)
+     * @param echoPersistence     the echo persistence (ms)
+     * @param contactPersistence  the contact persistence (ms)
+     * @param cleanTimestamp      the next clean instant (ms)
+     * @param contactRadius       the receptive distance (m)
+     * @param receptiveAngle      the receptive angle
+     * @param vertices            the vertices qVectors
+     * @param verticesByCells     the vertices indices by cell
      */
     public RadarMap(GridTopology topology, MapCell[] cells,
-                    long cleanInterval, long echoPersistence, long contactPersistence, long cleanTimestamp,
+                    long cleanInterval, long correlationInterval, long echoPersistence, long contactPersistence, long cleanTimestamp,
                     double contactRadius, Complex receptiveAngle,
                     QVect[] vertices, int[][] verticesByCells) {
         this.topology = requireNonNull(topology);
@@ -143,6 +148,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
         this.receptiveAngle = requireNonNull(receptiveAngle);
         this.vertices = requireNonNull(vertices);
         this.verticesByCells = requireNonNull(verticesByCells);
+        this.correlationInterval = correlationInterval;
     }
 
     /**
@@ -360,7 +366,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      * @param cells the cells
      */
     private RadarMap setCells(MapCell[] cells) {
-        return new RadarMap(topology, cells, cleanInterval, echoPersistence, contactPersistence, cleanTimestamp, contactRadius, receptiveAngle, vertices, verticesByCells);
+        return new RadarMap(topology, cells, cleanInterval, correlationInterval, echoPersistence, contactPersistence, cleanTimestamp, contactRadius, receptiveAngle, vertices, verticesByCells);
     }
 
     /**
@@ -369,7 +375,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      * @param cleanTimestamp the next clean instant (ms)
      */
     private RadarMap setCleanTimestamp(long cleanTimestamp) {
-        return new RadarMap(topology, cells, cleanInterval, echoPersistence, contactPersistence, cleanTimestamp, contactRadius, receptiveAngle, vertices, verticesByCells);
+        return new RadarMap(topology, cells, cleanInterval, correlationInterval, echoPersistence, contactPersistence, cleanTimestamp, contactRadius, receptiveAngle, vertices, verticesByCells);
     }
 
     /**
@@ -416,7 +422,9 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
         RadarMap.SensorSignal signal = new RadarMap.SensorSignal(location,
                 status.echoDirection(),
                 distance, time);
-        RadarMap hinderedMap = update(signal);
+
+        String label = status.isCorrelated(correlationInterval) ? status.qrCode() : null;
+        RadarMap hinderedMap = update(signal, label);
         boolean frontContact = !status.frontSensor();
         boolean rearContact = !status.rearSensor();
         RadarMap contactMap = frontContact || rearContact
@@ -429,15 +437,22 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      * Updates the map with a sensor signal
      *
      * @param signal the sensor signal
+     * @param label  the label
      */
-    RadarMap update(SensorSignal signal) {
+    RadarMap update(SensorSignal signal, String label) {
         AreaExpression sensibleArea = and(
                 circle(signal.sensorLocation(), MAX_SIGNAL_DISTANCE),
                 angle(signal.sensorLocation(), signal.sensorDirection(), receptiveAngle));
-        return map(indices()
-                        .filter(filterByArea(sensibleArea)),
-                cell ->
-                        cell.update(signal, MAX_SIGNAL_DISTANCE, topology.gridSize(), receptiveAngle)
+
+        return label == null ?
+                map(indices()
+                                .filter(filterByArea(sensibleArea)),
+                        cell ->
+                                cell.update(signal, MAX_SIGNAL_DISTANCE, topology.gridSize(), receptiveAngle)) :
+                map(indices()
+                                .filter(filterByArea(sensibleArea)),
+                        cell ->
+                                cell.updateLabel(signal, MAX_SIGNAL_DISTANCE, topology.gridSize(), receptiveAngle, label)
         );
     }
 

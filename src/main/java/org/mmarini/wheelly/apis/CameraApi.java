@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2023 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -28,36 +28,26 @@
 
 package org.mmarini.wheelly.apis;
 
-import io.reactivex.rxjava3.core.Flowable;
+import java.io.Closeable;
+import java.io.IOException;
 
-public interface WithStatusFlowable {
-    /**
-     * Returns the stream of proxy events
-     */
-    Flowable<RobotStatus> readContacts();
-
-    /**
-     * Returns the stream of motion events
-     */
-    Flowable<RobotStatus> readMotion();
+/**
+ * Api interface for camera
+ */
+public interface CameraApi extends Closeable, WithCameraCallback {
 
     /**
-     * Returns the stream of proxy events
+     * Connects the robot
+     *
+     * @throws IOException in case of error
      */
-    Flowable<RobotStatus> readProxy();
+    void connect() throws IOException;
 
     /**
-     * Returns the stream of camera events
+     * Advances localTime by a localTime interval
+     *
+     * @param dt the interval in millis
+     * @throws IOException in case of error
      */
-    Flowable<RobotStatus> readCamera();
-
-    /**
-     * Returns the stream of status
-     */
-    Flowable<RobotStatus> readRobotStatus();
-
-    /**
-     * Returns the stream of supply events
-     */
-    Flowable<RobotStatus> readSupply();
+    void tick(long dt) throws IOException;
 }

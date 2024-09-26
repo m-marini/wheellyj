@@ -42,7 +42,6 @@ import org.mmarini.rl.agents.KpiBinWriter;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.swing.GridLayoutHelper;
-import org.mmarini.wheelly.apis.ObstacleMap;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.SimRobot;
 import org.mmarini.wheelly.envs.*;
@@ -406,9 +405,17 @@ public class Wheelly {
      * @param simRobot the sim robot
      */
     private void handleObstacleChanged(SimRobot simRobot) {
+        simRobot.obstaclesMap().ifPresent(map -> {
+                    envPanel.setHinderedPoints(map.hindered().toList());
+                    envPanel.setLabeledPoints(map.labeled().toList());
+                }
+        );
+                /*
         simRobot.obstaclesMap()
                 .map(ObstacleMap::points)
-                .ifPresent(envPanel::setObstacleMap);
+                .ifPresent(envPanel::setObstacles);
+
+                 */
     }
 
     /**
@@ -552,7 +559,8 @@ public class Wheelly {
                 .filter(r -> r instanceof SimRobot)
                 .flatMap(r -> ((SimRobot) r).obstaclesMap())
                 .ifPresent(map -> {
-                    envPanel.setObstacleMap(map.points());
+                    envPanel.setHinderedPoints(map.hindered().toList());
+                    envPanel.setLabeledPoints(map.labeled().toList());
                     envPanel.setObstacleSize(map.gridSize());
                 });
         environment.start();

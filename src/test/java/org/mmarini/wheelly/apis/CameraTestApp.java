@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2023 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -28,34 +28,35 @@
 
 package org.mmarini.wheelly.apis;
 
-import io.reactivex.rxjava3.schedulers.Timed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
-class RobotSocketTest {
+class CameraTestApp {
+    private static final Logger logger = LoggerFactory.getLogger(CameraTestApp.class);
 
-    public static final long READ_TIMEOUT = 1000L;
-    public static final long CONNECTION_TIMEOUT = 1000L;
-    public static final int PORT = 22;
-    public static final String ROBOT_HOST = "192.168.1.11";
-    private static final Logger logger = LoggerFactory.getLogger(RobotSocketTest.class);
-
-    public static void main(String[] args) throws IOException {
-        LineSocket socket = new LineSocket(ROBOT_HOST, PORT, CONNECTION_TIMEOUT, READ_TIMEOUT);
-        logger.atDebug().log("Connecting...");
-        socket.connect();
-        logger.atDebug().log("Reading...");
-
-        socket.writeCommand("sc 90");
-        Timed<String> line;
-        while ((line = socket.readLine()) != null) {
-            logger.atDebug().setMessage("Read {}").addArgument(line).log();
-        }
-        logger.atDebug().log("Closing...");
-        socket.close();
-        logger.atDebug().log("Closed.");
+    public static void main(String[] arg) {
+        new CameraTestApp().run();
     }
 
+    private void onCamera(CameraEvent cameraEvent) {
+        logger.atInfo().log("{}", cameraEvent);
+    }
+
+    private void run() {
+        String host = "localhost";
+        int port = 8100;
+        long connectionTimeout = 10000;
+        long readTimeout = 3000;
+        try (Camera camera = new Camera(host, port, connectionTimeout, readTimeout)) {
+            camera.setOnCamera(this::onCamera);
+            camera.connect();
+            for (int i = 0; i < 10; i++) {
+                camera.tick(100);
+            }
+        } catch (IOException e) {
+            logger.atError().setCause(e).log("Error");
+        }
+    }
 }

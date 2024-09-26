@@ -25,7 +25,7 @@
 
 package org.mmarini.wheelly.apis;
 
-import org.nd4j.linalg.api.buffer.DataType;
+import org.mmarini.MapStream;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.ops.transforms.Transforms;
@@ -34,39 +34,83 @@ import java.awt.*;
 import java.awt.geom.Point2D;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.DoubleStream;
+import java.util.stream.Stream;
 
 import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Ths obstacle map defines the location of obstacle in a grid space
+ * Ths obstacle map defines the location of obstacle in a grid space.
+ * The map is organized in a list of obstacle cells each cell has the location in the grid map of n x n squares
+ * in the form horizontal, vertical index.
  *
- * @param indices     the indices of obstacle
- * @param gridSize    the grid size (m)
- * @param coordinates the coordinates array of n x 2 float
+ * @param cells    the cells
+ * @param gridSize the grid size (m)
  */
-public record ObstacleMap(List<Point> indices, double gridSize, INDArray coordinates) {
+public record ObstacleMap(List<ObstacleCell> cells, double gridSize) {
 
     /**
      * Returns the map of obstacles
      *
-     * @param indices  the obstacle location indices
+     * @param hindered the hindered obstacle location indices
+     * @param labeled  the labeled obstacle location indices
      * @param gridSize the gridSize
      */
-    public static ObstacleMap create(Collection<Point> indices, double gridSize) {
+    public static ObstacleMap create(Collection<Point> hindered, Collection<Point> labeled, double gridSize) {
         // Creates the unique indices
-        List<Point> uniqueIndices = indices.stream().distinct().collect(Collectors.toList());
-        // Creates the coordinates
-        double[] ary = uniqueIndices.stream()
-                .map(index -> toPoint(index, gridSize))
-                .flatMapToDouble(p -> DoubleStream.of(p.getX(), p.getY()))
-                .toArray();
+        List<ObstacleCell> cells = Stream.concat(
+                        hindered.stream(),
+                        labeled.stream())
+                .distinct()
+                .map(idx -> new ObstacleCell(idx, toPoint(idx, gridSize), labeled.contains(idx)))
+                .collect(Collectors.toList());
         // Creates the map
-        return new ObstacleMap(uniqueIndices,
-                gridSize,
-                Nd4j.createFromArray(ary).castTo(DataType.FLOAT).reshape(uniqueIndices.size(), 2));
+        return new ObstacleMap(cells,
+                gridSize);
+    }
+
+    /**
+     * Returns the cell at location
+     *
+     * @param x        the x location (m)
+     * @param y        the y location (m)
+     * @param gridSize the grid size
+     * @param labeled  true if obstacle is labeled
+     */
+    public static ObstacleCell create(double x, double y, double gridSize, boolean labeled) {
+        Point index = toIndex(x, y, gridSize);
+        return new ObstacleCell(index, toPoint(index, gridSize), labeled);
+    }
+
+    /**
+     * Returns the cell at location index
+     *
+     * @param x        the x location index
+     * @param y        the y location index
+     * @param gridSize the grid size
+     * @param labeled  true if obstacle is labeled
+     */
+    public static ObstacleCell create(int x, int y, double gridSize, boolean labeled) {
+        Point index = new Point(x, y);
+        return new ObstacleCell(index, toPoint(index, gridSize), labeled);
+    }
+
+    /**
+     * Returns the obstacle map from indices and labels
+     *
+     * @param points   the indices and labels
+     * @param gridSize the grid size (m)
+     */
+    public static ObstacleMap create(Map<Point, Boolean> points, double gridSize) {
+        List<ObstacleCell> cells = MapStream.of(points).tuples()
+                .map(entry ->
+                        new ObstacleCell(entry._1, toPoint(entry._1, gridSize), entry._2))
+                .toList();
+        return new ObstacleMap(cells, gridSize);
     }
 
     /**
@@ -95,40 +139,46 @@ public record ObstacleMap(List<Point> indices, double gridSize, INDArray coordin
     /**
      * Create the obstacle map
      *
-     * @param indices     the indices of obstacle
-     * @param gridSize    the grid size
-     * @param coordinates the coordinates array of n x 2 float
+     * @param cells    the indices of obstacle
+     * @param gridSize the grid size
      */
-    public ObstacleMap(List<Point> indices, double gridSize, INDArray coordinates) {
-        this.indices = requireNonNull(indices);
-        this.coordinates = requireNonNull(coordinates);
+    public ObstacleMap(List<ObstacleCell> cells, double gridSize) {
+        this.cells = requireNonNull(cells);
         this.gridSize = gridSize;
-        if (coordinates.shape().length != 2) {
-            throw new IllegalArgumentException("Wrong rank");
-        }
-        if (coordinates.shape()[1] != 2) {
-            throw new IllegalArgumentException("Wrong shape");
-        }
-        if (coordinates.dataType() != DataType.FLOAT) {
-            throw new IllegalArgumentException("Wrong data type");
-        }
     }
 
     /**
-     * Returns true if map contains obstacle at location
+     * Returns the cell at location
      *
      * @param x x coordinate
      * @param y coordinate
      */
-    public boolean contains(double x, double y) {
-        return indices.contains(toIndex(x, y, gridSize));
+    Optional<ObstacleCell> at(double x, double y) {
+        Point idx = toIndex(x, y, gridSize);
+        return cells.stream()
+                .filter(cell -> cell.index().equals(idx))
+                .findFirst();
     }
 
     /**
      * Returns the number of obstacles
      */
-    public int getSize() {
-        return (int) coordinates.shape()[0];
+    int getSize() {
+        return cells.size();
+    }
+
+    /**
+     * Returns the stream of hindered location
+     */
+    public Stream<Point2D> hindered() {
+        return cells.stream().filter(Predicate.not(ObstacleCell::labeled)).map(ObstacleCell::location);
+    }
+
+    /**
+     * Returns the stream of hindered location
+     */
+    public Stream<Point2D> labeled() {
+        return cells.stream().filter(ObstacleCell::labeled).map(ObstacleCell::location);
     }
 
     /**
@@ -139,7 +189,7 @@ public record ObstacleMap(List<Point> indices, double gridSize, INDArray coordin
      * @param direction      the direction
      * @param directionRange the direction range
      */
-    public Point2D nearest(double x, double y, Complex direction, Complex directionRange) {
+    public ObstacleCell nearest(double x, double y, Complex direction, Complex directionRange) {
         int n = getSize();
         if (n == 0) {
             return null;
@@ -147,6 +197,11 @@ public record ObstacleMap(List<Point> indices, double gridSize, INDArray coordin
         INDArray point = Nd4j.createFromArray(x, y).reshape(1, 2);
 
         // Computes the vectors of obstacles relative the given position (x,y)
+        INDArray coordinates = Nd4j.createFromArray(
+                cells.stream()
+                        .map(cell -> new float[]{(float) cell.location.getX(), (float) cell.location.getY()})
+                        .toArray(float[][]::new)
+        );
         INDArray vect = coordinates.sub(point);
 
         // Computes the distances of obstacles relative the given position
@@ -185,22 +240,22 @@ public record ObstacleMap(List<Point> indices, double gridSize, INDArray coordin
             float dist = distances.getFloat(i, 0);
             if (dist == 0) {
                 // the obstacle coincides with the given position
-                return toPoint(indices.get(i), gridSize);
+                return cells.get(i);
             } else if (val == 1 && dist < minDist) {
                 // the obstacle is valid and is near the previous found
                 index = i;
                 minDist = dist;
             }
         }
-        return index >= 0 ? toPoint(indices.get(index), gridSize) : null;
+        return index >= 0 ? cells.get(index) : null;
     }
 
     /**
-     * Returns the points of the map
+     * The obstacle indexed cell
+     *
+     * @param index   the index
+     * @param labeled true if obstacle is labeled
      */
-    public List<Point2D> points() {
-        return indices.stream()
-                .map(index -> toPoint(index, gridSize))
-                .toList();
+    public record ObstacleCell(Point index, Point2D location, boolean labeled) {
     }
 }

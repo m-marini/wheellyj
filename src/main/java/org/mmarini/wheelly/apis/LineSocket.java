@@ -51,7 +51,7 @@ import java.util.stream.Collectors;
 import static java.net.StandardSocketOptions.SO_KEEPALIVE;
 
 /**
- * The RobotSocket manages the communication channel via socket.
+ * The LineSocket manages the communication channel via socket.
  * <p>
  * Any IO function can throw an IOException on errors or timeout
  * </p>
@@ -59,26 +59,26 @@ import static java.net.StandardSocketOptions.SO_KEEPALIVE;
  * The usage samples is
  * <code><pre>
  *
- *     RobotSocket robotSocket = new RobotSocket(...);
+ *     LineSocket socket = new LineSocket(...);
  *
- *     robotSocket.connect();
+ *     socket.connect();
  *
- *     robotSocket.writeCommand("...");
+ *     socket.writeCommand("...");
  *
- *     Timed<String> line = robotSocket.readLine();
+ *     Timed<String> line = socket.readLine();
  *     ...
  *
- *     robotSocket.close();
+ *     socket.close();
  * </pre>
  * </code>
  * </p>
  */
-public class RobotSocket implements Closeable {
+public class LineSocket implements Closeable {
     private static final String LF = "\r\n";
     private static final String CRLF_PATTERN = "\\r?\\n";
     private static final int READ_BUFFER_SIZE = 1024;
 
-    private static final Logger logger = LoggerFactory.getLogger(RobotSocket.class);
+    private static final Logger logger = LoggerFactory.getLogger(LineSocket.class);
 
     private final String robotHost;
     private final int port;
@@ -97,7 +97,7 @@ public class RobotSocket implements Closeable {
      * @param connectionTimeout the connection timeout in millis
      * @param readTimeout       the read timeout in millis
      */
-    public RobotSocket(String robotHost, int port, long connectionTimeout, long readTimeout) {
+    public LineSocket(String robotHost, int port, long connectionTimeout, long readTimeout) {
         this.robotHost = robotHost;
         this.port = port;
         this.connectionTimeout = connectionTimeout;
@@ -125,7 +125,7 @@ public class RobotSocket implements Closeable {
      *
      * @throws IOException in case of error
      */
-    public RobotSocket connect() throws IOException {
+    public LineSocket connect() throws IOException {
         logger.atDebug().setMessage("Connection {}, {}")
                 .addArgument(robotHost).addArgument(port).log();
         InetSocketAddress socketAddress = new InetSocketAddress(robotHost, port);

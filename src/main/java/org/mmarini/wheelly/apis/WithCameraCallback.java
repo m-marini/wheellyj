@@ -28,34 +28,13 @@
 
 package org.mmarini.wheelly.apis;
 
-import io.reactivex.rxjava3.schedulers.Timed;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.function.Consumer;
 
-import java.io.IOException;
-
-class RobotSocketTest {
-
-    public static final long READ_TIMEOUT = 1000L;
-    public static final long CONNECTION_TIMEOUT = 1000L;
-    public static final int PORT = 22;
-    public static final String ROBOT_HOST = "192.168.1.11";
-    private static final Logger logger = LoggerFactory.getLogger(RobotSocketTest.class);
-
-    public static void main(String[] args) throws IOException {
-        LineSocket socket = new LineSocket(ROBOT_HOST, PORT, CONNECTION_TIMEOUT, READ_TIMEOUT);
-        logger.atDebug().log("Connecting...");
-        socket.connect();
-        logger.atDebug().log("Reading...");
-
-        socket.writeCommand("sc 90");
-        Timed<String> line;
-        while ((line = socket.readLine()) != null) {
-            logger.atDebug().setMessage("Read {}").addArgument(line).log();
-        }
-        logger.atDebug().log("Closing...");
-        socket.close();
-        logger.atDebug().log("Closed.");
-    }
-
+public interface WithCameraCallback {
+    /**
+     * Registers the consumer of camera event
+     *
+     * @param callback the callback
+     */
+    void setOnCamera(Consumer<CameraEvent> callback);
 }

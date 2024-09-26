@@ -75,9 +75,10 @@ import static java.util.Objects.requireNonNull;
  * </p>
  */
 public class Robot implements RobotApi, WithIOCallback {
-    public static final int DEFAULT_PORT = 22;
+    public static final int DEFAULT_ROBOT_PORT = 22;
+    public static final int DEFAULT_CAMERA_PORT = 8100;
     public static final int FLUSH_INTERVAL = 1000;
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/robot-schema-1.0";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/robot-schema-2.0";
     private static final Logger logger = LoggerFactory.getLogger(Robot.class);
 
     /**
@@ -88,8 +89,10 @@ public class Robot implements RobotApi, WithIOCallback {
      */
     public static Robot create(JsonNode root, Locator locator) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-        String host = locator.path("host").getNode(root).asText();
-        int port = locator.path("port").getNode(root).asInt(DEFAULT_PORT);
+        String robotHost = locator.path("robotHost").getNode(root).asText();
+        int robotPort = locator.path("robotPort").getNode(root).asInt(DEFAULT_ROBOT_PORT);
+        String cameraHost = locator.path("cameraHost").getNode(root).asText();
+        int cameraPort = locator.path("cameraPort").getNode(root).asInt(DEFAULT_CAMERA_PORT);
         long connectionTimeout = locator.path("connectionTimeout").getNode(root).asLong();
         long readTimeout = locator.path("readTimeout").getNode(root).asLong();
         long configureTimeout = locator.path("configureTimeout").getNode(root).asLong();
@@ -98,7 +101,8 @@ public class Robot implements RobotApi, WithIOCallback {
         String[] configCommands = !configCommandsLoc.getNode(root).isMissingNode()
                 ? configCommandsLoc.elements(root).map(l -> l.getNode(root).asText()).toArray(String[]::new)
                 : new String[0];
-        return Robot.create(host, port,
+        return Robot.create(robotHost, robotPort,
+                cameraHost, cameraPort,
                 connectionTimeout, readTimeout, configureTimeout,
                 configCommands);
     }
@@ -107,23 +111,29 @@ public class Robot implements RobotApi, WithIOCallback {
      * Returns an interface to the robot
      *
      * @param robotHost         the robot host
-     * @param port              the robot port
+     * @param robotPort         the robot port
+     * @param cameraHost        the camera host
+     * @param cameraPort        the camera port
      * @param connectionTimeout the connection timeout (ms)
      * @param readTimeout       the read timeout (ms)
      * @param configureTimeout  the configuration timeout (ms)
      * @param configCommands    the configuration commands
      */
-    public static Robot create(String robotHost, int port,
+    public static Robot create(String robotHost, int robotPort,
+                               String cameraHost, int cameraPort,
                                long connectionTimeout, long readTimeout, long configureTimeout,
                                String... configCommands) {
-        return new Robot(robotHost, port,
-                connectionTimeout, readTimeout, configureTimeout,
+        LineSocket robotSocket1 = new LineSocket(robotHost, robotPort, connectionTimeout, readTimeout);
+        LineSocket cameraSocket1 = new LineSocket(cameraHost, cameraPort, connectionTimeout, readTimeout);
+        return new Robot(robotSocket1, cameraSocket1,
+                configureTimeout,
                 configCommands);
     }
 
     private final String[] configCommands;
     private final long configureTimeout;
-    private final RobotSocket socket;
+    private final LineSocket robotSocket;
+    private final LineSocket cameraSocket;
     private Consumer<String> onReadLine;
     private Consumer<String> onWriteLine;
     private Consumer<WheellyMotionMessage> onMotion;
@@ -131,31 +141,36 @@ public class Robot implements RobotApi, WithIOCallback {
     private Consumer<WheellyContactsMessage> onContacts;
     private Consumer<WheellySupplyMessage> onSupply;
     private Consumer<ClockSyncEvent> onClock;
+    private Consumer<CameraEvent> onCamera;
     private ClockConverter clockConverter;
     private long simulationTime;
 
     /**
      * Create a Robot interface
      *
-     * @param host              the robot host
-     * @param port              the robot port
-     * @param connectionTimeout the connection timeout (ms)
-     * @param readTimeout       the read timeout (ms)
-     * @param configureTimeout  the configuration timeout (ms)
-     * @param configCommands    the motor theta corrections
+     * @param robotSocket      the robot socket
+     * @param cameraSocket     the camera socket
+     * @param configureTimeout the configuration timeout (ms)
+     * @param configCommands   the motor theta corrections
      */
-    public Robot(String host, int port, long connectionTimeout, long readTimeout, long configureTimeout, String[] configCommands) {
-        this.configureTimeout = configureTimeout;
-        socket = new RobotSocket(host, port, connectionTimeout, readTimeout);
+    protected Robot(LineSocket robotSocket, LineSocket cameraSocket, long configureTimeout, String[] configCommands) {
         this.configCommands = requireNonNull(configCommands);
         this.clockConverter = ClockConverter.identity();
+        this.configureTimeout = configureTimeout;
+        this.robotSocket = robotSocket;
+        this.cameraSocket = cameraSocket;
     }
 
     @Override
     public void close() throws IOException {
         logger.atInfo().log("Closing ...");
         try {
-            socket.close();
+            robotSocket.close();
+        } catch (Exception ex) {
+            logger.atError().setCause(ex).log();
+        }
+        try {
+            cameraSocket.close();
         } catch (Exception ex) {
             logger.atError().setCause(ex).log();
         }
@@ -183,12 +198,12 @@ public class Robot implements RobotApi, WithIOCallback {
         while (time < timeout) {
             time = System.currentTimeMillis();
             // Read the robot status
-            Timed<String> line = readLine();
+            Timed<String> line = readRobotLine();
             if (line != null) {
                 if (line.value().equals("// " + command)) {
                     return;
                 }
-                parseForMessage(line);
+                parseForWheellyMessage(line);
             }
         }
         throw new InterruptedIOException(format("Timeout on configure %s", command));
@@ -196,7 +211,8 @@ public class Robot implements RobotApi, WithIOCallback {
 
     @Override
     public void connect() throws IOException {
-        socket.connect();
+        robotSocket.connect();
+        cameraSocket.connect();
     }
 
     /**
@@ -205,8 +221,8 @@ public class Robot implements RobotApi, WithIOCallback {
     private void flush() throws IOException {
         long timeout = System.currentTimeMillis() + FLUSH_INTERVAL;
         while (System.currentTimeMillis() <= timeout) {
-            Timed<String> line = readLine();
-            parseForMessage(line);
+            Timed<String> line = readRobotLine();
+            parseForWheellyMessage(line);
             if (line == null) {
                 break;
             }
@@ -229,7 +245,20 @@ public class Robot implements RobotApi, WithIOCallback {
      *
      * @param line the data line received
      */
-    private void parseForMessage(Timed<String> line) {
+    private void parseForCameraMessage(Timed<String> line) {
+        CameraEvent msg = CameraEvent.create(line.value());
+        if (onCamera != null) {
+            onCamera.accept(msg);
+        }
+    }
+
+    /**
+     * Parses the data received for messages.
+     * The robot status is updated with received message.
+     *
+     * @param line the data line received
+     */
+    private void parseForWheellyMessage(Timed<String> line) {
         WheellyMessage.fromLine(line, clockConverter).ifPresent(msg -> {
             switch (msg) {
                 case WheellyMotionMessage ignored -> {
@@ -259,13 +288,30 @@ public class Robot implements RobotApi, WithIOCallback {
     }
 
     /**
-     * Returns the line read from roboto connection
+     * Returns the line read from camera connection
      * Notifies the line if onReadLine call back has been registered
      *
      * @throws IOException in case of error
      */
-    private Timed<String> readLine() throws IOException {
-        Timed<String> line = socket.readLine();
+    private Timed<String> readCameraLine() throws IOException {
+        Timed<String> line = cameraSocket.readLine();
+        logger.atDebug().setMessage("Read {}").addArgument(line).log();
+        if (line != null) {
+            if (onReadLine != null) {
+                onReadLine.accept(line.value());
+            }
+        }
+        return line;
+    }
+
+    /**
+     * Returns the line read from robot connection
+     * Notifies the line if onReadLine call back has been registered
+     *
+     * @throws IOException in case of error
+     */
+    private Timed<String> readRobotLine() throws IOException {
+        Timed<String> line = robotSocket.readLine();
         logger.atDebug().setMessage("Read {}").addArgument(line).log();
         if (line != null) {
             if (onReadLine != null) {
@@ -278,6 +324,11 @@ public class Robot implements RobotApi, WithIOCallback {
     @Override
     public void scan(Complex dir) throws IOException {
         writeCommand("sc " + dir.toIntDeg());
+    }
+
+    @Override
+    public void setOnCamera(Consumer<CameraEvent> callback) {
+        this.onCamera = callback;
     }
 
     @Override
@@ -333,7 +384,7 @@ public class Robot implements RobotApi, WithIOCallback {
         while (time < timeout) {
             time = System.currentTimeMillis();
             // Read the robot status
-            Timed<String> line = readLine();
+            Timed<String> line = readRobotLine();
             if (line != null) {
                 if (line.value().startsWith("ck " + t0 + " ")) {
                     try {
@@ -349,7 +400,7 @@ public class Robot implements RobotApi, WithIOCallback {
                         logger.atError().setCause(error).log();
                     }
                 } else {
-                    parseForMessage(line);
+                    parseForWheellyMessage(line);
                 }
             }
         }
@@ -364,9 +415,13 @@ public class Robot implements RobotApi, WithIOCallback {
         // Repeat until interval timeout
         while (t < timeout) {
             // Read the robot status
-            Timed<String> line = readLine();
+            Timed<String> line = readRobotLine();
             if (line != null) {
-                parseForMessage(line);
+                parseForWheellyMessage(line);
+            }
+            line = readCameraLine();
+            if (line != null) {
+                parseForCameraMessage(line);
             }
             t = System.currentTimeMillis();
         }
@@ -383,6 +438,6 @@ public class Robot implements RobotApi, WithIOCallback {
         if (onWriteLine != null) {
             onWriteLine.accept(cmd);
         }
-        socket.writeCommand(cmd);
+        robotSocket.writeCommand(cmd);
     }
 }

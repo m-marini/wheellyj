@@ -8,11 +8,12 @@ agent: agents/polarRadarAgent
 
 robots:
   simRobot:
-    $schema: https://mmarini.org/wheelly/sim-robot-schema-0.2
+    $schema: https://mmarini.org/wheelly/sim-robot-schema-0.3
     class: org.mmarini.wheelly.apis.SimRobot
     # robotSeed: 1234
     mapSeed: 1234
     numObstacles: 10
+    numLabels: 1
     changeObstaclesPeriod: 600000
     errSigma: 0.05
     errSensor: 0.05
@@ -50,7 +51,7 @@ controllers:
 
 environments:
   polarMapEnv:
-    $schema: https://mmarini.org/wheelly/env-polar-schema-0.1
+    $schema: https://mmarini.org/wheelly/env-polar-schema-1.0
     class: org.mmarini.wheelly.envs.PolarRobotEnv
     objective: objectives/cautious
     interval: 10
@@ -67,6 +68,7 @@ environments:
     echoPersistence: 300000
     contactPersistence: 300000
     radarCleanInterval: 30000
+    correlationInterval: 2000
     numRadarSectors: 24
     minRadarDistance: 0.3
     maxRadarDistance: 3
