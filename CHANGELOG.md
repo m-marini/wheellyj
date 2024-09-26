@@ -7,26 +7,34 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- Issue [#442](https://github.com/m-marini/wheellyj/issues/442): Add web cam processing
+
+### Changed
+
+- Issue [#446](https://github.com/m-marini/wheellyj/issues/446): Change state machine configuration yaml
+
 ## [0.17.0] 2024-08-24
 
 ### Added
 
-- Issue #430: Add PPO alghorithm
-- Issue #437: Report action deltas kpi
+- Issue [#430](https://github.com/m-marini/wheellyj/issues/430): Add PPO alghorithm
+- Issue [#437](https://github.com/m-marini/wheellyj/issues/437): Report action deltas kpi
 
 ### Changed
 
-- Issue #421: Training on trajectory sampling
-- Issue #423: Manage continuing task only
-- Issue #435: Separate learning rate from action optimization hyperparm
+- Issue [#421](https://github.com/m-marini/wheellyj/issues/421): Training on trajectory sampling
+- Issue [#423](https://github.com/m-marini/wheellyj/issues/423): Manage continuing task only
+- Issue [#435](https://github.com/m-marini/wheellyj/issues/435): Separate learning rate from action optimization hyperparm
 
 ### Fixed
 
-- Issue #426: Wrong action probabilitites kpis
-- Issue #428: Ignore trained agent in case of agent reset
-- Issue #433: Exception when alpha changes in wheelly ui
-- Issue #439: Histogram report generates exception
-- Issue #441: Test ppo algorithm
+- Issue [#426](https://github.com/m-marini/wheellyj/issues/426): Wrong action probabilitites kpis
+- Issue [#428](https://github.com/m-marini/wheellyj/issues/428): Ignore trained agent in case of agent reset
+- Issue [#433](https://github.com/m-marini/wheellyj/issues/433): Exception when alpha changes in wheelly ui
+- Issue [#439](https://github.com/m-marini/wheellyj/issues/439): Histogram report generates exception
+- Issue [#441](https://github.com/m-marini/wheellyj/issues/441): Test ppo algorithm
 
 ## [0.16.1] 2024-05-05
 

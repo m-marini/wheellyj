@@ -1,13 +1,13 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/state-agent-schema-2.0
+$id: https://mmarini.org/wheelly/state-agent-schema-3.0
 title: State machine agent
 description: State Agent Schema
 type: object
 properties:
   $schema:
     type: string
-    const: https://mmarini.org/wheelly/state-agent-schema-2.0
+    const: https://mmarini.org/wheelly/state-agent-schema-3.0
   class:
     const: org.mmarini.wheelly.engines.StateMachineAgent
   flow:
@@ -85,6 +85,8 @@ $defs:
         $ref: "#/$defs/Commands"
       onExit:
         $ref: "#/$defs/Commands"
+      transitions:
+        $ref: "#/$defs/Transitions"
       timeout:
         multipleOf: 1
         minimum: 1
@@ -114,6 +116,8 @@ $defs:
         $ref: "#/$defs/Commands"
       onExit:
         $ref: "#/$defs/Commands"
+      transitions:
+        $ref: "#/$defs/Transitions"
     required:
       - class
   AvoidingState:
@@ -127,6 +131,8 @@ $defs:
         $ref: "#/$defs/Commands"
       onExit:
         $ref: "#/$defs/Commands"
+      transitions:
+        $ref: "#/$defs/Transitions"
       timeout:
         multipleOf: 1
         minimum: 1
@@ -151,6 +157,8 @@ $defs:
         $ref: "#/$defs/Commands"
       onExit:
         $ref: "#/$defs/Commands"
+      transitions:
+        $ref: "#/$defs/Transitions"
       timeout:
         multipleOf: 1
         minimum: 1
@@ -173,6 +181,8 @@ $defs:
         $ref: "#/$defs/Commands"
       onExit:
         $ref: "#/$defs/Commands"
+      transitions:
+        $ref: "#/$defs/Transitions"
       maxDistance:
         exclusiveMinimum: 0
     required:
@@ -189,6 +199,8 @@ $defs:
         $ref: "#/$defs/Commands"
       onExit:
         $ref: "#/$defs/Commands"
+      transitions:
+        $ref: "#/$defs/Transitions"
       timeout:
         multipleOf: 1
         minimum: 1
@@ -211,24 +223,16 @@ $defs:
     additionalProperties:
       $ref: "#/$defs/StateNode"
   Transitions:
-    type: array
-    items:
-      $ref: "#/$defs/Transition"
-  Transition:
     type: object
-    properties:
-      trigger:
-        minLength: 1
-      from:
-        minLength: 1
-      to:
-        minLength: 1
-      onTransition:
-        $ref: "#/$defs/Commands"
-    required:
-      - trigger
-      - from
-      - to
+    additionalProperties:
+      type: object
+      properties:
+        to:
+          minLength: 1
+        onTransition:
+          $ref: "#/$defs/Commands"
+      required:
+        - to
   StateFlow:
     type: object
     properties:
@@ -236,11 +240,8 @@ $defs:
         $ref: "#/$defs/Commands"
       states:
         $ref: "#/$defs/StateNodes"
-      transitions:
-        $ref: "#/$defs/Transitions"
       entry:
         minLength: 1
     required:
       - states
-      - transitions
       - entry
