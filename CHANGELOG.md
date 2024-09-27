@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 - Issue [#442](https://github.com/m-marini/wheellyj/issues/442): Add web cam processing
+- Issue [#448](https://github.com/m-marini/wheellyj/issues/448):  Add labels in polar radar map
 
 ### Changed
 

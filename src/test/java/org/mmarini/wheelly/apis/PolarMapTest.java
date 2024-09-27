@@ -55,7 +55,7 @@ class PolarMapTest {
         assertEquals(PI * 2 / 8, map.sectorAngle());
 
         assertTrue(map.sectorStream().allMatch(Predicate.not(CircularSector::known)));
-        assertTrue(map.sectorStream().allMatch(Predicate.not(CircularSector::knownHindered)));
+        assertTrue(map.sectorStream().allMatch(Predicate.not(CircularSector::hindered)));
     }
 
     private RadarMap createRadarMap() {
@@ -120,10 +120,10 @@ class PolarMapTest {
         /*
          Then polar map at 0 DEG should be hindered as obsAt0
          */
-        assertEquals(obsAt0, polarMap.directionSector(Complex.DEG0).knownHindered());
-        assertEquals(obsAt90, polarMap.directionSector(Complex.DEG90).knownHindered());
-        assertEquals(obsAt180, polarMap.directionSector(Complex.DEG180).knownHindered());
-        assertEquals(obsAt270, polarMap.directionSector(Complex.DEG270).knownHindered());
+        assertEquals(obsAt0, polarMap.directionSector(Complex.DEG0).hindered());
+        assertEquals(obsAt90, polarMap.directionSector(Complex.DEG90).hindered());
+        assertEquals(obsAt180, polarMap.directionSector(Complex.DEG180).hindered());
+        assertEquals(obsAt270, polarMap.directionSector(Complex.DEG270).hindered());
         if (obsAt0) {
             assertThat(polarMap.directionSector(Complex.DEG0).distance(center), closeTo(distanceAt0, EPSILON));
         }
@@ -176,7 +176,7 @@ class PolarMapTest {
         for (int i = 0; i < polarMap.sectorsNumber(); i++) {
             if (i == 18) {
                 //if (i >= 18 && i <= 18) {
-                assertTrue(polarMap.sector(i).knownHindered(), format("index %d", i));
+                assertTrue(polarMap.sector(i).hindered(), format("index %d", i));
             } else {
                 assertTrue(polarMap.sector(i).empty(), format("index %d", i));
             }
@@ -206,7 +206,7 @@ class PolarMapTest {
         assertEquals(90, polarMap.direction().toIntDeg());
 
         CircularSector sector = polarMap.directionSector(Complex.DEG270);
-        assertTrue(sector.knownHindered());
+        assertTrue(sector.hindered());
         assertThat(sector.distance(center), closeTo(1.3, 1e-3));
         assertThat(new Point2D.Double(0.2, 1.5).distance(sector.location()),
                 closeTo(0, 1e-3));
@@ -215,7 +215,7 @@ class PolarMapTest {
         for (int i = 0; i < polarMap.sectorsNumber(); i++) {
             if (i == 18) {
                 //if (i >= 18 && i <= 18) {
-                assertTrue(polarMap.sector(i).knownHindered(), format("index %d", i));
+                assertTrue(polarMap.sector(i).hindered(), format("index %d", i));
             } else {
                 assertFalse(polarMap.sector(i).known(), format("index %d", i));
             }

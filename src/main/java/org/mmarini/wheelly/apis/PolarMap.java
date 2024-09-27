@@ -111,7 +111,7 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
         Point2D nearest = null;
         double minDistance = Double.POSITIVE_INFINITY;
         for (CircularSector sector : sectors) {
-            if (sector.knownHindered()) {
+            if (sector.hindered()) {
                 Point2D p = sector.location();
                 double distance = p.distance(center);
                 if (distance < minDistance) {
@@ -230,6 +230,7 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
         Point2D[] notEmptyPoints = new Point2D[sectors.length];
 
         double[] unknownDistances = Arrays.copyOf(emptyDistances, sectors.length);
+        boolean[] labeled = new boolean[sectorsNum];
 
         double thresholdDistance = max(minDistance, gridSize);
         Complex dAlpha = Complex.fromRad(sectorAngle() * 1.25 / 2);
@@ -259,6 +260,7 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
                                     }
                                 } else if (distance < notEmptyDistances[i]) {
                                     notEmptyDistances[i] = distance;
+                                    labeled[i] = cell.labeled();
                                     notEmptyTimestamps[i] = cell.echoTime();
                                     notEmptyPoints[i] = s;
                                 }
@@ -270,7 +272,9 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
                 .mapToObj(i -> {
                     // First priority is the obstacle signal
                     if (notEmptyDistances[i] < maxDistance) {
-                        return CircularSector.hindered(notEmptyTimestamps[i], notEmptyPoints[i]);
+                        return labeled[i]
+                                ? CircularSector.labeled(notEmptyTimestamps[i], notEmptyPoints[i])
+                                : CircularSector.hindered(notEmptyTimestamps[i], notEmptyPoints[i]);
                     } else if (emptyDistances[i] >= maxDistance) {
                         // Second priority is full unknown sector
                         return CircularSector.unknownSector();

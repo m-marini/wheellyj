@@ -248,7 +248,7 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
         INDArray sectorDistances = Nd4j.zeros(n);
         for (int i = 0; i < n; i++) {
             CircularSector sector = polarMap.sector(i);
-            double dist = sector.knownHindered()
+            double dist = sector.hindered()
                     ? clip(sector.distance(polarMap.center()), 0, maxDistance)
                     : 0;
             sectorDistances.getScalar(i).assign(dist);
