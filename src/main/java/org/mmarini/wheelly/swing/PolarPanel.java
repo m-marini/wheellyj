@@ -49,10 +49,19 @@ public class PolarPanel extends JComponent {
     static final Color GRID_COLOR = new Color(50, 50, 50);
     static final Color EMPTY_COLOR = new Color(64, 64, 64, 128);
     static final Color FILLED_COLOR = new Color(200, 0, 0, 128);
+    static final Color LABELED_COLOR = new Color(0, 200, 200, 128);
     private static final Color PING_COLOR = new Color(255, 128, 128);
+    private static final Color LABELED_PING_COLOR = new Color(128, 255, 255);
     private static final double DEFAULT_MAX_DISTANCE = 3;
     private static final double PING_SIZE = 0.05;
 
+    /**
+     * Returns the polar grid shapes
+     *
+     * @param radarMaxDistance the maximum radar distance
+     * @param gridSize         the grid siza
+     * @param sectorNumber     the number of sectors
+     */
     static List<Shape> createGridShapes(double radarMaxDistance, double gridSize, int sectorNumber) {
         List<Shape> gridShapes = new ArrayList<>();
         for (double size = gridSize; size <= radarMaxDistance; size += gridSize) {
@@ -71,6 +80,13 @@ public class PolarPanel extends JComponent {
         return gridShapes;
     }
 
+    /**
+     * Returns the pie shape
+     *
+     * @param startAngle the start angle
+     * @param extent     the extent angle
+     * @param radius     the radius
+     */
     private static Shape createPie(double startAngle, double extent, double radius) {
         return new Arc2D.Double(-radius, -radius, radius * 2, radius * 2, startAngle, extent, Arc2D.PIE);
     }
@@ -84,13 +100,14 @@ public class PolarPanel extends JComponent {
         return new Ellipse2D.Double(location.getX(), location.getY(), PING_SIZE, PING_SIZE);
     }
 
-    private List<Shape> emptyShapes;
-    private List<Shape> filledShapes;
+    private List<ColoredShape> shapes;
     private List<Shape> gridShapes;
     private int numSector;
-    private List<Shape> pingShapes;
     private double radarMaxDistance;
 
+    /**
+     * Creates the polar panel
+     */
     public PolarPanel() {
         setBackground(Color.BLACK);
         setForeground(WHITE);
@@ -98,9 +115,7 @@ public class PolarPanel extends JComponent {
         this.radarMaxDistance = DEFAULT_MAX_DISTANCE;
         this.numSector = DEFAULT_NUM_SECTOR;
         this.gridShapes = createGridShapes(radarMaxDistance, GRID_SIZE, numSector);
-        this.emptyShapes = new ArrayList<>();
-        this.filledShapes = new ArrayList<>();
-        this.pingShapes = new ArrayList<>();
+        this.shapes = new ArrayList<>();
         setPreferredSize(new Dimension(DEFAULT_SIZE, DEFAULT_SIZE));
     }
 
@@ -115,25 +130,26 @@ public class PolarPanel extends JComponent {
         return result;
     }
 
+    /**
+     * Draws the polar map grid
+     *
+     * @param gr the graphic environment
+     */
     private void drawGrid(Graphics2D gr) {
         gr.setStroke(BORDER_STROKE);
         gr.setColor(GRID_COLOR);
         gridShapes.forEach(gr::draw);
     }
 
-    private void drawMap(Graphics2D gr, List<Shape> emptyShapes, List<Shape> filledShapes) {
+    /**
+     * Draws the map
+     *
+     * @param gr     the graphic environment
+     * @param shapes the shapes to draw
+     */
+    private void drawMap(Graphics2D gr, List<ColoredShape> shapes) {
         gr.setStroke(BORDER_STROKE);
-        gr.setColor(EMPTY_COLOR);
-        emptyShapes.forEach(gr::fill);
-        gr.setColor(FILLED_COLOR);
-        filledShapes.forEach(gr::fill);
-    }
-
-    private void drawPings(Graphics2D gr) {
-        gr.setStroke(BORDER_STROKE);
-        gr.setColor(PING_COLOR);
-        pingShapes.forEach(gr::fill);
-        gr.setColor(FILLED_COLOR);
+        shapes.forEach(shape -> shape.draw(gr));
     }
 
     @Override
@@ -147,53 +163,97 @@ public class PolarPanel extends JComponent {
 
         gr.setTransform(base);
         drawGrid(gr);
-        drawMap(gr, emptyShapes, filledShapes);
-        drawPings(gr);
+        drawMap(gr, shapes);
     }
 
+    /**
+     * Sets the polar map
+     * <p>
+     * Create the list of shapes to be drawn
+     * </p>
+     *
+     * @param polarMap the polar map
+     */
     public void setPolarMap(PolarMap polarMap) {
         int n = polarMap.sectorsNumber();
         if (numSector != n) {
             numSector = n;
             this.gridShapes = createGridShapes(radarMaxDistance, GRID_SIZE, numSector);
         }
-        List<Shape> emptyShapes = new ArrayList<>();
-        List<Shape> filledShapes = new ArrayList<>();
-        List<Shape> pingShapes = new ArrayList<>();
+        List<ColoredShape> shapes = new ArrayList<>();
 
         double sectorAngle = toDegrees(polarMap.sectorAngle());
         Point2D center = polarMap.center();
         AffineTransform transform = AffineTransform.getRotateInstance(polarMap.direction().toRad());
         transform.translate(-center.getX(), -center.getY());
+        // First pass for empty shapes
         for (int i = 0; i < n; i++) {
             CircularSector sector = polarMap.sector(i);
             double angle = polarMap.sectorDirection(i).toDeg() - 90;
             if (sector.known()) {
                 double distance = sector.distance(center);
                 if (distance == 0 || sector.empty()) {
-                    emptyShapes.add(createPie(angle - sectorAngle / 2, sectorAngle, radarMaxDistance + SECTOR_SIZE));
+                    shapes.add(new ColoredShape(
+                            createPie(angle - sectorAngle / 2, sectorAngle, radarMaxDistance + SECTOR_SIZE),
+                            EMPTY_COLOR));
                 } else {
-                    Shape outerPie = createPie(angle - sectorAngle / 2, sectorAngle, radarMaxDistance + SECTOR_SIZE);
                     Shape innerPie = createPie(angle - sectorAngle / 2, sectorAngle, distance);
-                    emptyShapes.add(innerPie);
-                    Area outerSector = new Area(outerPie);
-                    outerSector.subtract(new Area(innerPie));
-                    pingShapes.add(
-                            createPing(
-                                    transform.transform(sector.location(), null)));
-                    filledShapes.add(outerSector);
+                    shapes.add(new ColoredShape(innerPie, EMPTY_COLOR));
                 }
             }
         }
-        this.emptyShapes = emptyShapes;
-        this.filledShapes = filledShapes;
-        this.pingShapes = pingShapes;
+        // Second pass for filled shapes
+        for (int i = 0; i < n; i++) {
+            CircularSector sector = polarMap.sector(i);
+            double angle = polarMap.sectorDirection(i).toDeg() - 90;
+            if (sector.known()) {
+                double distance = sector.distance(center);
+                if (!(distance == 0 || sector.empty())) {
+                    Shape outerPie = createPie(angle - sectorAngle / 2, sectorAngle, radarMaxDistance + SECTOR_SIZE);
+                    Shape innerPie = createPie(angle - sectorAngle / 2, sectorAngle, distance);
+                    Area outerSector = new Area(outerPie);
+                    outerSector.subtract(new Area(innerPie));
+                    shapes.add(new ColoredShape(outerSector,
+                            sector.labeled()
+                                    ? LABELED_COLOR
+                                    : FILLED_COLOR));
+                }
+            }
+        }
+        // Third pass for ping shapes
+        for (int i = 0; i < n; i++) {
+            CircularSector sector = polarMap.sector(i);
+            if (sector.known()) {
+                double distance = sector.distance(center);
+                if (!(distance == 0 || sector.empty())) {
+                    Shape pingShape = createPing(
+                            transform.transform(sector.location(), null));
+                    shapes.add(new ColoredShape(pingShape,
+                            sector.labeled()
+                                    ? LABELED_PING_COLOR
+                                    : PING_COLOR));
+                }
+            }
+        }
+        this.shapes = shapes;
         repaint();
     }
 
+    /**
+     * Sets the maximum radar distance
+     *
+     * @param radarMaxDistance the maximum radar distance (m)
+     */
     public void setRadarMaxDistance(double radarMaxDistance) {
         this.radarMaxDistance = radarMaxDistance;
         this.gridShapes = createGridShapes(radarMaxDistance, GRID_SIZE, numSector);
         repaint();
+    }
+
+    record ColoredShape(Shape shape, Color color) {
+        public void draw(Graphics2D gr) {
+            gr.setColor(color);
+            gr.fill(shape);
+        }
     }
 }

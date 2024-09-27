@@ -4,10 +4,10 @@ $schema: https://mmarini.org/wheelly/executor-schema-1.0
 robot: robots/simRobot
 #robot: robots/realRobot
 controller: controllers/controller
-#agent: agents/cautiousAgent
+agent: agents/cautiousAgent
 #agent: agents/explorerAgent
 #agent: agents/guardAgent
-agent: agents/idleAgent
+#agent: agents/idleAgent
 
 robots:
   simRobot:

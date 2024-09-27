@@ -33,10 +33,13 @@ import static java.util.Objects.requireNonNull;
  * Circular sector is a space area that keeps the distance of the nearest obstacle in the area and if it has been scanned
  *
  * @param timestamp the sector timestamp
- * @param hindered  true id sector is hindered
+ * @param status    the status of sector
  * @param location  location of echogenic
  */
-public record CircularSector(long timestamp, boolean hindered, Point2D location) {
+public record CircularSector(long timestamp, Status status, Point2D location) {
+
+    private static final CircularSector UNKNOWN_SECTOR = new CircularSector(0, Status.EMPTY, new Point2D.Double());
+
     /**
      * Returns an empty sector
      *
@@ -44,7 +47,7 @@ public record CircularSector(long timestamp, boolean hindered, Point2D location)
      * @param location  the status location
      */
     public static CircularSector empty(long timestamp, Point2D location) {
-        return new CircularSector(timestamp, false, location);
+        return new CircularSector(timestamp, Status.EMPTY, location);
     }
 
     /**
@@ -54,19 +57,36 @@ public record CircularSector(long timestamp, boolean hindered, Point2D location)
      * @param location  the status location
      */
     public static CircularSector hindered(long timestamp, Point2D location) {
-        return new CircularSector(timestamp, true, location);
+        return new CircularSector(timestamp, Status.HINDERED, location);
+    }
+
+    /**
+     * Returns a hindered sector with obstacle at specific distance
+     *
+     * @param timestamp the sector status timestamp (ms)
+     * @param location  the status location
+     */
+    public static CircularSector labeled(long timestamp, Point2D location) {
+        return new CircularSector(timestamp, Status.LABELED, location);
     }
 
     /**
      * Returns unknown sector centered at 0,0
      */
     public static CircularSector unknownSector() {
-        return new CircularSector(0, false, new Point2D.Double());
+        return UNKNOWN_SECTOR;
     }
 
-    public CircularSector(long timestamp, boolean hindered, Point2D location) {
+    /**
+     * Creates the circular sector
+     *
+     * @param timestamp the sector timestamp
+     * @param status    the status of sector
+     * @param location  location of echogenic
+     */
+    public CircularSector(long timestamp, Status status, Point2D location) {
         this.timestamp = timestamp;
-        this.hindered = hindered;
+        this.status = status;
         this.location = requireNonNull(location);
     }
 
@@ -84,7 +104,14 @@ public record CircularSector(long timestamp, boolean hindered, Point2D location)
      * Returns true if the sector is empty
      */
     public boolean empty() {
-        return known() && !hindered;
+        return known() && Status.EMPTY.equals(status);
+    }
+
+    /**
+     * Returns true if the sector is known and hindered
+     */
+    public boolean hindered() {
+        return known() && Status.HINDERED.equals(status);
     }
 
     /**
@@ -97,7 +124,14 @@ public record CircularSector(long timestamp, boolean hindered, Point2D location)
     /**
      * Returns true if the sector is known and hindered
      */
-    public boolean knownHindered() {
-        return known() && hindered;
+    public boolean labeled() {
+        return known() && Status.LABELED.equals(status);
+    }
+
+    /**
+     * Circular sector status
+     */
+    public enum Status {
+        EMPTY, HINDERED, LABELED
     }
 }

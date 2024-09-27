@@ -111,7 +111,7 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
         Point2D nearest = null;
         double minDistance = Double.POSITIVE_INFINITY;
         for (CircularSector sector : sectors) {
-            if (sector.knownHindered()) {
+            if (sector.hindered()) {
                 Point2D p = sector.location();
                 double distance = p.distance(center);
                 if (distance < minDistance) {

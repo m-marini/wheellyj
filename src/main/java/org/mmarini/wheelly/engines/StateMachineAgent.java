@@ -132,14 +132,30 @@ public class StateMachineAgent implements ProcessorContext, WithIOFlowable, With
         return (T) values.get(key);
     }
 
+    /**
+     * Returns the controller
+     */
     public RobotControllerApi getController() {
         return controller;
     }
 
+    /**
+     * Returns the maximum radar distance (m)
+     */
     public double getMaxRadarDistance() {
         return this.maxRadarDistance;
     }
 
+    /**
+     * Handles the inference event
+     * <p>
+     * Update the polar map with robot status,
+     * advances one step,
+     * feed the step flow
+     * </p>
+     *
+     * @param status the robot status
+     */
     private void handleInference(RobotStatus status) {
         long t0 = System.currentTimeMillis();
         logger.atDebug().log("Handle inference");
@@ -155,12 +171,28 @@ public class StateMachineAgent implements ProcessorContext, WithIOFlowable, With
         logger.atDebug().log("Handle inference completed in {} ms", System.currentTimeMillis() - t0);
     }
 
+    /**
+     * Handles the latch event.
+     * <p>
+     * Stores the robot status and the radar map at latch instant
+     * </p>
+     *
+     * @param status the status
+     */
     private void handleLatch(RobotStatus status) {
         logger.atDebug().log("Latch status {}", status);
         robotStatus = status;
         contextRadarMap = radarMap;
     }
 
+    /**
+     * Handles the status event
+     * <p>
+     * update the radar map
+     * </p>
+     *
+     * @param status the robot status
+     */
     private void handleStatus(RobotStatus status) {
         radarMap = radarMap.update(status);
     }
@@ -238,6 +270,11 @@ public class StateMachineAgent implements ProcessorContext, WithIOFlowable, With
     }
 
     @Override
+    public Flowable<RobotStatus> readCamera() {
+        return controller.readCamera();
+    }
+
+    @Override
     public Flowable<RobotCommands> readCommand() {
         return controller.readCommand();
     }
@@ -265,11 +302,6 @@ public class StateMachineAgent implements ProcessorContext, WithIOFlowable, With
     @Override
     public Flowable<RobotStatus> readProxy() {
         return controller.readProxy();
-    }
-
-    @Override
-    public Flowable<RobotStatus> readCamera() {
-        return controller.readCamera();
     }
 
     @Override
