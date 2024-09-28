@@ -1,8 +1,7 @@
 /*
+ * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
  *
- * Copyright (c) 2022 Marco Marini, marco.marini@mmarini.org
- *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -30,65 +29,90 @@
 package org.mmarini.wheelly.engines;
 
 import org.junit.jupiter.api.Test;
-import org.mmarini.wheelly.engines.statemachine.AStar;
 
 import java.awt.*;
+import java.awt.geom.Point2D;
+import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.contains;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class AStarTest {
 
-
-    public static final int EXTENSION_DISTANCE = 1;
-
-    @Test
-    void findPath1() {
-        Point start = new Point();
-        Point goal = new Point(2, 2);
-        Set<Point> prohibited = Set.of(
-                new Point(1, 1)
-        );
-        List<Point> path = AStar.findPath(start, goal, prohibited, EXTENSION_DISTANCE);
-        assertNotNull(path);
-        assertThat(path,
-                anyOf(
-                        contains(
-                                new Point(),
-                                new Point(0, 1),
-                                new Point(1, 2),
-                                new Point(2, 2)
-                        ),
-                        contains(
-                                new Point(),
-                                new Point(1, 0),
-                                new Point(2, 1),
-                                new Point(2, 2)
-                        )
-                )
+    static AStar<Point> create(Point from, Point to) {
+        return new AStar<>(
+                Point2D::distanceSq,
+                Point2D::distanceSq,
+                AStarTest::proximal,
+                from, to
         );
     }
 
-    void findPath2() {
-        Point start = new Point();
-        Point goal = new Point(2, 2);
-        Set<Point> prohibited = Set.of(
-                new Point(1, 1),
-                new Point(1, 0)
+    static Collection<Point> proximal(Point point) {
+        return List.of(
+                new Point(point.x + 1, point.y),
+                new Point(point.x, point.y + 1),
+                new Point(point.x - 1, point.y),
+                new Point(point.x, point.y - 1)
         );
-        List<Point> path = AStar.findPath(start, goal, prohibited, EXTENSION_DISTANCE);
-        assertNotNull(path);
-        assertThat(path,
-                contains(
-                        new Point(),
-                        new Point(0, 1),
-                        new Point(1, 2),
-                        new Point(2, 2)
-                )
-        );
+    }
+
+    @Test
+    void findTest() {
+        // Given an a-star instance
+        Point from = new Point();
+        Point to = new Point(3, 0);
+        AStar<Point> astar = create(from, to);
+
+        // When find
+        List<Point> path = astar.find();
+
+        // Then ...
+        assertThat(path, contains(
+                new Point(),
+                new Point(1, 0),
+                new Point(2, 0),
+                new Point(3, 0)
+        ));
+    }
+
+    @Test
+    void findTest1() {
+        // Given an a-star instance
+        Point from = new Point();
+        Point to = new Point(0, -3);
+        AStar<Point> astar = create(from, to);
+
+        // When find
+        List<Point> path = astar.find();
+
+        // Then ...
+        assertThat(path, contains(
+                new Point(),
+                new Point(0, -1),
+                new Point(0, -2),
+                new Point(0, -3)
+        ));
+    }
+
+    @Test
+    void findTest3() {
+        // Given an a-star instance
+        Point from = new Point();
+        Point to = new Point(2, 2);
+        AStar<Point> astar = create(from, to);
+
+        // When find
+        List<Point> path = astar.find();
+
+        // Then ...
+        assertThat(path, contains(
+                new Point(),
+                new Point(1, 0),
+                new Point(2, 0),
+                new Point(2, 1),
+                new Point(2, 2)
+        ));
     }
 }
