@@ -233,6 +233,18 @@ public record Complex(double x, double y) {
     }
 
     /**
+     * Returns the point at the given distance from center to the direction
+     *
+     * @param center   the center
+     * @param distance the distance
+     */
+    public Point2D at(Point2D center, double distance) {
+        return new Point2D.Double(
+                center.getX() + distance * x,
+                center.getY() + distance * y);
+    }
+
+    /**
      * Returns the radians
      */
     public double toRad() {
