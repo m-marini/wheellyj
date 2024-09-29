@@ -7,7 +7,7 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Vector of 5 dimensions is iused to perform quadratic linear computations
+ * Vector of 5 dimensions is used to perform quadratic linear computations
  *
  * @param coords the coordinates
  */

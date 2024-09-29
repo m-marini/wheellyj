@@ -124,6 +124,29 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
     }
 
     /**
+     * Returns the closest labeled point beyond the safe distance but within the maximum distance
+     * or null if it does not exist
+     *
+     * @param safeDistance the safe distance
+     * @param maxDistance  the maximum distance (m)
+     */
+    public Point2D nearestLabel(double safeDistance, double maxDistance) {
+        Point2D nearest = null;
+        double minDistance = maxDistance;
+        for (CircularSector sector : sectors) {
+            if (sector.labeled()) {
+                Point2D p = sector.location();
+                double distance = p.distance(center);
+                if (distance > safeDistance && distance < minDistance) {
+                    minDistance = distance;
+                    nearest = p;
+                }
+            }
+        }
+        return nearest;
+    }
+
+    /**
      * Returns the safe centroid of map
      *
      * @param maxDistance the maximum distance of polar map
