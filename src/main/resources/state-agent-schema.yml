@@ -238,8 +238,6 @@ $defs:
         maximum: 60
     required:
       - class
-      - x
-      - y
   StateNodes:
     type: object
     additionalProperties:

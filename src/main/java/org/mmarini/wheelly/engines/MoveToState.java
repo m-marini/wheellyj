@@ -66,17 +66,21 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
      * @param id      the state identifier
      */
     public static MoveToState create(JsonNode root, Locator locator, String id) {
-        double x = locator.path("x").getNode(root).asDouble();
-        double y = locator.path("y").getNode(root).asDouble();
+        Point2D.Double target = null;
+        if (locator.path("x").getNode(root).isMissingNode() || locator.path("yx").getNode(root).isMissingNode()) {
+            double x = locator.path("x").getNode(root).asDouble();
+            double y = locator.path("y").getNode(root).asDouble();
+            target = new Point2D.Double(x, y);
+        }
         double stopDistance = locator.path(STOP_DISTANCE).getNode(root).asDouble(DEFAULT_STOP_DISTANCE);
         double maxSpeed = locator.path(MAX_SPEED).getNode(root).asInt(MAX_PPS);
         ProcessorCommand onInit = ProcessorCommand.concat(
                 ExtendedStateNode.loadTimeout(root, locator, id),
                 ProcessorCommand.setProperties(Map.of(
                         id + "." + STOP_DISTANCE, stopDistance,
-                        id + "." + MAX_SPEED, maxSpeed,
-                        id + "." + TARGET, new Point2D.Double(x, y)
+                        id + "." + MAX_SPEED, maxSpeed
                 )),
+                target != null ? ProcessorCommand.put(id + "." + TARGET, target) : null,
                 ProcessorCommand.create(root, locator.path("onInit")));
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
@@ -140,6 +144,8 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
         Point2D target = get(context, TARGET);
         if (target != null) {
             context.setTarget(target);
+        } else {
+            remove(context, TARGET);
         }
     }
 
@@ -163,6 +169,10 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
 
         double stopDistance = getDouble(context, STOP_DISTANCE);
         Point2D target = get(context, TARGET);
+        if (target == null) {
+            logger.atError().log("Missing target in \"{}\" step", id());
+            return COMPLETED_RESULT;
+        }
         int maxSpeed = getInt(context, MAX_SPEED);
         return moveTo(context.robotStatus(), target, stopDistance, maxSpeed);
     }
