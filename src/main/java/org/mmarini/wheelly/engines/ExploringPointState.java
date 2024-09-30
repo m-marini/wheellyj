@@ -122,6 +122,6 @@ public record ExploringPointState(String id, ProcessorCommand onInit, ProcessorC
                     logger.atDebug().log("Target not found");
                     remove(context, "target");
                 });
-        return target.map(t -> COMPLETED_RESULT).orElse(NOT_FOUND_RESULT);
+        return target.map(t ->                 COMPLETED_RESULT).orElse(NOT_FOUND_RESULT);
     }
 }

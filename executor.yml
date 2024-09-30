@@ -93,32 +93,20 @@ agents:
         target:
           class: org.mmarini.wheelly.engines.LabelPointState
           maxDistance: 3
-          safeDistance: 0.6
+          safeDistance: 0.8
           transitions:
             completed:
               to: move
+              onTransition:
+                - move.target
+                - target.target
+                - get
+                - put
             notFound:
               to: explore
-        explore:
-          class: org.mmarini.wheelly.engines.ExploringPointState
-          distance: 1
-          safeDistance: 0.6
-          maxDistance: 3
-          transitions:
-            completed:
-              to: move
-            notFound:
-              to: clearMap
         move:
           class: org.mmarini.wheelly.engines.MoveToState
           stopDistance: 0.1
-          x: 0
-          y: 0
-          onEntry:
-            - move.target
-            - target.target
-            - get
-            - put
           transitions:
             completed:
               to: scan
@@ -128,6 +116,21 @@ agents:
               to: avoid
             blocked:
               to: avoid
+        explore:
+          class: org.mmarini.wheelly.engines.ExploringPointState
+          distance: 1
+          safeDistance: 0.8
+          maxDistance: 3
+          transitions:
+            completed:
+              to: move
+              onTransition:
+                - move.target
+                - explore.target
+                - get
+                - put
+            notFound:
+              to: clearMap
         avoid:
           class: org.mmarini.wheelly.engines.AvoidingState
           safeDistance: 0.2

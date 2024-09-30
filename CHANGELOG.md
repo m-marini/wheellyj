@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Issue [#446](https://github.com/m-marini/wheellyj/issues/446): Change state machine configuration yaml
 
+### Fixed
+
+- Issue [#451](https://github.com/m-marini/wheellyj/issues/451): Wrong target in exploring state
+
 ## [0.17.0] 2024-08-24
 
 ### Added
