@@ -73,7 +73,7 @@ public class Utils {
             Locator classLocator = locator.path("class");
             String className = classLocator.getNode(root).asText();
             Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(className);
-            Class[] argsType = Stream.concat(Stream.of(JsonNode.class, Locator.class),
+            Class<?>[] argsType = Stream.concat(Stream.of(JsonNode.class, Locator.class),
                             Arrays.stream(argClasses))
                     .toArray(Class[]::new);
             Method creator = clazz.getDeclaredMethod(method, argsType);

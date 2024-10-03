@@ -38,40 +38,22 @@ import java.util.List;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mmarini.wheelly.TestFunctions.text;
 import static org.mmarini.yaml.Utils.fromText;
 import static rocks.cleancode.hamcrest.record.HasFieldMatcher.field;
 
 class StateTransitionTest {
 
-    private static final String YAML = text("---",
-            "trigger: armed",
-            "from: a",
-            "to: b",
-            "onTransition:",
-            "  - a.b",
-            "  - 1",
-            "  - put");
-
-    private static final String LIST_YAML = text("---",
-            "- trigger: armed",
-            "  from: a",
-            "  to: b",
-            "- trigger: armed",
-            "  from: b",
-            "  to: c");
-
-    @Test
-    void create() throws IOException {
-        JsonNode root = fromText(YAML);
-        StateTransition st = StateTransition.create(root, Locator.root());
-        assertNotNull(st);
-        assertEquals("a", st.from());
-        assertEquals("b", st.to());
-        assertTrue(st.isTriggered("armed"));
-        assertThat(st, field("onTransition",
-                field("id", equalTo("@program"))));
-    }
+    private static final String LIST_YAML = """
+            ---
+            a:
+                transitions:
+                    armed:
+                        to: b
+            b:
+                transitions:
+                    armed:
+                        to: c
+            """;
 
     @Test
     void createList() throws IOException {

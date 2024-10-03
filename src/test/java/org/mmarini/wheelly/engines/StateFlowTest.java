@@ -36,33 +36,32 @@ import java.io.IOException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.mmarini.wheelly.TestFunctions.text;
 import static org.mmarini.yaml.Utils.fromText;
 import static rocks.cleancode.hamcrest.record.HasFieldMatcher.field;
 
 class StateFlowTest {
 
-    private static final String YAML = text("---",
-            "entry: a",
-            "states:",
-            "  a:",
-            "    class: org.mmarini.wheelly.engines.HaltState",
-            "  b:",
-            "    class: org.mmarini.wheelly.engines.HaltState",
-            "transitions:",
-            "  - from: a",
-            "    to: b",
-            "    trigger: .*",
-            "    onTransition:",
-            "      - a",
-            "      - b",
-            "      - get",
-            "      - put",
-            "onInit:",
-            "  - a",
-            "  - 1",
-            "  - put"
-    );
+    private static final String YAML = """
+            ---
+            entry: a
+            states:
+              a:
+                class: org.mmarini.wheelly.engines.HaltState
+                transitions:
+                    ".*":
+                      to: b
+                      onTransition:
+                        - a
+                        - b
+                        - get
+                        - put
+              b:
+                class: org.mmarini.wheelly.engines.HaltState
+            onInit:
+              - a
+              - 1
+              - put
+            """;
 
     @Test
     void create() throws IOException {

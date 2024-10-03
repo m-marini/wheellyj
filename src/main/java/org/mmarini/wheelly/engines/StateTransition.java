@@ -48,23 +48,6 @@ import static java.util.Objects.requireNonNull;
 public record StateTransition(Pattern trigger, String from, String to, ProcessorCommand onTransition) {
 
     /**
-     * Returns the state transition list from yaml
-     *
-     * @param root    the root document
-     * @param locator the state transition locator
-     */
-    public static StateTransition create(JsonNode root, Locator locator) {
-        Pattern trigger1 = Pattern.compile(locator.path("trigger").getNode(root).asText());
-        String from1 = locator.path("from").getNode(root).asText();
-        String to1 = locator.path("to").getNode(root).asText();
-        Locator onTransitionLoc = locator.path("onTransition");
-        ProcessorCommand onTransition = onTransitionLoc.getNode(root).isMissingNode()
-                ? null
-                : ProcessorCommand.create(root, onTransitionLoc);
-        return new StateTransition(trigger1, from1, to1, onTransition);
-    }
-
-    /**
      * Returns the state transition from yaml fragment
      *
      * @param root    the root document
@@ -89,12 +72,6 @@ public record StateTransition(Pattern trigger, String from, String to, Processor
      * @param locator the state definitions locator
      */
     public static List<StateTransition> createList(JsonNode root, Locator locator) {
-        /*
-        return locator.elements(root)
-                .map(l -> create(root, l))
-                .collect(Collectors.toList());
-
-         */
         return locator.propertyNames(root)
                 .flatMap((from1, l) ->
                         l.path("transitions")

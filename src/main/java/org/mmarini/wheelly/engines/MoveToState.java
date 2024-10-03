@@ -54,6 +54,8 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
     public static final String STOP_DISTANCE = "stopDistance";
     public static final String TARGET = "target";
     public static final double NEAR_DISTANCE = 0.4;
+    public static final int NO_DIRECTION_VALUE = -1000;
+    public static final int DEFAULT_DIRECTION_RANGE = 10;
     private static final double DEFAULT_STOP_DISTANCE = 0.4;
     private static final Logger logger = LoggerFactory.getLogger(MoveToState.class);
     private static final int MIN_PPS = 10;
@@ -72,6 +74,8 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
             double y = locator.path("y").getNode(root).asDouble();
             target = new Point2D.Double(x, y);
         }
+        int direction = locator.path("direction").getNode(root).asInt(NO_DIRECTION_VALUE);
+        int directionRange = locator.path("directionRange").getNode(root).asInt(NO_DIRECTION_VALUE);
         double stopDistance = locator.path(STOP_DISTANCE).getNode(root).asDouble(DEFAULT_STOP_DISTANCE);
         double maxSpeed = locator.path(MAX_SPEED).getNode(root).asInt(MAX_PPS);
         ProcessorCommand onInit = ProcessorCommand.concat(
@@ -81,6 +85,8 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
                         id + "." + MAX_SPEED, maxSpeed
                 )),
                 target != null ? ProcessorCommand.put(id + "." + TARGET, target) : null,
+                direction != NO_DIRECTION_VALUE ? ProcessorCommand.put(id + "." + "direction", direction) : null,
+                directionRange != NO_DIRECTION_VALUE ? ProcessorCommand.put(id + "." + "directionRange", direction) : null,
                 ProcessorCommand.create(root, locator.path("onInit")));
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
@@ -90,20 +96,27 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
     /**
      * Returns the state transition result to move to target
      *
-     * @param robotStatus  the roboto status
-     * @param target       the target
-     * @param stopDistance the stopDistance
-     * @param maxSpeed     the maximum speed (pps)
+     * @param robotStatus    the roboto status
+     * @param target         the target
+     * @param direction      the target direction
+     * @param directionRange the direction range
+     * @param stopDistance   the stopDistance
+     * @param maxSpeed       the maximum speed (pps)
      */
-    private static Tuple2<String, RobotCommands> moveTo(RobotStatus robotStatus, Point2D target, double stopDistance, double maxSpeed) {
+    private static Tuple2<String, RobotCommands> moveTo(RobotStatus robotStatus, Point2D target, Complex direction, Complex directionRange, double stopDistance, double maxSpeed) {
         // Converts location to meters
         Point2D current = robotStatus.location();
 
         double distance = current.distance(target);
         logger.atDebug().log("Distance to target {} m, stop at {} m", distance, stopDistance);
         if (distance <= stopDistance) {
-            // Target reached
-            return COMPLETED_RESULT;
+            if (direction == null || direction.isCloseTo(robotStatus.direction(), directionRange)) {
+                // Target reached
+                return COMPLETED_RESULT;
+            } else {
+                // Rotate to target direction
+                return Tuple2.of(NONE_EXIT, moveAndFrontScan(direction, 0));
+            }
         }
         double echoDistance = robotStatus.echoDistance();
         // Computes the direction of target
@@ -166,14 +179,22 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
             // Halt robot and move forward the sensor at timeout
             return TIMEOUT_RESULT;
         }
-
-        double stopDistance = getDouble(context, STOP_DISTANCE);
         Point2D target = get(context, TARGET);
         if (target == null) {
             logger.atError().log("Missing target in \"{}\" step", id());
             return COMPLETED_RESULT;
         }
+
+        double stopDistance = getDouble(context, STOP_DISTANCE);
+        Complex direction = switch (get(context, "direction")) {
+            case Number d -> Complex.fromDeg(d.doubleValue());
+            case null, default -> null;
+        };
         int maxSpeed = getInt(context, MAX_SPEED);
-        return moveTo(context.robotStatus(), target, stopDistance, maxSpeed);
+        Complex directionRange = switch (get(context, "directionRange")) {
+            case Number d -> Complex.fromDeg(d.doubleValue());
+            case null, default -> Complex.fromDeg(DEFAULT_DIRECTION_RANGE);
+        };
+        return moveTo(context.robotStatus(), target, direction, directionRange, stopDistance, maxSpeed);
     }
 }
