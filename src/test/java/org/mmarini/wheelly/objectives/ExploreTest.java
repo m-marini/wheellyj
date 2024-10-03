@@ -49,11 +49,12 @@ import static org.mmarini.wheelly.apis.SimRobot.MAX_VELOCITY;
 class ExploreTest {
 
     public static final int MAX_INTERVAL = 10000;
+    public static final double DECAY = 10000d;
 
     static RobotEnvironment createEnvironment(int sensorDir, double leftSpeed, double rightSpeed, boolean canMoveForward, boolean canMoveBackward, int knownCount) {
         long timestamp = System.currentTimeMillis();
-        RadarMap radarMap = RadarMap.create(new Point2D.Double(), 10, 10, 0.2, MAX_INTERVAL, 2000, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, Complex.fromDeg(15))
-                .map(IntStream.range(0, knownCount), cell -> cell.addAnechoic(timestamp));
+        RadarMap radarMap = RadarMap.create(new Point2D.Double(), 10, 10, 0.2, MAX_INTERVAL, 2000, MAX_INTERVAL, MAX_INTERVAL, DECAY, GRID_SIZE, Complex.fromDeg(15))
+                .map(IntStream.range(0, knownCount), cell -> cell.addAnechoic(timestamp, DECAY));
         RobotStatus status = RobotStatus.create(x -> 12d)
                 .setSensorDirection(Complex.fromDeg(sensorDir))
                 .setSpeeds(leftSpeed * MAX_VELOCITY / RobotStatus.DISTANCE_PER_PULSE,

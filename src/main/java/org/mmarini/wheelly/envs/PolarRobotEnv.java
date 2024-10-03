@@ -81,7 +81,7 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
     public static final double MIN_DISTANCE = 0;
     public static final double MAX_DISTANCE = 10;
     public static final int NUM_CAN_MOVE_STATES = 6;
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/env-polar-schema-1.0";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/env-polar-schema-1.1";
 
     /**
      * Returns the environment from json node spec

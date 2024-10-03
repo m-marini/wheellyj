@@ -59,6 +59,7 @@ class RadarMapTest {
     public static final int MAX_INTERVAL = 10000;
     public static final Complex RECEPTIVE_ANGLE = Complex.fromDeg(15);
     public static final int ECHO_TIME = 100;
+    public static final double DECAY = 100000;
 
     static RadarMap createRadarMap(Stream<Tuple2<Point, String>> obstacles) {
         List<Point2D> echos = allPointsOfValue(GRID_TOPOLOGY, "O").apply(obstacles)
@@ -66,10 +67,10 @@ class RadarMapTest {
                 .toList();
 
         RadarMap radarMap = RadarMap.create(RadarMapTest.GRID_TOPOLOGY.center(), RadarMapTest.GRID_TOPOLOGY.width(), RadarMapTest.GRID_TOPOLOGY.height(), RadarMapTest.GRID_TOPOLOGY.gridSize(),
-                MAX_INTERVAL, 2000, MAX_INTERVAL, MAX_INTERVAL, RadarMapTest.GRID_TOPOLOGY.gridSize(), RECEPTIVE_ANGLE);
+                MAX_INTERVAL, 2000, MAX_INTERVAL, MAX_INTERVAL, DECAY, RadarMapTest.GRID_TOPOLOGY.gridSize(), RECEPTIVE_ANGLE);
         for (Point2D p : echos) {
             radarMap = radarMap.updateCellAt(p,
-                    c -> c.addEchogenic(ECHO_TIME));
+                    c -> c.addEchogenic(ECHO_TIME, DECAY));
         }
         return radarMap;
     }
@@ -109,7 +110,7 @@ class RadarMapTest {
         long timestamp = System.currentTimeMillis();
         RadarMap map = createRadarMap()
                 .map(IntStream.range(10, 20),
-                        sector -> sector.addEchogenic(timestamp));
+                        sector -> sector.addEchogenic(timestamp, DECAY));
 
         map = map.clean(timestamp);
 
@@ -124,18 +125,20 @@ class RadarMapTest {
         long timestamp = System.currentTimeMillis();
         RadarMap map = createRadarMap()
                 .map(IntStream.range(10, 20),
-                        cell -> cell.addEchogenic(timestamp - MAX_INTERVAL - 1));
+                        cell -> cell.addEchogenic(timestamp - MAX_INTERVAL - 1, DECAY));
 
         map = map.clean(timestamp);
 
         MapCell[] cells = map.cells();
+        /*
         for (int i = 0; i < cells.length; i++) {
             MapCell cell = cells[i];
-            if (i >= 10 && i < 20) {
-                assertTrue(cell.echogenic());
-            } else {
-                assertTrue(cell.unknown());
-            }
+            assertTrue(cell.unknown());
+        }
+
+         */
+        for (MapCell cell : cells) {
+            assertTrue(cell.unknown());
         }
         assertEquals(timestamp + MAX_INTERVAL, map.cleanTimestamp());
     }
@@ -143,7 +146,7 @@ class RadarMapTest {
     @NotNull
     private RadarMap createRadarMap() {
         return RadarMap.create(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE,
-                MAX_INTERVAL, 2000, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
+                MAX_INTERVAL, 2000, MAX_INTERVAL, MAX_INTERVAL, DECAY, GRID_SIZE, RECEPTIVE_ANGLE);
     }
 
     @Test
@@ -213,7 +216,7 @@ class RadarMapTest {
         // Given a map with obstacle at xObstacle, yObstacle
         RadarMap map = createRadarMap();
         map = map.updateCellAt(xObstacle, yObstacle,
-                cell -> cell.addEchogenic(100)
+                cell -> cell.addEchogenic(100, DECAY)
         );
         // And the departure point
         Point2D from = new Point2D.Double(xFrom, yFrom);

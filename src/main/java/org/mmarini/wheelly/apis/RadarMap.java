@@ -55,6 +55,7 @@ import static org.mmarini.wheelly.apis.AreaExpression.*;
  * @param echoPersistence     the echo persistence (ms)
  * @param contactPersistence  the contact persistence (ms)
  * @param cleanTimestamp      the next clean instant (ms)
+ * @param decay               the decay factor (ms)
  * @param contactRadius       the receptive distance (m)
  * @param receptiveAngle      the receptive angle
  * @param vertices            the vertices qVectors
@@ -62,10 +63,11 @@ import static org.mmarini.wheelly.apis.AreaExpression.*;
  */
 public record RadarMap(GridTopology topology, MapCell[] cells,
                        long cleanInterval, long correlationInterval, long echoPersistence, long contactPersistence,
-                       long cleanTimestamp,
+                       long cleanTimestamp, double decay,
                        double contactRadius, Complex receptiveAngle,
                        QVect[] vertices, int[][] verticesByCells) {
     public static final double MAX_SIGNAL_DISTANCE = 3;
+    public static final double DEFAULT_DECAY = 300000;
     private static final Logger logger = LoggerFactory.getLogger(RadarMap.class);
 
     /**
@@ -84,9 +86,10 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
         long contactPersistence = locator.path("contactPersistence").getNode(root).asLong();
         double contactRadius = locator.path("contactRadius").getNode(root).asDouble();
         Complex radarReceptiveAngle = Complex.fromDeg(locator.path("radarReceptiveAngle").getNode(root).asInt());
+        double decay1 = locator.path("decay").getNode(root).asDouble(DEFAULT_DECAY);
         return RadarMap.create(new Point2D.Float(), radarWidth, radarHeight, radarGrid,
                 radarCleanInterval, correlationInterval1, echoPersistence,
-                contactPersistence, contactRadius, radarReceptiveAngle);
+                contactPersistence, decay1, contactRadius, radarReceptiveAngle);
     }
 
     /**
@@ -100,12 +103,13 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      * @param correlationInterval the qrcode-proxy correlation interval (ms)
      * @param echoPersistence     the echo persistence (ms)
      * @param contactPersistence  the contact persistence (ms)
+     * @param decay               the decay time of radar cell status
      * @param contactRadius       the contact radius (m)
      * @param receptiveAngle      receptive angle
      */
     public static RadarMap create(Point2D center, int width, int height, double gridSize,
                                   long radarCleanInterval, long correlationInterval, long echoPersistence, long contactPersistence,
-                                  double contactRadius, Complex receptiveAngle) {
+                                  double decay, double contactRadius, Complex receptiveAngle) {
         MapCell[] map1 = new MapCell[width * height];
         GridTopology topology1 = new GridTopology(center, width, height, gridSize);
         QVect[] vertices = AreaExpression.createQVertices(topology1);
@@ -116,7 +120,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
         }
         return new RadarMap(topology1, map1,
                 radarCleanInterval, correlationInterval, echoPersistence, contactPersistence,
-                0, contactRadius, receptiveAngle, vertices, verticesByCell);
+                0, decay, contactRadius, receptiveAngle, vertices, verticesByCell);
     }
 
     /**
@@ -129,6 +133,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      * @param echoPersistence     the echo persistence (ms)
      * @param contactPersistence  the contact persistence (ms)
      * @param cleanTimestamp      the next clean instant (ms)
+     * @param decay               the decay factor (ms)
      * @param contactRadius       the receptive distance (m)
      * @param receptiveAngle      the receptive angle
      * @param vertices            the vertices qVectors
@@ -136,7 +141,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      */
     public RadarMap(GridTopology topology, MapCell[] cells,
                     long cleanInterval, long correlationInterval, long echoPersistence, long contactPersistence, long cleanTimestamp,
-                    double contactRadius, Complex receptiveAngle,
+                    double decay, double contactRadius, Complex receptiveAngle,
                     QVect[] vertices, int[][] verticesByCells) {
         this.topology = requireNonNull(topology);
         this.cells = requireNonNull(cells);
@@ -149,6 +154,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
         this.vertices = requireNonNull(vertices);
         this.verticesByCells = requireNonNull(verticesByCells);
         this.correlationInterval = correlationInterval;
+        this.decay = decay;
     }
 
     /**
@@ -186,15 +192,17 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      * @param time the simulation time instant
      */
     public RadarMap clean(long time) {
-        long echoLimit = time - echoPersistence;
-        long contactLimit = time - contactPersistence;
-        return time >= cleanTimestamp
-                ?
-                setCells(Arrays.stream(cells)
-                        .map(m -> m.clean(echoLimit, contactLimit))
-                        .toArray(MapCell[]::new))
-                        .setCleanTimestamp(time + cleanInterval)
-                : this;
+        if (time >= cleanTimestamp) {
+            long echoLimit = time - echoPersistence;
+            long contactLimit = time - contactPersistence;
+            return setCells(Arrays.stream(cells)
+                    .map(m ->
+                            m.clean(echoLimit, contactLimit))
+                    .toArray(MapCell[]::new))
+                    .setCleanTimestamp(time + cleanInterval);
+        } else {
+            return this;
+        }
     }
 
     /**
@@ -366,7 +374,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      * @param cells the cells
      */
     private RadarMap setCells(MapCell[] cells) {
-        return new RadarMap(topology, cells, cleanInterval, correlationInterval, echoPersistence, contactPersistence, cleanTimestamp, contactRadius, receptiveAngle, vertices, verticesByCells);
+        return new RadarMap(topology, cells, cleanInterval, correlationInterval, echoPersistence, contactPersistence, cleanTimestamp, decay, contactRadius, receptiveAngle, vertices, verticesByCells);
     }
 
     /**
@@ -375,7 +383,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      * @param cleanTimestamp the next clean instant (ms)
      */
     private RadarMap setCleanTimestamp(long cleanTimestamp) {
-        return new RadarMap(topology, cells, cleanInterval, correlationInterval, echoPersistence, contactPersistence, cleanTimestamp, contactRadius, receptiveAngle, vertices, verticesByCells);
+        return new RadarMap(topology, cells, cleanInterval, correlationInterval, echoPersistence, contactPersistence, cleanTimestamp, decay, contactRadius, receptiveAngle, vertices, verticesByCells);
     }
 
     /**
@@ -448,12 +456,12 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
                 map(indices()
                                 .filter(filterByArea(sensibleArea)),
                         cell ->
-                                cell.update(signal, MAX_SIGNAL_DISTANCE, topology.gridSize(), receptiveAngle)) :
+                                cell.update(signal, MAX_SIGNAL_DISTANCE, topology.gridSize(), receptiveAngle, decay)) :
                 map(indices()
                                 .filter(filterByArea(sensibleArea)),
                         cell ->
-                                cell.updateLabel(signal, MAX_SIGNAL_DISTANCE, topology.gridSize(), receptiveAngle, label)
-        );
+                                cell.updateLabel(signal, MAX_SIGNAL_DISTANCE, topology.gridSize(), receptiveAngle, label, decay)
+                );
     }
 
     /**

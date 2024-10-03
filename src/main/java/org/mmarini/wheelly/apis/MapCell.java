@@ -29,85 +29,126 @@ import org.mmarini.Tuple2;
 
 import java.awt.geom.Point2D;
 
-import static java.lang.Math.max;
 import static java.lang.Math.min;
 
 /**
  * MapCell keeps the presence of obstacles in the sector
  *
- * @param location       the cell location
- * @param echoTime       the timestamp of last echo
- * @param echoCounter    the difference between the number of signal echo and no echo
- * @param contactTime    the timestamp of last contact signals
- * @param labeledCounter the difference between the number of labeled and unlabeled signals
+ * @param location      the cell location
+ * @param echoTime      the timestamp of last echo
+ * @param echoWeight    the weight of signal echo and no echo
+ * @param contactTime   the timestamp of last contact signals
+ * @param labeledTime   the timestamp of last label signal
+ * @param labeledWeight the weight of the labeled and unlabeled signals
  */
-public record MapCell(Point2D location, long echoTime, int echoCounter, long contactTime, int labeledCounter) {
+public record MapCell(Point2D location, long echoTime, double echoWeight, double contactTime, long labeledTime,
+                      double labeledWeight) {
     /**
      * Returns the unknown sector
      *
      * @param location the location
      */
     static MapCell unknown(Point2D location) {
-        return new MapCell(location, 0, 0, 0, 0);
+        return new MapCell(location, 0, 0, 0, 0, 0);
     }
 
     /**
      * Returns the cell with new no echo registered
      *
-     * @param echoTime the registration time
+     * @param echoTime the registration time (ms)
+     * @param decay    the decay factor (ms)
      */
-    public MapCell addAnechoic(long echoTime) {
-        return unknown() ? new MapCell(location, echoTime, 0, contactTime, 0)
-                : new MapCell(location, echoTime, echoCounter - 1, contactTime, labeledCounter);
+    public MapCell addAnechoic(long echoTime, double decay) {
+        if (unknown()) {
+            return new MapCell(location, echoTime, -1, contactTime, 0, 0);
+        } else {
+            double alpha = min((echoTime - this.echoTime) / decay, 1);
+            // dt -> 0 => alpha -> 0, echoWeight -> echoWeight
+            // dt -> decay => alpha -> 1, echoWeight -> -1
+            // weight = (-1-echoWeight)*alpha + echoWeight;
+            double weight = -(1 + echoWeight) * alpha + echoWeight;
+            return new MapCell(location, echoTime, weight, contactTime, labeledTime, labeledWeight);
+        }
     }
 
     /**
      * Returns the cell with new echo registered
      *
-     * @param echoTime the registration time
+     * @param echoTime the registration time (ms)
+     * @param decay    the decay factor (ms)
      */
-    public MapCell addEchogenic(long echoTime) {
-        return new MapCell(location, echoTime,
-                unknown() ? 1 : echoCounter + 1, contactTime, labeledCounter);
+    public MapCell addEchogenic(long echoTime, double decay) {
+        if (unknown()) {
+            return new MapCell(location, echoTime, 1, contactTime, 0, 0);
+        } else {
+            double alpha = min((echoTime - this.echoTime) / decay, 1);
+            // dt -> 0 => alpha -> 0, echoWeight -> echoWeight
+            // dt -> decay => alpha -> 1, echoWeight -> 1
+            // weight = (1-echoWeight)*alpha + echoWeight;
+            double weight = (1 - echoWeight) * alpha + echoWeight;
+            return new MapCell(location, echoTime, weight, contactTime, labeledTime, labeledWeight);
+        }
     }
 
     /**
      * Returns the cell with new registered labeled
+     *
+     * @param decay the decay factor (ms)
      */
-    public MapCell addLabeled() {
-        return new MapCell(location, echoTime, echoCounter, contactTime, labeledCounter + 1);
+    public MapCell addLabeled(double decay) {
+        if (unknown()) {
+            return this;
+        } else {
+            double alpha = min((echoTime - labeledTime) / decay, 1);
+            // dt -> 0 => alpha -> 0, echoWeight -> echoWeight
+            // dt -> decay => alpha -> 1, echoWeight -> -1
+            // weight = (-1-echoWeight)*alpha + echoWeight;
+            double weight = (1 - labeledWeight) * alpha + labeledWeight;
+            return new MapCell(location, echoTime, echoWeight, contactTime, echoTime, weight);
+        }
     }
 
     /**
      * Returns the cell with new registered unlabeled
+     *
+     * @param decay the decay factor (ms)
      */
-    public MapCell addUnlabeled() {
-        return new MapCell(location, echoTime, echoCounter, contactTime, labeledCounter - 1);
+    public MapCell addUnlabeled(double decay) {
+        if (unknown()) {
+            return this;
+        } else {
+            double alpha = min((echoTime - labeledTime) / decay, 1);
+            // dt -> 0 => alpha -> 0, echoWeight -> echoWeight
+            // dt -> decay => alpha -> 1, echoWeight -> -1
+            // weight = (-1-echoWeight)*alpha + echoWeight;
+            double weight = -(1 + labeledWeight) * alpha + labeledWeight;
+            return new MapCell(location, echoTime, echoWeight, contactTime, echoTime, weight);
+        }
     }
 
     /**
      * Returns true if cell is anechoic (no echo)
      */
     public boolean anechoic() {
-        return echoTime > 0 && echoCounter <= 0;
+        return echoTime > 0 && echoWeight <= 0;
     }
 
     /**
-     * Returns the cleaned cell
+     * Returns the cleaned cell if timeout
      *
-     * @param echoLimit    echo limit time
-     * @param contactLimit contact limit time
+     * @param expiredEcho    instant of the echo before which the state is canceled
+     * @param expiredContact instant of the contact before which the state is canceled
      */
-    public MapCell clean(long echoLimit, long contactLimit) {
-        return echoTime < echoLimit
-                ? contactTime < contactLimit
+    public MapCell clean(long expiredEcho, long expiredContact) {
+        return echoTime <= expiredEcho
+                ? contactTime <= expiredContact
                 // both times expired
-                ? new MapCell(location, echoTime, min(max(echoCounter, 0), 1), 0, labeledCounter)
+                ? MapCell.unknown(location)
                 // only echo expired
-                : new MapCell(location, echoTime, min(max(echoCounter, 0), 1), contactTime, labeledCounter)
-                : contactTime < contactLimit
+                : new MapCell(location, 0, 0, contactTime, 0, 0)
+                : contactTime <= expiredContact
                 // only contact expired
-                ? new MapCell(location, echoTime, echoCounter, 0, labeledCounter)
+                ? new MapCell(location, echoTime, echoWeight, 0, labeledTime, labeledWeight)
                 // nothing expired
                 : this;
     }
@@ -116,7 +157,7 @@ public record MapCell(Point2D location, long echoTime, int echoCounter, long con
      * Returns true if the cell is echogenic (echo)
      */
     public boolean echogenic() {
-        return echoTime > 0 && echoCounter > 0;
+        return echoTime > 0 && echoWeight > 0;
     }
 
     /**
@@ -144,7 +185,7 @@ public record MapCell(Point2D location, long echoTime, int echoCounter, long con
      * Returns true if the cell is echogenic (echo)
      */
     public boolean labeled() {
-        return echoTime > 0 && echoCounter > 0 && labeledCounter > 0;
+        return echoTime > 0 && echoWeight > 0 && labeledWeight > 0;
     }
 
     /**
@@ -153,7 +194,7 @@ public record MapCell(Point2D location, long echoTime, int echoCounter, long con
      * @param contactTime the contacts timestamp
      */
     public MapCell setContact(long contactTime) {
-        return new MapCell(location, echoTime, echoCounter, contactTime, labeledCounter);
+        return new MapCell(location, echoTime, echoWeight, contactTime, labeledTime, labeledWeight);
     }
 
     /**
@@ -177,8 +218,9 @@ public record MapCell(Point2D location, long echoTime, int echoCounter, long con
      * @param maxDistance    maximum distance of cell (m)
      * @param gridSize       receptive distance (m)
      * @param receptiveAngle receptive angle
+     * @param decay          the decay factor (ms)
      */
-    public MapCell update(RadarMap.SensorSignal signal, double maxDistance, double gridSize, Complex receptiveAngle) {
+    public MapCell update(RadarMap.SensorSignal signal, double maxDistance, double gridSize, Complex receptiveAngle, double decay) {
         long t0 = signal.timestamp();
         Point2D q = signal.sensorLocation();
         double distance = signal.distance();
@@ -190,23 +232,15 @@ public record MapCell(Point2D location, long echoTime, int echoCounter, long con
         }
         double near = interval._1.distance(q);
         double far = interval._2.distance(q);
-        /*
-        return near == 0 || near > maxDistance || (distance < near && signal.isEcho())
-                ? this
-                : distance <= far && signal.isEcho()
-                ? addEchogenic(t0)
-                : addAnechoic(t0);
-
-         */
         if (near > 0 && near <= maxDistance) {
             // cell is in receptive zone
             if (signal.isEcho() && distance >= near && distance <= far) {
                 // signal echo inside the cell
-                return addEchogenic(t0);
+                return addEchogenic(t0, decay);
             }
             if (!signal.isEcho() || distance > far) {
                 // signal is not echo or echo is far away the cell
-                return addAnechoic(t0);
+                return addAnechoic(t0, decay);
             }
         }
         return this;
@@ -220,8 +254,9 @@ public record MapCell(Point2D location, long echoTime, int echoCounter, long con
      * @param gridSize       receptive distance (m)
      * @param receptiveAngle receptive angle
      * @param label          the label
+     * @param decay          the decay factor (ms)
      */
-    public MapCell updateLabel(RadarMap.SensorSignal signal, double maxDistance, double gridSize, Complex receptiveAngle, String label) {
+    public MapCell updateLabel(RadarMap.SensorSignal signal, double maxDistance, double gridSize, Complex receptiveAngle, String label, double decay) {
         long t0 = signal.timestamp();
         Point2D q = signal.sensorLocation();
         double distance = signal.distance();
@@ -233,27 +268,19 @@ public record MapCell(Point2D location, long echoTime, int echoCounter, long con
         }
         double near = interval._1.distance(q);
         double far = interval._2.distance(q);
-        /*
-        return near == 0 || near > maxDistance || (distance < near && signal.isEcho())
-                ? this
-                : distance <= far && signal.isEcho()
-                ? addEchogenic(t0)
-                : addAnechoic(t0);
-
-         */
         if (near > 0 && near <= maxDistance) {
             // cell is in receptive zone
             if (signal.isEcho() && distance >= near && distance <= far) {
                 // signal echo inside the cell
                 return label == null ?
-                        addEchogenic(t0)
+                        addEchogenic(t0, decay)
                         : "?".equals(label)
-                        ? addUnlabeled()
-                        : addLabeled();
+                        ? addUnlabeled(decay)
+                        : addLabeled(decay);
             }
             if ((!signal.isEcho() || distance > far) && label == null) {
                 // signal is not echo or echo is far away the cell
-                return addAnechoic(t0);
+                return addAnechoic(t0, decay);
             }
         }
         return this;

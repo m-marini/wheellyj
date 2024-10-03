@@ -1,13 +1,13 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/state-agent-schema-3.1
+$id: https://mmarini.org/wheelly/state-agent-schema-3.2
 title: State machine agent
 description: State Agent Schema
 type: object
 properties:
   $schema:
     type: string
-    const: https://mmarini.org/wheelly/state-agent-schema-3.1
+    const: https://mmarini.org/wheelly/state-agent-schema-3.2
   class:
     const: org.mmarini.wheelly.engines.StateMachineAgent
   flow:
@@ -43,6 +43,8 @@ properties:
   contactPersistence:
     multipleOf: 1
     minimum: 1
+  decay:
+    exclusiveMinimum: 0
 required:
   - $schema
   - class

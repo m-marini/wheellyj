@@ -51,7 +51,7 @@ controllers:
 
 environments:
   polarMapEnv:
-    $schema: https://mmarini.org/wheelly/env-polar-schema-1.0
+    $schema: https://mmarini.org/wheelly/env-polar-schema-1.1
     class: org.mmarini.wheelly.envs.PolarRobotEnv
     objective: objectives/cautious
     interval: 10
@@ -69,6 +69,7 @@ environments:
     contactPersistence: 300000
     radarCleanInterval: 30000
     correlationInterval: 2000
+    decay: 120000
     numRadarSectors: 24
     minRadarDistance: 0.3
     maxRadarDistance: 3
