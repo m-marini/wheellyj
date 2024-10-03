@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 
 - Issue [#446](https://github.com/m-marini/wheellyj/issues/446): Change state machine configuration yaml
+- Issue [#455](https://github.com/m-marini/wheellyj/issues/455): Change radar map cell state update
 
 ### Fixed
 

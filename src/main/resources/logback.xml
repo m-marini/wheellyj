@@ -32,6 +32,7 @@
     <logger name="org.mmarini.wheelly.engines.MoveToState" level="INFO"/>
     <logger name="org.mmarini.wheelly.engines.HaltState" level="INFO"/>
     <logger name="org.mmarini.wheelly.engines.ClearMapState" level="INFO"/>
+    <logger name="org.mmarini.wheelly.engines.LabelPointState" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.apps.MatrixMonitor" level="INFO"/>
     <logger name="org.mmarini.wheelly.apps.RobotCheckUp" level="INFO"/>

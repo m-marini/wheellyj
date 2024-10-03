@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import java.awt.geom.Point2D;
 import java.util.Map;
 
+import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -107,7 +108,7 @@ public record LabelPointState(String id, ProcessorCommand onInit, ProcessorComma
         double maxDistance = getDouble(context, "maxDistance");
         double safeDistance = getDouble(context, "safeDistance");
         PolarMap polarMap = context.polarMap();
-        Point2D target = polarMap.nearestLabel(safeDistance, maxDistance);
+        Point2D target = polarMap.nearestLabel(0, maxDistance);
 
         if (target == null) {
             logger.atDebug().log("No target found");
@@ -115,14 +116,15 @@ public record LabelPointState(String id, ProcessorCommand onInit, ProcessorComma
             return NOT_FOUND_RESULT;
         } else {
             Point2D center = polarMap.center();
-            double distance = center.distance(target);
-            if (distance > safeDistance + MARGIN_DISTANCE) {
-                // Compute the safe target
-                Complex dir = Complex.direction(center, target);
-                target = dir.at(center, distance - safeDistance);
-            }
-            logger.atDebug().log("Target {}", target);
-            put(context, "target", target);
+            // Compute the safe target
+            Complex dir = Complex.direction(center, target);
+            Point2D nearTarget = dir.opposite().at(target, safeDistance + MARGIN_DISTANCE);
+            Complex targetDir = Complex.direction(center, nearTarget);
+            put(context, "target", nearTarget);
+            put(context, "direction", targetDir);
+            logger.atDebug().log("Target {} {} DEG at {}cm from label",
+                    nearTarget, targetDir.toIntDeg(),
+                    round(target.distance(nearTarget) * 100));
             return COMPLETED_RESULT;
         }
     }

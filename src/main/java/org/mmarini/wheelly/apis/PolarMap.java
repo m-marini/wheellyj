@@ -47,6 +47,10 @@ import static org.mmarini.wheelly.apis.Geometry.squareArcInterval;
 
 /**
  * The polar map keeps the status of the circle area round a center point.
+ *
+ * @param sectors   the cells
+ * @param center    the map center in world coordinate
+ * @param direction the map direction in world compass
  */
 public record PolarMap(CircularSector[] sectors, Point2D center, Complex direction) {
     private static final Logger logger = LoggerFactory.getLogger(PolarMap.class);
@@ -88,20 +92,10 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
     /**
      * Returns the circular sector in a direction
      *
-     * @param direction the direction
+     * @param direction the direction relative the polar map
      */
     public CircularSector directionSector(Complex direction) {
         return sectors[sectorIndex(direction)];
-    }
-
-    /**
-     * Returns the radar sector direction relative to polar map
-     *
-     * @param sectorIndex the sector index
-     */
-    public Complex indexDirection(int sectorIndex) {
-        Point2D point = sectors[sectorIndex].location();
-        return Complex.direction(center, point).sub(direction);
     }
 
     /**
@@ -198,7 +192,7 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
     }
 
     /**
-     * Returns the direction of sector
+     * Returns the direction of sector relative the polar map
      *
      * @param i the sector index
      */
@@ -209,7 +203,7 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
     /**
      * Returns the index of sector in a given direction
      *
-     * @param direction the direction
+     * @param direction the direction relative the polar map
      */
     public int sectorIndex(Complex direction) {
         int n = sectors.length;
@@ -249,11 +243,10 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
         Point2D[] emptyPoints = new Point2D[sectors.length];
 
         double[] notEmptyDistances = Arrays.copyOf(emptyDistances, sectors.length);
-        long[] notEmptyTimestamps = new long[sectors.length];
         Point2D[] notEmptyPoints = new Point2D[sectors.length];
 
         double[] unknownDistances = Arrays.copyOf(emptyDistances, sectors.length);
-        boolean[] labeled = new boolean[sectorsNum];
+        MapCell[] notEmptyCells = new MapCell[sectorsNum];
 
         double thresholdDistance = max(minDistance, gridSize);
         Complex dAlpha = Complex.fromRad(sectorAngle() * 1.25 / 2);
@@ -261,9 +254,10 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
         map.indices()
                 .filter(map.filterByArea(circle(center, maxDistance)))
                 .mapToObj(map::cell)
-                .forEach(cell -> { // For each radar sector
+                .forEach(cell -> { // For each radar cell
                     for (int i = 0; i < this.sectorsNumber(); i++) { // for each polar sector
-                        Complex sectorDir = this.sectorDirection(i).add(direction);
+                        Complex locSectorDir = this.sectorDirection(i);
+                        Complex sectorDir = locSectorDir.add(direction);
                         // Computes the contact point
                         Tuple2<Point2D, Point2D> interval = squareArcInterval(cell.location(), gridSize, center,
                                 sectorDir, dAlpha);
@@ -283,8 +277,7 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
                                     }
                                 } else if (distance < notEmptyDistances[i]) {
                                     notEmptyDistances[i] = distance;
-                                    labeled[i] = cell.labeled();
-                                    notEmptyTimestamps[i] = cell.echoTime();
+                                    notEmptyCells[i] = cell;
                                     notEmptyPoints[i] = s;
                                 }
                             }
@@ -295,9 +288,10 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
                 .mapToObj(i -> {
                     // First priority is the obstacle signal
                     if (notEmptyDistances[i] < maxDistance) {
-                        return labeled[i]
-                                ? CircularSector.labeled(notEmptyTimestamps[i], notEmptyPoints[i])
-                                : CircularSector.hindered(notEmptyTimestamps[i], notEmptyPoints[i]);
+                        MapCell cell = notEmptyCells[i];
+                        return cell.labeled()
+                                ? CircularSector.labeled(cell.echoTime(), notEmptyPoints[i])
+                                : CircularSector.hindered(cell.echoTime(), notEmptyPoints[i]);
                     } else if (emptyDistances[i] >= maxDistance) {
                         // Second priority is full unknown sector
                         return CircularSector.unknownSector();

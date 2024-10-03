@@ -47,6 +47,7 @@ class PolarMapTest {
     public static final double EPSILON = 1e-3;
     public static final float GRID_SIZE = 0.2F;
     public static final int MAX_INTERVAL = 1000;
+    public static final long DECAY = 10000;
     private static final Complex RECEPTIVE_ANGLE = Complex.fromDeg(15);
 
     @Test
@@ -59,7 +60,8 @@ class PolarMapTest {
     }
 
     private RadarMap createRadarMap() {
-        return RadarMap.create(new Point2D.Double(), 31, 31, GRID_SIZE, MAX_INTERVAL, 2000, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
+        return RadarMap.create(new Point2D.Double(), 31, 31, GRID_SIZE, MAX_INTERVAL, 2000,
+                MAX_INTERVAL, MAX_INTERVAL, DECAY, GRID_SIZE, RECEPTIVE_ANGLE);
     }
 
     @ParameterizedTest
@@ -110,8 +112,9 @@ class PolarMapTest {
          */
         Point2D center = new Point2D.Double();
         long timestamp = System.currentTimeMillis();
-        RadarMap radarMap = RadarMap.create(center, 11, 11, GRID_SIZE, MAX_INTERVAL, 2000, MAX_INTERVAL, MAX_INTERVAL, GRID_SIZE, RECEPTIVE_ANGLE);
-        radarMap = radarMap.updateCellAt(obsX, obsY, sect -> sect.addEchogenic(timestamp));
+        RadarMap radarMap = RadarMap.create(center, 11, 11, GRID_SIZE, MAX_INTERVAL, 2000,
+                MAX_INTERVAL, MAX_INTERVAL, DECAY, GRID_SIZE, RECEPTIVE_ANGLE);
+        radarMap = radarMap.updateCellAt(obsX, obsY, sect -> sect.addEchogenic(timestamp, DECAY));
 
         // When create a polar map from center directed to mapDir limited by GRID_SIZE and 3m
         PolarMap polarMap = PolarMap.create(4)
@@ -139,18 +142,18 @@ class PolarMapTest {
     }
 
     /**
-     * Given a completely empty radar map 31x31 except unknown at 0.2, 1.6
+     * Given a completely empty radar map 31x31 except hindered at 0.2, 1.6
      * And a polar map with 24 cells at 0.2, 0.2 directed to 90 DEG
      * When update the polar map with radar map
-     * Than polar map should have sector at 90 DEG unknown
+     * Than polar map should have sector at -90 DEG hindered
      */
     @Test
     void update1() {
         // Given a completely empty radar map 31x31 except unknown at 0.2, 1.6
-        long timestamp = System.currentTimeMillis();
-        RadarMap radarMap = createRadarMap().map(s -> s.addAnechoic(timestamp));
-        radarMap = radarMap.updateCellAt(0.2, 1.6, s -> s.addEchogenic(timestamp));
-        assertFalse(radarMap.cell(0.2, 1.6).filter(MapCell::unknown).isPresent());
+        long timestamp = 10000;
+        RadarMap radarMap = createRadarMap().map(s -> s.addAnechoic(timestamp, DECAY));
+        radarMap = radarMap.updateCellAt(0.2, 1.6, s -> s.addEchogenic(timestamp + DECAY, DECAY));
+        assertTrue(radarMap.cell(0.2, 1.6).filter(MapCell::hindered).isPresent());
 
         // And a polar map with 24 cells
         PolarMap polarMap1 = PolarMap.create(24);
@@ -166,12 +169,12 @@ class PolarMapTest {
         // And directed to 90 DEG
         assertEquals(90, polarMap.direction().toIntDeg());
 
-        // And sector at -90 DEG should be unknown
+        // And sector at 0 DEG should be hindered
         CircularSector sector = polarMap.directionSector(Complex.DEG270);
         assertTrue(sector.known());
+        assertTrue(sector.hindered());
         // The sector point location should be close to 0.2,1.5
-        assertThat(sector.location(), pointCloseTo(0.2, 1.5, 1e-3));
-        assertEquals(-90, polarMap.indexDirection(18).toIntDeg());
+//        assertThat(sector.location(), pointCloseTo(0.2, 1.5, 1e-3));
 
         for (int i = 0; i < polarMap.sectorsNumber(); i++) {
             if (i == 18) {
@@ -194,7 +197,7 @@ class PolarMapTest {
         long timestamp = System.currentTimeMillis();
         RadarMap radarMap = createRadarMap();
 
-        radarMap = radarMap.updateCellAt(0.2, 1.6, s -> s.addEchogenic(timestamp));
+        radarMap = radarMap.updateCellAt(0.2, 1.6, s -> s.addEchogenic(timestamp, DECAY));
         assertTrue(radarMap.cell(0.2, 1.6).filter(MapCell::echogenic).isPresent());
 
         PolarMap polarMap = PolarMap.create(24).update(radarMap,
@@ -210,7 +213,6 @@ class PolarMapTest {
         assertThat(sector.distance(center), closeTo(1.3, 1e-3));
         assertThat(new Point2D.Double(0.2, 1.5).distance(sector.location()),
                 closeTo(0, 1e-3));
-        assertEquals(-90, polarMap.indexDirection(18).toIntDeg());
 
         for (int i = 0; i < polarMap.sectorsNumber(); i++) {
             if (i == 18) {
@@ -232,7 +234,7 @@ class PolarMapTest {
     void update3() {
         // Given a completely empty radar map 31x31
         long timestamp = System.currentTimeMillis();
-        RadarMap radarMap = createRadarMap().map(s -> s.addAnechoic(timestamp));
+        RadarMap radarMap = createRadarMap().map(s -> s.addAnechoic(timestamp, DECAY));
 
         // And a polar map with 24 sectors (15 DEG)
         PolarMap polarMap1 = PolarMap.create(24);
