@@ -58,7 +58,7 @@ agents:
   # Cautious agent
   ######################################
   finderAgent:
-    $schema: https://mmarini.org/wheelly/state-agent-schema-3.2
+    $schema: https://mmarini.org/wheelly/state-agent-schema-3.3
     class: org.mmarini.wheelly.engines.StateMachineAgent
     numRadarSectors: 24
     minRadarDistance: 0.3
@@ -100,6 +100,10 @@ agents:
               onTransition:
                 - move.target
                 - target.target
+                - get
+                - put
+                - move.direction
+                - target.direction
                 - get
                 - put
             notFound:
@@ -147,7 +151,7 @@ agents:
   # Cautious agent
   ######################################
   cautiousAgent:
-    $schema: https://mmarini.org/wheelly/state-agent-schema-3.2
+    $schema: https://mmarini.org/wheelly/state-agent-schema-3.3
     class: org.mmarini.wheelly.engines.StateMachineAgent
     numRadarSectors: 24
     minRadarDistance: 0.3
@@ -220,7 +224,7 @@ agents:
   # Explorer agent
   ######################################
   explorerAgent:
-    $schema: https://mmarini.org/wheelly/state-agent-schema-3.2
+    $schema: https://mmarini.org/wheelly/state-agent-schema-3.3
     class: org.mmarini.wheelly.engines.StateMachineAgent
     numRadarSectors: 24
     minRadarDistance: 0.3
@@ -299,7 +303,7 @@ agents:
   # Guard agent
   ######################################
   guardAgent:
-    $schema: https://mmarini.org/wheelly/state-agent-schema-3.2
+    $schema: https://mmarini.org/wheelly/state-agent-schema-3.3
     class: org.mmarini.wheelly.engines.StateMachineAgent
     interval: 10
     commandInterval: 600

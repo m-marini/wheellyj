@@ -60,7 +60,7 @@ import static org.mmarini.wheelly.engines.StateNode.NONE_EXIT;
  */
 public class StateMachineAgent implements ProcessorContext, WithIOFlowable, WithStatusFlowable, WithErrorFlowable,
         WithCommandFlowable, WithControllerFlowable {
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-agent-schema-3.2";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-agent-schema-3.3";
     private static final Logger logger = LoggerFactory.getLogger(StateMachineAgent.class);
 
     /**

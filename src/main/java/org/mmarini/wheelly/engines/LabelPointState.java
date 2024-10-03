@@ -119,11 +119,11 @@ public record LabelPointState(String id, ProcessorCommand onInit, ProcessorComma
             // Compute the safe target
             Complex dir = Complex.direction(center, target);
             Point2D nearTarget = dir.opposite().at(target, safeDistance + MARGIN_DISTANCE);
-            Complex targetDir = Complex.direction(center, nearTarget);
+            int targetDir = dir.toIntDeg();
             put(context, "target", nearTarget);
             put(context, "direction", targetDir);
             logger.atDebug().log("Target {} {} DEG at {}cm from label",
-                    nearTarget, targetDir.toIntDeg(),
+                    nearTarget, targetDir,
                     round(target.distance(nearTarget) * 100));
             return COMPLETED_RESULT;
         }
