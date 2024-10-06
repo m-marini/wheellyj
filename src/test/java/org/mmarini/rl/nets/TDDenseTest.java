@@ -112,18 +112,16 @@ class TDDenseTest {
         // When ...
         TDNetworkState result = layer.forward(state);
         assertNotNull(result);
-        assertThat(result.getValues("name"), matrixCloseTo(new float[][]{
-                {
+        assertThat(result.getValues("name"),
+                matrixCloseTo(new long[]{2, 3}, EPSILON,
                         in00 * w00 + in01 * w10 + b0,
                         in00 * w01 + in01 * w11 + b1,
-                        in00 * w02 + in01 * w12 + b2
-                },
-                {
+                        in00 * w02 + in01 * w12 + b2,
+
                         in10 * w00 + in11 * w10 + b0,
                         in10 * w01 + in11 * w11 + b1,
                         in10 * w02 + in11 * w12 + b2
-                },
-        }, EPSILON));
+                ));
     }
 
     @Test
@@ -306,24 +304,29 @@ class TDDenseTest {
         TDNetworkState result = layer.train(state, delta.mul(alpha), lambda, null);
 
         // Then
-        assertThat(result.getGradients("input"), matrixCloseTo(new float[][]{
-                {post_grad00, post_grad01},
-                {post_grad10, post_grad11}
-        }, EPSILON));
-        assertThat(result.getBiasTrace("name"), matrixCloseTo(new float[][]{{
-                eb02, eb12, eb22
-        }}, EPSILON));
-        assertThat(result.getBias("name"), matrixCloseTo(new float[][]{{
-                b02, b12, b22
-        }}, EPSILON));
-        assertThat(result.getWeightsTrace("name"), matrixCloseTo(new float[][]{
-                {ew002, ew012, ew022},
-                {ew102, ew112, ew122}
-        }, EPSILON));
-        assertThat(result.getWeights("name"), matrixCloseTo(new float[][]{
-                {w002, w012, w022},
-                {w102, w112, w122}
-        }, EPSILON));
+        assertThat(result.getGradients("input"),
+                matrixCloseTo(new long[]{2, 2}, EPSILON,
+                        post_grad00, post_grad01,
+                        post_grad10, post_grad11
+                ));
+        assertThat(result.getBiasTrace("name"),
+                matrixCloseTo(new long[]{1, 3}, EPSILON,
+                        eb02, eb12, eb22
+                ));
+        assertThat(result.getBias("name"),
+                matrixCloseTo(new long[]{1, 3}, EPSILON,
+                        b02, b12, b22
+                ));
+        assertThat(result.getWeightsTrace("name"),
+                matrixCloseTo(new long[]{2, 3}, EPSILON,
+                        ew002, ew012, ew022,
+                        ew102, ew112, ew122
+                ));
+        assertThat(result.getWeights("name"),
+                matrixCloseTo(new long[]{2, 3}, EPSILON,
+                        w002, w012, w022,
+                        w102, w112, w122
+                ));
     }
 
     @ParameterizedTest
@@ -406,10 +409,11 @@ class TDDenseTest {
         float o100 = min01 * w000 + min11 * w100 + b00;
         float o110 = min01 * w010 + min11 * w110 + b10;
         float o120 = min01 * w020 + min11 * w120 + b20;
-        assertThat(state.getValues("name"), matrixCloseTo(new float[][]{
-                {o000, o010, o020},
-                {o100, o110, o120},
-        }, EPSILON));
+        assertThat(state.getValues("name"),
+                matrixCloseTo(new long[]{2, 3}, EPSILON,
+                        o000, o010, o020,
+                        o100, o110, o120
+                ));
 
         // When train
         TDNetworkState result = layer.train(state, delta.mul(alpha), lambda, null);
@@ -422,9 +426,10 @@ class TDDenseTest {
         float eb12 = eb11 * lambda + grad11 / dropOut; // eb1 at t=2
         float eb21 = eb20 * lambda + grad20 / dropOut; // eb2 at t=1
         float eb22 = eb21 * lambda + grad21 / dropOut; // eb2 at t=2
-        assertThat(result.getBiasTrace("name"), matrixCloseTo(new float[][]{{
-                eb02, eb12, eb22
-        }}, EPSILON));
+        assertThat(result.getBiasTrace("name"),
+                matrixCloseTo(new long[]{1, 3}, EPSILON,
+                        eb02, eb12, eb22
+                ));
         // Expected weights trace
         float ew001 = ew000 * lambda + min00 * grad00;
         float ew002 = ew001 * lambda + min01 * grad01;
@@ -438,10 +443,11 @@ class TDDenseTest {
         float ew112 = ew111 * lambda + min11 * grad11;
         float ew121 = ew120 * lambda + min10 * grad20;
         float ew122 = ew121 * lambda + min11 * grad21;
-        assertThat(result.getWeightsTrace("name"), matrixCloseTo(new float[][]{
-                {ew002, ew012, ew022},
-                {ew102, ew112, ew122}
-        }, EPSILON));
+        assertThat(result.getWeightsTrace("name"),
+                matrixCloseTo(new long[]{2, 3}, EPSILON,
+                        ew002, ew012, ew022,
+                        ew102, ew112, ew122
+                ));
         // Expected bias
         float fdelta0 = delta.getFloat(0, 0);
         float fdelta1 = delta.getFloat(1, 0);
@@ -451,9 +457,10 @@ class TDDenseTest {
         float b12 = b11 + fdelta1 * alpha * eb12; // b1 at t=2
         float b21 = b20 + fdelta0 * alpha * eb21; // b2 at t=1
         float b22 = b21 + fdelta1 * alpha * eb22; // b2 at t=1
-        assertThat(result.getBias("name"), matrixCloseTo(new float[][]{{
-                b02, b12, b22
-        }}, EPSILON));
+        assertThat(result.getBias("name"),
+                matrixCloseTo(new long[]{1, 3}, EPSILON,
+                        b02, b12, b22
+                ));
         // Expected weights
         float w001 = w000 + fdelta0 * alpha * ew001;
         float w002 = w001 + fdelta1 * alpha * ew002;
@@ -467,19 +474,21 @@ class TDDenseTest {
         float w112 = w111 + fdelta1 * alpha * ew112;
         float w121 = w120 + fdelta0 * alpha * ew121;
         float w122 = w121 + fdelta1 * alpha * ew122;
-        assertThat(result.getWeights("name"), matrixCloseTo(new float[][]{
-                {w002, w012, w022},
-                {w102, w112, w122}
-        }, EPSILON));
+        assertThat(result.getWeights("name"),
+                matrixCloseTo(new long[]{2, 3}, EPSILON,
+                        w002, w012, w022,
+                        w102, w112, w122
+                ));
         // Input gradients
         float post_grad00 = (w000 * grad00 + w010 * grad10 + w020 * grad20) / dropOut;
         float post_grad01 = (w100 * grad00 + w110 * grad10 + w120 * grad20) / dropOut;
         float post_grad10 = (w000 * grad01 + w010 * grad11 + w020 * grad21) / dropOut;
         float post_grad11 = (w100 * grad01 + w110 * grad11 + w120 * grad21) / dropOut;
-        assertThat(result.getGradients("input"), matrixCloseTo(new float[][]{
-                {post_grad00, post_grad01},
-                {post_grad10, post_grad11}
-        }, EPSILON));
+        assertThat(result.getGradients("input"),
+                matrixCloseTo(new long[]{2, 2}, EPSILON,
+                        post_grad00, post_grad01,
+                        post_grad10, post_grad11
+                ));
     }
 
     @Test
@@ -549,23 +558,28 @@ class TDDenseTest {
         TDNetworkState result = layer.train(state, delta.mul(alpha), lambda, null);
 
         // Then
-        assertThat(state.getGradients("input"), matrixCloseTo(new float[][]{{
-                post_grad0, post_grad1
-        }}, EPSILON));
-        assertThat(state.getBiasTrace("name"), matrixCloseTo(new float[][]{{
-                post_eb0, post_eb1, post_eb2
-        }}, EPSILON));
-        assertThat(result.getBias("name"), matrixCloseTo(new float[][]{{
-                post_b0, post_b1, post_b2
-        }}, EPSILON));
-        assertThat(state.getWeightsTrace("name"), matrixCloseTo(new float[][]{
-                {post_ew00, post_ew01, post_ew02},
-                {post_ew10, post_ew11, post_ew12}
-        }, EPSILON));
-        assertThat(result.getWeights("name"), matrixCloseTo(new float[][]{
-                {-maxAbsWeights, -maxAbsWeights, -maxAbsWeights},
-                {-maxAbsWeights, -maxAbsWeights, -maxAbsWeights}
-        }, EPSILON));
+        assertThat(state.getGradients("input"),
+                matrixCloseTo(new long[]{1, 2}, EPSILON,
+                        post_grad0, post_grad1
+                ));
+        assertThat(state.getBiasTrace("name"),
+                matrixCloseTo(new long[]{1, 3}, EPSILON,
+                        post_eb0, post_eb1, post_eb2
+                ));
+        assertThat(result.getBias("name"),
+                matrixCloseTo(new long[]{1, 3}, EPSILON,
+                        post_b0, post_b1, post_b2
+                ));
+        assertThat(state.getWeightsTrace("name"),
+                matrixCloseTo(new long[]{2, 3}, EPSILON,
+                        post_ew00, post_ew01, post_ew02,
+                        post_ew10, post_ew11, post_ew12
+                ));
+        assertThat(result.getWeights("name"),
+                matrixCloseTo(new long[]{2, 3}, EPSILON,
+                        -maxAbsWeights, -maxAbsWeights, -maxAbsWeights,
+                        -maxAbsWeights, -maxAbsWeights, -maxAbsWeights
+                ));
     }
 
     @Test
@@ -635,22 +649,27 @@ class TDDenseTest {
         TDNetworkState result = layer.train(state, delta.mul(alpha), lambda, null);
 
         // Then ...
-        assertThat(result.getGradients("input"), matrixCloseTo(new float[][]{{
-                post_grad0, post_grad1
-        }}, EPSILON));
-        assertThat(result.getBiasTrace("name"), matrixCloseTo(new float[][]{{
-                post_eb0, post_eb1, post_eb2
-        }}, EPSILON));
-        assertThat(result.getBias("name"), matrixCloseTo(new float[][]{{
-                post_b0, post_b1, post_b2
-        }}, EPSILON));
-        assertThat(result.getWeightsTrace("name"), matrixCloseTo(new float[][]{
-                {post_ew00, post_ew01, post_ew02},
-                {post_ew10, post_ew11, post_ew12}
-        }, EPSILON));
-        assertThat(result.getWeights("name"), matrixCloseTo(new float[][]{
-                {maxAbsWeights, maxAbsWeights, maxAbsWeights},
-                {maxAbsWeights, maxAbsWeights, maxAbsWeights}
-        }, EPSILON));
+        assertThat(result.getGradients("input"),
+                matrixCloseTo(new long[]{1, 2}, EPSILON,
+                        post_grad0, post_grad1
+                ));
+        assertThat(result.getBiasTrace("name"),
+                matrixCloseTo(new long[]{1, 3}, EPSILON,
+                        post_eb0, post_eb1, post_eb2
+                ));
+        assertThat(result.getBias("name"),
+                matrixCloseTo(new long[]{1, 3}, EPSILON,
+                        post_b0, post_b1, post_b2
+                ));
+        assertThat(result.getWeightsTrace("name"),
+                matrixCloseTo(new long[]{2, 3}, EPSILON,
+                        post_ew00, post_ew01, post_ew02,
+                        post_ew10, post_ew11, post_ew12
+                ));
+        assertThat(result.getWeights("name"),
+                matrixCloseTo(new long[]{2, 3}, EPSILON,
+                        maxAbsWeights, maxAbsWeights, maxAbsWeights,
+                        maxAbsWeights, maxAbsWeights, maxAbsWeights
+                ));
     }
 }

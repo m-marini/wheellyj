@@ -1,11 +1,11 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/ppo-agent-schema-0.1
+$id: https://mmarini.org/wheelly/ppo-agent-schema-0.2
 title: Agent
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/ppo-agent-schema-0.1
+    const: https://mmarini.org/wheelly/ppo-agent-schema-0.2
   class:
     const: org.mmarini.rl.agents.PPOAgent
   modelPath:
@@ -54,6 +54,7 @@ required:
 $defs:
   InputProcessor:
     anyOf:
+      - $ref: "#/$defs/EqualsToProcessor"
       - $ref: "#/$defs/AndProcessor"
       - $ref: "#/$defs/NotProcessor"
       - $ref: "#/$defs/PartitionProcessor"
@@ -135,6 +136,22 @@ $defs:
       - class
       - name
       - input
+  EqualsToProcessor:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.rl.processors.EqualsToProcessor
+      name:
+        minLength: 1
+      input:
+        minLength: 1
+      value:
+        type: number
+    required:
+      - class
+      - name
+      - input
+      - value
   AndProcessor:
     type: object
     properties:

@@ -59,6 +59,7 @@ class DecodeProcessorTest {
                 - b
                 - c
             """;
+    public static final double EPSILON = 1e-3;
 
     @Test
     void computeDecodedSizeTest() {
@@ -115,7 +116,7 @@ class DecodeProcessorTest {
         Map<String, Signal> result = encoder.apply(input);
         assertThat(result, hasKey("out"));
         INDArray features = result.get("out").toINDArray();
-        assertThat(features, matrixCloseTo(new float[]{y}, 1e-1));
+        assertThat(features, matrixCloseTo(new long[]{1}, EPSILON, y));
     }
 
     @ParameterizedTest
@@ -163,7 +164,7 @@ class DecodeProcessorTest {
         Map<String, Signal> result = proc.apply(input);
         assertThat(result, hasKey("out"));
         INDArray features = result.get("out").toINDArray();
-        assertThat(features, matrixCloseTo(new float[]{y}, 1e-1));
+        assertThat(features, matrixCloseTo(new long[]{1}, 1e-3, y));
     }
 
     @Test
@@ -208,7 +209,7 @@ class DecodeProcessorTest {
         };
         INDArray result = decoder.apply(inputs);
 
-        assertThat(result, matrixCloseTo(new float[]{y, y}, 1e-1));
+        assertThat(result, matrixCloseTo(new long[]{2}, 1e-3, y, y));
     }
 
     @Test

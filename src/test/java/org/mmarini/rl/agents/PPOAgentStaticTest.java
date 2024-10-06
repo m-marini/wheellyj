@@ -109,8 +109,8 @@ class PPOAgentStaticTest {
         INDArray grads = PPOAgent.ppoGrad(probs, probs0, PPO_EPSILON, posAdv, negAdv);
 
         // Then
-        assertThat(grads, matrixCloseTo(new float[][]{
-                {expectedGrad, expectedGrad},
-        }, EPSILON));
+        assertThat(grads, matrixCloseTo(new long[]{1, 2}, EPSILON,
+                expectedGrad, expectedGrad
+        ));
     }
 }

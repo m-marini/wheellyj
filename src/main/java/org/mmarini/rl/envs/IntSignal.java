@@ -42,19 +42,29 @@ public class IntSignal implements Signal {
      * @param value the value
      */
     public static IntSignal create(int value) {
-        return new IntSignal(new int[]{value}, new int[]{1});
+        return new IntSignal(new long[]{1}, value);
     }
 
+    /**
+     * Returns the integer signals
+     *
+     * @param shape  the shape
+     * @param values the data
+     */
+    public static IntSignal create(long[] shape, int... values) {
+        return new IntSignal(shape, values);
+    }
+
+    private final long[] shape;
     private final int[] data;
-    private final int[] shape;
 
     /**
      * Create integer signal
      *
-     * @param data  the data signals
      * @param shape the shape
+     * @param data  the data signals
      */
-    public IntSignal(int[] data, int[] shape) {
+    public IntSignal(long[] shape, int... data) {
         this.data = requireNonNull(data);
         this.shape = requireNonNull(shape);
         if (data.length != getSize()) {
@@ -82,8 +92,8 @@ public class IntSignal implements Signal {
                     indices.length, shape.length
             ));
         }
-        int idx = 0;
-        int stride = 1;
+        long idx = 0;
+        long stride = 1;
         for (int i = indices.length - 1; i >= 0; i--) {
             int j = indices[i];
             if (!(j >= 0 && j < shape[i])) {
@@ -93,7 +103,7 @@ public class IntSignal implements Signal {
             idx += indices[i] * stride;
             stride *= shape[i];
         }
-        return idx;
+        return (int) idx;
     }
 
     @Override
@@ -104,7 +114,7 @@ public class IntSignal implements Signal {
     /**
      * Returns the shape
      */
-    public int[] getShape() {
+    public long[] getShape() {
         return shape;
     }
 
@@ -121,8 +131,8 @@ public class IntSignal implements Signal {
     @Override
     public String toString() {
         return new StringJoiner(", ", IntSignal.class.getSimpleName() + "[", "]")
-                .add("data=" + Arrays.toString(data))
                 .add("shape=" + Arrays.toString(shape))
+                .add("data=" + Arrays.toString(data))
                 .toString();
     }
 }

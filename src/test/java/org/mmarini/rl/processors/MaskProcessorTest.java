@@ -72,14 +72,12 @@ class MaskProcessorTest {
         assertEquals("a", json.path(0).path("input").asText());
         assertEquals("mask", json.path(0).path("mask").asText());
 
-        INDArray aAry = Nd4j.createFromArray(
-                1F, 2, 3, 4,
-                5, 6, 7, 8
-        ).reshape(2, 4);
         Map<String, Signal> x = Map.of(
-                "a", new ArraySignal(aAry),
-                "mask", new ArraySignal(
-                        Nd4j.createFromArray(0f, 1F)));
+                "a", ArraySignal.create(new long[]{1, 2, 4},
+                        1F, 2, 3, 4,
+                        5, 6, 7, 8),
+                "mask", ArraySignal.create(new long[]{1, 2},
+                        0f, 1F));
 
         Map<String, Signal> y = proc.apply(x);
         assertThat(y, hasKey("a"));
@@ -87,10 +85,9 @@ class MaskProcessorTest {
         assertThat(y, hasKey("out"));
 
         INDArray out = y.get("out").toINDArray();
-        assertThat(out, matrixCloseTo(new float[][]{
-                        {0, 0, 0, 0},
-                        {5, 6, 7, 8}
-                }, 1e-6
+        assertThat(out, matrixCloseTo(new long[]{1, 2, 4}, 1e-6,
+                0, 0, 0, 0,
+                5, 6, 7, 8
         ));
     }
 
@@ -98,23 +95,21 @@ class MaskProcessorTest {
     void createMask() {
         INDArray mask = Nd4j.createFromArray(1, 0);
         INDArray out = MaskProcessor.createFullMask(mask, new long[]{2, 4});
-        assertThat(out, matrixCloseTo(new float[][]{
-                {1, 1, 1, 1},
-                {0, 0, 0, 0}
-        }, 1e-6));
+        assertThat(out, matrixCloseTo(new long[]{2, 4}, 1e-6,
+                1, 1, 1, 1,
+                0, 0, 0, 0
+        ));
     }
 
     @Test
     void createSignalEncoderTest() {
         UnaryOperator<Map<String, Signal>> encoder = MaskProcessor.createSignalEncoder("out", "a", "mask");
-        INDArray aAry = Nd4j.createFromArray(
+        ArraySignal aSignal = ArraySignal.create(new long[]{1, 2, 4},
                 1F, 2, 3, 4,
-                5, 6, 7, 8
-        ).reshape(2, 4);
+                5, 6, 7, 8);
         Map<String, Signal> x = Map.of(
-                "a", new ArraySignal(aAry),
-                "mask", new ArraySignal(
-                        Nd4j.createFromArray(0f, 1F)));
+                "a", aSignal,
+                "mask", ArraySignal.create(new long[]{1, 2}, 0, 1));
 
         Map<String, Signal> y = encoder.apply(x);
 
@@ -122,26 +117,23 @@ class MaskProcessorTest {
         assertThat(y, hasKey("out"));
 
         INDArray out = y.get("out").toINDArray();
-        assertThat(out, matrixCloseTo(new float[][]{
-                        {0, 0, 0, 0},
-                        {5, 6, 7, 8}
-                }, 1e-6
+        assertThat(out, matrixCloseTo(new long[]{1, 2, 4}, 1e-6,
+                0, 0, 0, 0,
+                5, 6, 7, 8
         ));
 
         x = Map.of(
-                "a", new ArraySignal(aAry),
-                "mask", new ArraySignal(
-                        Nd4j.createFromArray(1F, 0)));
+                "a", aSignal,
+                "mask", ArraySignal.create(new long[]{1, 2}, 1, 0));
 
         y = encoder.apply(x);
         assertThat(y, hasKey("a"));
         assertThat(y, hasKey("out"));
 
         out = y.get("out").toINDArray();
-        assertThat(out, matrixCloseTo(new float[][]{
-                        {1, 2, 3, 4},
-                        {0, 0, 0, 0}
-                }, 1e-6
+        assertThat(out, matrixCloseTo(new long[]{1, 2, 4}, 1e-6,
+                1, 2, 3, 4,
+                0, 0, 0, 0
         ));
     }
 

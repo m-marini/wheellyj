@@ -49,7 +49,7 @@ import static org.mmarini.wheelly.apis.Utils.clip;
  *     <li>sensor direction (discrete) </li>
  *     <li>sensor distance (discrete) </li>
  *     <li>movement enable flags (forward and backward)</li>
- *     <li>known polar sector flags</li>
+ *     <li>polar sector flags (unknown, empty, hindered, labeled)</li>
  *     <li>polar sector distances</li>
  * </ul>
  * <p>
@@ -190,7 +190,7 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
                 "sensor", new FloatSignalSpec(new long[]{1}, MIN_SENSOR_DIR, MAX_SENSOR_DIR),
                 "distance", new FloatSignalSpec(new long[]{1}, (float) MIN_DISTANCE, (float) MAX_DISTANCE),
                 "canMoveStates", new IntSignalSpec(new long[]{1}, NUM_CAN_MOVE_STATES),
-                "knownSectors", new IntSignalSpec(new long[]{n}, 2),
+                "sectorStates", new IntSignalSpec(new long[]{n}, CircularSector.Status.values().length + 1),
                 "sectorDistances", new FloatSignalSpec(new long[]{n}, 0, (float) maxRadarDistance)
         );
         readRobotStatus().doOnNext(this::handleStatus).subscribe();
@@ -244,22 +244,23 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
 
         PolarMap polarMap = currentStatus.polarMap;
         int n = polarMap.sectorsNumber();
-        INDArray knownSectors = Nd4j.zeros(n);
+        INDArray sectorStates = Nd4j.zeros(n);
         INDArray sectorDistances = Nd4j.zeros(n);
         for (int i = 0; i < n; i++) {
             CircularSector sector = polarMap.sector(i);
-            double dist = sector.hindered()
+            double dist = sector.hindered() || sector.labeled()
                     ? clip(sector.distance(polarMap.center()), 0, maxDistance)
                     : 0;
             sectorDistances.getScalar(i).assign(dist);
-            knownSectors.getScalar(i).assign(sector.known() ? 1 : 0);
+            sectorStates.getScalar(i)
+                    .assign(sector.known() ? sector.status().ordinal() + 1 : 0);
         }
         return Map.of(
                 "sensor", new ArraySignal(sensor),
                 "distance", new ArraySignal(distance),
                 "canMoveStates", new ArraySignal(canMoveStates),
-                "knownSectors", new ArraySignal(knownSectors),
-                "sectorDistances", new ArraySignal(sectorDistances)
+                "sectorDistances", new ArraySignal(sectorDistances),
+                "sectorStates", new ArraySignal(sectorStates)
         );
     }
 
@@ -275,13 +276,23 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithPolarMap, Wit
         RadarMap radarMap = currentStatus.radarMap;
         PolarMap polarMap = currentStatus.polarMap;
         polarMap = polarMap.update(radarMap, robotStatus.location(), robotStatus.direction(), minRadarDistance, maxRadarDistance);
-        this.currentStatus = currentStatus.setPolarMap(polarMap);
+        setCurrentStatus(currentStatus.setPolarMap(polarMap));
     }
 
     @Override
     protected void onStatus(RobotStatus status) {
         RadarMap newRadarMap = this.status.radarMap.update(status);
         this.status = this.status.setStatus(status).setRadarMap(newRadarMap);
+    }
+
+    /**
+     * Sets the current status
+     *
+     * @param currentStatus the current status
+     */
+    PolarRobotEnv setCurrentStatus(CompositeStatus currentStatus) {
+        this.currentStatus = currentStatus;
+        return this;
     }
 
     public static class CompositeStatus {

@@ -72,10 +72,11 @@ class TDReluTest {
         TDNetworkState result = layer.forward(state);
 
         assertNotNull(result);
-        assertThat(result.getValues("name"), matrixCloseTo(new float[][]{
-                {in00 > 0 ? in00 : 0f, in01 > 0 ? in01 : 0f},
-                {in10 > 0 ? in10 : 0f, in11 > 0 ? in11 : 0f}
-        }, EPSILON));
+        assertThat(result.getValues("name"),
+                matrixCloseTo(new long[]{2, 2}, EPSILON,
+                        in00 > 0 ? in00 : 0f, in01 > 0 ? in01 : 0f,
+                        in10 > 0 ? in10 : 0f, in11 > 0 ? in11 : 0f
+                ));
     }
 
     @Test
@@ -119,9 +120,10 @@ class TDReluTest {
         float post_grad10 = in10 > 0 ? grad10 : 0;
         float post_grad11 = in11 > 0 ? grad11 : 0;
 
-        assertThat(result.getGradients("input"), matrixCloseTo(new float[][]{
-                {post_grad00, post_grad01},
-                {post_grad10, post_grad11},
-        }, EPSILON));
+        assertThat(result.getGradients("input"),
+                matrixCloseTo(new long[]{2, 2}, EPSILON,
+                        post_grad00, post_grad01,
+                        post_grad10, post_grad11
+                ));
     }
 }

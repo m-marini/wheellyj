@@ -88,12 +88,17 @@ public interface TilesProcessor {
      */
     static UnaryOperator<INDArray> createEncoder(SignalSpec spec, int numTiles) {
         UnaryOperator<INDArray> part = createPartitioner(spec, numTiles);
-        long[] shape = computeOutShape(spec, numTiles);
-        long stride = shape[shape.length - 1];
-        return x -> {
-            INDArray result = Nd4j.zeros(shape);
+        long stride = (long) NUM_TILING * numTiles + NUM_TILING - 1;
+        return x0 -> {
+            long n = x0.length();
+            long[] inShape = x0.shape();
+            long[] outShape = new long[inShape.length + 1];
+            System.arraycopy(inShape, 0, outShape, 0, inShape.length);
+            outShape[inShape.length] = (long) NUM_TILING * numTiles + NUM_TILING - 1;
+            INDArray x = x0.reshape(n, 1);
+            INDArray result = Nd4j.zeros(n, stride);
             try (INDArray indices = part.apply(x)) {
-                long n = indices.length();
+                n = indices.length();
                 for (long i = 0; i < n; i++) {
                     long offset = indices.getLong(i);
                     for (int j = 0; j < NUM_TILING; j++) {
@@ -101,45 +106,48 @@ public interface TilesProcessor {
                     }
                 }
             }
-            return result;
+            return result.reshape(outShape);
         };
     }
 
     /**
-     * Returns the partitioner of signal
+     * Returns the partitioner of signal for a vector of values
      * The partitioner returns the array of indices of each dimension tiles
      * The receptive field of each tile will be input range / numTiles
      *
-     * @param spec     the signal spec
+     * @param min      the minimum value of input
+     * @param max      the maximum value of input
+     * @param numTiles the number of tiles
+     */
+    static UnaryOperator<INDArray> createPartitioner(float min, float max, int numTiles) {
+        int maxIndex = NUM_TILING * numTiles - 1;
+        float scale = (maxIndex + 1) / (max - min);
+        // Creates the linear transformation of input to produce the tile index
+        return x ->
+                Transforms.min(
+                        Transforms.max(
+                                Transforms.floor(
+                                        x.sub(min).muli(scale), false),
+                                0, false),
+                        maxIndex, false);
+    }
+
+    /**
+     * Returns the partitioner of signal for a vector of values
+     * The partitioner returns the array of indices of each dimension tiles
+     * The receptive field of each tile will be input range / numTiles
+     *
+     * @param spec     the input signal spec
      * @param numTiles the number of tiles
      */
     static UnaryOperator<INDArray> createPartitioner(SignalSpec spec, int numTiles) {
-        int maxIndex = NUM_TILING * numTiles - 1;
         return switch (spec) {
-            case FloatSignalSpec fSpec -> {
-                float minValue = fSpec.minValue();
-                float maxValue = fSpec.maxValue();
-                float scale = (maxIndex + 1) / (maxValue - minValue);
+            case FloatSignalSpec fSpec ->
                 // Creates the linear transformation of input to produce the tile index
-                yield x ->
-                        Transforms.min(
-                                Transforms.max(
-                                        Transforms.floor(
-                                                x.sub(minValue).muli(scale), false),
-                                        0, false),
-                                maxIndex, false);
-            }
-            case IntSignalSpec iSpec -> {
-                float maxValue = iSpec.numValues() - 1;
-                float scale = (maxIndex + 1) / maxValue;
+                    createPartitioner(fSpec.minValue(), fSpec.maxValue(), numTiles);
+            case IntSignalSpec iSpec ->
                 // Creates the linear transformation of input to produce the tile index
-                yield x -> Transforms.min(
-                        Transforms.max(
-                                Transforms.floor(
-                                        x.mul(scale), false),
-                                0, false),
-                        maxIndex, false);
-            }
+                    createPartitioner(0, iSpec.numValues() - 1, numTiles);
             default -> throw new NotImplementedException();
         };
     }

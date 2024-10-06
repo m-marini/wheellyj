@@ -61,8 +61,8 @@ import static java.lang.String.format;
  * Agent based on Temporal Difference Actor-Critic with single neural network
  */
 public class TDAgentSingleNN extends AbstractAgentNN {
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/agent-single-nn-schema-0.4";
-    public static final String SPEC_SCHEMA_NAME = "https://mmarini.org/wheelly/tdagent-spec-schema-0.1";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/agent-single-nn-schema-0.5";
+    public static final String SPEC_SCHEMA_NAME = "https://mmarini.org/wheelly/tdagent-spec-schema-0.2";
     public static final int DEFAULT_NUM_STEPS = 2048;
     public static final int DEFAULT_BATCH_SIZE = 32;
 

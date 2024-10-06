@@ -48,6 +48,7 @@ import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 
 class FeaturesProcessorTest {
 
+    public static final double EPSILON = 1e-6;
     private static final String YAML = """
             ---
             - name: out
@@ -87,37 +88,41 @@ class FeaturesProcessorTest {
         assertEquals(2, ((IntSignalSpec) outSpec).numValues());
 
         Map<String, Signal> inputs = Map.of(
-                "a", ArraySignal.create(a, a)
+                "a", ArraySignal.create(new long[]{1, 2}, a, a)
         );
         Map<String, Signal> result = proc.apply(inputs);
         assertThat(result, hasKey("out"));
         assertThat(result, hasKey("a"));
-        assertThat(result.get("out").toINDArray(), matrixCloseTo(new float[][]{
-                {y0, y1, y2, y3},
-                {y0, y1, y2, y3}
-        }, 1e-6));
+        assertThat(result.get("out").toINDArray(), matrixCloseTo(new long[]{1, 2, 4}, EPSILON,
+                y0, y1, y2, y3,
+                y0, y1, y2, y3
+        ));
     }
 
     @ParameterizedTest
     @CsvSource({
-            "0, 1,0,0,0",
-            "1, 0,1,0,0",
-            "2, 0,0,1,0",
-            "3, 0,0,0,1"
+            "0,1, 1,0,0,0, 0,1,0,0",
+            "1,2, 0,1,0,0, 0,0,1,0",
+            "2,3, 0,0,1,0, 0,0,0,1",
+            "3,0, 0,0,0,1, 1,0,0,0,"
     })
-    void createEncoderTest(int a, float y0, float y1, float y2, float y3) {
+    void createEncoderTest(int a, int b,
+                           float a0, float a1, float a2, float a3,
+                           float b0, float b1, float b2, float b3) {
         UnaryOperator<Map<String, Signal>> encoder = FeaturesProcessor.createSignalEncoder(
                 "out", "a", inputSpec());
         Map<String, Signal> inputs = Map.of(
-                "a", ArraySignal.create(a, a)
+                "a", ArraySignal.create(new long[]{1, 2}, a, b)
         );
         Map<String, Signal> result = encoder.apply(inputs);
         assertThat(result, hasKey("out"));
         assertThat(result, hasKey("a"));
-        assertThat(result.get("out").toINDArray(), matrixCloseTo(new float[][]{
-                {y0, y1, y2, y3},
-                {y0, y1, y2, y3}
-        }, 1e-6));
+        Signal out = result.get("out");
+        assertThat(out.toINDArray(),
+                matrixCloseTo(new long[]{1, 2, 4}, EPSILON,
+                        a0, a1, a2, a3,
+                        b0, b1, b2, b3
+                ));
     }
 
     @Test

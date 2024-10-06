@@ -71,10 +71,11 @@ class TDTanhTest {
                 .putValues("input", inputs);
         TDNetworkState result = layer.forward(state);
         assertNotNull(result);
-        assertThat(result.getValues("name"), matrixCloseTo(new float[][]{
-                {(float) tanh(in00), (float) tanh(in01)},
-                {(float) tanh(in10), (float) tanh(in11)}
-        }, EPSILON));
+        assertThat(result.getValues("name"),
+                matrixCloseTo(new long[]{2, 2}, EPSILON,
+                        (float) tanh(in00), (float) tanh(in01),
+                        (float) tanh(in10), (float) tanh(in11)
+                ));
     }
 
     @Test
@@ -121,9 +122,10 @@ class TDTanhTest {
         float post_grad10 = (1 - out10 * out10) * grad10;
         float post_grad11 = (1 - out11 * out11) * grad11;
 
-        assertThat(result.getGradients("input"), matrixCloseTo(new float[][]{
-                {post_grad00, post_grad01},
-                {post_grad10, post_grad11}
-        }, EPSILON));
+        assertThat(result.getGradients("input"),
+                matrixCloseTo(new long[]{2, 2}, EPSILON,
+                        post_grad00, post_grad01,
+                        post_grad10, post_grad11
+                ));
     }
 }

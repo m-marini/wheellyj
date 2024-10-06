@@ -104,12 +104,12 @@ class TDAgentSingleNNActObsTest {
             Map<String, Signal> actions = agent.act(state);
             assertThat(actions.get("output.a"), isA(IntSignal.class));
             assertThat(actions.get("output.b"), isA(IntSignal.class));
-            int[] as = ((IntSignal) actions.get("output.a")).getShape();
-            int[] bs = ((IntSignal) actions.get("output.b")).getShape();
+            long[] as = ((IntSignal) actions.get("output.a")).getShape();
+            long[] bs = ((IntSignal) actions.get("output.b")).getShape();
             assertEquals(1, as.length);
             assertEquals(1, bs.length);
-            assertEquals(1, as[0]);
-            assertEquals(1, bs[0]);
+            assertEquals(1L, as[0]);
+            assertEquals(1L, bs[0]);
             assertEquals(s0, s0Org);
         }
     }

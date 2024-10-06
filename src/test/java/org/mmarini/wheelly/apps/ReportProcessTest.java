@@ -113,10 +113,10 @@ class ReportProcessTest {
 
         float mean0 = (float) Math.sqrt(Math.sqrt(0.1f * 0.2f * 0.5f * 0.2f));
         float mean1 = (float) Math.sqrt(Math.sqrt(0.1f * 0.6f * 0.2f * 0.1f));
-        assertThat(ratio, matrixCloseTo(new float[][]{
-                {0.5f / mean0},
-                {0.6f / mean1}
-        }, 1e-6));
+        assertThat(ratio, matrixCloseTo(new long[]{2, 1}, 1e-6,
+                0.5f / mean0,
+                0.6f / mean1
+        ));
     }
 
     @Test
@@ -163,28 +163,10 @@ class ReportProcessTest {
         // When reset compute maxMinRatio
         INDArray ratio = ReportProcess.maxMinRatio(data);
 
-        assertThat(ratio, matrixCloseTo(new float[][]{
-                {0.5f / 0.1f},
-                {0.6f / 0.1f}
-        }, 1e-6));
-    }
-
-    @Test
-    void meanAggregatorTest() {
-        // Given an aggregator
-        ReportProcess.Aggregator agg = ReportProcess.meanAggregator();
-        // And a dataset
-        INDArray data = Nd4j.createFromArray(-2, -1, 0, 1);
-
-        // When reset and add data twice
-        agg.reset();
-        agg.add(data);
-        agg.add(data);
-
-        assertEquals(8L, agg.numSamples());
-        assertEquals(-2f, agg.min());
-        assertEquals(1f, agg.max());
-        assertEquals(-0.5f, agg.value());
+        assertThat(ratio, matrixCloseTo(new long[]{2, 1}, 1e-6,
+                0.5f / 0.1f,
+                0.6f / 0.1f
+        ));
     }
 
     @Test
@@ -215,6 +197,24 @@ class ReportProcessTest {
                 Transforms.log(data.max(true, 1)).meanNumber().floatValue()
         ).reshape(1, 6);
         assertThat(stats, matrixCloseTo(expected, 1e-6));
+    }
+
+    @Test
+    void meanAggregatorTest() {
+        // Given an aggregator
+        ReportProcess.Aggregator agg = ReportProcess.meanAggregator();
+        // And a dataset
+        INDArray data = Nd4j.createFromArray(-2, -1, 0, 1);
+
+        // When reset and add data twice
+        agg.reset();
+        agg.add(data);
+        agg.add(data);
+
+        assertEquals(8L, agg.numSamples());
+        assertEquals(-2f, agg.min());
+        assertEquals(1f, agg.max());
+        assertEquals(-0.5f, agg.value());
     }
 
     @Test

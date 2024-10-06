@@ -63,8 +63,8 @@ import static java.lang.String.format;
  * Agent based on Temporal Difference Actor-Critic with Proximal Policy Optimization (PPO)
  */
 public class PPOAgent extends AbstractAgentNN {
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/ppo-agent-schema-0.1";
-    public static final String SPEC_SCHEMA_NAME = "https://mmarini.org/wheelly/ppo-agent-spec-schema-0.1";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/ppo-agent-schema-0.2";
+    public static final String SPEC_SCHEMA_NAME = "https://mmarini.org/wheelly/ppo-agent-spec-schema-0.2";
 
     /**
      * Returns a random behavior agent

@@ -119,6 +119,6 @@ public record TestSequenceMDP(int numActions, int[] sequence, Map<String, Signal
     public Map<String, Signal> state(int state) {
         int[] data = new int[numStates()];
         data[state] = 1;
-        return Map.of("input", new IntSignal(data, new int[]{numStates()}));
+        return Map.of("input", new IntSignal(new long[]{numStates()}, data));
     }
 }

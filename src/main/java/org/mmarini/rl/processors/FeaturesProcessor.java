@@ -34,7 +34,6 @@ import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.UnaryOperator;
@@ -73,18 +72,22 @@ public interface FeaturesProcessor {
     /**
      * Returns the features encoder
      *
-     * @param numDimensions the number of input dimensions
-     * @param numFeatures   the number of output features
+     * @param numFeatures the number of output features
      */
-    static UnaryOperator<INDArray> createEncoder(long numDimensions, long numFeatures) {
-        long[] outShape = new long[]{numDimensions, numFeatures};
+    static UnaryOperator<INDArray> createEncoder(long numFeatures) {
         return x -> {
-            INDArray features = Nd4j.zeros(outShape);
+            long[] inShape = x.shape();
+            INDArray x1 = x.reshape(x.length());
+            long size = x1.size(0);
+            INDArray features = Nd4j.zeros(size, numFeatures);
             // sets the features
-            for (long i = 0; i < numDimensions; i++) {
+            for (long i = 0; i < size; i++) {
                 features.putScalar(i, x.getLong(i), 1F);
             }
-            return features;
+            long[] outShape = new long[inShape.length + 1];
+            System.arraycopy(inShape, 0, outShape, 0, inShape.length);
+            outShape[inShape.length] = numFeatures;
+            return features.reshape(outShape);
         };
     }
 
@@ -108,16 +111,13 @@ public interface FeaturesProcessor {
      * @param inSpec  the input specification
      */
     static UnaryOperator<Map<String, Signal>> createSignalEncoder(String outName, String inputName, IntSignalSpec inSpec) {
-        long[] inShape = inSpec.shape();
-        long n = Arrays.stream(inShape).reduce((a, b) -> a * b).orElseThrow();
-        long[] outShape = createOutputShape(inSpec);
-        UnaryOperator<INDArray> encoder = createEncoder(n, inSpec.numValues());
+        UnaryOperator<INDArray> encoder = createEncoder(inSpec.numValues());
         return x -> {
             // Create the features output
             INDArray features = encoder.apply(x.get(inputName).toINDArray());
             // Create the result
             Map<String, Signal> result = new HashMap<>(x);
-            result.put(outName, new ArraySignal(features.reshape(outShape)));
+            result.put(outName, new ArraySignal(features));
             return result;
         };
     }

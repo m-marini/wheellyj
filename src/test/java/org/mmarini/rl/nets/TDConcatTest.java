@@ -83,10 +83,11 @@ class TDConcatTest {
         TDNetworkState out = layer.forward(state);
 
         // Then ...
-        assertThat(out.getValues("name"), matrixCloseTo(new float[][]{
-                {in000, in010, in100, in110, in120},
-                {in001, in011, in101, in111, in121}
-        }, EPSILON));
+        assertThat(out.getValues("name"), matrixCloseTo(
+                new long[]{2, 5}, EPSILON,
+                in000, in010, in100, in110, in120,
+                in001, in011, in101, in111, in121
+        ));
     }
 
     @Test
@@ -125,13 +126,15 @@ class TDConcatTest {
 
         TDNetworkState result = layer.train(in, Nd4j.zeros(1), 0, null);
 
-        assertThat(result.getGradients("in0"), matrixCloseTo(new float[][]{
-                {grad00, grad10},
-                {grad01, grad11},
-        }, EPSILON));
-        assertThat(result.getGradients("in1"), matrixCloseTo(new float[][]{
-                {grad20, grad30, grad40},
-                {grad21, grad31, grad41},
-        }, EPSILON));
+        assertThat(result.getGradients("in0"),
+                matrixCloseTo(new long[]{2, 2}, EPSILON,
+                        grad00, grad10,
+                        grad01, grad11
+                ));
+        assertThat(result.getGradients("in1"),
+                matrixCloseTo(new long[]{2, 3}, EPSILON,
+                        grad20, grad30, grad40,
+                        grad21, grad31, grad41
+                ));
     }
 }

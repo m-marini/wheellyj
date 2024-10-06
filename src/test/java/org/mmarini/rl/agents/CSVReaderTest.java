@@ -64,15 +64,15 @@ class CSVReaderTest {
     void readFlat() throws IOException {
         CSVReader reader = new CSVReader(new File("src/test/resources/dataset1/data.csv"));
         INDArray array = reader.read(1);
-        assertThat(array, matrixCloseTo(new float[][]{
-                {1, 2, 3}
-        }, 1e-3));
+        assertThat(array, matrixCloseTo(new long[]{1, 3}, 1e-3,
+                1, 2, 3
+        ));
 
         array = reader.read(10);
-        assertThat(array, matrixCloseTo(new float[][]{
-                {4, 5, 6},
-                {7, 8, 9}
-        }, 1e-3));
+        assertThat(array, matrixCloseTo(new long[]{2, 3}, 1e-3,
+                4, 5, 6,
+                7, 8, 9
+        ));
 
         array = reader.read(10);
         assertNull(array);
