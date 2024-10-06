@@ -32,8 +32,8 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.Tuple2;
+import org.mmarini.rl.agents.AbstractAgentNN;
 import org.mmarini.rl.agents.Agent;
-import org.mmarini.rl.agents.TDAgentSingleNN;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.rl.nets.*;
 import org.mmarini.wheelly.envs.RobotEnvironment;
@@ -106,7 +106,7 @@ public class PrintNetChart {
      * Prints the agent
      */
     private void printAgent() {
-        TDAgentSingleNN ag = (TDAgentSingleNN) this.agent;
+        AbstractAgentNN ag = (AbstractAgentNN) this.agent;
         output.println("## Network");
         output.println();
         Map<String, SignalSpec> state = ag.processor().spec();

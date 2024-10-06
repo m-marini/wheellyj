@@ -37,14 +37,6 @@ import static java.util.Objects.requireNonNull;
  * The array signal
  */
 public class ArraySignal implements Signal {
-    /**
-     * Returns a float scalar signal
-     *
-     * @param values the values
-     */
-    public static ArraySignal create(float... values) {
-        return new ArraySignal(Nd4j.create(values));
-    }
 
     /**
      * Returns a matrix signal
@@ -52,8 +44,8 @@ public class ArraySignal implements Signal {
      * @param values the values
      * @param shape  the shape
      */
-    public static ArraySignal create(int[] shape, float... values) {
-        return new ArraySignal(Nd4j.create(shape, values));
+    public static ArraySignal create(long[] shape, float... values) {
+        return new ArraySignal(Nd4j.create(values).reshape(shape));
     }
 
     private final INDArray value;

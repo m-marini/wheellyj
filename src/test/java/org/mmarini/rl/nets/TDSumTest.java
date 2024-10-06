@@ -76,10 +76,11 @@ class TDSumTest {
                 .putValues("in0", input0)
                 .putValues("in1", input1);
         TDNetworkState result = layer.forward(state);
-        assertThat(result.getValues("name"), matrixCloseTo(new float[][]{
-                {in000 + in100, in010 + in110},
-                {in001 + in101, in011 + in111},
-        }, EPSILON));
+        assertThat(result.getValues("name"),
+                matrixCloseTo(new long[]{2, 2}, EPSILON,
+                        in000 + in100, in010 + in110,
+                        in001 + in101, in011 + in111
+                ));
     }
 
     @Test
@@ -114,13 +115,15 @@ class TDSumTest {
         TDNetworkState result = layer.train(state, Nd4j.zeros(1), 0, null);
 
         // Then ...
-        assertThat(result.getGradients("in0"), matrixCloseTo(new float[][]{
-                {grad00, grad10},
-                {grad01, grad11}
-        }, EPSILON));
-        assertThat(result.getGradients("in1"), matrixCloseTo(new float[][]{
-                {grad00, grad10},
-                {grad01, grad11}
-        }, EPSILON));
+        assertThat(result.getGradients("in0"),
+                matrixCloseTo(new long[]{2, 2}, EPSILON,
+                        grad00, grad10,
+                        grad01, grad11
+                ));
+        assertThat(result.getGradients("in1"),
+                matrixCloseTo(new long[]{2, 2}, EPSILON,
+                        grad00, grad10,
+                        grad01, grad11
+                ));
     }
 }

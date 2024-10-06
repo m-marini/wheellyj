@@ -71,7 +71,7 @@ class PartitionProcessorTest {
                 "a",
                 4);
         Map<String, Signal> x = Map.of(
-                "a", ArraySignal.create(x0, x1)
+                "a", ArraySignal.create(new long[]{1, 2}, x0, x1)
         );
 
         Map<String, Signal> result = encoder.apply(x);
@@ -80,7 +80,7 @@ class PartitionProcessorTest {
         assertThat(result, hasKey("p"));
 
         INDArray y = result.get("p").toINDArray();
-        assertThat(y, matrixCloseTo(new float[]{y0, y1}, EPSILON));
+        assertThat(y, matrixCloseTo(new long[]{1, 2}, EPSILON, y0, y1));
     }
 
     @ParameterizedTest
@@ -109,7 +109,7 @@ class PartitionProcessorTest {
         assertEquals(4, json.path(0).path("numTiles").asInt());
 
         Map<String, Signal> x = Map.of(
-                "a", ArraySignal.create(x0, x1)
+                "a", ArraySignal.create(new long[]{1, 2}, x0, x1)
         );
         Map<String, Signal> result = proc.apply(x);
 
@@ -117,7 +117,7 @@ class PartitionProcessorTest {
         assertThat(result, hasKey("p"));
 
         INDArray y = result.get("p").toINDArray();
-        assertThat(y, matrixCloseTo(new float[]{y0, y1}, EPSILON));
+        assertThat(y, matrixCloseTo(new long[]{1, 2}, EPSILON, y0, y1));
     }
 
     @Test
@@ -157,8 +157,8 @@ class PartitionProcessorTest {
     void floatCreateClassifierTest(float x0, float x1, float y0, float y1) {
         SignalSpec spec = new FloatSignalSpec(new long[]{2}, 1, 3);
         UnaryOperator<INDArray> f = PartitionProcessor.createClassifier(spec, 4);
-        INDArray result = f.apply(Nd4j.createFromArray(x0, x1));
-        assertThat(result, matrixCloseTo(new float[]{y0, y1}, EPSILON));
+        INDArray result = f.apply(Nd4j.createFromArray(x0, x1).reshape(1, 2));
+        assertThat(result, matrixCloseTo(new long[]{1, 2}, EPSILON, y0, y1));
     }
 
     @ParameterizedTest
@@ -171,8 +171,8 @@ class PartitionProcessorTest {
     void intCreateClassifier1Test(float x0, float x1, float y0, float y1) {
         SignalSpec spec = new IntSignalSpec(new long[]{2}, 8);
         UnaryOperator<INDArray> f = PartitionProcessor.createClassifier(spec, 8);
-        INDArray result = f.apply(Nd4j.createFromArray(x0, x1));
-        assertThat(result, matrixCloseTo(new float[]{y0, y1}, EPSILON));
+        INDArray result = f.apply(Nd4j.createFromArray(x0, x1).reshape(1, 2));
+        assertThat(result, matrixCloseTo(new long[]{1, 2}, EPSILON, y0, y1));
     }
 
     @ParameterizedTest
@@ -186,8 +186,8 @@ class PartitionProcessorTest {
     void intCreateClassifierTest(float x0, float x1, float y0, float y1) {
         SignalSpec spec = new IntSignalSpec(new long[]{2}, 3);
         UnaryOperator<INDArray> f = PartitionProcessor.createClassifier(spec, 4);
-        INDArray result = f.apply(Nd4j.createFromArray(x0, x1));
-        assertThat(result, matrixCloseTo(new float[]{y0, y1}, EPSILON));
+        INDArray result = f.apply(Nd4j.createFromArray(x0, x1).reshape(1, 2));
+        assertThat(result, matrixCloseTo(new long[]{1, 2}, EPSILON, y0, y1));
     }
 
     @Test

@@ -111,10 +111,11 @@ class TDSoftmaxTest {
         float out10 = (float) (ez10 / ez1);
         float out11 = (float) (ez11 / ez1);
         float out12 = (float) (ez12 / ez1);
-        assertThat(result.getValues("name"), matrixCloseTo(new float[][]{
-                {out00, out01, out02},
-                {out10, out11, out12}
-        }, EPSILON));
+        assertThat(result.getValues("name"),
+                matrixCloseTo(new long[]{2, 3}, EPSILON,
+                        out00, out01, out02,
+                        out10, out11, out12
+                ));
     }
 
     @ParameterizedTest
@@ -185,9 +186,10 @@ class TDSoftmaxTest {
         float post_grad11 = (-grad10 * pi10 * pi11 + grad11 * pi11 * (1 - pi11) - grad12 * pi12 * pi11) / temperature;
         float post_grad12 = (-grad10 * pi10 * pi12 - grad11 * pi11 * pi12 + grad12 * pi12 * (1 - pi12)) / temperature;
 
-        assertThat(result.getGradients("input"), matrixCloseTo(new float[][]{
-                {post_grad00, post_grad01, post_grad02},
-                {post_grad10, post_grad11, post_grad12}
-        }, EPSILON));
+        assertThat(result.getGradients("input"),
+                matrixCloseTo(new long[]{2, 3}, EPSILON,
+                        post_grad00, post_grad01, post_grad02,
+                        post_grad10, post_grad11, post_grad12
+                ));
     }
 }

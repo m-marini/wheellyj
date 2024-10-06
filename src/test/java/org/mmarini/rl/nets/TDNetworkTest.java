@@ -312,37 +312,38 @@ class TDNetworkTest {
 
         assertEquals(input0, input0Org);
         assertEquals(input1, input1Org);
-        assertThat(state.getValues("layer1"), matrixCloseTo(new float[][]{
-                {in00, in10, in11}
-        }, EPSILON));
+        assertThat(state.getValues("layer1"),
+                matrixCloseTo(new long[]{1, 3}, EPSILON,
+                        in00, in10, in11
+                ));
         assertThat(state.getValues("layer2"),
-                matrixCloseTo(new float[][]{
-                        {l20, l21}
-                }, EPSILON));
+                matrixCloseTo(new long[]{1, 2}, EPSILON,
+                        l20, l21
+                ));
         assertThat(state.getValues("layer3"),
-                matrixCloseTo(new float[][]{
-                        {l30, l31}
-                }, EPSILON));
+                matrixCloseTo(new long[]{1, 2}, EPSILON,
+                        l30, l31
+                ));
         assertThat(state.getValues("layer4"),
-                matrixCloseTo(new float[][]{
-                        {l40, l41}
-                }, EPSILON));
+                matrixCloseTo(new long[]{1, 2}, EPSILON,
+                        l40, l41
+                ));
         assertThat(state.getValues("layer5"),
-                matrixCloseTo(new float[][]{
-                        {l50, l51}
-                }, EPSILON));
+                matrixCloseTo(new long[]{1, 2}, EPSILON,
+                        l50, l51
+                ));
         assertThat(state.getValues("layer6"),
-                matrixCloseTo(new float[][]{
-                        {l60, l61}
-                }, EPSILON));
+                matrixCloseTo(new long[]{1, 2}, EPSILON,
+                        l60, l61
+                ));
         assertThat(state.getValues("layer7"),
-                matrixCloseTo(new float[][]{
-                        {l70, l71}
-                }, EPSILON));
+                matrixCloseTo(new long[]{1, 2}, EPSILON,
+                        l70, l71
+                ));
         assertThat(state.getValues("layer8"),
-                matrixCloseTo(new float[][]{
-                        {l80, l81}
-                }, EPSILON));
+                matrixCloseTo(new long[]{1, 2}, EPSILON,
+                        l80, l81
+                ));
     }
 
     @ParameterizedTest
@@ -695,62 +696,78 @@ class TDNetworkTest {
         assertEquals(grad7, grad7Org);
         assertEquals(grad8, grad8Org);
 
-        assertThat(out.getGradients("layer6"), matrixCloseTo(new float[][]{
-                {g60, g61}
-        }, EPSILON));
+        assertThat(out.getGradients("layer6"),
+                matrixCloseTo(new long[]{1, 2}, EPSILON,
+                        g60, g61
+                ));
 
-        assertThat(out.getGradients("layer5"), matrixCloseTo(new float[][]{
-                {g50, g51}
-        }, EPSILON));
-        assertThat(out.getGradients("layer4"), matrixCloseTo(new float[][]{
-                {g40, g41}
-        }, EPSILON));
-        assertThat(out.getGradients("layer3"), matrixCloseTo(new float[][]{
-                {g30, g31}
-        }, EPSILON));
-        assertThat(out.getGradients("layer2"), matrixCloseTo(new float[][]{
-                {g20, g21}
-        }, EPSILON));
-        assertThat(out.getGradients("layer1"), matrixCloseTo(new float[][]{
-                {g10, g11, g12}
-        }, EPSILON));
-        assertThat(out.getGradients("input1"), matrixCloseTo(new float[][]{
-                {g11, g12}
-        }, EPSILON));
-        assertThat(out.getGradients("input0"), matrixCloseTo(new float[][]{
-                {g10}
-        }, EPSILON));
+        assertThat(out.getGradients("layer5"),
+                matrixCloseTo(new long[]{1, 2}, EPSILON,
+                        g50, g51
+                ));
+        assertThat(out.getGradients("layer4"),
+                matrixCloseTo(new long[]{1, 2}, EPSILON,
+                        g40, g41
+                ));
+        assertThat(out.getGradients("layer3"),
+                matrixCloseTo(new long[]{1, 2}, EPSILON,
+                        g30, g31
+                ));
+        assertThat(out.getGradients("layer2"),
+                matrixCloseTo(new long[]{1, 2}, EPSILON,
+                        g20, g21
+                ));
+        assertThat(out.getGradients("layer1"),
+                matrixCloseTo(new long[]{1, 3}, EPSILON,
+                        g10, g11, g12
+                ));
+        assertThat(out.getGradients("input1"),
+                matrixCloseTo(new long[]{1, 2}, EPSILON,
+                        g11, g12
+                ));
+        assertThat(out.getGradients("input0"),
+                matrixCloseTo(new long[]{1, 1}, EPSILON,
+                        g10
+                ));
 
-        assertThat(out.getBiasTrace("layer2"), matrixCloseTo(new float[][]{
-                {post_eb20, post_eb21}
-        }, EPSILON));
-        assertThat(out.getBias("layer2"), matrixCloseTo(new float[][]{
-                {post_b20, post_b21}
-        }, EPSILON));
-        assertThat(out.getWeightsTrace("layer2"), matrixCloseTo(new float[][]{
-                {post_ew200, post_ew201},
-                {post_ew210, post_ew211},
-                {post_ew220, post_ew221}
-        }, EPSILON));
-        assertThat(out.getWeights("layer2"), matrixCloseTo(new float[][]{
-                {post_w200, post_w201},
-                {post_w210, post_w211},
-                {post_w220, post_w221}
-        }, EPSILON));
+        assertThat(out.getBiasTrace("layer2"),
+                matrixCloseTo(new long[]{1, 2}, EPSILON,
+                        post_eb20, post_eb21
+                ));
+        assertThat(out.getBias("layer2"),
+                matrixCloseTo(new long[]{1, 2}, EPSILON,
+                        post_b20, post_b21
+                ));
+        assertThat(out.getWeightsTrace("layer2"),
+                matrixCloseTo(new long[]{3, 2}, EPSILON,
+                        post_ew200, post_ew201,
+                        post_ew210, post_ew211,
+                        post_ew220, post_ew221
+                ));
+        assertThat(out.getWeights("layer2"),
+                matrixCloseTo(new long[]{3, 2}, EPSILON,
+                        post_w200, post_w201,
+                        post_w210, post_w211,
+                        post_w220, post_w221
+                ));
 
-        assertThat(out.getBiasTrace("layer4"), matrixCloseTo(new float[][]{
-                {post_eb40, post_eb41}
-        }, EPSILON));
-        assertThat(out.getBias("layer4"), matrixCloseTo(new float[][]{
-                {post_b40, post_b41}
-        }, EPSILON));
-        assertThat(out.getWeightsTrace("layer4"), matrixCloseTo(new float[][]{
-                {post_ew400, post_ew401},
-                {post_ew410, post_ew411},
-        }, EPSILON));
-        assertThat(out.getWeights("layer4"), matrixCloseTo(new float[][]{
-                {post_w400, post_w401},
-                {post_w410, post_w411},
-        }, EPSILON));
+        assertThat(out.getBiasTrace("layer4"),
+                matrixCloseTo(new long[]{1, 2}, EPSILON,
+                        post_eb40, post_eb41
+                ));
+        assertThat(out.getBias("layer4"),
+                matrixCloseTo(new long[]{1, 2}, EPSILON,
+                        post_b40, post_b41
+                ));
+        assertThat(out.getWeightsTrace("layer4"),
+                matrixCloseTo(new long[]{2, 2}, EPSILON,
+                        post_ew400, post_ew401,
+                        post_ew410, post_ew411
+                ));
+        assertThat(out.getWeights("layer4"),
+                matrixCloseTo(new long[]{2, 2}, EPSILON,
+                        post_w400, post_w401,
+                        post_w410, post_w411
+                ));
     }
 }

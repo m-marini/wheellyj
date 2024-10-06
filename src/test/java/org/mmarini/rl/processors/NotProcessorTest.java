@@ -30,7 +30,6 @@ import org.junit.jupiter.api.Test;
 import org.mmarini.rl.envs.*;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
-import org.nd4j.linalg.factory.Nd4j;
 
 import java.io.IOException;
 import java.util.Map;
@@ -51,21 +50,23 @@ class NotProcessorTest {
             - name: out
               class: org.mmarini.rl.processors.NotProcessor
               input: in
-              
+            
             """;
 
     @Test
     void createFromYaml() throws IOException {
         InputProcessor processor = InputProcessor.create(Utils.fromText(YAML), Locator.root(), IN_SPEC);
         Map<String, Signal> in = Map.of(
-                "in", new ArraySignal(Nd4j.createFromArray(new float[][]{{0, 0.5F}, {-0.5F, 2}}))
+                "in", ArraySignal.create(new long[]{1, 2, 2},
+                        0, 0.5F, -0.5F, 2)
         );
         Map<String, Signal> out = processor.apply(in);
         assertThat(out, hasKey("in"));
         assertThat(out, hasKey("out"));
-        assertThat(out.get("out").toINDArray(), matrixCloseTo(new float[][]{
-                {1, 0}, {0, 0}
-        }, EPSILON));
+        assertThat(out.get("out").toINDArray(), matrixCloseTo(new long[]{1, 2, 2}, EPSILON,
+                1, 0,
+                0, 0
+        ));
 
         JsonNode json = processor.json();
         assertTrue(json.isArray());

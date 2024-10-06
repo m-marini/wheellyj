@@ -47,7 +47,7 @@ class TDAgentSingleNNCreateTest {
     private static final float EPSILON = 1e-6f;
     private static final String AGENT_YAML = """
             ---
-            $schema: https://mmarini.org/wheelly/tdagent-spec-schema-0.1
+            $schema: https://mmarini.org/wheelly/tdagent-spec-schema-0.2
             class: org.mmarini.rl.agents.TDAgentSingleNN
             rewardAlpha: 0.001
             eta: 1e-3
@@ -99,7 +99,7 @@ class TDAgentSingleNNCreateTest {
             """;
     private static final String AGENT_NO_ACTION_ALPHAS_YAML = """
             ---
-            $schema: https://mmarini.org/wheelly/tdagent-spec-schema-0.1
+            $schema: https://mmarini.org/wheelly/tdagent-spec-schema-0.2
             class: org.mmarini.rl.agents.TDAgentSingleNN
             rewardAlpha: 0.001
             eta: 1e-3
@@ -147,7 +147,7 @@ class TDAgentSingleNNCreateTest {
             """;
     private static final String AGENT_ACTION_CRITIC_YAML = """
             ---
-            $schema: https://mmarini.org/wheelly/tdagent-spec-schema-0.1
+            $schema: https://mmarini.org/wheelly/tdagent-spec-schema-0.2
             class: org.mmarini.rl.agents.TDAgentSingleNN
             rewardAlpha: 0.001
             eta: 1e-3
@@ -201,7 +201,7 @@ class TDAgentSingleNNCreateTest {
             """;
     private static final String AGENT_NO_CRITIC_YAML = """
             ---
-            $schema: https://mmarini.org/wheelly/tdagent-spec-schema-0.1
+            $schema: https://mmarini.org/wheelly/tdagent-spec-schema-0.2
             class: org.mmarini.rl.agents.TDAgentSingleNN
             rewardAlpha: 0.001
             eta: 1e-3
@@ -347,14 +347,8 @@ class TDAgentSingleNNCreateTest {
         assertEquals(3e-3f, agent.alphas().get("output"));
         assertEquals(0.5f, agent.lambda());
         assertThat(agent.network().state().getBias("layer1"),
-                matrixCloseTo(new float[][]{
-                        {0.5f, 0.5f}
-                }, EPSILON));
-
-        assertThat(agent.network().state().getBias("layer1"),
-                matrixCloseTo(new float[][]{
-                        {0.5f, 0.5f}
-                }, EPSILON));
-
+                matrixCloseTo(new long[]{1, 2}, EPSILON,
+                        0.5f, 0.5f
+                ));
     }
 }

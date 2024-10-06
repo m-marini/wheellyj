@@ -50,6 +50,7 @@ import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 
 class TilesProcessorTest {
 
+    public static final double EPSILON = 1e-6;
     private static final String YAML = """
             ---
             - name: out
@@ -84,12 +85,12 @@ class TilesProcessorTest {
     ) {
         UnaryOperator<INDArray> part = TilesProcessor.createEncoder(inputSpec(), 2);
 
-        INDArray in = Nd4j.createFromArray(x, x);
+        INDArray in = Nd4j.createFromArray(x, x).reshape(1, 2);
         INDArray result = part.apply(in);
-        assertThat(result, matrixCloseTo(new float[][]{
-                {y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10},
-                {y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10}
-        }, 1e-3));
+        assertThat(result, matrixCloseTo(new long[]{1, 2, 11}, EPSILON,
+                y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10,
+                y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10
+        ));
     }
 
     @ParameterizedTest
@@ -119,14 +120,14 @@ class TilesProcessorTest {
         assertEquals("a", jsonProc.path("input").asText());
         assertEquals(2, jsonProc.path("numTiles").asInt());
 
-        INDArray in = Nd4j.createFromArray(x, x);
+        INDArray in = Nd4j.createFromArray(x, x).reshape(1, 2);
         Map<String, Signal> result = proc.apply(Map.of("a", new ArraySignal(in)));
         assertThat(result, hasKey("a"));
         assertThat(result, hasKey("out"));
-        assertThat(result.get("out").toINDArray(), matrixCloseTo(new float[][]{
-                {y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10},
-                {y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10}
-        }, 1e-3));
+        assertThat(result.get("out").toINDArray(), matrixCloseTo(new long[]{1, 2, 11}, EPSILON,
+                y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10,
+                y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10
+        ));
     }
 
     @ParameterizedTest
@@ -146,7 +147,7 @@ class TilesProcessorTest {
 
         INDArray in = Nd4j.createFromArray(x, x);
         INDArray result = part.apply(in);
-        assertThat(result, matrixCloseTo(new float[]{y, y}, 1e-3));
+        assertThat(result, matrixCloseTo(new long[]{2}, EPSILON, y, y));
     }
 
     @ParameterizedTest
@@ -163,7 +164,7 @@ class TilesProcessorTest {
 
         INDArray in = Nd4j.createFromArray(x, x);
         INDArray result = part.apply(in);
-        assertThat(result, matrixCloseTo(new float[]{y, y}, 1e-3));
+        assertThat(result, matrixCloseTo(new long[]{2}, EPSILON, y, y));
     }
 
     @ParameterizedTest
@@ -182,15 +183,16 @@ class TilesProcessorTest {
     ) {
         UnaryOperator<Map<String, Signal>> encoder = TilesProcessor.createSignalEncoder("out", "a", inputSpec(), 2);
 
-        INDArray in = Nd4j.createFromArray(x, x);
+        INDArray in = Nd4j.createFromArray(x, x).reshape(1, 2);
         Map<String, Signal> result = encoder.apply(Map.of("a", new ArraySignal(in)));
 
         assertThat(result, hasKey("a"));
         assertThat(result, hasKey("out"));
-        assertThat(result.get("out").toINDArray(), matrixCloseTo(new float[][]{
-                {y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10},
-                {y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10}
-        }, 1e-3));
+        Signal out = result.get("out");
+        assertThat(out.toINDArray(), matrixCloseTo(new long[]{1, 2, 11}, EPSILON,
+                y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10,
+                y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10
+        ));
     }
 
     @Test

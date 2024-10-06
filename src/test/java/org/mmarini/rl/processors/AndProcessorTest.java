@@ -30,7 +30,6 @@ import org.junit.jupiter.api.Test;
 import org.mmarini.rl.envs.*;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
-import org.nd4j.linalg.factory.Nd4j;
 
 import java.io.IOException;
 import java.util.List;
@@ -61,17 +60,18 @@ class AndProcessorTest {
     void createFromYaml() throws IOException {
         InputProcessor processor = InputProcessor.create(Utils.fromText(YAML), Locator.root(), IN_SPEC);
         Map<String, Signal> in = Map.of(
-                "in1", new ArraySignal(Nd4j.createFromArray(new float[][]{{0, 0}, {-0.5F, 2}})),
-                "in2", new ArraySignal(Nd4j.createFromArray(new float[][]{{0, 0.5F}, {0, 2}}))
+                "in1", ArraySignal.create(new long[]{1, 2, 2}, 0, 0, -0.5F, 2),
+                "in2", ArraySignal.create(new long[]{1, 2, 2}, 0, 0.5F, 0, 2)
         );
         Map<String, Signal> out = processor.apply(in);
 
         assertThat(out, hasKey("in1"));
         assertThat(out, hasKey("in2"));
         assertThat(out, hasKey("out"));
-        assertThat(out.get("out").toINDArray(), matrixCloseTo(new float[][]{
-                {0, 0}, {0, 1}
-        }, EPSILON));
+        assertThat(out.get("out").toINDArray(),
+                matrixCloseTo(new long[]{1, 2, 2}, EPSILON,
+                        0, 0, 0, 1
+                ));
 
         JsonNode json = processor.json();
         assertTrue(json.isArray());

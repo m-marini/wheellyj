@@ -1,11 +1,11 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/agent-single-nn-schema-0.4
+$id: https://mmarini.org/wheelly/agent-single-nn-schema-0.5
 title: Agent
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/agent-single-nn-schema-0.4
+    const: https://mmarini.org/wheelly/agent-single-nn-schema-0.5
   class:
     const: org.mmarini.rl.agents.TDAgentSingleNN
   modelPath:
@@ -58,6 +58,23 @@ $defs:
       - $ref: "#/$defs/FeaturesProcessor"
       - $ref: "#/$defs/TilesProcessor"
       - $ref: "#/$defs/MaskProcessor"
+      - $ref: "#/$defs/EqualsToProcessor"
+  EqualsToProcessor:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.rl.processors.EqualsToProcessor
+      name:
+        minLength: 1
+      input:
+        minLength: 1
+      value:
+        type: number
+    required:
+      - class
+      - name
+      - input
+      - value
   MaskProcessor:
     type: object
     properties:

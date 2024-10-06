@@ -42,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class PPOAgentEnvCreateTest {
     private static final String YAML = """
             ---
-            $schema: https://mmarini.org/wheelly/ppo-agent-schema-0.1
+            $schema: https://mmarini.org/wheelly/ppo-agent-schema-0.2
             class: org.mmarini.rl.agents.PPOAgent
             modelPath: models/test
             seed: 1234

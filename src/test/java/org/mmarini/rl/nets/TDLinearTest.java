@@ -97,10 +97,11 @@ class TDLinearTest {
 
         // Then ...
         assertNotNull(result);
-        assertThat(result.getValues("name"), matrixCloseTo(new float[][]{
-                {in00 * w + b, in01 * w + b},
-                {in10 * w + b, in11 * w + b}
-        }, EPSILON));
+        assertThat(result.getValues("name"),
+                matrixCloseTo(new long[]{2, 2}, EPSILON,
+                        in00 * w + b, in01 * w + b,
+                        in10 * w + b, in11 * w + b
+                ));
     }
 
     @ParameterizedTest
@@ -145,9 +146,10 @@ class TDLinearTest {
         float post_grad10 = w * grad10;
         float post_grad11 = w * grad11;
 
-        assertThat(result.getGradients("input"), matrixCloseTo(new float[][]{
-                {post_grad00, post_grad01},
-                {post_grad10, post_grad11}
-        }, EPSILON));
+        assertThat(result.getGradients("input"),
+                matrixCloseTo(new long[]{2, 2}, EPSILON,
+                        post_grad00, post_grad01,
+                        post_grad10, post_grad11
+                ));
     }
 }
