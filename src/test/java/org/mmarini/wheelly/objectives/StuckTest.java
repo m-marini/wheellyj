@@ -31,57 +31,50 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WithRobotStatus;
-import org.mmarini.wheelly.envs.RobotEnvironment;
+import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
 import java.io.IOException;
-import java.util.function.ToDoubleFunction;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class StuckTest {
-    static MockEnvironment createEnvironment(int sensorDir, double distance, boolean canMoveForward, boolean canMoveBackward) {
+    static MockState createEnvironment(int sensorDir, double distance) {
         RobotStatus status = RobotStatus.create(x -> 12d)
                 // Use complex
                 .setSensorDirection(Complex.fromDeg(sensorDir))
-                .setCanMoveBackward(canMoveBackward)
-                .setCanMoveForward(canMoveForward)
+                .setCanMoveBackward(true)
+                .setCanMoveForward(true)
                 .setEchoDistance(distance);
-        return new MockEnvironment1() {
-            @Override
-            public RobotStatus getRobotStatus() {
-                return status;
-            }
-        };
+        MockState state = mock();
+        when(state.getRobotStatus()).thenReturn(status);
+        return state;
     }
 
     @ParameterizedTest
     @CsvSource({
-            "1,0,1,1,1",
-            "1,0,0.9,1,1",
-            "1,0,1.1,1,1",
-            "0,0,0.5,1,1",
-            "0,0,0.5,1,1",
-            "0,0,1.5,1,1",
-            "0.5,0,0.7,1,1",
-            "0.5,0,1.3,1,1",
-            "0.5,10,1,1,1",
-            "0.5,-10,1,1,1",
-            "0,20,1,1,1",
-            "0,-20,1,1,1",
-            "-1,0,1,0,1",
-            "-1,0,1,1,0",
-            "-1,0,0,1,1",
-            "-1,0,3,1,1",
+            "1,0,1",
+            "1,0,0.9",
+            "1,0,1.1",
+            "0,0,0.5",
+            "0,0,0.5",
+            "0,0,1.5",
+            "0.5,0,0.7",
+            "0.5,0,1.3",
+            "0.5,10,1",
+            "0.5,-10,1",
+            "0,20,1",
+            "0,-20,1",
+            "0,0,0",
+            "0,0,3",
     })
     void create(double expected,
                 int sensorDir,
-                double distance,
-                int canMoveForward,
-                int canMoveBackward) throws IOException {
+                double distance) throws IOException {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + Stuck.SCHEMA_NAME,
                 "class: " + Stuck.class.getName(),
@@ -90,49 +83,42 @@ class StuckTest {
                 "distance2: 1.1",
                 "distance3: 1.5",
                 "sensorRange: 20"));
-        ToDoubleFunction<RobotEnvironment> f = Stuck.create(root, Locator.root());
-        MockEnvironment env = createEnvironment(sensorDir, distance, canMoveForward != 0, canMoveBackward != 0);
-        double result = f.applyAsDouble(env);
+        RewardFunction f = Stuck.create(root, Locator.root());
+        MockState env = createEnvironment(sensorDir, distance);
+        double result = f.apply(null, null, env);
         assertThat(result, closeTo(expected, 1e-3));
     }
 
     @ParameterizedTest
     @CsvSource({
-            "1,0,1,1,1",
-            "1,0,0.9,1,1",
-            "1,0,1.1,1,1",
-            "0,0,0.5,1,1",
-            "0,0,0.5,1,1",
-            "0,0,1.5,1,1",
-            "0.5,0,0.7,1,1",
-            "0.5,0,1.3,1,1",
-            "0.5,10,1,1,1",
-            "0.5,-10,1,1,1",
-            "0,20,1,1,1",
-            "0,-20,1,1,1",
-            "-1,0,1,0,1",
-            "-1,0,1,1,0",
-            "-1,0,0,1,1",
-            "-1,0,3,1,1",
+            "1,0,1",
+            "1,0,0.9",
+            "1,0,1.1",
+            "0,0,0.5",
+            "0,0,0.5",
+            "0,0,1.5",
+            "0.5,0,0.7",
+            "0.5,0,1.3",
+            "0.5,10,1",
+            "0.5,-10,1",
+            "0,20,1",
+            "0,-20,1",
+            "0,0,0",
+            "0,0,3",
     })
     void stuck(double expected,
                int sensorDir,
-               double distance,
-               int canMoveForward,
-               int canMoveBackward) {
+               double distance) {
         double x1 = 0.5;
         double x2 = 0.9;
         double x3 = 1.1;
         double x4 = 1.5;
         int directionRange = 20;
-        ToDoubleFunction<RobotEnvironment> f = Stuck.stuck(x1, x2, x3, x4, directionRange);
-        MockEnvironment env = createEnvironment(sensorDir, distance, canMoveForward != 0, canMoveBackward != 0);
+        RewardFunction f = Stuck.stuck(x1, x2, x3, x4, directionRange);
+        MockState state = createEnvironment(sensorDir, distance);
 
-        double result = f.applyAsDouble(env);
+        double result = f.apply(state, null, state);
 
         assertThat(result, closeTo(expected, 1e-3));
-    }
-
-    static abstract class MockEnvironment1 extends MockEnvironment implements WithRobotStatus {
     }
 }

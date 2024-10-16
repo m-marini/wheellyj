@@ -1,0 +1,13 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/objective-avoid-contact-schema-0.1
+title: Environment
+type: object
+properties:
+  $schema:
+    const: https://mmarini.org/wheelly/objective-avoid-contact-schema-0.1
+  class:
+    const: org.mmarini.wheelly.objectives.AvoidContact
+required:
+  - $schema
+  - class

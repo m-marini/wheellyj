@@ -54,7 +54,7 @@ class PolarRobotEnvTest {
 
         RadarMap radarMap = mock();
         return PolarRobotEnv.create(controller,
-                e -> 0, 4, 4, 4, NUM_RADAR_SECTORS,
+                (s0, a, s1) -> 0, 4, 4, 4, NUM_RADAR_SECTORS,
                 0.2, 3, radarMap);
     }
 
@@ -69,12 +69,12 @@ class PolarRobotEnvTest {
         setHindered(2, DISTANCE);
         setLabeled(3, DISTANCE);
         RobotStatus status = RobotStatus.create(x -> 0);
-        PolarRobotEnv.CompositeStatus currentStatus = new PolarRobotEnv.CompositeStatus(
-                status, mock(), polarMap);
-        env.setCurrentStatus(currentStatus);
+
+        PolarRobotState currentState = PolarRobotState.create(status, mock(), polarMap, 3);
+        env.setCurrentState(currentState);
 
         // When get the states
-        Map<String, Signal> signals = env.getSignals();
+        Map<String, Signal> signals = env.getCurrentState().signals();
 
         // Then signal ...
         assertThat(signals, hasKey("sectorStates"));

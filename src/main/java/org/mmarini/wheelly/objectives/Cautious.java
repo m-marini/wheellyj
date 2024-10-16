@@ -30,13 +30,12 @@ import org.mmarini.wheelly.apis.PolarMap;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WithRobotStatus;
 import org.mmarini.wheelly.apps.JsonSchemas;
-import org.mmarini.wheelly.envs.RobotEnvironment;
+import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.wheelly.envs.WithPolarMap;
 import org.mmarini.yaml.Locator;
 
 import java.awt.geom.Point2D;
 import java.util.Objects;
-import java.util.function.ToDoubleFunction;
 
 /**
  * The cautious objective rewards the behavior that brings the robot to the safest position,
@@ -54,30 +53,29 @@ public interface Cautious {
      *
      * @param maxDistance the maximum distance in polar map (m)
      */
-    static ToDoubleFunction<RobotEnvironment> cautious(double maxDistance) {
-        return environment -> {
-            if (Objects.requireNonNull(environment) instanceof WithPolarMap env) {
-                RobotStatus status = ((WithRobotStatus) environment).getRobotStatus();
-                if (!status.canMoveBackward() || !status.canMoveForward()) {
-                    // Avoid contacts
-                    return -1;
-                }
+    static RewardFunction cautious(double maxDistance) {
+        return (s0, a, s1) -> {
+            Objects.requireNonNull(s1);
+            if (s1 instanceof WithRobotStatus withRobotStatus) {
+                RobotStatus status = withRobotStatus.getRobotStatus();
                 if (!status.halt() && status.sensorDirection().toIntDeg() != 0) {
                     // Avoid rotated sensor during movement
                     return -0.5;
                 }
-                PolarMap polarMap = env.getPolarMap();
-                Point2D target = polarMap.safeCentroid(maxDistance);
-                double distance = target.distance(polarMap.center());
-                Point2D nearest = polarMap.nearestHindered();
-                if (nearest != null) {
-                    double minDistance = nearest.distance(polarMap.center());
-                    return minDistance > distance ? 1 - distance / minDistance : 0;
-                } else {
-                    return 1 - distance / maxDistance;
+                if (s1 instanceof WithPolarMap withPolarMap) {
+                    PolarMap polarMap = withPolarMap.getPolarMap();
+                    Point2D target = polarMap.safeCentroid(maxDistance);
+                    double distance = target.distance(polarMap.center());
+                    Point2D nearest = polarMap.nearestHindered();
+                    if (nearest != null) {
+                        double minDistance = nearest.distance(polarMap.center());
+                        return minDistance > distance ? 1 - distance / minDistance : 0;
+                    } else {
+                        return 1 - distance / maxDistance;
+                    }
                 }
             }
-            throw new IllegalArgumentException("Wrong context");
+            return 0;
         };
     }
 
@@ -87,7 +85,7 @@ public interface Cautious {
      * @param root    the root json document
      * @param locator the locator
      */
-    static ToDoubleFunction<RobotEnvironment> create(JsonNode root, Locator locator) {
+    static RewardFunction create(JsonNode root, Locator locator) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double maxDistance = locator.path("maxDistance").getNode(root).asDouble();
         return cautious(maxDistance);

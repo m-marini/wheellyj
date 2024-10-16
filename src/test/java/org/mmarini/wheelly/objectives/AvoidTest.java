@@ -29,54 +29,45 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RadarMap;
+import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
-import java.awt.geom.Point2D;
 import java.io.IOException;
-import java.util.stream.IntStream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
-import static org.mmarini.wheelly.apis.SimRobot.GRID_SIZE;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class ExploreTest {
-
-    public static final int MAX_INTERVAL = 10000;
-    public static final double DECAY = 10000d;
-
-    static MockState createState(int knownCount) {
-        long timestamp = System.currentTimeMillis();
-        RadarMap radarMap = RadarMap.create(new Point2D.Double(), 10, 10, 0.2, MAX_INTERVAL, 2000, MAX_INTERVAL, MAX_INTERVAL, DECAY, GRID_SIZE, Complex.fromDeg(15))
-                .map(IntStream.range(0, knownCount), cell -> cell.addAnechoic(timestamp, DECAY));
+class AvoidTest {
+    static MockState createState(boolean canMoveForward, boolean canMoveBackward) {
+        RobotStatus status = RobotStatus.create(x -> 12d)
+                .setCanMoveForward(canMoveForward)
+                .setCanMoveBackward(canMoveBackward);
         MockState state = mock();
-        when(state.getRadarMap()).thenReturn(radarMap);
+        when(state.getRobotStatus()).thenReturn(status);
         return state;
     }
 
     @ParameterizedTest
     @CsvSource({
-            "0, 10, 10",
-            "1, 10, 11",
-            "0, 11, 10"
+            "-1,0,1",
+            "-1,1,0",
+            "-1,0,0",
+            "0,1,1",
     })
     void create(double expected,
-                int knownCount0,
-                int knownCount1
-    ) throws IOException {
+                int canMoveForward,
+                int canMoveBackward) throws IOException {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
-                "$schema: " + Explore.SCHEMA_NAME,
-                "class: " + Explore.class.getName()));
-        RewardFunction f = Explore.create(root, Locator.root());
-        MockState state0 = createState(knownCount0);
-        MockState state1 = createState(knownCount1);
+                "$schema: " + AvoidContact.SCHEMA_NAME,
+                "class: " + AvoidContact.class.getName()));
+        RewardFunction f = AvoidContact.create(root, Locator.root());
+        MockState state = createState(canMoveForward != 0, canMoveBackward != 0);
 
-        double result = f.apply(state0, null, state1);
+        double result = f.apply(null, null, state);
 
         assertThat(result, closeTo(expected, 1e-4));
     }

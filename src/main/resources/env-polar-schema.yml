@@ -1,11 +1,11 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/env-polar-schema-1.1
+$id: https://mmarini.org/wheelly/env-polar-schema-2.0
 title: Environment
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/env-polar-schema-1.1
+    const: https://mmarini.org/wheelly/env-polar-schema-2.0
   class:
     const: org.mmarini.wheelly.envs.PolarRobotEnv
   objective:
