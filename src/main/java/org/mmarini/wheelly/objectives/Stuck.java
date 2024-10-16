@@ -29,14 +29,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WithRobotStatus;
 import org.mmarini.wheelly.apps.JsonSchemas;
-import org.mmarini.wheelly.envs.RobotEnvironment;
+import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.yaml.Locator;
-
-import java.util.function.ToDoubleFunction;
 
 import static java.lang.Math.abs;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.*;
-import static org.mmarini.wheelly.apis.SimRobot.MAX_DISTANCE;
 
 /**
  * A set of reward function
@@ -50,7 +47,7 @@ public interface Stuck {
      * @param root    the root json document
      * @param locator the locator
      */
-    static ToDoubleFunction<RobotEnvironment> create(JsonNode root, Locator locator) {
+    static RewardFunction create(JsonNode root, Locator locator) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double distance0 = locator.path("distance0").getNode(root).asDouble();
         double distance1 = locator.path("distance1").getNode(root).asDouble();
@@ -69,19 +66,18 @@ public interface Stuck {
      * @param x4          maximum distance for 0 reward
      * @param sensorRange tolerance of sensor front position in DEG
      */
-    static ToDoubleFunction<RobotEnvironment> stuck(double x1, double x2, double x3, double x4, int sensorRange) {
-        return environment -> {
-            RobotStatus status = ((WithRobotStatus) environment).getRobotStatus();
-            double dist = status.echoDistance();
-            if (!status.canMoveBackward() || !status.canMoveForward() || dist == 0 || dist >= MAX_DISTANCE) {
-                return -1;
-            } else {
+    static RewardFunction stuck(double x1, double x2, double x3, double x4, int sensorRange) {
+        return (s0, e, s1) -> {
+            if (s1 instanceof WithRobotStatus withRobotStatus) {
+                RobotStatus status = withRobotStatus.getRobotStatus();
+                double dist = status.echoDistance();
                 int sensor = status.sensorDirection().toIntDeg();
                 double isInRange = between(dist, x1, x2, x3, x4);
                 double isInDirection = not(positive(abs(sensor), sensorRange));
                 double isTarget = and(isInRange, isInDirection);
                 return defuzzy(0, 1, isTarget);
             }
+            return 0;
         };
     }
 }

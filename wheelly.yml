@@ -51,9 +51,9 @@ controllers:
 
 environments:
   polarMapEnv:
-    $schema: https://mmarini.org/wheelly/env-polar-schema-1.1
+    $schema: https://mmarini.org/wheelly/env-polar-schema-2.0
     class: org.mmarini.wheelly.envs.PolarRobotEnv
-    objective: objectives/cautious
+    objective: objectives/labelFinder
     interval: 10
     commandInterval: 600
     reactionInterval: 300
@@ -75,17 +75,29 @@ environments:
     maxRadarDistance: 3
 
 objectives:
-  explore:
-    $schema: https://mmarini.org/wheelly/objective-explore-schema-0.1
-    class: org.mmarini.wheelly.objectives.Explore
-    sensorRange: 60
+  labelFinder:
+    - $schema: https://mmarini.org/wheelly/objective-avoid-contact-schema-0.1
+      class: org.mmarini.wheelly.objectives.AvoidContact
+    - $schema: https://mmarini.org/wheelly/objective-label-schema-0.1
+      class: org.mmarini.wheelly.objectives.Label
+      minDistance: 0.8
+      maxDistance: 1.0
+    - $schema: https://mmarini.org/wheelly/objective-explore-schema-0.2
+      class: org.mmarini.wheelly.objectives.Explore
+    - $schema: https://mmarini.org/wheelly/objective-constant-schema-0.1
+      class: org.mmarini.wheelly.objectives.ConstantReward
+      reward: -0.1
   noMove:
-    $schema: https://mmarini.org/wheelly/objective-nomove-schema-0.1
-    class: org.mmarini.wheelly.objectives.NoMove
+    - $schema: https://mmarini.org/wheelly/objective-avoid-contact-schema-0.1
+      class: org.mmarini.wheelly.objectives.AvoidContact
+    - $schema: https://mmarini.org/wheelly/objective-nomove-schema-0.1
+      class: org.mmarini.wheelly.objectives.NoMove
   cautious:
-    $schema: https://mmarini.org/wheelly/objective-cautious-schema-0.1
-    class: org.mmarini.wheelly.objectives.Cautious
-    maxDistance: 3
+    - $schema: https://mmarini.org/wheelly/objective-avoid-contact-schema-0.1
+      class: org.mmarini.wheelly.objectives.AvoidContact
+    - $schema: https://mmarini.org/wheelly/objective-cautious-schema-0.1
+      class: org.mmarini.wheelly.objectives.Cautious
+      maxDistance: 3
 
 agents:
   ######################################

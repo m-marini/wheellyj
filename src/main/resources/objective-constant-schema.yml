@@ -1,0 +1,16 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/objective-constant-schema-0.1
+title: Environment
+type: object
+properties:
+  $schema:
+    const: https://mmarini.org/wheelly/objective-constant-schema-0.1
+  class:
+    const: org.mmarini.wheelly.objectives.ConstantReward
+  reward:
+    type: number
+required:
+  - $schema
+  - class
+  - reward

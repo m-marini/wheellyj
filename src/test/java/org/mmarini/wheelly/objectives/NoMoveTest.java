@@ -30,53 +30,53 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RadarMap;
+import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
-import java.awt.geom.Point2D;
 import java.io.IOException;
-import java.util.stream.IntStream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
-import static org.mmarini.wheelly.apis.SimRobot.GRID_SIZE;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class ExploreTest {
+class NoMoveTest {
 
-    public static final int MAX_INTERVAL = 10000;
-    public static final double DECAY = 10000d;
-
-    static MockState createState(int knownCount) {
-        long timestamp = System.currentTimeMillis();
-        RadarMap radarMap = RadarMap.create(new Point2D.Double(), 10, 10, 0.2, MAX_INTERVAL, 2000, MAX_INTERVAL, MAX_INTERVAL, DECAY, GRID_SIZE, Complex.fromDeg(15))
-                .map(IntStream.range(0, knownCount), cell -> cell.addAnechoic(timestamp, DECAY));
+    static MockState createState(int sensorDir, double leftPps, double rightPps) {
+        RobotStatus status = RobotStatus.create(x -> 12d)
+                .setSensorDirection(Complex.fromDeg(sensorDir))
+                .setSpeeds(leftPps, rightPps);
         MockState state = mock();
-        when(state.getRadarMap()).thenReturn(radarMap);
+        when(state.getRobotStatus()).thenReturn(status);
         return state;
     }
 
     @ParameterizedTest
     @CsvSource({
-            "0, 10, 10",
-            "1, 10, 11",
-            "0, 11, 10"
+            "1,0,0,0",
+            "0,1,0,0",
+            "0,-1,0,0",
+            "0,0,1,0",
+            "0,0,0,1",
+            "0,0,1,1",
+            "0,0,-1,0",
+            "0,0,0,-1",
+            "0,0,-1,-1",
+            "0,0,-1,1",
+            "0,0,1,-1",
     })
     void create(double expected,
-                int knownCount0,
-                int knownCount1
-    ) throws IOException {
+                int sensorDir,
+                double leftPps, double rightPps) throws IOException {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
-                "$schema: " + Explore.SCHEMA_NAME,
-                "class: " + Explore.class.getName()));
-        RewardFunction f = Explore.create(root, Locator.root());
-        MockState state0 = createState(knownCount0);
-        MockState state1 = createState(knownCount1);
+                "$schema: " + NoMove.SCHEMA_NAME,
+                "class: " + NoMove.class.getName()));
+        RewardFunction f = NoMove.create(root, Locator.root());
+        MockState state = createState(sensorDir, leftPps, rightPps);
 
-        double result = f.apply(state0, null, state1);
+        double result = f.apply(null, null, state);
 
         assertThat(result, closeTo(expected, 1e-4));
     }

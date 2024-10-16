@@ -28,21 +28,13 @@ package org.mmarini.wheelly.objectives;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apis.MapCell;
 import org.mmarini.wheelly.apis.RadarMap;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WithRobotStatus;
 import org.mmarini.wheelly.apps.JsonSchemas;
-import org.mmarini.wheelly.envs.RobotEnvironment;
+import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.wheelly.envs.WithRadarMap;
 import org.mmarini.yaml.Locator;
 
 import java.util.Arrays;
 import java.util.function.Predicate;
-import java.util.function.ToDoubleFunction;
-
-import static java.lang.Math.abs;
-import static org.mmarini.wheelly.apis.FuzzyFunctions.*;
-import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
-import static org.mmarini.wheelly.apis.Utils.clip;
 
 /**
  * The explore objective returns
@@ -54,7 +46,29 @@ import static org.mmarini.wheelly.apis.Utils.clip;
  */
 public interface Explore {
 
-    String SCHEMA_NAME = "https://mmarini.org/wheelly/objective-explore-schema-0.1";
+    String SCHEMA_NAME = "https://mmarini.org/wheelly/objective-explore-schema-0.2";
+
+    /**
+     * Returns the function of reward for the given environment
+     */
+    RewardFunction EXPLORE =
+            (s0, a, s1) -> {
+                if (s0 instanceof WithRadarMap withRadar0
+                        && s1 instanceof WithRadarMap withRadar1) {
+                    RadarMap radarMap0 = withRadar0.getRadarMap();
+                    RadarMap radarMap1 = withRadar1.getRadarMap();
+                    long knownSectors0Number = Arrays.stream(radarMap0.cells())
+                            .filter(Predicate.not(MapCell::unknown))
+                            .count();
+                    long knownSector10Number = Arrays.stream(radarMap1.cells())
+                            .filter(Predicate.not(MapCell::unknown))
+                            .count();
+                    if (knownSector10Number > knownSectors0Number) {
+                        return 1;
+                    }
+                }
+                return 0;
+            };
 
     /**
      * Returns the function that fuzzy rewards explore behavior from configuration
@@ -62,38 +76,9 @@ public interface Explore {
      * @param root    the root json document
      * @param locator the locator
      */
-    static ToDoubleFunction<RobotEnvironment> create(JsonNode root, Locator locator) {
+    static RewardFunction create(JsonNode root, Locator locator) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-        int sensorRange = locator.path("sensorRange").getNode(root).asInt();
-        return explore(sensorRange);
+        return EXPLORE;
     }
 
-    /**
-     * Returns the function of reward for the given environment
-     *
-     * @param sensorRange the sensor sensitivity angle range (DEG)
-     */
-    static ToDoubleFunction<RobotEnvironment> explore(int sensorRange) {
-        return environment -> {
-            WithRadarMap env = (WithRadarMap) environment;
-
-            RobotStatus status = ((WithRobotStatus) environment).getRobotStatus();
-            if (!status.canMoveBackward() || !status.canMoveForward()) {
-                // Avoid contacts
-                return -1;
-            }
-            RadarMap radarMap = env.getRadarMap();
-            long knownSectorsNumber = Arrays.stream(radarMap.cells())
-                    .filter(Predicate.not(MapCell::unknown))
-                    .count();
-            // encourages the exploration of unfamiliar areas
-            double isKnown = ((double) knownSectorsNumber) / radarMap.numCells();
-            // encourages the linear speed
-            double linSpeed = (status.rightPps() + status.leftPps()) / MAX_PPS / 2;
-            double isLinearSpeed = clip(linSpeed, 0, 1);
-            int sensor = status.sensorDirection().toIntDeg();
-            double isFrontSensor = not(positive(abs(sensor), sensorRange));
-            return defuzzy(0, 1, and(isLinearSpeed, isKnown, isFrontSensor));
-        };
-    }
 }

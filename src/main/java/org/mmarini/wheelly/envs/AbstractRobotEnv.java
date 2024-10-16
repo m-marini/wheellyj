@@ -37,7 +37,6 @@ import org.mmarini.wheelly.apis.*;
 
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.function.ToDoubleFunction;
 import java.util.function.UnaryOperator;
 
 import static java.lang.Math.round;
@@ -63,12 +62,14 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
     public static final int MIN_SENSOR_DIR = -90;
     public static final int MAX_SENSOR_DIR = 90;
     private final RobotControllerApi controller;
-    private final ToDoubleFunction<RobotEnvironment> rewardFunc;
+    private final RewardFunction rewardFunc;
     private UnaryOperator<Map<String, Signal>> onAct;
     private Consumer<RobotStatus> onInference;
     private Consumer<Environment.ExecutionResult> onResult;
-    private Map<String, Signal> prevActions;
     private Map<String, Signal> signals0;
+    private State prevState;
+    private State currentState;
+    private Map<String, Signal> prevActions;
 
     /**
      * Creates the abstract environment
@@ -76,7 +77,7 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
      * @param controller the controller
      * @param rewardFunc the reward function
      */
-    protected AbstractRobotEnv(RobotControllerApi controller, ToDoubleFunction<RobotEnvironment> rewardFunc) {
+    protected AbstractRobotEnv(RobotControllerApi controller, RewardFunction rewardFunc) {
         this.controller = requireNonNull(controller);
         this.rewardFunc = requireNonNull(rewardFunc);
         controller.setOnInference(this::handleInference);
@@ -106,9 +107,20 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
     }
 
     /**
-     * Returns the signals from current status
+     * Returns the current state
      */
-    protected abstract Map<String, Signal> getSignals();
+    public State getCurrentState() {
+        return currentState;
+    }
+
+    /**
+     * Sets the current state
+     *
+     * @param currentState the current state
+     */
+    protected void setCurrentState(State currentState) {
+        this.currentState = currentState;
+    }
 
     /**
      * Returns the halt action
@@ -128,7 +140,6 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
      * Processes the inference to produce the behaviour
      * The inference is composed by the sequence
      * <ul>
-     *     <li><code>getSignals</code> retrieves the signals of latched status</li>
      *     <li><code>onAct</code> asks the agent for generation of actions for current state</li>
      *     <li><code>processActions</code> processes the result actions</li>
      *     <li><code>getReward</code> generates the rewards from previous state, previous actions and current state</li>
@@ -142,11 +153,12 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
         if (onInference != null) {
             onInference.accept(status);
         }
-        Map<String, Signal> signals1 = getSignals();
+
+        Map<String, Signal> signals1 = currentState.signals();
         Map<String, Signal> actions1 = onAct.apply(signals1);
         processActions(actions1);
-        if (signals0 != null) {
-            double reward = rewardFunc.applyAsDouble(this);
+        if (prevState != null) {
+            double reward = rewardFunc.apply(prevState, prevActions, currentState);
             Environment.ExecutionResult result = new Environment.ExecutionResult(
                     signals0, prevActions, reward, signals1
             );
@@ -155,9 +167,9 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
             }
         }
         // Split status
+        prevState = currentState;
         signals0 = signals1;
         prevActions = actions1;
-        splitStatus();
     }
 
     /**
@@ -256,18 +268,17 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
         controller.shutdown();
     }
 
+    /**
+     * Returns the speed (pps) from the action signals
+     *
+     * @param actions the action signals
+     */
     public int speed(Map<String, Signal> actions) {
         int speedAction = actions.get("speed").getInt(0);
         int n = ((IntSignalSpec) getActions().get("speed")).numValues();
         return round(linear(speedAction,
                 0, n - 2,
                 -MAX_PPS, MAX_PPS));
-    }
-
-    /**
-     * Splits current composed status to previous status for next inference process
-     */
-    protected void splitStatus() {
     }
 
     @Override

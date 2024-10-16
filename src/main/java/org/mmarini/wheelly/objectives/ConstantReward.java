@@ -27,21 +27,19 @@ package org.mmarini.wheelly.objectives;
 
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WithRobotStatus;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.yaml.Locator;
 
-import static java.lang.Math.abs;
-
 /**
  * A set of reward function
  */
-public interface NoMove {
-    float DEFAULT_VELOCITY_THRESHOLD = 0.01f;
-    RewardFunction NO_MOVE = noMove(DEFAULT_VELOCITY_THRESHOLD);
-    String SCHEMA_NAME = "https://mmarini.org/wheelly/objective-nomove-schema-0.1";
+public interface ConstantReward {
+    String SCHEMA_NAME = "https://mmarini.org/wheelly/objective-constant-schema-0.1";
+
+    static RewardFunction constantReward(double reward) {
+        return (s0, a, s1) -> reward;
+    }
 
     /**
      * Returns the reward function from configuration
@@ -51,34 +49,7 @@ public interface NoMove {
      */
     static RewardFunction create(JsonNode root, Locator locator) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-        float velocityThreshold = (float) locator.path("velocityThreshold").getNode(root).asDouble(DEFAULT_VELOCITY_THRESHOLD);
-        return noMove(velocityThreshold);
-    }
-
-    /**
-     * Returns the function that rewards the no move behavior
-     *
-     * @param velocityThreshold the velocity threshold
-     */
-    static RewardFunction noMove(float velocityThreshold) {
-        return (s0, a, s1) -> {
-            if (s1 instanceof WithRobotStatus withRobotStatus) {
-                RobotStatus status = withRobotStatus.getRobotStatus();
-                if ((abs(status.leftPps()) < velocityThreshold
-                    && abs(status.rightPps()) < velocityThreshold
-                        && status.sensorDirection().toIntDeg() == 0)) {
-                    return 1;
-                }
-            }
-            return 0;
-        };
-
-    }
-
-    /**
-     * Returns the function that rewards the no move behavior
-     */
-    static RewardFunction noMove() {
-        return NO_MOVE;
+        double reward = locator.path("reward").getNode(root).asDouble();
+        return constantReward(reward);
     }
 }
