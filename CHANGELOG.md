@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#449](https://github.com/m-marini/wheellyj/issues/449): Add find label state in state machine engine
 - Issue [#452](https://github.com/m-marini/wheellyj/issues/452): Add label state to polar environment
 - Issue [#458](https://github.com/m-marini/wheellyj/issues/458): Implement the shaping technique to reward design
+- Issue [#462](https://github.com/m-marini/wheellyj/issues/462): Add kpi descriptions to generated report
 
 ### Changed
 
