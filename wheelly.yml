@@ -53,7 +53,7 @@ environments:
   polarMapEnv:
     $schema: https://mmarini.org/wheelly/env-polar-schema-2.0
     class: org.mmarini.wheelly.envs.PolarRobotEnv
-    objective: objectives/labelFinder
+    objective: objectives/noMove
     interval: 10
     commandInterval: 600
     reactionInterval: 300
@@ -113,11 +113,11 @@ agents:
     numSteps: 256
     numEpochs: 2
     batchSize: 32
-    eta: 1e-3
+    eta: 1e-6
     alphas:
-      sensorAction: 30e-3
-      speed: 300e-3
-      direction: 30e-3
+      sensorAction: 1e-6
+      speed: 1e-6
+      direction: 1e-6
     lambda: 0.5
     inputProcess:
       - name: canMoveFeatures

@@ -18,6 +18,8 @@ function generateKpiReport(hFile, dataPath, reportPath, id, kpiTitle, mode, vert
     fprintf(hFile, "\n");
     fprintf(hFile, "## %s\n", kpiTitle);
     fprintf(hFile, "\n");
+    importFile(hFile, ["templates/" id ".md"]);
+    fprintf(hFile, "\n");
     fprintf(hFile, "| KPI    |             |\n");
     fprintf(hFile, "|--------|------------:|\n");
     fprintf(hFile, "| Steps  | %11d |\n", n);
@@ -51,10 +53,10 @@ function generateKpiReport(hFile, dataPath, reportPath, id, kpiTitle, mode, vert
       fprintf(hFile, "| %10.3G | %7d | %9.3G |\n", histogram(2, i), histogram(1, i), histogram(1, i) * 100 / n);
     endfor
 
-    fprintf(hFile, "\n");
-    fprintf(hFile, "### %s notes\n", kpiTitle);
-    fprintf(hFile, "\n");
-    fprintf(hFile, "[Notes]\n");
+    #fprintf(hFile, "\n");
+    #fprintf(hFile, "### %s notes\n", kpiTitle);
+    #fprintf(hFile, "\n");
+    #fprintf(hFile, "[Notes]\n");
 
     fprintf(hFile, "\n");
     fprintf(hFile, "### %s chart\n", kpiTitle);
