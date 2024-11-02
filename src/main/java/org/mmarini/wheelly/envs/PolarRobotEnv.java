@@ -241,18 +241,17 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithRadarMap, Wit
     }
 
     @Override
-    protected void latchStatus(RobotStatus ignored) {
-        PolarRobotState currentState = (PolarRobotState) getCurrentState();
-        RobotStatus robotStatus = currentState.robotStatus();
+    protected void latchStatus(RobotStatus status) {
+        PolarRobotState currentState = ((PolarRobotState) getCurrentState()).setRobotStatus(status);
         RadarMap radarMap = currentState.radarMap();
         PolarMap polarMap = currentState.polarMap();
-        polarMap = polarMap.update(radarMap, robotStatus.location(), robotStatus.direction(), minRadarDistance, maxRadarDistance);
-        setCurrentState(currentState.setPolarMap(polarMap));
+        polarMap = polarMap.update(radarMap, status.location(), status.direction(), minRadarDistance, maxRadarDistance);
+        setCurrentState(currentState.setPolarMap(polarMap).setRobotStatus(status));
     }
 
     @Override
     protected void onStatus(RobotStatus status) {
-        PolarRobotState currentState = (PolarRobotState) getCurrentState();
+        PolarRobotState currentState = ((PolarRobotState) getCurrentState()).setRobotStatus(status);
         RadarMap newRadarMap = currentState.radarMap().update(status);
         setCurrentState(currentState.setRadarMap(newRadarMap));
     }

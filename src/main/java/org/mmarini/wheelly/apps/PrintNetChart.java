@@ -222,36 +222,36 @@ public class PrintNetChart {
          */
         private void printLayer(String name) {
             output.print(dictionary.get(name));
-            output.print("[\"");
+            output.print("[\"`");
             output.print(name);
             TDLayer layer = network.layers().get(name);
             switch (layer) {
                 case TDDense tdDense2 -> {
-                    output.printf("\\nDense(%d)",
+                    output.printf("\nDense(%d)",
                             network.size(name));
                     float dropOut = tdDense2.dropOut();
                     if (dropOut != 1F) {
-                        output.printf("\\ndropOut=%.3f", dropOut);
+                        output.printf("\ndropOut=%.3f", dropOut);
                     }
                 }
-                case TDConcat ignored -> output.print("\\nConcat");
-                case TDSum ignored -> output.print("\\nSum");
-                case TDTanh ignored -> output.print("\\nTanh");
-                case TDRelu ignored -> output.print("\\nRelu");
-                case TDLinear tdLinear2 -> output.printf("\\nLin(%.3f, %.3f)",
+                case TDConcat ignored -> output.print("\nConcat");
+                case TDSum ignored -> output.print("\nSum");
+                case TDTanh ignored -> output.print("\nTanh");
+                case TDRelu ignored -> output.print("\nRelu");
+                case TDLinear tdLinear2 -> output.printf("\nLin(%.3f, %.3f)",
                         tdLinear2.bias(),
                         tdLinear2.weight());
-                case TDSoftmax tdSoftmax2 -> output.printf("\\nSoftmax(%.3f)",
+                case TDSoftmax tdSoftmax2 -> output.printf("\nSoftmax(%.3f)",
                         tdSoftmax2.temperature());
-                case TDDropOut tdDropout -> output.printf("\\nDropout(%.3f)", tdDropout.dropOut());
+                case TDDropOut tdDropout -> output.printf("\nDropout(%.3f)", tdDropout.dropOut());
                 case null -> {
                     SignalSpec spec = state.get(name);
-                    output.printf("\\nInput(%d)", spec.size());
+                    output.printf("\nInput(%d)", spec.size());
                 }
                 default -> {
                 }
             }
-            output.println("\"]");
+            output.println("`\"]");
         }
     }
 }

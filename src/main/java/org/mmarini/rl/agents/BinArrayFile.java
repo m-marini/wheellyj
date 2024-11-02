@@ -265,7 +265,8 @@ public class BinArrayFile implements ArrayWriter, ArrayReader {
         if (shape == null) {
             throw new IOException(format("Missing shape in file %s", file));
         }
-        return (dataFile.length() - dataOffset) / recordSize / 4;
+        long fileSize = dataFile.length();
+        return (fileSize - dataOffset) / recordSize / 4;
     }
 
     @Override

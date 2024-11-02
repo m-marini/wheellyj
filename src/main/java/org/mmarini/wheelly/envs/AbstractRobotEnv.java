@@ -94,7 +94,7 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
         int action = actions.get("direction").getInt(0);
         int n = ((IntSignalSpec) getActions().get("direction")).numValues();
         return Complex.fromDeg(linear(action,
-                0, n - 1,
+                0, n,
                 MIN_DIRECTION_ACTION, MAX_DIRECTION_ACTION));
     }
 

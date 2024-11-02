@@ -197,6 +197,31 @@ public record ReportProcess(String reportKey,
     }
 
     /**
+     * Returns the builder of report of geometric mean of value
+     *
+     * @param reportKey the report key
+     */
+    public static Builder gmReport(String reportKey) {
+        return new Builder() {
+
+            @Override
+            public ReportProcess build(File path, File reportPath, long batchSize) {
+                ArrayReader reader = new MapArrayReader(BinArrayFile.createByKey(path, reportKey), ReportProcess::gm);
+                return new ReportProcess(reportKey + ".gm", reader, meanAggregator(), reportPath, batchSize);
+            }
+
+            @Override
+            public boolean canCreate(File path) {
+                try (BinArrayFile file = BinArrayFile.createByKey(path, reportKey)) {
+                    return file.file().canRead();
+                } catch (IOException e) {
+                    return false;
+                }
+            }
+        };
+    }
+
+    /**
      * Returns the linear regression by parameters
      *
      * @param x      the input data
@@ -243,6 +268,20 @@ public record ReportProcess(String reportKey,
                 try (INDArray geoMean = Transforms.exp(meanLog)) {
                     return max.divi(geoMean);
                 }
+            }
+        }
+    }
+
+    /**
+     * Returns the geometric mean
+     *
+     * @param records the records
+     */
+    static INDArray gm(INDArray records) {
+        INDArray max = records.max(true, 1);
+        try (INDArray dataLog = Transforms.log(records)) {
+            try (INDArray meanLog = dataLog.mean(true, 1)) {
+                return Transforms.exp(meanLog);
             }
         }
     }

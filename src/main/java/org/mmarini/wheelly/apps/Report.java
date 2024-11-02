@@ -53,15 +53,20 @@ public class Report {
 
             ReportProcess.meanReport("delta"), // td error
 
+            ReportProcess.meanReport("trainingLayers.critic.values"), // Critic
+
             ReportProcess.maxReport("trainingLayers.direction.values"), // max probability for direction
+            ReportProcess.gmReport("trainingLayers.direction.values"), // gm probability for direction
             ReportProcess.maxMinRatioReport("trainingLayers.direction.values"), // max/min probability ratio for direction
             ReportProcess.maxGMRatioReport("trainingLayers.direction.values"), // max/mean probability for direction
 
             ReportProcess.maxReport("trainingLayers.speed.values"), // max probability for speed
+            ReportProcess.gmReport("trainingLayers.speed.values"), // gm probability for direction
             ReportProcess.maxMinRatioReport("trainingLayers.speed.values"),
             ReportProcess.maxGMRatioReport("trainingLayers.speed.values"),
 
             ReportProcess.maxReport("trainingLayers.sensorAction.values"), // max probability for speed
+            ReportProcess.gmReport("trainingLayers.sensorAction.values"), // gm probability for direction
             ReportProcess.maxMinRatioReport("trainingLayers.sensorAction.values"), // max probability for direction
             ReportProcess.maxGMRatioReport("trainingLayers.sensorAction.values"),
 

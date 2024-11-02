@@ -10,7 +10,7 @@ ANN output layers are generally of the tanh -> softmax type, so the maximum valu
 
 The maximum value of the ratio is determined by the temperature T=0.434 of softmax layer and the number of actions n=9.
 
-**The maximum value of the ratio is 60**
+**The maximum value of the ratio is 63**
 
-1 / e^(-2 (n-1) / (n T))
+e^(2 (n-1) / (n T))
 

@@ -70,6 +70,10 @@
             <outputDirectory>bin</outputDirectory>
             <filtered>false</filtered>
         </fileSet>
+        <fileSet>
+            <directory>octave</directory>
+            <outputDirectory>octave</outputDirectory>
+        </fileSet>
     </fileSets>
     <dependencySets>
         <dependencySet>
