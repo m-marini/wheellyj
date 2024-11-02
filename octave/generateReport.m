@@ -1,6 +1,6 @@
 # Generate the report
 function generateReport(dataPath, reportPath)
-  filename = [reportPath "/report.md"];
+  filename = [reportPath, "/report-" strftime("%Y%m%d%H%M", localtime(time ())), ".md"];
   mkdir(reportPath);
 
   hFile = fopen(filename, "w");
@@ -21,14 +21,18 @@ function generateReport(dataPath, reportPath)
 
   fprintf(hFile, "\n");
   generateKpiReport(hFile, [dataPath "/reward"], reportPath, "reward", "Reward", mode);
+  generateKpiReport(hFile, [dataPath "trainingLayers/critic/values"], reportPath, "critic", "Critic", mode);
   generateKpiReport(hFile, [dataPath "/delta"], reportPath, "delta", "Delta", mode);
   generateKpiReport(hFile, [dataPath "/trainingLayers/direction/values/max"], reportPath, "policy_direction", "Direction max prob.", mode);
+  generateKpiReport(hFile, [dataPath "/trainingLayers/direction/values/gm"], reportPath, "policy_direction_gm", "Direction prob. geometric mean", mode);
   generateKpiReport(hFile, [dataPath "/trainingLayers/direction/values/maxGMRatio"], reportPath, "policy_direction_ratio", "Direction max/mean ratio", mode);
   generateKpiReport(hFile, [dataPath "/trainingLayers/direction/values/maxMinRatio"], reportPath, "policy_direction_ratio_min", "Direction max/min ratio", mode);
   generateKpiReport(hFile, [dataPath "/trainingLayers/speed/values/max"], reportPath, "policy_speed", "Speed max prob.", mode);
+  generateKpiReport(hFile, [dataPath "/trainingLayers/speed/values/gm"], reportPath, "policy_speed_gm", "Speed prob. geometric mean.", mode);
   generateKpiReport(hFile, [dataPath "/trainingLayers/speed/values/maxGMRatio"], reportPath, "policy_speed_ratio", "Speed max/mean ratio", mode);
   generateKpiReport(hFile, [dataPath "/trainingLayers/speed/values/maxMinRatio"], reportPath, "policy_speed_ratio_min", "Speed max/min ratio", mode);
   generateKpiReport(hFile, [dataPath "/trainingLayers/sensorAction/values/max"], reportPath, "policy_sensorAction", "Sensor direction max prob.", mode);
+  generateKpiReport(hFile, [dataPath "/trainingLayers/sensorAction/values/gm"], reportPath, "policy_sensorAction_gm", "Sensor direction prob. geometric mean.", mode);
   generateKpiReport(hFile, [dataPath "/trainingLayers/sensorAction/values/maxGMRatio"], reportPath, "policy_sensorAction_ratio", "Sensor direction  max/mean ratio", mode);
   generateKpiReport(hFile, [dataPath "/trainingLayers/sensorAction/values/maxMinRatio"], reportPath, "policy_sensorAction_ratio_min", "Sensor direction  max/min ratio", mode);
   generateKpiReport(hFile, [dataPath "/deltaGrads/critic"], reportPath, "eta_delta_critic", "Critic Error RMS", mode);

@@ -244,6 +244,11 @@ public class Wheelly {
         }
         JFrame frame = createFrame(Messages.getString("Wheelly.title"), new JScrollPane(envPanel));
         frame.getContentPane().add(createToolBar(), BorderLayout.NORTH);
+        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
+                .filter(ev ->
+                        ev.getID() == WindowEvent.WINDOW_OPENED)
+                .doOnNext(this::handleWindowOpened).subscribe();
+
         JFrame comFrame = comMonitor.createFrame();
         JFrame sensorFrame = sensorMonitor.createFrame();
 
@@ -309,7 +314,8 @@ public class Wheelly {
         JFrame frame = createFrame(Messages.getString("Wheelly.title"), panel);
         frame.getContentPane().add(createToolBar(), BorderLayout.NORTH);
         SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
-                .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
+                .filter(ev ->
+                        ev.getID() == WindowEvent.WINDOW_OPENED)
                 .doOnNext(this::handleWindowOpened).subscribe();
         center(frame);
         allFrames = List.of(frame);
@@ -559,9 +565,9 @@ public class Wheelly {
                 .filter(r -> r instanceof SimRobot)
                 .flatMap(r -> ((SimRobot) r).obstaclesMap())
                 .ifPresent(map -> {
+                    envPanel.setObstacleSize(map.gridSize());
                     envPanel.setHinderedPoints(map.hindered().toList());
                     envPanel.setLabeledPoints(map.labeled().toList());
-                    envPanel.setObstacleSize(map.gridSize());
                 });
         environment.start();
     }

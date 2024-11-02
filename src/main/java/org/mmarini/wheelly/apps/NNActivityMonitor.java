@@ -40,7 +40,7 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.BinArrayFile;
 import org.mmarini.rl.agents.KeyFileMap;
-import org.mmarini.rl.agents.TDAgentSingleNN;
+import org.mmarini.rl.agents.PPOAgent;
 import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.SwingUtils;
@@ -55,15 +55,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.table.AbstractTableModel;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.DoublePredicate;
 import java.util.function.Predicate;
 
+import static java.lang.Math.min;
 import static java.lang.String.format;
 import static org.mmarini.wheelly.apps.Wheelly.WHEELLY_SCHEMA_YML;
 import static org.mmarini.wheelly.swing.Utils.createFrame;
@@ -76,6 +81,7 @@ public class NNActivityMonitor {
     public static final int SIM_PERIOD = 100;
     public static final int PLAY_DIVIDER = 3;
     private static final Logger logger = LoggerFactory.getLogger(NNActivityMonitor.class);
+    public static final int BUFFER_SIZE = 1024;
 
     static {
         Nd4j.zeros(1);
@@ -124,15 +130,26 @@ public class NNActivityMonitor {
     private final NNActivityPanel activityPanel;
     private final JSlider timeLine;
     private final JButton rewind;
+    private final JButton forwardStep;
+    private final JButton backStep;
     private final JToggleButton play;
     private final JToggleButton fastPlay;
     private final JButton stop;
-
+    private final JButton findRewardBtn;
+    private final JButton findPunishmentBtn;
+    private final JFormattedTextField step;
+    private final JTable dataTable;
+    private final AbstractTableModel dataModel;
+    private final JList<String> layers;
+    private final JFormattedTextField reward;
     private TDNetwork network;
     private Map<String, BinArrayFile> signalFiles;
-    private boolean playing;
     private int timeDivider;
-    private BinArrayFile refFile;
+    private long pos;
+    private BinArrayFile rewardFile;
+    private Map<String, INDArray> activity;
+    private long size;
+    private INDArray detailData;
 
     /**
      * Creates the application
@@ -147,16 +164,72 @@ public class NNActivityMonitor {
         this.play = SwingUtils.createToolBarToggleButton("NNActivityMonitor.play");
         this.fastPlay = SwingUtils.createToolBarToggleButton("NNActivityMonitor.fastPlay");
         this.stop = SwingUtils.createButton("NNActivityMonitor.stop");
+        this.step = new JFormattedTextField();
+        this.reward = new JFormattedTextField();
+        this.forwardStep = SwingUtils.createButton("NNActivityMonitor.forward");
+        this.backStep = SwingUtils.createButton("NNActivityMonitor.backward");
+        this.findRewardBtn = SwingUtils.createButton("NNActivityMonitor.findReward");
+        this.findPunishmentBtn = SwingUtils.createButton("NNActivityMonitor.findPunishment");
+        this.layers = new JList<>();
+        this.dataModel = new AbstractTableModel() {
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                return columnIndex == 1 ? Float.class : String.class;
+            }
+
+            @Override
+            public int getColumnCount() {
+                return 2;
+            }
+
+            @Override
+            public String getColumnName(int column) {
+                return Messages.getString(column == 0
+                        ? "NNActivityMonitor.detailIndex.columnName"
+                        : "NNActivityMonitor.detailValue.name");
+            }
+
+            @Override
+            public int getRowCount() {
+                return detailData != null ? (int) detailData.size(1) : 0;
+            }
+
+            @Override
+            public Object getValueAt(int rowIndex, int columnIndex) {
+                return columnIndex == 0
+                        ? format(Messages.getString("NNActivityMonitor.detailIndex.name"), rowIndex)
+                        : detailData != null
+                        ? detailData.getFloat(0L, (long) rowIndex)
+                        : Float.NaN;
+            }
+        };
+        dataTable = new JTable(dataModel);
+
+        step.setValue(0);
+        step.setColumns(5);
+        step.setEditable(false);
+        step.setHorizontalAlignment(JTextField.RIGHT);
+
+        reward.setValue(0);
+        reward.setColumns(10);
+        reward.setEditable(false);
+        reward.setHorizontalAlignment(JTextField.RIGHT);
 
         timeLine.setPaintTicks(true);
         timeLine.setPaintLabels(true);
         timeLine.setPaintTrack(true);
         timeLine.setValue(0);
 
+        layers.setVisibleRowCount(5);
         rewind.addActionListener(ev -> rewind());
         stop.addActionListener(ev -> stop());
         play.addActionListener(ev -> play());
         fastPlay.addActionListener(ev -> fastPlay());
+        backStep.addActionListener(ev -> moveBackStep());
+        findRewardBtn.addActionListener(ev -> findForReward(x -> x > 0));
+        findPunishmentBtn.addActionListener(ev -> findForReward(x -> x < 0));
+        forwardStep.addActionListener(ev -> moveForwardStep());
+        layers.addListSelectionListener(this::selectedLayer);
         SwingObservable.change(timeLine)
                 .filter(ignored -> !timeLine.getValueIsAdjusting())
                 .doOnNext(ev -> moveTimeline())
@@ -172,7 +245,12 @@ public class NNActivityMonitor {
                 .modify("at,1,0").add(stop)
                 .modify("at,2,0").add(play)
                 .modify("at,3,0").add(fastPlay)
-                .modify("at,4,0 hfill weight,1,0").add(timeLine)
+                .modify("at,4,0").add(backStep)
+                .modify("at,5,0").add(forwardStep)
+                .modify("at,4,1").add(findPunishmentBtn)
+                .modify("at,5,1").add(findRewardBtn)
+                .modify("at,7,0 hfill weight,1,0").add(timeLine)
+                .modify("at,7,1 nofill").add(step)
                 .getContainer();
     }
 
@@ -183,7 +261,48 @@ public class NNActivityMonitor {
         return new GridLayoutHelper<>(new JPanel()).modify("insets,5 center fill")
                 .modify("at,0,0 weight,1,1").add(activityPanel)
                 .modify("at,0,1 weight,1,0").add(createCommandBar())
+                .modify("at,1,0 vspan,2 weight,1,1").add(createDetailPanel())
                 .getContainer();
+    }
+
+    /**
+     * Creates and returns the detail panel
+     */
+    private Component createDetailPanel() {
+        Box layersPanel = Box.createHorizontalBox();
+        layersPanel.add(new JScrollPane(layers));
+        layersPanel.setBorder(BorderFactory.createTitledBorder(Messages.getString("NNActivityMonitor.layers.name")));
+        return new GridLayoutHelper<>(Messages.RESOURCE_BUNDLE,
+                new JPanel()).modify("insets,5")
+                .modify("at,0,0 e").add("NNActivityMonitor.reward.name")
+                .modify("at,1,0 w").add(reward)
+                .modify("at,0,1 center hspan,2 noweight fill").add(layersPanel)
+                .modify("at,0,2 weight,1,1").add(new JScrollPane(dataTable))
+                .getContainer();
+    }
+
+    /**
+     * Finds next reward
+     */
+    private void findForReward(DoublePredicate criterion) {
+        try {
+            long p = pos + 1;
+            while (p < size - 1) {
+                long n = min(size - p, BUFFER_SIZE);
+                rewardFile.seek(p);
+                INDArray data = rewardFile.read(n);
+                for (long i = 0; i < n; i++) {
+                    if (criterion.test(data.getDouble(i, 1))) {
+                        pos = i + p;
+                        updatePlayer();
+                        break;
+                    }
+                }
+                p += n;
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -191,13 +310,16 @@ public class NNActivityMonitor {
      */
     private void fastPlay() {
         if (fastPlay.isSelected()) {
-            playing = true;
             timeDivider = 1;
             play.setSelected(false);
-            timeLine.setEnabled(false);
+            updatePlayer();
         } else {
             stop();
         }
+    }
+
+    private boolean isPlaying() {
+        return fastPlay.isSelected() || play.isSelected();
     }
 
     /**
@@ -212,26 +334,37 @@ public class NNActivityMonitor {
         if (agentLocator.getNode(config).isMissingNode()) {
             throw new IllegalArgumentException(format("Missing node %s", agentLocator));
         }
-        Agent agent = Agent.fromConfig(config, agentLocator, environment);
-        if (agent instanceof TDAgentSingleNN tdagent) {
-            this.network = tdagent.network();
-        } else {
-            throw new IllegalArgumentException(
-                    format("Wrong agent type %s", agent.getClass().getName()));
+        try (
+                Agent agent = Agent.fromConfig(config, agentLocator, environment)) {
+            if (agent instanceof PPOAgent tdAgent) {
+                this.network = tdAgent.network();
+            } else {
+                throw new IllegalArgumentException(
+                        format("Wrong agent type %s", agent.getClass().getName()));
+            }
         }
+        this.layers.setListData(network.forwardSequence().reversed().toArray(String[]::new));
+
     }
 
     /**
      * Loads the signals
      */
     private void loadSignals() throws IOException {
+        // Load reward file
         String source = args.getString("kpis");
+        File sourcePath = new File(source);
+        rewardFile = BinArrayFile.createByKey(sourcePath, "reward");
+        size = rewardFile.size();
+
+        // Extracts source keys
         String[] sourceKeys = network.sourceLayers().stream()
                 .map(name -> "s0." + name)
                 .toArray(String[]::new);
-        File sourcePath = new File(source);
+        // Creates the source files by source keys
         Map<String, BinArrayFile> signalFiles =
                 KeyFileMap.create(sourcePath, sourceKeys);
+        // Validates for missing file
         List<String> missingFiles = Arrays.stream(sourceKeys)
                 .filter(Predicate.not(signalFiles::containsKey))
                 .toList();
@@ -240,27 +373,28 @@ public class NNActivityMonitor {
                     String.join(", ", missingFiles),
                     sourcePath));
         }
-        KeyFileMap.validateSizes(signalFiles.values());
+        // Validates for number of record
+        Collection<BinArrayFile> files = signalFiles.values();
+        KeyFileMap.validateSizes(files);
         this.signalFiles = KeyFileMap.children(signalFiles, "s0");
+    }
+
+    private void moveBackStep() {
+        pos--;
+        updatePlayer();
+    }
+
+    private void moveForwardStep() {
+        pos++;
+        updatePlayer();
     }
 
     /**
      * Move the timeline
      */
     private void moveTimeline() {
-        try {
-            int pos = timeLine.getValue();
-            if (refFile.position() != pos) {
-                stop();
-                KeyFileMap.seek(this.signalFiles, pos);
-                Map<String, INDArray> activity = processNextSignal();
-                if (activity != null) {
-                    activityPanel.setActivity(activity);
-                }
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        pos = timeLine.getValue();
+        updatePlayer();
     }
 
     /**
@@ -268,27 +402,11 @@ public class NNActivityMonitor {
      */
     private void play() {
         if (play.isSelected()) {
-            playing = true;
             timeDivider = PLAY_DIVIDER;
             fastPlay.setSelected(false);
-            timeLine.setEnabled(false);
+            updatePlayer();
         } else {
             stop();
-        }
-    }
-
-    /**
-     * Returns the next signal from player
-     */
-    private Map<String, INDArray> processNextSignal() throws IOException {
-        Map<String, INDArray> signals = KeyFileMap.read(signalFiles, 1);
-        if (signals == null) {
-            stop();
-            return null;
-        } else {
-            long pos = refFile.position();
-            timeLine.setValue((int) pos);
-            return network.forward(signals).state().values();
         }
     }
 
@@ -296,19 +414,9 @@ public class NNActivityMonitor {
      * Rewind the player
      */
     private void rewind() {
-        try {
-            KeyFileMap.seek(signalFiles, 0);
-            Map<String, INDArray> activity = processNextSignal();
-            if (activity != null) {
-                activityPanel.setActivity(activity);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        timeLine.setValue(0);
-        playing = false;
-        play.setSelected(false);
-        fastPlay.setSelected(false);
+        pos = 0;
+        stop();
+        updatePlayer();
     }
 
     /**
@@ -320,8 +428,7 @@ public class NNActivityMonitor {
         // Prepare the input data
         loadSignals();
 
-        this.refFile = this.signalFiles.values().stream().findAny().orElseThrow();
-        long size = refFile.size();
+        long size = rewardFile.size();
         timeLine.setMaximum((int) size);
         timeLine.setMajorTickSpacing((int) (size / 5));
         timeLine.setMinorTickSpacing((int) (size / 20));
@@ -337,24 +444,78 @@ public class NNActivityMonitor {
 
         Flowable.interval(SIM_PERIOD, TimeUnit.MILLISECONDS).
                 observeOn(Schedulers.computation())
-                .filter(ignoerd -> playing)
+                .filter(ignored -> isPlaying())
                 .filter(t -> t % timeDivider == 0)
                 .doOnNext(ignored -> {
-                    Map<String, INDArray> activity = processNextSignal();
-                    if (activity != null) {
-                        activityPanel.setActivity(activity);
-                    }
+                    pos++;
+                    updatePlayer();
                 })
                 .subscribe();
+    }
+
+    private void selectedLayer(ListSelectionEvent event) {
+        if (!event.getValueIsAdjusting()) {
+            updateDetails();
+        }
     }
 
     /**
      * Stop the player
      */
     private void stop() {
-        playing = false;
         play.setSelected(false);
         fastPlay.setSelected(false);
-        timeLine.setEnabled(true);
+        updatePlayer();
+    }
+
+    /**
+     * Updates the detail panel with current activity if any
+     */
+    private void updateDetails() {
+        String key = layers.getSelectedValue();
+        detailData = activity != null && key != null ? activity.get(key + ".values") : null;
+        dataModel.fireTableDataChanged();
+    }
+
+    /**
+     * Processes signal from player
+     */
+    void updatePlayer() {
+        if (pos < size) {
+            try {
+                rewardFile.seek(pos);
+                INDArray rewardRecord = rewardFile.read(1);
+                reward.setValue(rewardRecord.getFloat(0, 0));
+                KeyFileMap.seek(signalFiles, pos);
+                Map<String, INDArray> signals = KeyFileMap.read(signalFiles, 1);
+                if (signals != null) {
+                    this.activity = network.forward(signals).state().values();
+                    if (activity != null) {
+                        activityPanel.setActivity(activity);
+                    }
+                } else {
+                    activity = null;
+                }
+                rewind.setEnabled(pos > 0);
+            } catch (IOException ex) {
+                // EOF
+                play.setSelected(false);
+                fastPlay.setSelected(false);
+            }
+        } else {
+            // EOF
+            play.setSelected(false);
+            fastPlay.setSelected(false);
+        }
+        updateDetails();
+        step.setValue((int) pos);
+        timeLine.setValue((int) pos);
+        rewind.setEnabled(pos > 0);
+        stop.setEnabled(isPlaying());
+        play.setEnabled(pos <= size - 1);
+        fastPlay.setEnabled(pos <= size - 1);
+        backStep.setEnabled(!isPlaying() && pos > 0);
+        forwardStep.setEnabled(!isPlaying() && pos <= size - 1);
+        timeLine.setEnabled(!isPlaying());
     }
 }

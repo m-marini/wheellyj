@@ -42,7 +42,9 @@ public interface AvoidContact {
             (s0, a, s1) -> {
                 if (s1 instanceof WithRobotStatus state) {
                     RobotStatus status = state.getRobotStatus();
-                    return !status.canMoveForward() || !status.canMoveBackward() ? -1 : 0;
+                    return !status.canMoveForward() || !status.canMoveBackward()
+                            ? -1
+                            : 0;
                 } else {
                     return 0;
                 }

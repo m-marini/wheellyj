@@ -53,7 +53,7 @@ environments:
   polarMapEnv:
     $schema: https://mmarini.org/wheelly/env-polar-schema-2.0
     class: org.mmarini.wheelly.envs.PolarRobotEnv
-    objective: objectives/noMove
+    objective: objectives/test
     interval: 10
     commandInterval: 600
     reactionInterval: 300
@@ -75,6 +75,14 @@ environments:
     maxRadarDistance: 3
 
 objectives:
+  test:
+    - $schema: https://mmarini.org/wheelly/objective-avoid-contact-schema-0.1
+      class: org.mmarini.wheelly.objectives.AvoidContact
+    - $schema: https://mmarini.org/wheelly/objective-action-set-schema-0.1
+      class: org.mmarini.wheelly.objectives.ActionSet
+      speed: 9
+      #direction: 13
+      #sensor: 3
   labelFinder:
     - $schema: https://mmarini.org/wheelly/objective-avoid-contact-schema-0.1
       class: org.mmarini.wheelly.objectives.AvoidContact
@@ -113,11 +121,11 @@ agents:
     numSteps: 256
     numEpochs: 2
     batchSize: 32
-    eta: 1e-6
+    eta: 100e-6
     alphas:
-      sensorAction: 1e-6
-      speed: 1e-6
-      direction: 1e-6
+      sensorAction: 0.003
+      speed: 0.003
+      direction: 0.003
     lambda: 0.5
     inputProcess:
       - name: canMoveFeatures
