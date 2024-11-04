@@ -80,8 +80,8 @@ import static org.mmarini.yaml.Utils.fromFile;
 public class NNActivityMonitor {
     public static final int SIM_PERIOD = 100;
     public static final int PLAY_DIVIDER = 3;
-    private static final Logger logger = LoggerFactory.getLogger(NNActivityMonitor.class);
     public static final int BUFFER_SIZE = 1024;
+    private static final Logger logger = LoggerFactory.getLogger(NNActivityMonitor.class);
 
     static {
         Nd4j.zeros(1);
@@ -142,6 +142,7 @@ public class NNActivityMonitor {
     private final AbstractTableModel dataModel;
     private final JList<String> layers;
     private final JFormattedTextField reward;
+    private final JFormattedTextField avgReward;
     private TDNetwork network;
     private Map<String, BinArrayFile> signalFiles;
     private int timeDivider;
@@ -166,6 +167,7 @@ public class NNActivityMonitor {
         this.stop = SwingUtils.createButton("NNActivityMonitor.stop");
         this.step = new JFormattedTextField();
         this.reward = new JFormattedTextField();
+        this.avgReward = new JFormattedTextField();
         this.forwardStep = SwingUtils.createButton("NNActivityMonitor.forward");
         this.backStep = SwingUtils.createButton("NNActivityMonitor.backward");
         this.findRewardBtn = SwingUtils.createButton("NNActivityMonitor.findReward");
@@ -210,10 +212,15 @@ public class NNActivityMonitor {
         step.setEditable(false);
         step.setHorizontalAlignment(JTextField.RIGHT);
 
-        reward.setValue(0);
+        reward.setValue(0F);
         reward.setColumns(10);
         reward.setEditable(false);
         reward.setHorizontalAlignment(JTextField.RIGHT);
+
+        avgReward.setValue(0F);
+        avgReward.setColumns(10);
+        avgReward.setEditable(false);
+        avgReward.setHorizontalAlignment(JTextField.RIGHT);
 
         timeLine.setPaintTicks(true);
         timeLine.setPaintLabels(true);
@@ -276,9 +283,24 @@ public class NNActivityMonitor {
                 new JPanel()).modify("insets,5")
                 .modify("at,0,0 e").add("NNActivityMonitor.reward.name")
                 .modify("at,1,0 w").add(reward)
-                .modify("at,0,1 center hspan,2 noweight fill").add(layersPanel)
-                .modify("at,0,2 weight,1,1").add(new JScrollPane(dataTable))
+                .modify("at,0,1 e").add("NNActivityMonitor.avgReward.name")
+                .modify("at,1,1 w").add(avgReward)
+                .modify("at,0,2 center hspan,2 noweight fill").add(layersPanel)
+                .modify("at,0,3 weight,1,1").add(new JScrollPane(dataTable))
                 .getContainer();
+    }
+
+    /**
+     * Runs player at fast speed
+     */
+    private void fastPlay() {
+        if (fastPlay.isSelected()) {
+            timeDivider = 1;
+            play.setSelected(false);
+            updatePlayer();
+        } else {
+            stop();
+        }
     }
 
     /**
@@ -305,19 +327,6 @@ public class NNActivityMonitor {
         }
     }
 
-    /**
-     * Runs player at fast speed
-     */
-    private void fastPlay() {
-        if (fastPlay.isSelected()) {
-            timeDivider = 1;
-            play.setSelected(false);
-            updatePlayer();
-        } else {
-            stop();
-        }
-    }
-
     private boolean isPlaying() {
         return fastPlay.isSelected() || play.isSelected();
     }
@@ -338,6 +347,7 @@ public class NNActivityMonitor {
                 Agent agent = Agent.fromConfig(config, agentLocator, environment)) {
             if (agent instanceof PPOAgent tdAgent) {
                 this.network = tdAgent.network();
+                this.avgReward.setValue(tdAgent.avgReward());
             } else {
                 throw new IllegalArgumentException(
                         format("Wrong agent type %s", agent.getClass().getName()));
