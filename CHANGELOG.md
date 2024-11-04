@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#452](https://github.com/m-marini/wheellyj/issues/452): Add label state to polar environment
 - Issue [#458](https://github.com/m-marini/wheellyj/issues/458): Implement the shaping technique to reward design
 - Issue [#462](https://github.com/m-marini/wheellyj/issues/462): Add kpi descriptions to generated report
+- Issue [#464](https://github.com/m-marini/wheellyj/issues/464): Simple test targe
+- Issue [#466](https://github.com/m-marini/wheellyj/issues/466): Add average reward in report and activity monitor
 
 ### Changed
 

@@ -50,6 +50,7 @@ public class Report {
 
     private static final List<ReportProcess.Builder> REPORTS = List.of(
             ReportProcess.meanReport("reward"), // Reward
+            ReportProcess.meanReport("avgReward"), // Average reward
 
             ReportProcess.meanReport("delta"), // td error
 

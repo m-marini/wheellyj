@@ -21,6 +21,7 @@ function generateReport(dataPath, reportPath)
 
   fprintf(hFile, "\n");
   generateKpiReport(hFile, [dataPath "/reward"], reportPath, "reward", "Reward", mode);
+  generateKpiReport(hFile, [dataPath "/avgReward"], reportPath, "avgReward", "Average reward", mode);
   generateKpiReport(hFile, [dataPath "trainingLayers/critic/values"], reportPath, "critic", "Critic", mode);
   generateKpiReport(hFile, [dataPath "/delta"], reportPath, "delta", "Delta", mode);
   generateKpiReport(hFile, [dataPath "/trainingLayers/direction/values/max"], reportPath, "policy_direction", "Direction max prob.", mode);

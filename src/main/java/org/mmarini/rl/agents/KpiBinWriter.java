@@ -50,7 +50,7 @@ import static java.util.Objects.requireNonNull;
 public class KpiBinWriter implements AutoCloseable {
     public static final String[] ANALYSIS_KPIS = {
             "^reward$",
-            "^avgRewards$",
+            "^avgReward$",
             "^delta$",
             "^actionMasks\\..*$",
             "^deltaGrads\\..*$",
