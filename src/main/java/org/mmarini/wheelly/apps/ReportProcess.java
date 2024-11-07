@@ -30,7 +30,10 @@ package org.mmarini.wheelly.apps;
 
 import io.reactivex.rxjava3.functions.BiFunction;
 import io.reactivex.rxjava3.functions.Function;
-import org.mmarini.rl.agents.*;
+import org.mmarini.rl.agents.ArrayReader;
+import org.mmarini.rl.agents.BinArrayFile;
+import org.mmarini.rl.agents.CSVWriter;
+import org.mmarini.rl.agents.KeyFileMap;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
@@ -206,7 +209,7 @@ public record ReportProcess(String reportKey,
 
             @Override
             public ReportProcess build(File path, File reportPath, long batchSize) {
-                ArrayReader reader = new MapArrayReader(BinArrayFile.createByKey(path, reportKey), ReportProcess::gm);
+                ArrayReader reader = BinArrayFile.createByKey(path, reportKey).map(ReportProcess::gm);
                 return new ReportProcess(reportKey + ".gm", reader, meanAggregator(), reportPath, batchSize);
             }
 
@@ -241,7 +244,7 @@ public record ReportProcess(String reportKey,
 
             @Override
             public ReportProcess build(File path, File reportPath, long batchSize) {
-                ArrayReader maxReader = new MapArrayReader(BinArrayFile.createByKey(path, reportKey), ReportProcess::maxGmRatio);
+                ArrayReader maxReader = BinArrayFile.createByKey(path, reportKey).map(ReportProcess::maxGmRatio);
                 return new ReportProcess(reportKey + ".maxGMRatio", maxReader, meanAggregator(), reportPath, batchSize);
             }
 
@@ -278,7 +281,6 @@ public record ReportProcess(String reportKey,
      * @param records the records
      */
     static INDArray gm(INDArray records) {
-        INDArray max = records.max(true, 1);
         try (INDArray dataLog = Transforms.log(records)) {
             try (INDArray meanLog = dataLog.mean(true, 1)) {
                 return Transforms.exp(meanLog);
@@ -308,7 +310,7 @@ public record ReportProcess(String reportKey,
 
             @Override
             public ReportProcess build(File path, File reportPath, long batchSize) {
-                ArrayReader maxReader = new MapArrayReader(BinArrayFile.createByKey(path, reportKey), ReportProcess::maxMinRatio);
+                ArrayReader maxReader = BinArrayFile.createByKey(path, reportKey).map(ReportProcess::maxMinRatio);
                 return new ReportProcess(reportKey + ".maxMinRatio", maxReader, meanAggregator(), reportPath, batchSize);
             }
 
@@ -333,7 +335,7 @@ public record ReportProcess(String reportKey,
 
             @Override
             public ReportProcess build(File path, File reportPath, long batchSize) {
-                ArrayReader maxReader = new MapArrayReader(BinArrayFile.createByKey(path, reportKey), a -> a.max(true, 1));
+                ArrayReader maxReader = BinArrayFile.createByKey(path, reportKey).map(a -> a.max(true, 1));
                 return new ReportProcess(reportKey + ".max", maxReader, meanAggregator(), reportPath, batchSize);
             }
 
@@ -478,8 +480,7 @@ public record ReportProcess(String reportKey,
 
             @Override
             public ReportProcess build(File path, File reportPath, long batchSize) {
-                ArrayReader reader = new MapArrayReader(BinArrayFile.createByKey(path, reportKey),
-                        Transforms::abs);
+                ArrayReader reader = BinArrayFile.createByKey(path, reportKey).map(Transforms::abs);
                 return new ReportProcess(reportKey,
                         reader, rmsAggregator(), reportPath, batchSize);
             }
@@ -505,8 +506,7 @@ public record ReportProcess(String reportKey,
 
             @Override
             public ReportProcess build(File path, File reportPath, long batchSize) {
-                ArrayReader sumReader = new MapArrayReader(BinArrayFile.createByKey(path, reportKey),
-                        x -> {
+                ArrayReader sumReader = BinArrayFile.createByKey(path, reportKey).map(x -> {
                             try (INDArray sum = x.sum(true, 1)) {
                                 return Transforms.abs(sum);
                             }

@@ -52,6 +52,8 @@ public class Report {
             ReportProcess.meanReport("reward"), // Reward
             ReportProcess.meanReport("avgReward"), // Average reward
 
+            ReportProcess.meanReport("dr"), // residual reward
+            ReportProcess.meanReport("dv"), // residual prediction
             ReportProcess.meanReport("delta"), // td error
 
             ReportProcess.meanReport("trainingLayers.critic.values"), // Critic

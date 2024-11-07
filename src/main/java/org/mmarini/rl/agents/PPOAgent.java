@@ -29,7 +29,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.MapStream;
-import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.rl.envs.WithSignalsSpec;
@@ -416,7 +415,7 @@ public class PPOAgent extends AbstractAgentNN {
      */
     static INDArray computeAdvantage(INDArray rewards, INDArray avgRewards, INDArray vPrediction) {
         // Computes the advantage A(t) for next n steps t = 0...n-1
-        // we known r(t), R(t) v(t), v(n)
+        // we known reward r(t), R(t), advantage prediction v(t), v(n)
         // A(t,n) = r(t) - R(t) + r(t+1) - R(t+1) + ... + r(n-1) - R(n-1) + v(t) - v(n)
         // A(t,n) = sum_i [r(i) - R(i)] + v(t) - v(n) for i = t...n-1
         // lets returns be a(t,n) = sum_i [r(i) - R(i)] for i = t...n-1
@@ -489,10 +488,10 @@ public class PPOAgent extends AbstractAgentNN {
         TDNetworkState result0 = trainingNet.state();
 
         // Computes the TDError
-        Tuple2<Tuple2<INDArray, INDArray>, Float> t = computeTDError(rewards, vPrediction, avgReward, rewardAlpha);
-        INDArray deltas = t._1._1;
-        INDArray avgRewards = t._1._2;
-        float finalAvgReward = t._2;
+        AdvantageRecord advRecord = computeAdvPrediction(rewards, vPrediction, avgReward, rewardAlpha);
+        INDArray deltas = advRecord.deltas();
+        INDArray avgRewards = advRecord.avgRewards();
+        float finalAvgReward = advRecord.avgReward();
 
         // Computes the advantage prediction
         INDArray adv = computeAdvantage(rewards, avgRewards, vPrediction);
@@ -525,6 +524,8 @@ public class PPOAgent extends AbstractAgentNN {
         Map<String, INDArray> kpis = new HashMap<>(MapUtils.addKeyPrefix(trainingLayers, "trainingLayers."));
         kpis.put("delta", deltas);
         kpis.put("avgReward", avgRewards);
+        kpis.put("dr", advRecord.dr());
+        kpis.put("dv", advRecord.dv());
         kpis.putAll(MapUtils.addKeyPrefix(actionMasks, "actionMasks."));
         kpis.putAll(MapUtils.addKeyPrefix(grads, "grads."));
         kpis.putAll(MapUtils.addKeyPrefix(deltaEtaGrads, "deltaGrads."));
