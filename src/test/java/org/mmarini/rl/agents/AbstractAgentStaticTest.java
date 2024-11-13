@@ -26,7 +26,6 @@
 package org.mmarini.rl.agents;
 
 import org.junit.jupiter.api.Test;
-import org.mmarini.Tuple2;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
@@ -74,18 +73,16 @@ class AbstractAgentStaticTest {
                 a2).reshape(3, 1);
 
         // When compute ppo gradient
-        Tuple2<Tuple2<INDArray, INDArray>, Float> t = AbstractAgentNN.computeTDError(
+        AbstractAgentNN.AdvantageRecord r = AbstractAgentNN.computeAdvPrediction(
                 rewards, vPrediction, initialAvgReward, REWARD_ALPHA);
 
         // Then ...
-        assertNotNull(t);
-        assertNotNull(t._1);
-        assertNotNull(t._2);
-        assertNotNull(t._1._1);
-        assertNotNull(t._1._2);
+        assertNotNull(r);
+        assertNotNull(r.deltas());
+        assertNotNull(r.avgRewards());
 
-        assertThat(t._1._1, matrixCloseTo(expectedDeltas, EPSILON));
-        assertThat(t._1._2, matrixCloseTo(expectedAvg, EPSILON));
-        assertThat(t._2.doubleValue(), closeTo(expectedFinalAvg, EPSILON));
+        assertThat(r.deltas(), matrixCloseTo(expectedDeltas, EPSILON));
+        assertThat(r.avgRewards(), matrixCloseTo(expectedAvg, EPSILON));
+        assertThat((double) r.avgReward(), closeTo(expectedFinalAvg, EPSILON));
     }
 }

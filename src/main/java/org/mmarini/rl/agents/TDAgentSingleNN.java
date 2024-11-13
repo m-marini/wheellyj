@@ -29,7 +29,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.MapStream;
-import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.rl.envs.WithSignalsSpec;
@@ -388,10 +387,10 @@ public class TDAgentSingleNN extends AbstractAgentNN {
         long n = rewards.size(0);
 
         // Computes the TDError
-        Tuple2<Tuple2<INDArray, INDArray>, Float> t = computeTDError(rewards, vPrediction, avgReward, rewardAlpha);
-        INDArray deltas = t._1._1;
-        INDArray avgRewards = t._1._2;
-        float finalAvgReward = t._2;
+        AdvantageRecord advRecord = computeAdvPrediction(rewards, vPrediction, avgReward, rewardAlpha);
+        INDArray deltas = advRecord.deltas();
+        INDArray avgRewards = advRecord.avgRewards();
+        float finalAvgReward = advRecord.avgReward();
 
         Map<String, INDArray> s0 = MapStream.of(states)
                 .mapValues(value -> value.get(NDArrayIndex.interval(0, n), NDArrayIndex.all()))

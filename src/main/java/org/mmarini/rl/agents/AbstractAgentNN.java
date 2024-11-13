@@ -30,7 +30,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.MapStream;
-import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.*;
 import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.rl.nets.TDNetworkState;
@@ -97,41 +96,44 @@ public abstract class AbstractAgentNN implements Agent {
     }
 
     /**
-     * Returns the td error (deltas), the average reward estimation (avgRewards) and the final average reward
+     * Returns the advantage record
      *
-     * @param rewards          the reward (n)
-     * @param vPrediction      the advantage prediction (n+1)
+     * @param rewards          the reward R(n)
+     * @param vPrediction      the advantage prediction v(n+1)
      * @param initialAvgReward the initial average reward
      * @param rewardAlpha      the reward alpha hyperparameter
      */
-    static Tuple2<Tuple2<INDArray, INDArray>, Float> computeTDError(INDArray rewards, INDArray vPrediction, float initialAvgReward, float rewardAlpha) {
-        // Computes the delta(t) (TD error)  and average reward R(t)
-        // delta(t) = r(t) - R(t) + v(t+1) - v(t)
-        // R(t+1) = R(t) + delta(t) alpha
-        // R(t+1) = R(t) + [r(t) - R(t) + v(t+1) - v(t)] alpha
-        // R(t+1) = (1 - alpha) R(t) + alpha [r(t) + v(t+1) - v(t)]
+    static AdvantageRecord computeAdvPrediction(INDArray rewards, INDArray vPrediction, float initialAvgReward, float rewardAlpha) {
+        // Computes the  average reward r(t)
+        // delta(t) = R(t) - r(t) + v(t+1) - v(t)
+        // dv(t) = v(t) - v(t+1)
+        // dr(t) = R(t) - r(t)
+        // delta(t) = dr(t) - dv(t)
+        // r(t+1) = r(t) + delta(t) alpha
+        // r(t+1) = r(t) + [dr(t) - dv(t)] alpha
+        // r(t+1) = r(t) + [R(t) - r(t) - dv(t)] alpha
+        // r(t+1) = (1 - alpha) r(t) + alpha [R(t) - dv(t)]
         long n = rewards.size(0);
         INDArrayIndex interval0n = NDArrayIndex.interval(0, n);
         INDArrayIndex interval1np1 = NDArrayIndex.interval(1, n + 1);
-        INDArray deltas = rewards.like();
-        INDArray avgRewards = rewards.like();
-        float finalAvgReward = initialAvgReward;
         INDArray v0 = vPrediction.get(interval0n, NDArrayIndex.all());
         INDArray v1 = vPrediction.get(interval1np1, NDArrayIndex.all());
-        try (INDArray dv = v0.sub(v1)) {
-            for (long i = 0; i < n; i++) {
-                avgRewards.put((int) i, 0, finalAvgReward);
-                float delta = rewards.getFloat(i, 0) - finalAvgReward - dv.getFloat(i, 0);
-                deltas.put((int) i, 0, delta);
-                // R = R + delta alpha
-                // R = (1 - alpha) R + alpha R_t + alpha (v1 - v0)
-                finalAvgReward += delta * rewardAlpha;
-            }
-            return Tuple2.of(
-                    Tuple2.of(deltas, avgRewards),
-                    finalAvgReward
-            );
+        INDArray dv = v0.sub(v1);
+        INDArray deltas = rewards.like();
+        INDArray dr = rewards.like();
+        INDArray avgRewards = rewards.like();
+        float finalAvgReward = initialAvgReward;
+        for (long i = 0; i < n; i++) {
+            avgRewards.put((int) i, 0, finalAvgReward);
+            float dr1 = rewards.getFloat(i, 0) - finalAvgReward;
+            dr.putScalar(i, dr1);
+            float delta = dr1 - dv.getFloat(i, 0);
+            deltas.put((int) i, 0, delta);
+            // R = R + delta alpha
+            // R = (1 - alpha) R + alpha R_t + alpha (v1 - v0)
+            finalAvgReward += delta * rewardAlpha;
         }
+        return new AdvantageRecord(dr, dv, deltas, avgRewards, finalAvgReward);
     }
 
     /**
@@ -205,7 +207,6 @@ public abstract class AbstractAgentNN implements Agent {
         }
         return node;
     }
-
     protected final Map<String, SignalSpec> state;
     protected final Map<String, SignalSpec> actions;
     protected final float rewardAlpha;
@@ -226,7 +227,6 @@ public abstract class AbstractAgentNN implements Agent {
     protected boolean backedUp;
     protected int savingStepCounter;
     protected float eta;
-
     /**
      * Creates a random behavior agent
      *
@@ -598,4 +598,7 @@ public abstract class AbstractAgentNN implements Agent {
 
     @Override
     public abstract AbstractAgentNN trajectory(List<Environment.ExecutionResult> trajectory);
+
+    record AdvantageRecord(INDArray dr, INDArray dv, INDArray deltas, INDArray avgRewards, float avgReward) {
+    }
 }
