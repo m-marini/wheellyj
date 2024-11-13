@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#462](https://github.com/m-marini/wheellyj/issues/462): Add kpi descriptions to generated report
 - Issue [#464](https://github.com/m-marini/wheellyj/issues/464): Simple test targe
 - Issue [#466](https://github.com/m-marini/wheellyj/issues/466): Add average reward in report and activity monitor
+- Issue [#468](https://github.com/m-marini/wheellyj/issues/468): Add differential comparison
 
 ### Changed
 
