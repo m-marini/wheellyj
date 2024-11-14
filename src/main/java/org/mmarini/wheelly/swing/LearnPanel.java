@@ -59,8 +59,8 @@ public class LearnPanel extends JPanel {
             3,
             10,
             30,
-            300,
-            100
+            100,
+            300
     };
     private static final double[] ETA_VALUES = new double[]{
             1e-6,
@@ -189,7 +189,7 @@ public class LearnPanel extends JPanel {
     }
 
     /**
-     * Returns the learning alphas flows
+     * Returns the learning alpha flows
      */
     public Flowable<Map<String, Float>> readActionAlphas() {
         return actionAlphasProcessor;

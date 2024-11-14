@@ -123,9 +123,9 @@ agents:
     batchSize: 32
     eta: 100e-6
     alphas:
-      sensorAction: 0.003
-      speed: 0.003
-      direction: 0.003
+      direction: 30
+      sensorAction: 30
+      speed: 30
     lambda: 0.5
     inputProcess:
       - name: canMoveFeatures
