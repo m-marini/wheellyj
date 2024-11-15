@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 
 - Issue [#451](https://github.com/m-marini/wheellyj/issues/451): Wrong target in exploring state
+- Issue [#470](https://github.com/m-marini/wheellyj/issues/470): Wrong alpha panel slider value greater than 100
 
 ## [0.17.0] 2024-08-24
 
