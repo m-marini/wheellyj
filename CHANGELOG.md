@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.18.0] 2024-11-15
+
 ### Added
 
 - Issue [#442](https://github.com/m-marini/wheellyj/issues/442): Add web cam processing

@@ -5,6 +5,19 @@ The code of Arduino controller is at [Wheellino project](https://github.com/m-ma
 
 The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
+## Release 0.18.0
+
+- Add web cam processing
+- Add labels in polar radar map
+- Add find label state in state machine engine
+- Add label state to polar environment
+- Implement the shaping technique to reward design
+- Add kpi descriptions to generated report
+- Simple test targe
+- Add average reward in report and activity monitor
+- Add differential comparison
+- Add rotation to target direction at move state
+
 ## Release 0.17.0
 
 - Add PPO alghorithm
