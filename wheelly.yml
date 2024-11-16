@@ -78,10 +78,9 @@ objectives:
   test:
     - $schema: https://mmarini.org/wheelly/objective-avoid-contact-schema-0.1
       class: org.mmarini.wheelly.objectives.AvoidContact
-    - $schema: https://mmarini.org/wheelly/objective-action-set-schema-0.1
+    - $schema: https://mmarini.org/wheelly/objective-action-set-schema-1.0
       class: org.mmarini.wheelly.objectives.ActionSet
-      speed: 9
-      #direction: 13
+      move: 112 # 9 / 2 + 9 * 24 / 2
       #sensor: 3
   labelFinder:
     - $schema: https://mmarini.org/wheelly/objective-avoid-contact-schema-0.1
@@ -121,11 +120,10 @@ agents:
     numSteps: 256
     numEpochs: 2
     batchSize: 32
-    eta: 100e-6
+    eta: 100e-9
     alphas:
-      direction: 30
-      sensorAction: 30
-      speed: 30
+      move: 100
+      sensorAction: 100
     lambda: 0.5
     inputProcess:
       - name: canMoveFeatures
@@ -237,24 +235,15 @@ agents:
             - hidden2
         layers:
           - type: relu
-      direction:
+      move:
         input: resnet2
         layers:
           - type: dense
-            outputSize: 24
+            outputSize: 216
             maxAbsWeights: 1E2
           - type: tanh
           - type: softmax
-            temperature: 0.434
-      speed:
-        input: resnet2
-        layers:
-          - type: dense
-            maxAbsWeights: 1E2
-            outputSize: 10
-          - type: tanh
-          - type: softmax
-            temperature: 0.434
+            temperature: 0.29
       sensorAction:
         input: resnet2
         layers:
@@ -270,7 +259,7 @@ agents:
           - type: dense
             outputSize: 1
             maxAbsWeights: 1E2
-          - type: tanh
-          - type: linear
-            b: 0
-            w: 3
+#          - type: tanh
+#          - type: linear
+#            b: 0
+#            w: 3

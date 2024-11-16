@@ -12,8 +12,8 @@ ANN output layers are generally of the tanh -> softmax type, so the maximum valu
 
 It is determined by the temperature T=0.434 of softmax layer
 
-e^(2 / T)
+$e^\frac{2}{T}$
 
  If we consider the tanh layer saturated when the output of layer is greater than of 0.96 or less than -0.96 _abs(input of tanh) >= 2_ then **the ratio of saturated layer are greater than 83**
  
- e^(2 * 0.96 / T)
+ $e^{0.96\frac{2}{T}}$

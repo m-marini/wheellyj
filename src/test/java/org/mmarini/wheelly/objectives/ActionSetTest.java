@@ -45,25 +45,22 @@ class ActionSetTest {
 
     @ParameterizedTest
     @CsvSource({
-            "1, 0,0,0",
-            "0, 1,0,0",
-            "0, 0,1,0",
-            "0, 0,0,1",
+            "1, 0,0",
+            "0, 0,1",
+            "0, 1,0",
+            "0, 1,1",
     })
     void createAll(double expected,
-                   int speed,
-                   int direction,
+                   int move,
                    int sensor) throws IOException {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + ActionSet.SCHEMA_NAME,
                 "class: " + ActionSet.class.getName(),
-                "direction: 0",
-                "speed: 0",
+                "move: 0",
                 "sensor: 0"));
         RewardFunction f = ActionSet.create(root, Locator.root());
         Map<String, Signal> action = Map.of(
-                "speed", IntSignal.create(speed),
-                "direction", IntSignal.create(direction),
+                "move", IntSignal.create(move),
                 "sensorAction", IntSignal.create(sensor)
         );
         double result = f.apply(null, action, null);
@@ -73,23 +70,21 @@ class ActionSetTest {
 
     @ParameterizedTest
     @CsvSource({
-            "1, 0,0,0",
-            "1, 1,0,0",
-            "0, 0,1,0",
-            "1, 0,0,1",
+            "1, 0,0",
+            "1, 0,1",
+            "0, 1,0",
+            "0, 1,1",
     })
-    void createDirection(double expected,
-                         int speed,
-                         int direction,
+    void createMoveTest(double expected,
+                        int move,
                          int sensor) throws IOException {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + ActionSet.SCHEMA_NAME,
                 "class: " + ActionSet.class.getName(),
-                "direction: 0"));
+                "move: 0"));
         RewardFunction f = ActionSet.create(root, Locator.root());
         Map<String, Signal> action = Map.of(
-                "speed", IntSignal.create(speed),
-                "direction", IntSignal.create(direction),
+                "move", IntSignal.create(move),
                 "sensorAction", IntSignal.create(sensor)
         );
         double result = f.apply(null, action, null);
@@ -99,14 +94,13 @@ class ActionSetTest {
 
     @ParameterizedTest
     @CsvSource({
-            "1, 0,0,0",
-            "1, 1,0,0",
-            "1, 0,1,0",
-            "0, 0,0,1",
+            "1, 0,0",
+            "0, 0,1",
+            "1, 1,0",
+            "0, 1,1",
     })
     void createSensor(double expected,
-                      int speed,
-                      int direction,
+                      int move,
                       int sensor) throws IOException {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + ActionSet.SCHEMA_NAME,
@@ -114,34 +108,7 @@ class ActionSetTest {
                 "sensor: 0"));
         RewardFunction f = ActionSet.create(root, Locator.root());
         Map<String, Signal> action = Map.of(
-                "speed", IntSignal.create(speed),
-                "direction", IntSignal.create(direction),
-                "sensorAction", IntSignal.create(sensor)
-        );
-        double result = f.apply(null, action, null);
-
-        assertThat(result, closeTo(expected, 1e-4));
-    }
-
-    @ParameterizedTest
-    @CsvSource({
-            "1, 0,0,0",
-            "0, 1,0,0",
-            "1, 0,1,0",
-            "1, 0,0,1",
-    })
-    void createSpeed(double expected,
-                     int speed,
-                     int direction,
-                     int sensor) throws IOException {
-        JsonNode root = Utils.fromText(TestFunctions.text("---",
-                "$schema: " + ActionSet.SCHEMA_NAME,
-                "class: " + ActionSet.class.getName(),
-                "speed: 0"));
-        RewardFunction f = ActionSet.create(root, Locator.root());
-        Map<String, Signal> action = Map.of(
-                "speed", IntSignal.create(speed),
-                "direction", IntSignal.create(direction),
+                "move", IntSignal.create(move),
                 "sensorAction", IntSignal.create(sensor)
         );
         double result = f.apply(null, action, null);

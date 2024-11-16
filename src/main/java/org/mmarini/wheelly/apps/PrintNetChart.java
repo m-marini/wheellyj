@@ -75,7 +75,7 @@ public class PrintNetChart {
                 .action(Arguments.version())
                 .help("show current version");
         parser.addArgument("-c", "--config")
-                .setDefault("print-net.yml")
+                .setDefault("wheelly.yml")
                 .help("specify controller yaml configuration file");
         parser.addArgument("-o", "--output")
                 .setDefault("output.md")

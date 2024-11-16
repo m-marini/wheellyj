@@ -58,28 +58,21 @@ public class Report {
 
             ReportProcess.meanReport("trainingLayers.critic.values"), // Critic
 
-            ReportProcess.maxReport("trainingLayers.direction.values"), // max probability for direction
-            ReportProcess.gmReport("trainingLayers.direction.values"), // gm probability for direction
-            ReportProcess.maxMinRatioReport("trainingLayers.direction.values"), // max/min probability ratio for direction
-            ReportProcess.maxGMRatioReport("trainingLayers.direction.values"), // max/mean probability for direction
+            ReportProcess.maxReport("trainingLayers.move.values"), // max probability for move
+            ReportProcess.gmReport("trainingLayers.move.values"), // gm probability for move
+            ReportProcess.maxMinRatioReport("trainingLayers.move.values"), // max/min probability ratio for move
+            ReportProcess.maxGMRatioReport("trainingLayers.move.values"), // max/mean probability for move
 
-            ReportProcess.maxReport("trainingLayers.speed.values"), // max probability for speed
-            ReportProcess.gmReport("trainingLayers.speed.values"), // gm probability for direction
-            ReportProcess.maxMinRatioReport("trainingLayers.speed.values"),
-            ReportProcess.maxGMRatioReport("trainingLayers.speed.values"),
-
-            ReportProcess.maxReport("trainingLayers.sensorAction.values"), // max probability for speed
-            ReportProcess.gmReport("trainingLayers.sensorAction.values"), // gm probability for direction
-            ReportProcess.maxMinRatioReport("trainingLayers.sensorAction.values"), // max probability for direction
+            ReportProcess.maxReport("trainingLayers.sensorAction.values"), // max probability for sensor
+            ReportProcess.gmReport("trainingLayers.sensorAction.values"), // gm probability for sensor
+            ReportProcess.maxMinRatioReport("trainingLayers.sensorAction.values"), // max probability for sensor
             ReportProcess.maxGMRatioReport("trainingLayers.sensorAction.values"),
 
             ReportProcess.rmsReport("deltaGrads.critic"), // delta eta gradient for critic
-            ReportProcess.sumRmsReport("deltaGrads.direction"), // delta eta alpha gradient for direction
-            ReportProcess.sumRmsReport("deltaGrads.speed"), // delta eta for critic for speed
+            ReportProcess.sumRmsReport("deltaGrads.move"), // delta eta alpha gradient for move
             ReportProcess.sumRmsReport("deltaGrads.sensorAction"), // delta eta for critic for
 
-            ReportProcess.deltaRatioReport("direction"),
-            ReportProcess.deltaRatioReport("speed"),
+            ReportProcess.deltaRatioReport("move"),
             ReportProcess.deltaRatioReport("sensorAction")
     );
 

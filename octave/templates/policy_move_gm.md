@@ -4,13 +4,13 @@ The geometric mean of the probabilities is an indicator of how much the agent ge
 
 This indicator tells us how the probability is distributed among the actions.
 
-**The maximum value is 0.04**
+**The maximum value is $4.63 \cdot 10^{-3}$**
  and occurs when all directions are equally probable
 
-1 / n
+$\frac{1}{n}$
 
 ANN output layers are generally of the tanh -> softmax type, so the maximum value of the tanh layer is +1 and the minimum value -1.
 
-**The minimum value is to 0.0098** determined by the temperature T=0.434 of softmax layer and the number of actions n=24 and indicates that the behaviours is quite deterministic.
+**The minimum value is to $857 \cdot 10^{-6}$** determined by the temperature T=0.29 of softmax layer and the number of actions n=216 and indicates that the behaviours is quite deterministic.
 
-e ^ (2 / n / T) / [e^(2 / T) + n - 1]
+$\frac{e^\frac{2}{n  T}}{e^\frac{2}{T} + n - 1}$

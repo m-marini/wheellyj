@@ -114,13 +114,12 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithRadarMap, Wit
                                        int numDirectionValues, int numSensorValues, int numSpeedValues,
                                        int numRadarSectors, double minRadarDistance, double maxRadarDistance, RadarMap radarMap) {
         Map<String, SignalSpec> actions1 = Map.of(
-                "direction", new IntSignalSpec(new long[]{1}, numDirectionValues),
-                "speed", new IntSignalSpec(new long[]{1}, numSpeedValues + 1), //number of speed values + haltCommand command
+                "move", new IntSignalSpec(new long[]{1}, numDirectionValues * numSpeedValues),
                 "sensorAction", new IntSignalSpec(new long[]{1}, numSensorValues)
         );
 
         return new PolarRobotEnv(robot, reward, actions1,
-                radarMap, PolarMap.create(numRadarSectors), minRadarDistance, maxRadarDistance);
+                numSpeedValues, numDirectionValues, radarMap, PolarMap.create(numRadarSectors), minRadarDistance, maxRadarDistance);
     }
 
     /**
@@ -177,7 +176,9 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithRadarMap, Wit
      *
      * @param controller       the controller api
      * @param rewardFunc       the reward function
-     * @param actions          the actions spec
+     * @param actions          the action spec
+     * @param numSpeeds        number of move action speeds
+     * @param numDirections    number of mova action directions
      * @param radarMap         the radar map
      * @param polarMap         the polar map
      * @param minRadarDistance min radar distance (m)
@@ -185,9 +186,9 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithRadarMap, Wit
      */
     public PolarRobotEnv(RobotControllerApi controller, RewardFunction rewardFunc,
                          Map<String, SignalSpec> actions,
-                         RadarMap radarMap,
+                         int numSpeeds, int numDirections, RadarMap radarMap,
                          PolarMap polarMap, double minRadarDistance, double maxRadarDistance) {
-        super(controller, rewardFunc);
+        super(controller, rewardFunc, numSpeeds, numDirections);
         this.actions = requireNonNull(actions);
         this.minRadarDistance = minRadarDistance;
         this.maxRadarDistance = maxRadarDistance;

@@ -1,17 +1,14 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/objective-action-set-schema-0.1
+$id: https://mmarini.org/wheelly/objective-action-set-schema-1.0
 title: Environment
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/objective-action-set-schema-0.1
+    const: https://mmarini.org/wheelly/objective-action-set-schema-1.0
   class:
     const: org.mmarini.wheelly.objectives.ActionSet
-  direction:
-    multipleOf: 1
-    minimum: 0
-  speed:
+  move:
     multipleOf: 1
     minimum: 0
   sensor:

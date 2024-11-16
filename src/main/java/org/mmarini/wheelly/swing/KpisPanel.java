@@ -50,6 +50,7 @@ import java.util.stream.Stream;
  */
 public class KpisPanel extends MatrixTable {
     public static final double PPM = 1e6;
+    public static final double PPG = 1e9;
     private static final Logger logger = LoggerFactory.getLogger(KpisPanel.class);
     private final RMSValue criticRms;
     private final MeanValue advantageMean;
@@ -177,7 +178,7 @@ public class KpisPanel extends MatrixTable {
      * @param delta the critic delta
      */
     private void handleCritic(INDArray delta) {
-        printf("critic.delta", "%,10.0f", criticRms.add(delta).value() * PPM);
+        printf("critic.delta", "%,10.0f", criticRms.add(delta).value() * PPG);
     }
 
     /**

@@ -3,6 +3,6 @@ In the average-reward setting, the quality of a policy is defined as the average
 
 Returns are defined in terms of differences between rewards and the average reward.
 
-This is known as the differential return, and the corresponding value functions are known as di↵erential value functions.
+This is known as the differential return, and the corresponding value functions are known as differential value functions.
 
-The critic output measures the estimated value of differential value of St.
+The critic output measures the estimated value of differential value of S(t).

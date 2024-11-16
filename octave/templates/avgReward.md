@@ -3,6 +3,6 @@ In the average-reward setting, the quality of a policy is defined as the average
 
 Returns are defined in terms of differences between rewards and the average reward.
 
-This is known as the differential return, and the corresponding value functions are known as di↵erential value functions.
+This is known as the differential return, and the corresponding value functions are known as differential value functions.
 
 The average reward is estimated by the agent by exponentially averaging the premium.

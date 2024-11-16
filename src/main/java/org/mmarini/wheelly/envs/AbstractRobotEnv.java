@@ -63,6 +63,8 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
     public static final int MAX_SENSOR_DIR = 90;
     private final RobotControllerApi controller;
     private final RewardFunction rewardFunc;
+    private final int numSpeeds;
+    private final int numDirections;
     private UnaryOperator<Map<String, Signal>> onAct;
     private Consumer<RobotStatus> onInference;
     private Consumer<Environment.ExecutionResult> onResult;
@@ -74,12 +76,16 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
     /**
      * Creates the abstract environment
      *
-     * @param controller the controller
-     * @param rewardFunc the reward function
+     * @param controller    the controller
+     * @param rewardFunc    the reward function
+     * @param numSpeeds     the number of move action speeds
+     * @param numDirections the number of move action directions
      */
-    protected AbstractRobotEnv(RobotControllerApi controller, RewardFunction rewardFunc) {
+    protected AbstractRobotEnv(RobotControllerApi controller, RewardFunction rewardFunc, int numSpeeds, int numDirections) {
         this.controller = requireNonNull(controller);
         this.rewardFunc = requireNonNull(rewardFunc);
+        this.numSpeeds = numSpeeds;
+        this.numDirections = numDirections;
         controller.setOnInference(this::handleInference);
         controller.setOnLatch(this::latchStatus);
         readRobotStatus().doOnNext(this::handleStatus).subscribe();
@@ -91,10 +97,10 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
      * @param actions the actions
      */
     Complex deltaDir(Map<String, Signal> actions) {
-        int action = actions.get("direction").getInt(0);
-        int n = ((IntSignalSpec) getActions().get("direction")).numValues();
-        return Complex.fromDeg(linear(action,
-                0, n,
+        int moveAction = actions.get("move").getInt(0);
+        int dirAction = moveAction / numSpeeds;
+        return Complex.fromDeg(linear(dirAction,
+                0, numDirections,
                 MIN_DIRECTION_ACTION, MAX_DIRECTION_ACTION));
     }
 
@@ -188,9 +194,16 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
      * @param actions the actions
      */
     public boolean isHalt(Map<String, Signal> actions) {
+        int moveAction = actions.get("move").getInt(0);
+        // (numSpeeds / 2 + (numDirections * numSpeeds) / 2);
+        int haltAction = (numSpeeds * (numDirections + 1)) / 2;
+        return moveAction == haltAction;
+        /*
         int speedAction = actions.get("speed").getInt(0);
         int n = ((IntSignalSpec) getActions().get("speed")).numValues();
         return speedAction == n - 1;
+
+         */
     }
 
     /**
@@ -201,6 +214,12 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
     protected void latchStatus(RobotStatus status) {
     }
 
+    /**
+     * Returns the robot direction from action signals
+     *
+     * @param actions          the action signals
+     * @param currentDirection the current robot direction
+     */
     public Complex moveDirection(Map<String, Signal> actions, Complex currentDirection) {
         Complex dDir = deltaDir(actions);
         return currentDirection.add(dDir);
@@ -274,11 +293,19 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
      * @param actions the action signals
      */
     public int speed(Map<String, Signal> actions) {
+        int moveAction = actions.get("move").getInt(0);
+        int actionSpeed = moveAction % numSpeeds;
+        return round(linear(actionSpeed,
+                0, numSpeeds - 1,
+                -MAX_PPS, MAX_PPS));
+        /*
         int speedAction = actions.get("speed").getInt(0);
         int n = ((IntSignalSpec) getActions().get("speed")).numValues();
         return round(linear(speedAction,
                 0, n - 2,
                 -MAX_PPS, MAX_PPS));
+
+         */
     }
 
     @Override
