@@ -38,7 +38,7 @@ import java.util.Map;
 import java.util.function.Predicate;
 
 public interface ActionSet {
-    String SCHEMA_NAME = "https://mmarini.org/wheelly/objective-action-set-schema-0.1";
+    String SCHEMA_NAME = "https://mmarini.org/wheelly/objective-action-set-schema-1.0";
 
     /**
      * Returns the reward function from configuration
@@ -49,32 +49,25 @@ public interface ActionSet {
     static RewardFunction create(JsonNode root, Locator locator) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
 
-        int direction = locator.path("direction").getNode(root).asInt(-1);
-        int speed = locator.path("speed").getNode(root).asInt(-1);
+        int move = locator.path("move").getNode(root).asInt(-1);
         int sensor = locator.path("sensor").getNode(root).asInt(-1);
-        if (direction < 0 && speed < 0 && sensor < 0) {
+        if (move < 0 && sensor < 0) {
             throw new IllegalArgumentException("Missing ActionSet objective values");
         }
-        return inactive(direction, speed, sensor);
+        return inactive(move, sensor);
     }
 
     /**
      * Returns the function that rewards the action set behavior
      *
-     * @param targetDirectionIndex the target direction index
-     * @param targetSpeedIndex     the target speed index
+     * @param targetMoveIndex     the target move index
      * @param targetSensorIndex    the target sensor index
      */
-    static RewardFunction inactive(int targetDirectionIndex,
-                                   int targetSpeedIndex,
+    static RewardFunction inactive(int targetMoveIndex,
                                    int targetSensorIndex) {
         Predicate<Map<String, Signal>> actionPredicate = null;
-        if (targetDirectionIndex >= 0) {
-            actionPredicate = x -> x.get("direction").getInt(0) == targetDirectionIndex;
-        }
-        if (targetSpeedIndex >= 0) {
-            Predicate<Map<String, Signal>> speedPredicate = x -> x.get("speed").getInt(0) == targetSpeedIndex;
-            actionPredicate = actionPredicate != null ? actionPredicate.and(speedPredicate) : speedPredicate;
+        if (targetMoveIndex >= 0) {
+            actionPredicate = x -> x.get("move").getInt(0) == targetMoveIndex;
         }
         if (targetSensorIndex >= 0) {
             Predicate<Map<String, Signal>> sensorPredicate = x -> x.get("sensorAction").getInt(0) == targetSensorIndex;

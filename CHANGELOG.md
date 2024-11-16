@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+
+- Issue #472: Combine move and direction into a single value action
+
 ## [0.18.0] 2024-11-15
 
 ### Added

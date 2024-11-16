@@ -30,6 +30,8 @@ package org.mmarini.wheelly.envs;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.rl.envs.*;
 import org.mmarini.wheelly.apis.*;
 
@@ -41,12 +43,16 @@ import static java.lang.Math.PI;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasKey;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 class PolarRobotEnvTest {
 
     public static final int NUM_RADAR_SECTORS = 4;
     public static final double DISTANCE = 2;
+    public static final int NUM_DIRECTION_VALUES = 4;
+    public static final int NUM_SPEED_VALUES = 3;
+    public static final int NUM_SENSOR_VALUES = 4;
 
     static PolarRobotEnv create() {
         RobotApi robot = mock();
@@ -54,12 +60,22 @@ class PolarRobotEnvTest {
 
         RadarMap radarMap = mock();
         return PolarRobotEnv.create(controller,
-                (s0, a, s1) -> 0, 4, 4, 4, NUM_RADAR_SECTORS,
+                (s0, a, s1) -> 0, NUM_DIRECTION_VALUES, NUM_SENSOR_VALUES, NUM_SPEED_VALUES, NUM_RADAR_SECTORS,
                 0.2, 3, radarMap);
     }
 
     private PolarMap polarMap;
     private PolarRobotEnv env;
+
+    @Test
+    void getActionsTest() {
+        Map<String, SignalSpec> actions = env.getActions();
+        assertThat(actions, hasKey("move"));
+        assertThat(actions, hasKey("sensorAction"));
+
+        assertEquals(new IntSignalSpec(new long[]{1}, NUM_DIRECTION_VALUES * NUM_SPEED_VALUES), actions.get("move"));
+        assertEquals(new IntSignalSpec(new long[]{1}, NUM_SENSOR_VALUES), actions.get("sensorAction"));
+    }
 
     @Test
     void getSignalsTest() {
@@ -86,6 +102,58 @@ class PolarRobotEnvTest {
         assertEquals(ArraySignal.create(new long[]{4}, 0f, 0f, (float) DISTANCE, (float) DISTANCE),
                 signals.get("sectorDistances"));
     }
+
+    @Test
+    void isHaltTest() {
+        Map<String, Signal> actions = Map.of(
+                "move", IntSignal.create(7),
+                "sensorAction", IntSignal.create(0)
+        );
+        assertTrue(env.isHalt(actions));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0, -180",
+            "1, -180",
+            "2, -180",
+            "3, -90",
+            "4, -90",
+            "5, -90",
+            "6, 0",
+            "7, 0",
+            "8, 0",
+            "9, 90",
+            "10, 90",
+            "11, 90",
+    })
+    void moveDirectionTest(int action, int expected) {
+        Map<String, Signal> actions = Map.of("move", IntSignal.create(action));
+        int dir = env.deltaDir(actions).toIntDeg();
+        assertEquals(expected, dir);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0, -60",
+            "1, 0",
+            "2, 60",
+            "3, -60",
+            "4, 0",
+            "5, 60",
+            "6, -60",
+            "7, 0",
+            "8, 60",
+            "9, -60",
+            "10, 0",
+            "11, 60",
+    })
+    void moveSpeedTest(int action, int expected) {
+        Map<String, Signal> actions = Map.of("move", IntSignal.create(action));
+        int speed = env.speed(actions);
+        assertEquals(expected, speed);
+    }
+
 
     @Test
     void getStateTest() {
