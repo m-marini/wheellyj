@@ -6,3 +6,4 @@ The amounts of adjusting weights are proportional to the TD error $\delta$ by th
 The direction error RMS is the root mean square of the adjusting weights and indicates the amount of changes from the sensor direction output layer.
 
 Values tending towards zero means that the ANN undergoes minimal variations in weights.
+

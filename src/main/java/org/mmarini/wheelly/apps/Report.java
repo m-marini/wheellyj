@@ -25,6 +25,8 @@
 
 package org.mmarini.wheelly.apps;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.functions.Action;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
@@ -33,6 +35,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.ParallelProcess;
 import org.mmarini.wheelly.swing.Messages;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +43,9 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+
+import static org.mmarini.yaml.Utils.fromFile;
+import static org.mmarini.yaml.Utils.objectMapper;
 
 /**
  * Runs the process to produce report data about learning kpis
@@ -101,10 +107,51 @@ public class Report {
         parser.addArgument("kpis")
                 .required(true)
                 .help("specify the source kpis path");
+        parser.addArgument("model")
+                .required(true)
+                .help("specify the source model path");
         parser.addArgument("reportPath")
                 .required(true)
                 .help("specify the destination report path");
         return parser;
+    }
+
+    /**
+     * Returns the report json node
+     *
+     * @param root the agent json node
+     */
+    private static JsonNode extractReportYaml(JsonNode root) {
+        Locator networkLocator = Locator.locate("network");
+        Locator layersLocator = networkLocator.path("layers");
+        Locator sizesLocator = networkLocator.path("sizes");
+        double moveTemperature = layersLocator.elements(root)
+                .filter(l -> "move".equals(l.path("name").getNode(root).asText()))
+                .findAny()
+                .map(l -> l.path("temperature").getNode(root).asDouble())
+                .orElse(0d);
+        double sensorTemperature = layersLocator.elements(root)
+                .filter(l -> "sensorAction".equals(l.path("name").getNode(root).asText()))
+                .findAny()
+                .map(l -> l.path("temperature").getNode(root).asDouble())
+                .orElse(0d);
+        long moveSize = sizesLocator.path("move").getNode(root).asLong();
+        long sensorSize = sizesLocator.path("sensorAction").getNode(root).asLong();
+        double ppoEpsilon = root.path("ppoEpsilon").asDouble();
+        double eta = root.path("eta").asDouble();
+        double moveAlpha = Locator.locate("alphas").path("move").getNode(root).asDouble();
+        double sensorAlpha = Locator.locate("alphas").path("sensorAction").getNode(root).asDouble();
+
+        ObjectNode report = objectMapper.createObjectNode();
+        report.put("ppoEpsilon", ppoEpsilon);
+        report.put("sensorActionTemperature", sensorTemperature);
+        report.put("moveTemperature", moveTemperature);
+        report.put("moveSize", moveSize);
+        report.put("sensorActionSize", sensorSize);
+        report.put("eta", eta);
+        report.put("moveAlpha", moveAlpha);
+        report.put("sensorActionAlpha", sensorAlpha);
+        return report;
     }
 
     /**
@@ -139,6 +186,21 @@ public class Report {
     }
 
     /**
+     * Generates a report YAML file
+     *
+     * @throws IOException in case of error
+     */
+    protected void generateReportYaml() throws IOException {
+        String modelPath = args.getString("model");
+        JsonNode root = fromFile(new File(modelPath, "agent.yml"));
+        JsonNode report = extractReportYaml(root);
+        this.reportPath = new File(args.getString("reportPath"));
+        File resultFile = new File(reportPath, "report.yml");
+        resultFile.getParentFile().mkdirs();
+        objectMapper.writeValue(resultFile, report);
+    }
+
+    /**
      * Start to produce the report
      *
      * @throws IOException in case of error
@@ -155,6 +217,7 @@ public class Report {
                 .<Action>map(t -> () ->
                         t.build(kpisPath, reportPath, batchSize).process())
                 .toList();
+        generateReportYaml();
         if (args.getBoolean("parallel")) {
             ParallelProcess.scheduler(tasks).run();
         } else {

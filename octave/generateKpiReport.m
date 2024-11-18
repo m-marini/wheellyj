@@ -1,4 +1,4 @@
-function generateKpiReport(hFile, dataPath, reportPath, id, kpiTitle, mode, vertHist=false)
+function generateKpiReport(hFile, dataPath, reportPath, id, kpiTitle, genParmFunc, mode, vertHist=false)
   if exist([dataPath "/stats/data.csv"], "file")
     disp(["Creating report for " dataPath "/stats/data.csv ..."]);
     stats = csvread([dataPath "/stats/data.csv"]);
@@ -10,7 +10,7 @@ function generateKpiReport(hFile, dataPath, reportPath, id, kpiTitle, mode, vert
     else
       exponential = 0;
     endif
-    generateKpiAbstract(hFile, id, kpiTitle, stats, histogram, chart, linear, exponential)
+    generateKpiAbstract(hFile, id, kpiTitle, stats, histogram, chart, linear, exponential, genParmFunc)
     generateKpiCharts(hFile, id, kpiTitle, reportPath, mode, stats, histogram, chart, linear, exponential)
   else
     disp(["File " dataPath "/stats/data.csv not found"]);
