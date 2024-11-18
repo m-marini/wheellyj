@@ -4,13 +4,11 @@ The ratio between the maximum probability and the geometric mean of the probabil
 
 This indicator tells us how many times the maximum action is more likely than other actions.
 
-**The minimum value of the ratio is 1** and occurs when all directions are equally probable.
+The minimum value of the ratio is and occurs when all directions are equally probable.
 
 ANN output layers are generally of the tanh -> softmax type, so the maximum value of the tanh layer is +1 and the minimum value -1.
 
-The maximum value of the ratio is determined by the temperature $T=0.434$ of softmax layer and the number of actions $n=7$.
-
-**The maximum value of the ratio is to 52**
+The maximum value of the ratio is determined by the temperature $T$ of softmax layer and the number of actions $n$.
 
 $\frac{1}{e^{-2 \frac{n-1}{n T}}}$
 

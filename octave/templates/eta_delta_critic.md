@@ -7,3 +7,4 @@ The amounts of adjiusting weights are proportional to the TD error $\delta$ by t
 The critic error RMS is the root mean square of the adjusting weights and indicates the amount of changes from the critic output layer.
 
 Values tending towards zero means that the ANN undergoes minimal variations in weights.
+

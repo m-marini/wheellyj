@@ -6,6 +6,5 @@ The root mean square value of this ratio indicates how much the agent has change
 
 Values tending towards zero means that the agent is not changing the behavior.
 
-**The absolute value of the ratio is limited by the proximal policy optimization method to a value around 20%**
+**The absolute value of the ratio is limited by the proximal policy optimization method to a value around $\varepsilon_{ppo}$**
 
-ppoEpsilon=0.2

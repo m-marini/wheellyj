@@ -1,4 +1,4 @@
-function generateKpiAbstract(hFile, id, kpiTitle, stats, histogram, chart, linear, exponential)
+function generateKpiAbstract(hFile, id, kpiTitle, stats, histogram, chart, linear, exponential, genParmFunc)
   n = stats(1);
   yMin = stats(2);
   yMax = stats(3);
@@ -7,6 +7,11 @@ function generateKpiAbstract(hFile, id, kpiTitle, stats, histogram, chart, linea
   fprintf(hFile, "## %s\n", kpiTitle);
   fprintf(hFile, "\n");
   importFile(hFile, ["templates/" id ".md"]);
+
+  if is_function_handle(genParmFunc)
+    genParmFunc(hFile);
+  endif
+
   fprintf(hFile, "\n");
   fprintf(hFile, "| KPI    |             |\n");
   fprintf(hFile, "|--------|------------:|\n");
