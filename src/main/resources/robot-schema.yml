@@ -11,23 +11,23 @@ properties:
   robotHost:
     type: string
   robotPort:
-    multipleOf: 1
+    type: integer
     minimum: 1
     maximum: 32768
   cameraHost:
     type: string
   cameraPort:
-    multipleOf: 1
+    type: integer
     minimum: 1
     maximum: 32768
   connectionTimeout:
-    multipleOf: 1
+    type: integer
     minimum: 1
   readTimeout:
-    multipleOf: 1
+    type: integer
     minimum: 1
   configureTimeout:
-    multipleOf: 1
+    type: integer
     minimum: 1
   configCommands:
     type: array

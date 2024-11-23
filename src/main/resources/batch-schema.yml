@@ -10,7 +10,10 @@ properties:
     type: string
     const: https://mmarini.org/wheelly/batch-schema-0.3
   seed:
-    multipleOf: 1
+    type: integer
+  numEpochs:
+    type: integer
+    minimum: 1
   robot:
     type: string
   controller:

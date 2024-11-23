@@ -50,8 +50,6 @@ import static org.mmarini.Utils.zipWithIndex;
 public class LearnPanel extends JPanel {
     public static final Dimension DEFAULT_PREFERRED_SIZE = new Dimension(500, 300);
     private static final double[] ALPHA_VALUES = new double[]{
-            10e-3,
-            30e-3,
             100e-3,
             300e-3,
             1,
@@ -60,7 +58,9 @@ public class LearnPanel extends JPanel {
             30,
             100,
             300,
-            1000
+            1e3,
+            3e3,
+            10e3
     };
     private static final double[] ETA_VALUES = new double[]{
             1e-9,
@@ -76,17 +76,18 @@ public class LearnPanel extends JPanel {
             100e-6,
     };
     private static final Dictionary<Integer, JComponent> ALPHA_LABELS = createLabels(new String[]{
-            "0.010",
-            "0.030",
-            "0.100",
-            "0.300",
+            "0.1",
+            "0.3",
             "1",
             "3",
             "10",
             "30",
             "100",
             "300",
-            "1000"});
+            "1 K",
+            "3 K",
+            "10 K"
+    });
     private static final Dictionary<Integer, JComponent> ETA_LABELS = createLabels(new String[]{
             "1 n",
             "3 n",

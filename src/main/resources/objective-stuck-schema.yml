@@ -9,15 +9,19 @@ properties:
   class:
     const: org.mmarini.wheelly.objectives.Stuck
   distance0:
+    type: number
     exclusiveMinimum: 0
   distance1:
+    type: number
     exclusiveMinimum: 0
   distance2:
+    type: number
     exclusiveMinimum: 0
   distance3:
+    type: number
     exclusiveMinimum: 0
   sensorRange:
-    multipleOf: 1
+    type: integer
     minimum: 0
 required:
   - $schema

@@ -43,7 +43,7 @@ class PPOAgentPolarMapTest {
     public static final double EPSILON = 1e-3;
     private static final String YAML = """
             ---
-            $schema: https://mmarini.org/wheelly/ppo-agent-schema-0.2
+            $schema: https://mmarini.org/wheelly/ppo-agent-schema-0.3
             class: org.mmarini.rl.agents.PPOAgent
             modelPath: models/test
             seed: 1234

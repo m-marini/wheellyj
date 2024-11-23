@@ -16,8 +16,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#472](https://github.com/m-marini/wheellyj/issues/472): Combine move and direction into a single value action
 - Issue [#475](https://github.com/m-marini/wheellyj/issues/475): Rescale learn panel values
 
-## [0.18.0] 2024-11-15
+### Fixed
 
+- Issue [#480](https://github.com/m-marini/wheellyj/issues/480): Change learning parameter during training
+
+## [0.18.0] 2024-11-15
 
 - Issue [#442](https://github.com/m-marini/wheellyj/issues/442): Add web cam processing
 - Issue [#448](https://github.com/m-marini/wheellyj/issues/448): Add labels in polar radar map

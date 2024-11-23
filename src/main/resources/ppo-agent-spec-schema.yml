@@ -1,39 +1,41 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/ppo-agent-spec-schema-0.2
+$id: https://mmarini.org/wheelly/ppo-agent-spec-schema-0.3
 title: Agent
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/ppo-agent-spec-schema-0.2
+    const: https://mmarini.org/wheelly/ppo-agent-spec-schema-0.3
   class:
     const: org.mmarini.rl.agents.PPOAgent
-  savingIntervalSteps:
-    multipleOf: 1
-    minimum: 1
   seed:
-    multipleOf: 1
+    type: integer
     minimum: 1
   ppoEpsilon:
+    type: number
     exclusiveMinimum: 0
   rewardAlpha:
+    type: number
     exclusiveMinimum: 0
   eta:
+    type: number
     minimum: 0
   alphas:
     type: object
     additionalProperties:
+      type: number
       minimum: 0
   lambda:
+    type: number
     minimum: 0
   numSteps:
-    multipleOf: 1
+    type: integer
     minimum: 1
   numEpochs:
-    multipleOf: 1
+    type: integer
     minimum: 1
   batchSize:
-    multipleOf: 1
+    type: integer
     minimum: 1
   inputProcess:
     $ref: "#/$defs/InputProcessors"
@@ -65,8 +67,10 @@ $defs:
       class:
         const: org.mmarini.rl.processors.EqualsToProcessor
       name:
+        type: string
         minLength: 1
       input:
+        type: string
         minLength: 1
       value:
         type: number
@@ -81,10 +85,13 @@ $defs:
       class:
         const: org.mmarini.rl.processors.MaskProcessor
       name:
+        type: string
         minLength: 1
       input:
+        type: string
         minLength: 1
       mask:
+        type: string
         minLength: 1
     required:
       - class
@@ -97,11 +104,13 @@ $defs:
       class:
         const: org.mmarini.rl.processors.TilesProcessor
       name:
+        type: string
         minLength: 1
       input:
+        type: string
         minLength: 1
       numTiles:
-        multipleOf: 1
+        type: integer
         minimum: 1
     required:
       - class
@@ -114,10 +123,12 @@ $defs:
       class:
         const: org.mmarini.rl.processors.DecodeProcessor
       name:
+        type: string
         minLength: 1
       inputs:
         type: array
         items:
+          type: string
           minLength: 1
     required:
       - class
@@ -129,8 +140,10 @@ $defs:
       class:
         const: org.mmarini.rl.processors.FeaturesProcessor
       name:
+        type: string
         minLength: 1
       input:
+        type: string
         minLength: 1
     required:
       - class
@@ -142,8 +155,10 @@ $defs:
       class:
         const: org.mmarini.rl.processors.NotProcessor
       name:
+        type: string
         minLength: 1
       input:
+        type: string
         minLength: 1
     required:
       - class
@@ -155,10 +170,12 @@ $defs:
       class:
         const: org.mmarini.rl.processors.AndProcessor
       name:
+        type: string
         minLength: 1
       inputs:
         type: array
         items:
+          type: string
           minLength: 1
     required:
       - class
@@ -170,6 +187,7 @@ $defs:
       class:
         const: org.mmarini.rl.processors.PartitionProcessor
       name:
+        type: string
         minLength: 1
       inputs:
         type: array
@@ -177,9 +195,10 @@ $defs:
           type: object
           properties:
             name:
+              type: string
               minLength: 1
             numTiles:
-              multipleOf: 1
+              type: integer
               minimum: 1
           required:
             - name
@@ -218,7 +237,7 @@ $defs:
       sizes:
         type: object
         additionalProperties:
-          multipleOf: 1
+          type: integer
           minimum: 1
     required:
       - $schema
@@ -238,10 +257,13 @@ $defs:
       type:
         const: dense
       name:
+        type: string
         minLength: 1
       maxAbsWeights:
+        type: number
         exclusiveMinimum: 0
       dropOut:
+        type: number
         exclusiveMinimum: 0
         maximum: 1
       inputs:
@@ -262,6 +284,7 @@ $defs:
       type:
         const: linear
       name:
+        type: string
         minLength: 1
       b:
         type: number
@@ -285,8 +308,10 @@ $defs:
       type:
         const: softmax
       name:
+        type: string
         minLength: 1
       temperature:
+        type: number
         exclusiveMinimum: 0
       inputs:
         type: array
@@ -305,8 +330,10 @@ $defs:
       type:
         const: dropout
       name:
+        type: string
         minLength: 1
       dropOut:
+        type: number
         exclusiveMinimum: 0
         maximum: 1
       inputs:
@@ -330,6 +357,7 @@ $defs:
           - sum
           - concat
       name:
+        type: string
         minLength: 1
       inputs:
         type: array
@@ -349,10 +377,11 @@ $defs:
           - sum
           - concat
       name:
+        type: string
         minLength: 1
       inputs:
-        minItems: 1
         type: array
+        minItems: 1
         items:
           type: string
     required:

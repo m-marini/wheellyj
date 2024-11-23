@@ -42,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class PPOAgentEnvCreateTest {
     private static final String YAML = """
             ---
-            $schema: https://mmarini.org/wheelly/ppo-agent-schema-0.2
+            $schema: https://mmarini.org/wheelly/ppo-agent-schema-0.3
             class: org.mmarini.rl.agents.PPOAgent
             modelPath: models/test
             seed: 1234
@@ -129,7 +129,7 @@ class PPOAgentEnvCreateTest {
         deleteRecursive(path);
         PPOAgent agent = PPOAgent.create(spec, Locator.root(), MOCK_ENV);
         assertNotNull(agent);
-        agent.save(path);
+        agent.save();
         JsonNode specLoad = Utils.fromText(YAML);
         PPOAgent agent1 = PPOAgent.create(specLoad, Locator.root(), MOCK_ENV);
         assertNotNull(agent1);

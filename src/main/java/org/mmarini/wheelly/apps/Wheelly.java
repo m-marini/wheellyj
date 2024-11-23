@@ -27,7 +27,7 @@ package org.mmarini.wheelly.apps;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
-import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.CompletableSubject;
@@ -75,7 +75,7 @@ import static org.mmarini.yaml.Utils.fromFile;
  * Run a test to check for robot environment with random behavior agent
  */
 public class Wheelly {
-    public static final String WHEELLY_SCHEMA_YML = "https://mmarini.org/wheelly/wheelly-schema-1.0";
+    public static final String WHEELLY_SCHEMA_YML = "https://mmarini.org/wheelly/wheelly-schema-2.0";
     public static final int LAYOUT_INTERVAL = 300;
     private static final Logger logger = LoggerFactory.getLogger(Wheelly.class);
 
@@ -160,9 +160,8 @@ public class Wheelly {
     private ComDumper dumper;
     private List<JFrame> allFrames;
     private boolean active;
-    private boolean synchTraining;
     private KpiBinWriter kpiWriter;
-    private AtomicReference<AgentTraining> agent;
+    private AtomicReference<AgentTrainer> trainer;
 
     /**
      * Creates the server reinforcement learning engine server
@@ -213,12 +212,12 @@ public class Wheelly {
         environment.setOnResult(this::handleResult);
 
         learnPanel.readActionAlphas()
-                .doOnNext(t -> agent.updateAndGet(ag ->
-                        ag.agent(((AbstractAgentNN) ag.agent()).alphas(t))))
+                .doOnNext(alphas -> trainer.updateAndGet(t ->
+                        t.alphas(alphas)))
                 .subscribe();
         learnPanel.readEtas()
-                .doOnNext(eta -> agent.updateAndGet(ag ->
-                        ag.agent(((AbstractAgentNN) ag.agent()).eta(eta))))
+                .doOnNext(eta -> trainer.updateAndGet(t ->
+                        t.eta(eta)))
                 .subscribe();
         Observable<WindowEvent>[] windowObs = allFrames.stream()
                 .map(f -> SwingObservable.window(f, SwingObservable.WINDOW_ACTIVE))
@@ -234,7 +233,7 @@ public class Wheelly {
      */
     private void createMultiFrames() {
         // Create multiple frame app
-        if (environment instanceof PolarRobotEnv) {
+        if (environment instanceof WithPolarMap) {
             radarFrame = createFixFrame(Messages.getString("Radar.title"), polarPanel);
         }
 
@@ -278,12 +277,10 @@ public class Wheelly {
      * Creates the panels
      */
     private void createPanels() {
-        Agent agent = this.agent.get().agent();
+        Agent agent = this.trainer.get().agent();
         kpisPanel.setKeys(agent.getActions().keySet().toArray(String[]::new));
-        if (agent instanceof AbstractAgentNN abstractAgent) {
-            learnPanel.setEta(abstractAgent.eta());
-            learnPanel.setActionAlphas(abstractAgent.alphas());
-        }
+        learnPanel.setEta(agent.eta());
+        learnPanel.setActionAlphas(agent.alphas());
         if (environment instanceof PolarRobotEnv env) {
             this.polarPanel = new PolarPanel();
             double radarMaxDistance = env.getMaxRadarDistance();
@@ -298,7 +295,7 @@ public class Wheelly {
         JTabbedPane panel = new JTabbedPane();
         panel.addTab(Messages.getString("Wheelly.tabPanel.envMap"), new JScrollPane(envPanel));
 
-        if (environment instanceof PolarRobotEnv) {
+        if (environment instanceof WithPolarMap) {
             panel.addTab(Messages.getString("Wheelly.tabPanel.polarMap"), new JScrollPane(polarPanel));
         }
         if (!this.args.getString("kpis").isEmpty()) {
@@ -346,7 +343,7 @@ public class Wheelly {
      * @param signals the input signals
      */
     private Map<String, Signal> handleAct(Map<String, Signal> signals) {
-        return active ? agent.get().agent().act(signals) : ((AbstractRobotEnv) environment).haltActions();
+        return active ? trainer.get().agent().act(signals) : ((AbstractRobotEnv) environment).haltActions();
     }
 
     /**
@@ -416,12 +413,6 @@ public class Wheelly {
                     envPanel.setLabeledPoints(map.labeled().toList());
                 }
         );
-                /*
-        simRobot.obstaclesMap()
-                .map(ObstacleMap::points)
-                .ifPresent(envPanel::setObstacles);
-
-                 */
     }
 
     /**
@@ -442,7 +433,7 @@ public class Wheelly {
      * @param actionEvent the action event
      */
     private void handleResetButton(ActionEvent actionEvent) {
-        agent.updateAndGet(ag -> ag.agent(ag.agent().init()).changeLock(true));
+        trainer.updateAndGet(AgentTrainer::resetAgent);
     }
 
     /**
@@ -458,7 +449,22 @@ public class Wheelly {
             // Update ui
             envPanel.setReward(avgRewards.add((float) reward).value());
             sensorMonitor.onReward(reward);
-            agent.updateAndGet(ag -> observeResult(ag, result));
+            // Observe the result
+            Maybe<AgentTrainer> tr = trainer.updateAndGet(t ->
+                            t.observeResult(result))
+                    .trainer();
+            if (tr != null) {
+                // If asynchronous training is required prepare for run
+                Maybe<AgentTrainer> trainer1 = tr.subscribeOn(Schedulers.computation())
+                        .doOnSuccess(trainer2 ->
+                                trainer.updateAndGet(t ->
+                                        t.setTrainedAgent(trainer2)));
+                // Reset asynchronous trainer
+                trainer.updateAndGet(t ->
+                        t.trainer(null));
+                // Run training
+                trainer1.subscribe();
+            }
         }
     }
 
@@ -480,7 +486,7 @@ public class Wheelly {
         waitFrame.setVisible(true);
         // Shutting down
         try {
-            agent.get().agent().close();
+            trainer.get().agent().close();
         } catch (IOException e) {
             logger.atError().setCause(e).log();
         }
@@ -585,60 +591,13 @@ public class Wheelly {
     }
 
     /**
-     * Returns the agent after the observation of the result
-     *
-     * @param agentTraining the concurrent agent before the observation
-     * @param result        the observed result
-     */
-    private AgentTraining observeResult(AgentTraining agentTraining, Environment.ExecutionResult result) {
-        // Let the agent observe the result
-        Agent trainingAgent = agentTraining.agent().observe(result);
-        if (!trainingAgent.isReadyForTrain() || agentTraining.training()) {
-            // Training skipped because is not ready or is already training
-            return agentTraining.agent(trainingAgent);
-        }
-
-        // Agent ready to train
-        List<Environment.ExecutionResult> trajectory = trainingAgent.trajectory();
-        // Extract clipped trajectory
-        List<Environment.ExecutionResult> clippedTrajectory = trajectory.size() > trainingAgent.numSteps()
-                ? trajectory.stream().skip(trajectory.size() - trainingAgent.numSteps()).toList()
-                : trajectory;
-        // Generate new agent with cleared trajectory
-        Agent clearedAgent = trainingAgent.trajectory(List.of());
-        if (synchTraining) {
-            // Runs synchronously the train process if not lock for change
-            return agentTraining.changeLock()
-                    ? agentTraining.agent(clearedAgent).changeLock(false)
-                    : agentTraining.agent(train(clearedAgent, clippedTrajectory, trajectory.size()));
-        }
-        // Runs asynchronously the train process
-        Completable.complete()
-                .subscribeOn(Schedulers.computation())
-                .doOnComplete(() -> {
-                    // Concurrent train the cleared agent
-                    Agent trainedAgent = train(clearedAgent, clippedTrajectory, trajectory.size());
-                    this.agent.updateAndGet(ag1 -> {
-                        AgentTraining agentTraining1 = ag1.changeLock()
-                                // If lock for change then clears the lock and the training flag
-                                ? ag1.changeLock(false)
-                                // If not lock for change then sets the trained agent, clears the lock
-                                : ag1.agent(trainedAgent.trajectory(ag1.agent().trajectory()));
-                        // Clear training flag
-                        return agentTraining1.training(false);
-                    });
-                }).subscribe();
-        // Sets the cleared agent, unlock for change and set training flag
-        return agentTraining.agent(clearedAgent).changeLock(false).training(true);
-    }
-
-    /**
      * Starts the application
      */
     protected void run() throws IOException {
         logger.atInfo().log("Creating environment");
         JsonNode config = fromFile(this.args.getString("config"));
         this.environment = AppYaml.envFromJson(config, Locator.root(), WHEELLY_SCHEMA_YML);
+        long savingInterval = Locator.locate("savingInterval").getNode(config).asLong();
 
         logger.atInfo().log("Creating agent");
         Locator agentLocator = Locator.locate(Locator.locate("agent").getNode(config).asText());
@@ -646,15 +605,16 @@ public class Wheelly {
             throw new IllegalArgumentException(format("Missing node %s", agentLocator));
         }
         Agent agent = Agent.fromConfig(config, agentLocator, environment);
-        if (agent instanceof AbstractAgentNN tdAgent) {
-            agent = tdAgent.setPostTrainKpis(true);
+        if (agent instanceof AbstractAgentNN agentNN) {
+            agent = agentNN.setPostTrainKpis(true);
         }
-        this.agent = new AtomicReference<>(new AgentTraining(agent, false, false));
+        boolean synchTraining = args.getBoolean("alternate");
+        this.trainer = new AtomicReference<>(AgentTrainer.create(agent, synchTraining, savingInterval));
+        //this.trainer = new AtomicReference<>(new AgentTraining(agent, false, false));
         if (environment.getController().getRobot() instanceof SimRobot robot) {
             // Add the obstacles location changes
             robot.setOnObstacleChanged(this::handleObstacleChanged);
         }
-        this.synchTraining = args.getBoolean("alternate");
 
         sessionDuration = this.args.getLong("localTime");
         logger.atInfo().log("Starting session ...");
@@ -702,38 +662,7 @@ public class Wheelly {
         // Starts the environment interaction
         active = true;
         startButton.setEnabled(false);
+        agent.backup();
         environment.start();
-    }
-
-    /**
-     * Returns the agent after the training
-     *
-     * @param agent      the training agent
-     * @param trajectory the clipped trajectory
-     * @param size       the original trajectory size
-     */
-    private Agent train(Agent agent, List<Environment.ExecutionResult> trajectory, int size) {
-        logger.atDebug().log("Training ...");
-        // Trains the agent
-        long t0 = System.currentTimeMillis();
-        Agent trainedAgent = agent.trainByTrajectory(trajectory);
-        long elapsed = System.currentTimeMillis() - t0;
-        logger.atInfo().log("Trained {}/{} steps in {} ms.", trajectory.size(), size, elapsed);
-        return trainedAgent;
-    }
-
-    record AgentTraining(Agent agent, boolean changeLock, boolean training) {
-        public AgentTraining agent(Agent agent) {
-            return new AgentTraining(agent, changeLock, training);
-        }
-
-        public AgentTraining changeLock(boolean changeLock) {
-            return new AgentTraining(agent, changeLock, training);
-        }
-
-
-        public AgentTraining training(boolean training) {
-            return new AgentTraining(agent, changeLock, training);
-        }
     }
 }

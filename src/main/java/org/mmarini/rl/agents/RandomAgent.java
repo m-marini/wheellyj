@@ -29,10 +29,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Flowable;
 import org.mmarini.MapStream;
 import org.mmarini.rl.envs.*;
+import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -104,6 +104,36 @@ public class RandomAgent implements Agent {
     }
 
     @Override
+    public Agent alphas(Map<String, Float> alphas) {
+        return null;
+    }
+
+    @Override
+    public Map<String, Float> alphas() {
+        return Map.of();
+    }
+
+    @Override
+    public Agent backup() {
+        return null;
+    }
+
+    @Override
+    public int batchSize() {
+        return 0;
+    }
+
+    @Override
+    public float eta() {
+        return 0;
+    }
+
+    @Override
+    public Agent eta(float eta) {
+        return null;
+    }
+
+    @Override
     public void close() {
     }
 
@@ -133,6 +163,16 @@ public class RandomAgent implements Agent {
     }
 
     @Override
+    public TDNetwork network() {
+        return null;
+    }
+
+    @Override
+    public int numEpochs() {
+        return 0;
+    }
+
+    @Override
     public int numSteps() {
         return 0;
     }
@@ -148,22 +188,27 @@ public class RandomAgent implements Agent {
     }
 
     @Override
-    public void save(File path) {
-        throw new RuntimeException("Not implemented");
+    public void save() {
+
     }
 
     @Override
     public Agent trainByTrajectory(List<Environment.ExecutionResult> trajectory) {
-        return null;
+        throw new RuntimeException("Not implemented");
+    }
+
+    @Override
+    public Agent trainMiniBatch(long epoch, long startStep, long numStepsParm, Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards, Map<String, INDArray> actionProb0) {
+        throw new RuntimeException("Not implemented");
     }
 
     @Override
     public List<Environment.ExecutionResult> trajectory() {
-        return null;
+        throw new RuntimeException("Not implemented");
     }
 
     @Override
     public Agent trajectory(List<Environment.ExecutionResult> trajectory) {
-        return null;
+        throw new RuntimeException("Not implemented");
     }
 }

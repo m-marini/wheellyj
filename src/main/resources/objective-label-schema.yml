@@ -9,10 +9,13 @@ properties:
   class:
     const: org.mmarini.wheelly.objectives.Label
   minDistance:
+    type: number
     minimum: 0
   maxDistance:
+    type: number
     minimum: 0
   velocityThreshold:
+    type: number
     minimum: 0
 required:
   - $schema

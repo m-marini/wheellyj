@@ -9,41 +9,48 @@ properties:
     type: string
     const: https://mmarini.org/wheelly/state-agent-schema-3.3
   class:
+    type: string
     const: org.mmarini.wheelly.engines.StateMachineAgent
   flow:
     $ref: "#/$defs/StateFlow"
   numRadarSectors:
-    multipleOf: 1
+    type: integer
     minimum: 2
   minRadarDistance:
+    type: number
     exclusiveMinimum: 0
   maxRadarDistance:
+    type: number
     exclusiveMinimum: 0
   radarWidth:
-    multipleOf: 1
+    type: integer
     minimum: 1
   radarHeight:
-    multipleOf: 1
+    type: integer
     minimum: 1
   radarGrid:
+    type: number
     exclusiveMinimum: 0
   contactRadius:
+    type: number
     exclusiveMinimum: 0
   radarReceptiveAngle:
+    type: number
     minimum: 0
   radarCleanInterval:
-    multipleOf: 1
+    type: integer
     minimum: 1
   correlationInterval:
-    multipleOf: 1
+    type: integer
     minimum: 1
   echoPersistence:
-    multipleOf: 1
+    type: integer
     minimum: 1
   contactPersistence:
-    multipleOf: 1
+    type: integer
     minimum: 1
   decay:
+    type: number
     exclusiveMinimum: 0
 required:
   - $schema
@@ -91,20 +98,20 @@ $defs:
       transitions:
         $ref: "#/$defs/Transitions"
       timeout:
-        multipleOf: 1
+        type: integer
         minimum: 1
       scanInterval:
-        multipleOf: 1
+        type: integer
       minSensorDir:
-        multipleOf: 1
+        type: integer
         minimum: -90
         maximum: 90
       maxSensorDir:
-        multipleOf: 1
+        type: integer
         minimum: -90
         maximum: 90
       sensorDirNumber:
-        multipleOf: 1
+        type: integer
         minimum: 1
     required:
       - class
@@ -137,15 +144,17 @@ $defs:
       transitions:
         $ref: "#/$defs/Transitions"
       timeout:
-        multipleOf: 1
+        type: integer
         minimum: 1
       speed:
-        multipleOf: 1
+        type: integer
         minimum: 1
         maximum: 60
       safeDistance:
+        type: number
         exclusiveMinimum: 0
       maxDistance:
+        type: number
         exclusiveMinimum: 0
     required:
       - class
@@ -163,11 +172,13 @@ $defs:
       transitions:
         $ref: "#/$defs/Transitions"
       timeout:
-        multipleOf: 1
+        type: integer
         minimum: 1
       safeDistance:
+        type: number
         exclusiveMinimum: 0
       maxDistance:
+        type: number
         exclusiveMinimum: 0
     required:
       - class
@@ -187,6 +198,7 @@ $defs:
       transitions:
         $ref: "#/$defs/Transitions"
       maxDistance:
+        type: number
         exclusiveMinimum: 0
     required:
       - class
@@ -205,8 +217,10 @@ $defs:
       transitions:
         $ref: "#/$defs/Transitions"
       maxDistance:
+        type: number
         exclusiveMinimum: 0
       safeDistance:
+        type: number
         exclusiveMinimum: 0
     required:
       - class
@@ -226,24 +240,25 @@ $defs:
       transitions:
         $ref: "#/$defs/Transitions"
       timeout:
-        multipleOf: 1
+        type: integer
         minimum: 1
       x:
         type: number
       y:
         type: number
       direction:
-        multipleOf: 1
+        type: integer
         minimum: -180
         maximum: 179
       directionRange:
-        multipleOf: 1
+        type: integer
         minimum: 0
         maximum: 180
       stop:
+        type: number
         exclusiveMinimum: 0
       maxSpeed:
-        multipleOf: 1
+        type: integer
         minimum: 10
         maximum: 60
     required:
@@ -258,6 +273,7 @@ $defs:
       type: object
       properties:
         to:
+          type: string
           minLength: 1
         onTransition:
           $ref: "#/$defs/Commands"
@@ -271,6 +287,7 @@ $defs:
       states:
         $ref: "#/$defs/StateNodes"
       entry:
+        type: string
         minLength: 1
     required:
       - states

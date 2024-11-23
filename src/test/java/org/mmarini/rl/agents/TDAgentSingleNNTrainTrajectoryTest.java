@@ -78,7 +78,7 @@ class TDAgentSingleNNTrainTrajectoryTest {
         return TDAgentSingleNN.create(STATE_SPEC, ACTIONS_SPEC0,
                 0, REWARD_ALPHA, ETA, alphas, LAMBDA,
                 numSteps, numEpochs, batchSize, network, null,
-                random, null, Integer.MAX_VALUE);
+                random, null);
     }
 
     /**

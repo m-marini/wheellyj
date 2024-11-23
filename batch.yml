@@ -5,15 +5,17 @@ controller: controllers/controller
 environment: environments/polarMapEnv
 agent: agents/polarRadarAgent
 seed: 1234
+numEpochs: 4
 
 robots:
   simRobot:
-    $schema: https://mmarini.org/wheelly/sim-robot-schema-0.2
+    $schema: https://mmarini.org/wheelly/sim-robot-schema-0.3
     class: org.mmarini.wheelly.apis.SimRobot
     # robotSeed: 1234
     mapSeed: 1234
     numObstacles: 10
-    changeObstaclesPeriod: 300000
+    numLabels: 1
+    changeObstaclesPeriod: 600000
     errSigma: 0.05
     errSensor: 0.05
     sensorReceptiveAngle: 15
@@ -34,14 +36,14 @@ controllers:
 
 environments:
   polarMapEnv:
-    $schema: https://mmarini.org/wheelly/env-polar-schema-0.1
+    $schema: https://mmarini.org/wheelly/env-polar-schema-2.0
     class: org.mmarini.wheelly.envs.PolarRobotEnv
-    objective: objectives/cautious
+    objective: objectives/test
     interval: 10
     commandInterval: 600
     reactionInterval: 300
-    numDirectionValues: 24
-    numSpeedValues: 9
+    numDirectionValues: 8
+    numSpeedValues: 5
     numSensorValues: 7
     radarWidth: 51
     radarHeight: 51
@@ -51,73 +53,106 @@ environments:
     echoPersistence: 300000
     contactPersistence: 300000
     radarCleanInterval: 30000
+    correlationInterval: 2000
+    decay: 120000
     numRadarSectors: 24
     minRadarDistance: 0.3
     maxRadarDistance: 3
 
 objectives:
+  test:
+    - $schema: https://mmarini.org/wheelly/objective-avoid-contact-schema-0.1
+      class: org.mmarini.wheelly.objectives.AvoidContact
+    - $schema: https://mmarini.org/wheelly/objective-action-set-schema-1.0
+      class: org.mmarini.wheelly.objectives.ActionSet
+      move: 22 # 5 / 2 + 5 * 8 / 2
+      #sensor: 3
+  labelFinder:
+    - $schema: https://mmarini.org/wheelly/objective-avoid-contact-schema-0.1
+      class: org.mmarini.wheelly.objectives.AvoidContact
+    - $schema: https://mmarini.org/wheelly/objective-label-schema-0.1
+      class: org.mmarini.wheelly.objectives.Label
+      minDistance: 0.8
+      maxDistance: 1.0
+    - $schema: https://mmarini.org/wheelly/objective-explore-schema-0.2
+      class: org.mmarini.wheelly.objectives.Explore
+    - $schema: https://mmarini.org/wheelly/objective-constant-schema-0.1
+      class: org.mmarini.wheelly.objectives.ConstantReward
+      reward: -0.1
+  noMove:
+    - $schema: https://mmarini.org/wheelly/objective-avoid-contact-schema-0.1
+      class: org.mmarini.wheelly.objectives.AvoidContact
+    - $schema: https://mmarini.org/wheelly/objective-nomove-schema-0.1
+      class: org.mmarini.wheelly.objectives.NoMove
   cautious:
-    $schema: https://mmarini.org/wheelly/objective-cautious-schema-0.1
-    class: org.mmarini.wheelly.objectives.Cautious
-    maxDistance: 3
+    - $schema: https://mmarini.org/wheelly/objective-avoid-contact-schema-0.1
+      class: org.mmarini.wheelly.objectives.AvoidContact
+    - $schema: https://mmarini.org/wheelly/objective-cautious-schema-0.1
+      class: org.mmarini.wheelly.objectives.Cautious
+      maxDistance: 3
 
 agents:
   ######################################
   # Polar radar agent
   ######################################
   polarRadarAgent:
-    #$schema: https://mmarini.org/wheelly/agent-single-nn-schema-0.3
-    #class: org.mmarini.rl.agents.TDAgentSingleNN
-    $schema: https://mmarini.org/wheelly/ppo-agent-schema-0.1
+    $schema: https://mmarini.org/wheelly/ppo-agent-schema-0.3
     class: org.mmarini.rl.agents.PPOAgent
     modelPath: models/polarRadarAgent
-    savingIntervalSteps: 1000
     rewardAlpha: 5e-3
-    eta: 1e-3
-    alphas:
-      sensorAction: 30e-3
-      speed: 300e-3
-      direction: 30e-3
-    lambda: 0.5
-    numSteps: 2048
-    numEpochs: 10
+    ppoEpsilon: 0.2
+    numSteps: 256
+    numEpochs: 2
     batchSize: 32
+    eta: 100e-9
+    alphas:
+      move: 100
+      sensorAction: 100
+    lambda: 0.5
     inputProcess:
-      - name: emptySectors
-        class: org.mmarini.rl.processors.NotProcessor
-        input: sectorDistances
-      - name: sectorStateCodes
-        class: org.mmarini.rl.processors.DecodeProcessor
-        inputs:
-          - emptySectors
-          - knownSectors
-      - name: sectorStateFeatures
-        class: org.mmarini.rl.processors.FeaturesProcessor
-        input: sectorStateCodes
       - name: canMoveFeatures
         class: org.mmarini.rl.processors.FeaturesProcessor
         input: canMoveStates
-      - name: distanceMask
-        class: org.mmarini.rl.processors.AndProcessor
-        inputs:
-          - sectorDistances
-          - knownSectors
+      - name: unknownSectors
+        class: org.mmarini.rl.processors.EqualsToProcessor
+        input: sectorStates
+        value: 0
+      - name: emptySectors
+        class: org.mmarini.rl.processors.EqualsToProcessor
+        input: sectorStates
+        value: 1
+      - name: hinderedSectors
+        class: org.mmarini.rl.processors.EqualsToProcessor
+        input: sectorStates
+        value: 2
+      - name: labeledSectors
+        class: org.mmarini.rl.processors.EqualsToProcessor
+        input: sectorStates
+        value: 3
+      - name: stateFeatures
+        class: org.mmarini.rl.processors.FeaturesProcessor
+        input: sectorStates
       - name: unmaskDistanceFeatures
         class: org.mmarini.rl.processors.TilesProcessor
         input: sectorDistances
-        numTiles: 8
-      - name: distanceFeatures
+        numTiles: 5
+      - name: hinderedDistanceFeatures
         class: org.mmarini.rl.processors.MaskProcessor
         input: unmaskDistanceFeatures
-        mask: distanceMask
+        mask: hinderedSectors
+      - name: labeledDistanceFeatures
+        class: org.mmarini.rl.processors.MaskProcessor
+        input: unmaskDistanceFeatures
+        mask: labeledSectors
     network:
       layer0:
         inputs:
           type: concat
           inputs:
             - canMoveFeatures
-            - sectorStateFeatures
-            - distanceFeatures
+            - stateFeatures
+            - hinderedDistanceFeatures
+            - labeledDistanceFeatures
         layers:
           - type: dense
             outputSize: 144
@@ -184,24 +219,15 @@ agents:
             - hidden2
         layers:
           - type: relu
-      direction:
+      move:
         input: resnet2
         layers:
           - type: dense
-            outputSize: 24
+            outputSize: 40
             maxAbsWeights: 1E2
           - type: tanh
           - type: softmax
-            temperature: 0.434
-      speed:
-        input: resnet2
-        layers:
-          - type: dense
-            maxAbsWeights: 1E2
-            outputSize: 10
-          - type: tanh
-          - type: softmax
-            temperature: 0.434
+            temperature: 0.29
       sensorAction:
         input: resnet2
         layers:
@@ -217,7 +243,7 @@ agents:
           - type: dense
             outputSize: 1
             maxAbsWeights: 1E2
-          - type: tanh
-          - type: linear
-            b: 0
-            w: 3
+#          - type: tanh
+#          - type: linear
+#            b: 0
+#            w: 3

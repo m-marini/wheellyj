@@ -9,29 +9,31 @@ properties:
   class:
     const: org.mmarini.wheelly.apis.SimRobot
   mapSeed:
-    multipleOf: 1
+    type: integer
     minimum: 1
   robotSeed:
-    multipleOf: 1
+    type: integer
     minimum: 1
   errSigma:
+    type: number
     minimum: 0
   errSensor:
+    type: number
     minimum: 0
   sensorReceptiveAngle:
-    multipleOf: 1
+    type: integer
     minimum: 1
   numObstacles:
-    multipleOf: 1
+    type: integer
     minimum: 0
   numLabels:
-    multipleOf: 1
+    type: integer
     minimum: 0
   maxAngularSpeed:
-    multipleOf: 1
+    type: integer
     minimum: 1
   changeObstaclesPeriod:
-    multipleOf: 1
+    type: integer
     minimum: 1
 required:
   - $schema

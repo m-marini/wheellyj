@@ -14,7 +14,7 @@ properties:
   sizes:
     type: object
     additionalProperties:
-      multipleOf: 1
+      type: integer
       minimum: 1
 required:
   - $schema
@@ -35,10 +35,13 @@ $defs:
       type:
         const: dense
       name:
+        type: string
         minLength: 1
       maxAbsWeights:
+        type: number
         exclusiveMinimum: 0
       dropOut:
+        type: number
         exclusiveMinimum: 0
         maximum: 1
       inputs:
@@ -59,6 +62,7 @@ $defs:
       type:
         const: linear
       name:
+        type: string
         minLength: 1
       b:
         type: number
@@ -82,8 +86,10 @@ $defs:
       type:
         const: softmax
       name:
+        type: string
         minLength: 1
       temperature:
+        type: number
         exclusiveMinimum: 0
       inputs:
         type: array
@@ -102,8 +108,10 @@ $defs:
       type:
         const: dropout
       name:
+        type: string
         minLength: 1
       dropOut:
+        type: number
         exclusiveMinimum: 0
         maximum: 1
       inputs:
@@ -127,6 +135,7 @@ $defs:
           - sum
           - concat
       name:
+        type: string
         minLength: 1
       inputs:
         type: array
@@ -146,10 +155,11 @@ $defs:
           - sum
           - concat
       name:
+        type: string
         minLength: 1
       inputs:
-        minItems: 1
         type: array
+        minItems: 1
         items:
           type: string
     required:

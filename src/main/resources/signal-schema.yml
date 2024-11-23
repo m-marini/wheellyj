@@ -8,15 +8,13 @@ additionalProperties:
 ---
 $defs:
   Signal:
-    type: object
-  Signal:
     anyOf:
       - $ref: "#/$defs/IntSignal"
       - $ref: "#/$defs/FloatSignal"
   Shape:
     type: array
     items:
-      multipleOf: 1
+      type: integer
       minimum: 1
   IntSignal:
     type: object
@@ -26,7 +24,7 @@ $defs:
       shape:
         $ref: "#/$defs/Shape"
       numValues:
-        multipleOf: 1
+        type: integer
         minimum: 1
     required:
       - type

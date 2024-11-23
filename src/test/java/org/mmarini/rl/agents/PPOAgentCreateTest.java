@@ -47,7 +47,7 @@ class PPOAgentCreateTest {
     private static final float EPSILON = 1e-6f;
     private static final String AGENT_YAML = """
             ---
-            $schema: https://mmarini.org/wheelly/ppo-agent-spec-schema-0.2
+            $schema: https://mmarini.org/wheelly/ppo-agent-spec-schema-0.3
             class: org.mmarini.rl.agents.PPOAgent
             rewardAlpha: 0.001
             eta: 1e-3
@@ -100,7 +100,7 @@ class PPOAgentCreateTest {
             """;
     private static final String AGENT_NO_ACTION_ALPHAS_YAML = """
             ---
-            $schema: https://mmarini.org/wheelly/ppo-agent-spec-schema-0.2
+            $schema: https://mmarini.org/wheelly/ppo-agent-spec-schema-0.3
             class: org.mmarini.rl.agents.PPOAgent
             rewardAlpha: 0.001
             eta: 1e-3
@@ -143,7 +143,7 @@ class PPOAgentCreateTest {
             """;
     private static final String AGENT_ACTION_CRITIC_YAML = """
             ---
-            $schema: https://mmarini.org/wheelly/ppo-agent-spec-schema-0.2
+            $schema: https://mmarini.org/wheelly/ppo-agent-spec-schema-0.3
             class: org.mmarini.rl.agents.PPOAgent
             rewardAlpha: 0.001
             eta: 1e-3
@@ -198,7 +198,7 @@ class PPOAgentCreateTest {
             """;
     private static final String AGENT_NO_CRITIC_YAML = """
             ---
-            $schema: https://mmarini.org/wheelly/ppo-agent-spec-schema-0.2
+            $schema: https://mmarini.org/wheelly/ppo-agent-spec-schema-0.3
             class: org.mmarini.rl.agents.PPOAgent
             rewardAlpha: 0.001
             eta: 1e-3
@@ -253,7 +253,7 @@ class PPOAgentCreateTest {
         Random random = Nd4j.getRandom();
         random.setSeed(AGENT_SEED);
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                PPOAgent.fromJson(spec, Locator.root(), props, null, Integer.MAX_VALUE, random)
+                PPOAgent.fromJson(spec, Locator.root(), props, null, random)
         );
         assertThat(ex.getMessage(), matchesPattern("actions must not contain \"critic\" key"));
     }
@@ -270,7 +270,7 @@ class PPOAgentCreateTest {
         Random random = Nd4j.getRandom();
         random.setSeed(AGENT_SEED);
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                PPOAgent.fromJson(spec, Locator.root(), props, null, Integer.MAX_VALUE, random)
+                PPOAgent.fromJson(spec, Locator.root(), props, null, random)
         );
         assertThat(ex.getMessage(), matchesPattern("Missing alpha for actions \"output\""));
     }
@@ -287,7 +287,7 @@ class PPOAgentCreateTest {
         Random random = Nd4j.getRandom();
         random.setSeed(AGENT_SEED);
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                PPOAgent.fromJson(spec, Locator.root(), props, null, Integer.MAX_VALUE, random)
+                PPOAgent.fromJson(spec, Locator.root(), props, null, random)
         );
         assertThat(ex.getMessage(), matchesPattern("network must contain \"critic\" output layer"));
     }
@@ -303,7 +303,7 @@ class PPOAgentCreateTest {
         );
         Random random = Nd4j.getRandom();
         random.setSeed(AGENT_SEED);
-        PPOAgent agent = PPOAgent.fromJson(spec, Locator.root(), props, null, Integer.MAX_VALUE, random);
+        PPOAgent agent = PPOAgent.fromJson(spec, Locator.root(), props, null, random);
         assertEquals(0.001f, agent.rewardAlpha());
         assertEquals(0f, agent.avgReward());
         assertEquals(1e-3f, agent.eta());
@@ -339,7 +339,7 @@ class PPOAgentCreateTest {
         );
         Random random = Nd4j.getRandom();
         random.setSeed(AGENT_SEED);
-        PPOAgent agent = PPOAgent.fromJson(spec, Locator.root(), props, null, Integer.MAX_VALUE, random);
+        PPOAgent agent = PPOAgent.fromJson(spec, Locator.root(), props, null, random);
         assertEquals(0.001f, agent.rewardAlpha());
         assertEquals(0.2f, agent.avgReward());
         assertEquals(1e-3f, agent.eta());

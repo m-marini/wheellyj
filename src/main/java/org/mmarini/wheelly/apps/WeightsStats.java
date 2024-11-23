@@ -87,7 +87,7 @@ public class WeightsStats {
         String modelPath = this.args.getString("modelPath");
         Random random = Nd4j.getRandom();
         try {
-            TDAgentSingleNN agent = TDAgentSingleNN.load(new File(modelPath), Integer.MAX_VALUE, random);
+            TDAgentSingleNN agent = TDAgentSingleNN.load(new File(modelPath), random);
             Stats criticWeightStats = new Stats();
             Stats criticBiasStats = new Stats();
             Stats policyWeightStats = new Stats();
