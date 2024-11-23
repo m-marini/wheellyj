@@ -27,16 +27,17 @@ package org.mmarini.rl.agents;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Flowable;
+import org.mmarini.MapStream;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.WithSignalsSpec;
+import org.mmarini.rl.nets.TDNetwork;
+import org.mmarini.rl.nets.TDNetworkState;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
 import java.io.Closeable;
-import java.io.File;
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -65,6 +66,40 @@ public interface Agent extends Closeable, WithSignalsSpec, Serializable {
     Map<String, Signal> act(Map<String, Signal> state);
 
     /**
+     * Sets the alpha parameters
+     *
+     * @param alphas the alpha parameters
+     */
+    Agent alphas(Map<String, Float> alphas);
+
+    /**
+     * Returns the alpha parameters
+     */
+    Map<String, Float> alphas();
+
+    /**
+     * Backup the current model file
+     */
+    Agent backup();
+
+    /**
+     * Returns the batch size for training
+     */
+    int batchSize();
+
+    /**
+     * Returns the learning rate hyperparameter
+     */
+    float eta();
+
+    /**
+     * Returns the learning rate hyperparameter
+     *
+     * @param eta the learning rate hyperparameter
+     */
+    Agent eta(float eta);
+
+    /**
      * Resets the inference engine
      */
 
@@ -81,6 +116,16 @@ public interface Agent extends Closeable, WithSignalsSpec, Serializable {
     JsonNode json();
 
     /**
+     * Returns the neural network
+     */
+    TDNetwork network();
+
+    /**
+     * Returns the number of epochs for training
+     */
+    int numEpochs();
+
+    /**
      * Returns the number of steps for training
      */
     int numSteps();
@@ -93,17 +138,25 @@ public interface Agent extends Closeable, WithSignalsSpec, Serializable {
     Agent observe(Environment.ExecutionResult result);
 
     /**
+     * Returns the policy for a network state
+     *
+     * @param state the network state
+     */
+    default Map<String, INDArray> policy(TDNetworkState state) {
+        return MapStream.of(getActions())
+                .mapValues((key, value) -> state.getValues(key))
+                .toMap();
+    }
+
+    /**
      * Returns the flowable kpis
      */
     Flowable<Map<String, INDArray>> readKpis();
 
     /**
      * Save the model
-     *
-     * @param path the path
-     * @throws IOException in case of error
      */
-    void save(File path) throws IOException;
+    void save();
 
     /**
      * Returns the trained agent for the given trajectory
@@ -111,6 +164,20 @@ public interface Agent extends Closeable, WithSignalsSpec, Serializable {
      * @param trajectory the trajectory
      */
     Agent trainByTrajectory(List<Environment.ExecutionResult> trajectory);
+
+    /**
+     * Returns the average step rewards after training a mini batch
+     *
+     * @param epoch        the current epoch number
+     * @param startStep    the current start step number
+     * @param numStepsParm the number of steps
+     * @param states       the states (size=n+1)
+     * @param actionMasks  the action masks (size=n)
+     * @param rewards      the rewards (size=n)
+     * @param actionProb0  the probabilities before train of action a_t (size=n)
+     */
+    Agent trainMiniBatch(long epoch, long startStep, long numStepsParm, Map<String, INDArray> states,
+                         Map<String, INDArray> actionMasks, INDArray rewards, Map<String, INDArray> actionProb0);
 
     /**
      * Returns the current trajectory

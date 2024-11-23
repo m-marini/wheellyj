@@ -63,7 +63,7 @@ class TDAgentSingleNNActObsTest {
         return TDAgentSingleNN.create(STATE_SPEC, ACTIONS_SPEC,
                 0, REWARD_ALPHA, ETA, alphas, LAMBDA,
                 1, 1, 1, network, null,
-                random, null, Integer.MAX_VALUE);
+                random, null);
     }
 
     private static TDNetwork createNetwork(Random random) {

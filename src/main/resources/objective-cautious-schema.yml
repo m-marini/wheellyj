@@ -9,6 +9,7 @@ properties:
   class:
     const: org.mmarini.wheelly.objectives.Cautious
   maxDistance:
+    type: number
     minimum: 0
 required:
   - $schema

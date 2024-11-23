@@ -9,19 +9,19 @@ properties:
   class:
     const: org.mmarini.wheelly.apis.RobotController
   interval:
-    multipleOf: 1
+    type: integer
     minimum: 1
   reactionInterval:
-    multipleOf: 1
+    type: integer
     minimum: 1
   commandInterval:
-    multipleOf: 1
+    type: integer
     minimum: 1
   connectionRetryInterval:
-    multipleOf: 1
+    type: integer
     minimum: 1
   watchdogInterval:
-    multipleOf: 1
+    type: integer
     minimum: 1
   simulationSpeed:
     type: number
@@ -29,7 +29,7 @@ properties:
   supplyValues:
     type: array
     items:
-      multipleOf: 1
+      type: integer
       minimum: 0
       maximum: 4095
     minItems: 2

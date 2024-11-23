@@ -34,10 +34,10 @@ import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
+import org.mmarini.rl.agents.AbstractAgentNN;
 import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.BatchTrainer;
 import org.mmarini.rl.agents.KpiBinWriter;
-import org.mmarini.rl.agents.TDAgentSingleNN;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.wheelly.swing.KpisPanel;
@@ -128,7 +128,8 @@ public class BatchTraining {
     private BatchTrainer trainer;
     private KpiBinWriter kpiWriter;
     private List<JFrame> allFrames;
-    private TDAgentSingleNN agent;
+    private Agent agent;
+    private int numEpochs;
 
     /**
      * Creates the application
@@ -220,10 +221,9 @@ public class BatchTraining {
         INDArray counters = kpis.get("counters");
         if (counters != null) {
             long epoch = counters.getLong(0, 0);
-            long numEpochs = counters.getLong(0, 1);
             long step = counters.getLong(0, 2);
             long numSteps = counters.getLong(0, 3);
-            info("Epoch.step %d.%d of %d.%d",
+            info("Epoch/step %d/%d of %d/%d",
                     epoch,
                     step,
                     numEpochs,
@@ -233,7 +233,7 @@ public class BatchTraining {
     }
 
     /**
-     * Handles shutdown
+     * Handle shutdown
      */
     private void handleShutdown() {
         info("Shutting down ...");
@@ -286,11 +286,15 @@ public class BatchTraining {
             throw new IllegalArgumentException(format("Missing node %s", agentLocator));
         }
         // Loads agent
-        this.agent = ((TDAgentSingleNN) Agent.fromConfig(config, agentLocator, environment))
-                .setPostTrainKpis(true);
+        this.agent = Agent.fromConfig(config, agentLocator, environment);
+
+        if (agent instanceof AbstractAgentNN aa) {
+            this.agent = aa.setPostTrainKpis(true);
+        }
 
         // Create the batch trainer
-        this.trainer = BatchTrainer.create(agent, this::saveNetwork);
+        numEpochs = Locator.locate("numEpochs").getNode(config).asInt(agent.numEpochs());
+        this.trainer = BatchTrainer.create(agent, numEpochs);
         learnPanel.setActionAlphas(agent.alphas());
         learnPanel.setEta(agent.eta());
         trainer.readInfo()
@@ -373,15 +377,4 @@ public class BatchTraining {
         trainer.train();
         info("Training completed.");
     }
-
-    /**
-     * Saves the network
-     *
-     * @param agent the agent
-     */
-    private void saveNetwork(TDAgentSingleNN agent) {
-        info("Saving network ...");
-        agent.autosave();
-    }
-
 }

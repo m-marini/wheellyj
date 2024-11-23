@@ -1,10 +1,11 @@
 ---
-$schema: https://mmarini.org/wheelly/wheelly-schema-1.0
+$schema: https://mmarini.org/wheelly/wheelly-schema-2.0
 robot: robots/simRobot
 #robot: robots/realRobot
 controller: controllers/controller
 environment: environments/polarMapEnv
 agent: agents/polarRadarAgent
+savingInterval: 300000
 
 robots:
   simRobot:
@@ -57,8 +58,8 @@ environments:
     interval: 10
     commandInterval: 600
     reactionInterval: 300
-    numDirectionValues: 24
-    numSpeedValues: 9
+    numDirectionValues: 8
+    numSpeedValues: 5
     numSensorValues: 7
     radarWidth: 51
     radarHeight: 51
@@ -80,7 +81,7 @@ objectives:
       class: org.mmarini.wheelly.objectives.AvoidContact
     - $schema: https://mmarini.org/wheelly/objective-action-set-schema-1.0
       class: org.mmarini.wheelly.objectives.ActionSet
-      move: 112 # 9 / 2 + 9 * 24 / 2
+      move: 22 # 5 / 2 + 5 * 8 / 2
       #sensor: 3
   labelFinder:
     - $schema: https://mmarini.org/wheelly/objective-avoid-contact-schema-0.1
@@ -111,10 +112,9 @@ agents:
   # Polar radar agent
   ######################################
   polarRadarAgent:
-    $schema: https://mmarini.org/wheelly/ppo-agent-schema-0.2
+    $schema: https://mmarini.org/wheelly/ppo-agent-schema-0.3
     class: org.mmarini.rl.agents.PPOAgent
     modelPath: models/polarRadarAgent
-    savingIntervalSteps: 1000
     rewardAlpha: 5e-3
     ppoEpsilon: 0.2
     numSteps: 256
@@ -239,7 +239,7 @@ agents:
         input: resnet2
         layers:
           - type: dense
-            outputSize: 216
+            outputSize: 40
             maxAbsWeights: 1E2
           - type: tanh
           - type: softmax

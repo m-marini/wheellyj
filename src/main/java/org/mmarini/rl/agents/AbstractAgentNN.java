@@ -32,7 +32,6 @@ import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.MapStream;
 import org.mmarini.rl.envs.*;
 import org.mmarini.rl.nets.TDNetwork;
-import org.mmarini.rl.nets.TDNetworkState;
 import org.mmarini.rl.processors.InputProcessor;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.buffer.DataType;
@@ -196,7 +195,7 @@ public abstract class AbstractAgentNN implements Agent {
     }
 
     /**
-     * Returns the json node of signal spec
+     * Returns the JSON node of signal spec
      *
      * @param signals the signals spec
      */
@@ -207,13 +206,13 @@ public abstract class AbstractAgentNN implements Agent {
         }
         return node;
     }
+
     protected final Map<String, SignalSpec> state;
     protected final Map<String, SignalSpec> actions;
     protected final float rewardAlpha;
     protected final Random random;
     protected final float lambda;
     protected final File modelPath;
-    protected final int savingIntervalSteps;
     protected final InputProcessor processor;
     protected final PublishProcessor<Map<String, INDArray>> indicatorsPub;
     protected final boolean postTrainKpis;
@@ -224,9 +223,8 @@ public abstract class AbstractAgentNN implements Agent {
     protected final int batchSize;
     protected final Map<String, Float> alphas;
     protected final float avgReward;
-    protected boolean backedUp;
-    protected int savingStepCounter;
-    protected float eta;
+    protected final float eta;
+
     /**
      * Creates a random behavior agent
      *
@@ -237,26 +235,22 @@ public abstract class AbstractAgentNN implements Agent {
      * @param eta                 the learning rate hyperparameter
      * @param alphas              the network training alpha parameter by output
      * @param lambda              the TD lambda factor
-     * @param numSteps            the number of step of trajectory
+     * @param numSteps            the number of trajectory steps
      * @param numEpochs           the number of epochs
      * @param batchSize           the batch size
      * @param network             the network
      * @param processor           the input state processor
      * @param random              the random generator
-     * @param modelPath           the model saving path
-     * @param savingIntervalSteps the number of steps between each model saving
+     * @param modelPath           the model-saving path
      * @param indicatorsPub       the indicator publisher
      * @param postTrainKpis       true if post train kpi
-     * @param savingStepCounter   the saving step counter
-     * @param backedUp            true if the model has been backed up
      */
     protected AbstractAgentNN(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
                               float avgReward, float rewardAlpha, float eta, Map<String, Float> alphas, float lambda,
                               int numSteps, int numEpochs, int batchSize, TDNetwork network,
                               List<Environment.ExecutionResult> trajectory, InputProcessor processor, Random random,
-                              File modelPath, int savingIntervalSteps,
-                              PublishProcessor<Map<String, INDArray>> indicatorsPub, boolean postTrainKpis,
-                              int savingStepCounter, boolean backedUp) {
+                              File modelPath,
+                              PublishProcessor<Map<String, INDArray>> indicatorsPub, boolean postTrainKpis) {
         this.state = requireNonNull(state);
         this.actions = requireNonNull(actions);
         this.rewardAlpha = rewardAlpha;
@@ -273,14 +267,11 @@ public abstract class AbstractAgentNN implements Agent {
         this.numSteps = numSteps;
         this.numEpochs = numEpochs;
         this.batchSize = batchSize;
-        this.savingStepCounter = savingStepCounter;
-        this.backedUp = backedUp;
         this.eta = eta;
         if (actions.containsKey("critic")) {
             throw new IllegalArgumentException("actions must not contain \"critic\" key");
         }
         Map<String, SignalSpec> processedState = processor != null ? processor.spec() : state;
-        this.savingIntervalSteps = savingIntervalSteps;
         Map<String, Long> stateSizes = getStateSizes(processedState);
         Map<String, Long> actionSizes = getActionSizes(actions);
 
@@ -299,42 +290,9 @@ public abstract class AbstractAgentNN implements Agent {
         return chooseActions(pis, random);
     }
 
-    /**
-     * Returns the alpha parameters
-     */
+    @Override
     public Map<String, Float> alphas() {
         return alphas;
-    }
-
-    /**
-     * Sets the alpha parameters
-     *
-     * @param alphas the alpha parameters
-     */
-    public abstract AbstractAgentNN alphas(Map<String, Float> alphas);
-
-    /**
-     * Saves the model
-     */
-    public AbstractAgentNN autosave() {
-        if (modelPath != null) {
-            try {
-                File file = new File(modelPath, "agent.bin");
-                if (!backedUp && file.exists() && file.canWrite()) {
-                    // rename network file to back up
-                    backedUp = true;
-                    String backupFileName = format("agent-%1$tY%1$tm%1$td-%1$tH%1$tM%1$tS.bin", Calendar.getInstance());
-                    File backupFile = new File(file.getParentFile(), backupFileName);
-                    file.renameTo(backupFile);
-                    logger.atInfo().log("Backup {}", backupFile);
-                }
-                save(modelPath);
-                logger.atInfo().setMessage("Saved model into \"{}\"").addArgument(modelPath).log();
-            } catch (IOException e) {
-                logger.atError().setCause(e).log();
-            }
-        }
-        return this;
     }
 
     /**
@@ -350,31 +308,44 @@ public abstract class AbstractAgentNN implements Agent {
     public abstract AbstractAgentNN avgReward(float avgReward);
 
     /**
-     * Returns the batch size for training
+     * Backup the model
      */
+    public Agent backup() {
+        if (modelPath != null) {
+            String backupFileName = format("agent-%1$tY%1$tm%1$td-%1$tH%1$tM%1$tS", Calendar.getInstance());
+            File ymlFile = new File(modelPath, "agent.yml");
+            if (ymlFile.exists() && ymlFile.canWrite()) {
+                // rename the file to back up
+                File backupYamlFile = new File(ymlFile.getParentFile(), backupFileName + ".yml");
+                ymlFile.renameTo(backupYamlFile);
+                logger.atInfo().log("Backup {}", backupYamlFile);
+            }
+            File binFile = new File(modelPath, "agent.bin");
+            if (binFile.exists() && binFile.canWrite()) {
+                File backupBinFile = new File(ymlFile.getParentFile(), backupFileName + ".bin");
+                binFile.renameTo(backupBinFile);
+                logger.atInfo().log("Backup {}", backupBinFile);
+            }
+            save();
+        }
+        return this;
+    }
+
+    @Override
     public int batchSize() {
         return batchSize;
     }
 
     @Override
     public void close() {
-        autosave();
+        save();
         indicatorsPub.onComplete();
     }
 
-    /**
-     * Returns the learning rate hyperparameter
-     */
+    @Override
     public float eta() {
         return eta;
     }
-
-    /**
-     * Returns the learning rate hyperparameter
-     *
-     * @param eta the learning rate hyperparameter
-     */
-    public abstract AbstractAgentNN eta(float eta);
 
     @Override
     public Map<String, SignalSpec> getActions() {
@@ -403,9 +374,7 @@ public abstract class AbstractAgentNN implements Agent {
         return lambda;
     }
 
-    /**
-     * Returns the neural network
-     */
+    @Override
     public TDNetwork network() {
         return network;
     }
@@ -417,9 +386,7 @@ public abstract class AbstractAgentNN implements Agent {
      */
     public abstract AbstractAgentNN network(TDNetwork network);
 
-    /**
-     * Returns the number of epochs for training
-     */
+    @Override
     public int numEpochs() {
         return numEpochs;
     }
@@ -442,7 +409,7 @@ public abstract class AbstractAgentNN implements Agent {
                 .mapValues(value -> value.reshape(1, 1))
                 .toMap();
 
-        // Extracts rewards
+        // Extract rewards
         INDArray rewards = Nd4j.scalar((float) result.reward()).reshape(DEFAULT_NUM_EPOCHS, DEFAULT_NUM_EPOCHS);
 
         // Generate kpis
@@ -454,17 +421,6 @@ public abstract class AbstractAgentNN implements Agent {
         indicatorsPub.onNext(kpis);
 
         return trajectory(newTrajectory);
-    }
-
-    /**
-     * Returns the policy outputs from network state
-     *
-     * @param state the network state
-     */
-    Map<String, INDArray> policy(TDNetworkState state) {
-        return MapStream.of(actions)
-                .mapValues((key, value) -> state.getValues(key))
-                .toMap();
     }
 
     /**
@@ -521,16 +477,23 @@ public abstract class AbstractAgentNN implements Agent {
     }
 
     @Override
-    public void save(File pathFile) throws IOException {
-        if (!pathFile.exists()) {
-            if (!pathFile.mkdirs()) {
-                throw new IOException(format("Unable to create path %s", pathFile.getCanonicalPath()));
+    public void save() {
+        if (modelPath != null) {
+            try {
+                if (!modelPath.exists()) {
+                    if (!modelPath.mkdirs()) {
+                        throw new IOException(format("Unable to create path %s", modelPath.getCanonicalPath()));
+                    }
+                }
+                JsonNode spec = json();
+                Utils.objectMapper.writerWithDefaultPrettyPrinter().writeValue(new File(modelPath, "agent.yml"), spec);
+                Map<String, INDArray> props = props();
+                Serde.serizalize(new File(modelPath, "agent.bin"), props);
+                logger.atInfo().log("Saved model into \"{}\"", modelPath);
+            } catch (IOException e) {
+                logger.atError().log("Error saving model into \"{}\"", modelPath);
             }
         }
-        JsonNode spec = json();
-        Utils.objectMapper.writerWithDefaultPrettyPrinter().writeValue(new File(pathFile, "agent.yml"), spec);
-        Map<String, INDArray> props = props();
-        Serde.serizalize(new File(pathFile, "agent.bin"), props);
     }
 
     /**
@@ -580,7 +543,7 @@ public abstract class AbstractAgentNN implements Agent {
                 })
                 .toMap();
 
-        // Extracts rewards
+        // Extract rewards
         INDArray rewards = Nd4j.createFromArray(
                         trajectory.stream()
                                 .mapToDouble(Environment.ExecutionResult::reward)

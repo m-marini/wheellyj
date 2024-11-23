@@ -99,7 +99,7 @@ public interface Utils {
 
 
     /**
-     * Lays horizontally the frames
+     * Horizontally lays the frames
      *
      * @param frames the list of frames
      */
@@ -108,7 +108,7 @@ public interface Utils {
     }
 
     /**
-     * Lays horizontally the frames
+     * Horizontally lays the frames
      *
      * @param frames the list of frames
      */

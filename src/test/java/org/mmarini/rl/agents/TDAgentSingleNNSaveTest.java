@@ -132,18 +132,18 @@ class TDAgentSingleNNSaveTest {
         return TDAgentSingleNN.create(STATE_SPEC, ACTIONS_SPEC,
                 0, REWARD_ALPHA, ETA, alphas, LAMBDA,
                 1, 1, 32, network, null,
-                random, null, Integer.MAX_VALUE);
+                random, new File("models/test"));
     }
 
     @Test
     void save() throws IOException {
+        File pathFile = new File("models/test");
         try (TDAgentSingleNN agent = createAgent()) {
-            File pathFile = new File("models/test");
-            agent.save(pathFile);
+            agent.save();
 
             Random random = Nd4j.getRandom();
             random.setSeed(1234);
-            TDAgentSingleNN newAgent = TDAgentSingleNN.load(pathFile, Integer.MAX_VALUE, random);
+            TDAgentSingleNN newAgent = TDAgentSingleNN.load(pathFile, random);
             assertEquals(agent.avgReward(), newAgent.avgReward());
             assertEquals(agent.rewardAlpha(), newAgent.rewardAlpha());
             assertEquals(agent.alphas(), newAgent.alphas());

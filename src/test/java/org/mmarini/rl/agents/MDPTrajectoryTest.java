@@ -55,9 +55,9 @@ class MDPTrajectoryTest {
      *
      * @param mdp         the mdp
      * @param rewardAlpha the reword alpha
-     * @param numSteps
-     * @param numEpochs
-     * @param batchSize
+     * @param numSteps    the number of steps
+     * @param numEpochs   the number of epochs
+     * @param batchSize   the batch size
      */
     static TDAgentSingleNN createAgent(TestSequenceMDP mdp, float rewardAlpha, int numSteps, int numEpochs, int batchSize) {
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(AGENT_SEED);
@@ -86,7 +86,7 @@ class MDPTrajectoryTest {
         return TDAgentSingleNN.create(mdp.signalSpec(), mdp.actionSpec(),
                 0, rewardAlpha, ETA, alphas, LAMBDA,
                 numSteps, numEpochs, batchSize, network, null,
-                random, null, Integer.MAX_VALUE);
+                random, null);
     }
 
     TestSequenceMDP mdp;

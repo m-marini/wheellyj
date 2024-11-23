@@ -60,8 +60,8 @@ import static java.lang.String.format;
  * Agent based on Temporal Difference Actor-Critic with single neural network
  */
 public class TDAgentSingleNN extends AbstractAgentNN {
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/agent-single-nn-schema-0.5";
-    public static final String SPEC_SCHEMA_NAME = "https://mmarini.org/wheelly/tdagent-spec-schema-0.2";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/agent-single-nn-schema-0.6";
+    public static final String SPEC_SCHEMA_NAME = "https://mmarini.org/wheelly/tdagent-spec-schema-0.3";
     public static final int DEFAULT_NUM_STEPS = 2048;
     public static final int DEFAULT_BATCH_SIZE = 32;
 
@@ -75,27 +75,24 @@ public class TDAgentSingleNN extends AbstractAgentNN {
      * @param eta                 the learning rate hyper parameter
      * @param alphas              the network training alpha parameter by output
      * @param lambda              the TD lambda factor
-     * @param numSteps            the number of step of trajectory
+     * @param numSteps            the number of trajectory steps
      * @param numEpochs           the number of epochs
      * @param batchSize           the batch size
      * @param network             the network
      * @param processor           the input state processor
      * @param random              the random generator
-     * @param modelPath           the model saving path
-     * @param savingIntervalSteps the number of steps between each model saving
+     * @param modelPath           the model-saving path
      */
     public static TDAgentSingleNN create(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
                                          float avgReward, float rewardAlpha, float eta, Map<String, Float> alphas, float lambda,
                                          int numSteps, int numEpochs, int batchSize, TDNetwork network,
-                                         InputProcessor processor, Random random, File modelPath,
-                                         int savingIntervalSteps) {
+                                         InputProcessor processor, Random random, File modelPath) {
         return new TDAgentSingleNN(
                 state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network,
                 List.of(), processor, random, modelPath,
-                savingIntervalSteps,
                 PublishProcessor.create(),
-                false,
-                0, false);
+                false
+        );
     }
 
     /**
@@ -108,7 +105,6 @@ public class TDAgentSingleNN extends AbstractAgentNN {
     public static TDAgentSingleNN create(JsonNode root, Locator locator, WithSignalsSpec env) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         File path = new File(locator.path("modelPath").getNode(root).asText());
-        int savingIntervalStep = locator.path("savingIntervalSteps").getNode(root).asInt(Integer.MAX_VALUE);
         Random random = Nd4j.getRandom();
         long seed = locator.path("seed").getNode(root).asLong(0);
         if (seed > 0) {
@@ -118,7 +114,7 @@ public class TDAgentSingleNN extends AbstractAgentNN {
         if (path.exists()) {
             // Load agent
             try {
-                TDAgentSingleNN agent = TDAgentSingleNN.load(path, savingIntervalStep, random);
+                TDAgentSingleNN agent = TDAgentSingleNN.load(path, random);
                 // Validate agent against env
                 SignalSpec.validateEqualsSpec(agent.getState(), stateSpec, "agent state", "environment state");
                 SignalSpec.validateEqualsSpec(agent.getState(), stateSpec, "agent actions", "environment actions");
@@ -147,7 +143,7 @@ public class TDAgentSingleNN extends AbstractAgentNN {
             return TDAgentSingleNN.create(stateSpec, actionSpec, 0,
                     rewardAlpha, eta, alphas, lambda,
                     numSteps, numEpochs, batchSize, network, processor,
-                    random, path, savingIntervalStep);
+                    random, path);
         }
     }
 
@@ -158,11 +154,10 @@ public class TDAgentSingleNN extends AbstractAgentNN {
      * @param locator             the locator of agent spec
      * @param props               the properties to initialize the agent
      * @param path                the saving path
-     * @param savingIntervalSteps the number of steps between each model saving
      * @param random              the random number generator
      */
     public static TDAgentSingleNN fromJson(JsonNode spec, Locator locator, Map<String, INDArray> props,
-                                           File path, int savingIntervalSteps, Random random) {
+                                           File path, Random random) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(spec), SPEC_SCHEMA_NAME);
         Map<String, SignalSpec> state = SignalSpec.createSignalSpecMap(spec, locator.path("state"));
         Map<String, SignalSpec> actions = SignalSpec.createSignalSpecMap(spec, locator.path("actions"));
@@ -194,21 +189,20 @@ public class TDAgentSingleNN extends AbstractAgentNN {
                 ? InputProcessor.create(spec, locator.path("inputProcess"), state)
                 : null;
         return TDAgentSingleNN.create(state, actions, avgReward, rewardAlpha, eta, alphas, lambda1,
-                numSteps, numEpochs, batchSize, network, processor1, random, path, savingIntervalSteps);
+                numSteps, numEpochs, batchSize, network, processor1, random, path);
     }
 
     /**
      * Loads the agent from path
      *
      * @param path                the path
-     * @param savingIntervalSteps the number of steps between each model saving
      * @param random              the random number generator
      * @throws IOException in case of error
      */
-    public static TDAgentSingleNN load(File path, int savingIntervalSteps, Random random) throws IOException {
+    public static TDAgentSingleNN load(File path, Random random) throws IOException {
         JsonNode spec = Utils.fromFile(new File(path, "agent.yml"));
         Map<String, INDArray> props = Serde.deserialize(new File(path, "agent.bin"));
-        return fromJson(spec, Locator.root(), props, path, savingIntervalSteps, random);
+        return fromJson(spec, Locator.root(), props, path, random);
     }
 
     /**
@@ -241,33 +235,30 @@ public class TDAgentSingleNN extends AbstractAgentNN {
      * @param processor           the input state processor
      * @param random              the random generator
      * @param modelPath           the model saving path
-     * @param savingIntervalSteps the number of steps between each model saving
      * @param indicatorsPub       the indicator publisher
      * @param postTrainKpis       true if post train kpi
-     * @param savingStepCounter   the saving step counter
-     * @param backedUp            true if the model has been backed up
      */
     protected TDAgentSingleNN(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
                               float avgReward, float rewardAlpha, float eta, Map<String, Float> alphas, float lambda,
                               int numSteps, int numEpochs, int batchSize, TDNetwork network,
                               List<Environment.ExecutionResult> trajectory, InputProcessor processor, Random random,
-                              File modelPath, int savingIntervalSteps,
-                              PublishProcessor<Map<String, INDArray>> indicatorsPub, boolean postTrainKpis,
-                              int savingStepCounter, boolean backedUp) {
+                              File modelPath,
+                              PublishProcessor<Map<String, INDArray>> indicatorsPub, boolean postTrainKpis) {
         super(state, actions,
                 avgReward, rewardAlpha, eta, alphas, lambda,
                 numSteps, numEpochs, batchSize, network,
                 trajectory, processor, random,
-                modelPath, savingIntervalSteps,
-                indicatorsPub, postTrainKpis,
-                savingStepCounter, backedUp);
+                modelPath,
+                indicatorsPub, postTrainKpis
+        );
     }
 
     @Override
     public TDAgentSingleNN alphas(Map<String, Float> alphas) {
-        return new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
-                savingIntervalSteps, indicatorsPub, postTrainKpis,
-                savingStepCounter, backedUp);
+        return alphas != this.alphas
+                ? new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
+                indicatorsPub, postTrainKpis)
+                : this;
     }
 
     /**
@@ -275,16 +266,28 @@ public class TDAgentSingleNN extends AbstractAgentNN {
      */
     @Override
     public TDAgentSingleNN avgReward(float avgReward) {
-        return new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
-                savingIntervalSteps, indicatorsPub, postTrainKpis, savingStepCounter, backedUp);
+        return avgReward != this.avgReward
+                ? new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
+                indicatorsPub, postTrainKpis)
+                : this;
     }
 
     @Override
     public TDAgentSingleNN eta(float eta) {
-        return new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
-                savingIntervalSteps, indicatorsPub, postTrainKpis,
-                savingStepCounter, backedUp);
+        return eta != this.eta
+                ? new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
+                indicatorsPub, postTrainKpis)
+                : this;
     }
+
+    @Override
+    public TDAgentSingleNN network(TDNetwork network) {
+        return network != this.network
+                ? new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
+                indicatorsPub, postTrainKpis)
+                : this;
+    }
+
 
     @Override
     public JsonNode json() {
@@ -312,15 +315,11 @@ public class TDAgentSingleNN extends AbstractAgentNN {
     }
 
     @Override
-    public TDAgentSingleNN network(TDNetwork network) {
-        return new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
-                savingIntervalSteps, indicatorsPub, postTrainKpis, savingStepCounter, backedUp);
-    }
-
-    @Override
     public TDAgentSingleNN setPostTrainKpis(boolean postTrainKpis) {
-        return new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
-                savingIntervalSteps, indicatorsPub, postTrainKpis, savingStepCounter, backedUp);
+        return postTrainKpis != this.postTrainKpis
+                ? new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
+                indicatorsPub, postTrainKpis)
+                : this;
     }
 
     @Override
@@ -328,10 +327,6 @@ public class TDAgentSingleNN extends AbstractAgentNN {
         TDAgentSingleNN newAgent = this;
         for (long i = 0; i < numEpochs; i++) {
             newAgent = newAgent.avgReward(avgReward).trainEpoch(i, states, actionMasks, rewards);
-        }
-        if (++savingStepCounter >= savingIntervalSteps) {
-            savingStepCounter = 0;
-            autosave();
         }
         return newAgent;
     }
@@ -347,7 +342,7 @@ public class TDAgentSingleNN extends AbstractAgentNN {
     private TDAgentSingleNN trainEpoch(long epoch, Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards) {
         long n = rewards.size(0);
         if (batchSize == n) {
-            return trainMiniBatch(epoch, 0, n, states, actionMasks, rewards);
+            return trainMiniBatch(epoch, 0, n, states, actionMasks, rewards, null);
         } else {
             TDAgentSingleNN newAgent = this;
             for (long startStep = 0; startStep < n; startStep += batchSize) {
@@ -362,23 +357,14 @@ public class TDAgentSingleNN extends AbstractAgentNN {
                         .toMap();
                 INDArray batchRewards = rewards.get(indices, NDArrayIndex.all());
                 newAgent = newAgent.avgReward(avgReward)
-                        .trainMiniBatch(epoch, startStep, n, batchStates, batchActionMasks, batchRewards);
+                        .trainMiniBatch(epoch, startStep, n, batchStates, batchActionMasks, batchRewards, null);
             }
             return newAgent;
         }
     }
 
-    /**
-     * Returns the average step rewards after training a mini batch
-     *
-     * @param epoch        the current epoch number
-     * @param startStep    the current start step number
-     * @param numStepsParm the number of steps
-     * @param states       the states (size=n+1)
-     * @param actionMasks  the action masks (size=n)
-     * @param rewards      the rewards (size=n)
-     */
-    public TDAgentSingleNN trainMiniBatch(long epoch, long startStep, long numStepsParm, Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards) {
+    @Override
+    public TDAgentSingleNN trainMiniBatch(long epoch, long startStep, long numStepsParm, Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards, Map<String, INDArray> actionProb0) {
         // Forward pass for differential value function prediction
         Map<String, INDArray> layers = network.forward(states).state().values();
         INDArray vPrediction = layers.get("critic.values");
@@ -449,10 +435,11 @@ public class TDAgentSingleNN extends AbstractAgentNN {
 
     @Override
     public TDAgentSingleNN trajectory(List<Environment.ExecutionResult> trajectory) {
-        return new TDAgentSingleNN(state, actions, avgReward,
+        return trajectory != this.trajectory
+                ? new TDAgentSingleNN(state, actions, avgReward,
                 rewardAlpha, eta, alphas, lambda,
                 numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
-                savingIntervalSteps, indicatorsPub, postTrainKpis,
-                savingStepCounter, backedUp);
+                indicatorsPub, postTrainKpis)
+                : this;
     }
 }

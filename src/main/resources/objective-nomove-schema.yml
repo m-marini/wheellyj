@@ -9,6 +9,7 @@ properties:
   class:
     const: org.mmarini.wheelly.objectives.NoMove
   velocityThreshold:
+    type: number
     minimum: 0
 required:
   - $schema

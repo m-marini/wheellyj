@@ -42,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class TDAgentSingleNNEnvCreateTest {
     private static final String YAML = """
             ---
-            $schema: https://mmarini.org/wheelly/agent-single-nn-schema-0.5
+            $schema: https://mmarini.org/wheelly/agent-single-nn-schema-0.6
             class: org.mmarini.rl.agents.TDAgentSingleNN
             modelPath: models/test
             seed: 1234
@@ -128,7 +128,7 @@ class TDAgentSingleNNEnvCreateTest {
         deleteRecursive(path);
         TDAgentSingleNN agent = TDAgentSingleNN.create(spec, Locator.root(), MOCK_ENV);
         assertNotNull(agent);
-        agent.save(path);
+        agent.save();
         JsonNode specLoad = Utils.fromText(YAML);
         TDAgentSingleNN agent1 = TDAgentSingleNN.create(specLoad, Locator.root(), MOCK_ENV);
         assertNotNull(agent1);

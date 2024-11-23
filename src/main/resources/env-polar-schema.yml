@@ -11,26 +11,26 @@ properties:
   objective:
     type: string
   numDirectionValues:
-    multipleOf: 1
+    type: integer
     minimum: 2
   numSensorValues:
-    multipleOf: 1
+    type: integer
     minimum: 2
   numSpeedValues:
-    multipleOf: 1
+    type: integer
     minimum: 2
   numRadarSectors:
-    multipleOf: 1
+    type: integer
     minimum: 2
   minRadarDistance:
     exclusiveMinimum: 0
   maxRadarDistance:
     exclusiveMinimum: 0
   radarWidth:
-    multipleOf: 1
+    type: integer
     minimum: 1
   radarHeight:
-    multipleOf: 1
+    type: integer
     minimum: 1
   radarGrid:
     exclusiveMinimum: 0
@@ -39,16 +39,16 @@ properties:
   radarReceptiveAngle:
     minimum: 0
   radarCleanInterval:
-    multipleOf: 1
+    type: integer
     minimum: 1
   correlationInterval:
-    multipleOf: 1
+    type: integer
     minimum: 1
   echoPersistence:
-    multipleOf: 1
+    type: integer
     minimum: 1
   contactPersistence:
-    multipleOf: 1
+    type: integer
     minimum: 1
   decay:
     exclusiveMinimum: 0
