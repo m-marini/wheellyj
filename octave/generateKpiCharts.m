@@ -9,6 +9,9 @@ function generateKpiCharts(hFile, id, kpiTitle, reportPath, mode, stats, histogr
     expTrend = 1;
   endif
 
+  [scaleHist, ordHist] = computeScale(histogram(2,1) , histogram(2,end));
+  withHist = ordHist < 12;
+
   # Generate charts
   plotFile = [id "_plot.png"];
   histFile = [id "_hist.png"];
@@ -17,9 +20,13 @@ function generateKpiCharts(hFile, id, kpiTitle, reportPath, mode, stats, histogr
 
   fprintf(hFile, "\n");
   fprintf(hFile, "### %s histogram\n", kpiTitle);
-
   fprintf(hFile, "\n");
-  fprintf(hFile, "![%s](%s)\n", kpiTitle, histFile);
+
+  if withHist
+    fprintf(hFile, "![%s](%s)\n", kpiTitle, histFile);
+  else
+    fprintf(hFile, "*Not available*\n");
+  endif
 
   # Generate legends
   z=[];
@@ -68,17 +75,19 @@ function generateKpiCharts(hFile, id, kpiTitle, reportPath, mode, stats, histogr
   print(file, "-dpng", "-S1200,800");
 
   # Generate histogram chart
-  [scaleHist, ordHist] = computeScale(histogram(2,1) , histogram(2,end));
   scaleHistLegend = sprintf("x 10^{%d}", ordHist);
   clf();
-  bar(histogram(2, :) * scaleHist, histogram(1, :));
-  grid on;
-  grid minor on;
-  title(kpiTitle);
-  if scaleHist != 1
-    xlabel(scaleHistLegend);
+  if withHist
+    bar(histogram(2, :) * scaleHist, histogram(1, :));
+    grid on;
+    grid minor on;
+    title(kpiTitle);
+    if scaleHist != 1
+      xlabel(scaleHistLegend);
+    endif
+    file = [reportPath "/" histFile];
+    print(file, "-dpng", "-S1200,800");
+  else
   endif
-  file = [reportPath "/" histFile];
-  print(file, "-dpng", "-S1200,800");
 endfunction
 
