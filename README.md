@@ -3,7 +3,15 @@ Wheelly is a wheels' robot base on Arduino system.
 
 The code of Arduino controller is at [Wheellino project](https://github.com/m-marini/wheellino).
 
+The code of Webcam controller is at [Wheellycam project](https://github.com/m-marini/wheellycam).
+
 The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
+
+## Release 0.19.0
+
+- Add generation of report yaml
+- Combine move and direction into a single value action
+- Rescale learn panel values
 
 ## Release 0.18.0
 
