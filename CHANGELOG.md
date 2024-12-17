@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 
 - Issue [#480](https://github.com/m-marini/wheellyj/issues/480): Change learning parameter during training
+- Issue [#482](https://github.com/m-marini/wheellyj/issues/482): Missing histogram
 
 ## [0.18.0] 2024-11-15
 
