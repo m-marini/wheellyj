@@ -33,6 +33,8 @@ import io.reactivex.rxjava3.core.Completable;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.function.Consumer;
 
 /**
@@ -112,6 +114,16 @@ public interface RobotControllerApi extends WithIOFlowable, WithStatusFlowable, 
      */
     static RobotControllerApi fromConfig(JsonNode config, Locator locator, RobotApi robot) {
         return Utils.createObject(config, locator, new Object[]{robot}, new Class[]{RobotApi.class});
+    }
+
+    /**
+     * Returns the robot controller from configuration json
+     *
+     * @param file  the configuration file
+     * @param robot the robot api
+     */
+    static RobotControllerApi fromFile(File file, RobotApi robot) throws IOException {
+        return Utils.createObject(file, new Object[]{robot}, new Class[]{RobotApi.class});
     }
 
     /**

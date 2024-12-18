@@ -1,0 +1,6 @@
+---
+- $schema: https://mmarini.org/wheelly/objective-avoid-contact-schema-0.1
+  class: org.mmarini.wheelly.objectives.AvoidContact
+- $schema: https://mmarini.org/wheelly/objective-cautious-schema-0.1
+  class: org.mmarini.wheelly.objectives.Cautious
+  maxDistance: 3

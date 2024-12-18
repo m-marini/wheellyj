@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+
+- Issue [#485](https://github.com/m-marini/wheellyj/issues/485): Change configuration files
+
 ## [0.19.0] 2024-12-17
 
 ### Added

@@ -29,90 +29,60 @@
 package org.mmarini.wheelly.apps;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.NullController;
 import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotControllerApi;
 import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.yaml.Locator;
 
+import java.io.File;
 import java.io.IOException;
-
-import static java.lang.String.format;
 
 public interface AppYaml {
 
 
     /**
-     * Returns the controller from configuration file
-     *
-     * @param config  the root node
-     * @param locator the configuration locator
-     * @param schema  the schema
-     */
-    static RobotControllerApi controllerFromJson(JsonNode config, Locator locator, String schema) {
-        JsonSchemas.instance().validateOrThrow(config, schema);
-        Locator robotLocator = locator.path(locator.path("robot").getNode(config).asText());
-        if (robotLocator.getNode(config).isMissingNode()) {
-            throw new IllegalArgumentException(format("Missing node %s", robotLocator));
-        }
-        Locator controllerLocator = locator.path(locator.path("controller").getNode(config).asText());
-        if (controllerLocator.getNode(config).isMissingNode()) {
-            throw new IllegalArgumentException(format("Missing node %s", controllerLocator));
-        }
-        RobotApi robot = RobotApi.fromConfig(config, robotLocator);
-        return RobotControllerApi.fromConfig(config, controllerLocator, robot);
-    }
-
-    /**
-     * Returns the environment
-     *
-     * @param config  the json document
-     * @param locator the config locator
-     * @param schema  the schema
-     */
-    static RobotEnvironment envFromJson(JsonNode config, Locator locator, String schema) {
-        RobotControllerApi controller = controllerFromJson(config, locator, schema);
-        Locator envLocator = locator.path(locator.path("environment").getNode(config).asText());
-        if (envLocator.getNode(config).isMissingNode()) {
-            throw new IllegalArgumentException(format("Missing node %s", envLocator));
-        }
-        return RobotEnvironment.fromConfig(config, envLocator, controller);
-    }
-
-    /**
-     * Returns the environment
-     *
-     * @param config  the json document
-     * @param locator the config locator
-     * @param schema  the schema
-     */
-    static RobotEnvironment envNullControllerFromJson(JsonNode config, Locator locator, String schema) {
-        JsonSchemas.instance().validateOrThrow(config, schema);
-        Locator envLocator = locator.path(locator.path("environment").getNode(config).asText());
-        if (envLocator.getNode(config).isMissingNode()) {
-            throw new IllegalArgumentException(format("Missing node %s", envLocator));
-        }
-        return RobotEnvironment.fromConfig(config, envLocator, new NullController());
-    }
-
-    /**
-     * Returns the controller from configuration file
+     * Returns the controller from the configuration file
      *
      * @param file the file
      */
-    static RobotControllerApi fromFile(String file, String schema) {
+    static RobotControllerApi controllerFromFile(String file, String schema) {
         try {
             JsonNode config = org.mmarini.yaml.Utils.fromFile(file);
-            return controllerFromJson(config, Locator.root(), schema);
+            return controllerFromJson(config, schema);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
     /**
+     * Returns the controller from configuration file reading "robot" and "controller" properties
+     *
+     * @param config the root node
+     * @param schema the schema
+     */
+    static RobotControllerApi controllerFromJson(JsonNode config, String schema) throws IOException {
+        JsonSchemas.instance().validateOrThrow(config, schema);
+        RobotApi robot = RobotApi.fromFile(new File(config.path("robot").asText()));
+        return RobotControllerApi.fromFile(new File(config.path("controller").asText()), robot);
+    }
+
+    /**
+     * Returns the environment readering the "robot", "controller" and "environment" properties
+     *
+     * @param config the json document
+     * @param schema the schema
+     */
+    static RobotEnvironment envFromJson(JsonNode config, String schema) throws IOException {
+        RobotControllerApi controller = controllerFromJson(config, schema);
+        return RobotEnvironment.fromFile(
+                new File(config.path("environment").asText()),
+                controller);
+    }
+
+    /**
      * Returns the double arrays from json document
      *
-     * @param root    the json root
+     * @param root    the JSON root
      * @param locator the array locator
      */
     static double[] loadDoubleArray(JsonNode root, Locator locator) {
@@ -122,9 +92,9 @@ public interface AppYaml {
     }
 
     /**
-     * Returns the int arrays from json document
+     * Returns the int arrays from JSON document
      *
-     * @param root    the json root
+     * @param root    the JSON root
      * @param locator the array locator
      */
     static int[] loadIntArray(JsonNode root, Locator locator) {

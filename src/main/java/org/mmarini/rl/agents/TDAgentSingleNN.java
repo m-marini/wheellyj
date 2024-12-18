@@ -68,20 +68,20 @@ public class TDAgentSingleNN extends AbstractAgentNN {
     /**
      * Returns a random behavior agent
      *
-     * @param state               the states
-     * @param actions             the actions
-     * @param avgReward           the average reward
-     * @param rewardAlpha         the reward alpha parameter
-     * @param eta                 the learning rate hyper parameter
-     * @param alphas              the network training alpha parameter by output
-     * @param lambda              the TD lambda factor
-     * @param numSteps            the number of trajectory steps
-     * @param numEpochs           the number of epochs
-     * @param batchSize           the batch size
-     * @param network             the network
-     * @param processor           the input state processor
-     * @param random              the random generator
-     * @param modelPath           the model-saving path
+     * @param state       the states
+     * @param actions     the actions
+     * @param avgReward   the average reward
+     * @param rewardAlpha the reward alpha parameter
+     * @param eta         the learning rate hyper parameter
+     * @param alphas      the network training alpha parameter by output
+     * @param lambda      the TD lambda factor
+     * @param numSteps    the number of trajectory steps
+     * @param numEpochs   the number of epochs
+     * @param batchSize   the batch size
+     * @param network     the network
+     * @param processor   the input state processor
+     * @param random      the random generator
+     * @param modelPath   the model-saving path
      */
     public static TDAgentSingleNN create(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
                                          float avgReward, float rewardAlpha, float eta, Map<String, Float> alphas, float lambda,
@@ -98,11 +98,22 @@ public class TDAgentSingleNN extends AbstractAgentNN {
     /**
      * Returns the agent from spec
      *
-     * @param root    the spec document
-     * @param locator the agent spec locator
-     * @param env     the environment
+     * @param root the spec document
+     * @param file the configuration file
+     * @param env  the environment
      */
-    public static TDAgentSingleNN create(JsonNode root, Locator locator, WithSignalsSpec env) {
+    public static TDAgentSingleNN create(JsonNode root, File file, WithSignalsSpec env) {
+        return create(root, env);
+    }
+
+    /**
+     * Returns the agent from spec
+     *
+     * @param root the spec document
+     * @param env  the environment
+     */
+    public static TDAgentSingleNN create(JsonNode root, WithSignalsSpec env) {
+        Locator locator = Locator.root();
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         File path = new File(locator.path("modelPath").getNode(root).asText());
         Random random = Nd4j.getRandom();
@@ -150,11 +161,11 @@ public class TDAgentSingleNN extends AbstractAgentNN {
     /**
      * Creates an agent from spec
      *
-     * @param spec                the specification
-     * @param locator             the locator of agent spec
-     * @param props               the properties to initialize the agent
-     * @param path                the saving path
-     * @param random              the random number generator
+     * @param spec    the specification
+     * @param locator the locator of agent spec
+     * @param props   the properties to initialize the agent
+     * @param path    the saving path
+     * @param random  the random number generator
      */
     public static TDAgentSingleNN fromJson(JsonNode spec, Locator locator, Map<String, INDArray> props,
                                            File path, Random random) {
@@ -193,10 +204,10 @@ public class TDAgentSingleNN extends AbstractAgentNN {
     }
 
     /**
-     * Loads the agent from path
+     * Loads the agent from the path
      *
-     * @param path                the path
-     * @param random              the random number generator
+     * @param path   the path
+     * @param random the random number generator
      * @throws IOException in case of error
      */
     public static TDAgentSingleNN load(File path, Random random) throws IOException {
@@ -221,22 +232,22 @@ public class TDAgentSingleNN extends AbstractAgentNN {
     /**
      * Creates a random behavior agent
      *
-     * @param state               the states
-     * @param actions             the actions
-     * @param avgReward           the average reward
-     * @param rewardAlpha         the reward alpha parameter
-     * @param eta                 the learning rate hyper parameter
-     * @param alphas              the network training alpha parameter by output
-     * @param lambda              the TD lambda factor
-     * @param numSteps            the number of step of trajectory
-     * @param numEpochs           the number of epochs
-     * @param batchSize           the batch size
-     * @param network             the network
-     * @param processor           the input state processor
-     * @param random              the random generator
-     * @param modelPath           the model saving path
-     * @param indicatorsPub       the indicator publisher
-     * @param postTrainKpis       true if post train kpi
+     * @param state         the states
+     * @param actions       the actions
+     * @param avgReward     the average reward
+     * @param rewardAlpha   the reward alpha parameter
+     * @param eta           the learning rate hyper parameter
+     * @param alphas        the network training alpha parameter by output
+     * @param lambda        the TD lambda factor
+     * @param numSteps      the number of trajectory steps
+     * @param numEpochs     the number of epochs
+     * @param batchSize     the batch size
+     * @param network       the network
+     * @param processor     the input state processor
+     * @param random        the random generator
+     * @param modelPath     the model-saving path
+     * @param indicatorsPub the indicator publisher
+     * @param postTrainKpis true if post train kpi
      */
     protected TDAgentSingleNN(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
                               float avgReward, float rewardAlpha, float eta, Map<String, Float> alphas, float lambda,
@@ -281,15 +292,6 @@ public class TDAgentSingleNN extends AbstractAgentNN {
     }
 
     @Override
-    public TDAgentSingleNN network(TDNetwork network) {
-        return network != this.network
-                ? new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
-                indicatorsPub, postTrainKpis)
-                : this;
-    }
-
-
-    @Override
     public JsonNode json() {
         ObjectNode alphasSpec = Utils.objectMapper.createObjectNode();
         for (Map.Entry<String, Float> alphaEntry : alphas.entrySet()) {
@@ -312,6 +314,14 @@ public class TDAgentSingleNN extends AbstractAgentNN {
             spec.set("inputProcess", processor.json());
         }
         return spec;
+    }
+
+    @Override
+    public TDAgentSingleNN network(TDNetwork network) {
+        return network != this.network
+                ? new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
+                indicatorsPub, postTrainKpis)
+                : this;
     }
 
     @Override

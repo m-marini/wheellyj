@@ -67,6 +67,8 @@ public record ReportProcess(String reportKey,
     public static final int ERROR_INDEX = 2;
     public static final int SIGMA_INDEX = 4;
     public static final int DEFAULT_NUM_CHART_POINTS = 200;
+    public static final double MIN_DIFFERENCE_RATIO = 1e-2;
+    public static final double MIN_DIFFERENCE = 1e-12;
     private static final int DEFAULT_NUM_BINS = 11;
     private static final int N_INDEX = 0;
     private static final int MIN_INDEX = 1;
@@ -78,8 +80,6 @@ public record ReportProcess(String reportKey,
     private static final long Y_MIN_INDEX = 2;
     private static final long Y_MAX_INDEX = 3;
     private static final Logger logger = LoggerFactory.getLogger(ReportProcess.class);
-    public static final double MIN_DIFFERENCE_RATIO = 1e-2;
-    public static final double MIN_DIFFERENCE = 1e-12;
 
     /**
      * Returns a reducer from MapArray to ArrayReader
@@ -200,6 +200,19 @@ public record ReportProcess(String reportKey,
     }
 
     /**
+     * Returns the geometric mean
+     *
+     * @param records the records
+     */
+    static INDArray gm(INDArray records) {
+        try (INDArray dataLog = Transforms.log(records)) {
+            try (INDArray meanLog = dataLog.mean(true, 1)) {
+                return Transforms.exp(meanLog);
+            }
+        }
+    }
+
+    /**
      * Returns the builder of report of geometric mean of value
      *
      * @param reportKey the report key
@@ -271,19 +284,6 @@ public record ReportProcess(String reportKey,
                 try (INDArray geoMean = Transforms.exp(meanLog)) {
                     return max.divi(geoMean);
                 }
-            }
-        }
-    }
-
-    /**
-     * Returns the geometric mean
-     *
-     * @param records the records
-     */
-    static INDArray gm(INDArray records) {
-        try (INDArray dataLog = Transforms.log(records)) {
-            try (INDArray meanLog = dataLog.mean(true, 1)) {
-                return Transforms.exp(meanLog);
             }
         }
     }
@@ -507,10 +507,10 @@ public record ReportProcess(String reportKey,
             @Override
             public ReportProcess build(File path, File reportPath, long batchSize) {
                 ArrayReader sumReader = BinArrayFile.createByKey(path, reportKey).map(x -> {
-                            try (INDArray sum = x.sum(true, 1)) {
-                                return Transforms.abs(sum);
-                            }
-                        });
+                    try (INDArray sum = x.sum(true, 1)) {
+                        return Transforms.abs(sum);
+                    }
+                });
                 return new ReportProcess(reportKey + ".sum", sumReader, rmsAggregator(), reportPath, batchSize);
             }
 

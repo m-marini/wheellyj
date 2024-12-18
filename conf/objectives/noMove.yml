@@ -1,0 +1,5 @@
+---
+- $schema: https://mmarini.org/wheelly/objective-avoid-contact-schema-0.1
+  class: org.mmarini.wheelly.objectives.AvoidContact
+- $schema: https://mmarini.org/wheelly/objective-nomove-schema-0.1
+  class: org.mmarini.wheelly.objectives.NoMove

@@ -124,6 +124,10 @@ public class RandomAgent implements Agent {
     }
 
     @Override
+    public void close() {
+    }
+
+    @Override
     public float eta() {
         return 0;
     }
@@ -131,10 +135,6 @@ public class RandomAgent implements Agent {
     @Override
     public Agent eta(float eta) {
         return null;
-    }
-
-    @Override
-    public void close() {
     }
 
     @Override

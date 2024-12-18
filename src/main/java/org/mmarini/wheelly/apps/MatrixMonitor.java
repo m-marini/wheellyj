@@ -376,7 +376,7 @@ public class MatrixMonitor {
      */
     private void run() {
         logger.info("Robot check started.");
-        controller = AppYaml.fromFile(parseArgs.getString("config"), MONITOR_SCHEMA_YML);
+        controller = AppYaml.controllerFromFile(parseArgs.getString("config"), MONITOR_SCHEMA_YML);
         controller.readRobotStatus()
                 .observeOn(Schedulers.io())
                 .doOnNext(this::handleStatus).subscribe();

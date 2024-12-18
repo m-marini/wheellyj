@@ -30,6 +30,7 @@ import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 
 /**
@@ -47,6 +48,17 @@ public interface RobotApi extends Closeable, WithStatusCallback, WithCameraCallb
     static RobotApi fromConfig(JsonNode config, Locator locator) {
         return Utils.createObject(config, locator, new Object[0], new Class[0]);
     }
+
+    /**
+     * Returns the robot api from configuration
+     *
+     * @param file the configuration file
+     * @throws IOException in case of error
+     */
+    static RobotApi fromFile(File file) throws IOException {
+        return Utils.createObject(file, new Object[0], new Class[0]);
+    }
+
 
     /**
      * Configures the robot

@@ -1,0 +1,27 @@
+---
+- $schema: https://mmarini.org/wheelly/objective-avoid-contact-schema-0.1
+  class: org.mmarini.wheelly.objectives.AvoidContact
+- $schema: https://mmarini.org/wheelly/objective-action-set-schema-1.0
+  class: org.mmarini.wheelly.objectives.ActionSet
+  move: 22
+- $schema: https://mmarini.org/wheelly/objective-action-set-schema-1.0
+  class: org.mmarini.wheelly.objectives.ActionSet
+  move: 2
+- $schema: https://mmarini.org/wheelly/objective-action-set-schema-1.0
+  class: org.mmarini.wheelly.objectives.ActionSet
+  move: 7
+- $schema: https://mmarini.org/wheelly/objective-action-set-schema-1.0
+  class: org.mmarini.wheelly.objectives.ActionSet
+  move: 12
+- $schema: https://mmarini.org/wheelly/objective-action-set-schema-1.0
+  class: org.mmarini.wheelly.objectives.ActionSet
+  move: 17
+- $schema: https://mmarini.org/wheelly/objective-action-set-schema-1.0
+  class: org.mmarini.wheelly.objectives.ActionSet
+  move: 27
+- $schema: https://mmarini.org/wheelly/objective-action-set-schema-1.0
+  class: org.mmarini.wheelly.objectives.ActionSet
+  move: 32
+- $schema: https://mmarini.org/wheelly/objective-action-set-schema-1.0
+  class: org.mmarini.wheelly.objectives.ActionSet
+  move: 37

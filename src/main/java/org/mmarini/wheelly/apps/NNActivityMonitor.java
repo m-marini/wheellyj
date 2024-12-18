@@ -48,7 +48,6 @@ import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.wheelly.swing.NNActivityPanel;
 import org.mmarini.wheelly.swing.Utils;
-import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
@@ -338,13 +337,9 @@ public class NNActivityMonitor {
      */
     private void loadNetwork() throws IOException {
         JsonNode config = fromFile(args.getString("config"));
-        RobotEnvironment environment = AppYaml.envFromJson(config, Locator.root(), WHEELLY_SCHEMA_YML);
-        Locator agentLocator = Locator.locate(Locator.locate("agent").getNode(config).asText());
-        if (agentLocator.getNode(config).isMissingNode()) {
-            throw new IllegalArgumentException(format("Missing node %s", agentLocator));
-        }
+        RobotEnvironment environment = AppYaml.envFromJson(config, WHEELLY_SCHEMA_YML);
         try (
-                Agent agent = Agent.fromConfig(config, agentLocator, environment)) {
+                Agent agent = Agent.fromFile(new File(config.path("agent").asText()), environment)) {
             if (agent instanceof PPOAgent tdAgent) {
                 this.network = tdAgent.network();
                 this.avgReward.setValue(tdAgent.avgReward());
@@ -374,7 +369,7 @@ public class NNActivityMonitor {
         // Creates the source files by source keys
         Map<String, BinArrayFile> signalFiles =
                 KeyFileMap.create(sourcePath, sourceKeys);
-        // Validates for missing file
+        // Validates for the missing files
         List<String> missingFiles = Arrays.stream(sourceKeys)
                 .filter(Predicate.not(signalFiles::containsKey))
                 .toList();
@@ -383,7 +378,7 @@ public class NNActivityMonitor {
                     String.join(", ", missingFiles),
                     sourcePath));
         }
-        // Validates for number of record
+        // Validates for number of records
         Collection<BinArrayFile> files = signalFiles.values();
         KeyFileMap.validateSizes(files);
         this.signalFiles = KeyFileMap.children(signalFiles, "s0");

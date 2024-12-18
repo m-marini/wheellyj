@@ -36,6 +36,7 @@ import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
@@ -111,11 +112,12 @@ public class RobotEnv implements Environment {
     /**
      * Returns the environment from json node spec
      *
-     * @param root    the json node
-     * @param locator the locator of environment
-     * @param robot   the robot interface
+     * @param root  the json node
+     * @param file  the configuration file
+     * @param robot the robot interface
      */
-    public static RobotEnv create(JsonNode root, Locator locator, RobotApi robot) {
+    public static RobotEnv create(JsonNode root, File file, RobotApi robot) {
+        Locator locator = Locator.root();
         RewardFunction reward = Utils.createObject(root, locator.path("objective"), new Object[0], new Class[0]);
         long interval = locator.path("interval").getNode(root).asLong();
         long reactionInterval = locator.path("reactionInterval").getNode(root).asLong();

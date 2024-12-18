@@ -39,6 +39,7 @@ import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.function.Consumer;
 import java.util.function.IntToDoubleFunction;
@@ -122,11 +123,12 @@ public class RobotController implements RobotControllerApi {
     /**
      * Returns the robot controller from configuration
      *
-     * @param root    the configuration document
-     * @param locator the locator of robot controller configuration
-     * @param robot   the robot api
+     * @param root  the configuration document
+     * @param file  the configuration file
+     * @param robot the robot api
      */
-    public static RobotController create(JsonNode root, Locator locator, RobotApi robot) {
+    public static RobotController create(JsonNode root, File file, RobotApi robot) {
+        Locator locator = Locator.root();
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         long interval = locator.path("interval").getNode(root).asLong();
         long reactionInterval = locator.path("reactionInterval").getNode(root).asLong();
@@ -234,17 +236,6 @@ public class RobotController implements RobotControllerApi {
     }
 
     /**
-     * Handles camera event
-     *
-     * @param cameraEvent the camera event
-     */
-    private void handleCamera(CameraEvent cameraEvent) {
-        robotStatus = robotStatus.setCameraMessage(cameraEvent).setSimulationTime(robot.simulationTime());
-        cameraProcessor.onNext(robotStatus);
-        scheduleInference(robotStatus);
-    }
-
-    /**
      * Handles the closing status.
      * Closes the connection to the robot
      */
@@ -322,6 +313,17 @@ public class RobotController implements RobotControllerApi {
     @Override
     public RobotApi getRobot() {
         return robot;
+    }
+
+    /**
+     * Handles camera event
+     *
+     * @param cameraEvent the camera event
+     */
+    private void handleCamera(CameraEvent cameraEvent) {
+        robotStatus = robotStatus.setCameraMessage(cameraEvent).setSimulationTime(robot.simulationTime());
+        cameraProcessor.onNext(robotStatus);
+        scheduleInference(robotStatus);
     }
 
     /**
@@ -416,6 +418,11 @@ public class RobotController implements RobotControllerApi {
     }
 
     @Override
+    public Flowable<RobotStatus> readCamera() {
+        return cameraProcessor;
+    }
+
+    @Override
     public Flowable<RobotCommands> readCommand() {
         return commandsProcessor;
     }
@@ -458,11 +465,6 @@ public class RobotController implements RobotControllerApi {
     @Override
     public Flowable<RobotStatus> readRobotStatus() {
         return statusFlow;
-    }
-
-    @Override
-    public Flowable<RobotStatus> readCamera() {
-        return cameraProcessor;
     }
 
     @Override
@@ -511,7 +513,7 @@ public class RobotController implements RobotControllerApi {
         this.isRunningStatus = true;
         while (!end && isReady) {
             try {
-                // Advance clock of interval
+                // Advance clock of the interval
                 tick();
                 // Computes the real elapsed localTime and robot elapsed localTime
                 long t0 = System.currentTimeMillis();
@@ -528,17 +530,6 @@ public class RobotController implements RobotControllerApi {
                 logger.atDebug().log("Real elapsed {} ms", realElapsed);
                 logger.atDebug().log("Expected elapsed {} ms", expectedElapsed);
                 logger.atDebug().log("Wait {} ms", waitTime);
-
-                // Checks for required sleep for synchronization
-                    /*
-                if (waitTime >= 1) {
-                    try {
-                        Thread.sleep(waitTime);
-                    } catch (InterruptedException ignored) {
-                    }
-
-                }
-                     */
             } catch (IOException e) {
                 logger.atError().setCause(e).log("Error on status thread");
                 break;
@@ -656,7 +647,7 @@ public class RobotController implements RobotControllerApi {
     }
 
     /**
-     * Waiting command interval
+     * Waiting the command interval
      */
     private void waitingCommandInterval() {
         logger.atDebug().log("Waiting for command {} ms", commandInterval);

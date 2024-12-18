@@ -60,8 +60,8 @@ public interface ActionSet {
     /**
      * Returns the function that rewards the action set behavior
      *
-     * @param targetMoveIndex     the target move index
-     * @param targetSensorIndex    the target sensor index
+     * @param targetMoveIndex   the target move index
+     * @param targetSensorIndex the target sensor index
      */
     static RewardFunction inactive(int targetMoveIndex,
                                    int targetSensorIndex) {

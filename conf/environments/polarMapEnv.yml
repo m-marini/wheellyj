@@ -1,0 +1,23 @@
+---
+$schema: https://mmarini.org/wheelly/env-polar-schema-2.0
+class: org.mmarini.wheelly.envs.PolarRobotEnv
+objective: ../objectives/test1.yml
+interval: 10
+commandInterval: 600
+reactionInterval: 300
+numDirectionValues: 8
+numSpeedValues: 5
+numSensorValues: 7
+radarWidth: 51
+radarHeight: 51
+radarGrid: 0.2
+contactRadius: 0.28
+radarReceptiveAngle: 15
+echoPersistence: 300000
+contactPersistence: 300000
+radarCleanInterval: 30000
+correlationInterval: 2000
+decay: 120000
+numRadarSectors: 24
+minRadarDistance: 0.3
+maxRadarDistance: 3

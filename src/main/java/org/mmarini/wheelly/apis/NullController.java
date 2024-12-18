@@ -24,6 +24,11 @@ public class NullController implements RobotControllerApi {
     }
 
     @Override
+    public Flowable<RobotStatus> readCamera() {
+        throw new NotImplementedException();
+    }
+
+    @Override
     public Flowable<RobotCommands> readCommand() {
         throw new NotImplementedException();
     }
@@ -55,11 +60,6 @@ public class NullController implements RobotControllerApi {
 
     @Override
     public Flowable<RobotStatus> readProxy() {
-        throw new NotImplementedException();
-    }
-
-    @Override
-    public Flowable<RobotStatus> readCamera() {
         throw new NotImplementedException();
     }
 

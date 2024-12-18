@@ -37,6 +37,8 @@ import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -80,9 +82,9 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithRadarMap, Wit
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/env-polar-schema-2.0";
 
     /**
-     * Returns the composed objective from objective list
+     * Returns the composed objective from the objective list
      *
-     * @param objectives the list of objectives
+     * @param objectives the list of goals
      */
     private static RewardFunction composeObjective(List<RewardFunction> objectives) {
         return (state0, action, state1) -> {
@@ -125,43 +127,39 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithRadarMap, Wit
     /**
      * Returns the environment from json node spec
      *
-     * @param root    the json node
-     * @param locator the locator of environment
-     * @param robot   the robot interface
+     * @param file  the configuration file
+     * @param robot the robot interface
      */
-    public static PolarRobotEnv create(JsonNode root, Locator locator, RobotControllerApi robot) {
-        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-        Locator objectiveLocator = Locator.locate(locator.path("objective").getNode(root).asText());
-        if (objectiveLocator.getNode(root).isMissingNode()) {
-            throw new IllegalArgumentException(format("Missing node %s", objectiveLocator));
-        }
-        if (!objectiveLocator.getNode(root).isArray()) {
-            throw new IllegalArgumentException(format("Node %s must be an array (%s)",
-                    objectiveLocator,
-                    objectiveLocator.getNode(root).getNodeType().name()
-            ));
-        }
-        RewardFunction reward = loadObjective(root, objectiveLocator);
-        int numDirectionValues = locator.path("numDirectionValues").getNode(root).asInt();
-        int numSensorValues = locator.path("numSensorValues").getNode(root).asInt();
-        int numSpeedValues = locator.path("numSpeedValues").getNode(root).asInt();
-        int numRadarSectors = locator.path("numRadarSectors").getNode(root).asInt();
-        double minRadarDistance = locator.path("minRadarDistance").getNode(root).asDouble();
-        double maxRadarDistance = locator.path("maxRadarDistance").getNode(root).asDouble();
-        RadarMap radarMap = RadarMap.create(root, locator);
+    public static PolarRobotEnv create(JsonNode root, File file, RobotControllerApi robot) throws IOException {
+        JsonSchemas.instance().validateOrThrow(root, SCHEMA_NAME);
+        RewardFunction reward = loadObjective(new File(file.getParentFile(),
+                root.path("objective").asText()));
+        int numDirectionValues = root.path("numDirectionValues").asInt();
+        int numSensorValues = root.path("numSensorValues").asInt();
+        int numSpeedValues = root.path("numSpeedValues").asInt();
+        int numRadarSectors = root.path("numRadarSectors").asInt();
+        double minRadarDistance = root.path("minRadarDistance").asDouble();
+        double maxRadarDistance = root.path("maxRadarDistance").asDouble();
+        RadarMap radarMap = RadarMap.create(root, Locator.root());
 
         return PolarRobotEnv.create(robot, reward,
                 numDirectionValues, numSensorValues, numSpeedValues, numRadarSectors, minRadarDistance, maxRadarDistance, radarMap);
     }
 
     /**
-     * Returns the composed objective from objective list
+     * Returns the composed objective the objective list in the configuration file
      *
-     * @param root             the root of document
-     * @param objectiveLocator the locator of objective list
+     * @param file the configuration file
      */
-    private static RewardFunction loadObjective(JsonNode root, Locator objectiveLocator) {
-        List<RewardFunction> objs = objectiveLocator.elements(root)
+    private static RewardFunction loadObjective(File file) throws IOException {
+        JsonNode root = Utils.fromFile(file);
+        if (!root.isArray()) {
+            throw new IllegalArgumentException(format("Node %s must be an array (%s)",
+                    root,
+                    root.getNodeType().name()
+            ));
+        }
+        List<RewardFunction> objs = Locator.root().elements(root)
                 .map(locator -> Utils.<RewardFunction>createObject(root, locator, new Object[0], new Class[0]))
                 .toList();
         return composeObjective(objs);
@@ -178,7 +176,7 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithRadarMap, Wit
      * @param rewardFunc       the reward function
      * @param actions          the action spec
      * @param numSpeeds        number of move action speeds
-     * @param numDirections    number of mova action directions
+     * @param numDirections    number of move action directions
      * @param radarMap         the radar map
      * @param polarMap         the polar map
      * @param minRadarDistance min radar distance (m)

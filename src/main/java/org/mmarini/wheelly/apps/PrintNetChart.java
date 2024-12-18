@@ -38,11 +38,11 @@ import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.rl.nets.*;
 import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.wheelly.swing.Messages;
-import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -50,7 +50,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static java.lang.String.format;
 import static org.mmarini.yaml.Utils.fromFile;
 
 /**
@@ -134,14 +133,10 @@ public class PrintNetChart {
             this.args = parser.parseArgs(args);
             logger.atInfo().log("Creating environment");
             JsonNode config = fromFile(this.args.getString("config"));
-            RobotEnvironment environment = AppYaml.envFromJson(config, Locator.root(), Wheelly.WHEELLY_SCHEMA_YML);
+            RobotEnvironment environment = AppYaml.envFromJson(config, Wheelly.WHEELLY_SCHEMA_YML);
 
             logger.atInfo().log("Creating agent");
-            Locator agentLocator = Locator.locate(Locator.locate("agent").getNode(config).asText());
-            if (agentLocator.getNode(config).isMissingNode()) {
-                throw new IllegalArgumentException(format("Missing node %s", agentLocator));
-            }
-            this.agent = Agent.fromConfig(config, agentLocator, environment);
+            this.agent = Agent.fromFile(new File(config.path("agent").asText()), environment);
 
             String outputFilename = this.args.getString("output");
             logger.atInfo().log("Creating {}", outputFilename);
