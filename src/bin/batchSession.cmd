@@ -1,10 +1,10 @@
-rmdir /S /Q  data
+rmdir /S /Q  batch
 rmdir /S /Q  csv
 rmdir /S /Q  report
 
-call bin\wheelly.cmd -k data -t 3600 -w -a -s
+call bin\train.cmd -k batch -w data
 
-call bin\report.cmd -p data model csv
+call bin\report.cmd -p batch model csv
 
 cd octave
 "C:\Program Files\GNU Octave\Octave-7.2.0\octave-launch" --no-gui generateReport1.m

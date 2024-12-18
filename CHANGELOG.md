@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Issue [#485](https://github.com/m-marini/wheellyj/issues/485): Change configuration files
 
+### Fixed
+
+- Issue [#487](https://github.com/m-marini/wheellyj/issues/487): Missing batch session command and wrong model path in cmmands
+
 ## [0.19.0] 2024-12-17
 
 ### Added
