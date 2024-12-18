@@ -53,6 +53,10 @@
             </includes>
         </fileSet>
         <fileSet>
+            <directory>conf</directory>
+            <outputDirectory>conf</outputDirectory>
+        </fileSet>
+        <fileSet>
             <directory>src/bin</directory>
             <includes>
                 <include>*.sh</include>

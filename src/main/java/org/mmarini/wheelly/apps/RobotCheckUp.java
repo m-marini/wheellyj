@@ -169,7 +169,7 @@ public class RobotCheckUp {
                 if (currentTest < 0) {
                     // First sample
                     currentTest = 0;
-                    if (currentTest >= directions.length) {
+                    if (currentTest == directions.length) {
                         controller.execute(command);
                         sensorPanel.setInfo("");
                         // No test required
@@ -303,7 +303,7 @@ public class RobotCheckUp {
      */
     private void run() {
         logger.info("Robot check started.");
-        controller = AppYaml.fromFile(parseArgs.getString("config"), CHECKUP_SCHEMA_YML);
+        controller = AppYaml.controllerFromFile(parseArgs.getString("config"), CHECKUP_SCHEMA_YML);
         controller.readErrors().doOnNext(err -> {
             comMonitor.onError(err);
             logger.atError().setCause(err).log();

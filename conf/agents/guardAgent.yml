@@ -1,0 +1,58 @@
+---
+######################################
+# Guard agent
+######################################
+$schema: https://mmarini.org/wheelly/state-agent-schema-3.3
+class: org.mmarini.wheelly.engines.StateMachineAgent
+interval: 10
+commandInterval: 600
+reactionInterval: 300
+numRadarSectors: 24
+minRadarDistance: 0.3
+maxRadarDistance: 2.8
+radarWidth: 51
+radarHeight: 51
+radarGrid: 0.2
+contactRadius: 0.2
+radarReceptiveAngle: 15
+echoPersistence: 300000
+contactPersistence: 300000
+radarCleanInterval: 30000
+correlationInterval: 2000
+flow:
+  entry: start
+  states:
+    start:
+      class: org.mmarini.wheelly.engines.HaltState
+      timeout: 2000
+      transitions:
+        timeout:
+          to: movingTo1
+    movingTo0:
+      class: org.mmarini.wheelly.engines.MoveToState
+      stopDistance: 0.1
+      x: 0
+      y: 0
+      transitions:
+        completed:
+          to: movingTo1
+        rearBlocked:
+          to: start
+        frontBlocked:
+          to: start
+        blocked:
+          to: start
+    movingTo1:
+      class: org.mmarini.wheelly.engines.MoveToState
+      stopDistance: 0.1
+      x: 0
+      y: 2
+      transitions:
+        completed:
+          to: movingTo0
+        rearBlocked:
+          to: start
+        frontBlocked:
+          to: start
+        blocked:
+            to: start

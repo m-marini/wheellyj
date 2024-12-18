@@ -38,6 +38,8 @@ import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
 import java.io.Closeable;
+import java.io.File;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +58,16 @@ public interface Agent extends Closeable, WithSignalsSpec, Serializable {
      */
     static Agent fromConfig(JsonNode config, Locator locator, WithSignalsSpec environment) {
         return Utils.createObject(config, locator, new Object[]{environment}, new Class[]{WithSignalsSpec.class});
+    }
+
+    /**
+     * Returns the agent
+     *
+     * @param file        the configuration file
+     * @param environment the environment
+     */
+    static Agent fromFile(File file, WithSignalsSpec environment) throws IOException {
+        return Utils.createObject(file, new Object[]{environment}, new Class[]{WithSignalsSpec.class});
     }
 
     /**

@@ -228,22 +228,22 @@ public abstract class AbstractAgentNN implements Agent {
     /**
      * Creates a random behavior agent
      *
-     * @param state               the states
-     * @param actions             the actions
-     * @param avgReward           the average reward
-     * @param rewardAlpha         the reward alpha parameter
-     * @param eta                 the learning rate hyperparameter
-     * @param alphas              the network training alpha parameter by output
-     * @param lambda              the TD lambda factor
-     * @param numSteps            the number of trajectory steps
-     * @param numEpochs           the number of epochs
-     * @param batchSize           the batch size
-     * @param network             the network
-     * @param processor           the input state processor
-     * @param random              the random generator
-     * @param modelPath           the model-saving path
-     * @param indicatorsPub       the indicator publisher
-     * @param postTrainKpis       true if post train kpi
+     * @param state         the states
+     * @param actions       the actions
+     * @param avgReward     the average reward
+     * @param rewardAlpha   the reward alpha parameter
+     * @param eta           the learning rate hyperparameter
+     * @param alphas        the network training alpha parameter by output
+     * @param lambda        the TD lambda factor
+     * @param numSteps      the number of trajectory steps
+     * @param numEpochs     the number of epochs
+     * @param batchSize     the batch size
+     * @param network       the network
+     * @param processor     the input state processor
+     * @param random        the random generator
+     * @param modelPath     the model-saving path
+     * @param indicatorsPub the indicator publisher
+     * @param postTrainKpis true if post train kpi
      */
     protected AbstractAgentNN(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
                               float avgReward, float rewardAlpha, float eta, Map<String, Float> alphas, float lambda,

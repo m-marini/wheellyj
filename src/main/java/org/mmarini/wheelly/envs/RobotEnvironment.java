@@ -38,6 +38,8 @@ import org.mmarini.wheelly.apis.*;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
@@ -59,9 +61,25 @@ public interface RobotEnvironment extends WithStatusFlowable, WithErrorFlowable,
     }
 
     /**
+     * Returns the robot environment from configuration
+     *
+     * @param file       the configuration file
+     * @param controller the controller
+     * @throws IOException in case of error
+     */
+    static RobotEnvironment fromFile(File file, RobotControllerApi controller) throws IOException {
+        return Utils.createObject(file, new Object[]{controller}, new Class[]{RobotControllerApi.class});
+    }
+
+    /**
      * Returns the robot controller
      */
     RobotControllerApi getController();
+
+    @Override
+    default Flowable<RobotStatus> readCamera() {
+        return getController().readCamera();
+    }
 
     @Override
     default Flowable<RobotCommands> readCommand() {
@@ -91,11 +109,6 @@ public interface RobotEnvironment extends WithStatusFlowable, WithErrorFlowable,
     @Override
     default Flowable<RobotStatus> readProxy() {
         return getController().readProxy();
-    }
-
-    @Override
-    default Flowable<RobotStatus> readCamera() {
-        return getController().readCamera();
     }
 
     @Override

@@ -45,8 +45,8 @@ public record CameraEvent(
         int width, int height,
         Point2D[] points
 ) {
-    private static final int NUM_PARAMS = 13;
     public static final String UNKNOWN_QR_CODE = "?";
+    private static final int NUM_PARAMS = 13;
 
     /**
      * Returns the camera event from line

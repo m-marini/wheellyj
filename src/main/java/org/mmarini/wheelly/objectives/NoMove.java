@@ -65,7 +65,7 @@ public interface NoMove {
             if (s1 instanceof WithRobotStatus withRobotStatus) {
                 RobotStatus status = withRobotStatus.getRobotStatus();
                 if ((abs(status.leftPps()) < velocityThreshold
-                    && abs(status.rightPps()) < velocityThreshold
+                        && abs(status.rightPps()) < velocityThreshold
                         && status.sensorDirection().toIntDeg() == 0)) {
                     return 1;
                 }

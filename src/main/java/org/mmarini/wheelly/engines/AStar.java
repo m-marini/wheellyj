@@ -55,9 +55,9 @@ public class AStar<T> {
     /* The map of previuos node of a node*/
     private final Map<T, T> cameFrom;
     /* The map of current best estimated cost from the initial node to the goal through a node */
-    private Map<T, Double> fScore;
+    private final Map<T, Double> fScore;
     /* The map of current cost from the initial node to the node */
-    private Map<T, Double> gScore;
+    private final Map<T, Double> gScore;
 
     /**
      * Canonical constructor

@@ -66,44 +66,41 @@ public class PPOAgent extends AbstractAgentNN {
     public static final String SPEC_SCHEMA_NAME = "https://mmarini.org/wheelly/ppo-agent-spec-schema-0.3";
 
     /**
-     * Returns a random behavior agent
+     * Returns the advantage estimation
      *
-     * @param state               the states
-     * @param actions             the actions
-     * @param avgReward           the average reward
-     * @param rewardAlpha         the reward alpha parameter
-     * @param eta                 the learning rate hyperparameter
-     * @param alphas              the network training alpha parameter by output
-     * @param lambda              the TD lambda factor
-     * @param ppoEpsilon          the ppo epsilon hyperparameter
-     * @param numSteps            the number of trajectory steps
-     * @param numEpochs           the number of epochs
-     * @param batchSize           the batch size
-     * @param network             the network
-     * @param processor           the input state processor
-     * @param random              the random generator
-     * @param modelPath           the model-saving path
+     * @param rewards     the rewards (n)
+     * @param avgRewards  the average rewards (n)
+     * @param vPrediction the advantage prediction (n+1)
      */
-    public static PPOAgent create(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
-                                  float avgReward, float rewardAlpha, float eta, Map<String, Float> alphas, float lambda,
-                                  float ppoEpsilon, int numSteps, int numEpochs, int batchSize, TDNetwork network,
-                                  InputProcessor processor, Random random, File modelPath) {
-        return new PPOAgent(
-                state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network,
-                List.of(), processor, random, modelPath,
-                PublishProcessor.create(),
-                false,
-                ppoEpsilon);
+    static INDArray computeAdvantage(INDArray rewards, INDArray avgRewards, INDArray vPrediction) {
+        // Computes the advantage A(t) for next n steps t = 0...n-1
+        // we known reward r(t), R(t), advantage prediction v(t), v(n)
+        // A(t,n) = r(t) - R(t) + r(t+1) - R(t+1) + ... + r(n-1) - R(n-1) + v(t) - v(n)
+        // A(t,n) = sum_i [r(i) - R(i)] + v(t) - v(n) for i = t...n-1
+        // lets returns be a(t,n) = sum_i [r(i) - R(i)] for i = t...n-1
+        // A(t,n) = a(t,n) + v(t) - v(n)
+        // lets a(n,n) = 0
+        // a(t,n) = r(t) - R(t) + a(t+1)
+        long n = rewards.size(0);
+        INDArray adv = rewards.sub(avgRewards); // r(t) - R(t)
+        // sum_i [r(i) - R(i)] for i = t...n-1
+        for (long i = n - 2; i >= 0; i--) {
+            adv.getScalar(i, 1).addi(adv.getScalar(i + 1, 1));
+        }
+        // A(t,n) = a(t,n) + v(t) - v(n)
+        adv.addi(vPrediction.getScalar(n, 0))
+                .subi(vPrediction.get(NDArrayIndex.interval(0, n), NDArrayIndex.all()));
+        return adv;
     }
 
     /**
      * Returns the agent from spec
      *
-     * @param root    the spec document
-     * @param locator the agent spec locator
-     * @param env     the environment
+     * @param root the spec document
+     * @param env  the environment
      */
-    public static PPOAgent create(JsonNode root, Locator locator, WithSignalsSpec env) {
+    static PPOAgent create(JsonNode root, WithSignalsSpec env) {
+        Locator locator = Locator.root();
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         File path = new File(locator.path("modelPath").getNode(root).asText());
         Random random = Nd4j.getRandom();
@@ -149,14 +146,57 @@ public class PPOAgent extends AbstractAgentNN {
         }
     }
 
+
+    /**
+     * Returns the agent from spec
+     *
+     * @param root the spec document
+     * @param file the configuration file
+     * @param env  the environment
+     */
+    public static PPOAgent create(JsonNode root, File file, WithSignalsSpec env) {
+        return create(root, env);
+    }
+
+    /**
+     * Returns a random behavior agent
+     *
+     * @param state       the states
+     * @param actions     the actions
+     * @param avgReward   the average reward
+     * @param rewardAlpha the reward alpha parameter
+     * @param eta         the learning rate hyperparameter
+     * @param alphas      the network training alpha parameter by output
+     * @param lambda      the TD lambda factor
+     * @param ppoEpsilon  the ppo epsilon hyperparameter
+     * @param numSteps    the number of trajectory steps
+     * @param numEpochs   the number of epochs
+     * @param batchSize   the batch size
+     * @param network     the network
+     * @param processor   the input state processor
+     * @param random      the random generator
+     * @param modelPath   the model-saving path
+     */
+    public static PPOAgent create(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
+                                  float avgReward, float rewardAlpha, float eta, Map<String, Float> alphas, float lambda,
+                                  float ppoEpsilon, int numSteps, int numEpochs, int batchSize, TDNetwork network,
+                                  InputProcessor processor, Random random, File modelPath) {
+        return new PPOAgent(
+                state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network,
+                List.of(), processor, random, modelPath,
+                PublishProcessor.create(),
+                false,
+                ppoEpsilon);
+    }
+
     /**
      * Creates an agent from spec
      *
-     * @param spec                the specification
-     * @param locator             the locator of agent spec
-     * @param props               the properties to initialize the agent
-     * @param path                the saving path
-     * @param random              the random number generator
+     * @param spec    the specification
+     * @param locator the locator of agent spec
+     * @param props   the properties to initialize the agent
+     * @param path    the saving path
+     * @param random  the random number generator
      */
     public static PPOAgent fromJson(JsonNode spec, Locator locator, Map<String, INDArray> props,
                                     File path, Random random) {
@@ -199,8 +239,8 @@ public class PPOAgent extends AbstractAgentNN {
     /**
      * Loads the agent from a path
      *
-     * @param path                the path
-     * @param random              the random number generator
+     * @param path   the path
+     * @param random the random number generator
      * @throws IOException in case of error
      */
     public static PPOAgent load(File path, Random random) throws IOException {
@@ -233,29 +273,28 @@ public class PPOAgent extends AbstractAgentNN {
             }
         }
     }
-
     protected final float ppoEpsilon;
 
     /**
      * Creates a random behavior agent
      *
-     * @param state               the states
-     * @param actions             the actions
-     * @param avgReward           the average reward
-     * @param rewardAlpha         the reward alpha parameter
-     * @param eta                 the learning rate hyperparameter
-     * @param alphas              the network training alpha parameter by output
-     * @param lambda              the TD lambda factor
-     * @param numSteps            the number of trajectory steps
-     * @param numEpochs           the number of epochs
-     * @param batchSize           the batch size
-     * @param network             the network
-     * @param processor           the input state processor
-     * @param random              the random generator
-     * @param modelPath           the model-saving path
-     * @param indicatorsPub       the indicator publisher
-     * @param postTrainKpis       true if post train kpi
-     * @param ppoEpsilon          the ppo epsilon hyperparameter
+     * @param state         the states
+     * @param actions       the actions
+     * @param avgReward     the average reward
+     * @param rewardAlpha   the reward alpha parameter
+     * @param eta           the learning rate hyperparameter
+     * @param alphas        the network training alpha parameter by output
+     * @param lambda        the TD lambda factor
+     * @param numSteps      the number of trajectory steps
+     * @param numEpochs     the number of epochs
+     * @param batchSize     the batch size
+     * @param network       the network
+     * @param processor     the input state processor
+     * @param random        the random generator
+     * @param modelPath     the model-saving path
+     * @param indicatorsPub the indicator publisher
+     * @param postTrainKpis true if post train kpi
+     * @param ppoEpsilon    the ppo epsilon hyperparameter
      */
     protected PPOAgent(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
                        float avgReward, float rewardAlpha, float eta, Map<String, Float> alphas, float lambda,
@@ -337,6 +376,29 @@ public class PPOAgent extends AbstractAgentNN {
                 : this;
     }
 
+    /**
+     * Returns the gradient of optimizer function for given action mask
+     *
+     * @param pi          the policies
+     * @param actionMasks the action masks
+     * @param p0          the probability of taken action at t
+     * @param adv         the advantage estimation
+     */
+    private Map<String, INDArray> optimizerGrad(Map<String, INDArray> pi, Map<String, INDArray> actionMasks, Map<String, INDArray> p0, INDArray adv) {
+        INDArray posDelta = adv.gte(0f);
+        INDArray negDelta = Transforms.not(posDelta);
+        // Extract ratio
+        return MapStream.of(pi)
+                .mapValues((key, value) -> {
+                    INDArray mask = actionMasks.get(key);
+                    INDArray pik = value.mul(mask);
+                    INDArray prob = pik.sum(true, 1);
+                    INDArray prob0 = p0.get(key);
+                    return mask.mul(ppoGrad(prob, prob0, ppoEpsilon, posDelta, negDelta));
+                })
+                .toMap();
+    }
+
     @Override
     public PPOAgent setPostTrainKpis(boolean postTrainKpis) {
         return postTrainKpis != this.postTrainKpis
@@ -402,57 +464,6 @@ public class PPOAgent extends AbstractAgentNN {
             }
             return newAgent;
         }
-    }
-
-    /**
-     * Returns the advantage estimation
-     *
-     * @param rewards     the rewards (n)
-     * @param avgRewards  the average rewards (n)
-     * @param vPrediction the advantage prediction (n+1)
-     */
-    static INDArray computeAdvantage(INDArray rewards, INDArray avgRewards, INDArray vPrediction) {
-        // Computes the advantage A(t) for next n steps t = 0...n-1
-        // we known reward r(t), R(t), advantage prediction v(t), v(n)
-        // A(t,n) = r(t) - R(t) + r(t+1) - R(t+1) + ... + r(n-1) - R(n-1) + v(t) - v(n)
-        // A(t,n) = sum_i [r(i) - R(i)] + v(t) - v(n) for i = t...n-1
-        // lets returns be a(t,n) = sum_i [r(i) - R(i)] for i = t...n-1
-        // A(t,n) = a(t,n) + v(t) - v(n)
-        // lets a(n,n) = 0
-        // a(t,n) = r(t) - R(t) + a(t+1)
-        long n = rewards.size(0);
-        INDArray adv = rewards.sub(avgRewards); // r(t) - R(t)
-        // sum_i [r(i) - R(i)] for i = t...n-1
-        for (long i = n - 2; i >= 0; i--) {
-            adv.getScalar(i, 1).addi(adv.getScalar(i + 1, 1));
-        }
-        // A(t,n) = a(t,n) + v(t) - v(n)
-        adv.addi(vPrediction.getScalar(n, 0))
-                .subi(vPrediction.get(NDArrayIndex.interval(0, n), NDArrayIndex.all()));
-        return adv;
-    }
-
-    /**
-     * Returns the gradient of optimizer function for given action mask
-     *
-     * @param pi          the policies
-     * @param actionMasks the action masks
-     * @param p0          the probability of taken action at t
-     * @param adv         the advantage estimation
-     */
-    private Map<String, INDArray> optimizerGrad(Map<String, INDArray> pi, Map<String, INDArray> actionMasks, Map<String, INDArray> p0, INDArray adv) {
-        INDArray posDelta = adv.gte(0f);
-        INDArray negDelta = Transforms.not(posDelta);
-        // Extract ratio
-        return MapStream.of(pi)
-                .mapValues((key, value) -> {
-                    INDArray mask = actionMasks.get(key);
-                    INDArray pik = value.mul(mask);
-                    INDArray prob = pik.sum(true, 1);
-                    INDArray prob0 = p0.get(key);
-                    return mask.mul(ppoGrad(prob, prob0, ppoEpsilon, posDelta, negDelta));
-                })
-                .toMap();
     }
 
     @Override

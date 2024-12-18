@@ -36,10 +36,13 @@ import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
+import org.mmarini.yaml.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 
 import static java.util.Objects.requireNonNull;
@@ -71,6 +74,25 @@ public class StateMachineAgent implements ProcessorContext, WithIOFlowable, With
      * @param robot   the robot api
      */
     public static StateMachineAgent create(JsonNode root, Locator locator, RobotControllerApi robot) {
+        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        StateFlow flow = StateFlow.create(root, locator.path("flow"));
+        double minRadarDistance = locator.path("minRadarDistance").getNode(root).asDouble();
+        double maxRadarDistance = locator.path("maxRadarDistance").getNode(root).asDouble();
+        int numRadarSectors = locator.path("numRadarSectors").getNode(root).asInt();
+        RadarMap radarMap = RadarMap.create(root, locator);
+        PolarMap polarMap = PolarMap.create(numRadarSectors);
+        return new StateMachineAgent(minRadarDistance, maxRadarDistance, radarMap, polarMap, robot, flow);
+    }
+
+    /**
+     * Returns the agent from configuration
+     *
+     * @param file  the configuration document
+     * @param robot the robot api
+     */
+    public static StateMachineAgent fromFile(File file, RobotControllerApi robot) throws IOException {
+        JsonNode root = Utils.fromFile(file);
+        Locator locator = Locator.root();
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         StateFlow flow = StateFlow.create(root, locator.path("flow"));
         double minRadarDistance = locator.path("minRadarDistance").getNode(root).asDouble();

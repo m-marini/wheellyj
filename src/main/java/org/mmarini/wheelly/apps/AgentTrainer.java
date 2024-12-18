@@ -154,6 +154,15 @@ public record AgentTrainer(Agent agent,
     }
 
     /**
+     * Returns the trainer with reset agent
+     */
+    public AgentTrainer resetAgent() {
+        return training ?
+                agent(agent.init()).skipNextTrainedAgent(true)
+                : agent(agent.init());
+    }
+
+    /**
      * Returns the agent trainer by setting the trained agent
      *
      * @param trainer the agent trainer
@@ -170,15 +179,6 @@ public record AgentTrainer(Agent agent,
         return agent(trainedAgent)
                 .nextSave(trainer.nextSave)
                 .training(false);
-    }
-
-    /**
-     * Returns the trainer with reset agent
-     */
-    public AgentTrainer resetAgent() {
-        return training ?
-                agent(agent.init()).skipNextTrainedAgent(true)
-                : agent(agent.init());
     }
 
     /**

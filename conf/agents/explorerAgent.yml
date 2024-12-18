@@ -1,0 +1,78 @@
+---
+######################################
+# Explorer agent
+######################################
+$schema: https://mmarini.org/wheelly/state-agent-schema-3.3
+class: org.mmarini.wheelly.engines.StateMachineAgent
+numRadarSectors: 24
+minRadarDistance: 0.3
+maxRadarDistance: 3
+radarWidth: 101
+radarHeight: 101
+radarGrid: 0.1
+contactRadius: 0.2
+radarReceptiveAngle: 15
+echoPersistence: 120000
+contactPersistence: 60000
+radarCleanInterval: 15000
+correlationInterval: 2000
+flow:
+  entry: scan
+  states:
+    scan:
+      class: org.mmarini.wheelly.engines.HaltState
+      timeout: 20000
+      scanInterval: 500
+      minSensorDir: -90
+      maxSensorDir: 90
+      sensorDirNumber: 9
+      transitions:
+        timeout:
+          to: target
+        rearBlocked:
+          to: avoid
+        frontBlocked:
+          to: avoid
+        blocked:
+          to: avoid
+    target:
+      class: org.mmarini.wheelly.engines.ExploringPointState
+      distance: 1
+      safeDistance: 0.4
+      maxDistance: 3
+      transitions:
+        completed:
+          to: move
+        notFound:
+          to: clearMap
+    move:
+      class: org.mmarini.wheelly.engines.MoveToState
+      stopDistance: 0.1
+      x: 0
+      y: 0
+      onEntry:
+        - move.target
+        - target.target
+        - get
+        - put
+      transitions:
+        completed:
+          to: scan
+        rearBlocked:
+          to: avoid
+        frontBlocked:
+          to: avoid
+        blocked:
+          to: avoid
+    avoid:
+      class: org.mmarini.wheelly.engines.AvoidingState
+      safeDistance: 0.2
+      speed: 20
+      transitions:
+        completed:
+          to: scan
+    clearMap:
+      class: org.mmarini.wheelly.engines.ClearMapState
+      transitions:
+        completed:
+          to: scan

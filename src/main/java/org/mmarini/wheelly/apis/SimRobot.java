@@ -41,6 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
+import java.io.File;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
@@ -60,7 +61,6 @@ public class SimRobot implements RobotApi {
     public static final double WORLD_SIZE = 10;
     public static final double MAX_OBSTACLE_DISTANCE = 3;
     public static final double MAX_DISTANCE = 3;
-    public static final double MAX_VELOCITY = MAX_PPS * DISTANCE_PER_PULSE;
     public static final double MAX_ANGULAR_PPS = 20;
     public static final double ROBOT_TRACK = 0.136;
     public static final double MAX_ANGULAR_VELOCITY = MAX_ANGULAR_PPS * DISTANCE_PER_PULSE / ROBOT_TRACK * 2; // RAD/s
@@ -90,13 +90,15 @@ public class SimRobot implements RobotApi {
     private static final int DEFAULT_SENSOR_RECEPTIVE_ANGLE = 15;
     private static final double DEG89_5_EPSILON = sin(toDegrees(89.5));
 
+
     /**
-     * Returns the simulated robot from json configuration
+     * Returns the simulated robot from JSON configuration
      *
-     * @param root    the json document
-     * @param locator the simulated robot locator
+     * @param root the json document
+     * @param file the configuration file
      */
-    public static SimRobot create(JsonNode root, Locator locator) {
+    public static SimRobot create(JsonNode root, File file) {
+        Locator locator = Locator.root();
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         long mapSeed = locator.path("mapSeed").getNode(root).asLong(0);
         long robotSeed = locator.path("robotSeed").getNode(root).asLong(0);
@@ -119,9 +121,9 @@ public class SimRobot implements RobotApi {
     }
 
     /**
-     * Creates obstacle in the world
+     * Creates the obstacle in the world
      *
-     * @param world    thr world
+     * @param world    the world
      * @param location the obstacle location
      */
     protected static Body createObstacleBodies(World world, Point2D location) {
@@ -208,7 +210,7 @@ public class SimRobot implements RobotApi {
      * @param motionInterval        the interval between motion messages
      * @param proxyInterval         the interval between proxy messages
      * @param numObstacles          the number of obstacles
-     * @param numLabels             the number of labeld obstacles
+     * @param numLabels             the number of labeled obstacles
      * @param changeObstaclesPeriod the period of change obstacles
      */
     public SimRobot(ObstacleMap obstacleMap, Random random, Random mapRandom, double errSigma, double errSensor,
@@ -376,7 +378,7 @@ public class SimRobot implements RobotApi {
         double angularVelocity1 = (right - left) / ROBOT_TRACK;
         // Limits rotation to max allowed rotation
         double angularVelocity = clip(angularVelocity1, -MAX_ANGULAR_VELOCITY, MAX_ANGULAR_VELOCITY);
-        // Angular impulse to fix direction
+        // Angular impulse to fix the direction
         double robotAngularVelocity = robot.getAngularVelocity();
         double angularTorque = (angularVelocity - robotAngularVelocity) * robot.getInertia() / dt;
         // Add a random factor to angular impulse
@@ -393,7 +395,7 @@ public class SimRobot implements RobotApi {
     }
 
     /**
-     * Creates the obstacles bodies
+     * Creates the obstacle bodies
      */
     private void createObstacleBodies() {
         obstacleBodies.forEach(world::destroyBody);
@@ -417,7 +419,7 @@ public class SimRobot implements RobotApi {
     }
 
     /**
-     * Returns true if front sensor is clear
+     * Returns true if the front sensor is clear
      */
     boolean frontSensor() {
         return frontSensor;
@@ -524,7 +526,7 @@ public class SimRobot implements RobotApi {
     }
 
     /**
-     * Sends the contacts message
+     * Sends the message of the contacts
      */
     private void sendContacts() {
         if (onContacts != null) {
@@ -700,7 +702,7 @@ public class SimRobot implements RobotApi {
     }
 
     /**
-     * Sends the proxy message if interval has elapsed
+     * Sends the proxy message if the interval has elapsed
      */
     private void updateCamera() {
         if (simulationTime >= cameraTimeout) {
@@ -709,7 +711,7 @@ public class SimRobot implements RobotApi {
     }
 
     /**
-     * Sends the motion message if interval has elapsed
+     * Sends the motion message if the interval has elapsed
      */
     private void updateMotion() {
         if (simulationTime >= motionTimeout) {
@@ -718,7 +720,7 @@ public class SimRobot implements RobotApi {
     }
 
     /**
-     * Sends the proxy message if interval has elapsed
+     * Sends the proxy message if the interval has elapsed
      */
     private void updateProxy() {
         if (simulationTime >= proxyTimeout) {

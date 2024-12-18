@@ -97,6 +97,18 @@ public record Complex(double x, double y) {
     }
 
     /**
+     * Returns the point at the given distance from center to the direction
+     *
+     * @param center   the center
+     * @param distance the distance
+     */
+    public Point2D at(Point2D center, double distance) {
+        return new Point2D.Double(
+                center.getX() + distance * x,
+                center.getY() + distance * y);
+    }
+
+    /**
      * Returns the cosine of angle
      */
     public double cos() {
@@ -230,18 +242,6 @@ public record Complex(double x, double y) {
     public int toIntDeg() {
         int deg = (int) round(toDeg());
         return deg < 180 ? deg : deg - 360;
-    }
-
-    /**
-     * Returns the point at the given distance from center to the direction
-     *
-     * @param center   the center
-     * @param distance the distance
-     */
-    public Point2D at(Point2D center, double distance) {
-        return new Point2D.Double(
-                center.getX() + distance * x,
-                center.getY() + distance * y);
     }
 
     /**

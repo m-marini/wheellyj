@@ -59,6 +59,51 @@ public class Utils {
     }
 
     /**
+     * Returns the object created by invoking create method of class of "class" property
+     *
+     * @param file       the configuration file
+     * @param args       the arguments
+     * @param argClasses the method argument class
+     * @param <T>        the type of object
+     */
+    public static <T> T createObject(File file, Object[] args, Class<?>[] argClasses) throws IOException {
+        return createObject(file, "create", args, argClasses);
+    }
+
+    /**
+     * Returns the object created by invoking method of class of "class" property
+     *
+     * @param file       the configuration file
+     * @param method     the method name
+     * @param args       the arguments
+     * @param argClasses the method argument class
+     * @param <T>        the type of object
+     */
+    public static <T> T createObject(File file, String method, Object[] args, Class<?>[] argClasses) throws IOException {
+        JsonNode conf = Utils.fromFile(file);
+        try {
+            String className = conf.path("class").asText();
+            Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(className);
+            Class<?>[] argsType = Stream.concat(Stream.of(JsonNode.class, File.class),
+                            Arrays.stream(argClasses))
+                    .toArray(Class[]::new);
+            Method creator = clazz.getDeclaredMethod(method, argsType);
+            if (!Modifier.isStatic(creator.getModifiers())) {
+                throw new IllegalArgumentException(format("Method %s.%s is not static", className, method));
+            }
+            Object[] builderArgs = Stream.concat(Stream.of(conf, file),
+                            Arrays.stream(args))
+                    .toArray(Object[]::new);
+            return (T) creator.invoke(null, builderArgs);
+        } catch (ClassNotFoundException | NoSuchMethodException |
+                 IllegalAccessException e) {
+            throw new RuntimeException(e);
+        } catch (InvocationTargetException e) {
+            throw new RuntimeException(e.getCause());
+        }
+    }
+
+    /**
      * Returns the object created by invoking method of class of "class" property
      *
      * @param root       the json document

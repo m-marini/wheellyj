@@ -42,18 +42,17 @@ import org.mmarini.wheelly.engines.ProcessorContext;
 import org.mmarini.wheelly.engines.StateMachineAgent;
 import org.mmarini.wheelly.engines.StateNode;
 import org.mmarini.wheelly.swing.*;
-import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.event.WindowEvent;
 import java.awt.geom.Point2D;
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
-import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.swing.Utils.*;
 
@@ -69,15 +68,12 @@ public class RobotExecutor {
      *
      * @param file the configuration file
      */
-    static StateMachineAgent createAgent(String file) {
+    static StateMachineAgent createAgent(File file) {
         try {
             JsonNode config = org.mmarini.yaml.Utils.fromFile(file);
-            RobotControllerApi controller = AppYaml.controllerFromJson(config, Locator.root(), EXECUTOR_SCHEMA_YML);
-            Locator agentLocator = Locator.locate(Locator.locate("agent").getNode(config).asText());
-            if (agentLocator.getNode(config).isMissingNode()) {
-                throw new IllegalArgumentException(format("Missing node %s", agentLocator));
-            }
-            return StateMachineAgent.create(config, agentLocator, controller);
+            RobotControllerApi controller = AppYaml.controllerFromJson(config, EXECUTOR_SCHEMA_YML);
+            return StateMachineAgent.fromFile(
+                    new File(config.path("agent").asText()), controller);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -243,7 +239,7 @@ public class RobotExecutor {
     }
 
     /**
-     * Handles step up of agent
+     * Handles the step-up of agent
      *
      * @param ctx the context
      */
@@ -346,14 +342,14 @@ public class RobotExecutor {
      * <p>
      * Creates the agent
      * Initializes the UI components
-     * Opens the application frames (environment + radar)
+     * Opens the application frames (environment and radar)
      */
     private void run() {
         logger.atInfo().log("Creating Agent");
         this.sessionDuration = this.args.getLong("localTime");
         sessionDuration *= 1000;
         logger.atInfo().log("Starting session ...");
-        this.agent = createAgent(this.args.getString("config"));
+        this.agent = createAgent(new File(this.args.getString("config")));
         Optional.ofNullable(this.args.getString("dump"))
                 .ifPresent(file -> {
                     try {

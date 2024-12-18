@@ -20,36 +20,6 @@ public interface ArrayReader extends AutoCloseable {
     File file();
 
     /**
-     * Returns the file position (# records)
-     *
-     * @throws IOException in case of error
-     */
-    long position() throws IOException;
-
-    /**
-     * Returns the array read from resources or null if no records available
-     *
-     * @param numRecords the maximum number of record
-     * @throws IOException in case of error
-     */
-    INDArray read(long numRecords) throws IOException;
-
-    /**
-     * Positions the resource to a specific record
-     *
-     * @param record record number
-     * @throws IOException in case of error
-     */
-    void seek(long record) throws IOException;
-
-    /**
-     * Returns the number of records
-     *
-     * @throws IOException in case of error
-     */
-    long size() throws IOException;
-
-    /**
      * Returns the ArrayReader with mapped data
      *
      * @param mapper the mapper function
@@ -88,5 +58,35 @@ public interface ArrayReader extends AutoCloseable {
             }
         };
     }
+
+    /**
+     * Returns the file position (# records)
+     *
+     * @throws IOException in case of error
+     */
+    long position() throws IOException;
+
+    /**
+     * Returns the array read from resources or null if no records available
+     *
+     * @param numRecords the maximum number of record
+     * @throws IOException in case of error
+     */
+    INDArray read(long numRecords) throws IOException;
+
+    /**
+     * Positions the resource to a specific record
+     *
+     * @param record record number
+     * @throws IOException in case of error
+     */
+    void seek(long record) throws IOException;
+
+    /**
+     * Returns the number of records
+     *
+     * @throws IOException in case of error
+     */
+    long size() throws IOException;
 
 }

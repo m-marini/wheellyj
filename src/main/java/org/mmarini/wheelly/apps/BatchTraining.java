@@ -271,8 +271,9 @@ public class BatchTraining {
     protected void run() throws Exception {
 
         // Load configuration
-        JsonNode config = fromFile(this.args.getString("config"));
-        JsonSchemas.instance().validateOrThrow(config, BATCH_SCHEMA_YML);
+        File configFile = new File(this.args.getString("config"));
+        JsonNode config = fromFile(configFile);
+        RobotEnvironment environment = AppYaml.envFromJson(config, BATCH_SCHEMA_YML);
 
         // Creates random number generator
         Random random = Nd4j.getRandomFactory().getNewRandomInstance();
@@ -280,13 +281,11 @@ public class BatchTraining {
         if (seed > 0) {
             random.setSeed(seed);
         }
-        RobotEnvironment environment = AppYaml.envFromJson(config, Locator.root(), BATCH_SCHEMA_YML);
-        Locator agentLocator = Locator.locate(Locator.locate("agent").getNode(config).asText());
-        if (agentLocator.getNode(config).isMissingNode()) {
-            throw new IllegalArgumentException(format("Missing node %s", agentLocator));
-        }
+
         // Loads agent
-        this.agent = Agent.fromConfig(config, agentLocator, environment);
+        this.agent = Agent.fromFile(
+                new File(Locator.locate("agent").getNode(config).asText()),
+                environment);
 
         if (agent instanceof AbstractAgentNN aa) {
             this.agent = aa.setPostTrainKpis(true);

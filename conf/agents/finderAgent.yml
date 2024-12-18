@@ -1,0 +1,90 @@
+---
+$schema: https://mmarini.org/wheelly/state-agent-schema-3.3
+class: org.mmarini.wheelly.engines.StateMachineAgent
+numRadarSectors: 24
+minRadarDistance: 0.3
+maxRadarDistance: 3
+radarWidth: 101
+radarHeight: 101
+radarGrid: 0.1
+contactRadius: 0.2
+radarReceptiveAngle: 15
+echoPersistence: 120000
+contactPersistence: 60000
+radarCleanInterval: 30000
+correlationInterval: 2000
+decay: 120000
+flow:
+  entry: scan
+  states:
+    scan:
+      class: org.mmarini.wheelly.engines.HaltState
+      timeout: 20000
+      scanInterval: 500
+      minSensorDir: -90
+      maxSensorDir: 90
+      sensorDirNumber: 9
+      transitions:
+        timeout:
+          to: target
+        frontBlocked:
+          to: avoid
+        blocked:
+          to: avoid
+    target:
+      class: org.mmarini.wheelly.engines.LabelPointState
+      maxDistance: 3
+      safeDistance: 0.8
+      transitions:
+        completed:
+          to: move
+          onTransition:
+            - move.target
+            - target.target
+            - get
+            - put
+            - move.direction
+            - target.direction
+            - get
+            - put
+        notFound:
+          to: explore
+    move:
+      class: org.mmarini.wheelly.engines.MoveToState
+      stopDistance: 0.1
+      transitions:
+        completed:
+          to: scan
+        rearBlocked:
+          to: avoid
+        frontBlocked:
+          to: avoid
+        blocked:
+          to: avoid
+    explore:
+      class: org.mmarini.wheelly.engines.ExploringPointState
+      distance: 1
+      safeDistance: 0.8
+      maxDistance: 3
+      transitions:
+        completed:
+          to: move
+          onTransition:
+            - move.target
+            - explore.target
+            - get
+            - put
+        notFound:
+          to: clearMap
+    avoid:
+      class: org.mmarini.wheelly.engines.AvoidingState
+      safeDistance: 0.2
+      speed: 20
+      transitions:
+        completed:
+          to: scan
+    clearMap:
+      class: org.mmarini.wheelly.engines.ClearMapState
+      transitions:
+        completed:
+          to: scan

@@ -28,7 +28,6 @@ package org.mmarini.rl.agents;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import org.mmarini.rl.envs.*;
-import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
 import java.io.File;
@@ -115,7 +114,7 @@ class PPOAgentEnvCreateTest {
         JsonNode spec = Utils.fromText(YAML);
         File path = new File("models/test");
         deleteRecursive(path);
-        PPOAgent agent = PPOAgent.create(spec, Locator.root(), MOCK_ENV);
+        PPOAgent agent = PPOAgent.create(spec, MOCK_ENV);
         assertNotNull(agent);
         assertEquals(2048, agent.numSteps());
         assertEquals(1, agent.numEpochs());
@@ -127,11 +126,11 @@ class PPOAgentEnvCreateTest {
         JsonNode spec = Utils.fromText(YAML);
         File path = new File("models/test");
         deleteRecursive(path);
-        PPOAgent agent = PPOAgent.create(spec, Locator.root(), MOCK_ENV);
+        PPOAgent agent = PPOAgent.create(spec, MOCK_ENV);
         assertNotNull(agent);
         agent.save();
         JsonNode specLoad = Utils.fromText(YAML);
-        PPOAgent agent1 = PPOAgent.create(specLoad, Locator.root(), MOCK_ENV);
+        PPOAgent agent1 = PPOAgent.create(specLoad, MOCK_ENV);
         assertNotNull(agent1);
         assertEquals(2048, agent1.numSteps());
         assertEquals(1, agent1.numEpochs());

@@ -1,0 +1,16 @@
+---
+$schema: https://mmarini.org/wheelly/robot-schema-2.0
+class: org.mmarini.wheelly.apis.Robot
+robotHost: 192.168.1.43
+cameraHost: localhost
+connectionTimeout: 10000
+readTimeout: 10000
+configureTimeout: 2000
+configCommands:
+  - cs 500
+  - cc 5 30 20
+  - tcsl 30 107 180 -32 -81 -180 400 50
+  - tcsr 39 78 180 -32 -92 -180 400 50
+  - fl 10000 10000
+  - fr 10000 10000
+  - ci 500 500

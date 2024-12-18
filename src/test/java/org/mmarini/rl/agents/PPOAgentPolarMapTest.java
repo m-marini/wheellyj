@@ -28,7 +28,6 @@ package org.mmarini.rl.agents;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import org.mmarini.rl.envs.*;
-import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
 import java.io.File;
@@ -148,14 +147,14 @@ class PPOAgentPolarMapTest {
         File path = new File("models/test");
         deleteRecursive(path);
         JsonNode spec = Utils.fromText(YAML);
-        PPOAgent agent = PPOAgent.create(spec, Locator.root(), MOCK_ENV);
-        // And a input state
+        PPOAgent agent = PPOAgent.create(spec, MOCK_ENV);
+        // And an input state
         Map<String, Signal> state = Map.of(
                 "sectorStates", ArraySignal.create(new long[]{1, 4}, 0, 1, 2, 3),
                 "sectorDistances", ArraySignal.create(new long[]{1, 4}, 0, 0, 0, 3)
         );
 
-        // When act the agent with signal
+        // When acts the agent with signal
         Map<String, Signal> out = agent.processSignals(state);
 
         // Then ...

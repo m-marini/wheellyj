@@ -66,7 +66,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.reactivex.rxjava3.core.Flowable.interval;
-import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.swing.Utils.*;
 import static org.mmarini.yaml.Utils.fromFile;
@@ -595,25 +594,23 @@ public class Wheelly {
      */
     protected void run() throws IOException {
         logger.atInfo().log("Creating environment");
-        JsonNode config = fromFile(this.args.getString("config"));
-        this.environment = AppYaml.envFromJson(config, Locator.root(), WHEELLY_SCHEMA_YML);
+        File configFile = new File(this.args.getString("config"));
+        JsonNode config = fromFile(configFile);
+        this.environment = AppYaml.envFromJson(config, WHEELLY_SCHEMA_YML);
         long savingInterval = Locator.locate("savingInterval").getNode(config).asLong();
 
         logger.atInfo().log("Creating agent");
-        Locator agentLocator = Locator.locate(Locator.locate("agent").getNode(config).asText());
-        if (agentLocator.getNode(config).isMissingNode()) {
-            throw new IllegalArgumentException(format("Missing node %s", agentLocator));
-        }
-        Agent agent = Agent.fromConfig(config, agentLocator, environment);
+        Agent agent = Agent.fromFile(
+                new File(Locator.locate("agent").getNode(config).asText()),
+                environment);
         if (agent instanceof AbstractAgentNN agentNN) {
             agent = agentNN.setPostTrainKpis(true);
         }
         boolean synchTraining = args.getBoolean("alternate");
         this.trainer = new AtomicReference<>(AgentTrainer.create(agent, synchTraining, savingInterval));
-        //this.trainer = new AtomicReference<>(new AgentTraining(agent, false, false));
-        if (environment.getController().getRobot() instanceof SimRobot robot) {
+        if (environment.getController().getRobot() instanceof SimRobot robot1) {
             // Add the obstacles location changes
-            robot.setOnObstacleChanged(this::handleObstacleChanged);
+            robot1.setOnObstacleChanged(this::handleObstacleChanged);
         }
 
         sessionDuration = this.args.getLong("localTime");

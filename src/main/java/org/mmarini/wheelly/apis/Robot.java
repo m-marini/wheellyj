@@ -32,6 +32,7 @@ import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Locale;
@@ -81,13 +82,15 @@ public class Robot implements RobotApi, WithIOCallback {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/robot-schema-2.0";
     private static final Logger logger = LoggerFactory.getLogger(Robot.class);
 
+
     /**
      * Returns the robot from configuration
      *
-     * @param root    the configuration document
-     * @param locator the locator of robot spec
+     * @param root the configuration document
+     * @param file the configuration file
      */
-    public static Robot create(JsonNode root, Locator locator) {
+    public static Robot create(JsonNode root, File file) {
+        Locator locator = Locator.root();
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         String robotHost = locator.path("robotHost").getNode(root).asText();
         int robotPort = locator.path("robotPort").getNode(root).asInt(DEFAULT_ROBOT_PORT);
@@ -216,7 +219,7 @@ public class Robot implements RobotApi, WithIOCallback {
     }
 
     /**
-     * Flushes the message for interval
+     * Flushes the message for the interval
      */
     private void flush() throws IOException {
         long timeout = System.currentTimeMillis() + FLUSH_INTERVAL;
@@ -241,7 +244,7 @@ public class Robot implements RobotApi, WithIOCallback {
 
     /**
      * Parses the data received for messages.
-     * The robot status is updated with received message.
+     * The robot status is updated with the received message.
      *
      * @param line the data line received
      */
@@ -254,7 +257,7 @@ public class Robot implements RobotApi, WithIOCallback {
 
     /**
      * Parses the data received for messages.
-     * The robot status is updated with received message.
+     * The robot status is updated with the received message.
      *
      * @param line the data line received
      */
