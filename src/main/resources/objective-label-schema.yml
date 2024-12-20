@@ -17,6 +17,16 @@ properties:
   velocityThreshold:
     type: number
     minimum: 0
+  directionRange:
+    type: integer
+    minimum: 0
+    maximum: 180
+  sensorRange:
+    type: integer
+    minimum: 0
+    maximum: 90
+  reward:
+    type: number
 required:
   - $schema
   - class

@@ -80,4 +80,65 @@ class NoMoveTest {
 
         assertThat(result, closeTo(expected, 1e-4));
     }
+
+    @ParameterizedTest
+    @CsvSource({
+            "2,0,0,0",
+            "0,1,0,0",
+            "0,-1,0,0",
+            "0,0,1,0",
+            "0,0,0,1",
+            "0,0,1,1",
+            "0,0,-1,0",
+            "0,0,0,-1",
+            "0,0,-1,-1",
+            "0,0,-1,1",
+            "0,0,1,-1",
+    })
+    void createWithReward(double expected,
+                          int sensorDir,
+                          double leftPps, double rightPps) throws IOException {
+        JsonNode root = Utils.fromText(TestFunctions.text("---",
+                "$schema: " + NoMove.SCHEMA_NAME,
+                "class: " + NoMove.class.getName(),
+                "reward: 2"));
+        RewardFunction f = NoMove.create(root, Locator.root());
+        MockState state = createState(sensorDir, leftPps, rightPps);
+
+        double result = f.apply(null, null, state);
+
+        assertThat(result, closeTo(expected, 1e-4));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "2,0,0,0",
+            "2,1,0,0",
+            "2,-1,0,0",
+            "0,2,0,0",
+            "0,-2,0,0",
+            "0,0,1,0",
+            "0,0,0,1",
+            "0,0,1,1",
+            "0,0,-1,0",
+            "0,0,0,-1",
+            "0,0,-1,-1",
+            "0,0,-1,1",
+            "0,0,1,-1",
+    })
+    void createWithRewardAndSensor(double expected,
+                          int sensorDir,
+                          double leftPps, double rightPps) throws IOException {
+        JsonNode root = Utils.fromText(TestFunctions.text("---",
+                "$schema: " + NoMove.SCHEMA_NAME,
+                "class: " + NoMove.class.getName(),
+                "sensorRange: 1",
+                "reward: 2"));
+        RewardFunction f = NoMove.create(root, Locator.root());
+        MockState state = createState(sensorDir, leftPps, rightPps);
+
+        double result = f.apply(null, null, state);
+
+        assertThat(result, closeTo(expected, 1e-4));
+    }
 }

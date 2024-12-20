@@ -38,17 +38,19 @@ import org.mmarini.yaml.Locator;
  */
 public interface AvoidContact {
     String SCHEMA_NAME = "https://mmarini.org/wheelly/objective-avoid-contact-schema-0.1";
-    RewardFunction AVOID =
-            (s0, a, s1) -> {
-                if (s1 instanceof WithRobotStatus state) {
-                    RobotStatus status = state.getRobotStatus();
-                    return !status.canMoveForward() || !status.canMoveBackward()
-                            ? -1
-                            : 0;
-                } else {
-                    return 0;
-                }
-            };
+
+    static RewardFunction avoid(double reward) {
+        return (s0, a, s1) -> {
+            if (s1 instanceof WithRobotStatus state) {
+                RobotStatus status = state.getRobotStatus();
+                return !status.canMoveForward() || !status.canMoveBackward()
+                        ? reward
+                        : 0;
+            } else {
+                return 0;
+            }
+        };
+    }
 
     /**
      * Returns the reward function from configuration
@@ -58,6 +60,7 @@ public interface AvoidContact {
      */
     static RewardFunction create(JsonNode root, Locator locator) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-        return AVOID;
+        double reward = locator.path("reward").getNode(root).asDouble(-1d);
+        return avoid(reward);
     }
 }

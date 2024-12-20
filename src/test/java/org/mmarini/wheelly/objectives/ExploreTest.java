@@ -80,4 +80,27 @@ class ExploreTest {
 
         assertThat(result, closeTo(expected, 1e-4));
     }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0, 10, 10",
+            "2, 10, 11",
+            "0, 11, 10"
+    })
+    void createWithReward(double expected,
+                          int knownCount0,
+                          int knownCount1
+    ) throws IOException {
+        JsonNode root = Utils.fromText(TestFunctions.text("---",
+                "$schema: " + Explore.SCHEMA_NAME,
+                "class: " + Explore.class.getName(),
+                "reward: 2"));
+        RewardFunction f = Explore.create(root, Locator.root());
+        MockState state0 = createState(knownCount0);
+        MockState state1 = createState(knownCount1);
+
+        double result = f.apply(state0, null, state1);
+
+        assertThat(result, closeTo(expected, 1e-4));
+    }
 }

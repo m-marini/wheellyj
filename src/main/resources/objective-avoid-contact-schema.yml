@@ -8,6 +8,8 @@ properties:
     const: https://mmarini.org/wheelly/objective-avoid-contact-schema-0.1
   class:
     const: org.mmarini.wheelly.objectives.AvoidContact
+  reward:
+    type: number
 required:
   - $schema
   - class
