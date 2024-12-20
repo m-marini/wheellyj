@@ -273,6 +273,7 @@ public class PPOAgent extends AbstractAgentNN {
             }
         }
     }
+
     protected final float ppoEpsilon;
 
     /**

@@ -97,8 +97,8 @@ class ObstacleMapTest {
         // Then ...
         assertThat(cell1, optionalOf(new ObstacleMap.ObstacleCell(new Point(0, 0), new Point2D.Double(), true)));
         assertThat(cell2, emptyOptional());
-        assertThat(cell3, optionalOf(new ObstacleMap.ObstacleCell(new Point(1, 1), new Point2D.Double(0.2,0.2), false)));
-        assertThat(cell4, optionalOf(new ObstacleMap.ObstacleCell(new Point(2, 2), new Point2D.Double(0.4,0.4), false)));
+        assertThat(cell3, optionalOf(new ObstacleMap.ObstacleCell(new Point(1, 1), new Point2D.Double(0.2, 0.2), false)));
+        assertThat(cell4, optionalOf(new ObstacleMap.ObstacleCell(new Point(2, 2), new Point2D.Double(0.4, 0.4), false)));
     }
 
     @Test
@@ -113,7 +113,7 @@ class ObstacleMapTest {
 
     @Test
     void testSize() {
-        ObstacleMap map = createMap(new int[]{2,2},
+        ObstacleMap map = createMap(new int[]{2, 2},
                 0, 0,
                 1, 1);
         assertThat(map.getSize(), equalTo(3));

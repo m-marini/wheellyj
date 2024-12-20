@@ -39,6 +39,7 @@ import java.util.function.Predicate;
 
 public interface ActionSet {
     String SCHEMA_NAME = "https://mmarini.org/wheelly/objective-action-set-schema-1.0";
+    double DEFAULT_REWARD = 1d;
 
     /**
      * Returns the reward function from configuration
@@ -54,7 +55,8 @@ public interface ActionSet {
         if (move < 0 && sensor < 0) {
             throw new IllegalArgumentException("Missing ActionSet objective values");
         }
-        return inactive(move, sensor);
+        double reward = locator.path("reward").getNode(root).asDouble(DEFAULT_REWARD);
+        return inactive(move, sensor, reward);
     }
 
     /**
@@ -62,9 +64,10 @@ public interface ActionSet {
      *
      * @param targetMoveIndex   the target move index
      * @param targetSensorIndex the target sensor index
+     * @param reward            the reward when matched gaol
      */
     static RewardFunction inactive(int targetMoveIndex,
-                                   int targetSensorIndex) {
+                                   int targetSensorIndex, double reward) {
         Predicate<Map<String, Signal>> actionPredicate = null;
         if (targetMoveIndex >= 0) {
             actionPredicate = x -> x.get("move").getInt(0) == targetMoveIndex;
@@ -75,6 +78,6 @@ public interface ActionSet {
         }
         Predicate<Map<String, Signal>> finalPredicate = actionPredicate;
         return (s0, a, s1) ->
-                finalPredicate.test(a) ? 1 : 0;
+                finalPredicate.test(a) ? reward : 0;
     }
 }

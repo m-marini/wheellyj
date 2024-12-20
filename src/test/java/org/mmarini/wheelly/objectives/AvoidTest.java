@@ -71,4 +71,26 @@ class AvoidTest {
 
         assertThat(result, closeTo(expected, 1e-4));
     }
+
+    @ParameterizedTest
+    @CsvSource({
+            "-2,0,1",
+            "-2,1,0",
+            "-2,0,0",
+            "0,1,1",
+    })
+    void createWithReward(double expected,
+                          int canMoveForward,
+                          int canMoveBackward) throws IOException {
+        JsonNode root = Utils.fromText(TestFunctions.text("---",
+                "$schema: " + AvoidContact.SCHEMA_NAME,
+                "class: " + AvoidContact.class.getName(),
+                "reward: -2"));
+        RewardFunction f = AvoidContact.create(root, Locator.root());
+        MockState state = createState(canMoveForward != 0, canMoveBackward != 0);
+
+        double result = f.apply(null, null, state);
+
+        assertThat(result, closeTo(expected, 1e-4));
+    }
 }

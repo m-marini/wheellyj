@@ -37,7 +37,7 @@ import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mmarini.yaml.Utils.fromText;
 import static rocks.cleancode.hamcrest.record.HasFieldMatcher.field;
 

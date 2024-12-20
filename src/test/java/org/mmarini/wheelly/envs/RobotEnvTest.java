@@ -28,6 +28,7 @@ package org.mmarini.wheelly.envs;
 import org.junit.jupiter.api.Test;
 import org.mmarini.rl.envs.IntSignal;
 import org.mmarini.rl.envs.Signal;
+import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.MockRobot;
 
 import java.util.Map;
@@ -48,7 +49,7 @@ class RobotEnvTest {
     @Test
     void deltaDir() {
         // Given a robot environment
-        RobotEnv env = RobotEnv.create(new MockRobot(), noMove());
+        RobotEnv env = RobotEnv.create(new MockRobot(), noMove(0, Complex.DEG0, 1));
         // And actions signals for min direction, half direction, max diretion
         Map<String, Signal> actions0 = createActions(0, 0, 0);
         Map<String, Signal> actions1 = createActions(RobotEnv.DEFAULT_NUM_DIRECTION_VALUES / 2, 0, 0);
@@ -67,7 +68,7 @@ class RobotEnvTest {
 
     @Test
     void sensor() {
-        RobotEnv env = RobotEnv.create(new MockRobot(), noMove());
+        RobotEnv env = RobotEnv.create(new MockRobot(), noMove(0, Complex.DEG90, 1));
 
         int sensor = env.sensorDir(createActions(0, 0, 0)).toIntDeg();
         assertEquals(RobotEnv.MIN_SENSOR_DIR, sensor);
@@ -81,7 +82,7 @@ class RobotEnvTest {
 
     @Test
     void speed() {
-        RobotEnv env = RobotEnv.create(new MockRobot(), noMove());
+        RobotEnv env = RobotEnv.create(new MockRobot(), noMove(0, Complex.DEG0, 1));
 
         float value = env.speed(createActions(0, 0, 0));
         assertEquals(RobotEnv.MIN_SPEED, value);

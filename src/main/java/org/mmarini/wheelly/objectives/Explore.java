@@ -49,28 +49,6 @@ public interface Explore {
     String SCHEMA_NAME = "https://mmarini.org/wheelly/objective-explore-schema-0.2";
 
     /**
-     * Returns the function of reward for the given environment
-     */
-    RewardFunction EXPLORE =
-            (s0, a, s1) -> {
-                if (s0 instanceof WithRadarMap withRadar0
-                        && s1 instanceof WithRadarMap withRadar1) {
-                    RadarMap radarMap0 = withRadar0.getRadarMap();
-                    RadarMap radarMap1 = withRadar1.getRadarMap();
-                    long knownSectors0Number = Arrays.stream(radarMap0.cells())
-                            .filter(Predicate.not(MapCell::unknown))
-                            .count();
-                    long knownSector10Number = Arrays.stream(radarMap1.cells())
-                            .filter(Predicate.not(MapCell::unknown))
-                            .count();
-                    if (knownSector10Number > knownSectors0Number) {
-                        return 1;
-                    }
-                }
-                return 0;
-            };
-
-    /**
      * Returns the function that fuzzy rewards explore behavior from configuration
      *
      * @param root    the root json document
@@ -78,7 +56,31 @@ public interface Explore {
      */
     static RewardFunction create(JsonNode root, Locator locator) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-        return EXPLORE;
+        double reward = locator.path("reward").getNode(root).asDouble(1d);
+        return explore(reward);
+    }
+
+    /**
+     * Returns the function of reward for the given environment
+     */
+    static RewardFunction explore(double reward) {
+        return (s0, a, s1) -> {
+            if (s0 instanceof WithRadarMap withRadar0
+                    && s1 instanceof WithRadarMap withRadar1) {
+                RadarMap radarMap0 = withRadar0.getRadarMap();
+                RadarMap radarMap1 = withRadar1.getRadarMap();
+                long knownSectors0Number = Arrays.stream(radarMap0.cells())
+                        .filter(Predicate.not(MapCell::unknown))
+                        .count();
+                long knownSector10Number = Arrays.stream(radarMap1.cells())
+                        .filter(Predicate.not(MapCell::unknown))
+                        .count();
+                if (knownSector10Number > knownSectors0Number) {
+                    return reward;
+                }
+            }
+            return 0;
+        };
     }
 
 }

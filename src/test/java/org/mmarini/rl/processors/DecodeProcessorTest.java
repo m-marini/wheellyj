@@ -50,6 +50,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 
 class DecodeProcessorTest {
+    public static final double EPSILON = 1e-3;
     private static final String YAML = """
             ---
             - name: out
@@ -59,7 +60,6 @@ class DecodeProcessorTest {
                 - b
                 - c
             """;
-    public static final double EPSILON = 1e-3;
 
     @Test
     void computeDecodedSizeTest() {

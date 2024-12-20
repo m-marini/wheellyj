@@ -8,6 +8,8 @@ properties:
     const: https://mmarini.org/wheelly/objective-explore-schema-0.2
   class:
     const: org.mmarini.wheelly.objectives.Explore
+  reward:
+    type: number
 required:
   - $schema
   - class
