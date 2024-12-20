@@ -104,7 +104,7 @@ class PPOAgentTrainTrajectoryTest {
                 "input", ArraySignal.create(new long[]{2}, 1f, 0f)
         );
         Map<String, Signal> s1 = Map.of(
-                "input", ArraySignal.create(new long[]{2},0f, 1f)
+                "input", ArraySignal.create(new long[]{2}, 0f, 1f)
         );
 
         Map<String, INDArray> input0 = TDAgentSingleNN.getInput(s0);
@@ -144,10 +144,10 @@ class PPOAgentTrainTrajectoryTest {
         // Given ...
         PPOAgent agent = createAgent0(1, 1, 1);
         Map<String, Signal> s0 = Map.of(
-                "input", ArraySignal.create(new long[]{2},1f, 0f)
+                "input", ArraySignal.create(new long[]{2}, 1f, 0f)
         );
         Map<String, Signal> s1 = Map.of(
-                "input", ArraySignal.create(new long[]{2},0f, 1f)
+                "input", ArraySignal.create(new long[]{2}, 0f, 1f)
         );
 
         Map<String, INDArray> input = TDAgentSingleNN.getInput(s0);
@@ -210,10 +210,10 @@ class PPOAgentTrainTrajectoryTest {
     void trainPositive() {
         PPOAgent agent = createAgent0(1, 1, 1);
         Map<String, Signal> s0 = Map.of(
-                "input", ArraySignal.create(new long[]{2},1f, 0f)
+                "input", ArraySignal.create(new long[]{2}, 1f, 0f)
         );
         Map<String, Signal> s1 = Map.of(
-                "input", ArraySignal.create(new long[]{2},0f, 1f)
+                "input", ArraySignal.create(new long[]{2}, 0f, 1f)
         );
 
         Map<String, INDArray> input = TDAgentSingleNN.getInput(s0);

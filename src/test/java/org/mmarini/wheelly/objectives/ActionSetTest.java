@@ -45,32 +45,6 @@ class ActionSetTest {
 
     @ParameterizedTest
     @CsvSource({
-            "2, 0,0",
-            "0, 0,1",
-            "0, 1,0",
-            "0, 1,1",
-    })
-    void createAllWithReward(double expected,
-                   int move,
-                   int sensor) throws IOException {
-        JsonNode root = Utils.fromText(TestFunctions.text("---",
-                "$schema: " + ActionSet.SCHEMA_NAME,
-                "class: " + ActionSet.class.getName(),
-                "move: 0",
-                "sensor: 0",
-                "reward: 2"));
-        RewardFunction f = ActionSet.create(root, Locator.root());
-        Map<String, Signal> action = Map.of(
-                "move", IntSignal.create(move),
-                "sensorAction", IntSignal.create(sensor)
-        );
-        double result = f.apply(null, action, null);
-
-        assertThat(result, closeTo(expected, 1e-4));
-    }
-
-    @ParameterizedTest
-    @CsvSource({
             "1, 0,0",
             "0, 0,1",
             "0, 1,0",
@@ -96,6 +70,32 @@ class ActionSetTest {
 
     @ParameterizedTest
     @CsvSource({
+            "2, 0,0",
+            "0, 0,1",
+            "0, 1,0",
+            "0, 1,1",
+    })
+    void createAllWithReward(double expected,
+                             int move,
+                             int sensor) throws IOException {
+        JsonNode root = Utils.fromText(TestFunctions.text("---",
+                "$schema: " + ActionSet.SCHEMA_NAME,
+                "class: " + ActionSet.class.getName(),
+                "move: 0",
+                "sensor: 0",
+                "reward: 2"));
+        RewardFunction f = ActionSet.create(root, Locator.root());
+        Map<String, Signal> action = Map.of(
+                "move", IntSignal.create(move),
+                "sensorAction", IntSignal.create(sensor)
+        );
+        double result = f.apply(null, action, null);
+
+        assertThat(result, closeTo(expected, 1e-4));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
             "1, 0,0",
             "1, 0,1",
             "0, 1,0",
@@ -103,7 +103,7 @@ class ActionSetTest {
     })
     void createMoveTest(double expected,
                         int move,
-                         int sensor) throws IOException {
+                        int sensor) throws IOException {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + ActionSet.SCHEMA_NAME,
                 "class: " + ActionSet.class.getName(),

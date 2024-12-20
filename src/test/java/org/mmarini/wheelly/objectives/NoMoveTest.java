@@ -127,8 +127,8 @@ class NoMoveTest {
             "0,0,1,-1",
     })
     void createWithRewardAndSensor(double expected,
-                          int sensorDir,
-                          double leftPps, double rightPps) throws IOException {
+                                   int sensorDir,
+                                   double leftPps, double rightPps) throws IOException {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + NoMove.SCHEMA_NAME,
                 "class: " + NoMove.class.getName(),

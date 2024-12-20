@@ -104,6 +104,19 @@ class PolarRobotEnvTest {
     }
 
     @Test
+    void getStateTest() {
+        // Given a polar robot environment
+        // When get the states
+        Map<String, SignalSpec> states = env.getState();
+
+        // Then the state should have sectorState and sectorDistances entries
+        assertEquals(new IntSignalSpec(new long[]{NUM_RADAR_SECTORS}, 4),
+                states.get("sectorStates"));
+        assertEquals(new FloatSignalSpec(new long[]{NUM_RADAR_SECTORS}, 0, 3),
+                states.get("sectorDistances"));
+    }
+
+    @Test
     void isHaltTest() {
         Map<String, Signal> actions = Map.of(
                 "move", IntSignal.create(7),
@@ -152,20 +165,6 @@ class PolarRobotEnvTest {
         Map<String, Signal> actions = Map.of("move", IntSignal.create(action));
         int speed = env.speed(actions);
         assertEquals(expected, speed);
-    }
-
-
-    @Test
-    void getStateTest() {
-        // Given a polar robot environment
-        // When get the states
-        Map<String, SignalSpec> states = env.getState();
-
-        // Then the state should have sectorState and sectorDistances entries
-        assertEquals(new IntSignalSpec(new long[]{NUM_RADAR_SECTORS}, 4),
-                states.get("sectorStates"));
-        assertEquals(new FloatSignalSpec(new long[]{NUM_RADAR_SECTORS}, 0, 3),
-                states.get("sectorDistances"));
     }
 
     void setEmpty(int i, double distance) {
