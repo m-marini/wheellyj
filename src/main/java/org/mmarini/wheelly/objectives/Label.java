@@ -27,6 +27,7 @@ package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.PolarMap;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WithRobotStatus;
 import org.mmarini.wheelly.apps.JsonSchemas;
@@ -35,13 +36,13 @@ import org.mmarini.wheelly.envs.WithPolarMap;
 import org.mmarini.yaml.Locator;
 
 import java.awt.geom.Point2D;
+import java.util.Arrays;
 
 import static java.lang.Math.abs;
-import static org.mmarini.wheelly.apis.Complex.DEG0;
 
 /**
  * The label objective returns reward if the robot is stopped with a labeled target in front (within range) within a given distance range
- * and sensor frontal oriented (within range)
+ * and sensor oriented (within range) toward a labeled target
  */
 public interface Label {
     float DEFAULT_VELOCITY_THRESHOLD = 0.01f;
@@ -85,8 +86,35 @@ public interface Label {
         return (s0, a, s1) -> {
             if (s1 instanceof WithPolarMap mapState && s1 instanceof WithRobotStatus robotState) {
                 // the environment supports polar map
+                RobotStatus robotStatus = robotState.getRobotStatus();
                 // Get the nearest labeled obstacle
-                Point2D goalLocation = mapState.getPolarMap().nearestLabel(minDistance, maxDistance);
+                PolarMap polarMap = mapState.getPolarMap();
+                Point2D robotLocation = robotStatus.location();
+                // check robot speed in range
+                if (abs(robotStatus.leftPps()) < velocityThreshold
+                        && abs(robotStatus.rightPps()) < velocityThreshold
+                        // and any sector in direction range with a labeled target in distance range
+                        && Arrays.stream(polarMap.sectors())
+                        .anyMatch(sector -> {
+                            if (!sector.labeled()) {
+                                return false;
+                            }
+                            Point2D labelLocation = sector.location();
+                            double distance = labelLocation.distance(robotLocation);
+                            if (!(distance >= minDistance && distance <= maxDistance)) {
+                                return false;
+                            }
+                            Complex labeledDir = Complex.direction(robotLocation, labelLocation);
+                            return labeledDir.isCloseTo(robotStatus.direction(), directionRange);
+                        })
+                        // and any sector in sensor direction range with a labeled target in distance range
+                        && robotStatus.sensorDirection().isCloseTo(Complex.DEG0, sensorRange)
+                ){
+                    return reward;
+                }
+
+/*
+                Point2D goalLocation = polarMap.nearestLabel(minDistance, maxDistance);
                 if (goalLocation != null) {
                     // A labeled obstacle exists in the polar map
                     RobotStatus robotStatus = robotState.getRobotStatus();
@@ -102,8 +130,10 @@ public interface Label {
                         return reward;
                     }
                 }
+
+ */
             }
-            return DEFAULT_SENSOR_RANGE;
+            return 0;
         };
     }
 }
