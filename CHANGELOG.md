@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Issue [#485](https://github.com/m-marini/wheellyj/issues/485): Change configuration files
 - Issue [#489](https://github.com/m-marini/wheellyj/issues/489): Change find label objective with parametrized direction and sensor check
+- Issue [#491](https://github.com/m-marini/wheellyj/issues/491):  Change find label objective
 
 ### Fixed
 
