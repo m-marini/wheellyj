@@ -7,6 +7,13 @@ The code of Webcam controller is at [Wheellycam project](https://github.com/m-ma
 
 The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
+
+## Release 0.20.0
+
+- Changed configuration files
+- Find label objective with parametrized direction and sensor check
+- Fixed missing batch session command and wrong model path in commands
+
 ## Release 0.19.0
 
 - Add generation of report yaml
