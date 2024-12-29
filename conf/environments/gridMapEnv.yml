@@ -18,7 +18,7 @@ contactPersistence: 300000
 radarCleanInterval: 30000
 correlationInterval: 2000
 decay: 120000
-numRadarSectors: 24
+numRadarSectors: 2
 minRadarDistance: 0.3
 maxRadarDistance: 3
-gridSize: 3
+gridSize: 31

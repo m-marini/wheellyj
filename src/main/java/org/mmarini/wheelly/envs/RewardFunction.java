@@ -28,14 +28,59 @@
 
 package org.mmarini.wheelly.envs;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.rl.envs.Signal;
+import org.mmarini.yaml.Locator;
+import org.mmarini.yaml.Utils;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
 import java.util.Map;
+
+import static java.lang.String.format;
 
 /**
  * Computes the reward base on initial state, action signals and resulting state
  */
 public interface RewardFunction {
+
+    /**
+     * Returns the composed objective from the objective list
+     *
+     * @param objectives the list of goals
+     */
+    private static RewardFunction composeObjective(List<RewardFunction> objectives) {
+        return (state0, action, state1) -> {
+            double value = 0;
+            for (RewardFunction objective : objectives) {
+                value = objective.apply(state0, action, state1);
+                if (value != 0) {
+                    break;
+                }
+            }
+            return value;
+        };
+    }
+
+    /**
+     * Returns the composed objective the objective list in the configuration file
+     *
+     * @param file the configuration file
+     */
+    static RewardFunction loadObjective(File file) throws IOException {
+        JsonNode root = org.mmarini.yaml.Utils.fromFile(file);
+        if (!root.isArray()) {
+            throw new IllegalArgumentException(format("Node %s must be an array (%s)",
+                    root,
+                    root.getNodeType().name()
+            ));
+        }
+        List<RewardFunction> objs = Locator.root().elements(root)
+                .map(locator -> Utils.<RewardFunction>createObject(root, locator, new Object[0], new Class[0]))
+                .toList();
+        return composeObjective(objs);
+    }
     /**
      * Returns the reward
      *

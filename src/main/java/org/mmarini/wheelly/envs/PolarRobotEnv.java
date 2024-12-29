@@ -30,20 +30,14 @@ package org.mmarini.wheelly.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.schedulers.Schedulers;
-import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
-import org.mmarini.yaml.Utils;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
-
-import static java.lang.String.format;
-import static java.util.Objects.requireNonNull;
 
 /**
  * Polar robot environment generates the following signals:
@@ -75,29 +69,12 @@ import static java.util.Objects.requireNonNull;
  *         <li><code>numRadarSectors</code> the number of sector of polar radar (suggested 25 = 15 DEG)</li>
  *         <li><code>minRadarDistance</code> the minimum sensitivity distance (m) of radar (suggested 0.3)</li>
  *         <li><code>maxRadarDistance</code> the minimum sensitivity distance (m) of radar (suggested 3)</li>
+ *         <li><code>gridSize</code> the number of relative radar map cells along the dimensions</li>
  *     </ul>
  * </p>
  */
-public class PolarRobotEnv extends AbstractRobotEnv implements WithRadarMap, WithPolarMap {
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/env-polar-schema-2.0";
-
-    /**
-     * Returns the composed objective from the objective list
-     *
-     * @param objectives the list of goals
-     */
-    private static RewardFunction composeObjective(List<RewardFunction> objectives) {
-        return (state0, action, state1) -> {
-            double value = 0;
-            for (RewardFunction objective : objectives) {
-                value = objective.apply(state0, action, state1);
-                if (value != 0) {
-                    break;
-                }
-            }
-            return value;
-        };
-    }
+public class PolarRobotEnv extends AbstractRobotEnv implements WithRadarMap, WithPolarMap, WithGridMap {
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/env-polar-schema-3.0";
 
     /**
      * Returns the robot environment
@@ -110,18 +87,14 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithRadarMap, Wit
      * @param numRadarSectors    the number of radar cells
      * @param minRadarDistance   the min radar distance (m)
      * @param maxRadarDistance   the max radar distance (m)
+     * @param gridSize           the number of radar map cells along the dimensions
      * @param radarMap           the radar map
      */
     public static PolarRobotEnv create(RobotControllerApi robot, RewardFunction reward,
                                        int numDirectionValues, int numSensorValues, int numSpeedValues,
-                                       int numRadarSectors, double minRadarDistance, double maxRadarDistance, RadarMap radarMap) {
-        Map<String, SignalSpec> actions1 = Map.of(
-                "move", new IntSignalSpec(new long[]{1}, numDirectionValues * numSpeedValues),
-                "sensorAction", new IntSignalSpec(new long[]{1}, numSensorValues)
-        );
-
-        return new PolarRobotEnv(robot, reward, actions1,
-                numSpeedValues, numDirectionValues, radarMap, PolarMap.create(numRadarSectors), minRadarDistance, maxRadarDistance);
+                                       int numRadarSectors, double minRadarDistance, double maxRadarDistance, int gridSize, RadarMap radarMap) {
+        return new PolarRobotEnv(robot, reward,
+                numSpeedValues, numDirectionValues, radarMap, PolarMap.create(numRadarSectors), minRadarDistance, maxRadarDistance, numSensorValues, gridSize);
     }
 
     /**
@@ -132,7 +105,7 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithRadarMap, Wit
      */
     public static PolarRobotEnv create(JsonNode root, File file, RobotControllerApi robot) throws IOException {
         JsonSchemas.instance().validateOrThrow(root, SCHEMA_NAME);
-        RewardFunction reward = loadObjective(new File(file.getParentFile(),
+        RewardFunction reward = RewardFunction.loadObjective(new File(file.getParentFile(),
                 root.path("objective").asText()));
         int numDirectionValues = root.path("numDirectionValues").asInt();
         int numSensorValues = root.path("numSensorValues").asInt();
@@ -140,32 +113,14 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithRadarMap, Wit
         int numRadarSectors = root.path("numRadarSectors").asInt();
         double minRadarDistance = root.path("minRadarDistance").asDouble();
         double maxRadarDistance = root.path("maxRadarDistance").asDouble();
+        int gridSize = root.path("gridSize").asInt();
         RadarMap radarMap = RadarMap.create(root, Locator.root());
 
         return PolarRobotEnv.create(robot, reward,
-                numDirectionValues, numSensorValues, numSpeedValues, numRadarSectors, minRadarDistance, maxRadarDistance, radarMap);
+                numDirectionValues, numSensorValues, numSpeedValues,
+                numRadarSectors, minRadarDistance, maxRadarDistance, gridSize, radarMap);
     }
 
-    /**
-     * Returns the composed objective the objective list in the configuration file
-     *
-     * @param file the configuration file
-     */
-    private static RewardFunction loadObjective(File file) throws IOException {
-        JsonNode root = Utils.fromFile(file);
-        if (!root.isArray()) {
-            throw new IllegalArgumentException(format("Node %s must be an array (%s)",
-                    root,
-                    root.getNodeType().name()
-            ));
-        }
-        List<RewardFunction> objs = Locator.root().elements(root)
-                .map(locator -> Utils.<RewardFunction>createObject(root, locator, new Object[0], new Class[0]))
-                .toList();
-        return composeObjective(objs);
-    }
-
-    private final Map<String, SignalSpec> actions;
     private final double maxRadarDistance;
     private final double minRadarDistance;
 
@@ -174,23 +129,22 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithRadarMap, Wit
      *
      * @param controller       the controller api
      * @param rewardFunc       the reward function
-     * @param actions          the action spec
      * @param numSpeeds        number of move action speeds
      * @param numDirections    number of move action directions
      * @param radarMap         the radar map
      * @param polarMap         the polar map
      * @param minRadarDistance min radar distance (m)
      * @param maxRadarDistance max radar distance (m)
+     * @param numSensorValues  the number of sensor values
+     * @param gridSize         the number of radar map cells along the dimensions
      */
     public PolarRobotEnv(RobotControllerApi controller, RewardFunction rewardFunc,
-                         Map<String, SignalSpec> actions,
                          int numSpeeds, int numDirections, RadarMap radarMap,
-                         PolarMap polarMap, double minRadarDistance, double maxRadarDistance) {
-        super(controller, rewardFunc, numSpeeds, numDirections);
-        this.actions = requireNonNull(actions);
+                         PolarMap polarMap, double minRadarDistance, double maxRadarDistance, int numSensorValues, int gridSize) {
+        super(controller, rewardFunc, numSpeeds, numDirections, numSensorValues);
         this.minRadarDistance = minRadarDistance;
         this.maxRadarDistance = maxRadarDistance;
-        setCurrentState(PolarRobotState.create(RobotStatus.create(x -> 12), radarMap, polarMap, maxRadarDistance));
+        setCurrentState(PolarRobotState.create(RobotStatus.create(x -> 12), radarMap, polarMap, maxRadarDistance, gridSize));
         readRobotStatus().doOnNext(this::handleStatus).subscribe();
         readControllerStatus()
                 .observeOn(Schedulers.io())
@@ -205,11 +159,6 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithRadarMap, Wit
     public void clearRadarMap() {
         PolarRobotState state = (PolarRobotState) getCurrentState();
         setCurrentState(state.setRadarMap(state.radarMap().clean()));
-    }
-
-    @Override
-    public Map<String, SignalSpec> getActions() {
-        return this.actions;
     }
 
     /**
@@ -230,13 +179,13 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithRadarMap, Wit
     }
 
     @Override
-    public RobotStatus getRobotStatus() {
-        return ((PolarRobotState) getCurrentState()).robotStatus();
+    public Map<String, SignalSpec> getState() {
+        return getCurrentState().spec();
     }
 
     @Override
-    public Map<String, SignalSpec> getState() {
-        return getCurrentState().spec();
+    public GridMap gridMap() {
+        return ((PolarRobotState) getCurrentState()).gridMap();
     }
 
     @Override
@@ -245,7 +194,9 @@ public class PolarRobotEnv extends AbstractRobotEnv implements WithRadarMap, Wit
         RadarMap radarMap = currentState.radarMap();
         PolarMap polarMap = currentState.polarMap();
         polarMap = polarMap.update(radarMap, status.location(), status.direction(), minRadarDistance, maxRadarDistance);
-        setCurrentState(currentState.setPolarMap(polarMap).setRobotStatus(status));
+        setCurrentState(currentState.setPolarMap(polarMap)
+                .setRobotStatus(status)
+                .createGridMap());
     }
 
     @Override

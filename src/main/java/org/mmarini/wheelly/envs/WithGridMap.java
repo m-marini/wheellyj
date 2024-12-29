@@ -28,14 +28,14 @@
 
 package org.mmarini.wheelly.envs;
 
-import org.mmarini.wheelly.apis.RadarMap;
+import org.mmarini.wheelly.apis.GridMap;
 
 /**
- * Returns the radar map
+ * Returns the grid map
  */
-public interface WithRadarMap {
+public interface WithGridMap extends WithRadarMap {
     /**
-     * Returns the radar map
+     * Returns the grid map
      */
-    RadarMap getRadarMap();
+    GridMap gridMap();
 }

@@ -236,7 +236,7 @@ class PolarMapTest {
         long timestamp = System.currentTimeMillis();
         RadarMap radarMap = createRadarMap().map(s -> s.addAnechoic(timestamp, DECAY));
 
-        // And a polar map with 24 sectors (15 DEG)
+        // And a polar map with 24 cells (15 DEG)
         PolarMap polarMap1 = PolarMap.create(24);
         // When update the polar map  at 0.2, 0.2 directed to 90 DEG with radar map
         PolarMap polarMap = polarMap1.update(radarMap,

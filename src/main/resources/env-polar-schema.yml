@@ -1,11 +1,11 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/env-polar-schema-2.0
+$id: https://mmarini.org/wheelly/env-polar-schema-3.0
 title: Environment
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/env-polar-schema-2.0
+    const: https://mmarini.org/wheelly/env-polar-schema-3.0
   class:
     const: org.mmarini.wheelly.envs.PolarRobotEnv
   objective:
@@ -33,10 +33,13 @@ properties:
     type: integer
     minimum: 1
   radarGrid:
+    type: number
     exclusiveMinimum: 0
   contactRadius:
+    type: number
     exclusiveMinimum: 0
   radarReceptiveAngle:
+    type: number
     minimum: 0
   radarCleanInterval:
     type: integer
@@ -51,6 +54,10 @@ properties:
     type: integer
     minimum: 1
   decay:
+    type: number
+    exclusiveMinimum: 0
+  gridSize:
+    type: integer
     exclusiveMinimum: 0
 required:
   - $schema
@@ -70,3 +77,4 @@ required:
   - radarCleanInterval
   - echoPersistence
   - contactPersistence
+  - gridSize

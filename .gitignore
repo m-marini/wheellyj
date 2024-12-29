@@ -20,3 +20,4 @@ docs/sonar-map.dxf~
 /test/**/*
 /csv/**/*
 /kpis/*
+/model/**/*

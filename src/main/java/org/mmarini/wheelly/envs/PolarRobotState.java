@@ -45,11 +45,15 @@ import static org.mmarini.wheelly.apis.Utils.clip;
  * @param robotStatus the robot status
  * @param radarMap    the radar map
  * @param polarMap    the polar map
+ * @param gridMap     the grid map
+ * @param gridSize    the number of radar cells along the dimensions
  * @param spec        the signal specification
  */
 public record PolarRobotState(RobotStatus robotStatus, RadarMap radarMap,
                               PolarMap polarMap,
-                              Map<String, SignalSpec> spec) implements State, WithRobotStatus, WithPolarMap, WithRadarMap {
+                              GridMap gridMap, int gridSize, Map<String, SignalSpec> spec
+) implements State, WithRobotStatus, WithPolarMap, WithRadarMap, WithGridMap {
+    public static final int NUM_CELL_STATES = 5;
     private static final double MIN_DISTANCE = 0;
     private static final double MAX_DISTANCE = 10;
     private static final FloatSignalSpec DISTANCE_SPEC = new FloatSignalSpec(new long[]{1}, (float) MIN_DISTANCE, (float) MAX_DISTANCE);
@@ -60,16 +64,37 @@ public record PolarRobotState(RobotStatus robotStatus, RadarMap radarMap,
     private static final FloatSignalSpec SENSOR_SPEC = new FloatSignalSpec(new long[]{1}, MIN_SENSOR_DIR, MAX_SENSOR_DIR);
 
     public static PolarRobotState create(RobotStatus robotStatus, RadarMap radarMap,
-                                         PolarMap polarMap, double maxRadarDistance) {
+                                         PolarMap polarMap, double maxRadarDistance, int gridSize) {
         int n = polarMap.sectorsNumber();
         Map<String, SignalSpec> spec = Map.of(
                 "sensor", SENSOR_SPEC,
                 "distance", DISTANCE_SPEC,
                 "canMoveStates", CAN_MOVE_SPEC,
                 "sectorStates", new IntSignalSpec(new long[]{n}, CircularSector.Status.values().length + 1),
-                "sectorDistances", new FloatSignalSpec(new long[]{n}, 0, (float) maxRadarDistance)
+                "sectorDistances", new FloatSignalSpec(new long[]{n}, 0, (float) maxRadarDistance),
+                "cellStates", new IntSignalSpec(new long[]{(long) gridSize * gridSize}, NUM_CELL_STATES)
         );
-        return new PolarRobotState(robotStatus, radarMap, polarMap, spec);
+        return new PolarRobotState(robotStatus, radarMap, polarMap, null, gridSize, spec);
+    }
+
+    /**
+     * Returns the status code value of a cell
+     * <pre>
+     *     0 - unknown
+     *     1 - contact
+     *     2 - label
+     *     3 - echo
+     *     4 - anechoic
+     * </pre>
+     *
+     * @param cell the cell
+     */
+    private static int decodeStatus(MapCell cell) {
+        return cell.hasContact() ? 1
+                : cell.labeled() ? 2
+                : cell.echogenic() ? 3
+                : cell.anechoic() ? 4
+                : 0;
     }
 
     /**
@@ -78,13 +103,25 @@ public record PolarRobotState(RobotStatus robotStatus, RadarMap radarMap,
      * @param robotStatus the robot status
      * @param radarMap    the radar map
      * @param polarMap    the polar map
+     * @param gridMap     the grid map
+     * @param gridSize    the number of radar cells along the dimensions
      * @param spec        the signal specification
      */
-    public PolarRobotState(RobotStatus robotStatus, RadarMap radarMap, PolarMap polarMap, Map<String, SignalSpec> spec) {
+    public PolarRobotState(RobotStatus robotStatus, RadarMap radarMap, PolarMap polarMap, GridMap gridMap, int gridSize, Map<String, SignalSpec> spec) {
         this.robotStatus = requireNonNull(robotStatus);
         this.radarMap = requireNonNull(radarMap);
         this.polarMap = requireNonNull(polarMap);
         this.spec = requireNonNull(spec);
+        this.gridSize = gridSize;
+        this.gridMap = gridMap;
+    }
+
+    /**
+     * Returns the state with gridMap
+     */
+    public PolarRobotState createGridMap() {
+        GridMap gridMap = GridMap.create(radarMap, robotStatus.location(), robotStatus.direction(), gridSize);
+        return new PolarRobotState(robotStatus, radarMap, polarMap, gridMap, gridSize, spec);
     }
 
     @Override
@@ -98,7 +135,7 @@ public record PolarRobotState(RobotStatus robotStatus, RadarMap radarMap,
      * @param polarMap the polar map
      */
     public PolarRobotState setPolarMap(PolarMap polarMap) {
-        return new PolarRobotState(robotStatus, radarMap, polarMap, spec);
+        return new PolarRobotState(robotStatus, radarMap, polarMap, gridMap, gridSize, spec);
     }
 
     @Override
@@ -112,7 +149,7 @@ public record PolarRobotState(RobotStatus robotStatus, RadarMap radarMap,
      * @param radarMap the radar map
      */
     public PolarRobotState setRadarMap(RadarMap radarMap) {
-        return new PolarRobotState(robotStatus, radarMap, polarMap, spec);
+        return new PolarRobotState(robotStatus, radarMap, polarMap, gridMap, gridSize, spec);
     }
 
     @Override
@@ -126,7 +163,7 @@ public record PolarRobotState(RobotStatus robotStatus, RadarMap radarMap,
      * @param robotStatus the robot status
      */
     public PolarRobotState setRobotStatus(RobotStatus robotStatus) {
-        return new PolarRobotState(robotStatus, radarMap, polarMap, spec);
+        return new PolarRobotState(robotStatus, radarMap, polarMap, gridMap, gridSize, spec);
     }
 
     @Override
@@ -165,12 +202,22 @@ public record PolarRobotState(RobotStatus robotStatus, RadarMap radarMap,
             sectorStates.getScalar(i)
                     .assign(sector.known() ? sector.status().ordinal() + 1 : 0);
         }
+        MapCell[] cells = gridMap.cells();
+        int n1 = cells.length;
+        INDArray cellStates = Nd4j.zeros(n1);
+        for (int i = 0; i < n1; i++) {
+            MapCell cell = cells[i];
+            int statusCode = decodeStatus(cell);
+            cellStates.getScalar(i)
+                    .assign(statusCode);
+        }
         return Map.of(
                 "sensor", new ArraySignal(sensor),
                 "distance", new ArraySignal(distance),
                 "canMoveStates", new ArraySignal(canMoveStates),
                 "sectorDistances", new ArraySignal(sectorDistances),
-                "sectorStates", new ArraySignal(sectorStates)
+                "sectorStates", new ArraySignal(sectorStates),
+                "cellStates", new ArraySignal(cellStates)
         );
     }
 }

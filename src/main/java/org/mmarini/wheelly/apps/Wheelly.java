@@ -152,6 +152,7 @@ public class Wheelly {
     private long robotStartTimestamp;
     private Long sessionDuration;
     private PolarPanel polarPanel;
+    private GridPanel gridPanel;
     private JFrame radarFrame;
     private RobotEnvironment environment;
     private long prevRobotStep;
@@ -161,6 +162,7 @@ public class Wheelly {
     private boolean active;
     private KpiBinWriter kpiWriter;
     private AtomicReference<AgentTrainer> trainer;
+    private JFrame gridFrame;
 
     /**
      * Creates the server reinforcement learning engine server
@@ -235,6 +237,9 @@ public class Wheelly {
         if (environment instanceof WithPolarMap) {
             radarFrame = createFixFrame(Messages.getString("Radar.title"), polarPanel);
         }
+        if (environment instanceof WithGridMap) {
+            this.gridFrame = createFixFrame(Messages.getString("Grid.title"), gridPanel);
+        }
 
         if (!this.args.getString("kpis").isEmpty()) {
             // Create kpis frame
@@ -255,6 +260,9 @@ public class Wheelly {
         allFrames.add(frame);
         if (radarFrame != null) {
             allFrames.add(radarFrame);
+        }
+        if (gridFrame != null) {
+            allFrames.add(gridFrame);
         }
         if (kpisFrame != null) {
             allFrames.add(kpisFrame);
@@ -284,6 +292,7 @@ public class Wheelly {
             this.polarPanel = new PolarPanel();
             double radarMaxDistance = env.getMaxRadarDistance();
             polarPanel.setRadarMaxDistance(radarMaxDistance);
+            this.gridPanel = new GridPanel();
         }
     }
 
@@ -296,6 +305,9 @@ public class Wheelly {
 
         if (environment instanceof WithPolarMap) {
             panel.addTab(Messages.getString("Wheelly.tabPanel.polarMap"), new JScrollPane(polarPanel));
+        }
+        if (environment instanceof WithGridMap) {
+            panel.addTab(Messages.getString("Wheelly.tabPanel.gridMap"), new JScrollPane(gridPanel));
         }
         if (!this.args.getString("kpis").isEmpty()) {
             panel.addTab(Messages.getString("Wheelly.tabPanel.kpi"), new JScrollPane(kpisPanel));
@@ -380,6 +392,9 @@ public class Wheelly {
         }
         if (environment instanceof WithPolarMap) {
             polarPanel.setPolarMap(((WithPolarMap) environment).getPolarMap());
+        }
+        if (environment instanceof WithGridMap) {
+            gridPanel.setGridMap(((WithGridMap) environment).gridMap());
         }
         long time = System.currentTimeMillis();
         if (prevRobotStep >= 0) {

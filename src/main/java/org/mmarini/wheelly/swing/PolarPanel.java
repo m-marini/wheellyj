@@ -60,7 +60,7 @@ public class PolarPanel extends JComponent {
      *
      * @param radarMaxDistance the maximum radar distance
      * @param gridSize         the grid siza
-     * @param sectorNumber     the number of sectors
+     * @param sectorNumber     the number of cells
      */
     static List<Shape> createGridShapes(double radarMaxDistance, double gridSize, int sectorNumber) {
         List<Shape> gridShapes = new ArrayList<>();
