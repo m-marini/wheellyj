@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- Issue [#493](https://github.com/m-marini/wheellyj/issues/493): Add relative radar map
+
 ## [0.20.0] 2024-12-28
 
 ### Changed

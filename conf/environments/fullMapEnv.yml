@@ -21,4 +21,4 @@ decay: 120000
 numRadarSectors: 24
 minRadarDistance: 0.3
 maxRadarDistance: 3
-gridSize: 3
+gridSize: 31

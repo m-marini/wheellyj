@@ -53,6 +53,7 @@ class PolarRobotEnvTest {
     public static final int NUM_DIRECTION_VALUES = 4;
     public static final int NUM_SPEED_VALUES = 3;
     public static final int NUM_SENSOR_VALUES = 4;
+    public static final int GRID_SIZE = 5;
 
     static PolarRobotEnv create() {
         RobotApi robot = mock();
@@ -61,7 +62,7 @@ class PolarRobotEnvTest {
         RadarMap radarMap = mock();
         return PolarRobotEnv.create(controller,
                 (s0, a, s1) -> 0, NUM_DIRECTION_VALUES, NUM_SENSOR_VALUES, NUM_SPEED_VALUES, NUM_RADAR_SECTORS,
-                0.2, 3, radarMap);
+                0.2, 3, GRID_SIZE, radarMap);
     }
 
     private PolarMap polarMap;
@@ -85,8 +86,9 @@ class PolarRobotEnvTest {
         setHindered(2, DISTANCE);
         setLabeled(3, DISTANCE);
         RobotStatus status = RobotStatus.create(x -> 0);
-
-        PolarRobotState currentState = PolarRobotState.create(status, mock(), polarMap, 3);
+        RadarMap radar = RadarMap.create(new Point2D.Float(), 11, 11, 0.2, 0, 0, 0, 0, 0, 0, Complex.DEG0);
+        PolarRobotState currentState = PolarRobotState.create(status, radar, polarMap, 3, GRID_SIZE)
+                .createGridMap();
         env.setCurrentState(currentState);
 
         // When get the states

@@ -29,10 +29,7 @@
 package org.mmarini.wheelly.envs;
 
 import io.reactivex.rxjava3.core.Completable;
-import org.mmarini.rl.envs.Environment;
-import org.mmarini.rl.envs.IntSignal;
-import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.rl.envs.Signal;
+import org.mmarini.rl.envs.*;
 import org.mmarini.wheelly.apis.*;
 
 import java.util.Map;
@@ -47,7 +44,7 @@ import static org.mmarini.wheelly.apis.Utils.linear;
 /**
  * Implements general functionalities of RobotEnvironment
  * <p>
- * The environment should implements
+ * The environment should implement
  * <ul>
  *     <li><code>onStatus</code> to process the status event</li>
  *     <li><code>latchStatus</code> to generate eventually composed status and store as current status</li>
@@ -65,6 +62,7 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
     private final RewardFunction rewardFunc;
     private final int numSpeeds;
     private final int numDirections;
+    private final Map<String, SignalSpec> actionsSpec;
     private UnaryOperator<Map<String, Signal>> onAct;
     private Consumer<RobotStatus> onInference;
     private Consumer<Environment.ExecutionResult> onResult;
@@ -73,19 +71,25 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
     private State currentState;
     private Map<String, Signal> prevActions;
 
+
     /**
      * Creates the abstract environment
      *
-     * @param controller    the controller
-     * @param rewardFunc    the reward function
-     * @param numSpeeds     the number of move action speeds
-     * @param numDirections the number of move action directions
+     * @param controller          the controller
+     * @param rewardFunc          the reward function
+     * @param numSpeeds           the number of move action speeds
+     * @param numDirections       the number of move action directions
+     * @param numSensorDirections the number of sensor directions
      */
-    protected AbstractRobotEnv(RobotControllerApi controller, RewardFunction rewardFunc, int numSpeeds, int numDirections) {
+    protected AbstractRobotEnv(RobotControllerApi controller, RewardFunction rewardFunc, int numSpeeds, int numDirections, int numSensorDirections) {
         this.controller = requireNonNull(controller);
         this.rewardFunc = requireNonNull(rewardFunc);
         this.numSpeeds = numSpeeds;
         this.numDirections = numDirections;
+        this.actionsSpec = Map.of(
+                "move", new IntSignalSpec(new long[]{1}, numDirections * numSpeeds),
+                "sensorAction", new IntSignalSpec(new long[]{1}, numSensorDirections)
+        );
         controller.setOnInference(this::handleInference);
         controller.setOnLatch(this::latchStatus);
         readRobotStatus().doOnNext(this::handleStatus).subscribe();
@@ -102,6 +106,11 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
         return Complex.fromDeg(linear(dirAction,
                 0, numDirections,
                 MIN_DIRECTION_ACTION, MAX_DIRECTION_ACTION));
+    }
+
+    @Override
+    public Map<String, SignalSpec> getActions() {
+        return this.actionsSpec;
     }
 
     /**
@@ -126,6 +135,11 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
      */
     protected void setCurrentState(State currentState) {
         this.currentState = currentState;
+    }
+
+    @Override
+    public RobotStatus getRobotStatus() {
+        return ((WithRobotStatus) currentState).getRobotStatus();
     }
 
     /**

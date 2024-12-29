@@ -194,7 +194,18 @@ public record MapCell(Point2D location, long echoTime, double echoWeight, double
      * @param contactTime the contacts timestamp
      */
     public MapCell setContact(long contactTime) {
-        return new MapCell(location, echoTime, echoWeight, contactTime, labeledTime, labeledWeight);
+        return contactTime == this.contactTime ? this
+                : new MapCell(location, echoTime, echoWeight, contactTime, labeledTime, labeledWeight);
+    }
+
+    /**
+     * Returns the cell at a given location
+     *
+     * @param location location
+     */
+    public MapCell setLocation(Point2D location) {
+        return location.equals(this.location) ? this
+                : new MapCell(location, echoTime, echoWeight, contactTime, labeledTime, labeledWeight);
     }
 
     /**
