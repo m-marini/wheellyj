@@ -301,11 +301,7 @@ public class RobotExecutor {
         RobotApi robot = agent.getController().getRobot();
         if (robot instanceof SimRobot sim) {
             sim.obstaclesMap()
-                    .ifPresent(map -> {
-                        envPanel.setHinderedPoints(map.hindered().toList());
-                        envPanel.setLabeledPoints(map.labeled().toList());
-                        envPanel.setObstacleSize(map.gridSize());
-                    });
+                    .ifPresent(envPanel::setObstacles);
         }
     }
 
@@ -398,10 +394,7 @@ public class RobotExecutor {
         if (agent.getController().getRobot() instanceof SimRobot simRobot) {
             simRobot.setOnObstacleChanged(sim ->
                     sim.obstaclesMap()
-                            .ifPresent(map -> {
-                                envPanel.setHinderedPoints(map.hindered().toList());
-                                envPanel.setLabeledPoints(map.labeled().toList());
-                            }));
+                            .ifPresent(envPanel::setObstacles));
         }
         if (args.getBoolean("windows")) {
             createMultiFrames();

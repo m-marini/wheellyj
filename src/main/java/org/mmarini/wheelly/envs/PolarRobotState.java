@@ -62,12 +62,16 @@ public record PolarRobotState(RobotStatus robotStatus, RadarMap radarMap,
     private static final int MIN_SENSOR_DIR = -90;
     private static final int MAX_SENSOR_DIR = 90;
     private static final FloatSignalSpec SENSOR_SPEC = new FloatSignalSpec(new long[]{1}, MIN_SENSOR_DIR, MAX_SENSOR_DIR);
+    public static final int MIN_ROBOT_MAP_DIR = -45;
+    public static final int MAX_ROBOT_MAP_DIR = 45;
+    private static final FloatSignalSpec ROBOT_MAP_DIR_SPEC = new FloatSignalSpec(new long[]{1}, MIN_ROBOT_MAP_DIR, MAX_ROBOT_MAP_DIR);
 
     public static PolarRobotState create(RobotStatus robotStatus, RadarMap radarMap,
                                          PolarMap polarMap, double maxRadarDistance, int gridSize) {
         int n = polarMap.sectorsNumber();
         Map<String, SignalSpec> spec = Map.of(
                 "sensor", SENSOR_SPEC,
+                "robotMapDir", ROBOT_MAP_DIR_SPEC,
                 "distance", DISTANCE_SPEC,
                 "canMoveStates", CAN_MOVE_SPEC,
                 "sectorStates", new IntSignalSpec(new long[]{n}, CircularSector.Status.values().length + 1),
@@ -211,8 +215,10 @@ public record PolarRobotState(RobotStatus robotStatus, RadarMap radarMap,
             cellStates.getScalar(i)
                     .assign(statusCode);
         }
+        INDArray robotMapDir = Nd4j.createFromArray((float) robotStatus.direction().sub(gridMap.direction()).toIntDeg());
         return Map.of(
                 "sensor", new ArraySignal(sensor),
+                "robotMapDir", new ArraySignal(robotMapDir),
                 "distance", new ArraySignal(distance),
                 "canMoveStates", new ArraySignal(canMoveStates),
                 "sectorDistances", new ArraySignal(sectorDistances),

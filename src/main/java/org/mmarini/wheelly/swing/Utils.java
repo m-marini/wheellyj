@@ -28,8 +28,12 @@
 
 package org.mmarini.wheelly.swing;
 
+import org.mmarini.wheelly.apis.Complex;
+
 import javax.swing.*;
 import java.awt.*;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Point2D;
 import java.util.Collection;
 
 import static java.lang.Math.min;
@@ -39,6 +43,32 @@ import static java.util.Objects.requireNonNull;
  * Swing utilities functions
  */
 public interface Utils {
+    /**
+     * default world size = 11 m
+     */
+    float DEFAULT_WORLD_SIZE = 11;
+    float GRID_SIZE = 1f;
+
+    /**
+     * Returns the transformation to draw the CW rotated shape in a world location
+     *
+     * @param location  location in the world coordinate
+     * @param direction direction
+     */
+    static AffineTransform at(Point2D location, Complex direction) {
+        AffineTransform tr = AffineTransform.getTranslateInstance(location.getX(), location.getY());
+        tr.rotate(-direction.toRad());
+        return tr;
+    }
+
+    /**
+     * Returns the transformation to draw in a world location
+     *
+     * @param location location in the world coordinate
+     */
+    static AffineTransform at(Point2D location) {
+        return AffineTransform.getTranslateInstance(location.getX(), location.getY());
+    }
 
     /**
      * Returns the desktop centered frame
@@ -96,7 +126,6 @@ public interface Utils {
         frame.pack();
         return frame;
     }
-
 
     /**
      * Horizontally lays the frames
