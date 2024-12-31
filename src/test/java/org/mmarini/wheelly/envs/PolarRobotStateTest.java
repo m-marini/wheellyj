@@ -32,6 +32,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
@@ -55,6 +56,7 @@ class PolarRobotStateTest {
     public static final int MAP_SIZE = 5;
     public static final double MAX_RADAR_DISTANCE = 3;
     public static final int SECTOR_NUMBERS = 4;
+    public static final int MAP_DEG = 90;
 
     @NotNull
     private static RadarMap createRadarMap() {
@@ -116,10 +118,13 @@ class PolarRobotStateTest {
         assertSame(status, state.robotStatus());
     }
 
-    @Test
-    void signalsTest() {
+    @ParameterizedTest
+    @ValueSource(ints = {
+            46, 90, 133
+    })
+    void signalsTest(int robotDeg) {
         // Given ...
-        RobotStatus status = createStatus(0, -0.5, 90);
+        RobotStatus status = createStatus(0, -0.5, robotDeg);
         RadarMap radarMap = createRadarMap();
         PolarRobotState state = PolarRobotState.create(status, radarMap, PolarMap.create(SECTOR_NUMBERS), MAX_RADAR_DISTANCE, MAP_SIZE).createGridMap();
 
@@ -136,6 +141,11 @@ class PolarRobotStateTest {
                 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0
         ));
+
+        // And
+        assertThat(signals, hasKey("robotMapDir"));
+        int dir = signals.get("robotMapDir").getInt(0);
+        assertEquals(robotDeg - MAP_DEG, dir);
     }
 
     @Test

@@ -42,6 +42,8 @@ import org.mmarini.rl.agents.KpiBinWriter;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.swing.GridLayoutHelper;
+import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.GridMap;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.SimRobot;
 import org.mmarini.wheelly.envs.*;
@@ -387,14 +389,15 @@ public class Wheelly {
         long robotClock = status.simulationTime();
         envPanel.setRobotStatus(status);
         sensorMonitor.onStatus(status);
-        if (environment instanceof WithRadarMap) {
-            envPanel.setRadarMap(((WithRadarMap) environment).getRadarMap());
+        if (environment instanceof WithRadarMap radarEnv) {
+            envPanel.setRadarMap(radarEnv.getRadarMap());
         }
-        if (environment instanceof WithPolarMap) {
-            polarPanel.setPolarMap(((WithPolarMap) environment).getPolarMap());
-        }
-        if (environment instanceof WithGridMap) {
-            gridPanel.setGridMap(((WithGridMap) environment).gridMap());
+        if (environment instanceof PolarRobotEnv polarRobotEnv) {
+            polarPanel.setPolarMap(polarRobotEnv.getPolarMap());
+            GridMap map = polarRobotEnv.gridMap();
+            Complex robotDir = polarRobotEnv.getRobotStatus().direction();
+            gridPanel.setGridMap(map);
+            gridPanel.setRobotDirection(robotDir.sub(map.direction()));
         }
         long time = System.currentTimeMillis();
         if (prevRobotStep >= 0) {
@@ -422,11 +425,7 @@ public class Wheelly {
      * @param simRobot the sim robot
      */
     private void handleObstacleChanged(SimRobot simRobot) {
-        simRobot.obstaclesMap().ifPresent(map -> {
-                    envPanel.setHinderedPoints(map.hindered().toList());
-                    envPanel.setLabeledPoints(map.labeled().toList());
-                }
-        );
+        simRobot.obstaclesMap().ifPresent(envPanel::setObstacles);
     }
 
     /**
@@ -584,11 +583,7 @@ public class Wheelly {
         Optional.ofNullable(environment.getController().getRobot())
                 .filter(r -> r instanceof SimRobot)
                 .flatMap(r -> ((SimRobot) r).obstaclesMap())
-                .ifPresent(map -> {
-                    envPanel.setObstacleSize(map.gridSize());
-                    envPanel.setHinderedPoints(map.hindered().toList());
-                    envPanel.setLabeledPoints(map.labeled().toList());
-                });
+                .ifPresent(envPanel::setObstacles);
         environment.start();
     }
 

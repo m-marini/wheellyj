@@ -25,73 +25,29 @@
 
 package org.mmarini.wheelly.swing;
 
-import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.ObstacleMap;
 import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotStatus;
 
+import javax.swing.*;
 import java.awt.*;
-import java.awt.geom.*;
-import java.util.List;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Point2D;
 
 import static java.lang.String.format;
+import static org.mmarini.wheelly.swing.BaseShape.*;
+import static org.mmarini.wheelly.swing.Utils.DEFAULT_WORLD_SIZE;
+import static org.mmarini.wheelly.swing.Utils.GRID_SIZE;
 
 /**
  * The canvas with environment display
  */
-public class EnvironmentPanel extends RadarPanel {
-    public static final BasicStroke BORDER_STROKE = new BasicStroke(0);
-    private static final float ROBOT_RADIUS = 0.15f;
-    private static final float ROBOT_ARROW_X = 0.11f;
-    private static final float ROBOT_ARROW_Y = 0.102f;
-    private static final float ROBOT_ARROW_BACK = 0.05f;
-    private static final float DEFAULT_WORLD_SIZE = 11;
-    private static final float DEFAULT_SCALE = 800 / DEFAULT_WORLD_SIZE;
-    private static final float OBSTACLE_SIZE = 0.2f;
-    private static final float SENSOR_LENGTH = 3f;
+public class EnvironmentPanel extends JComponent {
+    public static final int DEFAULT_WINDOW_SIZE = 800;
+    public static final float PING_RADIUS = 0.05f;
+    static final float DEFAULT_SCALE = DEFAULT_WINDOW_SIZE / DEFAULT_WORLD_SIZE;
     private static final int HUD_WIDTH = 200;
-    private static final double PING_SIZE = 0.1;
-    private static final Color ROBOT_COLOR = new Color(255, 255, 0);
-    private static final Color OBSTACLE_PHANTOM_COLOR = new Color(128, 128, 128);
-    private static final Color LABELED_PHANTOM_COLOR = new Color(0, 200, 200);
-    private static final Color HUD_BACKGROUND_COLOR = new Color(32, 32, 32);
-    private static final Color SENSOR_COLOR = new Color(200, 0, 0);
-    private static final Color PING_COLOR = new Color(255, 192, 192);
-    private static final float[][] ROBOT_POINTS = {
-            {0, ROBOT_RADIUS},
-            {-ROBOT_ARROW_X, -ROBOT_ARROW_Y},
-            {0, -ROBOT_ARROW_BACK},
-            {ROBOT_ARROW_X, -ROBOT_ARROW_Y}
-    };
-    private static final Shape ROBOT_SHAPE = createShape(ROBOT_POINTS);
-    private static final Shape ROBOT_OUTER = new Ellipse2D.Double(-ROBOT_RADIUS, -ROBOT_RADIUS, ROBOT_RADIUS * 2, ROBOT_RADIUS * 2);
-    private static final float[][] SENSOR_POINTS = {
-            {0, 0},
-            {0, SENSOR_LENGTH}
-    };
-    private static final Shape SENSOR_SHAPE = createShape(SENSOR_POINTS);
-    private static final Shape PING_SHAPE = new Ellipse2D.Double(-PING_SIZE / 2, -PING_SIZE / 2, PING_SIZE, PING_SIZE);
-
-    /**
-     * Returns the transformation to draw the CW rotated shape in a world location
-     *
-     * @param location  location in world coordinate
-     * @param direction direction
-     */
-    private static AffineTransform at(Point2D location, Complex direction) {
-        AffineTransform tr = AffineTransform.getTranslateInstance(location.getX(), location.getY());
-        tr.rotate(-direction.toRad());
-        return tr;
-    }
-
-    private static Shape createShape(float[][] points) {
-        Path2D.Float shape = new Path2D.Float();
-        shape.moveTo(points[0][0], points[0][1]);
-        for (int i = 1; i < points.length; i++) {
-            shape.lineTo(points[i][0], points[i][1]);
-        }
-        return shape;
-    }
+    private static final float TARGET_SIZE = 0.2f;
 
     /**
      * Returns the string representation of a localTime interval
@@ -120,22 +76,30 @@ public class EnvironmentPanel extends RadarPanel {
         return result.toString();
     }
 
+    private final Point2D centerLocation;
     private boolean hudAtBottom;
     private boolean hudAtRight;
-    private List<Point2D> hindereds;
-    private List<Point2D> labels;
-    private Shape obstacleShape;
-    private PanelData panelData;
     private double reactionRealTime;
     private double reactionRobotTime;
     private double reward;
     private double timeRatio;
+    private BaseShape gridShape;
+    private BaseShape target;
+    private BaseShape mapShape;
+    private BaseShape robotShape;
+    private BaseShape sensorShape;
+    private BaseShape pingShape;
+    private BaseShape hinderedShape;
+    private BaseShape labeledShape;
+    private RobotStatus robotStatus;
 
     public EnvironmentPanel() {
+        this.centerLocation = new Point2D.Float();
+
+        setBackground(Color.BLACK);
+        setForeground(Color.WHITE);
         setFont(Font.decode("Monospaced"));
-        setScale(DEFAULT_SCALE);
-        setObstacleSize(OBSTACLE_SIZE);
-        panelData = new PanelData(null, null);
+        setPreferredSize(new Dimension(DEFAULT_WINDOW_SIZE, DEFAULT_WINDOW_SIZE));
     }
 
     /**
@@ -164,7 +128,7 @@ public class EnvironmentPanel extends RadarPanel {
         int yHud = hudAtBottom ? size.height - hudHeight : 0;
 
         g1.translate(xHud, yHud);
-        g1.setColor(HUD_BACKGROUND_COLOR);
+        g1.setColor(BaseShape.HUD_BACKGROUND_COLOR);
         g1.fillRect(0, 0, HUD_WIDTH, hudHeight);
         g1.setColor(getForeground());
         drawLine(g1, format("Time     %s %.1fx", strDate(status.simulationTime()), timeRatio), 0, Color.GREEN);
@@ -195,75 +159,17 @@ public class EnvironmentPanel extends RadarPanel {
     }
 
     /**
-     * Draws an obstacle
-     *
-     * @param gr       the graphic context
-     * @param location the location
-     * @param color    the obstacle color
+     * Returns the location of center map
      */
-    private void drawObstacle(Graphics2D gr, Point2D location, Color color) {
-        if (location != null) {
-            gr.transform(at(location));
-            gr.setColor(color);
-            gr.setStroke(BORDER_STROKE);
-            gr.fill(obstacleShape);
-        }
+    public Point2D getCenterLocation() {
+        return centerLocation;
     }
 
     /**
-     * Draws the map
-     *
-     * @param gr        the graphic context
-     * @param obstacles the obstacle point list
-     * @param color     the obstacle color
+     * Returns the scale
      */
-    private void drawObstacles(Graphics2D gr, List<Point2D> obstacles, Color color) {
-        if (obstacles != null) {
-            AffineTransform base = gr.getTransform();
-            gr.setStroke(BORDER_STROKE);
-            for (Point2D obstacle : obstacles) {
-                gr.setTransform(base);
-                drawObstacle(gr, obstacle, color);
-            }
-            gr.setTransform(base);
-        }
-    }
-
-    /**
-     * Draws the ping echo point
-     *
-     * @param gr       the graphics
-     * @param location the location
-     */
-    private void drawPing(Graphics2D gr, Point2D location) {
-        if (location != null) {
-            fillShape(gr, location, EnvironmentPanel.PING_COLOR, PING_SHAPE);
-        }
-    }
-
-    /**
-     * Draws the robot
-     *
-     * @param gr the graphic context
-     */
-    private void drawRobot(Graphics2D gr, Point2D robotLocation, Complex robotDirection) {
-        gr.transform(at(robotLocation, robotDirection));
-        gr.setColor(ROBOT_COLOR);
-        gr.setStroke(BORDER_STROKE);
-        gr.draw(ROBOT_OUTER);
-        gr.fill(ROBOT_SHAPE);
-    }
-
-    /**
-     * Draws sensor
-     *
-     * @param gr the graphic context
-     */
-    private void drawSensor(Graphics2D gr, Point2D location, Complex robotDirection, Complex sensorDirection) {
-        gr.transform(at(location, robotDirection.add(sensorDirection)));
-        gr.setColor(SENSOR_COLOR);
-        gr.setStroke(BORDER_STROKE);
-        gr.draw(SENSOR_SHAPE);
+    public float getScale() {
+        return DEFAULT_SCALE;
     }
 
     @Override
@@ -274,85 +180,72 @@ public class EnvironmentPanel extends RadarPanel {
         Graphics2D gr = (Graphics2D) g.create();
         gr.transform(createBaseTransform());
         AffineTransform base = gr.getTransform();
-        drawGrid(gr);
+        if (gridShape != null) {
+            gridShape.paint(gr);
+        }
+        if (hinderedShape != null) {
+            hinderedShape.paint(gr);
+        }
+        if (labeledShape != null) {
+            labeledShape.paint(gr);
+        }
+        if (mapShape != null) {
+            mapShape.paint(gr);
+        }
         gr.setTransform(base);
-        drawObstacles(gr, hindereds, OBSTACLE_PHANTOM_COLOR);
-        drawObstacles(gr, labels, LABELED_PHANTOM_COLOR);
-        PanelData data = this.panelData;
-
-        if (data != null) {
-            RobotStatus status = data.status;
-            if (status != null) {
-                // compute hud position
-                hudAtBottom = !hudAtBottom && status.location().getY() > DEFAULT_WORLD_SIZE / 6
-                        || (!hudAtBottom || !(status.location().getY() < -DEFAULT_WORLD_SIZE / 6))
-                        && hudAtBottom;
-                hudAtRight = !hudAtRight && status.location().getX() < -DEFAULT_WORLD_SIZE / 6
-                        || (!hudAtRight || !(status.location().getX() > DEFAULT_WORLD_SIZE / 6))
-                        && hudAtRight;
-            }
-            RadarMap radarMap = data.radarMap;
-            if (radarMap != null) {
-                gr.setTransform(base);
-                List<Tuple2<Point2D, Color>> radarMap1 = createMap(radarMap);
-                Shape sectorShape = createSectorShape(radarMap);
-                drawRadarMap(gr, radarMap1, sectorShape);
-            }
-
-            if (status != null) {
-                gr.setTransform(base);
-                drawRobot(gr, status.location(), status.direction());
-
-                gr.setTransform(base);
-                drawSensor(gr, status.location(), status.direction(), status.sensorDirection());
-
-                gr.setTransform(base);
-                status.sensorObstacle()
-                        .ifPresent(point -> drawPing(gr, point));
-                drawHUD(g, status, reward, timeRatio);
-            }
-
-            if (target != null) {
-                gr.setTransform(base);
-                drawTarget(gr, target);
-            }
+        if (robotShape != null) {
+            robotShape.paint(gr);
+        }
+        if (sensorShape != null) {
+            sensorShape.paint(gr);
+        }
+        if (pingShape != null) {
+            pingShape.paint(gr);
+        }
+        if (target != null) {
+            gr.setTransform(base);
+            target.paint(gr);
+        }
+        RobotStatus status = this.robotStatus;
+        if (status != null) {
+            // compute hud position
+            hudAtBottom = !hudAtBottom && status.location().getY() > DEFAULT_WORLD_SIZE / 6
+                    || (!hudAtBottom || !(status.location().getY() < -DEFAULT_WORLD_SIZE / 6))
+                    && hudAtBottom;
+            hudAtRight = !hudAtRight && status.location().getX() < -DEFAULT_WORLD_SIZE / 6
+                    || (!hudAtRight || !(status.location().getX() > DEFAULT_WORLD_SIZE / 6))
+                    && hudAtRight;
+            gr.setTransform(base);
+            drawHUD(g, status, reward, timeRatio);
         }
     }
 
     /**
-     * Sets the locations of obstacles
+     * Sets the obstacle map
      *
-     * @param obstacles the locations of obstacles
+     * @param map the map
      */
-    public void setHinderedPoints(List<Point2D> obstacles) {
-        this.hindereds = obstacles;
+    public void setObstacles(ObstacleMap map) {
+        float obstacleSize = (float) map.gridSize();
+        this.hinderedShape = new CompositeShape(map.hindered()
+                .map(obs ->
+                        createRectangle(OBSTACLE_PHANTOM_COLOR, BORDER_STROKE, true, obs, obstacleSize, obstacleSize))
+                .toList());
+        this.labeledShape = new CompositeShape(map.labeled()
+                .map(obs ->
+                        createRectangle(LABELED_PHANTOM_COLOR, BORDER_STROKE, true, obs, obstacleSize, obstacleSize))
+                .toList());
         repaint();
     }
 
     /**
-     * Sets the locations of labeled obstacles
+     * Sets the radar map
      *
-     * @param labels the locations of labeled obstacles
+     * @param radarMap the radar map
      */
-    public void setLabeledPoints(List<Point2D> labels) {
-        this.labels = labels;
-        repaint();
-    }
-
-    /**
-     * Sets the size of obstacle
-     *
-     * @param obstacleSize the size (m)
-     */
-    public void setObstacleSize(double obstacleSize) {
-        this.obstacleShape = new Rectangle2D.Double(
-                -obstacleSize / 2, -obstacleSize / 2,
-                obstacleSize, obstacleSize);
-        repaint();
-    }
-
     public void setRadarMap(RadarMap radarMap) {
-        this.panelData = this.panelData.setRadarMap(radarMap);
+        this.gridShape = BaseShape.createGridShape(radarMap.topology(), GRID_SIZE);
+        this.mapShape = BaseShape.createMapShape((float) radarMap.topology().gridSize(), radarMap.cells());
         repaint();
     }
 
@@ -370,23 +263,27 @@ public class EnvironmentPanel extends RadarPanel {
     }
 
     public void setRobotStatus(RobotStatus status) {
-        this.panelData = this.panelData.setStatus(status);
+        this.robotStatus = status;
+        this.robotShape = createRobotShape(status.location(), status.direction());
+        this.sensorShape = createSensorShape(status.location(), status.direction().add(status.sensorDirection()));
+        this.pingShape = status.sensorObstacle()
+                .map(point -> createCircle(PING_COLOR, BORDER_STROKE, true, point, PING_RADIUS))
+                .orElse(null);
+        repaint();
+    }
+
+    /**
+     * Sets the target point
+     *
+     * @param target the target point
+     */
+    public void setTarget(Point2D target) {
+        this.target = BaseShape.createCircle(TARGET_COLOR, BORDER_STROKE, false, target, TARGET_SIZE);
         repaint();
     }
 
     public void setTimeRatio(double timeRatio) {
         this.timeRatio = timeRatio;
         repaint();
-    }
-
-    record PanelData(RobotStatus status, RadarMap radarMap) {
-
-        PanelData setRadarMap(RadarMap radarMap) {
-            return new PanelData(status, radarMap);
-        }
-
-        PanelData setStatus(RobotStatus status) {
-            return new PanelData(status, radarMap);
-        }
     }
 }
