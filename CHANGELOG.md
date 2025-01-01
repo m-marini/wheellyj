@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Issue [#493](https://github.com/m-marini/wheellyj/issues/493): Add relative radar map
 - Issue [#496](https://github.com/m-marini/wheellyj/issues/496): Add map relative direction signal
-
+- Issue [#498](https://github.com/m-marini/wheellyj/issues/498): Add observe label goal
 
 ## [0.20.0] 2024-12-28
 

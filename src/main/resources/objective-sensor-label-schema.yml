@@ -1,0 +1,30 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/objective-sensor-label-schema-0.1
+title: Label objective
+type: object
+properties:
+  $schema:
+    const: https://mmarini.org/wheelly/objective-sensor-label-schema-0.1
+  class:
+    const: org.mmarini.wheelly.objectives.SensorLabel
+  minDistance:
+    type: number
+    minimum: 0
+  maxDistance:
+    type: number
+    minimum: 0
+  velocityThreshold:
+    type: number
+    minimum: 0
+  sensorRange:
+    type: integer
+    minimum: 0
+    maximum: 90
+  reward:
+    type: number
+required:
+  - $schema
+  - class
+  - minDistance
+  - maxDistance

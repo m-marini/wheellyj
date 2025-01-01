@@ -4,7 +4,7 @@
 #
 - $schema: https://mmarini.org/wheelly/objective-avoid-contact-schema-0.1
   class: org.mmarini.wheelly.objectives.AvoidContact
-- $schema: https://mmarini.org/wheelly/objective-label-schema-0.1
-  class: org.mmarini.wheelly.objectives.Label
-  minDistance: 0.8
+- $schema: https://mmarini.org/wheelly/objective-sensor-label-schema-0.1
+  class: org.mmarini.wheelly.objectives.SensorLabel
+  minDistance: 0.5
   maxDistance: 1.0

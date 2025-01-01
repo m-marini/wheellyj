@@ -66,6 +66,7 @@ public class JsonSchemas {
             "/objective-stuck-schema.yml",
             "/objective-constant-schema.yml",
             "/objective-label-schema.yml",
+            "/objective-sensor-label-schema.yml",
             "/objective-action-set-schema.yml",
             "/controller-schema.yml",
             "/env-polar-schema.yml",
