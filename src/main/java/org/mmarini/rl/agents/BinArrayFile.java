@@ -246,11 +246,7 @@ public class BinArrayFile implements ArrayWriter, ArrayReader {
         dataFile.seek(pos);
     }
 
-    /**
-     * Returns the shape of data
-     *
-     * @throws IOException in case of error
-     */
+    @Override
     public long[] shape() throws IOException {
         open();
         if (shape == null) {
