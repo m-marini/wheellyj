@@ -64,11 +64,13 @@ public class Report {
 
             ReportProcess.meanReport("trainingLayers.critic.values"), // Critic
 
+            ReportProcess.statsReport("trainingLayers.move.values"), // max probability for move
             ReportProcess.maxReport("trainingLayers.move.values"), // max probability for move
             ReportProcess.gmReport("trainingLayers.move.values"), // gm probability for move
             ReportProcess.maxMinRatioReport("trainingLayers.move.values"), // max/min probability ratio for move
             ReportProcess.maxGMRatioReport("trainingLayers.move.values"), // max/mean probability for move
 
+            ReportProcess.statsReport("trainingLayers.sensorAction.values"), // max probability for move
             ReportProcess.maxReport("trainingLayers.sensorAction.values"), // max probability for sensor
             ReportProcess.gmReport("trainingLayers.sensorAction.values"), // gm probability for sensor
             ReportProcess.maxMinRatioReport("trainingLayers.sensorAction.values"), // max probability for sensor

@@ -37,11 +37,13 @@ function generateReport(dataPath, reportPath)
   generateKpiReport(hFile, [dataPath "/trainingLayers/move/values/gm"], reportPath, "policy_move_gm", "Move prob. geometric mean", @(h)generateGmReport(h, reportParms.moveSize, reportParms.moveTemperature), mode);
   generateKpiReport(hFile, [dataPath "/trainingLayers/move/values/maxGMRatio"], reportPath, "policy_move_ratio", "Move max/mean ratio", @(h)generateMaxGmRatioReport(h, reportParms.moveSize, reportParms.moveTemperature), mode);
   generateKpiReport(hFile, [dataPath "/trainingLayers/move/values/maxMinRatio"], reportPath, "policy_move_ratio_min", "Move max/min ratio", @(h)generateMaxMinRatioReport(h, reportParms.moveSize, reportParms.moveTemperature), mode);
+  generateMeansReport(hFile, [dataPath "/trainingLayers/move/values/mean"], reportPath, "policy_move_mean", "Move mean prob.", mode);
 
   generateKpiReport(hFile, [dataPath "/trainingLayers/sensorAction/values/max"], reportPath, "policy_sensorAction", "Sensor direction max prob.",@(h)generateMaxProbReport(h, reportParms.sensorActionSize, reportParms.sensorActionTemperature), mode);
   generateKpiReport(hFile, [dataPath "/trainingLayers/sensorAction/values/gm"], reportPath, "policy_sensorAction_gm", "Sensor direction prob. geometric mean.", @(h)generateGmReport(h, reportParms.sensorActionSize, reportParms.sensorActionTemperature), mode);
   generateKpiReport(hFile, [dataPath "/trainingLayers/sensorAction/values/maxGMRatio"], reportPath, "policy_sensorAction_ratio", "Sensor direction  max/mean ratio", @(h)generateMaxGmRatioReport(h, reportParms.sensorActionSize, reportParms.sensorActionTemperature), mode);
   generateKpiReport(hFile, [dataPath "/trainingLayers/sensorAction/values/maxMinRatio"], reportPath, "policy_sensorAction_ratio_min", "Sensor direction  max/min ratio", @(h)generateMaxMinRatioReport(h, reportParms.sensorActionSize, reportParms.sensorActionTemperature), mode);
+  generateMeansReport(hFile, [dataPath "/trainingLayers/sensorAction/values/mean"], reportPath, "policy_sensorAction_mean", "Sensor direction mean prob.", mode);
 
   generateKpiReport(hFile, [dataPath "/deltaGrads/critic"], reportPath, "eta_delta_critic", "Critic Error RMS", @(h)generateCriticErrorReport(h, reportParms), mode);
   generateKpiReport(hFile, [dataPath "/deltaGrads/move/sum"], reportPath, "eta_delta_move", "Move error RMS", @(h)generateActionErrorReport(h, reportParms.eta, reportParms.moveAlpha), mode);
