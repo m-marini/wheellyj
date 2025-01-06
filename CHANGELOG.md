@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#496](https://github.com/m-marini/wheellyj/issues/496): Add map relative direction signal
 - Issue [#498](https://github.com/m-marini/wheellyj/issues/498): Add observe label goal
 - Issue [#500](https://github.com/m-marini/wheellyj/issues/500): Add policy stats in report
+- Issue [#502](https://github.com/m-marini/wheellyj/issues/502): Add relocate robot button
 
 ## [0.20.0] 2024-12-28
 

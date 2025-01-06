@@ -49,8 +49,7 @@ import java.util.function.Consumer;
 
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_PER_PULSE;
-import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_SCALE;
+import static org.mmarini.wheelly.apis.RobotStatus.*;
 import static org.mmarini.wheelly.apis.Utils.clip;
 
 /**
@@ -501,6 +500,37 @@ public class SimRobot implements RobotApi {
      */
     boolean rearSensor() {
         return rearSensor;
+    }
+
+    /**
+     * Relocates randomly the robot
+     */
+    public SimRobot safeRelocateRandom() {
+        double safeDistanceSq = pow(SAFE_DISTANCE + OBSTACLE_SIZE, 2);
+        Point2D loc = obstaclesMap()
+                .map(map -> {
+                    Point2D loc1;
+                    for (; ; ) {
+                        // Generates a random location in the map
+                        loc1 = new Point2D.Double(
+                                random.nextDouble() * WORLD_SIZE - WORLD_SIZE / 2,
+                                random.nextDouble() * WORLD_SIZE - WORLD_SIZE / 2
+                        );
+                        Point2D finalLoc = loc1;
+                        // Check for safe distance from any obstacles
+                        if (map.cells().stream()
+                                .noneMatch(cell ->
+                                        finalLoc.distanceSq(cell.location()) <= safeDistanceSq
+                                )) {
+                            break;
+                        }
+                    }
+                    return loc1;
+                })
+                .orElse(new Point2D.Double());
+        // Relocate robot
+        setRobotPos(loc.getX(), loc.getY());
+        return this;
     }
 
     @Override

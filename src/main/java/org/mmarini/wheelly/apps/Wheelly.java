@@ -150,6 +150,7 @@ public class Wheelly {
     private final Namespace args;
     private final JButton stopButton;
     private final JButton startButton;
+    private final JButton relocateButton;
     private JFrame kpisFrame;
     private long robotStartTimestamp;
     private Long sessionDuration;
@@ -176,11 +177,8 @@ public class Wheelly {
         this.envPanel = new EnvironmentPanel();
         this.kpisPanel = new KpisPanel();
         this.comMonitor = new ComMonitor();
-        comMonitor.setPrintTimestamp(true);
         this.learnPanel = new LearnPanel();
         this.sensorMonitor = new SensorMonitor();
-        this.stopButton = new JButton();
-        this.startButton = new JButton();
         this.robotStartTimestamp = -1;
         this.avgRewards = MeanValue.zeros();
         this.reactionRobotTime = MeanValue.zeros();
@@ -188,8 +186,10 @@ public class Wheelly {
         this.prevRobotStep = -1;
         this.prevStep = -1;
         this.completion = CompletableSubject.create();
-        SwingUtils.getInstance().initButton(stopButton, "Wheelly.stopButton");
-        SwingUtils.getInstance().initButton(startButton, "Wheelly.runButton");
+        this.relocateButton = SwingUtils.getInstance().initButton(new JButton(), "Wheelly.relocateButton");
+        this.stopButton = SwingUtils.getInstance().initButton(new JButton(), "Wheelly.stopButton");
+        this.startButton = SwingUtils.getInstance().initButton(new JButton(), "Wheelly.runButton");
+        comMonitor.setPrintTimestamp(true);
     }
 
     /**
@@ -343,10 +343,12 @@ public class Wheelly {
         toolBar.add(startButton);
         toolBar.add(resetButton);
         toolBar.add(clearMapButton);
+        toolBar.add(relocateButton);
         stopButton.addActionListener(this::handleStopButton);
         startButton.addActionListener(this::handleStartButton);
         resetButton.addActionListener(this::handleResetButton);
         clearMapButton.addActionListener(this::handleClearMapButton);
+        relocateButton.addActionListener(this::handleRelocateButton);
         return toolBar;
     }
 
@@ -437,6 +439,15 @@ public class Wheelly {
         comMonitor.onReadLine(line);
         if (dumper != null) {
             dumper.dumpReadLine(line);
+        }
+    }
+
+    /**
+     * @param actionEvent the action event
+     */
+    private void handleRelocateButton(ActionEvent actionEvent) {
+        if (this.environment.getController().getRobot() instanceof SimRobot robot) {
+            robot.safeRelocateRandom();
         }
     }
 
@@ -621,6 +632,9 @@ public class Wheelly {
         if (environment.getController().getRobot() instanceof SimRobot robot1) {
             // Add the obstacles location changes
             robot1.setOnObstacleChanged(this::handleObstacleChanged);
+            relocateButton.setEnabled(true);
+        } else {
+            relocateButton.setEnabled(false);
         }
 
         sessionDuration = this.args.getLong("localTime");
