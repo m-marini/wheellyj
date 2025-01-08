@@ -42,7 +42,6 @@ import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
 import java.io.File;
-import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.function.Consumer;
@@ -80,14 +79,15 @@ public class SimRobot implements RobotApi {
     private static final double ROBOT_FRICTION = 1;
     private static final double ROBOT_RESTITUTION = 0;
     private static final double SAFE_DISTANCE = 0.2;
-    private static final double MAX_ACC = 1;
+    private static final float JBOX_SCALE = 100;
+    private static final double MAX_ACC = 1 * JBOX_SCALE;
     private static final double MAX_FORCE = MAX_ACC * ROBOT_MASS;
-    private static final double MAX_TORQUE = 0.7;
+    private static final double MAX_TORQUE = 0.7 * JBOX_SCALE * JBOX_SCALE;
     private static final Logger logger = LoggerFactory.getLogger(SimRobot.class);
     private static final float ROBOT_RADIUS = 0.15f;
-    private static final double ROBOT_DENSITY = ROBOT_MASS / (ROBOT_RADIUS * ROBOT_RADIUS * PI);
-    private static final int DEFAULT_SENSOR_RECEPTIVE_ANGLE = 15;
     private static final double DEG89_5_EPSILON = sin(toDegrees(89.5));
+    private static final double ROBOT_DENSITY = ROBOT_MASS / (ROBOT_RADIUS * ROBOT_RADIUS * PI * JBOX_SCALE * JBOX_SCALE);
+    private static final int DEFAULT_SENSOR_RECEPTIVE_ANGLE = 15;
 
 
     /**
@@ -117,29 +117,6 @@ public class SimRobot implements RobotApi {
                 robotRandom, mapRandom,
                 errSigma, errSensor,
                 sensorReceptiveAngle, maxAngularSpeed, motionInterval, proxyInterval, numObstacles, numLabels, changeObstaclesPeriod);
-    }
-
-    /**
-     * Creates the obstacle in the world
-     *
-     * @param world    the world
-     * @param location the obstacle location
-     */
-    protected static Body createObstacleBodies(World world, Point2D location) {
-        PolygonShape obsShape = new PolygonShape();
-        obsShape.setAsBox(RobotStatus.OBSTACLE_SIZE / 2, RobotStatus.OBSTACLE_SIZE / 2);
-
-        FixtureDef obsFixDef = new FixtureDef();
-        obsFixDef.shape = obsShape;
-
-        BodyDef obsDef = new BodyDef();
-        obsDef.type = BodyType.STATIC;
-
-        obsDef.position.x = (float) location.getX();
-        obsDef.position.y = (float) location.getY();
-        Body obs = world.createBody(obsDef);
-        obs.createFixture(obsFixDef);
-        return obs;
     }
 
     /**
@@ -192,7 +169,7 @@ public class SimRobot implements RobotApi {
     private long simulationTime;
     private int speed;
     private Consumer<SimRobot> onObstacleChanged;
-    private List<Body> obstacleBodies;
+    private Body obstacleBody;
     private ObstacleMap obstacleMap;
     private ObstacleMap.ObstacleCell nearestCell;
 
@@ -262,17 +239,16 @@ public class SimRobot implements RobotApi {
         this.robot = world.createBody(bodyDef);
 
         CircleShape circleShape = new CircleShape();
-        circleShape.setRadius(ROBOT_RADIUS);
+        circleShape.setRadius(ROBOT_RADIUS * JBOX_SCALE);
         FixtureDef fixDef = new FixtureDef();
         fixDef.shape = circleShape;
         fixDef.friction = (float) ROBOT_FRICTION;
         fixDef.density = (float) ROBOT_DENSITY;
         fixDef.restitution = (float) ROBOT_RESTITUTION;
         this.robotFixture = robot.createFixture(fixDef);
-        this.obstacleBodies = List.of();
 
         // Create obstacle bodies
-        createObstacleBodies();
+        createObstacleBody();
     }
 
     /**
@@ -325,8 +301,8 @@ public class SimRobot implements RobotApi {
     private Complex contactRelativeDirection(Contact contact) {
         WorldManifold worldManifold = new WorldManifold();
         contact.getWorldManifold(worldManifold);
-        Point2D contactAt = new Point2D.Double(worldManifold.points[0].x,
-                worldManifold.points[0].y);
+        Point2D contactAt = new Point2D.Double(worldManifold.points[0].x / JBOX_SCALE,
+                worldManifold.points[0].y / JBOX_SCALE);
         Point2D location = this.location();
         Complex contactDirection = Complex.direction(location, contactAt);
         return contactDirection.sub(direction());
@@ -357,7 +333,7 @@ public class SimRobot implements RobotApi {
         double forwardVelocity = (left + right) / 2;
 
         // target real speed
-        Vec2 targetVelocity = robot.getWorldVector(Utils.vec2(forwardVelocity, 0));
+        Vec2 targetVelocity = robot.getWorldVector(Utils.vec2(forwardVelocity * JBOX_SCALE, 0));
         // Difference of speed
         Vec2 dv = targetVelocity.sub(robot.getLinearVelocity());
         // Impulse to fix the speed
@@ -396,11 +372,26 @@ public class SimRobot implements RobotApi {
     /**
      * Creates the obstacle bodies
      */
-    private void createObstacleBodies() {
-        obstacleBodies.forEach(world::destroyBody);
-        this.obstacleBodies = obstacleMap.cells().stream()
-                .map(cell -> createObstacleBodies(world, cell.location()))
-                .toList();
+    private void createObstacleBody() {
+        if (obstacleBody != null) {
+            world.destroyBody(obstacleBody);
+            frontSensor = true;
+            rearSensor = true;
+        }
+
+        BodyDef obsDef = new BodyDef();
+        obsDef.type = BodyType.STATIC;
+        obstacleBody = world.createBody(obsDef);
+
+        for (ObstacleMap.ObstacleCell cell : obstacleMap.cells()) {
+            PolygonShape obsShape = new PolygonShape();
+            Vec2 center = new Vec2((float) cell.location().getX() * JBOX_SCALE, (float) cell.location().getY() * JBOX_SCALE);
+            obsShape.setAsBox(RobotStatus.OBSTACLE_SIZE / 2 * JBOX_SCALE, RobotStatus.OBSTACLE_SIZE / 2 * JBOX_SCALE, center, 0);
+
+            FixtureDef obsFixDef = new FixtureDef();
+            obsFixDef.shape = obsShape;
+            obstacleBody.createFixture(obsFixDef);
+        }
     }
 
     /**
@@ -440,8 +431,8 @@ public class SimRobot implements RobotApi {
                     .addArgument(() -> {
                         WorldManifold worldManifold = new WorldManifold();
                         contact.getWorldManifold(worldManifold);
-                        return new Point2D.Double(worldManifold.points[0].x,
-                                worldManifold.points[0].y);
+                        return new Point2D.Double(worldManifold.points[0].x / JBOX_SCALE,
+                                worldManifold.points[0].y / JBOX_SCALE);
                     }).log();
             logger.atDebug().setMessage("        robot at {} {} DEG")
                     .addArgument(this::location)
@@ -466,8 +457,8 @@ public class SimRobot implements RobotApi {
 
     private void handleEndContact(Contact contact) {
         logger.atDebug().log("End contact");
-        WorldManifold worldManifold = new WorldManifold();
-        contact.getWorldManifold(worldManifold);
+//        WorldManifold worldManifold = new WorldManifold();
+//        contact.getWorldManifold(worldManifold);
         frontSensor = true;
         rearSensor = true;
         sendContacts();
@@ -478,7 +469,7 @@ public class SimRobot implements RobotApi {
      */
     public Point2D location() {
         Vec2 pos = robot.getPosition();
-        return new Point2D.Double(pos.x, pos.y);
+        return new Point2D.Double(pos.x / JBOX_SCALE, pos.y / JBOX_SCALE);
     }
 
     @Override
@@ -503,7 +494,7 @@ public class SimRobot implements RobotApi {
     }
 
     /**
-     * Relocates randomly the robot
+     * Randomly relocates the robot
      */
     public SimRobot safeRelocateRandom() {
         double safeDistanceSq = pow(SAFE_DISTANCE + OBSTACLE_SIZE, 2);
@@ -576,9 +567,9 @@ public class SimRobot implements RobotApi {
      */
     private void sendMotion() {
         if (onMotion != null) {
-            Vec2 pos = robot.getPosition();
-            double xPulses = pos.x / DISTANCE_PER_PULSE;
-            double yPulses = pos.y / DISTANCE_PER_PULSE;
+            Point2D pos = this.location();
+            double xPulses = pos.getX() / DISTANCE_PER_PULSE;
+            double yPulses = pos.getY() / DISTANCE_PER_PULSE;
             Complex robotDir = direction();
             WheellyMotionMessage msg = new WheellyMotionMessage(
                     System.currentTimeMillis(), simulationTime, simulationTime,
@@ -597,9 +588,9 @@ public class SimRobot implements RobotApi {
      */
     private void sendProxy() {
         if (onProxy != null) {
-            Vec2 pos = robot.getPosition();
-            double xPulses = pos.x / DISTANCE_PER_PULSE;
-            double yPulses = pos.y / DISTANCE_PER_PULSE;
+            Point2D pos = this.location();
+            double xPulses = pos.getX() / DISTANCE_PER_PULSE;
+            double yPulses = pos.getY() / DISTANCE_PER_PULSE;
             Complex echoYaw = direction();
             long echoDelay = round(echoDistance / DISTANCE_SCALE);
             WheellyProxyMessage msg = new WheellyProxyMessage(
@@ -611,10 +602,19 @@ public class SimRobot implements RobotApi {
     }
 
     /**
-     * Returns the sensor direction (DEG)
+     * Returns the sensor direction
      */
     public Complex sensorDirection() {
         return sensorDirection;
+    }
+
+    /**
+     * Set the sensor direction
+     *
+     * @param sensorDirection the sector direction
+     */
+    public void setSensorDirection(Complex sensorDirection) {
+        this.sensorDirection = sensorDirection;
     }
 
     @Override
@@ -658,7 +658,7 @@ public class SimRobot implements RobotApi {
     /**
      * Sets the robot direction
      *
-     * @param direction the direction in DEG
+     * @param direction the direction (DEG)
      */
     public void setRobotDir(Complex direction) {
         this.direction = direction;
@@ -672,8 +672,8 @@ public class SimRobot implements RobotApi {
      */
     public void setRobotPos(double x, double y) {
         Vec2 pos = new Vec2();
-        pos.x = (float) x;
-        pos.y = (float) y;
+        pos.x = (float) (x * JBOX_SCALE);
+        pos.y = (float) (y * JBOX_SCALE);
         robot.setTransform(pos, robot.getAngle());
     }
 
@@ -693,7 +693,7 @@ public class SimRobot implements RobotApi {
             double p = 1 - exp(-lambda * dt);
             if (mapRandom.nextDouble() < p) {
                 obstacleMap = createObstacleMap(numObstacles, numLabels, mapRandom, location());
-                createObstacleBodies();
+                createObstacleBody();
                 if (onObstacleChanged != null) {
                     onObstacleChanged.accept(this);
                 }
@@ -704,10 +704,12 @@ public class SimRobot implements RobotApi {
         controller(dt * 1e-3F);
 
         // Check for sensor
-        Vec2 pos = robot.getPosition();
-        double x = pos.x;
-        double y = pos.y;
-        Point2D position = new Point2D.Double(x, y);
+//        Vec2 pos = robot.getPosition();
+//        double x = pos.x / JBOX_SCALE;
+//        double y = pos.y / JBOX_SCALE;
+        Point2D position = location();
+        double x = position.getX();
+        double y = position.getY();
         Complex sensorRad = direction().add(sensorDirection);
         boolean prevEchoAlarm = echoDistance > 0 && echoDistance <= SAFE_DISTANCE;
         this.echoDistance = 0;
