@@ -1,7 +1,7 @@
 ---
 $schema: https://mmarini.org/wheelly/env-polar-schema-3.0
 class: org.mmarini.wheelly.envs.PolarRobotEnv
-objective: ../objectives/test1.yml
+objective: ../objectives/findLabel1.yml
 interval: 10
 commandInterval: 600
 reactionInterval: 300
