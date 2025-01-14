@@ -26,9 +26,6 @@
 package org.mmarini.wheelly.apis;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.jbox2d.callbacks.ContactImpulse;
-import org.jbox2d.callbacks.ContactListener;
-import org.jbox2d.collision.Manifold;
 import org.jbox2d.collision.WorldManifold;
 import org.jbox2d.collision.shapes.CircleShape;
 import org.jbox2d.collision.shapes.PolygonShape;
@@ -88,7 +85,6 @@ public class SimRobot implements RobotApi {
     private static final double DEG89_5_EPSILON = sin(toDegrees(89.5));
     private static final double ROBOT_DENSITY = ROBOT_MASS / (ROBOT_RADIUS * ROBOT_RADIUS * PI * JBOX_SCALE * JBOX_SCALE);
     private static final int DEFAULT_SENSOR_RECEPTIVE_ANGLE = 15;
-
 
     /**
      * Returns the simulated robot from JSON configuration
@@ -212,25 +208,6 @@ public class SimRobot implements RobotApi {
 
         // Creates the jbox2 physic world
         this.world = new World(GRAVITY);
-        world.setContactListener(new ContactListener() {
-            @Override
-            public void beginContact(Contact contact) {
-                SimRobot.this.handleBeginContact(contact);
-            }
-
-            @Override
-            public void endContact(Contact contact) {
-                SimRobot.this.handleEndContact(contact);
-            }
-
-            @Override
-            public void postSolve(Contact contact, ContactImpulse contactImpulse) {
-            }
-
-            @Override
-            public void preSolve(Contact contact, Manifold manifold) {
-            }
-        });
 
         // Creates the jbox2 physic robot body
         BodyDef bodyDef = new BodyDef();
@@ -301,11 +278,19 @@ public class SimRobot implements RobotApi {
     private Complex contactRelativeDirection(Contact contact) {
         WorldManifold worldManifold = new WorldManifold();
         contact.getWorldManifold(worldManifold);
-        Point2D contactAt = new Point2D.Double(worldManifold.points[0].x / JBOX_SCALE,
-                worldManifold.points[0].y / JBOX_SCALE);
-        Point2D location = this.location();
-        Complex contactDirection = Complex.direction(location, contactAt);
-        return contactDirection.sub(direction());
+        int n = contact.getManifold().pointCount;
+        float x = 0;
+        float y = 0;
+        for (int i = 0; i < n; i++) {
+            x += worldManifold.points[i].x;
+            y += worldManifold.points[i].y;
+        }
+        Point2D collisionLocation = new Point2D.Double(
+                x / JBOX_SCALE / n,
+                y / JBOX_SCALE / n);
+        Complex collisionDirection = Complex.direction(location(), collisionLocation);
+        // Compute collision direction relative to the robot direction
+        return collisionDirection.sub(direction());
     }
 
     /**
@@ -364,6 +349,7 @@ public class SimRobot implements RobotApi {
         robot.applyForceToCenter(force);
         robot.applyTorque((float) angularTorque);
         world.step((float) dt, VELOCITY_ITER, POSITION_ITER);
+        handleContacts();
 
         // Update robot status
         updateMotion();
@@ -423,45 +409,35 @@ public class SimRobot implements RobotApi {
         rightPps = 0;
     }
 
-    private void handleBeginContact(Contact contact) {
-        if (contact.m_fixtureA.equals(robotFixture) || contact.m_fixtureB.equals(robotFixture)) {
-            // Contact with robot fixture
-            Complex contactDirection = contactRelativeDirection(contact);
-            logger.atDebug().setMessage("Begin contact at {}")
-                    .addArgument(() -> {
-                        WorldManifold worldManifold = new WorldManifold();
-                        contact.getWorldManifold(worldManifold);
-                        return new Point2D.Double(worldManifold.points[0].x / JBOX_SCALE,
-                                worldManifold.points[0].y / JBOX_SCALE);
-                    }).log();
-            logger.atDebug().setMessage("        robot at {} {} DEG")
-                    .addArgument(this::location)
-                    .addArgument(() -> direction().toIntDeg())
-                    .log();
-            logger.atDebug().setMessage("      contact at {} DEG")
-                    .addArgument(contactDirection::toIntDeg)
-                    .log();
-            if (contactDirection.isFront(DEG89_5_EPSILON)) {
-                // contact at +-89.5 DEG from the front
-                frontSensor = false;
-                halt();
+    /**
+     * Handles contact list
+     */
+    private void handleContacts() {
+        Contact contact = world.getContactList();
+        frontSensor = rearSensor = true;
+        while (contact != null) {
+            if (contact.isTouching()) {
+                Fixture fixture = contact.getFixtureA().equals(robotFixture)
+                        ? contact.getFixtureB()
+                        : contact.getFixtureB().equals(robotFixture)
+                        ? contact.getFixtureA()
+                        : null;
+                if (fixture != null) {
+                    Complex collisionDir = contactRelativeDirection(contact);
+                    if (collisionDir.isFront(DEG89_5_EPSILON)) {
+                        // contact at +-89.5 DEG from the front
+                        frontSensor = false;
+                        halt();
+                    }
+                    if (collisionDir.isRear(DEG89_5_EPSILON)) {
+                        // contact at +-89.5 DEG from the rear
+                        rearSensor = false;
+                        halt();
+                    }
+                }
             }
-            if (contactDirection.isRear(DEG89_5_EPSILON)) {
-                // contact at +-89.5 DEG from the rear
-                rearSensor = false;
-                halt();
-            }
+            contact = contact.getNext();
         }
-        sendContacts();
-    }
-
-    private void handleEndContact(Contact contact) {
-        logger.atDebug().log("End contact");
-//        WorldManifold worldManifold = new WorldManifold();
-//        contact.getWorldManifold(worldManifold);
-        frontSensor = true;
-        rearSensor = true;
-        sendContacts();
     }
 
     /**
@@ -608,15 +584,6 @@ public class SimRobot implements RobotApi {
         return sensorDirection;
     }
 
-    /**
-     * Set the sensor direction
-     *
-     * @param sensorDirection the sector direction
-     */
-    public void setSensorDirection(Complex sensorDirection) {
-        this.sensorDirection = sensorDirection;
-    }
-
     @Override
     public void setOnCamera(Consumer<CameraEvent> callback) {
         onCamera = callback;
@@ -677,6 +644,15 @@ public class SimRobot implements RobotApi {
         robot.setTransform(pos, robot.getAngle());
     }
 
+    /**
+     * Set the sensor direction
+     *
+     * @param sensorDirection the sector direction
+     */
+    public void setSensorDirection(Complex sensorDirection) {
+        this.sensorDirection = sensorDirection;
+    }
+
     @Override
     public long simulationTime() {
         return simulationTime;
@@ -701,12 +677,11 @@ public class SimRobot implements RobotApi {
         }
 
         // Simulate robot motion
+        boolean prevFront = frontSensor;
+        boolean prevRear = rearSensor;
         controller(dt * 1e-3F);
 
         // Check for sensor
-//        Vec2 pos = robot.getPosition();
-//        double x = pos.x / JBOX_SCALE;
-//        double y = pos.y / JBOX_SCALE;
         Point2D position = location();
         double x = position.getX();
         double y = position.getY();
@@ -718,12 +693,14 @@ public class SimRobot implements RobotApi {
         if (nearestCell != null) {
             // Computes the distance of obstacles
             Point2D obs = nearestCell.location();
-            double dist = obs.distance(position) - obstacleMap.gridSize() / 2
+            double dist = obs.distance(position) - obstacleMap.gridSize() / 2-
                     + random.nextGaussian() * errSensor;
             echoDistance = dist > 0 && dist < MAX_DISTANCE ? dist : 0;
         }
         boolean echoAlarm = echoDistance > 0 && echoDistance <= SAFE_DISTANCE;
-        if (echoAlarm != prevEchoAlarm) {
+        if (echoAlarm != prevEchoAlarm
+                || prevRear != rearSensor
+                || prevFront != frontSensor) {
             sendContacts();
         }
         // Check for movement constraints
