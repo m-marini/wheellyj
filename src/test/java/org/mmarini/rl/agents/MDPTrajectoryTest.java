@@ -28,14 +28,12 @@ package org.mmarini.rl.agents;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.rl.envs.Environment;
-import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.TestSequenceMDP;
 import org.mmarini.rl.nets.*;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
@@ -44,6 +42,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mmarini.rl.agents.MDPTest.next;
 
 class MDPTrajectoryTest {
     public static final long AGENT_SEED = 1234L;
@@ -54,7 +53,7 @@ class MDPTrajectoryTest {
      * Returns the agent
      *
      * @param mdp         the mdp
-     * @param rewardAlpha the reword alpha
+     * @param rewardAlpha the reward alpha
      * @param numSteps    the number of steps
      * @param numEpochs   the number of epochs
      * @param batchSize   the batch size
@@ -97,14 +96,15 @@ class MDPTrajectoryTest {
      */
     @Test
     void dynamicTest8104() {
-        // Give a mdp of 2 state
+        // Give a mdp of 2 states
         int numSteps = 8;
         int numEpochs = 10;
         int batchSize = 4;
         // And an agent for the mdp
         TDAgentSingleNN agent = createAgent(mdp, 1F / (numSteps + 1), numSteps, numEpochs, batchSize);
         // and the trajectory from current policy
-        List<Environment.ExecutionResult> trajectory = trajectory(agent, numSteps);
+        List<Environment.ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
+        //trajectory(agent, numSteps);
         // and the average reward
         float avg0 = (float) trajectory.stream()
                 .mapToDouble(Environment.ExecutionResult::reward)
@@ -128,7 +128,7 @@ class MDPTrajectoryTest {
         assertThat((double) avgReward, closeTo(avg0, 0.6));
         // And the policy for state 0 should increase the action 0
         assertThat(pi00Trained, greaterThan(pi00));
-        // And the policy for state 1 should increase the action 1
+        // And the policy for state 1 should increase action 1
         assertThat(pi11Trained, greaterThan(pi11));
     }
 
@@ -137,14 +137,14 @@ class MDPTrajectoryTest {
      */
     @Test
     void dynamicTest814() {
-        // Give a mdp of 2 state
+        // Give a mdp of 2 states
         int numSteps = 8;
         int numEpochs = 1;
         int batchSize = 4;
         // And an agent for the mdp
         TDAgentSingleNN agent = createAgent(mdp, 1F / (numSteps + 1), numSteps, numEpochs, batchSize);
         // and the trajectory from current policy
-        List<Environment.ExecutionResult> trajectory = trajectory(agent, numSteps);
+        List<Environment.ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
         // and the average reward
         float avg0 = (float) trajectory.stream()
                 .mapToDouble(Environment.ExecutionResult::reward)
@@ -166,9 +166,9 @@ class MDPTrajectoryTest {
 
         // Then the average reward should tend to 0
         assertThat((double) avgReward, closeTo(avg0, 0.6));
-        // And the policy for state 0 should increase the action 0
+        // And the policy for state 0 should increase action 0
         assertThat(trainedPi00, greaterThan(pi00));
-        // And the policy for state 1 should increase the action 1
+        // And the policy for state 1 should increase action 1
         assertThat(trainedPi11, greaterThan(pi11));
     }
 
@@ -177,14 +177,14 @@ class MDPTrajectoryTest {
      */
     @Test
     void dynamicTest818() {
-        // Give a mdp of 2 state
+        // Give a mdp of 2 states
         int numSteps = 8;
         int numEpochs = 1;
         int batchSize = 8;
         // And an agent for the mdp
         TDAgentSingleNN agent = createAgent(mdp, 1F / (numSteps + 1), numSteps, numEpochs, batchSize);
         // and the trajectory from current policy
-        List<Environment.ExecutionResult> trajectory = trajectory(agent, numSteps);
+        List<Environment.ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
         // and the average reward
         float avg0 = (float) trajectory.stream()
                 .mapToDouble(Environment.ExecutionResult::reward)
@@ -206,9 +206,9 @@ class MDPTrajectoryTest {
 
         // Then the average reward should tend to 0
         assertThat((double) avgReward, closeTo(avg0, 0.6));
-        // And the policy for state 0 should increase the action 0
+        // And the policy for state 0 should increase action 0
         assertThat(trainedPi00, greaterThan(pi00));
-        // And the policy for state 1 should increase the action 1
+        // And the policy for state 1 should increase action 1
         assertThat(trainedPi11, greaterThan(pi11));
     }
 
@@ -217,8 +217,8 @@ class MDPTrajectoryTest {
      */
     @Test
     void fullTrainTest() {
-        fail("Skiped");
-        // Given a mdp of 2 state
+        fail("Skipped");
+        // Given a mdp of 2 states
         int numIters = 4;
         int numSteps = 128;
         int numEpochs = 10;
@@ -226,7 +226,7 @@ class MDPTrajectoryTest {
         // And an agent for the mdp
         TDAgentSingleNN agent = createAgent(mdp, 1F / (numSteps + 1), numSteps, numEpochs, batchSize);
         // and the trajectory from current policy
-        List<Environment.ExecutionResult> trajectory = trajectory(agent, numSteps);
+        List<Environment.ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
         // and the average reward
         float avg0 = (float) trajectory.stream()
                 .mapToDouble(Environment.ExecutionResult::reward)
@@ -242,7 +242,7 @@ class MDPTrajectoryTest {
         AbstractAgentNN trained = agent;
         for (int j = 0; j < numIters; j++) {
             trained = trained.trainByTrajectory(trajectory);
-            trajectory = trajectory(trained, numSteps);
+            trajectory = mdp.trajectory(numSteps, 0, next(trained, mdp));
         }
         float avgReward = trained.avgReward();
         // And get the policy
@@ -252,15 +252,15 @@ class MDPTrajectoryTest {
 
         // Then the average reward should tend to 1
         assertThat((double) avgReward, closeTo(0.75, 0.25));
-        // And the policy for state 0 should increase the action 0
+        // And the policy for state 0 should increase action 0
         assertThat(trainedPi00, greaterThan(0.75));
-        // And the policy for state 1 should increase the action 1
+        // And the policy for state 1 should increase action 1
         assertThat(trainedPi11, greaterThan(0.75));
     }
 
     @BeforeEach
     void setUp() {
-        mdp = TestSequenceMDP.sequence(2);
+        mdp = TestSequenceMDP.circularSequence(2);
         allStates = MapUtils.flatMapValues(
                 IntStream.of(0, 1)
                         .mapToObj(mdp::state)
@@ -274,7 +274,7 @@ class MDPTrajectoryTest {
      */
     @Test
     void testFSFS() {
-        // Give a mdp of 2 state
+        // Give a mdp of 2 states
         int numEpochs = 1;
         int batchSize = 4;
         // and the trajectory for fail,success, fail,success
@@ -305,23 +305,9 @@ class MDPTrajectoryTest {
 
         // Then the average reward should tend to 0
         assertThat((double) avgReward, closeTo(0, 0.11));
-        // And the policy for state 0 should increase the action 0
+        // And the policy for state 0 should increase action 0
         assertThat(pi00Trained, greaterThan(pi00));
-        // And the policy for state 1 should increase the action 1
+        // And the policy for state 1 should increase action 1
         assertThat(pi11Trained, greaterThan(pi11));
-    }
-
-    List<Environment.ExecutionResult> trajectory(AbstractAgentNN agent, int numSteps) {
-        // and the trajectory from current policy
-        List<Environment.ExecutionResult> trajectory = new ArrayList<>(numSteps);
-        int state = 0;
-        for (int i = 0; i < numSteps; i++) {
-            Map<String, Signal> s0 = mdp.state(state);
-            Map<String, Signal> action = agent.act(s0);
-            int actionIdx = action.get("action").getInt(0);
-            trajectory.add(mdp.result(state, actionIdx));
-            state = mdp.next(state, actionIdx);
-        }
-        return trajectory;
     }
 }
