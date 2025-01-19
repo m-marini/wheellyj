@@ -366,8 +366,7 @@ public class TDAgentSingleNN extends AbstractAgentNN {
                         .mapValues(v -> v.get(indices, NDArrayIndex.all()))
                         .toMap();
                 INDArray batchRewards = rewards.get(indices, NDArrayIndex.all());
-                newAgent = newAgent.avgReward(avgReward)
-                        .trainMiniBatch(epoch, startStep, n, batchStates, batchActionMasks, batchRewards, null);
+                newAgent = newAgent.trainMiniBatch(epoch, startStep, n, batchStates, batchActionMasks, batchRewards, null);
             }
             return newAgent;
         }

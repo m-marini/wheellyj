@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 
 - Issue [#504](https://github.com/m-marini/wheellyj/issues/504): Verify contact simulation
+- Issue [#509](https://github.com/m-marini/wheellyj/issues/509): Wrong learning for negative reward
 
 ## [0.20.0] 2024-12-28
 

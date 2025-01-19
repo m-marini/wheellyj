@@ -38,7 +38,6 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
@@ -47,6 +46,7 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
+import static org.mmarini.rl.agents.MDPTest.next;
 import static org.mmarini.wheelly.TestFunctions.matrixShape;
 
 class KpisMDPTrajectoryTest {
@@ -59,7 +59,7 @@ class KpisMDPTrajectoryTest {
      * Returns the agent
      *
      * @param mdp         the mdp
-     * @param rewardAlpha the reword alpha
+     * @param rewardAlpha the reward alpha
      * @param numSteps    the number of steps
      * @param numEpochs   the number of epochs
      * @param batchSize   the batch size
@@ -99,18 +99,18 @@ class KpisMDPTrajectoryTest {
     Map<String, INDArray> allStates;
 
     /**
-     * Test on trajectory FSFS (faul, success, fail, success)
+     * Test on trajectory FSFS (fault, success, fail, success)
      */
     @Test
     void kpisActioningTest() {
-        // Give a mdp of 2 state
+        // Give a mdp of 2 states
         int numSteps = 8;
         int numEpochs = 1;
         int batchSize = 4;
         // And an agent for the mdp
         TDAgentSingleNN agent = createAgent(mdp, 1F / (numSteps + 1), numSteps, numEpochs, batchSize);
         // and the trajectory from current policy
-        List<Environment.ExecutionResult> trajectory = trajectory(agent, numSteps);
+        List<Environment.ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
         // and the average reward
         float avg0 = (float) trajectory.stream()
                 .mapToDouble(Environment.ExecutionResult::reward)
@@ -162,7 +162,7 @@ class KpisMDPTrajectoryTest {
                 matrixCloseTo(expActions.get("action"), 1e-3)
         ));
 */
-        // And the second kpis shoud be the first  mini batch kpis
+        // And the second kpis should be the first  mini batch kpis
         Map<String, INDArray> kpis = sub.values().getFirst();
         assertThat(kpis, hasEntry(
                 equalTo("trainingLayers.critic.values"),
@@ -257,18 +257,19 @@ class KpisMDPTrajectoryTest {
     }
 
     /**
-     * Test on trajectory FSFS (faul, success, fail, success)
+     * Test on trajectory FSFS (fail, success, fail, success)
      */
     @Test
     void kpisTrainingTest() {
-        // Give a mdp of 2 state
+        // Give a mdp of 2 states
         int numSteps = 8;
         int numEpochs = 1;
         int batchSize = 4;
         // And an agent for the mdp
         TDAgentSingleNN agent = createAgent(mdp, 1F / (numSteps + 1), numSteps, numEpochs, batchSize);
         // and the trajectory from current policy
-        List<Environment.ExecutionResult> trajectory = trajectory(agent, numSteps);
+//        List<Environment.ExecutionResult> trajectory = trajectory(agent, numSteps);
+        List<Environment.ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
         // and the average reward
         float avg0 = (float) trajectory.stream()
                 .mapToDouble(Environment.ExecutionResult::reward)
@@ -301,13 +302,13 @@ class KpisMDPTrajectoryTest {
         agent.trainByTrajectory(trajectory);
 
         // Then the flowable should be subscribed, not completed, no errors and should generate (1 for batch, 1 for mini-batch)
-        // trajectory size / minibtahc size
+        // trajectory size / mini batch size
         sub.assertSubscribed();
         sub.assertNotComplete();
         sub.assertNoErrors();
         sub.assertValueCount(2);
 
-        // And the first kpis shoud be the first mini batch kpis
+        // And the first kpis should be the first mini batch kpis
         Map<String, INDArray> kpis = sub.values().getFirst();
         assertThat(kpis, hasEntry(
                 equalTo("trainingLayers.critic.values"),
@@ -403,26 +404,12 @@ class KpisMDPTrajectoryTest {
 
     @BeforeEach
     void setUp() {
-        mdp = TestSequenceMDP.sequence(2);
+        mdp = TestSequenceMDP.circularSequence(2);
         allStates = MapUtils.flatMapValues(
                 IntStream.of(0, 1)
                         .mapToObj(mdp::state)
                         .map(TDAgentSingleNN::getInput),
                 (k, v) -> Nd4j.vstack(v.toArray(INDArray[]::new)));
 
-    }
-
-    List<Environment.ExecutionResult> trajectory(TDAgentSingleNN agent, int numSteps) {
-        // and the trajectory from current policy
-        List<Environment.ExecutionResult> trajectory = new ArrayList<>(numSteps);
-        int state = 0;
-        for (int i = 0; i < numSteps; i++) {
-            Map<String, Signal> s0 = mdp.state(state);
-            Map<String, Signal> action = agent.act(s0);
-            int actionIdx = action.get("action").getInt(0);
-            trajectory.add(mdp.result(state, actionIdx));
-            state = mdp.next(state, actionIdx);
-        }
-        return trajectory;
     }
 }
