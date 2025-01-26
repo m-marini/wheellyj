@@ -35,6 +35,7 @@ import java.util.Random;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mmarini.Matchers.angleCloseTo;
 import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
 
@@ -57,8 +58,24 @@ class SimRobotObstacleTest {
      * @param robotDirection    the robot direction
      */
     private static SimRobot createRobot(Point2D location, Complex robotDirection) {
+        return createRobot(location, robotDirection, Complex.DEG0, 0, 0);
+    }
+
+    /**
+     * Given a simulated robot with a map grid of 0.2 m and obstacles at x,y,...
+     * located at the given location and directed to the given direction
+     *
+     * @param location       the location
+     * @param robotDirection the robot direction
+     * @param obsCoords      the obstacle coordinates x,y, ...
+     */
+    private static SimRobot createRobot(Point2D location, Complex robotDirection, Complex sensorDirection, double... obsCoords) {
         Random random = new Random(SEED);
-        SimRobot simRobot = new SimRobot(MapBuilder.create(GRID_SIZE).add(false, 0, 0).build(),
+        MapBuilder mapBuilder = MapBuilder.create(GRID_SIZE);
+        for (int i = 0; i < obsCoords.length - 1; i += 2) {
+            mapBuilder.add(false, obsCoords[i], obsCoords[i + 1]);
+        }
+        SimRobot simRobot = new SimRobot(mapBuilder.build(),
                 random, null, 0, 0,
                 Complex.fromDeg(15), MAX_PPS,
                 500, 500,
@@ -67,11 +84,12 @@ class SimRobotObstacleTest {
         simRobot.configure();
         simRobot.setRobotPos(location.getX(), location.getY());
         simRobot.setRobotDir(robotDirection);
+        simRobot.setSensorDirection(sensorDirection);
         return simRobot;
     }
 
     /**
-     * Given a obstacle map with 3 obstacle
+     * Given an obstacle map with 3 obstacle
      * <pre>
      *        ^
      *        |
@@ -85,23 +103,10 @@ class SimRobotObstacleTest {
      * @param sensorDirection the sensor direction
      */
     private static SimRobot createRobotWithObstacles(Point2D robotLocation, Complex robotDirection, Complex sensorDirection) {
-        Random random = new Random(SEED);
-        ObstacleMap map = MapBuilder.create(GRID_SIZE)
-                .add(false, 0, 0)
-                .add(false, GRID_SIZE, 0)
-                .add(false, 0, GRID_SIZE)
-                .build();
-        SimRobot simRobot = new SimRobot(map,
-                random, null, 0, 0,
-                Complex.fromDeg(15), MAX_PPS,
-                500, 500,
-                0, 0, 0);
-        simRobot.connect();
-        simRobot.configure();
-        simRobot.setRobotPos(robotLocation.getX(), robotLocation.getY());
-        simRobot.setRobotDir(robotDirection);
-        simRobot.setSensorDirection(sensorDirection);
-        return simRobot;
+        return createRobot(robotLocation, robotDirection, sensorDirection,
+                0, 0,
+                GRID_SIZE, 0,
+                0, GRID_SIZE);
     }
 
     /*
@@ -162,6 +167,57 @@ class SimRobotObstacleTest {
          */
         Point2D moveLocation = robotDirection.at(robotLocation, expMovement * MM1);
         assertThat(robot.location(), pointCloseTo(moveLocation, DISTANCE_EPSILON));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,-60, true,true",
+            "45,0, false,true",
+            "-45,0, false,true",
+            "-135,0, true,false",
+            "135,0, true,false",
+            "180,0, true,false",
+            "30,-30, true,true",
+            "-30,-30, true,true",
+            "45,-30, true,true",
+            "-45,-30, true,true",
+            "60,-30, true,true",
+            "-60,-30, true,true",
+            "90,-30, true,true",
+            "-90,-30, true,true",
+    })
+    void moveTest(int moveDeg, int speed, boolean canMoveForward, boolean canMoveBackward) {
+        // Given the robot simulator in a map with 3 obstacles at 1 m from the origin
+        Point2D robotLocation = new Point2D.Double();
+        Complex robotDirection = Complex.DEG0;
+        Complex sensorDirection = Complex.DEG90;
+        SimRobot robot = createRobot(robotLocation, robotDirection, sensorDirection,
+                -0.2, 1,
+                0, 1,
+                0.2, 1
+        );
+        robot.halt();
+        robot.tick(300);
+        // And moving the robot forward till the obstacle contact
+        while (robot.canMoveForward()) {
+            robot.move(Complex.DEG0, MAX_PPS);
+            robot.tick(30);
+        }
+        assertFalse(robot.canMoveForward());
+
+        // Then the robot should stop at 0.703 m from the origin
+        assertThat(robot.location(), pointCloseTo(0, 0.750, DISTANCE_EPSILON));
+
+        // When turning the robot to 45 DEG back
+        Complex moveDirection = Complex.fromDeg(moveDeg);
+        for (int i = 0; i < MOVE_INTERATIONS * 10; i++) {
+            robot.move(moveDirection, speed);
+            robot.tick(30);
+        }
+        Complex direction = robot.direction();
+        assertThat(direction, angleCloseTo(moveDirection, 1));
+        assertEquals(canMoveForward, robot.canMoveForward());
+        assertEquals(canMoveBackward, robot.canMoveBackward());
     }
 
     /**
@@ -481,8 +537,7 @@ class SimRobotObstacleTest {
         assertTrue(robot.canMoveBackward());
 
         // When moving back
-        int speed = MAX_PPS;
-        robot.move(robotDir, -speed);
+        robot.move(robotDir, -MAX_PPS);
         long dt = 30;
         for (int i = 0; i < MOVE_INTERATIONS; i++) {
             robot.tick(dt);

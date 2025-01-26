@@ -31,6 +31,7 @@ package org.mmarini;
 import org.hamcrest.CustomMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
+import org.mmarini.wheelly.apis.Complex;
 
 import java.awt.geom.Point2D;
 import java.util.Optional;
@@ -102,6 +103,41 @@ public interface Matchers {
                 double distance = ((Point2D) o).distance(expected);
                 boolean matched = distance <= epsilon;
                 return matched;
+            }
+        };
+    }
+
+    static Matcher<Complex> angleCloseTo(Complex expected, double epsilon) {
+        return angleCloseTo(expected, Complex.fromDeg(epsilon));
+    }
+
+    static Matcher<Complex> angleCloseTo(Complex expected, Complex epsilon) {
+        requireNonNull(expected);
+        return new CustomMatcher<>(format("Angle close to %f DEG within +- %f DEG",
+                expected.toDeg(),
+                epsilon.toDeg())) {
+            @Override
+            public void describeMismatch(Object item, Description description) {
+                if (item instanceof Complex complex) {
+                    Complex da = complex.sub(expected).abs();
+                    description.appendText("angle ")
+                            .appendValue(complex.toDeg())
+                            .appendText(" DEG differs from ")
+                            .appendValue(expected.toDeg())
+                            .appendText(" DEG by ")
+                            .appendValue(da.toDeg())
+                            .appendText(" DEG (more then ")
+                            .appendValue(epsilon.toDeg())
+                            .appendText(")");
+                } else {
+                    super.describeMismatch(item, description);
+                }
+            }
+
+            @Override
+            public boolean matches(Object o) {
+                if (!(o instanceof Complex complex)) return false;
+                return complex.isCloseTo(expected, epsilon);
             }
         };
     }
