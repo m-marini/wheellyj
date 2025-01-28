@@ -473,6 +473,42 @@ public interface ReportProcess {
     }
 
     /**
+     * Returns the saturation of softmax input levels
+     *
+     * @param records the data records of input levels
+     */
+    static INDArray saturation(INDArray records) {
+        try (INDArray abs = Transforms.abs(records, true)) {
+            return abs.max(true, 1);
+        }
+    }
+
+    /**
+     * Returns the saturation report builder
+     *
+     * @param reportKey the report key
+     */
+    static Builder saturationReport(String reportKey) {
+        return new Builder() {
+
+            @Override
+            public CompositeReportProcess build(File path, File reportPath, long batchSize) {
+                ArrayReader reader = BinArrayFile.createByKey(path, reportKey).map(ReportProcess::saturation);
+                return new CompositeReportProcess(reportKey + ".saturation", reader, meanAggregator(), reportPath, batchSize);
+            }
+
+            @Override
+            public boolean canCreate(File path) {
+                try (BinArrayFile file = BinArrayFile.createByKey(path, reportKey)) {
+                    return file.file().canRead();
+                } catch (IOException e) {
+                    return false;
+                }
+            }
+        };
+    }
+
+    /**
      * Returns the mean value report of dataset
      *
      * @param reportKey the key

@@ -2,7 +2,7 @@
 $schema: https://mmarini.org/wheelly/batch-schema-0.3
 robot: conf/robots/simRobot.yml
 controller: conf/controllers/controller.yml
-environment: conf/environments/polarMapEnv.yml
-agent: conf/agents/polarRadarAgent.yml
+environment: conf/environments/fullMapEnv.yml
+agent: conf/agents/fullRadarAgent.yml
 seed: 1234
 numEpochs: 4
