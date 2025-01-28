@@ -29,8 +29,6 @@
 package org.mmarini.wheelly.swing;
 
 import io.reactivex.rxjava3.functions.Consumer;
-import org.mmarini.MapStream;
-import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apps.MeanValue;
 import org.mmarini.wheelly.apps.RMSValue;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -39,11 +37,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
-import java.util.stream.Stream;
 
 /**
  * Shows the kpis average values
@@ -55,15 +51,61 @@ public class KpisPanel extends MatrixTable {
     private final RMSValue criticRms;
     private final MeanValue advantageMean;
     private final RMSValue deltaRms;
-    private Map<String, Consumer<INDArray>> handlers;
-    private Consumer<Map<String, INDArray>> deltaActionHandler;
+    private final List<Consumer<Map<String, INDArray>>> handlers;
+
 
     public KpisPanel() {
-        this.handlers = Map.of();
+        this.handlers = new ArrayList<>();
         this.criticRms = RMSValue.zeros();
         this.advantageMean = MeanValue.zeros();
         this.deltaRms = RMSValue.zeros();
+        // Creates the default columns
+        addColumn("avgReward", Messages.getString("KpisPanel.avgReward.label"), 10)
+                .setScrollOnChange(true)
+                .setPrintTimestamp(false);
+        addColumn("deltaAdv", Messages.getString("KpisPanel.deltaAdv.label"), 10)
+                .setScrollOnChange(true)
+                .setPrintTimestamp(false);
+        addColumn("critic.delta", Messages.getString("KpisPanel.critic.label"), 10)
+                .setScrollOnChange(true)
+                .setPrintTimestamp(false);
+        // Creates the default handlers
+        handlers.add(this::handleDelta);
+        handlers.add(this::handleCritic);
+        handlers.add(this::handleAvgReward);
         setPrintTimestamp(false);
+    }
+
+    /**
+     * Add an action kpi
+     *
+     * @param outputKey the action key
+     * @param inputKey  the action input key
+     */
+    public void addActionKpi(String outputKey, String inputKey) {
+        addColumn(outputKey + ".delta",
+                Messages.getStringOpt("KpisPanel." + outputKey + ".delta.label").orElse(outputKey), 10)
+                .setScrollOnChange(true)
+                .setPrintTimestamp(false);
+        addColumn(outputKey + ".deltaAction",
+                Messages.getStringOpt("KpisPanel." + outputKey + ".deltaAction.label").orElse(outputKey), 10)
+                .setScrollOnChange(true)
+                .setPrintTimestamp(false);
+        addColumn(outputKey + ".prob",
+                Messages.getStringOpt("KpisPanel." + outputKey + ".prob.label").orElse(outputKey), 6)
+                .setScrollOnChange(true)
+                .setPrintTimestamp(false);
+        addColumn(inputKey + ".saturation",
+                Messages.getStringOpt("KpisPanel." + inputKey + ".saturation.label").orElse(outputKey), 10)
+                .setScrollOnChange(true)
+                .setPrintTimestamp(false);
+        addColumn(outputKey + ".probRatio",
+                Messages.getStringOpt("KpisPanel." + outputKey + ".probRatio.label").orElse(outputKey), 7)
+                .setScrollOnChange(true)
+                .setPrintTimestamp(false);
+        handlers.add(createSaturationHandler(inputKey));
+        handlers.add(createDeltaActionHandler(outputKey));
+        handlers.add(createActionKpiHandler(outputKey));
     }
 
     /**
@@ -72,26 +114,47 @@ public class KpisPanel extends MatrixTable {
      * @param kpis the kpis
      */
     public void addKpis(Map<String, INDArray> kpis) {
-        MapStream.of(handlers)
-                .forEach((key, value) -> {
-                    INDArray kpi = kpis.get(key);
-                    if (kpi != null) {
-                        try {
-                            value.accept(kpi);
-                        } catch (Throwable e) {
-                            logger.atError().setCause(e).log("Error adding kpis");
-                            throw new RuntimeException(e);
-                        }
-                    }
-                });
-        if (deltaActionHandler != null) {
+        for (Consumer<Map<String, INDArray>> mapConsumer : handlers) {
             try {
-                deltaActionHandler.accept(kpis);
+                mapConsumer.accept(kpis);
             } catch (Throwable e) {
                 throw new RuntimeException(e);
             }
         }
-        handleDelta(kpis);
+    }
+
+    /**
+     * Returns the handlers of kpi for an action
+     *
+     * @param key the action key
+     */
+    private Consumer<Map<String, INDArray>> createActionKpiHandler(String key) {
+        RMSValue delta = RMSValue.zeros();
+        MeanValue prob = MeanValue.zeros();
+        MeanValue probRatio = MeanValue.zeros();
+        return kpis -> {
+            INDArray deltaGrads = kpis.get("deltaGrads." + key);
+            if (deltaGrads != null) {
+                try (INDArray max = Transforms.abs(deltaGrads).max(true, 1)) {
+                    printf(key + ".delta", "%,10.0f", delta.add(max).value() * PPM);
+                }
+            }
+            INDArray data = kpis.get("trainingLayers." + key + ".values");
+            if (data != null) {
+                // shows the max of actin probabilities
+                // and the ratio of max of action probabilities over the probabilities geometric mean value
+                try (INDArray max = data.max(true, 1)) {
+                    try (INDArray log = Transforms.log(data)) {
+                        try (INDArray gm = Transforms.exp(log.mean(true, 1), false)) {
+                            try (INDArray ratio = max.div(gm)) {
+                                printf(key + ".prob", "%,6.1f", prob.add(max).value() * 100);
+                                printf(key + ".probRatio", "%,7.2f", probRatio.add(ratio).value());
+                            }
+                        }
+                    }
+                }
+            }
+        };
     }
 
     /**
@@ -129,56 +192,46 @@ public class KpisPanel extends MatrixTable {
     }
 
     /**
-     * Returns the handlers of kpi for an action
+     * Returns the saturation of input layer
      *
-     * @param key the action key
+     * @param inputKey the input layer key
      */
-    private Stream<Tuple2<String, Consumer<INDArray>>> createHandler(String key) {
-        RMSValue delta = RMSValue.zeros();
-        MeanValue prob = MeanValue.zeros();
-        MeanValue probRatio = MeanValue.zeros();
-        return Stream.of(
-                Tuple2.of(
-                        "deltaGrads." + key, data -> {
-                            // Shows the correction error for the action (delta eta alpha grad)
-                            try (INDArray max = Transforms.abs(data).max(true, 1)) {
-                                printf(key + ".delta", "%,10.0f", delta.add(max).value() * PPM);
-                            }
-                        }),
-                Tuple2.of(
-                        "trainingLayers." + key + ".values", data -> {
-                            // shows the max of actin probabilities
-                            // and the ratio of max of action probabilities over the probabilities geometric mean value
-                            try (INDArray max = data.max(true, 1)) {
-                                try (INDArray log = Transforms.log(data)) {
-                                    try (INDArray gm = Transforms.exp(log.mean(true, 1), false)) {
-                                        try (INDArray ratio = max.div(gm)) {
-                                            printf(key + ".prob", "%,6.1f", prob.add(max).value() * 100);
-                                            printf(key + ".probRatio", "%,7.2f", probRatio.add(ratio).value());
-                                        }
-                                    }
-                                }
-                            }
-                        })
-        );
+    private Consumer<Map<String, INDArray>> createSaturationHandler(String inputKey) {
+        MeanValue saturation = MeanValue.zeros();
+        return kpis -> {
+            INDArray data = kpis.get("trainingLayers." + inputKey + ".values");
+            if (data != null) {
+                try (INDArray abs = Transforms.abs(data, true)) {
+                    try (INDArray sat = abs.max(true, 1)) {
+                        printf(inputKey + ".saturation", "%,7.0f", saturation.add(sat).value() * 100);
+                    }
+                }
+            }
+        };
     }
 
     /**
      * Shows average reward
      *
-     * @param avgReward the average reward
+     * @param kpis the kpis
      */
-    private void handleAvgReward(INDArray avgReward) {
-        printf("avgReward", "%,10.0f", advantageMean.add(avgReward).value() * PPM);
+    private void handleAvgReward(Map<String, INDArray> kpis) {
+        INDArray avgReward = kpis.get("avgReward");
+        if (avgReward != null) {
+            printf("avgReward", "%,10.0f", advantageMean.add(avgReward).value() * PPM);
+        }
     }
 
     /**
      * Shows critic error (delta eta grad)
      *
-     * @param delta the critic delta
+     * @param kpis the kpis
      */
-    private void handleCritic(INDArray delta) {
-        printf("critic.delta", "%,10.0f", criticRms.add(delta).value() * PPG);
+    private void handleCritic(Map<String, INDArray> kpis) {
+        INDArray delta = kpis.get("deltaGrads.critic");
+        if (delta != null) {
+            printf("critic.delta", "%,10.0f", criticRms.add(delta).value() * PPG);
+        }
     }
 
     /**
@@ -191,68 +244,5 @@ public class KpisPanel extends MatrixTable {
         if (delta != null) {
             printf("deltaAdv", "%,10.3f", deltaRms.add(delta).value());
         }
-    }
-
-    /**
-     * Sets the keys shown
-     *
-     * @param keys the keys
-     */
-    public void setKeys(String... keys) {
-        // Creates the handlers
-        MapStream<String, Consumer<INDArray>> stream1 = MapStream.of(
-                Map.of("deltaGrads.critic", this::handleCritic,
-                        "avgReward", this::handleAvgReward));
-        MapStream<String, Consumer<INDArray>> stream2 = MapStream.fromTuple2Stream(Arrays.stream(keys).flatMap(this::createHandler));
-        handlers = MapStream.concat(
-                        stream1,
-                        stream2)
-                .toMap();
-
-        addColumn("avgReward", Messages.getString("KpisPanel.avgReward.label"), 10)
-                .setScrollOnChange(true)
-                .setPrintTimestamp(false);
-        addColumn("deltaAdv", Messages.getString("KpisPanel.deltaAdv.label"), 10)
-                .setScrollOnChange(true)
-                .setPrintTimestamp(false);
-        addColumn("critic.delta", Messages.getString("KpisPanel.critic.label"), 10)
-                .setScrollOnChange(true)
-                .setPrintTimestamp(false);
-        List<String> colKeys = Arrays.stream(keys)
-                .filter(Predicate.not("critic"::equals))
-                .sorted()
-                .toList();
-
-        colKeys.forEach(key ->
-                addColumn(key + ".delta",
-                        Messages.getStringOpt("KpisPanel." + key + ".delta.label").orElse(key), 10)
-                        .setScrollOnChange(true)
-                        .setPrintTimestamp(false)
-        );
-        colKeys.forEach(key ->
-                addColumn(key + ".prob",
-                        Messages.getStringOpt("KpisPanel." + key + ".prob.label").orElse(key), 6)
-                        .setScrollOnChange(true)
-                        .setPrintTimestamp(false)
-        );
-        colKeys.forEach(key ->
-                addColumn(key + ".probRatio",
-                        Messages.getStringOpt("KpisPanel." + key + ".probRatio.label").orElse(key), 7)
-                        .setScrollOnChange(true)
-                        .setPrintTimestamp(false)
-        );
-        colKeys.forEach(key ->
-                addColumn(key + ".deltaAction",
-                        Messages.getStringOpt("KpisPanel." + key + ".deltaAction.label").orElse(key), 10)
-                        .setScrollOnChange(true)
-                        .setPrintTimestamp(false)
-        );
-        this.deltaActionHandler = colKeys.stream()
-                .map(this::createDeltaActionHandler)
-                .reduce((a, b) -> kpis -> {
-                    a.accept(kpis);
-                    b.accept(kpis);
-                })
-                .orElse(null);
     }
 }

@@ -41,6 +41,8 @@ import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.KpiBinWriter;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.Signal;
+import org.mmarini.rl.nets.TDLayer;
+import org.mmarini.rl.nets.TDSoftmax;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.GridMap;
@@ -287,7 +289,18 @@ public class Wheelly {
      */
     private void createPanels() {
         Agent agent = this.trainer.get().agent();
-        kpisPanel.setKeys(agent.getActions().keySet().toArray(String[]::new));
+        if (agent instanceof AbstractAgentNN aa) {
+            Map<String, TDLayer> layers = aa.network().layers();
+            agent.getActions().keySet().stream()
+                    .sorted()
+                    .forEach(
+                            key -> {
+                                if (layers.get(key) instanceof TDSoftmax outLayer) {
+                                    kpisPanel.addActionKpi(key, outLayer.inputs()[0]);
+                                }
+                            }
+                    );
+        }
         learnPanel.setEta(agent.eta());
         learnPanel.setActionAlphas(agent.alphas());
         if (environment instanceof PolarRobotEnv env) {

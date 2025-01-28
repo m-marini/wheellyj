@@ -38,6 +38,8 @@ import org.mmarini.rl.agents.AbstractAgentNN;
 import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.BatchTrainer;
 import org.mmarini.rl.agents.KpiBinWriter;
+import org.mmarini.rl.nets.TDLayer;
+import org.mmarini.rl.nets.TDSoftmax;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.wheelly.envs.RobotEnvironment;
 import org.mmarini.wheelly.swing.KpisPanel;
@@ -53,6 +55,7 @@ import org.slf4j.LoggerFactory;
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
@@ -154,7 +157,14 @@ public class BatchTraining {
     private Component createContent(String... actions) {
         JPanel content = new JPanel();
         content.setLayout(new BorderLayout());
-        kpisPanel.setKeys(actions);
+        if (this.agent instanceof AbstractAgentNN aa) {
+            Map<String, TDLayer> layers = aa.network().layers();
+            Arrays.stream(actions).sorted().forEach(key -> {
+                if (layers.containsKey(key) && layers.get(key) instanceof TDSoftmax outLayer) {
+                    kpisPanel.addActionKpi(key, outLayer.inputs()[0]);
+                }
+            });
+        }
         content.add(kpisPanel, BorderLayout.CENTER);
         content.add(infoBar, BorderLayout.NORTH);
         content.add(recordBar, BorderLayout.SOUTH);
