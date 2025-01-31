@@ -6,10 +6,10 @@ ppoEpsilon: 0.2
 numSteps: 256
 numEpochs: 5
 batchSize: 32
-eta: 3e-6
+eta: 10e-9
 alphas:
-  move: 100
-  sensorAction: 100
+  sensorAction: 0.1
+  move: 0.1
 lambda: 0.5
 inputProcess:
   - name: canMoveFeatures

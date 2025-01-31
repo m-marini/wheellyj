@@ -30,10 +30,7 @@ package org.mmarini.wheelly.apps;
 
 import io.reactivex.rxjava3.functions.BiFunction;
 import io.reactivex.rxjava3.functions.Function;
-import org.mmarini.rl.agents.ArrayReader;
-import org.mmarini.rl.agents.BinArrayFile;
-import org.mmarini.rl.agents.CSVWriter;
-import org.mmarini.rl.agents.KeyFileMap;
+import org.mmarini.rl.agents.*;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
@@ -186,19 +183,6 @@ public interface ReportProcess {
     }
 
     /**
-     * Returns the geometric mean
-     *
-     * @param records the records
-     */
-    static INDArray gm(INDArray records) {
-        try (INDArray dataLog = Transforms.log(records)) {
-            try (INDArray meanLog = dataLog.mean(true, 1)) {
-                return Transforms.exp(meanLog);
-            }
-        }
-    }
-
-    /**
      * Returns the geometric mean report builder
      *
      * @param reportKey the report key
@@ -208,7 +192,7 @@ public interface ReportProcess {
 
             @Override
             public CompositeReportProcess build(File path, File reportPath, long batchSize) {
-                ArrayReader reader = BinArrayFile.createByKey(path, reportKey).map(ReportProcess::gm);
+                ArrayReader reader = BinArrayFile.createByKey(path, reportKey).map(Kpis::geometricMean);
                 return new CompositeReportProcess(reportKey + ".gm", reader, meanAggregator(), reportPath, batchSize);
             }
 
@@ -233,7 +217,7 @@ public interface ReportProcess {
 
             @Override
             public CompositeReportProcess build(File path, File reportPath, long batchSize) {
-                ArrayReader maxReader = BinArrayFile.createByKey(path, reportKey).map(ReportProcess::maxGmRatio);
+                ArrayReader maxReader = BinArrayFile.createByKey(path, reportKey).map(Kpis::maxGeometricMeanRatio);
                 return new CompositeReportProcess(reportKey + ".maxGMRatio", maxReader, meanAggregator(), reportPath, batchSize);
             }
 
@@ -249,34 +233,6 @@ public interface ReportProcess {
     }
 
     /**
-     * Returns the max/min ratio
-     *
-     * @param records the records
-     */
-    static INDArray maxGmRatio(INDArray records) {
-        INDArray max = records.max(true, 1);
-        try (INDArray dataLog = Transforms.log(records)) {
-            try (INDArray meanLog = dataLog.mean(true, 1)) {
-                try (INDArray geoMean = Transforms.exp(meanLog)) {
-                    return max.divi(geoMean);
-                }
-            }
-        }
-    }
-
-    /**
-     * Returns the max/min ratio
-     *
-     * @param records the records
-     */
-    static INDArray maxMinRatio(INDArray records) {
-        INDArray max = records.max(true, 1);
-        try (INDArray min = records.min(true, 1)) {
-            return max.divi(min);
-        }
-    }
-
-    /**
      * Returns the max value mean report builder
      *
      * @param reportKey the report key
@@ -286,7 +242,7 @@ public interface ReportProcess {
 
             @Override
             public CompositeReportProcess build(File path, File reportPath, long batchSize) {
-                ArrayReader maxReader = BinArrayFile.createByKey(path, reportKey).map(ReportProcess::maxMinRatio);
+                ArrayReader maxReader = BinArrayFile.createByKey(path, reportKey).map(Kpis::maxMinRatio);
                 return new CompositeReportProcess(reportKey + ".maxMinRatio", maxReader, meanAggregator(), reportPath, batchSize);
             }
 
@@ -473,17 +429,6 @@ public interface ReportProcess {
     }
 
     /**
-     * Returns the saturation of softmax input levels
-     *
-     * @param records the data records of input levels
-     */
-    static INDArray saturation(INDArray records) {
-        try (INDArray abs = Transforms.abs(records, true)) {
-            return abs.max(true, 1);
-        }
-    }
-
-    /**
      * Returns the saturation report builder
      *
      * @param reportKey the report key
@@ -493,7 +438,7 @@ public interface ReportProcess {
 
             @Override
             public CompositeReportProcess build(File path, File reportPath, long batchSize) {
-                ArrayReader reader = BinArrayFile.createByKey(path, reportKey).map(ReportProcess::saturation);
+                ArrayReader reader = BinArrayFile.createByKey(path, reportKey).map(Kpis::rms);
                 return new CompositeReportProcess(reportKey + ".saturation", reader, meanAggregator(), reportPath, batchSize);
             }
 
