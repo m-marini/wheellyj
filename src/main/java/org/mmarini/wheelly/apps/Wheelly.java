@@ -41,8 +41,6 @@ import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.KpiBinWriter;
 import org.mmarini.rl.envs.Environment;
 import org.mmarini.rl.envs.Signal;
-import org.mmarini.rl.nets.TDLayer;
-import org.mmarini.rl.nets.TDSoftmax;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.GridMap;
@@ -141,9 +139,9 @@ public class Wheelly {
     }
 
     protected final EnvironmentPanel envPanel;
-    private final MeanValue avgRewards;
-    private final MeanValue reactionRobotTime;
-    private final MeanValue reactionRealTime;
+    private final ReducedValue avgRewards;
+    private final ReducedValue reactionRobotTime;
+    private final ReducedValue reactionRealTime;
     private final ComMonitor comMonitor;
     private final SensorMonitor sensorMonitor;
     private final KpisPanel kpisPanel;
@@ -182,9 +180,9 @@ public class Wheelly {
         this.learnPanel = new LearnPanel();
         this.sensorMonitor = new SensorMonitor();
         this.robotStartTimestamp = -1;
-        this.avgRewards = MeanValue.zeros();
-        this.reactionRobotTime = MeanValue.zeros();
-        this.reactionRealTime = MeanValue.zeros();
+        this.avgRewards = ReducedValue.mean();
+        this.reactionRobotTime = ReducedValue.mean();
+        this.reactionRealTime = ReducedValue.mean();
         this.prevRobotStep = -1;
         this.prevStep = -1;
         this.completion = CompletableSubject.create();
@@ -289,18 +287,7 @@ public class Wheelly {
      */
     private void createPanels() {
         Agent agent = this.trainer.get().agent();
-        if (agent instanceof AbstractAgentNN aa) {
-            Map<String, TDLayer> layers = aa.network().layers();
-            agent.getActions().keySet().stream()
-                    .sorted()
-                    .forEach(
-                            key -> {
-                                if (layers.get(key) instanceof TDSoftmax outLayer) {
-                                    kpisPanel.addActionKpi(key, outLayer.inputs()[0]);
-                                }
-                            }
-                    );
-        }
+        kpisPanel.addActionKpis(agent);
         learnPanel.setEta(agent.eta());
         learnPanel.setActionAlphas(agent.alphas());
         if (environment instanceof PolarRobotEnv env) {

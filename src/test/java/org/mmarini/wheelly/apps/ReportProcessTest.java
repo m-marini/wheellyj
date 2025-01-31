@@ -100,26 +100,6 @@ class ReportProcessTest {
     }
 
     @Test
-    void maxGmRatioTest() {
-        // Given a dataset
-        // And a dataset
-        INDArray data = Nd4j.createFromArray(
-                0.1f, 0.2f, 0.5f, 0.2f,
-                0.1f, 0.6f, 0.2f, 0.1f
-        ).reshape(2, 4);
-
-        // When reset compute maxMinRatio
-        INDArray ratio = ReportProcess.maxGmRatio(data);
-
-        float mean0 = (float) Math.sqrt(Math.sqrt(0.1f * 0.2f * 0.5f * 0.2f));
-        float mean1 = (float) Math.sqrt(Math.sqrt(0.1f * 0.6f * 0.2f * 0.1f));
-        assertThat(ratio, matrixCloseTo(new long[]{2, 1}, 1e-6,
-                0.5f / mean0,
-                0.6f / mean1
-        ));
-    }
-
-    @Test
     void maxMinRatioReportTest() throws Throwable {
         // Given a random dataset
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(SEED);
@@ -149,24 +129,6 @@ class ReportProcessTest {
                 Transforms.log(ratio).meanNumber().floatValue()
         ).reshape(1, 6);
         assertThat(stats, matrixCloseTo(expected, 1e-5));
-    }
-
-    @Test
-    void maxMinRatioTest() {
-        // Given a dataset
-        // And a dataset
-        INDArray data = Nd4j.createFromArray(
-                0.1f, 0.2f, 0.5f, 0.2f,
-                0.1f, 0.6f, 0.2f, 0.1f
-        ).reshape(2, 4);
-
-        // When reset compute maxMinRatio
-        INDArray ratio = ReportProcess.maxMinRatio(data);
-
-        assertThat(ratio, matrixCloseTo(new long[]{2, 1}, 1e-6,
-                0.5f / 0.1f,
-                0.6f / 0.1f
-        ));
     }
 
     @Test
