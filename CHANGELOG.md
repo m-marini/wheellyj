@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#506](https://github.com/m-marini/wheellyj/issues/506): Add move to goal
 - Issue [#512](https://github.com/m-marini/wheellyj/issues/512): Add saturation output level
 - Issue [#514](https://github.com/m-marini/wheellyj/issues/514): Add critic kpi monitoring
+- Issue [#516](https://github.com/m-marini/wheellyj/issues/516): Add direction and speed probability in report
 
 ### Fixed
 
