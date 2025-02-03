@@ -14,7 +14,7 @@ function generateMeansReport(hFile, dataPath, reportPath, id, kpiTitle, mode)
     fprintf(hFile, "| Action | Probability |\n");
     fprintf(hFile, "|-------:|------------:|\n");
     for i = 1 : size(stats, 2)
-      fprintf(hFile, "| %6d | %11.3G |\n", i - 1, stats(i));
+      fprintf(hFile, "| %6d | %11s |\n", i - 1, strFloat(stats(i)));
     endfor
 
     fprintf(hFile, "\n");

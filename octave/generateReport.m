@@ -27,9 +27,8 @@ function generateReport(dataPath, reportPath)
   test = 0;
 
   if test
-    generateMoveProbReport(hFile, [dataPath "/trainingLayers/move/values/mean"], reportPath);
-  else
     generateKpiReport(hFile, [dataPath "/reward"], reportPath, "reward", "Reward", 0, mode);
+  else
     generateKpiReport(hFile, [dataPath "/avgReward"], reportPath, "avgReward", "Average reward", 0, mode);
     generateKpiReport(hFile, [dataPath "/dr"], reportPath, "dr", "Differential reward", 0, mode);
     generateKpiReport(hFile, [dataPath "/dv"], reportPath, "dv", "Differential prediction", 0, mode);
