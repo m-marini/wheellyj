@@ -36,11 +36,11 @@ function generateMoveProbReport(hFile, dataPath, reportPath)
     fprintf(hFile, "| Action | Dir (DEG)| Speed (PPS) |  Probability |\n");
     fprintf(hFile, "|-------:|---------:|------------:|------------:|\n");
     for i = 1 : size(stats, 2)
-      fprintf(hFile, "| %6d | %6d | %6d | %11.3G |\n",
+      fprintf(hFile, "| %6d | %6d | %6d | %11s |\n",
       i - 1,
       dirAngle(floor((i - 1) / numSpeed) + 1),
       speedValue(mod((i - 1), numSpeed) + 1),
-      stats(i));
+      strFloat(stats(i)));
     endfor
 
     fprintf(hFile, "\n");
@@ -74,7 +74,7 @@ function generateMoveProbReport(hFile, dataPath, reportPath)
     fprintf(hFile, "| Dir (DEG) | Probability |\n");
     fprintf(hFile, "|----------:|------------:|\n");
     for i = 1 : numDir
-      fprintf(hFile, "| %6d | %11.3G |\n", dirAngle(i), dirProb(i));
+      fprintf(hFile, "| %6d | %11s |\n", dirAngle(i), strFloat(dirProb(i)));
     endfor
 
     fprintf(hFile, "\n");
@@ -107,7 +107,7 @@ function generateMoveProbReport(hFile, dataPath, reportPath)
     fprintf(hFile, "| Speed (PPS) | Probability |\n");
     fprintf(hFile, "|-------:|------------:|\n");
     for i = 1 : numSpeed
-      fprintf(hFile, "| %6d | %11.3G |\n", speedValue(i), speedProb(i));
+      fprintf(hFile, "| %6d | %11s |\n", speedValue(i), strFloat(speedProb(i)));
     endfor
 
     fprintf(hFile, "\n");
