@@ -462,7 +462,7 @@ public class SimRobot implements RobotApi {
      * Checks for stalemate and relocate the roboto in caso of stalemate timeout
      */
     private void handleStalemate() {
-        if (canMoveBackward() || canMoveBackward()) {
+        if (frontSensor() || rearSensor()) {
             // no stalemate
             this.stalemate = false;
         } else if (!stalemate) {
