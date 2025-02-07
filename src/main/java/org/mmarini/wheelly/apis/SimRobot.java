@@ -82,7 +82,6 @@ public class SimRobot implements RobotApi {
     private static final double MAX_TORQUE = 0.7 * JBOX_SCALE * JBOX_SCALE;
     private static final Logger logger = LoggerFactory.getLogger(SimRobot.class);
     private static final float ROBOT_RADIUS = 0.15f;
-    private static final double DEG89_5_EPSILON = sin(toDegrees(89.5));
     private static final double ROBOT_DENSITY = ROBOT_MASS / (ROBOT_RADIUS * ROBOT_RADIUS * PI * JBOX_SCALE * JBOX_SCALE);
     private static final int DEFAULT_SENSOR_RECEPTIVE_ANGLE = 15;
 
@@ -289,7 +288,7 @@ public class SimRobot implements RobotApi {
                 x / JBOX_SCALE / n,
                 y / JBOX_SCALE / n);
         Complex collisionDirection = Complex.direction(location(), collisionLocation);
-        // Compute collision direction relative to the robot direction
+        // Compute the collision direction relative to the robot direction
         return collisionDirection.sub(direction());
     }
 
@@ -309,6 +308,16 @@ public class SimRobot implements RobotApi {
         // Relative left-right motor speeds
         leftPps = Utils.clip((linearVelocityPps - angularVelocityPps), -MAX_PPS, MAX_PPS);
         rightPps = Utils.clip((linearVelocityPps + angularVelocityPps), -MAX_PPS, MAX_PPS);
+
+        // Check for block
+        if ((leftPps < 0 && !canMoveBackward())
+                || (leftPps > 0 && !canMoveForward())) {
+            leftPps = 0;
+        }
+        if ((rightPps < 0 && !canMoveBackward())
+                && (rightPps > 0 && !canMoveForward())) {
+            rightPps = 0;
+        }
 
         // Real left-right motor speeds
         double left = leftPps * DISTANCE_PER_PULSE;
@@ -424,13 +433,13 @@ public class SimRobot implements RobotApi {
                         : null;
                 if (fixture != null) {
                     Complex collisionDir = contactRelativeDirection(contact);
-                    if (collisionDir.isFront(DEG89_5_EPSILON)) {
-                        // contact at +-89.5 DEG from the front
+                    if (collisionDir.y() >= 0) {
+                        // front contact
                         frontSensor = false;
                         halt();
                     }
-                    if (collisionDir.isRear(DEG89_5_EPSILON)) {
-                        // contact at +-89.5 DEG from the rear
+                    if (collisionDir.y() <= 0) {
+                        // rear contact
                         rearSensor = false;
                         halt();
                     }
@@ -438,6 +447,11 @@ public class SimRobot implements RobotApi {
             }
             contact = contact.getNext();
         }
+    }
+
+    @Override
+    public boolean isHalt() {
+        return speed == 0;
     }
 
     /**
@@ -693,7 +707,7 @@ public class SimRobot implements RobotApi {
         if (nearestCell != null) {
             // Computes the distance of obstacles
             Point2D obs = nearestCell.location();
-            double dist = obs.distance(position) - obstacleMap.gridSize() / 2-
+            double dist = obs.distance(position) - obstacleMap.gridSize() / 2
                     + random.nextGaussian() * errSensor;
             echoDistance = dist > 0 && dist < MAX_DISTANCE ? dist : 0;
         }

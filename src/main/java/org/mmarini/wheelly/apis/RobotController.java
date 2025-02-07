@@ -149,23 +149,23 @@ public class RobotController implements RobotControllerApi {
     }
 
     private final long commandInterval;
-    private final PublishProcessor<RobotCommands> commandsProcessor;
     private final long connectionRetryInterval;
+    private final long interval;
+    private final long reactionInterval;
+    private final long watchdogInterval;
+    private final double simSpeed;
+    private final RobotApi robot;
+    private final PublishProcessor<RobotCommands> commandsProcessor;
     private final PublishProcessor<RobotStatus> contactsProcessor;
     private final PublishProcessor<String> controllerStatusProcessor;
     private final PublishProcessor<Throwable> errorsProcessor;
     private final PublishProcessor<RobotStatus> inferencesProcessor;
-    private final long interval;
     private final PublishProcessor<RobotStatus> motionProcessor;
     private final PublishProcessor<RobotStatus> proxyProcessor;
-    private final long reactionInterval;
     private final PublishProcessor<String> readLinesProcessor;
-    private final RobotApi robot;
     private final CompletableSubject shutdownCompletable;
-    private final double simSpeed;
     private final Flowable<RobotStatus> statusFlow;
     private final PublishProcessor<RobotStatus> supplyProcessor;
-    private final long watchdogInterval;
     private final PublishProcessor<String> writeLinesProcessor;
     private final PublishProcessor<RobotStatus> cameraProcessor;
     private boolean close;
@@ -175,10 +175,12 @@ public class RobotController implements RobotControllerApi {
     private boolean isReady;
     private boolean isStarted;
     private long lastInference;
-    private RobotCommands lastMoveCommand;
     private long lastRobotMoveTimestamp;
     private long lastSensorMoveTimestamp;
     private long lastTick;
+    private double simRealSpeed;
+    private boolean isRunningStatus;
+    private RobotCommands lastMoveCommand;
     private RobotCommands moveCommand;
     private Consumer<RobotStatus> onInference;
     private Consumer<RobotStatus> onLatch;
@@ -186,8 +188,6 @@ public class RobotController implements RobotControllerApi {
     private RobotStatus robotStatus;
     private Complex sensorDir;
     private Runnable statusTransition;
-    private double simRealSpeed;
-    private boolean isRunningStatus;
 
     /**
      * Creates the robot controller
@@ -353,7 +353,7 @@ public class RobotController implements RobotControllerApi {
                 if (cmd != null) {
                     // Checks for move command required
                     if (!cmd.equals(lastMoveCommand)
-                            || !cmd.halt() && time >= lastRobotMoveTimestamp + commandInterval) {
+                            || !cmd.halt() && (time >= lastRobotMoveTimestamp + commandInterval) || robot.isHalt()) {
                         if (cmd.halt()) {
                             robot.halt();
                         } else {

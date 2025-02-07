@@ -82,6 +82,11 @@ public interface RobotApi extends Closeable, WithStatusCallback, WithCameraCallb
     void halt() throws IOException;
 
     /**
+     * Returns true if the robot is halted
+     */
+    boolean isHalt();
+
+    /**
      * Moves robot to direction at speed
      *
      * @param dir   the direction

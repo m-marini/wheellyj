@@ -50,7 +50,6 @@ class NotProcessorTest {
             - name: out
               class: org.mmarini.rl.processors.NotProcessor
               input: in
-            
             """;
 
     @Test

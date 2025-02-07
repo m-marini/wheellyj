@@ -38,7 +38,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * The grid map keeps the status of the squared area round a center point.
  *
- * @param topology   the grid topology
+ * @param topology  the grid topology
  * @param cells     the cells
  * @param center    the map center in world coordinate
  * @param direction the map direction in world compass
@@ -77,7 +77,7 @@ public record GridMap(GridTopology topology, MapCell[] cells, Point2D center, Co
     /**
      * Creates the grid map
      *
-     * @param topology   the grid topology
+     * @param topology  the grid topology
      * @param cells     the cells
      * @param center    the map center in world coordinate (m)
      * @param direction the map direction in world compass

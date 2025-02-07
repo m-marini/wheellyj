@@ -147,7 +147,6 @@ public class BatchTraining {
 
     /**
      * Returns the content
-     *
      */
     private Component createContent() {
         JPanel content = new JPanel();

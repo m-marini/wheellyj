@@ -11,6 +11,14 @@ import java.util.function.UnaryOperator;
  */
 public interface ArrayReader extends AutoCloseable {
 
+    @Override
+    void close() throws IOException;
+
+    /**
+     * Returns the file
+     */
+    File file();
+
     /**
      * Returns the ArrayReader with mapped data
      *
@@ -21,11 +29,6 @@ public interface ArrayReader extends AutoCloseable {
             @Override
             public void close() throws IOException {
                 ArrayReader.this.close();
-            }
-
-            @Override
-            public long[] shape() throws IOException {
-                return ArrayReader.this.shape();
             }
 
             @Override
@@ -50,26 +53,16 @@ public interface ArrayReader extends AutoCloseable {
             }
 
             @Override
+            public long[] shape() throws IOException {
+                return ArrayReader.this.shape();
+            }
+
+            @Override
             public long size() throws IOException {
                 return ArrayReader.this.size();
             }
         };
     }
-
-    @Override
-    void close() throws IOException;
-
-    /**
-     * Returns the file
-     */
-    File file();
-
-    /**
-     * Returns the shape of data
-     *
-     * @throws IOException in case of error
-     */
-    long[] shape() throws IOException;
 
     /**
      * Returns the file position (# records)
@@ -93,6 +86,13 @@ public interface ArrayReader extends AutoCloseable {
      * @throws IOException in case of error
      */
     void seek(long record) throws IOException;
+
+    /**
+     * Returns the shape of data
+     *
+     * @throws IOException in case of error
+     */
+    long[] shape() throws IOException;
 
     /**
      * Returns the number of records
