@@ -36,7 +36,7 @@ import java.util.List;
 
 import static java.awt.Color.WHITE;
 import static java.lang.Math.*;
-import static org.mmarini.wheelly.swing.Utils.*;
+import static org.mmarini.wheelly.swing.Utils.GRID_SIZE;
 
 /**
  * The canvas with environment display

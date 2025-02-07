@@ -109,7 +109,7 @@ public interface Label {
                         })
                         // and any sector in sensor direction range with a labeled target in distance range
                         && robotStatus.sensorDirection().isCloseTo(Complex.DEG0, sensorRange)
-                ){
+                ) {
                     return reward;
                 }
 

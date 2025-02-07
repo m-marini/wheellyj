@@ -54,6 +54,8 @@ public record PolarRobotState(RobotStatus robotStatus, RadarMap radarMap,
                               GridMap gridMap, int gridSize, Map<String, SignalSpec> spec
 ) implements State, WithRobotStatus, WithPolarMap, WithRadarMap, WithGridMap {
     public static final int NUM_CELL_STATES = 5;
+    public static final int MIN_ROBOT_MAP_DIR = -45;
+    public static final int MAX_ROBOT_MAP_DIR = 45;
     private static final double MIN_DISTANCE = 0;
     private static final double MAX_DISTANCE = 10;
     private static final FloatSignalSpec DISTANCE_SPEC = new FloatSignalSpec(new long[]{1}, (float) MIN_DISTANCE, (float) MAX_DISTANCE);
@@ -62,8 +64,6 @@ public record PolarRobotState(RobotStatus robotStatus, RadarMap radarMap,
     private static final int MIN_SENSOR_DIR = -90;
     private static final int MAX_SENSOR_DIR = 90;
     private static final FloatSignalSpec SENSOR_SPEC = new FloatSignalSpec(new long[]{1}, MIN_SENSOR_DIR, MAX_SENSOR_DIR);
-    public static final int MIN_ROBOT_MAP_DIR = -45;
-    public static final int MAX_ROBOT_MAP_DIR = 45;
     private static final FloatSignalSpec ROBOT_MAP_DIR_SPEC = new FloatSignalSpec(new long[]{1}, MIN_ROBOT_MAP_DIR, MAX_ROBOT_MAP_DIR);
 
     public static PolarRobotState create(RobotStatus robotStatus, RadarMap radarMap,
@@ -176,20 +176,23 @@ public record PolarRobotState(RobotStatus robotStatus, RadarMap radarMap,
         INDArray distance = Nd4j.createFromArray((float) robotStatus.echoDistance());
         /*
          * can move state by sensor state
-         * | Value | Description                                |
-         * |-------|--------------------------------------------|
-         * |   0   | Cannot move anywhere with front contact    |
-         * |   1   | Can move backward with front contact       |
-         * |   2   | Can move forward with front contact        |
-         * |   3   | Can move anywhere                          |
-         * |   4   | Cannot move anywhere without front contact |
-         * |   5   | Can move backward without front contact    |
+         * | Value | Description                    |
+         * |-------|--------------------------------|
+         * |   0   | Blocked with front contact     |
+         * |   1   | Front obstacle with contact    |
+         * |   2   | Rear contact                   |
+         * |   3   | No contact                     |
+         * |   4   | Blocked without front contact  |
+         * |   5   | Front obstacle without contact |
          */
-        int canMoveCode = robotStatus.canMoveForward()
-                ? robotStatus.canMoveBackward() ? 3 : 2
-                : robotStatus.canMoveBackward() ?
-                robotStatus.frontSensor() ? 5 : 1
-                : robotStatus.frontSensor() ? 4 : 0;
+        int canMoveCode = robotStatus.canMoveForward() ?
+                // no front obstacle
+                (robotStatus.canMoveBackward() ? 3 : 2) :
+                robotStatus.canMoveBackward() ?
+                        // front obstacle no rear obstacle
+                        (robotStatus.frontSensor() ? 5 : 1) :
+                        // front obstacle rear obstacle
+                        (robotStatus.frontSensor() ? 4 : 0);
         INDArray canMoveStates = Nd4j.createFromArray(canMoveCode)
                 .castTo(DataType.FLOAT);
         double maxDistance = ((FloatSignalSpec) spec.get("sectorDistances")).maxValue();

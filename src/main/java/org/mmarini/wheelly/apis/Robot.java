@@ -147,6 +147,7 @@ public class Robot implements RobotApi, WithIOCallback {
     private Consumer<CameraEvent> onCamera;
     private ClockConverter clockConverter;
     private long simulationTime;
+    private boolean halted;
 
     /**
      * Create a Robot interface
@@ -162,6 +163,7 @@ public class Robot implements RobotApi, WithIOCallback {
         this.configureTimeout = configureTimeout;
         this.robotSocket = robotSocket;
         this.cameraSocket = cameraSocket;
+        this.halted = true;
     }
 
     @Override
@@ -238,6 +240,11 @@ public class Robot implements RobotApi, WithIOCallback {
     }
 
     @Override
+    public boolean isHalt() {
+        return halted;
+    }
+
+    @Override
     public void move(Complex dir, int speed) throws IOException {
         writeCommand(format(Locale.ENGLISH, "mv %d %d", dir.toIntDeg(), speed));
     }
@@ -264,24 +271,25 @@ public class Robot implements RobotApi, WithIOCallback {
     private void parseForWheellyMessage(Timed<String> line) {
         WheellyMessage.fromLine(line, clockConverter).ifPresent(msg -> {
             switch (msg) {
-                case WheellyMotionMessage ignored -> {
+                case WheellyMotionMessage motionMsg -> {
                     if (onMotion != null) {
-                        onMotion.accept((WheellyMotionMessage) msg);
+                        onMotion.accept(motionMsg);
                     }
+                    halted = motionMsg.halt();
                 }
-                case WheellyContactsMessage ignored -> {
+                case WheellyContactsMessage contactsMsg -> {
                     if (onContacts != null) {
-                        onContacts.accept((WheellyContactsMessage) msg);
+                        onContacts.accept(contactsMsg);
                     }
                 }
-                case WheellyProxyMessage ignored -> {
+                case WheellyProxyMessage proxyMsg -> {
                     if (onProxy != null) {
-                        onProxy.accept((WheellyProxyMessage) msg);
+                        onProxy.accept(proxyMsg);
                     }
                 }
-                case WheellySupplyMessage ignored -> {
+                case WheellySupplyMessage supplyMsg -> {
                     if (onSupply != null) {
-                        onSupply.accept((WheellySupplyMessage) msg);
+                        onSupply.accept(supplyMsg);
                     }
                 }
                 default -> {

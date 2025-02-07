@@ -42,71 +42,6 @@ import static org.hamcrest.Matchers.equalTo;
 
 public interface Matchers {
 
-    static <T> Matcher<Optional<T>> emptyOptional() {
-        return equalTo(Optional.empty());
-    }
-
-    static <T> Matcher<Optional<? extends T>> optionalOf(T exp) {
-        return optionalOf(equalTo(exp));
-    }
-
-    static <T> Matcher<Optional<? extends T>> optionalOf(Matcher<? extends T> exp) {
-        requireNonNull(exp);
-        return new CustomMatcher<>(format("Optional containing  %s",
-                exp)) {
-            @Override
-            public void describeMismatch(Object item, Description description) {
-                if (!(item instanceof Optional
-                        && ((Optional<T>) item).isPresent())) {
-                    super.describeMismatch(item, description);
-                } else {
-                    exp.describeMismatch(((Optional<T>) item).orElseThrow(), description);
-                }
-            }
-
-            @Override
-            public boolean matches(Object o) {
-                return o instanceof Optional
-                        && ((Optional<T>) o).isPresent()
-                        && exp.matches(((Optional<T>) o).orElseThrow());
-            }
-        };
-    }
-
-    static Matcher<Point2D> pointCloseTo(double x, double y, double epsilon) {
-        return pointCloseTo(new Point2D.Double(x, y), epsilon);
-    }
-
-    static Matcher<Point2D> pointCloseTo(Point2D expected, double epsilon) {
-        requireNonNull(expected);
-        return new CustomMatcher<>(format("Point close to %s within +- %f",
-                expected,
-                epsilon)) {
-            @Override
-            public void describeMismatch(Object item, Description description) {
-                if (item instanceof Point2D) {
-                    double distance = expected.distance((Point2D) item);
-                    description.appendText("distance between ")
-                            .appendValue(item)
-                            .appendText(" and ")
-                            .appendValue(expected)
-                            .appendText(" = ")
-                            .appendValue(distance);
-                } else {
-                    super.describeMismatch(item, description);
-                }
-            }
-
-            @Override
-            public boolean matches(Object o) {
-                if (!(o instanceof Point2D)) return false;
-                double distance = ((Point2D) o).distance(expected);
-                boolean matched = distance <= epsilon;
-                return matched;
-            }
-        };
-    }
-
     static Matcher<Complex> angleCloseTo(Complex expected, double epsilon) {
         return angleCloseTo(expected, Complex.fromDeg(epsilon));
     }
@@ -142,6 +77,69 @@ public interface Matchers {
         };
     }
 
+    static <T> Matcher<Optional<T>> emptyOptional() {
+        return equalTo(Optional.empty());
+    }
+
+    static <T> Matcher<Optional<? extends T>> optionalOf(T exp) {
+        return optionalOf(equalTo(exp));
+    }
+
+    static <T> Matcher<Optional<? extends T>> optionalOf(Matcher<? extends T> exp) {
+        requireNonNull(exp);
+        return new CustomMatcher<>(format("Optional containing  %s",
+                exp)) {
+            @Override
+            public void describeMismatch(Object item, Description description) {
+                if (item instanceof Optional o && o.isPresent()) {
+                    super.describeMismatch(item, description);
+                } else {
+                    exp.describeMismatch(item, description);
+                }
+            }
+
+            @Override
+            public boolean matches(Object o) {
+                return o instanceof Optional opt
+                        && opt.isPresent()
+                        && exp.matches(opt.orElseThrow());
+            }
+        };
+    }
+
+    static Matcher<Point2D> pointCloseTo(double x, double y, double epsilon) {
+        return pointCloseTo(new Point2D.Double(x, y), epsilon);
+    }
+
+    static Matcher<Point2D> pointCloseTo(Point2D expected, double epsilon) {
+        requireNonNull(expected);
+        return new CustomMatcher<>(format("Point close to %s within +- %f",
+                expected,
+                epsilon)) {
+            @Override
+            public void describeMismatch(Object item, Description description) {
+                if (item instanceof Point2D) {
+                    double distance = expected.distance((Point2D) item);
+                    description.appendText("distance between ")
+                            .appendValue(item)
+                            .appendText(" and ")
+                            .appendValue(expected)
+                            .appendText(" = ")
+                            .appendValue(distance);
+                } else {
+                    super.describeMismatch(item, description);
+                }
+            }
+
+            @Override
+            public boolean matches(Object o) {
+                if (!(o instanceof Point2D)) return false;
+                double distance = ((Point2D) o).distance(expected);
+                return distance <= epsilon;
+            }
+        };
+    }
+
     static <T1, T2> Matcher<Tuple2<? extends T1, ? extends T2>> tupleOf(T1 value1, T2 value2) {
         return tupleOf(equalTo(value1), equalTo(value2));
     }
@@ -153,9 +151,9 @@ public interface Matchers {
                 value1, value2)) {
             @Override
             public boolean matches(Object o) {
-                return o instanceof Tuple2
-                        && value1.matches(((Tuple2<T1, T2>) o)._1)
-                        && value2.matches(((Tuple2<T1, T2>) o)._2);
+                return o instanceof Tuple2 t
+                        && value1.matches(t._1)
+                        && value2.matches(t._2);
             }
         };
     }

@@ -81,6 +81,7 @@ public interface RewardFunction {
                 .toList();
         return composeObjective(objs);
     }
+
     /**
      * Returns the reward
      *

@@ -64,19 +64,6 @@ public interface BaseShape {
 
     Color ROBOT_COLOR = new Color(255, 255, 0);
     Color GRID_COLOR = new Color(50, 50, 50);
-
-    /**
-     * Returns the affine transformation to rotate the shape and translate
-     *
-     * @param location  location
-     * @param direction direction
-     */
-    static AffineTransform at(Point2D location, Complex direction) {
-        AffineTransform at = AffineTransform.getTranslateInstance(location.getX(), location.getY());
-        at.rotate(-direction.toRad());
-        return at;
-    }
-
     BasicStroke BORDER_STROKE = new BasicStroke(0);
     Color EMPTY_COLOR = new Color(64, 64, 64, 128);
     Color FILLED_COLOR = new Color(200, 0, 0, 128);
@@ -89,6 +76,18 @@ public interface BaseShape {
     Color LABELED_PHANTOM_COLOR = new Color(0, 200, 200);
     Color HUD_BACKGROUND_COLOR = new Color(32, 32, 32);
     Color SENSOR_COLOR = new Color(200, 0, 0);
+
+    /**
+     * Returns the affine transformation to rotate the shape and translate
+     *
+     * @param location  location
+     * @param direction direction
+     */
+    static AffineTransform at(Point2D location, Complex direction) {
+        AffineTransform at = AffineTransform.getTranslateInstance(location.getX(), location.getY());
+        at.rotate(-direction.toRad());
+        return at;
+    }
 
     /**
      * Returns the circle shape
@@ -142,25 +141,6 @@ public interface BaseShape {
     }
 
     /**
-     * Returns a polygonal shape
-     *
-     * @param color  the color
-     * @param stroke the stroke
-     * @param filled true if filled
-     * @param at     the affine transformation
-     * @param points the points
-     */
-    static BaseShape createPolygon(Color color, Stroke stroke, boolean filled, AffineTransform at, float[][] points) {
-        Path2D.Float shape = new Path2D.Float();
-        shape.moveTo(points[0][0], points[0][1]);
-        for (int i = 1; i < points.length; i++) {
-            shape.lineTo(points[i][0], points[i][1]);
-        }
-        shape.transform(at);
-        return new SingleShape(shape, color, stroke, filled);
-    }
-
-    /**
      * Return cell points with the color
      *
      * @param size  the cell size (m)
@@ -179,6 +159,25 @@ public interface BaseShape {
                             return createRectangle(color, BaseShape.BORDER_STROKE, true, sector.location(), size, size);
                         })
                         .collect(Collectors.toList()));
+    }
+
+    /**
+     * Returns a polygonal shape
+     *
+     * @param color  the color
+     * @param stroke the stroke
+     * @param filled true if filled
+     * @param at     the affine transformation
+     * @param points the points
+     */
+    static BaseShape createPolygon(Color color, Stroke stroke, boolean filled, AffineTransform at, float[][] points) {
+        Path2D.Float shape = new Path2D.Float();
+        shape.moveTo(points[0][0], points[0][1]);
+        for (int i = 1; i < points.length; i++) {
+            shape.lineTo(points[i][0], points[i][1]);
+        }
+        shape.transform(at);
+        return new SingleShape(shape, color, stroke, filled);
     }
 
     /**

@@ -98,6 +98,11 @@ public class MockRobot implements RobotApi {
     }
 
     @Override
+    public boolean isHalt() {
+        return false;
+    }
+
+    @Override
     public void move(Complex dir, int speed) throws IOException {
 
     }

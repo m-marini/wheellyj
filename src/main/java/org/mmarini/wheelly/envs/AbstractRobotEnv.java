@@ -157,7 +157,7 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
     }
 
     /**
-     * Processes the inference to produce the behaviour
+     * Processes the inference to produce the behavior
      * The inference is composed by the sequence
      * <ul>
      *     <li><code>onAct</code> asks the agent for generation of actions for current state</li>
@@ -176,6 +176,19 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
 
         Map<String, Signal> signals1 = currentState.signals();
         Map<String, Signal> actions1 = onAct.apply(signals1);
+/*
+        if (signals0 != null) {
+            int canMoveState = signals0.get("canMoveStates").getInt(0);
+            if ((canMoveState == 0 || canMoveState == 2 || canMoveState == 4)
+                    && speed(actions1) > 0 && deltaDir(actions1).isFront(0.999)) {
+                int speed = speed(actions1);
+                Complex dir = deltaDir(actions1);
+                int speed1 = speed;
+            }
+        }
+
+
+ */
         processActions(actions1);
         if (prevState != null) {
             double reward = rewardFunc.apply(prevState, prevActions, currentState);
@@ -212,12 +225,6 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
         // (numSpeeds / 2 + (numDirections * numSpeeds) / 2);
         int haltAction = (numSpeeds * (numDirections + 1)) / 2;
         return moveAction == haltAction;
-        /*
-        int speedAction = actions.get("speed").getInt(0);
-        int n = ((IntSignalSpec) getActions().get("speed")).numValues();
-        return speedAction == n - 1;
-
-         */
     }
 
     /**
@@ -312,14 +319,6 @@ public abstract class AbstractRobotEnv implements RobotEnvironment, WithRobotSta
         return round(linear(actionSpeed,
                 0, numSpeeds - 1,
                 -MAX_PPS, MAX_PPS));
-        /*
-        int speedAction = actions.get("speed").getInt(0);
-        int n = ((IntSignalSpec) getActions().get("speed")).numValues();
-        return round(linear(speedAction,
-                0, n - 2,
-                -MAX_PPS, MAX_PPS));
-
-         */
     }
 
     @Override
