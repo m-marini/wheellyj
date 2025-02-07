@@ -7,6 +7,24 @@ The code of Webcam controller is at [Wheellycam project](https://github.com/m-ma
 
 The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
+## Release 0.21.0
+
+Added new features: 
+
+- Relative radar map
+- Map relative direction signal
+- observe label goal
+- Policy stats in report
+- Relocate robot button
+- Move to goal
+- Saturation output level
+- Critic kpi monitoring
+- Direction and speed probability in report
+
+Fixed sume bugs:
+
+- Wrong learning for negative reward
+- Incorrect collision resolution
 
 ## Release 0.20.0
 
