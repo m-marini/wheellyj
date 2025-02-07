@@ -1,11 +1,11 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/sim-robot-schema-0.3
+$id: https://mmarini.org/wheelly/sim-robot-schema-0.4
 title: Robot
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/sim-robot-schema-0.3
+    const: https://mmarini.org/wheelly/sim-robot-schema-0.4
   class:
     const: org.mmarini.wheelly.apis.SimRobot
   mapSeed:
@@ -33,6 +33,9 @@ properties:
     type: integer
     minimum: 1
   changeObstaclesPeriod:
+    type: integer
+    minimum: 1
+  stalemateInterval:
     type: integer
     minimum: 1
 required:
