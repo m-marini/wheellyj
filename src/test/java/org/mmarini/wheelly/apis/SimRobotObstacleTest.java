@@ -49,6 +49,7 @@ class SimRobotObstacleTest {
     public static final int MOVE_INTERATIONS = 10;
     private static final double HALF_SIZE = 100e-3;
     private static final double HALF_LENGTH = 140e-3;
+    public static final int STALEMATE_INTERVAL = 60000;
 
     /**
      * Given a simulated robot with a map grid of 0.2 m and an obstacle at 0,0
@@ -79,7 +80,7 @@ class SimRobotObstacleTest {
                 random, null, 0, 0,
                 Complex.fromDeg(15), MAX_PPS,
                 500, 500,
-                0, 0, 0);
+                0, 0, 0, STALEMATE_INTERVAL);
         simRobot.connect();
         simRobot.configure();
         simRobot.setRobotPos(location.getX(), location.getY());
@@ -400,25 +401,32 @@ class SimRobotObstacleTest {
         assertThat(robot.echoDistance(), closeTo(0, DISTANCE_EPSILON));
     }
 
-    @ParameterizedTest
+    @ParameterizedTest(name = "[{index}] R{0}, {1} PPS, contacts {2},{3}")
     @CsvSource({
             "0,-60, true,true",
-            "45,0, false,true",
-            "-45,0, false,true",
-            "-135,0, true,false",
-            "135,0, true,false",
-            "180,0, true,false",
+
+            "45,0, true,true",
+            "315,0, false,true",
+
+            "225,0, true,true",
+            "135,0, true,true",
+
+            "180,0, true,true",
+
             "30,-30, true,true",
-            "-30,-30, true,true",
+            "330,-30, true,true",
+
             "45,-30, true,true",
-            "-45,-30, true,true",
+            "315,-30, true,true",
+
             "60,-30, true,true",
-            "-60,-30, true,true",
+            "300,-30, true,true",
+
             "90,-30, true,true",
-            "-90,-30, true,true",
+            "270,-30, true,true",
     })
     void moveTest(int moveDeg, int speed, boolean canMoveForward, boolean canMoveBackward) {
-        // Given the robot simulator in a map with 3 obstacles at 1 m from the origin
+        // Given the robot simulator in a map with 3 obstacles at 1, R0 from the robot
         Point2D robotLocation = new Point2D.Double();
         Complex robotDirection = Complex.DEG0;
         Complex sensorDirection = Complex.DEG90;
@@ -429,7 +437,7 @@ class SimRobotObstacleTest {
         );
         robot.halt();
         robot.tick(300);
-        // And moving the robot forward till the obstacle contact
+        // And moving the robot ahead till the obstacle contact
         while (robot.canMoveForward()) {
             robot.move(Complex.DEG0, MAX_PPS);
             robot.tick(30);
@@ -445,8 +453,11 @@ class SimRobotObstacleTest {
             robot.move(moveDirection, speed);
             robot.tick(30);
         }
+
+        // Then the robot should be directed to move direction
         Complex direction = robot.direction();
         assertThat(direction, angleCloseTo(moveDirection, 1));
+        // And should have expected contact sensor signals
         assertEquals(canMoveForward, robot.canMoveForward());
         assertEquals(canMoveBackward, robot.canMoveBackward());
     }

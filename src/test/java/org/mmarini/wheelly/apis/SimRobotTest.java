@@ -52,6 +52,7 @@ class SimRobotTest {
     public static final float GRID_SIZE = 0.2f;
     public static final double ACCELERATION = 1d / DISTANCE_PER_PULSE; // ppss
     private static final double PULSES_EPSILON = 1;
+    public static final int STALEMATE_INTERVAL = 60000;
 
     /**
      * Returns the space traveled (m) in the given time with uniformly accelerated motion
@@ -139,7 +140,7 @@ class SimRobotTest {
         Random random = new Random(SEED);
         return new SimRobot(MapBuilder.create(GRID_SIZE).build(),
                 random, null, 0, 0, Complex.fromDeg(15), MAX_PPS,
-                INTERVAL, INTERVAL, 0, 0, 0);
+                INTERVAL, INTERVAL, 0, 0, 0, STALEMATE_INTERVAL);
     }
 
     @Test

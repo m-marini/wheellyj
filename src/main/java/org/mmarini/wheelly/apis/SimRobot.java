@@ -59,7 +59,7 @@ public class SimRobot implements RobotApi {
     public static final double MAX_ANGULAR_PPS = 20;
     public static final double ROBOT_TRACK = 0.136;
     public static final double MAX_ANGULAR_VELOCITY = MAX_ANGULAR_PPS * DISTANCE_PER_PULSE / ROBOT_TRACK * 2; // RAD/s
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/sim-robot-schema-0.3";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/sim-robot-schema-0.4";
     public static final int CAMERA_HEIGHT = 240;
     public static final int CAMERA_WIDTH = 240;
     public static final String QR_CODE = "A";
@@ -84,6 +84,7 @@ public class SimRobot implements RobotApi {
     private static final float ROBOT_RADIUS = 0.15f;
     private static final double ROBOT_DENSITY = ROBOT_MASS / (ROBOT_RADIUS * ROBOT_RADIUS * PI * JBOX_SCALE * JBOX_SCALE);
     private static final int DEFAULT_SENSOR_RECEPTIVE_ANGLE = 15;
+    private static final long DEFAULT_STALEMATE_INTERVAL = 60000;
 
     /**
      * Returns the simulated robot from JSON configuration
@@ -108,10 +109,11 @@ public class SimRobot implements RobotApi {
         long motionInterval = locator.path("motionInterval").getNode(root).asLong(DEFAULT_MOTION_INTERVAL);
         long proxyInterval = locator.path("proxyInterval").getNode(root).asLong(DEFAULT_PROXY_INTERVAL);
         long changeObstaclesPeriod = locator.path("changeObstaclesPeriod").getNode(root).asLong(0);
+        long stalemateInterval = locator.path("stalemateInterval").getNode(root).asLong(DEFAULT_STALEMATE_INTERVAL);
         return new SimRobot(obstacleMap,
                 robotRandom, mapRandom,
                 errSigma, errSensor,
-                sensorReceptiveAngle, maxAngularSpeed, motionInterval, proxyInterval, numObstacles, numLabels, changeObstaclesPeriod);
+                sensorReceptiveAngle, maxAngularSpeed, motionInterval, proxyInterval, numObstacles, numLabels, changeObstaclesPeriod, stalemateInterval);
     }
 
     /**
@@ -145,6 +147,7 @@ public class SimRobot implements RobotApi {
     private final double errSensor;
     private final double errSigma;
     private final int maxAngularSpeed;
+    private final long stalemateInterval;
     private final long motionInterval;
     private Complex direction;
     private double echoDistance;
@@ -167,6 +170,8 @@ public class SimRobot implements RobotApi {
     private Body obstacleBody;
     private ObstacleMap obstacleMap;
     private ObstacleMap.ObstacleCell nearestCell;
+    private long stalemateInstant;
+    private boolean stalemate;
 
     /**
      * Creates a simulated robot
@@ -183,14 +188,16 @@ public class SimRobot implements RobotApi {
      * @param numObstacles          the number of obstacles
      * @param numLabels             the number of labeled obstacles
      * @param changeObstaclesPeriod the period of change obstacles
+     * @param stalemateInterval     the stalemate interval (ms)
      */
     public SimRobot(ObstacleMap obstacleMap, Random random, Random mapRandom, double errSigma, double errSensor,
                     Complex sensorReceptiveAngle, int maxAngularSpeed, long motionInterval, long proxyInterval,
-                    int numObstacles, int numLabels, long changeObstaclesPeriod) {
+                    int numObstacles, int numLabels, long changeObstaclesPeriod, long stalemateInterval) {
         this.mapRandom = mapRandom;
         this.numObstacles = numObstacles;
         this.numLabels = numLabels;
         this.changeObstaclesPeriod = changeObstaclesPeriod;
+        this.stalemateInterval = stalemateInterval;
         logger.atDebug().log("Created");
         this.random = requireNonNull(random);
         this.errSigma = errSigma;
@@ -446,6 +453,25 @@ public class SimRobot implements RobotApi {
                 }
             }
             contact = contact.getNext();
+        }
+        handleStalemate();
+    }
+
+    /**
+     * Handles the stalemate status
+     * Checks for stalemate and relocate the roboto in caso of stalemate timeout
+     */
+    private void handleStalemate() {
+        if (canMoveBackward() || canMoveBackward()) {
+            // no stalemate
+            this.stalemate = false;
+        } else if (!stalemate) {
+            // First stalemate, start the timer
+            stalemateInstant = simulationTime + stalemateInterval;
+            this.stalemate = true;
+        } else if (simulationTime >= stalemateInstant) {
+            // stalemate timeout
+            safeRelocateRandom();
         }
     }
 
