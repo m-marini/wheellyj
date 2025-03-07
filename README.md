@@ -7,6 +7,10 @@ The code of Webcam controller is at [Wheellycam project](https://github.com/m-ma
 
 The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
+## Release 0.22.0
+
+- Added relocate robot on stalemate
+
 ## Release 0.21.0
 
 Added new features: 

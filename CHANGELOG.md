@@ -7,11 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.22.0] 2025-03-07
+
 ### Added
 
 - Issue [#522](https://github.com/m-marini/wheellyj/issues/522): Add relocate robot on stalemate
 
-## [0.21.0] 2025-02-0
+## [0.21.0] 2025-02-02
 
 ### Added
 
