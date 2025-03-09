@@ -139,9 +139,9 @@ public class Wheelly {
     }
 
     protected final EnvironmentPanel envPanel;
-    private final ReducedValue avgRewards;
-    private final ReducedValue reactionRobotTime;
-    private final ReducedValue reactionRealTime;
+    private final DoubleReducedValue avgRewards;
+    private final DoubleReducedValue reactionRobotTime;
+    private final DoubleReducedValue reactionRealTime;
     private final ComMonitor comMonitor;
     private final SensorMonitor sensorMonitor;
     private final KpisPanel kpisPanel;
@@ -180,9 +180,9 @@ public class Wheelly {
         this.learnPanel = new LearnPanel();
         this.sensorMonitor = new SensorMonitor();
         this.robotStartTimestamp = -1;
-        this.avgRewards = ReducedValue.mean();
-        this.reactionRobotTime = ReducedValue.mean();
-        this.reactionRealTime = ReducedValue.mean();
+        this.avgRewards = DoubleReducedValue.mean();
+        this.reactionRobotTime = DoubleReducedValue.mean();
+        this.reactionRealTime = DoubleReducedValue.mean();
         this.prevRobotStep = -1;
         this.prevStep = -1;
         this.completion = CompletableSubject.create();

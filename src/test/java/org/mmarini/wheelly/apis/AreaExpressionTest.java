@@ -7,7 +7,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
@@ -234,7 +233,7 @@ class AreaExpressionTest {
         AreaExpression exp = AreaExpression.ineq(QVect.zeros());
 
         // When ...
-        List<AreaExpression.Leaf> leaves = exp.leaves(new ArrayList<>());
+        List<AreaExpression.Leaf> leaves = exp.leaves();
         Predicate<boolean[]> cellPredicate = exp.createCellPredicate(leaves);
 
         boolean falseResult = cellPredicate.test(new boolean[]{false});
