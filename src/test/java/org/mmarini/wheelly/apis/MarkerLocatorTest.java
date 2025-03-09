@@ -50,6 +50,7 @@ import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_PER_PULSE;
 import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_SCALE;
 
 class MarkerLocatorTest {
+    public static final int NUM_TESTS = 10;
 
     public static final double MM_1 = 1e-3;
     public static final long CORRELATION_INTERVAL = 500;
@@ -69,15 +70,24 @@ class MarkerLocatorTest {
 
     public static final double GAMMA = Math.exp(-(double) DT / DECAY_TIME);
     public static final double NOT_GAMMA = 1 - GAMMA;
-    public static final int NUM_TESTS = 100;
     public static final Point2D ROBOT_LOCATION = new Point2D.Double(1, 1);
     public static final Point2D POINT0 = new Point2D.Double(2, 2);
     public static final long SEED = 1234;
     public static final Complex RECEPTIVE_ANGLE = Complex.fromDeg(RECEPTIVE_ANGLE_DEG);
     public static final double MARKER_SIZE = 0.2;
-    public static final String LABEL = "A";
+    public static final String LABEL_A = "A";
+    public static final String LABEL_B = "B";
 
-    public static Stream<Arguments> cleaningAreaData() {
+    static CameraEvent createCamera(long time, String label) {
+        return new CameraEvent(time, label, 0, 0, new Point2D[0]);
+    }
+
+    static LabelMarker createMarkerAt(int echoDeg, double distance, int markerDeg) {
+        Point2D location = locateMarker(Complex.fromDeg(markerDeg).add(Complex.fromDeg(echoDeg)), distance);
+        return new LabelMarker(LABEL_A, T0, location);
+    }
+
+    public static Stream<Arguments> dataCleaningArea() {
         Random random = Nd4j.getRandom();
         random.setSeed(SEED);
         return createStream(NUM_TESTS, SEED,
@@ -87,13 +97,14 @@ class MarkerLocatorTest {
         );
     }
 
-    static CameraEvent createCamera(long time) {
-        return new CameraEvent(time, LABEL, 0, 0, new Point2D[0]);
-    }
-
-    static LabelMarker createMarkerAt(int echoDeg, double distance, int markerDeg) {
-        Point2D location = locateMarker(Complex.fromDeg(markerDeg).add(Complex.fromDeg(echoDeg)), distance);
-        return new LabelMarker(LABEL, T0, location);
+    public static Stream<Arguments> dataCleaningEchoArea() {
+        Random random = Nd4j.getRandom();
+        random.setSeed(SEED);
+        return createStream(NUM_TESTS, SEED,
+                uniform(-180, 179), // echoDeg
+                uniform(0.1, ECHO_DISTANCE), // marker distance
+                uniform(-RECEPTIVE_ANGLE_DEG + 1, RECEPTIVE_ANGLE_DEG - 1)// markerDeg
+        );
     }
 
     static WheellyProxyMessage createProxy(long time, long delay, int direction) {
@@ -103,7 +114,7 @@ class MarkerLocatorTest {
                 direction);
     }
 
-    static Stream<Arguments> echoDeg() {
+    static Stream<Arguments> dataEchoDeg() {
         Random random = Nd4j.getRandom();
         random.setSeed(SEED);
         return createStream(NUM_TESTS, SEED,
@@ -115,23 +126,43 @@ class MarkerLocatorTest {
         return direction.at(ROBOT_LOCATION, distance);
     }
 
-    static Stream<Arguments> noCleaningArea1Data() {
-        Random random = Nd4j.getRandom();
-        random.setSeed(SEED);
-        return createStream(NUM_TESTS, SEED,
-                uniform(-180, 179), // echoDeg
-                uniform(0.1, MAX_DISTANCE), // distance
-                uniform(RECEPTIVE_ANGLE_DEG, 360 - RECEPTIVE_ANGLE_DEG)// markerDeg
-        );
-    }
-
-    static Stream<Arguments> noCleaningAreaData() {
+    static Stream<Arguments> dataNoCleanArea() {
         Random random = Nd4j.getRandom();
         random.setSeed(SEED);
         return createStream(NUM_TESTS, SEED,
                 uniform(-180, 179), // echoDeg
                 uniform(MAX_DISTANCE + MM_1, 10d), // distance
                 uniform(0, 359)// markerDeg
+        );
+    }
+
+    static Stream<Arguments> dataNoCleanEchoArea() {
+        Random random = Nd4j.getRandom();
+        random.setSeed(SEED);
+        return createStream(NUM_TESTS, SEED,
+                uniform(-180, 179), // echoDeg
+                uniform(ECHO_DISTANCE + MM_1, 10d), // distance
+                uniform(0, 359)// markerDeg
+        );
+    }
+
+    static Stream<Arguments> dataNoCleanEchoSector() {
+        Random random = Nd4j.getRandom();
+        random.setSeed(SEED);
+        return createStream(NUM_TESTS, SEED,
+                uniform(-180, 179), // echoDeg
+                uniform(0.1, ECHO_DISTANCE), // distance
+                uniform(RECEPTIVE_ANGLE_DEG, 360 - RECEPTIVE_ANGLE_DEG)// markerDeg
+        );
+    }
+
+    static Stream<Arguments> dataNoCleanSector() {
+        Random random = Nd4j.getRandom();
+        random.setSeed(SEED);
+        return createStream(NUM_TESTS, SEED,
+                uniform(-180, 179), // echoDeg
+                uniform(0.1, MAX_DISTANCE), // distance
+                uniform(RECEPTIVE_ANGLE_DEG, 360 - RECEPTIVE_ANGLE_DEG)// markerDeg
         );
     }
 
@@ -143,81 +174,231 @@ class MarkerLocatorTest {
     }
 
     /**
-     * update map by cleaning an existing label marker for long echo
+     * update map by cleaning an existing label marker for no echo
      */
-    @ParameterizedTest(name = "[{index} echo R{0} marker D{1} R{2}")
-    @MethodSource("cleaningAreaData")
-    void updateCleanExistingMarkerLongEchoTest(int echoDeg, double distance, int markerDeg) {
+    @ParameterizedTest(name = "[{index} echo R{0} D{1} marker {2} R{3}")
+    @MethodSource("dataCleaningEchoArea")
+    void cleanEchoCameraTest(int echoDeg, double distance, int markerDeg) {
         // Given a Marker locator
-        // And a camera event
-        CameraEvent event = createCamera(T3);
         // And a correlated proxy message
-        WheellyProxyMessage proxy = createProxy(T4, LONG_ECHO, echoDeg);
-        // And a map with existing marker in cleaning area
+        WheellyProxyMessage proxy = createProxy(T4, ECHO_DELAY, echoDeg);
+        // And a camera event
+        CameraEvent event = createCamera(T3, LABEL_B);
+        // And a map with existing marker located in the cleaning area
         Map<String, LabelMarker> map0 = Map.of(
-                LABEL, createMarkerAt(echoDeg, distance, markerDeg)
+                LABEL_A, createMarkerAt(echoDeg, distance, markerDeg)
         );
 
         // When update by event
         Map<String, LabelMarker> map = locator.update(map0, event, proxy);
 
         // Then the marker should not exist
-        assertThat(map, not(hasKey(LABEL)));
+        assertThat(map, not(hasKey(LABEL_A)));
     }
 
     /**
      * update map by cleaning an existing label marker for no echo
      */
-    @ParameterizedTest(name = "[{index} echo R{0} marker D{1} R{2}")
-    @MethodSource("cleaningAreaData")
-    void updateCleanExistingMarkerNoEchoTest(int echoDeg, double distance, int markerDeg) {
-        // Given a Marker locator
-        // And a camera event
-        CameraEvent event = createCamera(T3);
-        // And a correlated proxy message
-        WheellyProxyMessage proxy = createProxy(T4, 0, echoDeg);
-        // And a map with existing marker located in the cleaning area
-        Map<String, LabelMarker> map0 = Map.of(
-                LABEL, createMarkerAt(echoDeg, distance, markerDeg)
-        );
-
-        // When update by event
-        Map<String, LabelMarker> map = locator.update(map0, event, proxy);
-
-        // Then the marker should not exist
-        assertThat(map, not(hasKey(LABEL)));
-    }
-
-    /**
-     * update map with an existing label marker
-     */
-    @ParameterizedTest(name = "[{index}] echo R{0}")
-    @MethodSource("echoDeg")
-    void updateExistingMarkerTest(int echoDeg) {
+    @ParameterizedTest(name = "[{index} echo R{0} D{1} marker {2} R{3}")
+    @MethodSource({"dataNoCleanEchoArea", "dataNoCleanEchoSector"})
+    void cleanEchoCameraUnmatchTest(int echoDeg, double distance, int markerDeg) {
         // Given a Marker locator
         // And a correlated proxy message
         WheellyProxyMessage proxy = createProxy(T4, ECHO_DELAY, echoDeg);
         // And a camera event
-        CameraEvent event = createCamera(T3);
-        // And a map with existing marker
+        CameraEvent event = createCamera(T3, LABEL_B);
+        // And a map with existing marker located in the cleaning area
+        LabelMarker marker = createMarkerAt(echoDeg, distance, markerDeg);
         Map<String, LabelMarker> map0 = Map.of(
-                LABEL, new LabelMarker(LABEL, T0, POINT0)
+                LABEL_A, marker
         );
 
         // When update by event
         Map<String, LabelMarker> map = locator.update(map0, event, proxy);
 
         // Then the marker should exist
-        assertThat(map, hasKey(LABEL));
+        assertThat(map, hasEntry(
+                equalTo(LABEL_A),
+                sameInstance(marker)
+        ));
+    }
+
+    /**
+     * update map by cleaning an existing label marker for no echo
+     */
+    @ParameterizedTest(name = "[{index} echo R{0} D{1} marker {2} R{3}")
+    @MethodSource("dataCleaningEchoArea")
+    void cleanEchoNoCameraTest(int echoDeg, double distance, int markerDeg) {
+        // Given a Marker locator
+        // And a correlated proxy message
+        WheellyProxyMessage proxy = createProxy(T4, ECHO_DELAY, echoDeg);
+        // And a map with existing marker located in the cleaning area
+        Map<String, LabelMarker> map0 = Map.of(
+                LABEL_A, createMarkerAt(echoDeg, distance, markerDeg)
+        );
+
+        // When update by event
+        Map<String, LabelMarker> map = locator.update(map0, null, proxy);
+
+        // Then the marker should not exist
+        assertThat(map, not(hasKey(LABEL_A)));
+    }
+
+    /**
+     * update map by cleaning an existing label marker for no echo
+     */
+    @ParameterizedTest(name = "[{index} echo R{0} marker D{1} R{2}")
+    @MethodSource({"dataNoCleanEchoArea", "dataNoCleanEchoSector"})
+    void cleanEchoNoCameraUnmatchTest(int echoDeg, double distance, int markerDeg) {
+        // Given a Marker locator
+        // And a correlated proxy message
+        WheellyProxyMessage proxy = createProxy(T4, ECHO_DELAY, echoDeg);
+        // And a map with existing marker located in the cleaning area
+        LabelMarker marker = createMarkerAt(echoDeg, distance, markerDeg);
+        Map<String, LabelMarker> map0 = Map.of(
+                LABEL_A, marker
+        );
+
+        // When update by event
+        Map<String, LabelMarker> map = locator.update(map0, null, proxy);
+
+        // Then the marker should exist
+        assertThat(map, hasEntry(
+                equalTo(LABEL_A),
+                sameInstance(marker)
+        ));
+    }
+
+    /**
+     * update map by cleaning an existing label marker for long echo
+     */
+    @ParameterizedTest(name = "[{index} echo R{0} marker D{1} R{2}")
+    @MethodSource("dataCleaningArea")
+    void cleanLongEchoTest(int echoDeg, double distance, int markerDeg) {
+        // Given a Marker locator
+        // And a camera event
+        CameraEvent event = createCamera(T3, LABEL_A);
+        // And a correlated proxy message
+        WheellyProxyMessage proxy = createProxy(T4, LONG_ECHO, echoDeg);
+        // And a map with existing marker in cleaning area
+        Map<String, LabelMarker> map0 = Map.of(
+                LABEL_A, createMarkerAt(echoDeg, distance, markerDeg)
+        );
+
+        // When update by event
+        Map<String, LabelMarker> map = locator.update(map0, event, proxy);
+
+        // Then the marker should not exist
+        assertThat(map, not(hasKey(LABEL_A)));
+    }
+
+    /**
+     * update map by cleaning an existing label marker for no echo
+     */
+    @ParameterizedTest(name = "[{index} echo R{0} marker D{1} R{2}")
+    @MethodSource({"dataNoCleanArea", "dataNoCleanSector"})
+    void cleanLongEchoUnmatchTest(int echoDeg, double distance, int markerDeg) {
+        // Given a Marker locator
+        // And a camera event
+        CameraEvent event = createCamera(T0, LABEL_A);
+        // And a correlated proxy message
+        WheellyProxyMessage proxy = createProxy(T4, LONG_ECHO, echoDeg);
+        // And a map with existing marker located in the cleaning area
+        Complex direction = Complex.fromDeg(markerDeg);
+        Point2D location = locateMarker(direction, distance);
+        LabelMarker marker = new LabelMarker(LABEL_A, T0, location);
+        Map<String, LabelMarker> map0 = Map.of(LABEL_A, marker);
+
+        // When update by event
+        Map<String, LabelMarker> map = locator.update(map0, event, proxy);
+
+        // Then the marker should exist
+        assertThat(map, hasEntry(
+                equalTo(LABEL_A),
+                sameInstance(marker)
+        ));
+    }
+
+    /**
+     * update map by cleaning an existing label marker for no echo
+     */
+    @ParameterizedTest(name = "[{index} echo R{0} marker D{1} R{2}")
+    @MethodSource("dataCleaningArea")
+    void cleanNoEchoTest(int echoDeg, double distance, int markerDeg) {
+        // Given a Marker locator
+        // And a camera event
+        CameraEvent event = createCamera(T3, LABEL_A);
+        // And a correlated proxy message
+        WheellyProxyMessage proxy = createProxy(T4, 0, echoDeg);
+        // And a map with existing marker located in the cleaning area
+        Map<String, LabelMarker> map0 = Map.of(
+                LABEL_A, createMarkerAt(echoDeg, distance, markerDeg)
+        );
+
+        // When update by event
+        Map<String, LabelMarker> map = locator.update(map0, event, proxy);
+
+        // Then the marker should not exist
+        assertThat(map, not(hasKey(LABEL_A)));
+    }
+
+    /**
+     * update map by cleaning an existing label marker for no echo
+     */
+    @ParameterizedTest(name = "[{index} echo R{0} marker D{1} R{2}")
+    @MethodSource({"dataNoCleanArea", "dataNoCleanSector"})
+    void cleanNoEchoUnmatchTest(int echoDeg, double distance, int markerDeg) {
+        // Given a Marker locator
+        // And a camera event
+        CameraEvent event = createCamera(T0, LABEL_A);
+        // And a correlated proxy message
+        WheellyProxyMessage proxy = createProxy(T4, 0, echoDeg);
+        // And a map with existing marker located in the cleaning area
+        Complex direction = Complex.fromDeg(markerDeg);
+        Point2D location = locateMarker(direction, distance);
+        LabelMarker marker = new LabelMarker(LABEL_A, T0, location);
+        Map<String, LabelMarker> map0 = Map.of(LABEL_A, marker);
+
+        // When update by event
+        Map<String, LabelMarker> map = locator.update(map0, event, proxy);
+
+        // Then the marker should exist
+        assertThat(map, hasEntry(
+                equalTo(LABEL_A),
+                sameInstance(marker)
+        ));
+    }
+
+    /**
+     * update map with an existing label marker
+     */
+    @ParameterizedTest(name = "[{index}] echo R{0}")
+    @MethodSource("dataEchoDeg")
+    void updateExistingMarkerTest(int echoDeg) {
+        // Given a Marker locator
+        // And a correlated proxy message
+        WheellyProxyMessage proxy = createProxy(T4, ECHO_DELAY, echoDeg);
+        // And a camera event
+        CameraEvent event = createCamera(T3, LABEL_A);
+        // And a map with existing marker
+        Map<String, LabelMarker> map0 = Map.of(
+                LABEL_A, new LabelMarker(LABEL_A, T0, POINT0)
+        );
+
+        // When update by event
+        Map<String, LabelMarker> map = locator.update(map0, event, proxy);
+
+        // Then the marker should exist
+        assertThat(map, hasKey(LABEL_A));
 
         // And the marker should be labeled "A"
-        LabelMarker marker = map.get(LABEL);
-        assertEquals(LABEL, marker.label());
+        LabelMarker marker = map.get(LABEL_A);
+        assertEquals(LABEL_A, marker.label());
         // And should have proxy message time
         assertEquals(T4, marker.time());
 
         // And should be located at echo location
-        Point2D echoLocation = proxy.echoDirection().at(ROBOT_LOCATION, ECHO_DISTANCE);
+        Point2D echoLocation = proxy.echoDirection().at(ROBOT_LOCATION, ECHO_DISTANCE + MARKER_SIZE / 2);
         Point2D expectedLocation = new Point2D.Double(
                 POINT0.getX() * GAMMA + echoLocation.getX() * NOT_GAMMA,
                 POINT0.getY() * GAMMA + echoLocation.getY() * NOT_GAMMA
@@ -229,11 +410,11 @@ class MarkerLocatorTest {
      * update map with a new label marker
      */
     @ParameterizedTest(name = "[{index}] echo R{0}")
-    @MethodSource("echoDeg")
+    @MethodSource("dataEchoDeg")
     void updateNewMarkerTest(int echoDeg) {
         // Given a Marker locator
         // And a camera event
-        CameraEvent event = createCamera(T0);
+        CameraEvent event = createCamera(T0, LABEL_A);
         // And a correlated proxy message
         WheellyProxyMessage proxy = createProxy(T1, ECHO_DELAY, echoDeg);
 
@@ -241,59 +422,32 @@ class MarkerLocatorTest {
         Map<String, LabelMarker> map = locator.update(Map.of(), event, proxy);
 
         // Then the marker should exist
-        assertThat(map, hasKey(LABEL));
+        assertThat(map, hasKey(LABEL_A));
 
         // And the marker should be labeled "A"
-        LabelMarker marker = map.get(LABEL);
-        assertEquals(LABEL, marker.label());
+        LabelMarker marker = map.get(LABEL_A);
+        assertEquals(LABEL_A, marker.label());
         // And should have proxy message time
         assertEquals(T1, marker.time());
 
         // And should be located at echo location
-        Point2D expectedLocation = proxy.echoDirection().at(ROBOT_LOCATION, ECHO_DISTANCE);
+        Point2D expectedLocation = proxy.echoDirection().at(ROBOT_LOCATION, ECHO_DISTANCE + MARKER_SIZE / 2);
         assertThat(marker.location(), pointCloseTo(expectedLocation, MM_1));
-    }
-
-    /**
-     * update map by cleaning an existing label marker for no echo
-     */
-    @ParameterizedTest(name = "[{index} echo R{0} marker D{1} R{2}")
-    @MethodSource({"noCleaningAreaData", "noCleaningArea1Data"})
-    void updateNoCleanExistingMarkerNoEchoTest(int echoDeg, double distance, int markerDeg) {
-        // Given a Marker locator
-        // And a camera event
-        CameraEvent event = createCamera(T0);
-        // And a correlated proxy message
-        WheellyProxyMessage proxy = createProxy(T4, 0, echoDeg);
-        // And a map with existing marker located in the cleaning area
-        Complex direction = Complex.fromDeg(markerDeg);
-        Point2D location = locateMarker(direction, distance);
-        LabelMarker marker = new LabelMarker(LABEL, T0, location);
-        Map<String, LabelMarker> map0 = Map.of(LABEL, marker);
-
-        // When update by event
-        Map<String, LabelMarker> map = locator.update(map0, event, proxy);
-
-        // Then the marker should not exist
-        assertThat(map, hasEntry(
-                equalTo(LABEL),
-                sameInstance(marker)
-        ));
     }
 
     /**
      * update map with uncorrelated signals
      */
     @ParameterizedTest(name = "[{index}] echo R{0}")
-    @MethodSource("echoDeg")
+    @MethodSource("dataEchoDeg")
     void updateUncorrelatedTest(int echoDeg) {
         // Given a Marker locator
         // And a map with existing marker
         Map<String, LabelMarker> map0 = Map.of(
-                LABEL, new LabelMarker(LABEL, T0, POINT0)
+                LABEL_A, new LabelMarker(LABEL_A, T0, POINT0)
         );
         // And a camera event
-        CameraEvent event = new CameraEvent(T0, LABEL, 0, 0, new Point2D[0]);
+        CameraEvent event = new CameraEvent(T0, LABEL_A, 0, 0, new Point2D[0]);
         // And a correlated proxy message
         WheellyProxyMessage proxy = createProxy(T2, ECHO_DELAY, echoDeg);
 
