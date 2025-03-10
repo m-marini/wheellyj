@@ -112,19 +112,20 @@ public record MarkerLocator(long decayTime, long correlationInterval, double max
         Point2D robotLocation = RobotStatus.pulses2Location(proxyMessage.xPulses(), proxyMessage.yPulses());
         if (cameraEvent == null) {
             // proxy message only
-            return filterCleaningArea(map, robotLocation, proxyMessage.echoDirection(), distance + markerSize);
+            return filterCleaningArea(map, robotLocation, proxyMessage.echoDirection(), distance + markerSize / 2);
         } else if (proxyMessage.simulationTime() > cameraEvent.timestamp() && proxyMessage.simulationTime() <= cameraEvent.timestamp() + correlationInterval) {
             // Correlated messages
             if (cameraEvent.qrCode().equals(CameraEvent.UNKNOWN_QR_CODE)) {
                 // no recognized qrcode
-                return filterCleaningArea(map, robotLocation, proxyMessage.echoDirection(), distance + markerSize);
+                return filterCleaningArea(map, robotLocation, proxyMessage.echoDirection(), distance + markerSize / 2);
             } else {
                 if (distance == 0 || distance > maxDistance) {
                     // no echo
-                    return filterCleaningArea(map, robotLocation, proxyMessage.echoDirection(), maxDistance + markerSize);
+                    return filterCleaningArea(map, robotLocation, proxyMessage.echoDirection(), maxDistance + markerSize / 2);
                 } else {
                     Point2D markerLocation = proxyMessage.echoDirection().at(robotLocation, distance + markerSize / 2);
                     LabelMarker marker = map.get(cameraEvent.qrCode());
+                    Map<String, LabelMarker> map1 = filterCleaningArea(map, robotLocation, proxyMessage.echoDirection(), distance + markerSize / 2);
                     LabelMarker newMarker;
                     if (marker != null) {
                         // existing label
@@ -140,7 +141,7 @@ public record MarkerLocator(long decayTime, long correlationInterval, double max
                         // new valid label
                         newMarker = new LabelMarker(cameraEvent.qrCode(), proxyMessage.simulationTime(), markerLocation);
                     }
-                    Map<String, LabelMarker> newMap = new HashMap<>(map);
+                    Map<String, LabelMarker> newMap = new HashMap<>(map1);
                     newMap.put(newMarker.label(), newMarker);
                     return newMap;
                 }
