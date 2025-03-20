@@ -30,7 +30,7 @@ import org.nd4j.linalg.factory.Nd4j;
 
 import java.util.Map;
 
-public class SequenceEnv implements Environment {
+public class SequenceEnv implements WithSignalsSpec {
     private final int numStates;
     private int currentState;
 
@@ -38,11 +38,6 @@ public class SequenceEnv implements Environment {
         this.numStates = numStates;
     }
 
-    @Override
-    public void close() {
-    }
-
-    @Override
     public ExecutionResult execute(Map<String, Signal> actions) {
         int action = actions.get("output").getInt(0);
         Map<String, Signal> signals0 = getSignals();
@@ -60,7 +55,7 @@ public class SequenceEnv implements Environment {
     }
 
     @Override
-    public Map<String, SignalSpec> getActions() {
+    public Map<String, SignalSpec> actionSpec() {
         return Map.of(
                 "action", new IntSignalSpec(new long[]{1}, numStates)
         );
@@ -73,13 +68,12 @@ public class SequenceEnv implements Environment {
     }
 
     @Override
-    public Map<String, SignalSpec> getState() {
+    public Map<String, SignalSpec> stateSpec() {
         return Map.of(
                 "state", new FloatSignalSpec(new long[]{numStates}, 0, 1)
         );
     }
 
-    @Override
     public Map<String, Signal> reset() {
         currentState = 0;
         return getSignals();

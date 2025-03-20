@@ -30,6 +30,7 @@ package org.mmarini.wheelly.apis;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.Tuple2;
 
@@ -53,10 +54,9 @@ public class GridMapTest {
     public static final int MAP_SIZE = 5;
     public static final double DECAY = 0.9;
     private static final GridTopology GRID_TOPOLOGY = new GridTopology(new Point2D.Float(), RADAR_SIZE, RADAR_SIZE, GRID_SIZE);
-    private static final long MAX_INTERVAL = 0;
-    private static final Complex RECEPTIVE_ANGLE = Complex.fromDeg(30);
     private static final long ECHO_TIME = 100;
     private static final GridTopology GRID_MAP_TOPOLOGY = new GridTopology(new Point2D.Float(), MAP_SIZE, MAP_SIZE, GRID_SIZE);
+    private static final int GRID_MAP_SIZE = 5;
 
     private static Stream<Object> createMapCells(Stream<Tuple2<Point, String>> stream) {
         boolean[] mapCells = new boolean[MAP_SIZE * MAP_SIZE];
@@ -71,8 +71,7 @@ public class GridMapTest {
                 .map(o -> (Point2D) o[0])
                 .toList();
 
-        RadarMap radarMap = RadarMap.create(GRID_TOPOLOGY.center(), GRID_TOPOLOGY.width(), GRID_TOPOLOGY.height(), GRID_TOPOLOGY.gridSize(),
-                MAX_INTERVAL, 2000, MAX_INTERVAL, MAX_INTERVAL, DECAY, GRID_TOPOLOGY.gridSize(), RECEPTIVE_ANGLE);
+        RadarMap radarMap = RadarMap.empty(GRID_TOPOLOGY);
         for (Point2D p : echos) {
             radarMap = radarMap.updateCellAt(p,
                     c -> c.addEchogenic(ECHO_TIME, DECAY));
@@ -109,5 +108,35 @@ public class GridMapTest {
         for (int i = 0; i < expCells.length; i++) {
             assertEquals(expCells[i], cells[i].echogenic(), format("Wrong cells[%d] %s", i, cells[i]));
         }
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            // robotX,robotY, robotDeg, expX, expY, directionDeg
+            "0,0, 0, 0,0, 0",
+            "1.3,1.8, 44, 1.5,2, 0",
+            "1.3,1.8, 46, 1.5,2, 90",
+            "1.3,1.8, 134, 1.5,2, 90",
+            "1.3,1.8, 136, 1.5,2, -180",
+            "1.3,1.8, 224, 1.5,2, -180",
+            "1.3,1.8, 226, 1.5,2, -90",
+            "1.3,1.8, 314, 1.5,2, -90",
+            "0,0, 316, 0,0, 0",
+    })
+    void createGridMapTest(double robotX, double robotY, int robotDeg, double expX, double expY, int expDeg) {
+        // Given ...
+        RadarMap radarMap = RadarMap.empty(new GridTopology(new Point2D.Float(), RADAR_SIZE, RADAR_SIZE, GRID_SIZE))
+                .updateCellAt(0, 0, cell -> cell.addEchogenic(100, 0));
+
+        Point2D centre = new Point2D.Double(robotX, robotY);
+        Complex direction = Complex.fromDeg(robotDeg);
+
+        // When ...
+        GridMap map = GridMap.create(radarMap, centre, direction, GRID_MAP_SIZE);
+
+        // Then ...
+        assertNotNull(map);
+        assertEquals(new Point2D.Double(expX, expY), map.center());
+        assertEquals(expDeg, map.direction().toIntDeg());
     }
 }

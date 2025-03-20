@@ -1,73 +1,22 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/state-agent-schema-3.3
+$id: https://mmarini.org/wheelly/agent-state-machine-schema-0.1
 title: State machine agent
 description: State Agent Schema
 type: object
 properties:
   $schema:
     type: string
-    const: https://mmarini.org/wheelly/state-agent-schema-3.3
+    const: https://mmarini.org/wheelly/agent-state-machine-schema-0.1
   class:
     type: string
     const: org.mmarini.wheelly.engines.StateMachineAgent
   flow:
     $ref: "#/$defs/StateFlow"
-  numRadarSectors:
-    type: integer
-    minimum: 2
-  minRadarDistance:
-    type: number
-    exclusiveMinimum: 0
-  maxRadarDistance:
-    type: number
-    exclusiveMinimum: 0
-  radarWidth:
-    type: integer
-    minimum: 1
-  radarHeight:
-    type: integer
-    minimum: 1
-  radarGrid:
-    type: number
-    exclusiveMinimum: 0
-  contactRadius:
-    type: number
-    exclusiveMinimum: 0
-  radarReceptiveAngle:
-    type: number
-    minimum: 0
-  radarCleanInterval:
-    type: integer
-    minimum: 1
-  correlationInterval:
-    type: integer
-    minimum: 1
-  echoPersistence:
-    type: integer
-    minimum: 1
-  contactPersistence:
-    type: integer
-    minimum: 1
-  decay:
-    type: number
-    exclusiveMinimum: 0
 required:
   - $schema
   - class
   - flow
-  - numRadarSectors
-  - minRadarDistance
-  - maxRadarDistance
-  - radarWidth
-  - radarHeight
-  - radarGrid
-  - contactRadius
-  - radarReceptiveAngle
-  - radarCleanInterval
-  - correlationInterval
-  - echoPersistence
-  - contactPersistence
 $defs:
   Commands:
     type: array

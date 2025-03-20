@@ -42,43 +42,44 @@ import static org.mmarini.wheelly.apis.Utils.clip;
 /**
  * The state of polar robot
  *
- * @param robotStatus the robot status
- * @param radarMap    the radar map
- * @param polarMap    the polar map
- * @param gridMap     the grid map
- * @param gridSize    the number of radar cells along the dimensions
- * @param spec        the signal specification
+ * @param model the world model
+ * @param spec  the signal specification
  */
-public record PolarRobotState(RobotStatus robotStatus, RadarMap radarMap,
-                              PolarMap polarMap,
-                              GridMap gridMap, int gridSize, Map<String, SignalSpec> spec
-) implements State, WithRobotStatus, WithPolarMap, WithRadarMap, WithGridMap {
-    public static final int NUM_CELL_STATES = 5;
+public record WorldState(WorldModel model,
+                         Map<String, SignalSpec> spec) implements State {
+    public static final int NUM_CELL_STATES = 4;
+    public static final int NUM_SECTOR_STATES = 3;
     public static final int MIN_ROBOT_MAP_DIR = -45;
     public static final int MAX_ROBOT_MAP_DIR = 45;
-    private static final double MIN_DISTANCE = 0;
-    private static final double MAX_DISTANCE = 10;
-    private static final FloatSignalSpec DISTANCE_SPEC = new FloatSignalSpec(new long[]{1}, (float) MIN_DISTANCE, (float) MAX_DISTANCE);
-    private static final int NUM_CAN_MOVE_STATES = 6;
-    private static final IntSignalSpec CAN_MOVE_SPEC = new IntSignalSpec(new long[]{1}, NUM_CAN_MOVE_STATES);
-    private static final int MIN_SENSOR_DIR = -90;
-    private static final int MAX_SENSOR_DIR = 90;
-    private static final FloatSignalSpec SENSOR_SPEC = new FloatSignalSpec(new long[]{1}, MIN_SENSOR_DIR, MAX_SENSOR_DIR);
-    private static final FloatSignalSpec ROBOT_MAP_DIR_SPEC = new FloatSignalSpec(new long[]{1}, MIN_ROBOT_MAP_DIR, MAX_ROBOT_MAP_DIR);
+    public static final double MIN_DISTANCE = 0;
+    public static final double MAX_DISTANCE = 10;
+    public static final FloatSignalSpec DISTANCE_SPEC = new FloatSignalSpec(new long[]{1}, (float) MIN_DISTANCE, (float) MAX_DISTANCE);
+    public static final int NUM_CAN_MOVE_STATES = 6;
+    public static final IntSignalSpec CAN_MOVE_SPEC = new IntSignalSpec(new long[]{1}, NUM_CAN_MOVE_STATES);
+    public static final int MIN_SENSOR_DIR = -90;
+    public static final int MAX_SENSOR_DIR = 90;
+    public static final FloatSignalSpec SENSOR_SPEC = new FloatSignalSpec(new long[]{1}, MIN_SENSOR_DIR, MAX_SENSOR_DIR);
+    public static final FloatSignalSpec ROBOT_MAP_DIR_SPEC = new FloatSignalSpec(new long[]{1}, MIN_ROBOT_MAP_DIR, MAX_ROBOT_MAP_DIR);
 
-    public static PolarRobotState create(RobotStatus robotStatus, RadarMap radarMap,
-                                         PolarMap polarMap, double maxRadarDistance, int gridSize) {
-        int n = polarMap.sectorsNumber();
+    /**
+     * Returns the default polar robot state from the world model
+     *
+     * @param model the world model
+     */
+    public static WorldState create(WorldModel model) {
+        float maxRadarDistance = (float) model.robotStatus().robotSpec().maxRadarDistance();
+        int n = model.polarMap().sectorsNumber();
+        long radarSize = model.gridMap().cells().length;
         Map<String, SignalSpec> spec = Map.of(
                 "sensor", SENSOR_SPEC,
                 "robotMapDir", ROBOT_MAP_DIR_SPEC,
                 "distance", DISTANCE_SPEC,
                 "canMoveStates", CAN_MOVE_SPEC,
-                "sectorStates", new IntSignalSpec(new long[]{n}, CircularSector.Status.values().length + 1),
-                "sectorDistances", new FloatSignalSpec(new long[]{n}, 0, (float) maxRadarDistance),
-                "cellStates", new IntSignalSpec(new long[]{(long) gridSize * gridSize}, NUM_CELL_STATES)
+                "sectorStates", new IntSignalSpec(new long[]{n}, NUM_SECTOR_STATES),
+                "sectorDistances", new FloatSignalSpec(new long[]{n}, 0, maxRadarDistance),
+                "cellStates", new IntSignalSpec(new long[]{radarSize}, NUM_CELL_STATES)
         );
-        return new PolarRobotState(robotStatus, radarMap, polarMap, null, gridSize, spec);
+        return new WorldState(model, spec);
     }
 
     /**
@@ -86,92 +87,54 @@ public record PolarRobotState(RobotStatus robotStatus, RadarMap radarMap,
      * <pre>
      *     0 - unknown
      *     1 - contact
-     *     2 - label
-     *     3 - echo
-     *     4 - anechoic
+     *     2 - echo
+     *     3 - anechoic
      * </pre>
      *
      * @param cell the cell
      */
     private static int decodeStatus(MapCell cell) {
         return cell.hasContact() ? 1
-                : cell.labeled() ? 2
-                : cell.echogenic() ? 3
-                : cell.anechoic() ? 4
+                : cell.echogenic() ? 2
+                : cell.anechoic() ? 3
                 : 0;
+    }
+
+    /**
+     * Returns the state specification for the given world model specification
+     *
+     * @param worldSpec the world model specification
+     */
+    public static Map<String, SignalSpec> stateSpec(WorldModelSpec worldSpec) {
+        RobotSpec robotSpec = worldSpec.robotSpec();
+        long numSectors = worldSpec.numSectors();
+        FloatSignalSpec radarDistanceSpec = new FloatSignalSpec(new long[]{numSectors}, 0, (float) robotSpec.maxRadarDistance());
+        long gridSize = (long) worldSpec.gridSize() * worldSpec.gridSize();
+        return Map.of(
+                "sensor", SENSOR_SPEC,
+                "robotMapDir", ROBOT_MAP_DIR_SPEC,
+                "distance", radarDistanceSpec,
+                "canMoveStates", CAN_MOVE_SPEC,
+                "sectorStates", new IntSignalSpec(new long[]{numSectors}, NUM_SECTOR_STATES),
+                "sectorDistances", radarDistanceSpec,
+                "cellStates", new IntSignalSpec(new long[]{gridSize}, NUM_CELL_STATES)
+        );
     }
 
     /**
      * Creates the polar robot state
      *
-     * @param robotStatus the robot status
-     * @param radarMap    the radar map
-     * @param polarMap    the polar map
-     * @param gridMap     the grid map
-     * @param gridSize    the number of radar cells along the dimensions
-     * @param spec        the signal specification
+     * @param model the world model
+     * @param spec  the signal specification
      */
-    public PolarRobotState(RobotStatus robotStatus, RadarMap radarMap, PolarMap polarMap, GridMap gridMap, int gridSize, Map<String, SignalSpec> spec) {
-        this.robotStatus = requireNonNull(robotStatus);
-        this.radarMap = requireNonNull(radarMap);
-        this.polarMap = requireNonNull(polarMap);
+    public WorldState(WorldModel model, Map<String, SignalSpec> spec) {
+        this.model = requireNonNull(model);
         this.spec = requireNonNull(spec);
-        this.gridSize = gridSize;
-        this.gridMap = gridMap;
-    }
-
-    /**
-     * Returns the state with gridMap
-     */
-    public PolarRobotState createGridMap() {
-        GridMap gridMap = GridMap.create(radarMap, robotStatus.location(), robotStatus.direction(), gridSize);
-        return new PolarRobotState(robotStatus, radarMap, polarMap, gridMap, gridSize, spec);
-    }
-
-    @Override
-    public PolarMap getPolarMap() {
-        return polarMap;
-    }
-
-    /**
-     * Returns the state with polar map set
-     *
-     * @param polarMap the polar map
-     */
-    public PolarRobotState setPolarMap(PolarMap polarMap) {
-        return new PolarRobotState(robotStatus, radarMap, polarMap, gridMap, gridSize, spec);
-    }
-
-    @Override
-    public RadarMap getRadarMap() {
-        return radarMap;
-    }
-
-    /**
-     * Returns the state with radar map set
-     *
-     * @param radarMap the radar map
-     */
-    public PolarRobotState setRadarMap(RadarMap radarMap) {
-        return new PolarRobotState(robotStatus, radarMap, polarMap, gridMap, gridSize, spec);
-    }
-
-    @Override
-    public RobotStatus getRobotStatus() {
-        return robotStatus;
-    }
-
-    /**
-     * Returns the state with robot status set
-     *
-     * @param robotStatus the robot status
-     */
-    public PolarRobotState setRobotStatus(RobotStatus robotStatus) {
-        return new PolarRobotState(robotStatus, radarMap, polarMap, gridMap, gridSize, spec);
     }
 
     @Override
     public Map<String, Signal> signals() {
+        RobotStatus robotStatus = model.robotStatus();
         INDArray sensor = Nd4j.createFromArray((float) robotStatus.sensorDirection().toIntDeg());
         INDArray distance = Nd4j.createFromArray((float) robotStatus.echoDistance());
         /*
@@ -197,18 +160,21 @@ public record PolarRobotState(RobotStatus robotStatus, RadarMap radarMap,
                 .castTo(DataType.FLOAT);
         double maxDistance = ((FloatSignalSpec) spec.get("sectorDistances")).maxValue();
 
+        PolarMap polarMap = model.polarMap();
         int n = polarMap.sectorsNumber();
         INDArray sectorStates = Nd4j.zeros(n);
         INDArray sectorDistances = Nd4j.zeros(n);
         for (int i = 0; i < n; i++) {
             CircularSector sector = polarMap.sector(i);
-            double dist = sector.hindered() || sector.labeled()
+            double dist = sector.hindered()
                     ? clip(sector.distance(polarMap.center()), 0, maxDistance)
                     : 0;
             sectorDistances.getScalar(i).assign(dist);
             sectorStates.getScalar(i)
-                    .assign(sector.known() ? sector.status().ordinal() + 1 : 0);
+                    .assign(sector.empty() ? 1
+                            : sector.hindered() ? 2 : 0);
         }
+        GridMap gridMap = model.gridMap();
         MapCell[] cells = gridMap.cells();
         int n1 = cells.length;
         INDArray cellStates = Nd4j.zeros(n1);

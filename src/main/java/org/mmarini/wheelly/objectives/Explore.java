@@ -30,7 +30,7 @@ import org.mmarini.wheelly.apis.MapCell;
 import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.wheelly.envs.RewardFunction;
-import org.mmarini.wheelly.envs.WithRadarMap;
+import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 
 import java.util.Arrays;
@@ -65,10 +65,10 @@ public interface Explore {
      */
     static RewardFunction explore(double reward) {
         return (s0, a, s1) -> {
-            if (s0 instanceof WithRadarMap withRadar0
-                    && s1 instanceof WithRadarMap withRadar1) {
-                RadarMap radarMap0 = withRadar0.getRadarMap();
-                RadarMap radarMap1 = withRadar1.getRadarMap();
+            if (s0 instanceof WorldState state0
+                    && s1 instanceof WorldState state1) {
+                RadarMap radarMap0 = state0.model().radarMap();
+                RadarMap radarMap1 = state1.model().radarMap();
                 long knownSectors0Number = Arrays.stream(radarMap0.cells())
                         .filter(Predicate.not(MapCell::unknown))
                         .count();

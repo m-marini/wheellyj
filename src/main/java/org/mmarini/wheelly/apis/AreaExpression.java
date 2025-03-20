@@ -9,6 +9,7 @@ import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.QVect.from;
 
 /**
  * The tree of area expression
@@ -96,16 +97,6 @@ public interface AreaExpression {
     }
 
     /**
-     * Returns the expression parser
-     *
-     * @param exp the expression
-     */
-    static Parser createParser(AreaExpression exp) {
-        List<Leaf> leaves = exp.leaves(new ArrayList<>());
-        return new Parser(exp, leaves);
-    }
-
-    /**
      * Returns the quadratic vertices
      *
      * @param topology the grid topology
@@ -122,7 +113,7 @@ public interface AreaExpression {
             double y = y0 + i * gridSize;
             for (int j = 0; j < w; j++) {
                 double x = x0 + j * gridSize;
-                result[idx] = QVect.from(x, y);
+                result[idx] = from(x, y);
                 idx++;
             }
         }
@@ -153,14 +144,14 @@ public interface AreaExpression {
     }
 
     static IntPredicate filterByArea(AreaExpression f, QVect[] vertices, int[][] verticesByCell) {
-        AreaExpression.Parser parser = AreaExpression.createParser(f);
+        AreaExpression.Parser parser = f.createParser();
         // Creates the matrix of quadratic inequality results by vertex
         boolean[][] matrix = parser.apply(vertices);
         // Creates the function converting the matrix to quadratic inequality results by cell
         // using the martix of indices by cell
         int n = parser.leaves.size(); //number of evidences
         IntFunction<boolean[]> cellQIneqFunc = createCellFunction(verticesByCell, n, matrix);
-        Predicate<boolean[]> cellPredicate = parser.createCellPredicate();
+        Predicate<boolean[]> cellPredicate = parser.cellPredicate();
 
         // Creates the predicate of area by quadratic inequality results
         return i -> cellPredicate.test(cellQIneqFunc.apply(i));
@@ -263,6 +254,21 @@ public interface AreaExpression {
     Predicate<boolean[]> createCellPredicate(List<Leaf> leaves);
 
     /**
+     * Returns the expression parser
+     */
+    default Parser createParser() {
+        List<Leaf> leaves = leaves();
+        return new Parser(this, leaves, createCellPredicate(leaves));
+    }
+
+    /**
+     * Returns the list of leaves by traversing the expression tree
+     */
+    default List<Leaf> leaves() {
+        return leaves(new ArrayList<>());
+    }
+
+    /**
      * Returns the list of leaves by accumulating during tree traversal
      *
      * @param accumulator the leaves accumulator
@@ -317,10 +323,11 @@ public interface AreaExpression {
      * Parses the expression to build binary array of ordered the leaves expression (# vertices, # leaves)
      * and the function of cell containment for the (n) quadratic inequalities
      *
-     * @param expression the cell containment expression
-     * @param leaves     the leaves expression (vertex quadratic inequalities)
+     * @param expression    the cell containment expression
+     * @param leaves        the leaves expression (vertex quadratic inequalities)
+     * @param cellPredicate the function returning true if the expression matches the result of expression leaves
      */
-    record Parser(AreaExpression expression, List<Leaf> leaves) {
+    record Parser(AreaExpression expression, List<Leaf> leaves, Predicate<boolean[]> cellPredicate) {
 
         /**
          * Returns the binary array of ordered the leaves expression (# vertices, # leaves)
@@ -329,20 +336,39 @@ public interface AreaExpression {
          */
         boolean[][] apply(QVect... vectors) {
             return Arrays.stream(vectors).
-                    map(point -> {
-                        boolean[] result = new boolean[leaves.size()];
-                        for (int i = 0; i < leaves.size(); i++) {
-                            result[i] = leaves.get(i).test(point);
-                        }
-                        return result;
-                    }).toArray(boolean[][]::new);
+                    map(this::applyPoint)
+                    .toArray(boolean[][]::new);
         }
 
         /**
-         * Returns function that is true if expression is true for the (n) quadratic inequality evidences
+         * Returns the binary array of ordered the leaves expression (# leaves)
+         *
+         * @param point the vector
          */
-        public Predicate<boolean[]> createCellPredicate() {
-            return expression.createCellPredicate(leaves);
+        boolean[] applyPoint(QVect point) {
+            boolean[] result = new boolean[leaves.size()];
+            for (int i = 0; i < leaves.size(); i++) {
+                result[i] = leaves.get(i).test(point);
+            }
+            return result;
+        }
+
+        /**
+         * Returns true id the vector satisfies the expression
+         *
+         * @param point the point
+         */
+        boolean test(QVect point) {
+            return cellPredicate.test(applyPoint(point));
+        }
+
+        /**
+         * Returns true id the vector satisfies the expression
+         *
+         * @param point the point
+         */
+        boolean test(Point2D point) {
+            return test(from(point));
         }
     }
 }

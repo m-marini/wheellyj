@@ -1,6 +1,6 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/wheelly-schema-2.0
+$id: https://mmarini.org/wheelly/wheelly-schema-3.0
 title: Wheelly application
 
 # monitor schema
@@ -8,7 +8,7 @@ type: object
 properties:
   $schema:
     type: string
-    const: https://mmarini.org/wheelly/wheelly-schema-2.0
+    const: https://mmarini.org/wheelly/wheelly-schema-3.0
   savingInterval:
     type: integer
     minimum: 1
@@ -16,14 +16,20 @@ properties:
     type: string
   controller:
     type: string
+  modeller:
+    type: string
   environment:
     type: string
   agent:
+    type: string
+  objective:
     type: string
 required:
   - $schema
   - robot
   - controller
+  - modeller
   - environment
   - agent
   - savingInterval
+  - objective

@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.apis;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InOrder;
@@ -40,6 +41,7 @@ import static java.lang.Math.round;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
 import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.*;
@@ -55,55 +57,39 @@ class SimRobotControllerTest {
     private static final double PULSES_EPSILON = 1;
     private static final long SEED = 1234;
     private static final double GRID_SIZE = 0.2;
-
-    static RobotController createController(double simSpeed) {
-        Random random = new Random(SEED);
-        ObstacleMap obstacles = MapBuilder.create(GRID_SIZE)
-                .add(false, 0, 1)
-                .build();
-        SimRobot robot = new SimRobot(obstacles,
-                random, null, 0, 0, Complex.fromDeg(15), MAX_PPS,
-                INTERVAL, INTERVAL, 0, 0, 0, 60000);
-        return new RobotController(robot,
-                INTERVAL, REACTION_INTERVAL, COMMAND_INTERVAL, CONNECTION_RETRY_INTERVAL, WATCHDOG_INTERVAL,
-                simSpeed, x -> 12d);
-    }
-
-    static private void shutdown(RobotController rc) {
-        rc.shutdown();
-        rc.readShutdown().blockingAwait();
-    }
+    private SimRobot robot;
+    private RobotController controller;
 
     @ParameterizedTest
     @ValueSource(doubles = {1D, 10D})
     void configureTest(double simSpeed) throws Throwable {
         // and a controller connected
-        RobotController rc = createController(simSpeed);
-        rc.stepUp();
+        createController(simSpeed);
+        controller.stepUp();
 
         // and onController, on motion, on proxy, on contact, on status consumers
         io.reactivex.rxjava3.functions.Consumer<? super String> onController = mock();
-        rc.readControllerStatus().doOnNext(onController).subscribe();
+        controller.readControllerStatus().doOnNext(onController).subscribe();
 
         io.reactivex.rxjava3.functions.Consumer<? super RobotStatus> onMotion = mock();
-        rc.readMotion().doOnNext(onMotion).subscribe();
+        controller.readMotion().doOnNext(onMotion).subscribe();
 
         io.reactivex.rxjava3.functions.Consumer<? super RobotStatus> onProxy = mock();
-        rc.readProxy().doOnNext(onProxy).subscribe();
+        controller.readProxy().doOnNext(onProxy).subscribe();
 
         io.reactivex.rxjava3.functions.Consumer<? super RobotStatus> onContacts = mock();
-        rc.readContacts().doOnNext(onContacts).subscribe();
+        controller.readContacts().doOnNext(onContacts).subscribe();
 
         io.reactivex.rxjava3.functions.Consumer<? super RobotStatus> onStatus = mock();
-        rc.readRobotStatus().doOnNext(onStatus).subscribe();
+        controller.readRobotStatus().doOnNext(onStatus).subscribe();
 
         // When step up (configure)
-        rc.stepUp();
+        controller.stepUp();
         // And wait for 2 simulated intervals
         Thread.sleep(round(2 * INTERVAL / simSpeed));
 
         // Then the robot localTime should be 0
-        assertThat(rc.getRobot().simulationTime(), greaterThanOrEqualTo(INTERVAL));
+        assertThat(robot.simulationTime(), greaterThanOrEqualTo(INTERVAL));
 
         // And the handling commands should be emitted
         verify(onController).accept(RobotController.HANDLING_COMMANDS);
@@ -128,44 +114,52 @@ class SimRobotControllerTest {
                 field("contactsMessage", allOf(
                         field("remoteTime", equalTo(0L))
                 ))));
-
-        shutdown(rc);
     }
 
     @ParameterizedTest
     @ValueSource(doubles = {1D, 10D})
     void connectTest(double simSpeed) throws Throwable {
         // Given a controller
-        RobotController rc = createController(simSpeed);
+        createController(simSpeed);
 
         // and onController consumers
         io.reactivex.rxjava3.functions.Consumer<? super String> onController = mock();
-        rc.readControllerStatus().doOnNext(onController).subscribe();
+        controller.readControllerStatus().doOnNext(onController).subscribe();
 
         // When step up
-        rc.stepUp();
+        controller.stepUp();
 
         // And the configuring status should be emitted
         verify(onController).accept(RobotController.CONFIGURING);
 
         // And robot localTime should be 0
-        RobotApi robot = rc.getRobot();
         assertEquals(0L, robot.simulationTime());
+    }
 
-        shutdown(rc);
+    void createController(double simSpeed) {
+        Random random = new Random(SEED);
+        ObstacleMap obstacles = MapBuilder.create(GRID_SIZE)
+                .add(false, 0, 1)
+                .build();
+        this.robot = new SimRobot(ROBOT_SPEC, obstacles,
+                random, null, 0, 0, MAX_PPS,
+                INTERVAL, INTERVAL, 0, 0, 0, 60000);
+        this.controller = new RobotController(INTERVAL, REACTION_INTERVAL, COMMAND_INTERVAL, CONNECTION_RETRY_INTERVAL, WATCHDOG_INTERVAL,
+                simSpeed, x -> 12d)
+                .connectRobot(robot);
     }
 
     @ParameterizedTest
     @ValueSource(doubles = {1D, 10D})
     void inference(double simSpeed) throws Throwable {
         // Given a connected and configured controller
-        RobotController rc = createController(simSpeed);
-        rc.stepUp(); // Connect
+        createController(simSpeed);
+        controller.stepUp(); // Connect
 
         // And an inference consumer
         Consumer<RobotStatus> onInference = mock();
-        rc.setOnInference(onInference);
-        rc.stepUp(); // Configure
+        controller.setOnInference(onInference);
+        controller.stepUp(); // Configure
 
         // When sleeping for 10 simulated localTime interval
         long dt = round(10 * INTERVAL / simSpeed);
@@ -181,56 +175,55 @@ class SimRobotControllerTest {
         verify(onInference).accept(
                 MockitoHamcrest.argThat(field("simulationTime", equalTo(3 * REACTION_INTERVAL)))
         );
-
-
-        shutdown(rc);
     }
 
     @ParameterizedTest
     @ValueSource(doubles = {1D, 10D})
     void readTest(double simSpeed) throws InterruptedException {
         // Given a connected and configured controller
-        RobotController rc = createController(simSpeed);
-        rc.stepUp(); // Connect
-        rc.stepUp(); // Configure
+        createController(simSpeed);
+        controller.stepUp(); // Connect
+        controller.stepUp(); // Configure
 
         // And a robot status consumer
         Consumer<RobotStatus> consumer = mock();
-        rc.readRobotStatus().doOnNext(consumer::accept).subscribe();
+        controller.readRobotStatus().doOnNext(consumer::accept).subscribe();
 
         // When waiting for 2 simulated intervals
         Thread.sleep(round(INTERVAL));
 
         // Then the status should be emitted at least 2 times
         verify(consumer, atLeast(2)).accept(any());
+    }
 
-        shutdown(rc);
+    @AfterEach
+    void tearDown() {
+        controller.shutdown();
+        controller.readShutdown().blockingAwait();
     }
 
     @ParameterizedTest
     @ValueSource(doubles = {1D, 10D})
     void waitInterval(double simSpeed) throws Throwable {
         // Given a connected and configured controller
-        RobotController rc = createController(simSpeed);
-        rc.stepUp(); // Connect
-        rc.stepUp(); // Configure
+        createController(simSpeed);
+        controller.stepUp(); // Connect
+        controller.stepUp(); // Configure
 
         // And a controller status consumer
         io.reactivex.rxjava3.functions.Consumer<? super String> onController = mock();
-        rc.readControllerStatus().doOnNext(onController).subscribe();
+        controller.readControllerStatus().doOnNext(onController).subscribe();
 
         // And executing scan command to 90 DEG
-        rc.execute(RobotCommands.scan(Complex.DEG90));
+        controller.execute(RobotCommands.scan(Complex.DEG90));
 
         // And stepping twice the controller
-        rc.stepUp(); // Handle command
-        rc.stepUp(); // Waiting command
+        controller.stepUp(); // Handle command
+        controller.stepUp(); // Waiting command
 
         // Then the status should change to waiting command and then back to handling command
         InOrder onControllerOrder = inOrder(onController);
         onControllerOrder.verify(onController).accept(RobotController.WAITING_COMMAND_INTERVAL);
         onControllerOrder.verify(onController).accept(RobotController.HANDLING_COMMANDS);
-
-        shutdown(rc);
     }
 }

@@ -27,16 +27,16 @@ package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RadarMap;
+import org.mmarini.wheelly.apis.LabelMarker;
 import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WithRobotStatus;
+import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.wheelly.envs.RewardFunction;
-import org.mmarini.wheelly.envs.WithRadarMap;
+import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 
 import java.awt.geom.Point2D;
-import java.util.Arrays;
+import java.util.Map;
 import java.util.function.IntFunction;
 import java.util.function.IntUnaryOperator;
 
@@ -44,11 +44,11 @@ import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
 import static org.mmarini.wheelly.apis.Utils.linear;
-import static org.mmarini.wheelly.envs.AbstractRobotEnv.MAX_DIRECTION_ACTION;
-import static org.mmarini.wheelly.envs.AbstractRobotEnv.MIN_DIRECTION_ACTION;
+import static org.mmarini.wheelly.envs.WorldEnvironment.MAX_DIRECTION_ACTION;
 
 /**
- * The move to label goal returns the reward if the robot direct to the nearest labeled target and sensor oriented within range
+ * The move to label goal returns the reward
+ * if the robot direct to the nearest labelled target and sensor oriented within range
  */
 public interface MoveToLabel {
     String SCHEMA_NAME = "https://mmarini.org/wheelly/objective-moveToLabel-schema-0.1";
@@ -61,7 +61,7 @@ public interface MoveToLabel {
             int dirAction = action / numSpeeds;
             return Complex.fromDeg(linear(dirAction,
                     0, numDirections,
-                    MIN_DIRECTION_ACTION, MAX_DIRECTION_ACTION));
+                    -MAX_DIRECTION_ACTION, MAX_DIRECTION_ACTION));
         };
     }
 
@@ -113,26 +113,23 @@ public interface MoveToLabel {
         requireNonNull(action2Dir);
         requireNonNull(action2Speed);
         return (s0, a, s1) -> {
-            if (s0 instanceof WithRadarMap stateWithRadar
-                    && s0 instanceof WithRobotStatus stateWithRobot
+            if (s0 instanceof WorldState worldState
                     && a.containsKey("move")) {
-                RadarMap map = stateWithRadar.getRadarMap();
-                RobotStatus state = stateWithRobot.getRobotStatus();
+                WorldModel model = worldState.model();
+                RobotStatus state = model.robotStatus();
                 Point2D robotLocation = state.location();
                 int actionCode = a.get("move").getInt(0);
                 Complex actionDir = action2Dir.apply(actionCode);
                 int speed = action2Speed.applyAsInt(actionCode);
                 Complex targetRobotDir = state.direction().add(actionDir);
+                Map<String, LabelMarker> markers = model.markers();
                 if (speed >= minSpeed
                         && speed <= maxSpeed
                         && state.sensorDirection().isCloseTo(Complex.DEG0, sensorRange)
-                        && Arrays.stream(map.cells())
-                        .anyMatch(cell ->
-                                // Match for labeled cell and in the direction of robot
-                                cell.labeled()
-                                        && Complex.direction(robotLocation, cell.location())
-                                        .isCloseTo(targetRobotDir, directionRange)
-                        )) {
+                        && markers.values().stream()
+                        .anyMatch(marker ->
+                                Complex.direction(robotLocation, marker.location())
+                                        .isCloseTo(targetRobotDir, directionRange))) {
                     return reward;
                 }
             }

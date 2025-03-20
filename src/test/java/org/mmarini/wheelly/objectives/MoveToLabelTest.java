@@ -31,11 +31,9 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.rl.envs.IntSignal;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RadarMap;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.envs.AbstractRobotEnv;
+import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -46,7 +44,9 @@ import java.util.Map;
 import static java.lang.Math.round;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
+import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
 import static org.mmarini.wheelly.apis.Utils.linear;
+import static org.mmarini.wheelly.envs.WorldEnvironment.MAX_DIRECTION_ACTION;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -60,24 +60,30 @@ class MoveToLabelTest {
     public static final int MAX_SPEED_PPS = 60;
 
     static int actionCode(int actionDeg, int actionSpeed) {
-        return round(linear(actionDeg, AbstractRobotEnv.MIN_DIRECTION_ACTION, AbstractRobotEnv.MAX_DIRECTION_ACTION, 0, 8)) * 5
+        return round(linear(actionDeg, -MAX_DIRECTION_ACTION, MAX_DIRECTION_ACTION, 0, 8)) * 5
                 + round(linear(actionSpeed, -MAX_SPEED_PPS, MAX_SPEED_PPS, 0, 4));
     }
 
-    static MockState createState(Complex robotDir, Complex sensorDir, Complex obstacleDir) {
-        MockState state = mock();
+    static WorldState createState(Complex robotDir, Complex sensorDir, Complex obstacleDir) {
         Point2D obstacleLocation = obstacleDir.at(new Point2D.Float(), OBSTACLE_DISTANCE);
-        RadarMap map = RadarMap.create(new Point2D.Float(), MAP_SIZE, MAP_SIZE,
-                        GRID_SIZE,
-                        0, 0, 0, 0, DECAY,
-                        0.2, Complex.fromDeg(30))
+        RadarMap map = RadarMap.empty(new GridTopology(new Point2D.Float(), MAP_SIZE, MAP_SIZE,
+                        GRID_SIZE))
                 .updateCellAt(obstacleLocation.getX(), obstacleLocation.getY(), cell ->
-                        cell.addEchogenic(ECHO_TIME, DECAY).addLabeled(DECAY));
-        when(state.getRadarMap()).thenReturn(map);
-        RobotStatus status = RobotStatus.create(x -> 12)
+                        cell.addEchogenic(ECHO_TIME, DECAY));
+        RobotStatus status = RobotStatus.create(ROBOT_SPEC, x -> 12)
                 .setDirection(robotDir)
                 .setSensorDirection(sensorDir);
-        when(state.getRobotStatus()).thenReturn(status);
+        Map<String, LabelMarker> markers = Map.of(
+                "A", new LabelMarker("A", obstacleLocation, 1, 0, 0)
+        );
+
+        WorldModel model = mock();
+        when(model.radarMap()).thenReturn(map);
+        when(model.robotStatus()).thenReturn(status);
+        when(model.markers()).thenReturn(markers);
+
+        WorldState state = mock();
+        when(state.model()).thenReturn(model);
         return state;
     }
 
@@ -134,7 +140,7 @@ class MoveToLabelTest {
         ));
         RewardFunction f = MoveToLabel.create(root, Locator.root());
 
-        MockState state = createState(Complex.fromDeg(robotDeg),
+        WorldState state = createState(Complex.fromDeg(robotDeg),
                 Complex.fromDeg(sensorDeg), Complex.fromDeg(obstacleDeg));
         int actionCode = actionCode(actionDeg, actionSpeed);
         IntSignal actionSignal = IntSignal.create(actionCode);

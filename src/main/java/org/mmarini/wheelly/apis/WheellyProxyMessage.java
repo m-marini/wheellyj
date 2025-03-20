@@ -38,7 +38,7 @@ import static java.lang.String.format;
  * The Wheelly status contain the sensor value of Wheelly
  *
  * @param localTime          the local message localTime (ms)
- * @param simulationTime     the simulation time (ms)
+ * @param simulationTime     the simulation markerTime (ms)
  * @param remoteTime         the remote ping localTime (ms)
  * @param sensorDirectionDeg the sensor direction at ping (DEG)
  * @param sensorDirection    the sensor direction at ping
@@ -93,7 +93,7 @@ public record WheellyProxyMessage(long localTime, long simulationTime, long remo
      * Creates the message
      *
      * @param localTime          the local message localTime (ms)
-     * @param simulationTime     the simulation time (ms)
+     * @param simulationTime     the simulation markerTime (ms)
      * @param remoteTime         the remote ping localTime (ms)
      * @param sensorDirectionDeg the sensor direction at ping (DEG)
      * @param echoDelay          the echo delay (um)
@@ -135,9 +135,9 @@ public record WheellyProxyMessage(long localTime, long simulationTime, long remo
     }
 
     /**
-     * Returns the proxy message with simulation time
+     * Returns the proxy message with simulation markerTime
      *
-     * @param simulationTime the simulation time
+     * @param simulationTime the simulation markerTime
      */
     public WheellyProxyMessage setSimulationTime(long simulationTime) {
         return simulationTime != this.simulationTime

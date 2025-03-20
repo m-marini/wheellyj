@@ -25,6 +25,7 @@
 
 package org.mmarini.wheelly.apps;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.Observable;
 import net.sourceforge.argparse4j.ArgumentParsers;
@@ -33,10 +34,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.RobotControllerApi;
-import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.swing.ComMonitor;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.wheelly.swing.SensorMonitor;
@@ -49,6 +47,8 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowEvent;
 import java.awt.geom.Point2D;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -60,6 +60,7 @@ import static java.lang.String.format;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
 import static org.mmarini.wheelly.swing.Utils.createFrame;
 import static org.mmarini.wheelly.swing.Utils.layHorizontally;
+import static org.mmarini.yaml.Utils.fromFile;
 
 
 public class RobotCheckUp {
@@ -301,13 +302,25 @@ public class RobotCheckUp {
     /**
      * Runs the check
      */
-    private void run() {
+    private void run() throws IOException {
         logger.info("Robot check started.");
-        controller = AppYaml.controllerFromFile(parseArgs.getString("config"), CHECKUP_SCHEMA_YML);
+        File configFile = new File(parseArgs.getString("config"));
+        JsonNode config = fromFile(configFile);
+        JsonSchemas.instance().validateOrThrow(config, CHECKUP_SCHEMA_YML);
+
+        logger.info("Creating robot ...");
+        RobotApi robot = AppYaml.robotFromJson(config);
+
+        logger.info("Creating controller ...");
+        controller = AppYaml.controllerFromJson(config);
+        controller.connectRobot(robot);
+
         controller.readErrors().doOnNext(err -> {
             comMonitor.onError(err);
             logger.atError().setCause(err).log();
         }).subscribe();
+
+        // Create flow
         controller.readReadLine().doOnNext(comMonitor::onReadLine).subscribe();
         controller.readWriteLine().doOnNext(comMonitor::onWriteLine).subscribe();
         controller.readControllerStatus().doOnNext(this::handleControlStatus).subscribe();

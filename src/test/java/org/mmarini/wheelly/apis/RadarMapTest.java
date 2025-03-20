@@ -36,11 +36,8 @@ import org.mmarini.Tuple2;
 import java.awt.*;
 import java.awt.geom.Point2D;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Predicate;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -56,8 +53,6 @@ class RadarMapTest {
     public static final int HEIGHT = 11;
     public static final GridTopology GRID_TOPOLOGY = new GridTopology(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
     public static final double MM1 = 0.001;
-    public static final int MAX_INTERVAL = 10000;
-    public static final Complex RECEPTIVE_ANGLE = Complex.fromDeg(15);
     public static final int ECHO_TIME = 100;
     public static final double DECAY = 100000;
 
@@ -66,8 +61,7 @@ class RadarMapTest {
                 .map(o -> (Point2D) o[0])
                 .toList();
 
-        RadarMap radarMap = RadarMap.create(RadarMapTest.GRID_TOPOLOGY.center(), RadarMapTest.GRID_TOPOLOGY.width(), RadarMapTest.GRID_TOPOLOGY.height(), RadarMapTest.GRID_TOPOLOGY.gridSize(),
-                MAX_INTERVAL, 2000, MAX_INTERVAL, MAX_INTERVAL, DECAY, RadarMapTest.GRID_TOPOLOGY.gridSize(), RECEPTIVE_ANGLE);
+        RadarMap radarMap = RadarMap.empty(RadarMapTest.GRID_TOPOLOGY);
         for (Point2D p : echos) {
             radarMap = radarMap.updateCellAt(p,
                     c -> c.addEchogenic(ECHO_TIME, DECAY));
@@ -105,48 +99,9 @@ class RadarMapTest {
                 .parse();
     }
 
-    @Test
-    void cleanNoTimeout() {
-        long timestamp = System.currentTimeMillis();
-        RadarMap map = createRadarMap()
-                .map(IntStream.range(10, 20),
-                        sector -> sector.addEchogenic(timestamp, DECAY));
-
-        map = map.clean(timestamp);
-
-        assertEquals(10L, Arrays.stream(map.cells())
-                .filter(Predicate.not(MapCell::unknown))
-                .count());
-        assertEquals(timestamp + MAX_INTERVAL, map.cleanTimestamp());
-    }
-
-    @Test
-    void cleanTimeout() {
-        long timestamp = System.currentTimeMillis();
-        RadarMap map = createRadarMap()
-                .map(IntStream.range(10, 20),
-                        cell -> cell.addEchogenic(timestamp - MAX_INTERVAL - 1, DECAY));
-
-        map = map.clean(timestamp);
-
-        MapCell[] cells = map.cells();
-        /*
-        for (int i = 0; i < cells.length; i++) {
-            MapCell cell = cells[i];
-            assertTrue(cell.unknown());
-        }
-
-         */
-        for (MapCell cell : cells) {
-            assertTrue(cell.unknown());
-        }
-        assertEquals(timestamp + MAX_INTERVAL, map.cleanTimestamp());
-    }
-
     @NotNull
     private RadarMap createRadarMap() {
-        return RadarMap.create(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE,
-                MAX_INTERVAL, 2000, MAX_INTERVAL, MAX_INTERVAL, DECAY, GRID_SIZE, RECEPTIVE_ANGLE);
+        return RadarMap.empty(GRID_TOPOLOGY);
     }
 
     @Test
@@ -306,38 +261,5 @@ class RadarMapTest {
 
         // Then map should have expected contact cells
         assertEquals(expected, map.cell(index).hasContact());
-    }
-
-    @Test
-    void update() {
-        RadarMap map = createRadarMap();
-        Point2D sensor = new Point2D.Double();
-        Complex direction = Complex.DEG0;
-        double distance = 0.8;
-        long timestamp = System.currentTimeMillis();
-        RadarMap.SensorSignal signal = new RadarMap.SensorSignal(sensor, direction, distance, timestamp);
-
-        map = map.update(signal, null);
-
-        Optional<MapCell> sectorOpt = map.cell(0, 0);
-
-        assertTrue(sectorOpt.isPresent());
-        assertTrue(sectorOpt.get().unknown());
-
-        sectorOpt = map.cell(0, 0.4);
-        assertTrue(sectorOpt.isPresent());
-        assertFalse(sectorOpt.orElseThrow().unknown());
-
-        sectorOpt = map.cell(0, 0.8);
-
-        assertTrue(sectorOpt.isPresent());
-        assertFalse(sectorOpt.get().unknown());
-        assertTrue(sectorOpt.get().echogenic());
-        assertEquals(timestamp, sectorOpt.orElseThrow().echoTime());
-
-        sectorOpt = map.cell(0.2, 1);
-
-        assertTrue(sectorOpt.isPresent());
-        assertTrue(sectorOpt.orElseThrow().unknown());
     }
 }

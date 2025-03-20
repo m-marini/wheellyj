@@ -42,7 +42,7 @@ import java.util.Map;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Generates the behavior to select the cautious point
+ * Generates the behaviour to select the cautious point
  * Parameters are:
  * <ul>
  *     <li><code>maxDistance</code> the maximum distance (m)</li>
@@ -82,7 +82,7 @@ public record CautiousPointState(String id, ProcessorCommand onInit, ProcessorCo
      * Creates the exploring state
      *
      * @param id      the identifier
-     * @param onInit  the initialize command
+     * @param onInit  the initialise command
      * @param onEntry the entry command
      * @param onExit  the exit command
      */
@@ -94,9 +94,9 @@ public record CautiousPointState(String id, ProcessorCommand onInit, ProcessorCo
     }
 
     @Override
-    public Tuple2<String, RobotCommands> step(ProcessorContext context) {
+    public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
         double maxDistance = getDouble(context, "maxDistance");
-        PolarMap polarMap = context.polarMap();
+        PolarMap polarMap = context.worldModel().polarMap();
         Point2D target = polarMap.safeCentroid(maxDistance);
 
         logger.atDebug().log("Target {}", target);

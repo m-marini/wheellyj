@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.apis;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.mockito.hamcrest.MockitoHamcrest;
@@ -40,6 +41,7 @@ import static java.lang.Math.round;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.*;
 import static rocks.cleancode.hamcrest.record.HasFieldMatcher.field;
@@ -55,15 +57,19 @@ class RobotControllerTest {
     private static final double PULSES_EPSILON = 1;
 
     static RobotController createController(RobotApi robot) {
-        return new RobotController(robot, INTERVAL, REACTION_INTERVAL, COMMAND_INTERVAL, CONNECTION_RETRY_INTERVAL, WATCHDOG_INTERVAL, SIM_SPEED, x -> 12d);
+        return new RobotController(INTERVAL, REACTION_INTERVAL, COMMAND_INTERVAL, CONNECTION_RETRY_INTERVAL, WATCHDOG_INTERVAL, SIM_SPEED, x -> 12d)
+                .connectRobot(robot);
     }
+
+    private MockRobot mockRobot;
+    private RobotController controller;
 
     @Test
     void closeTest() throws IOException {
-        RobotApi robot = mock();
+//        RobotApi mockRobot = mock();
         IOException error = new IOException("Error");
-        doThrow(error).when(robot).configure();
-        RobotController rc = createController(robot);
+        doThrow(error).when(mockRobot).configure();
+        RobotController rc = createController(mockRobot);
         Consumer<Throwable> consumer = mock();
         rc.readErrors().doOnNext(consumer::accept).subscribe();
 
@@ -78,18 +84,18 @@ class RobotControllerTest {
 
         rc.stepUp(); // connect
 
-        verify(robot, times(1)).close();
-        verify(robot, times(2)).connect();
+        verify(mockRobot, times(1)).close();
+        verify(mockRobot, times(2)).connect();
         verify(consumer, times(1)).accept(error);
         rc.shutdown();
     }
 
     @Test
     void configureErrorTest() throws IOException {
-        RobotApi robot = mock();
+        //RobotApi mockRobot = mock();
         IOException error = new IOException("Error");
-        doThrow(error).when(robot).configure();
-        RobotController rc = createController(robot);
+        doThrow(error).when(mockRobot).configure();
+        RobotController rc = createController(mockRobot);
         Consumer<Throwable> consumer = mock();
         rc.readErrors().doOnNext(consumer::accept).subscribe();
 
@@ -97,7 +103,7 @@ class RobotControllerTest {
         rc.stepUp(); // configure
         rc.stepUp(); // close
 
-        verify(robot, times(1)).close();
+        verify(mockRobot, times(1)).close();
         verify(consumer, times(1)).accept(error);
         rc.shutdown();
     }
@@ -105,33 +111,32 @@ class RobotControllerTest {
     @Test
     void configureTest() throws Throwable {
         // Given a mock robot
-        RobotApi robot = spy(new MockRobot());
-
+        RobotApi mockRobot = spy(new MockRobot());
         // and a controller connected
-        RobotController rc = createController(robot);
-        rc.stepUp();
+        controller = createController(mockRobot);
+        controller.stepUp();
 
         // and onController, on motion, on proxy, on contact, on status consumers
         io.reactivex.rxjava3.functions.Consumer<? super String> onController = mock();
-        rc.readControllerStatus().doOnNext(onController).subscribe();
+        controller.readControllerStatus().doOnNext(onController).subscribe();
 
         io.reactivex.rxjava3.functions.Consumer<? super RobotStatus> onMotion = mock();
-        rc.readMotion().doOnNext(onMotion).subscribe();
+        controller.readMotion().doOnNext(onMotion).subscribe();
 
         io.reactivex.rxjava3.functions.Consumer<? super RobotStatus> onProxy = mock();
-        rc.readProxy().doOnNext(onProxy).subscribe();
+        controller.readProxy().doOnNext(onProxy).subscribe();
 
         io.reactivex.rxjava3.functions.Consumer<? super RobotStatus> onContacts = mock();
-        rc.readContacts().doOnNext(onContacts).subscribe();
+        controller.readContacts().doOnNext(onContacts).subscribe();
 
         io.reactivex.rxjava3.functions.Consumer<? super RobotStatus> onStatus = mock();
-        rc.readRobotStatus().doOnNext(onStatus).subscribe();
+        controller.readRobotStatus().doOnNext(onStatus).subscribe();
 
         // When step up (configure)
-        rc.stepUp();
+        controller.stepUp();
 
         // Then the configure method should be invoked
-        verify(robot).configure();
+        verify(mockRobot).configure();
 
         // And the handling commands should be emitted
         verify(onController).accept(RobotController.HANDLING_COMMANDS);
@@ -156,18 +161,18 @@ class RobotControllerTest {
                         field("remoteTime", equalTo(0L))
                 ))));
 
-        rc.shutdown();
+        controller.shutdown();
     }
 
     @Test
     void connectErrorTest() throws Throwable {
         // Given a mock robot throwing error on connection
-        RobotApi robot = mock();
+//        RobotApi mockRobot = mock();
         IOException error = new IOException("Error");
-        doThrow(error).when(robot).connect();
+        doThrow(error).when(mockRobot).connect();
 
         // and a controller
-        RobotController rc = createController(robot);
+        RobotController rc = createController(mockRobot);
 
         // and onError amd onController consumers
         io.reactivex.rxjava3.functions.Consumer<? super Throwable> onError = mock();
@@ -179,7 +184,7 @@ class RobotControllerTest {
         rc.stepUp(); // connect 1
 
         // Then robot connection should be invoked
-        verify(robot).connect();
+        verify(mockRobot).connect();
 
         // Then robot error should be emitted
         verify(onError).accept(error);
@@ -201,7 +206,7 @@ class RobotControllerTest {
         rc.stepUp(); // connect 2
 
         // Then robot connection should be invoked
-        verify(robot, times(2)).connect();
+        verify(mockRobot, times(2)).connect();
 
         // Then robot error should be emitted
         verify(onError, times(2)).accept(error);
@@ -215,10 +220,11 @@ class RobotControllerTest {
     @Test
     void connectTest() throws Throwable {
         // Given a mock robot
-        RobotApi robot = mock();
+        //RobotApi mockRobot = createMockRobot();
+        when(mockRobot.robotSpec()).thenReturn(ROBOT_SPEC);
 
         // and a controller
-        RobotController rc = createController(robot);
+        RobotController rc = createController(mockRobot);
 
         // and onController consumers
         io.reactivex.rxjava3.functions.Consumer<? super String> onController = mock();
@@ -228,7 +234,7 @@ class RobotControllerTest {
         rc.stepUp();
 
         // Then the connect method should be invoked
-        verify(robot).connect();
+        verify(mockRobot).connect();
 
         // And the configuring status should be emitted
         verify(onController).accept(RobotController.CONFIGURING);
@@ -239,7 +245,8 @@ class RobotControllerTest {
     @Test
     void inferenceTest() throws Throwable {
         // Given a mock robot
-        RobotApi robot = spy(new MockRobot() {
+
+        RobotApi mockRobot = spy(new MockRobot() {
             @Override
             public void tick(long dt) {
                 super.tick(dt);
@@ -250,15 +257,15 @@ class RobotControllerTest {
                 }
             }
         });
+        controller = createController(mockRobot);
 
         // And a connected and configured controller
-        RobotController rc = createController(robot);
-        rc.stepUp(); // Connect
-        rc.stepUp(); // Configure
+        controller.stepUp(); // Connect
+        controller.stepUp(); // Configure
 
         // And an inference consumer
         Consumer<RobotStatus> onInference = mock();
-        rc.setOnInference(onInference);
+        controller.setOnInference(onInference);
 
         // When sleeping for 20 simulated localTime interval
         long dt = 3000;
@@ -268,10 +275,17 @@ class RobotControllerTest {
 
         int expTicks = ticks / 2;
         int expReact = reactions / 2;
-        verify(robot, atLeast(expTicks)).tick(INTERVAL);
+        verify(mockRobot, atLeast(expTicks)).tick(INTERVAL);
         verify(onInference, atLeast(expReact)).accept(any());
 
-        rc.shutdown();
+        controller.shutdown();
+    }
+
+    @BeforeEach
+    void setUp() {
+        this.mockRobot = mock();
+        when(mockRobot.robotSpec()).thenReturn(ROBOT_SPEC);
+        this.controller = createController(mockRobot);
     }
 
     @Test

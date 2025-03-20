@@ -59,6 +59,7 @@ public interface RobotApi extends Closeable, WithStatusCallback, WithCameraCallb
         return Utils.createObject(file, new Object[0], new Class[0]);
     }
 
+    RobotSpec robotSpec();
 
     /**
      * Configures the robot

@@ -1,7 +1,7 @@
 package org.mmarini.wheelly.apis;
 
 /**
- * Converts the simulation time and from remote time
+ * Converts the simulation markerTime and from remote markerTime
  */
 public interface ClockConverter {
     ClockConverter IDENTITY = new ClockConverter() {
@@ -24,16 +24,16 @@ public interface ClockConverter {
     }
 
     /**
-     * Returns the simulation time from remote time
+     * Returns the simulation markerTime from remote markerTime
      *
-     * @param time the remote time
+     * @param time the remote markerTime
      */
     long fromRemote(long time);
 
     /**
-     * Returns the robot time from symulation time
+     * Returns the robot markerTime from symulation markerTime
      *
-     * @param time the simulation time
+     * @param time the simulation markerTime
      */
     long fromSimulation(long time);
 

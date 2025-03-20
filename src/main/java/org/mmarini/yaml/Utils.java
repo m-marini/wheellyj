@@ -71,6 +71,16 @@ public class Utils {
     }
 
     /**
+     * Returns the object created by invoking create method of class of "class" property
+     *
+     * @param file the configuration file
+     * @param <T>  the type of object
+     */
+    public static <T> T createObject(File file) throws IOException {
+        return createObject(file, "create", new Object[0], new Class[0]);
+    }
+
+    /**
      * Returns the object created by invoking method of class of "class" property
      *
      * @param file       the configuration file

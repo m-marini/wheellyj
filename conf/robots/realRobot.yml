@@ -1,11 +1,14 @@
 ---
-$schema: https://mmarini.org/wheelly/robot-schema-2.0
+$schema: https://mmarini.org/wheelly/robot-schema-3.0
 class: org.mmarini.wheelly.apis.Robot
 robotHost: 192.168.1.43
 cameraHost: localhost
 connectionTimeout: 10000
 readTimeout: 10000
 configureTimeout: 2000
+contactRadius: 0.28
+sensorReceptiveAngle: 15
+maxRadarDistance: 3
 configCommands:
   - cs 500
   - cc 5 30 20

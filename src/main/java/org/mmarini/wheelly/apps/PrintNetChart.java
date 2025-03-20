@@ -35,8 +35,9 @@ import org.mmarini.Tuple2;
 import org.mmarini.rl.agents.AbstractAgentNN;
 import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.envs.SignalSpec;
+import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.rl.nets.*;
-import org.mmarini.wheelly.envs.RobotEnvironment;
+import org.mmarini.wheelly.envs.EnvironmentApi;
 import org.mmarini.wheelly.swing.Messages;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
@@ -49,6 +50,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import static org.mmarini.yaml.Utils.fromFile;
 
@@ -63,7 +65,7 @@ public class PrintNetChart {
     }
 
     /**
-     * Returns the comand line argument parser
+     * Returns the command line argument parser
      */
     private static ArgumentParser createParser() {
         ArgumentParser parser = ArgumentParsers.newFor(PrintNetChart.class.getName()).build()
@@ -133,10 +135,12 @@ public class PrintNetChart {
             this.args = parser.parseArgs(args);
             logger.atInfo().log("Creating environment");
             JsonNode config = fromFile(this.args.getString("config"));
-            RobotEnvironment environment = AppYaml.envFromJson(config, Wheelly.WHEELLY_SCHEMA_YML);
+            JsonSchemas.instance().validateOrThrow(config, Wheelly.WHEELLY_SCHEMA_YML);
+            EnvironmentApi environment = AppYaml.envFromJson(config);
 
             logger.atInfo().log("Creating agent");
-            this.agent = Agent.fromFile(new File(config.path("agent").asText()), environment);
+            Function<WithSignalsSpec, Agent> builder = Agent.fromFile(new File(config.path("agent").asText()));
+            this.agent = builder.apply(environment);
 
             String outputFilename = this.args.getString("output");
             logger.atInfo().log("Creating {}", outputFilename);

@@ -36,12 +36,12 @@ import org.nd4j.linalg.factory.Nd4j;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 
-class ReducedValueTest {
+class DoubleReducedValueTest {
     @Test
     void addArrayMeanTest() {
-        ReducedValue means = ReducedValue.mean();
+        DoubleReducedValue means = DoubleReducedValue.mean();
         INDArray x = Nd4j.arange(1, 4).reshape(3, 1);
-        double discount = ReducedValue.DEFAULT_DISCOUNT;
+        double discount = DoubleReducedValue.DEFAULT_DISCOUNT;
         double a2 = (1 - discount);
         double a1 = a2 * discount;
         double a0 = a1 * discount;
@@ -52,9 +52,9 @@ class ReducedValueTest {
 
     @Test
     void addArrayRmsTest() {
-        ReducedValue means = ReducedValue.rms();
+        DoubleReducedValue means = DoubleReducedValue.rms();
         INDArray x = Nd4j.arange(-1, 2).reshape(3, 1).castTo(DataType.FLOAT).muli(2);
-        double discount = ReducedValue.DEFAULT_DISCOUNT;
+        double discount = DoubleReducedValue.DEFAULT_DISCOUNT;
 
         double a2 = (1 - discount);
         double a1 = a2 * discount;
@@ -67,18 +67,18 @@ class ReducedValueTest {
 
     @Test
     void addMeanTest() {
-        ReducedValue means = ReducedValue.mean();
+        DoubleReducedValue means = DoubleReducedValue.mean();
         means.add(1);
-        double discount = ReducedValue.DEFAULT_DISCOUNT;
+        double discount = DoubleReducedValue.DEFAULT_DISCOUNT;
         double exp = 1 - discount;
         assertThat(means.value(), closeTo(exp, 1e-3));
     }
 
     @Test
     void addRmsTest() {
-        ReducedValue means = ReducedValue.rms();
+        DoubleReducedValue means = DoubleReducedValue.rms();
         means.add(-1);
-        double discount = ReducedValue.DEFAULT_DISCOUNT;
+        double discount = DoubleReducedValue.DEFAULT_DISCOUNT;
         double exp = Math.sqrt(1 - discount);
         assertThat(means.value(), closeTo(exp, 1e-3));
     }

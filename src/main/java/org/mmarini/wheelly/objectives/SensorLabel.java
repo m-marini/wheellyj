@@ -27,12 +27,17 @@ package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.LabelMarker;
 import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WithRobotStatus;
+import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.wheelly.envs.RewardFunction;
-import org.mmarini.wheelly.envs.WithRadarMap;
+import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
+
+import java.awt.geom.Point2D;
+import java.util.Comparator;
+import java.util.Optional;
 
 import static java.lang.Math.abs;
 
@@ -76,12 +81,15 @@ public interface SensorLabel {
                                 Complex sensorRange,
                                 double reward) {
         return (s0, a, s1) -> {
-            if (s1 instanceof WithRadarMap mapState && s1 instanceof WithRobotStatus robotState) {
+            if (s1 instanceof WorldState state) {
                 // the environment supports radar map
-                RobotStatus robotStatus = robotState.getRobotStatus();
+                WorldModel model = state.model();
+                RobotStatus robotStatus = model.robotStatus();
                 double echoDistance = robotStatus.echoDistance();
-                // Get the nearest labeled obstacle
-                String qrCode = robotStatus.qrCode();
+                Point2D robotLocation = robotStatus.location();
+                // Get the nearest marker
+                Optional<LabelMarker> marker = model.markers().values().stream()
+                        .min(Comparator.comparingDouble(m -> m.location().distanceSq(robotLocation)));
                 // echo distance in range
                 if (echoDistance >= minDistance
                         && echoDistance <= maxDistance
@@ -90,12 +98,16 @@ public interface SensorLabel {
                         && abs(robotStatus.rightPps()) < velocityThreshold
                         // and any sector in sensor direction range with a labeled target in distance range
                         && robotStatus.sensorDirection().isCloseTo(Complex.DEG0, sensorRange)
-                        // and qr code not null
-                        && qrCode != null
+                        // and marker not null
+                        && marker.isPresent()
+                    /*
                         // and qr code recognized (!= "?")
-                        && !"?".equals(qrCode)
+                        && !CameraEvent.UNKNOWN_QR_CODE.equals(qrCode)
                         // and proxy and camera signals correlated
                         && robotStatus.isCorrelated(mapState.getRadarMap().correlationInterval())
+                    // TODO && robotStatus.isCorrelated(mapState.getRadarMap().correlationInterval())
+
+                     */
                 ) {
                     return reward;
                 }

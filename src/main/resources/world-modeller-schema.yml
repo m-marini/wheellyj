@@ -1,0 +1,67 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/world-modeller-schema-0.1
+title: Wheelly application
+type: object
+properties:
+  $schema:
+    type: string
+    const: https://mmarini.org/wheelly/world-modeller-schema-0.1
+  radarWidth:
+    type: integer
+    minimum: 1
+  radarHeight:
+    type: integer
+    minimum: 1
+  radarGrid:
+    type: number
+    exclusiveMinimum: 0
+  radarCleanInterval:
+    type: integer
+    minimum: 1
+  correlationInterval:
+    type: integer
+    minimum: 1
+  echoPersistence:
+    type: integer
+    minimum: 1
+  contactPersistence:
+    type: integer
+    minimum: 1
+  radarDecay:
+    type: number
+    exclusiveMinimum: 0
+  numSectors:
+    type: integer
+    minimum: 1
+  gridMapSize:
+    type: integer
+    minimum: 1
+  minRadarDistance:
+    type: number
+    exclusiveMinimum: 0
+  markerCleanDecay:
+    type: number
+    exclusiveMinimum: 0
+  markerDecay:
+    type: number
+    exclusiveMinimum: 0
+  markerSize:
+    type: number
+    exclusiveMinimum: 0
+required:
+  - $schema
+  - radarWidth
+  - radarHeight
+  - radarGrid
+  - radarCleanInterval
+  - correlationInterval
+  - echoPersistence
+  - contactPersistence
+  - radarDecay
+  - markerDecay
+  - markerSize
+  - markerCleanDecay
+  - numSectors
+  - minRadarDistance
+  - gridMapSize

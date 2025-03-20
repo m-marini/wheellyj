@@ -36,6 +36,11 @@ import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
 
 public class MockRobot implements RobotApi {
+    public static final double CONTACT_RADIUS = 0.3;
+    public static final int RECEPTIVE_ANGLE_DEG = 15;
+    public static final double MAX_RADAR_DISTANCE = 3d;
+    public static final RobotSpec ROBOT_SPEC = new RobotSpec(MAX_RADAR_DISTANCE, Complex.fromDeg(RECEPTIVE_ANGLE_DEG), CONTACT_RADIUS);
+
     public static MockRobot create(JsonNode root, Locator locator) {
         float x = (float) locator.path("x").getNode(root).asDouble(0);
         float y = (float) locator.path("y").getNode(root).asDouble(0);
@@ -86,7 +91,7 @@ public class MockRobot implements RobotApi {
     }
 
     public RobotStatus getStatus() {
-        return RobotStatus.create(x -> 12d)
+        return RobotStatus.create(ROBOT_SPEC, x -> 12d)
                 .setDirection(robotDir)
                 .setSensorDirection(sensorDir)
                 .setEchoDistance(sensorDistance)
@@ -105,6 +110,11 @@ public class MockRobot implements RobotApi {
     @Override
     public void move(Complex dir, int speed) throws IOException {
 
+    }
+
+    @Override
+    public RobotSpec robotSpec() {
+        return ROBOT_SPEC;
     }
 
     @Override

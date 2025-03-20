@@ -73,29 +73,15 @@ class TDAgentSingleNNEnvCreateTest {
     private static final Map<String, SignalSpec> ACTIONS = Map.of(
             "output", new IntSignalSpec(new long[]{1}, 3)
     );
-    static final Environment MOCK_ENV = new Environment() {
+    static final WithSignalsSpec MOCK_ENV = new WithSignalsSpec() {
         @Override
-        public void close() {
-        }
-
-        @Override
-        public ExecutionResult execute(Map<String, Signal> actions) {
-            return null;
-        }
-
-        @Override
-        public Map<String, SignalSpec> getActions() {
+        public Map<String, SignalSpec> actionSpec() {
             return ACTIONS;
         }
 
         @Override
-        public Map<String, SignalSpec> getState() {
+        public Map<String, SignalSpec> stateSpec() {
             return STATE;
-        }
-
-        @Override
-        public Map<String, Signal> reset() {
-            return null;
         }
     };
 

@@ -1,13 +1,16 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/objective-label-schema-0.1
+$id: https://mmarini.org/wheelly/objective-label-schema-1.0
 title: Label objective
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/objective-label-schema-0.1
+    const: https://mmarini.org/wheelly/objective-label-schema-1.0
   class:
     const: org.mmarini.wheelly.objectives.Label
+  label:
+    type: string
+    minLength: 1
   minDistance:
     type: number
     minimum: 0
@@ -30,5 +33,6 @@ properties:
 required:
   - $schema
   - class
+  - label
   - minDistance
   - maxDistance

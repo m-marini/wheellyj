@@ -27,7 +27,7 @@ package org.mmarini.rl.agents;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mmarini.rl.envs.Environment;
+import org.mmarini.rl.envs.ExecutionResult;
 import org.mmarini.rl.envs.TestSequenceMDP;
 import org.mmarini.rl.nets.*;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -103,11 +103,11 @@ class MDPTrajectoryTest {
         // And an agent for the mdp
         TDAgentSingleNN agent = createAgent(mdp, 1F / (numSteps + 1), numSteps, numEpochs, batchSize);
         // and the trajectory from current policy
-        List<Environment.ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
+        List<ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
         //trajectory(agent, numSteps);
         // and the average reward
         float avg0 = (float) trajectory.stream()
-                .mapToDouble(Environment.ExecutionResult::reward)
+                .mapToDouble(ExecutionResult::reward)
                 .average()
                 .orElseThrow();
         agent = agent.avgReward(avg0);
@@ -144,10 +144,10 @@ class MDPTrajectoryTest {
         // And an agent for the mdp
         TDAgentSingleNN agent = createAgent(mdp, 1F / (numSteps + 1), numSteps, numEpochs, batchSize);
         // and the trajectory from current policy
-        List<Environment.ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
+        List<ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
         // and the average reward
         float avg0 = (float) trajectory.stream()
-                .mapToDouble(Environment.ExecutionResult::reward)
+                .mapToDouble(ExecutionResult::reward)
                 .average()
                 .orElseThrow();
         agent = agent.avgReward(avg0);
@@ -184,10 +184,10 @@ class MDPTrajectoryTest {
         // And an agent for the mdp
         TDAgentSingleNN agent = createAgent(mdp, 1F / (numSteps + 1), numSteps, numEpochs, batchSize);
         // and the trajectory from current policy
-        List<Environment.ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
+        List<ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
         // and the average reward
         float avg0 = (float) trajectory.stream()
-                .mapToDouble(Environment.ExecutionResult::reward)
+                .mapToDouble(ExecutionResult::reward)
                 .average()
                 .orElseThrow();
         agent = agent.avgReward(avg0);
@@ -226,10 +226,10 @@ class MDPTrajectoryTest {
         // And an agent for the mdp
         TDAgentSingleNN agent = createAgent(mdp, 1F / (numSteps + 1), numSteps, numEpochs, batchSize);
         // and the trajectory from current policy
-        List<Environment.ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
+        List<ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
         // and the average reward
         float avg0 = (float) trajectory.stream()
-                .mapToDouble(Environment.ExecutionResult::reward)
+                .mapToDouble(ExecutionResult::reward)
                 .average()
                 .orElseThrow();
         agent = agent.avgReward(avg0);
@@ -278,7 +278,7 @@ class MDPTrajectoryTest {
         int numEpochs = 1;
         int batchSize = 4;
         // and the trajectory for fail,success, fail,success
-        List<Environment.ExecutionResult> trajectory = List.of(
+        List<ExecutionResult> trajectory = List.of(
                 mdp.result(0, 1),
                 mdp.result(0, 0),
                 mdp.result(1, 0),
@@ -286,7 +286,7 @@ class MDPTrajectoryTest {
         );
         // and the average reward
         float avg0 = (float) trajectory.stream()
-                .mapToDouble(Environment.ExecutionResult::reward)
+                .mapToDouble(ExecutionResult::reward)
                 .average()
                 .orElseThrow();
         // And an agent for the mdp

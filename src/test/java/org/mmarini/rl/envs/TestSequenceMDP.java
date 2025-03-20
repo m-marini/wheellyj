@@ -193,10 +193,10 @@ public record TestSequenceMDP(int[][] nextState, double[][] reward) {
      * @param state  the initial state
      * @param action the action
      */
-    public Environment.ExecutionResult result(int state, int action) {
+    public ExecutionResult result(int state, int action) {
         int next = next(state, action);
         double reward = reward(state, action);
-        return new Environment.ExecutionResult(state(state), action(action), reward, state(next));
+        return new ExecutionResult(state(state), action(action), reward, state(next));
     }
 
     /**
@@ -233,13 +233,13 @@ public record TestSequenceMDP(int[][] nextState, double[][] reward) {
      * @param initialState the initial state
      * @param actions      the actions
      */
-    public List<Environment.ExecutionResult> trajectory(int initialState, int... actions) {
-        List<Environment.ExecutionResult> result = new ArrayList<>();
+    public List<ExecutionResult> trajectory(int initialState, int... actions) {
+        List<ExecutionResult> result = new ArrayList<>();
         int state = initialState;
         for (int action : actions) {
             int next = next(state, action);
             double reward = reward(state, action);
-            result.add(new Environment.ExecutionResult(state(state), action(action), reward, state(next)));
+            result.add(new ExecutionResult(state(state), action(action), reward, state(next)));
             state = next;
         }
         return result;
@@ -253,14 +253,14 @@ public record TestSequenceMDP(int[][] nextState, double[][] reward) {
      * @param initialState the initial state
      * @param act          the action function
      */
-    public List<Environment.ExecutionResult> trajectory(int numStep, int initialState, IntUnaryOperator act) {
-        List<Environment.ExecutionResult> result = new ArrayList<>();
+    public List<ExecutionResult> trajectory(int numStep, int initialState, IntUnaryOperator act) {
+        List<ExecutionResult> result = new ArrayList<>();
         int state = initialState;
         for (int i = 0; i < numStep; i++) {
             int action = act.applyAsInt(state);
             int next = next(state, action);
             double reward = reward(state, action);
-            result.add(new Environment.ExecutionResult(state(state), action(action), reward, state(next)));
+            result.add(new ExecutionResult(state(state), action(action), reward, state(next)));
             state = next;
         }
         return result;

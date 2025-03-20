@@ -38,7 +38,7 @@ import static java.lang.String.format;
  * The Wheelly status contain the sensor value of Wheelly
  *
  * @param localTime      the status localTime (ms)
- * @param simulationTime the simulation time (ms)
+ * @param simulationTime the simulation markerTime (ms)
  * @param remoteTime     the remote status instant (ms)
  * @param xPulses        the x robot location pulses
  * @param yPulses        the y robot location pulses
@@ -120,7 +120,7 @@ public record WheellyMotionMessage(long localTime, long simulationTime, long rem
      * Creates a motion message
      *
      * @param localTime      the status localTime (ms)
-     * @param simulationTime the simulation time (ms)
+     * @param simulationTime the simulation markerTime (ms)
      * @param remoteTime     the remote status instant (ms)
      * @param xPulses        the x robot location pulses
      * @param yPulses        the y robot location pulses
@@ -179,9 +179,9 @@ public record WheellyMotionMessage(long localTime, long simulationTime, long rem
     }
 
     /**
-     * Returns the motion message with a simulated time
+     * Returns the motion message with a simulated markerTime
      *
-     * @param simulationTime the simulated time (ms)
+     * @param simulationTime the simulated markerTime (ms)
      */
     public WheellyMotionMessage setSimulationTime(long simulationTime) {
         return simulationTime != this.simulationTime

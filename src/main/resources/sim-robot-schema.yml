@@ -1,11 +1,11 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/sim-robot-schema-0.4
+$id: https://mmarini.org/wheelly/sim-robot-schema-1.0
 title: Robot
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/sim-robot-schema-0.4
+    const: https://mmarini.org/wheelly/sim-robot-schema-1.0
   class:
     const: org.mmarini.wheelly.apis.SimRobot
   mapSeed:
@@ -23,6 +23,7 @@ properties:
   sensorReceptiveAngle:
     type: integer
     minimum: 1
+    maximum: 90
   numObstacles:
     type: integer
     minimum: 0
@@ -32,6 +33,12 @@ properties:
   maxAngularSpeed:
     type: integer
     minimum: 1
+  contactRadius:
+    type: number
+    exclusiveMinimum: 0
+  maxRadarDistance:
+    type: number
+    exclusiveMinimum: 0
   changeObstaclesPeriod:
     type: integer
     minimum: 1
@@ -41,3 +48,6 @@ properties:
 required:
   - $schema
   - class
+  - contactRadius
+  - sensorReceptiveAngle
+  - maxRadarDistance

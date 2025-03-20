@@ -52,10 +52,10 @@ public class RandomAgent implements Agent {
      * @param locator the agent spec locator
      * @param env     the environment
      */
-    public static RandomAgent create(JsonNode root, Locator locator, Environment env) {
+    public static RandomAgent create(JsonNode root, Locator locator, WithSignalsSpec env) {
         long seed = locator.path("seed").getNode(root).asLong(0);
         Random random = seed > 0 ? new Random(seed) : new Random();
-        return new RandomAgent(env.getState(), env.getActions(), random);
+        return new RandomAgent(env.stateSpec(), env.actionSpec(), random);
     }
 
     private final Random random;
@@ -138,13 +138,13 @@ public class RandomAgent implements Agent {
     }
 
     @Override
-    public Map<String, SignalSpec> getActions() {
+    public Map<String, SignalSpec> actionSpec() {
         return actions;
     }
 
     @Override
-    public Map<String, SignalSpec> getState() {
-        return state;
+    public RandomAgent observe(ExecutionResult result) {
+        return this;
     }
 
     @Override
@@ -178,8 +178,8 @@ public class RandomAgent implements Agent {
     }
 
     @Override
-    public RandomAgent observe(Environment.ExecutionResult result) {
-        return this;
+    public Map<String, SignalSpec> stateSpec() {
+        return state;
     }
 
     @Override
@@ -193,7 +193,7 @@ public class RandomAgent implements Agent {
     }
 
     @Override
-    public Agent trainByTrajectory(List<Environment.ExecutionResult> trajectory) {
+    public Agent trainByTrajectory(List<ExecutionResult> trajectory) {
         throw new RuntimeException("Not implemented");
     }
 
@@ -203,12 +203,12 @@ public class RandomAgent implements Agent {
     }
 
     @Override
-    public List<Environment.ExecutionResult> trajectory() {
+    public List<ExecutionResult> trajectory() {
         throw new RuntimeException("Not implemented");
     }
 
     @Override
-    public Agent trajectory(List<Environment.ExecutionResult> trajectory) {
+    public Agent trajectory(List<ExecutionResult> trajectory) {
         throw new RuntimeException("Not implemented");
     }
 }

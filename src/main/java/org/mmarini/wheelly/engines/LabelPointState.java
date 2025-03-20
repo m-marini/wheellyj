@@ -30,9 +30,7 @@ package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.PolarMap;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.*;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,11 +102,16 @@ public record LabelPointState(String id, ProcessorCommand onInit, ProcessorComma
     }
 
     @Override
-    public Tuple2<String, RobotCommands> step(ProcessorContext context) {
-        double maxDistance = getDouble(context, "maxDistance");
+    public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
         double safeDistance = getDouble(context, "safeDistance");
-        PolarMap polarMap = context.polarMap();
-        Point2D target = polarMap.nearestLabel(0, maxDistance);
+        WorldModel worldModel = context.worldModel();
+        PolarMap polarMap = worldModel.polarMap();
+        Point2D target = worldModel.markers()
+                .values()
+                .stream()
+                .min((a, b) -> 0)
+                .map(LabelMarker::location)
+                .orElse(null);
 
         if (target == null) {
             logger.atDebug().log("No target found");

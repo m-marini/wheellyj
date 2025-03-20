@@ -30,7 +30,7 @@ package org.mmarini.wheelly.apps;
 
 import io.reactivex.rxjava3.core.Maybe;
 import org.mmarini.rl.agents.Agent;
-import org.mmarini.rl.envs.Environment;
+import org.mmarini.rl.envs.ExecutionResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -122,7 +122,7 @@ public record AgentTrainer(Agent agent,
      *
      * @param result the observed result
      */
-    public AgentTrainer observeResult(Environment.ExecutionResult result) {
+    public AgentTrainer observeResult(ExecutionResult result) {
         // Let the agent observe the result
         Agent trainingAgent = agent.observe(result);
         if (!trainingAgent.isReadyForTrain() || training) {
@@ -131,9 +131,9 @@ public record AgentTrainer(Agent agent,
         }
 
         // Agent ready to train
-        List<Environment.ExecutionResult> trajectory = trainingAgent.trajectory();
+        List<ExecutionResult> trajectory = trainingAgent.trajectory();
         // Extract clipped trajectory
-        List<Environment.ExecutionResult> clippedTrajectory = trajectory.size() > trainingAgent.numSteps()
+        List<ExecutionResult> clippedTrajectory = trajectory.size() > trainingAgent.numSteps()
                 ? trajectory.stream().skip(trajectory.size() - trainingAgent.numSteps()).toList()
                 : trajectory;
         // Generate new agent with cleared trajectory
@@ -192,7 +192,7 @@ public record AgentTrainer(Agent agent,
                 : this;
     }
 
-    private AgentTrainer train(Agent agent, List<Environment.ExecutionResult> trajectory, int size) {
+    private AgentTrainer train(Agent agent, List<ExecutionResult> trajectory, int size) {
         logger.atDebug().log("Training ...");
         // Trains the agent
         long t0 = System.currentTimeMillis();

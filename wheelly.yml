@@ -1,7 +1,10 @@
 ---
-$schema: https://mmarini.org/wheelly/wheelly-schema-2.0
-robot: conf/robots/simRobot.yml
+$schema: https://mmarini.org/wheelly/wheelly-schema-3.0
+robot: conf/robots/simRobot1Obstacles.yml
+#robot: conf/robots/realRobot.yml
 controller: conf/controllers/controller.yml
-environment: conf/environments/fullMapEnv.yml
+modeller: conf/modellers/modeller.yml
+environment: conf/environments/env.yml
+objective: conf/objectives/findLabel1.yml
 agent: conf/agents/fullRadarAgent.yml
 savingInterval: 300000
