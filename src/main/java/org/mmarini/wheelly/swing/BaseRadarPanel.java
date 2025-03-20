@@ -25,14 +25,18 @@
 
 package org.mmarini.wheelly.swing;
 
+import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.GridTopology;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
+import java.util.Collection;
 
 import static java.lang.Math.min;
+import static org.mmarini.wheelly.swing.BaseShape.*;
+import static org.mmarini.wheelly.swing.EnvironmentPanel.DEFAULT_MARKER_SIZE;
 import static org.mmarini.wheelly.swing.Utils.DEFAULT_WORLD_SIZE;
 
 /**
@@ -41,12 +45,13 @@ import static org.mmarini.wheelly.swing.Utils.DEFAULT_WORLD_SIZE;
 public class BaseRadarPanel extends JComponent {
     public static final int DEFAULT_WINDOW_SIZE = 400;
     static final float DEFAULT_SCALE = DEFAULT_WINDOW_SIZE / DEFAULT_WORLD_SIZE / 2;
-
+    private final float markerSize;
     private Point2D centerLocation;
     private float scale;
-
     private BaseShape gridShape;
     private BaseShape map;
+    private BaseShape markers;
+    private double direction;
 
     /**
      * Creates the radar panel
@@ -56,6 +61,7 @@ public class BaseRadarPanel extends JComponent {
         setForeground(Color.WHITE);
         setFont(Font.decode("Monospaced"));
         scale = DEFAULT_SCALE;
+        markerSize = DEFAULT_MARKER_SIZE;
         centerLocation = new Point2D.Float();
         setPreferredSize(new Dimension(DEFAULT_WINDOW_SIZE, DEFAULT_WINDOW_SIZE));
     }
@@ -75,6 +81,7 @@ public class BaseRadarPanel extends JComponent {
         AffineTransform result = AffineTransform.getTranslateInstance((float) size.width / 2, (float) size.height / 2);
         double scale = min(size.height, size.width) / (3 + 0.2) / 2;
         result.scale(scale, -scale);
+        result.rotate(direction);
         result.translate(-centerLocation.getX(), -centerLocation.getY());
         return result;
     }
@@ -135,6 +142,9 @@ public class BaseRadarPanel extends JComponent {
         if (map != null) {
             map.paint(gr);
         }
+        if (markers != null) {
+            markers.paint(gr);
+        }
     }
 
     /**
@@ -145,6 +155,25 @@ public class BaseRadarPanel extends JComponent {
     public void setCenterLocation(Point2D centerLocation) {
         this.centerLocation = centerLocation;
         repaint();
+    }
+
+    /**
+     * Sets the direction of map
+     *
+     * @param direction the direction (RAD)
+     */
+    public void setDirection(double direction) {
+        this.direction = direction;
+        repaint();
+    }
+
+    /**
+     * Sets the direction of map
+     *
+     * @param direction the direction
+     */
+    public void setDirection(Complex direction) {
+        setDirection(direction.toRad());
     }
 
     /**
@@ -173,6 +202,18 @@ public class BaseRadarPanel extends JComponent {
      */
     protected void setMap(BaseShape map) {
         this.map = map;
+        repaint();
+    }
+
+    /**
+     * Sets the markers
+     *
+     * @param markers the markers
+     */
+    public void setMarkers(Collection<Point2D> markers) {
+        this.markers = new BaseShape.CompositeShape(markers.stream()
+                .map(marker -> createCircle(LABELED_COLOR, BORDER_STROKE, true, marker, markerSize / 2))
+                .toList());
         repaint();
     }
 }

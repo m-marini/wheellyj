@@ -30,16 +30,19 @@ package org.mmarini.rl.envs;
 
 import java.util.Map;
 
+/**
+ * Returns the state and action specifications
+ */
 public interface WithSignalsSpec {
 
     /**
-     * Returns the actions specification
+     * Returns the action's specification
      */
-    Map<String, SignalSpec> getActions();
+    Map<String, SignalSpec> actionSpec();
 
     /**
-     * Returns the state specification
+     * Returns the state's specification
      */
-    Map<String, SignalSpec> getState();
+    Map<String, SignalSpec> stateSpec();
 
 }

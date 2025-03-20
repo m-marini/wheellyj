@@ -79,7 +79,7 @@ public class Robot implements RobotApi, WithIOCallback {
     public static final int DEFAULT_ROBOT_PORT = 22;
     public static final int DEFAULT_CAMERA_PORT = 8100;
     public static final int FLUSH_INTERVAL = 1000;
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/robot-schema-2.0";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/robot-schema-3.0";
     private static final Logger logger = LoggerFactory.getLogger(Robot.class);
 
 
@@ -100,11 +100,17 @@ public class Robot implements RobotApi, WithIOCallback {
         long readTimeout = locator.path("readTimeout").getNode(root).asLong();
         long configureTimeout = locator.path("configureTimeout").getNode(root).asLong();
 
+        double maxRadarDistance = locator.path("maxRadarDistance").getNode(root).asDouble();
+        double contactRadius = locator.path("contactRadius").getNode(root).asDouble();
+        int receptiveAngle = locator.path("sensorReceptiveAngle").getNode(root).asInt();
+        RobotSpec robotSpec = new RobotSpec(maxRadarDistance, Complex.fromDeg(receptiveAngle), contactRadius);
+
         Locator configCommandsLoc = locator.path("configCommands");
         String[] configCommands = !configCommandsLoc.getNode(root).isMissingNode()
                 ? configCommandsLoc.elements(root).map(l -> l.getNode(root).asText()).toArray(String[]::new)
                 : new String[0];
-        return Robot.create(robotHost, robotPort,
+
+        return Robot.create(robotSpec, robotHost, robotPort,
                 cameraHost, cameraPort,
                 connectionTimeout, readTimeout, configureTimeout,
                 configCommands);
@@ -113,6 +119,7 @@ public class Robot implements RobotApi, WithIOCallback {
     /**
      * Returns an interface to the robot
      *
+     * @param robotSpec         the robot specification
      * @param robotHost         the robot host
      * @param robotPort         the robot port
      * @param cameraHost        the camera host
@@ -122,13 +129,13 @@ public class Robot implements RobotApi, WithIOCallback {
      * @param configureTimeout  the configuration timeout (ms)
      * @param configCommands    the configuration commands
      */
-    public static Robot create(String robotHost, int robotPort,
+    public static Robot create(RobotSpec robotSpec, String robotHost, int robotPort,
                                String cameraHost, int cameraPort,
                                long connectionTimeout, long readTimeout, long configureTimeout,
                                String... configCommands) {
         LineSocket robotSocket1 = new LineSocket(robotHost, robotPort, connectionTimeout, readTimeout);
         LineSocket cameraSocket1 = new LineSocket(cameraHost, cameraPort, connectionTimeout, readTimeout);
-        return new Robot(robotSocket1, cameraSocket1,
+        return new Robot(robotSpec, robotSocket1, cameraSocket1,
                 configureTimeout,
                 configCommands);
     }
@@ -137,6 +144,7 @@ public class Robot implements RobotApi, WithIOCallback {
     private final long configureTimeout;
     private final LineSocket robotSocket;
     private final LineSocket cameraSocket;
+    private final RobotSpec robotSpec;
     private Consumer<String> onReadLine;
     private Consumer<String> onWriteLine;
     private Consumer<WheellyMotionMessage> onMotion;
@@ -152,13 +160,15 @@ public class Robot implements RobotApi, WithIOCallback {
     /**
      * Create a Robot interface
      *
+     * @param robotSpec        the robot specification
      * @param robotSocket      the robot socket
      * @param cameraSocket     the camera socket
      * @param configureTimeout the configuration timeout (ms)
      * @param configCommands   the motor theta corrections
      */
-    protected Robot(LineSocket robotSocket, LineSocket cameraSocket, long configureTimeout, String[] configCommands) {
+    protected Robot(RobotSpec robotSpec, LineSocket robotSocket, LineSocket cameraSocket, long configureTimeout, String[] configCommands) {
         this.configCommands = requireNonNull(configCommands);
+        this.robotSpec = requireNonNull(robotSpec);
         this.clockConverter = ClockConverter.identity();
         this.configureTimeout = configureTimeout;
         this.robotSocket = robotSocket;
@@ -330,6 +340,11 @@ public class Robot implements RobotApi, WithIOCallback {
             }
         }
         return line;
+    }
+
+    @Override
+    public RobotSpec robotSpec() {
+        return robotSpec;
     }
 
     @Override

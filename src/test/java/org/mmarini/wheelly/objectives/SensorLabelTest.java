@@ -29,46 +29,46 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.apis.CameraEvent;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RadarMap;
+import org.mmarini.wheelly.apis.LabelMarker;
 import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
+import java.awt.geom.Point2D;
 import java.io.IOException;
+import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
+import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class SensorLabelTest {
 
-    public static final long CORRELATION_INTERVAL = 1000L;
+    private static final long MARKER_TIME = 1;
 
-    static MockState createState(Complex sensorDir, double leftPps, double rightPps, double distance, String qrCode, long cameraDelay) {
-        RadarMap map = mock();
-        when(map.correlationInterval()).thenReturn(CORRELATION_INTERVAL);
-
-
-        RobotStatus status = RobotStatus.create(x -> 12)
+    static WorldState createState(Complex sensorDir, double leftPps, double rightPps, double distance, String qrCode) {
+        RobotStatus status = RobotStatus.create(ROBOT_SPEC, x -> 12)
                 .setSensorDirection(sensorDir)
                 .setSpeeds(leftPps, rightPps)
                 .setEchoDistance(distance);
 
-        // Create camera event
-        CameraEvent cameraEvent = new CameraEvent(
-                status.proxyMessage().simulationTime() + cameraDelay,
-                qrCode.equals("null") ? null : qrCode,
-                1, 1, null);
+        // Create markers
+        Point2D markerLocation = sensorDir.at(new Point2D.Double(), distance);
+        LabelMarker marker = qrCode.equals("?") ? null : new LabelMarker(qrCode, markerLocation, 1, MARKER_TIME, MARKER_TIME);
 
-        status = status.setCameraMessage(cameraEvent);
+        Map<String, LabelMarker> markers = marker == null ? Map.of() : Map.of(marker.label(), marker);
 
-        MockState state = mock();
-        when(state.getRobotStatus()).thenReturn(status);
-        when(state.getRadarMap()).thenReturn(map);
+        WorldModel model = mock();
+        when(model.robotStatus()).thenReturn(status);
+        when(model.markers()).thenReturn(markers);
+        WorldState state = mock();
+        when(state.model()).thenReturn(model);
 
         return state;
     }
@@ -76,35 +76,29 @@ class SensorLabelTest {
     @ParameterizedTest(
             name = "[{index}] sens=R{1}, pps={2},{3}, distance={4}, qrCode={5} delay={6}")
     @CsvSource({
-            "2, 0, 0,0, 0.8, A, 100",
-            "2, 29, 0,0, 0.8, A, 100", // sensor in range
-            "2, 331, 0,0, 0.8, A, 100", // sensor in range
-            "2, 0, 4.9,4.9, 0.8, A, 100", // speed in range
-            "2, 0, -4.9,-4.9, 0.8, A, 100", // speed in range
-            "2, 0, 0,0, 0.51, A, 100", // distance in range
-            "2, 0, 0,0, 0.99, A, 100", // distance in range
-            "2, 0, 0,0, 0.8, A, 0", // correlation in range
-            "2, 0, 0,0, 0.8, A, 1000", // correlation in range
+            "2, 0, 0,0, 0.8, A",
+            "2, 29, 0,0, 0.8, A", // sensor in range
+            "2, 331, 0,0, 0.8, A", // sensor in range
+            "2, 0, 4.9,4.9, 0.8, A", // speed in range
+            "2, 0, -4.9,-4.9, 0.8, A", // speed in range
+            "2, 0, 0,0, 0.51, A", // distance in range
+            "2, 0, 0,0, 0.99, A", // distance in range
 
-            "0, 0, 0,0, 0.8, null, 100", // null camera signal
-            "0, 0, 0,0, 0.8, ?, 100", // unknown camera signal
-            "0, 31, 0,0, 0.8, A, 100", // sensor out of range
-            "0, 329, 0,0, 0.8, A, 100", // sensor out of range
-            "0, 0, 0,0, 0.4, A, 100", // too near
-            "0, 0, 0,0, 1.1, A, 100", // too far
-            "0, 0, 0,0, 0.8, A, -1", // uncorrelated signals
-            "0, 0, 0,0, 0.8, A, 1001", // uncorrelated signals
-            "0, 0, 5.1,0, 0.8, A, 100", // speed out of range
-            "0, 0, -5.1,0, 0.8, A, 100", // speed out of range
-            "0, 0, 0,5.1, 0.8, A, 100", // speed out of range
-            "0, 0, 0,-5.1, 0.8, A, 100", // speed out of range
+            "0, 0, 0,0, 0.8, ?", // unknown camera signal
+            "0, 31, 0,0, 0.8, A", // sensor out of range
+            "0, 329, 0,0, 0.8, A", // sensor out of range
+            "0, 0, 0,0, 0.4, A", // too near
+            "0, 0, 0,0, 1.1, A", // too far
+            "0, 0, 5.1,0, 0.8, A", // speed out of range
+            "0, 0, -5.1,0, 0.8, A", // speed out of range
+            "0, 0, 0,5.1, 0.8, A", // speed out of range
+            "0, 0, 0,-5.1, 0.8, A", // speed out of range
     })
     void create(double expectedReward,
                 int sensorDir,
                 double leftPps, double rightPps,
                 double distance,
-                String qrCode,
-                long cameraDelay) throws IOException {
+                String qrCode) throws IOException {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + SensorLabel.SCHEMA_NAME,
                 "class: " + SensorLabel.class.getName(),
@@ -114,13 +108,14 @@ class SensorLabelTest {
                 "sensorRange: 30",
                 "reward: 2"
         ));
-        RewardFunction f = SensorLabel.create(root, Locator.root());
-
-        double result = f.apply(null, null, createState(
+        WorldState state = createState(
                 Complex.fromDeg(sensorDir),
                 leftPps,
                 rightPps,
-                distance, qrCode, cameraDelay));
+                distance, qrCode);
+        RewardFunction f = SensorLabel.create(root, Locator.root());
+
+        double result = f.apply(null, null, state);
 
         assertThat(result, closeTo(expectedReward, 1e-4));
     }

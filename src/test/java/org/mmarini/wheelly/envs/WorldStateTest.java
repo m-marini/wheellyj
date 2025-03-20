@@ -31,7 +31,6 @@ package org.mmarini.wheelly.envs;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
@@ -47,75 +46,49 @@ import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
-import static org.mockito.Mockito.mock;
+import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
 
-class PolarRobotStateTest {
+class WorldStateTest {
 
-    public static final int RADAR_SIZE = 11;
+    public static final int GRID_MAP_SIZE = 5;
     public static final double GRID_SIZE = 0.5;
-    public static final int MAP_SIZE = 5;
-    public static final double MAX_RADAR_DISTANCE = 3;
     public static final int SECTOR_NUMBERS = 4;
     public static final int MAP_DEG = 90;
+    private static final int RADAR_SIZE = 11;
 
     @NotNull
     private static RadarMap createRadarMap() {
-        return RadarMap.create(new Point2D.Float(), RADAR_SIZE, RADAR_SIZE, GRID_SIZE,
-                        0, 0, 0, 0, 0, 0, Complex.DEG0)
+        return RadarMap.empty(new GridTopology(new Point2D.Float(), RADAR_SIZE, RADAR_SIZE, GRID_SIZE))
                 .updateCellAt(0, 0, cell -> cell.addEchogenic(100, 0));
     }
 
-    private static RobotStatus createStatus(double robotX, double robotY, int robotDeg) {
-        return RobotStatus.create(x -> 12)
+    private static PolarMap createPolarMap() {
+        return PolarMap.create(SECTOR_NUMBERS);
+    }
+
+    private static RobotStatus createRobotStatus(double robotX, double robotY, int robotDeg) {
+        return RobotStatus.create(ROBOT_SPEC, x -> 12)
                 .setLocation(new Point2D.Double(robotX, robotY))
                 .setDirection(Complex.fromDeg(robotDeg));
     }
 
-    @ParameterizedTest
-    @CsvSource({
-            // robotX,robotY, robotDeg, expX, expY, directionDeg
-            "0,0, 0, 0,0, 0",
-            "1.3,1.8, 44, 1.5,2, 0",
-            "1.3,1.8, 46, 1.5,2, 90",
-            "1.3,1.8, 134, 1.5,2, 90",
-            "1.3,1.8, 136, 1.5,2, -180",
-            "1.3,1.8, 224, 1.5,2, -180",
-            "1.3,1.8, 226, 1.5,2, -90",
-            "1.3,1.8, 314, 1.5,2, -90",
-            "0,0, 316, 0,0, 0",
-    })
-    void createGridMapTest(double robotX, double robotY, int robotDeg, double expX, double expY, int expDeg) {
-        // Given ...
-        RobotStatus status = createStatus(robotX, robotY, robotDeg);
+    static WorldModel createWorldModel(RobotStatus status) {
         RadarMap radarMap = createRadarMap();
-        PolarRobotState state0 = PolarRobotState.create(status, radarMap, PolarMap.create(SECTOR_NUMBERS), MAX_RADAR_DISTANCE, MAP_SIZE);
-
-        // When ...
-        PolarRobotState state = state0.createGridMap();
-
-        // Then ...
-        assertSame(radarMap, state.radarMap());
-        assertSame(status, state.robotStatus());
-
-        // And
-        GridMap map = state.gridMap();
-        assertNotNull(map);
-        assertEquals(new Point2D.Double(expX, expY), map.center());
-        assertEquals(expDeg, map.direction().toIntDeg());
+        PolarMap polarMap = createPolarMap();
+        GridMap gridMap = GridMap.create(radarMap, status.location(), status.direction(), GRID_MAP_SIZE);
+        return new WorldModel(status, radarMap, Map.of(), polarMap, gridMap, null, null, false);
     }
 
     @Test
     void createTest() {
-        // Given ...
-        RobotStatus status = mock();
-        RadarMap radarMap = createRadarMap();
+        // Given a mock status
+        WorldModel model = createWorldModel(createRobotStatus(0, 0, 0));
 
-        // When ...
-        PolarRobotState state = PolarRobotState.create(status, radarMap, PolarMap.create(SECTOR_NUMBERS), MAX_RADAR_DISTANCE, MAP_SIZE);
+        // When create a state from world state
+        WorldState state = WorldState.create(model);
 
         // Then ...
-        assertSame(radarMap, state.radarMap());
-        assertSame(status, state.robotStatus());
+        assertSame(model, state.model());
     }
 
     @ParameterizedTest
@@ -124,9 +97,9 @@ class PolarRobotStateTest {
     })
     void signalsTest(int robotDeg) {
         // Given ...
-        RobotStatus status = createStatus(0, -0.5, robotDeg);
-        RadarMap radarMap = createRadarMap();
-        PolarRobotState state = PolarRobotState.create(status, radarMap, PolarMap.create(SECTOR_NUMBERS), MAX_RADAR_DISTANCE, MAP_SIZE).createGridMap();
+        RobotStatus status = createRobotStatus(0, -0.5, robotDeg);
+        WorldModel model = createWorldModel(status);
+        WorldState state = WorldState.create(model);
 
         // When ...
         Map<String, Signal> signals = state.signals();
@@ -137,7 +110,7 @@ class PolarRobotStateTest {
         assertThat(cellStates, matrixCloseTo(new long[]{25}, 1e-3,
                 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0,
-                0, 3, 0, 0, 0,
+                0, 2, 0, 0, 0,
                 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0
         ));
@@ -151,9 +124,8 @@ class PolarRobotStateTest {
     @Test
     void specTest() {
         // Given ...
-        RobotStatus status = mock();
-        RadarMap radarMap = createRadarMap();
-        PolarRobotState state = PolarRobotState.create(status, radarMap, PolarMap.create(SECTOR_NUMBERS), MAX_RADAR_DISTANCE, MAP_SIZE);
+        WorldModel model = createWorldModel(createRobotStatus(0, 0, 0));
+        WorldState state = WorldState.create(model);
 
         // When ...
         Map<String, SignalSpec> spec = state.spec();
@@ -163,7 +135,7 @@ class PolarRobotStateTest {
 
         SignalSpec cellStates = spec.get("cellStates");
         assertThat(cellStates, instanceOf(IntSignalSpec.class));
-        assertArrayEquals(new long[]{25}, cellStates.shape());
-        assertEquals(5, ((IntSignalSpec) cellStates).numValues());
+        assertArrayEquals(new long[]{GRID_MAP_SIZE * GRID_MAP_SIZE}, cellStates.shape());
+        assertEquals(4, ((IntSignalSpec) cellStates).numValues());
     }
 }

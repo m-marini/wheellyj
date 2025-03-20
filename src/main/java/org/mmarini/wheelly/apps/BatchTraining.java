@@ -38,8 +38,12 @@ import org.mmarini.rl.agents.AbstractAgentNN;
 import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.BatchTrainer;
 import org.mmarini.rl.agents.KpiBinWriter;
+import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.swing.GridLayoutHelper;
-import org.mmarini.wheelly.envs.RobotEnvironment;
+import org.mmarini.wheelly.apis.RobotApi;
+import org.mmarini.wheelly.apis.RobotControllerApi;
+import org.mmarini.wheelly.apis.WorldModeller;
+import org.mmarini.wheelly.envs.EnvironmentApi;
 import org.mmarini.wheelly.swing.KpisPanel;
 import org.mmarini.wheelly.swing.LearnPanel;
 import org.mmarini.wheelly.swing.Messages;
@@ -53,8 +57,10 @@ import org.slf4j.LoggerFactory;
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -142,7 +148,7 @@ public class BatchTraining {
         this.infoBar = new JTextField();
         this.kpisPanel = new KpisPanel();
         this.recordBar = new JProgressBar(JProgressBar.HORIZONTAL);
-        init();
+        createContext();
     }
 
     /**
@@ -241,7 +247,7 @@ public class BatchTraining {
     /**
      * Initializes the application
      */
-    private void init() {
+    private void createContext() {
         recordBar.setValue(0);
         recordBar.setStringPainted(true);
         infoBar.setHorizontalAlignment(JTextField.CENTER);
@@ -250,14 +256,20 @@ public class BatchTraining {
     }
 
     /**
-     * Starts the training
+     * Creates the application context
+     *
+     * @param config the configuration
+     * @throws IOException in case of error
      */
-    protected void run() throws Exception {
+    private void createContext(JsonNode config) throws IOException {
+        RobotApi robot = AppYaml.robotFromJson(config);
+        RobotControllerApi controller = AppYaml.controllerFromJson(config);
+        WorldModeller modeller = AppYaml.modellerFromJson(config);
+        EnvironmentApi environment = AppYaml.envFromJson(config);
+        Function<WithSignalsSpec, Agent> agentBuilder = Agent.fromFile(
+                new File(Locator.locate("agent").getNode(config).asText()));
 
-        // Load configuration
-        File configFile = new File(this.args.getString("config"));
-        JsonNode config = fromFile(configFile);
-        RobotEnvironment environment = AppYaml.envFromJson(config, BATCH_SCHEMA_YML);
+        this.agent = agentBuilder.apply(environment);
 
         // Creates random number generator
         Random random = Nd4j.getRandomFactory().getNewRandomInstance();
@@ -266,11 +278,31 @@ public class BatchTraining {
             random.setSeed(seed);
         }
 
-        // Loads agent
-        this.agent = Agent.fromFile(
-                new File(Locator.locate("agent").getNode(config).asText()),
-                environment);
+        controller.connectRobot(robot);
+        modeller.connectController(controller);
+        environment.connect(modeller);
+        environment.connect(agent);
+    }
 
+    /**
+     * Returns the validated configuration
+     */
+    private JsonNode loadConfiguration() throws IOException {
+        File configFile = new File(this.args.getString("config"));
+        JsonNode config = fromFile(configFile);
+        JsonSchemas.instance().validateOrThrow(config, BATCH_SCHEMA_YML);
+        return config;
+    }
+
+    /**
+     * Starts the training
+     */
+    protected void run() throws Exception {
+        // Load configuration
+        JsonNode config = loadConfiguration();
+        createContext(config);
+
+        // Loads agent
         if (agent instanceof AbstractAgentNN aa) {
             this.agent = aa.setPostTrainKpis(true);
         }

@@ -217,7 +217,7 @@ public abstract class AbstractAgentNN implements Agent {
     protected final PublishProcessor<Map<String, INDArray>> indicatorsPub;
     protected final boolean postTrainKpis;
     protected final TDNetwork network;
-    protected final List<Environment.ExecutionResult> trajectory;
+    protected final List<ExecutionResult> trajectory;
     protected final int numSteps;
     protected final int numEpochs;
     protected final int batchSize;
@@ -226,7 +226,7 @@ public abstract class AbstractAgentNN implements Agent {
     protected final float eta;
 
     /**
-     * Creates a random behavior agent
+     * Creates a random behaviour agent
      *
      * @param state         the states
      * @param actions       the actions
@@ -248,7 +248,7 @@ public abstract class AbstractAgentNN implements Agent {
     protected AbstractAgentNN(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
                               float avgReward, float rewardAlpha, float eta, Map<String, Float> alphas, float lambda,
                               int numSteps, int numEpochs, int batchSize, TDNetwork network,
-                              List<Environment.ExecutionResult> trajectory, InputProcessor processor, Random random,
+                              List<ExecutionResult> trajectory, InputProcessor processor, Random random,
                               File modelPath,
                               PublishProcessor<Map<String, INDArray>> indicatorsPub, boolean postTrainKpis) {
         this.state = requireNonNull(state);
@@ -348,13 +348,35 @@ public abstract class AbstractAgentNN implements Agent {
     }
 
     @Override
-    public Map<String, SignalSpec> getActions() {
+    public Map<String, SignalSpec> actionSpec() {
         return actions;
     }
 
     @Override
-    public Map<String, SignalSpec> getState() {
-        return state;
+    public AbstractAgentNN observe(ExecutionResult result) {
+        List<ExecutionResult> newTrajectory = new ArrayList<>(trajectory);
+        newTrajectory.add(result);
+
+        Map<String, INDArray> states = getInput(processSignals(result.state0()));
+
+        // Extracts action masks
+        Map<String, INDArray> actions = MapStream.of(result.actions())
+                .mapValues(Signal::toINDArray)
+                .mapValues(value -> value.reshape(1, 1))
+                .toMap();
+
+        // Extract rewards
+        INDArray rewards = Nd4j.scalar((float) result.reward()).reshape(DEFAULT_NUM_EPOCHS, DEFAULT_NUM_EPOCHS);
+
+        // Generate kpis
+        Map<String, INDArray> kpis = new HashMap<>();
+        kpis.put("reward", rewards);
+        kpis.putAll(MapUtils.addKeyPrefix(actions, "actions."));
+        kpis.putAll(MapUtils.addKeyPrefix(states, "s0."));
+
+        indicatorsPub.onNext(kpis);
+
+        return trajectory(newTrajectory);
     }
 
     @Override
@@ -397,30 +419,8 @@ public abstract class AbstractAgentNN implements Agent {
     }
 
     @Override
-    public AbstractAgentNN observe(Environment.ExecutionResult result) {
-        List<Environment.ExecutionResult> newTrajectory = new ArrayList<>(trajectory);
-        newTrajectory.add(result);
-
-        Map<String, INDArray> states = getInput(processSignals(result.state0()));
-
-        // Extracts action masks
-        Map<String, INDArray> actions = MapStream.of(result.actions())
-                .mapValues(Signal::toINDArray)
-                .mapValues(value -> value.reshape(1, 1))
-                .toMap();
-
-        // Extract rewards
-        INDArray rewards = Nd4j.scalar((float) result.reward()).reshape(DEFAULT_NUM_EPOCHS, DEFAULT_NUM_EPOCHS);
-
-        // Generate kpis
-        Map<String, INDArray> kpis = new HashMap<>();
-        kpis.put("reward", rewards);
-        kpis.putAll(MapUtils.addKeyPrefix(actions, "actions."));
-        kpis.putAll(MapUtils.addKeyPrefix(states, "s0."));
-
-        indicatorsPub.onNext(kpis);
-
-        return trajectory(newTrajectory);
+    public Map<String, SignalSpec> stateSpec() {
+        return state;
     }
 
     /**
@@ -513,7 +513,7 @@ public abstract class AbstractAgentNN implements Agent {
     protected abstract AbstractAgentNN trainBatch(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards);
 
     @Override
-    public AbstractAgentNN trainByTrajectory(List<Environment.ExecutionResult> trajectory) {
+    public AbstractAgentNN trainByTrajectory(List<ExecutionResult> trajectory) {
         // Extracts states from trajectory
         List<Map<String, INDArray>> state0 = trajectory.stream()
                 .map(res -> {
@@ -530,7 +530,7 @@ public abstract class AbstractAgentNN implements Agent {
         // Extracts action masks
         Map<String, INDArray> actions = MapUtils.flatMapValues(trajectory.stream()
                         // Extract action signal
-                        .map(Environment.ExecutionResult::actions),
+                        .map(ExecutionResult::actions),
                 (key, list) -> Nd4j.vstack(list.map(Signal::toINDArray)
                         .toArray(INDArray[]::new)));
         int n = trajectory.size();
@@ -546,7 +546,7 @@ public abstract class AbstractAgentNN implements Agent {
         // Extract rewards
         INDArray rewards = Nd4j.createFromArray(
                         trajectory.stream()
-                                .mapToDouble(Environment.ExecutionResult::reward)
+                                .mapToDouble(ExecutionResult::reward)
                                 .toArray())
                 .castTo(DataType.FLOAT)
                 .reshape(n, DEFAULT_NUM_EPOCHS);
@@ -555,12 +555,12 @@ public abstract class AbstractAgentNN implements Agent {
     }
 
     @Override
-    public List<Environment.ExecutionResult> trajectory() {
+    public List<ExecutionResult> trajectory() {
         return trajectory;
     }
 
     @Override
-    public abstract AbstractAgentNN trajectory(List<Environment.ExecutionResult> trajectory);
+    public abstract AbstractAgentNN trajectory(List<ExecutionResult> trajectory);
 
     record AdvantageRecord(INDArray dr, INDArray dv, INDArray deltas, INDArray avgRewards, float avgReward) {
     }

@@ -37,6 +37,7 @@ import static org.hamcrest.Matchers.closeTo;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.angleCloseTo;
 import static org.mmarini.Matchers.pointCloseTo;
+import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
 
 class SimRobotObstacleTest {
@@ -76,9 +77,9 @@ class SimRobotObstacleTest {
         for (int i = 0; i < obsCoords.length - 1; i += 2) {
             mapBuilder.add(false, obsCoords[i], obsCoords[i + 1]);
         }
-        SimRobot simRobot = new SimRobot(mapBuilder.build(),
+        SimRobot simRobot = new SimRobot(ROBOT_SPEC, mapBuilder.build(),
                 random, null, 0, 0,
-                Complex.fromDeg(15), MAX_PPS,
+                MAX_PPS,
                 500, 500,
                 0, 0, 0, STALEMATE_INTERVAL);
         simRobot.connect();

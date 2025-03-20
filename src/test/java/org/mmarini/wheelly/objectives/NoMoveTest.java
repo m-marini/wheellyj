@@ -31,7 +31,9 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -39,17 +41,20 @@ import java.io.IOException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
+import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class NoMoveTest {
 
-    static MockState createState(int sensorDir, double leftPps, double rightPps) {
-        RobotStatus status = RobotStatus.create(x -> 12d)
+    static WorldState createState(int sensorDir, double leftPps, double rightPps) {
+        RobotStatus status = RobotStatus.create(ROBOT_SPEC, x -> 12d)
                 .setSensorDirection(Complex.fromDeg(sensorDir))
                 .setSpeeds(leftPps, rightPps);
-        MockState state = mock();
-        when(state.getRobotStatus()).thenReturn(status);
+        WorldModel model = mock();
+        when(model.robotStatus()).thenReturn(status);
+        WorldState state = mock();
+        when(state.model()).thenReturn(model);
         return state;
     }
 
@@ -74,7 +79,7 @@ class NoMoveTest {
                 "$schema: " + NoMove.SCHEMA_NAME,
                 "class: " + NoMove.class.getName()));
         RewardFunction f = NoMove.create(root, Locator.root());
-        MockState state = createState(sensorDir, leftPps, rightPps);
+        WorldState state = createState(sensorDir, leftPps, rightPps);
 
         double result = f.apply(null, null, state);
 
@@ -103,7 +108,7 @@ class NoMoveTest {
                 "class: " + NoMove.class.getName(),
                 "reward: 2"));
         RewardFunction f = NoMove.create(root, Locator.root());
-        MockState state = createState(sensorDir, leftPps, rightPps);
+        WorldState state = createState(sensorDir, leftPps, rightPps);
 
         double result = f.apply(null, null, state);
 
@@ -135,7 +140,7 @@ class NoMoveTest {
                 "sensorRange: 1",
                 "reward: 2"));
         RewardFunction f = NoMove.create(root, Locator.root());
-        MockState state = createState(sensorDir, leftPps, rightPps);
+        WorldState state = createState(sensorDir, leftPps, rightPps);
 
         double result = f.apply(null, null, state);
 

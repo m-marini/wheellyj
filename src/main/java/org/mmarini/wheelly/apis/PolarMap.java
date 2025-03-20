@@ -29,7 +29,6 @@
 package org.mmarini.wheelly.apis;
 
 import org.jetbrains.annotations.NotNull;
-import org.mmarini.Tuple2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,10 +39,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static java.lang.Math.floor;
-import static java.lang.Math.max;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.apis.AreaExpression.circle;
-import static org.mmarini.wheelly.apis.Geometry.squareArcInterval;
 
 /**
  * The polar map keeps the status of the circle area round a center point.
@@ -109,29 +105,6 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
                 Point2D p = sector.location();
                 double distance = p.distance(center);
                 if (distance < minDistance) {
-                    minDistance = distance;
-                    nearest = p;
-                }
-            }
-        }
-        return nearest;
-    }
-
-    /**
-     * Returns the closest labeled point beyond the safe distance but within the maximum distance
-     * or null if it does not exist
-     *
-     * @param safeDistance the safe distance
-     * @param maxDistance  the maximum distance (m)
-     */
-    public Point2D nearestLabel(double safeDistance, double maxDistance) {
-        Point2D nearest = null;
-        double minDistance = maxDistance;
-        for (CircularSector sector : sectors) {
-            if (sector.labeled()) {
-                Point2D p = sector.location();
-                double distance = p.distance(center);
-                if (distance > safeDistance && distance < minDistance) {
                     minDistance = distance;
                     nearest = p;
                 }
@@ -224,85 +197,4 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
         return sectors.length;
     }
 
-    /**
-     * Returns the polar map updated from radar map
-     *
-     * @param map         the radar map
-     * @param center      the center of polar map
-     * @param direction   the direction of polar map
-     * @param minDistance thi min distance (m)
-     * @param maxDistance the max distance (m)
-     */
-    public PolarMap update(RadarMap map, Point2D center, Complex direction, double minDistance, double maxDistance) {
-        double gridSize = map.topology().gridSize();
-        int sectorsNum = this.sectors.length;
-
-        double[] emptyDistances = new double[sectorsNum];
-        Arrays.fill(emptyDistances, Double.MAX_VALUE);
-        long[] emptyTimestamps = new long[sectors.length];
-        Point2D[] emptyPoints = new Point2D[sectors.length];
-
-        double[] notEmptyDistances = Arrays.copyOf(emptyDistances, sectors.length);
-        Point2D[] notEmptyPoints = new Point2D[sectors.length];
-
-        double[] unknownDistances = Arrays.copyOf(emptyDistances, sectors.length);
-        MapCell[] notEmptyCells = new MapCell[sectorsNum];
-
-        double thresholdDistance = max(minDistance, gridSize);
-        Complex dAlpha = Complex.fromRad(sectorAngle() * 1.25 / 2);
-
-        map.indices()
-                .filter(map.filterByArea(circle(center, maxDistance)))
-                .mapToObj(map::cell)
-                .forEach(cell -> { // For each radar cell
-                    for (int i = 0; i < this.sectorsNumber(); i++) { // for each polar sector
-                        Complex locSectorDir = this.sectorDirection(i);
-                        Complex sectorDir = locSectorDir.add(direction);
-                        // Computes the contact point
-                        Tuple2<Point2D, Point2D> interval = squareArcInterval(cell.location(), gridSize, center,
-                                sectorDir, dAlpha);
-                        if (interval != null) {
-                            Point2D s = interval._1;
-                            double distance = s.distance(center);
-                            if (distance >= thresholdDistance && distance < maxDistance) {
-                                if (cell.unknown()) {
-                                    if (distance < unknownDistances[i]) {
-                                        unknownDistances[i] = distance;
-                                    }
-                                } else if (cell.empty()) {
-                                    if (distance < emptyDistances[i]) {
-                                        emptyDistances[i] = distance;
-                                        emptyTimestamps[i] = cell.echoTime();
-                                        emptyPoints[i] = s;
-                                    }
-                                } else if (distance < notEmptyDistances[i]) {
-                                    notEmptyDistances[i] = distance;
-                                    notEmptyCells[i] = cell;
-                                    notEmptyPoints[i] = s;
-                                }
-                            }
-                        }
-                    }
-                });
-        CircularSector[] sectors = IntStream.range(0, this.sectors.length)
-                .mapToObj(i -> {
-                    // First priority is the obstacle signal
-                    if (notEmptyDistances[i] < maxDistance) {
-                        MapCell cell = notEmptyCells[i];
-                        return cell.labeled()
-                                ? CircularSector.labeled(cell.echoTime(), notEmptyPoints[i])
-                                : CircularSector.hindered(cell.echoTime(), notEmptyPoints[i]);
-                    } else if (emptyDistances[i] >= maxDistance) {
-                        // Second priority is full unknown sector
-                        return CircularSector.unknownSector();
-                    } else {                        // Third priority is empty sector before unknown sector
-                        return (unknownDistances[i] >= maxDistance || unknownDistances[i] < emptyDistances[i])
-                                ? CircularSector.empty(emptyTimestamps[i], emptyPoints[i])
-                                : CircularSector.unknownSector();
-                    }
-                })
-                .toArray(CircularSector[]::new);
-
-        return new PolarMap(sectors, center, direction);
-    }
 }

@@ -29,7 +29,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.MapStream;
-import org.mmarini.rl.envs.Environment;
+import org.mmarini.rl.envs.ExecutionResult;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.rl.nets.TDNetwork;
@@ -66,7 +66,7 @@ public class TDAgentSingleNN extends AbstractAgentNN {
     public static final int DEFAULT_BATCH_SIZE = 32;
 
     /**
-     * Returns a random behavior agent
+     * Returns a random behaviour agent
      *
      * @param state       the states
      * @param actions     the actions
@@ -121,14 +121,14 @@ public class TDAgentSingleNN extends AbstractAgentNN {
         if (seed > 0) {
             random.setSeed(seed);
         }
-        Map<String, SignalSpec> stateSpec = env.getState();
+        Map<String, SignalSpec> stateSpec = env.stateSpec();
         if (path.exists()) {
             // Load agent
             try {
                 TDAgentSingleNN agent = TDAgentSingleNN.load(path, random);
                 // Validate agent against env
-                SignalSpec.validateEqualsSpec(agent.getState(), stateSpec, "agent state", "environment state");
-                SignalSpec.validateEqualsSpec(agent.getState(), stateSpec, "agent actions", "environment actions");
+                SignalSpec.validateEqualsSpec(agent.stateSpec(), stateSpec, "agent state", "environment state");
+                SignalSpec.validateEqualsSpec(agent.stateSpec(), stateSpec, "agent actions", "environment actions");
                 return agent;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -150,7 +150,7 @@ public class TDAgentSingleNN extends AbstractAgentNN {
             Map<String, SignalSpec> postProcSpec = processor != null ? processor.spec() : stateSpec;
             Map<String, Long> stateSizes = TDAgentSingleNN.getStateSizes(postProcSpec);
             TDNetwork network = new NetworkTranspiler(root, locator.path("network"), stateSizes, random).build();
-            Map<String, SignalSpec> actionSpec = env.getActions();
+            Map<String, SignalSpec> actionSpec = env.actionSpec();
             return TDAgentSingleNN.create(stateSpec, actionSpec, 0,
                     rewardAlpha, eta, alphas, lambda,
                     numSteps, numEpochs, batchSize, network, processor,
@@ -163,7 +163,7 @@ public class TDAgentSingleNN extends AbstractAgentNN {
      *
      * @param spec    the specification
      * @param locator the locator of agent spec
-     * @param props   the properties to initialize the agent
+     * @param props   the properties to initialise the agent
      * @param path    the saving path
      * @param random  the random number generator
      */
@@ -230,7 +230,7 @@ public class TDAgentSingleNN extends AbstractAgentNN {
     }
 
     /**
-     * Creates a random behavior agent
+     * Creates a random behaviour agent
      *
      * @param state         the states
      * @param actions       the actions
@@ -252,7 +252,7 @@ public class TDAgentSingleNN extends AbstractAgentNN {
     protected TDAgentSingleNN(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
                               float avgReward, float rewardAlpha, float eta, Map<String, Float> alphas, float lambda,
                               int numSteps, int numEpochs, int batchSize, TDNetwork network,
-                              List<Environment.ExecutionResult> trajectory, InputProcessor processor, Random random,
+                              List<ExecutionResult> trajectory, InputProcessor processor, Random random,
                               File modelPath,
                               PublishProcessor<Map<String, INDArray>> indicatorsPub, boolean postTrainKpis) {
         super(state, actions,
@@ -443,7 +443,7 @@ public class TDAgentSingleNN extends AbstractAgentNN {
     }
 
     @Override
-    public TDAgentSingleNN trajectory(List<Environment.ExecutionResult> trajectory) {
+    public TDAgentSingleNN trajectory(List<ExecutionResult> trajectory) {
         return trajectory != this.trajectory
                 ? new TDAgentSingleNN(state, actions, avgReward,
                 rewardAlpha, eta, alphas, lambda,

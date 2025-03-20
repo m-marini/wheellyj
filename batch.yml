@@ -1,8 +1,8 @@
 ---
 $schema: https://mmarini.org/wheelly/batch-schema-0.3
-robot: conf/robots/simRobot.yml
+robot: conf/robots/simRobot10Obstacles.yml
 controller: conf/controllers/controller.yml
-environment: conf/environments/fullMapEnv.yml
+environment: conf/environments/env.yml
 agent: conf/agents/fullRadarAgent.yml
 seed: 1234
 numEpochs: 4

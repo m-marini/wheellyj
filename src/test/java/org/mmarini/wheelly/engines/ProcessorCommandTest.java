@@ -31,6 +31,7 @@ package org.mmarini.wheelly.engines;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.yaml.Locator;
 import org.mockito.InOrder;
 
@@ -57,7 +58,7 @@ class ProcessorCommandTest {
     @Test
     void add() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("add");
-        ProcessorContext ctx = mock();
+        ProcessorContextApi ctx = mock();
         when(ctx.popDouble()).thenReturn(2D, 1D);
 
         cmd.execute(ctx);
@@ -71,7 +72,7 @@ class ProcessorCommandTest {
     @Test
     void constDouble() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("1.1");
-        ProcessorContext ctx = mock();
+        ProcessorContextApi ctx = mock();
 
         cmd.execute(ctx);
 
@@ -81,7 +82,7 @@ class ProcessorCommandTest {
     @Test
     void constInt() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("1");
-        ProcessorContext ctx = mock();
+        ProcessorContextApi ctx = mock();
 
         cmd.execute(ctx);
 
@@ -91,7 +92,7 @@ class ProcessorCommandTest {
     @Test
     void constString() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("a.b");
-        ProcessorContext ctx = mock();
+        ProcessorContextApi ctx = mock();
 
         cmd.execute(ctx);
 
@@ -102,7 +103,7 @@ class ProcessorCommandTest {
     void create() throws IOException {
         JsonNode root = fromText(YAML);
         ProcessorCommand cmd = ProcessorCommand.create(root, Locator.root());
-        ProcessorContext ctx = mock();
+        ProcessorContextApi ctx = mock();
         when(ctx.pop()).thenReturn(1D, 3D);
         when(ctx.popDouble()).thenReturn(1D, 2D);
         when(ctx.popString()).thenReturn("a.1", "a.1", "a.2");
@@ -134,7 +135,7 @@ class ProcessorCommandTest {
     @Test
     void div() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("div");
-        ProcessorContext ctx = mock();
+        ProcessorContextApi ctx = mock();
         when(ctx.popDouble()).thenReturn(2D, 3D);
 
         cmd.execute(ctx);
@@ -148,7 +149,7 @@ class ProcessorCommandTest {
     @Test
     void get() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("get");
-        ProcessorContext ctx = mock();
+        ProcessorContextApi ctx = mock();
         when(ctx.get("a.b")).thenReturn(1D);
         when(ctx.popString()).thenReturn("a.b");
 
@@ -163,7 +164,7 @@ class ProcessorCommandTest {
     @Test
     void mul() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("mul");
-        ProcessorContext ctx = mock();
+        ProcessorContextApi ctx = mock();
         when(ctx.popDouble()).thenReturn(3.5, 2D);
 
         cmd.execute(ctx);
@@ -177,7 +178,7 @@ class ProcessorCommandTest {
     @Test
     void neg() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("neg");
-        ProcessorContext ctx = mock();
+        ProcessorContextApi ctx = mock();
         when(ctx.popDouble()).thenReturn(-1D);
 
         cmd.execute(ctx);
@@ -191,7 +192,7 @@ class ProcessorCommandTest {
     @Test
     void put() {
         ProcessorCommand cmd = ProcessorCommand.parse("a.b", "1", "put");
-        ProcessorContext ctx = mock();
+        ProcessorContextApi ctx = mock();
         when(ctx.pop()).thenReturn(1D);
         when(ctx.popString()).thenReturn("a.b");
 
@@ -210,7 +211,7 @@ class ProcessorCommandTest {
     @Test
     void sub() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("sub");
-        ProcessorContext ctx = mock();
+        ProcessorContextApi ctx = mock();
         when(ctx.popDouble()).thenReturn(2D, 1D);
 
         cmd.execute(ctx);
@@ -224,7 +225,7 @@ class ProcessorCommandTest {
     @Test
     void swap() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("swap");
-        ProcessorContext ctx = mock();
+        ProcessorContextApi ctx = mock();
         when(ctx.pop()).thenReturn(2D, 1D);
 
         cmd.execute(ctx);
@@ -238,16 +239,22 @@ class ProcessorCommandTest {
 
     @Test
     void time() {
+        // Given ...
         ProcessorCommand cmd = ProcessorCommand.parseCommand("localTime");
-        ProcessorContext ctx = mock();
 
         RobotStatus status = mock();
         when(status.simulationTime()).thenReturn(100L);
 
-        when(ctx.robotStatus()).thenReturn(status);
+        WorldModel worldModel = mock();
+        when(worldModel.robotStatus()).thenReturn(status);
 
+        ProcessorContextApi ctx = mock();
+        when(ctx.worldModel()).thenReturn(worldModel);
+
+        // When ...
         cmd.execute(ctx);
 
+        // Then ...
         InOrder inOrder = inOrder(ctx, status);
         inOrder.verify(status).simulationTime();
         inOrder.verify(ctx).push(100L);

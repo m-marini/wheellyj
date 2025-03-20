@@ -29,7 +29,6 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.yaml.Locator;
 
 import java.util.*;
@@ -44,7 +43,7 @@ import static java.util.Objects.requireNonNull;
  * It is an immutable object
  * </p>
  */
-public record ProcessorCommand(String id, Consumer<ProcessorContext> command) {
+public record ProcessorCommand(String id, Consumer<ProcessorContextApi> command) {
     private static final List<ProcessorCommand> COMMANDS = List.of(
             new ProcessorCommand("put", ProcessorCommand::putCommand),
             new ProcessorCommand("get", ProcessorCommand::getCommand),
@@ -62,7 +61,7 @@ public record ProcessorCommand(String id, Consumer<ProcessorContext> command) {
      *
      * @param context the processor context
      */
-    private static void addCommand(ProcessorContext context) {
+    private static void addCommand(ProcessorContextApi context) {
         double b = context.popDouble();
         double a = context.popDouble();
         context.push(a + b);
@@ -109,7 +108,7 @@ public record ProcessorCommand(String id, Consumer<ProcessorContext> command) {
      *
      * @param context the processor context
      */
-    private static void divCommand(ProcessorContext context) {
+    private static void divCommand(ProcessorContextApi context) {
         double b = context.popDouble();
         double a = context.popDouble();
         context.push(a / b);
@@ -120,7 +119,7 @@ public record ProcessorCommand(String id, Consumer<ProcessorContext> command) {
      *
      * @param context the processor context
      */
-    private static void getCommand(ProcessorContext context) {
+    private static void getCommand(ProcessorContextApi context) {
         String key = context.popString();
         Object value = context.get(key);
         if (value == null) {
@@ -134,7 +133,7 @@ public record ProcessorCommand(String id, Consumer<ProcessorContext> command) {
      *
      * @param context the processor context
      */
-    private static void mulCommand(ProcessorContext context) {
+    private static void mulCommand(ProcessorContextApi context) {
         double b = context.popDouble();
         double a = context.popDouble();
         context.push(a * b);
@@ -145,7 +144,7 @@ public record ProcessorCommand(String id, Consumer<ProcessorContext> command) {
      *
      * @param context the processor context
      */
-    private static void negCommand(ProcessorContext context) {
+    private static void negCommand(ProcessorContextApi context) {
         double a = context.popDouble();
         context.push(-a);
     }
@@ -197,7 +196,7 @@ public record ProcessorCommand(String id, Consumer<ProcessorContext> command) {
      *
      * @param context the processor context
      */
-    private static void putCommand(ProcessorContext context) {
+    private static void putCommand(ProcessorContextApi context) {
         Object value = context.pop();
         String key = context.popString();
         context.put(key, value);
@@ -221,7 +220,7 @@ public record ProcessorCommand(String id, Consumer<ProcessorContext> command) {
      *
      * @param context the processor context
      */
-    private static void subCommand(ProcessorContext context) {
+    private static void subCommand(ProcessorContextApi context) {
         double b = context.popDouble();
         double a = context.popDouble();
         context.push(a - b);
@@ -232,7 +231,7 @@ public record ProcessorCommand(String id, Consumer<ProcessorContext> command) {
      *
      * @param context the processor context
      */
-    private static void swapCommand(ProcessorContext context) {
+    private static void swapCommand(ProcessorContextApi context) {
         Object b = context.pop();
         Object a = context.pop();
         context.push(b);
@@ -244,9 +243,8 @@ public record ProcessorCommand(String id, Consumer<ProcessorContext> command) {
      *
      * @param context the processor context
      */
-    private static void timeCommand(ProcessorContext context) {
-        RobotStatus status = context.robotStatus();
-        context.push(status.simulationTime());
+    private static void timeCommand(ProcessorContextApi context) {
+        context.push(context.worldModel().robotStatus().simulationTime());
     }
 
     /**
@@ -255,7 +253,7 @@ public record ProcessorCommand(String id, Consumer<ProcessorContext> command) {
      * @param id      the id of command
      * @param command the command
      */
-    public ProcessorCommand(String id, Consumer<ProcessorContext> command) {
+    public ProcessorCommand(String id, Consumer<ProcessorContextApi> command) {
         this.id = requireNonNull(id);
         this.command = requireNonNull(command);
     }
@@ -265,7 +263,7 @@ public record ProcessorCommand(String id, Consumer<ProcessorContext> command) {
      *
      * @param ctx the context
      */
-    public void execute(ProcessorContext ctx) {
+    public void execute(ProcessorContextApi ctx) {
         command.accept(ctx);
     }
 }

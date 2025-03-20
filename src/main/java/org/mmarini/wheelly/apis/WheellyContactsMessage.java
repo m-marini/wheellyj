@@ -35,9 +35,9 @@ import static java.lang.String.format;
 /**
  * The Wheelly status contain the sensor value of Wheelly
  *
- * @param localTime       the local time (ms)
- * @param simulationTime  the simulation time (ms)
- * @param remoteTime      the remote contacts time (ms)
+ * @param localTime       the local markerTime (ms)
+ * @param simulationTime  the simulation markerTime (ms)
+ * @param remoteTime      the remote contacts markerTime (ms)
  * @param frontSensors    the front sensors signals
  * @param rearSensors     the rear sensors signals
  * @param canMoveForward  true if it can move forward
@@ -109,9 +109,9 @@ public record WheellyContactsMessage(long localTime, long simulationTime, long r
     }
 
     /**
-     * Returns the contact message with simulation time
+     * Returns the contact message with simulation markerTime
      *
-     * @param simulationTime the simulation time (ms)
+     * @param simulationTime the simulation markerTime (ms)
      */
     public WheellyContactsMessage setSimulationTime(long simulationTime) {
         return simulationTime != this.simulationTime

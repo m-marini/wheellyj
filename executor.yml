@@ -1,5 +1,8 @@
 ---
-$schema: https://mmarini.org/wheelly/executor-schema-1.0
-robot: conf/robots/simRobot.yml
+$schema: https://mmarini.org/wheelly/executor-schema-2.0
+#robot: conf/robots/simRobot10Obstacles.yml
+robot: conf/robots/simRobot0Obstacles.yml
 controller: conf/controllers/controller.yml
+modeller: conf/modellers/modeller.yml
 agent: conf/agents/finderAgent.yml
+

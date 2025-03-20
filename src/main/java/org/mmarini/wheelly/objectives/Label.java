@@ -27,16 +27,16 @@ package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.PolarMap;
+import org.mmarini.wheelly.apis.LabelMarker;
 import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WithRobotStatus;
+import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.wheelly.envs.RewardFunction;
-import org.mmarini.wheelly.envs.WithPolarMap;
+import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 
 import java.awt.geom.Point2D;
-import java.util.Arrays;
+import java.util.Map;
 
 import static java.lang.Math.abs;
 
@@ -46,7 +46,7 @@ import static java.lang.Math.abs;
  */
 public interface Label {
     float DEFAULT_VELOCITY_THRESHOLD = 0.01f;
-    String SCHEMA_NAME = "https://mmarini.org/wheelly/objective-label-schema-0.1";
+    String SCHEMA_NAME = "https://mmarini.org/wheelly/objective-label-schema-1.0";
     int DEFAULT_DIRECTION_RANGE = 180;
     int DEFAULT_SENSOR_RANGE = 0;
     double DEFAULT_REWARD = 1d;
@@ -59,18 +59,20 @@ public interface Label {
      */
     static RewardFunction create(JsonNode root, Locator locator) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        String label = locator.path("label").getNode(root).asText();
         double minDistance = locator.path("minDistance").getNode(root).asDouble();
         double maxDistance = locator.path("maxDistance").getNode(root).asDouble();
         double velocityThreshold = locator.path("velocityThreshold").getNode(root).asDouble(DEFAULT_VELOCITY_THRESHOLD);
         Complex directionRange = Complex.fromDeg(locator.path("directionRange").getNode(root).asInt(DEFAULT_DIRECTION_RANGE));
         Complex sensorRange = Complex.fromDeg(locator.path("sensorRange").getNode(root).asInt(DEFAULT_SENSOR_RANGE));
         double reward = locator.path("reward").getNode(root).asDouble(DEFAULT_REWARD);
-        return label(minDistance, maxDistance, velocityThreshold, directionRange, sensorRange, reward);
+        return label(label, minDistance, maxDistance, velocityThreshold, directionRange, sensorRange, reward);
     }
 
     /**
      * Returns the function of reward for the given environment
      *
+     * @param label             the target label
      * @param minDistance       the minimum distance
      * @param maxDistance       the maximum distance
      * @param velocityThreshold the threshold of velocity
@@ -78,60 +80,31 @@ public interface Label {
      * @param sensorRange       the sensor direction range
      * @param reward            the reward in case of matched goal
      */
-    static RewardFunction label(double minDistance, double maxDistance,
+    static RewardFunction label(String label, double minDistance, double maxDistance,
                                 double velocityThreshold,
                                 Complex directionRange,
                                 Complex sensorRange,
                                 double reward) {
         return (s0, a, s1) -> {
-            if (s1 instanceof WithPolarMap mapState && s1 instanceof WithRobotStatus robotState) {
-                // the environment supports polar map
-                RobotStatus robotStatus = robotState.getRobotStatus();
+            if (s1 instanceof WorldState state) {
+                WorldModel model = state.model();
+                RobotStatus robotStatus = model.robotStatus();
+                Map<String, LabelMarker> markers = model.markers();
                 // Get the nearest labeled obstacle
-                PolarMap polarMap = mapState.getPolarMap();
                 Point2D robotLocation = robotStatus.location();
+                Point2D markerLocation = markers.get(label).location();
                 // check robot speed in range
                 if (abs(robotStatus.leftPps()) < velocityThreshold
-                        && abs(robotStatus.rightPps()) < velocityThreshold
-                        // and any sector in direction range with a labeled target in distance range
-                        && Arrays.stream(polarMap.sectors())
-                        .anyMatch(sector -> {
-                            if (!sector.labeled()) {
-                                return false;
-                            }
-                            Point2D labelLocation = sector.location();
-                            double distance = labelLocation.distance(robotLocation);
-                            if (!(distance >= minDistance && distance <= maxDistance)) {
-                                return false;
-                            }
-                            Complex labeledDir = Complex.direction(robotLocation, labelLocation);
-                            return labeledDir.isCloseTo(robotStatus.direction(), directionRange);
-                        })
-                        // and any sector in sensor direction range with a labeled target in distance range
-                        && robotStatus.sensorDirection().isCloseTo(Complex.DEG0, sensorRange)
-                ) {
-                    return reward;
-                }
-
-/*
-                Point2D goalLocation = polarMap.nearestLabel(minDistance, maxDistance);
-                if (goalLocation != null) {
-                    // A labeled obstacle exists in the polar map
-                    RobotStatus robotStatus = robotState.getRobotStatus();
-                    // Get the obstacle direction relative the robot location and orientation
-                    Point2D robotLocation = robotStatus.location();
-                    Complex goalDir = Complex.direction(robotLocation, goalLocation);
-                    Complex sensorDir = robotStatus.sensorDirection();
-                    // Check for sensor directed toward front and robot oriented to the goal
-                    if (sensorDir.isCloseTo(DEG0, sensorRange) &&
-                            goalDir.isCloseTo(robotStatus.direction(), directionRange)
-                            && abs(robotStatus.leftPps()) < velocityThreshold
-                            && abs(robotStatus.rightPps()) < velocityThreshold) {
+                        && abs(robotStatus.rightPps()) < velocityThreshold) {
+                    double distance = markerLocation.distance(robotLocation);
+                    Complex labeledDir = Complex.direction(robotLocation, markerLocation);
+                    if (distance >= minDistance && distance <= maxDistance
+                            && labeledDir.isCloseTo(robotStatus.direction(), directionRange)
+                            // and any sector in sensor direction range with a labeled target in distance range
+                            && robotStatus.sensorDirection().isCloseTo(Complex.DEG0, sensorRange)) {
                         return reward;
                     }
                 }
-
- */
             }
             return 0;
         };

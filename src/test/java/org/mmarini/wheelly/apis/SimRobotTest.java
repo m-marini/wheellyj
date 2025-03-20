@@ -37,6 +37,7 @@ import static java.lang.Math.min;
 import static java.lang.Math.toDegrees;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
 import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_PER_PULSE;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_ANGULAR_VELOCITY;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
@@ -55,14 +56,14 @@ class SimRobotTest {
     public static final int STALEMATE_INTERVAL = 60000;
 
     /**
-     * Returns the space traveled (m) in the given time with uniformly accelerated motion
+     * Returns the space traveled (m) in the given markerTime with uniformly accelerated motion
      * till max speed
      *
      * @param maxSpeed the max speed
-     * @param dt       the time
+     * @param dt       the markerTime
      */
     private static double expectedPulses(int maxSpeed, long dt) {
-        // Computes space limited by time in uniformly accelerated motion
+        // Computes space limited by markerTime in uniformly accelerated motion
         double sa = ACCELERATION * dt * dt / 2 / 1e6;
         // Computes space limited by speed in uniformly accelerated motion
         double sb = maxSpeed * maxSpeed / ACCELERATION / 2;
@@ -138,8 +139,8 @@ class SimRobotTest {
      */
     private SimRobot createRobot() {
         Random random = new Random(SEED);
-        return new SimRobot(MapBuilder.create(GRID_SIZE).build(),
-                random, null, 0, 0, Complex.fromDeg(15), MAX_PPS,
+        return new SimRobot(ROBOT_SPEC, MapBuilder.create(GRID_SIZE).build(),
+                random, null, 0, 0, MAX_PPS,
                 INTERVAL, INTERVAL, 0, 0, 0, STALEMATE_INTERVAL);
     }
 
@@ -171,7 +172,7 @@ class SimRobotTest {
             robot.tick(dt);
         }
 
-        // Then robot should emit motion at 500 ms remote time with the expected traveled distance
+        // Then robot should emit motion at 500 ms remote markerTime with the expected traveled distance
         long rt = 500;
         double dPulses = speed * dt;
         double yPulses = expectedPulses(speed, rt);
@@ -205,7 +206,7 @@ class SimRobotTest {
             robot.tick(dt);
         }
 
-        // Then robot should emit motion at 500 ms remote time with the expected traveled distance
+        // Then robot should emit motion at 500 ms remote markerTime with the expected traveled distance
         long rt = 500;
         double dPulses = speed * dt;
         double yPulses = -expectedPulses(speed, rt);

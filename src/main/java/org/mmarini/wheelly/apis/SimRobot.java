@@ -59,7 +59,7 @@ public class SimRobot implements RobotApi {
     public static final double MAX_ANGULAR_PPS = 20;
     public static final double ROBOT_TRACK = 0.136;
     public static final double MAX_ANGULAR_VELOCITY = MAX_ANGULAR_PPS * DISTANCE_PER_PULSE / ROBOT_TRACK * 2; // RAD/s
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/sim-robot-schema-0.4";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/sim-robot-schema-1.0";
     public static final int CAMERA_HEIGHT = 240;
     public static final int CAMERA_WIDTH = 240;
     public static final String QR_CODE = "A";
@@ -110,10 +110,15 @@ public class SimRobot implements RobotApi {
         long proxyInterval = locator.path("proxyInterval").getNode(root).asLong(DEFAULT_PROXY_INTERVAL);
         long changeObstaclesPeriod = locator.path("changeObstaclesPeriod").getNode(root).asLong(0);
         long stalemateInterval = locator.path("stalemateInterval").getNode(root).asLong(DEFAULT_STALEMATE_INTERVAL);
-        return new SimRobot(obstacleMap,
+
+        double maxRadarDistance = locator.path("maxRadarDistance").getNode(root).asDouble();
+        double contactRadius = locator.path("contactRadius").getNode(root).asDouble();
+        RobotSpec robotSpec = new RobotSpec(maxRadarDistance, sensorReceptiveAngle, contactRadius);
+
+        return new SimRobot(robotSpec, obstacleMap,
                 robotRandom, mapRandom,
                 errSigma, errSensor,
-                sensorReceptiveAngle, maxAngularSpeed, motionInterval, proxyInterval, numObstacles, numLabels, changeObstaclesPeriod, stalemateInterval);
+                maxAngularSpeed, motionInterval, proxyInterval, numObstacles, numLabels, changeObstaclesPeriod, stalemateInterval);
     }
 
     /**
@@ -139,7 +144,6 @@ public class SimRobot implements RobotApi {
     private final Random mapRandom;
     private final Body robot;
     private final Fixture robotFixture;
-    private final Complex sensorReceptiveAngle;
     private final World world;
     private final int numObstacles;
     private final int numLabels;
@@ -149,6 +153,7 @@ public class SimRobot implements RobotApi {
     private final int maxAngularSpeed;
     private final long stalemateInterval;
     private final long motionInterval;
+    private final RobotSpec robotSpec;
     private Complex direction;
     private double echoDistance;
     private boolean frontSensor;
@@ -176,12 +181,12 @@ public class SimRobot implements RobotApi {
     /**
      * Creates a simulated robot
      *
+     * @param robotSpec             the robot specification
      * @param obstacleMap           the obstacle map
      * @param random                the random generator
      * @param mapRandom             the map random generator
      * @param errSigma              sigma of errors in physic simulation (U)
      * @param errSensor             sensor error (m)
-     * @param sensorReceptiveAngle  sensor receptive angle (DEG)
      * @param maxAngularSpeed       the maximum angular speed
      * @param motionInterval        the interval between motion messages
      * @param proxyInterval         the interval between proxy messages
@@ -190,20 +195,20 @@ public class SimRobot implements RobotApi {
      * @param changeObstaclesPeriod the period of change obstacles
      * @param stalemateInterval     the stalemate interval (ms)
      */
-    public SimRobot(ObstacleMap obstacleMap, Random random, Random mapRandom, double errSigma, double errSensor,
-                    Complex sensorReceptiveAngle, int maxAngularSpeed, long motionInterval, long proxyInterval,
+    public SimRobot(RobotSpec robotSpec, ObstacleMap obstacleMap, Random random, Random mapRandom, double errSigma, double errSensor,
+                    int maxAngularSpeed, long motionInterval, long proxyInterval,
                     int numObstacles, int numLabels, long changeObstaclesPeriod, long stalemateInterval) {
         this.mapRandom = mapRandom;
         this.numObstacles = numObstacles;
         this.numLabels = numLabels;
         this.changeObstaclesPeriod = changeObstaclesPeriod;
         this.stalemateInterval = stalemateInterval;
+        this.robotSpec = robotSpec;
         logger.atDebug().log("Created");
         this.random = requireNonNull(random);
         this.errSigma = errSigma;
         this.errSensor = errSensor;
         this.obstacleMap = requireNonNull(obstacleMap);
-        this.sensorReceptiveAngle = requireNonNull(sensorReceptiveAngle);
         this.sensorDirection = Complex.DEG0;
         this.direction = Complex.DEG0;
         this.maxAngularSpeed = maxAngularSpeed;
@@ -509,6 +514,11 @@ public class SimRobot implements RobotApi {
         return rearSensor;
     }
 
+    @Override
+    public RobotSpec robotSpec() {
+        return robotSpec;
+    }
+
     /**
      * Randomly relocates the robot
      */
@@ -729,7 +739,7 @@ public class SimRobot implements RobotApi {
         boolean prevEchoAlarm = echoDistance > 0 && echoDistance <= SAFE_DISTANCE;
         this.echoDistance = 0;
         // Finds the nearest obstacle in proxy sensor range
-        this.nearestCell = obstacleMap.nearest(x, y, sensorRad, sensorReceptiveAngle);
+        this.nearestCell = obstacleMap.nearest(x, y, sensorRad, robotSpec.receptiveAngle());
         if (nearestCell != null) {
             // Computes the distance of obstacles
             Point2D obs = nearestCell.location();

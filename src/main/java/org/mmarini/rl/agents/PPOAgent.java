@@ -29,7 +29,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.MapStream;
-import org.mmarini.rl.envs.Environment;
+import org.mmarini.rl.envs.ExecutionResult;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.rl.nets.TDNetwork;
@@ -52,6 +52,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -94,6 +95,16 @@ public class PPOAgent extends AbstractAgentNN {
     }
 
     /**
+     * Returns the builder of agant
+     *
+     * @param root the configuration
+     * @param file the configuration file
+     */
+    public static Function<WithSignalsSpec, PPOAgent> create(JsonNode root, File file) {
+        return env -> create(root, env);
+    }
+
+    /**
      * Returns the agent from spec
      *
      * @param root the spec document
@@ -108,14 +119,14 @@ public class PPOAgent extends AbstractAgentNN {
         if (seed > 0) {
             random.setSeed(seed);
         }
-        Map<String, SignalSpec> stateSpec = env.getState();
+        Map<String, SignalSpec> stateSpec = env.stateSpec();
         if (path.exists()) {
             // Load agent
             try {
                 PPOAgent agent = PPOAgent.load(path, random);
                 // Validate agent against env
-                SignalSpec.validateEqualsSpec(agent.getState(), stateSpec, "agent state", "environment state");
-                SignalSpec.validateEqualsSpec(agent.getState(), stateSpec, "agent actions", "environment actions");
+                SignalSpec.validateEqualsSpec(agent.stateSpec(), stateSpec, "agent state", "environment state");
+                SignalSpec.validateEqualsSpec(agent.stateSpec(), stateSpec, "agent actions", "environment actions");
                 return agent;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -138,14 +149,13 @@ public class PPOAgent extends AbstractAgentNN {
             Map<String, SignalSpec> postProcSpec = processor != null ? processor.spec() : stateSpec;
             Map<String, Long> stateSizes = TDAgentSingleNN.getStateSizes(postProcSpec);
             TDNetwork network = new NetworkTranspiler(root, locator.path("network"), stateSizes, random).build();
-            Map<String, SignalSpec> actionSpec = env.getActions();
+            Map<String, SignalSpec> actionSpec = env.actionSpec();
             return PPOAgent.create(stateSpec, actionSpec, 0,
                     rewardAlpha, eta, alphas, lambda,
                     ppoEpsilon, numSteps, numEpochs, batchSize, network, processor,
                     random, path);
         }
     }
-
 
     /**
      * Returns the agent from spec
@@ -159,7 +169,7 @@ public class PPOAgent extends AbstractAgentNN {
     }
 
     /**
-     * Returns a random behavior agent
+     * Returns a random behaviour agent
      *
      * @param state       the states
      * @param actions     the actions
@@ -194,7 +204,7 @@ public class PPOAgent extends AbstractAgentNN {
      *
      * @param spec    the specification
      * @param locator the locator of agent spec
-     * @param props   the properties to initialize the agent
+     * @param props   the properties to initialise the agent
      * @param path    the saving path
      * @param random  the random number generator
      */
@@ -277,7 +287,7 @@ public class PPOAgent extends AbstractAgentNN {
     protected final float ppoEpsilon;
 
     /**
-     * Creates a random behavior agent
+     * Creates a random behaviour agent
      *
      * @param state         the states
      * @param actions       the actions
@@ -300,7 +310,7 @@ public class PPOAgent extends AbstractAgentNN {
     protected PPOAgent(Map<String, SignalSpec> state, Map<String, SignalSpec> actions,
                        float avgReward, float rewardAlpha, float eta, Map<String, Float> alphas, float lambda,
                        int numSteps, int numEpochs, int batchSize, TDNetwork network,
-                       List<Environment.ExecutionResult> trajectory, InputProcessor processor, Random random,
+                       List<ExecutionResult> trajectory, InputProcessor processor, Random random,
                        File modelPath,
                        PublishProcessor<Map<String, INDArray>> indicatorsPub, boolean postTrainKpis,
                        float ppoEpsilon) {
@@ -378,7 +388,7 @@ public class PPOAgent extends AbstractAgentNN {
     }
 
     /**
-     * Returns the gradient of optimizer function for given action mask
+     * Returns the gradient of optimiser function for given action mask
      *
      * @param pi          the policies
      * @param actionMasks the action masks
@@ -499,7 +509,7 @@ public class PPOAgent extends AbstractAgentNN {
         // Extract the policy output values pi from network results
         Map<String, INDArray> pi = policy(result0);
 
-        // Computes policy optimizer gradients
+        // Computes policy optimiser gradients
         Map<String, INDArray> optGrad = optimizerGrad(pi, actionMasks, actionProb0, adv);
 
         // Computes output gradients for network (merges critic and policy grads)
@@ -543,7 +553,7 @@ public class PPOAgent extends AbstractAgentNN {
     }
 
     @Override
-    public PPOAgent trajectory(List<Environment.ExecutionResult> trajectory) {
+    public PPOAgent trajectory(List<ExecutionResult> trajectory) {
         return trajectory != this.trajectory
                 ? new PPOAgent(state, actions, avgReward,
                 rewardAlpha, eta, alphas, lambda,

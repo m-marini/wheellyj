@@ -88,8 +88,8 @@ public interface ExtendedStateNode extends StateNode {
     }
 
     @Override
-    default void entry(ProcessorContext context) {
-        long time = context.robotStatus().simulationTime();
+    default void entry(ProcessorContextApi context) {
+        long time = context.worldModel().robotStatus().simulationTime();
         context.put(format("%s.entryTime", id()), time);
         ProcessorCommand onEntry = onEntry();
         if (onEntry != null) {
@@ -102,14 +102,14 @@ public interface ExtendedStateNode extends StateNode {
      *
      * @param context the processor context
      */
-    default void entryAutoScan(ProcessorContext context) {
+    default void entryAutoScan(ProcessorContextApi context) {
         put(context, "scanTime", -1);
         put(context, "scanIndex", 0);
         tickAutoScan(context);
     }
 
     @Override
-    default void exit(ProcessorContext context) {
+    default void exit(ProcessorContextApi context) {
         ProcessorCommand onExit = onExit();
         if (onExit != null) {
             onExit.execute(context);
@@ -123,7 +123,7 @@ public interface ExtendedStateNode extends StateNode {
      * @param key     the node key
      * @param <T>     the type of value
      */
-    default <T> T get(ProcessorContext context, String key) {
+    default <T> T get(ProcessorContextApi context, String key) {
         return context.get(format("%s.%s", id(), key));
     }
 
@@ -132,8 +132,8 @@ public interface ExtendedStateNode extends StateNode {
      *
      * @param context the context
      */
-    default Tuple2<String, RobotCommands> getBlockResult(ProcessorContext context) {
-        RobotStatus status = context.robotStatus();
+    default Tuple2<String, RobotCommands> getBlockResult(ProcessorContextApi context) {
+        RobotStatus status = context.worldModel().robotStatus();
         return !status.canMoveForward()
                 ? !status.canMoveBackward()
                 ? StateNode.BLOCKED_RESULT : StateNode.FRONT_BLOCKED_RESULT
@@ -147,18 +147,18 @@ public interface ExtendedStateNode extends StateNode {
      * @param context the processor context
      * @param key     the node key
      */
-    default double getDouble(ProcessorContext context, String key) {
+    default double getDouble(ProcessorContextApi context, String key) {
         return context.getDouble(format("%s.%s", id(), key));
     }
 
     @Override
-    default long getElapsedTime(ProcessorContext context) {
-        return context.robotStatus().simulationTime() -
+    default long getElapsedTime(ProcessorContextApi context) {
+        return context.worldModel().robotStatus().simulationTime() -
                 getEntryTime(context);
     }
 
     @Override
-    default long getEntryTime(ProcessorContext context) {
+    default long getEntryTime(ProcessorContextApi context) {
         return context.getLong(format("%s.entryTime", id()));
     }
 
@@ -168,7 +168,7 @@ public interface ExtendedStateNode extends StateNode {
      * @param context the processor context
      * @param key     the node key
      */
-    default int getInt(ProcessorContext context, String key) {
+    default int getInt(ProcessorContextApi context, String key) {
         return context.getInt(format("%s.%s", id(), key));
     }
 
@@ -178,12 +178,12 @@ public interface ExtendedStateNode extends StateNode {
      * @param context the processor context
      * @param key     the node key
      */
-    default long getLong(ProcessorContext context, String key) {
+    default long getLong(ProcessorContextApi context, String key) {
         return context.getLong(format("%s.%s", id(), key));
     }
 
     @Override
-    default void init(ProcessorContext context) {
+    default void init(ProcessorContextApi context) {
         ProcessorCommand onInit = onInit();
         if (onInit != null) {
             onInit.execute(context);
@@ -191,7 +191,7 @@ public interface ExtendedStateNode extends StateNode {
     }
 
     @Override
-    default boolean isTimeout(ProcessorContext context) {
+    default boolean isTimeout(ProcessorContextApi context) {
         OptionalLong timeout = context.getOptLong(format("%s.timeout", id()));
         return timeout.isPresent() && getElapsedTime(context) >= timeout.getAsLong();
     }
@@ -218,7 +218,7 @@ public interface ExtendedStateNode extends StateNode {
      * @param key     the key
      * @param value   the value
      */
-    default void put(ProcessorContext context, String key, Object value) {
+    default void put(ProcessorContextApi context, String key, Object value) {
         context.put(format("%s.%s", id(), key), value);
     }
 
@@ -228,7 +228,7 @@ public interface ExtendedStateNode extends StateNode {
      * @param context the processor context
      * @param key     the key
      */
-    default void remove(ProcessorContext context, String key) {
+    default void remove(ProcessorContextApi context, String key) {
         context.remove(format("%s.%s", id(), key));
     }
 
@@ -238,17 +238,18 @@ public interface ExtendedStateNode extends StateNode {
      *
      * @param context the processor context
      */
-    default Tuple2<String, RobotCommands> tickAutoScan(ProcessorContext context) {
+    default Tuple2<String, RobotCommands> tickAutoScan(ProcessorContextApi context) {
         long scanInterval = getLong(context, "scanInterval");
         // Check for scan interval set
         if (scanInterval > 0) {
             long scanTime = getLong(context, "scanTime");
-            long time = context.robotStatus().simulationTime();
+            RobotStatus robotStatus = context.worldModel().robotStatus();
+            long time = robotStatus.simulationTime();
             // Check for scan timeout
             long t0 = System.currentTimeMillis();
             logger.atDebug().log("tickAutoScan currentTime={}, remoteTime={}, statusDt={}, statusScanDt={}, localTime to next scan={}",
                     t0,
-                    context.robotStatus().simulationTime(),
+                    robotStatus.simulationTime(),
                     t0 - time,
                     t0 - scanTime,
                     scanTime + scanInterval - time);

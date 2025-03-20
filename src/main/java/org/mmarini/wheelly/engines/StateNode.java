@@ -82,7 +82,7 @@ public interface StateNode {
      *
      * @param context the processor context
      */
-    void entry(ProcessorContext context);
+    void entry(ProcessorContextApi context);
 
 
     /**
@@ -90,21 +90,21 @@ public interface StateNode {
      *
      * @param context the processor context
      */
-    void exit(ProcessorContext context);
+    void exit(ProcessorContextApi context);
 
     /**
      * Returns the elapsed localTime (ms) from state entry localTime
      *
      * @param context the processor context
      */
-    long getElapsedTime(ProcessorContext context);
+    long getElapsedTime(ProcessorContextApi context);
 
     /**
      * Returns the state entry localTime (ms)
      *
      * @param context the processor context
      */
-    long getEntryTime(ProcessorContext context);
+    long getEntryTime(ProcessorContextApi context);
 
     String id();
 
@@ -113,19 +113,19 @@ public interface StateNode {
      *
      * @param context the processor context
      */
-    void init(ProcessorContext context);
+    void init(ProcessorContextApi context);
 
     /**
      * Returns true if the state has timed out
      *
      * @param context the processor context
      */
-    boolean isTimeout(ProcessorContext context);
+    boolean isTimeout(ProcessorContextApi context);
 
     /**
      * Processes the interaction and returns the exit key and the robot command
      *
      * @param context the processor context
      */
-    Tuple2<String, RobotCommands> step(ProcessorContext context);
+    Tuple2<String, RobotCommands> step(ProcessorContextApi context);
 }

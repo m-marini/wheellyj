@@ -105,7 +105,7 @@ public record StateTransition(Pattern trigger, String from, String to, Processor
      *
      * @param processorContext the context
      */
-    public void activate(ProcessorContext processorContext) {
+    public void activate(ProcessorContextApi processorContext) {
         if (onTransition != null) {
             onTransition.execute(processorContext);
         }

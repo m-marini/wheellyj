@@ -70,7 +70,7 @@ public class JsonSchemas {
             "/objective-sensor-label-schema.yml",
             "/objective-action-set-schema.yml",
             "/controller-schema.yml",
-            "/env-polar-schema.yml",
+            "/env-world-schema.yml",
             "/executor-schema.yml",
             "/monitor-schema.yml",
             "/network-list-schema.yml",
@@ -78,7 +78,8 @@ public class JsonSchemas {
             "/robot-schema.yml",
             "/sim-robot-schema.yml",
             "/signal-schema.yml",
-            "/state-agent-schema.yml",
+            "/agent-state-machine-schema.yml",
+            "/world-modeller-schema.yml",
             "/wheelly-schema.yml",
             "/batch-schema.yml"
     );

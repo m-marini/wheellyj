@@ -1,19 +1,6 @@
 ---
-$schema: https://mmarini.org/wheelly/state-agent-schema-3.3
+$schema: https://mmarini.org/wheelly/agent-state-machine-schema-0.1
 class: org.mmarini.wheelly.engines.StateMachineAgent
-numRadarSectors: 24
-minRadarDistance: 0.3
-maxRadarDistance: 3
-radarWidth: 101
-radarHeight: 101
-radarGrid: 0.1
-contactRadius: 0.2
-radarReceptiveAngle: 15
-echoPersistence: 120000
-contactPersistence: 60000
-radarCleanInterval: 30000
-correlationInterval: 2000
-decay: 120000
 flow:
   entry: scan
   states:

@@ -31,6 +31,7 @@ package org.mmarini.wheelly.engines;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,21 +93,22 @@ public record HaltState(String id, ProcessorCommand onInit, ProcessorCommand onE
     }
 
     @Override
-    public void entry(ProcessorContext context) {
+    public void entry(ProcessorContextApi context) {
         ExtendedStateNode.super.entry(context);
         entryAutoScan(context);
     }
 
     @Override
-    public Tuple2<String, RobotCommands> step(ProcessorContext ctx) {
+    public Tuple2<String, RobotCommands> step(ProcessorContextApi ctx) {
         if (isTimeout(ctx)) {
             return TIMEOUT_RESULT;
         }
         Tuple2<String, RobotCommands> result = getBlockResult(ctx);
         if (result != null) {
+            RobotStatus robotStatus = ctx.worldModel().robotStatus();
             logger.atDebug().log("Contacts at {} {}",
-                    !ctx.robotStatus().canMoveForward() ? "front" : "",
-                    !ctx.robotStatus().canMoveBackward() ? "rear" : "");
+                    !robotStatus.canMoveForward() ? "front" : "",
+                    !robotStatus.canMoveBackward() ? "rear" : "");
             return result;
         }
         return tickAutoScan(ctx);

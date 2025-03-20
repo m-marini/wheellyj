@@ -71,7 +71,6 @@ public interface BaseShape {
     Color LABELED_COLOR = new Color(0, 128, 128, 128);
     Color TARGET_COLOR = new Color(0, 200, 0);
     Color PING_COLOR = new Color(255, 128, 128);
-    Color LABELED_PING_COLOR = new Color(128, 255, 255);
     Color OBSTACLE_PHANTOM_COLOR = new Color(128, 128, 128);
     Color LABELED_PHANTOM_COLOR = new Color(0, 200, 200);
     Color HUD_BACKGROUND_COLOR = new Color(32, 32, 32);
@@ -154,7 +153,7 @@ public interface BaseShape {
                             Color color = sector.hasContact()
                                     ? BaseShape.CONTACT_COLOR
                                     : sector.echogenic()
-                                    ? sector.labeled() ? BaseShape.LABELED_COLOR : BaseShape.FILLED_COLOR
+                                    ? BaseShape.FILLED_COLOR
                                     : BaseShape.EMPTY_COLOR;
                             return createRectangle(color, BaseShape.BORDER_STROKE, true, sector.location(), size, size);
                         })

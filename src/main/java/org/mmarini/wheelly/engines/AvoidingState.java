@@ -33,6 +33,7 @@ import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -99,8 +100,8 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
      *
      * @param context the context
      */
-    private Optional<Tuple2<String, RobotCommands>> computeReaction(ProcessorContext context) {
-        RobotStatus status = context.robotStatus();
+    private Optional<Tuple2<String, RobotCommands>> computeReaction(ProcessorContextApi context) {
+        RobotStatus status = context.worldModel().robotStatus();
         Complex direction = status.direction();
         int speed = getInt(context, SPEED);
         Point2D robotLocation = status.location();
@@ -139,7 +140,7 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
     }
 
     @Override
-    public void entry(ProcessorContext context) {
+    public void entry(ProcessorContextApi context) {
         ExtendedStateNode.super.entry(context);
         remove(context, CONTACT_DIRECTION);
         remove(context, CONTACT_POINT);
@@ -148,13 +149,14 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
     }
 
     @Override
-    public Tuple2<String, RobotCommands> step(ProcessorContext ctx) {
+    public Tuple2<String, RobotCommands> step(ProcessorContextApi ctx) {
         if (isTimeout(ctx)) {
             return TIMEOUT_RESULT;
         }
         return computeReaction(ctx).orElseGet(() -> {
             // contact disappeared
-            RobotStatus status = ctx.robotStatus();
+            WorldModel worldModel = ctx.worldModel();
+            RobotStatus status = worldModel.robotStatus();
             Point2D robotLocation = status.location();
             Point2D contactPoint = get(ctx, CONTACT_POINT);
             double safeDistance = getDouble(ctx, SAFE_DISTANCE);
@@ -182,7 +184,7 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
             if (safePoint == null) {
                 //  No free point set: search for it
                 double maxDistance = getDouble(ctx, MAX_DISTANCE);
-                Optional<Point2D> target = ctx.radarMap().findSafeTarget(
+                Optional<Point2D> target = worldModel.radarMap().findSafeTarget(
                         robotLocation,
                         frontContact
                                 ? contactsDir.opposite()

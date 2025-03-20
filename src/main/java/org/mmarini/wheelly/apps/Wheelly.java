@@ -36,17 +36,18 @@ import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
+import org.mmarini.Tuple2;
 import org.mmarini.rl.agents.AbstractAgentNN;
 import org.mmarini.rl.agents.Agent;
+import org.mmarini.rl.agents.AgentConnector;
 import org.mmarini.rl.agents.KpiBinWriter;
-import org.mmarini.rl.envs.Environment;
+import org.mmarini.rl.envs.ExecutionResult;
 import org.mmarini.rl.envs.Signal;
+import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.swing.GridLayoutHelper;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.GridMap;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.SimRobot;
-import org.mmarini.wheelly.envs.*;
+import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.envs.EnvironmentApi;
+import org.mmarini.wheelly.envs.WorldEnvironment;
 import org.mmarini.wheelly.swing.*;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -58,6 +59,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowEvent;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -66,6 +69,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 import static io.reactivex.rxjava3.core.Flowable.interval;
 import static java.util.Objects.requireNonNull;
@@ -73,10 +77,10 @@ import static org.mmarini.wheelly.swing.Utils.*;
 import static org.mmarini.yaml.Utils.fromFile;
 
 /**
- * Run a test to check for robot environment with random behavior agent
+ * Run a test to check for robot environment with random behaviour agent
  */
 public class Wheelly {
-    public static final String WHEELLY_SCHEMA_YML = "https://mmarini.org/wheelly/wheelly-schema-2.0";
+    public static final String WHEELLY_SCHEMA_YML = "https://mmarini.org/wheelly/wheelly-schema-3.0";
     public static final int LAYOUT_INTERVAL = 300;
     private static final Logger logger = LoggerFactory.getLogger(Wheelly.class);
 
@@ -139,9 +143,9 @@ public class Wheelly {
     }
 
     protected final EnvironmentPanel envPanel;
-    private final ReducedValue avgRewards;
-    private final ReducedValue reactionRobotTime;
-    private final ReducedValue reactionRealTime;
+    private final DoubleReducedValue avgRewards;
+    private final DoubleReducedValue reactionRobotTime;
+    private final DoubleReducedValue reactionRealTime;
     private final ComMonitor comMonitor;
     private final SensorMonitor sensorMonitor;
     private final KpisPanel kpisPanel;
@@ -151,21 +155,24 @@ public class Wheelly {
     private final JButton stopButton;
     private final JButton startButton;
     private final JButton relocateButton;
+    private final AtomicReference<AgentTrainer> trainer;
+    private final AgentConnector inferenceMediator;
     private JFrame kpisFrame;
     private long robotStartTimestamp;
     private Long sessionDuration;
     private PolarPanel polarPanel;
     private GridPanel gridPanel;
-    private JFrame radarFrame;
-    private RobotEnvironment environment;
     private long prevRobotStep;
     private long prevStep;
     private ComDumper dumper;
     private List<JFrame> allFrames;
     private boolean active;
     private KpiBinWriter kpiWriter;
-    private AtomicReference<AgentTrainer> trainer;
-    private JFrame gridFrame;
+    private RobotControllerApi controller;
+    private WorldModeller worldModeller;
+    private EnvironmentApi environment;
+    private RobotApi robot;
+    private Agent agent;
 
     /**
      * Creates the server reinforcement learning engine server
@@ -179,40 +186,78 @@ public class Wheelly {
         this.comMonitor = new ComMonitor();
         this.learnPanel = new LearnPanel();
         this.sensorMonitor = new SensorMonitor();
+        this.trainer = new AtomicReference<>();
         this.robotStartTimestamp = -1;
-        this.avgRewards = ReducedValue.mean();
-        this.reactionRobotTime = ReducedValue.mean();
-        this.reactionRealTime = ReducedValue.mean();
+        this.avgRewards = DoubleReducedValue.mean();
+        this.reactionRobotTime = DoubleReducedValue.mean();
+        this.reactionRealTime = DoubleReducedValue.mean();
         this.prevRobotStep = -1;
         this.prevStep = -1;
         this.completion = CompletableSubject.create();
         this.relocateButton = SwingUtils.getInstance().initButton(new JButton(), "Wheelly.relocateButton");
         this.stopButton = SwingUtils.getInstance().initButton(new JButton(), "Wheelly.stopButton");
         this.startButton = SwingUtils.getInstance().initButton(new JButton(), "Wheelly.runButton");
+        this.inferenceMediator = new AgentConnector() {
+            @Override
+            public Map<String, Signal> act(Map<String, Signal> state) {
+                return mediateAct(state);
+            }
+
+            @Override
+            public Agent observe(ExecutionResult result) {
+                return mediateObserve(result);
+            }
+        };
         comMonitor.setPrintTimestamp(true);
+    }
+
+    /**
+     * Creates the context from configuration
+     *
+     * @param config the configuration
+     * @throws IOException in case of error
+     */
+    private void createContext(JsonNode config) throws IOException {
+        logger.atInfo().log("Creating controller ...");
+        this.robot = AppYaml.robotFromJson(config);
+        this.controller = AppYaml.controllerFromJson(config);
+        controller.connectRobot(robot);
+
+        logger.atInfo().log("Creating world modeller ...");
+        this.worldModeller = AppYaml.modellerFromJson(config);
+        worldModeller.setRobotSpec(robot.robotSpec());
+        worldModeller.connectController(controller);
+
+        logger.atInfo().log("Creating RL environment ...");
+        this.environment = AppYaml.envFromJson(config);
+        environment.connect(worldModeller);
+        environment.connect(inferenceMediator);
+
+        logger.atInfo().log("Creating agent ...");
+        Function<WithSignalsSpec, Agent> agentBuilder = Agent.fromFile(
+                new File(Locator.locate("agent").getNode(config).asText()));
+        this.agent = agentBuilder.apply(environment);
     }
 
     /**
      * Creates the flows of events
      */
     private void createFlows() {
-        environment.readRobotStatus().observeOn(Schedulers.io()).doOnNext(this::handleStatusReady)
+        controller.readRobotStatus().observeOn(Schedulers.io()).doOnNext(this::handleStatusReady)
                 .subscribe();
-        environment.readReadLine().observeOn(Schedulers.io()).doOnNext(this::handleReadLine)
+        controller.readReadLine().observeOn(Schedulers.io()).doOnNext(this::handleReadLine)
                 .subscribe();
-        environment.readWriteLine().observeOn(Schedulers.io()).doOnNext(this::handleWrittenLine).subscribe();
-        environment.readCommand().observeOn(Schedulers.io()).doOnNext(sensorMonitor::onCommand).subscribe();
-        environment.readErrors().observeOn(Schedulers.io()).doOnNext(err -> {
+        controller.readWriteLine().observeOn(Schedulers.io()).doOnNext(this::handleWrittenLine).subscribe();
+        controller.readCommand().observeOn(Schedulers.io()).doOnNext(sensorMonitor::onCommand).subscribe();
+        controller.readErrors().observeOn(Schedulers.io()).doOnNext(err -> {
             comMonitor.onError(err);
             logger.atError().setCause(err).log();
         }).subscribe();
-        environment.readControllerStatus().observeOn(Schedulers.io()).doOnNext(this::handleControllerStatus).subscribe();
-        environment.readShutdown().doOnComplete(this::handleShutdown)
+        controller.readControllerStatus().observeOn(Schedulers.io()).doOnNext(this::handleControllerStatus).subscribe();
+        controller.readShutdown().doOnComplete(this::handleShutdown)
                 .subscribe();
-
-        environment.setOnInference(this::handleInference);
-        environment.setOnAct(this::handleAct);
-        environment.setOnResult(this::handleResult);
+        worldModeller.readInference().doOnNext(this::handleInference)
+                .subscribe();
 
         learnPanel.readActionAlphas()
                 .doOnNext(alphas -> trainer.updateAndGet(t ->
@@ -236,12 +281,8 @@ public class Wheelly {
      */
     private void createMultiFrames() {
         // Create multiple frame app
-        if (environment instanceof WithPolarMap) {
-            radarFrame = createFixFrame(Messages.getString("Radar.title"), polarPanel);
-        }
-        if (environment instanceof WithGridMap) {
-            this.gridFrame = createFixFrame(Messages.getString("Grid.title"), gridPanel);
-        }
+        JFrame radarFrame = createFixFrame(Messages.getString("Radar.title"), polarPanel);
+        JFrame gridFrame = createFixFrame(Messages.getString("Grid.title"), gridPanel);
 
         if (!this.args.getString("kpis").isEmpty()) {
             // Create kpis frame
@@ -260,12 +301,8 @@ public class Wheelly {
         // Collects all frames
         allFrames = new ArrayList<>();
         allFrames.add(frame);
-        if (radarFrame != null) {
-            allFrames.add(radarFrame);
-        }
-        if (gridFrame != null) {
-            allFrames.add(gridFrame);
-        }
+        allFrames.add(radarFrame);
+        allFrames.add(gridFrame);
         if (kpisFrame != null) {
             allFrames.add(kpisFrame);
         }
@@ -290,12 +327,13 @@ public class Wheelly {
         kpisPanel.addActionKpis(agent);
         learnPanel.setEta(agent.eta());
         learnPanel.setActionAlphas(agent.alphas());
-        if (environment instanceof PolarRobotEnv env) {
-            this.polarPanel = new PolarPanel();
-            double radarMaxDistance = env.getMaxRadarDistance();
-            polarPanel.setRadarMaxDistance(radarMaxDistance);
-            this.gridPanel = new GridPanel();
-        }
+
+        this.polarPanel = new PolarPanel();
+        RobotSpec robotSpec = robot.robotSpec();
+        double radarMaxDistance = robotSpec.maxRadarDistance();
+        polarPanel.setRadarMaxDistance(radarMaxDistance);
+        envPanel.setMarkerSize((float) worldModeller.worldModelSpec().markerSize());
+        this.gridPanel = new GridPanel();
     }
 
     /**
@@ -305,12 +343,8 @@ public class Wheelly {
         JTabbedPane panel = new JTabbedPane();
         panel.addTab(Messages.getString("Wheelly.tabPanel.envMap"), new JScrollPane(envPanel));
 
-        if (environment instanceof WithPolarMap) {
-            panel.addTab(Messages.getString("Wheelly.tabPanel.polarMap"), new JScrollPane(polarPanel));
-        }
-        if (environment instanceof WithGridMap) {
-            panel.addTab(Messages.getString("Wheelly.tabPanel.gridMap"), new JScrollPane(gridPanel));
-        }
+        panel.addTab(Messages.getString("Wheelly.tabPanel.polarMap"), new JScrollPane(polarPanel));
+        panel.addTab(Messages.getString("Wheelly.tabPanel.gridMap"), new JScrollPane(gridPanel));
         if (!this.args.getString("kpis").isEmpty()) {
             panel.addTab(Messages.getString("Wheelly.tabPanel.kpi"), new JScrollPane(kpisPanel));
         }
@@ -353,23 +387,12 @@ public class Wheelly {
     }
 
     /**
-     * Returns the action signals resulting from the action of inference
-     *
-     * @param signals the input signals
-     */
-    private Map<String, Signal> handleAct(Map<String, Signal> signals) {
-        return active ? trainer.get().agent().act(signals) : ((AbstractRobotEnv) environment).haltActions();
-    }
-
-    /**
      * Handles the clear map button event
      *
      * @param actionEvent the event
      */
     private void handleClearMapButton(ActionEvent actionEvent) {
-        if (environment instanceof PolarRobotEnv env) {
-            env.clearRadarMap();
-        }
+        worldModeller.clearRadarMap();
     }
 
     /**
@@ -385,22 +408,38 @@ public class Wheelly {
     /**
      * Handles the inference event
      *
-     * @param status the robot status
+     * @param inferenceResult the inference result
      */
-    private void handleInference(RobotStatus status) {
-        long robotClock = status.simulationTime();
-        envPanel.setRobotStatus(status);
-        sensorMonitor.onStatus(status);
-        if (environment instanceof WithRadarMap radarEnv) {
-            envPanel.setRadarMap(radarEnv.getRadarMap());
-        }
-        if (environment instanceof PolarRobotEnv polarRobotEnv) {
-            polarPanel.setPolarMap(polarRobotEnv.getPolarMap());
-            GridMap map = polarRobotEnv.gridMap();
-            Complex robotDir = polarRobotEnv.getRobotStatus().direction();
-            gridPanel.setGridMap(map);
-            gridPanel.setRobotDirection(robotDir.sub(map.direction()));
-        }
+    private void handleInference(Tuple2<WorldModel, RobotCommands> inferenceResult) {
+        WorldModel worldModel = inferenceResult._1;
+        RobotStatus robotStatus = worldModel.robotStatus();
+        Map<String, LabelMarker> markers = worldModel.markers();
+        PolarMap polarMap = worldModel.polarMap();
+        GridMap map = worldModel.gridMap();
+
+        long robotClock = robotStatus.simulationTime();
+        envPanel.setRobotStatus(robotStatus);
+        sensorMonitor.onStatus(robotStatus);
+        envPanel.setRadarMap(worldModel.radarMap());
+        envPanel.setMarkers(markers.values());
+        polarPanel.setPolarMap(polarMap, markers.values());
+        Complex robotDir = robotStatus.direction();
+
+        gridPanel.setGridMap(map);
+        gridPanel.setRobotDirection(robotDir.sub(map.direction()));
+        Point2D center = map.center();
+
+        /*
+         * Transformd the marker locations to grid map coordinates
+         */
+        AffineTransform tr = AffineTransform.getRotateInstance(map.direction().toRad());
+        tr.translate(-center.getX(), -center.getY());
+
+        List<Point2D> mks = markers.values().stream()
+                .map(p -> tr.transform(p.location(), null))
+                .toList();
+        gridPanel.setMarkers(mks);
+
         long time = System.currentTimeMillis();
         if (prevRobotStep >= 0) {
             envPanel.setReactionRealTime(reactionRealTime.add(time - prevStep).value() * 1e-3);
@@ -446,8 +485,8 @@ public class Wheelly {
      * @param actionEvent the action event
      */
     private void handleRelocateButton(ActionEvent actionEvent) {
-        if (this.environment.getController().getRobot() instanceof SimRobot robot) {
-            robot.safeRelocateRandom();
+        if (this.robot instanceof SimRobot simRobot) {
+            simRobot.safeRelocateRandom();
         }
     }
 
@@ -458,38 +497,6 @@ public class Wheelly {
      */
     private void handleResetButton(ActionEvent actionEvent) {
         trainer.updateAndGet(AgentTrainer::resetAgent);
-    }
-
-    /**
-     * Handle the result of execution control step
-     * Lets the agent to observer and eventually
-     * runs the training process
-     *
-     * @param result the result
-     */
-    private void handleResult(Environment.ExecutionResult result) {
-        if (active) {
-            double reward = result.reward();
-            // Update ui
-            envPanel.setReward(avgRewards.add((float) reward).value());
-            sensorMonitor.onReward(reward);
-            // Observe the result
-            Maybe<AgentTrainer> tr = trainer.updateAndGet(t ->
-                            t.observeResult(result))
-                    .trainer();
-            if (tr != null) {
-                // If asynchronous training is required prepare for run
-                Maybe<AgentTrainer> trainer1 = tr.subscribeOn(Schedulers.computation())
-                        .doOnSuccess(trainer2 ->
-                                trainer.updateAndGet(t ->
-                                        t.setTrainedAgent(trainer2)));
-                // Reset asynchronous trainer
-                trainer.updateAndGet(t ->
-                        t.trainer(null));
-                // Run training
-                trainer1.subscribe();
-            }
-        }
     }
 
     /**
@@ -558,9 +565,9 @@ public class Wheelly {
             robotStartTimestamp = status.simulationTime();
         }
         long robotElapsed = status.simulationTime() - robotStartTimestamp;
-        envPanel.setTimeRatio(environment.getController().simRealSpeed());
+        envPanel.setTimeRatio(controller.simRealSpeed());
         if (robotElapsed > sessionDuration) {
-            environment.shutdown();
+            controller.shutdown();
         }
     }
 
@@ -581,7 +588,7 @@ public class Wheelly {
      * @param windowEvent the event
      */
     private void handleWindowClosing(WindowEvent windowEvent) {
-        environment.shutdown();
+        controller.shutdown();
     }
 
     /**
@@ -591,11 +598,11 @@ public class Wheelly {
      * @param e the event
      */
     private void handleWindowOpened(WindowEvent e) {
-        Optional.ofNullable(environment.getController().getRobot())
+        Optional.ofNullable(robot)
                 .filter(r -> r instanceof SimRobot)
                 .flatMap(r -> ((SimRobot) r).obstaclesMap())
                 .ifPresent(envPanel::setObstacles);
-        environment.start();
+        controller.start();
     }
 
     /**
@@ -611,25 +618,80 @@ public class Wheelly {
     }
 
     /**
+     * Returns the validated application configuration
+     *
+     * @throws IOException in case of error
+     */
+    private JsonNode loadConfig() throws IOException {
+        File configFile = new File(this.args.getString("config"));
+        JsonNode config = fromFile(configFile);
+        JsonSchemas.instance().validateOrThrow(config, WHEELLY_SCHEMA_YML);
+        return config;
+    }
+
+    /**
+     * Returns the action signals resulting from the action of inference
+     *
+     * @param signals the input signals
+     */
+    private Map<String, Signal> mediateAct(Map<String, Signal> signals) {
+        return active ? trainer.get().agent().act(signals) : ((WorldEnvironment) environment).haltActions();
+    }
+
+    /**
+     * Handle the result of execution control step
+     * Lets the agent to observer and eventually
+     * runs the training process
+     * Returns the agent
+     *
+     * @param result the result
+     */
+    private Agent mediateObserve(ExecutionResult result) {
+        if (active) {
+            double reward = result.reward();
+            // Update ui
+            envPanel.setReward(avgRewards.add((float) reward).value());
+            sensorMonitor.onReward(reward);
+            // Observe the result
+            Maybe<AgentTrainer> tr = trainer.updateAndGet(t ->
+                            t.observeResult(result))
+                    .trainer();
+            if (tr != null) {
+                // If asynchronous training is required prepare for run
+                Maybe<AgentTrainer> trainer1 = tr.subscribeOn(Schedulers.computation())
+                        .doOnSuccess(trainer2 ->
+                                trainer.updateAndGet(t ->
+                                        t.setTrainedAgent(trainer2)));
+                // Reset asynchronous trainer
+                trainer.updateAndGet(t ->
+                        t.trainer(null));
+                // Run training
+                trainer1.subscribe();
+            }
+        }
+        return trainer.get().agent();
+    }
+
+    /**
      * Starts the application
      */
     protected void run() throws IOException {
         logger.atInfo().log("Creating environment");
-        File configFile = new File(this.args.getString("config"));
-        JsonNode config = fromFile(configFile);
-        this.environment = AppYaml.envFromJson(config, WHEELLY_SCHEMA_YML);
-        long savingInterval = Locator.locate("savingInterval").getNode(config).asLong();
+        JsonNode config = loadConfig();
 
-        logger.atInfo().log("Creating agent");
-        Agent agent = Agent.fromFile(
-                new File(Locator.locate("agent").getNode(config).asText()),
-                environment);
+        // Create context
+        createContext(config);
+
+        // Init agent
+        long savingInterval = Locator.locate("savingInterval").getNode(config).asLong();
         if (agent instanceof AbstractAgentNN agentNN) {
             agent = agentNN.setPostTrainKpis(true);
         }
+
         boolean synchTraining = args.getBoolean("alternate");
-        this.trainer = new AtomicReference<>(AgentTrainer.create(agent, synchTraining, savingInterval));
-        if (environment.getController().getRobot() instanceof SimRobot robot1) {
+
+        this.trainer.set(AgentTrainer.create(agent, synchTraining, savingInterval));
+        if (robot instanceof SimRobot robot1) {
             // Add the obstacles location changes
             robot1.setOnObstacleChanged(this::handleObstacleChanged);
             relocateButton.setEnabled(true);
@@ -680,10 +742,10 @@ public class Wheelly {
         }
         // Creates the flows
         createFlows();
+
         // Starts the environment interaction
         active = true;
         startButton.setEnabled(false);
         agent.backup();
-        environment.start();
     }
 }

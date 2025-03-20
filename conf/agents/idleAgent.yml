@@ -2,23 +2,8 @@
 ######################################
 # Idle agent
 ######################################
-$schema: https://mmarini.org/wheelly/state-agent-schema-3.0
+$schema: https://mmarini.org/wheelly/agent-state-machine-schema-0.1
 class: org.mmarini.wheelly.engines.StateMachineAgent
-interval: 10
-commandInterval: 600
-reactionInterval: 300
-radarWidth: 101
-radarHeight: 101
-radarGrid: 0.1
-contactRadius: 0.2
-radarReceptiveAngle: 15
-echoPersistence: 30000
-contactPersistence: 300000
-radarCleanInterval: 10000
-numRadarSectors: 24
-minRadarDistance: 0.3
-maxRadarDistance: 3
-correlationInterval: 2000
 flow:
   entry: idle
   states:

@@ -30,7 +30,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
 import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -38,16 +40,19 @@ import java.io.IOException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
+import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class AvoidTest {
-    static MockState createState(boolean canMoveForward, boolean canMoveBackward) {
-        RobotStatus status = RobotStatus.create(x -> 12d)
+    static WorldState createState(boolean canMoveForward, boolean canMoveBackward) {
+        RobotStatus status = RobotStatus.create(ROBOT_SPEC, x -> 12d)
                 .setCanMoveForward(canMoveForward)
                 .setCanMoveBackward(canMoveBackward);
-        MockState state = mock();
-        when(state.getRobotStatus()).thenReturn(status);
+        WorldModel worldModel = mock();
+        when(worldModel.robotStatus()).thenReturn(status);
+        WorldState state = mock();
+        when(state.model()).thenReturn(worldModel);
         return state;
     }
 
@@ -65,7 +70,7 @@ class AvoidTest {
                 "$schema: " + AvoidContact.SCHEMA_NAME,
                 "class: " + AvoidContact.class.getName()));
         RewardFunction f = AvoidContact.create(root, Locator.root());
-        MockState state = createState(canMoveForward != 0, canMoveBackward != 0);
+        WorldState state = createState(canMoveForward != 0, canMoveBackward != 0);
 
         double result = f.apply(null, null, state);
 
@@ -87,7 +92,7 @@ class AvoidTest {
                 "class: " + AvoidContact.class.getName(),
                 "reward: -2"));
         RewardFunction f = AvoidContact.create(root, Locator.root());
-        MockState state = createState(canMoveForward != 0, canMoveBackward != 0);
+        WorldState state = createState(canMoveForward != 0, canMoveBackward != 0);
 
         double result = f.apply(null, null, state);
 

@@ -26,16 +26,20 @@
 package org.mmarini.wheelly.swing;
 
 import org.mmarini.wheelly.apis.CircularSector;
+import org.mmarini.wheelly.apis.LabelMarker;
 import org.mmarini.wheelly.apis.PolarMap;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.*;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import static java.awt.Color.WHITE;
 import static java.lang.Math.*;
+import static org.mmarini.wheelly.swing.BaseShape.*;
+import static org.mmarini.wheelly.swing.EnvironmentPanel.DEFAULT_MARKER_SIZE;
 import static org.mmarini.wheelly.swing.Utils.GRID_SIZE;
 
 /**
@@ -97,6 +101,8 @@ public class PolarPanel extends JComponent {
     private List<Shape> gridShapes;
     private int numSector;
     private double radarMaxDistance;
+    private BaseShape markerShape;
+    private final float markerSize;
 
     /**
      * Creates the polar panel
@@ -109,6 +115,7 @@ public class PolarPanel extends JComponent {
         this.numSector = DEFAULT_NUM_SECTOR;
         this.gridShapes = createGridShapes(radarMaxDistance, GRID_SIZE, numSector);
         this.shapes = new ArrayList<>();
+        this.markerSize = DEFAULT_MARKER_SIZE;
         setPreferredSize(new Dimension(DEFAULT_SIZE, DEFAULT_SIZE));
     }
 
@@ -129,7 +136,7 @@ public class PolarPanel extends JComponent {
      * @param gr the graphic environment
      */
     private void drawGrid(Graphics2D gr) {
-        gr.setStroke(BaseShape.BORDER_STROKE);
+        gr.setStroke(BORDER_STROKE);
         gr.setColor(BaseShape.GRID_COLOR);
         gridShapes.forEach(gr::draw);
     }
@@ -141,7 +148,7 @@ public class PolarPanel extends JComponent {
      * @param shapes the shapes to draw
      */
     private void drawMap(Graphics2D gr, List<ColoredShape> shapes) {
-        gr.setStroke(BaseShape.BORDER_STROKE);
+        gr.setStroke(BORDER_STROKE);
         shapes.forEach(shape -> shape.draw(gr));
     }
 
@@ -157,6 +164,9 @@ public class PolarPanel extends JComponent {
         gr.setTransform(base);
         drawGrid(gr);
         drawMap(gr, shapes);
+        if (markerShape != null) {
+            markerShape.paint(gr);
+        }
     }
 
     /**
@@ -166,8 +176,9 @@ public class PolarPanel extends JComponent {
      * </p>
      *
      * @param polarMap the polar map
+     * @param markers the markers
      */
-    public void setPolarMap(PolarMap polarMap) {
+    public void setPolarMap(PolarMap polarMap, Collection<LabelMarker> markers) {
         int n = polarMap.sectorsNumber();
         if (numSector != n) {
             numSector = n;
@@ -179,6 +190,15 @@ public class PolarPanel extends JComponent {
         Point2D center = polarMap.center();
         AffineTransform transform = AffineTransform.getRotateInstance(polarMap.direction().toRad());
         transform.translate(-center.getX(), -center.getY());
+        // Create marker shapes
+        markerShape = new BaseShape.CompositeShape(
+                markers.stream()
+                        .map(marker ->
+                                createCircle(LABELED_COLOR, BORDER_STROKE, true,
+                                        transform.transform(marker.location(), null),
+                                        markerSize / 2))
+                        .toList());
+
         // First pass for empty shapes
         for (int i = 0; i < n; i++) {
             CircularSector sector = polarMap.sector(i);
@@ -206,10 +226,7 @@ public class PolarPanel extends JComponent {
                     Shape innerPie = createPie(angle - sectorAngle / 2, sectorAngle, distance);
                     Area outerSector = new Area(outerPie);
                     outerSector.subtract(new Area(innerPie));
-                    shapes.add(new ColoredShape(outerSector,
-                            sector.labeled()
-                                    ? BaseShape.LABELED_COLOR
-                                    : BaseShape.FILLED_COLOR));
+                    shapes.add(new ColoredShape(outerSector, BaseShape.FILLED_COLOR));
                 }
             }
         }
@@ -221,10 +238,7 @@ public class PolarPanel extends JComponent {
                 if (!(distance == 0 || sector.empty())) {
                     Shape pingShape = createPing(
                             transform.transform(sector.location(), null));
-                    shapes.add(new ColoredShape(pingShape,
-                            sector.labeled()
-                                    ? BaseShape.LABELED_PING_COLOR
-                                    : BaseShape.PING_COLOR));
+                    shapes.add(new ColoredShape(pingShape, BaseShape.PING_COLOR));
                 }
             }
         }

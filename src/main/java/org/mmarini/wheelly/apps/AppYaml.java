@@ -31,7 +31,8 @@ package org.mmarini.wheelly.apps;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotControllerApi;
-import org.mmarini.wheelly.envs.RobotEnvironment;
+import org.mmarini.wheelly.apis.WorldModeller;
+import org.mmarini.wheelly.envs.EnvironmentApi;
 import org.mmarini.yaml.Locator;
 
 import java.io.File;
@@ -39,44 +40,32 @@ import java.io.IOException;
 
 public interface AppYaml {
 
-
-    /**
-     * Returns the controller from the configuration file
-     *
-     * @param file the file
-     */
-    static RobotControllerApi controllerFromFile(String file, String schema) {
-        try {
-            JsonNode config = org.mmarini.yaml.Utils.fromFile(file);
-            return controllerFromJson(config, schema);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     /**
      * Returns the controller from configuration file reading "robot" and "controller" properties
      *
      * @param config the root node
-     * @param schema the schema
      */
-    static RobotControllerApi controllerFromJson(JsonNode config, String schema) throws IOException {
-        JsonSchemas.instance().validateOrThrow(config, schema);
-        RobotApi robot = RobotApi.fromFile(new File(config.path("robot").asText()));
-        return RobotControllerApi.fromFile(new File(config.path("controller").asText()), robot);
+    static RobotControllerApi controllerFromJson(JsonNode config) throws IOException {
+        return RobotControllerApi.fromFile(new File(config.path("controller").asText()));
     }
 
     /**
-     * Returns the environment readering the "robot", "controller" and "environment" properties
+     * Returns the environment reading the file of "environment" property
      *
      * @param config the json document
-     * @param schema the schema
      */
-    static RobotEnvironment envFromJson(JsonNode config, String schema) throws IOException {
-        RobotControllerApi controller = controllerFromJson(config, schema);
-        return RobotEnvironment.fromFile(
-                new File(config.path("environment").asText()),
-                controller);
+    static EnvironmentApi envFromJson(JsonNode config) throws IOException {
+        return EnvironmentApi.fromFile(new File(config.path("environment").asText()));
+    }
+
+    /**
+     * Returns the world modeller reading the file of "modeller" property
+     *
+     * @param config the JSON configuration
+     * @throws IOException in case of error
+     */
+    static WorldModeller modellerFromJson(JsonNode config) throws IOException {
+        return WorldModeller.fromFile(new File(config.path("modeller").asText()));
     }
 
     /**
@@ -101,5 +90,15 @@ public interface AppYaml {
         return locator.elements(root)
                 .mapToInt(l -> l.getNode(root).asInt())
                 .toArray();
+    }
+
+    /**
+     * Returns the world modeller reading the file of "robot" property
+     *
+     * @param config the JSON configuration
+     * @throws IOException in case of error
+     */
+    static RobotApi robotFromJson(JsonNode config) throws IOException {
+        return RobotApi.fromFile(new File(config.path("robot").asText()));
     }
 }

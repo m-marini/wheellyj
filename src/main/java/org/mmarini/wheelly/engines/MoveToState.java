@@ -152,7 +152,7 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
     }
 
     @Override
-    public void entry(ProcessorContext context) {
+    public void entry(ProcessorContextApi context) {
         ExtendedStateNode.super.entry(context);
         Point2D target = get(context, TARGET);
         if (target != null) {
@@ -163,13 +163,13 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
     }
 
     @Override
-    public void exit(ProcessorContext context) {
+    public void exit(ProcessorContextApi context) {
         ExtendedStateNode.super.exit(context);
         context.setTarget(null);
     }
 
     @Override
-    public Tuple2<String, RobotCommands> step(ProcessorContext context) {
+    public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
         Tuple2<String, RobotCommands> blockResult = getBlockResult(context);
         if (blockResult != null) {
             // Halt robot and move forward the sensor at block
@@ -195,6 +195,6 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
             case Number d -> Complex.fromDeg(d.doubleValue());
             case null, default -> Complex.fromDeg(DEFAULT_DIRECTION_RANGE);
         };
-        return moveTo(context.robotStatus(), target, direction, directionRange, stopDistance, maxSpeed);
+        return moveTo(context.worldModel().robotStatus(), target, direction, directionRange, stopDistance, maxSpeed);
     }
 }

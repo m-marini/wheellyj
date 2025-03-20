@@ -25,7 +25,6 @@
 
 package org.mmarini.rl.envs;
 
-import java.io.Closeable;
 import java.util.Map;
 import java.util.StringJoiner;
 
@@ -34,21 +33,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * The environment interface
  */
-public interface Environment extends Closeable, WithSignalsSpec {
-
-    /**
-     * Returns the result of execution of actions
-     *
-     * @param actions the actions
-     */
-    ExecutionResult execute(Map<String, Signal> actions);
-
-    /**
-     * Returns the initial state of an episode
-     */
-    Map<String, Signal> reset();
-
-    record ExecutionResult(Map<String, Signal> state0, Map<String, Signal> actions, double reward,
+public record ExecutionResult(Map<String, Signal> state0, Map<String, Signal> actions, double reward,
                            Map<String, Signal> state1) {
         /**
          * Creates an execution result
@@ -74,5 +59,4 @@ public interface Environment extends Closeable, WithSignalsSpec {
                     .add("state1=" + state1)
                     .toString();
         }
-    }
 }

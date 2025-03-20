@@ -34,11 +34,8 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
-import org.mmarini.wheelly.apis.RobotApi;
-import org.mmarini.wheelly.apis.RobotControllerApi;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.SimRobot;
-import org.mmarini.wheelly.engines.ProcessorContext;
+import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.engines.ProcessorContextApi;
 import org.mmarini.wheelly.engines.StateMachineAgent;
 import org.mmarini.wheelly.engines.StateNode;
 import org.mmarini.wheelly.swing.*;
@@ -57,27 +54,11 @@ import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.swing.Utils.*;
 
 /**
- * Run a test to check for robot environment with random behavior agent
+ * Run a test to check for robot environment with random behaviour agent
  */
 public class RobotExecutor {
-    public static final String EXECUTOR_SCHEMA_YML = "https://mmarini.org/wheelly/executor-schema-1.0";
+    public static final String EXECUTOR_SCHEMA_YML = "https://mmarini.org/wheelly/executor-schema-2.0";
     private static final Logger logger = LoggerFactory.getLogger(RobotExecutor.class);
-
-    /**
-     * Returns the agent from configuration files
-     *
-     * @param file the configuration file
-     */
-    static StateMachineAgent createAgent(File file) {
-        try {
-            JsonNode config = org.mmarini.yaml.Utils.fromFile(file);
-            RobotControllerApi controller = AppYaml.controllerFromJson(config, EXECUTOR_SCHEMA_YML);
-            return StateMachineAgent.fromFile(
-                    new File(config.path("agent").asText()), controller);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     /**
      * Returns the argument parser
@@ -121,17 +102,20 @@ public class RobotExecutor {
         } catch (ArgumentParserException e) {
             parser.handleError(e);
             System.exit(1);
+        } catch (IOException e) {
+            logger.atError().setCause(e).log("Error running application");
+            System.exit(1);
         }
     }
-
     private final EnvironmentPanel envPanel;
     private final PolarPanel polarPanel;
-    private final ReducedValue reactionRobotTime;
-    private final ReducedValue reactionRealTime;
+    private final DoubleReducedValue reactionRobotTime;
+    private final DoubleReducedValue reactionRealTime;
     private final ComMonitor comMonitor;
     private final SensorMonitor sensorMonitor;
     private final StateEngineMonitor engineMonitor;
     private final Namespace args;
+    private RobotApi robot;
     private long start;
     private long sessionDuration;
     private StateMachineAgent agent;
@@ -140,6 +124,8 @@ public class RobotExecutor {
     private long prevRealStep;
     private ComDumper dumper;
     private List<JFrame> allFrames;
+    private RobotControllerApi controller;
+    private WorldModeller modeller;
 
     /**
      * Creates the roboto executor
@@ -152,12 +138,51 @@ public class RobotExecutor {
         this.polarPanel = new PolarPanel();
         this.comMonitor = new ComMonitor();
         this.engineMonitor = new StateEngineMonitor();
-        this.reactionRobotTime = ReducedValue.mean();
-        this.reactionRealTime = ReducedValue.mean();
+        this.reactionRobotTime = DoubleReducedValue.mean();
+        this.reactionRealTime = DoubleReducedValue.mean();
         this.robotStartTimestamp = -1;
         this.prevRobotStep = -1;
         this.prevRealStep = -1;
         this.sensorMonitor = new SensorMonitor();
+    }
+
+    /**
+     * Returns the agent from configuration files
+     */
+    void createContext() throws IOException {
+        File confFile = new File(this.args.getString("config"));
+        JsonNode config = org.mmarini.yaml.Utils.fromFile(confFile);
+        JsonSchemas.instance().validateOrThrow(config, EXECUTOR_SCHEMA_YML);
+
+        logger.atInfo().log("Creating robot ...");
+        this.robot = AppYaml.robotFromJson(config);
+
+        logger.atInfo().log("Creating controller ...");
+        this.controller = AppYaml.controllerFromJson(config);
+        controller.connectRobot(robot);
+
+        logger.atInfo().log("Creating world modeller ...");
+        this.modeller = AppYaml.modellerFromJson(config);
+        modeller.connectController(controller);
+
+        logger.atInfo().log("Creating agent ...");
+        this.agent = StateMachineAgent.fromFile(
+                new File(config.path("agent").asText()));
+        agent.connect(modeller);
+
+        // Creating the dumper
+        Optional.ofNullable(this.args.getString("dump"))
+                .ifPresent(file -> {
+                    logger.atInfo().log("Creating dumper {} ...", file);
+                    try {
+                        dumper = ComDumper.fromFile(file);
+                    } catch (IOException e) {
+                        logger.atError().setCause(e).log();
+                    }
+                });
+
+        this.sessionDuration = this.args.getLong("localTime") * 1000;
+        logger.atInfo().setMessage("Session will be running for {} sec...").addArgument(sessionDuration).log();
     }
 
     /**
@@ -214,7 +239,6 @@ public class RobotExecutor {
      * Handles the application shutdown
      */
     private void handleShutdown() {
-        agent.shutdown();
         allFrames.forEach(JFrame::dispose);
         if (dumper != null) {
             try {
@@ -239,33 +263,42 @@ public class RobotExecutor {
     }
 
     /**
-     * Handles the step-up of agent
-     *
-     * @param ctx the context
+     * Creates the reactive flows
      */
-    private void handleStepUp(ProcessorContext ctx) {
-        RobotStatus status = ctx.robotStatus();
-        if (robotStartTimestamp < 0) {
-            robotStartTimestamp = status.simulationTime();
-        }
-        sensorMonitor.onStatus(status);
-        envPanel.setRobotStatus(status);
-        envPanel.setRadarMap(ctx.radarMap());
-        long robotClock = status.simulationTime();
-        long robotElapsed = robotClock - robotStartTimestamp;
-        envPanel.setTimeRatio((double) robotElapsed / (System.currentTimeMillis() - start));
-        long clock = System.currentTimeMillis();
-        if (prevRobotStep >= 0) {
-            envPanel.setReactionRealTime(reactionRealTime.add(clock - prevRealStep).value() * 1e-3);
-            envPanel.setReactionRobotTime(reactionRobotTime.add(robotClock - prevRobotStep).value() * 1e-3);
-        }
-        prevRobotStep = robotClock;
-        this.prevRealStep = clock;
-
-        polarPanel.setPolarMap(ctx.polarMap());
-        if (robotElapsed > sessionDuration) {
-            agent.shutdown();
-        }
+    private void createFlows() {
+        controller.readShutdown().doOnComplete(this::handleShutdown).subscribe();
+        controller.readErrors()
+                .observeOn(Schedulers.io())
+                .doOnNext(err -> {
+                    comMonitor.onError(err);
+                    logger.atError().setCause(err).log();
+                }).subscribe();
+        controller.readReadLine()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::handleReadLine).subscribe();
+        controller.readWriteLine()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::handleWrittenLine).subscribe();
+        controller.readControllerStatus()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::handleControllerStatus).subscribe();
+        controller.readCommand()
+                .observeOn(Schedulers.io())
+                .doOnNext(sensorMonitor::onCommand).subscribe();
+        agent.readState()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::handleState)
+                .subscribe();
+        agent.readStepUp()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::handleStepUp).subscribe();
+        agent.readTargets()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::handleTarget).subscribe();
+        agent.readTriggers()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::handleTrigger)
+                .subscribe();
     }
 
     /**
@@ -286,8 +319,37 @@ public class RobotExecutor {
         engineMonitor.addTrigger(trigger);
     }
 
-    private void handleWindowClosing(WindowEvent windowEvent) {
-        agent.shutdown();
+    /**
+     * Handles the step-up of agent
+     *
+     * @param ctx the context
+     */
+    private void handleStepUp(ProcessorContextApi ctx) {
+        WorldModel worldModel = ctx.worldModel();
+        RobotStatus status = worldModel.robotStatus();
+        if (robotStartTimestamp < 0) {
+            robotStartTimestamp = status.simulationTime();
+        }
+        sensorMonitor.onStatus(status);
+        envPanel.setRobotStatus(status);
+        envPanel.setRadarMap(worldModel.radarMap());
+        envPanel.setMarkers(worldModel.markers().values());
+
+        long robotClock = status.simulationTime();
+        long robotElapsed = robotClock - robotStartTimestamp;
+        envPanel.setTimeRatio((double) robotElapsed / (System.currentTimeMillis() - start));
+        long clock = System.currentTimeMillis();
+        if (prevRobotStep >= 0) {
+            envPanel.setReactionRealTime(reactionRealTime.add(clock - prevRealStep).value() * 1e-3);
+            envPanel.setReactionRobotTime(reactionRobotTime.add(robotClock - prevRobotStep).value() * 1e-3);
+        }
+        prevRobotStep = robotClock;
+        this.prevRealStep = clock;
+
+        polarPanel.setPolarMap(worldModel.polarMap(), worldModel.markers().values());
+        if (robotElapsed > sessionDuration) {
+            controller.shutdown();
+        }
     }
 
     /**
@@ -297,8 +359,6 @@ public class RobotExecutor {
      * @param e the event
      */
     private void handleWindowOpened(WindowEvent e) {
-        agent.init();
-        RobotApi robot = agent.getController().getRobot();
         if (robot instanceof SimRobot sim) {
             sim.obstaclesMap()
                     .ifPresent(envPanel::setObstacles);
@@ -317,10 +377,27 @@ public class RobotExecutor {
         }
     }
 
+    private void handleWindowClosing(WindowEvent windowEvent) {
+        controller.shutdown();
+    }
+
     /**
-     * Initializes the application
+     * Initializes the user interface
      */
-    private void init() {
+    private void initUI() {
+        double radarMaxDistance = robot.robotSpec().maxRadarDistance();
+        polarPanel.setRadarMaxDistance(radarMaxDistance);
+        if (robot instanceof SimRobot simRobot) {
+            simRobot.setOnObstacleChanged(sim ->
+                    sim.obstaclesMap()
+                            .ifPresent(envPanel::setObstacles));
+        }
+        envPanel.setMarkerSize((float) modeller.worldModelSpec().markerSize());
+        if (args.getBoolean("windows")) {
+            createMultiFrames();
+        } else {
+            createSingleFrames();
+        }
         SwingObservable.window(allFrames.getFirst(), SwingObservable.WINDOW_ACTIVE)
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
                 .doOnNext(this::handleWindowOpened)
@@ -340,68 +417,15 @@ public class RobotExecutor {
      * Initializes the UI components
      * Opens the application frames (environment and radar)
      */
-    private void run() {
-        logger.atInfo().log("Creating Agent");
-        this.sessionDuration = this.args.getLong("localTime");
-        sessionDuration *= 1000;
+    private void run() throws IOException {
+        createContext();
+        createFlows();
+        initUI();
+
+        // Configure the user interface
         logger.atInfo().log("Starting session ...");
-        this.agent = createAgent(new File(this.args.getString("config")));
-        Optional.ofNullable(this.args.getString("dump"))
-                .ifPresent(file -> {
-                    try {
-                        dumper = ComDumper.fromFile(file);
-                    } catch (IOException e) {
-                        logger.atError().setCause(e).log();
-                    }
-                });
-        double radarMaxDistance = agent.getMaxRadarDistance();
-        polarPanel.setRadarMaxDistance(radarMaxDistance);
-        logger.atInfo().setMessage("Session are running for {} sec...").addArgument(sessionDuration).log();
         this.start = System.currentTimeMillis();
-        agent.readStepUp()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleStepUp).subscribe();
-        agent.readTargets()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleTarget).subscribe();
-        agent.readShutdown().doOnComplete(this::handleShutdown).subscribe();
-        agent.readErrors()
-                .observeOn(Schedulers.io())
-                .doOnNext(err -> {
-                    comMonitor.onError(err);
-                    logger.atError().setCause(err).log();
-                }).subscribe();
-        agent.readReadLine()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleReadLine).subscribe();
-        agent.readWriteLine()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleWrittenLine).subscribe();
-        agent.readControllerStatus()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleControllerStatus).subscribe();
-        agent.readCommand()
-                .observeOn(Schedulers.io())
-                .doOnNext(sensorMonitor::onCommand).subscribe();
-        agent.readTriggers()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleTrigger)
-                .subscribe();
-        agent.readState()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleState)
-                .subscribe();
-        if (agent.getController().getRobot() instanceof SimRobot simRobot) {
-            simRobot.setOnObstacleChanged(sim ->
-                    sim.obstaclesMap()
-                            .ifPresent(envPanel::setObstacles));
-        }
-        if (args.getBoolean("windows")) {
-            createMultiFrames();
-        } else {
-            createSingleFrames();
-        }
-        init();
         allFrames.forEach(f -> f.setVisible(true));
+        controller.start();
     }
 }

@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2023 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2023-2025 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -26,16 +26,16 @@
  *
  */
 
-package org.mmarini.wheelly.envs;
+package org.mmarini.wheelly.apis;
 
-import org.mmarini.wheelly.apis.GridMap;
+import java.util.Map;
 
 /**
- * Returns the grid map
+ * Returns the label markers
  */
-public interface WithGridMap extends WithRadarMap {
+public interface WithLabelMarkers {
     /**
-     * Returns the grid map
+     * Returns the radar map
      */
-    GridMap gridMap();
+    Map<String, LabelMarker> markers();
 }

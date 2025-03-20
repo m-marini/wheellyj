@@ -37,7 +37,7 @@ import static java.lang.String.format;
  * The Wheelly status contain the sensor value of Wheelly
  *
  * @param localTime      the status localTime (ms)
- * @param simulationTime the simulation time (ms)
+ * @param simulationTime the simulation markerTime (ms)
  * @param remoteTime     the remote localTime (ms)
  * @param supplySensor   the supply voltage (U)
  */

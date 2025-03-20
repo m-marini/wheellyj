@@ -1,15 +1,17 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/executor-schema-1.0
+$id: https://mmarini.org/wheelly/executor-schema-2.0
 title: Executor application
 type: object
 properties:
   $schema:
     type: string
-    const: https://mmarini.org/wheelly/executor-schema-1.0
+    const: https://mmarini.org/wheelly/executor-schema-2.0
   robot:
     type: string
   controller:
+    type: string
+  modeller:
     type: string
   agent:
     type: string
@@ -17,4 +19,5 @@ required:
   - $schema
   - robot
   - controller
+  - modeller
   - agent

@@ -34,7 +34,7 @@ import org.mmarini.rl.agents.AbstractAgentNN;
 import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.Kpis;
 import org.mmarini.rl.nets.TDLayer;
-import org.mmarini.wheelly.apps.ReducedValue;
+import org.mmarini.wheelly.apps.DoubleReducedValue;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,8 +45,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import static org.mmarini.wheelly.apps.ReducedValue.mean;
-import static org.mmarini.wheelly.apps.ReducedValue.rms;
+import static org.mmarini.wheelly.apps.DoubleReducedValue.mean;
+import static org.mmarini.wheelly.apps.DoubleReducedValue.rms;
 
 /**
  * Shows the kpis average values
@@ -57,10 +57,10 @@ public class KpisPanel extends MatrixTable {
     public static final double NANOS = 1e9;
     public static final double PICOS = 1e12;
     private static final Logger logger = LoggerFactory.getLogger(KpisPanel.class);
-    private final ReducedValue criticDeltaRms;
-    private final ReducedValue criticMean;
-    private final ReducedValue advantageMean;
-    private final ReducedValue deltaRms;
+    private final DoubleReducedValue criticDeltaRms;
+    private final DoubleReducedValue criticMean;
+    private final DoubleReducedValue advantageMean;
+    private final DoubleReducedValue deltaRms;
     private final List<Consumer<Map<String, INDArray>>> handlers;
 
     /**
@@ -154,7 +154,7 @@ public class KpisPanel extends MatrixTable {
     public void addActionKpis(Agent agent) {
         if (agent instanceof AbstractAgentNN aa) {
             Map<String, TDLayer> layers = aa.network().layers();
-            addActionKpi(agent.getActions().keySet().stream()
+            addActionKpi(agent.actionSpec().keySet().stream()
                     .filter(layers::containsKey)
                     .sorted()
                     .map(key ->
@@ -186,9 +186,9 @@ public class KpisPanel extends MatrixTable {
      * @param key the action key
      */
     private Consumer<Map<String, INDArray>> createActionKpiHandler(String key) {
-        ReducedValue delta = rms();
-        ReducedValue prob = mean();
-        ReducedValue probRatio = mean();
+        DoubleReducedValue delta = rms();
+        DoubleReducedValue prob = mean();
+        DoubleReducedValue probRatio = mean();
         return kpis -> {
             INDArray deltaGrads = kpis.get("deltaGrads." + key);
             if (deltaGrads != null) {
@@ -216,7 +216,7 @@ public class KpisPanel extends MatrixTable {
      * @param actionKey the key action
      */
     private Consumer<Map<String, INDArray>> createDeltaActionHandler(String actionKey) {
-        ReducedValue deltaRms = rms();
+        DoubleReducedValue deltaRms = rms();
         return kpis -> {
             INDArray pi0 = kpis.get("trainingLayers." + actionKey + ".values");
             INDArray pi1 = kpis.get("trainedLayers." + actionKey + ".values");
@@ -250,7 +250,7 @@ public class KpisPanel extends MatrixTable {
      * @param inputKey the input layer key
      */
     private Consumer<Map<String, INDArray>> createSaturationHandler(String inputKey) {
-        ReducedValue saturation = mean();
+        DoubleReducedValue saturation = mean();
         return kpis -> {
             INDArray data = kpis.get("trainingLayers." + inputKey + ".values");
             if (data != null) {

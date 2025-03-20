@@ -15,12 +15,12 @@ import static io.reactivex.rxjava3.core.Flowable.empty;
  */
 public class NullController implements RobotControllerApi {
     @Override
-    public void execute(RobotCommands command) {
+    public RobotControllerApi connectRobot(RobotApi robot) {
+        return this;
     }
 
     @Override
-    public RobotApi getRobot() {
-        throw new NotImplementedException();
+    public void execute(RobotCommands command) {
     }
 
     @Override

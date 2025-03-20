@@ -29,42 +29,44 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.apis.CircularSector;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.PolarMap;
+import org.mmarini.wheelly.apis.LabelMarker;
 import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;
+import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
+import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class LabelTest {
 
-    public static final int SECTOR_NUMBERS = 8;
-
-    static MockState createState(Complex robotDir, Complex sensorDir, double leftPps, double rightPps, Complex obstacleDir, double distance) {
+    static WorldState createState(Complex robotDir, Complex sensorDir, double leftPps, double rightPps, Complex obstacleDir, double distance) {
         Point2D.Double robotLocation = new Point2D.Double();
-        Point2D obstacleLocation = obstacleDir.at(robotLocation, distance);
         long timestamp = System.currentTimeMillis();
-        PolarMap map = PolarMap.create(SECTOR_NUMBERS);
-        int idx = map.sectorIndex(obstacleDir.sub(robotDir));
-        CircularSector[] sectors = map.sectors();
-        sectors[idx] = CircularSector.labeled(timestamp, obstacleLocation);
-
-        MockState state = mock();
-        when(state.getPolarMap()).thenReturn(map);
-        RobotStatus status = RobotStatus.create(x -> 12)
+        Point2D obstacleLocation = obstacleDir.at(robotLocation, distance);
+        Map<String, LabelMarker> markers = Map.of(
+                "A", new LabelMarker("A", obstacleLocation, 1, timestamp, timestamp));
+        RobotStatus status = RobotStatus.create(ROBOT_SPEC, x -> 12)
                 .setDirection(robotDir)
                 .setSensorDirection(sensorDir)
                 .setSpeeds(leftPps, rightPps);
-        when(state.getRobotStatus()).thenReturn(status);
+
+        WorldModel model = mock();
+        when(model.markers()).thenReturn(markers);
+        when(model.robotStatus()).thenReturn(status);
+
+        WorldState state = mock();
+        when(state.model()).thenReturn(model);
         return state;
     }
 
@@ -108,6 +110,7 @@ class LabelTest {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + Label.SCHEMA_NAME,
                 "class: " + Label.class.getName(),
+                "label: A",
                 "minDistance: 0.5",
                 "maxDistance: 1",
                 "velocityThreshold: 1",
@@ -117,10 +120,12 @@ class LabelTest {
         ));
         RewardFunction f = Label.create(root, Locator.root());
 
-        double result = f.apply(null, null, createState(Complex.fromDeg(robotDir),
+        WorldState state = createState(Complex.fromDeg(robotDir),
                 Complex.fromDeg(sensorDir),
                 leftPps, rightPps,
-                Complex.fromDeg(obstacleDir), distance));
+                Complex.fromDeg(obstacleDir), distance);
+
+        double result = f.apply(null, null, state);
 
         assertThat(result, closeTo(expected, 1e-4));
     }

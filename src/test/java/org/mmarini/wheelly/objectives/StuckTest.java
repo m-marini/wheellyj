@@ -31,7 +31,9 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -39,19 +41,24 @@ import java.io.IOException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
+import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class StuckTest {
-    static MockState createEnvironment(int sensorDir, double distance) {
-        RobotStatus status = RobotStatus.create(x -> 12d)
+    static WorldState createEnvironment(int sensorDir, double distance) {
+        RobotStatus status = RobotStatus.create(ROBOT_SPEC, x -> 12d)
                 // Use complex
                 .setSensorDirection(Complex.fromDeg(sensorDir))
                 .setCanMoveBackward(true)
                 .setCanMoveForward(true)
                 .setEchoDistance(distance);
-        MockState state = mock();
-        when(state.getRobotStatus()).thenReturn(status);
+
+        WorldModel model = mock();
+        when(model.robotStatus()).thenReturn(status);
+
+        WorldState state = mock();
+        when(state.model()).thenReturn(model);
         return state;
     }
 
@@ -84,7 +91,7 @@ class StuckTest {
                 "distance3: 1.5",
                 "sensorRange: 20"));
         RewardFunction f = Stuck.create(root, Locator.root());
-        MockState env = createEnvironment(sensorDir, distance);
+        WorldState env = createEnvironment(sensorDir, distance);
         double result = f.apply(null, null, env);
         assertThat(result, closeTo(expected, 1e-3));
     }
@@ -115,7 +122,7 @@ class StuckTest {
         double x4 = 1.5;
         int directionRange = 20;
         RewardFunction f = Stuck.stuck(x1, x2, x3, x4, directionRange);
-        MockState state = createEnvironment(sensorDir, distance);
+        WorldState state = createEnvironment(sensorDir, distance);
 
         double result = f.apply(state, null, state);
 

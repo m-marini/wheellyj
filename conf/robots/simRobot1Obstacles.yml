@@ -1,9 +1,9 @@
 ---
-$schema: https://mmarini.org/wheelly/sim-robot-schema-0.4
+$schema: https://mmarini.org/wheelly/sim-robot-schema-1.0
 class: org.mmarini.wheelly.apis.SimRobot
 # robotSeed: 1234
 mapSeed: 1234
-numObstacles: 10
+numObstacles: 1
 numLabels: 1
 changeObstaclesPeriod: 600000
 errSigma: 0.05
@@ -11,3 +11,5 @@ errSensor: 0.05
 sensorReceptiveAngle: 15
 maxAngularSpeed: 5
 stalemateInterval: 60000
+contactRadius: 0.28
+maxRadarDistance: 3

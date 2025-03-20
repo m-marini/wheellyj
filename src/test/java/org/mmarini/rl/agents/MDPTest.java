@@ -26,7 +26,7 @@
 package org.mmarini.rl.agents;
 
 import org.junit.jupiter.api.Test;
-import org.mmarini.rl.envs.Environment;
+import org.mmarini.rl.envs.ExecutionResult;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.TestSequenceMDP;
 import org.mmarini.rl.nets.*;
@@ -128,7 +128,7 @@ class MDPTest {
         AbstractAgentNN trained = agent;
         int state = 0;
         for (int i = 0; i < NUM_ERAS; i++) {
-            List<Environment.ExecutionResult> trajectory = mdp.trajectory(NUM_STEPS, state, next(trained, mdp));
+            List<ExecutionResult> trajectory = mdp.trajectory(NUM_STEPS, state, next(trained, mdp));
             trained = trained.trainByTrajectory(trajectory);
             Map<String, Signal> nextState = trajectory.getLast().state1();
             state = nextState.get("input").getInt(0) == 1 ? 0 : 1;
@@ -174,7 +174,7 @@ class MDPTest {
         // When train with fixed trajectory
         AbstractAgentNN trained = agent;
         int state = 0;
-        List<Environment.ExecutionResult> trajectory = mdp.trajectory(state, 1, 2, 3, 0, 0, 1, 2, 3);
+        List<ExecutionResult> trajectory = mdp.trajectory(state, 1, 2, 3, 0, 0, 1, 2, 3);
         for (int i = 0; i < NUM_ERAS; i++) {
             trained = trained.trainByTrajectory(trajectory);
         }
@@ -230,7 +230,7 @@ class MDPTest {
         AbstractAgentNN trained = agent;
         int state = 0;
         for (int i = 0; i < NUM_ERAS; i++) {
-            List<Environment.ExecutionResult> trajectory = mdp.trajectory(NUM_STEPS, state, next(trained, mdp));
+            List<ExecutionResult> trajectory = mdp.trajectory(NUM_STEPS, state, next(trained, mdp));
             trained = trained.trainByTrajectory(trajectory);
             Map<String, Signal> nextState = trajectory.getLast().state1();
             state = nextState.get("input").getInt(0) == 1 ? 0 : 1;
@@ -276,7 +276,7 @@ class MDPTest {
         AbstractAgentNN trained = agent;
         int state = 0;
         for (int i = 0; i < NUM_ERAS; i++) {
-            List<Environment.ExecutionResult> trajectory = mdpPos.trajectory(NUM_STEPS, state, next(trained, mdpPos));
+            List<ExecutionResult> trajectory = mdpPos.trajectory(NUM_STEPS, state, next(trained, mdpPos));
             trained = trained.trainByTrajectory(trajectory);
             Map<String, Signal> nextState = trajectory.getLast().state1();
             state = nextState.get("input").getInt(0) == 1 ? 0 : 1;
@@ -321,7 +321,7 @@ class MDPTest {
         AbstractAgentNN trained = agent;
         int state = 0;
         for (int i = 0; i < NUM_ERAS; i++) {
-            List<Environment.ExecutionResult> trajectory = mdp.trajectory(NUM_STEPS, state, next(trained, mdp));
+            List<ExecutionResult> trajectory = mdp.trajectory(NUM_STEPS, state, next(trained, mdp));
             trained = trained.trainByTrajectory(trajectory);
             Map<String, Signal> nextState = trajectory.getLast().state1();
             state = nextState.get("input").getInt(0) == 1 ? 0 : 1;

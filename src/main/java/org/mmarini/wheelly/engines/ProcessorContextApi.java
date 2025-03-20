@@ -28,9 +28,7 @@
 
 package org.mmarini.wheelly.engines;
 
-import org.mmarini.wheelly.apis.PolarMap;
-import org.mmarini.wheelly.apis.RadarMap;
-import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.WorldModel;
 
 import java.awt.geom.Point2D;
 import java.util.Optional;
@@ -47,12 +45,17 @@ import static java.lang.String.format;
  * It tracks the current state of the robot, inference engine, and radars
  * </p>
  */
-public interface ProcessorContext {
+public interface ProcessorContextApi {
 
     /**
      * Clears the radar map
      */
     void clearMap();
+
+    /**
+     * Returns the current state node
+     */
+    StateNode currentNode();
 
     /**
      * Returns a value by key
@@ -190,11 +193,6 @@ public interface ProcessorContext {
     <T> T peek();
 
     /**
-     * Returns the polar map
-     */
-    PolarMap polarMap();
-
-    /**
      * Returns and remove the last element in the stack
      *
      * @param <T> the element type
@@ -232,7 +230,7 @@ public interface ProcessorContext {
      * @param value the value
      * @param <T>   the element type
      */
-    <T> ProcessorContext push(T value);
+    <T> ProcessorContextApi push(T value);
 
     /**
      * Puts a value in the key, value map
@@ -241,12 +239,7 @@ public interface ProcessorContext {
      * @param value the value
      * @param <T>   the element type
      */
-    <T> ProcessorContext put(String key, T value);
-
-    /**
-     * Returns the radar map
-     */
-    RadarMap radarMap();
+    <T> ProcessorContextApi put(String key, T value);
 
     /**
      * Removes a key from key,value map
@@ -254,11 +247,6 @@ public interface ProcessorContext {
      * @param key the key to remove
      */
     void remove(String key);
-
-    /**
-     * Returns the robot status
-     */
-    RobotStatus robotStatus();
 
     /**
      * Sets the target point
@@ -271,4 +259,9 @@ public interface ProcessorContext {
      * Returns the number of stackl elements
      */
     int stackSize();
+
+    /**
+     * Returns the current world model
+     */
+    WorldModel worldModel();
 }

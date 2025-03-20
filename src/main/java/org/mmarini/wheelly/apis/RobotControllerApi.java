@@ -35,7 +35,6 @@ import org.mmarini.yaml.Utils;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.function.Consumer;
 
 /**
  * Manages the processing threads and event generation to interface the robot.
@@ -104,7 +103,7 @@ import java.util.function.Consumer;
  * </code>
  * </p>
  */
-public interface RobotControllerApi extends WithIOFlowable, WithStatusFlowable, WithErrorFlowable, WithCommandFlowable, WithControllerFlowable, WithInferenceFlowable {
+public interface RobotControllerApi extends RobotControllerConnector, WithIOFlowable, WithStatusFlowable, WithErrorFlowable, WithCommandFlowable, WithControllerFlowable, WithInferenceFlowable {
     /**
      * Returns the robot controller from configuration json
      *
@@ -120,39 +119,23 @@ public interface RobotControllerApi extends WithIOFlowable, WithStatusFlowable, 
      * Returns the robot controller from configuration json
      *
      * @param file  the configuration file
-     * @param robot the robot api
      */
-    static RobotControllerApi fromFile(File file, RobotApi robot) throws IOException {
-        return Utils.createObject(file, new Object[]{robot}, new Class[]{RobotApi.class});
+    static RobotControllerApi fromFile(File file) throws IOException {
+        return Utils.createObject(file);
     }
 
     /**
-     * Executes the command
+     * Connects the robot
      *
-     * @param command the command
+     * @param robot the robot
      */
-    void execute(RobotCommands command);
+    RobotControllerApi connectRobot(RobotApi robot);
 
     /**
-     * Returns the apis
+     *
+     * Returns the shutdown signal
      */
-    RobotApi getRobot();
-
     Completable readShutdown();
-
-    /**
-     * Registers the consumer of inference event
-     *
-     * @param callback the callback
-     */
-    void setOnInference(Consumer<RobotStatus> callback);
-
-    /**
-     * Registers the consumer of latch event
-     *
-     * @param callback the callback
-     */
-    void setOnLatch(Consumer<RobotStatus> callback);
 
     /**
      * Shutdowns the controller

@@ -27,7 +27,6 @@ package org.mmarini.rl.agents;
 
 import org.junit.jupiter.api.Test;
 import org.mmarini.rl.envs.*;
-import org.mmarini.rl.envs.Environment.ExecutionResult;
 import org.mmarini.rl.nets.*;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;

@@ -29,9 +29,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.GridTopology;
 import org.mmarini.wheelly.apis.RadarMap;
+import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -41,21 +43,24 @@ import java.util.stream.IntStream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
-import static org.mmarini.wheelly.apis.SimRobot.GRID_SIZE;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class ExploreTest {
 
-    public static final int MAX_INTERVAL = 10000;
     public static final double DECAY = 10000d;
 
-    static MockState createState(int knownCount) {
+    static WorldState createState(int knownCount) {
         long timestamp = System.currentTimeMillis();
-        RadarMap radarMap = RadarMap.create(new Point2D.Double(), 10, 10, 0.2, MAX_INTERVAL, 2000, MAX_INTERVAL, MAX_INTERVAL, DECAY, GRID_SIZE, Complex.fromDeg(15))
+        RadarMap radarMap = RadarMap.empty(new GridTopology(new Point2D.Float(), 10, 10, 0.2))
                 .map(IntStream.range(0, knownCount), cell -> cell.addAnechoic(timestamp, DECAY));
-        MockState state = mock();
-        when(state.getRadarMap()).thenReturn(radarMap);
+
+        WorldModel model = mock();
+        when(model.radarMap()).thenReturn(radarMap);
+
+        WorldState state = mock();
+        when(state.model()).thenReturn(model);
+
         return state;
     }
 
@@ -73,8 +78,8 @@ class ExploreTest {
                 "$schema: " + Explore.SCHEMA_NAME,
                 "class: " + Explore.class.getName()));
         RewardFunction f = Explore.create(root, Locator.root());
-        MockState state0 = createState(knownCount0);
-        MockState state1 = createState(knownCount1);
+        WorldState state0 = createState(knownCount0);
+        WorldState state1 = createState(knownCount1);
 
         double result = f.apply(state0, null, state1);
 
@@ -96,8 +101,8 @@ class ExploreTest {
                 "class: " + Explore.class.getName(),
                 "reward: 2"));
         RewardFunction f = Explore.create(root, Locator.root());
-        MockState state0 = createState(knownCount0);
-        MockState state1 = createState(knownCount1);
+        WorldState state0 = createState(knownCount0);
+        WorldState state1 = createState(knownCount1);
 
         double result = f.apply(state0, null, state1);
 

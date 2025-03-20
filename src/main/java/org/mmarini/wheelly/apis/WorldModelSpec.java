@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,12 +26,27 @@
  *
  */
 
-package org.mmarini.wheelly.objectives;
+package org.mmarini.wheelly.apis;
 
-import org.mmarini.wheelly.apis.WithRobotStatus;
-import org.mmarini.wheelly.envs.State;
-import org.mmarini.wheelly.envs.WithPolarMap;
-import org.mmarini.wheelly.envs.WithRadarMap;
+import static java.util.Objects.requireNonNull;
 
-public interface MockState extends State, WithRobotStatus, WithRadarMap, WithPolarMap {
+/**
+ * Returns the world model specifications
+ *
+ * @param robotSpec  the robot specification
+ * @param numSectors the number of polar map sectors
+ * @param gridSize   the size of grid map among all dimensions
+ * @param markerSize
+ */
+public record WorldModelSpec(RobotSpec robotSpec, int numSectors, int gridSize, double markerSize) {
+    /**
+     * Returns the woeld model specification with robot specification
+     *
+     * @param robotSpec the robot specification
+     */
+    public WorldModelSpec setRobotSpec(RobotSpec robotSpec) {
+        return requireNonNull(robotSpec).equals(this.robotSpec)
+                ? this
+                : new WorldModelSpec(robotSpec, numSectors, gridSize, markerSize);
+    }
 }

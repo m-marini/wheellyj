@@ -29,11 +29,12 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.apis.WorldModellerConnector;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
@@ -61,9 +62,8 @@ import static org.mmarini.wheelly.engines.StateNode.NONE_EXIT;
  *     It is a mutable object
  * </p>
  */
-public class StateMachineAgent implements ProcessorContext, WithIOFlowable, WithStatusFlowable, WithErrorFlowable,
-        WithCommandFlowable, WithControllerFlowable {
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-agent-schema-3.3";
+public class StateMachineAgent implements ProcessorContextApi {
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/agent-state-machine-schema-0.1";
     private static final Logger logger = LoggerFactory.getLogger(StateMachineAgent.class);
 
     /**
@@ -71,70 +71,43 @@ public class StateMachineAgent implements ProcessorContext, WithIOFlowable, With
      *
      * @param root    the configuration document
      * @param locator the locator of agent specification in the document
-     * @param robot   the robot api
      */
-    public static StateMachineAgent create(JsonNode root, Locator locator, RobotControllerApi robot) {
+    public static StateMachineAgent create(JsonNode root, Locator locator) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         StateFlow flow = StateFlow.create(root, locator.path("flow"));
-        double minRadarDistance = locator.path("minRadarDistance").getNode(root).asDouble();
-        double maxRadarDistance = locator.path("maxRadarDistance").getNode(root).asDouble();
-        int numRadarSectors = locator.path("numRadarSectors").getNode(root).asInt();
-        RadarMap radarMap = RadarMap.create(root, locator);
-        PolarMap polarMap = PolarMap.create(numRadarSectors);
-        return new StateMachineAgent(minRadarDistance, maxRadarDistance, radarMap, polarMap, robot, flow);
+        return new StateMachineAgent(flow);
     }
 
     /**
      * Returns the agent from configuration
      *
      * @param file  the configuration document
-     * @param robot the robot api
      */
-    public static StateMachineAgent fromFile(File file, RobotControllerApi robot) throws IOException {
+    public static StateMachineAgent fromFile(File file) throws IOException {
         JsonNode root = Utils.fromFile(file);
         Locator locator = Locator.root();
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         StateFlow flow = StateFlow.create(root, locator.path("flow"));
-        double minRadarDistance = locator.path("minRadarDistance").getNode(root).asDouble();
-        double maxRadarDistance = locator.path("maxRadarDistance").getNode(root).asDouble();
-        int numRadarSectors = locator.path("numRadarSectors").getNode(root).asInt();
-        RadarMap radarMap = RadarMap.create(root, locator);
-        PolarMap polarMap = PolarMap.create(numRadarSectors);
-        return new StateMachineAgent(minRadarDistance, maxRadarDistance, radarMap, polarMap, robot, flow);
+        return new StateMachineAgent(flow);
     }
 
-    private final RobotControllerApi controller;
-    private final double maxRadarDistance;
-    private final double minRadarDistance;
-    private final PublishProcessor<ProcessorContext> stepUpProcessor;
+    private final PublishProcessor<ProcessorContextApi> stepUpProcessor;
     private final PublishProcessor<String> triggerProcessor;
     private final PublishProcessor<Optional<Point2D>> targetProcessor;
     private final Map<String, Object> values;
     private final List<Object> stack;
     private final StateFlow flow;
     private final PublishProcessor<StateNode> stateProcessor;
-    private PolarMap polarMap;
-    private RadarMap radarMap;
-    private boolean started;
     private StateNode currentNode;
-    private RobotStatus robotStatus;
-    private RadarMap contextRadarMap;
+    private WorldModellerConnector modeller;
+    private WorldModel worldModel;
 
     /**
      * Creates the agent
      *
-     * @param minRadarDistance the min radar distance (m)
-     * @param maxRadarDistance the max radar distance (m)
-     * @param radarMap         the radar map
-     * @param polarMap         the polar map
-     * @param controller       the robot api
+     * @param flow             the state flow
      */
-    public StateMachineAgent(double minRadarDistance, double maxRadarDistance, RadarMap radarMap, PolarMap polarMap, RobotControllerApi controller, StateFlow flow) {
-        this.minRadarDistance = minRadarDistance;
-        this.maxRadarDistance = maxRadarDistance;
-        this.controller = requireNonNull(controller);
-        this.polarMap = requireNonNull(polarMap);
-        this.radarMap = requireNonNull(radarMap);
+    public StateMachineAgent(StateFlow flow) {
         this.flow = flow;
         this.stepUpProcessor = PublishProcessor.create();
         this.stack = new ArrayList<>();
@@ -146,89 +119,27 @@ public class StateMachineAgent implements ProcessorContext, WithIOFlowable, With
 
     @Override
     public void clearMap() {
-        radarMap = radarMap.clean();
+        this.modeller.clearRadarMap();
+    }
+
+    /**
+     * Connects the world modeller
+     *
+     * @param modeller the world modeller
+     */
+    public void connect(WorldModellerConnector modeller) {
+        this.modeller = requireNonNull(modeller);
+        modeller.setOnInference(this::onInference);
+    }
+
+    @Override
+    public StateNode currentNode() {
+        return currentNode;
     }
 
     @Override
     public <T> T get(String key) {
         return (T) values.get(key);
-    }
-
-    /**
-     * Returns the controller
-     */
-    public RobotControllerApi getController() {
-        return controller;
-    }
-
-    /**
-     * Returns the maximum radar distance (m)
-     */
-    public double getMaxRadarDistance() {
-        return this.maxRadarDistance;
-    }
-
-    /**
-     * Handles the inference event
-     * <p>
-     * Update the polar map with robot status,
-     * advances one step,
-     * feed the step flow
-     * </p>
-     *
-     * @param status the robot status
-     */
-    private void handleInference(RobotStatus status) {
-        long t0 = System.currentTimeMillis();
-        logger.atDebug().log("Handle inference");
-        polarMap = polarMap.update(radarMap, status.location(), status.direction(), minRadarDistance, maxRadarDistance);
-        logger.atDebug().log("Polar map updated in {} ms", System.currentTimeMillis() - t0);
-        robotStatus = status;
-        if (!started) {
-            started = true;
-            initContext();
-        }
-        step();
-        stepUpProcessor.onNext(this);
-        logger.atDebug().log("Handle inference completed in {} ms", System.currentTimeMillis() - t0);
-    }
-
-    /**
-     * Handles the latch event.
-     * <p>
-     * Stores the robot status and the radar map at latch instant
-     * </p>
-     *
-     * @param status the status
-     */
-    private void handleLatch(RobotStatus status) {
-        logger.atDebug().log("Latch status {}", status);
-        robotStatus = status;
-        contextRadarMap = radarMap;
-    }
-
-    /**
-     * Handles the status event
-     * <p>
-     * update the radar map
-     * </p>
-     *
-     * @param status the robot status
-     */
-    private void handleStatus(RobotStatus status) {
-        radarMap = radarMap.update(status);
-    }
-
-    /**
-     * Initializes the agent.
-     * <p>
-     * Initializes the robot and state machine context from the entry state
-     */
-    public void init() {
-        controller.setOnInference(this::handleInference);
-        controller.setOnLatch(this::handleLatch);
-        controller.readRobotStatus().doOnNext(this::handleStatus).subscribe();
-        controller.start();
     }
 
     /**
@@ -256,14 +167,27 @@ public class StateMachineAgent implements ProcessorContext, WithIOFlowable, With
         stateProcessor.onNext(currentNode);
     }
 
-    @Override
-    public <T> T peek() {
-        return stack.isEmpty() ? null : (T) stack.getLast();
+    /**
+     * Returns the robot command by inferring the event world model
+     *
+     * @param worldModel the world model
+     */
+    private RobotCommands onInference(WorldModel worldModel) {
+        long t0 = System.currentTimeMillis();
+        logger.atDebug().log("Handle inference");
+        this.worldModel = worldModel;
+        if (this.currentNode == null) {
+            initContext();
+        }
+        RobotCommands commands = step();
+        stepUpProcessor.onNext(this);
+        logger.atDebug().log("Handle inference completed in {} ms", System.currentTimeMillis() - t0);
+        return commands;
     }
 
     @Override
-    public PolarMap polarMap() {
-        return polarMap;
+    public <T> T peek() {
+        return stack.isEmpty() ? null : (T) stack.getLast();
     }
 
     @Override
@@ -275,72 +199,15 @@ public class StateMachineAgent implements ProcessorContext, WithIOFlowable, With
     }
 
     @Override
-    public <T> ProcessorContext push(T value) {
+    public <T> ProcessorContextApi push(T value) {
         stack.add(value);
         return this;
     }
 
     @Override
-    public <T> ProcessorContext put(String key, T value) {
+    public <T> ProcessorContextApi put(String key, T value) {
         values.put(key, value);
         return this;
-    }
-
-    @Override
-    public RadarMap radarMap() {
-        return contextRadarMap;
-    }
-
-    @Override
-    public Flowable<RobotStatus> readCamera() {
-        return controller.readCamera();
-    }
-
-    @Override
-    public Flowable<RobotCommands> readCommand() {
-        return controller.readCommand();
-    }
-
-    @Override
-    public Flowable<RobotStatus> readContacts() {
-        return controller.readContacts();
-    }
-
-    @Override
-    public Flowable<String> readControllerStatus() {
-        return controller.readControllerStatus();
-    }
-
-    @Override
-    public Flowable<Throwable> readErrors() {
-        return controller.readErrors();
-    }
-
-    @Override
-    public Flowable<RobotStatus> readMotion() {
-        return controller.readMotion();
-    }
-
-    @Override
-    public Flowable<RobotStatus> readProxy() {
-        return controller.readProxy();
-    }
-
-    @Override
-    public Flowable<String> readReadLine() {
-        return controller.readReadLine();
-    }
-
-    @Override
-    public Flowable<RobotStatus> readRobotStatus() {
-        return controller.readRobotStatus();
-    }
-
-    /**
-     * Returns the shutdown event
-     */
-    public Completable readShutdown() {
-        return controller.readShutdown();
     }
 
     /**
@@ -353,13 +220,8 @@ public class StateMachineAgent implements ProcessorContext, WithIOFlowable, With
     /**
      * Returns the process context step up event
      */
-    public Flowable<ProcessorContext> readStepUp() {
+    public Flowable<ProcessorContextApi> readStepUp() {
         return stepUpProcessor;
-    }
-
-    @Override
-    public Flowable<RobotStatus> readSupply() {
-        return controller.readSupply();
     }
 
     /**
@@ -377,28 +239,13 @@ public class StateMachineAgent implements ProcessorContext, WithIOFlowable, With
     }
 
     @Override
-    public Flowable<String> readWriteLine() {
-        return controller.readWriteLine();
-    }
-
-    @Override
     public void remove(String key) {
         values.remove(key);
     }
 
     @Override
-    public RobotStatus robotStatus() {
-        return robotStatus;
-    }
-
-    @Override
     public void setTarget(Point2D target) {
         targetProcessor.onNext(Optional.ofNullable(target));
-    }
-
-    public void shutdown() {
-        controller.shutdown();
-        stepUpProcessor.onComplete();
     }
 
     @Override
@@ -407,18 +254,19 @@ public class StateMachineAgent implements ProcessorContext, WithIOFlowable, With
     }
 
     /**
-     * Process the next transition
+     * Returns the robot command by processing the next transition
      */
-    public void step() {
+    public RobotCommands step() {
         // Process the state node
         Tuple2<String, RobotCommands> result = currentNode.step(this);
         // Execute robot command
-        controller.execute(result._2);
-        triggerProcessor.onNext(result._1);
-        if (!NONE_EXIT.equals(result._1)) {
+        String exitTag = result._1;
+        RobotCommands commands = result._2;
+        triggerProcessor.onNext(exitTag);
+        if (!NONE_EXIT.equals(exitTag)) {
             //find for transition match
             Optional<StateTransition> tx = flow.transitions().stream()
-                    .filter(t -> t.from().equals(currentNode.id()) && t.isTriggered(result._1))
+                    .filter(t -> t.from().equals(currentNode.id()) && t.isTriggered(exitTag))
                     .findFirst();
             tx.ifPresentOrElse(t -> {
                         // trigger the exit call back
@@ -433,8 +281,14 @@ public class StateMachineAgent implements ProcessorContext, WithIOFlowable, With
                         currentNode.entry(this);
                         stateProcessor.onNext(currentNode);
                     },
-                    () -> logger.debug("Trigger {} - {} ignored", currentNode.id(), result._1)
+                    () -> logger.debug("Trigger {} - {} ignored", currentNode.id(), exitTag)
             );
         }
+        return commands;
+    }
+
+    @Override
+    public WorldModel worldModel() {
+        return worldModel;
     }
 }

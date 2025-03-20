@@ -8,8 +8,9 @@
   minDistance: 0.5
   maxDistance: 1.0
 # or should be in range of a labeled obstacle
-- $schema: https://mmarini.org/wheelly/objective-label-schema-0.1
+- $schema: https://mmarini.org/wheelly/objective-label-schema-1.0
   class: org.mmarini.wheelly.objectives.Label
+  label: A
   minDistance: 0.2
   maxDistance: 4
   velocityThresholds: 100

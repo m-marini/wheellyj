@@ -25,6 +25,7 @@
 
 package org.mmarini.wheelly.apps;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
@@ -34,10 +35,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.swing.GridLayoutHelper;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.RobotControllerApi;
-import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.swing.ComMonitor;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.wheelly.swing.SensorMonitor;
@@ -124,9 +122,10 @@ public class MatrixMonitor {
     //    private int commandDuration;
     private long runTimestamp;
     private JFrame sensorFrame;
+    private RobotApi robot;
 
     /**
-     * Creates the check
+     * Creates the matrix monitor application
      */
     public MatrixMonitor() {
         this.comMonitor = new ComMonitor();
@@ -145,9 +144,13 @@ public class MatrixMonitor {
         this.runButton = new JButton("Run");
         this.commandPanel = createCommandPanel();
         this.halt = true;
-        initFlow();
+
+        initListeners();
     }
 
+    /**
+     * Returns the command panel
+     */
     private Container createCommandPanel() {
         sensorDirField.setColumns(5);
         sensorDirField.setEditable(false);
@@ -241,37 +244,118 @@ public class MatrixMonitor {
                 .getContainer();
     }
 
+    /**
+     * Creates the context connections
+     */
+    private void createConnections() {
+        controller.connectRobot(robot);
+        controller.setOnInference(this::onInference);
+    }
+
+    /**
+     * Creates the application context
+     *
+     * @throws IOException in case of error
+     */
+    private void createContext() throws IOException {
+        JsonNode config = org.mmarini.yaml.Utils.fromFile(parseArgs.getString("config"));
+        JsonSchemas.instance().validateOrThrow(config, MONITOR_SCHEMA_YML);
+        this.robot = AppYaml.robotFromJson(config);
+        this.controller = AppYaml.controllerFromJson(config);
+
+        // Creates the frames
+        this.commandFrame = createFrame(Messages.getString("MatrixMonitor.title"), commandPanel);
+        this.sensorFrame = sensorMonitor.createFrame();
+        this.comFrame = comMonitor.createFrame();
+
+        layHorizontally(commandFrame, sensorFrame, comFrame);
+
+        // Creates the dumper if configured
+        Optional.ofNullable(parseArgs.getString("dump"))
+                .ifPresent(file -> {
+                    try {
+                        this.dumper = ComDumper.fromFile(file);
+                    } catch (IOException e) {
+                        logger.atError().setCause(e).log();
+                    }
+                });
+    }
+
+    /**
+     * Create the flows
+     */
+    private void createFlows() {
+        controller.readRobotStatus()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::handleStatus).subscribe();
+        controller.readErrors()
+                .observeOn(Schedulers.io())
+                .doOnNext(er -> {
+                    comMonitor.onError(er);
+                    logger.atError().setCause(er).log();
+                }).subscribe();
+        controller.readReadLine()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::handleReadLine).subscribe();
+        controller.readWriteLine()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::handleWriteLine).subscribe();
+        controller.readShutdown()
+                .observeOn(Schedulers.io())
+                .doOnComplete(this::handleShutdown).subscribe();
+        controller.readControllerStatus()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::handleControlStatus).subscribe();
+        Observable.mergeArray(
+                        SwingObservable.window(commandFrame, SwingObservable.WINDOW_ACTIVE),
+                        SwingObservable.window(sensorFrame, SwingObservable.WINDOW_ACTIVE),
+                        SwingObservable.window(comFrame, SwingObservable.WINDOW_ACTIVE))
+                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
+                .doOnNext(this::handleClose)
+                .subscribe();
+        Stream.of(comFrame, sensorFrame, commandFrame).forEach(f -> f.setVisible(true));
+    }
+
+    /**
+     * Handles the window close event
+     *
+     * @param windowEvent the event
+     */
     private void handleClose(WindowEvent windowEvent) {
         controller.shutdown();
     }
 
-    private void handleCommands(RobotStatus status) {
-        long time = System.currentTimeMillis();
-        if (!halt && time >= runTimestamp + timeSlider.getValue() * 1000L) {
-            halt = true;
-            runButton.setEnabled(true);
-            timeSlider.setEnabled(true);
-        }
-        if (halt) {
-            controller.execute(RobotCommands.haltCommand());
-        } else {
-            controller.execute(RobotCommands.move(
-                    Complex.fromDeg(robotDirSlider.getValue()),
-                    speedSlider.getValue()));
-        }
+    /**
+     * Handles the control status event
+     *
+     * @param status the control status event
+     */
+    private void handleControlStatus(String status) {
+        comMonitor.onControllerStatus(status);
+        sensorMonitor.onControllerStatus(status);
     }
 
-    private void handleControlStatus(String s) {
-        comMonitor.onControllerStatus(s);
-        sensorMonitor.onControllerStatus(s);
-    }
-
+    /**
+     * Handles the halt button event
+     *
+     * @param actionEvent the event
+     */
     private void handleHaltButton(ActionEvent actionEvent) {
         sensorDirSlider.setValue(0);
         speedSlider.setValue(0);
         halt = true;
         runButton.setEnabled(true);
         timeSlider.setEnabled(true);
+    }
+
+    /**
+     * Handles the robot direction slider event
+     *
+     * @param changeEvent the event
+     */
+    private void handleRobotDirSlider(ChangeEvent changeEvent) {
+        int robotDir = robotDirSlider.getValue();
+        robotDirField.setValue(robotDir);
     }
 
     /**
@@ -287,11 +371,11 @@ public class MatrixMonitor {
         logger.atDebug().setMessage("--> {}").addArgument(line).log();
     }
 
-    private void handleRobotDirSlider(ChangeEvent changeEvent) {
-        int robotDir = robotDirSlider.getValue();
-        robotDirField.setValue(robotDir);
-    }
-
+    /**
+     * Handles the run button event
+     *
+     * @param actionEvent the event
+     */
     private void handleRunButton(ActionEvent actionEvent) {
         runButton.setEnabled(false);
         timeSlider.setEnabled(false);
@@ -299,12 +383,20 @@ public class MatrixMonitor {
         halt = false;
     }
 
+    /**
+     * Handles the sensor direction slider event
+     *
+     * @param changeEvent the event
+     */
     private void handleSensorDirSlider(ChangeEvent changeEvent) {
         int sensorDir = sensorDirSlider.getValue();
         sensorDirField.setValue(sensorDir);
         controller.execute(RobotCommands.scan(Complex.fromDeg(sensorDir)));
     }
 
+    /**
+     * Handles the shutdown event
+     */
     private void handleShutdown() {
         commandFrame.dispose();
         sensorFrame.dispose();
@@ -317,19 +409,14 @@ public class MatrixMonitor {
         }
     }
 
+    /**
+     * Handles the speed slider event
+     *
+     * @param changeEvent eht event
+     */
     private void handleSpeedSlider(ChangeEvent changeEvent) {
         int robotSpeed = speedSlider.getValue();
         speedField.setValue(robotSpeed);
-    }
-
-    private void handleStatus(RobotStatus status) {
-        sensorMonitor.onStatus(status);
-    }
-
-    private void handleTimeSlider(ChangeEvent changeEvent) {
-        int commandDuration = max(timeSlider.getValue(), MIN_TIME);
-        timeSlider.setValue(commandDuration);
-        timeField.setValue(commandDuration);
     }
 
     /**
@@ -362,7 +449,30 @@ public class MatrixMonitor {
         return this;
     }
 
-    private void initFlow() {
+    /**
+     * Handle the state event
+     *
+     * @param status the status event
+     */
+    private void handleStatus(RobotStatus status) {
+        sensorMonitor.onStatus(status);
+    }
+
+    /**
+     * Handles the markerTime slider event
+     *
+     * @param changeEvent the event
+     */
+    private void handleTimeSlider(ChangeEvent changeEvent) {
+        int commandDuration = max(timeSlider.getValue(), MIN_TIME);
+        timeSlider.setValue(commandDuration);
+        timeField.setValue(commandDuration);
+    }
+
+    /**
+     * Inititlizes the listeners
+     */
+    private void initListeners() {
         sensorDirSlider.addChangeListener(this::handleSensorDirSlider);
         haltButton.addActionListener(this::handleHaltButton);
         robotDirSlider.addChangeListener(this::handleRobotDirSlider);
@@ -372,56 +482,34 @@ public class MatrixMonitor {
     }
 
     /**
-     * Runs the check
+     * Handles the inference event
+     *
+     * @param status the robot status
      */
-    private void run() {
+    private void onInference(RobotStatus status) {
+        long time = System.currentTimeMillis();
+        if (!halt && time >= runTimestamp + timeSlider.getValue() * 1000L) {
+            halt = true;
+            runButton.setEnabled(true);
+            timeSlider.setEnabled(true);
+        }
+        if (halt) {
+            controller.execute(RobotCommands.haltCommand());
+        } else {
+            controller.execute(RobotCommands.move(
+                    Complex.fromDeg(robotDirSlider.getValue()),
+                    speedSlider.getValue()));
+        }
+    }
+
+    /**
+     * Runs the application
+     */
+    private void run() throws IOException {
         logger.info("Robot check started.");
-        controller = AppYaml.controllerFromFile(parseArgs.getString("config"), MONITOR_SCHEMA_YML);
-        controller.readRobotStatus()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleStatus).subscribe();
-        controller.readErrors()
-                .observeOn(Schedulers.io())
-                .doOnNext(er -> {
-                    comMonitor.onError(er);
-                    logger.atError().setCause(er).log();
-                }).subscribe();
-        controller.readReadLine()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleReadLine).subscribe();
-        controller.readWriteLine()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleWriteLine).subscribe();
-        controller.readShutdown()
-                .observeOn(Schedulers.io())
-                .doOnComplete(this::handleShutdown).subscribe();
-        controller.readControllerStatus()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleControlStatus).subscribe();
-        controller.setOnInference(this::handleCommands);
-        Optional.ofNullable(parseArgs.getString("dump"))
-                .ifPresent(file -> {
-                    try {
-                        this.dumper = ComDumper.fromFile(file);
-                    } catch (IOException e) {
-                        logger.atError().setCause(e).log();
-                    }
-                });
-
-        this.commandFrame = createFrame(Messages.getString("MatrixMonitor.title"), commandPanel);
-        this.sensorFrame = sensorMonitor.createFrame();
-        this.comFrame = comMonitor.createFrame();
-        layHorizontally(commandFrame, sensorFrame, comFrame);
-
-        Observable.mergeArray(
-                        SwingObservable.window(commandFrame, SwingObservable.WINDOW_ACTIVE),
-                        SwingObservable.window(sensorFrame, SwingObservable.WINDOW_ACTIVE),
-                        SwingObservable.window(comFrame, SwingObservable.WINDOW_ACTIVE))
-                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
-                .doOnNext(this::handleClose)
-                .subscribe();
-
-        Stream.of(comFrame, sensorFrame, commandFrame).forEach(f -> f.setVisible(true));
+        createContext();
+        createConnections();
+        createFlows();
         comFrame.setState(JFrame.ICONIFIED);
         controller.start();
     }

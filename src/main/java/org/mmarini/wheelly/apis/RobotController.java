@@ -123,11 +123,10 @@ public class RobotController implements RobotControllerApi {
     /**
      * Returns the robot controller from configuration
      *
-     * @param root  the configuration document
-     * @param file  the configuration file
-     * @param robot the robot api
+     * @param root the configuration document
+     * @param file the configuration file
      */
-    public static RobotController create(JsonNode root, File file, RobotApi robot) {
+    public static RobotController create(JsonNode root, File file) {
         Locator locator = Locator.root();
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         long interval = locator.path("interval").getNode(root).asLong();
@@ -145,7 +144,7 @@ public class RobotController implements RobotControllerApi {
             throw new IllegalArgumentException(format("voltages must have 2 items (%d)", voltages.length));
         }
         IntToDoubleFunction decodeVoltage = x -> linear(x, supplyValues[0], supplyValues[1], voltages[0], voltages[1]);
-        return new RobotController(robot, interval, reactionInterval, commandInterval, connectionRetryInterval, watchdogInterval, simSpeed, decodeVoltage);
+        return new RobotController(interval, reactionInterval, commandInterval, connectionRetryInterval, watchdogInterval, simSpeed, decodeVoltage);
     }
 
     private final long commandInterval;
@@ -154,7 +153,6 @@ public class RobotController implements RobotControllerApi {
     private final long reactionInterval;
     private final long watchdogInterval;
     private final double simSpeed;
-    private final RobotApi robot;
     private final PublishProcessor<RobotCommands> commandsProcessor;
     private final PublishProcessor<RobotStatus> contactsProcessor;
     private final PublishProcessor<String> controllerStatusProcessor;
@@ -168,6 +166,8 @@ public class RobotController implements RobotControllerApi {
     private final PublishProcessor<RobotStatus> supplyProcessor;
     private final PublishProcessor<String> writeLinesProcessor;
     private final PublishProcessor<RobotStatus> cameraProcessor;
+    private final IntToDoubleFunction decodeVoltage;
+    private RobotApi robot;
     private boolean close;
     private boolean connected;
     private boolean end;
@@ -192,7 +192,6 @@ public class RobotController implements RobotControllerApi {
     /**
      * Creates the robot controller
      *
-     * @param robot                   the robot api
      * @param interval                the tick interval (ms)
      * @param reactionInterval        the minimum reaction interval of inference engine (ms)
      * @param commandInterval         the interval between command send (ms)
@@ -201,8 +200,8 @@ public class RobotController implements RobotControllerApi {
      * @param simSpeed                the simulation speed
      * @param decodeVoltage           the decode voltage function
      */
-    public RobotController(RobotApi robot, long interval, long reactionInterval, long commandInterval, long connectionRetryInterval, long watchdogInterval, double simSpeed, IntToDoubleFunction decodeVoltage) {
-        this.robot = requireNonNull(robot);
+    public RobotController(long interval, long reactionInterval, long commandInterval, long connectionRetryInterval,
+                           long watchdogInterval, double simSpeed, IntToDoubleFunction decodeVoltage) {
         this.interval = interval;
         this.reactionInterval = reactionInterval;
         this.commandInterval = commandInterval;
@@ -225,14 +224,21 @@ public class RobotController implements RobotControllerApi {
         this.writeLinesProcessor = PublishProcessor.create();
         this.inferencesProcessor = PublishProcessor.create();
         this.shutdownCompletable = CompletableSubject.create();
-        this.robotStatus = RobotStatus.create(decodeVoltage);
         this.statusFlow = Flowable.merge(readMotion(), readContacts(), readProxy(), readSupply());
+        this.decodeVoltage = requireNonNull(decodeVoltage);
         setStatusTransition(this::connecting, CONNECTING);
+    }
+
+    @Override
+    public RobotController connectRobot(RobotApi robot) {
+        this.robot = requireNonNull(robot);
         robot.setOnMotion(this::handleMotion);
         robot.setOnProxy(this::handleProxy);
         robot.setOnContacts(this::handleContacts);
         robot.setOnSupply(this::handleSupply);
         robot.setOnCamera(this::handleCamera);
+        this.robotStatus = RobotStatus.create(robot.robotSpec(), decodeVoltage);
+        return this;
     }
 
     /**
@@ -308,11 +314,6 @@ public class RobotController implements RobotControllerApi {
             }
         }
         commandsProcessor.onNext(command);
-    }
-
-    @Override
-    public RobotApi getRobot() {
-        return robot;
     }
 
     /**
@@ -551,16 +552,16 @@ public class RobotController implements RobotControllerApi {
     private void scheduleInference(RobotStatus status) {
         if (isReady) {
             long time = robot.simulationTime();
+            if (onLatch != null) {
+                try {
+                    onLatch.accept(status);
+                } catch (Throwable ex) {
+                    sendError(ex);
+                    logger.atError().setCause(ex).log("Error on latch");
+                }
+            }
             if (time >= lastInference + reactionInterval) {
                 lastInference = time;
-                if (onLatch != null) {
-                    try {
-                        onLatch.accept(status);
-                    } catch (Throwable ex) {
-                        sendError(ex);
-                        logger.atError().setCause(ex).log("Error on latch");
-                    }
-                }
                 isInference = true;
                 inferencesProcessor.onNext(status);
                 if (onInference != null) {
@@ -615,6 +616,7 @@ public class RobotController implements RobotControllerApi {
 
     @Override
     public synchronized void start() {
+        requireNonNull(robot);
         if (!isStarted) {
             isStarted = true;
             setStatusTransition(this::connecting, CONNECTING);

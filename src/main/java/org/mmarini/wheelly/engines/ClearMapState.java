@@ -86,7 +86,7 @@ public record ClearMapState(String id, ProcessorCommand onInit, ProcessorCommand
     }
 
     @Override
-    public Tuple2<String, RobotCommands> step(ProcessorContext ctx) {
+    public Tuple2<String, RobotCommands> step(ProcessorContextApi ctx) {
         // Clear the map
         logger.atDebug().log("Clearing map ...");
         ctx.clearMap();

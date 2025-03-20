@@ -25,14 +25,13 @@
 
 package org.mmarini.wheelly.swing;
 
-import org.mmarini.wheelly.apis.ObstacleMap;
-import org.mmarini.wheelly.apis.RadarMap;
-import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.*;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
+import java.util.Collection;
 
 import static java.lang.String.format;
 import static org.mmarini.wheelly.swing.BaseShape.*;
@@ -48,6 +47,7 @@ public class EnvironmentPanel extends JComponent {
     static final float DEFAULT_SCALE = DEFAULT_WINDOW_SIZE / DEFAULT_WORLD_SIZE;
     private static final int HUD_WIDTH = 200;
     private static final float TARGET_SIZE = 0.2f;
+    public static final float DEFAULT_MARKER_SIZE = 0.3f;
 
     /**
      * Returns the string representation of a localTime interval
@@ -92,14 +92,67 @@ public class EnvironmentPanel extends JComponent {
     private BaseShape hinderedShape;
     private BaseShape labeledShape;
     private RobotStatus robotStatus;
+    private float markerSize;
+    private BaseShape markerShape;
 
     public EnvironmentPanel() {
         this.centerLocation = new Point2D.Float();
-
+        this.markerSize = DEFAULT_MARKER_SIZE;
         setBackground(Color.BLACK);
         setForeground(Color.WHITE);
         setFont(Font.decode("Monospaced"));
         setPreferredSize(new Dimension(DEFAULT_WINDOW_SIZE, DEFAULT_WINDOW_SIZE));
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        Dimension size = getSize();
+        g.setColor(getBackground());
+        g.fillRect(0, 0, size.width, size.height);
+        Graphics2D gr = (Graphics2D) g.create();
+        gr.transform(createBaseTransform());
+        AffineTransform base = gr.getTransform();
+        if (gridShape != null) {
+            gridShape.paint(gr);
+        }
+        if (hinderedShape != null) {
+            hinderedShape.paint(gr);
+        }
+        if (labeledShape != null) {
+            labeledShape.paint(gr);
+        }
+        if (mapShape != null) {
+            mapShape.paint(gr);
+        }
+        if (markerShape != null) {
+            markerShape.paint(gr);
+        }
+        gr.setTransform(base);
+        if (robotShape != null) {
+            robotShape.paint(gr);
+        }
+        if (sensorShape != null) {
+            sensorShape.paint(gr);
+        }
+        if (pingShape != null) {
+            pingShape.paint(gr);
+        }
+        if (target != null) {
+            gr.setTransform(base);
+            target.paint(gr);
+        }
+        RobotStatus status = this.robotStatus;
+        if (status != null) {
+            // compute hud position
+            hudAtBottom = !hudAtBottom && status.location().getY() > DEFAULT_WORLD_SIZE / 6
+                    || (!hudAtBottom || !(status.location().getY() < -DEFAULT_WORLD_SIZE / 6))
+                    && hudAtBottom;
+            hudAtRight = !hudAtRight && status.location().getX() < -DEFAULT_WORLD_SIZE / 6
+                    || (!hudAtRight || !(status.location().getX() > DEFAULT_WORLD_SIZE / 6))
+                    && hudAtRight;
+            gr.setTransform(base);
+            drawHUD(g, status, reward, timeRatio);
+        }
     }
 
     /**
@@ -172,52 +225,27 @@ public class EnvironmentPanel extends JComponent {
         return DEFAULT_SCALE;
     }
 
-    @Override
-    protected void paintComponent(Graphics g) {
-        Dimension size = getSize();
-        g.setColor(getBackground());
-        g.fillRect(0, 0, size.width, size.height);
-        Graphics2D gr = (Graphics2D) g.create();
-        gr.transform(createBaseTransform());
-        AffineTransform base = gr.getTransform();
-        if (gridShape != null) {
-            gridShape.paint(gr);
-        }
-        if (hinderedShape != null) {
-            hinderedShape.paint(gr);
-        }
-        if (labeledShape != null) {
-            labeledShape.paint(gr);
-        }
-        if (mapShape != null) {
-            mapShape.paint(gr);
-        }
-        gr.setTransform(base);
-        if (robotShape != null) {
-            robotShape.paint(gr);
-        }
-        if (sensorShape != null) {
-            sensorShape.paint(gr);
-        }
-        if (pingShape != null) {
-            pingShape.paint(gr);
-        }
-        if (target != null) {
-            gr.setTransform(base);
-            target.paint(gr);
-        }
-        RobotStatus status = this.robotStatus;
-        if (status != null) {
-            // compute hud position
-            hudAtBottom = !hudAtBottom && status.location().getY() > DEFAULT_WORLD_SIZE / 6
-                    || (!hudAtBottom || !(status.location().getY() < -DEFAULT_WORLD_SIZE / 6))
-                    && hudAtBottom;
-            hudAtRight = !hudAtRight && status.location().getX() < -DEFAULT_WORLD_SIZE / 6
-                    || (!hudAtRight || !(status.location().getX() > DEFAULT_WORLD_SIZE / 6))
-                    && hudAtRight;
-            gr.setTransform(base);
-            drawHUD(g, status, reward, timeRatio);
-        }
+    /**
+     * Sets the marker size
+     *
+     * @param markerSize the marker size (m)
+     */
+    public void setMarkerSize(float markerSize) {
+        this.markerSize = markerSize;
+        repaint();
+    }
+
+    /**
+     * Sets the obstalce map
+     *
+     * @param markers the markers
+     */
+    public void setMarkers(Collection<LabelMarker> markers) {
+        this.markerShape = new CompositeShape(markers.stream()
+                .map(marker ->
+                        createCircle(LABELED_COLOR, BORDER_STROKE, true, marker.location(), markerSize / 2)
+                ).toList());
+        repaint();
     }
 
     /**
@@ -251,10 +279,12 @@ public class EnvironmentPanel extends JComponent {
 
     public void setReactionRealTime(double reactionRealTime) {
         this.reactionRealTime = reactionRealTime;
+        repaint();
     }
 
     public void setReactionRobotTime(double reactionRobotTime) {
         this.reactionRobotTime = reactionRobotTime;
+        repaint();
     }
 
     public void setReward(double reward) {
@@ -264,8 +294,10 @@ public class EnvironmentPanel extends JComponent {
 
     public void setRobotStatus(RobotStatus status) {
         this.robotStatus = status;
-        this.robotShape = createRobotShape(status.location(), status.direction());
-        this.sensorShape = createSensorShape(status.location(), status.direction().add(status.sensorDirection()));
+        Point2D location = status.location();
+        Complex direction = status.direction();
+        this.robotShape = createRobotShape(location, direction);
+        this.sensorShape = createSensorShape(location, direction.add(status.sensorDirection()));
         this.pingShape = status.sensorObstacle()
                 .map(point -> createCircle(PING_COLOR, BORDER_STROKE, true, point, PING_RADIUS))
                 .orElse(null);
@@ -278,7 +310,9 @@ public class EnvironmentPanel extends JComponent {
      * @param target the target point
      */
     public void setTarget(Point2D target) {
-        this.target = BaseShape.createCircle(TARGET_COLOR, BORDER_STROKE, false, target, TARGET_SIZE);
+        this.target = target == null
+                ? null
+                : BaseShape.createCircle(TARGET_COLOR, BORDER_STROKE, false, target, TARGET_SIZE);
         repaint();
     }
 

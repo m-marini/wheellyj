@@ -41,10 +41,11 @@ import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.BinArrayFile;
 import org.mmarini.rl.agents.KeyFileMap;
 import org.mmarini.rl.agents.PPOAgent;
+import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.SwingUtils;
-import org.mmarini.wheelly.envs.RobotEnvironment;
+import org.mmarini.wheelly.envs.EnvironmentApi;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.wheelly.swing.NNActivityPanel;
 import org.mmarini.wheelly.swing.Utils;
@@ -65,6 +66,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.DoublePredicate;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static java.lang.Math.min;
@@ -337,12 +339,13 @@ public class NNActivityMonitor {
      */
     private void loadNetwork() throws IOException {
         JsonNode config = fromFile(args.getString("config"));
-        RobotEnvironment environment = AppYaml.envFromJson(config, WHEELLY_SCHEMA_YML);
-        try (
-                Agent agent = Agent.fromFile(new File(config.path("agent").asText()), environment)) {
-            if (agent instanceof PPOAgent tdAgent) {
-                this.network = tdAgent.network();
-                this.avgReward.setValue(tdAgent.avgReward());
+        JsonSchemas.instance().validateOrThrow(config, WHEELLY_SCHEMA_YML);
+        EnvironmentApi environment = AppYaml.envFromJson(config);
+        Function<WithSignalsSpec, Agent> builder = Agent.fromFile(new File(config.path("agent").asText()));
+        try (Agent agent = builder.apply(environment)) {
+            if (agent instanceof PPOAgent ppoAgent) {
+                this.network = ppoAgent.network();
+                this.avgReward.setValue(ppoAgent.avgReward());
             } else {
                 throw new IllegalArgumentException(
                         format("Wrong agent type %s", agent.getClass().getName()));

@@ -35,14 +35,14 @@ import static java.lang.Math.exp;
 /**
  * Computes the reduced value of values set
  */
-public interface ReducedValue {
+public interface DoubleReducedValue {
     double DEFAULT_DISCOUNT = exp(-1 / 29.7);
 
     /**
      * Returns the zero average scalar value
      * The discount factor is about 0.9669 (21 steps to halving)
      */
-    static ReducedValue mean() {
+    static DoubleReducedValue mean() {
         return new MeanValue(0, DEFAULT_DISCOUNT);
     }
 
@@ -50,7 +50,7 @@ public interface ReducedValue {
      * Returns the zero rms scalar value
      * The discount factor is about 0.9669 (21 steps to halving)
      */
-    static ReducedValue rms() {
+    static DoubleReducedValue rms() {
         return new RMSValue(0, DEFAULT_DISCOUNT);
     }
 
@@ -59,14 +59,14 @@ public interface ReducedValue {
      *
      * @param value the added value
      */
-    ReducedValue add(double value);
+    DoubleReducedValue add(double value);
 
     /**
      * Returns the reduced value adding values
      *
      * @param values the added values
      */
-    ReducedValue add(INDArray values);
+    DoubleReducedValue add(INDArray values);
 
     /**
      * Returns the value
@@ -76,7 +76,7 @@ public interface ReducedValue {
     /**
      * Computes the discount average of values set
      */
-    class MeanValue implements ReducedValue {
+    class MeanValue implements DoubleReducedValue {
         private final double discount;
         private double value;
 
@@ -118,7 +118,7 @@ public interface ReducedValue {
     /**
      * Computes the discount average of values set
      */
-    class RMSValue implements ReducedValue {
+    class RMSValue implements DoubleReducedValue {
         private final double discount;
         private double value;
 

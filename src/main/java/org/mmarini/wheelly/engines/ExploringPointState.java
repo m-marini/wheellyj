@@ -31,6 +31,7 @@ package org.mmarini.wheelly.engines;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +43,7 @@ import java.util.Optional;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Generates the behavior to explore environment.
+ * Generates the behaviour to explore environment.
  * <p>
  * Turns the sensor toward the unknown cells if in front<br>
  * Turns the robot toward the unknown cells.<br>
@@ -96,7 +97,7 @@ public record ExploringPointState(String id, ProcessorCommand onInit, ProcessorC
      * Creates the exploring state
      *
      * @param id      the identifier
-     * @param onInit  the initialize command
+     * @param onInit  the initialise command
      * @param onEntry the entry command
      * @param onExit  the exit command
      */
@@ -108,11 +109,12 @@ public record ExploringPointState(String id, ProcessorCommand onInit, ProcessorC
     }
 
     @Override
-    public Tuple2<String, RobotCommands> step(ProcessorContext context) {
+    public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
         double maxDistance = getDouble(context, "maxDistance");
         double safeDistance = getDouble(context, "safeDistance");
 
-        Optional<Point2D> target = context.radarMap().findTarget(context.robotStatus().location(),
+        WorldModel worldModel = context.worldModel();
+        Optional<Point2D> target = worldModel.radarMap().findTarget(worldModel.robotStatus().location(),
                 maxDistance, safeDistance);
         target.ifPresentOrElse(p -> {
                     logger.atDebug().log("Target {}", p);

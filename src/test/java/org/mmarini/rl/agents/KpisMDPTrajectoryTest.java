@@ -29,7 +29,7 @@ import io.reactivex.subscribers.TestSubscriber;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.MapStream;
-import org.mmarini.rl.envs.Environment;
+import org.mmarini.rl.envs.ExecutionResult;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.TestSequenceMDP;
 import org.mmarini.rl.nets.*;
@@ -110,10 +110,10 @@ class KpisMDPTrajectoryTest {
         // And an agent for the mdp
         TDAgentSingleNN agent = createAgent(mdp, 1F / (numSteps + 1), numSteps, numEpochs, batchSize);
         // and the trajectory from current policy
-        List<Environment.ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
+        List<ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
         // and the average reward
         float avg0 = (float) trajectory.stream()
-                .mapToDouble(Environment.ExecutionResult::reward)
+                .mapToDouble(ExecutionResult::reward)
                 .average()
                 .orElseThrow();
         agent = agent.avgReward(avg0);
@@ -125,7 +125,7 @@ class KpisMDPTrajectoryTest {
                 (k, v) -> Nd4j.vstack(v.map(Signal::toINDArray).toArray(INDArray[]::new)));
         // And expected rewards
         INDArray expRewards = Nd4j.createFromArray(trajectory.stream()
-                .mapToDouble(Environment.ExecutionResult::reward)
+                .mapToDouble(ExecutionResult::reward)
                 .toArray()).reshape(numSteps, 1).castTo(DataType.FLOAT);
         // And expected actions
         Stream<Map<String, INDArray>> expActionStream = trajectory.stream()
@@ -268,11 +268,11 @@ class KpisMDPTrajectoryTest {
         // And an agent for the mdp
         TDAgentSingleNN agent = createAgent(mdp, 1F / (numSteps + 1), numSteps, numEpochs, batchSize);
         // and the trajectory from current policy
-//        List<Environment.ExecutionResult> trajectory = trajectory(agent, numSteps);
-        List<Environment.ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
+//        List<ExecutionResult> trajectory = trajectory(agent, numSteps);
+        List<ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
         // and the average reward
         float avg0 = (float) trajectory.stream()
-                .mapToDouble(Environment.ExecutionResult::reward)
+                .mapToDouble(ExecutionResult::reward)
                 .average()
                 .orElseThrow();
         agent = agent.avgReward(avg0);
@@ -284,7 +284,7 @@ class KpisMDPTrajectoryTest {
                 (k, v) -> Nd4j.vstack(v.map(Signal::toINDArray).toArray(INDArray[]::new)));
         // And expected rewards
         INDArray expRewards = Nd4j.createFromArray(trajectory.stream()
-                .mapToDouble(Environment.ExecutionResult::reward)
+                .mapToDouble(ExecutionResult::reward)
                 .toArray()).reshape(numSteps, 1).castTo(DataType.FLOAT);
         // And expected actions
         Stream<Map<String, INDArray>> expActionStream = trajectory.stream()

@@ -65,7 +65,7 @@ public interface WheellyMessage {
     long remoteTime();
 
     /**
-     * Returns the simulation time
+     * Returns the simulation markerTime
      */
     long simulationTime();
 }

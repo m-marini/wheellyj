@@ -29,9 +29,9 @@ package org.mmarini.wheelly.objectives;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WithRobotStatus;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 
 import static java.lang.Math.abs;
@@ -67,8 +67,8 @@ public interface NoMove {
      */
     static RewardFunction noMove(float velocityThreshold, Complex sensorRange, double reward) {
         return (s0, a, s1) -> {
-            if (s1 instanceof WithRobotStatus withRobotStatus) {
-                RobotStatus status = withRobotStatus.getRobotStatus();
+            if (s1 instanceof WorldState worldState) {
+                RobotStatus status = worldState.model().robotStatus();
                 if (abs(status.leftPps()) < velocityThreshold
                         && abs(status.rightPps()) < velocityThreshold
                         && status.sensorDirection().isCloseTo(Complex.DEG0, sensorRange)) {
