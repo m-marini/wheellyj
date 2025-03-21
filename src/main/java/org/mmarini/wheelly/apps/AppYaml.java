@@ -33,6 +33,7 @@ import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotControllerApi;
 import org.mmarini.wheelly.apis.WorldModeller;
 import org.mmarini.wheelly.envs.EnvironmentApi;
+import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.yaml.Locator;
 
 import java.io.File;
@@ -59,16 +60,6 @@ public interface AppYaml {
     }
 
     /**
-     * Returns the world modeller reading the file of "modeller" property
-     *
-     * @param config the JSON configuration
-     * @throws IOException in case of error
-     */
-    static WorldModeller modellerFromJson(JsonNode config) throws IOException {
-        return WorldModeller.fromFile(new File(config.path("modeller").asText()));
-    }
-
-    /**
      * Returns the double arrays from json document
      *
      * @param root    the JSON root
@@ -90,6 +81,26 @@ public interface AppYaml {
         return locator.elements(root)
                 .mapToInt(l -> l.getNode(root).asInt())
                 .toArray();
+    }
+
+    /**
+     * Returns the world modeller reading the file of "modeller" property
+     *
+     * @param config the JSON configuration
+     * @throws IOException in case of error
+     */
+    static WorldModeller modellerFromJson(JsonNode config) throws IOException {
+        return WorldModeller.fromFile(new File(config.path("modeller").asText()));
+    }
+
+    /**
+     * Returns the objective reading the file of "objective" property
+     *
+     * @param config the JSON configuration
+     * @throws IOException in case of error
+     */
+    static RewardFunction rewardFromJson(JsonNode config) throws IOException {
+        return RewardFunction.fromFile(new File(config.path("rewardFunction").asText()));
     }
 
     /**

@@ -27,13 +27,12 @@ inputProcess:
     class: org.mmarini.rl.processors.EqualsToProcessor
     input: sectorStates
     value: 2
-  - name: labeledSectors
-    class: org.mmarini.rl.processors.EqualsToProcessor
-    input: sectorStates
-    value: 3
   - name: stateFeatures
     class: org.mmarini.rl.processors.FeaturesProcessor
     input: sectorStates
+  - name: cellFeatures
+    class: org.mmarini.rl.processors.FeaturesProcessor
+    input: cellStates
   - name: unmaskDistanceFeatures
     class: org.mmarini.rl.processors.TilesProcessor
     input: sectorDistances
@@ -42,10 +41,22 @@ inputProcess:
     class: org.mmarini.rl.processors.MaskProcessor
     input: unmaskDistanceFeatures
     mask: hinderedSectors
-  - name: labeledDistanceFeatures
+  - name: unmaskMarkerDistanceFeatures
+    class: org.mmarini.rl.processors.TilesProcessor
+    input: markerDistances
+    numTiles: 10
+  - name: markerDistanceFeatures
     class: org.mmarini.rl.processors.MaskProcessor
-    input: unmaskDistanceFeatures
-    mask: labeledSectors
+    input: unmaskMarkerDistanceFeatures
+    mask: markerStates
+  - name: unmaskMarkerDirectionFeatures
+    class: org.mmarini.rl.processors.TilesProcessor
+    input: markerDirections
+    numTiles: 24
+  - name: markerDirectionFeatures
+    class: org.mmarini.rl.processors.MaskProcessor
+    input: unmaskMarkerDirectionFeatures
+    mask: markerStates
 network:
   layer0:
     inputs:
@@ -54,7 +65,10 @@ network:
         - canMoveFeatures
         - stateFeatures
         - hinderedDistanceFeatures
-        - labeledDistanceFeatures
+        - cellFeatures
+        - markerStates
+        - markerDistanceFeatures
+        - markerDirectionFeatures
     layers:
       - type: dense
         outputSize: 144

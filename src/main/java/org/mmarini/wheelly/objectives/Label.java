@@ -92,10 +92,12 @@ public interface Label {
                 Map<String, LabelMarker> markers = model.markers();
                 // Get the nearest labeled obstacle
                 Point2D robotLocation = robotStatus.location();
-                Point2D markerLocation = markers.get(label).location();
+                LabelMarker labelMarker = markers.get(label);
                 // check robot speed in range
-                if (abs(robotStatus.leftPps()) < velocityThreshold
+                if (labelMarker != null
+                        && abs(robotStatus.leftPps()) < velocityThreshold
                         && abs(robotStatus.rightPps()) < velocityThreshold) {
+                    Point2D markerLocation = labelMarker.location();
                     double distance = markerLocation.distance(robotLocation);
                     Complex labeledDir = Complex.direction(robotLocation, markerLocation);
                     if (distance >= minDistance && distance <= maxDistance

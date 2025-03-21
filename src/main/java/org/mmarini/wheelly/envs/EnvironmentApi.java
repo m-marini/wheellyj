@@ -71,4 +71,11 @@ public interface EnvironmentApi extends EnvironmentConnector, WithSignalsSpec {
     static EnvironmentApi fromFile(File file) throws IOException {
         return Utils.createObject(file);
     }
+
+    /**
+     * Sets the reward function
+     *
+     * @param rewardFunc the reward function
+     */
+    void setRewardFunc(RewardFunction rewardFunc);
 }

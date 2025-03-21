@@ -22,7 +22,7 @@ properties:
     type: string
   agent:
     type: string
-  objective:
+  rewardFunction:
     type: string
 required:
   - $schema
@@ -32,4 +32,4 @@ required:
   - environment
   - agent
   - savingInterval
-  - objective
+  - rewardFunction

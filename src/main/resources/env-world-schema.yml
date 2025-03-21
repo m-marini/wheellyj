@@ -17,10 +17,17 @@ properties:
   numSpeeds:
     type: integer
     minimum: 2
+  markerLabels:
+    type: array
+    items:
+      type: string
+      minLength: 1
+    minItems: 1
 required:
   - $schema
   - class
   - numSpeeds
   - numDirections
   - numSensorDirections
+  - markerLabels
 

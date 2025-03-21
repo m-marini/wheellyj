@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- Issue [#530](https://github.com/m-marini/wheellyj/issues/530): Add markers signals
+
 ### Changed
 
 - Issue [#527](https://github.com/m-marini/wheellyj/issues/527): Change label locating

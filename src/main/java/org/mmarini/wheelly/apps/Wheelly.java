@@ -47,6 +47,7 @@ import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.envs.EnvironmentApi;
+import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.wheelly.envs.WorldEnvironment;
 import org.mmarini.wheelly.swing.*;
 import org.mmarini.yaml.Locator;
@@ -218,8 +219,10 @@ public class Wheelly {
      * @throws IOException in case of error
      */
     private void createContext(JsonNode config) throws IOException {
-        logger.atInfo().log("Creating controller ...");
+        logger.atInfo().log("Creating robot ...");
         this.robot = AppYaml.robotFromJson(config);
+
+        logger.atInfo().log("Creating controller ...");
         this.controller = AppYaml.controllerFromJson(config);
         controller.connectRobot(robot);
 
@@ -232,6 +235,10 @@ public class Wheelly {
         this.environment = AppYaml.envFromJson(config);
         environment.connect(worldModeller);
         environment.connect(inferenceMediator);
+
+        logger.atInfo().log("Create reward function ...");
+        RewardFunction rewardFunc = AppYaml.rewardFromJson(config);
+        environment.setRewardFunc(rewardFunc);
 
         logger.atInfo().log("Creating agent ...");
         Function<WithSignalsSpec, Agent> agentBuilder = Agent.fromFile(

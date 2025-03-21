@@ -37,8 +37,13 @@ import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.rl.nets.*;
+import org.mmarini.wheelly.apis.RobotApi;
+import org.mmarini.wheelly.apis.RobotControllerApi;
+import org.mmarini.wheelly.apis.WorldModeller;
 import org.mmarini.wheelly.envs.EnvironmentApi;
+import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.wheelly.swing.Messages;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -133,15 +138,53 @@ public class PrintNetChart {
         ArgumentParser parser = createParser();
         try {
             this.args = parser.parseArgs(args);
-            logger.atInfo().log("Creating environment");
             JsonNode config = fromFile(this.args.getString("config"));
             JsonSchemas.instance().validateOrThrow(config, Wheelly.WHEELLY_SCHEMA_YML);
+
+            logger.atInfo().log("Creating robot ...");
+            RobotApi robot = AppYaml.robotFromJson(config);
+
+            logger.atInfo().log("Creating controller ...");
+            RobotControllerApi controller = AppYaml.controllerFromJson(config);
+            controller.connectRobot(robot);
+
+            logger.atInfo().log("Creating world modeller ...");
+            WorldModeller worldModeller = AppYaml.modellerFromJson(config);
+            worldModeller.setRobotSpec(robot.robotSpec());
+            worldModeller.connectController(controller);
+
+            logger.atInfo().log("Creating RL environment ...");
             EnvironmentApi environment = AppYaml.envFromJson(config);
+            environment.connect(worldModeller);
+
+            logger.atInfo().log("Create reward function ...");
+            RewardFunction rewardFunc = AppYaml.rewardFromJson(config);
+            environment.setRewardFunc(rewardFunc);
+
+            logger.atInfo().log("Creating agent ...");
+            Function<WithSignalsSpec, Agent> agentBuilder = Agent.fromFile(
+                    new File(Locator.locate("agent").getNode(config).asText()));
+            this.agent = agentBuilder.apply(environment);
+
+            environment.connect(agent);
+
+            /*
+            RobotApi robot = AppYaml.robotFromJson(config);
+
+            RobotControllerApi controller = AppYaml.controllerFromJson(config);
+            controller.connectRobot(robot);
+
+            WorldModeller modeller = AppYaml.modellerFromJson(config);
+            modeller.connectController(controller);
+
+            EnvironmentApi environment = AppYaml.envFromJson(config);
+            environment.connect(modeller);
 
             logger.atInfo().log("Creating agent");
             Function<WithSignalsSpec, Agent> builder = Agent.fromFile(new File(config.path("agent").asText()));
             this.agent = builder.apply(environment);
-
+            environment.connect(agent);
+*/
             String outputFilename = this.args.getString("output");
             logger.atInfo().log("Creating {}", outputFilename);
             try {
