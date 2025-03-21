@@ -45,10 +45,15 @@ import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.SwingUtils;
+import org.mmarini.wheelly.apis.RobotApi;
+import org.mmarini.wheelly.apis.RobotControllerApi;
+import org.mmarini.wheelly.apis.WorldModeller;
 import org.mmarini.wheelly.envs.EnvironmentApi;
+import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.wheelly.swing.NNActivityPanel;
 import org.mmarini.wheelly.swing.Utils;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
@@ -340,9 +345,32 @@ public class NNActivityMonitor {
     private void loadNetwork() throws IOException {
         JsonNode config = fromFile(args.getString("config"));
         JsonSchemas.instance().validateOrThrow(config, WHEELLY_SCHEMA_YML);
+
+        logger.atInfo().log("Creating robot ...");
+        RobotApi robot = AppYaml.robotFromJson(config);
+
+        logger.atInfo().log("Creating controller ...");
+        RobotControllerApi controller = AppYaml.controllerFromJson(config);
+        controller.connectRobot(robot);
+
+        logger.atInfo().log("Creating world modeller ...");
+        WorldModeller worldModeller = AppYaml.modellerFromJson(config);
+        worldModeller.setRobotSpec(robot.robotSpec());
+        worldModeller.connectController(controller);
+
+        logger.atInfo().log("Creating RL environment ...");
         EnvironmentApi environment = AppYaml.envFromJson(config);
-        Function<WithSignalsSpec, Agent> builder = Agent.fromFile(new File(config.path("agent").asText()));
-        try (Agent agent = builder.apply(environment)) {
+        environment.connect(worldModeller);
+
+        logger.atInfo().log("Create reward function ...");
+        RewardFunction rewardFunc = AppYaml.rewardFromJson(config);
+        environment.setRewardFunc(rewardFunc);
+
+        logger.atInfo().log("Creating agent ...");
+        Function<WithSignalsSpec, Agent> agentBuilder = Agent.fromFile(
+                new File(Locator.locate("agent").getNode(config).asText()));
+        try (Agent agent = agentBuilder.apply(environment)) {
+            environment.connect(agent);
             if (agent instanceof PPOAgent ppoAgent) {
                 this.network = ppoAgent.network();
                 this.avgReward.setValue(ppoAgent.avgReward());

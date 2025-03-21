@@ -219,8 +219,10 @@ public class Wheelly {
      * @throws IOException in case of error
      */
     private void createContext(JsonNode config) throws IOException {
-        logger.atInfo().log("Creating controller ...");
+        logger.atInfo().log("Creating robot ...");
         this.robot = AppYaml.robotFromJson(config);
+
+        logger.atInfo().log("Creating controller ...");
         this.controller = AppYaml.controllerFromJson(config);
         controller.connectRobot(robot);
 

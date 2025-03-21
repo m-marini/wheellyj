@@ -84,7 +84,9 @@ public class WorldEnvironment implements EnvironmentApi {
         int numSpeeds = locator.path("numSpeeds").getNode(root).asInt();
         int numDirections = locator.path("numDirections").getNode(root).asInt();
         int numSensorDirections = locator.path("numSensorDirections").getNode(root).asInt();
-        List<String> markerLabels = List.of();
+        List<String> markerLabels = locator.path("markerLabels").elements(root)
+                .map(l -> l.getNode(root).asText())
+                .toList();
         return new WorldEnvironment(numSpeeds, numDirections, numSensorDirections, markerLabels);
     }
     private final int numSpeeds;
