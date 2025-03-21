@@ -36,14 +36,14 @@ import org.mmarini.rl.envs.*;
 import org.mmarini.wheelly.apis.*;
 
 import java.awt.geom.Point2D;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
 
 import static java.lang.Math.PI;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasKey;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.wheelly.apis.MockRobot.MAX_RADAR_DISTANCE;
 import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
 import static org.mockito.Mockito.mock;
@@ -59,6 +59,7 @@ class WorldEnvironmentTest {
     public static final int GRID_SIZE = 5;
     private static final int GRID_MAP_SIZE = 5;
     public static final double MARKER_SIZE = 0.3;
+    public static final WorldModelSpec WORLD_SPEC = new WorldModelSpec(ROBOT_SPEC, NUM_RADAR_SECTORS, GRID_MAP_SIZE, MARKER_SIZE);
 
     private PolarMap polarMap;
     private WorldEnvironment env;
@@ -77,14 +78,23 @@ class WorldEnvironmentTest {
     @BeforeEach
     void setUp() {
         RobotStatus robotStatus = RobotStatus.create(ROBOT_SPEC, x -> 12d);
+
         RadarMap radarMap = RadarMap.empty(new GridTopology(new Point2D.Float(), 11, 11, 0.2));
+
         CircularSector[] sectors = IntStream.range(0, NUM_RADAR_SECTORS)
                 .mapToObj(i -> CircularSector.unknownSector())
                 .toArray(CircularSector[]::new);
         this.polarMap = new PolarMap(sectors, new Point2D.Double(), Complex.DEG0);
+
         GridMap gridMap = GridMap.create(radarMap, new Point2D.Double(), Complex.DEG0, GRID_MAP_SIZE);
-        this.worldModel = new WorldModel(robotStatus, radarMap, Map.of(), polarMap, gridMap, null, null, false);
-        this.env = new WorldEnvironment(NUM_SPEED_VALUES, NUM_DIRECTION_VALUES, NUM_SENSOR_VALUES);
+
+        this.worldModel = new WorldModel(WORLD_SPEC, robotStatus, radarMap, Map.of(), polarMap, gridMap, null, null, false);
+
+        WorldModellerConnector controller = mock();
+        when(controller.worldModelSpec()).thenReturn(WORLD_SPEC);
+
+        this.env = new WorldEnvironment(NUM_SPEED_VALUES, NUM_DIRECTION_VALUES, NUM_SENSOR_VALUES, List.of("A"));
+        this.env.connect(controller);
     }
 
     @Test
@@ -149,11 +159,36 @@ class WorldEnvironmentTest {
     }
 
     @Test
+    void signalsTest() {
+        // Given a polar robot environment
+        // And a current status with a polar map
+        setEmpty(1, DISTANCE);
+        setHindered(2, DISTANCE);
+
+        // When get the states
+        State state = env.state(worldModel);
+
+        // Then signal ...
+        assertNotNull(state);
+        Map<String, Signal> signals = state.signals();
+
+        assertThat(signals, hasKey("sectorStates"));
+        assertThat(signals, hasKey("sectorDistances"));
+        // And states ...
+        assertEquals(ArraySignal.create(new long[]{4}, 0, 1, 2, 0),
+                signals.get("sectorStates"));
+        // And distance
+        assertEquals(ArraySignal.create(new long[]{4}, 0f, 0f, (float) DISTANCE, 0),
+                signals.get("sectorDistances"));
+    }
+
+    @Test
     void stateSpecTest() {
-        // Given a world environemt
+        // Given a world environment
         // And a mock world modeller
         WorldModellerConnector connector = mock();
-        WorldModelSpec worldModelSpec = new WorldModelSpec(ROBOT_SPEC, NUM_RADAR_SECTORS, GRID_MAP_SIZE, MARKER_SIZE);
+
+        WorldModelSpec worldModelSpec = WORLD_SPEC;
         when(connector.worldModelSpec()).thenReturn(worldModelSpec);
 
         // When connect the connector
@@ -166,26 +201,5 @@ class WorldEnvironmentTest {
                 states.get("sectorStates"));
         assertEquals(new FloatSignalSpec(new long[]{NUM_RADAR_SECTORS}, 0f, (float) MAX_RADAR_DISTANCE),
                 states.get("sectorDistances"));
-    }
-
-    @Test
-    void signalsTest() {
-        // Given a polar robot environment
-        // And a current status with a polar map
-        setEmpty(1, DISTANCE);
-        setHindered(2, DISTANCE);
-
-        // When get the states
-        Map<String, Signal> signals = env.state(worldModel).signals();
-
-        // Then signal ...
-        assertThat(signals, hasKey("sectorStates"));
-        assertThat(signals, hasKey("sectorDistances"));
-        // And states ...
-        assertEquals(ArraySignal.create(new long[]{4}, 0, 1, 2, 0),
-                signals.get("sectorStates"));
-        // And distance
-        assertEquals(ArraySignal.create(new long[]{4}, 0f, 0f, (float) DISTANCE, 0),
-                signals.get("sectorDistances"));
     }
 }

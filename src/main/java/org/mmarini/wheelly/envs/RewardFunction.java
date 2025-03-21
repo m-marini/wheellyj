@@ -68,7 +68,7 @@ public interface RewardFunction {
      *
      * @param file the configuration file
      */
-    static RewardFunction loadObjective(File file) throws IOException {
+    static RewardFunction fromFile(File file) throws IOException {
         JsonNode root = org.mmarini.yaml.Utils.fromFile(file);
         if (!root.isArray()) {
             throw new IllegalArgumentException(format("Node %s must be an array (%s)",

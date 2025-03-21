@@ -151,7 +151,7 @@ public class WorldModeller implements WorldModellerApi {
         if (model == null) {
             RadarMap radarMap = radarModeller.empty();
             Map<String, LabelMarker> markers = Map.of();
-            model = new WorldModel(robotStatus, radarMap, markers, null, null, null, null, false);
+            model = new WorldModel(worldSpec, robotStatus, radarMap, markers, null, null, null, null, false);
         }
         model = this.updateStatus(model, robotStatus);
         currentModel = model;
