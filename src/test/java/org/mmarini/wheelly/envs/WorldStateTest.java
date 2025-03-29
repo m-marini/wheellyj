@@ -97,7 +97,7 @@ class WorldStateTest {
                         LabelMarker::label,
                         x -> x
                 ));
-        return new WorldModel(WORLD_SPEC, status, radarMap, markerMap, polarMap, gridMap, null, null, false);
+        return new WorldModel(WORLD_SPEC, status, radarMap, markerMap, polarMap, gridMap, null);
     }
 
     @Test

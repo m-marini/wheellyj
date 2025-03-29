@@ -20,10 +20,14 @@ properties:
     type: string
   environment:
     type: string
+  modeller:
+    type: string
   agent:
     type: string
 required:
   - $schema
   - robot
   - controller
+  - modeller
+  - environment
   - agent

@@ -322,7 +322,8 @@ public class RobotController implements RobotControllerApi {
      * @param cameraEvent the camera event
      */
     private void handleCamera(CameraEvent cameraEvent) {
-        robotStatus = robotStatus.setCameraMessage(cameraEvent).setSimulationTime(robot.simulationTime());
+        robotStatus = robotStatus.setCameraMessage(cameraEvent)
+                .setSimulationTime(robot.simulationTime());
         cameraProcessor.onNext(robotStatus);
         scheduleInference(robotStatus);
     }

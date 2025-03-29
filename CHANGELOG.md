@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 
 - Issue [#527](https://github.com/m-marini/wheellyj/issues/527): Change label locating
+- Issue [#532](https://github.com/m-marini/wheellyj/issues/532): Camera event following proxy
 
 ## [0.22.0] 2025-03-07
 

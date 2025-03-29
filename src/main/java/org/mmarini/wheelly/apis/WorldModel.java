@@ -36,49 +36,42 @@ import static java.util.Objects.requireNonNull;
 /**
  * Represents the environment world
  *
- * @param worldSpec        the world model specification
- * @param robotStatus      the robot status
- * @param radarMap         the radar map
- * @param markers          the markers
- * @param polarMap         the polar map
- * @param gridMap          the grid map
- * @param prevCameraEvent  the previous camera event
- * @param prevProxyMessage the precious proxy message
- * @param waitingForProxy  true if waiting for proxy
+ * @param worldSpec       the world model specification
+ * @param robotStatus     the robot status
+ * @param radarMap        the radar map
+ * @param markers         the markers
+ * @param polarMap        the polar map
+ * @param gridMap         the grid map
+ * @param prevCameraEvent the previous camera event
  */
 public record WorldModel(WorldModelSpec worldSpec, RobotStatus robotStatus,
                          RadarMap radarMap,
                          Map<String, LabelMarker> markers,
                          PolarMap polarMap,
                          GridMap gridMap,
-                         CameraEvent prevCameraEvent, WheellyProxyMessage prevProxyMessage,
-                         boolean waitingForProxy) implements
+                         CameraEvent prevCameraEvent
+) implements
         WithRadarMap, WithPolarMap, WithRobotStatus, WithLabelMarkers, WithGridMap {
 
     /**
      * Creates the world model
      *
-     * @param worldSpec        the world model specification
-     * @param robotStatus      the robot status
-     * @param radarMap         the radar map
-     * @param markers          the markers
-     * @param polarMap         the polar map
-     * @param gridMap          the grid map
-     * @param prevCameraEvent  the previous camera event
-     * @param prevProxyMessage the precious proxy message
-     * @param waitingForProxy  true if waiting for proxy
+     * @param worldSpec       the world model specification
+     * @param robotStatus     the robot status
+     * @param radarMap        the radar map
+     * @param markers         the markers
+     * @param polarMap        the polar map
+     * @param gridMap         the grid map
+     * @param prevCameraEvent the previous camera event
      */
-    public WorldModel(WorldModelSpec worldSpec, RobotStatus robotStatus, RadarMap radarMap, Map<String, LabelMarker> markers, PolarMap polarMap, GridMap gridMap, CameraEvent prevCameraEvent, WheellyProxyMessage prevProxyMessage, boolean waitingForProxy) {
+    public WorldModel(WorldModelSpec worldSpec, RobotStatus robotStatus, RadarMap radarMap, Map<String, LabelMarker> markers, PolarMap polarMap, GridMap gridMap, CameraEvent prevCameraEvent) {
         this.worldSpec = requireNonNull(worldSpec);
         this.robotStatus = requireNonNull(robotStatus);
         this.radarMap = requireNonNull(radarMap);
         this.markers = requireNonNull(markers);
+        this.prevCameraEvent = prevCameraEvent;
         this.polarMap = polarMap;
         this.gridMap = gridMap;
-
-        this.prevCameraEvent = prevCameraEvent;
-        this.prevProxyMessage = prevProxyMessage;
-        this.waitingForProxy = waitingForProxy;
     }
 
     @Override
@@ -89,17 +82,6 @@ public record WorldModel(WorldModelSpec worldSpec, RobotStatus robotStatus,
     @Override
     public RadarMap getRadarMap() {
         return radarMap;
-    }
-
-    /**
-     * Returns the world model with the radar map
-     *
-     * @param radarMap the radar map
-     */
-    public WorldModel setRadarMap(RadarMap radarMap) {
-        return Objects.equals(radarMap, this.radarMap)
-                ? this
-                : new WorldModel(worldSpec, robotStatus, radarMap, markers, polarMap, gridMap, prevCameraEvent, prevProxyMessage, waitingForProxy);
     }
 
     @Override
@@ -115,7 +97,7 @@ public record WorldModel(WorldModelSpec worldSpec, RobotStatus robotStatus,
     public WorldModel setRobotStatus(RobotStatus robotStatus) {
         return Objects.equals(robotStatus, this.robotStatus)
                 ? this
-                : new WorldModel(worldSpec, robotStatus, radarMap, markers, polarMap, gridMap, prevCameraEvent, prevProxyMessage, waitingForProxy);
+                : new WorldModel(worldSpec, robotStatus, radarMap, markers, polarMap, gridMap, prevCameraEvent);
     }
 
     /**
@@ -126,7 +108,7 @@ public record WorldModel(WorldModelSpec worldSpec, RobotStatus robotStatus,
     public WorldModel setGridMap(GridMap gridMap) {
         return Objects.equals(gridMap, this.gridMap)
                 ? this
-                : new WorldModel(worldSpec, robotStatus, radarMap, markers, polarMap, gridMap, prevCameraEvent, prevProxyMessage, waitingForProxy);
+                : new WorldModel(worldSpec, robotStatus, radarMap, markers, polarMap, gridMap, prevCameraEvent);
     }
 
     /**
@@ -137,7 +119,7 @@ public record WorldModel(WorldModelSpec worldSpec, RobotStatus robotStatus,
     public WorldModel setMarkers(Map<String, LabelMarker> markers) {
         return Objects.equals(markers, this.markers)
                 ? this
-                : new WorldModel(worldSpec, robotStatus, radarMap, markers, polarMap, gridMap, prevCameraEvent, prevProxyMessage, waitingForProxy);
+                : new WorldModel(worldSpec, robotStatus, radarMap, markers, polarMap, gridMap, prevCameraEvent);
     }
 
     /**
@@ -148,7 +130,7 @@ public record WorldModel(WorldModelSpec worldSpec, RobotStatus robotStatus,
     public WorldModel setPolarMap(PolarMap polarMap) {
         return Objects.equals(polarMap, this.polarMap)
                 ? this
-                : new WorldModel(worldSpec, robotStatus, radarMap, markers, polarMap, gridMap, prevCameraEvent, prevProxyMessage, waitingForProxy);
+                : new WorldModel(worldSpec, robotStatus, radarMap, markers, polarMap, gridMap, prevCameraEvent);
     }
 
     /**
@@ -159,28 +141,17 @@ public record WorldModel(WorldModelSpec worldSpec, RobotStatus robotStatus,
     public WorldModel setPrevCameraEvent(CameraEvent prevCameraEvent) {
         return Objects.equals(prevCameraEvent, this.prevCameraEvent)
                 ? this
-                : new WorldModel(worldSpec, robotStatus, radarMap, markers, polarMap, gridMap, prevCameraEvent, prevProxyMessage, waitingForProxy);
+                : new WorldModel(worldSpec, robotStatus, radarMap, markers, polarMap, gridMap, prevCameraEvent);
     }
 
     /**
-     * Returns the world model with the previous proxy message
+     * Returns the world model with the radar map
      *
-     * @param prevProxyMessage the previous proxy message
+     * @param radarMap the radar map
      */
-    public WorldModel setPrevProxyMessage(WheellyProxyMessage prevProxyMessage) {
-        return Objects.equals(prevProxyMessage, this.prevProxyMessage)
+    public WorldModel setRadarMap(RadarMap radarMap) {
+        return Objects.equals(radarMap, this.radarMap)
                 ? this
-                : new WorldModel(worldSpec, robotStatus, radarMap, markers, polarMap, gridMap, prevCameraEvent, prevProxyMessage, waitingForProxy);
-    }
-
-    /**
-     * Returns the world model with waiting for proxy
-     *
-     * @param waitingForProxy true if waiting for proxy
-     */
-    public WorldModel setWaitingForProxy(boolean waitingForProxy) {
-        return waitingForProxy == this.waitingForProxy
-                ? this
-                : new WorldModel(worldSpec, robotStatus, radarMap, markers, polarMap, gridMap, prevCameraEvent, prevProxyMessage, waitingForProxy);
+                : new WorldModel(worldSpec, robotStatus, radarMap, markers, polarMap, gridMap, prevCameraEvent);
     }
 }

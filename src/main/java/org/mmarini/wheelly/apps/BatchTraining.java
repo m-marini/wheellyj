@@ -263,13 +263,23 @@ public class BatchTraining {
      */
     private void createContext(JsonNode config) throws IOException {
         RobotApi robot = AppYaml.robotFromJson(config);
+
         RobotControllerApi controller = AppYaml.controllerFromJson(config);
+        controller.connectRobot(robot);
+
         WorldModeller modeller = AppYaml.modellerFromJson(config);
+        modeller.setRobotSpec(robot.robotSpec());
+        modeller.connectController(controller);
+
         EnvironmentApi environment = AppYaml.envFromJson(config);
+
+        environment.connect(modeller);
+
         Function<WithSignalsSpec, Agent> agentBuilder = Agent.fromFile(
                 new File(Locator.locate("agent").getNode(config).asText()));
 
         this.agent = agentBuilder.apply(environment);
+        environment.connect(agent);
 
         // Creates random number generator
         Random random = Nd4j.getRandomFactory().getNewRandomInstance();
