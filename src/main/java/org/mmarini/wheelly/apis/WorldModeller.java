@@ -151,7 +151,7 @@ public class WorldModeller implements WorldModellerApi {
         if (model == null) {
             RadarMap radarMap = radarModeller.empty();
             Map<String, LabelMarker> markers = Map.of();
-            model = new WorldModel(worldSpec, robotStatus, radarMap, markers, null, null, null, null, false);
+            model = new WorldModel(worldSpec, robotStatus, radarMap, markers, null, null, null);
         }
         model = this.updateStatus(model, robotStatus);
         currentModel = model;
@@ -202,34 +202,13 @@ public class WorldModeller implements WorldModellerApi {
         RadarMap newRadarMap = radarModeller.update(model.radarMap(), status);
         model = model.setRobotStatus(status).setRadarMap(newRadarMap);
         CameraEvent camera = status.cameraEvent();
-        WheellyProxyMessage proxy = status.proxyMessage();
+        WheellyProxyMessage proxy = status.cameraProxyMessage();
         CameraEvent prevCamera = model.prevCameraEvent();
-        WheellyProxyMessage prevProxy = model.prevProxyMessage();
         if (!Objects.equals(camera, prevCamera)) {
-            // Camera event changed
-            if (Objects.equals(proxy, prevProxy)) {
-                // new camera, proxy not changed: store camera and set wait for first proxy
-                return model.setPrevCameraEvent(camera)
-                        .setWaitingForProxy(true);
-            } else {
-                // new camera event, new proxy: store camera event and proxy event and reset wait for first proxy
-                Map<String, LabelMarker> newMarker = markerLocator.update(model.markers(), camera, proxy, status.robotSpec());
-                return model.setMarkers(newMarker)
-                        .setPrevCameraEvent(camera)
-                        .setPrevProxyMessage(proxy)
-                        .setWaitingForProxy(false);
-            }
-        } else if (!Objects.equals(proxy, prevProxy)) {
-            // proxy event changed
-            if (model.waitingForProxy()) {
-                // camera isn't changed, proxy changed, wait for first proxy: store proxy reset wait for first proxy
-                Map<String, LabelMarker> newMarker = markerLocator.update(model.markers(), camera, proxy, status.robotSpec());
-                return model.setMarkers(newMarker).setPrevProxyMessage(proxy)
-                        .setWaitingForProxy(false);
-            } else {
-                // camera isn't changed, proxy changed, not wait for first proxy: store proxy clean markers
-                return model.setPrevProxyMessage(proxy);
-            }
+            // new camera event, new proxy: store camera event and proxy event and reset wait for first proxy
+            Map<String, LabelMarker> newMarker = markerLocator.update(model.markers(), camera, proxy, status.robotSpec());
+            return model.setMarkers(newMarker)
+                    .setPrevCameraEvent(camera);
         }
         return model;
     }

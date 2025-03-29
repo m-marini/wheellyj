@@ -88,7 +88,7 @@ class WorldEnvironmentTest {
 
         GridMap gridMap = GridMap.create(radarMap, new Point2D.Double(), Complex.DEG0, GRID_MAP_SIZE);
 
-        this.worldModel = new WorldModel(WORLD_SPEC, robotStatus, radarMap, Map.of(), polarMap, gridMap, null, null, false);
+        this.worldModel = new WorldModel(WORLD_SPEC, robotStatus, radarMap, Map.of(), polarMap, gridMap, null);
 
         WorldModellerConnector controller = mock();
         when(controller.worldModelSpec()).thenReturn(WORLD_SPEC);

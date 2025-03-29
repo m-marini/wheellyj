@@ -8,8 +8,8 @@ rem set PATH=%JAVA_HOME%\bin
 rem run
 rem cd ..
 echo 
-rem start javaw -jar "lib/${pom.build.finalName}.jar"
-rem java -jar "lib/${pom.build.finalName}.jar" %1 %2
+rem start javaw -jar "lib/wheelly-0.22.0.jar"
+rem java -jar "lib/wheelly-0.22.0.jar" %1 %2
 java -version > nul
 IF ERRORLEVEL 2 goto noJavaw
 javaw > nul

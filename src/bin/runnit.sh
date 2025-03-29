@@ -6,5 +6,5 @@
 
 # run
 cd ..
-java -jar "lib/${pom.build.finalName}.jar" $1 $2
+java -jar "lib/wheelly-0.22.0.jar" $1 $2
 cd bin

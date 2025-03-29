@@ -39,19 +39,20 @@ import static java.util.Objects.requireNonNull;
 /**
  * Creates the robot status
  *
- * @param robotSpec       the robot specification
- * @param simulationTime  the simulated markerTime (ms)
- * @param motionMessage   the motion message
- * @param proxyMessage    the proxy message
- * @param contactsMessage the contact's message
- * @param supplyMessage   the supply message
- * @param decodeVoltage   the voltage decode function
- * @param cameraEvent     the camera event
+ * @param robotSpec          the robot specification
+ * @param simulationTime     the simulated markerTime (ms)
+ * @param motionMessage      the motion message
+ * @param proxyMessage       the proxy message
+ * @param contactsMessage    the contact's message
+ * @param supplyMessage      the supply message
+ * @param decodeVoltage      the voltage decode function
+ * @param cameraEvent        the camera event
+ * @param cameraProxyMessage
  */
 public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotionMessage motionMessage,
                           WheellyProxyMessage proxyMessage, WheellyContactsMessage contactsMessage,
                           WheellySupplyMessage supplyMessage, IntToDoubleFunction decodeVoltage,
-                          CameraEvent cameraEvent) {
+                          CameraEvent cameraEvent, WheellyProxyMessage cameraProxyMessage) {
     public static final int PULSES_PER_ROOT = 40;
     public static final double WHEEL_DIAMETER = 0.067;
     public static final double DISTANCE_PER_PULSE = WHEEL_DIAMETER * PI / PULSES_PER_ROOT;
@@ -66,15 +67,16 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      */
     public static RobotStatus create(RobotSpec robotSpec, IntToDoubleFunction decodeVoltage) {
         long now = System.currentTimeMillis();
+        WheellyProxyMessage proxyMessage1 = new WheellyProxyMessage(now, 0, 0, 0, 0, 0, 0, 0);
         return new RobotStatus(robotSpec, 0,
                 new WheellyMotionMessage(now, 0, 0, 0, 0,
                         0, 0, 0, 0, true, 0, 0, 0, 0),
-                new WheellyProxyMessage(now, 0, 0, 0, 0, 0, 0, 0),
+                proxyMessage1,
                 new WheellyContactsMessage(now, 0, 0, true, true, true, true),
                 new WheellySupplyMessage(now, 0, 0, 0),
                 decodeVoltage,
-                CameraEvent.unknown(0)
-        );
+                CameraEvent.unknown(0),
+                proxyMessage1);
     }
 
     /**
@@ -89,7 +91,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
 
     public RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotionMessage motionMessage, WheellyProxyMessage proxyMessage,
                        WheellyContactsMessage contactsMessage, WheellySupplyMessage supplyMessage,
-                       IntToDoubleFunction decodeVoltage, CameraEvent cameraEvent) {
+                       IntToDoubleFunction decodeVoltage, CameraEvent cameraEvent, WheellyProxyMessage cameraProxyMessage) {
         this.motionMessage = requireNonNull(motionMessage);
         this.proxyMessage = requireNonNull(proxyMessage);
         this.contactsMessage = requireNonNull(contactsMessage);
@@ -98,6 +100,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
         this.decodeVoltage = requireNonNull(decodeVoltage);
         this.simulationTime = simulationTime;
         this.cameraEvent = requireNonNull(cameraEvent);
+        this.cameraProxyMessage = requireNonNull(cameraProxyMessage);
     }
 
     /**
@@ -244,12 +247,12 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
     }
 
     /**
-     * Returns the status with the set camera event
+     * Returns the status with the set camera event and current proxy message as a camera proxy message
      *
      * @param cameraEvent the camera event
      */
     public RobotStatus setCameraMessage(CameraEvent cameraEvent) {
-        return new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent);
+        return new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, proxyMessage);
     }
 
     /**
@@ -280,7 +283,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      * @param contactsMessage the message
      */
     public RobotStatus setContactsMessage(WheellyContactsMessage contactsMessage) {
-        return new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent);
+        return new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, cameraProxyMessage);
     }
 
     /**
@@ -330,7 +333,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      * @param motionMessage the motion message
      */
     public RobotStatus setMotionMessage(WheellyMotionMessage motionMessage) {
-        return new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent);
+        return new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, cameraProxyMessage);
     }
 
     /**
@@ -339,7 +342,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      * @param proxyMessage the message
      */
     public RobotStatus setProxyMessage(WheellyProxyMessage proxyMessage) {
-        return new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent);
+        return new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, cameraProxyMessage);
     }
 
     /**
@@ -359,7 +362,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      */
     public RobotStatus setSimulationTime(long simulationTime) {
         return simulationTime != this.simulationTime ?
-                new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent)
+                new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, cameraProxyMessage)
                 : this;
     }
 
@@ -381,7 +384,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      * @param supplyMessage the message
      */
     public RobotStatus setSupplyMessage(WheellySupplyMessage supplyMessage) {
-        return new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent);
+        return new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, cameraProxyMessage);
     }
 
     /**

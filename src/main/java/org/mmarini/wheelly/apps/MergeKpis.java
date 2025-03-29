@@ -84,6 +84,9 @@ public class MergeKpis {
         parser.addArgument("-p", "--parallel")
                 .action(Arguments.storeTrue())
                 .help("run parallel tasks");
+        parser.addArgument("-a", "--append")
+                .action(Arguments.storeTrue())
+                .help("append to the output files");
         parser.addArgument("output")
                 .required(true)
                 .help("specify the out path");
@@ -134,7 +137,13 @@ public class MergeKpis {
      */
     private void merge(String key, List<BinArrayFile> binArrayFiles) throws IOException {
         try (BinArrayFile output = BinArrayFile.createByKey(outputFile, key)) {
-            output.clear();
+            if (args.getBoolean("append")) {
+                // Append
+                output.seek(output.size());
+            } else {
+                // Override
+                output.clear();
+            }
             for (BinArrayFile source : binArrayFiles) {
                 logger.atInfo().log("Merging {} -> {}", source.file(), output.file());
                 source.seek(0);

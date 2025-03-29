@@ -1,10 +1,12 @@
-rmdir /S /Q  batch
-rmdir /S /Q  csv
-rmdir /S /Q  report
+call bin\setConfig.cmd
 
-call bin\train.cmd -k batch -w data
+rmdir /S /Q  %KPIS%
+rmdir /S /Q  %CSVS%
+rmdir /S /Q  %REPORT%
 
-call bin\report.cmd -p batch model csv
+call bin\train.cmd -k %KPIS% -w %MERGE%
+
+call bin\report.cmd -p %KPIS% %MODEL% %CSVS%
 
 cd octave
 "C:\Program Files\GNU Octave\Octave-7.2.0\octave-launch" --no-gui generateReport1.m

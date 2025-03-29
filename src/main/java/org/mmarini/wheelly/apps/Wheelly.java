@@ -174,6 +174,7 @@ public class Wheelly {
     private EnvironmentApi environment;
     private RobotApi robot;
     private Agent agent;
+    private JFrame frame;
 
     /**
      * Creates the server reinforcement learning engine server
@@ -295,7 +296,7 @@ public class Wheelly {
             // Create kpis frame
             this.kpisFrame = kpisPanel.createFrame();
         }
-        JFrame frame = createFrame(Messages.getString("Wheelly.title"), new JScrollPane(envPanel));
+        frame = createFrame(Messages.getString("Wheelly.title"), new JScrollPane(envPanel));
         frame.getContentPane().add(createToolBar(), BorderLayout.NORTH);
         SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
                 .filter(ev ->
@@ -362,7 +363,7 @@ public class Wheelly {
         panel.addTab(Messages.getString("Wheelly.tabPanel.sensor"), new JScrollPane(sensorMonitor));
         panel.addTab(Messages.getString("Wheelly.tabPanel.com"), new JScrollPane(comMonitor));
         // Create single frame app
-        JFrame frame = createFrame(Messages.getString("Wheelly.title"), panel);
+        this.frame = createFrame(Messages.getString("Wheelly.title"), panel);
         frame.getContentPane().add(createToolBar(), BorderLayout.NORTH);
         SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
                 .filter(ev ->
@@ -370,7 +371,6 @@ public class Wheelly {
                 .doOnNext(this::handleWindowOpened).subscribe();
         center(frame);
         allFrames = List.of(frame);
-        frame.setVisible(true);
     }
 
     /**
@@ -750,9 +750,11 @@ public class Wheelly {
         // Creates the flows
         createFlows();
 
+        agent.backup();
+
         // Starts the environment interaction
         active = true;
         startButton.setEnabled(false);
-        agent.backup();
+        frame.setVisible(true);
     }
 }

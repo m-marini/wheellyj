@@ -176,10 +176,10 @@ class MarkerLocatorTest {
     @MethodSource("dataCleaningEchoArea")
     void cleanEchoCameraTest(int echoDeg, double distance, int markerDeg) {
         // Given a Marker locator
-        // And a camera event
-        CameraEvent event = createCamera(T3, LABEL_B);
         // And a correlated proxy message
-        WheellyProxyMessage proxy = createProxy(T4, ECHO_DELAY, echoDeg);
+        WheellyProxyMessage proxy = createProxy(T3, ECHO_DELAY, echoDeg);
+        // And a camera event
+        CameraEvent event = createCamera(T4, LABEL_B);
         // And a map with existing marker located in the cleaning area
         Map<String, LabelMarker> map0 = Map.of(
                 LABEL_A, createMarkerAt(echoDeg, distance, markerDeg)
@@ -228,9 +228,9 @@ class MarkerLocatorTest {
     void cleanEchoUnknownTest(int echoDeg, double distance, int markerDeg) {
         // Given a Marker locator
         // And a camera event
-        CameraEvent event = createCamera(T3, UNKNOWN_QR_CODE);
+        CameraEvent event = createCamera(T4, UNKNOWN_QR_CODE);
         // And a correlated proxy message
-        WheellyProxyMessage proxy = createProxy(T4, ECHO_DELAY, echoDeg);
+        WheellyProxyMessage proxy = createProxy(T3, ECHO_DELAY, echoDeg);
         // And a map with existing marker located in the cleaning area
         Map<String, LabelMarker> map0 = Map.of(
                 LABEL_A, createMarkerAt(echoDeg, distance, markerDeg)
@@ -277,10 +277,10 @@ class MarkerLocatorTest {
     @MethodSource("dataCleaningArea")
     void cleanLongEchoTest(int echoDeg, double distance, int markerDeg) {
         // Given a Marker locator
-        // And a camera event
-        CameraEvent event = createCamera(T3, LABEL_A);
         // And a correlated proxy message
-        WheellyProxyMessage proxy = createProxy(T4, LONG_ECHO, echoDeg);
+        WheellyProxyMessage proxy = createProxy(T3, LONG_ECHO, echoDeg);
+        // And a camera event
+        CameraEvent event = createCamera(T4, LABEL_A);
         // And a map with existing marker in cleaning area
         Map<String, LabelMarker> map0 = Map.of(
                 LABEL_A, createMarkerAt(echoDeg, distance, markerDeg)
@@ -327,10 +327,10 @@ class MarkerLocatorTest {
     @MethodSource("dataCleaningArea")
     void cleanNoEchoTest(int echoDeg, double distance, int markerDeg) {
         // Given a Marker locator
-        // And a camera event
-        CameraEvent event = createCamera(T3, LABEL_A);
         // And a correlated proxy message
-        WheellyProxyMessage proxy = createProxy(T4, 0, echoDeg);
+        WheellyProxyMessage proxy = createProxy(T3, 0, echoDeg);
+        // And a camera event
+        CameraEvent event = createCamera(T4, LABEL_A);
         // And a map with existing marker located in the cleaning area
         Map<String, LabelMarker> map0 = Map.of(
                 LABEL_A, createMarkerAt(echoDeg, distance, markerDeg)
@@ -383,9 +383,9 @@ class MarkerLocatorTest {
     void updateExistingMarkerTest(int echoDeg) {
         // Given a Marker locator
         // And a correlated proxy message
-        WheellyProxyMessage proxy = createProxy(T4, ECHO_DELAY, echoDeg);
+        WheellyProxyMessage proxy = createProxy(T3, ECHO_DELAY, echoDeg);
         // And a camera event
-        CameraEvent event = createCamera(T3, LABEL_A);
+        CameraEvent event = createCamera(T4, LABEL_A);
         // And a map with existing marker
         Map<String, LabelMarker> map0 = Map.of(
                 LABEL_A, new LabelMarker(LABEL_A, POINT0, 1, T0, T0)
@@ -419,10 +419,10 @@ class MarkerLocatorTest {
     @MethodSource("dataEchoDeg")
     void updateNewMarkerTest(int echoDeg) {
         // Given a Marker locator
-        // And a camera event
-        CameraEvent event = createCamera(T0, LABEL_A);
         // And a correlated proxy message
-        WheellyProxyMessage proxy = createProxy(T1, ECHO_DELAY, echoDeg);
+        WheellyProxyMessage proxy = createProxy(T0, ECHO_DELAY, echoDeg);
+        // And a camera event
+        CameraEvent event = createCamera(T1, LABEL_A);
 
         // When update by event
         Map<String, LabelMarker> map = locator.update(Map.of(), event, proxy, ROBOT_SPEC);
