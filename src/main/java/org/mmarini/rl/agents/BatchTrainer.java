@@ -41,7 +41,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -61,6 +60,9 @@ import static java.util.Objects.requireNonNull;
  * </ul>
  */
 public class BatchTrainer {
+    public static final String CREATE_ACTION_MASK_ID = "createActionMask";
+    public static final String TRAINING_ID = "training";
+    public static final String CREATE_PI0_ID = "createPi0";
     public static final String S0_KEY = "s0";
     public static final String ACTIONS_KEY = "actions";
     public static final String REWARD_KEY = "reward";
@@ -82,8 +84,7 @@ public class BatchTrainer {
     }
 
     private final PublishProcessor<Map<String, INDArray>> kpisProcessor;
-    private final PublishProcessor<String> infoProcessor;
-    private final PublishProcessor<Long> counterProcessor;
+    private final PublishProcessor<TrainingInfo> infoProcessor;
     private final int numEpochs;
     private boolean stopped;
     private Map<String, BinArrayFile> masksFiles;
@@ -103,7 +104,6 @@ public class BatchTrainer {
         this.numEpochs = numEpochs;
         this.kpisProcessor = PublishProcessor.create();
         this.infoProcessor = PublishProcessor.create();
-        this.counterProcessor = PublishProcessor.create();
     }
 
     /**
@@ -120,9 +120,8 @@ public class BatchTrainer {
      *
      * @param path the actions' path
      */
-    private Map<String, BinArrayFile> createActionMasks(File path) throws Exception {
+    private Map<String, BinArrayFile> createActionMasks(File path) {
         // Converts to actions' mask
-        info("Loading action from \"%s\" ...", path.getCanonicalPath());
 
         // Get the layer io size
         Map<String, Long> layerSizes = agent.network().sizes();
@@ -152,17 +151,19 @@ public class BatchTrainer {
         }
         KeyFileMap.seek(s0Files, 0);
         KeyFileMap.seek(masksFiles, 0);
-        info("Creating pi0 files ...");
+        logger.atInfo().log("Creating pi0 files ...");
+        String maskRefKey = masksFiles.keySet().iterator().next();
+        long totalRecord = masksFiles.get(maskRefKey).size();
+        long n = 0;
+        TrainingInfo info = new TrainingInfo(CREATE_PI0_ID, 0, n, totalRecord);
+        infoProcessor.onNext(info);
         for (; ; ) {
-            Map<String, INDArray> s0 = KeyFileMap.read(s0Files, BATCH_SIZE);
-            if (s0 == null) {
+            Map<String, INDArray> actionsMasks = KeyFileMap.read(masksFiles, BATCH_SIZE);
+            if (actionsMasks == null) {
                 break;
             }
-            String s0Ref = s0Files.keySet().iterator().next();
-            info("Written %d records pi0 files ...", s0Files.get(s0Ref).position());
-
-            long m = s0.get(s0Ref).size(0);
-            Map<String, INDArray> actionsMasks = KeyFileMap.read(masksFiles, m);
+            long m = actionsMasks.get(maskRefKey).size(0);
+            Map<String, INDArray> s0 = KeyFileMap.read(s0Files, m);
             TDNetworkState state = agent.network().forward(s0).state();
             Map<String, INDArray> pi0 = agent.policy(state);
             Map<String, INDArray> actionProb0 = MapStream.of(pi0)
@@ -172,13 +173,15 @@ public class BatchTrainer {
             for (Map.Entry<String, INDArray> entry : actionProb0.entrySet()) {
                 actionProb0Files.get(entry.getKey()).write(entry.getValue());
             }
+            n += m;
+            info = new TrainingInfo(CREATE_PI0_ID, 0, n, totalRecord);
+            infoProcessor.onNext(info);
         }
         try {
             KeyFileMap.close(actionProb0Files);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        info("Created pi0 files.");
         return actionProb0Files;
     }
 
@@ -195,14 +198,17 @@ public class BatchTrainer {
         // Creates the process to transform the action value to action mask
         BinArrayFile maskFile = BinArrayFile.createByKey(TMP_MASKS_PATH, actionName);
         AtomicLong n = new AtomicLong();
-        counterProcessor.onNext(0L);
+        long totalRecords = actionFile.size();
+        infoProcessor.onNext(new TrainingInfo(CREATE_ACTION_MASK_ID, 0, n.get(), totalRecords));
         Batches.map(maskFile, actionFile, agent.numSteps(),
                 action -> {
                     INDArray mask = Nd4j.zeros(action.size(0), numActions);
                     for (long i = 0; i < action.size(0); i++) {
                         mask.putScalar(i, action.getLong(i), 1f);
                     }
-                    counterProcessor.onNext(n.addAndGet(action.size(0)));
+                    long records = n.addAndGet(action.size(0));
+                    TrainingInfo info = new TrainingInfo(CREATE_ACTION_MASK_ID, 0, records, totalRecords);
+                    infoProcessor.onNext(info);
                     return mask;
                 }
         );
@@ -219,30 +225,6 @@ public class BatchTrainer {
     }
 
     /**
-     * Send an info message
-     *
-     * @param fmt  the format
-     * @param args the arguments
-     */
-    private void info(String fmt, Object... args) {
-        String msg = format(fmt, args);
-        logger.atInfo().log(msg);
-        infoProcessor.onNext(msg);
-    }
-
-    /**
-     * Returns the number of records
-     */
-    public long numRecords() {
-        try {
-            return rewardFile != null ? rewardFile.size() : 0;
-        } catch (IOException ex) {
-            logger.atError().setCause(ex).log("Error getting number of records");
-            return 0;
-        }
-    }
-
-    /**
      * Prepare data for training.
      * Load the dataset of s0, s1, reward, terminal, actions
      */
@@ -251,16 +233,9 @@ public class BatchTrainer {
     }
 
     /**
-     * Returns the counter-flow
-     */
-    public Flowable<Long> readCounter() {
-        return counterProcessor;
-    }
-
-    /**
      * Return the info flow
      */
-    public Flowable<String> readInfo() {
+    public Flowable<TrainingInfo> readInfo() {
         return infoProcessor;
     }
 
@@ -284,7 +259,6 @@ public class BatchTrainer {
      */
     public void train() throws Exception {
         agent.backup();
-        info("Training batch size %d", agent.batchSize());
         try {
             Batches.Monitor monitor = new Batches.Monitor();
             long numSteps = rewardFile.size() - 1;
@@ -295,11 +269,13 @@ public class BatchTrainer {
                 rewardFile.seek(0);
 
                 long n = 0;
-                counterProcessor.onNext(n);
+                TrainingInfo info = new TrainingInfo(TRAINING_ID, epoch, n, numSteps);
+                infoProcessor.onNext(info);
                 for (; ; ) {
                     if (stopped) {
                         return;
                     }
+                    // Reads state batch
                     KeyFileMap.seek(s0Files, n);
                     Map<String, INDArray> s0 = KeyFileMap.read(s0Files, agent.batchSize() + 1);
                     if (s0 == null) {
@@ -309,27 +285,34 @@ public class BatchTrainer {
                     if (m <= 1) {
                         break;
                     }
+                    // Reads reward batch
                     INDArray rewards = rewardFile.read(m - 1);
+                    // Reads action mask batch
                     Map<String, INDArray> actionsMasks = KeyFileMap.read(masksFiles, m - 1);
+                    // Reads action prob0 batch
                     Map<String, INDArray> actionProb0 = KeyFileMap.read(actionProb0Files, m - 1);
+
                     if (rewards == null || actionsMasks == null || actionProb0 == null) {
                         break;
                     }
+
                     long finalN = n;
                     monitor.wakeUp(() -> format("Processing %d records", finalN));
+                    // Trains networks mini batch
                     agent = agent.trainMiniBatch(epoch, n, numSteps, s0, actionsMasks, rewards, actionProb0)
                             .eta(agent.eta())
                             .alphas(agent.alphas());
 
                     n += m - 1;
-                    counterProcessor.onNext(n);
+                    info = new TrainingInfo(TRAINING_ID, epoch, n, numSteps);
+                    infoProcessor.onNext(info);
                 }
                 agent.save();
             }
         } finally {
             agent.close();
             kpisProcessor.onComplete();
-            counterProcessor.onComplete();
+            infoProcessor.onComplete();
         }
     }
 
@@ -352,12 +335,33 @@ public class BatchTrainer {
         if (actionFiles.isEmpty()) {
             throw new IllegalArgumentException("Missing actions datasets");
         }
-        List<BinArrayFile> files = Stream.of(
-                        List.of(rewardFile),
-                        actionFiles.values(),
-                        s0Files.values())
-                .flatMap(Collection::stream)
+
+        KeyFileMap.validateSizes(s0Files.values());
+
+        List<BinArrayFile> files = Stream.concat(
+                        actionFiles.values().stream(),
+                        Stream.of(rewardFile))
                 .toList();
         KeyFileMap.validateSizes(files);
+
+        BinArrayFile refFile = s0Files.values().iterator().next();
+        if (rewardFile.size() != refFile.size() - 1) {
+            throw new IllegalArgumentException(format("Wrong files size %s (%d) referred to %s (%d - 1)",
+                    rewardFile,
+                    rewardFile.size(),
+                    refFile,
+                    refFile.size()));
+        }
+    }
+
+    /**
+     * Stores the training info
+     *
+     * @param text             the descriptive process phase
+     * @param epoch            the epoch number
+     * @param processedRecords the number of processed records
+     * @param totalRecords     the total number of records to be processed
+     */
+    public record TrainingInfo(String text, long epoch, long processedRecords, long totalRecords) {
     }
 }

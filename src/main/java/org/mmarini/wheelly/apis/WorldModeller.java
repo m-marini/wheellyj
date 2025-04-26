@@ -158,6 +158,11 @@ public class WorldModeller implements WorldModellerApi {
     }
 
     @Override
+    public RadarModeller radarModeller() {
+        return radarModeller;
+    }
+
+    @Override
     public Flowable<Tuple2<WorldModel, RobotCommands>> readInference() {
         return inferenceProcessor;
     }

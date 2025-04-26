@@ -26,35 +26,25 @@
  *
  */
 
-package org.mmarini.wheelly.apis;
+package org.mmarini.wheelly.batch;
 
 import io.reactivex.rxjava3.core.Flowable;
-import org.mmarini.Tuple2;
+import org.mmarini.rl.agents.BinArrayFile;
+
+import java.io.IOException;
+import java.util.Map;
 
 /**
- * Models the world by interpreting the event flow
+ * Generates the signal files
  */
-public interface WorldModellerApi extends WorldModellerConnector {
+public interface SignalGeneratorApi {
+    /**
+     * Returns the signal files
+     */
+    Map<String, BinArrayFile> generate() throws IOException;
 
     /**
-     * Connects the controller
-     *
-     * @param controller the controller
+     * Returns the process info observable
      */
-    WorldModeller connectController(RobotControllerConnector controller);
-
-    /**
-     * Returns the radar modeller
-     */
-    RadarModeller radarModeller();
-
-    /**
-     * Returns the flow of inference events
-     */
-    Flowable<Tuple2<WorldModel, RobotCommands>> readInference();
-
-    /**
-     * Returns the world model specification
-     */
-    WorldModelSpec worldModelSpec();
+    Flowable<SignalGenerator.GeneratorInfo> readInfo();
 }

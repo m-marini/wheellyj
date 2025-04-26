@@ -303,7 +303,7 @@ public interface KeyFileMap {
                     })
                     .toList();
             if (!wrongSizes.isEmpty()) {
-                throw new RuntimeException(format("Wrong files size %s referred to %s (%d)",
+                throw new IllegalArgumentException(format("Wrong files size %s referred to %s (%d)",
                         String.join(", ", wrongSizes),
                         refFile.file(), size));
             }

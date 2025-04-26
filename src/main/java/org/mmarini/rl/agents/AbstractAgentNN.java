@@ -164,7 +164,7 @@ public abstract class AbstractAgentNN implements Agent {
      *
      * @param state the state signals
      */
-    static Map<String, INDArray> getInput(Map<String, Signal> state) {
+    public static Map<String, INDArray> getInput(Map<String, Signal> state) {
         return MapStream.of(state)
                 .mapValues(v -> {
                     INDArray value = Nd4j.toFlattened(v.toINDArray());
@@ -428,7 +428,7 @@ public abstract class AbstractAgentNN implements Agent {
      *
      * @param state the base signals
      */
-    Map<String, Signal> processSignals(Map<String, Signal> state) {
+    public Map<String, Signal> processSignals(Map<String, Signal> state) {
         return processor != null ? processor.apply(state) : state;
     }
 

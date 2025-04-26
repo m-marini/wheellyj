@@ -237,13 +237,14 @@ public class BinArrayFile implements ArrayWriter, ArrayReader {
     }
 
     @Override
-    public void seek(long record) throws IOException {
+    public BinArrayFile seek(long record) throws IOException {
         open();
         if (shape == null) {
             throw new IOException(format("Missing shape in file %s", file));
         }
         long pos = record * recordSize * 4 + dataOffset;
         dataFile.seek(pos);
+        return this;
     }
 
     @Override
