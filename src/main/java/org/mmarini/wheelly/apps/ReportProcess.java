@@ -110,9 +110,9 @@ public interface ReportProcess {
             }
 
             @Override
-            public void seek(long record) throws IOException {
+            public ArrayReader seek(long record) throws IOException {
                 KeyFileMap.seek(files, record);
-
+                return this;
             }
 
             @Override

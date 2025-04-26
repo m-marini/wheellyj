@@ -48,8 +48,8 @@ public interface ArrayReader extends AutoCloseable {
             }
 
             @Override
-            public void seek(long record) throws IOException {
-                ArrayReader.this.seek(record);
+            public ArrayReader seek(long record) throws IOException {
+                return ArrayReader.this.seek(record);
             }
 
             @Override
@@ -85,7 +85,7 @@ public interface ArrayReader extends AutoCloseable {
      * @param record record number
      * @throws IOException in case of error
      */
-    void seek(long record) throws IOException;
+    ArrayReader seek(long record) throws IOException;
 
     /**
      * Returns the shape of data

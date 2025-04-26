@@ -110,7 +110,7 @@ public class PPOAgent extends AbstractAgentNN {
      * @param root the spec document
      * @param env  the environment
      */
-    static PPOAgent create(JsonNode root, WithSignalsSpec env) {
+    public static PPOAgent create(JsonNode root, WithSignalsSpec env) {
         Locator locator = Locator.root();
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         File path = new File(locator.path("modelPath").getNode(root).asText());

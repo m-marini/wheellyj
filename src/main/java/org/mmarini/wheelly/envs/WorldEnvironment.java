@@ -133,6 +133,34 @@ public class WorldEnvironment implements EnvironmentApi {
         return this.actionsSpec;
     }
 
+    /**
+     * Returns the actions from commands
+     *
+     * @param commands       the commands
+     * @param robotDirection the robot direction
+     */
+    public Map<String, Signal> actions(RobotCommands commands, Complex robotDirection) {
+        Complex sensDir = commands.scanDirection();
+        int sensorSignal = round(linear(sensDir.toIntDeg(),
+                -MAX_SENSOR_DIR, MAX_SENSOR_DIR,
+                0, numSensorDirections - 1));
+        int moveSignal = (numSpeeds * (numDirections + 1)) / 2;
+        if (commands.move()) {
+            int speedSignal = round(linear(commands.speed(),
+                    -MAX_PPS, MAX_PPS,
+                    0, numSpeeds - 1));
+            Complex direction = commands.moveDirection().sub(robotDirection);
+            int dirSignal = round(linear(direction.toIntDeg(),
+                    -MAX_DIRECTION_ACTION, MAX_DIRECTION_ACTION,
+                    0, numDirections));
+            moveSignal = dirSignal * numSpeeds + speedSignal;
+        }
+        return Map.of(
+                "sensorAction", IntSignal.create(sensorSignal),
+                "move", IntSignal.create(moveSignal)
+        );
+    }
+
     @Override
     public RobotCommands command(State state, Map<String, Signal> actions) {
         if (state instanceof WorldState worldState) {
@@ -196,10 +224,10 @@ public class WorldEnvironment implements EnvironmentApi {
      * Returns the halt actions
      */
     public Map<String, Signal> haltActions() {
-        int haltAction = (numSpeeds * (numDirections + 1)) / NUM_MARKER_STATE_VALUES;
+        int haltAction = (numSpeeds * (numDirections + 1)) / 2;
         return Map.of(
                 "move", IntSignal.create(haltAction),
-                "sensorAction", IntSignal.create(numSensorDirections / NUM_MARKER_STATE_VALUES)
+                "sensorAction", IntSignal.create(numSensorDirections / 2)
         );
     }
 
@@ -211,7 +239,7 @@ public class WorldEnvironment implements EnvironmentApi {
     boolean isHalt(Map<String, Signal> actions) {
         int moveAction = actions.get("move").getInt(0);
         // (numSpeeds / 2 + (numDirections * numSpeeds) / 2);
-        int haltAction = (numSpeeds * (numDirections + 1)) / NUM_MARKER_STATE_VALUES;
+        int haltAction = (numSpeeds * (numDirections + 1)) / 2;
         return moveAction == haltAction;
     }
 

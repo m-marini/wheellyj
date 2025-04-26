@@ -97,12 +97,16 @@ public class Wheelly {
                 .defaultHelp(true)
                 .version(Messages.getString("Wheelly.title"))
                 .description("Run a session of interaction between robot and environment.");
-        parser.addArgument("-v", "--version")
-                .action(Arguments.version())
-                .help("show current version");
+        parser.addArgument("-a", "--alternate")
+                .action(Arguments.storeTrue())
+                .help("specify alternate act/training");
+        parser.addArgument("-b", "--batch")
+                .help("specify batch output path");
         parser.addArgument("-c", "--config")
                 .setDefault("wheelly.yml")
-                .help("specify yaml configuration file");
+                .help("specify yaml configuration path");
+        parser.addArgument("-d", "--dump")
+                .help("specify dump signal path");
         parser.addArgument("-k", "--kpis")
                 .setDefault("")
                 .help("specify kpis path");
@@ -112,18 +116,16 @@ public class Wheelly {
         parser.addArgument("-s", "--silent")
                 .action(Arguments.storeTrue())
                 .help("specify silent closing (no window messages)");
-        parser.addArgument("-a", "--alternate")
-                .action(Arguments.storeTrue())
-                .help("specify alternate act/training");
-        parser.addArgument("-w", "--windows")
-                .action(Arguments.storeTrue())
-                .help("use multiple windows");
         parser.addArgument("-t", "--localTime")
                 .setDefault(43200L)
                 .type(Long.class)
                 .help("specify number of seconds of session duration");
-        parser.addArgument("-d", "--dump")
-                .help("specify dump signal file");
+        parser.addArgument("-v", "--version")
+                .action(Arguments.version())
+                .help("show current version");
+        parser.addArgument("-w", "--windows")
+                .action(Arguments.storeTrue())
+                .help("use multiple windows");
         return parser;
     }
 
@@ -175,6 +177,7 @@ public class Wheelly {
     private RobotApi robot;
     private Agent agent;
     private JFrame frame;
+    private InferenceFile modelDumper;
 
     /**
      * Creates the server reinforcement learning engine server
@@ -424,6 +427,15 @@ public class Wheelly {
         PolarMap polarMap = worldModel.polarMap();
         GridMap map = worldModel.gridMap();
 
+        // Dumps world model
+        if (modelDumper != null) {
+            try {
+                modelDumper.write(worldModel, inferenceResult._2);
+            } catch (IOException e) {
+                logger.atError().setCause(e).log("Error dumping model");
+            }
+        }
+
         long robotClock = robotStatus.simulationTime();
         envPanel.setRobotStatus(robotStatus);
         sensorMonitor.onStatus(robotStatus);
@@ -437,7 +449,7 @@ public class Wheelly {
         Point2D center = map.center();
 
         /*
-         * Transformd the marker locations to grid map coordinates
+         * Transforms the marker locations to grid map coordinates
          */
         AffineTransform tr = AffineTransform.getRotateInstance(map.direction().toRad());
         tr.translate(-center.getX(), -center.getY());
@@ -526,13 +538,20 @@ public class Wheelly {
         try {
             trainer.get().agent().close();
         } catch (IOException e) {
-            logger.atError().setCause(e).log();
+            logger.atError().setCause(e).log("Error closing agent");
         }
         if (dumper != null) {
             try {
                 dumper.close();
             } catch (IOException e) {
-                logger.atError().setCause(e).log();
+                logger.atError().setCause(e).log("Error closing dumper");
+            }
+        }
+        if (modelDumper != null) {
+            try {
+                modelDumper.close();
+            } catch (Exception e) {
+                logger.atError().setCause(e).log("Error closing model dumper");
             }
         }
         // Wait for completion
@@ -735,6 +754,19 @@ public class Wheelly {
                 this.dumper = ComDumper.fromFile(file);
             } catch (IOException e) {
                 logger.atError().setCause(e).log("Error dumping to {}", file);
+            }
+        });
+
+        // Creates the model dumper
+        Optional.ofNullable(this.args.getString("batch")).ifPresent(file -> {
+            try {
+                this.modelDumper = InferenceFile.fromFile(
+                                worldModeller.worldModelSpec(),
+                                worldModeller.radarModeller().topology(),
+                                new File(this.args.getString("dataset")))
+                        .append();
+            } catch (IOException e) {
+                logger.atError().setCause(e).log("Error dumping model to {}", file);
             }
         });
 

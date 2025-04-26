@@ -39,11 +39,15 @@ import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.BatchTrainer;
 import org.mmarini.rl.agents.KpiBinWriter;
 import org.mmarini.rl.envs.WithSignalsSpec;
+import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.swing.GridLayoutHelper;
+import org.mmarini.wheelly.apis.InferenceFile;
 import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotControllerApi;
 import org.mmarini.wheelly.apis.WorldModeller;
+import org.mmarini.wheelly.batch.SignalGenerator;
 import org.mmarini.wheelly.envs.EnvironmentApi;
+import org.mmarini.wheelly.envs.WorldEnvironment;
 import org.mmarini.wheelly.swing.KpisPanel;
 import org.mmarini.wheelly.swing.LearnPanel;
 import org.mmarini.wheelly.swing.Messages;
@@ -60,7 +64,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -76,7 +82,8 @@ public class BatchTraining {
     private static final Logger logger = LoggerFactory.getLogger(BatchTraining.class);
 
     static {
-        Nd4j.zeros(1);
+        try (INDArray ignored = Nd4j.zeros(1)) {
+        }
     }
 
     private static ArgumentParser createParser() {
@@ -84,27 +91,30 @@ public class BatchTraining {
                 .defaultHelp(true)
                 .version(Messages.getString("Wheelly.title"))
                 .description("Run a session of batch training.");
-        parser.addArgument("-v", "--version")
-                .action(Arguments.version())
-                .help("show current version");
-        parser.addArgument("-k", "--kpis")
-                .setDefault("")
-                .help("specify kpis path");
         parser.addArgument("-c", "--config")
                 .setDefault("batch.yml")
                 .help("specify yaml configuration file");
+        parser.addArgument("-k", "--kpis")
+                .setDefault("")
+                .help("specify kpis path");
         parser.addArgument("-l", "--labels")
                 .setDefault("default")
                 .help("specify kpi label regex comma separated (all for all kpi, batch for batch training kpis)");
         parser.addArgument("-n", "--no-backup")
                 .action(Arguments.storeTrue())
                 .help("no backup of network file");
+        parser.addArgument("-t", "--temp")
+                .setDefault("tmp")
+                .help("specify the working path file");
+        parser.addArgument("-v", "--version")
+                .action(Arguments.version())
+                .help("show current version");
         parser.addArgument("-w", "--windows")
                 .action(Arguments.storeTrue())
                 .help("use multiple windows");
         parser.addArgument("dataset")
                 .required(true)
-                .help("specify dataset path");
+                .help("specify dataset");
         return parser;
     }
 
@@ -125,16 +135,17 @@ public class BatchTraining {
     }
 
     protected final Namespace args;
-    private final CompletableSubject completed;
+    private final JProgressBar progressBar;
     private final JTextField infoBar;
     private final KpisPanel kpisPanel;
-    private final JProgressBar recordBar;
+    private final CompletableSubject kpiCompleted;
     private final LearnPanel learnPanel;
     private BatchTrainer trainer;
     private KpiBinWriter kpiWriter;
     private List<JFrame> allFrames;
-    private Agent agent;
+    private AbstractAgentNN agent;
     private int numEpochs;
+    private SignalGenerator signalsGenerator;
 
     /**
      * Creates the application
@@ -143,12 +154,12 @@ public class BatchTraining {
      */
     public BatchTraining(Namespace args) {
         this.args = requireNonNull(args);
-        this.completed = CompletableSubject.create();
+        this.kpiCompleted = CompletableSubject.create();
         this.learnPanel = new LearnPanel();
         this.infoBar = new JTextField();
         this.kpisPanel = new KpisPanel();
-        this.recordBar = new JProgressBar(JProgressBar.HORIZONTAL);
-        createContext();
+        this.progressBar = new JProgressBar(JProgressBar.HORIZONTAL);
+        initUI();
     }
 
     /**
@@ -160,8 +171,155 @@ public class BatchTraining {
         kpisPanel.addActionKpis(this.agent);
         content.add(kpisPanel, BorderLayout.CENTER);
         content.add(infoBar, BorderLayout.NORTH);
-        content.add(recordBar, BorderLayout.SOUTH);
+        content.add(progressBar, BorderLayout.SOUTH);
         return content;
+    }
+
+    /**
+     * Creates the application context
+     *
+     * @throws IOException in case of error
+     */
+    private void createContext() throws IOException {
+        // Load configuration
+        JsonNode config = loadConfiguration();
+
+        // Creates robot
+        RobotApi robot = AppYaml.robotFromJson(config);
+
+        // Creates controller
+        RobotControllerApi controller = AppYaml.controllerFromJson(config);
+        controller.connectRobot(robot);
+
+        // Creates modeller
+        WorldModeller modeller = AppYaml.modellerFromJson(config);
+        modeller.setRobotSpec(robot.robotSpec());
+        modeller.connectController(controller);
+
+        // Creates environment
+        EnvironmentApi env = AppYaml.envFromJson(config);
+        WorldEnvironment environment;
+        if (env instanceof WorldEnvironment we) {
+            environment = we;
+        } else {
+            throw new IllegalArgumentException(format(
+                    "Environment must be %s (%s)",
+                    WorldEnvironment.class.getSimpleName(),
+                    env.getClass().getSimpleName()
+            ));
+        }
+        environment.connect(modeller);
+
+        // Creates agent
+        Function<WithSignalsSpec, Agent> agentBuilder = Agent.fromFile(
+                new File(Locator.locate("agent").getNode(config).asText()));
+        Agent ag = agentBuilder.apply(environment);
+        if (ag instanceof AbstractAgentNN aa) {
+            this.agent = aa;
+            this.agent = aa.setPostTrainKpis(true);
+        } else {
+            throw new IllegalArgumentException(format(
+                    "Environment must be %s (%s)",
+                    AbstractAgentNN.class.getSimpleName(),
+                    ag.getClass().getSimpleName()
+            ));
+        }
+        environment.connect(agent);
+
+        // Creates random number generator
+        Random random = Nd4j.getRandomFactory().getNewRandomInstance();
+        long seed = Locator.locate("seed").getNode(config).asLong(0);
+        if (seed > 0) {
+            random.setSeed(seed);
+        }
+
+        // Creates the inference reader
+        InferenceFile inferenceReader = InferenceFile.fromFile(
+                modeller.worldModelSpec(),
+                modeller.radarModeller().topology(),
+                new File(this.args.getString("dataset")));
+
+        // Creates the signal generator
+        TDNetwork net = agent.network();
+        String[] s0Labels = net.sourceLayers().toArray(String[]::new);
+        Predicate<String> criterion = Predicate.not("critic"::equals);
+        String[] actionLabels = net.sinkLayers().stream()
+                .filter(criterion)
+                .toArray(String[]::new);
+        this.signalsGenerator = new SignalGenerator(inferenceReader,
+                modeller, environment, agent,
+                new File(args.getString("temp")),
+                s0Labels,
+                actionLabels);
+
+        // Creates the batch trainer
+        numEpochs = Locator.locate("numEpochs").getNode(config).asInt(agent.numEpochs());
+        this.trainer = BatchTrainer.create(agent, numEpochs);
+
+        // Creates the kpi writer
+        String kpiPath = this.args.getString("kpis");
+        if (!kpiPath.isEmpty()) {
+            this.kpiWriter = KpiBinWriter.createFromLabels(
+                    new File(kpiPath),
+                    this.args.getString("label"));
+        }
+    }
+
+    /**
+     * Creates the event flow
+     */
+    private void createFlow() {
+        signalsGenerator.readInfo()
+                .observeOn(Schedulers.io())
+                .sample(1000L, TimeUnit.MILLISECONDS)
+                .doOnNext(this::onGeneratorInfo)
+                .subscribe();
+        trainer.readInfo()
+                .observeOn(Schedulers.io())
+                .sample(1000L, TimeUnit.MILLISECONDS)
+                .doOnNext(this::onTrainingInfo)
+                .subscribe();
+        trainer.readKpis()
+                .observeOn(Schedulers.io())
+                .doOnNext(this::onKpis)
+                .subscribe();
+        learnPanel.readActionAlphas()
+                .doOnNext(rates -> trainer.alphas(rates))
+                .subscribe();
+        learnPanel.readEtas()
+                .doOnNext(eta -> trainer.eta(eta))
+                .subscribe();
+
+        // reads kpis if activated
+        if (kpiWriter != null) {
+            this.trainer.readKpis()
+                    .observeOn(Schedulers.io())
+                    .onBackpressureBuffer(KPIS_CAPACITY, true)
+                    .doOnNext(kpiWriter::write)
+                    .doOnError(ex -> {
+                        logger.atError().setCause(ex).log("Error on kpis");
+                        info("Error on kpis %s", ex.getMessage());
+                    })
+                    .doOnComplete(() -> {
+                        kpiWriter.close();
+                        kpiCompleted.onComplete();
+                    })
+                    .subscribe();
+        } else {
+            kpiCompleted.onComplete();
+        }
+    }
+
+    /**
+     * Show info
+     *
+     * @param fmt  the format text
+     * @param args the arguments
+     */
+    private void info(String fmt, Object... args) {
+        String msg = format(fmt, args);
+        infoBar.setText(msg);
+        logger.atInfo().log(msg);
     }
 
     /**
@@ -202,96 +360,14 @@ public class BatchTraining {
     }
 
     /**
-     * Handles the kpis
-     *
-     * @param kpis the kpis
-     */
-    private void handleKpis(Map<String, INDArray> kpis) {
-        kpisPanel.addKpis(kpis);
-        INDArray counters = kpis.get("counters");
-        if (counters != null) {
-            long epoch = counters.getLong(0, 0);
-            long step = counters.getLong(0, 2);
-            long numSteps = counters.getLong(0, 3);
-            info("Epoch/step %d/%d of %d/%d",
-                    epoch,
-                    step,
-                    numEpochs,
-                    numSteps
-            );
-        }
-    }
-
-    /**
-     * Handle shutdown
-     */
-    private void handleShutdown() {
-        info("Shutting down ...");
-        trainer.stop();
-        completed.blockingAwait();
-        info("Shutting down completed");
-    }
-
-    /**
-     * Show info
-     *
-     * @param fmt  the format text
-     * @param args the arguments
-     */
-    private void info(String fmt, Object... args) {
-        String msg = format(fmt, args);
-        infoBar.setText(msg);
-        logger.atInfo().log(msg);
-    }
-
-    /**
      * Initializes the application
      */
-    private void createContext() {
-        recordBar.setValue(0);
-        recordBar.setStringPainted(true);
+    private void initUI() {
+        progressBar.setValue(0);
+        progressBar.setStringPainted(true);
         infoBar.setHorizontalAlignment(JTextField.CENTER);
         infoBar.setFont(infoBar.getFont().deriveFont(Font.BOLD));
         infoBar.setEditable(false);
-    }
-
-    /**
-     * Creates the application context
-     *
-     * @param config the configuration
-     * @throws IOException in case of error
-     */
-    private void createContext(JsonNode config) throws IOException {
-        RobotApi robot = AppYaml.robotFromJson(config);
-
-        RobotControllerApi controller = AppYaml.controllerFromJson(config);
-        controller.connectRobot(robot);
-
-        WorldModeller modeller = AppYaml.modellerFromJson(config);
-        modeller.setRobotSpec(robot.robotSpec());
-        modeller.connectController(controller);
-
-        EnvironmentApi environment = AppYaml.envFromJson(config);
-
-        environment.connect(modeller);
-
-        Function<WithSignalsSpec, Agent> agentBuilder = Agent.fromFile(
-                new File(Locator.locate("agent").getNode(config).asText()));
-
-        this.agent = agentBuilder.apply(environment);
-        environment.connect(agent);
-
-        // Creates random number generator
-        Random random = Nd4j.getRandomFactory().getNewRandomInstance();
-        long seed = Locator.locate("seed").getNode(config).asLong(0);
-        if (seed > 0) {
-            random.setSeed(seed);
-        }
-
-        controller.connectRobot(robot);
-        modeller.connectController(controller);
-        environment.connect(modeller);
-        environment.connect(agent);
     }
 
     /**
@@ -305,61 +381,91 @@ public class BatchTraining {
     }
 
     /**
+     * Process the signal generator info
+     *
+     * @param info the info
+     */
+    private void onGeneratorInfo(SignalGenerator.GeneratorInfo info) {
+        int percentage = (int) (info.processedBytes() * 100 / info.totalBytes());
+        info(Messages.getString("BatchTraining.generatorInfo.text"),
+                info.numProcessedRecords(), info.processedBytes(), info.totalBytes(), percentage);
+        progressBar.setValue(percentage);
+    }
+
+    /**
+     * Handles the kpis
+     *
+     * @param kpis the kpis
+     */
+    private void onKpis(Map<String, INDArray> kpis) {
+        kpisPanel.addKpis(kpis);
+    }
+
+    /**
+     * Handle shutdown
+     */
+    private void onShutdown() {
+        info("Shutting down ...");
+        signalsGenerator.stop();
+        trainer.stop();
+        if (kpiCompleted != null) {
+            kpiCompleted.blockingAwait();
+        }
+        info("Shutting down completed");
+    }
+
+    /**
+     * Handles training info
+     *
+     * @param info the info
+     */
+    private void onTrainingInfo(BatchTrainer.TrainingInfo info) {
+        int percentage = (int) (info.processedRecords() * 100 / info.totalRecords());
+        info(Messages.getString("BatchTraining.trainingInfo." + info.text() + ".text"),
+                info.epoch(),
+                info.processedRecords(), info.totalRecords(),
+                percentage,
+                numEpochs);
+        progressBar.setValue(percentage);
+    }
+
+    /**
      * Starts the training
      */
     protected void run() throws Exception {
-        // Load configuration
-        JsonNode config = loadConfiguration();
-        createContext(config);
+        // Create the application context
+        createContext();
 
-        // Loads agent
-        if (agent instanceof AbstractAgentNN aa) {
-            this.agent = aa.setPostTrainKpis(true);
-        }
-
-        // Create the batch trainer
-        numEpochs = Locator.locate("numEpochs").getNode(config).asInt(agent.numEpochs());
-        this.trainer = BatchTrainer.create(agent, numEpochs);
         learnPanel.setActionAlphas(agent.alphas());
         learnPanel.setEta(agent.eta());
-        trainer.readInfo()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::info)
-                .subscribe();
-        trainer.readKpis()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleKpis)
-                .subscribe();
-        trainer.readCounter()
-                .observeOn(Schedulers.io())
-                .map(Number::intValue)
-                .doOnNext(recordBar::setValue)
-                .subscribe();
-        learnPanel.readActionAlphas()
-                .doOnNext(rates -> trainer.alphas(rates))
-                .subscribe();
-        learnPanel.readEtas()
-                .doOnNext(eta -> trainer.eta(eta))
-                .subscribe();
 
-        Thread hook = new Thread(this::handleShutdown);
+        // Creates the event flow
+        createFlow();
+
+        Thread hook = new Thread(this::onShutdown);
         Runtime.getRuntime().addShutdownHook(hook);
 
+        // Create the windows
         if (args.getBoolean("windows")) {
             createFrames();
         } else {
             createSingleFrames();
         }
-
-        Completable.fromAction(this::runBatch)
-                .subscribeOn(Schedulers.computation())
-                .doOnComplete(() -> allFrames.forEach(Window::dispose))
-                .subscribe();
-
         allFrames.forEach(f -> {
             f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             f.setVisible(true);
         });
+
+        // Creates and start the batch
+        Completable batchCompleted = Completable.fromAction(this::runBatch)
+                .subscribeOn(Schedulers.computation())
+                .doOnError(ex -> {
+                    logger.atError().setCause(ex).log("Error running batch");
+                    info("Error running batch %s", ex.getMessage());
+                })
+                .doOnComplete(() ->
+                        allFrames.forEach(Window::dispose));
+        batchCompleted.subscribe();
     }
 
     /**
@@ -368,36 +474,17 @@ public class BatchTraining {
      * @throws Exception in case of error
      */
     private void runBatch() throws Exception {
+        // Creates input datasets
+        signalsGenerator.generate();
+
         // Prepares for training
+        progressBar.setValue(0);
         info("Preparing for training ...");
-        trainer.validate(new File(this.args.getString("dataset")));
-        recordBar.setMaximum((int) trainer.numRecords());
+        trainer.validate(new File(this.args.getString("temp")));
         trainer.prepare();
 
-        // reads kpis if activated
-        String kpiPath = this.args.getString("kpis");
-        this.kpiWriter = kpiPath.isEmpty()
-                ? null
-                : KpiBinWriter.createFromLabels(
-                new File(kpiPath),
-                this.args.getString("label"));
-
-        if (kpiWriter != null) {
-            this.trainer.readKpis()
-                    .observeOn(Schedulers.io())
-                    .onBackpressureBuffer(KPIS_CAPACITY, true)
-                    .doOnNext(kpiWriter::write)
-                    .doOnComplete(() -> {
-                        kpiWriter.close();
-                        completed.onComplete();
-                    })
-                    .doOnError(ex -> logger.atError().setCause(ex).log("Error on kpis"))
-                    .subscribe();
-
-        } else {
-            completed.onComplete();
-        }
         // Runs the training session
+        progressBar.setValue(0);
         info("Training ...");
         trainer.train();
         info("Training completed.");
