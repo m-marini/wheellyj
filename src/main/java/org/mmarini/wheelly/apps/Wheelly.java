@@ -100,13 +100,13 @@ public class Wheelly {
         parser.addArgument("-a", "--alternate")
                 .action(Arguments.storeTrue())
                 .help("specify alternate act/training");
-        parser.addArgument("-b", "--batch")
-                .help("specify batch output path");
         parser.addArgument("-c", "--config")
                 .setDefault("wheelly.yml")
                 .help("specify yaml configuration path");
         parser.addArgument("-d", "--dump")
                 .help("specify dump signal path");
+        parser.addArgument("-i", "--inference")
+                .help("specify inference output path");
         parser.addArgument("-k", "--kpis")
                 .setDefault("")
                 .help("specify kpis path");
@@ -248,7 +248,35 @@ public class Wheelly {
         Function<WithSignalsSpec, Agent> agentBuilder = Agent.fromFile(
                 new File(Locator.locate("agent").getNode(config).asText()));
         this.agent = agentBuilder.apply(environment);
-    }
+        // Create the kpis writer
+        String kpis = this.args.getString("kpis");
+        if (!kpis.isEmpty()) {
+            // Create kpis frame
+            this.kpiWriter = KpiBinWriter.createFromLabels(new File(kpis), this.args.getString("labels"));
+        }
+
+        // Creates the com line dumper
+        Optional.ofNullable(this.args.getString("dump")).ifPresent(file -> {
+            try {
+                this.dumper = ComDumper.fromFile(file);
+            } catch (IOException e) {
+                logger.atError().setCause(e).log("Error dumping to {}", file);
+            }
+        });
+
+        // Creates the model dumper
+        Optional.ofNullable(this.args.getString("inference")).ifPresent(file -> {
+            try {
+                this.modelDumper = InferenceFile.fromFile(
+                                worldModeller.worldModelSpec(),
+                                worldModeller.radarModeller().topology(),
+                                new File(this.args.getString("inference")))
+                        .append();
+            } catch (IOException e) {
+                logger.atError().setCause(e).log("Error dumping inference to {}", file);
+            }
+        });
+   }
 
     /**
      * Creates the flows of events
@@ -285,6 +313,20 @@ public class Wheelly {
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
                 .doOnNext(this::handleWindowClosing)
                 .subscribe();
+
+        if (kpiWriter!=null) {
+            agent.readKpis().observeOn(Schedulers.io(), true)
+                    .doOnNext(this::handleKpis)
+                    .doOnError(ex -> logger.atError().setCause(ex).log("Error writing kpis"))
+                    .doOnComplete(() -> {
+                        logger.atInfo().log("Closing kpis writer ...");
+                        kpiWriter.close();
+                        logger.atInfo().log("Kpis writer closed");
+                        completion.onComplete();
+                    }).subscribe();
+        } else {
+            completion.onComplete();
+        }
     }
 
     /**
@@ -730,46 +772,6 @@ public class Wheelly {
         logger.atInfo().log("Session are running for {} sec...", sessionDuration);
         sessionDuration *= 1000;
 
-        // Create the kpis writer
-        String kpis = this.args.getString("kpis");
-        if (!kpis.isEmpty()) {
-            // Create kpis frame
-            this.kpiWriter = KpiBinWriter.createFromLabels(new File(kpis), this.args.getString("labels"));
-            agent.readKpis().observeOn(Schedulers.io(), true)
-                    .doOnNext(this::handleKpis)
-                    .doOnError(ex -> logger.atError().setCause(ex).log("Error writing kpis"))
-                    .doOnComplete(() -> {
-                        logger.atInfo().log("Closing kpis writer ...");
-                        kpiWriter.close();
-                        logger.atInfo().log("Kpis writer closed");
-                        completion.onComplete();
-                    }).subscribe();
-        } else {
-            completion.onComplete();
-        }
-
-        // Creates the com line dumper
-        Optional.ofNullable(this.args.getString("dump")).ifPresent(file -> {
-            try {
-                this.dumper = ComDumper.fromFile(file);
-            } catch (IOException e) {
-                logger.atError().setCause(e).log("Error dumping to {}", file);
-            }
-        });
-
-        // Creates the model dumper
-        Optional.ofNullable(this.args.getString("batch")).ifPresent(file -> {
-            try {
-                this.modelDumper = InferenceFile.fromFile(
-                                worldModeller.worldModelSpec(),
-                                worldModeller.radarModeller().topology(),
-                                new File(this.args.getString("dataset")))
-                        .append();
-            } catch (IOException e) {
-                logger.atError().setCause(e).log("Error dumping model to {}", file);
-            }
-        });
-
         // Create panels
         createPanels();
 
@@ -779,6 +781,7 @@ public class Wheelly {
         } else {
             createSingleFrame();
         }
+
         // Creates the flows
         createFlows();
 

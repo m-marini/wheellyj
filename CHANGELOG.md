@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 
 - Issue [#536](https://github.com/m-marini/wheellyj/issues/536): Overflow on command line arguments
+- Issue [#538](https://github.com/m-marini/wheellyj/issues/538): Wrong inference command line argument
 
 ## [0.22.0] 2025-03-07
 

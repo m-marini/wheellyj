@@ -1,6 +1,6 @@
 SET MODEL=.\model
-SET KPIS=.\batch
-set CSVS=.\csv
 SET REPORT=.\report
-SET DATA=.\data
-SET INFERENCE=D:\wheelly-data\inference.bin
+SET KPIS=D:\wheelly-data\batch
+set CSVS=D:\wheelly-data\csv
+SET DATA=D:\wheelly-data\data
+SET INFERENCE=D:\wheelly-data\inference\inference.bin
