@@ -47,6 +47,7 @@ import org.mmarini.wheelly.apis.RobotControllerApi;
 import org.mmarini.wheelly.apis.WorldModeller;
 import org.mmarini.wheelly.batch.SignalGenerator;
 import org.mmarini.wheelly.envs.EnvironmentApi;
+import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.wheelly.envs.WorldEnvironment;
 import org.mmarini.wheelly.swing.KpisPanel;
 import org.mmarini.wheelly.swing.LearnPanel;
@@ -77,7 +78,7 @@ import static org.mmarini.yaml.Utils.fromFile;
  * Run the batch training of agent from kpis files
  */
 public class BatchTraining {
-    private static final String BATCH_SCHEMA_YML = "https://mmarini.org/wheelly/batch-schema-0.3";
+    private static final String BATCH_SCHEMA_YML = "https://mmarini.org/wheelly/batch-schema-0.4";
     private static final int KPIS_CAPACITY = 1000;
     private static final Logger logger = LoggerFactory.getLogger(BatchTraining.class);
 
@@ -209,6 +210,9 @@ public class BatchTraining {
             ));
         }
         environment.connect(modeller);
+        // Load reward function
+        RewardFunction rewardFunc = AppYaml.rewardFromJson(config);
+        environment.setRewardFunc(rewardFunc);
 
         // Creates agent
         Function<WithSignalsSpec, Agent> agentBuilder = Agent.fromFile(

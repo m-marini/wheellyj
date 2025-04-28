@@ -1,11 +1,11 @@
 call bin\setConfig.cmd
 
-rmdir /S /Q  %DATA%
+rmdir /S /Q  %KPIS%
 rmdir /S /Q  %CSVS%%
 rmdir /S /Q  %REPORT%
 
 rem  Run session
-call bin\wheelly.cmd -k %DATA% -t 21600 -a -w -s -i %INFERENCE%
+call bin\wheelly.cmd -k %KPIS% -t 21600 -a -w -s -i %INFERENCE%
 
 rem Compute report data
 call bin\report.cmd -p %DATA% %MODEL% %CSVS%

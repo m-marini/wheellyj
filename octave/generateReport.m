@@ -35,7 +35,7 @@ function generateReport(dataPath, reportPath)
     generateComparison(hFile, [dataPath "/dv"], [dataPath "/dr"], reportPath, "dvdr", "Differential comparison", {"Prediction", "Reward"}, mode);
     generateKpiReport(hFile, [dataPath "/delta"], reportPath, "delta", "Delta", reportParms, mode);
 
-    generateKpiReport(hFile, [dataPath "trainingLayers/critic/values"], reportPath, "critic", "Critic", 0, mode);
+    generateKpiReport(hFile, [dataPath "/trainingLayers/critic/values"], reportPath, "critic", "Critic", 0, mode);
 
     generateMoveProbReport(hFile, [dataPath "/trainingLayers/move/values/mean"], reportPath);
     generateKpiReport(hFile, [dataPath "/trainingLayers/move/values/max"], reportPath, "policy_move", "Move max prob.", @(h)generateMaxProbReport(h, reportParms.moveSize, reportParms.moveTemperature), mode);
