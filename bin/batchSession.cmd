@@ -4,7 +4,7 @@ rmdir /S /Q  %KPIS%
 rmdir /S /Q  %CSVS%
 rmdir /S /Q  %REPORT%
 
-call bin\train.cmd -k %KPIS% -w %INFERENCE%
+call bin\train.cmd -k %KPIS% -w -t %TEMP% %INFERENCE%
 
 call bin\report.cmd -p %KPIS% %MODEL% %CSVS%
 

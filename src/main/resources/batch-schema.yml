@@ -1,6 +1,6 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/batch-schema-0.3
+$id: https://mmarini.org/wheelly/batch-schema-0.4
 title: Wheelly application
 
 # monitor schema
@@ -8,7 +8,7 @@ type: object
 properties:
   $schema:
     type: string
-    const: https://mmarini.org/wheelly/batch-schema-0.3
+    const: https://mmarini.org/wheelly/batch-schema-0.4
   seed:
     type: integer
   numEpochs:
@@ -24,6 +24,8 @@ properties:
     type: string
   agent:
     type: string
+  rewardFunction:
+    type: string
 required:
   - $schema
   - robot
@@ -31,3 +33,4 @@ required:
   - modeller
   - environment
   - agent
+  - rewardFunction
