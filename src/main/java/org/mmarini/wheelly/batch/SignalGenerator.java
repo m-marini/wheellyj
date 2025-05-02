@@ -33,7 +33,9 @@ import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.agents.AbstractAgentNN;
 import org.mmarini.rl.agents.BinArrayFile;
+import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
+import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.envs.State;
 import org.mmarini.wheelly.envs.WorldEnvironment;
@@ -58,7 +60,7 @@ public class SignalGenerator implements SignalGeneratorApi {
     public static final String REWARD_KEY = "reward";
     private static final Logger logger = LoggerFactory.getLogger(SignalGenerator.class);
     public static final String S0_PREFIX_KEY = "s0.";
-    public static final String ACTIONS_PREFIX_KEY = "actions.";
+    private static final String ACTION_MASKS_PREFIX_KEY = "masks.";
     private final InferenceFile file;
     private final WorldModeller modeller;
     private final WorldEnvironment environment;
@@ -71,6 +73,7 @@ public class SignalGenerator implements SignalGeneratorApi {
     private State state0;
     private Map<String, BinArrayFile> keyFileMap;
     private boolean stopping;
+    private Map<String, INDArray> actionMasks0;
 
     /**
      * Creates the Signal generator
@@ -97,27 +100,27 @@ public class SignalGenerator implements SignalGeneratorApi {
     }
 
     /**
-     * Returns the result files
+     * Returns the actin masks
+     *
+     * @param actions the actions
      */
-    private Map<String, BinArrayFile> createResultFiles() throws IOException {
-        Stream<Tuple2<String, BinArrayFile>> actionFiles = Arrays.stream(actionKeys)
-                .map(key -> {
-                    String fullKey = ACTIONS_PREFIX_KEY + key;
-                    return Tuple2.of(fullKey, BinArrayFile.createByKey(outputPath, fullKey));
-                });
-        Stream<Tuple2<String, BinArrayFile>> stateFiles = Arrays.stream(signalKeys)
-                .map(key -> {
-                    String fullKey = S0_PREFIX_KEY + key;
-                    return Tuple2.of(fullKey, BinArrayFile.createByKey(outputPath, fullKey));
-                });
-        Map<String, BinArrayFile> files = Stream.concat(
-                Stream.concat(actionFiles, stateFiles),
-                Stream.of(Tuple2.of(REWARD_KEY, BinArrayFile.createByKey(outputPath, REWARD_KEY)))
-        ).collect(Tuple2.toMap());
-        for (BinArrayFile file : files.values()) {
-            file.clear();
-        }
-        return files;
+    private Map<String, INDArray> createMasks(Map<String, Signal> actions) {
+        Map<String, SignalSpec> actionSpec = environment.actionSpec();
+        return Arrays.stream(actionKeys)
+                .map(actionName -> {
+                    INDArray action = actions.get(actionName).toINDArray();
+                    // Number of signals
+                    long n = action.size(0);
+                    IntSignalSpec spec = (IntSignalSpec) actionSpec.get(actionName);
+                    // Numbers of action values
+                    long m = spec.numValues();
+                    INDArray mask = Nd4j.zeros(n, m);
+                    for (long i = 0; i < n; i++) {
+                        mask.putScalar(i, action.getLong(i), 1f);
+                    }
+                    return Tuple2.of(actionName, mask);
+                })
+                .collect(Tuple2.toMap());
     }
 
     @Override
@@ -139,6 +142,30 @@ public class SignalGenerator implements SignalGeneratorApi {
     }
 
     /**
+     * Returns the result files
+     */
+    private Map<String, BinArrayFile> createResultFiles() throws IOException {
+        Stream<Tuple2<String, BinArrayFile>> actionFiles = Arrays.stream(actionKeys)
+                .map(key -> {
+                    String fullKey = ACTION_MASKS_PREFIX_KEY + key;
+                    return Tuple2.of(fullKey, BinArrayFile.createByKey(outputPath, fullKey));
+                });
+        Stream<Tuple2<String, BinArrayFile>> stateFiles = Arrays.stream(signalKeys)
+                .map(key -> {
+                    String fullKey = S0_PREFIX_KEY + key;
+                    return Tuple2.of(fullKey, BinArrayFile.createByKey(outputPath, fullKey));
+                });
+        Map<String, BinArrayFile> files = Stream.concat(
+                Stream.concat(actionFiles, stateFiles),
+                Stream.of(Tuple2.of(REWARD_KEY, BinArrayFile.createByKey(outputPath, REWARD_KEY)))
+        ).collect(Tuple2.toMap());
+        for (BinArrayFile file : files.values()) {
+            file.clear();
+        }
+        return files;
+    }
+
+    /**
      * Process an inference record
      *
      * @param model    the world model
@@ -153,8 +180,10 @@ public class SignalGenerator implements SignalGeneratorApi {
         writeSignals(inputs);
         Complex robotDirection = model.robotStatus().direction();
         Map<String, Signal> actions = environment.actions(commands, robotDirection);
+        Map<String, INDArray> actionMasks = createMasks(actions);
         if (state0 != null && actions0 != null) {
-            writeActions(actions0);
+            writeActionMasks(actionMasks0);
+            //writeActions(actions0);
             double reward = environment.reward(state0, actions0, state1);
             writeReward(reward);
         }
@@ -174,6 +203,22 @@ public class SignalGenerator implements SignalGeneratorApi {
         }
         this.state0 = state1;
         this.actions0 = actions;
+        this.actionMasks0 = actionMasks;
+    }
+
+
+    /**
+     * Writes the action masks
+     *
+     * @param masks the action masks
+     */
+    private void writeActionMasks(Map<String, INDArray> masks) throws IOException {
+        for (String partKey : actionKeys) {
+            String key = ACTION_MASKS_PREFIX_KEY + partKey;
+            INDArray data = requireNonNull(masks.get(partKey));
+            BinArrayFile binFile = requireNonNull(keyFileMap.get(key));
+            binFile.write(data);
+        }
     }
 
     @Override
@@ -200,21 +245,6 @@ public class SignalGenerator implements SignalGeneratorApi {
     public SignalGenerator stop() {
         stopping = true;
         return this;
-    }
-
-    /**
-     * Write actions
-     *
-     * @param actions the actions
-     */
-    private void writeActions(Map<String, Signal> actions) throws IOException {
-        for (String partKey : actionKeys) {
-            String key = ACTIONS_PREFIX_KEY + partKey;
-            Signal data = requireNonNull(actions.get(partKey));
-            BinArrayFile binFile = requireNonNull(keyFileMap.get(key));
-            INDArray indArray = data.toINDArray();
-            binFile.write(indArray.reshape(1, indArray.size(0)));
-        }
     }
 
     /**

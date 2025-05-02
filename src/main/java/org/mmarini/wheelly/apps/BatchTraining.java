@@ -485,7 +485,6 @@ public class BatchTraining {
         progressBar.setValue(0);
         info("Preparing for training ...");
         trainer.validate(new File(this.args.getString("temp")));
-        trainer.prepare();
 
         // Runs the training session
         progressBar.setValue(0);

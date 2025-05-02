@@ -131,22 +131,32 @@ class SignalGeneratorTest {
         Map<String, BinArrayFile> files = generator.generate();
         assertNotNull(files);
         assertThat(files, hasKey("reward"));
-        assertThat(files, hasKey("actions.move"));
-        assertThat(files, hasKey("actions.sensorAction"));
+        assertThat(files, hasKey("masks.move"));
+        assertThat(files, hasKey("masks.sensorAction"));
         assertThat(files, hasKey("s0.canMoveFeatures"));
         assertThat(files, hasKey("s0.markerStates"));
 
         assertEquals(1, files.get("reward").size());
 
-        BinArrayFile sensorActionFile = files.get("actions.sensorAction");
+        BinArrayFile sensorActionFile = files.get("masks.sensorAction");
         assertEquals(1, sensorActionFile.size());
         assertThat(sensorActionFile.seek(0).read(1),
-                matrixCloseTo(new long[]{1, 1}, EPSILON, 3));
+                matrixCloseTo(new long[]{1, 7}, EPSILON,
+                        0, 0, 0, 1, 0, 0, 0));
 
-        BinArrayFile moveFile = files.get("actions.move");
+        BinArrayFile moveFile = files.get("masks.move");
         assertEquals(1, moveFile.size());
         INDArray move = moveFile.seek(0).read(1);
-        assertThat(move, matrixCloseTo(new long[]{1, 1}, EPSILON, 22));
+        assertThat(move, matrixCloseTo(new long[]{1, 40}, EPSILON,
+                0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0,
+                0, 0, 1, 0, 0,
+                0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0
+        ));
 
         BinArrayFile canMoveFile = files.get("s0.canMoveFeatures");
         assertEquals(2, canMoveFile.size());
