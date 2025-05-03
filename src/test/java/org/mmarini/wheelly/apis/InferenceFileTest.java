@@ -31,6 +31,9 @@ package org.mmarini.wheelly.apis;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mmarini.Tuple2;
 
 import java.awt.geom.Point2D;
@@ -71,111 +74,236 @@ class InferenceFileTest {
             "?", new LabelMarker("?", new Point2D.Double(1, 2), 1, 2, 3));
     public static final WorldModel MODEL = new WorldModel(WORLD_MODEL_SPEC, ROBOT_STATUS, RADAR, MARKERS, null, null, null);
 
-    private InferenceWriter writer;
-    private InferenceReader reader;
+    private InferenceFileWriter writer;
 
     @BeforeEach
     void setUp() throws IOException {
         FILE.delete();
         this.writer = InferenceFileWriter.fromFile(FILE);
-        this.reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE);
     }
 
     @AfterEach
     void tearDown() throws Exception {
         writer.close();
-        reader.close();
         FILE.delete();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void testBoolean(boolean value) throws IOException {
+        writer.write(value);
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
+            boolean read = reader.readBoolean();
+            assertEquals(1, reader.size());
+            assertEquals(value, read);
+        }
     }
 
     @Test
     void testCamera() throws IOException {
         writer.write(CAMERA_EVENT);
-        CameraEvent cameraRead = reader.readCamera();
-        assertEquals(CAMERA_EVENT, cameraRead);
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
+            CameraEvent cameraRead = reader.readCamera();
+            assertEquals(CAMERA_EVENT, cameraRead);
+        }
     }
 
     @Test
     void testCommands() throws IOException {
         writer.write(COMMANDS);
-        RobotCommands commandRead = reader.readCommands();
-        assertEquals(COMMANDS, commandRead);
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
+            RobotCommands commandRead = reader.readCommands();
+            assertEquals(COMMANDS, commandRead);
+        }
     }
 
     @Test
     void testContacts() throws IOException {
         writer.write(CONTACTS_MESSAGE);
-        WheellyContactsMessage contactsRead = reader.readContacts();
-        assertEquals(CONTACTS_MESSAGE, contactsRead);
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
+            WheellyContactsMessage contactsRead = reader.readContacts();
+            assertEquals(CONTACTS_MESSAGE, contactsRead);
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(doubles = {
+            0d,
+            -0d,
+            1d,
+            -1d,
+            Double.MIN_VALUE,
+            -Double.MIN_VALUE,
+            Double.MAX_VALUE,
+            -Double.MAX_VALUE,
+            Double.POSITIVE_INFINITY,
+            Double.NEGATIVE_INFINITY,
+            Double.NaN
+    })
+    void testDouble(double value) throws IOException {
+        writer.write(value);
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
+            assertEquals(Double.BYTES, reader.size());
+            double read = reader.readDouble();
+            assertEquals(value, read);
+        }
     }
 
     @Test
     void testInference() throws IOException {
         writer.write(MODEL, COMMANDS);
-        Tuple2<WorldModel, RobotCommands> t = reader.read();
-        WorldModel model = t._1;
-        RadarMap radarRead = model.radarMap();
-        assertEquals(MODEL.robotStatus(), model.robotStatus());
-        assertEquals(MODEL.markers(), model.markers());
-        assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
-        assertEquals(RADAR.topology(), radarRead.topology());
-        assertArrayEquals(RADAR.cells(), radarRead.cells());
-        assertArrayEquals(RADAR.vertices(), radarRead.vertices());
-        assertArrayEquals(RADAR.verticesByCells(), radarRead.verticesByCells());
-        RobotCommands commands = t._2;
-        assertEquals(COMMANDS, commands);
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
+            Tuple2<WorldModel, RobotCommands> t = reader.read();
+            WorldModel model = t._1;
+            RadarMap radarRead = model.radarMap();
+            assertEquals(MODEL.robotStatus(), model.robotStatus());
+            assertEquals(MODEL.markers(), model.markers());
+            assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
+            assertEquals(RADAR.topology(), radarRead.topology());
+            assertArrayEquals(RADAR.cells(), radarRead.cells());
+            assertArrayEquals(RADAR.vertices(), radarRead.vertices());
+            assertArrayEquals(RADAR.verticesByCells(), radarRead.verticesByCells());
+            RobotCommands commands = t._2;
+            assertEquals(COMMANDS, commands);
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,1",
+            "1,1",
+            "63,1",
+            "64,2",
+            "8191,2",
+            "8192,3",
+            "134217727,4",
+            "134217728,5",
+            "2147483647,5",
+            "-1,1",
+            "-2,1",
+            "-64,1",
+            "-65,2",
+            "-8192,2",
+            "-8193,3",
+            "-134217728,4",
+            "-134217729,5",
+            "-2147483648,5",
+    })
+    void testInt(int value, long size) throws IOException {
+        writer.write(value);
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
+            long read = reader.readInt();
+            assertEquals(size, reader.size());
+            assertEquals(value, read);
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,1",
+            "1,1",
+            "63,1",
+            "64,2",
+            "8191,2",
+            "8192,3",
+            "4611686018427387903,9",
+            "4611686018427387904,10",
+            "9223372036854775807,10",
+            "-1,1",
+            "-2,1",
+            "-64,1",
+            "-65,2",
+            "-8192,2",
+            "-8193,3",
+            "-4611686018427387904,9",
+            "-4611686018427387905,10",
+            "-9223372036854775808,10",
+    })
+    void testLong(long value, long size) throws IOException {
+        writer.write(value);
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
+            assertEquals(size, reader.size());
+            long read = reader.readLong();
+            assertEquals(value, read);
+        }
     }
 
     @Test
     void testMarkers() throws IOException {
         writer.write(MARKERS);
-        Map<String, LabelMarker> markersRead = reader.readMarkers();
-        assertEquals(MARKERS, markersRead);
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
+            Map<String, LabelMarker> markersRead = reader.readMarkers();
+            assertEquals(MARKERS, markersRead);
+        }
     }
 
     @Test
     void testModel() throws IOException {
         writer.write(MODEL);
-        WorldModel model = reader.readModel();
-        RadarMap radarRead = model.radarMap();
-        assertEquals(MODEL.robotStatus(), model.robotStatus());
-        assertEquals(MODEL.markers(), model.markers());
-        assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
-        assertEquals(RADAR.topology(), radarRead.topology());
-        assertArrayEquals(RADAR.cells(), radarRead.cells());
-        assertArrayEquals(RADAR.vertices(), radarRead.vertices());
-        assertArrayEquals(RADAR.verticesByCells(), radarRead.verticesByCells());
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
+            WorldModel model = reader.readModel();
+            RadarMap radarRead = model.radarMap();
+            assertEquals(MODEL.robotStatus(), model.robotStatus());
+            assertEquals(MODEL.markers(), model.markers());
+            assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
+            assertEquals(RADAR.topology(), radarRead.topology());
+            assertArrayEquals(RADAR.cells(), radarRead.cells());
+            assertArrayEquals(RADAR.vertices(), radarRead.vertices());
+            assertArrayEquals(RADAR.verticesByCells(), radarRead.verticesByCells());
+        }
     }
 
     @Test
     void testMotion() throws IOException {
         writer.write(MOTION_MESSAGE);
-        WheellyMotionMessage motionRead = reader.readMotion();
-        assertEquals(MOTION_MESSAGE, motionRead);
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
+            WheellyMotionMessage motionRead = reader.readMotion();
+            assertEquals(MOTION_MESSAGE, motionRead);
+        }
     }
 
     @Test
     void testProxy() throws IOException {
         writer.write(PROXY_MESSAGE);
-        WheellyProxyMessage proxyRead = reader.readProxy();
-        assertEquals(PROXY_MESSAGE, proxyRead);
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
+            WheellyProxyMessage proxyRead = reader.readProxy();
+            assertEquals(PROXY_MESSAGE, proxyRead);
+        }
     }
 
     @Test
     void testRadarMap() throws IOException {
         writer.write(RADAR);
-        RadarMap radarRead = reader.readRadar();
-        assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
-        assertEquals(RADAR.topology(), radarRead.topology());
-        assertArrayEquals(RADAR.cells(), radarRead.cells());
-        assertArrayEquals(RADAR.vertices(), radarRead.vertices());
-        assertArrayEquals(RADAR.verticesByCells(), radarRead.verticesByCells());
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
+            RadarMap radarRead = reader.readRadar();
+            assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
+            assertEquals(RADAR.topology(), radarRead.topology());
+            assertArrayEquals(RADAR.cells(), radarRead.cells());
+            assertArrayEquals(RADAR.vertices(), radarRead.vertices());
+            assertArrayEquals(RADAR.verticesByCells(), radarRead.verticesByCells());
+        }
     }
 
     @Test
     void testStatus() throws IOException {
         writer.write(ROBOT_STATUS);
-        RobotStatus contactsRead = reader.readStatus();
-        assertEquals(ROBOT_STATUS, contactsRead);
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
+            RobotStatus contactsRead = reader.readStatus();
+            assertEquals(ROBOT_STATUS, contactsRead);
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "A,2",
+            "AA,3",
+    })
+    void testString(String value, long size) throws IOException {
+        writer.write(value);
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
+            String read = reader.readString();
+            assertEquals(size, reader.size());
+            assertEquals(value, read);
+        }
     }
 }

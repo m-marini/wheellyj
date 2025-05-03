@@ -28,33 +28,67 @@
 
 package org.mmarini.wheelly.apis;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 
 /**
- * Stores and retrieves inference data
+ * World model dumper
  */
-public class InferenceFileWriter extends DataFileWriter implements InferenceWriter {
+public interface DataWriter extends AutoCloseable {
     /**
-     * Returns the world model dumper
+     * Writes a long number
      *
-     * @param file the files
+     * @param data the number
      * @throws IOException in case of error
      */
-    public static InferenceFileWriter fromFile(File file) throws IOException {
-        file.getCanonicalFile().getParentFile().mkdirs();
-        OutputStream stream = new FileOutputStream(file, true);
-        return new InferenceFileWriter(stream);
-    }
+    DataWriter write(long data) throws IOException;
 
     /**
-     * Creates the world model writer
+     * Writes an int number
      *
-     * @param stream the file
+     * @param data the number
+     * @throws IOException in case of error
      */
-    protected InferenceFileWriter(OutputStream stream) {
-        super(stream);
-    }
+    DataWriter write(int data) throws IOException;
+
+    /**
+     * Writes a boolean value
+     *
+     * @param data the value
+     * @throws IOException in case of error
+     */
+    DataWriter write(boolean data) throws IOException;
+
+    /**
+     * Writes a double value
+     *
+     * @param data the value
+     * @throws IOException in case of error
+     */
+    DataWriter write(double data) throws IOException;
+
+    /**
+     * Writes a string value
+     *
+     * @param data the value
+     * @throws IOException in case of error
+     */
+    DataWriter write(String data) throws IOException;
+
+    /**
+     * Writes the buffer data
+     *
+     * @param buffer the buffer data
+     * @param offset the offset
+     * @param size   the number of bytes to write
+     * @throws IOException in case of error
+     */
+    DataWriter write(byte[] buffer, int offset, int size) throws IOException;
+
+    /**
+     * Write a byte
+     *
+     * @param data the byte
+     * @throws IOException in case of error
+     */
+    DataWriter write(byte data) throws IOException;
 }

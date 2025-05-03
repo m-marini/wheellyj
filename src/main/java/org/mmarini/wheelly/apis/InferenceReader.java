@@ -41,7 +41,7 @@ import java.util.stream.Collectors;
 /**
  * Reads infrence data
  */
-public interface InferenceReader extends AutoCloseable {
+public interface InferenceReader extends AutoCloseable, DataReader {
 
     /**
      * Returns the world model from file or null if end of file
@@ -53,13 +53,6 @@ public interface InferenceReader extends AutoCloseable {
         RobotCommands commands = readCommands();
         return Tuple2.of(model, commands);
     }
-
-    /**
-     * Returns a boolean from reader
-     *
-     * @throws IOException in case of error
-     */
-    boolean readBoolean() throws IOException;
 
     /**
      * Returns the camera event
@@ -105,27 +98,6 @@ public interface InferenceReader extends AutoCloseable {
         return new WheellyContactsMessage(localTime, simulationTime, remoteTime,
                 frontSensor, rearSensor, canMoveForward, canMoveBackward);
     }
-
-    /**
-     * Returns a double from reader
-     *
-     * @throws IOException in case of error
-     */
-    double readDouble() throws IOException;
-
-    /**
-     * Return an int from reader
-     *
-     * @throws IOException in case of error
-     */
-    int readInt() throws IOException;
-
-    /**
-     * Returns a long number from reader
-     *
-     * @throws IOException in case of error
-     */
-    long readLong() throws IOException;
 
     /**
      * Returns the marker map
@@ -211,11 +183,4 @@ public interface InferenceReader extends AutoCloseable {
      * @throws IOException in case of error
      */
     RobotStatus readStatus() throws IOException;
-
-    /**
-     * Returns a string from reader
-     *
-     * @throws IOException in case of error
-     */
-    String readString() throws IOException;
 }

@@ -114,7 +114,7 @@ public class SignalGenerator implements SignalGeneratorApi {
      */
     private Map<String, INDArray> createData(InferenceData data) {
         Map<String, INDArray> result = new HashMap<>();
-        result.putAll(createSignals(data));
+        result.putAll(createSignals(data.s0));
         result.putAll(createActionMasks(data));
         result.put(REWARD_KEY, Nd4j.createFromArray(createReward(data)).reshape(1, 1));
         return result;
@@ -182,8 +182,8 @@ public class SignalGenerator implements SignalGeneratorApi {
      *
      * @param data the inference data
      */
-    private Map<String, INDArray> createSignals(InferenceData data) {
-        Map<String, Signal> signals = data.s0().signals();
+    private Map<String, INDArray> createSignals(State data) {
+        Map<String, Signal> signals = data.signals();
         signals = agent.processSignals(signals);
         Map<String, INDArray> inputs = AbstractAgentNN.getInput(signals);
         return Arrays.stream(signalKeys)
@@ -220,6 +220,7 @@ public class SignalGenerator implements SignalGeneratorApi {
                 n++;
                 infoProcessor.onNext(new GeneratorInfo(n, f.position(), f.size()));
             }
+            writeData(createSignals(state0));
             infoProcessor.onComplete();
         }
         return keyFileMap;
@@ -232,6 +233,15 @@ public class SignalGenerator implements SignalGeneratorApi {
      */
     private void processData(InferenceData inferenceData) throws IOException {
         Map<String, INDArray> data = createData(inferenceData);
+        writeData(data);
+    }
+
+    /**
+     * Writes the data
+     *
+     * @param data the data
+     */
+    private void writeData(Map<String, INDArray> data) throws IOException {
         for (Map.Entry<String, INDArray> entry : data.entrySet()) {
             BinArrayFile f = keyFileMap.get(entry.getKey());
             f.write(entry.getValue());

@@ -34,58 +34,18 @@ import java.util.Map;
 /**
  * World model dumper
  */
-public interface InferenceWriter extends AutoCloseable {
-    /**
-     * Writes a long number
-     *
-     * @param data the number
-     * @throws IOException in case of error
-     */
-    InferenceWriter write(long data) throws IOException;
-
-    /**
-     * Writes an int number
-     *
-     * @param data the number
-     * @throws IOException in case of error
-     */
-    InferenceWriter write(int data) throws IOException;
-
-    /**
-     * Writes a boolean value
-     *
-     * @param data the value
-     * @throws IOException in case of error
-     */
-    InferenceWriter write(boolean data) throws IOException;
-
-    /**
-     * Writes a double value
-     *
-     * @param data the value
-     * @throws IOException in case of error
-     */
-    InferenceWriter write(double data) throws IOException;
-
-    /**
-     * Writes a string value
-     *
-     * @param data the value
-     * @throws IOException in case of error
-     */
-    InferenceWriter write(String data) throws IOException;
-
-
+public interface InferenceWriter extends AutoCloseable, DataWriter {
     /**
      * Writes camera events
      *
      * @param camera the camera event
      */
     default InferenceWriter write(CameraEvent camera) throws IOException {
-        return write(camera.timestamp())
+        write(camera.timestamp())
                 .write(camera.qrCode())
                 .write(camera.width())
                 .write(camera.height());
+        return this;
     }
 
     /**
@@ -94,12 +54,13 @@ public interface InferenceWriter extends AutoCloseable {
      * @param commands the commands
      */
     default InferenceWriter write(RobotCommands commands) throws IOException {
-        return write(commands.scan())
+        write(commands.scan())
                 .write(commands.scanDirection().toIntDeg())
                 .write(commands.move())
                 .write(commands.halt())
                 .write(commands.moveDirection().toIntDeg())
                 .write(commands.speed());
+        return this;
     }
 
     /**
@@ -108,13 +69,14 @@ public interface InferenceWriter extends AutoCloseable {
      * @param contacts the contact message
      */
     default InferenceWriter write(WheellyContactsMessage contacts) throws IOException {
-        return write(contacts.localTime())
+        write(contacts.localTime())
                 .write(contacts.simulationTime())
                 .write(contacts.remoteTime())
                 .write(contacts.frontSensors())
                 .write(contacts.rearSensors())
                 .write(contacts.canMoveForward())
                 .write(contacts.canMoveBackward());
+        return this;
     }
 
     /**
@@ -141,7 +103,7 @@ public interface InferenceWriter extends AutoCloseable {
      * @param motion the motion message
      */
     default InferenceWriter write(WheellyMotionMessage motion) throws IOException {
-        return write(motion.localTime())
+        write(motion.localTime())
                 .write(motion.simulationTime())
                 .write(motion.remoteTime())
                 .write(motion.xPulses())
@@ -155,6 +117,7 @@ public interface InferenceWriter extends AutoCloseable {
                 .write(motion.rightTargetPps())
                 .write(motion.leftPower())
                 .write(motion.rightPower());
+        return this;
     }
 
     /**
@@ -179,7 +142,7 @@ public interface InferenceWriter extends AutoCloseable {
      * @param proxy the proxy message
      */
     default InferenceWriter write(WheellyProxyMessage proxy) throws IOException {
-        return write(proxy.localTime())
+        write(proxy.localTime())
                 .write(proxy.simulationTime())
                 .write(proxy.remoteTime())
                 .write(proxy.sensorDirectionDeg())
@@ -187,6 +150,7 @@ public interface InferenceWriter extends AutoCloseable {
                 .write(proxy.xPulses())
                 .write(proxy.yPulses())
                 .write(proxy.echoYawDeg());
+        return this;
     }
 
     /**
@@ -216,12 +180,11 @@ public interface InferenceWriter extends AutoCloseable {
      * @param status the status
      */
     default InferenceWriter write(RobotStatus status) throws IOException {
-        return write(status.simulationTime())
-                .write(status.motionMessage())
+        write(status.simulationTime());
+        return write(status.motionMessage())
                 .write(status.proxyMessage())
                 .write(status.contactsMessage())
                 .write(status.cameraEvent())
                 .write(status.cameraProxyMessage());
-
     }
 }

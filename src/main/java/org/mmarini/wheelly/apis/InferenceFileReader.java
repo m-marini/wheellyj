@@ -28,8 +28,10 @@
 
 package org.mmarini.wheelly.apis;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Map;
 import java.util.function.IntToDoubleFunction;
 
@@ -38,11 +40,10 @@ import static java.util.Objects.requireNonNull;
 /**
  * Stores and retrieves inference data
  */
-public class InferenceFileReader implements InferenceReader {
+public class InferenceFileReader extends DataFileReader implements InferenceReader {
 
     public static final WheellySupplyMessage DEFAULT_SUPPLY_MESSAGE = new WheellySupplyMessage(0, 0, 0, 0);
     public static final IntToDoubleFunction DEFAULT_DECODE_VOLTAGE = x -> 12d;
-    public static final int BUFFER_SIZE = 128;
 
     /**
      * Returns the world model dumper
@@ -58,11 +59,7 @@ public class InferenceFileReader implements InferenceReader {
     }
 
     private final WorldModelSpec worldSpec;
-    private final InputStream file;
     private final GridTopology topology;
-    private final byte[] buffer;
-    private final long size;
-    private long position;
 
     /**
      * Creates the world model reader
@@ -70,76 +67,12 @@ public class InferenceFileReader implements InferenceReader {
      * @param worldSpec the world spec
      * @param topology  the radar grid topology
      * @param file      the file
-     * @param size the size of file
+     * @param size      the size of file
      */
     protected InferenceFileReader(WorldModelSpec worldSpec, GridTopology topology, InputStream file, long size) {
+        super(file, size);
         this.worldSpec = requireNonNull(worldSpec);
-        this.file = requireNonNull(file);
         this.topology = requireNonNull(topology);
-        this.size = size;
-        this.buffer = new byte[BUFFER_SIZE];
-    }
-
-    @Override
-    public void close() throws IOException {
-        file.close();
-    }
-
-    /**
-     * Returns the position of file pointer
-     */
-    public long position() throws IOException {
-        return position;
-    }
-
-    /**
-     * Reads the chunk of bytes
-     *
-     * @param buffer the buffer
-     * @param offset the start offset
-     * @param length the length
-     */
-    private InferenceFileReader read(byte[] buffer, int offset, int length) throws IOException {
-        int n = file.read(buffer, offset, length);
-        if (n != length) {
-            throw new EOFException();
-        }
-        position += n;
-        return this;
-    }
-
-    @Override
-    public boolean readBoolean() throws IOException {
-        read(buffer, 0, 1);
-        return buffer[0] != 0;
-    }
-
-    @Override
-    public double readDouble() throws IOException {
-        long value = readLong();
-        return Double.longBitsToDouble(value);
-    }
-
-    @Override
-    public int readInt() throws IOException {
-        read(buffer, 0, Integer.BYTES);
-        int result = 0;
-        for (int i = Integer.BYTES - 1; i >= 0; i--) {
-            result <<= 8;
-            result += buffer[i] & 0xff;
-        }
-        return result;
-    }
-
-    @Override
-    public long readLong() throws IOException {
-        read(buffer, 0, Long.BYTES);
-        long result = 0;
-        for (int i = Long.BYTES - 1; i >= 0; i--) {
-            result <<= 8;
-            result += buffer[i] & 0xff;
-        }
-        return result;
     }
 
     @Override
@@ -174,24 +107,5 @@ public class InferenceFileReader implements InferenceReader {
         WheellyProxyMessage cameraProxy = readProxy();
         return new RobotStatus(worldSpec.robotSpec(), simTime, motion, proxy, contacts,
                 DEFAULT_SUPPLY_MESSAGE, DEFAULT_DECODE_VOLTAGE, camera, cameraProxy);
-    }
-
-    @Override
-    public String readString() throws IOException {
-        int n = readInt();
-        byte[] buffer = this.buffer;
-        if (n > buffer.length) {
-            // Reallocate a new buffer
-            buffer = new byte[n];
-        }
-        read(buffer, 0, n);
-        return new String(buffer, 0, n, StandardCharsets.UTF_8);
-    }
-
-    /**
-     * Returns the length of file
-     */
-    public long size() throws IOException {
-        return size;
     }
 }

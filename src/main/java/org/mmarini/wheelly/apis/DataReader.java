@@ -28,33 +28,61 @@
 
 package org.mmarini.wheelly.apis;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 
 /**
- * Stores and retrieves inference data
+ * Reads infrence data
  */
-public class InferenceFileWriter extends DataFileWriter implements InferenceWriter {
+public interface DataReader extends AutoCloseable {
     /**
-     * Returns the world model dumper
+     * Returns a boolean from reader
      *
-     * @param file the files
      * @throws IOException in case of error
      */
-    public static InferenceFileWriter fromFile(File file) throws IOException {
-        file.getCanonicalFile().getParentFile().mkdirs();
-        OutputStream stream = new FileOutputStream(file, true);
-        return new InferenceFileWriter(stream);
-    }
+    boolean readBoolean() throws IOException;
 
     /**
-     * Creates the world model writer
+     * Returns a byte from reader
      *
-     * @param stream the file
+     * @throws IOException in case of error
      */
-    protected InferenceFileWriter(OutputStream stream) {
-        super(stream);
-    }
+    byte readByte() throws IOException;
+
+    /**
+     * Returns the number of bytes read
+     *
+     * @param buffer the buffer
+     * @param offset the offset
+     * @param length the number of bytes to read
+     * @throws IOException in case of error
+     */
+    int readBytes(byte[] buffer, int offset, int length) throws IOException;
+
+    /**
+     * Returns a double from reader
+     *
+     * @throws IOException in case of error
+     */
+    double readDouble() throws IOException;
+
+    /**
+     * Return an int from reader
+     *
+     * @throws IOException in case of error
+     */
+    int readInt() throws IOException;
+
+    /**
+     * Returns a long number from reader
+     *
+     * @throws IOException in case of error
+     */
+    long readLong() throws IOException;
+
+    /**
+     * Returns a string from reader
+     *
+     * @throws IOException in case of error
+     */
+    String readString() throws IOException;
 }
