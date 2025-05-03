@@ -109,8 +109,8 @@ public interface InferenceReader extends AutoCloseable, DataReader {
         List<LabelMarker> markers = new ArrayList<>();
         for (int i = 0; i < n; i++) {
             String qrCode = readString();
-            Point2D location = new Point2D.Double(readDouble(), readDouble());
-            double weight = readDouble();
+            Point2D location = new Point2D.Float(readFloat(), readFloat());
+            double weight = readFloat();
             long markerTime = readLong();
             long cleanTime = readLong();
             markers.add(new LabelMarker(qrCode, location, weight, markerTime, cleanTime));
@@ -138,11 +138,11 @@ public interface InferenceReader extends AutoCloseable, DataReader {
         long localTime = readLong();
         long simulationTime = readLong();
         long remoteTime = readLong();
-        double xPulses = readDouble();
-        double yPulses = readDouble();
+        double xPulses = readFloat();
+        double yPulses = readFloat();
         int directionDeg = readInt();
-        double leftPps = readDouble();
-        double rightPps = readDouble();
+        double leftPps = readFloat();
+        double rightPps = readFloat();
         int imuFailure = readInt();
         boolean halt = readBoolean();
         int leftTargetPps = readInt();
@@ -164,8 +164,8 @@ public interface InferenceReader extends AutoCloseable, DataReader {
         long remoteTime = readLong();
         int sensorDirectionDeg = readInt();
         long echoDelay = readLong();
-        double xPulse = readDouble();
-        double yPulse = readDouble();
+        double xPulse = readFloat();
+        double yPulse = readFloat();
         int echoYawDeg = readInt();
         return new WheellyProxyMessage(localTime, simTime, remoteTime, sensorDirectionDeg, echoDelay, xPulse, yPulse, echoYawDeg);
     }

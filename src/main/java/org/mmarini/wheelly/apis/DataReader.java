@@ -63,7 +63,21 @@ public interface DataReader extends AutoCloseable {
      *
      * @throws IOException in case of error
      */
+    float readFloat() throws IOException;
+
+    /**
+     * Returns a double from reader
+     *
+     * @throws IOException in case of error
+     */
     double readDouble() throws IOException;
+
+    /**
+     * Returns a double from reader
+     *
+     * @throws IOException in case of error
+     */
+    short readShort() throws IOException;
 
     /**
      * Return an int from reader

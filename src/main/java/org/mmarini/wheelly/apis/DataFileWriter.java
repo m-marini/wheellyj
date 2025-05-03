@@ -86,8 +86,25 @@ public class DataFileWriter implements DataWriter {
     }
 
     @Override
+    public DataFileWriter write(short data) throws IOException {
+        write((long) data);
+        return this;
+    }
+
+    @Override
     public DataFileWriter write(boolean data) throws IOException {
         return write(data ? 1L : 0L);
+    }
+
+    @Override
+    public DataFileWriter write(float data) throws IOException {
+        int bitValue = Float.floatToIntBits(data);
+        for (int i = 0; i < Float.BYTES; i++) {
+            buffer[i] = (byte) (bitValue & 0xff);
+            bitValue >>>= 8;
+        }
+        write(buffer, 0, Float.BYTES);
+        return this;
     }
 
     @Override

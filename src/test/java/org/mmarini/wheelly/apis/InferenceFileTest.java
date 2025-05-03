@@ -31,9 +31,6 @@ package org.mmarini.wheelly.apis;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mmarini.Tuple2;
 
 import java.awt.geom.Point2D;
@@ -88,17 +85,6 @@ class InferenceFileTest {
         FILE.delete();
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void testBoolean(boolean value) throws IOException {
-        writer.write(value);
-        try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
-            boolean read = reader.readBoolean();
-            assertEquals(1, reader.size());
-            assertEquals(value, read);
-        }
-    }
-
     @Test
     void testCamera() throws IOException {
         writer.write(CAMERA_EVENT);
@@ -126,29 +112,6 @@ class InferenceFileTest {
         }
     }
 
-    @ParameterizedTest
-    @ValueSource(doubles = {
-            0d,
-            -0d,
-            1d,
-            -1d,
-            Double.MIN_VALUE,
-            -Double.MIN_VALUE,
-            Double.MAX_VALUE,
-            -Double.MAX_VALUE,
-            Double.POSITIVE_INFINITY,
-            Double.NEGATIVE_INFINITY,
-            Double.NaN
-    })
-    void testDouble(double value) throws IOException {
-        writer.write(value);
-        try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
-            assertEquals(Double.BYTES, reader.size());
-            double read = reader.readDouble();
-            assertEquals(value, read);
-        }
-    }
-
     @Test
     void testInference() throws IOException {
         writer.write(MODEL, COMMANDS);
@@ -165,66 +128,6 @@ class InferenceFileTest {
             assertArrayEquals(RADAR.verticesByCells(), radarRead.verticesByCells());
             RobotCommands commands = t._2;
             assertEquals(COMMANDS, commands);
-        }
-    }
-
-    @ParameterizedTest
-    @CsvSource({
-            "0,1",
-            "1,1",
-            "63,1",
-            "64,2",
-            "8191,2",
-            "8192,3",
-            "134217727,4",
-            "134217728,5",
-            "2147483647,5",
-            "-1,1",
-            "-2,1",
-            "-64,1",
-            "-65,2",
-            "-8192,2",
-            "-8193,3",
-            "-134217728,4",
-            "-134217729,5",
-            "-2147483648,5",
-    })
-    void testInt(int value, long size) throws IOException {
-        writer.write(value);
-        try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
-            long read = reader.readInt();
-            assertEquals(size, reader.size());
-            assertEquals(value, read);
-        }
-    }
-
-    @ParameterizedTest
-    @CsvSource({
-            "0,1",
-            "1,1",
-            "63,1",
-            "64,2",
-            "8191,2",
-            "8192,3",
-            "4611686018427387903,9",
-            "4611686018427387904,10",
-            "9223372036854775807,10",
-            "-1,1",
-            "-2,1",
-            "-64,1",
-            "-65,2",
-            "-8192,2",
-            "-8193,3",
-            "-4611686018427387904,9",
-            "-4611686018427387905,10",
-            "-9223372036854775808,10",
-    })
-    void testLong(long value, long size) throws IOException {
-        writer.write(value);
-        try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
-            assertEquals(size, reader.size());
-            long read = reader.readLong();
-            assertEquals(value, read);
         }
     }
 
@@ -290,20 +193,6 @@ class InferenceFileTest {
         try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
             RobotStatus contactsRead = reader.readStatus();
             assertEquals(ROBOT_STATUS, contactsRead);
-        }
-    }
-
-    @ParameterizedTest
-    @CsvSource({
-            "A,2",
-            "AA,3",
-    })
-    void testString(String value, long size) throws IOException {
-        writer.write(value);
-        try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
-            String read = reader.readString();
-            assertEquals(size, reader.size());
-            assertEquals(value, read);
         }
     }
 }

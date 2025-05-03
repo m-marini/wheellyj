@@ -88,9 +88,9 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
         write(markers.size());
         for (LabelMarker marker : markers.values()) {
             write(marker.label())
-                    .write(marker.location().getX())
-                    .write(marker.location().getY())
-                    .write(marker.weight())
+                    .write((float) marker.location().getX())
+                    .write((float) marker.location().getY())
+                    .write((float) marker.weight())
                     .write(marker.markerTime())
                     .write(marker.cleanTime());
         }
@@ -106,11 +106,11 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
         write(motion.localTime())
                 .write(motion.simulationTime())
                 .write(motion.remoteTime())
-                .write(motion.xPulses())
-                .write(motion.yPulses())
+                .write((float) motion.xPulses())
+                .write((float) motion.yPulses())
                 .write(motion.directionDeg())
-                .write(motion.leftPps())
-                .write(motion.rightPps())
+                .write((float) motion.leftPps())
+                .write((float) motion.rightPps())
                 .write(motion.imuFailure())
                 .write(motion.halt())
                 .write(motion.leftTargetPps())
@@ -130,8 +130,8 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
         MapCell[] cells = radarMap.cells();
         for (MapCell cell : cells) {
             write(cell.echoTime())
-                    .write(cell.echoWeight())
-                    .write(cell.contactTime());
+                    .write((float) cell.echoWeight())
+                    .write((float) cell.contactTime());
         }
         return this;
     }
@@ -147,8 +147,8 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
                 .write(proxy.remoteTime())
                 .write(proxy.sensorDirectionDeg())
                 .write(proxy.echoDelay())
-                .write(proxy.xPulses())
-                .write(proxy.yPulses())
+                .write((float) proxy.xPulses())
+                .write((float) proxy.yPulses())
                 .write(proxy.echoYawDeg());
         return this;
     }

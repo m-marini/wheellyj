@@ -51,12 +51,28 @@ public interface DataWriter extends AutoCloseable {
     DataWriter write(int data) throws IOException;
 
     /**
+     * Writes an short number
+     *
+     * @param data the number
+     * @throws IOException in case of error
+     */
+    DataWriter write(short data) throws IOException;
+
+    /**
      * Writes a boolean value
      *
      * @param data the value
      * @throws IOException in case of error
      */
     DataWriter write(boolean data) throws IOException;
+
+    /**
+     * Writes a float value
+     *
+     * @param data the value
+     * @throws IOException in case of error
+     */
+    DataWriter write(float data) throws IOException;
 
     /**
      * Writes a double value
