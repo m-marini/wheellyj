@@ -48,6 +48,7 @@ import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -58,10 +59,10 @@ import static java.util.Objects.requireNonNull;
  */
 public class SignalGenerator implements SignalGeneratorApi {
     public static final String REWARD_KEY = "reward";
-    private static final Logger logger = LoggerFactory.getLogger(SignalGenerator.class);
     public static final String S0_PREFIX_KEY = "s0.";
+    private static final Logger logger = LoggerFactory.getLogger(SignalGenerator.class);
     private static final String ACTION_MASKS_PREFIX_KEY = "masks.";
-    private final InferenceFile file;
+
     private final WorldModeller modeller;
     private final WorldEnvironment environment;
     private final AbstractAgentNN agent;
@@ -69,11 +70,9 @@ public class SignalGenerator implements SignalGeneratorApi {
     private final String[] signalKeys;
     private final String[] actionKeys;
     private final PublishProcessor<GeneratorInfo> infoProcessor;
-    private Map<String, Signal> actions0;
-    private State state0;
+    private final File file;
     private Map<String, BinArrayFile> keyFileMap;
     private boolean stopping;
-    private Map<String, INDArray> actionMasks0;
 
     /**
      * Creates the Signal generator
@@ -86,7 +85,7 @@ public class SignalGenerator implements SignalGeneratorApi {
      * @param signalKeys  the signal keys
      * @param actionKeys  the action key
      */
-    public SignalGenerator(InferenceFile file, WorldModeller modeller, WorldEnvironment environment,
+    public SignalGenerator(File file, WorldModeller modeller, WorldEnvironment environment,
                            AbstractAgentNN agent, File outputPath, String[] signalKeys, String[] actionKeys) {
         this.file = requireNonNull(file);
         this.modeller = requireNonNull(modeller);
@@ -97,6 +96,28 @@ public class SignalGenerator implements SignalGeneratorApi {
         this.actionKeys = requireNonNull(actionKeys);
         this.infoProcessor = PublishProcessor.create();
         logger.atDebug().log("SignalGenerator from {}", file);
+    }
+
+    /**
+     * Returns the action masks
+     *
+     * @param data the inference data
+     */
+    private Map<String, INDArray> createActionMasks(InferenceData data) {
+        return createMasks(data.commands());
+    }
+
+    /**
+     * Returns the file data from inference
+     *
+     * @param data the inference
+     */
+    private Map<String, INDArray> createData(InferenceData data) {
+        Map<String, INDArray> result = new HashMap<>();
+        result.putAll(createSignals(data));
+        result.putAll(createActionMasks(data));
+        result.put(REWARD_KEY, Nd4j.createFromArray(createReward(data)).reshape(1, 1));
+        return result;
     }
 
     /**
@@ -118,27 +139,9 @@ public class SignalGenerator implements SignalGeneratorApi {
                     for (long i = 0; i < n; i++) {
                         mask.putScalar(i, action.getLong(i), 1f);
                     }
-                    return Tuple2.of(actionName, mask);
+                    return Tuple2.of(ACTION_MASKS_PREFIX_KEY + actionName, mask);
                 })
                 .collect(Tuple2.toMap());
-    }
-
-    @Override
-    public Map<String, BinArrayFile> generate() throws IOException {
-        keyFileMap = createResultFiles();
-        long n = 0;
-        for (; ; ) {
-            Tuple2<WorldModel, RobotCommands> t = readData();
-            if (t == null || stopping) {
-                break;
-            }
-            processRecord(t._1, t._2);
-            n++;
-            infoProcessor.onNext(new GeneratorInfo(n, file.position(), file.size()));
-        }
-        infoProcessor.onComplete();
-        file.close();
-        return keyFileMap;
     }
 
     /**
@@ -166,64 +169,73 @@ public class SignalGenerator implements SignalGeneratorApi {
     }
 
     /**
-     * Process an inference record
+     * Returns the reward
      *
-     * @param model    the world model
-     * @param commands the commands
+     * @param data the inference data
      */
-    private void processRecord(WorldModel model, RobotCommands commands) throws IOException {
-        model = modeller.updateForInference(model);
-        State state1 = environment.state(model);
-        Map<String, Signal> signals = state1.signals();
-        signals = agent.processSignals(signals);
-        Map<String, INDArray> inputs = AbstractAgentNN.getInput(signals);
-        writeSignals(inputs);
-        Complex robotDirection = model.robotStatus().direction();
-        Map<String, Signal> actions = environment.actions(commands, robotDirection);
-        Map<String, INDArray> actionMasks = createMasks(actions);
-        if (state0 != null && actions0 != null) {
-            writeActionMasks(actionMasks0);
-            //writeActions(actions0);
-            double reward = environment.reward(state0, actions0, state1);
-            writeReward(reward);
-        }
-        // Clean up memory
-        for (INDArray value : inputs.values()) {
-            value.close();
-        }
-        if (state0 != null) {
-            for (Signal value : state0.signals().values()) {
-                value.toINDArray().close();
-            }
-        }
-        if (actions0 != null) {
-            for (Signal value : actions0.values()) {
-                value.toINDArray().close();
-            }
-        }
-        this.state0 = state1;
-        this.actions0 = actions;
-        this.actionMasks0 = actionMasks;
+    private double createReward(InferenceData data) {
+        return environment.reward(data.s0(), data.commands(), data.s1);
     }
 
-
     /**
-     * Writes the action masks
+     * Returns the input signals
      *
-     * @param masks the action masks
+     * @param data the inference data
      */
-    private void writeActionMasks(Map<String, INDArray> masks) throws IOException {
-        for (String partKey : actionKeys) {
-            String key = ACTION_MASKS_PREFIX_KEY + partKey;
-            INDArray data = requireNonNull(masks.get(partKey));
-            BinArrayFile binFile = requireNonNull(keyFileMap.get(key));
-            binFile.write(data);
-        }
+    private Map<String, INDArray> createSignals(InferenceData data) {
+        Map<String, Signal> signals = data.s0().signals();
+        signals = agent.processSignals(signals);
+        Map<String, INDArray> inputs = AbstractAgentNN.getInput(signals);
+        return Arrays.stream(signalKeys)
+                .map(k ->
+                        Tuple2.of(S0_PREFIX_KEY + k,
+                                inputs.get(k)))
+                .collect(Tuple2.toMap());
     }
 
     @Override
-    public Flowable<GeneratorInfo> readInfo() {
-        return infoProcessor;
+    public Map<String, BinArrayFile> generate() throws IOException {
+        keyFileMap = createResultFiles();
+        try (InferenceFileReader f = InferenceFileReader.fromFile(modeller.worldModelSpec(), modeller.radarModeller().topology(), file)) {
+            long n = 0;
+
+            State state0 = null;
+            Map<String, Signal> action0 = null;
+            for (; ; ) {
+                Tuple2<WorldModel, RobotCommands> t = readData(f);
+                if (t == null || stopping) {
+                    break;
+                }
+                WorldModel model = modeller.updateForInference(t._1);
+                State state1 = environment.state(model);
+                Complex robotDirection = model.robotStatus().direction();
+                Map<String, Signal> actions = environment.actions(t._2, robotDirection);
+                if (state0 != null) {
+                    processData(new InferenceData(state0, action0, state1));
+                }
+
+                // Process state0, action, state1
+                state0 = state1;
+                action0 = actions;
+                n++;
+                infoProcessor.onNext(new GeneratorInfo(n, f.position(), f.size()));
+            }
+            infoProcessor.onComplete();
+        }
+        return keyFileMap;
+    }
+
+    /**
+     * Process the inference data
+     *
+     * @param inferenceData the inference data
+     */
+    private void processData(InferenceData inferenceData) throws IOException {
+        Map<String, INDArray> data = createData(inferenceData);
+        for (Map.Entry<String, INDArray> entry : data.entrySet()) {
+            BinArrayFile f = keyFileMap.get(entry.getKey());
+            f.write(entry.getValue());
+        }
     }
 
     /**
@@ -231,12 +243,17 @@ public class SignalGenerator implements SignalGeneratorApi {
      *
      * @throws IOException in case of error
      */
-    private Tuple2<WorldModel, RobotCommands> readData() throws IOException {
+    private Tuple2<WorldModel, RobotCommands> readData(InferenceReader f) throws IOException {
         try {
-            return file.read();
+            return f.read();
         } catch (EOFException ex) {
             return null;
         }
+    }
+
+    @Override
+    public Flowable<GeneratorInfo> readInfo() {
+        return infoProcessor;
     }
 
     /**
@@ -247,30 +264,7 @@ public class SignalGenerator implements SignalGeneratorApi {
         return this;
     }
 
-    /**
-     * Writes reward
-     *
-     * @param reward the reward
-     */
-    private void writeReward(double reward) throws IOException {
-        BinArrayFile binFile = requireNonNull(keyFileMap.get(REWARD_KEY));
-        try (INDArray data = Nd4j.createFromArray(reward).reshape(1, 1)) {
-            binFile.write(data);
-        }
-    }
-
-    /**
-     * Writes the signals
-     *
-     * @param signals the signals
-     */
-    private void writeSignals(Map<String, INDArray> signals) throws IOException {
-        for (String partKey : signalKeys) {
-            String key = S0_PREFIX_KEY + partKey;
-            INDArray data = requireNonNull(signals.get(partKey));
-            BinArrayFile binFile = requireNonNull(keyFileMap.get(key));
-            binFile.write(data);
-        }
+    private record InferenceData(State s0, Map<String, Signal> commands, State s1) {
     }
 
     /**

@@ -41,7 +41,6 @@ import org.mmarini.rl.agents.KpiBinWriter;
 import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.swing.GridLayoutHelper;
-import org.mmarini.wheelly.apis.InferenceFile;
 import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotControllerApi;
 import org.mmarini.wheelly.apis.WorldModeller;
@@ -237,12 +236,6 @@ public class BatchTraining {
             random.setSeed(seed);
         }
 
-        // Creates the inference reader
-        InferenceFile inferenceReader = InferenceFile.fromFile(
-                modeller.worldModelSpec(),
-                modeller.radarModeller().topology(),
-                new File(this.args.getString("dataset")));
-
         // Creates the signal generator
         TDNetwork net = agent.network();
         String[] s0Labels = net.sourceLayers().toArray(String[]::new);
@@ -250,7 +243,7 @@ public class BatchTraining {
         String[] actionLabels = net.sinkLayers().stream()
                 .filter(criterion)
                 .toArray(String[]::new);
-        this.signalsGenerator = new SignalGenerator(inferenceReader,
+        this.signalsGenerator = new SignalGenerator(new File(this.args.getString("dataset")),
                 modeller, environment, agent,
                 new File(args.getString("temp")),
                 s0Labels,

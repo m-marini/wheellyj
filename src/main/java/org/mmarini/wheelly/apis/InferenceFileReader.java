@@ -28,9 +28,8 @@
 
 package org.mmarini.wheelly.apis;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.function.IntToDoubleFunction;
 
@@ -39,10 +38,11 @@ import static java.util.Objects.requireNonNull;
 /**
  * Stores and retrieves inference data
  */
-public class InferenceFile implements InferenceReader, InferenceWriter {
+public class InferenceFileReader implements InferenceReader {
 
     public static final WheellySupplyMessage DEFAULT_SUPPLY_MESSAGE = new WheellySupplyMessage(0, 0, 0, 0);
     public static final IntToDoubleFunction DEFAULT_DECODE_VOLTAGE = x -> 12d;
+    public static final int BUFFER_SIZE = 128;
 
     /**
      * Returns the world model dumper
@@ -52,15 +52,17 @@ public class InferenceFile implements InferenceReader, InferenceWriter {
      * @param file     the files
      * @throws IOException in case of error
      */
-    public static InferenceFile fromFile(WorldModelSpec spec, GridTopology topology, File file) throws IOException {
+    public static InferenceFileReader fromFile(WorldModelSpec spec, GridTopology topology, File file) throws IOException {
         file.getCanonicalFile().getParentFile().mkdirs();
-        RandomAccessFile raf = new RandomAccessFile(file, "rw");
-        return new InferenceFile(spec, topology, raf);
+        return new InferenceFileReader(spec, topology, new FileInputStream(requireNonNull(file)), file.length());
     }
 
     private final WorldModelSpec worldSpec;
-    private final RandomAccessFile file;
+    private final InputStream file;
     private final GridTopology topology;
+    private final byte[] buffer;
+    private final long size;
+    private long position;
 
     /**
      * Creates the world model reader
@@ -68,27 +70,14 @@ public class InferenceFile implements InferenceReader, InferenceWriter {
      * @param worldSpec the world spec
      * @param topology  the radar grid topology
      * @param file      the file
+     * @param size the size of file
      */
-    public InferenceFile(WorldModelSpec worldSpec, GridTopology topology, RandomAccessFile file) {
+    protected InferenceFileReader(WorldModelSpec worldSpec, GridTopology topology, InputStream file, long size) {
         this.worldSpec = requireNonNull(worldSpec);
         this.file = requireNonNull(file);
         this.topology = requireNonNull(topology);
-    }
-
-    /**
-     * Moves file cursor to the end of the file
-     */
-    public InferenceFile append() throws IOException {
-        file.seek(file.length());
-        return this;
-    }
-
-    /**
-     * Clears the file
-     */
-    public InferenceFile clear() throws IOException {
-        file.setLength(0);
-        return this;
+        this.size = size;
+        this.buffer = new byte[BUFFER_SIZE];
     }
 
     @Override
@@ -100,34 +89,57 @@ public class InferenceFile implements InferenceReader, InferenceWriter {
      * Returns the position of file pointer
      */
     public long position() throws IOException {
-        return file.getFilePointer();
+        return position;
     }
 
     /**
-     * Returns the length of file
+     * Reads the chunk of bytes
+     *
+     * @param buffer the buffer
+     * @param offset the start offset
+     * @param length the length
      */
-    public long size() throws IOException {
-        return file.length();
+    private InferenceFileReader read(byte[] buffer, int offset, int length) throws IOException {
+        int n = file.read(buffer, offset, length);
+        if (n != length) {
+            throw new EOFException();
+        }
+        position += n;
+        return this;
     }
 
     @Override
     public boolean readBoolean() throws IOException {
-        return file.readBoolean();
+        read(buffer, 0, 1);
+        return buffer[0] != 0;
     }
 
     @Override
     public double readDouble() throws IOException {
-        return file.readDouble();
+        long value = readLong();
+        return Double.longBitsToDouble(value);
     }
 
     @Override
     public int readInt() throws IOException {
-        return file.readInt();
+        read(buffer, 0, Integer.BYTES);
+        int result = 0;
+        for (int i = Integer.BYTES - 1; i >= 0; i--) {
+            result <<= 8;
+            result += buffer[i] & 0xff;
+        }
+        return result;
     }
 
     @Override
     public long readLong() throws IOException {
-        return file.readLong();
+        read(buffer, 0, Long.BYTES);
+        long result = 0;
+        for (int i = Long.BYTES - 1; i >= 0; i--) {
+            result <<= 8;
+            result += buffer[i] & 0xff;
+        }
+        return result;
     }
 
     @Override
@@ -166,44 +178,20 @@ public class InferenceFile implements InferenceReader, InferenceWriter {
 
     @Override
     public String readString() throws IOException {
-        return file.readUTF();
+        int n = readInt();
+        byte[] buffer = this.buffer;
+        if (n > buffer.length) {
+            // Reallocate a new buffer
+            buffer = new byte[n];
+        }
+        read(buffer, 0, n);
+        return new String(buffer, 0, n, StandardCharsets.UTF_8);
     }
 
     /**
-     * Moves file cursor to begin of the file
+     * Returns the length of file
      */
-    public InferenceFile reset() throws IOException {
-        file.seek(0);
-        return this;
-    }
-
-    @Override
-    public InferenceFile write(long data) throws IOException {
-        file.writeLong(data);
-        return this;
-    }
-
-    @Override
-    public InferenceFile write(int data) throws IOException {
-        file.writeInt(data);
-        return this;
-    }
-
-    @Override
-    public InferenceFile write(boolean data) throws IOException {
-        file.writeBoolean(data);
-        return this;
-    }
-
-    @Override
-    public InferenceFile write(double data) throws IOException {
-        file.writeDouble(data);
-        return this;
-    }
-
-    @Override
-    public InferenceFile write(String data) throws IOException {
-        file.writeUTF(data);
-        return this;
+    public long size() throws IOException {
+        return size;
     }
 }

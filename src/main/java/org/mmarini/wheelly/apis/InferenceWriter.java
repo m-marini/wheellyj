@@ -35,7 +35,6 @@ import java.util.Map;
  * World model dumper
  */
 public interface InferenceWriter extends AutoCloseable {
-
     /**
      * Writes a long number
      *

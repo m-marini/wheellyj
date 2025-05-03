@@ -29,19 +29,19 @@
 package org.mmarini.wheelly.batch;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.rl.agents.AbstractAgentNN;
 import org.mmarini.rl.agents.BinArrayFile;
 import org.mmarini.rl.agents.PPOAgent;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.RobotSpec;
+import org.mmarini.wheelly.apis.WorldModeller;
 import org.mmarini.wheelly.envs.WorldEnvironment;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
-import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
@@ -56,36 +56,12 @@ class SignalGeneratorTest {
 
     public static final File FILE = new File("tmp/dump.bin");
     public static final double GRID_SIZE = 0.3;
-    public static final GridTopology TOPOLOGY = new GridTopology(new Point2D.Double(), 51, 51, GRID_SIZE);
-    public static final RadarMap RADAR = RadarMap.empty(TOPOLOGY);
-    public static final int NUM_SECTORS = 24;
     public static final Complex RECEPTIVE_ANGLE = Complex.fromDeg(15);
     public static final double MAX_RADAR_DISTANCE = 3d;
-    public static final WheellyProxyMessage PROXY_MESSAGE = new WheellyProxyMessage(1, 2, 3, 0,
-            5, 6, 7, 8);
-    public static final WheellyProxyMessage CAMERA_PROXY_MESSAGE = new WheellyProxyMessage(2, 3, 4, 0,
-            6, 7, 8, 9);
-    public static final WheellyMotionMessage MOTION_MESSAGE = new WheellyMotionMessage(1, 2, 3, 4, 5,
-            45, 7, 8, 9, true, 10, 11, 12, 13);
-    public static final WheellyContactsMessage CONTACTS_MESSAGE = new WheellyContactsMessage(1, 2, 3, true,
-            true, true, true);
-    public static final CameraEvent CAMERA_EVENT = new CameraEvent(1, "?", 3, 4, null);
-    public static final RobotCommands COMMANDS = new RobotCommands(true, Complex.DEG0, false, true, Complex.DEG90, 20);
     public static final double CONTACT_RADIUS = 0.28;
     public static final RobotSpec ROBOT_SPEC = new RobotSpec(MAX_RADAR_DISTANCE, RECEPTIVE_ANGLE, CONTACT_RADIUS);
     public static final File OUTPUT_PATH = new File("tmp");
     public static final double EPSILON = 1e-6;
-    private static final double MARKER_SIZE = 0.3;
-    private static final int GRID_MAP_SIZE = 31;
-    public static final WorldModelSpec WORLD_MODEL_SPEC = new WorldModelSpec(ROBOT_SPEC, NUM_SECTORS, GRID_MAP_SIZE, MARKER_SIZE);
-    public static final RobotStatus ROBOT_STATUS = new RobotStatus(WORLD_MODEL_SPEC.robotSpec(), 1, MOTION_MESSAGE, PROXY_MESSAGE,
-            CONTACTS_MESSAGE, InferenceFile.DEFAULT_SUPPLY_MESSAGE, InferenceFile.DEFAULT_DECODE_VOLTAGE, CAMERA_EVENT, CAMERA_PROXY_MESSAGE);
-    private static final Map<String, LabelMarker> MARKERS0 = Map.of(
-            "?", new LabelMarker("?", new Point2D.Double(1, 2), 1, 2, 3));
-    public static final WorldModel MODEL0 = new WorldModel(WORLD_MODEL_SPEC, ROBOT_STATUS, RADAR, MARKERS0, null, null, null);
-    private static final Map<String, LabelMarker> MARKERS1 = Map.of(
-            "A", new LabelMarker("A", new Point2D.Double(1, 2), 1, 2, 3));
-    public static final WorldModel MODEL1 = new WorldModel(WORLD_MODEL_SPEC, ROBOT_STATUS, RADAR, MARKERS1, null, null, null);
     private static final String MODELLER_DEF = """
             ---
             $schema: https://mmarini.org/wheelly/world-modeller-schema-0.1
@@ -124,7 +100,6 @@ class SignalGeneratorTest {
             "sensorAction"
     };
     private SignalGenerator generator;
-    private InferenceFile file;
 
     @Test
     void generate() throws IOException {
@@ -174,26 +149,12 @@ class SignalGeneratorTest {
 
     @BeforeEach
     void setUp() throws IOException {
-        this.file = InferenceFile.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE);
-        file.clear()
-                .write(MODEL0, COMMANDS)
-                .write(MODEL1, COMMANDS);
-        file.reset();
         WorldModeller modeller = WorldModeller.create(Utils.fromText(MODELLER_DEF), Locator.root());
         modeller.setRobotSpec(ROBOT_SPEC);
         WorldEnvironment environment = WorldEnvironment.create(Utils.fromText(ENV_DEF), Locator.root());
         environment.connect(modeller);
         JsonNode spec = Utils.fromResource("/rlAgent.yml");
         AbstractAgentNN agent = PPOAgent.create(spec, environment);
-        this.generator = new SignalGenerator(file, modeller, environment, agent, OUTPUT_PATH, SIGNAL_KEYS, ACTION_KEYS);
-    }
-
-    @AfterEach
-    void tearDown() throws IOException {
-        if (file != null) {
-            InferenceFile file1 = file;
-            file = null;
-            file1.close();
-        }
+        this.generator = new SignalGenerator(FILE, modeller, environment, agent, OUTPUT_PATH, SIGNAL_KEYS, ACTION_KEYS);
     }
 }

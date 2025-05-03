@@ -50,11 +50,6 @@ class InferenceFileTest {
     public static final int NUM_SECTORS = 24;
     public static final Complex RECEPTIVE_ANGLE = Complex.fromDeg(15);
     public static final double MAX_RADAR_DISTANCE = 3d;
-    private static final double CONTACT_RADIUS = 0.28;
-    private static final double MARKER_SIZE = 0.3;
-    private static final int GRID_MAP_SIZE = 31;
-    public static final WorldModelSpec WORLD_MODEL_SPEC = new WorldModelSpec(new RobotSpec(MAX_RADAR_DISTANCE, RECEPTIVE_ANGLE, CONTACT_RADIUS),
-            NUM_SECTORS, GRID_MAP_SIZE, MARKER_SIZE);
     public static final WheellyProxyMessage PROXY_MESSAGE = new WheellyProxyMessage(1, 2, 3, 4,
             5, 6, 7, 8);
     public static final WheellyProxyMessage CAMERA_PROXY_MESSAGE = new WheellyProxyMessage(2, 3, 4, 5,
@@ -64,114 +59,123 @@ class InferenceFileTest {
     public static final WheellyContactsMessage CONTACTS_MESSAGE = new WheellyContactsMessage(1, 2, 3, true,
             true, true, true);
     public static final CameraEvent CAMERA_EVENT = new CameraEvent(1, "?", 3, 4, null);
-    public static final RobotStatus ROBOT_STATUS = new RobotStatus(WORLD_MODEL_SPEC.robotSpec(), 1, MOTION_MESSAGE, PROXY_MESSAGE,
-            CONTACTS_MESSAGE, InferenceFile.DEFAULT_SUPPLY_MESSAGE, InferenceFile.DEFAULT_DECODE_VOLTAGE, CAMERA_EVENT, CAMERA_PROXY_MESSAGE);
     public static final RobotCommands COMMANDS = new RobotCommands(true, Complex.DEG0, false, true, Complex.DEG90, 20);
+    private static final double CONTACT_RADIUS = 0.28;
+    private static final double MARKER_SIZE = 0.3;
+    private static final int GRID_MAP_SIZE = 31;
+    public static final WorldModelSpec WORLD_MODEL_SPEC = new WorldModelSpec(new RobotSpec(MAX_RADAR_DISTANCE, RECEPTIVE_ANGLE, CONTACT_RADIUS),
+            NUM_SECTORS, GRID_MAP_SIZE, MARKER_SIZE);
+    public static final RobotStatus ROBOT_STATUS = new RobotStatus(WORLD_MODEL_SPEC.robotSpec(), 1, MOTION_MESSAGE, PROXY_MESSAGE,
+            CONTACTS_MESSAGE, InferenceFileReader.DEFAULT_SUPPLY_MESSAGE, InferenceFileReader.DEFAULT_DECODE_VOLTAGE, CAMERA_EVENT, CAMERA_PROXY_MESSAGE);
     private static final Map<String, LabelMarker> MARKERS = Map.of(
             "?", new LabelMarker("?", new Point2D.Double(1, 2), 1, 2, 3));
     public static final WorldModel MODEL = new WorldModel(WORLD_MODEL_SPEC, ROBOT_STATUS, RADAR, MARKERS, null, null, null);
 
-    private InferenceFile file;
+    private InferenceWriter writer;
+    private InferenceReader reader;
 
     @BeforeEach
     void setUp() throws IOException {
-        this.file = InferenceFile.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE).clear();
+        FILE.delete();
+        this.writer = InferenceFileWriter.fromFile(FILE);
+        this.reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE);
     }
 
     @AfterEach
-    void tearDown() throws IOException {
-        file.close();
+    void tearDown() throws Exception {
+        writer.close();
+        reader.close();
         FILE.delete();
     }
 
     @Test
     void testCamera() throws IOException {
-        file.write(CAMERA_EVENT);
-        CameraEvent cameraRead = file.reset().readCamera();
-            assertEquals(CAMERA_EVENT, cameraRead);
+        writer.write(CAMERA_EVENT);
+        CameraEvent cameraRead = reader.readCamera();
+        assertEquals(CAMERA_EVENT, cameraRead);
     }
 
     @Test
     void testCommands() throws IOException {
-        file.write(COMMANDS);
-        RobotCommands commandRead = file.reset().readCommands();
-            assertEquals(COMMANDS, commandRead);
+        writer.write(COMMANDS);
+        RobotCommands commandRead = reader.readCommands();
+        assertEquals(COMMANDS, commandRead);
     }
 
     @Test
     void testContacts() throws IOException {
-        file.write(CONTACTS_MESSAGE);
-        WheellyContactsMessage contactsRead = file.reset().readContacts();
-            assertEquals(CONTACTS_MESSAGE, contactsRead);
+        writer.write(CONTACTS_MESSAGE);
+        WheellyContactsMessage contactsRead = reader.readContacts();
+        assertEquals(CONTACTS_MESSAGE, contactsRead);
     }
 
     @Test
     void testInference() throws IOException {
-        file.write(MODEL, COMMANDS);
-        Tuple2<WorldModel, RobotCommands> t = file.reset().read();
-            WorldModel model = t._1;
-            RadarMap radarRead = model.radarMap();
-            assertEquals(MODEL.robotStatus(), model.robotStatus());
-            assertEquals(MODEL.markers(), model.markers());
-            assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
-            assertEquals(RADAR.topology(), radarRead.topology());
-            assertArrayEquals(RADAR.cells(), radarRead.cells());
-            assertArrayEquals(RADAR.vertices(), radarRead.vertices());
-            assertArrayEquals(RADAR.verticesByCells(), radarRead.verticesByCells());
-            RobotCommands commands = t._2;
-            assertEquals(COMMANDS, commands);
+        writer.write(MODEL, COMMANDS);
+        Tuple2<WorldModel, RobotCommands> t = reader.read();
+        WorldModel model = t._1;
+        RadarMap radarRead = model.radarMap();
+        assertEquals(MODEL.robotStatus(), model.robotStatus());
+        assertEquals(MODEL.markers(), model.markers());
+        assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
+        assertEquals(RADAR.topology(), radarRead.topology());
+        assertArrayEquals(RADAR.cells(), radarRead.cells());
+        assertArrayEquals(RADAR.vertices(), radarRead.vertices());
+        assertArrayEquals(RADAR.verticesByCells(), radarRead.verticesByCells());
+        RobotCommands commands = t._2;
+        assertEquals(COMMANDS, commands);
     }
 
     @Test
     void testMarkers() throws IOException {
-        file.write(MARKERS);
-        Map<String, LabelMarker> markersRead = file.reset().readMarkers();
-            assertEquals(MARKERS, markersRead);
+        writer.write(MARKERS);
+        Map<String, LabelMarker> markersRead = reader.readMarkers();
+        assertEquals(MARKERS, markersRead);
     }
 
     @Test
     void testModel() throws IOException {
-        file.write(MODEL);
-        WorldModel model = file.reset().readModel();
-            RadarMap radarRead = model.radarMap();
-            assertEquals(MODEL.robotStatus(), model.robotStatus());
-            assertEquals(MODEL.markers(), model.markers());
-            assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
-            assertEquals(RADAR.topology(), radarRead.topology());
-            assertArrayEquals(RADAR.cells(), radarRead.cells());
-            assertArrayEquals(RADAR.vertices(), radarRead.vertices());
-            assertArrayEquals(RADAR.verticesByCells(), radarRead.verticesByCells());
+        writer.write(MODEL);
+        WorldModel model = reader.readModel();
+        RadarMap radarRead = model.radarMap();
+        assertEquals(MODEL.robotStatus(), model.robotStatus());
+        assertEquals(MODEL.markers(), model.markers());
+        assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
+        assertEquals(RADAR.topology(), radarRead.topology());
+        assertArrayEquals(RADAR.cells(), radarRead.cells());
+        assertArrayEquals(RADAR.vertices(), radarRead.vertices());
+        assertArrayEquals(RADAR.verticesByCells(), radarRead.verticesByCells());
     }
 
     @Test
     void testMotion() throws IOException {
-        file.write(MOTION_MESSAGE);
-        WheellyMotionMessage motionRead = file.reset().readMotion();
-            assertEquals(MOTION_MESSAGE, motionRead);
-        }
+        writer.write(MOTION_MESSAGE);
+        WheellyMotionMessage motionRead = reader.readMotion();
+        assertEquals(MOTION_MESSAGE, motionRead);
+    }
 
     @Test
     void testProxy() throws IOException {
-        file.write(PROXY_MESSAGE);
-        WheellyProxyMessage proxyRead = file.reset().readProxy();
-            assertEquals(PROXY_MESSAGE, proxyRead);
+        writer.write(PROXY_MESSAGE);
+        WheellyProxyMessage proxyRead = reader.readProxy();
+        assertEquals(PROXY_MESSAGE, proxyRead);
     }
 
     @Test
     void testRadarMap() throws IOException {
-        file.write(RADAR);
-        RadarMap radarRead = file.reset().readRadar();
-            assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
-            assertEquals(RADAR.topology(), radarRead.topology());
-            assertArrayEquals(RADAR.cells(), radarRead.cells());
-            assertArrayEquals(RADAR.vertices(), radarRead.vertices());
-            assertArrayEquals(RADAR.verticesByCells(), radarRead.verticesByCells());
+        writer.write(RADAR);
+        RadarMap radarRead = reader.readRadar();
+        assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
+        assertEquals(RADAR.topology(), radarRead.topology());
+        assertArrayEquals(RADAR.cells(), radarRead.cells());
+        assertArrayEquals(RADAR.vertices(), radarRead.vertices());
+        assertArrayEquals(RADAR.verticesByCells(), radarRead.verticesByCells());
     }
 
     @Test
     void testStatus() throws IOException {
-        file.write(ROBOT_STATUS);
-        RobotStatus contactsRead = file.reset().readStatus();
-            assertEquals(ROBOT_STATUS, contactsRead);
+        writer.write(ROBOT_STATUS);
+        RobotStatus contactsRead = reader.readStatus();
+        assertEquals(ROBOT_STATUS, contactsRead);
     }
 }

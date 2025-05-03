@@ -177,7 +177,7 @@ public class Wheelly {
     private RobotApi robot;
     private Agent agent;
     private JFrame frame;
-    private InferenceFile modelDumper;
+    private InferenceWriter modelDumper;
 
     /**
      * Creates the server reinforcement learning engine server
@@ -267,11 +267,8 @@ public class Wheelly {
         // Creates the model dumper
         Optional.ofNullable(this.args.getString("inference")).ifPresent(file -> {
             try {
-                this.modelDumper = InferenceFile.fromFile(
-                                worldModeller.worldModelSpec(),
-                                worldModeller.radarModeller().topology(),
-                                new File(this.args.getString("inference")))
-                        .append();
+                this.modelDumper = InferenceFileWriter.fromFile(
+                        new File(this.args.getString("inference")));
             } catch (IOException e) {
                 logger.atError().setCause(e).log("Error dumping inference to {}", file);
             }
