@@ -41,7 +41,7 @@ import java.util.stream.Collectors;
 /**
  * Reads infrence data
  */
-public interface InferenceReader extends AutoCloseable {
+public interface InferenceReader extends AutoCloseable, DataReader {
 
     /**
      * Returns the world model from file or null if end of file
@@ -53,13 +53,6 @@ public interface InferenceReader extends AutoCloseable {
         RobotCommands commands = readCommands();
         return Tuple2.of(model, commands);
     }
-
-    /**
-     * Returns a boolean from reader
-     *
-     * @throws IOException in case of error
-     */
-    boolean readBoolean() throws IOException;
 
     /**
      * Returns the camera event
@@ -107,27 +100,6 @@ public interface InferenceReader extends AutoCloseable {
     }
 
     /**
-     * Returns a double from reader
-     *
-     * @throws IOException in case of error
-     */
-    double readDouble() throws IOException;
-
-    /**
-     * Return an int from reader
-     *
-     * @throws IOException in case of error
-     */
-    int readInt() throws IOException;
-
-    /**
-     * Returns a long number from reader
-     *
-     * @throws IOException in case of error
-     */
-    long readLong() throws IOException;
-
-    /**
      * Returns the marker map
      *
      * @throws IOException in case of error
@@ -137,8 +109,8 @@ public interface InferenceReader extends AutoCloseable {
         List<LabelMarker> markers = new ArrayList<>();
         for (int i = 0; i < n; i++) {
             String qrCode = readString();
-            Point2D location = new Point2D.Double(readDouble(), readDouble());
-            double weight = readDouble();
+            Point2D location = new Point2D.Float(readFloat(), readFloat());
+            double weight = readFloat();
             long markerTime = readLong();
             long cleanTime = readLong();
             markers.add(new LabelMarker(qrCode, location, weight, markerTime, cleanTime));
@@ -166,11 +138,11 @@ public interface InferenceReader extends AutoCloseable {
         long localTime = readLong();
         long simulationTime = readLong();
         long remoteTime = readLong();
-        double xPulses = readDouble();
-        double yPulses = readDouble();
+        double xPulses = readFloat();
+        double yPulses = readFloat();
         int directionDeg = readInt();
-        double leftPps = readDouble();
-        double rightPps = readDouble();
+        double leftPps = readFloat();
+        double rightPps = readFloat();
         int imuFailure = readInt();
         boolean halt = readBoolean();
         int leftTargetPps = readInt();
@@ -192,8 +164,8 @@ public interface InferenceReader extends AutoCloseable {
         long remoteTime = readLong();
         int sensorDirectionDeg = readInt();
         long echoDelay = readLong();
-        double xPulse = readDouble();
-        double yPulse = readDouble();
+        double xPulse = readFloat();
+        double yPulse = readFloat();
         int echoYawDeg = readInt();
         return new WheellyProxyMessage(localTime, simTime, remoteTime, sensorDirectionDeg, echoDelay, xPulse, yPulse, echoYawDeg);
     }
@@ -211,11 +183,4 @@ public interface InferenceReader extends AutoCloseable {
      * @throws IOException in case of error
      */
     RobotStatus readStatus() throws IOException;
-
-    /**
-     * Returns a string from reader
-     *
-     * @throws IOException in case of error
-     */
-    String readString() throws IOException;
 }

@@ -35,7 +35,6 @@ import org.mmarini.Tuple2;
 import org.mmarini.rl.nets.TDNetworkState;
 import org.mmarini.wheelly.apps.Batches;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +42,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -54,22 +52,19 @@ import static java.util.Objects.requireNonNull;
  * The input of the training batch are
  * <ul>
  *     <li> <b>s0</b> state inputs of network for each step </li>
- *     <li> <b>actions</b> selected actions for each step step </li>
+ *     <li> <b>masks</b> masks of selected actions for each step step </li>
  *     <li> <b>reward</b> reward received for each step </li>
  *     <li> <b>terminal</b> true if state terminal for each step </li>
  * </ul>
  */
 public class BatchTrainer {
-    public static final String CREATE_ACTION_MASK_ID = "createActionMask";
     public static final String TRAINING_ID = "training";
     public static final String CREATE_PI0_ID = "createPi0";
     public static final String S0_KEY = "s0";
-    public static final String ACTIONS_KEY = "actions";
     public static final String REWARD_KEY = "reward";
     public static final int BATCH_SIZE = 1024;
     private static final String ACTIONS_MASKS_KEY = "masks";
     private static final File TMP_PATH = new File("tmp");
-    private static final File TMP_MASKS_PATH = new File(TMP_PATH, ACTIONS_MASKS_KEY);
     private static final Logger logger = LoggerFactory.getLogger(BatchTrainer.class);
     private static final File TMP_ACTION_PROB0_PATH = new File(TMP_PATH, "actionProb0");
 
@@ -89,7 +84,6 @@ public class BatchTrainer {
     private boolean stopped;
     private Map<String, BinArrayFile> masksFiles;
     private Map<String, BinArrayFile> s0Files;
-    private File datasetPath;
     private BinArrayFile rewardFile;
     private Agent agent;
 
@@ -115,28 +109,6 @@ public class BatchTrainer {
         agent = agent.alphas(alphas);
     }
 
-    /**
-     * Returns the action mask iterators by reading actions
-     *
-     * @param path the actions' path
-     */
-    private Map<String, BinArrayFile> createActionMasks(File path) {
-        // Converts to actions' mask
-
-        // Get the layer io size
-        Map<String, Long> layerSizes = agent.network().sizes();
-        // Load actions
-        return KeyFileMap.streamBinArrayFile(path, ACTIONS_KEY)
-                .mapKeys(key -> KeyFileMap.children(key, ACTIONS_KEY))
-                .mapValues((action, value) -> {
-                    try {
-                        return createActionToMask(action, value, layerSizes.get(action));
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-                .toMap();
-    }
 
     private Map<String, BinArrayFile> createActionProb0() throws IOException {
         Map<String, BinArrayFile> actionProb0Files = masksFiles.keySet().stream()
@@ -186,50 +158,12 @@ public class BatchTrainer {
     }
 
     /**
-     * Returns the action mask binary file from the action binary file
-     *
-     * @param actionName the name of action used to build output filepath
-     * @param actionFile the action dataset
-     * @param numActions the number of possible action values
-     */
-    private BinArrayFile createActionToMask(String actionName,
-                                            BinArrayFile actionFile,
-                                            long numActions) throws IOException {
-        // Creates the process to transform the action value to action mask
-        BinArrayFile maskFile = BinArrayFile.createByKey(TMP_MASKS_PATH, actionName);
-        AtomicLong n = new AtomicLong();
-        long totalRecords = actionFile.size();
-        infoProcessor.onNext(new TrainingInfo(CREATE_ACTION_MASK_ID, 0, n.get(), totalRecords));
-        Batches.map(maskFile, actionFile, agent.numSteps(),
-                action -> {
-                    INDArray mask = Nd4j.zeros(action.size(0), numActions);
-                    for (long i = 0; i < action.size(0); i++) {
-                        mask.putScalar(i, action.getLong(i), 1f);
-                    }
-                    long records = n.addAndGet(action.size(0));
-                    TrainingInfo info = new TrainingInfo(CREATE_ACTION_MASK_ID, 0, records, totalRecords);
-                    infoProcessor.onNext(info);
-                    return mask;
-                }
-        );
-        return maskFile;
-    }
-
-    /**
      * Set the learning rate hyperparameter
      *
      * @param eta learning rate hyperparameter
      */
     public void eta(float eta) {
         agent = agent.eta(eta);
-    }
-
-    /**
-     * Prepare data for training.
-     * Load the dataset of s0, s1, reward, terminal, actions
-     */
-    public void prepare() throws Exception {
-        this.masksFiles = createActionMasks(datasetPath);
     }
 
     /**
@@ -322,7 +256,6 @@ public class BatchTrainer {
      * @param datasetPath the dataset path
      */
     public void validate(File datasetPath) throws IOException {
-        this.datasetPath = datasetPath;
         this.s0Files = KeyFileMap.children(KeyFileMap.create(datasetPath, S0_KEY), S0_KEY);
         if (s0Files.isEmpty()) {
             throw new IllegalArgumentException("Missing s0 datasets");
@@ -331,15 +264,15 @@ public class BatchTrainer {
         if (!rewardFile.file().canRead()) {
             throw new IllegalArgumentException("Missing reward datasets");
         }
-        Map<String, BinArrayFile> actionFiles = KeyFileMap.create(datasetPath, ACTIONS_KEY);
-        if (actionFiles.isEmpty()) {
-            throw new IllegalArgumentException("Missing actions datasets");
+        this.masksFiles = KeyFileMap.children(KeyFileMap.create(datasetPath, ACTIONS_MASKS_KEY), ACTIONS_MASKS_KEY);
+        if (masksFiles.isEmpty()) {
+            throw new IllegalArgumentException("Missing action masks datasets");
         }
 
         KeyFileMap.validateSizes(s0Files.values());
 
         List<BinArrayFile> files = Stream.concat(
-                        actionFiles.values().stream(),
+                        masksFiles.values().stream(),
                         Stream.of(rewardFile))
                 .toList();
         KeyFileMap.validateSizes(files);

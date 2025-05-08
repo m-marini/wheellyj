@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Issue [#527](https://github.com/m-marini/wheellyj/issues/527): Change label locating
 - Issue [#532](https://github.com/m-marini/wheellyj/issues/532): Camera event following proxy
+- Issue [#542](https://github.com/m-marini/wheellyj/issues/542): Move action masks creation
 
 ### Fixed
 

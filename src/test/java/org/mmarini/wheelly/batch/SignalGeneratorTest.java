@@ -29,7 +29,6 @@
 package org.mmarini.wheelly.batch;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.rl.agents.AbstractAgentNN;
@@ -56,11 +55,15 @@ class SignalGeneratorTest {
 
     public static final File FILE = new File("tmp/dump.bin");
     public static final double GRID_SIZE = 0.3;
+    public static final Complex RECEPTIVE_ANGLE = Complex.fromDeg(15);
+    public static final double MAX_RADAR_DISTANCE = 3d;
+    public static final double CONTACT_RADIUS = 0.28;
+    public static final RobotSpec ROBOT_SPEC = new RobotSpec(MAX_RADAR_DISTANCE, RECEPTIVE_ANGLE, CONTACT_RADIUS);
+    public static final File OUTPUT_PATH = new File("tmp");
+    public static final double EPSILON = 1e-6;
     public static final GridTopology TOPOLOGY = new GridTopology(new Point2D.Double(), 51, 51, GRID_SIZE);
     public static final RadarMap RADAR = RadarMap.empty(TOPOLOGY);
     public static final int NUM_SECTORS = 24;
-    public static final Complex RECEPTIVE_ANGLE = Complex.fromDeg(15);
-    public static final double MAX_RADAR_DISTANCE = 3d;
     public static final WheellyProxyMessage PROXY_MESSAGE = new WheellyProxyMessage(1, 2, 3, 0,
             5, 6, 7, 8);
     public static final WheellyProxyMessage CAMERA_PROXY_MESSAGE = new WheellyProxyMessage(2, 3, 4, 0,
@@ -71,21 +74,6 @@ class SignalGeneratorTest {
             true, true, true);
     public static final CameraEvent CAMERA_EVENT = new CameraEvent(1, "?", 3, 4, null);
     public static final RobotCommands COMMANDS = new RobotCommands(true, Complex.DEG0, false, true, Complex.DEG90, 20);
-    public static final double CONTACT_RADIUS = 0.28;
-    public static final RobotSpec ROBOT_SPEC = new RobotSpec(MAX_RADAR_DISTANCE, RECEPTIVE_ANGLE, CONTACT_RADIUS);
-    public static final File OUTPUT_PATH = new File("tmp");
-    public static final double EPSILON = 1e-6;
-    private static final double MARKER_SIZE = 0.3;
-    private static final int GRID_MAP_SIZE = 31;
-    public static final WorldModelSpec WORLD_MODEL_SPEC = new WorldModelSpec(ROBOT_SPEC, NUM_SECTORS, GRID_MAP_SIZE, MARKER_SIZE);
-    public static final RobotStatus ROBOT_STATUS = new RobotStatus(WORLD_MODEL_SPEC.robotSpec(), 1, MOTION_MESSAGE, PROXY_MESSAGE,
-            CONTACTS_MESSAGE, InferenceFile.DEFAULT_SUPPLY_MESSAGE, InferenceFile.DEFAULT_DECODE_VOLTAGE, CAMERA_EVENT, CAMERA_PROXY_MESSAGE);
-    private static final Map<String, LabelMarker> MARKERS0 = Map.of(
-            "?", new LabelMarker("?", new Point2D.Double(1, 2), 1, 2, 3));
-    public static final WorldModel MODEL0 = new WorldModel(WORLD_MODEL_SPEC, ROBOT_STATUS, RADAR, MARKERS0, null, null, null);
-    private static final Map<String, LabelMarker> MARKERS1 = Map.of(
-            "A", new LabelMarker("A", new Point2D.Double(1, 2), 1, 2, 3));
-    public static final WorldModel MODEL1 = new WorldModel(WORLD_MODEL_SPEC, ROBOT_STATUS, RADAR, MARKERS1, null, null, null);
     private static final String MODELLER_DEF = """
             ---
             $schema: https://mmarini.org/wheelly/world-modeller-schema-0.1
@@ -123,30 +111,50 @@ class SignalGeneratorTest {
             "move",
             "sensorAction"
     };
+    private static final double MARKER_SIZE = 0.3;
+    private static final int GRID_MAP_SIZE = 31;
+    public static final WorldModelSpec WORLD_MODEL_SPEC = new WorldModelSpec(ROBOT_SPEC, NUM_SECTORS, GRID_MAP_SIZE, MARKER_SIZE);
+    public static final RobotStatus ROBOT_STATUS = new RobotStatus(WORLD_MODEL_SPEC.robotSpec(), 1, MOTION_MESSAGE, PROXY_MESSAGE,
+            CONTACTS_MESSAGE, InferenceFileReader.DEFAULT_SUPPLY_MESSAGE, InferenceFileReader.DEFAULT_DECODE_VOLTAGE, CAMERA_EVENT, CAMERA_PROXY_MESSAGE);
+    private static final Map<String, LabelMarker> MARKERS0 = Map.of(
+            "?", new LabelMarker("?", new Point2D.Double(1, 2), 1, 2, 3));
+    public static final WorldModel MODEL0 = new WorldModel(WORLD_MODEL_SPEC, ROBOT_STATUS, RADAR, MARKERS0, null, null, null);
+    private static final Map<String, LabelMarker> MARKERS1 = Map.of(
+            "A", new LabelMarker("A", new Point2D.Double(1, 2), 1, 2, 3));
+    public static final WorldModel MODEL1 = new WorldModel(WORLD_MODEL_SPEC, ROBOT_STATUS, RADAR, MARKERS1, null, null, null);
     private SignalGenerator generator;
-    private InferenceFile file;
 
     @Test
     void generate() throws IOException {
         Map<String, BinArrayFile> files = generator.generate();
         assertNotNull(files);
         assertThat(files, hasKey("reward"));
-        assertThat(files, hasKey("actions.move"));
-        assertThat(files, hasKey("actions.sensorAction"));
+        assertThat(files, hasKey("masks.move"));
+        assertThat(files, hasKey("masks.sensorAction"));
         assertThat(files, hasKey("s0.canMoveFeatures"));
         assertThat(files, hasKey("s0.markerStates"));
 
         assertEquals(1, files.get("reward").size());
 
-        BinArrayFile sensorActionFile = files.get("actions.sensorAction");
+        BinArrayFile sensorActionFile = files.get("masks.sensorAction");
         assertEquals(1, sensorActionFile.size());
         assertThat(sensorActionFile.seek(0).read(1),
-                matrixCloseTo(new long[]{1, 1}, EPSILON, 3));
+                matrixCloseTo(new long[]{1, 7}, EPSILON,
+                        0, 0, 0, 1, 0, 0, 0));
 
-        BinArrayFile moveFile = files.get("actions.move");
+        BinArrayFile moveFile = files.get("masks.move");
         assertEquals(1, moveFile.size());
         INDArray move = moveFile.seek(0).read(1);
-        assertThat(move, matrixCloseTo(new long[]{1, 1}, EPSILON, 22));
+        assertThat(move, matrixCloseTo(new long[]{1, 40}, EPSILON,
+                0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0,
+                0, 0, 1, 0, 0,
+                0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0
+        ));
 
         BinArrayFile canMoveFile = files.get("s0.canMoveFeatures");
         assertEquals(2, canMoveFile.size());
@@ -164,26 +172,17 @@ class SignalGeneratorTest {
 
     @BeforeEach
     void setUp() throws IOException {
-        this.file = InferenceFile.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE);
-        file.clear()
-                .write(MODEL0, COMMANDS)
-                .write(MODEL1, COMMANDS);
-        file.reset();
+        FILE.delete();
+        try (InferenceFileWriter file = InferenceFileWriter.fromFile(FILE)) {
+            file.write(MODEL0, COMMANDS)
+                    .write(MODEL1, COMMANDS);
+        }
         WorldModeller modeller = WorldModeller.create(Utils.fromText(MODELLER_DEF), Locator.root());
         modeller.setRobotSpec(ROBOT_SPEC);
         WorldEnvironment environment = WorldEnvironment.create(Utils.fromText(ENV_DEF), Locator.root());
         environment.connect(modeller);
         JsonNode spec = Utils.fromResource("/rlAgent.yml");
         AbstractAgentNN agent = PPOAgent.create(spec, environment);
-        this.generator = new SignalGenerator(file, modeller, environment, agent, OUTPUT_PATH, SIGNAL_KEYS, ACTION_KEYS);
-    }
-
-    @AfterEach
-    void tearDown() throws IOException {
-        if (file != null) {
-            InferenceFile file1 = file;
-            file = null;
-            file1.close();
-        }
+        this.generator = new SignalGenerator(FILE, modeller, environment, agent, OUTPUT_PATH, SIGNAL_KEYS, ACTION_KEYS);
     }
 }
