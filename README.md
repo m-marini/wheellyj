@@ -9,6 +9,14 @@ The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/w
 
 ## Release 0.22.0
 
+- Add markers signals
+- Add state dump
+- Change label locating
+- Camera event following proxy
+- Move action masks creation
+
+## Release 0.22.0
+
 - Added relocate robot on stalemate
 
 ## Release 0.21.0
@@ -25,7 +33,7 @@ Added new features:
 - Critic kpi monitoring
 - Direction and speed probability in report
 
-Fixed sume bugs:
+Fixed some bugs:
 
 - Wrong learning for negative reward
 - Incorrect collision resolution
