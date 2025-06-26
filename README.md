@@ -7,7 +7,7 @@ The code of Webcam controller is at [Wheellycam project](https://github.com/m-ma
 
 The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
-## Release 0.22.0
+## Release 0.23.0
 
 - Add markers signals
 - Add state dump
