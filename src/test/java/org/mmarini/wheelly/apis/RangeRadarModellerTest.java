@@ -43,7 +43,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
 
-class RadarModellerTest {
+class RangeRadarModellerTest {
 
     public static final double GRID_SIZE = 0.2;
     public static final int WIDTH = 11;
@@ -66,7 +66,7 @@ class RadarModellerTest {
         };
     }
 
-    private RadarModeller modeller;
+    private RangeRadarModeller modeller;
 
     @Test
     void cleanNoTimeout() {
@@ -126,7 +126,7 @@ class RadarModellerTest {
 
     @BeforeEach
     void setUp() {
-        modeller = new RadarModeller(GRID_TOPOLOGY,
+        modeller = new RangeRadarModeller(GRID_TOPOLOGY,
                 CLEAN_INTERVAL, ECHO_PRESISTANCE, CONTACT_PRESISTENCE, CORRELATION_INTERVAL,
                 DECAY);
     }
@@ -138,7 +138,7 @@ class RadarModellerTest {
         Complex direction = Complex.DEG0;
         double distance = 0.8;
         long timestamp = System.currentTimeMillis();
-        RadarModeller.SensorSignal signal = new RadarModeller.SensorSignal(sensor, direction, distance, timestamp, true);
+        SensorSignal signal = new SensorSignal(sensor, direction, distance, timestamp, true);
 
         map = modeller.update(map, signal, ROBOT_SPEC);
 
@@ -216,7 +216,7 @@ class RadarModellerTest {
 
         // And a sensor signal
         Point2D sensLocation = new Point2D.Double();
-        RadarModeller.SensorSignal signal = new RadarModeller.SensorSignal(sensLocation,
+        SensorSignal signal = new SensorSignal(sensLocation,
                 Complex.fromDeg(sensDir), distance, t1,
                 distance > 0 && distance < MAX_RADAR_DISTANCE);
 

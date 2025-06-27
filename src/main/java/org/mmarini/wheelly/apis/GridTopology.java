@@ -55,6 +55,16 @@ public record GridTopology(Point2D center, int width, int height, double gridSiz
     }
 
     /**
+     * Returns true if topology cntains the cells indexed by i, j
+     *
+     * @param i the columns indices (x-axis)
+     * @param j the row indices (y-axis)
+     */
+    public boolean contains(int i, int j) {
+        return i >= 0 && j >= 0 && i < width && j < height;
+    }
+
+    /**
      * Returns the index of cell or -1 if not found
      *
      * @param p the point

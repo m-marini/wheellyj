@@ -7,7 +7,9 @@ import java.util.List;
 import java.util.function.IntFunction;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
+import java.util.stream.IntStream;
 
+import static java.lang.Math.abs;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.QVect.from;
 
@@ -15,6 +17,7 @@ import static org.mmarini.wheelly.apis.QVect.from;
  * The tree of area expression
  */
 public interface AreaExpression {
+
 
     /**
      * Returns the intersection (and) of the given expressions
@@ -61,7 +64,7 @@ public interface AreaExpression {
     /**
      * Returns the inequality predicate of circle area
      *
-     * @param center the circle center
+     * @param center the circle centre
      * @param radius the circle radius (m)
      */
     static AreaExpression circle(Point2D center, double radius) {
@@ -148,7 +151,7 @@ public interface AreaExpression {
         // Creates the matrix of quadratic inequality results by vertex
         boolean[][] matrix = parser.apply(vertices);
         // Creates the function converting the matrix to quadratic inequality results by cell
-        // using the martix of indices by cell
+        // using the matrix of indices by cell
         int n = parser.leaves.size(); //number of evidences
         IntFunction<boolean[]> cellQIneqFunc = createCellFunction(verticesByCell, n, matrix);
         Predicate<boolean[]> cellPredicate = parser.cellPredicate();
@@ -162,7 +165,7 @@ public interface AreaExpression {
     }
 
     /**
-     * Returns the negate predicate
+     * Returns the negated predicate
      */
     static AreaExpression not(AreaExpression expression) {
         requireNonNull(expression);
@@ -178,6 +181,142 @@ public interface AreaExpression {
                 return children[0].createCellPredicate(leaves).negate();
             }
         };
+    }
+
+    /**
+     * Returns the indices of cells intersected by segment from given extremes
+     *
+     * @param topology the grid topology
+     * @param p0       the extreme
+     * @param p1       the extreme
+     */
+    static IntStream segment(GridTopology topology, Point2D p0, Point2D p1) {
+        if (p0.equals(p1)) {
+            int idx = topology.indexOf(p0);
+            return idx >= 0 ? IntStream.of(idx) : IntStream.empty();
+        }
+        double dx = p1.getX() - p0.getX();
+        double dy = p1.getY() - p0.getY();
+        int w = topology.width();
+        IntStream.Builder builder = IntStream.builder();
+        if (abs(dx) >= abs(dy)) {
+            // Scan horizontally along x
+            if (dx < 0) {
+                Point2D tmp = p1;
+                p1 = p0;
+                p0 = tmp;
+                dy = -dy;
+            }
+            int idx = topology.indexOf(p0);
+            if (idx >= 0) {
+                builder.add(idx);
+            }
+            int i = idx % w;
+            int j = idx / w;
+            double grid = topology.gridSize();
+            double ox = -w * grid / 2;
+            double oy = -topology.height() * grid / 2;
+            double x0 = p0.getX();
+            double y0 = p0.getY();
+            double x1 = p1.getX();
+            double y1 = p1.getY();
+            double m = (y1 - y0) / (x1 - x0);
+            double p = -x0 * m + y0;
+            for (; ; ) {
+                i++;
+                // Compute x left edge
+                double x = i * grid + ox;
+                if (x > x1) {
+                    break;
+                }
+                x = (i + 1) * grid + ox;
+                // Compute y intersection
+                double y = x * m + p;
+                if (topology.contains(i, j)) {
+                    builder.add(i + j * w);
+                }
+                if (dy >= 0) {
+                    // Compute upper y edge
+                    double yc = (j + 1) * grid + oy;
+                    if (y >= yc) {
+                        // intersect in upper cell
+                        j++;
+                        if (topology.contains(i, j)) {
+                            builder.add(i + j * w);
+                        }
+                    }
+                } else {
+                    // Compute lower y edge
+                    double yc = j * grid + oy;
+                    if (y <= yc) {
+                        // intersect in upper cell
+                        j--;
+                        if (topology.contains(i, j)) {
+                            builder.add(i + j * w);
+                        }
+                    }
+                }
+            }
+        } else {
+            // Scan vertically along y
+            if (dy < 0) {
+                Point2D tmp = p1;
+                p1 = p0;
+                p0 = tmp;
+                dx = -dx;
+            }
+            int idx = topology.indexOf(p0);
+            if (idx >= 0) {
+                builder.add(idx);
+            }
+            int i = idx % w;
+            int j = idx / w;
+            double grid = topology.gridSize();
+            double ox = -w * grid / 2;
+            double oy = -topology.height() * grid / 2;
+            double x0 = p0.getX();
+            double y0 = p0.getY();
+            double x1 = p1.getX();
+            double y1 = p1.getY();
+            double m = (x1 - x0) / (y1 - y0);
+            double p = -y0 * m + x0;
+            for (; ; ) {
+                j++;
+                // Compute y upper edge
+                double y = j * grid + oy;
+                if (y > y1) {
+                    break;
+                }
+                y = (j + 1) * grid + oy;
+                // Compute x intersection
+                double x = y * m + p;
+                if (topology.contains(i, j)) {
+                    builder.add(i + j * w);
+                }
+                if (dx >= 0) {
+                    // Compute left x edge
+                    double xc = (i + 1) * grid + ox;
+                    if (x >= xc) {
+                        // intersect in upper cell
+                        i++;
+                        if (topology.contains(i, j)) {
+                            builder.add(i + j * w);
+                        }
+                    }
+                } else {
+                    // Compute right x edge
+                    double xc = i * grid + ox;
+                    if (x <= xc) {
+                        // intersect in upper cell
+                        i--;
+                        if (topology.contains(i, j)) {
+                            builder.add(i + j * w);
+                        }
+                    }
+                }
+            }
+        }
+        return builder.build();
     }
 
     /**
@@ -249,7 +388,7 @@ public interface AreaExpression {
     /**
      * Returns the cell predicate for the cell evidences
      *
-     * @param leaves the leaves expressions
+     * @param leaves the leave expressions
      */
     Predicate<boolean[]> createCellPredicate(List<Leaf> leaves);
 
@@ -271,7 +410,7 @@ public interface AreaExpression {
     /**
      * Returns the list of leaves by accumulating during tree traversal
      *
-     * @param accumulator the leaves accumulator
+     * @param accumulator the leave accumulator
      */
     List<Leaf> leaves(List<Leaf> accumulator);
 
@@ -320,7 +459,7 @@ public interface AreaExpression {
     }
 
     /**
-     * Parses the expression to build binary array of ordered the leaves expression (# vertices, # leaves)
+     * Parses the expression to build the binary array of ordered the leaves expression (# vertices, # leaves)
      * and the function of cell containment for the (n) quadratic inequalities
      *
      * @param expression    the cell containment expression
