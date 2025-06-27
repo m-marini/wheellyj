@@ -1,16 +1,13 @@
 ---
-$schema: https://mmarini.org/wheelly/agent-state-machine-schema-0.1
+$schema: https://mmarini.org/wheelly/agent-state-machine-schema-0.2
 class: org.mmarini.wheelly.engines.StateMachineAgent
 flow:
   entry: scan
   states:
     scan:
-      class: org.mmarini.wheelly.engines.HaltState
-      timeout: 20000
+      class: org.mmarini.wheelly.engines.MappingState
+      timeout: 300000
       scanInterval: 500
-      minSensorDir: -90
-      maxSensorDir: 90
-      sensorDirNumber: 9
       transitions:
         timeout:
           to: target
@@ -18,6 +15,8 @@ flow:
           to: avoid
         blocked:
           to: avoid
+        completed:
+          to: target
     target:
       class: org.mmarini.wheelly.engines.LabelPointState
       maxDistance: 3

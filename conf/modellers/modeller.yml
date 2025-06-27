@@ -4,9 +4,9 @@ class: org.mmarini.wheelly.apis.WorldModeller
 radarWidth: 51
 radarHeight: 51
 radarGrid: 0.2
-echoPersistence: 300000
+echoPersistence: 600000
 contactPersistence: 300000
-radarCleanInterval: 30000
+radarCleanInterval: 3600000
 correlationInterval: 2000
 radarDecay: 120000
 numSectors: 24
