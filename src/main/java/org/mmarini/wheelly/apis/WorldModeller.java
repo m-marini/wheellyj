@@ -69,7 +69,7 @@ public class WorldModeller implements WorldModellerApi {
      */
     public static WorldModeller create(JsonNode root, Locator locator) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-        RadarModeller radarModeller = RadarModeller.create(root, locator);
+        RadarModeller radarModeller = PointRadarModeller.create(root, locator);
         PolarMapModeller polarModeller = PolarMapModeller.create(root, locator);
         MarkerLocator markerModeller = MarkerLocator.create(root, locator);
         int gridSize = locator.path("gridMapSize").getNode(root).asInt();

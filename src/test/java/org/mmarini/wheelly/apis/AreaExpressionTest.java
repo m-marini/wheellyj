@@ -3,6 +3,7 @@ package org.mmarini.wheelly.apis;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.awt.geom.Point2D;
@@ -10,6 +11,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -26,6 +28,39 @@ class AreaExpressionTest {
     public static final int WIDTH = 8;
     public static final double GRID_SIZE = 1;
     public static final GridTopology GRID_TOPOLOGY = new GridTopology(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
+
+    @ParameterizedTest
+    @CsvSource({
+            "-3.9,-3.9,  -3.9,-3.9,  0,-1,-1,-1,-1,-1,-1,-1,-1",
+            "-2.5,-2.2,  2.5,-2.2,   9,10,11,12,13,14,-1,-1,-1",
+            "2.5,-2.2,  -2.5,-2.2,   9,10,11,12,13,14,-1,-1,-1",
+            "-2.5,-2.5, -0.5,-1.5,   9,10,18,19,-1,-1,-1,-1,-1",
+            "-0.5,-1.5, -2.5,-2.5,   9,10,18,19,-1,-1,-1,-1,-1",
+            "-2.5,-2.5, -0.5,-3.5,   9,10,2,3,-1,-1,-1,-1,-1",
+            "-0.5,-3.5, -2.5,-2.5,   9,10,2,3,-1,-1,-1,-1,-1",
+            "0.75,-0.25, 2.75,1.75, 28,29,37,38,46,-1,-1,-1,-1",
+            "0.5,-3.5,    0.5,0.5,   4,12,20,28,36,-1,-1,-1,-1",
+            "0.5,0.5,     0.5,-3.5,  4,12,20,28,36,-1,-1,-1,-1",
+            "-2.5,-1.5,  -1.5,0.5,    17,25,26,34,-1,-1,-1,-1,-1",
+            "-1.5,0.5,   -2.5,-1.5,   17,25,26,34,-1,-1,-1,-1,-1",
+            "-2.5,-1.5,  -3.5,0.5,    17,25,24,32,-1,-1,-1,-1,-1",
+            "-3.5,0.5,   -2.5,-1.5,   17,25,24,32,-1,-1,-1,-1,-1",
+    })
+    void testSegment(double x0, double y0, double x1, double y1, int c0, int c1, int c2, int c3, int c4, int c5, int c6, int c7, int c8) {
+        // Given a grid topology
+        // and the extremes of a segment
+        Point2D p0 = new Point2D.Double(x0, y0);
+        Point2D p1 = new Point2D.Double(x1, y1);
+
+        // When computes the intersection cells
+        int[] cells = AreaExpression.segment(GRID_TOPOLOGY, p0, p1).toArray();
+
+        // Then should return the intersected cells
+        int[] expected = IntStream.of(c0, c1, c2, c3, c4, c5, c6, c7, c8)
+                .filter(x -> x >= 0)
+                .toArray();
+        assertArrayEquals(expected, cells);
+    }
 
     public static Stream<Arguments> andNotTestDataset() throws IOException {
         return jsonFileArguments("/org/mmarini/wheelly/apis/AreaExpressionTest/andNotTest.yml")

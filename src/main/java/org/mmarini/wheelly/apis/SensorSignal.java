@@ -28,36 +28,24 @@
 
 package org.mmarini.wheelly.apis;
 
+import java.awt.geom.Point2D;
+
 /**
- * Creates and updates the radar maps
+ * Sensor signal information
+ *
+ * @param sensorLocation  the sensor location
+ * @param sensorDirection the sensor direction
+ * @param distance        the distance (m)
+ * @param timestamp       the timestamp (ms)
+ * @param echo            true if there is an echo ping
  */
-public interface RadarModeller {
+public record SensorSignal(Point2D sensorLocation, Complex sensorDirection, double distance, long timestamp,
+                           boolean echo) {
 
     /**
-     * Returns cleans up the map for timeout
-     *
-     * @param time the simulation markerTime instant
+     * Returns the echo ping location if distance > 0
      */
-    RadarMap clean(RadarMap radarMap, long time);
-
-    /**
-     * Returns the empty radar map
-     */
-    default RadarMap empty() {
-        return RadarMap.empty(topology());
+    public Point2D echoPing() {
+        return distance > 0 ? sensorDirection.at(sensorLocation, distance) : null;
     }
-
-    /**
-     * Returns the topology
-     */
-    GridTopology topology();
-
-    /**
-     * Returns the radar map updated with the radar status.
-     * It uses the localTime and signals from robot to update the status of radar map
-     *
-     * @param map    the radar map
-     * @param status the robot status
-     */
-    RadarMap update(RadarMap map, RobotStatus status);
 }
