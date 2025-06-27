@@ -1,13 +1,13 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/agent-state-machine-schema-0.1
+$id: https://mmarini.org/wheelly/agent-state-machine-schema-0.2
 title: State machine agent
 description: State Agent Schema
 type: object
 properties:
   $schema:
     type: string
-    const: https://mmarini.org/wheelly/agent-state-machine-schema-0.1
+    const: https://mmarini.org/wheelly/agent-state-machine-schema-0.2
   class:
     type: string
     const: org.mmarini.wheelly.engines.StateMachineAgent
@@ -27,6 +27,7 @@ $defs:
   StateNode:
     anyOf:
       - $ref: "#/$defs/HaltState"
+      - $ref: "#/$defs/MappingState"
       - $ref: "#/$defs/ExploringPointState"
       - $ref: "#/$defs/CautiousPointState"
       - $ref: "#/$defs/LabelPointState"
@@ -62,6 +63,30 @@ $defs:
       sensorDirNumber:
         type: integer
         minimum: 1
+    required:
+      - class
+  MappingState:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.wheelly.engines.MappingState
+      onInit:
+        $ref: "#/$defs/Commands"
+      onEntry:
+        $ref: "#/$defs/Commands"
+      onExit:
+        $ref: "#/$defs/Commands"
+      transitions:
+        $ref: "#/$defs/Transitions"
+      timeout:
+        type: integer
+        minimum: 1
+      scanInterval:
+        type: integer
+      turnAngle:
+        type: integer
+        minimum: 1
+        maximum: 360
     required:
       - class
   ClearMapState:
