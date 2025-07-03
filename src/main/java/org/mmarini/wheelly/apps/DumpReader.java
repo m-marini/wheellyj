@@ -39,7 +39,7 @@ import org.mmarini.wheelly.apis.DumpRecord;
 import org.mmarini.wheelly.swing.DumpRecordPanel;
 import org.mmarini.wheelly.swing.DumpRecordsTable;
 import org.mmarini.wheelly.swing.Messages;
-import org.mmarini.wheelly.swing.RecordFilterMenu;
+import org.mmarini.wheelly.swing.RecordFilterPanel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -110,11 +110,13 @@ public class DumpReader {
     private final List<DumpRecord> lineRecords;
     private final DumpRecordsTable recordsTable;
     private final DumpRecordPanel detailPanel;
-    private final JSplitPane splitPanel;
+    private final JSplitPane splitPanel1;
+    private final JSplitPane splitPanel2;
     private final JScrollPane scrollPanel;
     private final JMenuItem loadMenuItem;
     private final JMenuItem exitMenuItem;
-    private final RecordFilterMenu filterMenu;
+    //    private final RecordFilterMenu filterMenu;
+    private final RecordFilterPanel filterPanel;
     private final JFileChooser openFileChooser;
     private JFrame dumpReaderFrame;
 
@@ -125,12 +127,18 @@ public class DumpReader {
         this.lineRecords = new ArrayList<>();
         this.recordsTable = new DumpRecordsTable();
         this.detailPanel = new DumpRecordPanel();
-        this.splitPanel = new JSplitPane();
+        this.splitPanel1 = new JSplitPane();
+        this.splitPanel2 = new JSplitPane();
         this.scrollPanel = new JScrollPane(recordsTable);
         this.loadMenuItem = SwingUtils.createMenuItem("DumpReader.loadMenuItem");
         this.exitMenuItem = SwingUtils.createMenuItem("DumpReader.exitMenuItem");
-        this.filterMenu = new RecordFilterMenu();
+        //this.filterMenu = new RecordFilterMenu();
+        this.filterPanel = new RecordFilterPanel();
         this.openFileChooser = new JFileChooser();
+        FileNameExtensionFilter filter = new FileNameExtensionFilter(
+                "Dump files", "log");
+        openFileChooser.setFileFilter(filter);
+        openFileChooser.setCurrentDirectory(new File("./"));
         createFlows();
     }
 
@@ -139,10 +147,11 @@ public class DumpReader {
      */
     private Component createContentPane() {
         scrollPanel.setBorder(BorderFactory.createTitledBorder(Messages.getString("DumpReader.recordTable.title")));
-
-        splitPanel.setLeftComponent(scrollPanel);
-        splitPanel.setRightComponent(detailPanel);
-        return splitPanel;
+        splitPanel2.setLeftComponent(scrollPanel);
+        splitPanel2.setRightComponent(detailPanel);
+        splitPanel1.setLeftComponent(filterPanel);
+        splitPanel1.setRightComponent(splitPanel2);
+        return splitPanel1;
     }
 
     /**
@@ -157,7 +166,7 @@ public class DumpReader {
         detailPanel.readOffset()
                 .doOnNext(this::handleSetOffset)
                 .subscribe();
-        filterMenu.readFilters()
+        filterPanel.readFilters()
                 .doOnNext(this::handleFilters)
                 .subscribe();
         SwingObservable.actions(exitMenuItem)
@@ -211,12 +220,12 @@ public class DumpReader {
     }
 
     /**
-     * Handles window opened
+     * Handles the window opened event
      *
      * @param event the event
      */
     private void handleOpened(WindowEvent event) {
-        splitPanel.setDividerLocation(
+        splitPanel2.setDividerLocation(
                 max(scrollPanel.getPreferredSize().width,
                         recordsTable.getPreferredSize().width));
     }
@@ -235,13 +244,13 @@ public class DumpReader {
     }
 
     /**
-     * Handles the set offet event
+     * Handles the set offset event
      *
      * @param offset the offset
      */
     private void handleSetOffset(Instant offset) {
         recordsTable.setTimestampOffset(offset);
-        filterMenu.setOffset(offset);
+        filterPanel.setOffset(offset);
     }
 
     /**
@@ -252,11 +261,7 @@ public class DumpReader {
      */
     private DumpReader init(String[] args) throws ArgumentParserException, IOException {
         detailPanel.setBorder(BorderFactory.createTitledBorder(Messages.getString("DumpReader.detailPanel.title")));
-        splitPanel.setOneTouchExpandable(true);
-        FileNameExtensionFilter filter = new FileNameExtensionFilter(
-                "Dump files", "txt");
-        openFileChooser.setFileFilter(filter);
-        openFileChooser.setCurrentDirectory(new File("./"));
+        splitPanel2.setOneTouchExpandable(true);
 
         ArgumentParser parser = createParser();
         try {
@@ -275,7 +280,7 @@ public class DumpReader {
     }
 
     /**
-     * Loads the dump from file
+     * Loads the dump from the file
      *
      * @param file the file
      */
@@ -290,19 +295,26 @@ public class DumpReader {
      */
     private void loadFile(Reader reader) throws IOException {
         BufferedReader bufferedReader = new BufferedReader(reader);
+        int lineNumber = 1;
         for (; ; ) {
             String line = bufferedReader.readLine();
             if (line == null) {
                 break;
             }
-            lineRecords.add(DumpRecord.create(line));
+            try {
+                DumpRecord record = DumpRecord.create(line);
+                lineRecords.add(record);
+            } catch (RuntimeException ex) {
+                logger.atError().setCause(ex).log("Error loading record @{} {}", lineNumber, line);
+            }
+            lineNumber++;
         }
         bufferedReader.close();
         if (!lineRecords.isEmpty()) {
             Instant offset = lineRecords.getFirst().instant();
             recordsTable.setTimestampOffset(offset);
             detailPanel.setOffset(offset);
-            filterMenu.setOffset(offset);
+            filterPanel.setOffset(offset);
         }
         recordsTable.setRecords(lineRecords);
     }
@@ -324,7 +336,6 @@ public class DumpReader {
 
         JMenuBar menuBar = new JMenuBar();
         menuBar.add(fileMenu);
-        menuBar.add(filterMenu);
 
         dumpReaderFrame.setJMenuBar(menuBar);
 

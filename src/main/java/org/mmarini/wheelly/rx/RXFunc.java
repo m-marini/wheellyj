@@ -26,14 +26,24 @@
 package org.mmarini.wheelly.rx;
 
 import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.functions.Function;
+import io.reactivex.rxjava3.functions.Predicate;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public interface RXFunc {
     static Function<Map<String, INDArray>, Flowable<INDArray>> getProperty(String key) {
         return map ->
                 map.containsKey(key) ? Flowable.just(map.get(key)) : Flowable.empty();
     }
+
+    static <T> Maybe<T> findFirst(io.reactivex.rxjava3.core.Flowable<T> flowable, Predicate<T> predicate, long timeout) {
+        return flowable.filter(predicate)
+                .take(timeout, TimeUnit.MILLISECONDS)
+                .firstElement();
+    }
+
 }

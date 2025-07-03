@@ -48,7 +48,7 @@ import java.util.stream.Stream;
 import static java.lang.String.format;
 
 /**
- * Load and cache json schemas
+ * Load and cache JSON schemas
  */
 public class JsonSchemas {
     private static final Logger logger = LoggerFactory.getLogger(JsonSchemas.class);
@@ -76,6 +76,7 @@ public class JsonSchemas {
             "/network-list-schema.yml",
             "/network-schema.yml",
             "/robot-schema.yml",
+            "/real-robot-schema.yml",
             "/sim-robot-schema.yml",
             "/signal-schema.yml",
             "/agent-state-machine-schema.yml",
@@ -122,7 +123,7 @@ public class JsonSchemas {
     private final Map<String, JsonSchema> cache;
 
     /**
-     * Creates the json schemas
+     * Creates the JSON schemas
      */
     protected JsonSchemas(Map<String, JsonSchema> cache) {
         this.cache = cache;
@@ -142,7 +143,7 @@ public class JsonSchemas {
     }
 
     /**
-     * Returns the validation error set for a json instance against the schema
+     * Returns the validation error set for a JSON instance against the schema
      *
      * @param node   the instance
      * @param schema the schema

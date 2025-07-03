@@ -177,7 +177,7 @@ public class RobotExecutor {
                     try {
                         dumper = ComDumper.fromFile(file);
                     } catch (IOException e) {
-                        logger.atError().setCause(e).log();
+                        logger.atError().setCause(e).log("Error dumping file");
                     }
                 });
 
@@ -236,33 +236,6 @@ public class RobotExecutor {
     }
 
     /**
-     * Handles the application shutdown
-     */
-    private void handleShutdown() {
-        allFrames.forEach(JFrame::dispose);
-        if (dumper != null) {
-            try {
-                dumper.close();
-            } catch (IOException e) {
-                logger.atError().setCause(e).log();
-            }
-        }
-        if (!args.getBoolean("silent")) {
-            JOptionPane.showMessageDialog(null,
-                    "Completed", "Information", JOptionPane.INFORMATION_MESSAGE);
-        }
-    }
-
-    /**
-     * Handles state change event
-     *
-     * @param state the state
-     */
-    private void handleState(StateNode state) {
-        engineMonitor.addState(state);
-    }
-
-    /**
      * Creates the reactive flows
      */
     private void createFlows() {
@@ -271,7 +244,7 @@ public class RobotExecutor {
                 .observeOn(Schedulers.io())
                 .doOnNext(err -> {
                     comMonitor.onError(err);
-                    logger.atError().setCause(err).log();
+                    logger.atError().setCause(err).log("Controller error");
                 }).subscribe();
         controller.readReadLine()
                 .observeOn(Schedulers.io())
@@ -299,6 +272,33 @@ public class RobotExecutor {
                 .observeOn(Schedulers.io())
                 .doOnNext(this::handleTrigger)
                 .subscribe();
+    }
+
+    /**
+     * Handles state change event
+     *
+     * @param state the state
+     */
+    private void handleState(StateNode state) {
+        engineMonitor.addState(state);
+    }
+
+    /**
+     * Handles the application shutdown
+     */
+    private void handleShutdown() {
+        allFrames.forEach(JFrame::dispose);
+        if (dumper != null) {
+            try {
+                dumper.close();
+            } catch (IOException e) {
+                logger.atError().setCause(e).log("Error closing dumper");
+            }
+        }
+        if (!args.getBoolean("silent")) {
+            JOptionPane.showMessageDialog(null,
+                    "Completed", "Information", JOptionPane.INFORMATION_MESSAGE);
+        }
     }
 
     /**

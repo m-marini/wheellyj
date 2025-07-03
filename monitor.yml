@@ -1,4 +1,5 @@
 ---
 $schema: https://mmarini.org/wheelly/monitor-schema-1.0
-robot: conf/robots/simRobot10Obstacles.yml
+robot: conf/robots/realRobot.yml
+#robot: conf/robots/simRobot10Obstacles.yml
 controller: conf/controllers/controller.yml

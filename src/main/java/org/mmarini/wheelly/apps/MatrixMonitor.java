@@ -292,7 +292,7 @@ public class MatrixMonitor {
                 .observeOn(Schedulers.io())
                 .doOnNext(er -> {
                     comMonitor.onError(er);
-                    logger.atError().setCause(er).log();
+                    logger.atError().setCause(er).log("Error:");
                 }).subscribe();
         controller.readReadLine()
                 .observeOn(Schedulers.io())

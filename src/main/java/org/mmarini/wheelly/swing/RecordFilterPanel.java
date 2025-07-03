@@ -32,6 +32,7 @@ import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.BackpressureStrategy;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
+import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.SwingUtils;
 import org.mmarini.wheelly.apis.*;
 import org.slf4j.Logger;
@@ -46,7 +47,7 @@ import java.util.stream.Stream;
 /**
  * Shows the record filters' user interface
  */
-public class RecordFilterMenu extends JMenu {
+public class RecordFilterPanel extends JPanel {
     public static final Predicate<DumpRecord> PROXY_FILTER = record -> record instanceof DumpRecord.MessageDumpRecord &&
             ((DumpRecord.MessageDumpRecord<?>) record).message() instanceof WheellyProxyMessage;
     public static final Predicate<DumpRecord> CONTACT_FILTER = record -> record instanceof DumpRecord.MessageDumpRecord &&
@@ -69,24 +70,24 @@ public class RecordFilterMenu extends JMenu {
     public static final Predicate<DumpRecord> OTHER_WRITE_FILTER = Predicate.not(MOVE_FILTER.or(HALT_FILTER).or(SCAN_FILTER))
             .and(record -> record instanceof DumpRecord.WriteDumpRecord);
     private static final Predicate<DumpRecord> NONE_FILTER = record -> false;
-    private static final Logger logger = LoggerFactory.getLogger(RecordFilterMenu.class);
+    private static final Logger logger = LoggerFactory.getLogger(RecordFilterPanel.class);
 
-    private final JCheckBoxMenuItem motionBtn;
-    private final JCheckBoxMenuItem proxyBtn;
-    private final JCheckBoxMenuItem supplyBtn;
-    private final JCheckBoxMenuItem contactsBtn;
-    private final JCheckBoxMenuItem errorBtn;
-    private final JCheckBoxMenuItem readBtn;
-    private final JCheckBoxMenuItem moveBtn;
-    private final JCheckBoxMenuItem haltBtn;
-    private final JCheckBoxMenuItem scanBtn;
-    private final JCheckBoxMenuItem writeBtn;
-    private final JCheckBoxMenuItem beforeBtn;
-    private final JCheckBoxMenuItem afterBtn;
-    private final JCheckBoxMenuItem allTypesBtn;
-    private final JCheckBoxMenuItem noneTypesBtn;
-    private final JCheckBoxMenuItem allTimeBtn;
-    private final JCheckBoxMenuItem noneTimeBtn;
+    private final JCheckBox motionBtn;
+    private final JCheckBox proxyBtn;
+    private final JCheckBox supplyBtn;
+    private final JCheckBox contactsBtn;
+    private final JCheckBox errorBtn;
+    private final JCheckBox readBtn;
+    private final JCheckBox moveBtn;
+    private final JCheckBox haltBtn;
+    private final JCheckBox scanBtn;
+    private final JCheckBox writeBtn;
+    private final JCheckBox beforeBtn;
+    private final JCheckBox afterBtn;
+    private final JCheckBox allTypesBtn;
+    private final JCheckBox noneTypesBtn;
+    private final JCheckBox allTimeBtn;
+    private final JCheckBox noneTimeBtn;
     private final PublishProcessor<Instant> offsetFlow;
     private Flowable<Predicate<DumpRecord>> filtersFlow;
     private Instant offset;
@@ -94,27 +95,23 @@ public class RecordFilterMenu extends JMenu {
     /**
      * Creates the panel
      */
-    public RecordFilterMenu() {
-        setText(Messages.getString("RecordFiltersMenu.name"));
-        Messages.getStringOpt("RecordFiltersMenu.mnemonic")
-                .map(s -> s.charAt(0))
-                .ifPresent(this::setMnemonic);
-        this.proxyBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.proxyButton");
-        this.motionBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.motionBtn");
-        this.supplyBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.supplyButton");
-        this.contactsBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.contactsButton");
-        this.errorBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.errorButton");
-        this.readBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.readButton");
-        this.moveBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.moveButton");
-        this.haltBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.haltButton");
-        this.scanBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.scanButton");
-        this.writeBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.writeButton");
-        this.beforeBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.beforeButton");
-        this.afterBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.afterButton");
-        this.allTypesBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.allTypesButton");
-        this.noneTypesBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.noneTypesButton");
-        this.allTimeBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.allTimeButton");
-        this.noneTimeBtn = SwingUtils.createCheckBoxMenuItem("RecordFiltersMenu.noneTimeButton");
+    public RecordFilterPanel() {
+        this.proxyBtn = SwingUtils.createCheckBox("RecordFiltersMenu.proxyButton");
+        this.motionBtn = SwingUtils.createCheckBox("RecordFiltersMenu.motionButton");
+        this.supplyBtn = SwingUtils.createCheckBox("RecordFiltersMenu.supplyButton");
+        this.contactsBtn = SwingUtils.createCheckBox("RecordFiltersMenu.contactsButton");
+        this.errorBtn = SwingUtils.createCheckBox("RecordFiltersMenu.errorButton");
+        this.readBtn = SwingUtils.createCheckBox("RecordFiltersMenu.readButton");
+        this.moveBtn = SwingUtils.createCheckBox("RecordFiltersMenu.moveButton");
+        this.haltBtn = SwingUtils.createCheckBox("RecordFiltersMenu.haltButton");
+        this.scanBtn = SwingUtils.createCheckBox("RecordFiltersMenu.scanButton");
+        this.writeBtn = SwingUtils.createCheckBox("RecordFiltersMenu.writeButton");
+        this.beforeBtn = SwingUtils.createCheckBox("RecordFiltersMenu.beforeButton");
+        this.afterBtn = SwingUtils.createCheckBox("RecordFiltersMenu.afterButton");
+        this.allTypesBtn = SwingUtils.createCheckBox("RecordFiltersMenu.allTypesButton");
+        this.noneTypesBtn = SwingUtils.createCheckBox("RecordFiltersMenu.noneTypesButton");
+        this.allTimeBtn = SwingUtils.createCheckBox("RecordFiltersMenu.allTimeButton");
+        this.noneTimeBtn = SwingUtils.createCheckBox("RecordFiltersMenu.noneTimeButton");
         this.offsetFlow = PublishProcessor.create();
         this.offset = Instant.now();
         init();
@@ -125,26 +122,24 @@ public class RecordFilterMenu extends JMenu {
      * Creates the panel content
      */
     private void createContent() {
-        Stream.of(motionBtn,
-                        proxyBtn,
-                        contactsBtn,
-                        supplyBtn,
-                        errorBtn,
-                        readBtn,
-                        moveBtn,
-                        haltBtn,
-                        scanBtn,
-                        writeBtn,
-                        allTypesBtn,
-                        noneTypesBtn)
-                .forEach(this::add);
-        add(new JSeparator());
-
-        Stream.of(beforeBtn,
-                        afterBtn,
-                        allTimeBtn,
-                        noneTimeBtn)
-                .forEach(this::add);
+        new GridLayoutHelper<>(this).modify("insets,2,2 w nofill weight,1,1")
+                .modify("at,0,0").add(motionBtn)
+                .modify("at,0,1").add(proxyBtn)
+                .modify("at,0,2").add(contactsBtn)
+                .modify("at,0,3").add(supplyBtn)
+                .modify("at,0,4").add(errorBtn)
+                .modify("at,0,5").add(readBtn)
+                .modify("at,0,6").add(moveBtn)
+                .modify("at,0,7").add(haltBtn)
+                .modify("at,0,8").add(scanBtn)
+                .modify("at,0,9").add(writeBtn)
+                .modify("at,0,10").add(allTypesBtn)
+                .modify("at,0,11").add(noneTypesBtn)
+                .modify("at,0,12").add(new JSeparator())
+                .modify("at,0,13").add(beforeBtn)
+                .modify("at,0,14").add(afterBtn)
+                .modify("at,0,15").add(allTimeBtn)
+                .modify("at,0,16").add(noneTimeBtn);
     }
 
     /**

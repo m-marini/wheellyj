@@ -19,6 +19,9 @@
     <logger name="com.networknt.schema" level="INFO">
     </logger>
 
+    <logger name="org.mmarini.wheelly.apis.AsyncLineSocket" level="DEBUG">
+    </logger>
+
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>
