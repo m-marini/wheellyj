@@ -1,0 +1,88 @@
+---
+######################################
+# Cautious agent
+######################################
+$schema: https://mmarini.org/wheelly/agent-state-machine-schema-0.3
+class: org.mmarini.wheelly.engines.StateMachineAgent
+flow:
+  entry: mapping
+  states:
+    mapping:
+      class: org.mmarini.wheelly.engines.MappingState
+      timeout: 300000
+      scanInterval: 1000
+      transitions:
+        timeout:
+          to: findLabel
+        frontBlocked:
+          to: avoid
+        blocked:
+          to: avoid
+        completed:
+          to: findLabel
+    findLabel:
+      class: org.mmarini.wheelly.engines.FindLabelState
+      transitions:
+        completed:
+          to: moveLabel
+          onTransition:
+            - moveLabel.path
+            - findLabel.path
+            - get
+            - put
+        notFound:
+          to: findUnknown
+    findUnknown:
+      class: org.mmarini.wheelly.engines.FindUnknownState
+      transitions:
+        completed:
+          to: moveUnknown
+          onTransition:
+            - moveUnknown.path
+            - findUnknown.path
+            - get
+            - put
+        notFound:
+          to: halt
+    moveLabel:
+      class: org.mmarini.wheelly.engines.MovePathState
+      transitions:
+        completed:
+          to: halt
+        timeout:
+          to: mapping
+        frontBlocked:
+          to: avoid
+        rearBlocked:
+          to: avoid
+    moveUnknown:
+      class: org.mmarini.wheelly.engines.MovePathState
+      transitions:
+        completed:
+          to: mapping
+        timeout:
+          to: mapping
+        frontBlocked:
+          to: avoid
+        rearBlocked:
+          to: avoid
+    halt:
+      class: org.mmarini.wheelly.engines.HaltState
+      timeout: 10000
+      scanInterval: 1000
+      minSensorDir: 0
+      maxSensorDir: 0
+      transitions:
+        timeout:
+          to: mapping
+        frontBlocked:
+          to: avoid
+        rearBlocked:
+          to: avoid
+    avoid:
+      class: org.mmarini.wheelly.engines.AvoidingState
+      safeDistance: 0.2
+      speed: 20
+      transitions:
+        completed:
+          to: mapping

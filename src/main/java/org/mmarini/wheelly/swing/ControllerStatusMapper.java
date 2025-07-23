@@ -28,21 +28,32 @@
 
 package org.mmarini.wheelly.swing;
 
-import org.mmarini.wheelly.apis.RobotController;
+import org.mmarini.wheelly.apis.RobotControllerStatusApi;
 
-import java.util.Map;
+/**
+ * The mapper robot controller status
+ */
+public interface ControllerStatusMapper {
 
-interface ControllerStatusMapper {
-    Map<String, String> CONTROLLER_STATUS_MAP = Map.of(
-            RobotController.CONFIGURING, "cfg",
-            RobotController.CONNECTING, "con",
-            RobotController.CLOSING, "cls",
-            RobotController.WAITING_RETRY, "wtr",
-            RobotController.HANDLING_COMMANDS, "act",
-            RobotController.WAITING_COMMAND_INTERVAL, "act"
-    );
+    String NOT_STARTED = "!st";
+    String INFERENCING = "inf";
+    String READY = "rdy";
+    String NOT_READY = "!rd";
 
-    static String map(String status) {
-        return CONTROLLER_STATUS_MAP.getOrDefault(status, status);
+    /**
+     * Returns the short string controller status
+     *
+     * @param status the status
+     */
+    static String map(RobotControllerStatusApi status) {
+        if (!status.started()) {
+            return NOT_STARTED;
+        } else if (status.inferencing()) {
+            return INFERENCING;
+        } else if (status.ready()) {
+            return READY;
+        } else {
+            return NOT_READY;
+        }
     }
 }

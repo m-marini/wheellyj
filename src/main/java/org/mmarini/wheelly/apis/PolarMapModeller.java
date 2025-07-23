@@ -69,7 +69,8 @@ public record PolarMapModeller(int numSectors, double minDistance) {
      * @param maxDistance the maximum distance (m)
      */
     public PolarMap create(RadarMap map, Point2D centre, Complex direction, double maxDistance) {
-        double gridSize = map.topology().gridSize();
+        GridTopology topology = map.topology();
+        double gridSize = topology.gridSize();
 
         double[] emptyDistances = new double[numSectors];
         Arrays.fill(emptyDistances, Double.MAX_VALUE);
@@ -85,8 +86,7 @@ public record PolarMapModeller(int numSectors, double minDistance) {
         double thresholdDistance = max(minDistance, gridSize);
         Complex dAlpha = Complex.fromRad(sectorAngle() * 1.25 / 2);
 
-        map.indices()
-                .filter(map.filterByArea(circle(centre, maxDistance)))
+        topology.indicesByArea(circle(centre, maxDistance))
                 .mapToObj(map::cell)
                 .forEach(cell -> { // For each radar cell
                     for (int i = 0; i < numSectors; i++) { // for each polar sector

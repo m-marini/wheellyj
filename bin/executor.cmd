@@ -1,2 +1,2 @@
 @echo off
-bin\runnit.cmd org.mmarini.wheelly.apps.RobotExecutor %*
+bin\runnit.cmd org.mmarini.wheelly.apps.SyncRobotExecutor %*

@@ -108,7 +108,7 @@ public class RestApi {
      * @param password the pass phrase of network
      * @throws IOException in case of error
      */
-    public static NetworkConfig postConfig(Object address, boolean active, String ssid, String password) throws IOException {
+    public static NetworkConfig postConfig(String address, boolean active, String ssid, String password) throws IOException {
         requireNonNull(address);
         requireNonNull(ssid);
         requireNonNull(password);
@@ -119,6 +119,26 @@ public class RestApi {
         WebTarget target = client.target(apiUrl);
         Response response = target.request(MediaType.APPLICATION_JSON)
                 .post(Entity.entity(body, MediaType.APPLICATION_JSON));
+        if (response.getStatus() != 200) {
+            throw new IOException(format("Http Status %d", response.getStatus()));
+        }
+        return response.readEntity(NetworkConfig.class);
+    }
+
+    /**
+     * Changes the configuration and returns the new configuration
+     *
+     * @param address the robot address
+     * @throws IOException in case of error
+     */
+    public static NetworkConfig postRestart(String address) throws IOException {
+        requireNonNull(address);
+        String apiUrl = format("http://%s/api/v1/wheelly/restart", address);
+        logger.info("POST {}", apiUrl);
+        Client client = ClientBuilder.newClient();
+        WebTarget target = client.target(apiUrl);
+        Response response = target.request(MediaType.APPLICATION_JSON)
+                .post(Entity.entity("", MediaType.APPLICATION_JSON));
         if (response.getStatus() != 200) {
             throw new IOException(format("Http Status %d", response.getStatus()));
         }

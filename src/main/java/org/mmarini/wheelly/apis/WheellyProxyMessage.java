@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import static java.lang.Double.parseDouble;
 import static java.lang.Integer.parseInt;
 import static java.lang.Long.parseLong;
+import static java.lang.Math.round;
 import static java.lang.String.format;
 
 /**
@@ -53,6 +54,7 @@ public record WheellyProxyMessage(long localTime, long simulationTime, long remo
                                   double xPulses, double yPulses, int echoYawDeg,
                                   Complex echoYaw) implements WheellyMessage {
     public static final int NUM_PARAMS = 7;
+    public static final float DISTANCE_SCALE = 1F / 5882;
 
     /**
      * Returns the Wheelly status from status string
@@ -113,6 +115,13 @@ public record WheellyProxyMessage(long localTime, long simulationTime, long remo
     }
 
     /**
+     * Returns the echo distance (m)
+     */
+    public double echoDistance() {
+        return echoDelay * DISTANCE_SCALE;
+    }
+
+    /**
      * Returns the proxy message with echo delay set
      *
      * @param echoDelay echo delay (us)
@@ -121,6 +130,15 @@ public record WheellyProxyMessage(long localTime, long simulationTime, long remo
         return echoDelay != this.echoDelay
                 ? new WheellyProxyMessage(localTime, simulationTime, remoteTime, sensorDirectionDeg, sensorDirection, echoDelay, xPulses, yPulses, echoYawDeg, echoYaw)
                 : this;
+    }
+
+    /**
+     * Returns the proxy message with echo delay set to echo distance
+     *
+     * @param echoDistance the distance (m)
+     */
+    public WheellyProxyMessage setEchoDistance(double echoDistance) {
+        return setEchoDelay(round(echoDistance / DISTANCE_SCALE));
     }
 
     /**

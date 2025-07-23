@@ -166,11 +166,13 @@ public class WorldEnvironment implements EnvironmentApi {
         if (state instanceof WorldState worldState) {
             Complex sensorDirection = sensorDir(actions);
             Complex robotDirection = worldState.model().robotStatus().direction();
-            return isHalt(actions)
-                    ? RobotCommands.haltAndScan(sensorDirection)
-                    : RobotCommands.moveAndScan(moveDirection(actions, robotDirection),
+            return !isHalt(actions)
+                    ? RobotCommands.moveAndScan(moveDirection(actions, robotDirection),
                     speed(actions),
-                    sensorDirection);
+                    sensorDirection)
+                    : sensorDirection.toIntDeg() == 0
+                    ? RobotCommands.haltCommand()
+                    : RobotCommands.scan(sensorDirection);
         }
         return RobotCommands.haltCommand();
     }

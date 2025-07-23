@@ -35,10 +35,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
 import org.mmarini.wheelly.apis.*;
-import org.mmarini.wheelly.swing.ComMonitor;
-import org.mmarini.wheelly.swing.Messages;
-import org.mmarini.wheelly.swing.SensorMonitor;
-import org.mmarini.wheelly.swing.SensorsPanel;
+import org.mmarini.wheelly.swing.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,7 +77,7 @@ public class RobotCheckUp {
      */
     @NotNull
     private static ArgumentParser createParser() {
-        ArgumentParser parser = ArgumentParsers.newFor(MatrixMonitor.class.getName()).build()
+        ArgumentParser parser = ArgumentParsers.newFor(RobotCheckUp.class.getName()).build()
                 .defaultHelp(true)
                 .version(Messages.getString("Wheelly.title"))
                 .description("Run manual control robot.");
@@ -323,7 +320,10 @@ public class RobotCheckUp {
         // Create flow
         controller.readReadLine().doOnNext(comMonitor::onReadLine).subscribe();
         controller.readWriteLine().doOnNext(comMonitor::onWriteLine).subscribe();
-        controller.readControllerStatus().doOnNext(this::handleControlStatus).subscribe();
+        controller.readControllerStatus()
+                .map(ControllerStatusMapper::map)
+                .distinct()
+                .subscribe(this::handleControlStatus);
         controller.readShutdown().doOnComplete(this::handleShutdown).subscribe();
         controller.setOnInference(this::handleInference);
         frame.setVisible(true);

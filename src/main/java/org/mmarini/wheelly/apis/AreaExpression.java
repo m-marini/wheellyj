@@ -102,19 +102,21 @@ public interface AreaExpression {
     /**
      * Returns the quadratic vertices
      *
-     * @param topology the grid topology
+     * @param centre   the centre
+     * @param width    the width
+     * @param height   the height
+     * @param gridSize the grid size (m)
      */
-    static QVect[] createQVertices(GridTopology topology) {
-        int w = topology.width() + 1;
-        int h = topology.height() + 1;
-        double gridSize = topology.gridSize();
-        QVect[] result = new QVect[w * h];
+    static QVect[] createQVertices(Point2D centre, int width, int height, double gridSize) {
+        width++;
+        height++;
+        QVect[] result = new QVect[width * height];
         int idx = 0;
-        double x0 = topology.center().getX() - gridSize * (w - 1) / 2;
-        double y0 = topology.center().getY() - gridSize * (h - 1) / 2;
-        for (int i = 0; i < h; i++) {
+        double x0 = centre.getX() - gridSize * (width - 1) / 2;
+        double y0 = centre.getY() - gridSize * (height - 1) / 2;
+        for (int i = 0; i < height; i++) {
             double y = y0 + i * gridSize;
-            for (int j = 0; j < w; j++) {
+            for (int j = 0; j < width; j++) {
                 double x = x0 + j * gridSize;
                 result[idx] = from(x, y);
                 idx++;
@@ -126,19 +128,18 @@ public interface AreaExpression {
     /**
      * Returns the vertex indices by cell (no cell x 4)
      *
-     * @param topology the grid topology
+     * @param width  the width
+     * @param height the height
      */
-    static int[][] createVerticesIndices(GridTopology topology) {
-        int w = topology.width();
-        int h = topology.height();
-        int[][] result = new int[w * h][4];
+    static int[][] createVerticesIndices(int width, int height) {
+        int[][] result = new int[width * height][4];
         int idx = 0;
-        for (int i = 0; i < h; i++) {
-            for (int j = 0; j < w; j++) {
-                int offset = j + i * (w + 1);
+        for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width; j++) {
+                int offset = j + i * (width + 1);
                 result[idx][0] = offset;
-                result[idx][1] = offset + w + 1;
-                result[idx][2] = offset + w + 2;
+                result[idx][1] = offset + width + 1;
+                result[idx][2] = offset + width + 2;
                 result[idx][3] = offset + 1;
                 idx++;
             }
@@ -181,6 +182,72 @@ public interface AreaExpression {
                 return children[0].createCellPredicate(leaves).negate();
             }
         };
+    }
+
+    /**
+     * Returns the union (or) of the given expression
+     *
+     * @param children the children expressions
+     */
+    static AreaExpression or(AreaExpression... children) {
+        requireNonNull(children);
+        if (children.length == 0) {
+            throw new IllegalArgumentException("Missing children");
+        }
+        return new Tree() {
+            @Override
+            public AreaExpression[] children() {
+                return children;
+            }
+
+            @Override
+            public Predicate<boolean[]> createCellPredicate(List<Leaf> leaves) {
+                Predicate<boolean[]> result = null;
+                for (AreaExpression child : children) {
+                    Predicate<boolean[]> pred = child.createCellPredicate(leaves);
+                    result = result != null
+                            ? result.or(pred)
+                            : pred;
+                }
+                return result;
+            }
+        };
+    }
+
+    /**
+     * Returns the rectangular area from point A to point B for the given width
+     *
+     * @param a     A point
+     * @param b     B point
+     * @param width the width (m)
+     */
+    static AreaExpression rectangle(Point2D a, Point2D b, double width) {
+        Complex direction = Complex.direction(a, b);
+        Complex left = direction.add(Complex.DEG270);
+        Point2D leftPoint = new Point2D.Double(
+                a.getX() + left.x() * width,
+                a.getY() + left.y() * width
+        );
+        Point2D rightPoint = new Point2D.Double(
+                a.getX() - left.x() * width,
+                a.getY() - left.y() * width
+        );
+        return and(
+                rightHalfPlane(leftPoint, direction),
+                rightHalfPlane(rightPoint, direction.opposite()),
+                rightHalfPlane(a, left),
+                rightHalfPlane(b, left.opposite()));
+    }
+
+    /**
+     * Returns the inequality predicate of right half planes for the given point to the given directions
+     *
+     * @param point     the point
+     * @param direction the direction
+     */
+    static AreaExpression.Leaf rightHalfPlane(Point2D point, Complex direction) {
+        QVect matrix = QVect.line(point, direction);
+        return ineq(matrix);
     }
 
     /**
@@ -317,72 +384,6 @@ public interface AreaExpression {
             }
         }
         return builder.build();
-    }
-
-    /**
-     * Returns the union (or) of the given expression
-     *
-     * @param children the children expressions
-     */
-    static AreaExpression or(AreaExpression... children) {
-        requireNonNull(children);
-        if (children.length == 0) {
-            throw new IllegalArgumentException("Missing children");
-        }
-        return new Tree() {
-            @Override
-            public AreaExpression[] children() {
-                return children;
-            }
-
-            @Override
-            public Predicate<boolean[]> createCellPredicate(List<Leaf> leaves) {
-                Predicate<boolean[]> result = null;
-                for (AreaExpression child : children) {
-                    Predicate<boolean[]> pred = child.createCellPredicate(leaves);
-                    result = result != null
-                            ? result.or(pred)
-                            : pred;
-                }
-                return result;
-            }
-        };
-    }
-
-    /**
-     * Returns the rectangular area from point A to point B for the given width
-     *
-     * @param a     A point
-     * @param b     B point
-     * @param width the width (m)
-     */
-    static AreaExpression rectangle(Point2D a, Point2D b, double width) {
-        Complex direction = Complex.direction(a, b);
-        Complex left = direction.add(Complex.DEG270);
-        Point2D leftPoint = new Point2D.Double(
-                a.getX() + left.x() * width,
-                a.getY() + left.y() * width
-        );
-        Point2D rightPoint = new Point2D.Double(
-                a.getX() - left.x() * width,
-                a.getY() - left.y() * width
-        );
-        return and(
-                rightHalfPlane(leftPoint, direction),
-                rightHalfPlane(rightPoint, direction.opposite()),
-                rightHalfPlane(a, left),
-                rightHalfPlane(b, left.opposite()));
-    }
-
-    /**
-     * Returns the inequality predicate of right half planes for the given point to the given directions
-     *
-     * @param point     the point
-     * @param direction the direction
-     */
-    static AreaExpression.Leaf rightHalfPlane(Point2D point, Complex direction) {
-        QVect matrix = QVect.line(point, direction);
-        return ineq(matrix);
     }
 
     /**

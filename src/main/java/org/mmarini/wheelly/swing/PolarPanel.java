@@ -191,13 +191,13 @@ public class PolarPanel extends JComponent {
         AffineTransform transform = AffineTransform.getRotateInstance(polarMap.direction().toRad());
         transform.translate(-center.getX(), -center.getY());
         // Create marker shapes
-        markerShape = new BaseShape.CompositeShape(
+        markerShape = new CompositeShape(
                 markers.stream()
                         .map(marker ->
                                 createCircle(LABELED_COLOR, BORDER_STROKE, true,
                                         transform.transform(marker.location(), null),
                                         markerSize / 2))
-                        .toList());
+                        .toArray(BaseShape[]::new));
 
         // First pass for empty shapes
         for (int i = 0; i < n; i++) {

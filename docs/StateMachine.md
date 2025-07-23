@@ -1,14 +1,14 @@
 After installed the application run the command:
 
 ```bash
-java -classpath lib/wheelly-0.5.0.jar org.mmarini.wheelly.apps.RobotExecutor
+java -classpath lib/wheelly-0.5.0.jar org.mmarini.wheelly.apps.SyncRobotExecutor
 ```
 
 the options are
 
 ```bash
-> java -classpath lib/wheelly-0.5.0.jar org.mmarini.wheelly.apps.RobotExecutor -h
-usage: org.mmarini.wheelly.apps.RobotExecutor
+> java -classpath lib/wheelly-0.5.0.jar org.mmarini.wheelly.apps.SyncRobotExecutor -h
+usage: org.mmarini.wheelly.apps.SyncRobotExecutor
        [-h] [-v] [-r ROBOT] [-a AGENT] [-s] [-t TIME]
 
 Run a session of interaction between robot and environment.

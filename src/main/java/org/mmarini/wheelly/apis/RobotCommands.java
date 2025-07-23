@@ -64,15 +64,6 @@ public record RobotCommands(boolean scan, Complex scanDirection, boolean move, b
     }
 
     /**
-     * Returns the only scan command and haltCommand
-     *
-     * @param direction the scanner direction
-     */
-    public static RobotCommands haltAndScan(Complex direction) {
-        return new RobotCommands(true, direction, false, true, Complex.DEG0, 0);
-    }
-
-    /**
      * Returns the haltCommand command
      */
     public static RobotCommands haltCommand() {

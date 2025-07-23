@@ -49,7 +49,7 @@ import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.apis.CameraEvent.UNKNOWN_QR_CODE;
 import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
 import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_PER_PULSE;
-import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_SCALE;
+import static org.mmarini.wheelly.apis.WheellyProxyMessage.DISTANCE_SCALE;
 
 class MarkerLocatorTest {
     public static final int NUM_TESTS = 10;

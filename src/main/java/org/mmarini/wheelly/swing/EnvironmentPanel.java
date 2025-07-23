@@ -25,29 +25,21 @@
 
 package org.mmarini.wheelly.swing;
 
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apis.RobotStatus;
 
-import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.AffineTransform;
-import java.awt.geom.Point2D;
-import java.util.Collection;
 
 import static java.lang.String.format;
-import static org.mmarini.wheelly.swing.BaseShape.*;
 import static org.mmarini.wheelly.swing.Utils.DEFAULT_WORLD_SIZE;
-import static org.mmarini.wheelly.swing.Utils.GRID_SIZE;
 
 /**
  * The canvas with environment display
  */
-public class EnvironmentPanel extends JComponent {
+public class EnvironmentPanel extends MapPanel {
     public static final int DEFAULT_WINDOW_SIZE = 800;
-    public static final float PING_RADIUS = 0.05f;
-    static final float DEFAULT_SCALE = DEFAULT_WINDOW_SIZE / DEFAULT_WORLD_SIZE;
-    private static final int HUD_WIDTH = 200;
-    private static final float TARGET_SIZE = 0.2f;
     public static final float DEFAULT_MARKER_SIZE = 0.3f;
+    private static final int HUD_WIDTH = 200;
 
     /**
      * Returns the string representation of a localTime interval
@@ -76,98 +68,30 @@ public class EnvironmentPanel extends JComponent {
         return result.toString();
     }
 
-    private final Point2D centerLocation;
     private boolean hudAtBottom;
     private boolean hudAtRight;
     private double reactionRealTime;
     private double reactionRobotTime;
     private double reward;
     private double timeRatio;
-    private BaseShape gridShape;
-    private BaseShape target;
-    private BaseShape mapShape;
-    private BaseShape robotShape;
-    private BaseShape sensorShape;
-    private BaseShape pingShape;
-    private BaseShape hinderedShape;
-    private BaseShape labeledShape;
     private RobotStatus robotStatus;
-    private float markerSize;
-    private BaseShape markerShape;
 
+    /**
+     * Creates the environment panel
+     */
     public EnvironmentPanel() {
-        this.centerLocation = new Point2D.Float();
-        this.markerSize = DEFAULT_MARKER_SIZE;
-        setBackground(Color.BLACK);
-        setForeground(Color.WHITE);
         setFont(Font.decode("Monospaced"));
         setPreferredSize(new Dimension(DEFAULT_WINDOW_SIZE, DEFAULT_WINDOW_SIZE));
     }
 
-    @Override
-    protected void paintComponent(Graphics g) {
-        Dimension size = getSize();
-        g.setColor(getBackground());
-        g.fillRect(0, 0, size.width, size.height);
-        Graphics2D gr = (Graphics2D) g.create();
-        gr.transform(createBaseTransform());
-        AffineTransform base = gr.getTransform();
-        if (gridShape != null) {
-            gridShape.paint(gr);
-        }
-        if (hinderedShape != null) {
-            hinderedShape.paint(gr);
-        }
-        if (labeledShape != null) {
-            labeledShape.paint(gr);
-        }
-        if (mapShape != null) {
-            mapShape.paint(gr);
-        }
-        if (markerShape != null) {
-            markerShape.paint(gr);
-        }
-        gr.setTransform(base);
-        if (robotShape != null) {
-            robotShape.paint(gr);
-        }
-        if (sensorShape != null) {
-            sensorShape.paint(gr);
-        }
-        if (pingShape != null) {
-            pingShape.paint(gr);
-        }
-        if (target != null) {
-            gr.setTransform(base);
-            target.paint(gr);
-        }
-        RobotStatus status = this.robotStatus;
-        if (status != null) {
-            // compute hud position
-            hudAtBottom = !hudAtBottom && status.location().getY() > DEFAULT_WORLD_SIZE / 6
-                    || (!hudAtBottom || !(status.location().getY() < -DEFAULT_WORLD_SIZE / 6))
-                    && hudAtBottom;
-            hudAtRight = !hudAtRight && status.location().getX() < -DEFAULT_WORLD_SIZE / 6
-                    || (!hudAtRight || !(status.location().getX() > DEFAULT_WORLD_SIZE / 6))
-                    && hudAtRight;
-            gr.setTransform(base);
-            drawHUD(g, status, reward, timeRatio);
-        }
-    }
-
     /**
-     * Returns the base transformation to apply to the graphic to draw a shape in world coordinate
+     * Draws the HUD
+     *
+     * @param g         graphics
+     * @param status    the status
+     * @param reward    the reward
+     * @param timeRatio the time ratio
      */
-    AffineTransform createBaseTransform() {
-        Dimension size = getSize();
-        AffineTransform result = AffineTransform.getTranslateInstance((float) size.width / 2, (float) size.height / 2);
-        float scale = getScale();
-        result.scale(scale, -scale);
-        Point2D centerLocation = getCenterLocation();
-        result.translate(-centerLocation.getX(), -centerLocation.getY());
-        return result;
-    }
-
     private void drawHUD(Graphics g, RobotStatus status, double reward, double timeRatio) {
         Graphics2D g1 = (Graphics2D) g;
         AffineTransform tr = g1.getTransform();
@@ -204,118 +128,77 @@ public class EnvironmentPanel extends JComponent {
         g1.setTransform(tr);
     }
 
-    private void drawLine(Graphics g, String text, int row, Color color) {
+    /**
+     * Draws a text line
+     *
+     * @param g      the graphics
+     * @param text   the text
+     * @param row    the row index
+     * @param colour the colour
+     */
+    private void drawLine(Graphics g, String text, int row, Color colour) {
         FontMetrics fm = getFontMetrics(getFont());
         int y = fm.getHeight() * (row + 1);
-        g.setColor(color);
+        g.setColor(colour);
         g.drawString(text, 0, y);
     }
 
-    /**
-     * Returns the location of center map
-     */
-    public Point2D getCenterLocation() {
-        return centerLocation;
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        RobotStatus status = robotStatus;
+        if (status != null) {
+            // compute hud position
+            hudAtBottom = !hudAtBottom && status.location().getY() > DEFAULT_WORLD_SIZE / 6
+                    || (!hudAtBottom || !(status.location().getY() < -DEFAULT_WORLD_SIZE / 6))
+                    && hudAtBottom;
+            hudAtRight = !hudAtRight && status.location().getX() < -DEFAULT_WORLD_SIZE / 6
+                    || (!hudAtRight || !(status.location().getX() > DEFAULT_WORLD_SIZE / 6))
+                    && hudAtRight;
+            drawHUD(g, status, reward, timeRatio);
+        }
+    }
+
+    @Override
+    public void robotStatus(RobotStatus status) {
+        super.robotStatus(status);
+        this.robotStatus = status;
     }
 
     /**
-     * Returns the scale
-     */
-    public float getScale() {
-        return DEFAULT_SCALE;
-    }
-
-    /**
-     * Sets the marker size
+     * Sets the reaction real time
      *
-     * @param markerSize the marker size (m)
+     * @param reactionRealTime the reaction real time
      */
-    public void setMarkerSize(float markerSize) {
-        this.markerSize = markerSize;
-        repaint();
-    }
-
-    /**
-     * Sets the obstalce map
-     *
-     * @param markers the markers
-     */
-    public void setMarkers(Collection<LabelMarker> markers) {
-        this.markerShape = new CompositeShape(markers.stream()
-                .map(marker ->
-                        createCircle(LABELED_COLOR, BORDER_STROKE, true, marker.location(), markerSize / 2)
-                ).toList());
-        repaint();
-    }
-
-    /**
-     * Sets the obstacle map
-     *
-     * @param map the map
-     */
-    public void setObstacles(ObstacleMap map) {
-        float obstacleSize = (float) map.gridSize();
-        this.hinderedShape = new CompositeShape(map.hindered()
-                .map(obs ->
-                        createRectangle(OBSTACLE_PHANTOM_COLOR, BORDER_STROKE, true, obs, obstacleSize, obstacleSize))
-                .toList());
-        this.labeledShape = new CompositeShape(map.labeled()
-                .map(obs ->
-                        createRectangle(LABELED_PHANTOM_COLOR, BORDER_STROKE, true, obs, obstacleSize, obstacleSize))
-                .toList());
-        repaint();
-    }
-
-    /**
-     * Sets the radar map
-     *
-     * @param radarMap the radar map
-     */
-    public void setRadarMap(RadarMap radarMap) {
-        this.gridShape = BaseShape.createGridShape(radarMap.topology(), GRID_SIZE);
-        this.mapShape = BaseShape.createMapShape((float) radarMap.topology().gridSize(), radarMap.cells());
-        repaint();
-    }
-
     public void setReactionRealTime(double reactionRealTime) {
         this.reactionRealTime = reactionRealTime;
         repaint();
     }
 
+    /**
+     * Sets the reaction robot time
+     *
+     * @param reactionRobotTime the reaction robot time
+     */
     public void setReactionRobotTime(double reactionRobotTime) {
         this.reactionRobotTime = reactionRobotTime;
         repaint();
     }
 
+    /**
+     * Sets the reward
+     *
+     * @param reward reward
+     */
     public void setReward(double reward) {
         this.reward = reward;
         repaint();
     }
 
-    public void setRobotStatus(RobotStatus status) {
-        this.robotStatus = status;
-        Point2D location = status.location();
-        Complex direction = status.direction();
-        this.robotShape = createRobotShape(location, direction);
-        this.sensorShape = createSensorShape(location, direction.add(status.sensorDirection()));
-        this.pingShape = status.sensorObstacle()
-                .map(point -> createCircle(PING_COLOR, BORDER_STROKE, true, point, PING_RADIUS))
-                .orElse(null);
-        repaint();
-    }
-
     /**
-     * Sets the target point
-     *
-     * @param target the target point
+     * Sets the time ratio
+     * @param timeRatio the time ratio (x)
      */
-    public void setTarget(Point2D target) {
-        this.target = target == null
-                ? null
-                : BaseShape.createCircle(TARGET_COLOR, BORDER_STROKE, false, target, TARGET_SIZE);
-        repaint();
-    }
-
     public void setTimeRatio(double timeRatio) {
         this.timeRatio = timeRatio;
         repaint();

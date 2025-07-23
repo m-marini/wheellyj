@@ -53,9 +53,9 @@ public class GridMapTest {
     public static final double GRID_SIZE = 0.5;
     public static final int MAP_SIZE = 5;
     public static final double DECAY = 0.9;
-    private static final GridTopology GRID_TOPOLOGY = new GridTopology(new Point2D.Float(), RADAR_SIZE, RADAR_SIZE, GRID_SIZE);
+    private static final GridTopology GRID_TOPOLOGY = GridTopology.create(new Point2D.Float(), RADAR_SIZE, RADAR_SIZE, GRID_SIZE);
     private static final long ECHO_TIME = 100;
-    private static final GridTopology GRID_MAP_TOPOLOGY = new GridTopology(new Point2D.Float(), MAP_SIZE, MAP_SIZE, GRID_SIZE);
+    private static final GridTopology GRID_MAP_TOPOLOGY = GridTopology.create(new Point2D.Float(), MAP_SIZE, MAP_SIZE, GRID_SIZE);
     private static final int GRID_MAP_SIZE = 5;
 
     private static Stream<Object> createMapCells(Stream<Tuple2<Point, String>> stream) {
@@ -125,7 +125,7 @@ public class GridMapTest {
     })
     void createGridMapTest(double robotX, double robotY, int robotDeg, double expX, double expY, int expDeg) {
         // Given ...
-        RadarMap radarMap = RadarMap.empty(new GridTopology(new Point2D.Float(), RADAR_SIZE, RADAR_SIZE, GRID_SIZE))
+        RadarMap radarMap = RadarMap.empty(GridTopology.create(new Point2D.Float(), RADAR_SIZE, RADAR_SIZE, GRID_SIZE))
                 .updateCellAt(0, 0, cell -> cell.addEchogenic(100, 0));
 
         Point2D centre = new Point2D.Double(robotX, robotY);

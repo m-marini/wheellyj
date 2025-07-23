@@ -273,56 +273,62 @@ public class Wheelly {
                 logger.atError().setCause(e).log("Error dumping inference to {}", file);
             }
         });
-   }
+    }
 
     /**
      * Creates the flows of events
      */
     private void createFlows() {
-        controller.readRobotStatus().observeOn(Schedulers.io()).doOnNext(this::handleStatusReady)
-                .subscribe();
-        controller.readReadLine().observeOn(Schedulers.io()).doOnNext(this::handleReadLine)
-                .subscribe();
-        controller.readWriteLine().observeOn(Schedulers.io()).doOnNext(this::handleWrittenLine).subscribe();
-        controller.readCommand().observeOn(Schedulers.io()).doOnNext(sensorMonitor::onCommand).subscribe();
-        controller.readErrors().observeOn(Schedulers.io()).doOnNext(err -> {
+        controller.readRobotStatus().observeOn(Schedulers.io()).subscribe(this::handleStatusReady);
+        controller.readReadLine().observeOn(Schedulers.io()).subscribe(this::handleReadLine);
+        controller.readWriteLine().observeOn(Schedulers.io()).subscribe(this::handleWrittenLine);
+        controller.readCommand().observeOn(Schedulers.io()).subscribe(sensorMonitor::onCommand);
+        controller.readErrors().observeOn(Schedulers.io()).subscribe(err -> {
             comMonitor.onError(err);
             logger.atError().setCause(err).log();
-        }).subscribe();
-        controller.readControllerStatus().observeOn(Schedulers.io()).doOnNext(this::handleControllerStatus).subscribe();
-        controller.readShutdown().doOnComplete(this::handleShutdown)
-                .subscribe();
-        worldModeller.readInference().doOnNext(this::handleInference)
-                .subscribe();
+        });
+        controller.readControllerStatus()
+                .observeOn(Schedulers.io())
+                .map(ControllerStatusMapper::map)
+                .distinct()
+                .subscribe(this::handleControllerStatus);
+        controller.readShutdown().subscribe(this::handleShutdown);
+        worldModeller.readInference().subscribe(this::handleInference);
 
         learnPanel.readActionAlphas()
-                .doOnNext(alphas -> trainer.updateAndGet(t ->
-                        t.alphas(alphas)))
-                .subscribe();
+                .subscribe(alphas -> trainer.updateAndGet(t ->
+                        t.alphas(alphas)));
         learnPanel.readEtas()
-                .doOnNext(eta -> trainer.updateAndGet(t ->
-                        t.eta(eta)))
-                .subscribe();
+                .subscribe(eta -> trainer.updateAndGet(t ->
+                        t.eta(eta)));
         Observable<WindowEvent>[] windowObs = allFrames.stream()
                 .map(f -> SwingObservable.window(f, SwingObservable.WINDOW_ACTIVE))
                 .toArray(Observable[]::new);
         Observable.mergeArray(windowObs)
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
-                .doOnNext(this::handleWindowClosing)
-                .subscribe();
+                .subscribe(this::handleWindowClosing);
 
-        if (kpiWriter!=null) {
+        if (kpiWriter != null) {
             agent.readKpis().observeOn(Schedulers.io(), true)
-                    .doOnNext(this::handleKpis)
-                    .doOnError(ex -> logger.atError().setCause(ex).log("Error writing kpis"))
-                    .doOnComplete(() -> {
-                        logger.atInfo().log("Closing kpis writer ...");
-                        kpiWriter.close();
-                        logger.atInfo().log("Kpis writer closed");
-                        completion.onComplete();
-                    }).subscribe();
+                    .subscribe(this::handleKpis,
+                            ex -> logger.atError().setCause(ex).log("Error writing kpis"),
+                            () -> {
+                                logger.atInfo().log("Closing kpis writer ...");
+                                kpiWriter.close();
+                                logger.atInfo().log("Kpis writer closed");
+                                completion.onComplete();
+                            });
         } else {
             completion.onComplete();
+        }
+    }
+
+    /**
+     * @param actionEvent the action event
+     */
+    private void handleRelocateButton(ActionEvent actionEvent) {
+        if (this.robot instanceof SimRobot simRobot) {
+            simRobot.safeRelocateRandom();
         }
     }
 
@@ -343,7 +349,7 @@ public class Wheelly {
         SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
                 .filter(ev ->
                         ev.getID() == WindowEvent.WINDOW_OPENED)
-                .doOnNext(this::handleWindowOpened).subscribe();
+                .subscribe(this::handleWindowOpened);
 
         JFrame comFrame = comMonitor.createFrame();
         JFrame sensorFrame = sensorMonitor.createFrame();
@@ -366,7 +372,11 @@ public class Wheelly {
         layHorizontally(frameAry);
 
         comFrame.setState(JFrame.ICONIFIED);
-        interval(LAYOUT_INTERVAL, TimeUnit.MILLISECONDS).limit(allFrames.size()).doOnNext(i -> allFrames.get(allFrames.size() - 1 - Math.toIntExact(i)).setVisible(true)).subscribe();
+        interval(LAYOUT_INTERVAL, TimeUnit.MILLISECONDS)
+                .limit(allFrames.size())
+                .subscribe(i ->
+                        allFrames.get(allFrames.size() - 1 - Math.toIntExact(i))
+                                .setVisible(true));
     }
 
     /**
@@ -382,7 +392,7 @@ public class Wheelly {
         RobotSpec robotSpec = robot.robotSpec();
         double radarMaxDistance = robotSpec.maxRadarDistance();
         polarPanel.setRadarMaxDistance(radarMaxDistance);
-        envPanel.setMarkerSize((float) worldModeller.worldModelSpec().markerSize());
+        envPanel.markerSize((float) worldModeller.worldModelSpec().markerSize());
         this.gridPanel = new GridPanel();
     }
 
@@ -410,7 +420,7 @@ public class Wheelly {
         SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
                 .filter(ev ->
                         ev.getID() == WindowEvent.WINDOW_OPENED)
-                .doOnNext(this::handleWindowOpened).subscribe();
+                .subscribe(this::handleWindowOpened);
         center(frame);
         allFrames = List.of(frame);
     }
@@ -476,10 +486,10 @@ public class Wheelly {
         }
 
         long robotClock = robotStatus.simulationTime();
-        envPanel.setRobotStatus(robotStatus);
+        envPanel.robotStatus(robotStatus);
         sensorMonitor.onStatus(robotStatus);
-        envPanel.setRadarMap(worldModel.radarMap());
-        envPanel.setMarkers(markers.values());
+        envPanel.radarMap(worldModel.radarMap());
+        envPanel.markers(markers.values());
         polarPanel.setPolarMap(polarMap, markers.values());
         Complex robotDir = robotStatus.direction();
 
@@ -519,15 +529,6 @@ public class Wheelly {
     }
 
     /**
-     * Handles obstacle changeLock
-     *
-     * @param simRobot the sim robot
-     */
-    private void handleObstacleChanged(SimRobot simRobot) {
-        simRobot.obstaclesMap().ifPresent(envPanel::setObstacles);
-    }
-
-    /**
      * Handles read line
      *
      * @param line read line
@@ -540,12 +541,12 @@ public class Wheelly {
     }
 
     /**
-     * @param actionEvent the action event
+     * Handles the obstacle map
+     *
+     * @param map the obstacle map
      */
-    private void handleRelocateButton(ActionEvent actionEvent) {
-        if (this.robot instanceof SimRobot simRobot) {
-            simRobot.safeRelocateRandom();
-        }
+    private void onObstacleMap(ObstacleMap map) {
+        envPanel.obstacles(map);
     }
 
     /**
@@ -594,7 +595,7 @@ public class Wheelly {
             }
         }
         // Wait for completion
-        completion.doOnComplete(() -> {
+        completion.subscribe(() -> {
             logger.atInfo().log("Shutdown completed.");
             // Close waiting frame
             waitFrame.dispose();
@@ -606,7 +607,7 @@ public class Wheelly {
             allFrames.forEach(JFrame::dispose);
             // Notify completion
             logger.atInfo().log("completed.");
-        }).subscribe();
+        });
     }
 
     /**
@@ -663,10 +664,6 @@ public class Wheelly {
      * @param e the event
      */
     private void handleWindowOpened(WindowEvent e) {
-        Optional.ofNullable(robot)
-                .filter(r -> r instanceof SimRobot)
-                .flatMap(r -> ((SimRobot) r).obstaclesMap())
-                .ifPresent(envPanel::setObstacles);
         controller.start();
     }
 
@@ -758,7 +755,8 @@ public class Wheelly {
         this.trainer.set(AgentTrainer.create(agent, synchTraining, savingInterval));
         if (robot instanceof SimRobot robot1) {
             // Add the obstacles location changes
-            robot1.setOnObstacleChanged(this::handleObstacleChanged);
+            robot1.readObstacleMap()
+                    .subscribe(this::onObstacleMap);
             relocateButton.setEnabled(true);
         } else {
             relocateButton.setEnabled(false);

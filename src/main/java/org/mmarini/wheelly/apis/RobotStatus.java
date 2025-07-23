@@ -33,7 +33,6 @@ import java.util.Optional;
 import java.util.function.IntToDoubleFunction;
 
 import static java.lang.Math.PI;
-import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -56,7 +55,6 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
     public static final int PULSES_PER_ROOT = 40;
     public static final double WHEEL_DIAMETER = 0.067;
     public static final double DISTANCE_PER_PULSE = WHEEL_DIAMETER * PI / PULSES_PER_ROOT;
-    public static final float DISTANCE_SCALE = 1F / 5882;
     public static final float OBSTACLE_SIZE = 0.2f;
 
     /**
@@ -140,7 +138,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
     }
 
     public double echoDistance() {
-        return proxyMessage.echoDelay() * DISTANCE_SCALE;
+        return proxyMessage.echoDistance();
     }
 
     /**
@@ -304,7 +302,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      */
     public RobotStatus setEchoDistance(double echoDistance) {
         return setProxyMessage(
-                proxyMessage.setEchoDelay(round(echoDistance / DISTANCE_SCALE))
+                proxyMessage.setEchoDistance(echoDistance)
                         .setSimulationTime(simulationTime));
     }
 

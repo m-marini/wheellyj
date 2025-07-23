@@ -45,7 +45,7 @@ class InferenceFileTest {
 
     public static final File FILE = new File("tmp/dump.bin");
     public static final double GRID_SIZE = 0.3;
-    public static final GridTopology TOPOLOGY = new GridTopology(new Point2D.Double(), 51, 51, GRID_SIZE);
+    public static final GridTopology TOPOLOGY = GridTopology.create(new Point2D.Double(), 51, 51, GRID_SIZE);
     public static final RadarMap RADAR = RadarMap.empty(TOPOLOGY);
     public static final int NUM_SECTORS = 24;
     public static final Complex RECEPTIVE_ANGLE = Complex.fromDeg(15);
@@ -124,8 +124,6 @@ class InferenceFileTest {
             assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
             assertEquals(RADAR.topology(), radarRead.topology());
             assertArrayEquals(RADAR.cells(), radarRead.cells());
-            assertArrayEquals(RADAR.vertices(), radarRead.vertices());
-            assertArrayEquals(RADAR.verticesByCells(), radarRead.verticesByCells());
             RobotCommands commands = t._2;
             assertEquals(COMMANDS, commands);
         }
@@ -151,8 +149,6 @@ class InferenceFileTest {
             assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
             assertEquals(RADAR.topology(), radarRead.topology());
             assertArrayEquals(RADAR.cells(), radarRead.cells());
-            assertArrayEquals(RADAR.vertices(), radarRead.vertices());
-            assertArrayEquals(RADAR.verticesByCells(), radarRead.verticesByCells());
         }
     }
 
@@ -182,8 +178,6 @@ class InferenceFileTest {
             assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
             assertEquals(RADAR.topology(), radarRead.topology());
             assertArrayEquals(RADAR.cells(), radarRead.cells());
-            assertArrayEquals(RADAR.vertices(), radarRead.vertices());
-            assertArrayEquals(RADAR.verticesByCells(), radarRead.verticesByCells());
         }
     }
 

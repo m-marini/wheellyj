@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 
 - Issue [#545](https://github.com/m-marini/wheellyj/issues/545): Point echo
+- Issue [#550](https://github.com/m-marini/wheellyj/issues/550): Full reactive robot api
 
 ## [0.23.0] 2025-06-26
 

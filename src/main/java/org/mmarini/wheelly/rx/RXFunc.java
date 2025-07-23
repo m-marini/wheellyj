@@ -26,14 +26,39 @@
 package org.mmarini.wheelly.rx;
 
 import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.functions.Function;
-import org.nd4j.linalg.api.ndarray.INDArray;
+import io.reactivex.rxjava3.core.Maybe;
+import io.reactivex.rxjava3.functions.Predicate;
 
-import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public interface RXFunc {
-    static Function<Map<String, INDArray>, Flowable<INDArray>> getProperty(String key) {
-        return map ->
-                map.containsKey(key) ? Flowable.just(map.get(key)) : Flowable.empty();
+
+    /**
+     * Returns the first element matching the predicate within timeout or none if timed out
+     *
+     * @param flowable  the flowable
+     * @param predicate the predicate to match
+     * @param timeout   the timeout
+     * @param <T>       the flow items type
+     */
+    static <T> Maybe<T> findFirst(Flowable<T> flowable, Predicate<T> predicate, long timeout) {
+        return flowable.filter(predicate)
+                .take(timeout, TimeUnit.MILLISECONDS)
+
+                .firstElement();
+    }
+
+    /**
+     * Returns the flowable that emitt only the valid item or an error
+     *
+     * @param flow  the flow
+     * @param valid the validation function
+     * @param <T>   the flow item type
+     */
+    static <T> Flowable<T> validate(Flowable<T> flow, Predicate<T> valid) {
+        return flow.flatMap(item ->
+                valid.test(item)
+                        ? Flowable.just(item)
+                        : Flowable.error(new IllegalArgumentException("Wrong item")));
     }
 }

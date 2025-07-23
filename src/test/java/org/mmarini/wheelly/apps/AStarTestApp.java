@@ -1,0 +1,221 @@
+/*
+ * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ *
+ *  Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ *    END OF TERMS AND CONDITIONS
+ *
+ */
+
+package org.mmarini.wheelly.apps;
+
+import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.schedulers.Schedulers;
+import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.engines.AbstractPathFinder;
+import org.mmarini.wheelly.engines.SectorsPathFinder;
+import org.mmarini.wheelly.swing.MapPanel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.geom.Point2D;
+import java.util.List;
+import java.util.Optional;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * Graphical AStar test
+ */
+public class AStarTestApp {
+
+    public static final GridTopology TOPOLOGY = GridTopology.create(new Point2D.Double(), 33, 33, 0.2);
+    public static final long SEED = 1234L;
+    public static final int NUM_LABELS = 1;
+    public static final int NUM_OBSTACLES = 8;
+    public static final int CLEAN_TIME = 10000;
+    public static final Point2D.Double ROBOT_LOCATION = new Point2D.Double(-1.2, -2.6);
+    public static final Point2D.Double TARGET = new Point2D.Double(2, -2.2);
+    public static final Complex ROBOT_DIRECTION = Complex.DEG0;
+    public static final Complex SENSOR_DIRECTION = Complex.DEG0;
+    public static final int PERIOD = 50;
+    private static final double WORLD_WIDTH = TOPOLOGY.width() * TOPOLOGY.gridSize();
+    private static final double MAX_OBSTACLE_DISTANCE = WORLD_WIDTH / 2;
+    private static final double WORLD_HEIGHT = TOPOLOGY.height() * TOPOLOGY.gridSize();
+    private static final double MIN_OBSTACLE_DISTANCE = 0.4;
+    private static final double DECAY = 10 * 1000;
+    private static final Color NEIGHBOUR_COLOR = new Color(0, 1, 0, 0.3F);
+    private static final Logger logger = LoggerFactory.getLogger(AStarTestApp.class);
+    public static final double DISTANCE = 0.6;
+
+    private static ObstacleMap createObstacles() {
+        Random random = new Random(SEED);
+        return MapBuilder.create(TOPOLOGY.gridSize())
+                .rect(false, -WORLD_WIDTH / 2,
+                        -WORLD_HEIGHT / 2, WORLD_WIDTH / 2, WORLD_HEIGHT / 2)
+                .rand(NUM_OBSTACLES, NUM_LABELS, new Point2D.Double(), MAX_OBSTACLE_DISTANCE,
+                        new Point2D.Double(), MIN_OBSTACLE_DISTANCE, random)
+                .build();
+    }
+
+    private static AbstractPathFinder createPathFinder(RadarMap map, ObstacleMap obstacles, Point2D location) {
+//        return SectorsPathFinder.createLabelTargets(map, location, DISTANCE, obstacles.labeled().toArray(Point2D[]::new));
+        return SectorsPathFinder.createUnknownTargets(map, location);
+    }
+
+    private static RadarMap createRadarMap(ObstacleMap obstacles) {
+        long t0 = 1;
+        // Creates the radar map
+        return RadarMap.empty(TOPOLOGY).map(cell -> {
+            Point2D point = cell.location();
+            if (point.distance(ROBOT_LOCATION) > 3) {
+                return cell;
+            } else {
+                Optional<ObstacleMap.ObstacleCell> obstacleOpt = obstacles.cells().stream()
+                        .filter(obstacleCell -> obstacleCell.location().distanceSq(point) <= TOPOLOGY.gridSize() / 2)
+                        .findAny();
+                return obstacleOpt.map(obs ->
+                        cell.addEchogenic(t0, DECAY)
+                ).orElse(cell.addAnechoic(t0, DECAY));
+            }
+        });
+    }
+
+    public static void main(String[] args) {
+        new AStarTestApp().run();
+    }
+
+    private final JFrame frame;
+    private final MapPanel mapPanel;
+    private final RadarMap map;
+    private final ObstacleMap obstacles;
+    private final Point2D target;
+    private final AbstractPathFinder pathFinder;
+    private final Point2D robotLocation;
+    private final Complex robotDirection;
+    private final JButton restartButton;
+
+    /**
+     * Creates the test
+     */
+    public AStarTestApp() {
+        this.frame = new JFrame();
+        this.mapPanel = new MapPanel();
+        this.restartButton = new JButton("Restart");
+        this.obstacles = createObstacles();
+        this.map = createRadarMap(obstacles);
+        this.target = obstacles.labeled().findAny().orElse(null);
+        this.robotLocation = ROBOT_LOCATION;
+        this.robotDirection = ROBOT_DIRECTION;
+        this.pathFinder = createPathFinder(map, obstacles, robotLocation);
+
+        frame.setSize(800, 600);
+        frame.setTitle("AStar test");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(restartButton);
+
+        Container content = frame.getContentPane();
+        content.setLayout(new BorderLayout());
+        content.add(BorderLayout.CENTER, new JScrollPane(mapPanel));
+        content.add(BorderLayout.SOUTH, buttonPanel);
+
+        restartButton.addActionListener(ev -> restart());
+    }
+
+    private void restart() {
+        pathFinder.init();
+        showStatus();
+        restartButton.setEnabled(false);
+        Flowable.interval(PERIOD, TimeUnit.MILLISECONDS)
+                .subscribeOn(Schedulers.computation())
+                .takeUntil(i -> {
+                    Point2D current = pathFinder.astar().current();
+                    return current == null || pathFinder.isGoal(current);
+                })
+                .subscribe(ignored -> {
+                            pathFinder.astar().traverse();
+                            showStatus();
+                        },
+                        err -> {
+                        },
+                        () -> restartButton.setEnabled(true)
+                );
+    }
+
+    /**
+     * Runs the test
+     */
+    private void run() {
+        mapPanel.radarMap(map);
+        mapPanel.obstacles(obstacles);
+        mapPanel.markers(obstacles.labeled()
+                .map(pt -> new LabelMarker("A", pt, 1, 1, CLEAN_TIME))
+                .toList());
+        mapPanel.target(target);
+        mapPanel.robot(robotLocation, robotDirection, null);
+        frame.setVisible(true);
+        restart();
+    }
+
+    private void showStatus() {
+        Point2D current = pathFinder.astar().current();
+        List<Point2D> path = current != null
+                ? pathFinder.astar().reconstructPath(current)
+                : List.of();
+        if (current != null && pathFinder.isGoal(current)) {
+            logger.atInfo().log("found path:");
+            Point2D prev = null;
+            double tot = 0;
+            for (Point2D point2D : path) {
+                double cost = prev != null ? prev.distance(point2D) : 0;
+                tot += cost;
+                prev = point2D;
+                logger.atInfo().log("   {} cost={} tot={}", point2D, cost, tot);
+            }
+        }
+        mapPanel.path(path.toArray(Point2D[]::new));
+        mapPanel.pingLocation(current);
+/*
+        Point2D from = new Point2D.Double(-1, -1);
+        Point2D to = new Point2D.Double(1, 1);
+        double width = map.topology().gridSize() / sqrt(2)+0.18;
+        AreaExpression sensibleArea = AreaExpression.or(
+                rectangle(from, to, width),
+                circle(from, width),
+                circle(to, width)
+        );
+        Point2D[] area = map.indicesByArea(sensibleArea).mapToObj(i -> map.cell(i).location()).toArray(Point2D[]::new);
+        mapPanel.sectors((float) map.topology().gridSize(),
+                NEIGHBOUR_COLOR, area);
+
+ */
+        mapPanel.sectors((float) map.topology().gridSize(),
+                NEIGHBOUR_COLOR,
+                current != null
+                        ? pathFinder.neighbourCells(current).toArray(Point2D[]::new)
+                        : new Point2D[0]);
+    }
+}

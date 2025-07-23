@@ -121,7 +121,7 @@ public class SensorMonitor extends MatrixTable {
      * @param status the status
      */
     public void onControllerStatus(String status) {
-        printf(CONTROLLER_STATUS_KEY, ControllerStatusMapper.map(status));
+        printf(CONTROLLER_STATUS_KEY, status);
     }
 
     /**

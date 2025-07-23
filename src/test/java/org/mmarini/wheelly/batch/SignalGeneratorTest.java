@@ -61,7 +61,7 @@ class SignalGeneratorTest {
     public static final RobotSpec ROBOT_SPEC = new RobotSpec(MAX_RADAR_DISTANCE, RECEPTIVE_ANGLE, CONTACT_RADIUS);
     public static final File OUTPUT_PATH = new File("tmp");
     public static final double EPSILON = 1e-6;
-    public static final GridTopology TOPOLOGY = new GridTopology(new Point2D.Double(), 51, 51, GRID_SIZE);
+    public static final GridTopology TOPOLOGY = GridTopology.create(new Point2D.Double(), 51, 51, GRID_SIZE);
     public static final RadarMap RADAR = RadarMap.empty(TOPOLOGY);
     public static final int NUM_SECTORS = 24;
     public static final WheellyProxyMessage PROXY_MESSAGE = new WheellyProxyMessage(1, 2, 3, 0,

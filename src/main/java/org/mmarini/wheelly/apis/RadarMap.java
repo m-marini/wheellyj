@@ -29,13 +29,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static java.lang.Math.abs;
@@ -46,15 +44,13 @@ import static org.mmarini.wheelly.apis.AreaExpression.*;
 /**
  * The RadarMap keeps the obstacle signal results of the space round the centre
  *
- * @param topology        the topology
- * @param cells           the map cells
- * @param cleanTimestamp  the next clean instant (ms)
- * @param vertices        the vertices qVectors
- * @param verticesByCells the vertices by cell
+ * @param topology       the topology
+ * @param cells          the map cells
+ * @param cleanTimestamp the next clean instant (ms)
  */
 public record RadarMap(GridTopology topology, MapCell[] cells,
-                       long cleanTimestamp,
-                       QVect[] vertices, int[][] verticesByCells) {
+                       long cleanTimestamp
+) {
     private static final Logger logger = LoggerFactory.getLogger(RadarMap.class);
 
     /**
@@ -66,33 +62,33 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
         int width = topology.width();
         int height = topology.height();
         MapCell[] cells = new MapCell[width * height];
-        QVect[] vertices = AreaExpression.createQVertices(topology);
-        int[][] verticesByCell = AreaExpression.createVerticesIndices(topology);
         for (int i = 0; i < cells.length; i++) {
             Point2D location = topology.location(i);
             cells[i] = MapCell.unknown(location);
         }
-        return new RadarMap(topology, cells,
-                0, vertices, verticesByCell);
+        return new RadarMap(topology, cells, 0);
     }
 
     /**
      * Creates the radar map
      *
-     * @param topology        the topology
-     * @param cells           the map cells
-     * @param cleanTimestamp  the next clean instant (ms)
-     * @param vertices        the vertices qVectors
-     * @param verticesByCells the vertices indices by cell
+     * @param topology       the topology
+     * @param cells          the map cells
+     * @param cleanTimestamp the next clean instant (ms)
      */
-    public RadarMap(GridTopology topology, MapCell[] cells,
-                    long cleanTimestamp,
-                    QVect[] vertices, int[][] verticesByCells) {
+    public RadarMap(GridTopology topology, MapCell[] cells, long cleanTimestamp) {
         this.topology = requireNonNull(topology);
         this.cells = requireNonNull(cells);
-        this.vertices = requireNonNull(vertices);
-        this.verticesByCells = requireNonNull(verticesByCells);
         this.cleanTimestamp = cleanTimestamp;
+    }
+
+    /**
+     * Returns the sector containing the location
+     *
+     * @param location the location
+     */
+    public Optional<MapCell> cell(Point2D location) {
+        return cell(location.getX(), location.getY());
     }
 
     /**
@@ -113,6 +109,15 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      */
     public MapCell cell(int index) {
         return cells[index];
+    }
+
+    /**
+     * Returns the predicate relative to index of a cell predicate
+     *
+     * @param f the cell predicate
+     */
+    public IntPredicate cellIs(Predicate<MapCell> f) {
+        return i -> f.test(cell(i));
     }
 
     /**
@@ -138,21 +143,15 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
     }
 
     /**
-     * Returns the predicate that return true if cell at index is contained in the area
+     * Returns the indices of the sectors connected to the given location.
+     * The sector is connected if it exists a direct trajectory from the given location and the centre of sector
      *
-     * @param area the cell predicate
+     * @param location       the location
+     * @param safetyDistance the safety distance (m)
      */
-    IntPredicate filterByArea(AreaExpression area) {
-        return AreaExpression.filterByArea(area, vertices, verticesByCells);
-    }
-
-    /**
-     * Returns the predicate relative to index of a cell predicate
-     *
-     * @param f the cell predicate
-     */
-    IntPredicate filterByCell(Predicate<MapCell> f) {
-        return i -> f.test(cells[i]);
+    IntStream connectedIndices(Point2D location, double safetyDistance) {
+        return noContactIndices().filter(cellIs(cell ->
+                freeTrajectory(location, cell.location(), safetyDistance)));
     }
 
     /**
@@ -173,9 +172,9 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
                 rightHalfPlane(location, escapeDir.add(Complex.DEG270)));
 
         // Extracts the empty cell
-        Optional<Point2D> result = indices()
-                .filter(filterByCell(c -> c.empty() || c.unknown()))
-                .filter(filterByArea(sensibleArea))
+        Optional<Point2D> result = topology.indices()
+                .filter(cellIs(c -> c.empty() || c.unknown()))
+                .filter(topology.inArea(sensibleArea))
                 .mapToObj(this::cell)
                 .map(MapCell::location)
                 .sorted(Comparator.comparingDouble(location::distanceSq))
@@ -201,9 +200,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
                 circle(location, maxDistance),
                 not(circle(location, safeDistance))
         );
-        List<MapCell> eligibleCells = indices()
-                // Filters cell at a distance no longer maxDistance and with free trajectory
-                .filter(filterByArea(sensibleArea))
+        List<MapCell> eligibleCells = topology.indicesByArea(sensibleArea)
                 .mapToObj(this::cell)
                 .toList();
         Optional<Point2D> result = eligibleCells.stream()
@@ -217,35 +214,34 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
                         eligibleCells.stream()
                                 .filter(MapCell::empty)
                                 .map(MapCell::location)
-                                .sorted(Comparator.<Point2D>comparingDouble(location::distanceSq).reversed())
-                                // Filters cell at a distance no longer maxDistance and with free trajectory
                                 .filter(p -> freeTrajectory(location, p, safeDistance))
-                                .findFirst());
+                                .max(Comparator.comparingDouble(location::distanceSq)));
         logger.atDebug().log("findTarget completed in {} ms", System.currentTimeMillis() - t0);
         return result;
     }
 
     /**
-     * Returns true if the trajectory from given point to given point has obstacles (all intersection point distance > safeDistance)
+     * Returns true if the trajectory from given point to given point has obstacles
+     * (all intersection point distance > safeDistance)
      *
      * @param from         departure (m)
      * @param to           destination (m)
      * @param safeDistance safe distance (m)
      */
-    boolean freeTrajectory(Point2D from, Point2D to, double safeDistance) {
+    public boolean freeTrajectory(Point2D from, Point2D to, double safeDistance) {
         double size = topology.gridSize();
         Complex dir = Complex.direction(from, to);
         double distance = from.distance(to);
         double maxDistance = distance + safeDistance;
-        double width = safeDistance + topology.gridSize() * sqrt(2);
+        double width = safeDistance + topology.gridSize() / sqrt(2);
         AreaExpression sensibleArea = AreaExpression.or(
                 rectangle(from, to, width),
                 circle(from, width),
                 circle(to, width)
         );
-        return indices()
-                .filter(filterByCell(MapCell::hindered))
-                .filter(filterByArea(sensibleArea))
+        return topology.indices()
+                .filter(cellIs(MapCell::hindered))
+                .filter(topology.inArea(sensibleArea))
                 .mapToObj(this::cell)
                 // Get all projections of hindered cells
                 .flatMap(cell -> Geometry.lineSquareProjections(from, dir, cell.location(), size).stream())
@@ -256,6 +252,15 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
     }
 
     /**
+     * Returns the indices of sector containing the location
+     *
+     * @param location the location
+     */
+    public int indexOf(Point2D location) {
+        return topology.indexOf(location);
+    }
+
+    /**
      * Returns the indices of sector containing the point
      *
      * @param x x coordinate of point
@@ -263,13 +268,6 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      */
     public int indexOf(double x, double y) {
         return topology.indexOf(x, y);
-    }
-
-    /**
-     * Returns all the cell indices
-     */
-    IntStream indices() {
-        return IntStream.range(0, cells.length);
     }
 
     /**
@@ -294,10 +292,28 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
     }
 
     /**
-     * Returns the number of cells
+     * Returns the indices of the sectors neighbour the given location included the given sector index
+     *
+     * @param location       the location
+     * @param safetyDistance the safety distance
+     * @param includeIndex   the function returning true if sector index is included
      */
-    public int numCells() {
-        return cells.length;
+    public IntStream neighbourIndices(Point2D location, double safetyDistance, IntPredicate includeIndex) {
+        Set<Integer> connectedIndices = connectedIndices(location, safetyDistance)
+                .boxed()
+                .collect(Collectors.toSet());
+        return IntStream.concat(
+                        connectedIndices.stream().mapToInt(x -> x).filter(includeIndex),
+                        topology.contour(connectedIndices))
+                .distinct();
+    }
+
+    /**
+     * Returns the indices of no contact sectors
+     */
+    IntStream noContactIndices() {
+        return topology.indices().
+                filter(cellIs(Predicate.not(MapCell::hindered)));
     }
 
     /**
@@ -306,7 +322,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      * @param cells the cells
      */
     private RadarMap setCells(MapCell[] cells) {
-        return new RadarMap(topology, cells, cleanTimestamp, vertices, verticesByCells);
+        return new RadarMap(topology, cells, cleanTimestamp);
     }
 
     /**
@@ -315,7 +331,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      * @param cleanTimestamp the next clean instant (ms)
      */
     public RadarMap setCleanTimestamp(long cleanTimestamp) {
-        return new RadarMap(topology, cells, cleanTimestamp, vertices, verticesByCells);
+        return new RadarMap(topology, cells, cleanTimestamp);
     }
 
     /**
@@ -343,8 +359,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
         AreaExpression sensibleArea = contactArea != null
                 ? and(distanceArea, contactArea)
                 : distanceArea;
-        IntStream indices = indices()
-                .filter(filterByArea(sensibleArea));
+        IntStream indices = topology.indicesByArea(sensibleArea);
         return map(indices, cell -> cell.setContact(contactsTimestamp));
     }
 

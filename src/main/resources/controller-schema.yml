@@ -1,30 +1,18 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/controller-schema-1.0
+$id: https://mmarini.org/wheelly/controller-schema-2.0
 title: Robot controller
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/controller-schema-1.0
+    const: https://mmarini.org/wheelly/controller-schema-2.0
   class:
     const: org.mmarini.wheelly.apis.RobotController
-  interval:
-    type: integer
-    minimum: 1
   reactionInterval:
     type: integer
     minimum: 1
   commandInterval:
     type: integer
-    minimum: 1
-  connectionRetryInterval:
-    type: integer
-    minimum: 1
-  watchdogInterval:
-    type: integer
-    minimum: 1
-  simulationSpeed:
-    type: number
     minimum: 1
   supplyValues:
     type: array
@@ -43,10 +31,7 @@ properties:
 required:
   - $schema
   - class
-  - interval
   - reactionInterval
   - commandInterval
-  - connectionRetryInterval
-  - watchdogInterval
   - supplyValues
   - voltages

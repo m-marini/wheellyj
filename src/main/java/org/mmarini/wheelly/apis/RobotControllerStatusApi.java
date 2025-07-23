@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2023 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -26,26 +26,24 @@
  *
  */
 
-package org.mmarini;
+package org.mmarini.wheelly.apis;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+/**
+ * Gets the robot controller status
+ */
+public interface RobotControllerStatusApi {
+    /**
+     * Returns true if the controller is inferencing
+     */
+    boolean inferencing();
 
-public class ClockTest {
-    private static final Logger logger = LoggerFactory.getLogger(ClockTest.class);
+    /**
+     * Returns true if the controller is ready
+     */
+    boolean ready();
 
-    public static void main(String[] args) {
-        logger.atInfo().log("Started");
-        long prev = System.currentTimeMillis();
-        long lastError = prev;
-        for (; ; ) {
-            long t0 = System.currentTimeMillis();
-            long dt = t0 - prev;
-            if (dt < 0) {
-                logger.atError().log("Elapsed {} after {}", dt, prev - lastError);
-                lastError = prev;
-            }
-            prev = t0;
-        }
-    }
+    /**
+     * Returns true if the controller is started
+     */
+    boolean started();
 }

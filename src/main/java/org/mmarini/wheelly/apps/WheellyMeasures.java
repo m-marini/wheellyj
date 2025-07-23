@@ -25,6 +25,7 @@
 
 package org.mmarini.wheelly.apps;
 
+import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.schedulers.Timed;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
@@ -32,7 +33,9 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
+import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.LineSocket;
+import org.mmarini.wheelly.rx.RXFunc;
 import org.mmarini.wheelly.swing.Messages;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,16 +45,19 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 
 import static java.lang.String.format;
 
 
 /**
- * Run a test to check for robot environment with random behavior agent
+ * Run a test to check for robot environment with random behaviour agent
  */
 public class WheellyMeasures {
     public static final int CONNECTION_TIMEOUT = 3000;
@@ -153,59 +159,52 @@ public class WheellyMeasures {
      *
      * @param prefix the prefix id
      */
-    private int[][] readMeasureSet(String prefix) throws IOException {
-        Pattern startRegex = Pattern.compile(prefix + "s (\\d*)");
-        int n;
+    private int[][] readMeasureSet(String prefix) {
         // Waits for start record
-        for (; ; ) {
-            Timed<String> record = socket.readLine();
-            if (record != null) {
-                String line = record.value();
-                logger.atDebug().log("< {}", line);
-                Matcher matcher = startRegex.matcher(line);
-                if (matcher.matches()) {
-                    n = Integer.parseInt(matcher.group(1));
-                    break;
-                }
-            }
-        }
+        Pattern startRegex = Pattern.compile(prefix + "s (\\d*)");
+        int n = socket.readLines()
+                .map(Timed::value)
+                .doOnNext(line ->
+                        logger.atDebug().log("< {}", line))
+                .map(startRegex::matcher)
+                .filter(Matcher::matches)
+                .map(matcher -> Integer.parseInt(matcher.group(1)))
+                .blockingFirst();
         logger.atDebug().log("Measure set with {} record", n);
 
         // Reads data
-        int[][] result = new int[n][];
         Pattern dataRegex = Pattern.compile(prefix + "d (\\d*) (\\d*) (-?\\d*) (-?\\d*)");
-        for (int i = 0; i < n; i++) {
-            Timed<String> record = socket.readLine();
-            if (record != null) {
-                String line = record.value();
-                logger.atDebug().log("< {}", line);
-                Matcher matcher = dataRegex.matcher(line);
-                if (!matcher.matches()) {
-                    throw new IllegalArgumentException("Wrong data record");
-                }
-                int id = Integer.parseInt(matcher.group(1));
-                int time = Integer.parseInt(matcher.group(2));
-                int pulses = Integer.parseInt(matcher.group(3));
-                int power = Integer.parseInt(matcher.group(4));
-                if (id != i) {
-                    throw new IllegalArgumentException("Wrong data sequence");
-                }
-                result[i] = new int[]{time, pulses, power};
-            }
-        }
+        int[][] result = (int[][]) RXFunc.validate(
+                        RXFunc.validate(
+                                        socket.readLines()
+                                                .map(Timed::value)
+                                                .doOnNext(line ->
+                                                        logger.atDebug().log("< {}", line))
+                                                .map(dataRegex::matcher),
+                                        Matcher::matches)
+                                .zipWith(IntStream.range(0, n).boxed().toList(), Tuple2::of),
+                        t ->
+                                Integer.parseInt(t._1.group(1)) == t._2)
+                .map(t -> {
+                    Matcher matcher = t._1;
+                    int time = Integer.parseInt(matcher.group(2));
+                    int pulses = Integer.parseInt(matcher.group(3));
+                    int power = Integer.parseInt(matcher.group(4));
+                    return new int[]{time, pulses, power};
+                })
+                .toList()
+                .map(List::toArray)
+                .blockingGet();
 
         // Waits for stop record
         String stop = prefix + "e";
-        for (; ; ) {
-            Timed<String> record = socket.readLine();
-            if (record != null) {
-                String line = record.value();
-                logger.atDebug().log("< {}", line);
-                if (line.equals(stop)) {
-                    break;
-                }
-            }
-        }
+        socket.readLines()
+                .map(Timed::value)
+                .doOnNext(line ->
+                        logger.atDebug().log("< {}", line)
+                )
+                .filter(stop::equals)
+                .blockingFirst();
         logger.atDebug().log("Measure set complete");
         return result;
     }
@@ -216,7 +215,7 @@ public class WheellyMeasures {
      * @param leftPwr  the left power
      * @param rightPwr the right power
      */
-    private Report readReport(int leftPwr, int rightPwr) throws IOException {
+    private Report readReport(int leftPwr, int rightPwr) {
         int[][] leftMeasures = readMeasureSet("l");
         int[][] rightMeasures = readMeasureSet("r");
         return new Report(leftPwr, rightPwr, leftMeasures, rightMeasures);
@@ -228,9 +227,8 @@ public class WheellyMeasures {
      * @param duration the duration (ms)
      * @param leftPwr  the left power
      * @param rightPwr the right power
-     * @throws IOException in case of error
      */
-    private Report runTest(int duration, int leftPwr, int rightPwr) throws IOException {
+    private Report runTest(int duration, int leftPwr, int rightPwr) {
         String cmd = "start " + duration + " " + leftPwr + " " + rightPwr;
         logger.atInfo().log("  {}", cmd);
         socket.writeCommand(cmd);
@@ -239,7 +237,7 @@ public class WheellyMeasures {
     }
 
     /**
-     * Returns the tests report by running the tests
+     * Returns the test report by running the tests
      */
     private void runTests() throws IOException {
         logger.atInfo().log("Started");
@@ -254,16 +252,12 @@ public class WheellyMeasures {
             logger.atInfo().log("Test {}", i + 1);
             Report report = runTest(duration, leftPwr, rightPwr);
             writeResults(report);
-            try {
-                Thread.sleep(idle);
-            } catch (InterruptedException ignored) {
-            }
+            Completable.timer(idle, TimeUnit.MILLISECONDS)
+                    .blockingAwait();
             report = runTest(duration, -leftPwr, -rightPwr);
             writeResults(report);
-            try {
-                Thread.sleep(idle);
-            } catch (InterruptedException ignored) {
-            }
+            Completable.timer(idle, TimeUnit.MILLISECONDS)
+                    .blockingAwait();
         }
     }
 
@@ -281,7 +275,7 @@ public class WheellyMeasures {
                     CONNECTION_TIMEOUT, READ_TIMEOUT);
             socket.connect();
 
-            // Wait for welcome message
+            // Wait for the welcome message
             waitForWelcome();
             runTests();
             socket.close();
@@ -296,24 +290,13 @@ public class WheellyMeasures {
 
     /**
      * Waits for test completion
-     *
-     * @throws IOException in case of error
      */
-    private void waitForCompletion() throws IOException {
+    private void waitForCompletion() {
         Predicate<String> isError = Pattern.compile("!! .*").asMatchPredicate();
-        for (; ; ) {
-            Timed<String> record = socket.readLine();
-            if (record != null) {
-                String line = record.value();
-                logger.atDebug().log("< {}", line);
-                if (isError.test(line)) {
-                    throw new IllegalArgumentException(line);
-                }
-                if (line.equals("completed")) {
-                    break;
-                }
-            }
-        }
+        RXFunc.validate(socket.readLines()
+                        .map(Timed::value), x -> !isError.test(x))
+                .filter("completed"::equals)
+                .blockingFirst();
         logger.atDebug().log("Test completed");
     }
 
@@ -324,16 +307,12 @@ public class WheellyMeasures {
      */
     private void waitForWelcome() throws IOException {
         Predicate<String> linePredicate = Pattern.compile("Wheelly measures ready").asMatchPredicate();
-        for (; ; ) {
-            Timed<String> record = socket.readLine();
-            if (record != null) {
-                String line = record.value();
-                logger.atDebug().log("< {}", line);
-                if (linePredicate.test(line)) {
-                    break;
-                }
-            }
-        }
+        socket.readLines()
+                .map(Timed::value)
+                .doOnNext(line ->
+                        logger.atDebug().log("< {}", line))
+                .filter(linePredicate::test)
+                .blockingFirst();
     }
 
     /**
@@ -368,25 +347,6 @@ public class WheellyMeasures {
         }
     }
 
-    static class Report {
-        public final int[][] leftMeasures;
-        public final int leftPower;
-        public final int[][] rightMeasures;
-        public final int rightPower;
-
-        /**
-         * Creates the report
-         *
-         * @param leftPower     the left power
-         * @param rightPower    the right power
-         * @param leftMeasures  the left measures
-         * @param rightMeasures the right measures
-         */
-        Report(int leftPower, int rightPower, int[][] leftMeasures, int[][] rightMeasures) {
-            this.leftPower = leftPower;
-            this.rightPower = rightPower;
-            this.leftMeasures = leftMeasures;
-            this.rightMeasures = rightMeasures;
-        }
+    record Report(int leftPower, int rightPower, int[][] leftMeasures, int[][] rightMeasures) {
     }
 }

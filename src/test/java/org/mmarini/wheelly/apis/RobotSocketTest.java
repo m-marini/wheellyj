@@ -32,27 +32,27 @@ import io.reactivex.rxjava3.schedulers.Timed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-
 class RobotSocketTest {
 
     public static final long READ_TIMEOUT = 1000L;
     public static final long CONNECTION_TIMEOUT = 1000L;
     public static final int PORT = 22;
-    public static final String ROBOT_HOST = "192.168.1.11";
+    public static final String ROBOT_HOST = "192.168.1.43";
     private static final Logger logger = LoggerFactory.getLogger(RobotSocketTest.class);
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         LineSocket socket = new LineSocket(ROBOT_HOST, PORT, CONNECTION_TIMEOUT, READ_TIMEOUT);
         logger.atDebug().log("Connecting...");
         socket.connect();
         logger.atDebug().log("Reading...");
 
         socket.writeCommand("sc 90");
-        Timed<String> line;
-        while ((line = socket.readLine()) != null) {
-            logger.atDebug().setMessage("Read {}").addArgument(line).log();
-        }
+
+        Timed<String> line = socket.readLines()
+                .firstElement()
+                .blockingGet();
+        logger.atDebug().setMessage("Read {}").addArgument(line).log();
+
         logger.atDebug().log("Closing...");
         socket.close();
         logger.atDebug().log("Closed.");

@@ -103,9 +103,9 @@ import java.io.IOException;
  * </code>
  * </p>
  */
-public interface RobotControllerApi extends RobotControllerConnector, WithIOFlowable, WithStatusFlowable, WithErrorFlowable, WithCommandFlowable, WithControllerFlowable, WithInferenceFlowable {
+public interface RobotControllerApi extends RobotControllerConnector, WithRobotStatusFlowable, WithIOFlowable, WithErrorFlowable, WithCommandFlowable, WithControllerFlowable {
     /**
-     * Returns the robot controller from configuration json
+     * Returns the robot controller from configuration JSON
      *
      * @param config  the root document
      * @param locator the configuration locator
@@ -116,9 +116,9 @@ public interface RobotControllerApi extends RobotControllerConnector, WithIOFlow
     }
 
     /**
-     * Returns the robot controller from configuration json
+     * Returns the robot controller from configuration JSON
      *
-     * @param file  the configuration file
+     * @param file the configuration file
      */
     static RobotControllerApi fromFile(File file) throws IOException {
         return Utils.createObject(file);
@@ -132,10 +132,14 @@ public interface RobotControllerApi extends RobotControllerConnector, WithIOFlow
     RobotControllerApi connectRobot(RobotApi robot);
 
     /**
-     *
      * Returns the shutdown signal
      */
     Completable readShutdown();
+
+    /**
+     * Reconnect the robot
+     */
+    void reconnect();
 
     /**
      * Shutdowns the controller
