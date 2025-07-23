@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -28,35 +28,27 @@
 
 package org.mmarini.wheelly.apis;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+/**
+ * The robot status
+ */
+public interface RobotStatusApi {
+    /**
+     * Returns true if robot is configured
+     */
+    boolean configured();
 
-import java.io.IOException;
+    /**
+     * Returns true if robot is configuring
+     */
+    boolean configuring();
 
-class CameraTestApp {
-    private static final Logger logger = LoggerFactory.getLogger(CameraTestApp.class);
+    /**
+     * Returns true if robot is connected
+     */
+    boolean connected();
 
-    public static void main(String[] arg) {
-        new CameraTestApp().run();
-    }
-
-    private void onCamera(CameraEvent cameraEvent) {
-        logger.atInfo().log("{}", cameraEvent);
-    }
-
-    private void run() {
-        String host = "localhost";
-        int port = 8100;
-        long connectionTimeout = 10000;
-        long readTimeout = 3000;
-        try (Camera camera = new Camera(host, port, connectionTimeout, readTimeout)) {
-            camera.setOnCamera(this::onCamera);
-            camera.connect();
-            for (int i = 0; i < 10; i++) {
-                camera.tick(100);
-            }
-        } catch (IOException e) {
-            logger.atError().setCause(e).log("Error");
-        }
-    }
+    /**
+     * Returns true if robot is connecting
+     */
+    boolean connecting();
 }

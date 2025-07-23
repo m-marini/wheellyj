@@ -51,6 +51,16 @@ public interface AppYaml {
     }
 
     /**
+     * Returns the world modeller reading the file of "robot" property
+     *
+     * @param config the JSON configuration
+     * @throws IOException in case of error
+     */
+    static RobotApi robotFromJson(JsonNode config) throws IOException {
+        return RobotApi.fromFile(new File(config.path("robot").asText()));
+    }
+
+    /**
      * Returns the environment reading the file of "environment" property
      *
      * @param config the json document
@@ -103,13 +113,4 @@ public interface AppYaml {
         return RewardFunction.fromFile(new File(config.path("rewardFunction").asText()));
     }
 
-    /**
-     * Returns the world modeller reading the file of "robot" property
-     *
-     * @param config the JSON configuration
-     * @throws IOException in case of error
-     */
-    static RobotApi robotFromJson(JsonNode config) throws IOException {
-        return RobotApi.fromFile(new File(config.path("robot").asText()));
-    }
 }

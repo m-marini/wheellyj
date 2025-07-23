@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -28,26 +28,11 @@
 
 package org.mmarini.wheelly.apis;
 
-import java.io.Closeable;
-import java.io.IOException;
+import io.reactivex.rxjava3.core.Flowable;
 
-/**
- * Api interface for camera
- */
-public interface CameraApi extends Closeable, WithCameraCallback {
-
+public interface WithCameraFlowable {
     /**
-     * Connects the robot
-     *
-     * @throws IOException in case of error
+     * Returns the camera event flow
      */
-    void connect() throws IOException;
-
-    /**
-     * Advances localTime by a localTime interval
-     *
-     * @param dt the interval in millis
-     * @throws IOException in case of error
-     */
-    void tick(long dt) throws IOException;
+    Flowable<CameraEvent> readCamera();
 }

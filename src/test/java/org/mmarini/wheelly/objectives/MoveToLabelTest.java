@@ -66,7 +66,7 @@ class MoveToLabelTest {
 
     static WorldState createState(Complex robotDir, Complex sensorDir, Complex obstacleDir) {
         Point2D obstacleLocation = obstacleDir.at(new Point2D.Float(), OBSTACLE_DISTANCE);
-        RadarMap map = RadarMap.empty(new GridTopology(new Point2D.Float(), MAP_SIZE, MAP_SIZE,
+        RadarMap map = RadarMap.empty(GridTopology.create(new Point2D.Float(), MAP_SIZE, MAP_SIZE,
                         GRID_SIZE))
                 .updateCellAt(obstacleLocation.getX(), obstacleLocation.getY(), cell ->
                         cell.addEchogenic(ECHO_TIME, DECAY));

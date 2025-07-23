@@ -51,7 +51,7 @@ class RadarMapTest {
     public static final double GRID_SIZE = 0.2;
     public static final int WIDTH = 11;
     public static final int HEIGHT = 11;
-    public static final GridTopology GRID_TOPOLOGY = new GridTopology(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
+    public static final GridTopology GRID_TOPOLOGY = GridTopology.create(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
     public static final double MM1 = 0.001;
     public static final int ECHO_TIME = 100;
     public static final double DECAY = 100000;

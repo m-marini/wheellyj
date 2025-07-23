@@ -26,6 +26,7 @@
 package org.mmarini.wheelly.apis;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.reactivex.rxjava3.core.Flowable;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -36,7 +37,7 @@ import java.io.IOException;
 /**
  * API Interface for robot
  */
-public interface RobotApi extends Closeable, WithStatusCallback, WithCameraCallback {
+public interface RobotApi extends Closeable, WithWheellyMessageFlowable, WithCameraFlowable, WithIOFlowable, WithErrorFlowable {
     int MAX_PPS = 60;
 
     /**
@@ -59,28 +60,15 @@ public interface RobotApi extends Closeable, WithStatusCallback, WithCameraCallb
         return Utils.createObject(file, new Object[0], new Class[0]);
     }
 
-    RobotSpec robotSpec();
-
-    /**
-     * Configures the robot
-     *
-     * @throws IOException in case of error
-     */
-    void configure() throws IOException;
-
     /**
      * Connects the robot
-     *
-     * @throws IOException in case of error
      */
-    void connect() throws IOException;
+    void connect();
 
     /**
-     * Halts the robot
-     *
-     * @throws IOException in case of error
+     * Halts the robot returning true on success
      */
-    void halt() throws IOException;
+    boolean halt();
 
     /**
      * Returns true if the robot is halted
@@ -88,32 +76,42 @@ public interface RobotApi extends Closeable, WithStatusCallback, WithCameraCallb
     boolean isHalt();
 
     /**
-     * Moves robot to direction at speed
+     * Moves robot to the given direction at the given speed returning true on success
      *
-     * @param dir   the direction
-     * @param speed the speed in pps
-     * @throws IOException in case of error
+     * @param dir   the direction (DEG)
+     * @param speed the speed (PPS)
      */
-    void move(Complex dir, int speed) throws IOException;
+    boolean move(int dir, int speed);
 
     /**
-     * Moves the sensor to a direction
-     *
-     * @param dir the direction
-     * @throws IOException in case of error
+     * Returns the robot line status
      */
-    void scan(Complex dir) throws IOException;
+    Flowable<RobotStatusApi> readRobotStatus();
+
+    /**
+     * Reconnect the robot
+     */
+    void reconnect();
+
+    /**
+     * Returns the robot specification
+     */
+    RobotSpec robotSpec();
+
+    /**
+     * Moves the sensor to the given direction returning true on success
+     *
+     * @param direction the direction (DEG)
+     */
+    boolean scan(int direction);
+
+    /**
+     * Returns the simulation speed
+     */
+    double simulationSpeed();
 
     /**
      * Returns the robot localTime
      */
     long simulationTime();
-
-    /**
-     * Advances localTime by a localTime interval
-     *
-     * @param dt the interval in millis
-     * @throws IOException in case of error
-     */
-    void tick(long dt) throws IOException;
 }

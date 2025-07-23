@@ -27,7 +27,7 @@ class AreaExpressionTest {
     public static final int HEIGHT = 8;
     public static final int WIDTH = 8;
     public static final double GRID_SIZE = 1;
-    public static final GridTopology GRID_TOPOLOGY = new GridTopology(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
+    public static final GridTopology GRID_TOPOLOGY = GridTopology.create(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
 
     @ParameterizedTest
     @CsvSource({
@@ -156,9 +156,9 @@ class AreaExpressionTest {
         AreaExpression exp = and(
                 circle(new Point2D.Double(x0, y0), radius0),
                 not(circle(new Point2D.Double(x1, y1), radius1)));
-        GridTopology topology = new GridTopology(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
-        QVect[] vertices = createQVertices(topology);
-        int[][] verticesByCell = createVerticesIndices(topology);
+        GridTopology.create(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
+        QVect[] vertices = createQVertices(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
+        int[][] verticesByCell = createVerticesIndices(WIDTH, HEIGHT);
 
         // When ...
         IntPredicate x = AreaExpression.filterByArea(exp, vertices, verticesByCell);
@@ -177,9 +177,9 @@ class AreaExpressionTest {
         AreaExpression exp = and(
                 circle(new Point2D.Double(x0, y0), radius0),
                 circle(new Point2D.Double(x1, y1), radius1));
-        GridTopology topology = new GridTopology(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
-        QVect[] vertices = createQVertices(topology);
-        int[][] verticesByCell = createVerticesIndices(topology);
+        GridTopology.create(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
+        QVect[] vertices = createQVertices(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
+        int[][] verticesByCell = createVerticesIndices(WIDTH, HEIGHT);
 
         // When ...
         IntPredicate x = AreaExpression.filterByArea(exp, vertices, verticesByCell);
@@ -199,9 +199,9 @@ class AreaExpressionTest {
                 new Point2D.Double(x0, y0),
                 Complex.fromDeg(direction),
                 Complex.fromDeg(width));
-        GridTopology topology = new GridTopology(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
-        QVect[] vertices = createQVertices(topology);
-        int[][] verticesByCell = createVerticesIndices(topology);
+        GridTopology.create(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
+        QVect[] vertices = createQVertices(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
+        int[][] verticesByCell = createVerticesIndices(WIDTH, HEIGHT);
 
         // When ...
         IntPredicate x = AreaExpression.filterByArea(exp, vertices, verticesByCell);
@@ -216,9 +216,9 @@ class AreaExpressionTest {
     void circleTest(int index, boolean expected, double x0, double y0, double radius) {
         // Given a right half plane expression
         AreaExpression exp = circle(new Point2D.Double(x0, y0), radius);
-        GridTopology topology = new GridTopology(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
-        QVect[] vertices = createQVertices(topology);
-        int[][] verticesByCell = createVerticesIndices(topology);
+        GridTopology.create(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
+        QVect[] vertices = createQVertices(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
+        int[][] verticesByCell = createVerticesIndices(WIDTH, HEIGHT);
 
         // When ...
         IntPredicate x = AreaExpression.filterByArea(exp, vertices, verticesByCell);
@@ -231,10 +231,10 @@ class AreaExpressionTest {
     @Test
     void createCellIndices() {
         // Given a grid topology
-        GridTopology topology = new GridTopology(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
+        GridTopology.create(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
 
         // When create vertices indices
-        int[][] vertices = createVerticesIndices(topology);
+        int[][] vertices = createVerticesIndices(WIDTH, HEIGHT);
 
         // Then should return exact number of vertices
         assertEquals(WIDTH * HEIGHT, vertices.length);
@@ -248,10 +248,8 @@ class AreaExpressionTest {
     @Test
     void createQVerticesText() {
         // Given a grid topology
-        GridTopology topology = new GridTopology(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
-
         // When create vertices
-        QVect[] vertices = createQVertices(topology);
+        QVect[] vertices = createQVertices(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
 
         // Then should return exact number of vertices
         assertEquals((WIDTH + 1) * (HEIGHT + 1), vertices.length);
@@ -286,9 +284,9 @@ class AreaExpressionTest {
                  double x0, double y0, double radius0) {
         // Given a right half plane expression
         AreaExpression exp = not(circle(new Point2D.Double(x0, y0), radius0));
-        GridTopology topology = new GridTopology(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
-        QVect[] vertices = createQVertices(topology);
-        int[][] verticesByCell = createVerticesIndices(topology);
+        GridTopology.create(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
+        QVect[] vertices = createQVertices(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
+        int[][] verticesByCell = createVerticesIndices(WIDTH, HEIGHT);
 
         // When ...
         IntPredicate x = AreaExpression.filterByArea(exp, vertices, verticesByCell);
@@ -307,9 +305,9 @@ class AreaExpressionTest {
         AreaExpression exp = or(
                 circle(new Point2D.Double(x0, y0), radius0),
                 circle(new Point2D.Double(x1, y1), radius1));
-        GridTopology topology = new GridTopology(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
-        QVect[] vertices = createQVertices(topology);
-        int[][] verticesByCell = createVerticesIndices(topology);
+        GridTopology.create(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
+        QVect[] vertices = createQVertices(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
+        int[][] verticesByCell = createVerticesIndices(WIDTH, HEIGHT);
 
         // When ...
         IntPredicate x = AreaExpression.filterByArea(exp, vertices, verticesByCell);
@@ -329,9 +327,8 @@ class AreaExpressionTest {
                 new Point2D.Double(x0, y0),
                 new Point2D.Double(x1, y1),
                 width);
-        GridTopology topology = new GridTopology(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
-        QVect[] vertices = createQVertices(topology);
-        int[][] verticesByCell = createVerticesIndices(topology);
+        QVect[] vertices = createQVertices(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
+        int[][] verticesByCell = createVerticesIndices(WIDTH, HEIGHT);
 
         // When ...
         IntPredicate x = AreaExpression.filterByArea(exp, vertices, verticesByCell);
@@ -346,9 +343,8 @@ class AreaExpressionTest {
     void rightHalfPlaneTest1(int index, boolean expected, double x0, double y0, int direction) {
         // Given a right half plane expression
         AreaExpression exp = AreaExpression.rightHalfPlane(new Point2D.Double(x0, y0), Complex.fromDeg(direction));
-        GridTopology topology = new GridTopology(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
-        QVect[] vertices = createQVertices(topology);
-        int[][] verticesByCell = createVerticesIndices(topology);
+        QVect[] vertices = createQVertices(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
+        int[][] verticesByCell = createVerticesIndices(WIDTH, HEIGHT);
 
         // When ...
         IntPredicate x = AreaExpression.filterByArea(exp, vertices, verticesByCell);

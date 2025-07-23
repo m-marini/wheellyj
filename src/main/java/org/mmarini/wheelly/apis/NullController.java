@@ -11,7 +11,7 @@ import static io.reactivex.rxjava3.core.Flowable.empty;
 
 /**
  * Null controller throws not implemented exception.
- * It is used only to loca environment for batch training.
+ * It is used only to local environment for batch training.
  */
 public class NullController implements RobotControllerApi {
     @Override
@@ -24,42 +24,17 @@ public class NullController implements RobotControllerApi {
     }
 
     @Override
-    public Flowable<RobotStatus> readCamera() {
-        throw new NotImplementedException();
-    }
-
-    @Override
     public Flowable<RobotCommands> readCommand() {
         throw new NotImplementedException();
     }
 
     @Override
-    public Flowable<RobotStatus> readContacts() {
-        throw new NotImplementedException();
-    }
-
-    @Override
-    public Flowable<String> readControllerStatus() {
+    public Flowable<RobotControllerStatusApi> readControllerStatus() {
         throw new NotImplementedException();
     }
 
     @Override
     public Flowable<Throwable> readErrors() {
-        throw new NotImplementedException();
-    }
-
-    @Override
-    public Flowable<RobotStatus> readInference() {
-        throw new NotImplementedException();
-    }
-
-    @Override
-    public Flowable<RobotStatus> readMotion() {
-        throw new NotImplementedException();
-    }
-
-    @Override
-    public Flowable<RobotStatus> readProxy() {
         throw new NotImplementedException();
     }
 
@@ -79,8 +54,7 @@ public class NullController implements RobotControllerApi {
     }
 
     @Override
-    public Flowable<RobotStatus> readSupply() {
-        return empty();
+    public void reconnect() {
     }
 
     @Override

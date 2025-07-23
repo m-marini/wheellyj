@@ -79,7 +79,7 @@ class WorldEnvironmentTest {
     void setUp() {
         RobotStatus robotStatus = RobotStatus.create(ROBOT_SPEC, x -> 12d);
 
-        RadarMap radarMap = RadarMap.empty(new GridTopology(new Point2D.Float(), 11, 11, 0.2));
+        RadarMap radarMap = RadarMap.empty(GridTopology.create(new Point2D.Float(), 11, 11, 0.2));
 
         CircularSector[] sectors = IntStream.range(0, NUM_RADAR_SECTORS)
                 .mapToObj(i -> CircularSector.unknownSector())

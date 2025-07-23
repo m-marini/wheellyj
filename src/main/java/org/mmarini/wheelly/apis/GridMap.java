@@ -55,7 +55,7 @@ public record GridMap(GridTopology topology, MapCell[] cells, Point2D center, Co
     public static GridMap create(RadarMap map, Point2D center, Complex direction, int mapSize) {
         GridTopology radarTopology = map.topology();
         Point2D mapCenter = radarTopology.snap(center);
-        GridTopology mapTopology = new GridTopology(new Point2D.Float(), mapSize, mapSize, radarTopology.gridSize());
+        GridTopology mapTopology = GridTopology.create(new Point2D.Float(), mapSize, mapSize, radarTopology.gridSize());
         int n = mapSize * mapSize;
         MapCell[] cells = new MapCell[n];
         double dirRad = direction.toRad() + 2 * PI;

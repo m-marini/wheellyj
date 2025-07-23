@@ -1,11 +1,8 @@
 ---
-$schema: https://mmarini.org/wheelly/controller-schema-1.0
+$schema: https://mmarini.org/wheelly/controller-schema-2.0
 class: org.mmarini.wheelly.apis.RobotController
 interval: 100
 reactionInterval: 300
 commandInterval: 600
-connectionRetryInterval: 1000
-watchdogInterval: 5000
-simulationSpeed: 1
 supplyValues: [ 1762, 2878 ]
 voltages: [ 8.3, 11.9 ]

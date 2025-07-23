@@ -1,17 +1,23 @@
 ---
-$schema: https://mmarini.org/wheelly/robot-schema-3.0
-class: org.mmarini.wheelly.apis.Robot
+$schema: https://mmarini.org/wheelly/real-robot-schema-0.1
+class: org.mmarini.wheelly.apis.RealRobot
 robotHost: 192.168.1.43
 cameraHost: localhost
-connectionTimeout: 10000
+connectionRetryInterval: 10000
 readTimeout: 10000
 configureTimeout: 2000
+watchDogInterval: 500
+watchDogTimeout: 5000
 contactRadius: 0.28
 sensorReceptiveAngle: 15
 maxRadarDistance: 3
 configCommands:
   - cs 500
   - cc 5 30 20
+#  - tcsl 32 41 180 -32 -81 -180 400 50
+#  - tcsr 32 41 180 -32 -92 -180 400 50
+#  - fl 0 0
+#  - fr 0 0
   - tcsl 30 107 180 -32 -81 -180 400 50
   - tcsr 39 78 180 -32 -92 -180 400 50
   - fl 10000 10000

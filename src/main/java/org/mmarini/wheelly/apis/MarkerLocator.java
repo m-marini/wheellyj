@@ -125,7 +125,7 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
         requireNonNull(map);
         requireNonNull(proxyMessage);
         requireNonNull(cameraEvent);
-        double distance = proxyMessage.echoDelay() * RobotStatus.DISTANCE_SCALE;
+        double distance = proxyMessage.echoDistance();
         double maxDistance = robotSpec.maxRadarDistance();
         Point2D robotLocation = RobotStatus.pulses2Location(proxyMessage.xPulses(), proxyMessage.yPulses());
         long cameraTime = cameraEvent.timestamp();

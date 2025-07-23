@@ -1,0 +1,65 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/real-robot-schema-0.1
+title: Robot
+type: object
+properties:
+  $schema:
+    const: https://mmarini.org/wheelly/real-robot-schema-0.1
+  class:
+    const: org.mmarini.wheelly.apis.RealRobot
+  robotHost:
+    type: string
+  robotPort:
+    type: integer
+    minimum: 1
+    maximum: 32768
+  cameraHost:
+    type: string
+  cameraPort:
+    type: integer
+    minimum: 1
+    maximum: 32768
+  connectionRetryInterval:
+    type: integer
+    minimum: 1
+  readTimeout:
+    type: integer
+    minimum: 1
+  configureTimeout:
+    type: integer
+    minimum: 1
+  watchDogInterval:
+    type: integer
+    minimum: 1
+  watchDogTimeout:
+    type: integer
+    minimum: 1
+  contactRadius:
+    type: number
+    exclusiveMinimum: 0
+  maxRadarDistance:
+    type: number
+    exclusiveMinimum: 0
+  sensorReceptiveAngle:
+    type: integer
+    minimum: 1
+    maximum: 90
+  configCommands:
+    type: array
+    items:
+      type: string
+      minLength: 3
+required:
+  - $schema
+  - class
+  - contactRadius
+  - sensorReceptiveAngle
+  - maxRadarDistance
+  - robotHost
+  - cameraHost
+  - connectionRetryInterval
+  - readTimeout
+  - configureTimeout
+  - watchDogInterval
+  - watchDogTimeout

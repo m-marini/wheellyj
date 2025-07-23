@@ -34,5 +34,5 @@ public interface WithControllerFlowable {
     /**
      * Returns the stream of controller status
      */
-    Flowable<String> readControllerStatus();
+    Flowable<RobotControllerStatusApi> readControllerStatus();
 }

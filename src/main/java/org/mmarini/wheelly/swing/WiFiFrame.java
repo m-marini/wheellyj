@@ -38,6 +38,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
 
@@ -82,31 +83,21 @@ public class WiFiFrame extends JFrame {
         String psw = String.valueOf(password.getPassword());
         Single<NetworkConfig> confRequest = Single.fromCallable(() -> RestApi.postConfig(address.getText(), true, ssid, psw))
                 .subscribeOn(Schedulers.io());
-        Single<List<String>> listRequest = Single.fromCallable(() -> RestApi.getNetworks(address.getText()))
+        Single<NetworkConfig> restartRequest = Single.fromCallable(() -> RestApi.postRestart(address.getText()))
                 .subscribeOn(Schedulers.io());
-
-
-        confRequest.flatMap(
-                l -> listRequest.map(c -> Tuple2.of(l, c))
-        ).subscribe(
-                t -> {
-                    setNetworks(t._2);
-                    setConfig(t._1);
-                    releaseUI();
-                    JOptionPane.showMessageDialog(this,
-                            new String[]{
-                                    format("Activated network: \"%s\"", t._1.getSsid()),
-                                    "Wheelly restart required to reload new configuration."
-                            },
-                            "Activated",
-                            JOptionPane.WARNING_MESSAGE);
-                },
-                err -> {
-                    releaseUI();
-                    handleError(err);
-                });
+        confRequest.flatMap(ignored ->
+                        restartRequest)
+                .delay(1000, TimeUnit.MILLISECONDS)
+                .subscribe(this::onActConfirm,
+                        err -> {
+                            releaseUI();
+                            handleError(err);
+                        });
     }
 
+    /**
+     * Block user interface
+     */
     private void blockUI() {
         activateBtn.setEnabled(false);
         inactivateBtn.setEnabled(false);
@@ -152,17 +143,6 @@ public class WiFiFrame extends JFrame {
                 .modify("insets,2 at,0,0 weight,1,0 fill").add(upper)
                 .modify("at,0,1 weight,1,1 fill").add(center)
                 .modify("at,0,2 weight,1,0 fill").add(bottom);
-
-        /**
-         pane.setLayout(new FlowLayout());
-         pane.add(address);
-         pane.add(new JScrollPane(netList));
-         pane.add(active);
-         pane.add(password);
-         pane.add(activateBtn);
-         pane.add(inactivateBtn);
-         pane.add(reloadBtn);
-         */
     }
 
     private void handleError(Throwable err) {
@@ -177,31 +157,54 @@ public class WiFiFrame extends JFrame {
         String psw = String.valueOf(password.getPassword());
         Single<NetworkConfig> confRequest = Single.fromCallable(() -> RestApi.postConfig(address.getText(), false, ssid, psw))
                 .subscribeOn(Schedulers.io());
-        Single<List<String>> listRequest = Single.fromCallable(() -> RestApi.getNetworks(address.getText()))
+        Single<NetworkConfig> restartRequest = Single.fromCallable(() -> RestApi.postRestart(address.getText()))
                 .subscribeOn(Schedulers.io());
 
+        confRequest.flatMap(ignored ->
+                        restartRequest)
+                .subscribe(this::onInactConfig,
+                        err -> {
+                            releaseUI();
+                            handleError(err);
+                        });
+    }
 
-        confRequest.flatMap(
-                l -> listRequest.map(c -> Tuple2.of(l, c))
-        ).subscribe(
-                t -> {
-                    setNetworks(t._2);
-                    setConfig(t._1);
-                    releaseUI();
-                    JOptionPane.showMessageDialog(this,
-                            new String[]{
-                                    format("Inactivated network: \"%s\"", t._1.getSsid()),
-                                    "Wheelly restart required to reload new configuration.",
-                                    "Wheelly will act as access point for the \"Wheelly\" network without pass phrase",
-                                    "at default address 192.168.4.1."
-                            },
-                            "Inactivated",
-                            JOptionPane.WARNING_MESSAGE);
+    /**
+     * Handles the activation confirmation
+     *
+     * @param networkConfig the configuration
+     */
+    private void onActConfirm(NetworkConfig networkConfig) {
+        setConfig(networkConfig);
+        releaseUI();
+        JOptionPane.showMessageDialog(this,
+                new String[]{
+                        format("Activated network: \"%s\"", networkConfig.getSsid()),
+                        "Wheelly has been restarted to reload new configuration."
                 },
-                err -> {
-                    releaseUI();
-                    handleError(err);
-                });
+                "Activated",
+                JOptionPane.WARNING_MESSAGE);
+        reload();
+    }
+
+    /**
+     * Handles the inactivation confirmation
+     *
+     * @param networkConfig the configuration
+     */
+    private void onInactConfig(NetworkConfig networkConfig) {
+        setConfig(networkConfig);
+        releaseUI();
+        JOptionPane.showMessageDialog(this,
+                new String[]{
+                        format("Inactivated network: \"%s\"", networkConfig.getSsid()),
+                        "Wheelly has been restarted to reload new configuration.",
+                        "Wheelly will act as access point for the \"Wheelly\" network without pass phrase",
+                        "at default address 192.168.4.1."
+                },
+                "Inactivated",
+                JOptionPane.WARNING_MESSAGE);
+        reload();
     }
 
     private void releaseUI() {
@@ -219,7 +222,6 @@ public class WiFiFrame extends JFrame {
         logger.debug("reload");
         Single<List<String>> listRequest = Single.fromCallable(() -> RestApi.getNetworks(address.getText()))
                 .subscribeOn(Schedulers.io());
-
         Single<NetworkConfig> confRequest = Single.fromCallable(() -> RestApi.getNetworkConfig(address.getText()))
                 .subscribeOn(Schedulers.io());
 

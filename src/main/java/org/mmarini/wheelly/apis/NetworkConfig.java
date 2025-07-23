@@ -32,8 +32,17 @@ public class NetworkConfig {
     private boolean active;
     private String ssid;
     private String password;
+    private boolean restart;
 
     public NetworkConfig() {
+    }
+
+    public boolean isRestart() {
+        return restart;
+    }
+
+    public void setRestart(boolean restart) {
+        this.restart = restart;
     }
 
     public NetworkConfig(boolean active, String ssid, String password) {

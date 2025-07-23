@@ -68,7 +68,7 @@ public record PointRadarModeller(GridTopology topology,
         long echoPersistence = locator.path("echoPersistence").getNode(root).asLong();
         long contactPersistence = locator.path("contactPersistence").getNode(root).asLong();
         double decay1 = locator.path("decay").getNode(root).asDouble(DEFAULT_DECAY);
-        GridTopology topology = new GridTopology(new Point2D.Float(), radarWidth, radarHeight, radarGrid);
+        GridTopology topology = GridTopology.create(new Point2D.Float(), radarWidth, radarHeight, radarGrid);
         return new PointRadarModeller(topology, radarCleanInterval, echoPersistence, contactPersistence, correlationInterval1, decay1);
     }
 
@@ -106,7 +106,7 @@ public record PointRadarModeller(GridTopology topology,
                             t != target && t != sensor),
                     cell -> cell.addAnechoic(t0, decay)
             );
-            if (signal.echo()) {
+            if (signal.echo() && target >= 0) {
                 // Set echogenic for the ping cell
                 newMap = newMap.map(IntStream.of(target), cell -> cell.addEchogenic(t0, decay));
             }

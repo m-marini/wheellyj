@@ -30,7 +30,7 @@ import org.hamcrest.CustomMatcher;
 import org.hamcrest.Matcher;
 import org.junit.jupiter.params.provider.Arguments;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.GridTopology;
+import org.mmarini.wheelly.apis.*;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -53,6 +53,41 @@ import static org.mmarini.Utils.zipWithIndex;
 import static org.mmarini.yaml.Utils.fromResource;
 
 public interface TestFunctions {
+    static Predicate<WheellyMessage> after(long time) {
+        return msg -> msg.simulationTime() > time;
+    }
+
+    static void execUntil(RobotApi robot, Predicate<WheellyMessage> pred) {
+        robot.readMessages()
+                .filter(pred::test)
+                .firstElement()
+                .blockingGet();
+    }
+
+    static void execUntil(RobotApi robot, Predicate<WheellyMessage> pred, long time) {
+        Predicate<WheellyMessage> pred1 = msg -> msg.simulationTime() >= time;
+        execUntil(robot, pred1.or(pred));
+    }
+
+    static WheellyContactsMessage findContact(List<WheellyMessage> messages, Predicate<WheellyMessage> pred) {
+        Predicate<WheellyMessage> classPred = msg -> msg instanceof WheellyContactsMessage;
+        return findMessage(messages, classPred.and(pred));
+    }
+
+    static <T extends WheellyMessage> T findMessage(List<WheellyMessage> messages, Predicate<WheellyMessage> pred) {
+        return (T) messages.stream().filter(pred).findFirst().orElse(null);
+    }
+
+    static WheellyMotionMessage findMotion(List<WheellyMessage> messages, Predicate<WheellyMessage> pred) {
+        Predicate<WheellyMessage> classPred = msg -> msg instanceof WheellyMotionMessage;
+        return findMessage(messages, classPred.and(pred));
+    }
+
+    static WheellyProxyMessage findProxy(List<WheellyMessage> messages, Predicate<WheellyMessage> pred) {
+        Predicate<WheellyMessage> classPred = msg -> msg instanceof WheellyProxyMessage;
+        return findMessage(messages, classPred.and(pred));
+    }
+
     static ArgumentJsonParser jsonFileArguments(String resource) throws IOException {
         return new ArgumentJsonParser(fromResource(resource));
     }
@@ -86,6 +121,10 @@ public interface TestFunctions {
         };
     }
 
+    static Predicate<WheellyMessage> notBefore(long time) {
+        return msg -> msg.simulationTime() >= time;
+    }
+
     static Stream<Tuple2<Point, String>> parseMap(String... lines) {
         Stream.Builder<Tuple2<Point, String>> builder = Stream.builder();
         for (int j = lines.length - 1; j >= 0; j--) {
@@ -96,6 +135,13 @@ public interface TestFunctions {
             }
         }
         return builder.build();
+    }
+
+    static void pause(RobotApi robot, long time) {
+        robot.readMessages()
+                .filter(m -> m.simulationTime() >= time)
+                .firstElement()
+                .blockingGet();
     }
 
     static String text(String... lines) {

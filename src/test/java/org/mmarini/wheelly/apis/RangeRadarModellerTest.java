@@ -48,7 +48,7 @@ class RangeRadarModellerTest {
     public static final double GRID_SIZE = 0.2;
     public static final int WIDTH = 11;
     public static final int HEIGHT = 11;
-    public static final GridTopology GRID_TOPOLOGY = new GridTopology(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
+    public static final GridTopology GRID_TOPOLOGY = GridTopology.create(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
     public static final double DECAY = 100000;
     private static final double MAX_RADAR_DISTANCE = 3;
     private static final long CLEAN_INTERVAL = 10000;

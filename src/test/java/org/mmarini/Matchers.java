@@ -91,7 +91,7 @@ public interface Matchers {
                 exp)) {
             @Override
             public void describeMismatch(Object item, Description description) {
-                if (item instanceof Optional o && o.isPresent()) {
+                if (item instanceof Optional<?> o && o.isPresent()) {
                     super.describeMismatch(item, description);
                 } else {
                     exp.describeMismatch(item, description);
@@ -100,7 +100,7 @@ public interface Matchers {
 
             @Override
             public boolean matches(Object o) {
-                return o instanceof Optional opt
+                return o instanceof Optional<?> opt
                         && opt.isPresent()
                         && exp.matches(opt.orElseThrow());
             }
@@ -124,7 +124,7 @@ public interface Matchers {
                             .appendValue(item)
                             .appendText(" and ")
                             .appendValue(expected)
-                            .appendText(" = ")
+                            .appendText(" is ")
                             .appendValue(distance);
                 } else {
                     super.describeMismatch(item, description);
@@ -151,7 +151,7 @@ public interface Matchers {
                 value1, value2)) {
             @Override
             public boolean matches(Object o) {
-                return o instanceof Tuple2 t
+                return o instanceof Tuple2<?, ?> t
                         && value1.matches(t._1)
                         && value2.matches(t._2);
             }

@@ -107,6 +107,7 @@ public class RobotExecutor {
             System.exit(1);
         }
     }
+
     private final EnvironmentPanel envPanel;
     private final PolarPanel polarPanel;
     private final DoubleReducedValue reactionRobotTime;
@@ -177,7 +178,7 @@ public class RobotExecutor {
                     try {
                         dumper = ComDumper.fromFile(file);
                     } catch (IOException e) {
-                        logger.atError().setCause(e).log();
+                        logger.atError().setCause(e).log("Error dumping file");
                     }
                 });
 
@@ -186,13 +187,75 @@ public class RobotExecutor {
     }
 
     /**
+     * Creates the reactive flows
+     */
+    private void createFlows() {
+        if (robot instanceof SimRobot sim) {
+            sim.readObstacleMap()
+                    .subscribe(this::onObstacleMap);
+        }
+        controller.readShutdown()
+                .subscribe(this::onShutdown);
+        controller.readErrors()
+                .observeOn(Schedulers.io())
+                .subscribe(err -> {
+                    comMonitor.onError(err);
+                    logger.atError().setCause(err).log("Controller error");
+                });
+        controller.readReadLine()
+                .observeOn(Schedulers.io())
+                .subscribe(this::onReadLine);
+        controller.readWriteLine()
+                .observeOn(Schedulers.io())
+                .subscribe(this::onWrittenLine);
+        controller.readControllerStatus()
+                .observeOn(Schedulers.io())
+                .map(ControllerStatusMapper::map)
+                .subscribe(this::onControllerStatus);
+        controller.readCommand()
+                .observeOn(Schedulers.io())
+                .subscribe(sensorMonitor::onCommand);
+        agent.readState()
+                .observeOn(Schedulers.io())
+                .subscribe(this::onState);
+        agent.readStepUp()
+                .observeOn(Schedulers.io())
+                .subscribe(this::onStepUp);
+        agent.readTargets()
+                .observeOn(Schedulers.io())
+                .subscribe(this::onTarget);
+        agent.readTriggers()
+                .observeOn(Schedulers.io())
+                .subscribe(this::onTrigger);
+    }
+
+    /**
+     * Initializes the user interface
+     */
+    private void initUI() {
+        double radarMaxDistance = robot.robotSpec().maxRadarDistance();
+        polarPanel.setRadarMaxDistance(radarMaxDistance);
+        envPanel.markerSize((float) modeller.worldModelSpec().markerSize());
+        if (args.getBoolean("windows")) {
+            createMultiFrames();
+        } else {
+            createSingleFrames();
+        }
+        allFrames.forEach(f -> SwingObservable.window(f, SwingObservable.WINDOW_ACTIVE)
+                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
+                .doOnNext(this::onWindowClosing)
+                .subscribe());
+        layHorizontally(allFrames);
+    }
+
+    /**
      * Creates the multi frames
      */
     private void createMultiFrames() {
         this.allFrames = List.of(
                 createFrame(Messages.getString("RobotExecutor.title"), envPanel),
-                createFixFrame(Messages.getString("Radar.title"), polarPanel),
                 engineMonitor.createFrame(),
+                createFixFrame(Messages.getString("Radar.title"), polarPanel),
                 sensorMonitor.createFrame(),
                 comMonitor.createFrame()
         );
@@ -218,9 +281,18 @@ public class RobotExecutor {
      *
      * @param status the controller status string
      */
-    private void handleControllerStatus(String status) {
+    private void onControllerStatus(String status) {
         sensorMonitor.onControllerStatus(status);
         comMonitor.onControllerStatus(status);
+    }
+
+    /**
+     * Handles the obstacle map changes
+     *
+     * @param map the obstacle map
+     */
+    private void onObstacleMap(ObstacleMap map) {
+        envPanel.obstacles(map);
     }
 
     /**
@@ -228,7 +300,7 @@ public class RobotExecutor {
      *
      * @param line the read line
      */
-    private void handleReadLine(String line) {
+    private void onReadLine(String line) {
         comMonitor.onReadLine(line);
         if (dumper != null) {
             dumper.dumpReadLine(line);
@@ -238,13 +310,13 @@ public class RobotExecutor {
     /**
      * Handles the application shutdown
      */
-    private void handleShutdown() {
+    private void onShutdown() {
         allFrames.forEach(JFrame::dispose);
         if (dumper != null) {
             try {
                 dumper.close();
             } catch (IOException e) {
-                logger.atError().setCause(e).log();
+                logger.atError().setCause(e).log("Error closing dumper");
             }
         }
         if (!args.getBoolean("silent")) {
@@ -258,65 +330,8 @@ public class RobotExecutor {
      *
      * @param state the state
      */
-    private void handleState(StateNode state) {
+    private void onState(StateNode state) {
         engineMonitor.addState(state);
-    }
-
-    /**
-     * Creates the reactive flows
-     */
-    private void createFlows() {
-        controller.readShutdown().doOnComplete(this::handleShutdown).subscribe();
-        controller.readErrors()
-                .observeOn(Schedulers.io())
-                .doOnNext(err -> {
-                    comMonitor.onError(err);
-                    logger.atError().setCause(err).log();
-                }).subscribe();
-        controller.readReadLine()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleReadLine).subscribe();
-        controller.readWriteLine()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleWrittenLine).subscribe();
-        controller.readControllerStatus()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleControllerStatus).subscribe();
-        controller.readCommand()
-                .observeOn(Schedulers.io())
-                .doOnNext(sensorMonitor::onCommand).subscribe();
-        agent.readState()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleState)
-                .subscribe();
-        agent.readStepUp()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleStepUp).subscribe();
-        agent.readTargets()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleTarget).subscribe();
-        agent.readTriggers()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleTrigger)
-                .subscribe();
-    }
-
-    /**
-     * Handles the target event
-     *
-     * @param target the target point
-     */
-    private void handleTarget(Optional<Point2D> target) {
-        envPanel.setTarget(target.orElse(null));
-    }
-
-    /**
-     * Handles the trigger event
-     *
-     * @param trigger the trigger
-     */
-    private void handleTrigger(String trigger) {
-        engineMonitor.addTrigger(trigger);
     }
 
     /**
@@ -324,16 +339,16 @@ public class RobotExecutor {
      *
      * @param ctx the context
      */
-    private void handleStepUp(ProcessorContextApi ctx) {
+    private void onStepUp(ProcessorContextApi ctx) {
         WorldModel worldModel = ctx.worldModel();
         RobotStatus status = worldModel.robotStatus();
         if (robotStartTimestamp < 0) {
             robotStartTimestamp = status.simulationTime();
         }
         sensorMonitor.onStatus(status);
-        envPanel.setRobotStatus(status);
-        envPanel.setRadarMap(worldModel.radarMap());
-        envPanel.setMarkers(worldModel.markers().values());
+        envPanel.robotStatus(status);
+        envPanel.radarMap(worldModel.radarMap());
+        envPanel.markers(worldModel.markers().values());
 
         long robotClock = status.simulationTime();
         long robotElapsed = robotClock - robotStartTimestamp;
@@ -353,16 +368,25 @@ public class RobotExecutor {
     }
 
     /**
-     * Handles the windows opened
-     * Initializes the agent
+     * Handles the target event
      *
-     * @param e the event
+     * @param target the target point
      */
-    private void handleWindowOpened(WindowEvent e) {
-        if (robot instanceof SimRobot sim) {
-            sim.obstaclesMap()
-                    .ifPresent(envPanel::setObstacles);
-        }
+    private void onTarget(Optional<Point2D> target) {
+        envPanel.target(target.orElse(null));
+    }
+
+    /**
+     * Handles the trigger event
+     *
+     * @param trigger the trigger
+     */
+    private void onTrigger(String trigger) {
+        engineMonitor.addTrigger(trigger);
+    }
+
+    private void onWindowClosing(WindowEvent windowEvent) {
+        controller.shutdown();
     }
 
     /**
@@ -370,44 +394,11 @@ public class RobotExecutor {
      *
      * @param line the written line
      */
-    private void handleWrittenLine(String line) {
+    private void onWrittenLine(String line) {
         comMonitor.onWriteLine(line);
         if (dumper != null) {
             dumper.dumpWrittenLine(line);
         }
-    }
-
-    private void handleWindowClosing(WindowEvent windowEvent) {
-        controller.shutdown();
-    }
-
-    /**
-     * Initializes the user interface
-     */
-    private void initUI() {
-        double radarMaxDistance = robot.robotSpec().maxRadarDistance();
-        polarPanel.setRadarMaxDistance(radarMaxDistance);
-        if (robot instanceof SimRobot simRobot) {
-            simRobot.setOnObstacleChanged(sim ->
-                    sim.obstaclesMap()
-                            .ifPresent(envPanel::setObstacles));
-        }
-        envPanel.setMarkerSize((float) modeller.worldModelSpec().markerSize());
-        if (args.getBoolean("windows")) {
-            createMultiFrames();
-        } else {
-            createSingleFrames();
-        }
-        SwingObservable.window(allFrames.getFirst(), SwingObservable.WINDOW_ACTIVE)
-                .filter(ev -> ev.getID() == WindowEvent.WINDOW_OPENED)
-                .doOnNext(this::handleWindowOpened)
-                .subscribe();
-
-        allFrames.forEach(f -> SwingObservable.window(f, SwingObservable.WINDOW_ACTIVE)
-                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
-                .doOnNext(this::handleWindowClosing)
-                .subscribe());
-        layHorizontally(allFrames);
     }
 
     /**
@@ -425,7 +416,7 @@ public class RobotExecutor {
         // Configure the user interface
         logger.atInfo().log("Starting session ...");
         this.start = System.currentTimeMillis();
-        allFrames.forEach(f -> f.setVisible(true));
+        allFrames.reversed().forEach(f -> f.setVisible(true));
         controller.start();
     }
 }

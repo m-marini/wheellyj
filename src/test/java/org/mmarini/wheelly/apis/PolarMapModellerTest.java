@@ -48,7 +48,7 @@ class PolarMapModellerTest {
     public static final double MAX_DISTANCE = 3d;
 
     private static RadarMap createRadarMap() {
-        return RadarMap.empty(new GridTopology(new Point2D.Double(), 31, 31, GRID_SIZE));
+        return RadarMap.empty(GridTopology.create(new Point2D.Double(), 31, 31, GRID_SIZE));
     }
 
     @ParameterizedTest
@@ -75,7 +75,7 @@ class PolarMapModellerTest {
         PolarMapModeller modeler = new PolarMapModeller(4, GRID_SIZE);
         Point2D center = new Point2D.Double();
         long timestamp = System.currentTimeMillis();
-        RadarMap radarMap = RadarMap.empty(new GridTopology(center, 11, 11, GRID_SIZE));
+        RadarMap radarMap = RadarMap.empty(GridTopology.create(center, 11, 11, GRID_SIZE));
         radarMap = radarMap.updateCellAt(obsX, obsY, sect -> sect.addEchogenic(timestamp, DECAY));
 
         // When create a polar map from the centre directed to mapDir limited by GRID_SIZE and 3 m

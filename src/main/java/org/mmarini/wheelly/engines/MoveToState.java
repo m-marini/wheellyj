@@ -21,7 +21,7 @@ import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
 import static org.mmarini.wheelly.apis.RobotCommands.moveAndFrontScan;
 
 /**
- * Generates the behavior to move roboto to target position
+ * Generates the behavior to move robot to target position
  * <p>
  * Turns the sensor front<br>
  * Turns the robot toward the target direction<br>

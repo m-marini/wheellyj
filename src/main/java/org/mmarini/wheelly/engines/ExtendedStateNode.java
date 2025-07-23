@@ -151,6 +151,17 @@ public interface ExtendedStateNode extends StateNode {
         return context.getDouble(format("%s.%s", id(), key));
     }
 
+    /**
+     * Returns the double value by node key or 0 if not exits
+     *
+     * @param context      the processor context
+     * @param key          the node key
+     * @param defaultValue the default value
+     */
+    default double getDouble(ProcessorContextApi context, String key, double defaultValue) {
+        return context.getDouble(format("%s.%s", id(), key), defaultValue);
+    }
+
     @Override
     default long getElapsedTime(ProcessorContextApi context) {
         return context.worldModel().robotStatus().simulationTime() -
@@ -170,6 +181,17 @@ public interface ExtendedStateNode extends StateNode {
      */
     default int getInt(ProcessorContextApi context, String key) {
         return context.getInt(format("%s.%s", id(), key));
+    }
+
+    /**
+     * Returns the int value by node key or 0 if not exits
+     *
+     * @param context      the processor context
+     * @param key          the node key
+     * @param defaultValue the default value
+     */
+    default int getInt(ProcessorContextApi context, String key, int defaultValue) {
+        return context.getInt(format("%s.%s", id(), key), defaultValue);
     }
 
     /**

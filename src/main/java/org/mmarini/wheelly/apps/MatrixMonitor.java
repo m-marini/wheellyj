@@ -28,7 +28,6 @@ package org.mmarini.wheelly.apps;
 import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.Observable;
-import io.reactivex.rxjava3.schedulers.Schedulers;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -37,6 +36,7 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.swing.ComMonitor;
+import org.mmarini.wheelly.swing.ControllerStatusMapper;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.wheelly.swing.SensorMonitor;
 import org.slf4j.Logger;
@@ -99,29 +99,29 @@ public class MatrixMonitor {
             System.exit(4);
         }
     }
-
-    private final ComMonitor comMonitor;
     private final Container commandPanel;
-    private final JButton haltButton;
-    private final JFormattedTextField robotDirField;
     private final JSlider robotDirSlider;
-    private final JButton runButton;
-    private final JFormattedTextField sensorDirField;
-    private final JSlider sensorDirSlider;
-    private final SensorMonitor sensorMonitor;
-    private final JFormattedTextField speedField;
     private final JSlider speedSlider;
-    private final JFormattedTextField timeField;
     private final JSlider timeSlider;
+    private final JSlider sensorDirSlider;
+    private final JButton haltButton;
+    private final JButton runButton;
+    private final JButton reconnectButton;
+    private final JFormattedTextField robotDirField;
+    private final JFormattedTextField sensorDirField;
+    private final JFormattedTextField speedField;
+    private final JFormattedTextField timeField;
+    private final SensorMonitor sensorMonitor;
+    private final ComMonitor comMonitor;
     private JFrame comFrame;
     private JFrame commandFrame;
+    private JFrame sensorFrame;
     private RobotControllerApi controller;
     private ComDumper dumper;
     private boolean halt;
     private Namespace parseArgs;
     //    private int commandDuration;
     private long runTimestamp;
-    private JFrame sensorFrame;
     private RobotApi robot;
 
     /**
@@ -142,6 +142,7 @@ public class MatrixMonitor {
         this.timeField = new JFormattedTextField(intFormat);
         this.haltButton = new JButton("HALT !!!");
         this.runButton = new JButton("Run");
+        this.reconnectButton = new JButton("Reconnect");
         this.commandPanel = createCommandPanel();
         this.halt = true;
 
@@ -240,7 +241,8 @@ public class MatrixMonitor {
         return new GridLayoutHelper<>(new JPanel())
                 .modify("at,0,0 insets,2 noweight fill").add(sensorCmdPanel)
                 .modify("at,0,1 weight,1,1").add(otherPanel)
-                .modify("at,0,2 insets,10 noweight nofill").add(haltButton)
+                .modify("at,0,2 insets,10 noweight nofill").add(reconnectButton)
+                .modify("at,0,3 insets,10 noweight nofill").add(haltButton)
                 .getContainer();
     }
 
@@ -286,33 +288,34 @@ public class MatrixMonitor {
      */
     private void createFlows() {
         controller.readRobotStatus()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleStatus).subscribe();
+                .subscribe(this::handleStatus);
         controller.readErrors()
-                .observeOn(Schedulers.io())
-                .doOnNext(er -> {
+                .subscribe(er -> {
                     comMonitor.onError(er);
-                    logger.atError().setCause(er).log();
-                }).subscribe();
+                    logger.atError().setCause(er).log("Error:");
+                });
         controller.readReadLine()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleReadLine).subscribe();
+                .subscribe(this::handleReadLine);
         controller.readWriteLine()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleWriteLine).subscribe();
+                .subscribe(this::handleWriteLine);
         controller.readShutdown()
-                .observeOn(Schedulers.io())
-                .doOnComplete(this::handleShutdown).subscribe();
+                .subscribe(this::handleShutdown);
         controller.readControllerStatus()
-                .observeOn(Schedulers.io())
-                .doOnNext(this::handleControlStatus).subscribe();
+                .map(ControllerStatusMapper::map)
+                .doOnNext(s ->
+                        logger.atDebug().log("Status {}", s))
+                .distinctUntilChanged()
+                .doOnNext(s ->
+                        logger.atDebug().log("Distinct {}", s))
+                .subscribe(this::handleControlStatus);
+        controller.setOnLatch(this::onLatch);
+        controller.setOnInference(this::onInference);
         Observable.mergeArray(
                         SwingObservable.window(commandFrame, SwingObservable.WINDOW_ACTIVE),
                         SwingObservable.window(sensorFrame, SwingObservable.WINDOW_ACTIVE),
                         SwingObservable.window(comFrame, SwingObservable.WINDOW_ACTIVE))
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
-                .doOnNext(this::handleClose)
-                .subscribe();
+                .subscribe(this::handleClose);
         Stream.of(comFrame, sensorFrame, commandFrame).forEach(f -> f.setVisible(true));
     }
 
@@ -349,16 +352,6 @@ public class MatrixMonitor {
     }
 
     /**
-     * Handles the robot direction slider event
-     *
-     * @param changeEvent the event
-     */
-    private void handleRobotDirSlider(ChangeEvent changeEvent) {
-        int robotDir = robotDirSlider.getValue();
-        robotDirField.setValue(robotDir);
-    }
-
-    /**
      * Handles the read line
      *
      * @param line the read line
@@ -369,6 +362,16 @@ public class MatrixMonitor {
             dumper.dumpReadLine(line);
         }
         logger.atDebug().setMessage("--> {}").addArgument(line).log();
+    }
+
+    /**
+     * Handles the robot direction slider event
+     *
+     * @param changeEvent the event
+     */
+    private void handleRobotDirSlider(ChangeEvent changeEvent) {
+        int robotDir = robotDirSlider.getValue();
+        robotDirField.setValue(robotDir);
     }
 
     /**
@@ -420,6 +423,26 @@ public class MatrixMonitor {
     }
 
     /**
+     * Handle the state event
+     *
+     * @param status the status event
+     */
+    private void handleStatus(RobotStatus status) {
+        sensorMonitor.onStatus(status);
+    }
+
+    /**
+     * Handles the markerTime slider event
+     *
+     * @param changeEvent the event
+     */
+    private void handleTimeSlider(ChangeEvent changeEvent) {
+        int commandDuration = max(timeSlider.getValue(), MIN_TIME);
+        timeSlider.setValue(commandDuration);
+        timeField.setValue(commandDuration);
+    }
+
+    /**
      * Handles the written line
      *
      * @param line the written line
@@ -450,23 +473,12 @@ public class MatrixMonitor {
     }
 
     /**
-     * Handle the state event
+     * Handles the reconnect button action
      *
-     * @param status the status event
+     * @param actionEvent the event
      */
-    private void handleStatus(RobotStatus status) {
-        sensorMonitor.onStatus(status);
-    }
-
-    /**
-     * Handles the markerTime slider event
-     *
-     * @param changeEvent the event
-     */
-    private void handleTimeSlider(ChangeEvent changeEvent) {
-        int commandDuration = max(timeSlider.getValue(), MIN_TIME);
-        timeSlider.setValue(commandDuration);
-        timeField.setValue(commandDuration);
+    private void handleReconnectButton(ActionEvent actionEvent) {
+        controller.reconnect();
     }
 
     /**
@@ -475,6 +487,7 @@ public class MatrixMonitor {
     private void initListeners() {
         sensorDirSlider.addChangeListener(this::handleSensorDirSlider);
         haltButton.addActionListener(this::handleHaltButton);
+        reconnectButton.addActionListener(this::handleReconnectButton);
         robotDirSlider.addChangeListener(this::handleRobotDirSlider);
         speedSlider.addChangeListener(this::handleSpeedSlider);
         timeSlider.addChangeListener(this::handleTimeSlider);
@@ -487,6 +500,7 @@ public class MatrixMonitor {
      * @param status the robot status
      */
     private void onInference(RobotStatus status) {
+        logger.atDebug().log("onInference");
         long time = System.currentTimeMillis();
         if (!halt && time >= runTimestamp + timeSlider.getValue() * 1000L) {
             halt = true;
@@ -500,6 +514,10 @@ public class MatrixMonitor {
                     Complex.fromDeg(robotDirSlider.getValue()),
                     speedSlider.getValue()));
         }
+    }
+
+    private void onLatch(RobotStatus robotStatus) {
+        logger.atDebug().log("onLatch");
     }
 
     /**

@@ -63,7 +63,7 @@ import static org.mmarini.wheelly.engines.StateNode.NONE_EXIT;
  * </p>
  */
 public class StateMachineAgent implements ProcessorContextApi {
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/agent-state-machine-schema-0.2";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/agent-state-machine-schema-0.3";
     private static final Logger logger = LoggerFactory.getLogger(StateMachineAgent.class);
 
     /**
@@ -174,14 +174,12 @@ public class StateMachineAgent implements ProcessorContextApi {
      */
     private RobotCommands onInference(WorldModel worldModel) {
         long t0 = System.currentTimeMillis();
-        logger.atDebug().log("Handle inference");
         this.worldModel = worldModel;
         if (this.currentNode == null) {
             initContext();
         }
         RobotCommands commands = step();
         stepUpProcessor.onNext(this);
-        logger.atDebug().log("Handle inference completed in {} ms", System.currentTimeMillis() - t0);
         return commands;
     }
 

@@ -70,7 +70,7 @@ public record RangeRadarModeller(GridTopology topology,
         long echoPersistence = locator.path("echoPersistence").getNode(root).asLong();
         long contactPersistence = locator.path("contactPersistence").getNode(root).asLong();
         double decay1 = locator.path("decay").getNode(root).asDouble(DEFAULT_DECAY);
-        GridTopology topology = new GridTopology(new Point2D.Float(), radarWidth, radarHeight, radarGrid);
+        GridTopology topology = GridTopology.create(new Point2D.Float(), radarWidth, radarHeight, radarGrid);
         return new RangeRadarModeller(topology, radarCleanInterval, echoPersistence, contactPersistence, correlationInterval1, decay1);
     }
 
@@ -105,8 +105,9 @@ public record RangeRadarModeller(GridTopology topology,
         AreaExpression sensibleArea = and(
                 circle(signal.sensorLocation(), robotSpec.maxRadarDistance()),
                 angle(signal.sensorLocation(), signal.sensorDirection(), robotSpec.receptiveAngle()));
-        return radarMap.map(radarMap.indices()
-                        .filter(radarMap.filterByArea(sensibleArea)),
+        GridTopology topology = radarMap.topology();
+        return radarMap.map(topology.indices()
+                        .filter(topology.inArea(sensibleArea)),
                 cell ->
                         update(cell, signal, robotSpec)
         );

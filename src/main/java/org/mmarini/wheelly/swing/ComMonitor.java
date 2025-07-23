@@ -74,7 +74,7 @@ public class ComMonitor extends MatrixTable {
     }
 
     public void onControllerStatus(String status) {
-        printf(CONTROLLER_KEY, ControllerStatusMapper.map(status));
+        printf(CONTROLLER_KEY, status);
     }
 
     public void onError(Throwable err) {

@@ -52,7 +52,7 @@ class ExploreTest {
 
     static WorldState createState(int knownCount) {
         long timestamp = System.currentTimeMillis();
-        RadarMap radarMap = RadarMap.empty(new GridTopology(new Point2D.Float(), 10, 10, 0.2))
+        RadarMap radarMap = RadarMap.empty(GridTopology.create(new Point2D.Float(), 10, 10, 0.2))
                 .map(IntStream.range(0, knownCount), cell -> cell.addAnechoic(timestamp, DECAY));
 
         WorldModel model = mock();

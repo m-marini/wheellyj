@@ -35,9 +35,8 @@ import org.mmarini.wheelly.apis.MapCell;
 import java.awt.*;
 import java.awt.geom.*;
 import java.util.Arrays;
-import java.util.List;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.lang.Math.max;
 
@@ -146,7 +145,7 @@ public interface BaseShape {
      * @param cells the cells
      */
     static BaseShape createMapShape(float size, MapCell[] cells) {
-        return new BaseShape.CompositeShape(
+        return new CompositeShape(
                 Arrays.stream(cells)
                         .filter(Predicate.not(MapCell::unknown))
                         .map(sector -> {
@@ -157,7 +156,21 @@ public interface BaseShape {
                                     : BaseShape.EMPTY_COLOR;
                             return createRectangle(color, BaseShape.BORDER_STROKE, true, sector.location(), size, size);
                         })
-                        .collect(Collectors.toList()));
+                        .toArray(BaseShape[]::new));
+    }
+
+    /**
+     * Return cell points with the color
+     *
+     * @param size  the cell size (m)
+     * @param cells the cells
+     * @param color the colour
+     */
+    static BaseShape createMapShape(float size, Stream<Point2D> cells, Color color) {
+        return new CompositeShape(
+                cells.map(sector ->
+                                createRectangle(color, BaseShape.BORDER_STROKE, true, sector, size, size))
+                        .toArray(BaseShape[]::new));
     }
 
     /**
@@ -196,6 +209,23 @@ public interface BaseShape {
         return new SingleShape(shape, color, stroke, fillled);
     }
 
+    static BaseShape createPolygon(Color color, BasicStroke stroke, boolean filled, AffineTransform at, Point2D... path) {
+        Path2D.Float shape = new Path2D.Float();
+        if (path.length >= 2) {
+            Point2D first = path[0];
+            shape.moveTo(first.getX(), first.getY());
+            for (int i = 1; i < path.length; i++) {
+                first = path[i];
+                shape.lineTo(first.getX(), first.getY());
+            }
+        }
+        if (at != null) {
+            shape.transform(at);
+        }
+        return new SingleShape(shape, color, stroke, filled);
+
+    }
+
     /**
      * Returns the robot shape
      *
@@ -204,10 +234,10 @@ public interface BaseShape {
      */
     static BaseShape createRobotShape(Point2D location, Complex direction) {
         AffineTransform at = at(location, direction);
-        return new CompositeShape(List.of(
+        return new CompositeShape(
                 createPolygon(ROBOT_COLOR, BORDER_STROKE, true, at, ROBOT_POINTS),
                 createCircle(ROBOT_COLOR, BORDER_STROKE, false, location, ROBOT_RADIUS)
-        ));
+        );
     }
 
     /**
@@ -227,34 +257,4 @@ public interface BaseShape {
      */
     void paint(Graphics2D graphics);
 
-    /**
-     * @param shape  the shape
-     * @param color  the color
-     * @param stroke the stroke
-     * @param filled true if filled shape
-     */
-    record SingleShape(Shape shape, Color color, Stroke stroke, boolean filled) implements BaseShape {
-        @Override
-        public void paint(Graphics2D graphics) {
-            graphics.setStroke(stroke);
-            graphics.setColor(color);
-            if (filled) {
-                graphics.fill(shape);
-            } else {
-                graphics.draw(shape);
-            }
-        }
-    }
-
-    /**
-     * @param list the list of shape
-     */
-    record CompositeShape(List<BaseShape> list) implements BaseShape {
-        @Override
-        public void paint(Graphics2D graphics) {
-            for (BaseShape baseShape : list) {
-                baseShape.paint(graphics);
-            }
-        }
-    }
 }

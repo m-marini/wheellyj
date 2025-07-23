@@ -26,6 +26,9 @@
 package org.mmarini.wheelly.apis;
 
 import java.awt.geom.Point2D;
+import java.util.Set;
+import java.util.function.IntPredicate;
+import java.util.stream.IntStream;
 
 import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
@@ -33,25 +36,83 @@ import static java.util.Objects.requireNonNull;
 /**
  * The grid topology
  *
- * @param center   the grid center
- * @param width    the number of horizontal cells
- * @param height   the number of vertical cells
- * @param gridSize the grid size
+ * @param center         the grid center
+ * @param width          the number of horizontal cells
+ * @param height         the number of vertical cells
+ * @param gridSize       the grid size
+ * @param vertices
+ * @param verticesByCell
  */
-public record GridTopology(Point2D center, int width, int height, double gridSize) {
+public record GridTopology(Point2D center, int width, int height, double gridSize, QVect[] vertices,
+                           int[][] verticesByCell) {
     /**
-     * Creates the grid topology
+     * Returns the grid topology
      *
      * @param center   the grid center
      * @param width    the number of horizontal cells
      * @param height   the number of vertical cells
      * @param gridSize the grid size
      */
-    public GridTopology(Point2D center, int width, int height, double gridSize) {
+    public static GridTopology create(Point2D center, int width, int height, double gridSize) {
+        QVect[] vertices = AreaExpression.createQVertices(center, width, height, gridSize);
+        int[][] verticesByCell = AreaExpression.createVerticesIndices(width, height);
+        return new GridTopology(center, width, height, gridSize, vertices, verticesByCell);
+    }
+
+    /**
+     * Creates the grid topology
+     *
+     * @param center         the grid centre
+     * @param width          the number of horizontal cells
+     * @param height         the number of vertical cells
+     * @param gridSize       the grid size
+     * @param vertices       the vertices qVectors
+     * @param verticesByCell the vertices by cell
+     */
+    public GridTopology(Point2D center, int width, int height, double gridSize, QVect[] vertices, int[][] verticesByCell) {
         this.center = requireNonNull(center);
+        this.vertices = requireNonNull(vertices);
+        this.verticesByCell = requireNonNull(verticesByCell);
         this.width = width;
         this.height = height;
         this.gridSize = gridSize;
+    }
+
+    /**
+     * Returns the index of contour sector
+     *
+     * @param indices the indices
+     */
+    public IntStream contour(Set<Integer> indices) {
+        return indices.stream()
+                .mapToInt(x -> x)
+                .filter(i -> {
+                    int ix = i % width;
+                    int iy = i / width;
+                    if (ix == 0 || ix >= width || iy == 0 || iy >= height) {
+                        return true;
+                    }
+                    Set<Integer> adj = Set.of(
+                            ix + (iy + 1) * width, // N
+                            ix + 1 + (iy + 1) * width, // NE
+                            ix + 1 + iy * width, // E
+                            ix + 1 + (iy - 1) * width, // SE
+                            ix + (iy - 1) * width, // S
+                            ix - 1 + (iy - 1) * width, // SW
+                            ix - 1 + iy * width, // W
+                            ix - 1 + (iy + 1) * width // NW
+                    );
+                    return !indices.containsAll(adj);
+                });
+    }
+
+    /**
+     * Returns the predicate that return true if cell at index is contained in the area
+     *
+     * @param area the cell predicate
+     */
+    public IntPredicate inArea(AreaExpression area) {
+        return AreaExpression.filterByArea(area, vertices, verticesByCell);
     }
 
     /**
@@ -87,6 +148,22 @@ public record GridTopology(Point2D center, int width, int height, double gridSiz
         return (i >= 0 && i < height && j >= 0 && j < width)
                 ? i * width + j
                 : -1;
+    }
+
+    /**
+     * Returns all the cell indices
+     */
+    public IntStream indices() {
+        return IntStream.range(0, width * height);
+    }
+
+    /**
+     * Returns the indices in area
+     *
+     * @param area the area
+     */
+    public IntStream indicesByArea(AreaExpression area) {
+        return indices().filter(inArea(area));
     }
 
     /**

@@ -27,12 +27,14 @@ package org.mmarini.wheelly.apis;
 
 import io.reactivex.rxjava3.schedulers.Timed;
 
+import java.awt.geom.Point2D;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.Double.parseDouble;
 import static java.lang.Integer.parseInt;
 import static java.lang.Long.parseLong;
 import static java.lang.String.format;
+import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_PER_PULSE;
 
 /**
  * The Wheelly status contain the sensor value of Wheelly
@@ -70,8 +72,8 @@ public record WheellyMotionMessage(long localTime, long simulationTime, long rem
      *     [xLocation]
      *     [yLocation]
      *     [yaw]
-     *     [leftSpeed]
-     *     [rightSpeed]
+     *     [leftPps]
+     *     [rightPps]
      *     [imuFailure]
      *     [haltCommand]
      *     [move directionDeg]
@@ -153,6 +155,10 @@ public record WheellyMotionMessage(long localTime, long simulationTime, long rem
                 leftPps, rightPps, imuFailure, halt,
                 leftTargetPps, rightTargetPps, leftPower, rightPower)
                 : this;
+    }
+
+    public Point2D robotLocation() {
+        return new Point2D.Double(xPulses * DISTANCE_PER_PULSE, yPulses * DISTANCE_PER_PULSE);
     }
 
     /**

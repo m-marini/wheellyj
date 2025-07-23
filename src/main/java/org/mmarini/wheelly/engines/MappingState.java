@@ -83,12 +83,14 @@ public record MappingState(String id, ProcessorCommand onInit, ProcessorCommand 
     public static final String TURING_ROBOT = "turingRobot";
     public static final int DEFAULT_TURN_ANGLE = 120;
     private static final Logger logger = LoggerFactory.getLogger(MappingState.class);
+    public static final int MIN_TURN_DEG = 2;
+    public static final double EPSILON = sin(toRadians(1));
 
     /**
-     * Returns the haltCommand state from configuration
+     * Returns the mapping state from configuration
      *
      * @param root    the configuration document
-     * @param locator the locator of haltCommand sensor
+     * @param locator the locator of mapping state
      * @param id      the status identifier
      */
     public static MappingState create(JsonNode root, Locator locator, String id) {
@@ -125,14 +127,16 @@ public record MappingState(String id, ProcessorCommand onInit, ProcessorCommand 
         if (distance == 0) {
             distance = status.robotSpec().maxRadarDistance();
         }
-        double dAngle = asin(ctx.worldModel().getRadarMap().topology().gridSize() / sqrt(2) / distance) * 2;
-        dAngle = max(dAngle, toRadians(1));
+        int dAngle = (int) round(toDegrees(asin(ctx.worldModel().getRadarMap().topology().gridSize() / sqrt(2) / distance) * 2));
+        dAngle = max(dAngle, MIN_TURN_DEG);
         // Turn right sensor
-        return status.sensorDirection().add(Complex.fromRad(dAngle));
+        Complex sensorDir = status.sensorDirection();
+        sensorDir = sensorDir.add(Complex.fromDeg(dAngle));
+        return sensorDir;
     }
 
     /**
-     * Creates the haltCommand state
+     * Creates the mapping state
      *
      * @param id      the identifier
      * @param onInit  the initialisation command
@@ -148,12 +152,15 @@ public record MappingState(String id, ProcessorCommand onInit, ProcessorCommand 
 
     @Override
     public void entry(ProcessorContextApi context) {
+        logger.atDebug().log("Entry");
         ExtendedStateNode.super.entry(context);
-        Complex robotDir = context.worldModel().robotStatus().direction();
-        put(context, SCAN_TIME, context.worldModel().robotStatus().simulationTime());
+        RobotStatus status = context.worldModel().robotStatus();
+        Complex robotDir = status.direction();
+        put(context, SCAN_TIME, status.simulationTime());
         put(context, INITIAL_DIRECTION, robotDir);
         put(context, STATUS, RIGHT_SCANNING);
-        put(context, SENSOR_DIRECTION, Complex.DEG0);
+        put(context, SENSOR_DIRECTION, 0);
+        logger.atDebug().log("Scanning {} ...", 0);
     }
 
     /**
@@ -162,30 +169,34 @@ public record MappingState(String id, ProcessorCommand onInit, ProcessorCommand 
      * @param context the context
      */
     Tuple2<String, RobotCommands> leftScanning(ProcessorContextApi context) {
-        long scanTime = getLong(context, SCAN_TIME);
         RobotStatus robotStatus = context.worldModel().robotStatus();
-        long time = robotStatus.simulationTime();
-        Complex targetSensorDir = get(context, SENSOR_DIRECTION);
-        // Check for scan timeout
-        Complex sensorDir = robotStatus.sensorDirection();
-        long echoTime = robotStatus.proxyMessage().simulationTime();
-        if (echoTime < scanTime && !sensorDir.isCloseTo(targetSensorDir, Complex.fromDeg(1))) {
-//        if (time < scanTime + scanInterval) {
+        long scanTime = getLong(context, SCAN_TIME);
+        int targetSensorDir = getInt(context, SENSOR_DIRECTION);
+        // Check for scan completed
+        int sensorDir = robotStatus.sensorDirection().toIntDeg();
+        long proxyTime = robotStatus.proxyMessage().simulationTime();
+        if (!(sensorDir == targetSensorDir && proxyTime > scanTime)) {
             // Scanning
-            RobotCommands command = RobotCommands.scan(targetSensorDir);
+            RobotCommands command = targetSensorDir == 0
+                    ? RobotCommands.haltCommand()
+                    : RobotCommands.scan(Complex.fromDeg(targetSensorDir));
             return Tuple2.of(NONE_EXIT, command);
         }
         // Scanning completed
-        if (targetSensorDir.toIntDeg() < 0) {
-            targetSensorDir = nextSensorDir(context);
-            if (targetSensorDir.toIntDeg() > 0) {
-                targetSensorDir = Complex.DEG0;
+        long t0 = robotStatus.simulationTime();
+        if (targetSensorDir < 0) {
+            // Turn right sensor
+            targetSensorDir = nextSensorDir(context).toIntDeg();
+            if (targetSensorDir > 0) {
+                targetSensorDir = 0;
             }
-            put(context, SCAN_TIME, time);
+            logger.atDebug().log("Scanning {} ...", targetSensorDir);
             put(context, SENSOR_DIRECTION, targetSensorDir);
-            RobotCommands command = RobotCommands.scan(targetSensorDir);
+            put(context, SCAN_TIME, t0);
+            RobotCommands command = RobotCommands.scan(Complex.fromDeg(targetSensorDir));
             return Tuple2.of(NONE_EXIT, command);
         }
+
         Complex robotDir = robotStatus.direction();
         Complex turnAngle = get(context, TURN_ANGLE);
         Complex targetDir = robotDir.add(turnAngle);
@@ -194,8 +205,10 @@ public record MappingState(String id, ProcessorCommand onInit, ProcessorCommand 
         if (deltaAngle > 0 && deltaAngle < turnAngle.toIntDeg()) {
             targetDir = initialDir;
         }
-        logger.atDebug().log("Turning robot");
+
+        logger.atDebug().log("Left scanning completed");
         put(context, ROBOT_DIR, targetDir);
+        put(context, SCAN_TIME, t0);
         put(context, STATUS, TURING_ROBOT);
         return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(targetDir, 0));
     }
@@ -206,36 +219,39 @@ public record MappingState(String id, ProcessorCommand onInit, ProcessorCommand 
      * @param context the context
      */
     Tuple2<String, RobotCommands> rightScanning(ProcessorContextApi context) {
-        long scanTime = getLong(context, SCAN_TIME);
         RobotStatus robotStatus = context.worldModel().robotStatus();
-        long time = robotStatus.simulationTime();
-        Complex targetSensorDir = get(context, SENSOR_DIRECTION);
+        int targetSensorDir = getInt(context, SENSOR_DIRECTION);
+        long scanTime = getLong(context, SCAN_TIME);
         // Check for scan completed
-        Complex sensorDir = robotStatus.sensorDirection();
-        long echoTime = robotStatus.proxyMessage().simulationTime();
-        if (echoTime < scanTime && !sensorDir.isCloseTo(targetSensorDir, Complex.fromDeg(1))) {
-//        if (time < scanTime + scanInterval) {
+        int sensorDir = robotStatus.sensorDirection().toIntDeg();
+        if (!(sensorDir == targetSensorDir && robotStatus.proxyMessage().simulationTime() >= scanTime)) {
             // Scanning
-            RobotCommands command = RobotCommands.scan(targetSensorDir);
+            RobotCommands command = targetSensorDir == 0
+                    ? RobotCommands.haltCommand()
+                    : RobotCommands.scan(Complex.fromDeg(targetSensorDir));
             return Tuple2.of(NONE_EXIT, command);
         }
-        // Scanning completed
-        if (targetSensorDir.toIntDeg() < 90) {
+        // Single scan completed
+        long t0 = robotStatus.simulationTime();
+        if (targetSensorDir < 90) {
             // Turn right sensor
-            targetSensorDir = nextSensorDir(context);
-            if (targetSensorDir.toIntDeg() > 90) {
-                targetSensorDir = Complex.DEG90;
+            targetSensorDir = nextSensorDir(context).toIntDeg();
+            if (targetSensorDir > 90) {
+                targetSensorDir = 90;
             }
-            put(context, SCAN_TIME, time);
             put(context, SENSOR_DIRECTION, targetSensorDir);
-            RobotCommands command = RobotCommands.scan(targetSensorDir);
+            put(context, SCAN_TIME, t0);
+            logger.atDebug().log("Scanning {} ...", targetSensorDir);
+            RobotCommands command = RobotCommands.scan(Complex.fromDeg(targetSensorDir));
             return Tuple2.of(NONE_EXIT, command);
         }
-        targetSensorDir = Complex.DEG270;
+        logger.atDebug().log("Right scanning completed");
+        targetSensorDir = -90;
+        put(context, SCAN_TIME, t0);
         put(context, STATUS, LEFT_SCANNING);
-        put(context, SCAN_TIME, time);
         put(context, SENSOR_DIRECTION, targetSensorDir);
-        RobotCommands command = RobotCommands.scan(targetSensorDir);
+        logger.atDebug().log("Scanning {} ...", targetSensorDir);
+        RobotCommands command = RobotCommands.scan(Complex.fromDeg(targetSensorDir));
         return Tuple2.of(NONE_EXIT, command);
     }
 
@@ -243,6 +259,7 @@ public record MappingState(String id, ProcessorCommand onInit, ProcessorCommand 
     public Tuple2<String, RobotCommands> step(ProcessorContextApi ctx) {
         // Check for timeout
         if (isTimeout(ctx)) {
+            logger.atDebug().log("Mapping robot timed out");
             return TIMEOUT_RESULT;
         }
         // Check for block conditions
@@ -275,13 +292,15 @@ public record MappingState(String id, ProcessorCommand onInit, ProcessorCommand 
             return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(targetDir, 0));
         }
         Complex initialDir = get(context, INITIAL_DIRECTION);
-        if (targetDir.isCloseTo(initialDir, Complex.fromDeg(1))) {
+        if (targetDir.isCloseTo(initialDir, EPSILON)) {
             // Mapping completed
+            logger.atDebug().log("Mapping completed");
             return COMPLETED_RESULT;
         }
+        logger.atDebug().log("Turning robot completed");
         put(context, SCAN_TIME, status.simulationTime());
         put(context, STATUS, RIGHT_SCANNING);
-        put(context, SENSOR_DIRECTION, Complex.DEG0);
+        put(context, SENSOR_DIRECTION, 0);
         return Tuple2.of(NONE_EXIT, RobotCommands.scan(Complex.DEG0));
     }
 }

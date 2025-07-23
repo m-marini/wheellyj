@@ -211,9 +211,9 @@ public class BaseRadarPanel extends JComponent {
      * @param markers the markers
      */
     public void setMarkers(Collection<Point2D> markers) {
-        this.markers = new BaseShape.CompositeShape(markers.stream()
+        this.markers = new CompositeShape(markers.stream()
                 .map(marker -> createCircle(LABELED_COLOR, BORDER_STROKE, true, marker, markerSize / 2))
-                .toList());
+                .toArray(BaseShape[]::new));
         repaint();
     }
 }

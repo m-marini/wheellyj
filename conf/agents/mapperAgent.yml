@@ -1,0 +1,39 @@
+---
+$schema: https://mmarini.org/wheelly/agent-state-machine-schema-0.2
+class: org.mmarini.wheelly.engines.StateMachineAgent
+flow:
+  entry: scan
+  states:
+    scan:
+      class: org.mmarini.wheelly.engines.MappingState
+      timeout: 300000
+      scanInterval: 1000
+      transitions:
+        timeout:
+          to: halt
+        frontBlocked:
+          to: avoid
+        blocked:
+          to: avoid
+        completed:
+          to: halt
+    halt:
+      class: org.mmarini.wheelly.engines.HaltState
+      timeout: 10000
+      scanInterval: 1000
+      minSensorDir: 0
+      maxSensorDir: 0
+      transitions:
+        timeout:
+          to: scan
+        frontBlocked:
+          to: avoid
+        rearBlocked:
+          to: avoid
+    avoid:
+      class: org.mmarini.wheelly.engines.AvoidingState
+      safeDistance: 0.2
+      speed: 20
+      transitions:
+        completed:
+          to: scan

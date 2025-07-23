@@ -73,7 +73,7 @@ class WorldStateTest {
 
     @NotNull
     private static RadarMap createRadarMap() {
-        return RadarMap.empty(new GridTopology(new Point2D.Float(), RADAR_SIZE, RADAR_SIZE, GRID_SIZE))
+        return RadarMap.empty(GridTopology.create(new Point2D.Float(), RADAR_SIZE, RADAR_SIZE, GRID_SIZE))
                 .updateCellAt(0, 0, cell -> cell.addEchogenic(100, 0));
     }
 

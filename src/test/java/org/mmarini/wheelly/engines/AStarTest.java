@@ -42,10 +42,11 @@ class AStarTest {
 
     static AStar<Point> create(Point from, Point to) {
         return new AStar<>(
+                to::equals,
                 Point2D::distanceSq,
-                Point2D::distanceSq,
+                to::distanceSq,
                 AStarTest::proximal,
-                from, to
+                from
         );
     }
 
@@ -110,7 +111,7 @@ class AStarTest {
         assertThat(path, contains(
                 new Point(),
                 new Point(1, 0),
-                new Point(2, 0),
+                new Point(1, 1),
                 new Point(2, 1),
                 new Point(2, 2)
         ));

@@ -1,13 +1,13 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/agent-state-machine-schema-0.2
+$id: https://mmarini.org/wheelly/agent-state-machine-schema-0.3
 title: State machine agent
 description: State Agent Schema
 type: object
 properties:
   $schema:
     type: string
-    const: https://mmarini.org/wheelly/agent-state-machine-schema-0.2
+    const: https://mmarini.org/wheelly/agent-state-machine-schema-0.3
   class:
     type: string
     const: org.mmarini.wheelly.engines.StateMachineAgent
@@ -34,6 +34,9 @@ $defs:
       - $ref: "#/$defs/AvoidingState"
       - $ref: "#/$defs/MoveToState"
       - $ref: "#/$defs/ClearMapState"
+      - $ref: "#/$defs/FindUnknownState"
+      - $ref: "#/$defs/FindLabelState"
+      - $ref: "#/$defs/MovePathState"
   HaltState:
     type: object
     properties:
@@ -200,6 +203,64 @@ $defs:
       - class
       - maxDistance
       - safeDistance
+  FindUnknownState:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.wheelly.engines.FindUnknownState
+      onInit:
+        $ref: "#/$defs/Commands"
+      onEntry:
+        $ref: "#/$defs/Commands"
+      onExit:
+        $ref: "#/$defs/Commands"
+      transitions:
+        $ref: "#/$defs/Transitions"
+    required:
+      - class
+  FindLabelState:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.wheelly.engines.FindLabelState
+      onInit:
+        $ref: "#/$defs/Commands"
+      onEntry:
+        $ref: "#/$defs/Commands"
+      onExit:
+        $ref: "#/$defs/Commands"
+      transitions:
+        $ref: "#/$defs/Transitions"
+      distance:
+        type: number
+        exclusiveMinimum: 0
+    required:
+      - class
+  MovePathState:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.wheelly.engines.MovePathState
+      onInit:
+        $ref: "#/$defs/Commands"
+      onEntry:
+        $ref: "#/$defs/Commands"
+      onExit:
+        $ref: "#/$defs/Commands"
+      transitions:
+        $ref: "#/$defs/Transitions"
+      timeout:
+        type: integer
+        minimum: 1
+      approachDistance:
+        type: number
+        exclusiveMinimum: 0
+      speed:
+        type: integer
+        minimum: 10
+        maximum: 60
+    required:
+      - class
   MoveToState:
     type: object
     properties:

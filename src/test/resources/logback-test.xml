@@ -16,8 +16,14 @@
         </encoder>
     </appender>
 
-    <logger name="com.networknt.schema" level="INFO">
-    </logger>
+    <logger name="com.networknt.schema" level="INFO"/>
+
+    <logger name="org.mmarini.wheelly.apis.LineSocket" level="DEBUG"/>
+    <logger name="org.mmarini.wheelly.apis.SimRobotObstacleTest" level="INFO"/>
+    <logger name="org.mmarini.wheelly.apis.RobotControllerStatus" level="INFO"/>
+    <logger name="org.mmarini.wheelly.apis.SimRobot" level="INFO"/>
+
+    <logger name="org.mmarini.wheelly.engines.AStar" level="INFO"/>
 
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
