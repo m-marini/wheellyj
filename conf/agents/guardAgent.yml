@@ -2,18 +2,20 @@
 ######################################
 # Guard agent
 ######################################
-$schema: https://mmarini.org/wheelly/agent-state-machine-schema-0.1
+$schema: https://mmarini.org/wheelly/agent-state-machine-schema-0.4
 class: org.mmarini.wheelly.engines.StateMachineAgent
 flow:
   entry: start
   states:
     start:
+      $id: https://mmarini.org/wheelly/state-halt-schema-0.1
       class: org.mmarini.wheelly.engines.HaltState
       timeout: 2000
       transitions:
         timeout:
           to: movingTo1
     movingTo0:
+      $id: https://mmarini.org/wheelly/state-move-to-schema-0.1
       class: org.mmarini.wheelly.engines.MoveToState
       stopDistance: 0.1
       x: 0
@@ -28,6 +30,7 @@ flow:
         blocked:
           to: start
     movingTo1:
+      $id: https://mmarini.org/wheelly/state-move-to-schema-0.1
       class: org.mmarini.wheelly.engines.MoveToState
       stopDistance: 0.1
       x: 0

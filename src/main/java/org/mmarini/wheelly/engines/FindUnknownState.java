@@ -34,6 +34,7 @@ import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,6 +78,7 @@ public record FindUnknownState(String id, ProcessorCommand onInit, ProcessorComm
     public static final long DEFAULT_MAX_SEARCH_TIME = 3600000;
     private static final Tuple2<String, RobotCommands> NOT_FOUND_RESULT = Tuple2.of(
             NOT_FOUND, RobotCommands.idle());
+    private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-find-unknown-schema-0.1";
     private static final Logger logger = LoggerFactory.getLogger(FindUnknownState.class);
 
     /**
@@ -87,6 +89,7 @@ public record FindUnknownState(String id, ProcessorCommand onInit, ProcessorComm
      * @param id      the state identifier
      */
     public static FindUnknownState create(JsonNode root, Locator locator, String id) {
+        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double growthDistance = locator.path(GROWTH_DISTANCE).getNode(root).asDouble(DEFAULT_GROWTH_DISTANCE);
         long seed = locator.path(SEED).getNode(root).asLong();
         Random random = seed == 0

@@ -1,0 +1,61 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/state-halt-schema-0.1
+title: State machine agent
+description: State Agent Schema
+type: object
+properties:
+  $id:
+    const: https://mmarini.org/wheelly/state-halt-schema-0.1
+  class:
+    const: org.mmarini.wheelly.engines.HaltState
+  onInit:
+    $ref: "#/$defs/Commands"
+  onEntry:
+    $ref: "#/$defs/Commands"
+  onExit:
+    $ref: "#/$defs/Commands"
+  transitions:
+    $ref: "#/$defs/Transitions"
+  timeout:
+    type: integer
+    minimum: 1
+  scanInterval:
+    type: integer
+  minSensorDir:
+    type: integer
+    minimum: -90
+    maximum: 90
+  maxSensorDir:
+    type: integer
+    minimum: -90
+    maximum: 90
+  sensorDirNumber:
+    type: integer
+    minimum: 1
+required:
+  - $id
+  - class
+$defs:
+  Commands:
+    type: array
+    items:
+      $ref: "#/$defs/Command"
+  Command:
+    type: [ string, number ]
+  StateNodes:
+    type: object
+    additionalProperties:
+      $ref: "#/$defs/StateNode"
+  Transitions:
+    type: object
+    additionalProperties:
+      type: object
+      properties:
+        to:
+          type: string
+          minLength: 1
+        onTransition:
+          $ref: "#/$defs/Commands"
+      required:
+        - to

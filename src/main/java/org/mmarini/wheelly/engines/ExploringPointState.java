@@ -32,6 +32,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,6 +71,7 @@ public record ExploringPointState(String id, ProcessorCommand onInit, ProcessorC
                                   ProcessorCommand onExit) implements ExtendedStateNode {
     private static final Logger logger = LoggerFactory.getLogger(ExploringPointState.class);
     private static final Tuple2<String, RobotCommands> NOT_FOUND_RESULT = Tuple2.of("notFound", RobotCommands.idle());
+    private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-exploring-schema-0.1";
 
     /**
      * Returns the exploring state from configuration
@@ -79,6 +81,7 @@ public record ExploringPointState(String id, ProcessorCommand onInit, ProcessorC
      * @param id      the state identifier
      */
     public static ExploringPointState create(JsonNode root, Locator locator, String id) {
+        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double safeDistance = locator.path("safeDistance").getNode(root).asDouble();
         double maxDistance = locator.path("maxDistance").getNode(root).asDouble();
         ProcessorCommand onInit = ProcessorCommand.concat(
