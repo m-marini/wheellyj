@@ -74,6 +74,7 @@ public record LabelStuckState(String id, ProcessorCommand onInit, ProcessorComma
     public static final int DEFAULT_DIRECTION_RANGE = 10;
     private static final Logger logger = LoggerFactory.getLogger(LabelStuckState.class);
     private static final double EPSILON_DISTANCE = 0.3;
+    public static final int DEFAULT_SPEED = 30;
 
     /**
      * Returns the exploring state from configuration
@@ -87,12 +88,14 @@ public record LabelStuckState(String id, ProcessorCommand onInit, ProcessorComma
         double maxDistance = locator.path(MAX_DISTANCE_ID).getNode(root).asDouble(DEFAULT_MAX_DISTANCE);
         double distance = locator.path(DISTANCE_ID).getNode(root).asDouble(DEFAULT_DISTANCE);
         int directionRange = locator.path(DIRECTION_RANGE_ID).getNode(root).asInt(DEFAULT_DIRECTION_RANGE);
+        int speed = locator.path(SPEED_ID).getNode(root).asInt(DEFAULT_SPEED);
         ProcessorCommand onInit = ProcessorCommand.concat(
                 ExtendedStateNode.loadTimeout(root, locator, id),
                 ProcessorCommand.setProperties(Map.of(
                         id + "." + MAX_DISTANCE_ID, maxDistance,
                         id + "." + DISTANCE_ID, distance,
-                        id + "." + DIRECTION_RANGE_ID, directionRange
+                        id + "." + DIRECTION_RANGE_ID, directionRange,
+                        id + "." + SPEED_ID, speed
                 )),
                 ProcessorCommand.create(root, locator.path("onInit")));
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
