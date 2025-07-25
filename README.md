@@ -7,6 +7,12 @@ The code of Webcam controller is at [Wheellycam project](https://github.com/m-ma
 
 The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
+## Release 0.24.0
+
+- Full reactive robot api
+- Add mapping, label stuck, find label, find unknown, find refresh, move path states
+- Point echo
+
 ## Release 0.23.0
 
 - Add markers signals
