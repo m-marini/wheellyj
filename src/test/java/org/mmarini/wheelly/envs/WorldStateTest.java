@@ -60,15 +60,19 @@ class WorldStateTest {
     public static final int SECTOR_NUMBERS = 4;
     public static final int MAP_DEG = 90;
     public static final List<String> MARKERS = List.of("A", "B");
-    private static final int RADAR_SIZE = 11;
     public static final double MARKER_SIZE = 0.3;
     public static final WorldModelSpec WORLD_SPEC = new WorldModelSpec(ROBOT_SPEC, SECTOR_NUMBERS, GRID_MAP_SIZE, MARKER_SIZE);
     public static final Map<String, SignalSpec> SIGNAL_SPEC = WorldEnvironment.createStateSpec(WORLD_SPEC, MARKERS.size());
+    private static final int RADAR_SIZE = 11;
     private static final float MAX_RADAR_DISTANCE = 3f;
     private static final long NUM_MARKERS = MARKERS.size();
 
     private static LabelMarker createLabel(String labelA, double xa, double ya) {
         return new LabelMarker(labelA, new Point2D.Double(xa, ya), 1, 0, 0);
+    }
+
+    private static PolarMap createPolarMap() {
+        return PolarMap.create(SECTOR_NUMBERS);
     }
 
     @NotNull
@@ -81,10 +85,6 @@ class WorldStateTest {
         return RobotStatus.create(ROBOT_SPEC, x -> 12)
                 .setLocation(new Point2D.Double(robotX, robotY))
                 .setDirection(Complex.fromDeg(robotDeg));
-    }
-
-    private static PolarMap createPolarMap() {
-        return PolarMap.create(SECTOR_NUMBERS);
     }
 
     static WorldModel createWorldModel(RobotStatus status, LabelMarker... markers) {

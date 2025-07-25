@@ -79,17 +79,6 @@ public record SimRobotStatus(
     }
 
     /**
-     * Returns status with the changed closed flag
-     *
-     * @param closed true if the robot is closed
-     */
-    public SimRobotStatus closed(boolean closed) {
-        return this.closed == closed
-                ? this
-                : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection, echoDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap, motionTimeout, proxyTimeout, cameraTimeout, stalemateTimeout, nearestCell, startSimulationTime, lastTick);
-    }
-
-    /**
      * Returns true if robot can move backward
      */
     public boolean canMoveBackward() {
@@ -103,6 +92,17 @@ public record SimRobotStatus(
         return frontSensor && (echoDistance == 0 || echoDistance > SAFE_DISTANCE);
     }
 
+    /**
+     * Returns status with the changed closed flag
+     *
+     * @param closed true if the robot is closed
+     */
+    public SimRobotStatus closed(boolean closed) {
+        return this.closed == closed
+                ? this
+                : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection, echoDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap, motionTimeout, proxyTimeout, cameraTimeout, stalemateTimeout, nearestCell, startSimulationTime, lastTick);
+    }
+
     @Override
     public boolean configured() {
         return connected;
@@ -110,11 +110,6 @@ public record SimRobotStatus(
 
     @Override
     public boolean configuring() {
-        return false;
-    }
-
-    @Override
-    public boolean connecting() {
         return false;
     }
 
@@ -127,6 +122,11 @@ public record SimRobotStatus(
         return this.connected == connected
                 ? this
                 : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection, echoDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap, motionTimeout, proxyTimeout, cameraTimeout, stalemateTimeout, nearestCell, startSimulationTime, lastTick);
+    }
+
+    @Override
+    public boolean connecting() {
+        return false;
     }
 
     /**

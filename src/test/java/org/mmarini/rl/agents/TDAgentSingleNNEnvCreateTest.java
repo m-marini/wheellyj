@@ -27,7 +27,10 @@ package org.mmarini.rl.agents;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
-import org.mmarini.rl.envs.*;
+import org.mmarini.rl.envs.FloatSignalSpec;
+import org.mmarini.rl.envs.IntSignalSpec;
+import org.mmarini.rl.envs.SignalSpec;
+import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.yaml.Utils;
 
 import java.io.File;

@@ -97,12 +97,12 @@ public class PolarPanel extends JComponent {
         return new Ellipse2D.Double(location.getX(), location.getY(), PING_SIZE, PING_SIZE);
     }
 
+    private final float markerSize;
     private List<ColoredShape> shapes;
     private List<Shape> gridShapes;
     private int numSector;
     private double radarMaxDistance;
     private BaseShape markerShape;
-    private final float markerSize;
 
     /**
      * Creates the polar panel
@@ -176,7 +176,7 @@ public class PolarPanel extends JComponent {
      * </p>
      *
      * @param polarMap the polar map
-     * @param markers the markers
+     * @param markers  the markers
      */
     public void setPolarMap(PolarMap polarMap, Collection<LabelMarker> markers) {
         int n = polarMap.sectorsNumber();

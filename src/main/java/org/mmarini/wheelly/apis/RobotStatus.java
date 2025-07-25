@@ -60,7 +60,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
     /**
      * Returns the default robot status
      *
-     * @param robotSpec       the robot specification
+     * @param robotSpec     the robot specification
      * @param decodeVoltage the decode voltage function
      */
     public static RobotStatus create(RobotSpec robotSpec, IntToDoubleFunction decodeVoltage) {

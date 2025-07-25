@@ -22,6 +22,9 @@ flow:
           to: findLabel
     findLabel:
       class: org.mmarini.wheelly.engines.FindLabelState
+      maxSearchTime: 3000
+      minGoals: 2
+      distance: 0.8
       transitions:
         completed:
           to: moveLabel
@@ -34,12 +37,28 @@ flow:
           to: findUnknown
     findUnknown:
       class: org.mmarini.wheelly.engines.FindUnknownState
+      maxSearchTime: 3000
+      minGoals: 2
       transitions:
         completed:
           to: moveUnknown
           onTransition:
             - moveUnknown.path
             - findUnknown.path
+            - get
+            - put
+        notFound:
+          to: findRefresh
+    findRefresh:
+      class: org.mmarini.wheelly.engines.FindRefreshState
+      maxSearchTime: 3000
+      minGoals: 2
+      transitions:
+        completed:
+          to: moveUnknown
+          onTransition:
+            - moveRefresh.path
+            - findRefresh.path
             - get
             - put
         notFound:
@@ -56,6 +75,17 @@ flow:
         rearBlocked:
           to: avoid
     moveUnknown:
+      class: org.mmarini.wheelly.engines.MovePathState
+      transitions:
+        completed:
+          to: mapping
+        timeout:
+          to: mapping
+        frontBlocked:
+          to: avoid
+        rearBlocked:
+          to: avoid
+    moveRefresh:
       class: org.mmarini.wheelly.engines.MovePathState
       transitions:
         completed:

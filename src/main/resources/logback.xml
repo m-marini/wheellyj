@@ -33,7 +33,9 @@
     <logger name="org.mmarini.wheelly.engines.LabelPointState" level="INFO"/>
     <logger name="org.mmarini.wheelly.engines.MappingState" level="INFO"/>
     <logger name="org.mmarini.wheelly.engines.ExploringPointState" level="INFO"/>
-    <logger name="org.mmarini.wheelly.engines.FindUnknownState" level="DEBUG"/>
+    <logger name="org.mmarini.wheelly.engines.FindLabelState" level="INFO"/>
+    <logger name="org.mmarini.wheelly.engines.FindUnknownState" level="INFO"/>
+    <logger name="org.mmarini.wheelly.engines.FindRefreshState" level="DEBUG"/>
     <logger name="org.mmarini.wheelly.engines.AStar" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.apps.MatrixMonitor" level="INFO"/>

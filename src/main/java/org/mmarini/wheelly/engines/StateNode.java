@@ -38,7 +38,7 @@ import java.util.List;
 import static org.mmarini.yaml.Utils.createObject;
 
 /**
- * The state machine node generates a simple behavior of robot
+ * The state machine node generates a simple behaviour of robot
  */
 public interface StateNode {
     String TIMEOUT_EXIT = "timeout";
@@ -47,6 +47,8 @@ public interface StateNode {
     String BLOCKED_EXIT = "blocked";
     String COMPLETED_EXIT = "completed";
     String NONE_EXIT = "none";
+    String TARGET_ID = "target";
+    String PATH_ID = "path";
     Tuple2<String, RobotCommands> TIMEOUT_RESULT = Tuple2.of(TIMEOUT_EXIT, RobotCommands.idle());
     Tuple2<String, RobotCommands> BLOCKED_RESULT = Tuple2.of(BLOCKED_EXIT, RobotCommands.idle());
     Tuple2<String, RobotCommands> FRONT_BLOCKED_RESULT = Tuple2.of(FRONT_BLOCKED_EXIT, RobotCommands.idle());

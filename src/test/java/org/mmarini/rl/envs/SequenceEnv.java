@@ -38,6 +38,13 @@ public class SequenceEnv implements WithSignalsSpec {
         this.numStates = numStates;
     }
 
+    @Override
+    public Map<String, SignalSpec> actionSpec() {
+        return Map.of(
+                "action", new IntSignalSpec(new long[]{1}, numStates)
+        );
+    }
+
     public ExecutionResult execute(Map<String, Signal> actions) {
         int action = actions.get("output").getInt(0);
         Map<String, Signal> signals0 = getSignals();
@@ -54,17 +61,15 @@ public class SequenceEnv implements WithSignalsSpec {
         }
     }
 
-    @Override
-    public Map<String, SignalSpec> actionSpec() {
-        return Map.of(
-                "action", new IntSignalSpec(new long[]{1}, numStates)
-        );
-    }
-
     private Map<String, Signal> getSignals() {
         INDArray signals = Nd4j.zeros(numStates);
         signals.putScalar(currentState, 1f);
         return Map.of("input", new ArraySignal(signals));
+    }
+
+    public Map<String, Signal> reset() {
+        currentState = 0;
+        return getSignals();
     }
 
     @Override
@@ -72,10 +77,5 @@ public class SequenceEnv implements WithSignalsSpec {
         return Map.of(
                 "state", new FloatSignalSpec(new long[]{numStates}, 0, 1)
         );
-    }
-
-    public Map<String, Signal> reset() {
-        currentState = 0;
-        return getSignals();
     }
 }

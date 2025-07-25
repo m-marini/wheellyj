@@ -143,6 +143,10 @@ public record WheellyMotionMessage(long localTime, long simulationTime, long rem
                 leftTargetPps, rightTargetPps, leftPower, rightPower);
     }
 
+    public Point2D robotLocation() {
+        return new Point2D.Double(xPulses * DISTANCE_PER_PULSE, yPulses * DISTANCE_PER_PULSE);
+    }
+
     /**
      * Returns the motion message with direction set
      *
@@ -155,10 +159,6 @@ public record WheellyMotionMessage(long localTime, long simulationTime, long rem
                 leftPps, rightPps, imuFailure, halt,
                 leftTargetPps, rightTargetPps, leftPower, rightPower)
                 : this;
-    }
-
-    public Point2D robotLocation() {
-        return new Point2D.Double(xPulses * DISTANCE_PER_PULSE, yPulses * DISTANCE_PER_PULSE);
     }
 
     /**

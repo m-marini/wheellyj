@@ -104,6 +104,11 @@ public class RandomAgent implements Agent {
     }
 
     @Override
+    public Map<String, SignalSpec> actionSpec() {
+        return actions;
+    }
+
+    @Override
     public Agent alphas(Map<String, Float> alphas) {
         return null;
     }
@@ -138,16 +143,6 @@ public class RandomAgent implements Agent {
     }
 
     @Override
-    public Map<String, SignalSpec> actionSpec() {
-        return actions;
-    }
-
-    @Override
-    public RandomAgent observe(ExecutionResult result) {
-        return this;
-    }
-
-    @Override
     public RandomAgent init() {
         return this;
     }
@@ -178,8 +173,8 @@ public class RandomAgent implements Agent {
     }
 
     @Override
-    public Map<String, SignalSpec> stateSpec() {
-        return state;
+    public RandomAgent observe(ExecutionResult result) {
+        return this;
     }
 
     @Override
@@ -190,6 +185,11 @@ public class RandomAgent implements Agent {
     @Override
     public void save() {
 
+    }
+
+    @Override
+    public Map<String, SignalSpec> stateSpec() {
+        return state;
     }
 
     @Override

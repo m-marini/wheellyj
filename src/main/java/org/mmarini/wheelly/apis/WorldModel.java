@@ -79,9 +79,31 @@ public record WorldModel(WorldModelSpec worldSpec, RobotStatus robotStatus,
         return polarMap;
     }
 
+    /**
+     * Returns the world model with the polar map
+     *
+     * @param polarMap the polar map
+     */
+    public WorldModel setPolarMap(PolarMap polarMap) {
+        return Objects.equals(polarMap, this.polarMap)
+                ? this
+                : new WorldModel(worldSpec, robotStatus, radarMap, markers, polarMap, gridMap, prevCameraEvent);
+    }
+
     @Override
     public RadarMap getRadarMap() {
         return radarMap;
+    }
+
+    /**
+     * Returns the world model with the radar map
+     *
+     * @param radarMap the radar map
+     */
+    public WorldModel setRadarMap(RadarMap radarMap) {
+        return Objects.equals(radarMap, this.radarMap)
+                ? this
+                : new WorldModel(worldSpec, robotStatus, radarMap, markers, polarMap, gridMap, prevCameraEvent);
     }
 
     @Override
@@ -123,34 +145,12 @@ public record WorldModel(WorldModelSpec worldSpec, RobotStatus robotStatus,
     }
 
     /**
-     * Returns the world model with the polar map
-     *
-     * @param polarMap the polar map
-     */
-    public WorldModel setPolarMap(PolarMap polarMap) {
-        return Objects.equals(polarMap, this.polarMap)
-                ? this
-                : new WorldModel(worldSpec, robotStatus, radarMap, markers, polarMap, gridMap, prevCameraEvent);
-    }
-
-    /**
      * Returns the world model with the previous camera event
      *
      * @param prevCameraEvent the previous camera event
      */
     public WorldModel setPrevCameraEvent(CameraEvent prevCameraEvent) {
         return Objects.equals(prevCameraEvent, this.prevCameraEvent)
-                ? this
-                : new WorldModel(worldSpec, robotStatus, radarMap, markers, polarMap, gridMap, prevCameraEvent);
-    }
-
-    /**
-     * Returns the world model with the radar map
-     *
-     * @param radarMap the radar map
-     */
-    public WorldModel setRadarMap(RadarMap radarMap) {
-        return Objects.equals(radarMap, this.radarMap)
                 ? this
                 : new WorldModel(worldSpec, robotStatus, radarMap, markers, polarMap, gridMap, prevCameraEvent);
     }

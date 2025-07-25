@@ -74,6 +74,7 @@ public interface BaseShape {
     Color LABELED_PHANTOM_COLOR = new Color(0, 200, 200);
     Color HUD_BACKGROUND_COLOR = new Color(32, 32, 32);
     Color SENSOR_COLOR = new Color(200, 0, 0);
+    Color PATH_COLOR = new Color(200, 200, 0);
 
     /**
      * Returns the affine transformation to rotate the shape and translate
@@ -192,23 +193,6 @@ public interface BaseShape {
         return new SingleShape(shape, color, stroke, filled);
     }
 
-    /**
-     * Returns the rectangle shape
-     *
-     * @param color   the color
-     * @param stroke  the stroke
-     * @param fillled true if filled
-     * @param center  the center location
-     * @param width   the width
-     * @param height  the height
-     */
-    static BaseShape createRectangle(Color color, BasicStroke stroke, boolean fillled, Point2D center, float width, float height) {
-        Rectangle2D shape = new Rectangle2D.Float(
-                (float) (center.getX() - width / 2), (float) (center.getY() - height / 2),
-                width, height);
-        return new SingleShape(shape, color, stroke, fillled);
-    }
-
     static BaseShape createPolygon(Color color, BasicStroke stroke, boolean filled, AffineTransform at, Point2D... path) {
         Path2D.Float shape = new Path2D.Float();
         if (path.length >= 2) {
@@ -224,6 +208,27 @@ public interface BaseShape {
         }
         return new SingleShape(shape, color, stroke, filled);
 
+    }
+
+    static BaseShape createPolygon(Color color, BasicStroke stroke, boolean filled, AffineTransform at, Stream<Point2D> path) {
+        return createPolygon(color, stroke, filled, at, path.toArray(Point2D[]::new));
+    }
+
+    /**
+     * Returns the rectangle shape
+     *
+     * @param color   the color
+     * @param stroke  the stroke
+     * @param fillled true if filled
+     * @param center  the center location
+     * @param width   the width
+     * @param height  the height
+     */
+    static BaseShape createRectangle(Color color, BasicStroke stroke, boolean fillled, Point2D center, float width, float height) {
+        Rectangle2D shape = new Rectangle2D.Float(
+                (float) (center.getX() - width / 2), (float) (center.getY() - height / 2),
+                width, height);
+        return new SingleShape(shape, color, stroke, fillled);
     }
 
     /**

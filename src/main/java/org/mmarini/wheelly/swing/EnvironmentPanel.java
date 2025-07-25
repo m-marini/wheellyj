@@ -197,6 +197,7 @@ public class EnvironmentPanel extends MapPanel {
 
     /**
      * Sets the time ratio
+     *
      * @param timeRatio the time ratio (x)
      */
     public void setTimeRatio(double timeRatio) {

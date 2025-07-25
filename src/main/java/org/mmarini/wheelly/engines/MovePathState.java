@@ -56,8 +56,7 @@ import static org.mmarini.wheelly.apis.RobotCommands.moveAndFrontScan;
  */
 public record MovePathState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit)
         implements ExtendedStateNode {
-    public static final String PATH = "path";
-    public static final String TARGET = "target";
+    public static final String TARGET_INDEX = "targetIndex";
     public static final String SPEED = "speed";
     public static final String APPROACH_DISTANCE = "approachDistance";
     public static final double DEFAULT_TARGET_DISTANCE = 0.5;
@@ -106,7 +105,7 @@ public record MovePathState(String id, ProcessorCommand onInit, ProcessorCommand
     @Override
     public void entry(ProcessorContextApi context) {
         ExtendedStateNode.super.entry(context);
-        put(context, TARGET, 0);
+        put(context, TARGET_INDEX, 0);
     }
 
     /**
@@ -121,6 +120,9 @@ public record MovePathState(String id, ProcessorCommand onInit, ProcessorCommand
             return COMPLETED_RESULT;
         }
         Point2D target = path.get(index);
+        if (get(context, TARGET_ID) == null) {
+            put(context, TARGET_ID, target);
+        }
         RobotStatus robotStatus = context.worldModel().robotStatus();
         Point2D robotLocation = robotStatus.location();
         double distance = robotLocation.distance(target);
@@ -145,13 +147,15 @@ public record MovePathState(String id, ProcessorCommand onInit, ProcessorCommand
      * @param context the context
      */
     private Tuple2<String, RobotCommands> nextLocation(ProcessorContextApi context) {
+        remove(context, TARGET_ID);
         int targetIndex = targetIndex(context) + 1;
         List<Point2D> path = path(context);
         if (targetIndex >= path.size()) {
+            remove(context, PATH_ID);
             logger.atDebug().log("Completed");
             return COMPLETED_RESULT;
         }
-        put(context, TARGET, targetIndex);
+        put(context, TARGET_INDEX, targetIndex);
         logger.atDebug().log("Move to {}", path.get(targetIndex));
         return move(context);
     }
@@ -162,7 +166,7 @@ public record MovePathState(String id, ProcessorCommand onInit, ProcessorCommand
      * @param context the context
      */
     private List<Point2D> path(ProcessorContextApi context) {
-        return get(context, PATH);
+        return get(context, PATH_ID);
     }
 
     @Override
@@ -189,7 +193,7 @@ public record MovePathState(String id, ProcessorCommand onInit, ProcessorCommand
      * @param context the context
      */
     private int targetIndex(ProcessorContextApi context) {
-        return getInt(context, TARGET, -1);
+        return getInt(context, TARGET_INDEX, -1);
     }
 
     /**
@@ -203,7 +207,7 @@ public record MovePathState(String id, ProcessorCommand onInit, ProcessorCommand
             logger.atError().log("Missing target in \"{}\" step", id());
             return COMPLETED_RESULT;
         }
-        Object obj = get(context, PATH);
+        Object obj = get(context, PATH_ID);
         if (!(obj instanceof List<?>)) {
             logger.atError().log("Missing path in \"{}\" step", id());
             return COMPLETED_RESULT;

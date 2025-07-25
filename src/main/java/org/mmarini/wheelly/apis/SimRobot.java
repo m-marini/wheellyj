@@ -73,10 +73,11 @@ public class SimRobot implements RobotApi {
     public static final int CAMERA_HEIGHT = 240;
     public static final int CAMERA_WIDTH = 240;
     public static final String QR_CODE = "A";
+    public static final float ROBOT_RADIUS = 0.15f;
+    public static final double NANOS_PER_MILLIS = 10e6;
     private static final double MIN_OBSTACLE_DISTANCE = 1;
     private static final Logger logger = LoggerFactory.getLogger(SimRobot.class);
     private static final Vec2 GRAVITY = new Vec2();
-    public static final float ROBOT_RADIUS = 0.15f;
     private static final double ROBOT_MASS = 0.785;
     private static final double ROBOT_FRICTION = 1;
     private static final double ROBOT_RESTITUTION = 0;
@@ -97,7 +98,6 @@ public class SimRobot implements RobotApi {
     private static final long DEFAULT_MOTION_INTERVAL = 500;
     private static final long DEFAULT_PROXY_INTERVAL = 500;
     private static final long DEFAULT_CAMERA_INTERVAL = 500;
-    public static final double NANOS_PER_MILLIS = 10e6;
 
     /**
      * Returns the simulated robot from JSON configuration
@@ -326,17 +326,6 @@ public class SimRobot implements RobotApi {
         return collisionDirection.sub(direction());
     }
 
-    @Override
-    public boolean halt() {
-        SimRobotStatus s0 = status.getAndUpdate(s -> s.speed(0)
-                .sensorDirection(Complex.DEG0)
-                .leftPps(0)
-                .rightPps(0)
-                .direction(direction()));
-        logger.atDebug().log("{}: Halt", s0.simulationTime());
-        return true;
-    }
-
     /**
      * Creates the obstacle bodies
      */
@@ -415,25 +404,15 @@ public class SimRobot implements RobotApi {
         return loc1;
     }
 
-    /**
-     * Sends the motion message
-     */
-    private void sendMotion() {
-        SimRobotStatus s = status.get();
-        Point2D pos = this.location();
-        double xPulses = pos.getX() / DISTANCE_PER_PULSE;
-        double yPulses = pos.getY() / DISTANCE_PER_PULSE;
-        Complex robotDir = direction();
-        logger.atDebug().log("{}: send R{}", s.simulationTime(), robotDir.toIntDeg());
-        WheellyMotionMessage msg = new WheellyMotionMessage(
-                System.currentTimeMillis(), s.simulationTime(), s.simulationTime(),
-                xPulses, yPulses, robotDir.toIntDeg(),
-                s.leftPps(), s.rightPps(),
-                0, s.speed() == 0,
-                (int) round(s.leftPps()), (int) round(s.rightPps()),
-                0, 0);
-        messages.onNext(msg);
-        status.updateAndGet(s1 -> s1.motionTimeout(s1.simulationTime() + motionInterval));
+    @Override
+    public boolean halt() {
+        SimRobotStatus s0 = status.getAndUpdate(s -> s.speed(0)
+                .sensorDirection(Complex.DEG0)
+                .leftPps(0)
+                .rightPps(0)
+                .direction(direction()));
+        logger.atDebug().log("{}: Halt", s0.simulationTime());
+        return true;
     }
 
     /**
@@ -557,12 +536,12 @@ public class SimRobot implements RobotApi {
     }
 
     @Override
-    public void reconnect() {
+    public Flowable<String> readWriteLine() {
+        return writeLines;
     }
 
     @Override
-    public Flowable<String> readWriteLine() {
-        return writeLines;
+    public void reconnect() {
     }
 
     /**
@@ -577,11 +556,6 @@ public class SimRobot implements RobotApi {
         return this;
     }
 
-    @Override
-    public RobotSpec robotSpec() {
-        return robotSpec;
-    }
-
     /**
      * Sets the robot location
      *
@@ -593,6 +567,24 @@ public class SimRobot implements RobotApi {
         pos.x = (float) (x * JBOX_SCALE);
         pos.y = (float) (y * JBOX_SCALE);
         robot.setTransform(pos, robot.getAngle());
+    }
+
+    @Override
+    public RobotSpec robotSpec() {
+        return robotSpec;
+    }
+
+    /**
+     * Randomly relocates the robot
+     */
+    public void safeRelocateRandom() {
+        SimRobotStatus s = status.get();
+        ObstacleMap map = s.obstacleMap();
+        Point2D loc = map != null
+                ? generateLocation(map)
+                : new Point2D.Double();
+        // Relocate robot
+        robotPos(loc.getX(), loc.getY());
     }
 
     @Override
@@ -633,6 +625,62 @@ public class SimRobot implements RobotApi {
     }
 
     /**
+     * Sends the motion message
+     */
+    private void sendMotion() {
+        SimRobotStatus s = status.get();
+        Point2D pos = this.location();
+        double xPulses = pos.getX() / DISTANCE_PER_PULSE;
+        double yPulses = pos.getY() / DISTANCE_PER_PULSE;
+        Complex robotDir = direction();
+        logger.atDebug().log("{}: send R{}", s.simulationTime(), robotDir.toIntDeg());
+        WheellyMotionMessage msg = new WheellyMotionMessage(
+                System.currentTimeMillis(), s.simulationTime(), s.simulationTime(),
+                xPulses, yPulses, robotDir.toIntDeg(),
+                s.leftPps(), s.rightPps(),
+                0, s.speed() == 0,
+                (int) round(s.leftPps()), (int) round(s.rightPps()),
+                0, 0);
+        messages.onNext(msg);
+        status.updateAndGet(s1 -> s1.motionTimeout(s1.simulationTime() + motionInterval));
+    }
+
+    /**
+     * Sends the proxy message
+     */
+    private void sendProxy() {
+        SimRobotStatus s = status.get();
+        Point2D pos = this.location();
+        double xPulses = pos.getX() / DISTANCE_PER_PULSE;
+        double yPulses = pos.getY() / DISTANCE_PER_PULSE;
+        Complex echoYaw = direction();
+        long echoDelay = round(s.echoDistance() / DISTANCE_SCALE);
+        WheellyProxyMessage msg = new WheellyProxyMessage(
+                System.currentTimeMillis(), s.simulationTime(), s.simulationTime(),
+                s.sensorDirection().toIntDeg(), echoDelay, xPulses, yPulses, echoYaw.toIntDeg());
+        logger.atDebug().log("proxy R{} D{}", msg.sensorDirection().toDeg(), msg.echoDistance());
+        messages.onNext(msg);
+        status.updateAndGet(s1 -> s1.proxyTimeout(s1.simulationTime() + proxyInterval));
+    }
+
+    /**
+     * Returns the sensor direction
+     */
+    public Complex sensorDirection() {
+        return status.get().sensorDirection();
+    }
+
+    /**
+     * Sets the sensor direction
+     *
+     * @param sensorDirection the sensor direction
+     */
+    public SimRobot sensorDirection(Complex sensorDirection) {
+        status.updateAndGet(s -> s.sensorDirection(sensorDirection));
+        return this;
+    }
+
+    /**
      * Simulate the time interval
      */
     private void simulate() {
@@ -666,54 +714,6 @@ public class SimRobot implements RobotApi {
 
         // Reschedules the simulation
         tick();
-    }
-
-    /**
-     * Sends the proxy message
-     */
-    private void sendProxy() {
-        SimRobotStatus s = status.get();
-        Point2D pos = this.location();
-        double xPulses = pos.getX() / DISTANCE_PER_PULSE;
-        double yPulses = pos.getY() / DISTANCE_PER_PULSE;
-        Complex echoYaw = direction();
-        long echoDelay = round(s.echoDistance() / DISTANCE_SCALE);
-        WheellyProxyMessage msg = new WheellyProxyMessage(
-                System.currentTimeMillis(), s.simulationTime(), s.simulationTime(),
-                s.sensorDirection().toIntDeg(), echoDelay, xPulses, yPulses, echoYaw.toIntDeg());
-        logger.atDebug().log("proxy R{} D{}", msg.sensorDirection().toDeg(), msg.echoDistance());
-        messages.onNext(msg);
-        status.updateAndGet(s1 -> s1.proxyTimeout(s1.simulationTime() + proxyInterval));
-    }
-
-    /**
-     * Returns the sensor direction
-     */
-    public Complex sensorDirection() {
-        return status.get().sensorDirection();
-    }
-
-    /**
-     * Randomly relocates the robot
-     */
-    public void safeRelocateRandom() {
-        SimRobotStatus s = status.get();
-        ObstacleMap map = s.obstacleMap();
-        Point2D loc = map != null
-                ? generateLocation(map)
-                : new Point2D.Double();
-        // Relocate robot
-        robotPos(loc.getX(), loc.getY());
-    }
-
-    /**
-     * Sets the sensor direction
-     *
-     * @param sensorDirection the sensor direction
-     */
-    public SimRobot sensorDirection(Complex sensorDirection) {
-        status.updateAndGet(s -> s.sensorDirection(sensorDirection));
-        return this;
     }
 
     /**

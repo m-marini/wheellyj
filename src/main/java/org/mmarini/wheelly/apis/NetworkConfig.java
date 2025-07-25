@@ -37,14 +37,6 @@ public class NetworkConfig {
     public NetworkConfig() {
     }
 
-    public boolean isRestart() {
-        return restart;
-    }
-
-    public void setRestart(boolean restart) {
-        this.restart = restart;
-    }
-
     public NetworkConfig(boolean active, String ssid, String password) {
         this.version = "0";
         this.active = active;
@@ -82,6 +74,14 @@ public class NetworkConfig {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public boolean isRestart() {
+        return restart;
+    }
+
+    public void setRestart(boolean restart) {
+        this.restart = restart;
     }
 
     @Override

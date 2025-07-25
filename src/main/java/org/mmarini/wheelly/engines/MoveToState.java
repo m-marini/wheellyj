@@ -52,7 +52,6 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
                           ProcessorCommand onExit) implements ExtendedStateNode {
     public static final String MAX_SPEED = "maxSpeed";
     public static final String STOP_DISTANCE = "stopDistance";
-    public static final String TARGET = "target";
     public static final double NEAR_DISTANCE = 0.4;
     public static final int NO_DIRECTION_VALUE = -1000;
     public static final int DEFAULT_DIRECTION_RANGE = 10;
@@ -84,7 +83,7 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
                         id + "." + STOP_DISTANCE, stopDistance,
                         id + "." + MAX_SPEED, maxSpeed
                 )),
-                target != null ? ProcessorCommand.put(id + "." + TARGET, target) : null,
+                target != null ? ProcessorCommand.put(id + "." + TARGET_ID, target) : null,
                 direction != NO_DIRECTION_VALUE ? ProcessorCommand.put(id + "." + "direction", direction) : null,
                 directionRange != NO_DIRECTION_VALUE ? ProcessorCommand.put(id + "." + "directionRange", direction) : null,
                 ProcessorCommand.create(root, locator.path("onInit")));
@@ -154,18 +153,18 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
     @Override
     public void entry(ProcessorContextApi context) {
         ExtendedStateNode.super.entry(context);
-        Point2D target = get(context, TARGET);
+        Point2D target = get(context, TARGET_ID);
         if (target != null) {
-            context.setTarget(target);
+            put(context, TARGET_ID, target);
         } else {
-            remove(context, TARGET);
+            remove(context, TARGET_ID);
         }
     }
 
     @Override
     public void exit(ProcessorContextApi context) {
         ExtendedStateNode.super.exit(context);
-        context.setTarget(null);
+        remove(context, TARGET_ID);
     }
 
     @Override
@@ -179,7 +178,7 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
             // Halt robot and move forward the sensor at timeout
             return TIMEOUT_RESULT;
         }
-        Point2D target = get(context, TARGET);
+        Point2D target = get(context, TARGET_ID);
         if (target == null) {
             logger.atError().log("Missing target in \"{}\" step", id());
             return COMPLETED_RESULT;

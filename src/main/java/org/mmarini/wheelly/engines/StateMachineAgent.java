@@ -47,7 +47,7 @@ import java.io.IOException;
 import java.util.*;
 
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.engines.StateNode.NONE_EXIT;
+import static org.mmarini.wheelly.engines.StateNode.*;
 
 /**
  * State machine agent acts the robot basing on state machine flow.
@@ -81,7 +81,7 @@ public class StateMachineAgent implements ProcessorContextApi {
     /**
      * Returns the agent from configuration
      *
-     * @param file  the configuration document
+     * @param file the configuration document
      */
     public static StateMachineAgent fromFile(File file) throws IOException {
         JsonNode root = Utils.fromFile(file);
@@ -94,6 +94,7 @@ public class StateMachineAgent implements ProcessorContextApi {
     private final PublishProcessor<ProcessorContextApi> stepUpProcessor;
     private final PublishProcessor<String> triggerProcessor;
     private final PublishProcessor<Optional<Point2D>> targetProcessor;
+    private final PublishProcessor<List<Point2D>> pathProcessor;
     private final Map<String, Object> values;
     private final List<Object> stack;
     private final StateFlow flow;
@@ -105,7 +106,7 @@ public class StateMachineAgent implements ProcessorContextApi {
     /**
      * Creates the agent
      *
-     * @param flow             the state flow
+     * @param flow the state flow
      */
     public StateMachineAgent(StateFlow flow) {
         this.flow = flow;
@@ -115,6 +116,7 @@ public class StateMachineAgent implements ProcessorContextApi {
         this.triggerProcessor = PublishProcessor.create();
         this.stateProcessor = PublishProcessor.create();
         this.targetProcessor = PublishProcessor.create();
+        this.pathProcessor = PublishProcessor.create();
     }
 
     @Override
@@ -173,7 +175,6 @@ public class StateMachineAgent implements ProcessorContextApi {
      * @param worldModel the world model
      */
     private RobotCommands onInference(WorldModel worldModel) {
-        long t0 = System.currentTimeMillis();
         this.worldModel = worldModel;
         if (this.currentNode == null) {
             initContext();
@@ -205,7 +206,25 @@ public class StateMachineAgent implements ProcessorContextApi {
     @Override
     public <T> ProcessorContextApi put(String key, T value) {
         values.put(key, value);
+        if (key.endsWith("." + TARGET_ID)) {
+            Object obj = get(key);
+            if (obj instanceof Point2D target) {
+                targetProcessor.onNext(Optional.ofNullable(target));
+            }
+        } else if (key.endsWith("." + PATH_ID)) {
+            Object obj = get(key);
+            if (obj instanceof List<?> path) {
+                pathProcessor.onNext((List<Point2D>) path);
+            }
+        }
         return this;
+    }
+
+    /**
+     * Returns the state flow
+     */
+    public Flowable<List<Point2D>> readPath() {
+        return pathProcessor;
     }
 
     /**
@@ -239,11 +258,11 @@ public class StateMachineAgent implements ProcessorContextApi {
     @Override
     public void remove(String key) {
         values.remove(key);
-    }
-
-    @Override
-    public void setTarget(Point2D target) {
-        targetProcessor.onNext(Optional.ofNullable(target));
+        if (key.endsWith("." + TARGET_ID)) {
+            targetProcessor.onNext(Optional.empty());
+        } else if (key.endsWith("." + PATH_ID)) {
+            pathProcessor.onNext(List.of());
+        }
     }
 
     @Override

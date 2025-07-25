@@ -317,6 +317,26 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
     }
 
     /**
+     * Returns the safeSectors
+     *
+     * @param safetyDistance the safety distance
+     */
+    public IntStream safeSectors(double safetyDistance) {
+        AreaExpression[] areas = topology.contour(
+                topology.indices()
+                        .filter(cellIs(MapCell::hindered))
+                        .boxed()
+                        .collect(Collectors.toSet())
+        ).mapToObj(
+                i ->
+                        not(circle(cell(i).location(), safetyDistance))
+        ).toArray(AreaExpression[]::new);
+        AreaExpression area = or(areas);
+        return topology.indicesByArea(area)
+                .filter(cellIs(cell -> !cell.hindered()));
+    }
+
+    /**
      * Returns the map with new cells
      *
      * @param cells the cells

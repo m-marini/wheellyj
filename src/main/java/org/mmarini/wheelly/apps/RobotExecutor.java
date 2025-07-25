@@ -51,6 +51,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.swing.BaseShape.PATH_COLOR;
 import static org.mmarini.wheelly.swing.Utils.*;
 
 /**
@@ -224,28 +225,21 @@ public class RobotExecutor {
         agent.readTargets()
                 .observeOn(Schedulers.io())
                 .subscribe(this::onTarget);
+        agent.readPath()
+                .observeOn(Schedulers.io())
+                .subscribe(this::onPath);
         agent.readTriggers()
                 .observeOn(Schedulers.io())
                 .subscribe(this::onTrigger);
     }
 
     /**
-     * Initializes the user interface
+     * Handles the path event
+     *
+     * @param path the path
      */
-    private void initUI() {
-        double radarMaxDistance = robot.robotSpec().maxRadarDistance();
-        polarPanel.setRadarMaxDistance(radarMaxDistance);
-        envPanel.markerSize((float) modeller.worldModelSpec().markerSize());
-        if (args.getBoolean("windows")) {
-            createMultiFrames();
-        } else {
-            createSingleFrames();
-        }
-        allFrames.forEach(f -> SwingObservable.window(f, SwingObservable.WINDOW_ACTIVE)
-                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
-                .doOnNext(this::onWindowClosing)
-                .subscribe());
-        layHorizontally(allFrames);
+    private void onPath(List<Point2D> path) {
+        envPanel.path(PATH_COLOR, path.toArray(Point2D[]::new));
     }
 
     /**
@@ -274,6 +268,25 @@ public class RobotExecutor {
         allFrames = List.of(
                 createFrame(Messages.getString("RobotExecutor.title"), panel)
         );
+    }
+
+    /**
+     * Initializes the user interface
+     */
+    private void initUI() {
+        double radarMaxDistance = robot.robotSpec().maxRadarDistance();
+        polarPanel.setRadarMaxDistance(radarMaxDistance);
+        envPanel.markerSize((float) modeller.worldModelSpec().markerSize());
+        if (args.getBoolean("windows")) {
+            createMultiFrames();
+        } else {
+            createSingleFrames();
+        }
+        allFrames.forEach(f -> SwingObservable.window(f, SwingObservable.WINDOW_ACTIVE)
+                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
+                .doOnNext(this::onWindowClosing)
+                .subscribe());
+        layHorizontally(allFrames);
     }
 
     /**

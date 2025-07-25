@@ -36,8 +36,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 /**
  * Generates the behaviour to select the path to the nearest label sector
@@ -63,11 +65,18 @@ public record FindLabelState(String id, ProcessorCommand onInit, ProcessorComman
                              ProcessorCommand onExit) implements ExtendedStateNode {
     public static final String PATH = "path";
     public static final String DISTANCE = "distance";
-    private static final String NOT_FOUND = "notFound";
-    private static final Tuple2<String, RobotCommands> NOT_FOUND_RESULT = Tuple2.of(
+    public static final String NOT_FOUND = "notFound";
+    public static final String SEED = "seed";
+    public static final String GROWTH_DISTANCE = "growthDistance";
+    public static final String RANDOM = "random";
+    public static final String MAX_SEARCH_TIME = "maxSearchTime";
+    public static final String MAX_ITERATIONS = "maxIterations";
+    public static final String MIN_GOALS = "minGoals";
+    public static final double DEFAULT_GROWTH_DISTANCE = 0.5;
+    public static final long DEFAULT_MAX_SEARCH_TIME = 3600000;
+    public static final Tuple2<String, RobotCommands> NOT_FOUND_RESULT = Tuple2.of(
             NOT_FOUND, RobotCommands.idle());
     private static final Logger logger = LoggerFactory.getLogger(FindLabelState.class);
-    private static final double DEFAULT_DISTANCE = 0.8;
 
     /**
      * Returns the exploring state from configuration
@@ -77,11 +86,24 @@ public record FindLabelState(String id, ProcessorCommand onInit, ProcessorComman
      * @param id      the state identifier
      */
     public static FindLabelState create(JsonNode root, Locator locator, String id) {
-        double distance = locator.path(DISTANCE).getNode(root).asDouble(DEFAULT_DISTANCE);
+        double distance = locator.path(DISTANCE).getNode(root).asDouble();
+        double growthDistance = locator.path(GROWTH_DISTANCE).getNode(root).asDouble(DEFAULT_GROWTH_DISTANCE);
+        long seed = locator.path(SEED).getNode(root).asLong();
+        Random random = seed == 0
+                ? new Random()
+                : new Random(seed);
+        int maxIterations = locator.path(MAX_ITERATIONS).getNode(root).asInt(Integer.MAX_VALUE);
+        int minGoals = locator.path(MIN_GOALS).getNode(root).asInt(1);
+        long maxSearchTime = locator.path(MAX_SEARCH_TIME).getNode(root).asLong(DEFAULT_MAX_SEARCH_TIME);
         ProcessorCommand onInit = ProcessorCommand.concat(
                 ExtendedStateNode.loadTimeout(root, locator, id),
                 ProcessorCommand.setProperties(Map.of(
-                        id + "." + DISTANCE, distance
+                        id + "." + DISTANCE, distance,
+                        id + "." + GROWTH_DISTANCE, growthDistance,
+                        id + "." + RANDOM, random,
+                        id + "." + MAX_ITERATIONS, maxIterations,
+                        id + "." + MIN_GOALS, minGoals,
+                        id + "." + MAX_SEARCH_TIME, maxSearchTime
                 )),
                 ProcessorCommand.create(root, locator.path("onInit")));
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
@@ -106,15 +128,28 @@ public record FindLabelState(String id, ProcessorCommand onInit, ProcessorComman
             remove(context, PATH);
             return NOT_FOUND_RESULT;
         }
-        List<Point2D> path = SectorsPathFinder.createLabelTargets(map, robotLocation, distance, labels).find();
-        if (path.isEmpty()) {
+        double growthDistance = getDouble(context, GROWTH_DISTANCE);
+        Random random = get(context, RANDOM);
+        RRTDiscretePathFinder pathFinder = RRTDiscretePathFinder.createLabelTargets(map, robotLocation, distance, growthDistance, random,
+                Arrays.stream(labels));
+
+        long timeout = System.currentTimeMillis() + getLong(context, MAX_SEARCH_TIME);
+        // Look for the maximum time interval
+        int minGoals = getInt(context, MIN_GOALS);
+        int maxIterations = getInt(context, MAX_ITERATIONS);
+        for (int i = 0; i < maxIterations
+                && pathFinder.rrt().goals().size() < minGoals
+                && System.currentTimeMillis() <= timeout; i++) {
+            pathFinder.grow();
+        }
+        if (!pathFinder.isFound()) {
             logger.atDebug().log("No path found");
             remove(context, PATH);
             return NOT_FOUND_RESULT;
-        } else {
-            put(context, PATH, path);
-            logger.atDebug().log("Path found");
-            return COMPLETED_RESULT;
         }
+        List<Point2D> path = pathFinder.path();
+        put(context, PATH, path);
+        logger.atDebug().log("Path found");
+        return COMPLETED_RESULT;
     }
 }

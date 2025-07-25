@@ -36,6 +36,7 @@ $defs:
       - $ref: "#/$defs/ClearMapState"
       - $ref: "#/$defs/FindUnknownState"
       - $ref: "#/$defs/FindLabelState"
+      - $ref: "#/$defs/FindRefreshState"
       - $ref: "#/$defs/MovePathState"
   HaltState:
     type: object
@@ -216,6 +217,20 @@ $defs:
         $ref: "#/$defs/Commands"
       transitions:
         $ref: "#/$defs/Transitions"
+      growDistance:
+        type: number
+        exclusiveMinimum: 0
+      seed:
+        type: integer
+      maxSearchTime:
+        type: integer
+        minimum: 1
+      minGoals:
+        type: integer
+        minimum: 1
+      maxIterations:
+        type: integer
+        minimum: 1
     required:
       - class
   FindLabelState:
@@ -234,6 +249,50 @@ $defs:
       distance:
         type: number
         exclusiveMinimum: 0
+      growDistance:
+        type: number
+        exclusiveMinimum: 0
+      seed:
+        type: integer
+      maxSearchTime:
+        type: integer
+        minimum: 1
+      minGoals:
+        type: integer
+        minimum: 1
+      maxIterations:
+        type: integer
+        minimum: 1
+    required:
+      - class
+      - distance
+  FindRefreshState:
+    type: object
+    properties:
+      class:
+        const: org.mmarini.wheelly.engines.FindRefreshState
+      onInit:
+        $ref: "#/$defs/Commands"
+      onEntry:
+        $ref: "#/$defs/Commands"
+      onExit:
+        $ref: "#/$defs/Commands"
+      transitions:
+        $ref: "#/$defs/Transitions"
+      growDistance:
+        type: number
+        exclusiveMinimum: 0
+      seed:
+        type: integer
+      maxSearchTime:
+        type: integer
+        minimum: 1
+      minGoals:
+        type: integer
+        minimum: 1
+      maxIterations:
+        type: integer
+        minimum: 1
     required:
       - class
   MovePathState:

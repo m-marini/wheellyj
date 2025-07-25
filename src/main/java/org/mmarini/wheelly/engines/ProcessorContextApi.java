@@ -30,7 +30,6 @@ package org.mmarini.wheelly.engines;
 
 import org.mmarini.wheelly.apis.WorldModel;
 
-import java.awt.geom.Point2D;
 import java.util.Optional;
 import java.util.OptionalLong;
 
@@ -247,13 +246,6 @@ public interface ProcessorContextApi {
      * @param key the key to remove
      */
     void remove(String key);
-
-    /**
-     * Sets the target point
-     *
-     * @param target the target point
-     */
-    void setTarget(Point2D target);
 
     /**
      * Returns the number of stackl elements

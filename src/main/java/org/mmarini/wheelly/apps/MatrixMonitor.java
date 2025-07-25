@@ -99,6 +99,7 @@ public class MatrixMonitor {
             System.exit(4);
         }
     }
+
     private final Container commandPanel;
     private final JSlider robotDirSlider;
     private final JSlider speedSlider;
@@ -365,6 +366,15 @@ public class MatrixMonitor {
     }
 
     /**
+     * Handles the reconnect button action
+     *
+     * @param actionEvent the event
+     */
+    private void handleReconnectButton(ActionEvent actionEvent) {
+        controller.reconnect();
+    }
+
+    /**
      * Handles the robot direction slider event
      *
      * @param changeEvent the event
@@ -470,15 +480,6 @@ public class MatrixMonitor {
             throw e;
         }
         return this;
-    }
-
-    /**
-     * Handles the reconnect button action
-     *
-     * @param actionEvent the event
-     */
-    private void handleReconnectButton(ActionEvent actionEvent) {
-        controller.reconnect();
     }
 
     /**

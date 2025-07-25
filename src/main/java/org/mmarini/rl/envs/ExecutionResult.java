@@ -34,29 +34,29 @@ import static java.util.Objects.requireNonNull;
  * The environment interface
  */
 public record ExecutionResult(Map<String, Signal> state0, Map<String, Signal> actions, double reward,
-                           Map<String, Signal> state1) {
-        /**
-         * Creates an execution result
-         *
-         * @param state1  the result state
-         * @param actions the action
-         * @param reward  the reward
-         * @param state0  the resulting state
-         */
-        public ExecutionResult(Map<String, Signal> state0, Map<String, Signal> actions, double reward, Map<String, Signal> state1) {
-            this.state1 = requireNonNull(state1);
-            this.actions = requireNonNull(actions);
-            this.reward = reward;
-            this.state0 = requireNonNull(state0);
-        }
+                              Map<String, Signal> state1) {
+    /**
+     * Creates an execution result
+     *
+     * @param state1  the result state
+     * @param actions the action
+     * @param reward  the reward
+     * @param state0  the resulting state
+     */
+    public ExecutionResult(Map<String, Signal> state0, Map<String, Signal> actions, double reward, Map<String, Signal> state1) {
+        this.state1 = requireNonNull(state1);
+        this.actions = requireNonNull(actions);
+        this.reward = reward;
+        this.state0 = requireNonNull(state0);
+    }
 
-        @Override
-        public String toString() {
-            return new StringJoiner(", ", ExecutionResult.class.getSimpleName() + "[", "]")
-                    .add("state0=" + state0)
-                    .add("action=" + actions)
-                    .add("reward=" + reward)
-                    .add("state1=" + state1)
-                    .toString();
-        }
+    @Override
+    public String toString() {
+        return new StringJoiner(", ", ExecutionResult.class.getSimpleName() + "[", "]")
+                .add("state0=" + state0)
+                .add("action=" + actions)
+                .add("reward=" + reward)
+                .add("state1=" + state1)
+                .toString();
+    }
 }

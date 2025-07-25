@@ -54,12 +54,12 @@ public class NullController implements RobotControllerApi {
     }
 
     @Override
-    public void reconnect() {
+    public Flowable<String> readWriteLine() {
+        return empty();
     }
 
     @Override
-    public Flowable<String> readWriteLine() {
-        return empty();
+    public void reconnect() {
     }
 
     @Override
