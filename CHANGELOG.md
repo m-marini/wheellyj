@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.24.0] 2025-07-25
+
 ### Added
 
 - Issue [#546](https://github.com/m-marini/wheellyj/issues/546): Mapping state
