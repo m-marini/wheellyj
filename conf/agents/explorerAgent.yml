@@ -2,12 +2,13 @@
 ######################################
 # Explorer agent
 ######################################
-$schema: https://mmarini.org/wheelly/agent-state-machine-schema-0.1
+$schema: https://mmarini.org/wheelly/agent-state-machine-schema-0.4
 class: org.mmarini.wheelly.engines.StateMachineAgent
 flow:
   entry: scan
   states:
     scan:
+      $id: https://mmarini.org/wheelly/state-halt-schema-0.1
       class: org.mmarini.wheelly.engines.HaltState
       timeout: 20000
       scanInterval: 500
@@ -24,6 +25,7 @@ flow:
         blocked:
           to: avoid
     target:
+      $id: https://mmarini.org/wheelly/state-exploring-schema-0.1
       class: org.mmarini.wheelly.engines.ExploringPointState
       distance: 1
       safeDistance: 0.4
@@ -34,6 +36,7 @@ flow:
         notFound:
           to: clearMap
     move:
+      $id: https://mmarini.org/wheelly/state-move-to-schema-0.1
       class: org.mmarini.wheelly.engines.MoveToState
       stopDistance: 0.1
       x: 0
@@ -53,6 +56,7 @@ flow:
         blocked:
           to: avoid
     avoid:
+      $id: https://mmarini.org/wheelly/state-avoid-schema-0.1
       class: org.mmarini.wheelly.engines.AvoidingState
       safeDistance: 0.2
       speed: 20
@@ -60,6 +64,7 @@ flow:
         completed:
           to: scan
     clearMap:
+      $id: https://mmarini.org/wheelly/state-clear-map-schema-0.1
       class: org.mmarini.wheelly.engines.ClearMapState
       transitions:
         completed:

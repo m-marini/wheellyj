@@ -32,6 +32,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.PolarMap;
 import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +58,7 @@ import static java.util.Objects.requireNonNull;
 public record CautiousPointState(String id, ProcessorCommand onInit, ProcessorCommand onEntry,
                                  ProcessorCommand onExit) implements ExtendedStateNode {
     private static final Logger logger = LoggerFactory.getLogger(CautiousPointState.class);
+    private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-cautious-point-schema-0.1";
 
     /**
      * Returns the exploring state from configuration
@@ -66,6 +68,7 @@ public record CautiousPointState(String id, ProcessorCommand onInit, ProcessorCo
      * @param id      the state identifier
      */
     public static CautiousPointState create(JsonNode root, Locator locator, String id) {
+        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double maxDistance = locator.path("maxDistance").getNode(root).asDouble();
         ProcessorCommand onInit = ProcessorCommand.concat(
                 ExtendedStateNode.loadTimeout(root, locator, id),

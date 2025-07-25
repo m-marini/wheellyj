@@ -31,6 +31,7 @@ package org.mmarini.wheelly.engines;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,6 +76,7 @@ public record FindRefreshState(String id, ProcessorCommand onInit, ProcessorComm
     public static final Tuple2<String, RobotCommands> NOT_FOUND_RESULT = Tuple2.of(
             NOT_FOUND, RobotCommands.idle());
     private static final Logger logger = LoggerFactory.getLogger(FindRefreshState.class);
+    private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-find-refresh-schema-0.1";
 
     /**
      * Returns the exploring state from configuration
@@ -84,6 +86,7 @@ public record FindRefreshState(String id, ProcessorCommand onInit, ProcessorComm
      * @param id      the state identifier
      */
     public static FindRefreshState create(JsonNode root, Locator locator, String id) {
+        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double growthDistance = locator.path(GROWTH_DISTANCE).getNode(root).asDouble(DEFAULT_GROWTH_DISTANCE);
         long seed = locator.path(SEED).getNode(root).asLong();
         Random random = seed == 0

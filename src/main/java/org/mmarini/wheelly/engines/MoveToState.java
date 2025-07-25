@@ -5,6 +5,7 @@ import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,6 +59,7 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
     private static final double DEFAULT_STOP_DISTANCE = 0.4;
     private static final Logger logger = LoggerFactory.getLogger(MoveToState.class);
     private static final int MIN_PPS = 10;
+    private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-move-to-schema-0.1";
 
     /**
      * Returns the exploring state from configuration
@@ -67,6 +69,7 @@ public record MoveToState(String id, ProcessorCommand onInit, ProcessorCommand o
      * @param id      the state identifier
      */
     public static MoveToState create(JsonNode root, Locator locator, String id) {
+        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         Point2D.Double target = null;
         if (locator.path("x").getNode(root).isMissingNode() || locator.path("yx").getNode(root).isMissingNode()) {
             double x = locator.path("x").getNode(root).asDouble();

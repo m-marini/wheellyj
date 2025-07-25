@@ -32,6 +32,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,6 +60,7 @@ public record HaltState(String id, ProcessorCommand onInit, ProcessorCommand onE
                         ProcessorCommand onExit) implements ExtendedStateNode {
 
     private static final Logger logger = LoggerFactory.getLogger(HaltState.class);
+    private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-halt-schema-0.1";
 
     /**
      * Returns the haltCommand state from configuration
@@ -68,6 +70,7 @@ public record HaltState(String id, ProcessorCommand onInit, ProcessorCommand onE
      * @param id      the status identifier
      */
     public static HaltState create(JsonNode root, Locator locator, String id) {
+        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
         ProcessorCommand onInit = ProcessorCommand.concat(

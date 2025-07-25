@@ -1,0 +1,59 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/state-find-unknown-schema-0.1
+title: State machine agent
+description: State Agent Schema
+type: object
+properties:
+  $id:
+    const: https://mmarini.org/wheelly/state-find-unknown-schema-0.1
+  class:
+    const: org.mmarini.wheelly.engines.FindUnknownState
+  onInit:
+    $ref: "#/$defs/Commands"
+  onEntry:
+    $ref: "#/$defs/Commands"
+  onExit:
+    $ref: "#/$defs/Commands"
+  transitions:
+    $ref: "#/$defs/Transitions"
+  growDistance:
+    type: number
+    exclusiveMinimum: 0
+  seed:
+    type: integer
+  maxSearchTime:
+    type: integer
+    minimum: 1
+  minGoals:
+    type: integer
+    minimum: 1
+  maxIterations:
+    type: integer
+    minimum: 1
+required:
+  - $id
+  - class
+$defs:
+  Commands:
+    type: array
+    items:
+      $ref: "#/$defs/Command"
+  Command:
+    type: [ string, number ]
+  StateNodes:
+    type: object
+    additionalProperties:
+      $ref: "#/$defs/StateNode"
+  Transitions:
+    type: object
+    additionalProperties:
+      type: object
+      properties:
+        to:
+          type: string
+          minLength: 1
+        onTransition:
+          $ref: "#/$defs/Commands"
+      required:
+        - to

@@ -63,7 +63,7 @@ import static org.mmarini.wheelly.engines.StateNode.*;
  * </p>
  */
 public class StateMachineAgent implements ProcessorContextApi {
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/agent-state-machine-schema-0.3";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/agent-state-machine-schema-0.4";
     private static final Logger logger = LoggerFactory.getLogger(StateMachineAgent.class);
 
     /**

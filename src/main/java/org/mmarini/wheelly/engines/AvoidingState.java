@@ -34,6 +34,7 @@ import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,8 +72,10 @@ public record AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand
     private static final Logger logger = LoggerFactory.getLogger(AvoidingState.class);
     private static final double DEFAULT_SAFE_DISTANCE = 0.3;
     private static final double DEFAULT_MAX_DISTANCE = 1;
+    private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-avoid-schema-0.1";
 
     public static AvoidingState create(JsonNode root, Locator locator, String id) {
+        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double safeDistance = locator.path(SAFE_DISTANCE).getNode(root).asDouble(DEFAULT_SAFE_DISTANCE);
         double maxDistance = locator.path(MAX_DISTANCE).getNode(root).asDouble(DEFAULT_MAX_DISTANCE);
         int speed = locator.path(SPEED).getNode(root).asInt(MAX_PPS);

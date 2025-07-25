@@ -31,6 +31,7 @@ package org.mmarini.wheelly.engines;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,6 +55,7 @@ public record ClearMapState(String id, ProcessorCommand onInit, ProcessorCommand
                             ProcessorCommand onExit) implements ExtendedStateNode {
 
     private static final Logger logger = LoggerFactory.getLogger(ClearMapState.class);
+    private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-clear-map-schema-0.1";
 
     /**
      * Returns the haltCommand state from configuration
@@ -63,6 +65,7 @@ public record ClearMapState(String id, ProcessorCommand onInit, ProcessorCommand
      * @param id      the status identifier
      */
     public static ClearMapState create(JsonNode root, Locator locator, String id) {
+        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
         ProcessorCommand onInit = ProcessorCommand.concat(ProcessorCommand.create(root, locator.path("onInit")));

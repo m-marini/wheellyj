@@ -5,6 +5,7 @@ import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,6 +64,7 @@ public record MovePathState(String id, ProcessorCommand onInit, ProcessorCommand
     public static final double NEAR_DISTANCE = 0.4;
     private static final Logger logger = LoggerFactory.getLogger(MovePathState.class);
     private static final int MIN_PPS = 10;
+    private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-move-path-schema-0.1";
     private static final double DEFAULT_APPROACH_DISTANCE = 0.4;
 
     /**
@@ -73,6 +75,7 @@ public record MovePathState(String id, ProcessorCommand onInit, ProcessorCommand
      * @param id      the state identifier
      */
     public static MovePathState create(JsonNode root, Locator locator, String id) {
+        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         int speed = locator.path(SPEED).getNode(root).asInt(MAX_PPS);
         double approachDistance = locator.path(APPROACH_DISTANCE).getNode(root).asDouble(DEFAULT_APPROACH_DISTANCE);
         ProcessorCommand onInit = ProcessorCommand.concat(

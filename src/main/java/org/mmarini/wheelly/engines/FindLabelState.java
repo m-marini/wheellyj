@@ -31,6 +31,7 @@ package org.mmarini.wheelly.engines;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,6 +77,7 @@ public record FindLabelState(String id, ProcessorCommand onInit, ProcessorComman
     public static final long DEFAULT_MAX_SEARCH_TIME = 3600000;
     public static final Tuple2<String, RobotCommands> NOT_FOUND_RESULT = Tuple2.of(
             NOT_FOUND, RobotCommands.idle());
+    private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-find-label-schema-0.1";
     private static final Logger logger = LoggerFactory.getLogger(FindLabelState.class);
 
     /**
@@ -86,6 +88,7 @@ public record FindLabelState(String id, ProcessorCommand onInit, ProcessorComman
      * @param id      the state identifier
      */
     public static FindLabelState create(JsonNode root, Locator locator, String id) {
+        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double distance = locator.path(DISTANCE).getNode(root).asDouble();
         double growthDistance = locator.path(GROWTH_DISTANCE).getNode(root).asDouble(DEFAULT_GROWTH_DISTANCE);
         long seed = locator.path(SEED).getNode(root).asLong();

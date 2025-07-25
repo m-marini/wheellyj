@@ -2,12 +2,13 @@
 ######################################
 # Cautious agent
 ######################################
-$schema: https://mmarini.org/wheelly/agent-state-machine-schema-0.3
+$schema: https://mmarini.org/wheelly/agent-state-machine-schema-0.4
 class: org.mmarini.wheelly.engines.StateMachineAgent
 flow:
   entry: mapping
   states:
     mapping:
+      $id: https://mmarini.org/wheelly/state-mapping-schema-0.1
       class: org.mmarini.wheelly.engines.MappingState
       timeout: 300000
       scanInterval: 1000
@@ -21,6 +22,7 @@ flow:
         completed:
           to: findLabel
     findLabel:
+      $id: https://mmarini.org/wheelly/state-find-label-schema-0.1
       class: org.mmarini.wheelly.engines.FindLabelState
       maxSearchTime: 3000
       minGoals: 2
@@ -36,6 +38,7 @@ flow:
         notFound:
           to: findUnknown
     findUnknown:
+      $id: https://mmarini.org/wheelly/state-find-unknown-schema-0.1
       class: org.mmarini.wheelly.engines.FindUnknownState
       maxSearchTime: 3000
       minGoals: 2
@@ -50,6 +53,7 @@ flow:
         notFound:
           to: findRefresh
     findRefresh:
+      $id: https://mmarini.org/wheelly/state-find-refresh-schema-0.1
       class: org.mmarini.wheelly.engines.FindRefreshState
       maxSearchTime: 3000
       minGoals: 2
@@ -64,17 +68,29 @@ flow:
         notFound:
           to: halt
     moveLabel:
+      $id: https://mmarini.org/wheelly/state-move-path-schema-0.1
       class: org.mmarini.wheelly.engines.MovePathState
       transitions:
         completed:
-          to: halt
+          to: labelStuck
         timeout:
           to: mapping
         frontBlocked:
           to: avoid
         rearBlocked:
           to: avoid
+    labelStuck:
+      $id: https://mmarini.org/wheelly/state-label-stuck-schema-0.1
+      class: org.mmarini.wheelly.engines.LabelStuckState
+      transitions:
+        frontBlocked:
+          to: avoid
+        rearBlocked:
+          to: avoid
+        notFound:
+          to: mapping
     moveUnknown:
+      $id: https://mmarini.org/wheelly/state-move-path-schema-0.1
       class: org.mmarini.wheelly.engines.MovePathState
       transitions:
         completed:
@@ -86,6 +102,7 @@ flow:
         rearBlocked:
           to: avoid
     moveRefresh:
+      $id: https://mmarini.org/wheelly/state-move-path-schema-0.1
       class: org.mmarini.wheelly.engines.MovePathState
       transitions:
         completed:
@@ -97,6 +114,7 @@ flow:
         rearBlocked:
           to: avoid
     halt:
+      $id: https://mmarini.org/wheelly/state-halt-schema-0.1
       class: org.mmarini.wheelly.engines.HaltState
       timeout: 10000
       scanInterval: 1000
@@ -110,6 +128,7 @@ flow:
         rearBlocked:
           to: avoid
     avoid:
+      $id: https://mmarini.org/wheelly/state-avoid-schema-0.1
       class: org.mmarini.wheelly.engines.AvoidingState
       safeDistance: 0.2
       speed: 20
