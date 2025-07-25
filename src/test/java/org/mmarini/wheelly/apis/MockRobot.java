@@ -228,13 +228,13 @@ public class MockRobot implements RobotApi {
     }
 
     @Override
-    public void reconnect() {
-
+    public Flowable<String> readWriteLine() {
+        throw new NotImplementedException();
     }
 
     @Override
-    public Flowable<String> readWriteLine() {
-        throw new NotImplementedException();
+    public void reconnect() {
+
     }
 
     @Override

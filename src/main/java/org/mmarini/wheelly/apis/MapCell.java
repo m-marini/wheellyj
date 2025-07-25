@@ -37,7 +37,7 @@ import static java.lang.Math.min;
  * @param echoWeight  the weight of signal echo and no echo
  * @param contactTime the timestamp of last contact signals
  */
-public record MapCell(Point2D location, long echoTime, double echoWeight, double contactTime) {
+public record MapCell(Point2D location, long echoTime, double echoWeight, long contactTime) {
     /**
      * Returns the unknown sector
      *

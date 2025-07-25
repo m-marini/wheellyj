@@ -54,6 +54,7 @@ import static org.mmarini.wheelly.apis.Utils.clip;
  * Implements commons functions to manage timeout, robot block, automatic scanning
  */
 public interface ExtendedStateNode extends StateNode {
+
     Logger logger = LoggerFactory.getLogger(ExtendedStateNode.class);
 
     /**

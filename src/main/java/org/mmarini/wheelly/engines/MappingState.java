@@ -82,9 +82,9 @@ public record MappingState(String id, ProcessorCommand onInit, ProcessorCommand 
     public static final String ROBOT_DIR = "robotDir";
     public static final String TURING_ROBOT = "turingRobot";
     public static final int DEFAULT_TURN_ANGLE = 120;
-    private static final Logger logger = LoggerFactory.getLogger(MappingState.class);
     public static final int MIN_TURN_DEG = 2;
     public static final double EPSILON = sin(toRadians(1));
+    private static final Logger logger = LoggerFactory.getLogger(MappingState.class);
 
     /**
      * Returns the mapping state from configuration

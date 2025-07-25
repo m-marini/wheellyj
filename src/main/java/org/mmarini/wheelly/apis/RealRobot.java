@@ -271,8 +271,8 @@ public class RealRobot implements RobotApi {
             sync()
                     .flatMap(sync ->
                             sync
-                            ? allConfigCmd
-                            : Single.just(false))
+                                    ? allConfigCmd
+                                    : Single.just(false))
                     .doOnSuccess(replied -> logger.atDebug().log("Configuration={}", replied))
                     .subscribe(this::onConfiguration);
         }
@@ -355,6 +355,36 @@ public class RealRobot implements RobotApi {
         }
     }
 
+    @Override
+    public boolean halt() {
+        return writeCommand("ha");
+    }
+
+    @Override
+    public boolean isHalt() {
+        return status.get().halted();
+    }
+
+    @Override
+    public boolean move(int dir, int speed) {
+        return writeCommand(format(Locale.ENGLISH, "mv %d %d", dir, speed));
+    }
+
+    /**
+     * Handles the camera data
+     *
+     * @param line the camera data line
+     */
+    private void onCameraLine(Timed<String> line) {
+        readLines.onNext(line.value());
+        try {
+            parseForCameraMessage(line);
+        } catch (Throwable ex) {
+            logger.atError().setCause(ex).log("Error parsing camera event");
+            errors.onNext(ex);
+        }
+    }
+
     /**
      * Handles the configuration event
      *
@@ -429,36 +459,6 @@ public class RealRobot implements RobotApi {
         }
     }
 
-    @Override
-    public boolean halt() {
-        return writeCommand("ha");
-    }
-
-    @Override
-    public boolean isHalt() {
-        return status.get().halted();
-    }
-
-    @Override
-    public boolean move(int dir, int speed) {
-        return writeCommand(format(Locale.ENGLISH, "mv %d %d", dir, speed));
-    }
-
-    /**
-     * Handles the camera data
-     *
-     * @param line the camera data line
-     */
-    private void onCameraLine(Timed<String> line) {
-        readLines.onNext(line.value());
-        try {
-            parseForCameraMessage(line);
-        } catch (Throwable ex) {
-            logger.atError().setCause(ex).log("Error parsing camera event");
-            errors.onNext(ex);
-        }
-    }
-
     /**
      * Parses the data received for messages.
      * The robot status is updated with the received message.
@@ -491,11 +491,6 @@ public class RealRobot implements RobotApi {
     }
 
     @Override
-    public Flowable<RobotStatusApi> readRobotStatus() {
-        return states;
-    }
-
-    @Override
     public Flowable<CameraEvent> readCamera() {
         return cameraEvents;
     }
@@ -513,6 +508,11 @@ public class RealRobot implements RobotApi {
     @Override
     public Flowable<String> readReadLine() {
         return readLines;
+    }
+
+    @Override
+    public Flowable<RobotStatusApi> readRobotStatus() {
+        return states;
     }
 
     @Override
@@ -534,17 +534,17 @@ public class RealRobot implements RobotApi {
                 .subscribe(this::createSockets);
     }
 
+    @Override
+    public RobotSpec robotSpec() {
+        return robotSpec;
+    }
+
     /**
      * Returns true if the robot is working correctly
      */
     private boolean safetyCheck() {
         RealRobotStatus st = status.get();
         return !(st.connected() && System.currentTimeMillis() >= st.lastActivity() + watchDogTimeout);
-    }
-
-    @Override
-    public RobotSpec robotSpec() {
-        return robotSpec;
     }
 
     @Override

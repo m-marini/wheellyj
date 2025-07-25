@@ -237,18 +237,6 @@ public class SignalGenerator implements SignalGeneratorApi {
     }
 
     /**
-     * Writes the data
-     *
-     * @param data the data
-     */
-    private void writeData(Map<String, INDArray> data) throws IOException {
-        for (Map.Entry<String, INDArray> entry : data.entrySet()) {
-            BinArrayFile f = keyFileMap.get(entry.getKey());
-            f.write(entry.getValue());
-        }
-    }
-
-    /**
      * Returns the inference record
      *
      * @throws IOException in case of error
@@ -272,6 +260,18 @@ public class SignalGenerator implements SignalGeneratorApi {
     public SignalGenerator stop() {
         stopping = true;
         return this;
+    }
+
+    /**
+     * Writes the data
+     *
+     * @param data the data
+     */
+    private void writeData(Map<String, INDArray> data) throws IOException {
+        for (Map.Entry<String, INDArray> entry : data.entrySet()) {
+            BinArrayFile f = keyFileMap.get(entry.getKey());
+            f.write(entry.getValue());
+        }
     }
 
     private record InferenceData(State s0, Map<String, Signal> commands, State s1) {

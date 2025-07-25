@@ -57,8 +57,8 @@ class WorldEnvironmentTest {
     public static final int NUM_SPEED_VALUES = 3;
     public static final int NUM_SENSOR_VALUES = 4;
     public static final int GRID_SIZE = 5;
-    private static final int GRID_MAP_SIZE = 5;
     public static final double MARKER_SIZE = 0.3;
+    private static final int GRID_MAP_SIZE = 5;
     public static final WorldModelSpec WORLD_SPEC = new WorldModelSpec(ROBOT_SPEC, NUM_RADAR_SECTORS, GRID_MAP_SIZE, MARKER_SIZE);
 
     private PolarMap polarMap;
@@ -73,28 +73,6 @@ class WorldEnvironmentTest {
 
         assertEquals(new IntSignalSpec(new long[]{1}, NUM_DIRECTION_VALUES * NUM_SPEED_VALUES), actions.get("move"));
         assertEquals(new IntSignalSpec(new long[]{1}, NUM_SENSOR_VALUES), actions.get("sensorAction"));
-    }
-
-    @BeforeEach
-    void setUp() {
-        RobotStatus robotStatus = RobotStatus.create(ROBOT_SPEC, x -> 12d);
-
-        RadarMap radarMap = RadarMap.empty(GridTopology.create(new Point2D.Float(), 11, 11, 0.2));
-
-        CircularSector[] sectors = IntStream.range(0, NUM_RADAR_SECTORS)
-                .mapToObj(i -> CircularSector.unknownSector())
-                .toArray(CircularSector[]::new);
-        this.polarMap = new PolarMap(sectors, new Point2D.Double(), Complex.DEG0);
-
-        GridMap gridMap = GridMap.create(radarMap, new Point2D.Double(), Complex.DEG0, GRID_MAP_SIZE);
-
-        this.worldModel = new WorldModel(WORLD_SPEC, robotStatus, radarMap, Map.of(), polarMap, gridMap, null);
-
-        WorldModellerConnector controller = mock();
-        when(controller.worldModelSpec()).thenReturn(WORLD_SPEC);
-
-        this.env = new WorldEnvironment(NUM_SPEED_VALUES, NUM_DIRECTION_VALUES, NUM_SENSOR_VALUES, List.of("A"));
-        this.env.connect(controller);
     }
 
     @Test
@@ -156,6 +134,28 @@ class WorldEnvironmentTest {
     void setHindered(int i, double distance) {
         Point2D location = Complex.fromRad(i * 2 * PI / NUM_RADAR_SECTORS).at(new Point2D.Double(), distance);
         polarMap.sectors()[i] = CircularSector.hindered(System.currentTimeMillis(), location);
+    }
+
+    @BeforeEach
+    void setUp() {
+        RobotStatus robotStatus = RobotStatus.create(ROBOT_SPEC, x -> 12d);
+
+        RadarMap radarMap = RadarMap.empty(GridTopology.create(new Point2D.Float(), 11, 11, 0.2));
+
+        CircularSector[] sectors = IntStream.range(0, NUM_RADAR_SECTORS)
+                .mapToObj(i -> CircularSector.unknownSector())
+                .toArray(CircularSector[]::new);
+        this.polarMap = new PolarMap(sectors, new Point2D.Double(), Complex.DEG0);
+
+        GridMap gridMap = GridMap.create(radarMap, new Point2D.Double(), Complex.DEG0, GRID_MAP_SIZE);
+
+        this.worldModel = new WorldModel(WORLD_SPEC, robotStatus, radarMap, Map.of(), polarMap, gridMap, null);
+
+        WorldModellerConnector controller = mock();
+        when(controller.worldModelSpec()).thenReturn(WORLD_SPEC);
+
+        this.env = new WorldEnvironment(NUM_SPEED_VALUES, NUM_DIRECTION_VALUES, NUM_SENSOR_VALUES, List.of("A"));
+        this.env.connect(controller);
     }
 
     @Test

@@ -91,7 +91,7 @@ public class InferenceFileReader extends DataFileReader implements InferenceRead
         for (int i = 0; i < cells.length; i++) {
             long echoTime = readLong();
             double echoWeight = readFloat();
-            double contactTime = readFloat();
+            long contactTime = readLong();
             cells[i] = new MapCell(cells[i].location(), echoTime, echoWeight, contactTime);
         }
         return radarMap;

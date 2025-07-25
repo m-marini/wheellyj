@@ -291,6 +291,11 @@ public abstract class AbstractAgentNN implements Agent {
     }
 
     @Override
+    public Map<String, SignalSpec> actionSpec() {
+        return actions;
+    }
+
+    @Override
     public Map<String, Float> alphas() {
         return alphas;
     }
@@ -348,38 +353,6 @@ public abstract class AbstractAgentNN implements Agent {
     }
 
     @Override
-    public Map<String, SignalSpec> actionSpec() {
-        return actions;
-    }
-
-    @Override
-    public AbstractAgentNN observe(ExecutionResult result) {
-        List<ExecutionResult> newTrajectory = new ArrayList<>(trajectory);
-        newTrajectory.add(result);
-
-        Map<String, INDArray> states = getInput(processSignals(result.state0()));
-
-        // Extracts action masks
-        Map<String, INDArray> actions = MapStream.of(result.actions())
-                .mapValues(Signal::toINDArray)
-                .mapValues(value -> value.reshape(1, 1))
-                .toMap();
-
-        // Extract rewards
-        INDArray rewards = Nd4j.scalar((float) result.reward()).reshape(DEFAULT_NUM_EPOCHS, DEFAULT_NUM_EPOCHS);
-
-        // Generate kpis
-        Map<String, INDArray> kpis = new HashMap<>();
-        kpis.put("reward", rewards);
-        kpis.putAll(MapUtils.addKeyPrefix(actions, "actions."));
-        kpis.putAll(MapUtils.addKeyPrefix(states, "s0."));
-
-        indicatorsPub.onNext(kpis);
-
-        return trajectory(newTrajectory);
-    }
-
-    @Override
     public AbstractAgentNN init() {
         return network(network.init());
     }
@@ -419,8 +392,30 @@ public abstract class AbstractAgentNN implements Agent {
     }
 
     @Override
-    public Map<String, SignalSpec> stateSpec() {
-        return state;
+    public AbstractAgentNN observe(ExecutionResult result) {
+        List<ExecutionResult> newTrajectory = new ArrayList<>(trajectory);
+        newTrajectory.add(result);
+
+        Map<String, INDArray> states = getInput(processSignals(result.state0()));
+
+        // Extracts action masks
+        Map<String, INDArray> actions = MapStream.of(result.actions())
+                .mapValues(Signal::toINDArray)
+                .mapValues(value -> value.reshape(1, 1))
+                .toMap();
+
+        // Extract rewards
+        INDArray rewards = Nd4j.scalar((float) result.reward()).reshape(DEFAULT_NUM_EPOCHS, DEFAULT_NUM_EPOCHS);
+
+        // Generate kpis
+        Map<String, INDArray> kpis = new HashMap<>();
+        kpis.put("reward", rewards);
+        kpis.putAll(MapUtils.addKeyPrefix(actions, "actions."));
+        kpis.putAll(MapUtils.addKeyPrefix(states, "s0."));
+
+        indicatorsPub.onNext(kpis);
+
+        return trajectory(newTrajectory);
     }
 
     /**
@@ -502,6 +497,11 @@ public abstract class AbstractAgentNN implements Agent {
      * @param postTrainKpis true to activate pot train kpis
      */
     public abstract AbstractAgentNN setPostTrainKpis(boolean postTrainKpis);
+
+    @Override
+    public Map<String, SignalSpec> stateSpec() {
+        return state;
+    }
 
     /**
      * Returns the agent trained with batch

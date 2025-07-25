@@ -101,17 +101,6 @@ public class DataFileReader implements DataReader {
     }
 
     @Override
-    public float readFloat() throws IOException {
-        readBytes(buffer, 0, Float.BYTES);
-        int result = 0;
-        for (int i = Float.BYTES - 1; i >= 0; i--) {
-            result <<= 8;
-            result += buffer[i] & 0xff;
-        }
-        return Float.intBitsToFloat(result);
-    }
-
-    @Override
     public double readDouble() throws IOException {
         readBytes(buffer, 0, Double.BYTES);
         long result = 0;
@@ -123,8 +112,14 @@ public class DataFileReader implements DataReader {
     }
 
     @Override
-    public short readShort() throws IOException {
-        return (short) readLong();
+    public float readFloat() throws IOException {
+        readBytes(buffer, 0, Float.BYTES);
+        int result = 0;
+        for (int i = Float.BYTES - 1; i >= 0; i--) {
+            result <<= 8;
+            result += buffer[i] & 0xff;
+        }
+        return Float.intBitsToFloat(result);
     }
 
     @Override
@@ -148,6 +143,11 @@ public class DataFileReader implements DataReader {
                 result == -1 ? Long.MIN_VALUE : -1 - result
                 : result == -1 ? Long.MAX_VALUE : result;
         return result;
+    }
+
+    @Override
+    public short readShort() throws IOException {
+        return (short) readLong();
     }
 
     @Override

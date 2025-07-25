@@ -69,7 +69,7 @@ class RobotControllerTest {
     @AfterEach
     void tearDown() {
         this.controller.shutdown();
-   }
+    }
 
     @Test
     void testConnect() throws Throwable {

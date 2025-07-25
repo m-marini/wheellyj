@@ -51,7 +51,7 @@ public interface Agent extends Closeable, AgentConnector, WithSignalsSpec, Seria
     /**
      * Returns the agent
      *
-     * @param file        the configuration file
+     * @param file the configuration file
      */
     static Function<WithSignalsSpec, Agent> fromFile(File file) throws IOException {
         return Utils.createObject(file);

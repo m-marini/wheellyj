@@ -324,15 +324,6 @@ public class Wheelly {
     }
 
     /**
-     * @param actionEvent the action event
-     */
-    private void handleRelocateButton(ActionEvent actionEvent) {
-        if (this.robot instanceof SimRobot simRobot) {
-            simRobot.safeRelocateRandom();
-        }
-    }
-
-    /**
      * Creates all the frames
      */
     private void createMultiFrames() {
@@ -541,12 +532,12 @@ public class Wheelly {
     }
 
     /**
-     * Handles the obstacle map
-     *
-     * @param map the obstacle map
+     * @param actionEvent the action event
      */
-    private void onObstacleMap(ObstacleMap map) {
-        envPanel.obstacles(map);
+    private void handleRelocateButton(ActionEvent actionEvent) {
+        if (this.robot instanceof SimRobot simRobot) {
+            simRobot.safeRelocateRandom();
+        }
     }
 
     /**
@@ -732,6 +723,15 @@ public class Wheelly {
             }
         }
         return trainer.get().agent();
+    }
+
+    /**
+     * Handles the obstacle map
+     *
+     * @param map the obstacle map
+     */
+    private void onObstacleMap(ObstacleMap map) {
+        envPanel.obstacles(map);
     }
 
     /**

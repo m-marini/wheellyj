@@ -9,10 +9,10 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 public class TestRobotSocket {
-    private static final long CMD_INTERVAL = 800;
-    private static final Logger logger = LoggerFactory.getLogger(TestRobotSocket.class);
     public static final String HOST = "192.168.1.43";
     public static final int PORT = 22;
+    private static final long CMD_INTERVAL = 800;
+    private static final Logger logger = LoggerFactory.getLogger(TestRobotSocket.class);
 
     public static void main(String[] args) throws IOException {
         try (LineSocket robot = new LineSocket(HOST, PORT, 10000, 3000)) {

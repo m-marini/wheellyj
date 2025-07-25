@@ -353,21 +353,21 @@ public class LineSocket implements Closeable {
             return false;
         }
         ByteBuffer buffer = ByteBuffer.wrap((cmd + LF).getBytes(StandardCharsets.UTF_8));
-            while (buffer.remaining() > 0) {
-                try {
-                    ch.write(buffer).get();
-                } catch (RuntimeException e) {
-                    Throwable cause = e.getCause();
-                    if (cause instanceof IOException ex1) {
-                        onWriteError(ex1);
-                    }
-                    return false;
-                } catch (Throwable e) {
-                    onWriteError(e);
-                    return false;
+        while (buffer.remaining() > 0) {
+            try {
+                ch.write(buffer).get();
+            } catch (RuntimeException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof IOException ex1) {
+                    onWriteError(ex1);
                 }
+                return false;
+            } catch (Throwable e) {
+                onWriteError(e);
+                return false;
             }
-            logger.atDebug().setMessage("Written command {}").addArgument(cmd).log();
+        }
+        logger.atDebug().setMessage("Written command {}").addArgument(cmd).log();
         return true;
     }
 

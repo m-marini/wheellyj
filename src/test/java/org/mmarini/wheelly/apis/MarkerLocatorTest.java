@@ -88,6 +88,13 @@ class MarkerLocatorTest {
         return new LabelMarker(LABEL_A, location, 1, T0, T0);
     }
 
+    static WheellyProxyMessage createProxy(long time, long delay, int direction) {
+        return new WheellyProxyMessage(time, time, time, 0, delay,
+                Math.round(ROBOT_LOCATION.getX() / DISTANCE_PER_PULSE),
+                Math.round(ROBOT_LOCATION.getX() / DISTANCE_PER_PULSE),
+                direction);
+    }
+
     public static Stream<Arguments> dataCleaningArea() {
         Random random = Nd4j.getRandom();
         random.setSeed(SEED);
@@ -108,23 +115,12 @@ class MarkerLocatorTest {
         );
     }
 
-    static WheellyProxyMessage createProxy(long time, long delay, int direction) {
-        return new WheellyProxyMessage(time, time, time, 0, delay,
-                Math.round(ROBOT_LOCATION.getX() / DISTANCE_PER_PULSE),
-                Math.round(ROBOT_LOCATION.getX() / DISTANCE_PER_PULSE),
-                direction);
-    }
-
     static Stream<Arguments> dataEchoDeg() {
         Random random = Nd4j.getRandom();
         random.setSeed(SEED);
         return createStream(NUM_TESTS, SEED,
                 uniform(-180, 179) // echoDeg
         );
-    }
-
-    static Point2D locateMarker(Complex direction, double distance) {
-        return direction.at(ROBOT_LOCATION, distance);
     }
 
     static Stream<Arguments> dataNoCleanArea() {
@@ -167,6 +163,9 @@ class MarkerLocatorTest {
         );
     }
 
+    static Point2D locateMarker(Complex direction, double distance) {
+        return direction.at(ROBOT_LOCATION, distance);
+    }
     MarkerLocator locator;
 
     /**

@@ -8,6 +8,7 @@ import java.util.function.IntFunction;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static java.lang.Math.abs;
 import static java.util.Objects.requireNonNull;
@@ -212,6 +213,15 @@ public interface AreaExpression {
                 return result;
             }
         };
+    }
+
+    /**
+     * Returns the union (or) of the given expression
+     *
+     * @param children the children expressions
+     */
+    static AreaExpression or(Stream<AreaExpression> children) {
+        return or(children.toArray(AreaExpression[]::new));
     }
 
     /**

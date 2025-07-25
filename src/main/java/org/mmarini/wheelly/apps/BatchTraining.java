@@ -308,18 +308,6 @@ public class BatchTraining {
     }
 
     /**
-     * Show info
-     *
-     * @param fmt  the format text
-     * @param args the arguments
-     */
-    private void info(String fmt, Object... args) {
-        String msg = format(fmt, args);
-        infoBar.setText(msg);
-        logger.atInfo().log(msg);
-    }
-
-    /**
      * Creates multi frames
      */
     private void createFrames() {
@@ -354,6 +342,18 @@ public class BatchTraining {
             f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             f.setVisible(true);
         });
+    }
+
+    /**
+     * Show info
+     *
+     * @param fmt  the format text
+     * @param args the arguments
+     */
+    private void info(String fmt, Object... args) {
+        String msg = format(fmt, args);
+        infoBar.setText(msg);
+        logger.atInfo().log(msg);
     }
 
     /**

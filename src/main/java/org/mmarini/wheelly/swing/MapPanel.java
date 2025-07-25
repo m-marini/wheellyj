@@ -28,14 +28,14 @@
 
 package org.mmarini.wheelly.swing;
 
+import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.*;
 
 import java.awt.*;
 import java.awt.geom.Point2D;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.*;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static java.lang.Math.max;
 import static org.mmarini.wheelly.swing.BaseShape.*;
@@ -69,6 +69,21 @@ public class MapPanel extends LayeredCanvas {
     }
 
     /**
+     * Sets the edges
+     *
+     * @param colour the edge colour
+     * @param edges  the edges
+     */
+    public void edges(Color colour, List<Tuple2<Point2D, Point2D>> edges) {
+        BaseShape shape = edges != null
+                ? CompositeShape.create(edges.stream()
+                .map(t -> createPolygon(colour, BORDER_STROKE, false, null, t._1, t._2))
+                .toList())
+                : null;
+        setLayer(Layers.EDGES.ordinal(), shape);
+    }
+
+    /**
      * Sets the marker size
      *
      * @param markerSize the marker size (m)
@@ -83,10 +98,14 @@ public class MapPanel extends LayeredCanvas {
      * @param markers the markers
      */
     public void markers(Collection<LabelMarker> markers) {
-        setLayer(Layers.MARKERS.ordinal(), new CompositeShape(markers.stream()
+        BaseShape shape = markers != null
+                ? CompositeShape.create(markers.stream()
                 .map(marker ->
                         createCircle(LABELED_COLOR, BORDER_STROKE, true, marker.location(), markerSize / 2)
-                ).toArray(BaseShape[]::new)));
+                )
+                .toList())
+                : null;
+        setLayer(Layers.MARKERS.ordinal(), shape);
     }
 
     /**
@@ -95,16 +114,20 @@ public class MapPanel extends LayeredCanvas {
      * @param map the map
      */
     public void obstacles(ObstacleMap map) {
-        float obstacleSize = (float) map.gridSize();
-        CompositeShape hindereds = new CompositeShape(map.hindered()
-                .map(obs ->
-                        createRectangle(OBSTACLE_PHANTOM_COLOR, BORDER_STROKE, true, obs, obstacleSize, obstacleSize))
-                .toArray(BaseShape[]::new));
-        CompositeShape labeleds = new CompositeShape(map.labeled()
-                .map(obs ->
-                        createRectangle(LABELED_PHANTOM_COLOR, BORDER_STROKE, true, obs, obstacleSize, obstacleSize))
-                .toArray(BaseShape[]::new));
-        setLayer(Layers.OBSTACLES.ordinal(), new CompositeShape(hindereds, labeleds));
+        if (map != null) {
+            float obstacleSize = (float) map.gridSize();
+            CompositeShape hindereds = new CompositeShape(map.hindered()
+                    .map(obs ->
+                            createRectangle(OBSTACLE_PHANTOM_COLOR, BORDER_STROKE, true, obs, obstacleSize, obstacleSize))
+                    .toArray(BaseShape[]::new));
+            CompositeShape labeleds = new CompositeShape(map.labeled()
+                    .map(obs ->
+                            createRectangle(LABELED_PHANTOM_COLOR, BORDER_STROKE, true, obs, obstacleSize, obstacleSize))
+                    .toArray(BaseShape[]::new));
+            setLayer(Layers.OBSTACLES.ordinal(), new CompositeShape(hindereds, labeleds));
+        } else {
+            setLayer(Layers.OBSTACLES.ordinal(), null);
+        }
     }
 
     /**
@@ -112,8 +135,24 @@ public class MapPanel extends LayeredCanvas {
      *
      * @param path the location of path vertices
      */
-    public void path(Point2D... path) {
-        setLayer(Layers.PATH.ordinal(), createPolygon(Color.WHITE, BORDER_STROKE, false, null, path));
+    public void path(Color colour, Point2D... path) {
+        BaseShape shape = path != null
+                ? createPolygon(colour, BORDER_STROKE, false, null, path)
+                : null;
+        setLayer(Layers.PATH.ordinal(), shape);
+    }
+
+    /**
+     * Shows the path
+     *
+     * @param colour the colour of path
+     * @param path   the location of path vertices
+     */
+    public void path(Color colour, Stream<Point2D> path) {
+        BaseShape shape = path != null
+                ? createPolygon(colour, BORDER_STROKE, false, null, path)
+                : null;
+        setLayer(Layers.PATH.ordinal(), shape);
     }
 
     /**
@@ -183,11 +222,35 @@ public class MapPanel extends LayeredCanvas {
      * @param color      the color
      * @param sectors    the sectors
      */
+    public void sectors(float sectorSize, Color color, List<Point2D> sectors) {
+        sectors(sectorSize, color, sectors != null ? sectors.stream() : null);
+    }
+
+    /**
+     * Sets the cells over the map
+     *
+     * @param sectorSize the sector size (m)
+     * @param color      the color
+     * @param sectors    the sectors
+     */
     public void sectors(float sectorSize, Color color, Point2D... sectors) {
-        setLayer(Layers.CUSTOM_SECTORS.ordinal(),
-                BaseShape.createMapShape(sectorSize,
-                        Arrays.stream(sectors),
-                        color));
+        sectors(sectorSize, color, sectors != null ? Arrays.stream(sectors) : null);
+    }
+
+    /**
+     * Sets the cells over the map
+     *
+     * @param sectorSize the sector size (m)
+     * @param color      the color
+     * @param sectors    the sectors
+     */
+    public void sectors(float sectorSize, Color color, Stream<Point2D> sectors) {
+        BaseShape shape = sectors != null
+                ? createMapShape(sectorSize,
+                sectors,
+                color)
+                : null;
+        setLayer(Layers.CUSTOM_SECTORS.ordinal(), shape);
     }
 
     /**
@@ -196,19 +259,23 @@ public class MapPanel extends LayeredCanvas {
      * @param targets the target points
      */
     public void target(Point2D... targets) {
-        setLayer(Layers.TARGETS.ordinal(),
-                new CompositeShape(
-                        Arrays.stream(targets)
-                                .map(target -> createCircle(TARGET_COLOR, BORDER_STROKE, false, target, TARGET_SIZE))
-                                .toArray(BaseShape[]::new)));
+        CompositeShape shape = targets != null
+                ? new CompositeShape(
+                Arrays.stream(targets)
+                        .filter(Objects::nonNull)
+                        .map(target -> createCircle(TARGET_COLOR, BORDER_STROKE, false, target, TARGET_SIZE))
+                        .toArray(BaseShape[]::new))
+                : null;
+        setLayer(Layers.TARGETS.ordinal(), shape);
     }
 
-    enum Layers {
+    private enum Layers {
         GRID,
         RADAR_MAP,
         OBSTACLES,
         CUSTOM_SECTORS,
         MARKERS,
+        EDGES,
         PATH,
         TARGETS,
         ROBOT,

@@ -30,10 +30,7 @@ package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.RadarMap;
-import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.apis.*;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +41,7 @@ import java.util.Map;
 import java.util.Random;
 
 /**
- * Generates the behaviour to select the path to the nearest unknown sector
+ * Generates the behaviour to select the path to the least empty sector
  * <p>
  * Exits are:
  * <ul>
@@ -63,7 +60,7 @@ import java.util.Random;
  * @param onEntry the on entry command
  * @param onExit  the on exit command
  */
-public record FindUnknownState(String id, ProcessorCommand onInit, ProcessorCommand onEntry,
+public record FindRefreshState(String id, ProcessorCommand onInit, ProcessorCommand onEntry,
                                ProcessorCommand onExit) implements ExtendedStateNode {
     public static final String PATH = "path";
     public static final String NOT_FOUND = "notFound";
@@ -75,9 +72,9 @@ public record FindUnknownState(String id, ProcessorCommand onInit, ProcessorComm
     public static final String MIN_GOALS = "minGoals";
     public static final double DEFAULT_GROWTH_DISTANCE = 0.5;
     public static final long DEFAULT_MAX_SEARCH_TIME = 3600000;
-    private static final Tuple2<String, RobotCommands> NOT_FOUND_RESULT = Tuple2.of(
+    public static final Tuple2<String, RobotCommands> NOT_FOUND_RESULT = Tuple2.of(
             NOT_FOUND, RobotCommands.idle());
-    private static final Logger logger = LoggerFactory.getLogger(FindUnknownState.class);
+    private static final Logger logger = LoggerFactory.getLogger(FindRefreshState.class);
 
     /**
      * Returns the exploring state from configuration
@@ -86,7 +83,7 @@ public record FindUnknownState(String id, ProcessorCommand onInit, ProcessorComm
      * @param locator the locator of exploring state spec
      * @param id      the state identifier
      */
-    public static FindUnknownState create(JsonNode root, Locator locator, String id) {
+    public static FindRefreshState create(JsonNode root, Locator locator, String id) {
         double growthDistance = locator.path(GROWTH_DISTANCE).getNode(root).asDouble(DEFAULT_GROWTH_DISTANCE);
         long seed = locator.path(SEED).getNode(root).asLong();
         Random random = seed == 0
@@ -107,18 +104,28 @@ public record FindUnknownState(String id, ProcessorCommand onInit, ProcessorComm
                 ProcessorCommand.create(root, locator.path("onInit")));
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
-        return new FindUnknownState(id, onInit, onEntry, onExit);
+        return new FindRefreshState(id, onInit, onEntry, onExit);
     }
 
     @Override
     public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
+        Tuple2<String, RobotCommands> result = getBlockResult(context);
+        if (result != null) {
+            return result;
+        }
         WorldModel worldModel = context.worldModel();
         RadarMap map = worldModel.radarMap();
         RobotStatus status = worldModel.robotStatus();
+        Point2D robotLocation = status.location();
+        Point2D[] labels = worldModel.markers().values().stream().map(LabelMarker::location).toArray(Point2D[]::new);
+        if (labels.length == 0) {
+            logger.atDebug().log("No path found");
+            remove(context, PATH);
+            return NOT_FOUND_RESULT;
+        }
         double growthDistance = getDouble(context, GROWTH_DISTANCE);
         Random random = get(context, RANDOM);
-
-        RRTDiscretePathFinder pathFinder = RRTDiscretePathFinder.createUnknownTargets(map, status.location(), growthDistance, random);
+        RRTDiscretePathFinder pathFinder = RRTDiscretePathFinder.createLeastEmptyTargets(map, robotLocation, growthDistance, random);
 
         long timeout = System.currentTimeMillis() + getLong(context, MAX_SEARCH_TIME);
         // Look for the maximum time interval

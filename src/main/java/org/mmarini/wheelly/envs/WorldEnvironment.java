@@ -89,10 +89,6 @@ public class WorldEnvironment implements EnvironmentApi {
                 .toList();
         return new WorldEnvironment(numSpeeds, numDirections, numSensorDirections, markerLabels);
     }
-    private final int numSpeeds;
-    private final int numDirections;
-    private final int numSensorDirections;
-    private final Map<String, SignalSpec> actionsSpec;
 
     /**
      * Returns the world signal specifications
@@ -119,6 +115,12 @@ public class WorldEnvironment implements EnvironmentApi {
                 "markerDirections", new FloatSignalSpec(new long[]{numMarkers}, (float) -Math.PI, (float) Math.PI)
         );
     }
+
+    private final int numSpeeds;
+    private final int numDirections;
+    private final int numSensorDirections;
+    private final Map<String, SignalSpec> actionsSpec;
+    private final List<String> markerLabels;
     private Map<String, Signal> signals0;
     private State prevState;
     private Map<String, Signal> prevActions;
@@ -126,7 +128,25 @@ public class WorldEnvironment implements EnvironmentApi {
     private Consumer<ExecutionResult> onResult;
     private RewardFunction rewardFunc;
     private Map<String, SignalSpec> stateSpec;
-    private final List<String> markerLabels;
+
+    /**
+     * Creates the adapter
+     *
+     * @param numSpeeds           the number of move action speeds
+     * @param numDirections       the number of move action directions
+     * @param numSensorDirections the number of sensor directions
+     * @param markerLabels        the marker labels
+     */
+    public WorldEnvironment(int numSpeeds, int numDirections, int numSensorDirections, List<String> markerLabels) {
+        this.numSpeeds = numSpeeds;
+        this.numDirections = numDirections;
+        this.numSensorDirections = numSensorDirections;
+        this.markerLabels = requireNonNull(markerLabels);
+        this.actionsSpec = Map.of(
+                "move", new IntSignalSpec(new long[]{1}, numDirections * numSpeeds),
+                "sensorAction", new IntSignalSpec(new long[]{1}, numSensorDirections)
+        );
+    }
 
     @Override
     public Map<String, SignalSpec> actionSpec() {
@@ -175,25 +195,6 @@ public class WorldEnvironment implements EnvironmentApi {
                     : RobotCommands.scan(sensorDirection);
         }
         return RobotCommands.haltCommand();
-    }
-
-    /**
-     * Creates the adapter
-     *
-     * @param numSpeeds           the number of move action speeds
-     * @param numDirections       the number of move action directions
-     * @param numSensorDirections the number of sensor directions
-     * @param markerLabels        the marker labels
-     */
-    public WorldEnvironment(int numSpeeds, int numDirections, int numSensorDirections, List<String> markerLabels) {
-        this.numSpeeds = numSpeeds;
-        this.numDirections = numDirections;
-        this.numSensorDirections = numSensorDirections;
-        this.markerLabels = requireNonNull(markerLabels);
-        this.actionsSpec = Map.of(
-                "move", new IntSignalSpec(new long[]{1}, numDirections * numSpeeds),
-                "sensorAction", new IntSignalSpec(new long[]{1}, numSensorDirections)
-        );
     }
 
     @Override
