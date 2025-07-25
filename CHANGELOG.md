@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#545](https://github.com/m-marini/wheellyj/issues/545): Point echo
 - Issue [#550](https://github.com/m-marini/wheellyj/issues/550): Full reactive robot api
 
+### Fixed
+- 
+- Issue [#556](https://github.com/m-marini/wheellyj/issues/556): Missing speed parameter in LabelStuckState
+
 ## [0.23.0] 2025-06-26
 
 ### Added
