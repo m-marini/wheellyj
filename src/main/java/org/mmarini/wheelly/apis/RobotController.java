@@ -297,9 +297,14 @@ public class RobotController implements RobotControllerApi {
                 if (st.inferenceRequested()) {
                     controllerStatus.onNext(st);
                     // schedule inference
-                    Completable.fromAction(() ->
-                                    onInference.accept(currentStatus))
-                            .subscribeOn(Schedulers.computation())
+                    Completable.fromAction(() -> {
+                                try {
+                                    onInference.accept(currentStatus);
+                                } catch (Throwable ex) {
+                                    logger.atError().setCause(ex).log("Error on inference function");
+                                    throw ex;
+                                }
+                            }).subscribeOn(Schedulers.computation())
                             .subscribe(this::onInferenceCompletion,
                                     this::onInferenceError);
                 }

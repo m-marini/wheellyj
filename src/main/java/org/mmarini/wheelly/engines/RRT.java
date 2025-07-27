@@ -103,12 +103,10 @@ public class RRT<T> {
      */
     public T grow() {
         last = newConf.get();
-        T nearest = nearestNode(last);
-        if (nearest == null) {
-            // The nearest node not found
-            last = null;
-            return null;
+        if (last == null) {
+            return last;
         }
+        T nearest = nearestNode(last);
         last = interpolate.apply(nearest, last);
         if (last == null) {
             return last;
@@ -149,7 +147,6 @@ public class RRT<T> {
      */
     private T nearestNode(T node) {
         return vertices.stream()
-                .filter(c -> isConnected.test(c, node))
                 .min((a, b) ->
                         Double.compare(distance.applyAsDouble(a, node), distance.applyAsDouble(b, node)))
                 .orElse(null);

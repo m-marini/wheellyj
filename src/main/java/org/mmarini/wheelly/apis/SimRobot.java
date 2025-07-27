@@ -248,10 +248,14 @@ public class SimRobot implements RobotApi {
             double dist = obs.distance(position) - status.obstacleMap().gridSize() / 2
                     + random.nextGaussian() * errSensor;
             echoDistance = dist > 0 && dist < MAX_DISTANCE ? dist : 0;
+            if (echoDistance == 0) {
+                nearestCell = null;
+            }
         } else {
             echoDistance = 0;
         }
-        status = this.status.updateAndGet(s -> s.echoDistance(echoDistance).nearestCell(nearestCell));
+        ObstacleMap.ObstacleCell finalNearestCell = nearestCell;
+        status = this.status.updateAndGet(s -> s.echoDistance(echoDistance).nearestCell(finalNearestCell));
 
         boolean echoAlarm = echoDistance > 0 && echoDistance <= SAFE_DISTANCE;
         boolean prevEchoAlarm = initial.echoDistance() > 0 && initial.echoDistance() <= SAFE_DISTANCE;

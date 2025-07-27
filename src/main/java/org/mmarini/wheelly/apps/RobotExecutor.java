@@ -224,7 +224,8 @@ public class RobotExecutor {
                 .subscribe(this::onStepUp);
         agent.readTargets()
                 .observeOn(Schedulers.io())
-                .subscribe(this::onTarget);
+                .subscribe(t ->
+                        envPanel.target(t.orElse(null)));
         agent.readPath()
                 .observeOn(Schedulers.io())
                 .subscribe(this::onPath);
@@ -381,15 +382,6 @@ public class RobotExecutor {
     }
 
     /**
-     * Handles the target event
-     *
-     * @param target the target point
-     */
-    private void onTarget(Optional<Point2D> target) {
-        envPanel.target(target.orElse(null));
-    }
-
-    /**
      * Handles the trigger event
      *
      * @param trigger the trigger
@@ -398,6 +390,11 @@ public class RobotExecutor {
         engineMonitor.addTrigger(trigger);
     }
 
+    /**
+     * Handles window closing
+     *
+     * @param windowEvent the window event
+     */
     private void onWindowClosing(WindowEvent windowEvent) {
         controller.shutdown();
     }

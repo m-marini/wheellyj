@@ -121,13 +121,15 @@ public record FindUnknownState(String id, ProcessorCommand onInit, ProcessorComm
         double growthDistance = getDouble(context, GROWTH_DISTANCE);
         Random random = get(context, RANDOM);
 
-        RRTDiscretePathFinder pathFinder = RRTDiscretePathFinder.createUnknownTargets(map, status.location(), growthDistance, random);
+        RRTPathFinder pathFinder = RRTPathFinder.createUnknownTargets(map, status.location(), growthDistance, random)
+                .init();
 
         long timeout = System.currentTimeMillis() + getLong(context, MAX_SEARCH_TIME);
         // Look for the maximum time interval
         int minGoals = getInt(context, MIN_GOALS);
         int maxIterations = getInt(context, MAX_ITERATIONS);
         for (int i = 0; i < maxIterations
+                && !pathFinder.isCompleted()
                 && pathFinder.rrt().goals().size() < minGoals
                 && System.currentTimeMillis() <= timeout; i++) {
             pathFinder.grow();

@@ -13,11 +13,11 @@ flow:
       timeout: 300000
       scanInterval: 1000
       transitions:
-        timeout:
-          to: findLabel
+        blocked:
+          to: avoid
         frontBlocked:
           to: avoid
-        blocked:
+        rearBlocked:
           to: avoid
         completed:
           to: findLabel
@@ -59,14 +59,14 @@ flow:
       minGoals: 2
       transitions:
         completed:
-          to: moveUnknown
+          to: moveRefresh
           onTransition:
             - moveRefresh.path
             - findRefresh.path
             - get
             - put
         notFound:
-          to: halt
+          to: mapping
     moveLabel:
       $id: https://mmarini.org/wheelly/state-move-path-schema-0.1
       class: org.mmarini.wheelly.engines.MovePathState
@@ -75,6 +75,8 @@ flow:
           to: labelStuck
         timeout:
           to: mapping
+        blocked:
+          to: avoid
         frontBlocked:
           to: avoid
         rearBlocked:
@@ -83,6 +85,8 @@ flow:
       $id: https://mmarini.org/wheelly/state-label-stuck-schema-0.1
       class: org.mmarini.wheelly.engines.LabelStuckState
       transitions:
+        blocked:
+          to: avoid
         frontBlocked:
           to: avoid
         rearBlocked:
@@ -97,6 +101,8 @@ flow:
           to: mapping
         timeout:
           to: mapping
+        blocked:
+          to: avoid
         frontBlocked:
           to: avoid
         rearBlocked:
@@ -109,20 +115,8 @@ flow:
           to: mapping
         timeout:
           to: mapping
-        frontBlocked:
+        blocked:
           to: avoid
-        rearBlocked:
-          to: avoid
-    halt:
-      $id: https://mmarini.org/wheelly/state-halt-schema-0.1
-      class: org.mmarini.wheelly.engines.HaltState
-      timeout: 10000
-      scanInterval: 1000
-      minSensorDir: 0
-      maxSensorDir: 0
-      transitions:
-        timeout:
-          to: mapping
         frontBlocked:
           to: avoid
         rearBlocked:
