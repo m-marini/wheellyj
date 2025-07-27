@@ -30,7 +30,10 @@ package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apis.RadarMap;
+import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
@@ -66,11 +69,11 @@ public record FindRefreshState(String id, ProcessorCommand onInit, ProcessorComm
     public static final String PATH = "path";
     public static final String NOT_FOUND = "notFound";
     public static final String SEED = "seed";
-    public static final String GROWTH_DISTANCE = "growthDistance";
+    public static final String GROWTH_DISTANCE_ID = "growthDistance";
     public static final String RANDOM = "random";
-    public static final String MAX_SEARCH_TIME = "maxSearchTime";
-    public static final String MAX_ITERATIONS = "maxIterations";
-    public static final String MIN_GOALS = "minGoals";
+    public static final String MAX_SEARCH_TIME_ID = "maxSearchTime";
+    public static final String MAX_ITERATIONS_ID = "maxIterations";
+    public static final String MIN_GOALS_ID = "minGoals";
     public static final double DEFAULT_GROWTH_DISTANCE = 0.5;
     public static final long DEFAULT_MAX_SEARCH_TIME = 3600000;
     public static final Tuple2<String, RobotCommands> NOT_FOUND_RESULT = Tuple2.of(
@@ -87,22 +90,22 @@ public record FindRefreshState(String id, ProcessorCommand onInit, ProcessorComm
      */
     public static FindRefreshState create(JsonNode root, Locator locator, String id) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-        double growthDistance = locator.path(GROWTH_DISTANCE).getNode(root).asDouble(DEFAULT_GROWTH_DISTANCE);
+        double growthDistance = locator.path(GROWTH_DISTANCE_ID).getNode(root).asDouble(DEFAULT_GROWTH_DISTANCE);
         long seed = locator.path(SEED).getNode(root).asLong();
         Random random = seed == 0
                 ? new Random()
                 : new Random(seed);
-        int maxIterations = locator.path(MAX_ITERATIONS).getNode(root).asInt(Integer.MAX_VALUE);
-        int minGoals = locator.path(MIN_GOALS).getNode(root).asInt(1);
-        long maxSearchTime = locator.path(MAX_SEARCH_TIME).getNode(root).asLong(DEFAULT_MAX_SEARCH_TIME);
+        int maxIterations = locator.path(MAX_ITERATIONS_ID).getNode(root).asInt(Integer.MAX_VALUE);
+        int minGoals = locator.path(MIN_GOALS_ID).getNode(root).asInt(1);
+        long maxSearchTime = locator.path(MAX_SEARCH_TIME_ID).getNode(root).asLong(DEFAULT_MAX_SEARCH_TIME);
         ProcessorCommand onInit = ProcessorCommand.concat(
                 ExtendedStateNode.loadTimeout(root, locator, id),
                 ProcessorCommand.setProperties(Map.of(
-                        id + "." + GROWTH_DISTANCE, growthDistance,
+                        id + "." + GROWTH_DISTANCE_ID, growthDistance,
                         id + "." + RANDOM, random,
-                        id + "." + MAX_ITERATIONS, maxIterations,
-                        id + "." + MIN_GOALS, minGoals,
-                        id + "." + MAX_SEARCH_TIME, maxSearchTime
+                        id + "." + MAX_ITERATIONS_ID, maxIterations,
+                        id + "." + MIN_GOALS_ID, minGoals,
+                        id + "." + MAX_SEARCH_TIME_ID, maxSearchTime
                 )),
                 ProcessorCommand.create(root, locator.path("onInit")));
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
@@ -120,21 +123,19 @@ public record FindRefreshState(String id, ProcessorCommand onInit, ProcessorComm
         RadarMap map = worldModel.radarMap();
         RobotStatus status = worldModel.robotStatus();
         Point2D robotLocation = status.location();
-        Point2D[] labels = worldModel.markers().values().stream().map(LabelMarker::location).toArray(Point2D[]::new);
-        if (labels.length == 0) {
-            logger.atDebug().log("No path found");
-            remove(context, PATH);
-            return NOT_FOUND_RESULT;
-        }
-        double growthDistance = getDouble(context, GROWTH_DISTANCE);
+        double growthDistance = getDouble(context, GROWTH_DISTANCE_ID);
         Random random = get(context, RANDOM);
-        RRTDiscretePathFinder pathFinder = RRTDiscretePathFinder.createLeastEmptyTargets(map, robotLocation, growthDistance, random);
+        double maxDistance = status.robotSpec().maxRadarDistance();
+        RRTPathFinder pathFinder = RRTPathFinder.createLeastEmptyTargets(map, robotLocation, growthDistance, maxDistance, random)
+                .init();
 
-        long timeout = System.currentTimeMillis() + getLong(context, MAX_SEARCH_TIME);
+        long maxSearchTime = getLong(context, MAX_SEARCH_TIME_ID);
+        long timeout = System.currentTimeMillis() + maxSearchTime;
         // Look for the maximum time interval
-        int minGoals = getInt(context, MIN_GOALS);
-        int maxIterations = getInt(context, MAX_ITERATIONS);
+        int minGoals = getInt(context, MIN_GOALS_ID);
+        int maxIterations = getInt(context, MAX_ITERATIONS_ID);
         for (int i = 0; i < maxIterations
+                && !pathFinder.isCompleted()
                 && pathFinder.rrt().goals().size() < minGoals
                 && System.currentTimeMillis() <= timeout; i++) {
             pathFinder.grow();

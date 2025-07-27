@@ -33,8 +33,8 @@ import org.mmarini.wheelly.apis.*;
 
 import java.awt.*;
 import java.awt.geom.Point2D;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 import java.util.stream.Stream;
 
 import static java.lang.Math.max;
@@ -222,7 +222,7 @@ public class MapPanel extends LayeredCanvas {
      * @param color      the color
      * @param sectors    the sectors
      */
-    public void sectors(float sectorSize, Color color, List<Point2D> sectors) {
+    public void sectors(float sectorSize, Color color, Collection<Point2D> sectors) {
         sectors(sectorSize, color, sectors != null ? sectors.stream() : null);
     }
 

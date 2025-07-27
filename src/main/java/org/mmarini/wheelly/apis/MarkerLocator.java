@@ -133,19 +133,20 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
         if (cameraTime >= proxyTime && cameraTime <= proxyTime + correlationInterval) {
             // Correlated messages
             Complex receptiveAngle = robotSpec.receptiveAngle();
+            double cleanAreaDistance = min(distance, maxDistance);
+            if (cleanAreaDistance == 0) {
+                cleanAreaDistance = maxDistance;
+            }
+            cleanAreaDistance += markerSize / 2;
             if (cameraEvent.qrCode().equals(CameraEvent.UNKNOWN_QR_CODE)) {
                 // no recognized qrcode
                 return filterCleaningArea(map, robotLocation, proxyMessage.echoDirection(),
-                        distance + markerSize / 2, receptiveAngle, cameraTime);
-            } else if (distance == 0 || distance > maxDistance) {
-                // no echo ?
-                return filterCleaningArea(map, robotLocation, proxyMessage.echoDirection(),
-                        maxDistance + markerSize / 2, receptiveAngle, cameraTime);
+                        cleanAreaDistance, receptiveAngle, cameraTime);
             } else {
                 Point2D markerLocation = proxyMessage.echoDirection().at(robotLocation, distance + markerSize / 2);
                 LabelMarker marker = map.get(cameraEvent.qrCode());
                 Map<String, LabelMarker> map1 = filterCleaningArea(map, robotLocation, proxyMessage.echoDirection(),
-                        distance + markerSize / 2, receptiveAngle, cameraTime);
+                        cleanAreaDistance, receptiveAngle, cameraTime);
                 LabelMarker newMarker;
                 if (marker != null) {
                     // existing label

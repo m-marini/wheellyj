@@ -31,7 +31,6 @@ package org.mmarini.wheelly.apps;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.mmarini.wheelly.apis.*;
-import org.mmarini.wheelly.engines.RRTDiscretePathFinder;
 import org.mmarini.wheelly.engines.RRTPathFinder;
 import org.mmarini.wheelly.swing.MapPanel;
 import org.slf4j.Logger;
@@ -82,8 +81,9 @@ public class RRTTestApp {
     }
 
     private static RRTPathFinder createPathFinder(RadarMap map, ObstacleMap obstacles, Point2D location) {
-        return RRTDiscretePathFinder.createUnknownTargets(map, location, GROWTH_DISTANCE, new Random(SEED));
-//        return RRTDiscretePathFinder.createLabelTargets(map, location, DISTANCE, GROWTH_DISTANCE, new Random(SEED), obstacles.labeled());
+        //return RRTPathFinder.createUnknownTargets(map, location, GROWTH_DISTANCE, new Random(SEED));
+//        return RRTPathFinder.createLeastEmptyTargets(map, location, GROWTH_DISTANCE, 3, new Random(SEED));
+        return RRTPathFinder.createLabelTargets(map, location, DISTANCE, GROWTH_DISTANCE, new Random(SEED), obstacles.labeled());
     }
 
     private static RadarMap createRadarMap(ObstacleMap obstacles) {
@@ -148,7 +148,7 @@ public class RRTTestApp {
     }
 
     private RRTPathFinder createPathFinder() {
-        return createPathFinder(map, obstacles, robotLocation);
+        return createPathFinder(map, obstacles, robotLocation).init();
     }
 
     private void restart() {
@@ -202,9 +202,11 @@ public class RRTTestApp {
         mapPanel.path(Color.RED, path != null ? path.stream() : null);
         mapPanel.edges(Color.WHITE, pathFinder.rrt().edges().stream().toList());
         mapPanel.sectors((float) map.topology().gridSize(), SECTOR_COLOR,
-                pathFinder.freeIndices()
-                        .stream()
-                        .map(i -> map.cell(i).location()));
+                pathFinder.targets());
+        /*
+        mapPanel.sectors((float) map.topology().gridSize(), SECTOR_COLOR,
+                pathFinder.freeLocations());
+                */
         mapPanel.pingLocation(path != null ? path.getLast() : pathFinder.last());
     }
 }

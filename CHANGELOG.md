@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Fixed
+
+- Issue [#557](https://github.com/m-marini/wheellyj/issues/557): Ghost labels in simulated robot
+
 ## [0.24.0] 2025-07-25
 
 ### Added
