@@ -69,6 +69,18 @@ public record WheellySupplyMessage(long localTime, long simulationTime, long rem
         return new WheellySupplyMessage(time, simTime, remoteTime, supplySensor);
     }
 
+    public static WheellySupplyMessage create(Timed<String> line, long timeOffset) {
+        long time = line.time(TimeUnit.MILLISECONDS);
+        String[] params = line.value().split(" ");
+        if (params.length != NO_PARAMS) {
+            throw new IllegalArgumentException(format("Wrong supply message \"%s\" (#params=%d)", line.value(), params.length));
+        }
+        long remoteTime = parseLong(params[1]);
+        int supplySensor = parseInt(params[2]);
+        long simTime = time - timeOffset;
+        return new WheellySupplyMessage(time, simTime, remoteTime, supplySensor);
+    }
+
     /**
      * Returns the status with remote localTime instant set
      *

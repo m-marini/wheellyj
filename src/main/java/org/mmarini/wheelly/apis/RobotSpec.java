@@ -36,18 +36,22 @@ import static java.util.Objects.requireNonNull;
  * @param maxRadarDistance the maximum radar distance (m)
  * @param receptiveAngle   the receptive angle
  * @param contactRadius    the contact radius (m)
+ * @param cameraViewAngle  the camera view angle
  */
-public record RobotSpec(double maxRadarDistance, Complex receptiveAngle, double contactRadius) {
+public record RobotSpec(double maxRadarDistance, Complex receptiveAngle, double contactRadius,
+                        Complex cameraViewAngle) {
     /**
      * Creates the robot specification
      *
      * @param maxRadarDistance the maximum radar distance (m)
      * @param receptiveAngle   the receptive angle
      * @param contactRadius    the contact radius (m)
+     * @param cameraViewAngle  the camera view angle
      */
-    public RobotSpec(double maxRadarDistance, Complex receptiveAngle, double contactRadius) {
+    public RobotSpec(double maxRadarDistance, Complex receptiveAngle, double contactRadius, Complex cameraViewAngle) {
         this.maxRadarDistance = maxRadarDistance;
         this.receptiveAngle = requireNonNull(receptiveAngle);
         this.contactRadius = contactRadius;
+        this.cameraViewAngle = requireNonNull(cameraViewAngle);
     }
 }

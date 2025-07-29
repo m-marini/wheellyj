@@ -58,12 +58,12 @@ class InferenceFileTest {
             6, 7, 8, 9, true, 10, 11, 12, 13);
     public static final WheellyContactsMessage CONTACTS_MESSAGE = new WheellyContactsMessage(1, 2, 3, true,
             true, true, true);
-    public static final CameraEvent CAMERA_EVENT = new CameraEvent(1, "?", 3, 4, null);
+    public static final CameraEvent CAMERA_EVENT = new CameraEvent(1, simulationTime, "?", 3, 4, null, direction);
     public static final RobotCommands COMMANDS = new RobotCommands(true, Complex.DEG0, false, true, Complex.DEG90, 20);
     private static final double CONTACT_RADIUS = 0.28;
     private static final double MARKER_SIZE = 0.3;
     private static final int GRID_MAP_SIZE = 31;
-    public static final WorldModelSpec WORLD_MODEL_SPEC = new WorldModelSpec(new RobotSpec(MAX_RADAR_DISTANCE, RECEPTIVE_ANGLE, CONTACT_RADIUS),
+    public static final WorldModelSpec WORLD_MODEL_SPEC = new WorldModelSpec(new RobotSpec(MAX_RADAR_DISTANCE, RECEPTIVE_ANGLE, CONTACT_RADIUS, cameraViewAngle),
             NUM_SECTORS, GRID_MAP_SIZE, MARKER_SIZE);
     public static final RobotStatus ROBOT_STATUS = new RobotStatus(WORLD_MODEL_SPEC.robotSpec(), 1, MOTION_MESSAGE, PROXY_MESSAGE,
             CONTACTS_MESSAGE, InferenceFileReader.DEFAULT_SUPPLY_MESSAGE, InferenceFileReader.DEFAULT_DECODE_VOLTAGE, CAMERA_EVENT, CAMERA_PROXY_MESSAGE);

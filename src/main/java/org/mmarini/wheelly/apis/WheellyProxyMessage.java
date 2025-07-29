@@ -72,7 +72,6 @@ public record WheellyProxyMessage(long localTime, long simulationTime, long remo
      * @param line           the status string
      * @param clockConverter the clock converter
      */
-
     public static WheellyProxyMessage create(Timed<String> line, ClockConverter clockConverter) {
         long time = line.time(TimeUnit.MILLISECONDS);
         String[] params = line.value().split(" ");
@@ -87,6 +86,24 @@ public record WheellyProxyMessage(long localTime, long simulationTime, long remo
         int echoYaw = parseInt(params[6]);
 
         long simTime = clockConverter.fromRemote(remoteTime);
+        return new WheellyProxyMessage(time, simTime, remoteTime, echoDirection, echoDelay, x,
+                y, echoYaw);
+    }
+
+    public static WheellyProxyMessage create(Timed<String> line, long timeOffset) {
+        long time = line.time(TimeUnit.MILLISECONDS);
+        String[] params = line.value().split(" ");
+        if (params.length != NUM_PARAMS) {
+            throw new IllegalArgumentException(format("Wrong status message \"%s\" (#params=%d)", line.value(), params.length));
+        }
+        long remoteTime = parseLong(params[1]);
+        int echoDirection = parseInt(params[2]);
+        int echoDelay = parseInt(params[3]);
+        double x = parseDouble(params[4]);
+        double y = parseDouble(params[5]);
+        int echoYaw = parseInt(params[6]);
+
+        long simTime = time - timeOffset;
         return new WheellyProxyMessage(time, simTime, remoteTime, echoDirection, echoDelay, x,
                 y, echoYaw);
     }

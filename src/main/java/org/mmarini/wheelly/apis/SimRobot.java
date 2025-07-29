@@ -126,7 +126,7 @@ public class SimRobot implements RobotApi {
         long cameraInterval = locator.path("interval").getNode(root).asLong(DEFAULT_CAMERA_INTERVAL);
         double maxRadarDistance = locator.path("maxRadarDistance").getNode(root).asDouble();
         double contactRadius = locator.path("contactRadius").getNode(root).asDouble();
-        RobotSpec robotSpec = new RobotSpec(maxRadarDistance, sensorReceptiveAngle, contactRadius);
+        RobotSpec robotSpec = new RobotSpec(maxRadarDistance, sensorReceptiveAngle, contactRadius, Complex.DEG90);
         return new SimRobot(robotSpec, robotRandom, mapRandom,
                 interval, motionInterval, proxyInterval, cameraInterval, stalemateInterval, changeObstaclesPeriod,
                 errSensor, errSigma, maxAngularSpeed, numObstacles, numLabels);
@@ -606,9 +606,19 @@ public class SimRobot implements RobotApi {
     private void sendCamera() {
         SimRobotStatus s = status.get();
         Point2D[] points = new Point2D[0];
-        CameraEvent event = s.nearestCell() != null && s.nearestCell().labeled()
-                ? new CameraEvent(s.simulationTime(), QR_CODE, CAMERA_WIDTH, CAMERA_HEIGHT, points)
-                : CameraEvent.unknown(s.simulationTime());
+        CameraEvent event;
+        if (s.nearestCell() != null && s.nearestCell().labeled()) {
+            Complex sectorDir = Complex.direction(location(),
+                    s.nearestCell().location());
+            Complex robotDir = direction();
+            Complex sensorDir = sensorDirection();
+            Complex direction = sectorDir
+                    .sub(robotDir)
+                    .sub(sensorDir);
+            event = new CameraEvent(s.simulationTime(), s.simulationTime(), QR_CODE, CAMERA_WIDTH, CAMERA_HEIGHT, points, direction);
+        } else {
+            event = CameraEvent.unknown(s.simulationTime());
+        }
         cameraEvents.onNext(event);
         status.updateAndGet(s1 -> s1.cameraTimeout(s.simulationTime() + cameraInterval));
     }

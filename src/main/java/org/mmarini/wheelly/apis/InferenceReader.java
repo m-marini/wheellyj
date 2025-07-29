@@ -64,7 +64,7 @@ public interface InferenceReader extends AutoCloseable, DataReader {
         String qrCode = readString();
         int width = readInt();
         int height = readInt();
-        return new CameraEvent(timestamp, qrCode, width, height, null);
+        return new CameraEvent(timestamp, timestamp, qrCode, width, height, null, Complex.DEG0);
     }
 
     /**

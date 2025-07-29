@@ -1,11 +1,11 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/real-robot-schema-0.1
+$id: https://mmarini.org/wheelly/real-robot-schema-0.2
 title: Robot
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/real-robot-schema-0.1
+    const: https://mmarini.org/wheelly/real-robot-schema-0.2
   class:
     const: org.mmarini.wheelly.apis.RealRobot
   robotHost:
@@ -45,6 +45,10 @@ properties:
     type: integer
     minimum: 1
     maximum: 90
+  cameraViewAngle:
+    type: integer
+    minimum: 1
+    maximum: 179
   configCommands:
     type: array
     items:
@@ -55,6 +59,7 @@ required:
   - class
   - contactRadius
   - sensorReceptiveAngle
+  - cameraViewAngle
   - maxRadarDistance
   - robotHost
   - cameraHost

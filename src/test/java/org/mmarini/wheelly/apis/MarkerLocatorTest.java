@@ -80,7 +80,7 @@ class MarkerLocatorTest {
     public static final String LABEL_B = "B";
 
     static CameraEvent createCamera(long time, String label) {
-        return new CameraEvent(time, label, 0, 0, new Point2D[0]);
+        return new CameraEvent(time, simulationTime, label, 0, 0, new Point2D[0], direction);
     }
 
     static LabelMarker createMarkerAt(int echoDeg, double distance, int markerDeg) {
@@ -452,7 +452,7 @@ class MarkerLocatorTest {
                 LABEL_A, new LabelMarker(LABEL_A, POINT0, 1, T0, T0)
         );
         // And a camera event
-        CameraEvent event = new CameraEvent(T0, LABEL_A, 0, 0, new Point2D[0]);
+        CameraEvent event = new CameraEvent(T0, simulationTime, LABEL_A, 0, 0, new Point2D[0], direction);
         // And a correlated proxy message
         WheellyProxyMessage proxy = createProxy(T2, ECHO_DELAY, echoDeg);
 

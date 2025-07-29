@@ -28,33 +28,41 @@
 
 package org.mmarini.wheelly.apis;
 
+import io.reactivex.rxjava3.schedulers.Timed;
+
 import java.awt.geom.Point2D;
+import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
 
 /**
  * The camera event
  *
- * @param timestamp the timestamp of captured data
- * @param qrCode    the captured QRCode
- * @param points    the QRCode vertices
+ * @param timestamp      the timestamp of captured data (ms)
+ * @param simulationTime the simulation time (ms)
+ * @param qrCode         the captured QRCode
+ * @param points         the QRCode vertices
+ * @param direction      the direction of label
  */
 public record CameraEvent(
         long timestamp,
+        long simulationTime,
         String qrCode,
         int width, int height,
-        Point2D[] points
-) {
+        Point2D[] points,
+        Complex direction) {
     public static final String UNKNOWN_QR_CODE = "?";
     private static final int NUM_PARAMS = 13;
 
     /**
      * Returns the camera event from line
      *
-     * @param line the data line
+     * @param line  the data line
+     * @param widthRatio the width ratio
      */
-    static CameraEvent create(String line) {
-        String[] params = line.split(" ");
+    static CameraEvent create(Timed<String> line, double widthRatio, long timeOffset) {
+        String[] params = line.value().split(" ");
+        long time = line.time(TimeUnit.MILLISECONDS);
         if (params.length != NUM_PARAMS) {
             throw new IllegalArgumentException(format("Wrong status message \"%s\" (#params=%d)", line, params.length));
         }
@@ -63,18 +71,21 @@ public record CameraEvent(
         int width = Integer.parseInt(params[3]);
         int height = Integer.parseInt(params[4]);
         Point2D[] points = new Point2D[4];
+        double xTot = 0;
         for (int i = 0; i < 4; i++) {
             double x = Double.parseDouble(params[i * 2 + 5]);
             double y = Double.parseDouble(params[i * 2 + 6]);
             points[i] = new Point2D.Double(x, y);
+            xTot += x;
         }
-        return new CameraEvent(timestamp, qrcode, width, height, points);
+        Complex direction = Complex.fromPoint(xTot / 4 * widthRatio, width);
+        return new CameraEvent(timestamp, time - timeOffset, qrcode, width, height, points, direction);
     }
 
     /**
      * Returns the unknown qrCode event
      */
     public static CameraEvent unknown(long timestamp) {
-        return new CameraEvent(timestamp, UNKNOWN_QR_CODE, 0, 0, null);
+        return new CameraEvent(timestamp, timestamp, UNKNOWN_QR_CODE, 0, 0, null, Complex.DEG0);
     }
 }

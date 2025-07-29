@@ -84,6 +84,7 @@ flow:
     labelStuck:
       $id: https://mmarini.org/wheelly/state-label-stuck-schema-0.1
       class: org.mmarini.wheelly.engines.LabelStuckState
+      distance: 0.5
       transitions:
         blocked:
           to: avoid
@@ -126,6 +127,14 @@ flow:
       class: org.mmarini.wheelly.engines.AvoidingState
       safeDistance: 0.2
       speed: 20
+      transitions:
+        completed:
+          to: mapping
+        blocked:
+          to: clearMap
+    clearMap:
+      $id: https://mmarini.org/wheelly/state-clear-map-schema-0.1
+      class: org.mmarini.wheelly.engines.ClearMapState
       transitions:
         completed:
           to: mapping

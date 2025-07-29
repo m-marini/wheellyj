@@ -58,7 +58,7 @@ class SignalGeneratorTest {
     public static final Complex RECEPTIVE_ANGLE = Complex.fromDeg(15);
     public static final double MAX_RADAR_DISTANCE = 3d;
     public static final double CONTACT_RADIUS = 0.28;
-    public static final RobotSpec ROBOT_SPEC = new RobotSpec(MAX_RADAR_DISTANCE, RECEPTIVE_ANGLE, CONTACT_RADIUS);
+    public static final RobotSpec ROBOT_SPEC = new RobotSpec(MAX_RADAR_DISTANCE, RECEPTIVE_ANGLE, CONTACT_RADIUS, cameraViewAngle);
     public static final File OUTPUT_PATH = new File("tmp");
     public static final double EPSILON = 1e-6;
     public static final GridTopology TOPOLOGY = GridTopology.create(new Point2D.Double(), 51, 51, GRID_SIZE);
@@ -72,7 +72,7 @@ class SignalGeneratorTest {
             45, 7, 8, 9, true, 10, 11, 12, 13);
     public static final WheellyContactsMessage CONTACTS_MESSAGE = new WheellyContactsMessage(1, 2, 3, true,
             true, true, true);
-    public static final CameraEvent CAMERA_EVENT = new CameraEvent(1, "?", 3, 4, null);
+    public static final CameraEvent CAMERA_EVENT = new CameraEvent(1, simulationTime, "?", 3, 4, null, direction);
     public static final RobotCommands COMMANDS = new RobotCommands(true, Complex.DEG0, false, true, Complex.DEG90, 20);
     private static final String MODELLER_DEF = """
             ---

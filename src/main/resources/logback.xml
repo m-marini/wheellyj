@@ -43,6 +43,7 @@
     <logger name="org.mmarini.wheelly.apps.RobotExecutor" level="INFO"/>
     <logger name="org.mmarini.wheelly.apps.Report" level="INFO"/>
     <logger name="org.mmarini.wheelly.apps.Wheelly" level="INFO"/>
+    <logger name="org.mmarini.wheelly.apps.CameraCalibration" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.swing.NNActivityPanel" level="INFO"/>
 
