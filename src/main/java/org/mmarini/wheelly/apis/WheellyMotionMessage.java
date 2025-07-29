@@ -118,6 +118,36 @@ public record WheellyMotionMessage(long localTime, long simulationTime, long rem
                 halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
     }
 
+    public static WheellyMotionMessage create(Timed<String> line, long timeOffset) {
+        long time = line.time(TimeUnit.MILLISECONDS);
+        String[] params = line.value().split(" ");
+        if (params.length != NO_STATUS_PARAMS) {
+            throw new IllegalArgumentException(format("Wrong motion message \"%s\" (#params=%d)", line.value(), params.length));
+        }
+
+        long remoteTime = parseLong(params[1]);
+        double x = parseDouble(params[2]);
+        double y = parseDouble(params[3]);
+        int robotDeg = parseInt(params[4]);
+
+        double left = parseDouble(params[5]);
+        double right = parseDouble(params[6]);
+
+        int imuFailure = Integer.parseInt(params[7]);
+        boolean halt = Integer.parseInt(params[8]) != 0;
+        int leftTargetPps = Integer.parseInt(params[11]);
+        int rightTargetPps = Integer.parseInt(params[12]);
+        int leftPower = Integer.parseInt(params[13]);
+        int rightPower = Integer.parseInt(params[14]);
+
+        long simTime = time - timeOffset;
+        return new WheellyMotionMessage(time, simTime, remoteTime, x,
+                y,
+                robotDeg, left,
+                right, imuFailure,
+                halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
+    }
+
     /**
      * Creates a motion message
      *

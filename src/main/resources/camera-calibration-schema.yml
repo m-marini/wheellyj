@@ -1,0 +1,19 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/camera-calibration-schema-0.1
+title: Monitor application
+
+# monitor schema
+type: object
+properties:
+  $schema:
+    type: string
+    const: https://mmarini.org/wheelly/camera-calibration-schema-0.1
+  robot:
+    type: string
+  controller:
+    type: string
+required:
+  - $schema
+  - robot
+  - controller

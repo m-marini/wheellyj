@@ -43,7 +43,7 @@ public class MockRobot implements RobotApi {
     public static final double CONTACT_RADIUS = 0.3;
     public static final int RECEPTIVE_ANGLE_DEG = 15;
     public static final double MAX_RADAR_DISTANCE = 3d;
-    public static final RobotSpec ROBOT_SPEC = new RobotSpec(MAX_RADAR_DISTANCE, Complex.fromDeg(RECEPTIVE_ANGLE_DEG), CONTACT_RADIUS);
+    public static final RobotSpec ROBOT_SPEC = new RobotSpec(MAX_RADAR_DISTANCE, Complex.fromDeg(RECEPTIVE_ANGLE_DEG), CONTACT_RADIUS, cameraViewAngle);
     public static final RobotStatusApi CONNECTED = new RobotStatusApi() {
         @Override
         public boolean configured() {

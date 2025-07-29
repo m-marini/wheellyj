@@ -5,7 +5,7 @@ The code of Arduino controller is at [Wheellino project](https://github.com/m-ma
 
 The code of Webcam controller is at [Wheellycam project](https://github.com/m-marini/wheellycam).
 
-The documentaion is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
+The documentation is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
 ## Release 0.24.0
 

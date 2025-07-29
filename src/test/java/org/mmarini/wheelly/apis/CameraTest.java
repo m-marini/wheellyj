@@ -42,7 +42,7 @@ class CameraTest {
         String line = "qr 1725192587504 A 320 240 90.0 108.8 182.0 107.0 184.0 203.0 90.0 203.0";
 
         // When create a camera event
-        CameraEvent event = CameraEvent.create(line);
+        CameraEvent event = CameraEvent.create(line, focal);
 
         // Then
         assertNotNull(event);

@@ -303,14 +303,14 @@ public class LineSocket implements Closeable {
      * Splits the buffer to lines
      */
     private void splitLines() {
-        long timestamp = System.nanoTime();
+        long timestamp = System.currentTimeMillis();
         String data = new String(buffer.array(), buffer.position(), buffer.remaining(), StandardCharsets.UTF_8);
         String[] fragments = data.split(CRLF_PATTERN, -1);
         String tail = fragments[fragments.length - 1];
         buffer.clear();
         buffer.put(tail.getBytes(StandardCharsets.UTF_8));
         Arrays.stream(fragments).limit(fragments.length - 1)
-                .map(line -> new Timed<>(line, timestamp, TimeUnit.NANOSECONDS))
+                .map(line -> new Timed<>(line, timestamp, TimeUnit.MILLISECONDS))
                 .forEach(lines::onNext);
     }
 

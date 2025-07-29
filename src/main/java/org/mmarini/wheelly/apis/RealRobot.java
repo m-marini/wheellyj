@@ -78,6 +78,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import static java.lang.Math.tan;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
@@ -117,7 +118,7 @@ import static java.util.Objects.requireNonNull;
  * </p>
  */
 public class RealRobot implements RobotApi {
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/real-robot-schema-0.1";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/real-robot-schema-0.2";
     public static final int DEFAULT_ROBOT_PORT = 22;
     public static final int DEFAULT_CAMERA_PORT = 8100;
     private static final Logger logger = LoggerFactory.getLogger(RealRobot.class);
@@ -144,7 +145,8 @@ public class RealRobot implements RobotApi {
         double maxRadarDistance = locator.path("maxRadarDistance").getNode(root).asDouble();
         double contactRadius = locator.path("contactRadius").getNode(root).asDouble();
         int receptiveAngle = locator.path("sensorReceptiveAngle").getNode(root).asInt();
-        RobotSpec robotSpec = new RobotSpec(maxRadarDistance, Complex.fromDeg(receptiveAngle), contactRadius);
+        int cameraViewAngle = locator.path("cameraViewAngle").getNode(root).asInt();
+        RobotSpec robotSpec = new RobotSpec(maxRadarDistance, Complex.fromDeg(receptiveAngle), contactRadius, Complex.fromDeg(cameraViewAngle));
 
         Locator configCommandsLoc = locator.path("configCommands");
         String[] configCommands = !configCommandsLoc.getNode(root).isMissingNode()
@@ -231,6 +233,7 @@ public class RealRobot implements RobotApi {
     public void close() throws IOException {
         logger.atInfo().log("Closing ...");
         RealRobotStatus s1 = status.get();
+        halt();
         LineSocket robotSocket = s1.robotSocket();
         robotSocket.close();
         LineSocket cameraSocket = s1.cameraSocket();
@@ -304,6 +307,7 @@ public class RealRobot implements RobotApi {
     public void connect() {
         RealRobotStatus s = status.getAndUpdate(s1 -> s1.started(true));
         if (!s.started()) {
+            status.getAndUpdate(s1 -> s1.startTime(System.currentTimeMillis()));
             createSockets();
         }
     }
@@ -313,7 +317,7 @@ public class RealRobot implements RobotApi {
      */
     private void createSockets() {
         logger.atDebug().log("Creating sockets ...");
-        RealRobotStatus s = status.updateAndGet(s1 -> s1.startTime(System.currentTimeMillis())
+        RealRobotStatus s = status.updateAndGet(s1 -> s1
                 .robotSocket(robotSocketProvider.get())
                 .cameraSocket(cameraSocketProvider.get())
                 .setConnecting());
@@ -467,7 +471,8 @@ public class RealRobot implements RobotApi {
      * @throws IllegalArgumentException if messages cannot be parsed
      */
     private void parseForCameraMessage(Timed<String> line) {
-        CameraEvent msg = CameraEvent.create(line.value());
+        double widthRatio = 2 * tan(robotSpec.cameraViewAngle().toRad() / 2);
+        CameraEvent msg = CameraEvent.create(line, widthRatio, status.get().startTime());
         cameraEvents.onNext(msg);
     }
 
@@ -480,7 +485,7 @@ public class RealRobot implements RobotApi {
      */
     private void parseForWheellyMessage(Timed<String> line) {
         RealRobotStatus s = status.get();
-        Optional<WheellyMessage> msgOpt = WheellyMessage.fromLine(line, s.clockConverter());
+        Optional<WheellyMessage> msgOpt = WheellyMessage.fromLine(line, s.startTime());
         msgOpt.ifPresent(msg -> {
             if (msg instanceof WheellyMotionMessage motionMsg) {
                 RealRobotStatus st = status.updateAndGet(s1 -> s1.halted(motionMsg.halt()));

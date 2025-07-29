@@ -1,5 +1,5 @@
 ---
-$schema: https://mmarini.org/wheelly/real-robot-schema-0.1
+$schema: https://mmarini.org/wheelly/real-robot-schema-0.2
 class: org.mmarini.wheelly.apis.RealRobot
 robotHost: 192.168.1.43
 cameraHost: localhost
@@ -10,6 +10,7 @@ watchDogInterval: 500
 watchDogTimeout: 5000
 contactRadius: 0.28
 sensorReceptiveAngle: 15
+cameraViewAngle: 120
 maxRadarDistance: 3
 configCommands:
   - cs 500

@@ -143,7 +143,7 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
                 return filterCleaningArea(map, robotLocation, proxyMessage.echoDirection(),
                         cleanAreaDistance, receptiveAngle, cameraTime);
             } else {
-                Point2D markerLocation = proxyMessage.echoDirection().at(robotLocation, distance + markerSize / 2);
+                Point2D markerLocation = proxyMessage.echoDirection().add(cameraEvent.direction()).at(robotLocation, distance + markerSize / 2);
                 LabelMarker marker = map.get(cameraEvent.qrCode());
                 Map<String, LabelMarker> map1 = filterCleaningArea(map, robotLocation, proxyMessage.echoDirection(),
                         cleanAreaDistance, receptiveAngle, cameraTime);
