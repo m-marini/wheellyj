@@ -28,9 +28,11 @@
 
 package org.mmarini.wheelly.apis;
 
+import io.reactivex.rxjava3.schedulers.Timed;
 import org.junit.jupiter.api.Test;
 
 import java.awt.geom.Point2D;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -42,7 +44,7 @@ class CameraTest {
         String line = "qr 1725192587504 A 320 240 90.0 108.8 182.0 107.0 184.0 203.0 90.0 203.0";
 
         // When create a camera event
-        CameraEvent event = CameraEvent.create(line, focal);
+        CameraEvent event = CameraEvent.create(new Timed<>(line, 0, TimeUnit.MILLISECONDS), 1, 0);
 
         // Then
         assertNotNull(event);

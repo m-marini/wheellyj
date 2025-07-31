@@ -20,6 +20,9 @@ properties:
   timeout:
     type: integer
     minimum: 1
+  safetyDistance:
+    type: number
+    exclusiveMinimum: 0
   approachDistance:
     type: number
     exclusiveMinimum: 0
@@ -27,10 +30,20 @@ properties:
     type: integer
     minimum: 10
     maximum: 60
+  path:
+    type: array
+    items:
+      $ref: "#/$defs/Point"
 required:
   - $id
   - class
 $defs:
+  Point:
+    type: array
+    items:
+      type: number
+    minItems: 2
+    maxItems: 2
   Commands:
     type: array
     items:

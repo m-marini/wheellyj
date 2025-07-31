@@ -35,7 +35,9 @@ import org.mmarini.yaml.Locator;
 import java.io.IOException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mmarini.yaml.Utils.fromText;
 import static rocks.cleancode.hamcrest.record.HasFieldMatcher.field;
 
@@ -46,6 +48,7 @@ class StateFlowTest {
             entry: a
             states:
               a:
+                $id: https://mmarini.org/wheelly/state-halt-schema-0.1
                 class: org.mmarini.wheelly.engines.HaltState
                 transitions:
                     ".*":
@@ -56,6 +59,7 @@ class StateFlowTest {
                         - get
                         - put
               b:
+                $id: https://mmarini.org/wheelly/state-halt-schema-0.1
                 class: org.mmarini.wheelly.engines.HaltState
             onInit:
               - a
@@ -70,14 +74,11 @@ class StateFlowTest {
         StateFlow sf = StateFlow.create(root, Locator.root());
 
         assertThat(sf, field("states", hasSize(2)));
-        assertThat(sf, field("states",
-                hasItem(field("id",
-                        equalTo("a")))));
-        assertThat(sf, field("states",
-                hasItem(field("id",
-                        equalTo("b")))));
-        assertThat(sf, field("onInit",
-                field("id", equalTo("@program"))));
-        assertThat(sf, field("transitions", hasSize(1)));
+        assertNotNull(sf.getState("a"));
+        assertNotNull(sf.getState("b"));
+        ProcessorCommand onInit = sf.onInit();
+        assertNotNull(onInit);
+        assertEquals("@program", onInit.id());
+        assertThat(sf.transitions(), hasSize(1));
     }
 }

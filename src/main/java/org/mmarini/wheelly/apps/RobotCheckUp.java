@@ -163,7 +163,7 @@ public class RobotCheckUp {
             @Override
             public List<ScannerResult> apply(RobotStatus status) {
                 long time = status.simulationTime();
-                RobotCommands command = RobotCommands.haltCommand();
+                RobotCommands command = RobotCommands.haltMove();
                 if (currentTest < 0) {
                     // First sample
                     currentTest = 0;

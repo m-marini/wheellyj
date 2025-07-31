@@ -509,7 +509,7 @@ public class MatrixMonitor {
             timeSlider.setEnabled(true);
         }
         if (halt) {
-            controller.execute(RobotCommands.haltCommand());
+            controller.execute(RobotCommands.haltMove());
         } else {
             controller.execute(RobotCommands.move(
                     Complex.fromDeg(robotDirSlider.getValue()),

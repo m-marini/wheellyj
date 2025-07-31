@@ -31,16 +31,13 @@ package org.mmarini.wheelly.engines;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static java.util.Objects.requireNonNull;
-
 /**
- * Generates the behavior to haltCommand the robot
+ * Generates the behaviour to haltCommand the robot
  * <p>
  * Stops the robot and moves the sensor if required.<br>
  * <code>blocked</code> is generated at contact sensors signals.<br>
@@ -49,18 +46,13 @@ import static java.util.Objects.requireNonNull;
  * <code>blocked</code> is generated at contact sensors signals.<br>
  * <code>timeout</code> is generated at timeout.
  * </p>
- *
- * @param id      the identifier
- * @param onInit  the initialization command
- * @param onEntry the entry command
- * @param onExit  eht exit command
  */
 
-public record HaltState(String id, ProcessorCommand onInit, ProcessorCommand onEntry,
-                        ProcessorCommand onExit) implements ExtendedStateNode {
+public class HaltState extends TimeOutState {
 
     private static final Logger logger = LoggerFactory.getLogger(HaltState.class);
     private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-halt-schema-0.1";
+    public static final String TIMEOUT_ID = "TIMEOUT";
 
     /**
      * Returns the haltCommand state from configuration
@@ -71,49 +63,33 @@ public record HaltState(String id, ProcessorCommand onInit, ProcessorCommand onE
      */
     public static HaltState create(JsonNode root, Locator locator, String id) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        long timeout = locator.path(TIMEOUT_ID).getNode(root).asLong();
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
-        ProcessorCommand onInit = ProcessorCommand.concat(
-                ExtendedStateNode.loadTimeout(root, locator, id),
-                ExtendedStateNode.loadAutoScanOnInit(root, locator, id),
-                ProcessorCommand.create(root, locator.path("onInit")));
-        return new HaltState(id, onInit, onEntry, onExit);
+        ProcessorCommand onInit = ProcessorCommand.create(root, locator.path("onInit"));
+        return new HaltState(id, onInit, onEntry, onExit, timeout);
     }
 
     /**
      * Creates the haltCommand state
      *
      * @param id      the identifier
-     * @param onInit  the initialization command
+     * @param onInit  the initialisation command
      * @param onEntry the entry command
-     * @param onExit  eht exit command
+     * @param onExit  the exit command
+     * @param timeout the timeout (ms)
      */
-    public HaltState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit) {
-        this.id = requireNonNull(id);
-        this.onInit = onInit;
-        this.onEntry = onEntry;
-        this.onExit = onExit;
-    }
-
-    @Override
-    public void entry(ProcessorContextApi context) {
-        ExtendedStateNode.super.entry(context);
-        entryAutoScan(context);
+    public HaltState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit, long timeout) {
+        super(id, onInit, onEntry, onExit, timeout);
+        logger.atDebug().log("Created {}", id);
     }
 
     @Override
     public Tuple2<String, RobotCommands> step(ProcessorContextApi ctx) {
-        if (isTimeout(ctx)) {
-            return TIMEOUT_RESULT;
-        }
-        Tuple2<String, RobotCommands> result = getBlockResult(ctx);
+        Tuple2<String, RobotCommands> result = super.step(ctx);
         if (result != null) {
-            RobotStatus robotStatus = ctx.worldModel().robotStatus();
-            logger.atDebug().log("Contacts at {} {}",
-                    !robotStatus.canMoveForward() ? "front" : "",
-                    !robotStatus.canMoveBackward() ? "rear" : "");
             return result;
         }
-        return tickAutoScan(ctx);
+        return NONE_HALT_RESULT;
     }
 }

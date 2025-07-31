@@ -7,12 +7,11 @@ flow:
     scan:
       $id: https://mmarini.org/wheelly/state-mapping-schema-0.1
       class: org.mmarini.wheelly.engines.MappingState
-      timeout: 300000
       scanInterval: 1000
       transitions:
-        timeout:
-          to: halt
         frontBlocked:
+          to: avoid
+        rearBlocked:
           to: avoid
         blocked:
           to: avoid
@@ -22,15 +21,20 @@ flow:
       $id: https://mmarini.org/wheelly/state-halt-schema-0.1
       class: org.mmarini.wheelly.engines.HaltState
       timeout: 10000
-      scanInterval: 1000
-      minSensorDir: 0
-      maxSensorDir: 0
       transitions:
         timeout:
           to: scan
+        blocked:
+          to: clearMap
         frontBlocked:
           to: avoid
         rearBlocked:
+          to: avoid
+    clearMap:
+      $id: https://mmarini.org/wheelly/state-clear-map-schema-0.1
+      class: org.mmarini.wheelly.engines.ClearMapState
+      transitions:
+        ".*":
           to: avoid
     avoid:
       $id: https://mmarini.org/wheelly/state-avoid-schema-0.1
@@ -40,3 +44,5 @@ flow:
       transitions:
         completed:
           to: scan
+        blocked:
+          to: clearMap

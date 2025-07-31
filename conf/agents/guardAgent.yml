@@ -13,34 +13,42 @@ flow:
       timeout: 2000
       transitions:
         timeout:
-          to: movingTo1
-    movingTo0:
-      $id: https://mmarini.org/wheelly/state-move-to-schema-0.1
-      class: org.mmarini.wheelly.engines.MoveToState
+          to: moving
+        rearBlocked:
+          to: avoid
+        frontBlocked:
+          to: avoid
+        blocked:
+          to: clearMap
+    moving:
+      $id: https://mmarini.org/wheelly/state-move-path-schema-0.1
+      class: org.mmarini.wheelly.engines.MovePathState
       stopDistance: 0.1
-      x: 0
-      y: 0
+      path:
+        - [0, 0]
+        - [0, 2]
       transitions:
         completed:
-          to: movingTo1
+          to: moving
         rearBlocked:
-          to: start
+          to: avoid
         frontBlocked:
-          to: start
+          to: avoid
         blocked:
-          to: start
-    movingTo1:
-      $id: https://mmarini.org/wheelly/state-move-to-schema-0.1
-      class: org.mmarini.wheelly.engines.MoveToState
-      stopDistance: 0.1
-      x: 0
-      y: 2
+          to: clearMap
+    clearMap:
+      $id: https://mmarini.org/wheelly/state-clear-map-schema-0.1
+      class: org.mmarini.wheelly.engines.ClearMapState
+      transitions:
+        ".*":
+          to: avoid
+    avoid:
+      $id: https://mmarini.org/wheelly/state-avoid-schema-0.1
+      class: org.mmarini.wheelly.engines.AvoidingState
+      safeDistance: 0.2
+      speed: 20
       transitions:
         completed:
-          to: movingTo0
-        rearBlocked:
-          to: start
-        frontBlocked:
           to: start
         blocked:
-            to: start
+          to: clearMap

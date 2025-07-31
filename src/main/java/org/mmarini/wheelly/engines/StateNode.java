@@ -49,12 +49,12 @@ public interface StateNode {
     String NONE_EXIT = "none";
     String TARGET_ID = "target";
     String PATH_ID = "path";
-    Tuple2<String, RobotCommands> TIMEOUT_RESULT = Tuple2.of(TIMEOUT_EXIT, RobotCommands.idle());
-    Tuple2<String, RobotCommands> BLOCKED_RESULT = Tuple2.of(BLOCKED_EXIT, RobotCommands.idle());
-    Tuple2<String, RobotCommands> FRONT_BLOCKED_RESULT = Tuple2.of(FRONT_BLOCKED_EXIT, RobotCommands.idle());
-    Tuple2<String, RobotCommands> REAR_BLOCKED_RESULT = Tuple2.of(REAR_BLOCKED_EXIT, RobotCommands.idle());
-    Tuple2<String, RobotCommands> NONE_RESULT = Tuple2.of(NONE_EXIT, RobotCommands.none());
-    Tuple2<String, RobotCommands> COMPLETED_RESULT = Tuple2.of(COMPLETED_EXIT, RobotCommands.idle());
+    Tuple2<String, RobotCommands> TIMEOUT_RESULT = Tuple2.of(TIMEOUT_EXIT, RobotCommands.haltCommand());
+    Tuple2<String, RobotCommands> BLOCKED_RESULT = Tuple2.of(BLOCKED_EXIT, RobotCommands.haltCommand());
+    Tuple2<String, RobotCommands> FRONT_BLOCKED_RESULT = Tuple2.of(FRONT_BLOCKED_EXIT, RobotCommands.haltCommand());
+    Tuple2<String, RobotCommands> REAR_BLOCKED_RESULT = Tuple2.of(REAR_BLOCKED_EXIT, RobotCommands.haltCommand());
+    Tuple2<String, RobotCommands> NONE_HALT_RESULT = Tuple2.of(NONE_EXIT, RobotCommands.haltCommand());
+    Tuple2<String, RobotCommands> COMPLETED_RESULT = Tuple2.of(COMPLETED_EXIT, RobotCommands.haltCommand());
 
     /**
      * Returns the state node from yaml document
@@ -99,15 +99,18 @@ public interface StateNode {
      *
      * @param context the processor context
      */
-    long getElapsedTime(ProcessorContextApi context);
+    long elapsedTime(ProcessorContextApi context);
 
     /**
      * Returns the state entry localTime (ms)
      *
      * @param context the processor context
      */
-    long getEntryTime(ProcessorContextApi context);
+    long entryTime(ProcessorContextApi context);
 
+    /**
+     * Returns the state identifier
+     */
     String id();
 
     /**
@@ -116,13 +119,6 @@ public interface StateNode {
      * @param context the processor context
      */
     void init(ProcessorContextApi context);
-
-    /**
-     * Returns true if the state has timed out
-     *
-     * @param context the processor context
-     */
-    boolean isTimeout(ProcessorContextApi context);
 
     /**
      * Processes the interaction and returns the exit key and the robot command

@@ -69,6 +69,7 @@ public class RRTTestApp {
     private static final double MIN_OBSTACLE_DISTANCE = 0.4;
     private static final double DECAY = 10 * 1000;
     private static final Logger logger = LoggerFactory.getLogger(RRTTestApp.class);
+    public static final double SAFETY_DISTANCE = 0.3;
 
     private static ObstacleMap createObstacles() {
         Random random = new Random(SEED);
@@ -83,7 +84,7 @@ public class RRTTestApp {
     private static RRTPathFinder createPathFinder(RadarMap map, ObstacleMap obstacles, Point2D location) {
         //return RRTPathFinder.createUnknownTargets(map, location, GROWTH_DISTANCE, new Random(SEED));
 //        return RRTPathFinder.createLeastEmptyTargets(map, location, GROWTH_DISTANCE, 3, new Random(SEED));
-        return RRTPathFinder.createLabelTargets(map, location, DISTANCE, GROWTH_DISTANCE, new Random(SEED), obstacles.labeled());
+        return RRTPathFinder.createLabelTargets(map, location, DISTANCE, SAFETY_DISTANCE, GROWTH_DISTANCE, new Random(SEED), obstacles.labeled());
     }
 
     private static RadarMap createRadarMap(ObstacleMap obstacles) {

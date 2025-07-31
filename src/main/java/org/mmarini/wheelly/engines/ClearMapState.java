@@ -36,23 +36,15 @@ import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static java.util.Objects.requireNonNull;
-
 /**
  * Generates the behavior to clear map
  * <p>
  * Clear the map.<br>
  * <code>completed</code> is generated at completion
  * </p>
- *
- * @param id      the identifier
- * @param onInit  the initialization command
- * @param onEntry the entry command
- * @param onExit  eht exit command
  */
 
-public record ClearMapState(String id, ProcessorCommand onInit, ProcessorCommand onEntry,
-                            ProcessorCommand onExit) implements ExtendedStateNode {
+public class ClearMapState extends AbstractStateNode {
 
     private static final Logger logger = LoggerFactory.getLogger(ClearMapState.class);
     private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-clear-map-schema-0.1";
@@ -81,10 +73,7 @@ public record ClearMapState(String id, ProcessorCommand onInit, ProcessorCommand
      * @param onExit  eht exit command
      */
     public ClearMapState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit) {
-        this.id = requireNonNull(id);
-        this.onInit = onInit;
-        this.onEntry = onEntry;
-        this.onExit = onExit;
+        super(id, onInit, onEntry, onExit);
         logger.atDebug().log("Created");
     }
 
@@ -93,6 +82,10 @@ public record ClearMapState(String id, ProcessorCommand onInit, ProcessorCommand
         // Clear the map
         logger.atDebug().log("Clearing map ...");
         ctx.clearMap();
-        return COMPLETED_RESULT;
+        Tuple2<String, RobotCommands> result = super.step(ctx);
+        if (result == null) {
+            result = COMPLETED_RESULT;
+        }
+        return result;
     }
 }

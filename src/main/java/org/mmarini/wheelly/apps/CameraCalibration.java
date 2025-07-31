@@ -217,7 +217,7 @@ public class CameraCalibration {
 
     private void halt() {
         currentState = null;
-        controller.execute(RobotCommands.idle());
+        controller.execute(RobotCommands.haltCommand());
     }
 
     /**

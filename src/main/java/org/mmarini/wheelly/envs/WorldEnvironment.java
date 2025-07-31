@@ -191,10 +191,10 @@ public class WorldEnvironment implements EnvironmentApi {
                     speed(actions),
                     sensorDirection)
                     : sensorDirection.toIntDeg() == 0
-                    ? RobotCommands.haltCommand()
+                    ? RobotCommands.haltMove()
                     : RobotCommands.scan(sensorDirection);
         }
-        return RobotCommands.haltCommand();
+        return RobotCommands.haltMove();
     }
 
     @Override
