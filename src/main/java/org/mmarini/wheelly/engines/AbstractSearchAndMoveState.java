@@ -132,10 +132,6 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
             // Target reached
             return nextLocation(context);
         }
-        if (!map.freeTrajectory(robotLocation, target, safetyDistance)) {
-            crearePath(context);
-            return step(context);
-        }
         // Computes direction
         Complex direction = Complex.direction(robotLocation, target);
         // Computes speed

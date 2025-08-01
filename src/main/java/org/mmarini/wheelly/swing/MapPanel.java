@@ -51,7 +51,7 @@ public class MapPanel extends LayeredCanvas {
     public static final float DEFAULT_MARKER_SIZE = 0.3f;
     public static final int MAP_INSETS = 10;
     private static final int DEFAULT_PIXEL_GRID_SIZE1 = 15;
-    private static final float TARGET_SIZE = 0.2f;
+    private static final float TARGET_SIZE = ROBOT_RADIUS;
     private final double pixelGridSize;
     private float markerSize;
 

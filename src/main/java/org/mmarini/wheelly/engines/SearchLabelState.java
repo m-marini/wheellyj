@@ -59,6 +59,7 @@ public class SearchLabelState extends AbstractSearchAndMoveState {
     public static final String DISTANCE_ID = "distance";
     private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-search-label-schema-0.1";
     private static final Logger logger = LoggerFactory.getLogger(SearchLabelState.class);
+    private static final double CM = 10e-3;
 
     /**
      * Returns the exploring state from configuration
@@ -93,7 +94,7 @@ public class SearchLabelState extends AbstractSearchAndMoveState {
             Point2D[] labels = worldModel.markers().values().stream().map(LabelMarker::location).toArray(Point2D[]::new);
             return labels.length == 0
                     ? null
-                    : RRTPathFinder.createLabelTargets(map, robotLocation, distance, safetyDistance, growthDistance, random,
+                    : RRTPathFinder.createLabelTargets(map, robotLocation, distance, safetyDistance + CM, growthDistance, random,
                     Arrays.stream(labels));
 
         };

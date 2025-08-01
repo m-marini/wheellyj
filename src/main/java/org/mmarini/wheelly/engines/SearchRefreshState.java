@@ -60,6 +60,7 @@ import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
 public class SearchRefreshState extends AbstractSearchAndMoveState {
     private static final Logger logger = LoggerFactory.getLogger(SearchRefreshState.class);
     private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-search-refresh-schema-0.1";
+    public static final double CM = 10e-3;
 
     /**
      * Returns the exploring state from configuration
@@ -91,7 +92,7 @@ public class SearchRefreshState extends AbstractSearchAndMoveState {
             RobotStatus status = worldModel.robotStatus();
             Point2D robotLocation = status.location();
             double maxDistance = status.robotSpec().maxRadarDistance();
-            return RRTPathFinder.createLeastEmptyTargets(map, robotLocation, safetyDistance, growthDistance, maxDistance, random);
+            return RRTPathFinder.createLeastEmptyTargets(map, robotLocation, safetyDistance + CM, growthDistance, maxDistance, random);
         };
         return new SearchRefreshState(id, onInit, onEntry, onExit, timeout, safetyDistance, approachDistance, speed, maxIterations, minGoals, maxSearchTime, pathFinderSupplier);
     }

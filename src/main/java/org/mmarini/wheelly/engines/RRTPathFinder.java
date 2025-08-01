@@ -47,6 +47,7 @@ import static org.mmarini.wheelly.swing.BaseShape.ROBOT_RADIUS;
  * Finds the best path to a generic goal.
  */
 public class RRTPathFinder {
+
     /**
      * Creates the pathfinder
      *

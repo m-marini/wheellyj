@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import java.awt.geom.Point2D;
 import java.util.Comparator;
 
+import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -147,20 +148,22 @@ public class LabelStuckState extends TimeOutState {
         double labelDistance = robotLocation.distance(target);
         Complex targetDir = Complex.direction(robotLocation, target);
         Complex robotDir = status.direction();
+        Complex sensorDir = Complex.fromDeg(clamp(targetDir.sub(robotDir).toIntDeg(), -90, 90));
+
         if (labelDistance < distance - EPSILON_DISTANCE) {
             // the robot is too close, move backward
-            RobotCommands command = RobotCommands.moveAndFrontScan(targetDir, -speed);
+            RobotCommands command = RobotCommands.moveAndScan(targetDir, -speed, sensorDir);
             return new Tuple2<>(NONE_EXIT, command);
         } else if (labelDistance > distance + EPSILON_DISTANCE) {
             // the robot is too far, move forward
-            RobotCommands command = RobotCommands.moveAndFrontScan(targetDir, speed);
+            RobotCommands command = RobotCommands.moveAndScan(targetDir, speed, sensorDir);
             return new Tuple2<>(NONE_EXIT, command);
         } else if (!targetDir.isCloseTo(robotDir, directionRange)) {
             // The robot is not directed to the label, turn the robot
-            RobotCommands command = RobotCommands.moveAndFrontScan(targetDir, 0);
+            RobotCommands command = RobotCommands.moveAndScan(targetDir, 0, sensorDir);
             return new Tuple2<>(NONE_EXIT, command);
         } else {
-            return new Tuple2<>(NONE_EXIT, RobotCommands.haltCommand());
+            return new Tuple2<>(NONE_EXIT, RobotCommands.scan(sensorDir).setHalt());
         }
     }
 }

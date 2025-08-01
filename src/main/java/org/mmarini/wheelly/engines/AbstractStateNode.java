@@ -35,7 +35,9 @@ import org.mmarini.wheelly.apis.RobotStatus;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
-
+/**
+ * Abstract state node
+ */
 public abstract class AbstractStateNode implements StateNode {
     private final String id;
     private final ProcessorCommand onInit;

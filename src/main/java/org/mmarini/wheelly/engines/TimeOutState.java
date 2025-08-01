@@ -61,10 +61,8 @@ public abstract class TimeOutState extends AbstractStateNode {
 
     @Override
     public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
-        Tuple2<String, RobotCommands> result = super.step(context);
-        if (result != null) {
-            return result;
-        }
-        return isTimeout(context) ? TIMEOUT_RESULT : null;
+        return isTimeout(context)
+                ? TIMEOUT_RESULT
+                : super.step(context);
     }
 }

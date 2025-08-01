@@ -200,7 +200,6 @@ public class AvoidingState extends TimeOutState {
 
         Complex escapeDir;
         int escapeSpeed;
-        int speed = getInt(ctx, SPEED_ID);
         if (safePoint == null) {
             // no free point found: move away
             escapeDir = contactDirection;

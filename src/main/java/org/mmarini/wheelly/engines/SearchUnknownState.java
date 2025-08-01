@@ -60,6 +60,7 @@ import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
 public class SearchUnknownState extends AbstractSearchAndMoveState {
     private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-search-unknown-schema-0.1";
     private static final Logger logger = LoggerFactory.getLogger(SearchUnknownState.class);
+    public static final double CM = 10e-3;
 
     /**
      * Returns the exploring state from configuration
@@ -89,7 +90,7 @@ public class SearchUnknownState extends AbstractSearchAndMoveState {
             WorldModel worldModel = context.worldModel();
             RadarMap map = worldModel.radarMap();
             RobotStatus status = worldModel.robotStatus();
-            return RRTPathFinder.createUnknownTargets(map, status.location(), safetyDistance, growthDistance, random);
+            return RRTPathFinder.createUnknownTargets(map, status.location(), safetyDistance + CM, growthDistance, random);
         };
         return new SearchUnknownState(id, onInit, onEntry, onExit, timeout, safetyDistance, approachDistance, speed, maxIterations, minGoals, maxSearchTime, pathFinderSupplier);
     }
