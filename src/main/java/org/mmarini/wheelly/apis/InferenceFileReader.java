@@ -42,7 +42,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class InferenceFileReader extends DataFileReader implements InferenceReader {
 
-    public static final WheellySupplyMessage DEFAULT_SUPPLY_MESSAGE = new WheellySupplyMessage(0, 0, 0, 0);
+    public static final WheellySupplyMessage DEFAULT_SUPPLY_MESSAGE = new WheellySupplyMessage(0, 0);
     public static final IntToDoubleFunction DEFAULT_DECODE_VOLTAGE = x -> 12d;
 
     /**

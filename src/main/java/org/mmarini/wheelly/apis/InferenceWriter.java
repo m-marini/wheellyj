@@ -41,7 +41,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * @param camera the camera event
      */
     default InferenceWriter write(CameraEvent camera) throws IOException {
-        write(camera.timestamp())
+        write(camera.simulationTime())
                 .write(camera.qrCode())
                 .write(camera.width())
                 .write(camera.height());
@@ -69,9 +69,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * @param contacts the contact message
      */
     default InferenceWriter write(WheellyContactsMessage contacts) throws IOException {
-        write(contacts.localTime())
-                .write(contacts.simulationTime())
-                .write(contacts.remoteTime())
+        write(contacts.simulationTime())
                 .write(contacts.frontSensors())
                 .write(contacts.rearSensors())
                 .write(contacts.canMoveForward())
@@ -103,9 +101,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * @param motion the motion message
      */
     default InferenceWriter write(WheellyMotionMessage motion) throws IOException {
-        write(motion.localTime())
-                .write(motion.simulationTime())
-                .write(motion.remoteTime())
+        write(motion.simulationTime())
                 .write((float) motion.xPulses())
                 .write((float) motion.yPulses())
                 .write(motion.directionDeg())
@@ -142,9 +138,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * @param proxy the proxy message
      */
     default InferenceWriter write(WheellyProxyMessage proxy) throws IOException {
-        write(proxy.localTime())
-                .write(proxy.simulationTime())
-                .write(proxy.remoteTime())
+        write(proxy.simulationTime())
                 .write(proxy.sensorDirectionDeg())
                 .write(proxy.echoDelay())
                 .write((float) proxy.xPulses())

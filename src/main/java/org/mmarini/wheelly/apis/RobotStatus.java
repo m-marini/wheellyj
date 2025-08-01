@@ -64,14 +64,13 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      * @param decodeVoltage the decode voltage function
      */
     public static RobotStatus create(RobotSpec robotSpec, IntToDoubleFunction decodeVoltage) {
-        long now = System.currentTimeMillis();
-        WheellyProxyMessage proxyMessage1 = new WheellyProxyMessage(now, 0, 0, 0, 0, 0, 0, 0);
+        WheellyProxyMessage proxyMessage1 = new WheellyProxyMessage(0, 0, 0, 0, 0, 0);
         return new RobotStatus(robotSpec, 0,
-                new WheellyMotionMessage(now, 0, 0, 0, 0,
+                new WheellyMotionMessage(0, 0, 0,
                         0, 0, 0, 0, true, 0, 0, 0, 0),
                 proxyMessage1,
-                new WheellyContactsMessage(now, 0, 0, true, true, true, true),
-                new WheellySupplyMessage(now, 0, 0, 0),
+                new WheellyContactsMessage(0, true, true, true, true),
+                new WheellySupplyMessage(0, 0),
                 decodeVoltage,
                 CameraEvent.unknown(0),
                 proxyMessage1);

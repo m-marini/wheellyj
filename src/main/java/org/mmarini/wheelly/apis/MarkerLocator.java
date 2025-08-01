@@ -128,7 +128,7 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
         double distance = proxyMessage.echoDistance();
         double maxDistance = robotSpec.maxRadarDistance();
         Point2D robotLocation = RobotStatus.pulses2Location(proxyMessage.xPulses(), proxyMessage.yPulses());
-        long cameraTime = cameraEvent.timestamp();
+        long cameraTime = cameraEvent.simulationTime();
         long proxyTime = proxyMessage.simulationTime();
         if (cameraTime >= proxyTime && cameraTime <= proxyTime + correlationInterval) {
             // Correlated messages

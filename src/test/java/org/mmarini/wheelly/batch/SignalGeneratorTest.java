@@ -64,15 +64,15 @@ class SignalGeneratorTest {
     public static final GridTopology TOPOLOGY = GridTopology.create(new Point2D.Double(), 51, 51, GRID_SIZE);
     public static final RadarMap RADAR = RadarMap.empty(TOPOLOGY);
     public static final int NUM_SECTORS = 24;
-    public static final WheellyProxyMessage PROXY_MESSAGE = new WheellyProxyMessage(1, 2, 3, 0,
+    public static final WheellyProxyMessage PROXY_MESSAGE = new WheellyProxyMessage(2, 0,
             5, 6, 7, 8);
-    public static final WheellyProxyMessage CAMERA_PROXY_MESSAGE = new WheellyProxyMessage(2, 3, 4, 0,
+    public static final WheellyProxyMessage CAMERA_PROXY_MESSAGE = new WheellyProxyMessage(3, 0,
             6, 7, 8, 9);
-    public static final WheellyMotionMessage MOTION_MESSAGE = new WheellyMotionMessage(1, 2, 3, 4, 5,
+    public static final WheellyMotionMessage MOTION_MESSAGE = new WheellyMotionMessage(2, 4, 5,
             45, 7, 8, 9, true, 10, 11, 12, 13);
-    public static final WheellyContactsMessage CONTACTS_MESSAGE = new WheellyContactsMessage(1, 2, 3, true,
+    public static final WheellyContactsMessage CONTACTS_MESSAGE = new WheellyContactsMessage(2, true,
             true, true, true);
-    public static final CameraEvent CAMERA_EVENT = new CameraEvent(1, 0, "?", 3, 4, null, Complex.DEG0);
+    public static final CameraEvent CAMERA_EVENT = new CameraEvent(0, "?", 3, 4, null, Complex.DEG0);
     public static final RobotCommands COMMANDS = new RobotCommands(true, Complex.DEG0, false, true, Complex.DEG90, 20);
     private static final String MODELLER_DEF = """
             ---

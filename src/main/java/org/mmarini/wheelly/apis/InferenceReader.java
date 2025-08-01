@@ -64,7 +64,7 @@ public interface InferenceReader extends AutoCloseable, DataReader {
         String qrCode = readString();
         int width = readInt();
         int height = readInt();
-        return new CameraEvent(timestamp, timestamp, qrCode, width, height, null, Complex.DEG0);
+        return new CameraEvent(timestamp, qrCode, width, height, null, Complex.DEG0);
     }
 
     /**
@@ -88,14 +88,12 @@ public interface InferenceReader extends AutoCloseable, DataReader {
      * @throws IOException in case of error
      */
     default WheellyContactsMessage readContacts() throws IOException {
-        long localTime = readLong();
         long simulationTime = readLong();
-        long remoteTime = readLong();
         boolean frontSensor = readBoolean();
         boolean rearSensor = readBoolean();
         boolean canMoveForward = readBoolean();
         boolean canMoveBackward = readBoolean();
-        return new WheellyContactsMessage(localTime, simulationTime, remoteTime,
+        return new WheellyContactsMessage(simulationTime,
                 frontSensor, rearSensor, canMoveForward, canMoveBackward);
     }
 
@@ -135,9 +133,7 @@ public interface InferenceReader extends AutoCloseable, DataReader {
      * @throws IOException in case of error
      */
     default WheellyMotionMessage readMotion() throws IOException {
-        long localTime = readLong();
         long simulationTime = readLong();
-        long remoteTime = readLong();
         double xPulses = readFloat();
         double yPulses = readFloat();
         int directionDeg = readInt();
@@ -149,7 +145,7 @@ public interface InferenceReader extends AutoCloseable, DataReader {
         int rightTargetPps = readInt();
         int leftPower = readInt();
         int rightPower = readInt();
-        return new WheellyMotionMessage(localTime, simulationTime, remoteTime, xPulses, yPulses,
+        return new WheellyMotionMessage(simulationTime, xPulses, yPulses,
                 directionDeg, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
     }
 
@@ -159,15 +155,13 @@ public interface InferenceReader extends AutoCloseable, DataReader {
      * @throws IOException in case of error
      */
     default WheellyProxyMessage readProxy() throws IOException {
-        long localTime = readLong();
         long simTime = readLong();
-        long remoteTime = readLong();
         int sensorDirectionDeg = readInt();
         long echoDelay = readLong();
         double xPulse = readFloat();
         double yPulse = readFloat();
         int echoYawDeg = readInt();
-        return new WheellyProxyMessage(localTime, simTime, remoteTime, sensorDirectionDeg, echoDelay, xPulse, yPulse, echoYawDeg);
+        return new WheellyProxyMessage(simTime, sensorDirectionDeg, echoDelay, xPulse, yPulse, echoYawDeg);
     }
 
     /**

@@ -257,7 +257,7 @@ public class MockRobot implements RobotApi {
     public MockRobot sendStatus(long time) {
         this.simulationTime += time;
         messages.onNext(new WheellyMotionMessage(
-                System.currentTimeMillis(), simulationTime, simulationTime,
+                simulationTime,
                 robotPos.getX() / RobotStatus.DISTANCE_PER_PULSE,
                 robotPos.getY() / RobotStatus.DISTANCE_PER_PULSE,
                 robotDir.toIntDeg(),

@@ -50,15 +50,15 @@ class InferenceFileTest {
     public static final int NUM_SECTORS = 24;
     public static final Complex RECEPTIVE_ANGLE = Complex.fromDeg(15);
     public static final double MAX_RADAR_DISTANCE = 3d;
-    public static final WheellyProxyMessage PROXY_MESSAGE = new WheellyProxyMessage(1, 2, 3, 4,
+    public static final WheellyProxyMessage PROXY_MESSAGE = new WheellyProxyMessage(2, 4,
             5, 6, 7, 8);
-    public static final WheellyProxyMessage CAMERA_PROXY_MESSAGE = new WheellyProxyMessage(2, 3, 4, 5,
+    public static final WheellyProxyMessage CAMERA_PROXY_MESSAGE = new WheellyProxyMessage(3, 5,
             6, 7, 8, 9);
-    public static final WheellyMotionMessage MOTION_MESSAGE = new WheellyMotionMessage(1, 2, 3, 4, 5,
+    public static final WheellyMotionMessage MOTION_MESSAGE = new WheellyMotionMessage(2, 4, 5,
             6, 7, 8, 9, true, 10, 11, 12, 13);
-    public static final WheellyContactsMessage CONTACTS_MESSAGE = new WheellyContactsMessage(1, 2, 3, true,
+    public static final WheellyContactsMessage CONTACTS_MESSAGE = new WheellyContactsMessage(2, true,
             true, true, true);
-    public static final CameraEvent CAMERA_EVENT = new CameraEvent(1, 0, "?", 3, 4, null, Complex.DEG0);
+    public static final CameraEvent CAMERA_EVENT = new CameraEvent(0, "?", 3, 4, null, Complex.DEG0);
     public static final RobotCommands COMMANDS = new RobotCommands(true, Complex.DEG0, false, true, Complex.DEG90, 20);
     private static final double CONTACT_RADIUS = 0.28;
     private static final double MARKER_SIZE = 0.3;

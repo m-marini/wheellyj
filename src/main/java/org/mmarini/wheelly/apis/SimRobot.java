@@ -615,7 +615,7 @@ public class SimRobot implements RobotApi {
             Complex direction = sectorDir
                     .sub(robotDir)
                     .sub(sensorDir);
-            event = new CameraEvent(s.simulationTime(), s.simulationTime(), QR_CODE, CAMERA_WIDTH, CAMERA_HEIGHT, points, direction);
+            event = new CameraEvent(s.simulationTime(), QR_CODE, CAMERA_WIDTH, CAMERA_HEIGHT, points, direction);
         } else {
             event = CameraEvent.unknown(s.simulationTime());
         }
@@ -629,7 +629,7 @@ public class SimRobot implements RobotApi {
     private void sendContacts() {
         SimRobotStatus s = status.get();
         WheellyContactsMessage msg = new WheellyContactsMessage(
-                System.currentTimeMillis(), s.simulationTime(), s.simulationTime(),
+                s.simulationTime(),
                 s.frontSensor(), s.rearSensor(),
                 s.canMoveForward(),
                 s.canMoveBackward()
@@ -649,7 +649,7 @@ public class SimRobot implements RobotApi {
         Complex robotDir = direction();
         logger.atDebug().log("{}: send R{}", s.simulationTime(), robotDir.toIntDeg());
         WheellyMotionMessage msg = new WheellyMotionMessage(
-                System.currentTimeMillis(), s.simulationTime(), s.simulationTime(),
+                s.simulationTime(),
                 xPulses, yPulses, robotDir.toIntDeg(),
                 s.leftPps(), s.rightPps(),
                 0, s.speed() == 0,
@@ -670,7 +670,7 @@ public class SimRobot implements RobotApi {
         Complex echoYaw = direction();
         long echoDelay = round(s.echoDistance() / DISTANCE_SCALE);
         WheellyProxyMessage msg = new WheellyProxyMessage(
-                System.currentTimeMillis(), s.simulationTime(), s.simulationTime(),
+                s.simulationTime(),
                 s.sensorDirection().toIntDeg(), echoDelay, xPulses, yPulses, echoYaw.toIntDeg());
         logger.atDebug().log("proxy R{} D{}", msg.sensorDirection().toDeg(), msg.echoDistance());
         messages.onNext(msg);
