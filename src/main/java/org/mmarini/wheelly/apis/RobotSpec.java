@@ -109,6 +109,32 @@ public record RobotSpec(double maxRadarDistance, Complex receptiveAngle, double 
     }
 
     /**
+     * Returns the camera sensor area
+     *
+     * @param location  the camera location
+     * @param direction the camera direction
+     */
+    public AreaExpression cameraSensorArea(Point2D location, Complex direction) {
+        return AreaExpression.radialSensorArea(
+                location, direction, cameraViewAngle.divAngle(2),
+                RobotSpec.ROBOT_RADIUS, maxRadarDistance
+        );
+    }
+
+    /**
+     * Returns the proxy sensor area
+     *
+     * @param location  the proxy sensor location
+     * @param direction the proxy sensor direction
+     */
+    public AreaExpression proxySensorArea(Point2D location, Complex direction) {
+        return AreaExpression.radialSensorArea(
+                location, direction, receptiveAngle,
+                RobotSpec.ROBOT_RADIUS, maxRadarDistance
+        );
+    }
+
+    /**
      * Returns the distance the given pulses
      *
      * @param pulses the number of pulses

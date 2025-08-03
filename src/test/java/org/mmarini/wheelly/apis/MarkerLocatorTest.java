@@ -148,7 +148,7 @@ class MarkerLocatorTest {
 
     @BeforeEach
     void setUp() {
-        locator = new MarkerLocator(DECAY_TIME, DECAY_TIME, CORRELATION_INTERVAL, MARKER_SIZE);
+        locator = new MarkerLocator(DECAY_TIME, DECAY_TIME, CORRELATION_INTERVAL, 1, MARKER_SIZE);
     }
 
     /**

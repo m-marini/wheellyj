@@ -28,6 +28,8 @@
 
 package org.mmarini.wheelly.apis;
 
+import io.reactivex.rxjava3.core.Flowable;
+
 import java.util.function.Consumer;
 
 /**
@@ -41,6 +43,11 @@ public interface RobotControllerConnector {
      * @param command the command
      */
     void execute(RobotCommands command);
+
+    /**
+     * Returns the flow of controller ready
+     */
+    Flowable<Boolean> readReady();
 
     /**
      * Registers the consumer of inference event

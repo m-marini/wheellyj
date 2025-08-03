@@ -24,6 +24,11 @@ public class NullController implements RobotControllerApi {
     }
 
     @Override
+    public Flowable<Boolean> readReady() {
+        return null;
+    }
+
+    @Override
     public Flowable<RobotCommands> readCommand() {
         throw new NotImplementedException();
     }

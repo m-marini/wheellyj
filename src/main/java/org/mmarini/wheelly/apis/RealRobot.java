@@ -341,9 +341,11 @@ public class RealRobot implements RobotApi {
 
     /**
      * Creates the watch dog
+     *
      */
     private void createWatchDog() {
         // Create a new watch dog
+        // TODO
         WatchDog watchDog = new WatchDog(this::safetyCheck, watchDogInterval, watchDogTimeout);
         RealRobotStatus st = status.updateAndGet(s ->
                 s.watchDog() == null
@@ -473,7 +475,9 @@ public class RealRobot implements RobotApi {
     private void parseForCameraMessage(Timed<String> line) {
         double widthRatio = 2 * tan(robotSpec.cameraViewAngle().toRad() / 2);
         CameraEvent msg = CameraEvent.create(line, widthRatio, status.get().startTime());
-        cameraEvents.onNext(msg);
+        if (msg != null) {
+            cameraEvents.onNext(msg);
+        }
     }
 
     /**
@@ -599,6 +603,9 @@ public class RealRobot implements RobotApi {
      */
     private boolean writeCommand(String cmd) {
         LineSocket robotSocket = status.get().robotSocket();
+        if (robotSocket == null) {
+            return false;
+        }
         boolean result = robotSocket.writeCommand(cmd);
         if (result) {
             writeLines.onNext(cmd);

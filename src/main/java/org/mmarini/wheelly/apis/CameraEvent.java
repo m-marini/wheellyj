@@ -58,6 +58,9 @@ public record CameraEvent(
      * @param widthRatio the width ratio
      */
     static CameraEvent create(Timed<String> line, double widthRatio, long timeOffset) {
+        if (!line.value().startsWith("qr ")) {
+            return null;
+        }
         String[] params = line.value().split(" ");
         long time = line.time(TimeUnit.MILLISECONDS);
         if (params.length != NUM_PARAMS) {

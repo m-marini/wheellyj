@@ -46,6 +46,9 @@ properties:
   markerDecay:
     type: number
     exclusiveMinimum: 0
+  minNumberEvents:
+    type: integer
+    minimum: 1
   markerSize:
     type: number
     exclusiveMinimum: 0

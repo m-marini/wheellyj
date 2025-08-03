@@ -397,6 +397,23 @@ public interface AreaExpression {
     }
 
     /**
+     * Returns the area of the radia sensor
+     *
+     * @param from        the sensor loction
+     * @param direction   the direction
+     * @param range       the direction range
+     * @param minDistance the minumum distance (m)
+     * @param maxDistance the maximum distance (m)
+     */
+    static AreaExpression radialSensorArea(Point2D from, Complex direction, Complex range, double minDistance, double maxDistance) {
+        return AreaExpression.and(
+                AreaExpression.angle(from, direction, range),
+                AreaExpression.circle(from, maxDistance),
+                AreaExpression.not(
+                        AreaExpression.circle(from, minDistance)));
+    }
+
+    /**
      * Returns the cell predicate for the cell evidences
      *
      * @param leaves the leave expressions

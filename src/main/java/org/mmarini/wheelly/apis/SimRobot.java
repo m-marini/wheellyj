@@ -47,8 +47,10 @@ import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
 import java.io.File;
+import java.util.Comparator;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
@@ -217,7 +219,7 @@ public class SimRobot implements RobotApi {
         this.status = new AtomicReference<>(new SimRobotStatus(0, false, false, false,
                 Complex.DEG0, 0, true, true,
                 direction(), 0, 0, 0,
-                null, 0, 0, 0, 0, null, 0, 0));
+                null, 0, 0, 0, 0, 0, 0));
         this.robotLineState = BehaviorProcessor.createDefault(status.get());
         createObstacleMap();
     }
@@ -230,28 +232,27 @@ public class SimRobot implements RobotApi {
      */
     private void checkForSensor(SimRobotStatus initial) {
         Point2D position = location();
-        double x = position.getX();
-        double y = position.getY();
         SimRobotStatus status = this.status.get();
-        Complex sensorRad = direction().add(status.sensorDirection());
+        Complex sensorDirection = direction().add(status.sensorDirection());
         double echoDistance;
 
         // Finds the nearest obstacle in proxy sensor range
-        ObstacleMap.ObstacleCell nearestCell = status.obstacleMap().nearest(x, y, sensorRad, robotSpec.receptiveAngle());
-        if (nearestCell != null) {
+        AreaExpression.Parser parser = robotSpec.proxySensorArea(position, sensorDirection)
+                .createParser();
+        Point2D nearestLocation = status.obstacleMap().cells().stream()
+                .map(ObstacleMap.ObstacleCell::location)
+                .filter(parser::test)
+                .min(Comparator.comparingDouble(position::distanceSq))
+                .orElse(null);
+        if (nearestLocation != null) {
             // Computes the distance of obstacles
-            Point2D obs = nearestCell.location();
-            double dist = obs.distance(position) - status.obstacleMap().gridSize() / 2
+            double dist = nearestLocation.distance(position) - status.obstacleMap().gridSize() / 2
                     + random.nextGaussian() * errSensor;
             echoDistance = dist > 0 && dist < MAX_DISTANCE ? dist : 0;
-            if (echoDistance == 0) {
-                nearestCell = null;
-            }
         } else {
             echoDistance = 0;
         }
-        ObstacleMap.ObstacleCell finalNearestCell = nearestCell;
-        status = this.status.updateAndGet(s -> s.echoDistance(echoDistance).nearestCell(finalNearestCell));
+        status = this.status.updateAndGet(s -> s.echoDistance(echoDistance));
 
         boolean echoAlarm = echoDistance > 0 && echoDistance <= SAFE_DISTANCE;
         boolean prevEchoAlarm = initial.echoDistance() > 0 && initial.echoDistance() <= SAFE_DISTANCE;
@@ -259,9 +260,8 @@ public class SimRobot implements RobotApi {
                 || initial.rearSensor() != status.rearSensor()
                 || initial.frontSensor() != status.frontSensor()) {
             // Contacts changed -> send status
-            sendContacts();
-            sendMotion();
             sendProxy();
+            sendContacts();
         }
     }
 
@@ -497,7 +497,7 @@ public class SimRobot implements RobotApi {
      * @param map the map
      */
     public SimRobot obstacleMap(ObstacleMap map) {
-        status.updateAndGet(s -> s.setObstacleMap(map));
+        status.updateAndGet(s -> s.obstacleMap(map));
         createObstacleBody(map);
         obstacleChanged.onNext(map);
         return this;
@@ -601,11 +601,20 @@ public class SimRobot implements RobotApi {
      */
     private void sendCamera() {
         SimRobotStatus s = status.get();
+        Point2D location = location();
+        Complex sensorRad = direction().add(s.sensorDirection());
+
+        Predicate<Point2D> areaParser = robotSpec.cameraSensorArea(location, sensorRad)
+                .createParser()::test;
+        Point2D markerLocation = s.obstacleMap().labeled()
+                .filter(areaParser)
+                .min(Comparator.comparingDouble(location::distanceSq))
+                .orElse(null);
+
         Point2D[] points = new Point2D[0];
         CameraEvent event;
-        if (s.nearestCell() != null && s.nearestCell().labeled()) {
-            Complex sectorDir = Complex.direction(location(),
-                    s.nearestCell().location());
+        if (markerLocation != null) {
+            Complex sectorDir = Complex.direction(location, markerLocation);
             Complex robotDir = direction();
             Complex sensorDir = sensorDirection();
             Complex direction = sectorDir

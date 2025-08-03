@@ -152,6 +152,13 @@ public class RobotController implements RobotControllerApi {
         commands.onNext(command);
     }
 
+    @Override
+    public Flowable<Boolean> readReady() {
+        return readControllerStatus()
+                .map(RobotControllerStatusApi::ready)
+                .distinctUntilChanged();
+    }
+
     /**
      * Handles camera events
      *

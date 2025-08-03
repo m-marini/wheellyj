@@ -10,8 +10,7 @@ flow:
     mapping:
       $id: https://mmarini.org/wheelly/state-mapping-schema-0.1
       class: org.mmarini.wheelly.engines.MappingState
-      timeout: 300000
-      scanInterval: 1000
+      timeout: 600000
       transitions:
         blocked:
           to: clearMap

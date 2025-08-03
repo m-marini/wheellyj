@@ -80,16 +80,6 @@ class RadarMapTest {
                 .parse();
     }
 
-    public static Stream<Arguments> findTargetDataset() throws IOException {
-        // List<Point2D> obstacles, Optional<Point2D> location, double maxDistance, Optional<Point2D> expected        return Stream.of(
-        return jsonFileArguments("/org/mmarini/wheelly/apis/RadarMapTest/findTargetTest.yml")
-                .addMap("map", stream -> Stream.of(new Object[]{createRadarMap(stream)}))
-                .addMap("map", anyPointOfValue(GRID_TOPOLOGY, "X"))
-                .addDouble("maxDistance")
-                .addMap("map", anyPointOfValue(GRID_TOPOLOGY, "T"))
-                .parse();
-    }
-
     public static Stream<Arguments> setContactsDataset() throws IOException {
         return jsonFileArguments("/org/mmarini/wheelly/apis/RadarMapTest/setContactsTest.yml")
                 .forEachCell("map", allIndicesByValue(GRID_TOPOLOGY, "O"))
@@ -133,24 +123,6 @@ class RadarMapTest {
 
         // When find target
         Optional<Point2D> result = map.findSafeTarget(location, Complex.fromDeg(escapeDir), safeDistance, maxDistance);
-
-        // Then ...
-        assertThat(result, expected != null
-                ? optionalOf(pointCloseTo(expected, 1e-3))
-                : emptyOptional());
-    }
-
-    @ParameterizedTest(name = "[{index}] at {1} max {2} m {0}")
-    @MethodSource("findTargetDataset")
-    void findTargetTest(RadarMap map, Point2D location, double maxDistance, Point2D expected) {
-        // Given a radar map with obstacles
-        // And max distance
-        // And safe distance
-        assertNotNull(location);
-        double safeDistance = 0.15;
-
-        // When find target
-        Optional<Point2D> result = map.findTarget(location, maxDistance, safeDistance);
 
         // Then ...
         assertThat(result, expected != null

@@ -126,6 +126,7 @@ public class LineSocket implements Closeable {
             AsynchronousSocketChannel ch = s0.channel();
             if (ch != null) {
                 try {
+                    logger.atInfo().log("Closing channel");
                     ch.close();
                 } catch (IOException e) {
                     errors.onNext(e);
@@ -185,6 +186,7 @@ public class LineSocket implements Closeable {
             st = status.updateAndGet(s -> s.connected(false).connecting(false).channel(null));
             states.onNext(st);
             try {
+                logger.atInfo().log("Closing channel");
                 ch.close();
             } catch (IOException e) {
                 logger.atError().setCause(e).log("Error closing socket");
@@ -205,6 +207,7 @@ public class LineSocket implements Closeable {
         logger.atError().setCause(e).log("{}:{} error connecting channel", host, port);
         if (ch != null) {
             try {
+                logger.atInfo().log("Closing channel");
                 ch.close();
             } catch (Throwable ex) {
                 logger.atError().setCause(ex).log("{}:{} error closing channel", host, port);
@@ -242,6 +245,7 @@ public class LineSocket implements Closeable {
         logger.atError().setCause(e).log("{}:{} error reading channel", host, port);
         if (ch != null) {
             try {
+                logger.atInfo().log("Closing channel");
                 ch.close();
             } catch (IOException ex) {
                 logger.atError().setCause(ex).log("{}:{} error closing channel", host, port);
@@ -262,6 +266,7 @@ public class LineSocket implements Closeable {
         e = notifyError(e);
         logger.atError().setCause(e).log("{}:{} error writing channel", host, port);
         try {
+            logger.atInfo().log("Closing channel");
             ch.close();
         } catch (IOException ex) {
             logger.atError().setCause(ex).log("{}:{} error closing channel", host, port);
@@ -382,6 +387,4 @@ public class LineSocket implements Closeable {
             subject.onReadError(ex);
         }
     };
-
-
 }
