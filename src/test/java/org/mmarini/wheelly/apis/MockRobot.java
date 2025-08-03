@@ -38,12 +38,13 @@ import java.awt.geom.Point2D;
 import java.io.IOException;
 
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.RobotSpec.distance2Pulse;
 
 public class MockRobot implements RobotApi {
     public static final double CONTACT_RADIUS = 0.3;
     public static final int RECEPTIVE_ANGLE_DEG = 15;
     public static final double MAX_RADAR_DISTANCE = 3d;
-    public static final RobotSpec ROBOT_SPEC = new RobotSpec(MAX_RADAR_DISTANCE, Complex.fromDeg(RECEPTIVE_ANGLE_DEG), CONTACT_RADIUS, Complex.DEG0);
+    public static final RobotSpec ROBOT_SPEC = new RobotSpec(MAX_RADAR_DISTANCE, Complex.fromDeg(RECEPTIVE_ANGLE_DEG), CONTACT_RADIUS, Complex.fromDeg(120));
     public static final RobotStatusApi CONNECTED = new RobotStatusApi() {
         @Override
         public boolean configured() {
@@ -258,8 +259,8 @@ public class MockRobot implements RobotApi {
         this.simulationTime += time;
         messages.onNext(new WheellyMotionMessage(
                 simulationTime,
-                robotPos.getX() / RobotStatus.DISTANCE_PER_PULSE,
-                robotPos.getY() / RobotStatus.DISTANCE_PER_PULSE,
+                distance2Pulse(robotPos.getX()),
+                distance2Pulse(robotPos.getY()),
                 robotDir.toIntDeg(),
                 0, 0,
                 0, true,

@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Random;
 import java.util.function.Function;
 
-import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
+import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
 
 /**
  * Generates the behaviour to select the path to the nearest unknown sector

@@ -68,6 +68,17 @@ public interface InferenceReader extends AutoCloseable, DataReader {
     }
 
     /**
+     * Returns the camera event
+     *
+     * @throws IOException in case of error
+     */
+    default CorrelatedCameraEvent readCorrelatedCamera() throws IOException {
+        CameraEvent camera = readCamera();
+        WheellyProxyMessage proxy = readProxy();
+        return new CorrelatedCameraEvent(camera, proxy);
+    }
+
+    /**
      * Returns the robot command
      *
      * @throws IOException in case of error

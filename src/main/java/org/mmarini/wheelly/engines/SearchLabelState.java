@@ -43,7 +43,7 @@ import java.util.Arrays;
 import java.util.Random;
 import java.util.function.Function;
 
-import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
+import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
 
 /**
  * Generates the behaviour to select the path to the nearest label sector

@@ -52,10 +52,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_PER_PULSE;
+import static org.mmarini.wheelly.apis.RobotSpec.*;
 import static org.mmarini.wheelly.apis.RobotStatus.OBSTACLE_SIZE;
 import static org.mmarini.wheelly.apis.Utils.clip;
-import static org.mmarini.wheelly.apis.WheellyProxyMessage.DISTANCE_SCALE;
 
 /**
  * Simulated robot
@@ -67,26 +66,23 @@ public class SimRobot implements RobotApi {
     public static final double MAX_OBSTACLE_DISTANCE = 3;
     public static final double MAX_DISTANCE = 3;
     public static final double MAX_ANGULAR_PPS = 20;
-    public static final double ROBOT_TRACK = 0.136;
-    public static final double MAX_ANGULAR_VELOCITY = MAX_ANGULAR_PPS * DISTANCE_PER_PULSE / ROBOT_TRACK * 2; // RAD/s
+    public static final double MAX_ANGULAR_VELOCITY = MAX_ANGULAR_PPS * DISTANCE_PER_PULSE / RobotSpec.ROBOT_TRACK * 2; // RAD/s
     public static final double SAFE_DISTANCE = 0.2;
     public static final int CAMERA_HEIGHT = 240;
     public static final int CAMERA_WIDTH = 240;
     public static final String QR_CODE = "A";
-    public static final float ROBOT_RADIUS = 0.15f;
     public static final double NANOS_PER_MILLIS = 10e6;
     private static final double MIN_OBSTACLE_DISTANCE = 1;
     private static final Logger logger = LoggerFactory.getLogger(SimRobot.class);
     private static final Vec2 GRAVITY = new Vec2();
-    private static final double ROBOT_MASS = 0.785;
     private static final double ROBOT_FRICTION = 1;
     private static final double ROBOT_RESTITUTION = 0;
     private static final float JBOX_SCALE = 100;
-    private static final double ROBOT_DENSITY = ROBOT_MASS / (ROBOT_RADIUS * ROBOT_RADIUS * PI * JBOX_SCALE * JBOX_SCALE);
+    private static final double ROBOT_DENSITY = RobotSpec.ROBOT_MASS / (RobotSpec.ROBOT_RADIUS * RobotSpec.ROBOT_RADIUS * PI * JBOX_SCALE * JBOX_SCALE);
     private static final double RAD_10 = toRadians(10);
     private static final double RAD_30 = toRadians(30);
     private static final double MAX_ACC = 1 * JBOX_SCALE;
-    private static final double MAX_FORCE = MAX_ACC * ROBOT_MASS;
+    private static final double MAX_FORCE = MAX_ACC * RobotSpec.ROBOT_MASS;
     private static final double MAX_TORQUE = 0.7 * JBOX_SCALE * JBOX_SCALE;
     private static final int VELOCITY_ITER = 10;
     private static final int POSITION_ITER = 10;
@@ -211,7 +207,7 @@ public class SimRobot implements RobotApi {
         this.robot = world.createBody(bodyDef);
         // Creates the robot fixture
         CircleShape circleShape = new CircleShape();
-        circleShape.setRadius(ROBOT_RADIUS * JBOX_SCALE);
+        circleShape.setRadius(RobotSpec.ROBOT_RADIUS * JBOX_SCALE);
         FixtureDef fixDef = new FixtureDef();
         fixDef.shape = circleShape;
         fixDef.friction = (float) ROBOT_FRICTION;
@@ -490,7 +486,7 @@ public class SimRobot implements RobotApi {
     @Override
     public boolean move(int dir, int speed) {
         status.updateAndGet(s -> s.direction(Complex.fromDeg(dir))
-                .speed(clip(speed, -MAX_PPS, MAX_PPS)));
+                .speed(clip(speed, -RobotSpec.MAX_PPS, RobotSpec.MAX_PPS)));
         checkForSpeed();
         return true;
     }
@@ -665,8 +661,8 @@ public class SimRobot implements RobotApi {
     private void sendProxy() {
         SimRobotStatus s = status.get();
         Point2D pos = this.location();
-        double xPulses = pos.getX() / DISTANCE_PER_PULSE;
-        double yPulses = pos.getY() / DISTANCE_PER_PULSE;
+        double xPulses = distance2Pulse(pos.getX());
+        double yPulses = distance2Pulse(pos.getY());
         Complex echoYaw = direction();
         long echoDelay = round(s.echoDistance() / DISTANCE_SCALE);
         WheellyProxyMessage msg = new WheellyProxyMessage(
@@ -751,8 +747,8 @@ public class SimRobot implements RobotApi {
                         0, 1);
 
         // Relative left-right motor speeds
-        double leftPps = clip((linearVelocityPps - angularVelocityPps), -MAX_PPS, MAX_PPS);
-        double rightPps = clip((linearVelocityPps + angularVelocityPps), -MAX_PPS, MAX_PPS);
+        double leftPps = clip((linearVelocityPps - angularVelocityPps), -RobotSpec.MAX_PPS, RobotSpec.MAX_PPS);
+        double rightPps = clip((linearVelocityPps + angularVelocityPps), -RobotSpec.MAX_PPS, RobotSpec.MAX_PPS);
 
         // Check for block
         if ((leftPps < 0 && !status.canMoveBackward())
@@ -793,7 +789,7 @@ public class SimRobot implements RobotApi {
         force = robot.getWorldVector(localForce);
 
         // Angle rotation due to differential motor speeds
-        double angularVelocity1 = (right - left) / ROBOT_TRACK;
+        double angularVelocity1 = (right - left) / RobotSpec.ROBOT_TRACK;
         // Limits rotation to max allowed rotation
         double angularVelocity = clip(angularVelocity1, -MAX_ANGULAR_VELOCITY, MAX_ANGULAR_VELOCITY);
         // Angular impulse to fix the direction

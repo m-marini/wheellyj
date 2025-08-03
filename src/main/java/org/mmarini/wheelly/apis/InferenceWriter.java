@@ -49,6 +49,17 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
     }
 
     /**
+     * Writes camera events
+     *
+     * @param camera the camera event
+     */
+    default InferenceWriter write(CorrelatedCameraEvent camera) throws IOException {
+        write(camera.camerEvent())
+                .write(camera.proxy());
+        return this;
+    }
+
+    /**
      * Writes robot commands
      *
      * @param commands the commands
@@ -127,7 +138,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
         for (MapCell cell : cells) {
             write(cell.echoTime())
                     .write((float) cell.echoWeight())
-                    .write((float) cell.contactTime());
+                    .write(cell.contactTime());
         }
         return this;
     }
@@ -154,7 +165,8 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * @param commands the commands
      */
     default InferenceWriter write(WorldModel model, RobotCommands commands) throws IOException {
-        return write(model).write(commands);
+        return write(model)
+                .write(commands);
     }
 
     /**
@@ -178,7 +190,6 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
         return write(status.motionMessage())
                 .write(status.proxyMessage())
                 .write(status.contactsMessage())
-                .write(status.cameraEvent())
-                .write(status.cameraProxyMessage());
+                .write(status.cameraEvent());
     }
 }

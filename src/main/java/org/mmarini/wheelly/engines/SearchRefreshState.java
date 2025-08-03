@@ -41,7 +41,7 @@ import java.awt.geom.Point2D;
 import java.util.Random;
 import java.util.function.Function;
 
-import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
+import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
 
 /**
  * Generates the behaviour to select the path to the least empty sector

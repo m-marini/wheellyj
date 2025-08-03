@@ -29,32 +29,29 @@
 package org.mmarini.wheelly.apis;
 
 import java.awt.geom.Point2D;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.IntToDoubleFunction;
 
-import static java.lang.Math.PI;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.RobotSpec.distance2Pulse;
 
 /**
  * Creates the robot status
  *
- * @param robotSpec          the robot specification
- * @param simulationTime     the simulated markerTime (ms)
- * @param motionMessage      the motion message
- * @param proxyMessage       the proxy message
- * @param contactsMessage    the contact's message
- * @param supplyMessage      the supply message
- * @param decodeVoltage      the voltage decode function
- * @param cameraEvent        the camera event
- * @param cameraProxyMessage
+ * @param robotSpec       the robot specification
+ * @param simulationTime  the simulated markerTime (ms)
+ * @param motionMessage   the motion message
+ * @param proxyMessage    the proxy message
+ * @param contactsMessage the contact's message
+ * @param supplyMessage   the supply message
+ * @param decodeVoltage   the voltage decode function
+ * @param cameraEvent     the camera event
  */
 public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotionMessage motionMessage,
                           WheellyProxyMessage proxyMessage, WheellyContactsMessage contactsMessage,
                           WheellySupplyMessage supplyMessage, IntToDoubleFunction decodeVoltage,
-                          CameraEvent cameraEvent, WheellyProxyMessage cameraProxyMessage) {
-    public static final int PULSES_PER_ROOT = 40;
-    public static final double WHEEL_DIAMETER = 0.067;
-    public static final double DISTANCE_PER_PULSE = WHEEL_DIAMETER * PI / PULSES_PER_ROOT;
+                          CorrelatedCameraEvent cameraEvent) {
     public static final float OBSTACLE_SIZE = 0.2f;
 
     /**
@@ -72,23 +69,13 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
                 new WheellyContactsMessage(0, true, true, true, true),
                 new WheellySupplyMessage(0, 0),
                 decodeVoltage,
-                CameraEvent.unknown(0),
-                proxyMessage1);
-    }
-
-    /**
-     * Returns the location (m) from pulse coordinate
-     *
-     * @param xPulses the x pulse coordinate
-     * @param yPulses the y pulse coordinate
-     */
-    public static Point2D pulses2Location(double xPulses, double yPulses) {
-        return new Point2D.Double(xPulses * DISTANCE_PER_PULSE, yPulses * DISTANCE_PER_PULSE);
+                new CorrelatedCameraEvent(CameraEvent.unknown(0), proxyMessage1)
+        );
     }
 
     public RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotionMessage motionMessage, WheellyProxyMessage proxyMessage,
                        WheellyContactsMessage contactsMessage, WheellySupplyMessage supplyMessage,
-                       IntToDoubleFunction decodeVoltage, CameraEvent cameraEvent, WheellyProxyMessage cameraProxyMessage) {
+                       IntToDoubleFunction decodeVoltage, CorrelatedCameraEvent cameraEvent) {
         this.motionMessage = requireNonNull(motionMessage);
         this.proxyMessage = requireNonNull(proxyMessage);
         this.contactsMessage = requireNonNull(contactsMessage);
@@ -97,7 +84,6 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
         this.decodeVoltage = requireNonNull(decodeVoltage);
         this.simulationTime = simulationTime;
         this.cameraEvent = requireNonNull(cameraEvent);
-        this.cameraProxyMessage = requireNonNull(cameraProxyMessage);
     }
 
     /**
@@ -144,7 +130,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      * Returns the robot location at ping localTime (pulses)
      */
     public Point2D echoRobotLocation() {
-        return pulses2Location(proxyMessage.xPulses(), proxyMessage.yPulses());
+        return RobotSpec.pulses2Location(proxyMessage.xPulses(), proxyMessage.yPulses());
     }
 
     /**
@@ -190,14 +176,14 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      * Returns the location of robot (m)
      */
     public Point2D location() {
-        return pulses2Location(motionMessage.xPulses(), motionMessage.yPulses());
+        return motionMessage.robotLocation();
     }
 
     /**
      * Returns the qr code captured by camera
      */
     public String qrCode() {
-        return cameraEvent != null ? cameraEvent.qrCode() : "?";
+        return cameraEvent != null ? cameraEvent.camerEvent().qrCode() : "?";
     }
 
     /**
@@ -248,8 +234,11 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      *
      * @param cameraEvent the camera event
      */
-    public RobotStatus setCameraMessage(CameraEvent cameraEvent) {
-        return new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, proxyMessage);
+    public RobotStatus setCameraMessage(CorrelatedCameraEvent cameraEvent) {
+        return Objects.equals(cameraEvent, this.cameraEvent)
+                ? this
+                : new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage,
+                supplyMessage, decodeVoltage, cameraEvent);
     }
 
     /**
@@ -280,7 +269,9 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      * @param contactsMessage the message
      */
     public RobotStatus setContactsMessage(WheellyContactsMessage contactsMessage) {
-        return new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, cameraProxyMessage);
+        return !Objects.equals(this.contactsMessage, contactsMessage)
+                ? new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent)
+                : this;
     }
 
     /**
@@ -319,8 +310,8 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
     public RobotStatus setLocation(Point2D location) {
         return setMotionMessage(
                 motionMessage.setPulses(
-                                location.getX() / DISTANCE_PER_PULSE,
-                                location.getY() / DISTANCE_PER_PULSE)
+                                distance2Pulse(location.getX()),
+                                distance2Pulse(location.getY()))
                         .setSimulationTime(simulationTime));
     }
 
@@ -330,7 +321,9 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      * @param motionMessage the motion message
      */
     public RobotStatus setMotionMessage(WheellyMotionMessage motionMessage) {
-        return new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, cameraProxyMessage);
+        return !Objects.equals(this.motionMessage, motionMessage)
+                ? new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent)
+                : this;
     }
 
     /**
@@ -339,7 +332,9 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      * @param proxyMessage the message
      */
     public RobotStatus setProxyMessage(WheellyProxyMessage proxyMessage) {
-        return new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, cameraProxyMessage);
+        return !Objects.equals(this.proxyMessage, proxyMessage)
+                ? new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent)
+                : this;
     }
 
     /**
@@ -359,7 +354,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      */
     public RobotStatus setSimulationTime(long simulationTime) {
         return simulationTime != this.simulationTime ?
-                new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, cameraProxyMessage)
+                new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent)
                 : this;
     }
 
@@ -381,7 +376,9 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      * @param supplyMessage the message
      */
     public RobotStatus setSupplyMessage(WheellySupplyMessage supplyMessage) {
-        return new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, cameraProxyMessage);
+        return !Objects.equals(this.supplyMessage, supplyMessage)
+                ? new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent)
+                : this;
     }
 
     /**

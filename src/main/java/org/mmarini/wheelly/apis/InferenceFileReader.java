@@ -103,9 +103,8 @@ public class InferenceFileReader extends DataFileReader implements InferenceRead
         WheellyMotionMessage motion = readMotion();
         WheellyProxyMessage proxy = readProxy();
         WheellyContactsMessage contacts = readContacts();
-        CameraEvent camera = readCamera();
-        WheellyProxyMessage cameraProxy = readProxy();
+        CorrelatedCameraEvent camera = readCorrelatedCamera();
         return new RobotStatus(worldSpec.robotSpec(), simTime, motion, proxy, contacts,
-                DEFAULT_SUPPLY_MESSAGE, DEFAULT_DECODE_VOLTAGE, camera, cameraProxy);
+                DEFAULT_SUPPLY_MESSAGE, DEFAULT_DECODE_VOLTAGE, camera);
     }
 }

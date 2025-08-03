@@ -14,8 +14,8 @@ import java.util.List;
 import static java.lang.Math.round;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.defuzzy;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.positive;
-import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
 import static org.mmarini.wheelly.apis.RobotCommands.moveAndFrontScan;
+import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
 
 /**
  * Generates the behaviour to move robot through path

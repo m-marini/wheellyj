@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -43,7 +44,6 @@ import java.util.stream.Stream;
 import static java.lang.Math.exp;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mmarini.ArgumentsGenerator.*;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 
 class TDSoftmaxTest {
@@ -54,11 +54,11 @@ class TDSoftmaxTest {
     static Stream<Arguments> cases() {
         Random random = Nd4j.getRandom();
         random.setSeed(SEED);
-        return createStream(SEED,
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 3)), // inputs
-                exponential(0.3f, 3f), // temperature
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 3)) // grad
-        );
+        return RandomArgumentsGenerator.create(SEED)
+                .generate(() -> Nd4j.randn(random, 2, 3)) // inputs
+                .exponential(0.3f, 3f) // temperature
+                .generate(() -> Nd4j.randn(random, 2, 3)) // grad
+                .build(100);
     }
 
     @Test

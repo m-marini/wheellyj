@@ -49,7 +49,6 @@ public record CameraEvent(
         int width, int height,
         Point2D[] points,
         Complex direction) {
-    public static final String UNKNOWN_QR_CODE = "?";
     private static final int NUM_PARAMS = 13;
 
     /**
@@ -83,6 +82,6 @@ public record CameraEvent(
      * Returns the unknown qrCode event
      */
     public static CameraEvent unknown(long timestamp) {
-        return new CameraEvent(timestamp, UNKNOWN_QR_CODE, 0, 0, null, Complex.DEG0);
+        return new CameraEvent(timestamp, RobotSpec.UNKNOWN_QR_CODE, 0, 0, null, Complex.DEG0);
     }
 }

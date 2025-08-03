@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -45,7 +46,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mmarini.ArgumentsGenerator.*;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 
 class TDDenseTest {
@@ -66,6 +66,18 @@ class TDDenseTest {
     static Stream<Arguments> cases() {
         Random random = Nd4j.getRandom();
         random.setSeed(SEED);
+        return RandomArgumentsGenerator.create(SEED)
+                .generate(() -> Nd4j.randn(random, 2, 2)) // inputs
+                .generate(() -> Nd4j.randn(random, 1, 3)) // eb
+                .generate(() -> Nd4j.randn(random, 2, 3)) // ew
+                .generate(() -> Nd4j.randn(random, 1, 3)) // b
+                .generate(() -> Nd4j.randn(random, 2, 3)) // w
+                .exponential(1e-3f, 100e-3f) // alpha
+                .uniform(0f, 0.5f) // lambda
+                .generate(() -> Nd4j.randn(random, 2, 1)) // delta
+                .generate(() -> Nd4j.randn(random, 2, 3)) // grad
+                .build(100);
+                /*
         return createStream(SEED,
                 createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)), // inputs
                 createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 3)), // eb
@@ -77,6 +89,8 @@ class TDDenseTest {
                 createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 1)), // delta
                 createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 3)) // grad
         );
+
+         */
     }
 
     @ParameterizedTest

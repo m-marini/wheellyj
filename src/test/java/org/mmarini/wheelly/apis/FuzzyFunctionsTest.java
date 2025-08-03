@@ -29,6 +29,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mmarini.RandomArgumentsGenerator;
 
 import java.util.stream.Stream;
 
@@ -36,7 +37,6 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
-import static org.mmarini.ArgumentsGenerator.*;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.*;
 
 class FuzzyFunctionsTest {
@@ -49,10 +49,10 @@ class FuzzyFunctionsTest {
     private static final double X3 = 8;
 
     static Stream<Arguments> argPositive() {
-        return createStream(1234,
-                uniform(-RANGE, RANGE),
-                exponential(MIN_DELTA, MAX_DELTA)
-        );
+        return RandomArgumentsGenerator.create(1234)
+                .uniform(-RANGE, RANGE)
+                .exponential(MIN_DELTA, MAX_DELTA)
+                .build(100);
     }
 
     @ParameterizedTest

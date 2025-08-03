@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
 import java.awt.geom.Point2D;
 import java.util.Optional;
 
-import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
+import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
 
 /**
  * Generates the behaviour to avoid the contact obstacle.

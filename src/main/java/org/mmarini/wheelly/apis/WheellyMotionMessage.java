@@ -35,7 +35,7 @@ import static java.lang.Integer.parseInt;
 import static java.lang.Long.parseLong;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_PER_PULSE;
+import static org.mmarini.wheelly.apis.RobotSpec.pulses2Location;
 
 /**
  * Contains the motion information of Wheelly
@@ -207,8 +207,11 @@ public record WheellyMotionMessage(long simulationTime, double xPulses, double y
         this.rightPower = rightPower;
     }
 
+    /**
+     * Returns the robot location
+     */
     public Point2D robotLocation() {
-        return new Point2D.Double(xPulses * DISTANCE_PER_PULSE, yPulses * DISTANCE_PER_PULSE);
+        return pulses2Location(xPulses, yPulses);
     }
 
     /**

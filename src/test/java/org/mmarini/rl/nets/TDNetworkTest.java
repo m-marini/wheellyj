@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -48,7 +49,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mmarini.ArgumentsGenerator.*;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 
 
@@ -86,6 +86,27 @@ class TDNetworkTest {
     static Stream<Arguments> cases() {
         Random random = Nd4j.getRandom();
         random.setSeed(SEED);
+        return RandomArgumentsGenerator.create(SEED)
+                .exponential(1e-3f, 100e-3f) // alpha
+                .uniform(0f, 0.5f) // lambda
+                .generate(() -> Nd4j.randn(random, 1, 2)) // eb2
+                .generate(() -> Nd4j.randn(random, 3, 2)) // ew2
+                .generate(() -> Nd4j.randn(random, 1, 2)) // b2
+                .generate(() -> Nd4j.randn(random, 3, 2)) // w2
+                .generate(() -> Nd4j.randn(random, 1, 2)) // eb4
+                .generate(() -> Nd4j.randn(random, 2, 2)) // ew4
+                .generate(() -> Nd4j.randn(random, 1, 2)) // b4
+                .generate(() -> Nd4j.randn(random, 2, 2)) // w4
+                .gaussian(0f, 1f) // b7
+                .gaussian(0f, 1f) // w7
+                .exponential(0.3f, 3f) // temperature
+                .generate(() -> Nd4j.randn(random, 1, 1)) // input0
+                .generate(() -> Nd4j.randn(random, 1, 2)) // input1
+                .generate(() -> Nd4j.randn(random, 1, 2)) // grad7
+                .generate(() -> Nd4j.randn(random, 1, 2)) // grad8
+                .generate(() -> Nd4j.randn(random, 1, 1)) // delta
+                .build(100);
+        /*
         return createStream(SEED,
                 exponential(1e-3f, 100e-3f), // alpha
                 uniform(0f, 0.5f), // lambda
@@ -106,6 +127,8 @@ class TDNetworkTest {
                 createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 2)), // grad8
                 createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 1)) // delta
         );
+
+         */
     }
 
     static TDNetwork createNet(INDArray eb2,

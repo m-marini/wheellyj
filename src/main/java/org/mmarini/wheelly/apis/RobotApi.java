@@ -38,7 +38,6 @@ import java.io.IOException;
  * API Interface for robot
  */
 public interface RobotApi extends Closeable, WithWheellyMessageFlowable, WithCameraFlowable, WithIOFlowable, WithErrorFlowable {
-    int MAX_PPS = 60;
 
     /**
      * Returns the robot api from configuration

@@ -27,14 +27,15 @@ package org.mmarini.wheelly.apis;
 
 import io.reactivex.rxjava3.schedulers.Timed;
 
+import java.awt.geom.Point2D;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.Double.parseDouble;
 import static java.lang.Integer.parseInt;
 import static java.lang.Long.parseLong;
-import static java.lang.Math.round;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.RobotSpec.*;
 
 /**
  * Contains the proxy sensor information
@@ -53,7 +54,6 @@ public record WheellyProxyMessage(long simulationTime,
                                   double xPulses, double yPulses, int echoYawDeg,
                                   Complex echoYaw) implements WheellyMessage {
     public static final int NUM_PARAMS = 7;
-    public static final float DISTANCE_SCALE = 1F / 5882;
 
     /**
      * Returns the Wheelly status from status string
@@ -154,7 +154,7 @@ public record WheellyProxyMessage(long simulationTime,
      * Returns the echo distance (m)
      */
     public double echoDistance() {
-        return echoDelay * DISTANCE_SCALE;
+        return delay2Distance(echoDelay);
     }
 
     /**
@@ -169,12 +169,13 @@ public record WheellyProxyMessage(long simulationTime,
     }
 
     /**
-     * Returns the proxy message with echo delay set to echo distance
-     *
-     * @param echoDistance the distance (m)
+     * Returns the echo location or null if not exists
      */
-    public WheellyProxyMessage setEchoDistance(double echoDistance) {
-        return setEchoDelay(round(echoDistance / DISTANCE_SCALE));
+    public Point2D echoLocation() {
+        double distance = echoDistance();
+        return distance > 0
+                ? echoYaw.at(sensorLocation(), distance)
+                : null;
     }
 
     /**
@@ -197,5 +198,21 @@ public record WheellyProxyMessage(long simulationTime,
         return simulationTime != this.simulationTime
                 ? new WheellyProxyMessage(simulationTime, sensorDirectionDeg, sensorDirection, echoDelay, xPulses, yPulses, echoYawDeg, echoYaw)
                 : this;
+    }
+
+    /**
+     * Returns the sensor location (m)
+     */
+    public Point2D sensorLocation() {
+        return pulses2Location(xPulses, yPulses);
+    }
+
+    /**
+     * Returns the proxy message with echo delay set to echo distance
+     *
+     * @param echoDistance the distance (m)
+     */
+    public WheellyProxyMessage setEchoDistance(double echoDistance) {
+        return setEchoDelay(distance2Delay(echoDistance));
     }
 }

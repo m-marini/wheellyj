@@ -46,7 +46,6 @@ import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.TestFunctions.execUntil;
 import static org.mmarini.wheelly.TestFunctions.pause;
 import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
-import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
 import static rocks.cleancode.hamcrest.record.HasFieldMatcher.field;
 
 class SimRobotObstacleTest {
@@ -81,7 +80,7 @@ class SimRobotObstacleTest {
         }
         SimRobot simRobot = new SimRobot(ROBOT_SPEC, random, random,
                 INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL, CHANGE_OBSTACLES_PERIOD,
-                0, 0, MAX_PPS, 0, 0);
+                0, 0, RobotSpec.MAX_PPS, 0, 0);
         simRobot.robotPos(location.getX(), location.getY());
         simRobot.robotDir(robotDirection);
         simRobot.sensorDirection(sensorDirection);
@@ -251,7 +250,7 @@ class SimRobotObstacleTest {
         pause(robot, MESSAGE_INTERVAL);
 
         // And move ahead at max speed
-        robot.move(robotDir.toIntDeg(), MAX_PPS);
+        robot.move(robotDir.toIntDeg(), RobotSpec.MAX_PPS);
         pause(robot, 2 * MESSAGE_INTERVAL);
         robot.close();
 
@@ -322,7 +321,7 @@ class SimRobotObstacleTest {
         robot.connect();
         pause(robot, MESSAGE_INTERVAL);
         // And move back at half-speed for 500 ms
-        robot.move(locationDir.opposite().toIntDeg(), -MAX_PPS / 2);
+        robot.move(locationDir.opposite().toIntDeg(), -RobotSpec.MAX_PPS / 2);
         pause(robot, 1000);
         robot.close();
 
@@ -466,7 +465,7 @@ class SimRobotObstacleTest {
         pause(robot, MESSAGE_INTERVAL);
 
         // When move front at max speed for 300 ms
-        robot.move(locationDir.toIntDeg(), MAX_PPS / 2);
+        robot.move(locationDir.toIntDeg(), RobotSpec.MAX_PPS / 2);
         pause(robot, 1010);
         robot.close();
 
@@ -557,11 +556,11 @@ class SimRobotObstacleTest {
         robot.connect();
         // And turning robot to 0 DEG
         // And wait for simulated 1500 ms
-        robot.move(0, MAX_PPS);
+        robot.move(0, RobotSpec.MAX_PPS);
         execUntil(robot, msg -> {
             if (msg instanceof WheellyMotionMessage) {
                 logger.atDebug().log("t={} move(0,MAX_PPS)", msg.simulationTime());
-                robot.move(0, MAX_PPS);
+                robot.move(0, RobotSpec.MAX_PPS);
             }
             return msg instanceof WheellyContactsMessage c
                     && !c.canMoveForward();
@@ -707,7 +706,7 @@ class SimRobotObstacleTest {
         robot.connect();
         pause(robot, MESSAGE_INTERVAL);
         // And moving back
-        robot.move(locationDeg, -MAX_PPS);
+        robot.move(locationDeg, -RobotSpec.MAX_PPS);
         pause(robot, 2 * MESSAGE_INTERVAL);
         robot.close();
 

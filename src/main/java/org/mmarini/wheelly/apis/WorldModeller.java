@@ -206,12 +206,11 @@ public class WorldModeller implements WorldModellerApi {
     public WorldModel updateStatus(WorldModel model, RobotStatus status) {
         RadarMap newRadarMap = radarModeller.update(model.radarMap(), status);
         model = model.setRobotStatus(status).setRadarMap(newRadarMap);
-        CameraEvent camera = status.cameraEvent();
-        WheellyProxyMessage proxy = status.cameraProxyMessage();
-        CameraEvent prevCamera = model.prevCameraEvent();
+        CorrelatedCameraEvent camera = status.cameraEvent();
+        CorrelatedCameraEvent prevCamera = model.prevCameraEvent();
         if (!Objects.equals(camera, prevCamera)) {
             // new camera event, new proxy: store camera event and proxy event and reset wait for first proxy
-            Map<String, LabelMarker> newMarker = markerLocator.update(model.markers(), camera, proxy, status.robotSpec());
+            Map<String, LabelMarker> newMarker = markerLocator.update(model.markers(), camera, status.robotSpec());
             return model.setMarkers(newMarker)
                     .setPrevCameraEvent(camera);
         }
