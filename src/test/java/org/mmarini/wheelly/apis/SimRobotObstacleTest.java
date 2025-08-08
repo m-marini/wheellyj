@@ -27,15 +27,20 @@ package org.mmarini.wheelly.apis;
 
 import io.reactivex.rxjava3.subscribers.TestSubscriber;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.wheelly.TestFunctions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.*;
 import java.awt.geom.Point2D;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Stream;
 
 import static java.lang.Math.abs;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -79,7 +84,7 @@ class SimRobotObstacleTest {
             mapBuilder.add(false, obsCoords[i], obsCoords[i + 1]);
         }
         SimRobot simRobot = new SimRobot(ROBOT_SPEC, random, random,
-                INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL, CHANGE_OBSTACLES_PERIOD,
+                INTERVAL, 0, MESSAGE_INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL, CHANGE_OBSTACLES_PERIOD,
                 0, 0, RobotSpec.MAX_PPS, 0, 0);
         simRobot.robotPos(location.getX(), location.getY());
         simRobot.robotDir(robotDirection);
@@ -97,6 +102,21 @@ class SimRobotObstacleTest {
      */
     private static SimRobot createRobot(Point2D location, Complex robotDirection) {
         return createRobot(location, robotDirection, Complex.DEG0, 0, 0);
+    }
+
+    private static SimRobot createRobotWithLabel(Point2D location, Complex robotDirection, Complex sensorDirection, Point2D labelLocation) {
+        Random random = new Random(SEED);
+        Point index = ObstacleMap.toIndex(labelLocation.getX(), labelLocation.getY(), GRID_SIZE);
+        ObstacleMap.ObstacleCell cell = new ObstacleMap.ObstacleCell(index, labelLocation, true);
+        ObstacleMap map = new ObstacleMap(List.of(cell), GRID_SIZE);
+        SimRobot simRobot = new SimRobot(ROBOT_SPEC, random, random,
+                INTERVAL, 0, MESSAGE_INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL, CHANGE_OBSTACLES_PERIOD,
+                0, 0, RobotSpec.MAX_PPS, 0, 0);
+        simRobot.robotPos(location.getX(), location.getY());
+        simRobot.robotDir(robotDirection);
+        simRobot.sensorDirection(sensorDirection);
+        simRobot.obstacleMap(map);
+        return simRobot;
     }
 
     /**
@@ -118,6 +138,17 @@ class SimRobotObstacleTest {
                 0, 0,
                 GRID_SIZE, 0,
                 0, GRID_SIZE);
+    }
+
+    public static Stream<Arguments> dataLabel() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(0, 359) // robotLocationDeg
+                .uniform(0, 1)   // robotLocationDistance
+                .uniform(0, 359) // robotDeg
+                .uniform(-90, 90) // sensorDeg
+                .uniform(-15, 15) // markerDeg
+                .uniform(1, 2) // markerDistance
+                .build(100);
     }
 
     private SimRobot robot;
@@ -673,6 +704,47 @@ class SimRobotObstacleTest {
         // And there should not be any contacts after the move command (500 ms)
         contact = TestFunctions.findContact(messages, TestFunctions.notBefore(501));
         assertNull(contact);
+    }
+
+    /*
+     *
+     */
+    @ParameterizedTest
+    @MethodSource("dataLabel")
+    void testLabel(int robotLocationDeg, double robotLocationDistance,
+                   int robotDeg, int sensorDeg, int markerDeg, double markerDistance) {
+        // Given a simulated robot
+        // with a labelled marker
+        Point2D location = Complex.fromDeg(robotLocationDeg).at(new Point2D.Float(), robotLocationDistance);
+        Point2D labelLocation = Complex.fromDeg(robotDeg + sensorDeg + markerDeg).at(location, markerDistance);
+        robot = createRobotWithLabel(location, Complex.fromDeg(robotDeg), Complex.fromDeg(sensorDeg),
+                labelLocation);
+        TestSubscriber<CameraEvent> messagesSub = new TestSubscriber<>();
+        robot.readCamera()
+                .limit(1)
+                .doOnNext(m -> logger.atDebug().log("t={}", m.simulationTime()))
+                .subscribe(messagesSub);
+
+        // When connect and wait for simulated 500 ms
+        robot.connect();
+        robot.halt();
+        pause(robot, MESSAGE_INTERVAL);
+        robot.close();
+
+        // Then ...
+        messagesSub.assertNoErrors();
+        messagesSub.assertComplete();
+        List<CameraEvent> messages = messagesSub.values();
+
+        assertThat(robot.direction(), angleCloseTo(robotDeg, 1));
+        assertThat(robot.location(), pointCloseTo(location, MM1));
+
+        // And the camera event should be a label directed as expected
+        assertThat(messages, hasSize(1));
+        CameraEvent event = messages.getFirst();
+        assertNotNull(event);
+        assertEquals("A", event.qrCode());
+        assertThat(event.direction(), angleCloseTo(markerDeg, 1));
     }
 
     /**

@@ -154,7 +154,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
                 .write(proxy.echoDelay())
                 .write((float) proxy.xPulses())
                 .write((float) proxy.yPulses())
-                .write(proxy.echoYawDeg());
+                .write(proxy.robotYawDeg());
         return this;
     }
 

@@ -189,11 +189,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
         double distance = from.distance(to);
         double maxDistance = distance + safeDistance;
         double width = safeDistance + topology.gridSize() / sqrt(2);
-        AreaExpression sensibleArea = AreaExpression.or(
-                rectangle(from, to, width),
-                circle(from, width),
-                circle(to, width)
-        );
+        AreaExpression sensibleArea = AreaExpression.roundSegment(from, to, width);
         return topology.indices()
                 .filter(cellIs(MapCell::hindered))
                 .filter(topology.inArea(sensibleArea))

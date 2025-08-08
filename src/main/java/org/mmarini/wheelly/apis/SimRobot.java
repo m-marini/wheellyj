@@ -49,6 +49,7 @@ import java.awt.geom.Point2D;
 import java.io.File;
 import java.util.Comparator;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 
@@ -122,11 +123,12 @@ public class SimRobot implements RobotApi {
         long stalemateInterval = locator.path("stalemateInterval").getNode(root).asLong(DEFAULT_STALEMATE_INTERVAL);
         long interval = locator.path("interval").getNode(root).asLong(DEFAULT_INTERVAL);
         long cameraInterval = locator.path("interval").getNode(root).asLong(DEFAULT_CAMERA_INTERVAL);
+        long simulationInterval = locator.path("simulationInterval").getNode(root).asLong();
         double maxRadarDistance = locator.path("maxRadarDistance").getNode(root).asDouble();
         double contactRadius = locator.path("contactRadius").getNode(root).asDouble();
         RobotSpec robotSpec = new RobotSpec(maxRadarDistance, sensorReceptiveAngle, contactRadius, Complex.DEG90);
         return new SimRobot(robotSpec, robotRandom, mapRandom,
-                interval, motionInterval, proxyInterval, cameraInterval, stalemateInterval, changeObstaclesPeriod,
+                interval, simulationInterval, motionInterval, proxyInterval, cameraInterval, stalemateInterval, changeObstaclesPeriod,
                 errSensor, errSigma, maxAngularSpeed, numObstacles, numLabels);
     }
 
@@ -155,6 +157,7 @@ public class SimRobot implements RobotApi {
     private final World world;
     private final Body robot;
     private final Fixture robotFixture;
+    private final long simulationInterval;
     private Body obstacleBody;
 
     /**
@@ -164,6 +167,7 @@ public class SimRobot implements RobotApi {
      * @param random                the robot random generator
      * @param mapRandom             the map random generator
      * @param interval              the simulation time interval (ms)
+     * @param simulationInterval    the simulation interval (ms)
      * @param motionInterval        the motion message interval (ms)
      * @param proxyInterval         the proxy message interval (ms)
      * @param cameraInterval        the camera event interval (ms)
@@ -176,7 +180,7 @@ public class SimRobot implements RobotApi {
      * @param numLabels             the number of labels
      */
     public SimRobot(RobotSpec robotSpec, Random random, Random mapRandom,
-                    long interval, long motionInterval, long proxyInterval, long cameraInterval, long stalemateInterval,
+                    long interval, long simulationInterval, long motionInterval, long proxyInterval, long cameraInterval, long stalemateInterval,
                     long changeObstaclesPeriod,
                     double errSensor, double errSigma, int maxAngularSpeed,
                     int numObstacles, int numLabels) {
@@ -194,6 +198,7 @@ public class SimRobot implements RobotApi {
         this.errSensor = errSensor;
         this.errSigma = errSigma;
         this.maxAngularSpeed = maxAngularSpeed;
+        this.simulationInterval = simulationInterval;
         this.cameraEvents = PublishProcessor.create();
         this.messages = PublishProcessor.create();
         this.errors = PublishProcessor.create();
@@ -601,26 +606,22 @@ public class SimRobot implements RobotApi {
      */
     private void sendCamera() {
         SimRobotStatus s = status.get();
-        Point2D location = location();
-        Complex sensorRad = direction().add(s.sensorDirection());
+        Point2D cameraLocation = location();
+        Complex cameraAzimuth = direction().add(s.sensorDirection());
 
-        Predicate<Point2D> areaParser = robotSpec.cameraSensorArea(location, sensorRad)
+        Predicate<Point2D> areaParser = robotSpec.cameraSensorArea(cameraLocation, cameraAzimuth)
                 .createParser()::test;
         Point2D markerLocation = s.obstacleMap().labeled()
                 .filter(areaParser)
-                .min(Comparator.comparingDouble(location::distanceSq))
+                .min(Comparator.comparingDouble(cameraLocation::distanceSq))
                 .orElse(null);
 
         Point2D[] points = new Point2D[0];
         CameraEvent event;
         if (markerLocation != null) {
-            Complex sectorDir = Complex.direction(location, markerLocation);
-            Complex robotDir = direction();
-            Complex sensorDir = sensorDirection();
-            Complex direction = sectorDir
-                    .sub(robotDir)
-                    .sub(sensorDir);
-            event = new CameraEvent(s.simulationTime(), QR_CODE, CAMERA_WIDTH, CAMERA_HEIGHT, points, direction);
+            Complex markerDirection = Complex.direction(cameraLocation, markerLocation);
+            Complex markerRelativeDirection = markerDirection.sub(cameraAzimuth);
+            event = new CameraEvent(s.simulationTime(), QR_CODE, CAMERA_WIDTH, CAMERA_HEIGHT, points, markerRelativeDirection);
         } else {
             event = CameraEvent.unknown(s.simulationTime());
         }
@@ -672,11 +673,11 @@ public class SimRobot implements RobotApi {
         Point2D pos = this.location();
         double xPulses = distance2Pulse(pos.getX());
         double yPulses = distance2Pulse(pos.getY());
-        Complex echoYaw = direction();
+        Complex robotYaw = direction();
         long echoDelay = round(s.echoDistance() / DISTANCE_SCALE);
         WheellyProxyMessage msg = new WheellyProxyMessage(
                 s.simulationTime(),
-                s.sensorDirection().toIntDeg(), echoDelay, xPulses, yPulses, echoYaw.toIntDeg());
+                s.sensorDirection().toIntDeg(), echoDelay, xPulses, yPulses, robotYaw.toIntDeg());
         logger.atDebug().log("proxy R{} D{}", msg.sensorDirection().toDeg(), msg.echoDistance());
         messages.onNext(msg);
         status.updateAndGet(s1 -> s1.proxyTimeout(s1.simulationTime() + proxyInterval));
@@ -832,9 +833,11 @@ public class SimRobot implements RobotApi {
     private void tick() {
         SimRobotStatus s = status.get();
         if (s.connected() && !s.closed()) {
-            Completable.fromAction(this::simulate)
+            (simulationInterval == 0
+                    ? Completable.complete()
+                    : Completable.timer(simulationInterval, TimeUnit.MILLISECONDS))
                     .subscribeOn(Schedulers.computation())
-                    .subscribe();
+                    .subscribe(this::simulate);
         }
     }
 

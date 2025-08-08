@@ -37,9 +37,9 @@ import static org.mmarini.wheelly.apis.SimRobot.SAFE_DISTANCE;
  *
  * @param simulationTime      the simulation time (ms)
  * @param connected           true if robot connected
- * @param closed              true if roboto closed
+ * @param closed              true if robot closed
  * @param stalemate           true if robot is stalemate
- * @param sensorDirection     the sensor direction
+ * @param sensorDirection     the sensor direction relative the robot
  * @param echoDistance        the echo distance (m)
  * @param frontSensor         true if front sensor without contact
  * @param rearSensor          true if rear sensor without contect

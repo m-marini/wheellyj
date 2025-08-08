@@ -98,7 +98,7 @@ public class SearchLabelState extends AbstractSearchAndMoveState {
                     Arrays.stream(labels));
 
         };
-        return new SearchLabelState(id, onInit, onEntry, onExit, timeout, maxIterations, minGoals, maxSearchTime, approachDistance, speed, safetyDistance, pathFinderSupplier);
+        return new SearchLabelState(id, onInit, onEntry, onExit, timeout, maxIterations, minGoals, maxSearchTime, approachDistance, speed, pathFinderSupplier);
     }
 
     /**
@@ -114,11 +114,13 @@ public class SearchLabelState extends AbstractSearchAndMoveState {
      * @param maxSearchTime      the maximum search time (ms)
      * @param approachDistance   the approach distance (m)
      * @param speed              the speed (pps)
-     * @param safetyDistance     the safety distance (m)
      * @param pathFinderSupplier the pathfinder supplier
      */
-    protected SearchLabelState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit, long timeout, int maxIterations, int minGoals, long maxSearchTime, double approachDistance, int speed, double safetyDistance, Function<ProcessorContextApi, RRTPathFinder> pathFinderSupplier) {
-        super(id, onInit, onEntry, onExit, timeout, maxIterations, minGoals, maxSearchTime, safetyDistance, approachDistance, speed, pathFinderSupplier);
+    protected SearchLabelState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit,
+                               long timeout, int maxIterations, int minGoals, long maxSearchTime,
+                               double approachDistance, int speed,
+                               Function<ProcessorContextApi, RRTPathFinder> pathFinderSupplier) {
+        super(id, onInit, onEntry, onExit, timeout, maxIterations, minGoals, maxSearchTime, approachDistance, speed, pathFinderSupplier);
         logger.atDebug().log("Created");
     }
 }

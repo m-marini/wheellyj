@@ -94,7 +94,7 @@ public class SearchRefreshState extends AbstractSearchAndMoveState {
             double maxDistance = status.robotSpec().maxRadarDistance();
             return RRTPathFinder.createLeastEmptyTargets(map, robotLocation, safetyDistance + CM, growthDistance, maxDistance, random);
         };
-        return new SearchRefreshState(id, onInit, onEntry, onExit, timeout, safetyDistance, approachDistance, speed, maxIterations, minGoals, maxSearchTime, pathFinderSupplier);
+        return new SearchRefreshState(id, onInit, onEntry, onExit, timeout, approachDistance, speed, maxIterations, minGoals, maxSearchTime, pathFinderSupplier);
     }
 
     /**
@@ -105,7 +105,6 @@ public class SearchRefreshState extends AbstractSearchAndMoveState {
      * @param onEntry            the entry command or null if none
      * @param onExit             the exit command or null if none
      * @param timeout            the timeout (ms)
-     * @param safetyDistance     the safety distance (m)
      * @param approachDistance   the approach distance (m)
      * @param speed              the maximum speed (pps)
      * @param maxIterations      the maximum number of iterations
@@ -113,8 +112,10 @@ public class SearchRefreshState extends AbstractSearchAndMoveState {
      * @param maxSearchTime      the maximum search time (ms)
      * @param pathFinderSupplier the pathfinder supplier
      */
-    public SearchRefreshState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit, long timeout, double safetyDistance, double approachDistance, int speed, int maxIterations, int minGoals, long maxSearchTime, Function<ProcessorContextApi, RRTPathFinder> pathFinderSupplier) {
-        super(id, onInit, onEntry, onExit, timeout, maxIterations, minGoals, maxSearchTime, safetyDistance, approachDistance, speed, pathFinderSupplier);
+    public SearchRefreshState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit,
+                              long timeout, double approachDistance, int speed, int maxIterations, int minGoals,
+                              long maxSearchTime, Function<ProcessorContextApi, RRTPathFinder> pathFinderSupplier) {
+        super(id, onInit, onEntry, onExit, timeout, maxIterations, minGoals, maxSearchTime, approachDistance, speed, pathFinderSupplier);
         logger.atDebug().log("Created");
     }
 }

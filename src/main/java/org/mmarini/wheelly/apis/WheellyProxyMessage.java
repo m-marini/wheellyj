@@ -46,13 +46,13 @@ import static org.mmarini.wheelly.apis.RobotSpec.*;
  * @param echoDelay          the echo delay (um)
  * @param xPulses            the x robot location pulses at echo ping
  * @param yPulses            the y robot location pulses at echo ping
- * @param echoYawDeg         the robot direction at ping (DEG)
- * @param echoYaw            the robot direction at ping
+ * @param robotYawDeg        the robot direction at ping (DEG)
+ * @param robotYaw           the robot direction at ping
  */
 public record WheellyProxyMessage(long simulationTime,
                                   int sensorDirectionDeg, Complex sensorDirection, long echoDelay,
-                                  double xPulses, double yPulses, int echoYawDeg,
-                                  Complex echoYaw) implements WheellyMessage {
+                                  double xPulses, double yPulses, int robotYawDeg,
+                                  Complex robotYaw) implements WheellyMessage {
     public static final int NUM_PARAMS = 7;
 
     /**
@@ -81,11 +81,9 @@ public record WheellyProxyMessage(long simulationTime,
         int echoDelay = parseInt(params[3]);
         double x = parseDouble(params[4]);
         double y = parseDouble(params[5]);
-        int echoYaw = parseInt(params[6]);
-
+        int robotYaw = parseInt(params[6]);
         long simTime = clockConverter.fromRemote(remoteTime);
-        return new WheellyProxyMessage(simTime, echoDirection, echoDelay, x,
-                y, echoYaw);
+        return new WheellyProxyMessage(simTime, echoDirection, echoDelay, x, y, robotYaw);
     }
 
     public static WheellyProxyMessage create(Timed<String> line, long timeOffset) {
@@ -98,11 +96,10 @@ public record WheellyProxyMessage(long simulationTime,
         int echoDelay = parseInt(params[3]);
         double x = parseDouble(params[4]);
         double y = parseDouble(params[5]);
-        int echoYaw = parseInt(params[6]);
+        int robotYaw = parseInt(params[6]);
 
         long simTime = time - timeOffset;
-        return new WheellyProxyMessage(simTime, echoDirection, echoDelay, x,
-                y, echoYaw);
+        return new WheellyProxyMessage(simTime, echoDirection, echoDelay, x, y, robotYaw);
     }
 
     /**
@@ -129,25 +126,25 @@ public record WheellyProxyMessage(long simulationTime,
      * @param echoDelay          the echo delay (um)
      * @param xPulses            the x robot location pulses at echo ping
      * @param yPulses            the y robot location pulses at echo ping
-     * @param echoYawDeg         the robot direction at ping (DEG)
-     * @param echoYaw            the robot direction at ping
+     * @param robotYawDeg        the robot direction at ping (DEG)
+     * @param robotYaw           the robot direction at ping
      */
-    public WheellyProxyMessage(long simulationTime, int sensorDirectionDeg, Complex sensorDirection, long echoDelay, double xPulses, double yPulses, int echoYawDeg, Complex echoYaw) {
+    public WheellyProxyMessage(long simulationTime, int sensorDirectionDeg, Complex sensorDirection, long echoDelay, double xPulses, double yPulses, int robotYawDeg, Complex robotYaw) {
         this.simulationTime = simulationTime;
         this.sensorDirectionDeg = sensorDirectionDeg;
         this.sensorDirection = requireNonNull(sensorDirection);
         this.echoDelay = echoDelay;
         this.xPulses = xPulses;
         this.yPulses = yPulses;
-        this.echoYawDeg = echoYawDeg;
-        this.echoYaw = requireNonNull(echoYaw);
+        this.robotYawDeg = robotYawDeg;
+        this.robotYaw = requireNonNull(robotYaw);
     }
 
     /**
      * Returns the absolute echo direction (DEG)
      */
     public Complex echoDirection() {
-        return sensorDirection.add(echoYaw);
+        return sensorDirection.add(robotYaw);
     }
 
     /**
@@ -158,24 +155,30 @@ public record WheellyProxyMessage(long simulationTime,
     }
 
     /**
+     * Returns the sensor location (m)
+     */
+    public Point2D sensorLocation() {
+        return pulses2Location(xPulses, yPulses);
+    }
+
+    /**
      * Returns the proxy message with the echo delay set
      *
      * @param echoDelay echo delay (us)
      */
     public WheellyProxyMessage setEchoDelay(long echoDelay) {
         return echoDelay != this.echoDelay
-                ? new WheellyProxyMessage(simulationTime, sensorDirectionDeg, sensorDirection, echoDelay, xPulses, yPulses, echoYawDeg, echoYaw)
+                ? new WheellyProxyMessage(simulationTime, sensorDirectionDeg, sensorDirection, echoDelay, xPulses, yPulses, robotYawDeg, robotYaw)
                 : this;
     }
 
     /**
-     * Returns the echo location or null if not exists
+     * Returns the proxy message with echo delay set to echo distance
+     *
+     * @param echoDistance the distance (m)
      */
-    public Point2D echoLocation() {
-        double distance = echoDistance();
-        return distance > 0
-                ? echoYaw.at(sensorLocation(), distance)
-                : null;
+    public WheellyProxyMessage setEchoDistance(double echoDistance) {
+        return setEchoDelay(distance2Delay(echoDistance));
     }
 
     /**
@@ -185,7 +188,7 @@ public record WheellyProxyMessage(long simulationTime,
      */
     public WheellyProxyMessage setSensorDirection(int sensorDirectionDeg) {
         return sensorDirectionDeg != this.sensorDirectionDeg
-                ? new WheellyProxyMessage(simulationTime, sensorDirectionDeg, Complex.fromDeg(sensorDirectionDeg), echoDelay, xPulses, yPulses, echoYawDeg, echoYaw)
+                ? new WheellyProxyMessage(simulationTime, sensorDirectionDeg, Complex.fromDeg(sensorDirectionDeg), echoDelay, xPulses, yPulses, robotYawDeg, robotYaw)
                 : this;
     }
 
@@ -196,23 +199,7 @@ public record WheellyProxyMessage(long simulationTime,
      */
     public WheellyProxyMessage setSimulationTime(long simulationTime) {
         return simulationTime != this.simulationTime
-                ? new WheellyProxyMessage(simulationTime, sensorDirectionDeg, sensorDirection, echoDelay, xPulses, yPulses, echoYawDeg, echoYaw)
+                ? new WheellyProxyMessage(simulationTime, sensorDirectionDeg, sensorDirection, echoDelay, xPulses, yPulses, robotYawDeg, robotYaw)
                 : this;
-    }
-
-    /**
-     * Returns the sensor location (m)
-     */
-    public Point2D sensorLocation() {
-        return pulses2Location(xPulses, yPulses);
-    }
-
-    /**
-     * Returns the proxy message with echo delay set to echo distance
-     *
-     * @param echoDistance the distance (m)
-     */
-    public WheellyProxyMessage setEchoDistance(double echoDistance) {
-        return setEchoDelay(distance2Delay(echoDistance));
     }
 }

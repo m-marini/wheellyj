@@ -14,6 +14,7 @@ stalemateInterval: 60000
 contactRadius: 0.28
 maxRadarDistance: 3
 interval: 100
+simulationInterval: 0
 cameraInterval: 500
 motionInterval: 500
 proxyInterval: 500

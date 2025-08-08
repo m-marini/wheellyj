@@ -61,7 +61,7 @@ class SimRobotTest {
      */
     private static SimRobot createRobot() {
         return new SimRobot(ROBOT_SPEC, new Random(SEED), new Random(SEED),
-                INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL, STALEMATE_INTERVAL,
+                INTERVAL, 0, MESSAGE_INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL, STALEMATE_INTERVAL,
                 0, 0, RobotSpec.MAX_PPS, 0, 0);
     }
 

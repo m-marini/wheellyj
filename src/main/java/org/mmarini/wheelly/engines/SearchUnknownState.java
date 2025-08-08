@@ -58,9 +58,9 @@ import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
  * </p>
  */
 public class SearchUnknownState extends AbstractSearchAndMoveState {
+    public static final double CM = 10e-3;
     private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-search-unknown-schema-0.1";
     private static final Logger logger = LoggerFactory.getLogger(SearchUnknownState.class);
-    public static final double CM = 10e-3;
 
     /**
      * Returns the exploring state from configuration
@@ -92,7 +92,7 @@ public class SearchUnknownState extends AbstractSearchAndMoveState {
             RobotStatus status = worldModel.robotStatus();
             return RRTPathFinder.createUnknownTargets(map, status.location(), safetyDistance + CM, growthDistance, random);
         };
-        return new SearchUnknownState(id, onInit, onEntry, onExit, timeout, safetyDistance, approachDistance, speed, maxIterations, minGoals, maxSearchTime, pathFinderSupplier);
+        return new SearchUnknownState(id, onInit, onEntry, onExit, timeout, approachDistance, speed, maxIterations, minGoals, maxSearchTime, pathFinderSupplier);
     }
 
     /**
@@ -103,7 +103,6 @@ public class SearchUnknownState extends AbstractSearchAndMoveState {
      * @param onEntry            the entry command or null if none
      * @param onExit             the exit command or null if none
      * @param timeout            the timeout (ms)
-     * @param safetyDistance     the safety distance (m)
      * @param approachDistance   the approach distance (m)
      * @param speed              the maximum speed (pps)
      * @param maxIterations      the maximum number of iterations
@@ -111,8 +110,10 @@ public class SearchUnknownState extends AbstractSearchAndMoveState {
      * @param maxSearchTime      the maximum search time (ms)
      * @param pathFinderSupplier the pathfinder supplier
      */
-    public SearchUnknownState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit, long timeout, double safetyDistance, double approachDistance, int speed, int maxIterations, int minGoals, long maxSearchTime, Function<ProcessorContextApi, RRTPathFinder> pathFinderSupplier) {
-        super(id, onInit, onEntry, onExit, timeout, maxIterations, minGoals, maxSearchTime, safetyDistance, approachDistance, speed, pathFinderSupplier);
+    public SearchUnknownState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit,
+                              long timeout, double approachDistance, int speed, int maxIterations, int minGoals,
+                              long maxSearchTime, Function<ProcessorContextApi, RRTPathFinder> pathFinderSupplier) {
+        super(id, onInit, onEntry, onExit, timeout, maxIterations, minGoals, maxSearchTime, approachDistance, speed, pathFinderSupplier);
         logger.atDebug().log("Created");
     }
 }

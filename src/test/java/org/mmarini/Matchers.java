@@ -46,6 +46,10 @@ public interface Matchers {
         return angleCloseTo(expected, Complex.fromDeg(epsilon));
     }
 
+    static Matcher<Complex> angleCloseTo(int expected, int epsilon) {
+        return angleCloseTo(Complex.fromDeg(expected), Complex.fromDeg(epsilon));
+    }
+
     static Matcher<Complex> angleCloseTo(Complex expected, Complex epsilon) {
         requireNonNull(expected);
         return new CustomMatcher<>(format("Angle close to %f DEG within +- %f DEG",

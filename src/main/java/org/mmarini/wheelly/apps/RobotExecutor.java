@@ -27,7 +27,6 @@ package org.mmarini.wheelly.apps;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
-import io.reactivex.rxjava3.schedulers.Schedulers;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -198,39 +197,30 @@ public class RobotExecutor {
         controller.readShutdown()
                 .subscribe(this::onShutdown);
         controller.readErrors()
-                .observeOn(Schedulers.io())
                 .subscribe(err -> {
                     comMonitor.onError(err);
                     logger.atError().setCause(err).log("Controller error");
                 });
         controller.readReadLine()
-                .observeOn(Schedulers.io())
                 .subscribe(this::onReadLine);
         controller.readWriteLine()
-                .observeOn(Schedulers.io())
                 .subscribe(this::onWrittenLine);
         controller.readControllerStatus()
-                .observeOn(Schedulers.io())
                 .map(ControllerStatusMapper::map)
                 .subscribe(this::onControllerStatus);
         controller.readCommand()
-                .observeOn(Schedulers.io())
                 .subscribe(sensorMonitor::onCommand);
         agent.readState()
-                .observeOn(Schedulers.io())
                 .subscribe(this::onState);
         agent.readStepUp()
-                .observeOn(Schedulers.io())
                 .subscribe(this::onStepUp);
         agent.readTargets()
-                .observeOn(Schedulers.io())
                 .subscribe(t ->
                         envPanel.target(t.orElse(null)));
+
         agent.readPath()
-                .observeOn(Schedulers.io())
                 .subscribe(this::onPath);
         agent.readTriggers()
-                .observeOn(Schedulers.io())
                 .subscribe(this::onTrigger);
     }
 
@@ -363,7 +353,6 @@ public class RobotExecutor {
         envPanel.robotStatus(status);
         envPanel.radarMap(worldModel.radarMap());
         envPanel.markers(worldModel.markers().values());
-
         long robotClock = status.simulationTime();
         long robotElapsed = robotClock - robotStartTimestamp;
         envPanel.setTimeRatio((double) robotElapsed / (System.currentTimeMillis() - start));

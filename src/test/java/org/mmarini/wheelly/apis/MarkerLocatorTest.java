@@ -54,7 +54,6 @@ class MarkerLocatorTest {
     public static final int RECEPTIVE_ANGLE_DEG = 15;
 
     public static final long T0 = 100;
-    public static final long T1 = T0 + CORRELATION_INTERVAL;
     public static final long T2 = T0 + CORRELATION_INTERVAL + 1;
     public static final long DT = 600;
     public static final long T3 = T0 + DT - CORRELATION_INTERVAL;
@@ -73,6 +72,17 @@ class MarkerLocatorTest {
         return new CameraEvent(cameraTime, label, 0, 0, new Point2D[0], Complex.fromDeg(labelDeg));
     }
 
+    /**
+     * Returns a correlate event
+     *
+     * @param cameraTime   the camera event time (ms)
+     * @param label        the label
+     * @param labelDeg     the label position relative the camera direction (DEG)
+     * @param proxyTime    the proxy time (ms)
+     * @param echoDistance the echo distance (m)
+     * @param echoDeg      the proxy direction relative to the robot direction (DEG)
+     * @param echoYaw      the proxy direction radial relative to north environment (DEG)
+     */
     private static CorrelatedCameraEvent createCorrelateEvent(long cameraTime, String label, int labelDeg, long proxyTime, double echoDistance, int echoDeg, int echoYaw) {
         return new CorrelatedCameraEvent(
                 createCameraEvent(cameraTime, label, labelDeg),
@@ -130,13 +140,35 @@ class MarkerLocatorTest {
                 .build(100);
     }
 
-    static Stream<Arguments> dateUpdateExistingMarker() {
+    public static Stream<Arguments> dataUpdateNewMarker() {
+        // void testUpdateNewMarker(int cameraDeg, int targetDeg, int echoDeg, double echoDistance) {
         return RandomArgumentsGenerator.create(SEED)
-                .uniform(0, 359) // targetDeg
-                .uniform(0.5, 3) // targetDistance
-                .uniform(-60, 60) // deltaCameraAzimuth
-                .uniform(-30, 30) // labelDeg
+                .uniform(0, 359) // cameraDeg
+                .uniform(-15, 15) // targetDeg
+                .uniform(-90, 90) // echoDeg
+                .uniform(0.5, 2.5) // echoDistance
+                .build(100);
+    }
+
+    static Stream<Arguments> dateNoUpdateExistingMarker() {
+//        void testUpdateExistingMarker(int cameraDeg, int echoDeg, int markerDeg, double markerDistance) {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(0, 359) // cameraDeg
+                .uniform(-90, 90) // echoDeg
+                .uniform(30, 330) // markerDeg
+                .uniform(0.5, 3) // markerDistance
+                .build(100);
+    }
+
+    static Stream<Arguments> dateUpdateExistingMarker() {
+//        void testUpdateExistingMarker(int cameraDeg, int targetDeg, int echoDeg, double echoDistance, int markerDeg, double markerDistance) {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(0, 359) // cameraDeg
+                .uniform(-15, 15) // targetDeg
+                .uniform(-30, 30) // echoDeg
                 .uniform(0.5, 3) // echoDistance
+                .uniform(-30, 30) // markerDeg
+                .uniform(0.5, 3) // markerDistance
                 .build(100);
     }
 
@@ -304,15 +336,55 @@ class MarkerLocatorTest {
      * update map with an existing label marker
      */
     @ParameterizedTest(name = "[{index}] echo R{0}")
-    @MethodSource("dateUpdateExistingMarker")
-    void testUpdateExistingMarker(int targetDeg, double targetDistance, int deltaCameraAzimuth, int labelDeg, double echoDistance) {
-        // Given a Marker locator
-        // And a correlated camera event
-        Point2D targetLocation = Complex.fromDeg(targetDeg).at(ROBOT_LOCATION, targetDistance);
-        CorrelatedCameraEvent event = createCorrelateEvent(T4, LABEL_A, labelDeg, T3, echoDistance, 0, deltaCameraAzimuth);
-        // And a map with existing marker
+    @MethodSource("dateNoUpdateExistingMarker")
+    void testNoUpdateExistingMarker(int cameraDeg, int echoDeg, int markerDeg, double markerDistance) {
+        // Given a correlated camera event with camera directed to cameraDeg relative the ambient
+
+        // and camera directed to deltaCameraAzimuth relative to targetDeg relative the camera direction
+
+        // and echo at echoDistance directed to echoDeg relative the robot direction
+        // (the result should not depend on)
+        CorrelatedCameraEvent event = createCorrelateEvent(T4, UNKNOWN_QR_CODE, 0, T3, 0, echoDeg, cameraDeg);
+        // And a map with existing marker located at markerDistance directed to markerDeg relative the camera
+        Point2D markerLocation = Complex.fromDeg(cameraDeg + markerDeg).at(ROBOT_LOCATION, markerDistance);
         Map<String, LabelMarker> map0 = Map.of(
-                LABEL_A, new LabelMarker(LABEL_A, targetLocation, 1, T0, T0)
+                LABEL_A, new LabelMarker(LABEL_A, markerLocation, 1, T0, T0)
+        );
+
+        // When update by event
+        Map<String, LabelMarker> map = locator.update(map0, event, ROBOT_SPEC);
+
+        // Then the marker should exist
+        assertThat(map, hasKey(LABEL_A));
+
+        // And the marker should be labelled "A"
+        LabelMarker marker = map.get(LABEL_A);
+        assertEquals(LABEL_A, marker.label());
+        // And should have proxy message markerTime
+        assertEquals(T0, marker.markerTime());
+
+        // And should be located in the middle between old location and new location
+        assertThat(marker.location(), pointCloseTo(markerLocation, MM_1));
+    }
+
+    /**
+     * update map with an existing label marker
+     */
+    @ParameterizedTest(name = "[{index}] echo R{0}")
+    @MethodSource("dateUpdateExistingMarker")
+    void testUpdateExistingMarker(int cameraDeg, int targetDeg, int echoDeg, double echoDistance,
+                                  int markerDeg, double markerDistance) {
+        // Given a correlated camera event with camera directed to cameraDeg relative the ambient
+
+        // and camera directed to deltaCameraAzimuth relative to targetDeg relative the camera direction
+
+        // and echo at echoDistance directed to echoDeg relative the robot direction
+        // (the result should not depend on)
+        CorrelatedCameraEvent event = createCorrelateEvent(T4, LABEL_A, targetDeg, T3, echoDistance, echoDeg, cameraDeg);
+        // And a map with existing marker located at markerDistance directed to markerDeg relative the camera
+        Point2D markerLocation = Complex.fromDeg(cameraDeg + markerDeg).at(ROBOT_LOCATION, markerDistance);
+        Map<String, LabelMarker> map0 = Map.of(
+                LABEL_A, new LabelMarker(LABEL_A, markerLocation, 1, T0, T0)
         );
 
         // When update by event
@@ -327,14 +399,14 @@ class MarkerLocatorTest {
         // And should have proxy message markerTime
         assertEquals(T4, marker.markerTime());
 
-        // And should be located at echo location
-        Point2D echoLocation = event.markerAzimuth().at(ROBOT_LOCATION, echoDistance + MARKER_SIZE / 2);
+        // And should be located in the middle between old location and new location
+        Point2D newLocation = Complex.fromDeg(cameraDeg + targetDeg).at(ROBOT_LOCATION, echoDistance + MARKER_SIZE / 2);
 
         double gamma = gamma(T4 - T0, DECAY_TIME);
         double notGamma = 1 - gamma;
         Point2D expectedLocation = new Point2D.Double(
-                targetLocation.getX() * gamma + echoLocation.getX() * notGamma,
-                targetLocation.getY() * gamma + echoLocation.getY() * notGamma
+                markerLocation.getX() * gamma + newLocation.getX() * notGamma,
+                markerLocation.getY() * gamma + newLocation.getY() * notGamma
         );
         assertThat(marker.location(), pointCloseTo(expectedLocation, MM_1));
     }
@@ -342,12 +414,17 @@ class MarkerLocatorTest {
     /**
      * update map with a new label marker
      */
-    @ParameterizedTest(name = "[{index}] echo R{0}")
-    @MethodSource("dateUpdateExistingMarker")
-    void updateNewMarkerTest(int echoDeg) {
-        // Given a Marker locator
-        // And a correlated camera event
-        CorrelatedCameraEvent event = createCorrelateEvent(T1, T0, echoDeg);
+    @ParameterizedTest(name = "[{index}] target R{0} D{1}, deltaCamera {2} DEG, label {3} DEG")
+    @MethodSource("dataUpdateNewMarker")
+    void testUpdateNewMarker(int cameraDeg, int targetDeg, int echoDeg, double echoDistance) {
+        // Given a correlated camera event with camera directed to cameraDeg relative the ambient
+
+        // and camera directed to deltaCameraAzimuth relative to targetDeg relative the camera direction
+
+        // and echo at echoDistance directed to echoDeg relative the robot direction
+
+        // (the result should not depend on)
+        CorrelatedCameraEvent event = createCorrelateEvent(T4, LABEL_A, targetDeg, T3, echoDistance, echoDeg, cameraDeg);
 
         // When update by event
         Map<String, LabelMarker> map = locator.update(Map.of(), event, ROBOT_SPEC);
@@ -359,11 +436,11 @@ class MarkerLocatorTest {
         LabelMarker marker = map.get(LABEL_A);
         assertEquals(LABEL_A, marker.label());
         // And should have proxy message markerTime
-        assertEquals(T1, marker.markerTime());
+        assertEquals(T4, marker.markerTime());
 
         // And should be located at echo location
-        Point2D expectedLocation = event.markerAzimuth().at(ROBOT_LOCATION, ECHO_DISTANCE + MARKER_SIZE / 2);
-        assertThat(marker.location(), pointCloseTo(expectedLocation, MM_1));
+        Point2D expected = Complex.fromDeg(cameraDeg + targetDeg).at(ROBOT_LOCATION, echoDistance + MARKER_SIZE / 2);
+        assertThat(marker.location(), pointCloseTo(expected, MM_1));
     }
 
     /**

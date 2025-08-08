@@ -54,14 +54,7 @@ public record CorrelatedCameraEvent(CameraEvent camerEvent, WheellyProxyMessage 
      * Returns the camera azimuth (direction relative to environment)
      */
     public Complex cameraAzimuth() {
-        return proxy.echoYaw();
-    }
-
-    /**
-     * Returns the camera direction relative to robot
-     */
-    public Complex cameraDirection() {
-        return proxy.sensorDirection();
+        return proxy.robotYaw().add(proxy.sensorDirection());
     }
 
     /**
@@ -83,16 +76,6 @@ public record CorrelatedCameraEvent(CameraEvent camerEvent, WheellyProxyMessage 
      */
     public double markerDistance() {
         return proxy.echoDistance();
-    }
-
-    /**
-     * Returns the marker direction relative to environment or null if not exists
-     */
-    public Point2D markerLocation() {
-        double distance = proxy.echoDistance();
-        return distance > 0
-                ? markerAzimuth().at(proxy.sensorLocation(), distance)
-                : null;
     }
 
     /**

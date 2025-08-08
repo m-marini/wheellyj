@@ -47,7 +47,7 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
     public static final String MAX_ITERATIONS_ID = "maxIterations";
     public static final String MIN_GOALS_ID = "minGoals";
     public static final String SEED_ID = "seed";
-    public static final double DEFAULT_APPROACH_DISTANCE = 0.4;
+    public static final double DEFAULT_APPROACH_DISTANCE = 0.2;
     public static final double DEFAULT_GROWTH_DISTANCE = 0.5;
     public static final long DEFAULT_MAX_SEARCH_TIME = 3600000;
     public static final String NOT_FOUND_EXIT = "notFound";
@@ -62,7 +62,6 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
     private final int minGoals;
     private final long maxSearchTime;
     private final Function<ProcessorContextApi, RRTPathFinder> pathFinderSupplier;
-    private final double safetyDistance;
     private int targetIndex;
     private List<Point2D> path;
 
@@ -77,14 +76,13 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
      * @param maxIterations      the maximum number of iterations
      * @param minGoals           the minimum number of goals
      * @param maxSearchTime      the maximum search time (ms)
-     * @param safetyDistance     the safetyDistance (m)
      * @param approachDistance   the approach distance (m)
      * @param speed              the maximum speed (pps)
      * @param pathFinderSupplier the pathfinder supplier
      */
     public AbstractSearchAndMoveState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit,
                                       long timeout, int maxIterations, int minGoals, long maxSearchTime,
-                                      double safetyDistance, double approachDistance, int speed,
+                                      double approachDistance, int speed,
                                       Function<ProcessorContextApi, RRTPathFinder> pathFinderSupplier) {
         super(id, onInit, onEntry, onExit, timeout);
         this.approachDistance = approachDistance;
@@ -93,7 +91,6 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
         this.minGoals = minGoals;
         this.maxSearchTime = maxSearchTime;
         this.pathFinderSupplier = requireNonNull(pathFinderSupplier);
-        this.safetyDistance = safetyDistance;
     }
 
     /**
@@ -126,7 +123,6 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
         WorldModel worldModel = context.worldModel();
         RobotStatus robotStatus = worldModel.robotStatus();
         Point2D robotLocation = robotStatus.location();
-        RadarMap map = worldModel.radarMap();
         double distance = robotLocation.distance(target);
         if (distance <= approachDistance) {
             // Target reached

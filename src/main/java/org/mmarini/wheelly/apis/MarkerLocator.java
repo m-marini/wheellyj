@@ -57,6 +57,7 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
                             double markerSize, AtomicReference<MarkerLocatorStatus> status) {
 
     public static final double EPSILON_1DEG = sin(toRadians(1));
+    public static final Complex CLEAR_REDUCTION_ANGLE = Complex.fromDeg(3);
 
     /**
      * Returns the empty radar from definition
@@ -188,14 +189,18 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
                 return filterCleaningArea(map, cameraLocation, cameraAzimuth,
                         clearDistance, receptiveAngle, cameraTime);
             }
-            Complex clearAngle = Complex.fromRad(min(halfViewAngle.toRad(), receptiveAngle.toRad()));
+            Complex clearAngle = Complex.fromRad(min(halfViewAngle.toRad(), receptiveAngle.toRad())).sub(CLEAR_REDUCTION_ANGLE);
             CorrelatedCameraEvent prevEvent = status.get().prevEvent();
-            if (!RobotSpec.UNKNOWN_QR_CODE.equals(cameraEvent.qrCode())) {
+            if (!RobotSpec.UNKNOWN_QR_CODE.equals(cameraEvent.qrCode())
+                    // qr code recognized
+                    && cameraEvent.camerEvent().direction().isCloseTo(Complex.DEG0, robotSpec.receptiveAngle())
+                // direction correlated with the proxy receptive angle
+            ) {
                 // Marker recognized
                 Complex markerDirection = cameraEvent.markerAzimuth();
                 Point2D markerLocation = markerDirection.at(cameraLocation, distance + markerSize / 2);
                 LabelMarker marker = map.get(cameraEvent.qrCode());
-                Map<String, LabelMarker> map1 = filterCleaningArea(map, cameraLocation, markerDirection,
+                Map<String, LabelMarker> map1 = filterCleaningArea(map, cameraLocation, cameraAzimuth,
                         clearDistance, clearAngle, cameraTime);
                 LabelMarker newMarker;
                 if (marker != null) {
@@ -218,8 +223,9 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
                 newMap.put(newMarker.label(), newMarker);
                 status.updateAndGet(s -> s.markEvent(cameraEvent));
                 return newMap;
-            } else if (prevEvent != null && cameraTime <= prevEvent.simulationTime()
-                    || !cameraEvent.cameraAzimuth().isCloseTo(prevEvent.cameraAzimuth(), EPSILON_1DEG)) {
+            } else if (prevEvent != null
+                    && (cameraTime <= prevEvent.simulationTime()
+                    || !cameraEvent.cameraAzimuth().isCloseTo(prevEvent.cameraAzimuth(), EPSILON_1DEG))) {
                 // Event not changed or
                 status.updateAndGet(s -> s.markEvent(cameraEvent));
                 return map;
