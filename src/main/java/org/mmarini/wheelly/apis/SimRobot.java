@@ -267,6 +267,7 @@ public class SimRobot implements RobotApi {
             // Contacts changed -> send status
             sendProxy();
             sendContacts();
+            sendMotion();
         }
     }
 

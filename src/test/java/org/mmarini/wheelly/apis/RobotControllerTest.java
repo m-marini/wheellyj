@@ -120,9 +120,8 @@ class RobotControllerTest {
 
         // When start the controller
         controller.start();
-        // And generating 10 async messages delayed by 10 ms
-        //mockRobot.sendStatus(10, MESSAGE_INTERVAL);
-        Flowable.interval(1, TimeUnit.MILLISECONDS)
+        // And generating 10 async messages of 500 ms of simulation time
+        Flowable.interval(100, TimeUnit.MILLISECONDS)
                 .take(10)
                 .doOnNext(ignored ->
                         mockRobot.sendStatus(MESSAGE_INTERVAL))

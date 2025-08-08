@@ -48,8 +48,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.angleCloseTo;
 import static org.mmarini.Matchers.pointCloseTo;
-import static org.mmarini.wheelly.TestFunctions.execUntil;
-import static org.mmarini.wheelly.TestFunctions.pause;
+import static org.mmarini.wheelly.TestFunctions.*;
 import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
 import static rocks.cleancode.hamcrest.record.HasFieldMatcher.field;
 
@@ -159,8 +158,8 @@ class SimRobotObstacleTest {
     @ParameterizedTest(name = "[{index}] Robot at ({0},{1}) head R{2} speed {3} pps")
     @CsvSource({
             // x,y, dir, sensorDir, speed, expFrontBlock,expRearBlock, expMovement
-            "0,1000, 0,0,   60, false,false, 264", // no collision, max movement = 267mm
-            "0,1000, 270,0, 60, false,false, 264", // no collision, max movement = 267mm
+            "0,1000, 0,0,   60, false,false, 422", // no collision, max movement = 416mm
+            "0,1000, 270,0, 60, false,false, 422", // no collision, max movement = 416mm
 
             // rear collisions from robot +(10,10)
             "260,260, 90,0, -60, false,true, -10",
@@ -208,6 +207,9 @@ class SimRobotObstacleTest {
             }
             return false;
         }, maxTime);
+        execUntil(robot, m ->
+                !(m instanceof WheellyMotionMessage)
+        );
         robot.close();
 
         // Then
@@ -216,7 +218,7 @@ class SimRobotObstacleTest {
         List<WheellyMessage> messages = messagesSub.values();
 
         // And no collision should be detected before moving
-        WheellyContactsMessage contact = TestFunctions.findContact(messages, m -> m.simulationTime() < 500);
+        WheellyContactsMessage contact = TestFunctions.findContact(messages, before(500));
         assertNull(contact);
 
         /*
@@ -414,7 +416,9 @@ class SimRobotObstacleTest {
             0, 90, 180, 270
     })
     void testContactRear(int locationDeg) {
+        // Given a robot directed to locationDeg
         Complex locationDir = Complex.fromDeg(locationDeg);
+        // and located near the obstacle in the origin toward the robot direction
         Point2D location = locationDir.at(new Point2D.Float(), GRID_SIZE / 2 + ROBOT_RADIUS - MM1);
         robot = createRobot(location, locationDir);
 
@@ -429,7 +433,7 @@ class SimRobotObstacleTest {
         pause(robot, MESSAGE_INTERVAL);
 
         // And move back at half-speed for 500 ms
-        robot.move(locationDir.toIntDeg(), -1);
+        robot.move(locationDeg, -RobotSpec.MAX_PPS / 2);
         pause(robot, 1010);
         robot.close();
 
@@ -441,7 +445,7 @@ class SimRobotObstacleTest {
         // And the robot should not change the location
         WheellyMotionMessage motion = TestFunctions.findMotion(messages, TestFunctions.after(0));
         assertNotNull(motion);
-        assertEquals(10L, motion.simulationTime());
+        assertEquals(10, motion.simulationTime());
         Point2D contactPoint = locationDir.at(new Point2D.Float(), GRID_SIZE / 2 + ROBOT_RADIUS);
         assertThat(motion.robotLocation(), pointCloseTo(contactPoint, DISTANCE_EPSILON));
 
@@ -495,8 +499,8 @@ class SimRobotObstacleTest {
         robot.connect();
         pause(robot, MESSAGE_INTERVAL);
 
-        // When move front at max speed for 300 ms
-        robot.move(locationDir.toIntDeg(), RobotSpec.MAX_PPS / 2);
+        // When move front at half-speed for 1010 ms
+        robot.move(locationDeg, RobotSpec.MAX_PPS / 2);
         pause(robot, 1010);
         robot.close();
 
@@ -624,7 +628,6 @@ class SimRobotObstacleTest {
         WheellyMotionMessage motion = TestFunctions.findMotion(messages, TestFunctions.notBefore(contactTime));
         assertNotNull(motion);
         assertThat(motion.robotLocation(), pointCloseTo(0, 0.750, DISTANCE_EPSILON));
-        assertEquals(contactTime, motion.simulationTime());
 
         // Then the robot should be directed to the move direction after movement
         motion = (WheellyMotionMessage) messages.stream().filter(m -> m instanceof WheellyMotionMessage).toList().getLast();

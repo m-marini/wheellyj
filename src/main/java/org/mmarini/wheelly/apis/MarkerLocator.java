@@ -189,7 +189,7 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
                 return filterCleaningArea(map, cameraLocation, cameraAzimuth,
                         clearDistance, receptiveAngle, cameraTime);
             }
-            Complex clearAngle = Complex.fromRad(min(halfViewAngle.toRad(), receptiveAngle.toRad())).sub(CLEAR_REDUCTION_ANGLE);
+            Complex clearAngle = Complex.fromRad(min(halfViewAngle.toRad(), receptiveAngle.toRad()));
             CorrelatedCameraEvent prevEvent = status.get().prevEvent();
             if (!RobotSpec.UNKNOWN_QR_CODE.equals(cameraEvent.qrCode())
                     // qr code recognized
@@ -230,11 +230,11 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
                 status.updateAndGet(s -> s.markEvent(cameraEvent));
                 return map;
             } else if (status.updateAndGet(MarkerLocatorStatus::incUnknownCounter).unknownEventCount() >= minNumberEvents) {
-                // Marker not recognized and camera event counter reached the threshold
+                // Marker not recognised and camera event counter reached the threshold
                 // Clear area
                 status.updateAndGet(s -> s.markEvent(cameraEvent));
                 return filterCleaningArea(map, cameraLocation, cameraAzimuth,
-                        clearDistance, clearAngle, cameraTime);
+                        clearDistance, clearAngle.sub(CLEAR_REDUCTION_ANGLE), cameraTime);
             } else {
                 // camera event ignored
                 status.updateAndGet(s -> s.prevEvent(cameraEvent));
