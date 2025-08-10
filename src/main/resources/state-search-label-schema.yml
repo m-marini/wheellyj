@@ -1,14 +1,14 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/state-cautious-point-schema-0.1
+$id: https://mmarini.org/wheelly/state-search-label-schema-0.1
 title: State machine agent
 description: State Agent Schema
 type: object
 properties:
   $id:
-    const: https://mmarini.org/wheelly/state-cautious-point-schema-0.1
+    const: https://mmarini.org/wheelly/state-search-label-schema-0.1
   class:
-    const: org.mmarini.wheelly.engines.CautiousPointState
+    const: org.mmarini.wheelly.engines.SearchLabelState
   onInit:
     $ref: "#/$defs/Commands"
   onEntry:
@@ -17,13 +17,40 @@ properties:
     $ref: "#/$defs/Commands"
   transitions:
     $ref: "#/$defs/Transitions"
-  maxDistance:
+  timeout:
+    type: integer
+    minimum: 1
+  safetyDistance:
     type: number
     exclusiveMinimum: 0
+  approachDistance:
+    type: number
+    exclusiveMinimum: 0
+  speed:
+    type: integer
+    minimum: 10
+    maximum: 60
+  distance:
+    type: number
+    exclusiveMinimum: 0
+  growDistance:
+    type: number
+    exclusiveMinimum: 0
+  seed:
+    type: integer
+  maxSearchTime:
+    type: integer
+    minimum: 1
+  minGoals:
+    type: integer
+    minimum: 1
+  maxIterations:
+    type: integer
+    minimum: 1
 required:
   - $id
   - class
-  - maxDistance
+  - distance
 $defs:
   Commands:
     type: array

@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -42,7 +43,6 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mmarini.ArgumentsGenerator.*;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 
 class TDLinearTest {
@@ -53,12 +53,21 @@ class TDLinearTest {
     static Stream<Arguments> cases() {
         Random random = Nd4j.getRandom();
         random.setSeed(SEED);
+        return RandomArgumentsGenerator.create(SEED)
+                .generate(() -> Nd4j.randn(random, 2, 2)) // inputs
+                .gaussian(0f, 1f) // b
+                .gaussian(0f, 1f) // w
+                .generate(() -> Nd4j.randn(random, 2, 2)) // grad
+                .build(100);
+        /*
         return createStream(SEED,
                 createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)), // inputs
                 gaussian(0f, 1f), // b
                 gaussian(0f, 1f), // w
                 createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)) // grad
         );
+
+         */
     }
 
     @Test

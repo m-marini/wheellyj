@@ -2,9 +2,7 @@ package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
@@ -12,14 +10,12 @@ import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
 import java.util.List;
-import java.util.Map;
 
 import static java.lang.Math.round;
-import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.defuzzy;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.positive;
-import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
 import static org.mmarini.wheelly.apis.RobotCommands.moveAndFrontScan;
+import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
 
 /**
  * Generates the behaviour to move robot through path
@@ -39,7 +35,10 @@ import static org.mmarini.wheelly.apis.RobotCommands.moveAndFrontScan;
  * Returns are:
  * <ul>
  *  <li><code>completed</code> is generated when the target is reached</li>
+ *  <li><code>notFound</code> is generated when the path is not found or not free</li>
  *  <li><code>blocked</code> is generated at contact sensors signals</li>
+ *  <li><code>frontBlocked</code> is generated at contact sensors signals</li>
+ *  <li><code>rearBlocked</code> is generated at contact sensors signals</li>
  *  <li><code>timeout</code> is generated at timeout</li>
  * </ul>
  * </p>
@@ -49,23 +48,21 @@ import static org.mmarini.wheelly.apis.RobotCommands.moveAndFrontScan;
  *  <li><code>targetIndex</code> integer of current target</li>
  * </ul>
  * </p>
- *
- * @param id      the node identifier
- * @param onInit  the initialisation command or null if none
- * @param onEntry the entry command or null if none
- * @param onExit  the exit command or null if none
  */
-public record MovePathState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit)
-        implements ExtendedStateNode {
-    public static final String TARGET_INDEX = "targetIndex";
-    public static final String SPEED = "speed";
-    public static final String APPROACH_DISTANCE = "approachDistance";
-    public static final double DEFAULT_TARGET_DISTANCE = 0.5;
+public class MovePathState extends TimeOutState {
+    public static final String SPEED_ID = "speed";
+    public static final String APPROACH_DISTANCE_ID = "approachDistance";
     public static final double NEAR_DISTANCE = 0.4;
+    public static final String TIMEOUT_ID = "timeout";
+    public static final String PATH_ID = "path";
+    public static final String NOT_FOUND_EXIT = "notFound";
+    public static final Tuple2<String, RobotCommands> NOT_FOUND_RESULT = Tuple2.of(NOT_FOUND_EXIT, RobotCommands.haltCommand());
     private static final Logger logger = LoggerFactory.getLogger(MovePathState.class);
     private static final int MIN_PPS = 10;
     private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-move-path-schema-0.1";
     private static final double DEFAULT_APPROACH_DISTANCE = 0.4;
+    public static final String SAFETY_DISTANCE_ID = "safetyDistance";
+    private static final double DEFAULT_SAFETY_DISTANCE = 0.5;
 
     /**
      * Returns the exploring state from configuration
@@ -76,39 +73,62 @@ public record MovePathState(String id, ProcessorCommand onInit, ProcessorCommand
      */
     public static MovePathState create(JsonNode root, Locator locator, String id) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-        int speed = locator.path(SPEED).getNode(root).asInt(MAX_PPS);
-        double approachDistance = locator.path(APPROACH_DISTANCE).getNode(root).asDouble(DEFAULT_APPROACH_DISTANCE);
-        ProcessorCommand onInit = ProcessorCommand.concat(
-                ExtendedStateNode.loadTimeout(root, locator, id),
-                ProcessorCommand.setProperties(Map.of(
-                        id + "." + SPEED, speed,
-                        id + "." + APPROACH_DISTANCE, approachDistance
-                )),
-                ProcessorCommand.create(root, locator.path("onInit")));
+        long timeout = locator.path(TIMEOUT_ID).getNode(root).asLong(DEFAULT_TIMEOUT);
+        int speed = locator.path(SPEED_ID).getNode(root).asInt(MAX_PPS);
+        double approachDistance = locator.path(APPROACH_DISTANCE_ID).getNode(root).asDouble(DEFAULT_APPROACH_DISTANCE);
+        double safetyDistance = locator.path(SAFETY_DISTANCE_ID).getNode(root).asDouble(DEFAULT_SAFETY_DISTANCE);
+        ProcessorCommand onInit = ProcessorCommand.create(root, locator.path("onInit"));
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
-        return new MovePathState(id, onInit, onEntry, onExit);
+        List<Point2D> path = locator.path(PATH_ID).elements(root)
+                .<Point2D>map(pointLocator -> {
+                    double[] coords = pointLocator.elements(root)
+                            .mapToDouble(coordLoc ->
+                                    coordLoc.getNode(root).asDouble())
+                            .toArray();
+                    return new Point2D.Double(coords[0], coords[1]);
+                })
+                .toList();
+        return new MovePathState(id, onInit, onEntry, onExit, timeout, approachDistance, speed, safetyDistance, path.isEmpty() ? null : path);
     }
+
+    private final double approachDistance;
+    private final int speed;
+    private final double safetyDistance;
+    private final List<Point2D> defaultPath;
+    private int targetIndex;
+    private List<Point2D> path;
 
     /**
      * Create the abstract node
      *
-     * @param id      the node identifier
-     * @param onInit  the initialisation command or null if none
-     * @param onEntry the entry command or null if none
-     * @param onExit  the exit command or null if none
+     * @param id               the node identifier
+     * @param onInit           the initialisation command or null if none
+     * @param onEntry          the entry command or null if none
+     * @param onExit           the exit command or null if none
+     * @param timeout          the timeout (ms)
+     * @param approachDistance the approach distance (m)
+     * @param speed            the maximum speed (pps)
+     * @param safetyDistance   the safety distance (m)
+     * @param defaultPath      the default path
      */
-    public MovePathState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit) {
-        this.id = requireNonNull(id);
-        this.onInit = onInit;
-        this.onEntry = onEntry;
-        this.onExit = onExit;
+    public MovePathState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit, long timeout, double approachDistance, int speed, double safetyDistance, List<Point2D> defaultPath) {
+        super(id, onInit, onEntry, onExit, timeout);
+        this.approachDistance = approachDistance;
+        this.speed = speed;
+        this.safetyDistance = safetyDistance;
+        this.defaultPath = defaultPath;
     }
 
     @Override
     public void entry(ProcessorContextApi context) {
-        ExtendedStateNode.super.entry(context);
-        put(context, TARGET_INDEX, 0);
+        super.entry(context);
+        targetIndex = 0;
+        path = get(context, PATH_ID, defaultPath);
+        context.path(path);
+        if (path != null && !path.isEmpty()) {
+            context.target(path.getLast());
+        }
     }
 
     /**
@@ -117,19 +137,20 @@ public record MovePathState(String id, ProcessorCommand onInit, ProcessorCommand
      * @param context the context
      */
     private Tuple2<String, RobotCommands> move(ProcessorContextApi context) {
-        List<Point2D> path = path(context);
-        int index = targetIndex(context);
-        if (index < 0 || index >= path.size()) {
-            return COMPLETED_RESULT;
+        if (path == null) {
+            context.path(null).target(null);
+            return NOT_FOUND_RESULT;
         }
-        Point2D target = path.get(index);
-        if (get(context, TARGET_ID) == null) {
-            put(context, TARGET_ID, target);
-        }
-        RobotStatus robotStatus = context.worldModel().robotStatus();
+        WorldModel worldModel = context.worldModel();
+        RadarMap map = worldModel.radarMap();
+        RobotStatus robotStatus = worldModel.robotStatus();
         Point2D robotLocation = robotStatus.location();
+        Point2D target = path.get(targetIndex);
+        if (!map.freeTrajectory(robotLocation, target, safetyDistance)) {
+            context.path(null).target(null);
+            return NOT_FOUND_RESULT;
+        }
         double distance = robotLocation.distance(target);
-        double approachDistance = getDouble(context, APPROACH_DISTANCE, DEFAULT_TARGET_DISTANCE);
         if (distance <= approachDistance) {
             // Target reached
             return nextLocation(context);
@@ -138,8 +159,7 @@ public record MovePathState(String id, ProcessorCommand onInit, ProcessorCommand
         Complex direction = Complex.direction(robotLocation, target);
         // Computes speed
         double isFar = positive(distance - approachDistance, NEAR_DISTANCE);
-        int maxSpeed = getInt(context, SPEED);
-        int speed = (int) round(defuzzy(MIN_PPS, maxSpeed, isFar));
+        int speed = (int) round(defuzzy(MIN_PPS, this.speed, isFar));
         logger.atDebug().log("move to {} DEG, speed {}", direction, speed);
         return Tuple2.of(NONE_EXIT, moveAndFrontScan(direction, speed));
     }
@@ -150,71 +170,21 @@ public record MovePathState(String id, ProcessorCommand onInit, ProcessorCommand
      * @param context the context
      */
     private Tuple2<String, RobotCommands> nextLocation(ProcessorContextApi context) {
-        remove(context, TARGET_ID);
-        int targetIndex = targetIndex(context) + 1;
-        List<Point2D> path = path(context);
-        if (targetIndex >= path.size()) {
-            remove(context, PATH_ID);
+        if (++targetIndex >= path.size()) {
+            context.path(null).target(null);
             logger.atDebug().log("Completed");
             return COMPLETED_RESULT;
         }
-        put(context, TARGET_INDEX, targetIndex);
         logger.atDebug().log("Move to {}", path.get(targetIndex));
         return move(context);
     }
 
-    /**
-     * Returns the path
-     *
-     * @param context the context
-     */
-    private List<Point2D> path(ProcessorContextApi context) {
-        return get(context, PATH_ID);
-    }
-
     @Override
     public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
-        Tuple2<String, RobotCommands> blockResult = getBlockResult(context);
-        if (blockResult != null) {
-            // Halt the robot and move forward the sensor at block
-            return blockResult;
-        }
-        if (isTimeout(context)) {
-            // Halt the robot and move forward the sensor at timeout
-            return TIMEOUT_RESULT;
-        }
-        Tuple2<String, RobotCommands> result = validate(context);
-        if (result != null) {
-            return result;
-        }
-        return move(context);
-    }
-
-    /**
-     * Returns the target index
-     *
-     * @param context the context
-     */
-    private int targetIndex(ProcessorContextApi context) {
-        return getInt(context, TARGET_INDEX, -1);
-    }
-
-    /**
-     * Validate thecontext variables
-     *
-     * @param context the context
-     */
-    private Tuple2<String, RobotCommands> validate(ProcessorContextApi context) {
-        int index = targetIndex(context);
-        if (index < 0) {
-            logger.atError().log("Missing target in \"{}\" step", id());
-            return COMPLETED_RESULT;
-        }
-        Object obj = get(context, PATH_ID);
-        if (!(obj instanceof List<?>)) {
-            logger.atError().log("Missing path in \"{}\" step", id());
-            return COMPLETED_RESULT;
-        }
-        return null;
+        Tuple2<String, RobotCommands> result = super.step(context);
+        return result != null
+                // Halt the robot and move forward the sensor at block
+                ? result
+                : move(context);
     }
 }

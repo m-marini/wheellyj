@@ -25,7 +25,7 @@
     <logger name="org.mmarini.wheelly.apis.RadarMap" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.engines.StateMachineAgent" level="INFO"/>
-    <logger name="org.mmarini.wheelly.engines.ExtendedStateNode" level="INFO"/>
+    <logger name="org.mmarini.wheelly.engines.AbstractSearchAndMoveState" level="INFO"/>
     <logger name="org.mmarini.wheelly.engines.AvoidingState" level="INFO"/>
     <logger name="org.mmarini.wheelly.engines.MoveToState" level="INFO"/>
     <logger name="org.mmarini.wheelly.engines.HaltState" level="INFO"/>
@@ -33,9 +33,9 @@
     <logger name="org.mmarini.wheelly.engines.LabelStuckState" level="INFO"/>
     <logger name="org.mmarini.wheelly.engines.MappingState" level="INFO"/>
     <logger name="org.mmarini.wheelly.engines.ExploringPointState" level="INFO"/>
-    <logger name="org.mmarini.wheelly.engines.FindLabelState" level="INFO"/>
-    <logger name="org.mmarini.wheelly.engines.FindUnknownState" level="INFO"/>
-    <logger name="org.mmarini.wheelly.engines.FindRefreshState" level="INFO"/>
+    <logger name="org.mmarini.wheelly.engines.SearchLabelState" level="INFO"/>
+    <logger name="org.mmarini.wheelly.engines.SearchUnknownState" level="INFO"/>
+    <logger name="org.mmarini.wheelly.engines.SearchRefreshState" level="INFO"/>
     <logger name="org.mmarini.wheelly.engines.AStar" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.apps.MatrixMonitor" level="INFO"/>

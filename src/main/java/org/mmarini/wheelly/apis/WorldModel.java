@@ -49,7 +49,7 @@ public record WorldModel(WorldModelSpec worldSpec, RobotStatus robotStatus,
                          Map<String, LabelMarker> markers,
                          PolarMap polarMap,
                          GridMap gridMap,
-                         CameraEvent prevCameraEvent
+                         CorrelatedCameraEvent prevCameraEvent
 ) implements
         WithRadarMap, WithPolarMap, WithRobotStatus, WithLabelMarkers, WithGridMap {
 
@@ -64,7 +64,7 @@ public record WorldModel(WorldModelSpec worldSpec, RobotStatus robotStatus,
      * @param gridMap         the grid map
      * @param prevCameraEvent the previous camera event
      */
-    public WorldModel(WorldModelSpec worldSpec, RobotStatus robotStatus, RadarMap radarMap, Map<String, LabelMarker> markers, PolarMap polarMap, GridMap gridMap, CameraEvent prevCameraEvent) {
+    public WorldModel(WorldModelSpec worldSpec, RobotStatus robotStatus, RadarMap radarMap, Map<String, LabelMarker> markers, PolarMap polarMap, GridMap gridMap, CorrelatedCameraEvent prevCameraEvent) {
         this.worldSpec = requireNonNull(worldSpec);
         this.robotStatus = requireNonNull(robotStatus);
         this.radarMap = requireNonNull(radarMap);
@@ -149,7 +149,7 @@ public record WorldModel(WorldModelSpec worldSpec, RobotStatus robotStatus,
      *
      * @param prevCameraEvent the previous camera event
      */
-    public WorldModel setPrevCameraEvent(CameraEvent prevCameraEvent) {
+    public WorldModel setPrevCameraEvent(CorrelatedCameraEvent prevCameraEvent) {
         return Objects.equals(prevCameraEvent, this.prevCameraEvent)
                 ? this
                 : new WorldModel(worldSpec, robotStatus, radarMap, markers, polarMap, gridMap, prevCameraEvent);

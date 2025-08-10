@@ -67,7 +67,7 @@ public interface BaseShape {
     Color EMPTY_COLOR = new Color(64, 64, 64, 128);
     Color FILLED_COLOR = new Color(200, 0, 0, 128);
     Color CONTACT_COLOR = new Color(200, 0, 200, 128);
-    Color LABELED_COLOR = new Color(0, 128, 128, 128);
+    Color LABELED_COLOR = new Color(0, 255, 255, 255);
     Color TARGET_COLOR = new Color(0, 200, 0);
     Color PING_COLOR = new Color(255, 128, 128);
     Color OBSTACLE_PHANTOM_COLOR = new Color(128, 128, 128);

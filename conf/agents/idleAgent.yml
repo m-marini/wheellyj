@@ -5,24 +5,31 @@
 $schema: https://mmarini.org/wheelly/agent-state-machine-schema-0.4
 class: org.mmarini.wheelly.engines.StateMachineAgent
 flow:
-  entry: idle
+  entry: halt
   states:
-    idle:
+    halt:
       $id: https://mmarini.org/wheelly/state-halt-schema-0.1
       class: org.mmarini.wheelly.engines.HaltState
-      scanInterval: 1000
-      minSensorDir: -90
-      maxSensorDir: 90
-      sensorDirNumber: 9
       transitions:
+        blocked:
+          to: clearMap
         frontBlocked:
           to: avoid
         rearBlocked:
           to: avoid
+    clearMap:
+      $id: https://mmarini.org/wheelly/state-clear-map-schema-0.1
+      class: org.mmarini.wheelly.engines.ClearMapState
+      transitions:
+        ".*":
+          to: avoid
     avoid:
       $id: https://mmarini.org/wheelly/state-avoid-schema-0.1
       class: org.mmarini.wheelly.engines.AvoidingState
-      safeDistance: 0.1
-  transitions:
-    completed:
-      to: idle
+      safeDistance: 0.2
+      speed: 20
+      transitions:
+        completed:
+          to: halt
+        blocked:
+          to: clearMap

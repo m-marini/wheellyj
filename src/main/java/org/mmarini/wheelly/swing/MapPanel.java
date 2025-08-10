@@ -50,9 +50,8 @@ public class MapPanel extends LayeredCanvas {
     public static final float PING_RADIUS = 0.05f;
     public static final float DEFAULT_MARKER_SIZE = 0.3f;
     public static final int MAP_INSETS = 10;
-    private static final int DEFAULT_PIXEL_GRID_SIZE1 = 15;
-    private static final float TARGET_SIZE = 0.2f;
-    private final double pixelGridSize;
+    public static final double DEFAULT_SCALE = 80; // 100 pix/m
+    private static final float TARGET_SIZE = ROBOT_RADIUS;
     private float markerSize;
 
     /**
@@ -61,10 +60,10 @@ public class MapPanel extends LayeredCanvas {
     public MapPanel() {
         super(Layers.values().length);
         this.markerSize = DEFAULT_MARKER_SIZE;
-        this.pixelGridSize = DEFAULT_PIXEL_GRID_SIZE1;
         setBackground(Color.BLACK);
         setForeground(Color.WHITE);
         setFont(Font.decode("Monospaced"));
+        scale(DEFAULT_SCALE);
         setPreferredSize(new Dimension(DEFAULT_WINDOW_SIZE, DEFAULT_WINDOW_SIZE));
     }
 
@@ -101,7 +100,7 @@ public class MapPanel extends LayeredCanvas {
         BaseShape shape = markers != null
                 ? CompositeShape.create(markers.stream()
                 .map(marker ->
-                        createCircle(LABELED_COLOR, BORDER_STROKE, true, marker.location(), markerSize / 2)
+                        createCircle(LABELED_COLOR, BORDER_STROKE, false, marker.location(), markerSize / 2)
                 )
                 .toList())
                 : null;
@@ -173,11 +172,11 @@ public class MapPanel extends LayeredCanvas {
      */
     public void radarMap(RadarMap radarMap) {
         GridTopology topology = radarMap.topology();
+        double gridSize = topology.gridSize();
         int worldSize = max(topology.width(), topology.height());
-        scale(pixelGridSize / topology.gridSize());
-        int size = round(worldSize * pixelGridSize + MAP_INSETS);
-        setLayer(Layers.GRID.ordinal(), BaseShape.createGridShape(radarMap.topology(), GRID_SIZE));
-        setLayer(Layers.RADAR_MAP.ordinal(), BaseShape.createMapShape((float) radarMap.topology().gridSize(), radarMap.cells()));
+        int size = round(scale() * worldSize * gridSize + MAP_INSETS);
+        setLayer(Layers.GRID.ordinal(), BaseShape.createGridShape(topology, GRID_SIZE));
+        setLayer(Layers.RADAR_MAP.ordinal(), BaseShape.createMapShape((float) gridSize, radarMap.cells()));
         setPreferredSize(new Dimension(size, size));
         invalidate();
     }

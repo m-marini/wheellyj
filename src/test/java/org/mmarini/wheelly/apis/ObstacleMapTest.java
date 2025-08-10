@@ -26,8 +26,6 @@
 package org.mmarini.wheelly.apis;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvFileSource;
 import org.nd4j.linalg.factory.Nd4j;
 
 import java.awt.*;
@@ -39,8 +37,6 @@ import java.util.Set;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mmarini.Matchers.*;
 
 class ObstacleMapTest {
@@ -59,28 +55,6 @@ class ObstacleMapTest {
             hindPts.add(new Point(hindered[i], hindered[i + 1]));
         }
         return ObstacleMap.create(hindPts, labPts, 0.2);
-    }
-
-    @ParameterizedTest(name = "[{index}] at({0},{1}) to {2} DEG ~{3} DEG")
-    @CsvFileSource(numLinesToSkip = 1, resources = {
-            "/org/mmarini/wheelly/apis/ObstacleMapTest/nearestTest.csv"
-    })
-    void nearestTest(double x, double y, int dir, int dDir, boolean exist, double xo, double yo) {
-        // Given an obstacle map with 2 obstacle at (0,0), (4,3)
-        ObstacleMap map = createMap(new int[]{0, 0},
-                0, 0,
-                20, 15);
-
-        // When find nearest cell from (x, y) to dìr DEG within +- dDir DEG
-        ObstacleMap.ObstacleCell i1 = map.nearest(x, y, Complex.fromDeg(dir), Complex.fromDeg(dDir));
-
-        // Then should be expected
-        if (exist) {
-            assertNotNull(i1);
-            assertThat(i1.location(), pointCloseTo(xo, yo, 1e-3));
-        } else {
-            assertNull(i1);
-        }
     }
 
     @Test

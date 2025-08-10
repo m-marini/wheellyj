@@ -31,6 +31,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mmarini.RandomArgumentsGenerator;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -40,18 +41,16 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mmarini.ArgumentsGenerator.createStream;
-import static org.mmarini.ArgumentsGenerator.uniform;
 
 class UtilsTest {
 
     static final double MAX_COORD = 3d;
 
     static Stream<Arguments> vect2dArgs() {
-        return createStream(1234,
-                uniform(-MAX_COORD, MAX_COORD),
-                uniform(-MAX_COORD, MAX_COORD)
-        );
+        return RandomArgumentsGenerator.create(1234)
+                .uniform(-MAX_COORD, MAX_COORD)
+                .uniform(-MAX_COORD, MAX_COORD)
+                .build(100);
     }
 
     @ParameterizedTest

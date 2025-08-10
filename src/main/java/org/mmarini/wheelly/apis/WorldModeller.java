@@ -31,6 +31,7 @@ package org.mmarini.wheelly.apis;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
@@ -114,8 +115,10 @@ public class WorldModeller implements WorldModellerApi {
     @Override
     public WorldModel clearRadarMap() {
         WorldModel model = currentModel;
-        model = model.setRadarMap(model.radarMap().clean());
-        currentModel = model;
+        if (model != null) {
+            model = model.setRadarMap(model.radarMap().clean());
+            currentModel = model;
+        }
         return model;
     }
 
@@ -124,7 +127,21 @@ public class WorldModeller implements WorldModellerApi {
         this.controller = requireNonNull(controller);
         controller.setOnLatch(this::onLatch);
         controller.setOnInference(this::onInference);
+        controller.readReady()
+                .subscribeOn(Schedulers.io())
+                .subscribe(this::onConnected);
         return this;
+    }
+
+    /**
+     * Handles the connection of controller
+     *
+     * @param connected true if the controller has been connected
+     */
+    private void onConnected(boolean connected) {
+        if (connected) {
+            clearRadarMap();
+        }
     }
 
     /**
@@ -206,12 +223,11 @@ public class WorldModeller implements WorldModellerApi {
     public WorldModel updateStatus(WorldModel model, RobotStatus status) {
         RadarMap newRadarMap = radarModeller.update(model.radarMap(), status);
         model = model.setRobotStatus(status).setRadarMap(newRadarMap);
-        CameraEvent camera = status.cameraEvent();
-        WheellyProxyMessage proxy = status.cameraProxyMessage();
-        CameraEvent prevCamera = model.prevCameraEvent();
+        CorrelatedCameraEvent camera = status.cameraEvent();
+        CorrelatedCameraEvent prevCamera = model.prevCameraEvent();
         if (!Objects.equals(camera, prevCamera)) {
             // new camera event, new proxy: store camera event and proxy event and reset wait for first proxy
-            Map<String, LabelMarker> newMarker = markerLocator.update(model.markers(), camera, proxy, status.robotSpec());
+            Map<String, LabelMarker> newMarker = markerLocator.update(model.markers(), camera, status.robotSpec());
             return model.setMarkers(newMarker)
                     .setPrevCameraEvent(camera);
         }

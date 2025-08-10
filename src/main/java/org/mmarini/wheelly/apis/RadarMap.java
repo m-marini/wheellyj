@@ -29,7 +29,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Optional;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
@@ -143,18 +145,6 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
     }
 
     /**
-     * Returns the indices of the sectors connected to the given location.
-     * The sector is connected if it exists a direct trajectory from the given location and the centre of sector
-     *
-     * @param location       the location
-     * @param safetyDistance the safety distance (m)
-     */
-    IntStream connectedIndices(Point2D location, double safetyDistance) {
-        return noContactIndices().filter(cellIs(cell ->
-                freeTrajectory(location, cell.location(), safetyDistance)));
-    }
-
-    /**
      * Returns the safe point from location toward the escape direction at safe distance but less than max distance
      *
      * @param location     the location
@@ -186,41 +176,6 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
     }
 
     /**
-     * Returns the point furthest from the given whose direct trajectory is free and no further than the maximum distance
-     *
-     * @param location     the departure point
-     * @param maxDistance  the maximum distance
-     * @param safeDistance the safe distance
-     */
-    public Optional<Point2D> findTarget(Point2D location, double maxDistance, double safeDistance) {
-        long t0 = System.currentTimeMillis();
-
-        // Extracts the target unknown cells
-        AreaExpression sensibleArea = and(
-                circle(location, maxDistance),
-                not(circle(location, safeDistance))
-        );
-        List<MapCell> eligibleCells = topology.indicesByArea(sensibleArea)
-                .mapToObj(this::cell)
-                .toList();
-        Optional<Point2D> result = eligibleCells.stream()
-                .filter(MapCell::unknown)
-                .map(MapCell::location)
-                .sorted(Comparator.<Point2D>comparingDouble(location::distanceSq).reversed())
-                .filter(p -> freeTrajectory(location, p, safeDistance))
-                .findFirst()
-                .or(() ->
-                        // unknown target not found: search for empty target cells
-                        eligibleCells.stream()
-                                .filter(MapCell::empty)
-                                .map(MapCell::location)
-                                .filter(p -> freeTrajectory(location, p, safeDistance))
-                                .max(Comparator.comparingDouble(location::distanceSq)));
-        logger.atDebug().log("findTarget completed in {} ms", System.currentTimeMillis() - t0);
-        return result;
-    }
-
-    /**
      * Returns true if the trajectory from given point to given point has obstacles
      * (all intersection point distance > safeDistance)
      *
@@ -234,11 +189,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
         double distance = from.distance(to);
         double maxDistance = distance + safeDistance;
         double width = safeDistance + topology.gridSize() / sqrt(2);
-        AreaExpression sensibleArea = AreaExpression.or(
-                rectangle(from, to, width),
-                circle(from, width),
-                circle(to, width)
-        );
+        AreaExpression sensibleArea = AreaExpression.roundSegment(from, to, width);
         return topology.indices()
                 .filter(cellIs(MapCell::hindered))
                 .filter(topology.inArea(sensibleArea))
@@ -249,15 +200,6 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
                 .noneMatch(p ->
                         p.getY() >= safeDistance && p.getY() <= maxDistance
                                 && abs(p.getX()) <= safeDistance);
-    }
-
-    /**
-     * Returns the indices of sector containing the location
-     *
-     * @param location the location
-     */
-    public int indexOf(Point2D location) {
-        return topology.indexOf(location);
     }
 
     /**
@@ -289,31 +231,6 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
         MapCell[] sectors = Arrays.copyOf(this.cells, this.cells.length);
         indices.forEach(index -> sectors[index] = mapper.apply(cells[index]));
         return setCells(sectors);
-    }
-
-    /**
-     * Returns the indices of the sectors neighbour the given location included the given sector index
-     *
-     * @param location       the location
-     * @param safetyDistance the safety distance
-     * @param includeIndex   the function returning true if sector index is included
-     */
-    public IntStream neighbourIndices(Point2D location, double safetyDistance, IntPredicate includeIndex) {
-        Set<Integer> connectedIndices = connectedIndices(location, safetyDistance)
-                .boxed()
-                .collect(Collectors.toSet());
-        return IntStream.concat(
-                        connectedIndices.stream().mapToInt(x -> x).filter(includeIndex),
-                        topology.contour(connectedIndices))
-                .distinct();
-    }
-
-    /**
-     * Returns the indices of no contact sectors
-     */
-    IntStream noContactIndices() {
-        return topology.indices().
-                filter(cellIs(Predicate.not(MapCell::hindered)));
     }
 
     /**

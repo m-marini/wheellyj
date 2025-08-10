@@ -28,25 +28,30 @@
 
 package org.mmarini.wheelly.apis;
 
+import io.reactivex.rxjava3.schedulers.Timed;
 import org.junit.jupiter.api.Test;
 
 import java.awt.geom.Point2D;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class CameraTest {
+
+    public static final int SIMULATON_TIME = 1;
+
     @Test
     void createTest() {
         // Given a line
         String line = "qr 1725192587504 A 320 240 90.0 108.8 182.0 107.0 184.0 203.0 90.0 203.0";
 
         // When create a camera event
-        CameraEvent event = CameraEvent.create(line, focal);
+        CameraEvent event = CameraEvent.create(new Timed<>(line, SIMULATON_TIME, TimeUnit.MILLISECONDS), 1, 0);
 
         // Then
         assertNotNull(event);
-        assertEquals(1725192587504L, event.timestamp());
+        assertEquals(SIMULATON_TIME, event.simulationTime());
         assertEquals("A", event.qrCode());
         assertEquals(new Point2D.Double(90, 108.8), event.points()[0]);
         assertEquals(new Point2D.Double(182, 107), event.points()[1]);

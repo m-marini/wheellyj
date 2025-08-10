@@ -279,16 +279,15 @@ public class Wheelly {
      * Creates the flows of events
      */
     private void createFlows() {
-        controller.readRobotStatus().observeOn(Schedulers.io()).subscribe(this::handleStatusReady);
-        controller.readReadLine().observeOn(Schedulers.io()).subscribe(this::handleReadLine);
-        controller.readWriteLine().observeOn(Schedulers.io()).subscribe(this::handleWrittenLine);
-        controller.readCommand().observeOn(Schedulers.io()).subscribe(sensorMonitor::onCommand);
-        controller.readErrors().observeOn(Schedulers.io()).subscribe(err -> {
+        controller.readRobotStatus().subscribe(this::handleStatusReady);
+        controller.readReadLine().subscribe(this::handleReadLine);
+        controller.readWriteLine().subscribe(this::handleWrittenLine);
+        controller.readCommand().subscribe(sensorMonitor::onCommand);
+        controller.readErrors().subscribe(err -> {
             comMonitor.onError(err);
             logger.atError().setCause(err).log();
         });
         controller.readControllerStatus()
-                .observeOn(Schedulers.io())
                 .map(ControllerStatusMapper::map)
                 .distinct()
                 .subscribe(this::handleControllerStatus);
@@ -309,7 +308,7 @@ public class Wheelly {
                 .subscribe(this::handleWindowClosing);
 
         if (kpiWriter != null) {
-            agent.readKpis().observeOn(Schedulers.io(), true)
+            agent.readKpis()
                     .subscribe(this::handleKpis,
                             ex -> logger.atError().setCause(ex).log("Error writing kpis"),
                             () -> {

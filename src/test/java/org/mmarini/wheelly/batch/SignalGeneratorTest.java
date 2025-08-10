@@ -58,21 +58,19 @@ class SignalGeneratorTest {
     public static final Complex RECEPTIVE_ANGLE = Complex.fromDeg(15);
     public static final double MAX_RADAR_DISTANCE = 3d;
     public static final double CONTACT_RADIUS = 0.28;
-    public static final RobotSpec ROBOT_SPEC = new RobotSpec(MAX_RADAR_DISTANCE, RECEPTIVE_ANGLE, CONTACT_RADIUS, cameraViewAngle);
+    public static final RobotSpec ROBOT_SPEC = new RobotSpec(MAX_RADAR_DISTANCE, RECEPTIVE_ANGLE, CONTACT_RADIUS, Complex.DEG0);
     public static final File OUTPUT_PATH = new File("tmp");
     public static final double EPSILON = 1e-6;
     public static final GridTopology TOPOLOGY = GridTopology.create(new Point2D.Double(), 51, 51, GRID_SIZE);
     public static final RadarMap RADAR = RadarMap.empty(TOPOLOGY);
     public static final int NUM_SECTORS = 24;
-    public static final WheellyProxyMessage PROXY_MESSAGE = new WheellyProxyMessage(1, 2, 3, 0,
+    public static final WheellyProxyMessage PROXY_MESSAGE = new WheellyProxyMessage(2, 0,
             5, 6, 7, 8);
-    public static final WheellyProxyMessage CAMERA_PROXY_MESSAGE = new WheellyProxyMessage(2, 3, 4, 0,
-            6, 7, 8, 9);
-    public static final WheellyMotionMessage MOTION_MESSAGE = new WheellyMotionMessage(1, 2, 3, 4, 5,
+    public static final WheellyMotionMessage MOTION_MESSAGE = new WheellyMotionMessage(2, 4, 5,
             45, 7, 8, 9, true, 10, 11, 12, 13);
-    public static final WheellyContactsMessage CONTACTS_MESSAGE = new WheellyContactsMessage(1, 2, 3, true,
+    public static final WheellyContactsMessage CONTACTS_MESSAGE = new WheellyContactsMessage(2, true,
             true, true, true);
-    public static final CameraEvent CAMERA_EVENT = new CameraEvent(1, simulationTime, "?", 3, 4, null, direction);
+    public static final CameraEvent CAMERA_EVENT = new CameraEvent(0, "?", 3, 4, null, Complex.DEG0);
     public static final RobotCommands COMMANDS = new RobotCommands(true, Complex.DEG0, false, true, Complex.DEG90, 20);
     private static final String MODELLER_DEF = """
             ---
@@ -115,7 +113,7 @@ class SignalGeneratorTest {
     private static final int GRID_MAP_SIZE = 31;
     public static final WorldModelSpec WORLD_MODEL_SPEC = new WorldModelSpec(ROBOT_SPEC, NUM_SECTORS, GRID_MAP_SIZE, MARKER_SIZE);
     public static final RobotStatus ROBOT_STATUS = new RobotStatus(WORLD_MODEL_SPEC.robotSpec(), 1, MOTION_MESSAGE, PROXY_MESSAGE,
-            CONTACTS_MESSAGE, InferenceFileReader.DEFAULT_SUPPLY_MESSAGE, InferenceFileReader.DEFAULT_DECODE_VOLTAGE, CAMERA_EVENT, CAMERA_PROXY_MESSAGE);
+            CONTACTS_MESSAGE, InferenceFileReader.DEFAULT_SUPPLY_MESSAGE, InferenceFileReader.DEFAULT_DECODE_VOLTAGE, new CorrelatedCameraEvent(CAMERA_EVENT, PROXY_MESSAGE));
     private static final Map<String, LabelMarker> MARKERS0 = Map.of(
             "?", new LabelMarker("?", new Point2D.Double(1, 2), 1, 2, 3));
     public static final WorldModel MODEL0 = new WorldModel(WORLD_MODEL_SPEC, ROBOT_STATUS, RADAR, MARKERS0, null, null, null);

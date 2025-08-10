@@ -30,6 +30,8 @@ package org.mmarini.wheelly.engines;
 
 import org.mmarini.wheelly.apis.WorldModel;
 
+import java.awt.geom.Point2D;
+import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
 
@@ -256,4 +258,18 @@ public interface ProcessorContextApi {
      * Returns the current world model
      */
     WorldModel worldModel();
+
+    /**
+     * Notify the path
+     *
+     * @param path the path
+     */
+    ProcessorContextApi path(List<Point2D> path);
+
+    /**
+     * Notify the target
+     *
+     * @param target the target location
+     */
+    ProcessorContextApi target(Point2D target);
 }

@@ -49,7 +49,7 @@ import java.util.function.IntToDoubleFunction;
 import static java.lang.Math.abs;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
+import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
 import static org.mmarini.wheelly.apis.Utils.linear;
 import static org.mmarini.wheelly.apps.AppYaml.loadDoubleArray;
 import static org.mmarini.wheelly.apps.AppYaml.loadIntArray;
@@ -159,7 +159,8 @@ public class RobotController implements RobotControllerApi {
      */
     private void onCamera(CameraEvent cameraEvent) {
         RobotControllerStatus st = status.updateAndGet(s -> {
-            RobotStatus s1 = s.robotStatus().setCameraMessage(cameraEvent)
+            RobotStatus s1 = s.robotStatus()
+                    .setCameraMessage(new CorrelatedCameraEvent(cameraEvent, s.robotStatus().proxyMessage()))
                     .setSimulationTime(robot.simulationTime());
             return s.robotStatus(s1);
         });
@@ -167,6 +168,13 @@ public class RobotController implements RobotControllerApi {
         statusMessages.onNext(robotStatus);
         scheduleInference(robotStatus);
         syncActions(robotStatus);
+    }
+
+    @Override
+    public Flowable<Boolean> readReady() {
+        return readControllerStatus()
+                .map(RobotControllerStatusApi::ready)
+                .distinctUntilChanged();
     }
 
     /**

@@ -204,19 +204,9 @@ public class StateMachineAgent implements ProcessorContextApi {
     }
 
     @Override
-    public <T> ProcessorContextApi put(String key, T value) {
-        values.put(key, value);
-        if (key.endsWith("." + TARGET_ID)) {
-            Object obj = get(key);
-            if (obj instanceof Point2D target) {
-                targetProcessor.onNext(Optional.ofNullable(target));
-            }
-        } else if (key.endsWith("." + PATH_ID)) {
-            Object obj = get(key);
-            if (obj instanceof List<?> path) {
-                pathProcessor.onNext((List<Point2D>) path);
-            }
-        }
+    public StateMachineAgent path(List<Point2D> path) {
+        pathProcessor.onNext(path != null
+                ? path : List.of());
         return this;
     }
 
@@ -256,13 +246,20 @@ public class StateMachineAgent implements ProcessorContextApi {
     }
 
     @Override
-    public void remove(String key) {
-        values.remove(key);
+    public <T> ProcessorContextApi put(String key, T value) {
+        values.put(key, value);
         if (key.endsWith("." + TARGET_ID)) {
-            targetProcessor.onNext(Optional.empty());
+            Object obj = get(key);
+            if (obj instanceof Point2D target) {
+                target(target);
+            }
         } else if (key.endsWith("." + PATH_ID)) {
-            pathProcessor.onNext(List.of());
+            Object obj = get(key);
+            if (obj instanceof List<?> path) {
+                path((List<Point2D>) path);
+            }
         }
+        return this;
     }
 
     @Override
@@ -307,5 +304,21 @@ public class StateMachineAgent implements ProcessorContextApi {
     @Override
     public WorldModel worldModel() {
         return worldModel;
+    }
+
+    @Override
+    public void remove(String key) {
+        values.remove(key);
+        if (key.endsWith("." + TARGET_ID)) {
+            target(null);
+        } else if (key.endsWith("." + PATH_ID)) {
+            path(null);
+        }
+    }
+
+    @Override
+    public StateMachineAgent target(Point2D target) {
+        targetProcessor.onNext(Optional.ofNullable(target));
+        return this;
     }
 }

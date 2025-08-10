@@ -92,7 +92,7 @@ class WorldStateTest {
         PolarMap polarMap = createPolarMap();
         GridMap gridMap = GridMap.create(radarMap, status.location(), status.direction(), GRID_MAP_SIZE);
         Map<String, LabelMarker> markerMap = Arrays.stream(markers)
-                .filter(m -> !CameraEvent.UNKNOWN_QR_CODE.equals(m.label()))
+                .filter(m -> !RobotSpec.UNKNOWN_QR_CODE.equals(m.label()))
                 .collect(Collectors.toMap(
                         LabelMarker::label,
                         x -> x

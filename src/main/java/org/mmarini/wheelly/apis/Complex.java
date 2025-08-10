@@ -116,6 +116,24 @@ public record Complex(double x, double y) {
     }
 
     /**
+     * Returns the angle divided by a scale factor
+     *
+     * @param scale scale factor
+     */
+    public Complex divAngle(double scale) {
+        return Complex.fromRad(toRad() / scale);
+    }
+
+    /**
+     * Returns the angle multiplied by a scale factor
+     *
+     * @param scale scale factor
+     */
+    public Complex mulAngle(double scale) {
+        return Complex.fromRad(toRad() * scale);
+    }
+
+    /**
      * Returns true if the Complex is close to other witin epsilon abscissa
      *
      * @param other   the other complex

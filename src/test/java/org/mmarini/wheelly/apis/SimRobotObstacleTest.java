@@ -27,15 +27,20 @@ package org.mmarini.wheelly.apis;
 
 import io.reactivex.rxjava3.subscribers.TestSubscriber;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.wheelly.TestFunctions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.*;
 import java.awt.geom.Point2D;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Stream;
 
 import static java.lang.Math.abs;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -43,10 +48,8 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.angleCloseTo;
 import static org.mmarini.Matchers.pointCloseTo;
-import static org.mmarini.wheelly.TestFunctions.execUntil;
-import static org.mmarini.wheelly.TestFunctions.pause;
+import static org.mmarini.wheelly.TestFunctions.*;
 import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
-import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
 import static rocks.cleancode.hamcrest.record.HasFieldMatcher.field;
 
 class SimRobotObstacleTest {
@@ -80,8 +83,8 @@ class SimRobotObstacleTest {
             mapBuilder.add(false, obsCoords[i], obsCoords[i + 1]);
         }
         SimRobot simRobot = new SimRobot(ROBOT_SPEC, random, random,
-                INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL, CHANGE_OBSTACLES_PERIOD,
-                0, 0, MAX_PPS, 0, 0);
+                INTERVAL, 0, MESSAGE_INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL, CHANGE_OBSTACLES_PERIOD,
+                0, 0, RobotSpec.MAX_PPS, 0, 0);
         simRobot.robotPos(location.getX(), location.getY());
         simRobot.robotDir(robotDirection);
         simRobot.sensorDirection(sensorDirection);
@@ -98,6 +101,21 @@ class SimRobotObstacleTest {
      */
     private static SimRobot createRobot(Point2D location, Complex robotDirection) {
         return createRobot(location, robotDirection, Complex.DEG0, 0, 0);
+    }
+
+    private static SimRobot createRobotWithLabel(Point2D location, Complex robotDirection, Complex sensorDirection, Point2D labelLocation) {
+        Random random = new Random(SEED);
+        Point index = ObstacleMap.toIndex(labelLocation.getX(), labelLocation.getY(), GRID_SIZE);
+        ObstacleMap.ObstacleCell cell = new ObstacleMap.ObstacleCell(index, labelLocation, true);
+        ObstacleMap map = new ObstacleMap(List.of(cell), GRID_SIZE);
+        SimRobot simRobot = new SimRobot(ROBOT_SPEC, random, random,
+                INTERVAL, 0, MESSAGE_INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL, CHANGE_OBSTACLES_PERIOD,
+                0, 0, RobotSpec.MAX_PPS, 0, 0);
+        simRobot.robotPos(location.getX(), location.getY());
+        simRobot.robotDir(robotDirection);
+        simRobot.sensorDirection(sensorDirection);
+        simRobot.obstacleMap(map);
+        return simRobot;
     }
 
     /**
@@ -121,6 +139,17 @@ class SimRobotObstacleTest {
                 0, GRID_SIZE);
     }
 
+    public static Stream<Arguments> dataLabel() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(0, 359) // robotLocationDeg
+                .uniform(0, 1)   // robotLocationDistance
+                .uniform(0, 359) // robotDeg
+                .uniform(-90, 90) // sensorDeg
+                .uniform(-15, 15) // markerDeg
+                .uniform(1, 2) // markerDistance
+                .build(100);
+    }
+
     private SimRobot robot;
 
     /*
@@ -129,8 +158,8 @@ class SimRobotObstacleTest {
     @ParameterizedTest(name = "[{index}] Robot at ({0},{1}) head R{2} speed {3} pps")
     @CsvSource({
             // x,y, dir, sensorDir, speed, expFrontBlock,expRearBlock, expMovement
-            "0,1000, 0,0,   60, false,false, 264", // no collision, max movement = 267mm
-            "0,1000, 270,0, 60, false,false, 264", // no collision, max movement = 267mm
+            "0,1000, 0,0,   60, false,false, 422", // no collision, max movement = 416mm
+            "0,1000, 270,0, 60, false,false, 422", // no collision, max movement = 416mm
 
             // rear collisions from robot +(10,10)
             "260,260, 90,0, -60, false,true, -10",
@@ -178,6 +207,9 @@ class SimRobotObstacleTest {
             }
             return false;
         }, maxTime);
+        execUntil(robot, m ->
+                !(m instanceof WheellyMotionMessage)
+        );
         robot.close();
 
         // Then
@@ -186,7 +218,7 @@ class SimRobotObstacleTest {
         List<WheellyMessage> messages = messagesSub.values();
 
         // And no collision should be detected before moving
-        WheellyContactsMessage contact = TestFunctions.findContact(messages, m -> m.simulationTime() < 500);
+        WheellyContactsMessage contact = TestFunctions.findContact(messages, before(500));
         assertNull(contact);
 
         /*
@@ -251,7 +283,7 @@ class SimRobotObstacleTest {
         pause(robot, MESSAGE_INTERVAL);
 
         // And move ahead at max speed
-        robot.move(robotDir.toIntDeg(), MAX_PPS);
+        robot.move(robotDir.toIntDeg(), RobotSpec.MAX_PPS);
         pause(robot, 2 * MESSAGE_INTERVAL);
         robot.close();
 
@@ -322,7 +354,7 @@ class SimRobotObstacleTest {
         robot.connect();
         pause(robot, MESSAGE_INTERVAL);
         // And move back at half-speed for 500 ms
-        robot.move(locationDir.opposite().toIntDeg(), -MAX_PPS / 2);
+        robot.move(locationDir.opposite().toIntDeg(), -RobotSpec.MAX_PPS / 2);
         pause(robot, 1000);
         robot.close();
 
@@ -384,7 +416,9 @@ class SimRobotObstacleTest {
             0, 90, 180, 270
     })
     void testContactRear(int locationDeg) {
+        // Given a robot directed to locationDeg
         Complex locationDir = Complex.fromDeg(locationDeg);
+        // and located near the obstacle in the origin toward the robot direction
         Point2D location = locationDir.at(new Point2D.Float(), GRID_SIZE / 2 + ROBOT_RADIUS - MM1);
         robot = createRobot(location, locationDir);
 
@@ -399,7 +433,7 @@ class SimRobotObstacleTest {
         pause(robot, MESSAGE_INTERVAL);
 
         // And move back at half-speed for 500 ms
-        robot.move(locationDir.toIntDeg(), -1);
+        robot.move(locationDeg, -RobotSpec.MAX_PPS / 2);
         pause(robot, 1010);
         robot.close();
 
@@ -411,7 +445,7 @@ class SimRobotObstacleTest {
         // And the robot should not change the location
         WheellyMotionMessage motion = TestFunctions.findMotion(messages, TestFunctions.after(0));
         assertNotNull(motion);
-        assertEquals(10L, motion.simulationTime());
+        assertEquals(10, motion.simulationTime());
         Point2D contactPoint = locationDir.at(new Point2D.Float(), GRID_SIZE / 2 + ROBOT_RADIUS);
         assertThat(motion.robotLocation(), pointCloseTo(contactPoint, DISTANCE_EPSILON));
 
@@ -465,8 +499,8 @@ class SimRobotObstacleTest {
         robot.connect();
         pause(robot, MESSAGE_INTERVAL);
 
-        // When move front at max speed for 300 ms
-        robot.move(locationDir.toIntDeg(), MAX_PPS / 2);
+        // When move front at half-speed for 1010 ms
+        robot.move(locationDeg, RobotSpec.MAX_PPS / 2);
         pause(robot, 1010);
         robot.close();
 
@@ -513,93 +547,45 @@ class SimRobotObstacleTest {
         assertTrue(contact.canMoveBackward());
     }
 
-    @ParameterizedTest(name = "[{index}] R{0}, {1} PPS, contacts {2},{3}")
-    @CsvSource({
-            "0,-60, false,true",
-
-            "45,0, false,true",
-            "315,0, false,true",
-
-            "225,0, false,true",
-            "135,0, false,true",
-
-            "180,0, false,true",
-
-            "30,-30, false,true",
-            "330,-30, false,true",
-
-            "45,-30, false,true",
-            "315,-30, false,true",
-
-            "60,-30, false,true",
-            "300,-30, false,true",
-
-            "90,-30, false,true",
-            "270,-30, false,true",
-    })
-    void testMove(int moveDeg, int speed, boolean canMoveForward, boolean canMoveBackward) {
-        // Given the robot simulator in a map with 3 obstacles at 1, R0 from the robot
-        Point2D robotLocation = new Point2D.Double();
-        Complex robotDirection = Complex.DEG0;
-        Complex sensorDirection = Complex.DEG90;
-        robot = createRobot(robotLocation, robotDirection, sensorDirection,
-                -0.2, 1,
-                0, 1,
-                0.2, 1
-        );
-        TestSubscriber<WheellyMessage> messagesSub = new TestSubscriber<>();
-        robot.readMessages()
-                .doOnNext(m ->
-                        logger.atDebug().log("t={} {}", m.simulationTime(), m.getClass().getSimpleName()))
+    /*
+     *
+     */
+    @ParameterizedTest
+    @MethodSource("dataLabel")
+    void testLabel(int robotLocationDeg, double robotLocationDistance,
+                   int robotDeg, int sensorDeg, int markerDeg, double markerDistance) {
+        // Given a simulated robot
+        // with a labelled marker
+        Point2D location = Complex.fromDeg(robotLocationDeg).at(new Point2D.Float(), robotLocationDistance);
+        Point2D labelLocation = Complex.fromDeg(robotDeg + sensorDeg + markerDeg).at(location, markerDistance);
+        robot = createRobotWithLabel(location, Complex.fromDeg(robotDeg), Complex.fromDeg(sensorDeg),
+                labelLocation);
+        TestSubscriber<CameraEvent> messagesSub = new TestSubscriber<>();
+        robot.readCamera()
+                .limit(1)
+                .doOnNext(m -> logger.atDebug().log("t={}", m.simulationTime()))
                 .subscribe(messagesSub);
 
-        // When connect
+        // When connect and wait for simulated 500 ms
         robot.connect();
-        // And turning robot to 0 DEG
-        // And wait for simulated 1500 ms
-        robot.move(0, MAX_PPS);
-        execUntil(robot, msg -> {
-            if (msg instanceof WheellyMotionMessage) {
-                logger.atDebug().log("t={} move(0,MAX_PPS)", msg.simulationTime());
-                robot.move(0, MAX_PPS);
-            }
-            return msg instanceof WheellyContactsMessage c
-                    && !c.canMoveForward();
-        }, 5000);
-        long contactTime = robot.simulationTime();
-
-        // And turning the robot to the test direction at the test speed
-        robot.move(moveDeg, speed);
-        execUntil(robot, msg -> {
-            if (msg instanceof WheellyMotionMessage) {
-                logger.atDebug().log("t={} move({}, {})", msg.simulationTime(), moveDeg, speed);
-                robot.move(moveDeg, speed);
-            }
-            return false;
-        }, contactTime + 2000);
+        robot.halt();
+        pause(robot, MESSAGE_INTERVAL);
         robot.close();
 
         // Then ...
-        messagesSub.assertComplete();
         messagesSub.assertNoErrors();
-        List<WheellyMessage> messages = messagesSub.values();
+        messagesSub.assertComplete();
+        List<CameraEvent> messages = messagesSub.values();
 
-        // And contact time
-        WheellyContactsMessage contact = TestFunctions.findContact(messages, TestFunctions.notBefore(contactTime));
-        assertNotNull(contact);
-        assertThat(contact.simulationTime(), equalTo(contactTime));
-        assertEquals(canMoveForward, contact.canMoveForward());
-        assertEquals(canMoveBackward, contact.canMoveBackward());
+        assertThat(robot.direction(), angleCloseTo(robotDeg, 1));
+        assertThat(robot.location(), pointCloseTo(location, MM1));
 
-        WheellyMotionMessage motion = TestFunctions.findMotion(messages, TestFunctions.notBefore(contactTime));
-        assertNotNull(motion);
-        assertThat(motion.robotLocation(), pointCloseTo(0, 0.750, DISTANCE_EPSILON));
-        assertEquals(contactTime, motion.simulationTime());
-
-        // Then the robot should be directed to the move direction after movement
-        motion = (WheellyMotionMessage) messages.stream().filter(m -> m instanceof WheellyMotionMessage).toList().getLast();
-        assertNotNull(motion);
-        assertThat(motion.direction(), angleCloseTo(Complex.fromDeg(moveDeg), Complex.fromDeg(1)));
+        // And the camera event should be a label directed as expected
+        assertThat(messages, hasSize(1));
+        CameraEvent event = messages.getFirst();
+        assertNotNull(event);
+        assertEquals("A", event.qrCode());
+        assertThat(event.direction(), angleCloseTo(markerDeg, 1));
     }
 
     /*
@@ -676,6 +662,94 @@ class SimRobotObstacleTest {
         assertNull(contact);
     }
 
+    @ParameterizedTest(name = "[{index}] R{0}, {1} PPS, contacts {2},{3}")
+    @CsvSource({
+            "0,-60, false,true",
+
+            "45,0, false,true",
+            "315,0, false,true",
+
+            "225,0, false,true",
+            "135,0, false,true",
+
+            "180,0, false,true",
+
+            "30,-30, false,true",
+            "330,-30, false,true",
+
+            "45,-30, false,true",
+            "315,-30, false,true",
+
+            "60,-30, false,true",
+            "300,-30, false,true",
+
+            "90,-30, false,true",
+            "270,-30, false,true",
+    })
+    void testMove(int moveDeg, int speed, boolean canMoveForward, boolean canMoveBackward) {
+        // Given the robot simulator in a map with 3 obstacles at 1, R0 from the robot
+        Point2D robotLocation = new Point2D.Double();
+        Complex robotDirection = Complex.DEG0;
+        Complex sensorDirection = Complex.DEG90;
+        robot = createRobot(robotLocation, robotDirection, sensorDirection,
+                -0.2, 1,
+                0, 1,
+                0.2, 1
+        );
+        TestSubscriber<WheellyMessage> messagesSub = new TestSubscriber<>();
+        robot.readMessages()
+                .doOnNext(m ->
+                        logger.atDebug().log("t={} {}", m.simulationTime(), m.getClass().getSimpleName()))
+                .subscribe(messagesSub);
+
+        // When connect
+        robot.connect();
+        // And turning robot to 0 DEG
+        // And wait for simulated 1500 ms
+        robot.move(0, RobotSpec.MAX_PPS);
+        execUntil(robot, msg -> {
+            if (msg instanceof WheellyMotionMessage) {
+                logger.atDebug().log("t={} move(0,MAX_PPS)", msg.simulationTime());
+                robot.move(0, RobotSpec.MAX_PPS);
+            }
+            return msg instanceof WheellyContactsMessage c
+                    && !c.canMoveForward();
+        }, 5000);
+        long contactTime = robot.simulationTime();
+
+        // And turning the robot to the test direction at the test speed
+        robot.move(moveDeg, speed);
+        execUntil(robot, msg -> {
+            if (msg instanceof WheellyMotionMessage) {
+                logger.atDebug().log("t={} move({}, {})", msg.simulationTime(), moveDeg, speed);
+                robot.move(moveDeg, speed);
+            }
+            return false;
+        }, contactTime + 2000);
+        robot.close();
+
+        // Then ...
+        messagesSub.assertComplete();
+        messagesSub.assertNoErrors();
+        List<WheellyMessage> messages = messagesSub.values();
+
+        // And contact time
+        WheellyContactsMessage contact = TestFunctions.findContact(messages, TestFunctions.notBefore(contactTime));
+        assertNotNull(contact);
+        assertThat(contact.simulationTime(), equalTo(contactTime));
+        assertEquals(canMoveForward, contact.canMoveForward());
+        assertEquals(canMoveBackward, contact.canMoveBackward());
+
+        WheellyMotionMessage motion = TestFunctions.findMotion(messages, TestFunctions.notBefore(contactTime));
+        assertNotNull(motion);
+        assertThat(motion.robotLocation(), pointCloseTo(0, 0.750, DISTANCE_EPSILON));
+
+        // Then the robot should be directed to the move direction after movement
+        motion = (WheellyMotionMessage) messages.stream().filter(m -> m instanceof WheellyMotionMessage).toList().getLast();
+        assertNotNull(motion);
+        assertThat(motion.direction(), angleCloseTo(Complex.fromDeg(moveDeg), Complex.fromDeg(1)));
+    }
+
     /**
      * Given a robot directed to -90 DEG with an obstacle at 50 mm from the back
      * <pre>
@@ -707,7 +781,7 @@ class SimRobotObstacleTest {
         robot.connect();
         pause(robot, MESSAGE_INTERVAL);
         // And moving back
-        robot.move(locationDeg, -MAX_PPS);
+        robot.move(locationDeg, -RobotSpec.MAX_PPS);
         pause(robot, 2 * MESSAGE_INTERVAL);
         robot.close();
 

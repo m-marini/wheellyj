@@ -217,7 +217,7 @@ public class CameraCalibration {
 
     private void halt() {
         currentState = null;
-        controller.execute(RobotCommands.idle());
+        controller.execute(RobotCommands.haltCommand());
     }
 
     /**
@@ -411,14 +411,14 @@ public class CameraCalibration {
     }
 
     private void sampling(RobotStatus status) {
-        CameraEvent cameraEvent = status.cameraEvent();
+        CameraEvent cameraEvent = status.cameraEvent().camerEvent();
         WheellyProxyMessage proxy = status.proxyMessage();
         long t0 = cameraEvent.simulationTime();
         if (samplingStart == 0) {
             samplingStart = t0;
         }
         samplingCounter++;
-        if (!CameraEvent.UNKNOWN_QR_CODE.equals(cameraEvent.qrCode())
+        if (!RobotSpec.UNKNOWN_QR_CODE.equals(cameraEvent.qrCode())
                 && t0 > samplingStart) {
             // Valid sample
             Complex sensorDir = proxy.sensorDirection();

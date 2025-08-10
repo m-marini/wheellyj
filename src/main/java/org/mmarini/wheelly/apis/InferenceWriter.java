@@ -41,10 +41,21 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * @param camera the camera event
      */
     default InferenceWriter write(CameraEvent camera) throws IOException {
-        write(camera.timestamp())
+        write(camera.simulationTime())
                 .write(camera.qrCode())
                 .write(camera.width())
                 .write(camera.height());
+        return this;
+    }
+
+    /**
+     * Writes camera events
+     *
+     * @param camera the camera event
+     */
+    default InferenceWriter write(CorrelatedCameraEvent camera) throws IOException {
+        write(camera.camerEvent())
+                .write(camera.proxy());
         return this;
     }
 
@@ -69,9 +80,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * @param contacts the contact message
      */
     default InferenceWriter write(WheellyContactsMessage contacts) throws IOException {
-        write(contacts.localTime())
-                .write(contacts.simulationTime())
-                .write(contacts.remoteTime())
+        write(contacts.simulationTime())
                 .write(contacts.frontSensors())
                 .write(contacts.rearSensors())
                 .write(contacts.canMoveForward())
@@ -103,9 +112,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * @param motion the motion message
      */
     default InferenceWriter write(WheellyMotionMessage motion) throws IOException {
-        write(motion.localTime())
-                .write(motion.simulationTime())
-                .write(motion.remoteTime())
+        write(motion.simulationTime())
                 .write((float) motion.xPulses())
                 .write((float) motion.yPulses())
                 .write(motion.directionDeg())
@@ -131,7 +138,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
         for (MapCell cell : cells) {
             write(cell.echoTime())
                     .write((float) cell.echoWeight())
-                    .write((float) cell.contactTime());
+                    .write(cell.contactTime());
         }
         return this;
     }
@@ -142,14 +149,12 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * @param proxy the proxy message
      */
     default InferenceWriter write(WheellyProxyMessage proxy) throws IOException {
-        write(proxy.localTime())
-                .write(proxy.simulationTime())
-                .write(proxy.remoteTime())
+        write(proxy.simulationTime())
                 .write(proxy.sensorDirectionDeg())
                 .write(proxy.echoDelay())
                 .write((float) proxy.xPulses())
                 .write((float) proxy.yPulses())
-                .write(proxy.echoYawDeg());
+                .write(proxy.robotYawDeg());
         return this;
     }
 
@@ -160,7 +165,8 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * @param commands the commands
      */
     default InferenceWriter write(WorldModel model, RobotCommands commands) throws IOException {
-        return write(model).write(commands);
+        return write(model)
+                .write(commands);
     }
 
     /**
@@ -184,7 +190,6 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
         return write(status.motionMessage())
                 .write(status.proxyMessage())
                 .write(status.contactsMessage())
-                .write(status.cameraEvent())
-                .write(status.cameraProxyMessage());
+                .write(status.cameraEvent());
     }
 }
