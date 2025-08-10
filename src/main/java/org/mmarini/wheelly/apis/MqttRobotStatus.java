@@ -1,0 +1,162 @@
+/*
+ * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ *
+ *  Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ *    END OF TERMS AND CONDITIONS
+ *
+ */
+
+package org.mmarini.wheelly.apis;
+
+import java.util.Objects;
+
+public record MqttRobotStatus(
+        boolean started, boolean closed, boolean connecting, boolean connected, boolean configuring, boolean configured,
+        boolean halted,
+        long startTime,
+        long lastActivity,
+        ClockConverter clockConverter,
+        WatchDog watchDog) implements RobotStatusApi {
+
+    /**
+     * Returns the real robot state with the changed clock converter
+     *
+     * @param clockConverter the clock converter
+     */
+    public MqttRobotStatus clockConverter(ClockConverter clockConverter) {
+        return !Objects.equals(this.clockConverter, clockConverter)
+                ? new MqttRobotStatus(started, closed, connecting, connected, configuring, configured, halted, startTime, lastActivity, clockConverter, watchDog)
+                : this;
+    }
+
+    /**
+     * Returns the real robot state with the changed halted flag
+     *
+     * @param halted true if robot is halted
+     */
+    public MqttRobotStatus halted(boolean halted) {
+        return this.halted != halted
+                ? new MqttRobotStatus(started, closed, connecting, connected, configuring, configured, halted, startTime, lastActivity, clockConverter, watchDog)
+                : this;
+    }
+
+    /**
+     * Returns the real robot state with the changed last activity time
+     *
+     * @param lastActivity the last activity time
+     */
+    public MqttRobotStatus lastActivity(long lastActivity) {
+        return this.lastActivity != lastActivity
+                ? new MqttRobotStatus(started, closed, connecting, connected, configuring, configured, halted, startTime, lastActivity, clockConverter, watchDog)
+                : this;
+    }
+
+    public MqttRobotStatus setClosed() {
+        return !(closed && !connecting && connected && !configuring && configured)
+                ? new MqttRobotStatus(started, true, false, false, false, false,
+                false, startTime, lastActivity, clockConverter, watchDog)
+                : this;
+    }
+
+    /**
+     * Returns the configured state
+     */
+    public MqttRobotStatus setConfigured() {
+        return !(!connecting && connected && !configuring && configured)
+                ? new MqttRobotStatus(started, closed, false, true, false, true, halted,
+                startTime, lastActivity, clockConverter, watchDog)
+                : this;
+    }
+
+    /**
+     * Returns the configuring state
+     */
+    public MqttRobotStatus setConfiguring() {
+        return !(!connecting && connected && configuring && !configured)
+                ? new MqttRobotStatus(started, closed, false, true, true, false, halted,
+                startTime, lastActivity, clockConverter, watchDog)
+                : this;
+    }
+
+    /**
+     * Returns the state in connecting value
+     */
+    public MqttRobotStatus setConnected() {
+        return !(connected && !connecting && !configuring && !configured)
+                ? new MqttRobotStatus(started, closed, false, true, false, false, halted, startTime, lastActivity, clockConverter, watchDog)
+                : this;
+    }
+
+    /**
+     * Returns the connecting state
+     */
+    public MqttRobotStatus setConnecting() {
+        return !(connecting && !connected && !configuring && !configured)
+                ? new MqttRobotStatus(started, closed, true, false, false, false, halted,
+                startTime, lastActivity, clockConverter, watchDog)
+                : this;
+    }
+
+    /**
+     * Returns the unconnected state
+     */
+    public MqttRobotStatus setUnconnected() {
+        return !(!connecting && !connected && !configuring && !configured)
+                ? new MqttRobotStatus(started, closed, false, false, false, false, halted,
+                startTime, lastActivity, clockConverter, watchDog)
+                : this;
+    }
+
+    /**
+     * Returns the real robot state with the changed start simulation time
+     *
+     * @param startTime the start simulation time
+     */
+    public MqttRobotStatus startTime(long startTime) {
+        return this.startTime != startTime
+                ? new MqttRobotStatus(started, closed, connecting, connected, configuring, configured, halted, startTime, lastActivity, clockConverter, watchDog)
+                : this;
+    }
+
+    /**
+     * Returns the real robot state with the changed started flag
+     *
+     * @param started true if robot is started
+     */
+    public MqttRobotStatus started(boolean started) {
+        return this.started != started
+                ? new MqttRobotStatus(started, closed, connecting, connected, configuring, configured, halted, startTime, lastActivity, clockConverter, watchDog)
+                : this;
+    }
+
+    /**
+     * Returns the real robot state with the changed watch dog
+     *
+     * @param watchDog the watch dog
+     */
+    public MqttRobotStatus watchDog(WatchDog watchDog) {
+        return !Objects.equals(this.watchDog, watchDog)
+                ? new MqttRobotStatus(started, closed, connecting, connected, configuring, configured, halted, startTime, lastActivity, clockConverter, watchDog)
+                : this;
+    }
+}
