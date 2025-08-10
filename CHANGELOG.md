@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.24.1] 2025-08-10
+
 ### Added
 
 - Issue [#561](https://github.com/m-marini/wheellyj/issues/561): Add label direction to camera event
