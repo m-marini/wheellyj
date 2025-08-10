@@ -28,6 +28,10 @@
 
 package org.mmarini.wheelly.apis;
 
+import java.awt.geom.Point2D;
+
+import static java.lang.Math.PI;
+import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -40,6 +44,115 @@ import static java.util.Objects.requireNonNull;
  */
 public record RobotSpec(double maxRadarDistance, Complex receptiveAngle, double contactRadius,
                         Complex cameraViewAngle) {
+    /**
+     * Number of pulses per wheel root
+     */
+    public static final int PULSES_PER_ROOT = 40;
+    /**
+     * Wheel diameter (m)
+     */
+    public static final double WHEEL_DIAMETER = 0.067;
+    /**
+     * Distance per pulse (m)
+     */
+    public static final double DISTANCE_PER_PULSE = WHEEL_DIAMETER * PI / PULSES_PER_ROOT;
+    /**
+     * Scale distance per echo delay (m/us)
+     */
+    public static final double DISTANCE_SCALE = 1D / 5882;
+    /**
+     * Unknown qr code
+     */
+    public static final String UNKNOWN_QR_CODE = "?";
+    /**
+     * Roboto radius (m)
+     */
+    public static final float ROBOT_RADIUS = 0.15f;
+    /**
+     * Max whells speed (pps)
+     */
+    public static final int MAX_PPS = 60;
+    /**
+     * Robot trak, distance between wheels (m)
+     */
+    public static final double ROBOT_TRACK = 0.136;
+    /**
+     * Robot mass (Kg)
+     */
+    static final double ROBOT_MASS = 0.785;
+
+    /**
+     * Returns the distance from the echo delay (m)
+     *
+     * @param delay the echo delay (us)
+     */
+    public static double delay2Distance(long delay) {
+        return delay * DISTANCE_SCALE;
+    }
+
+    /**
+     * Returns the echo delay from the distance (us)
+     *
+     * @param distance the distance (m)
+     */
+    public static long distance2Delay(double distance) {
+        return round(distance / RobotSpec.DISTANCE_SCALE);
+    }
+
+    /**
+     * Returns the pulses for the given distance
+     *
+     * @param distance the distance (m)
+     */
+    public static double distance2Pulse(double distance) {
+        return distance / DISTANCE_PER_PULSE;
+    }
+
+    /**
+     * Returns the distance the given pulses
+     *
+     * @param pulses the number of pulses
+     */
+    public static double pulse2Distance(double pulses) {
+        return pulses * DISTANCE_PER_PULSE;
+    }
+
+    /**
+     * Returns the location (m) for the given pulses
+     *
+     * @param xPulses the x pulse coordinate
+     * @param yPulses the y pulse coordinate
+     */
+    public static Point2D pulses2Location(double xPulses, double yPulses) {
+        return new Point2D.Double(pulse2Distance(xPulses), pulse2Distance(yPulses));
+    }
+
+    /**
+     * Returns the camera sensor area
+     *
+     * @param location  the camera location
+     * @param direction the camera direction
+     */
+    public AreaExpression cameraSensorArea(Point2D location, Complex direction) {
+        return AreaExpression.radialSensorArea(
+                location, direction, cameraViewAngle.divAngle(2),
+                RobotSpec.ROBOT_RADIUS, maxRadarDistance
+        );
+    }
+
+    /**
+     * Returns the proxy sensor area
+     *
+     * @param location  the proxy sensor location
+     * @param direction the proxy sensor direction
+     */
+    public AreaExpression proxySensorArea(Point2D location, Complex direction) {
+        return AreaExpression.radialSensorArea(
+                location, direction, receptiveAngle,
+                RobotSpec.ROBOT_RADIUS, maxRadarDistance
+        );
+    }
+
     /**
      * Creates the robot specification
      *

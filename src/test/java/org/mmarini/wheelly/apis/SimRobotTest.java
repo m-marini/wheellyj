@@ -42,9 +42,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mmarini.wheelly.TestFunctions.*;
 import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
-import static org.mmarini.wheelly.apis.RobotStatus.DISTANCE_PER_PULSE;
+import static org.mmarini.wheelly.apis.RobotSpec.DISTANCE_PER_PULSE;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_ANGULAR_VELOCITY;
-import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
 import static rocks.cleancode.hamcrest.record.HasFieldMatcher.field;
 
 class SimRobotTest {
@@ -62,8 +61,8 @@ class SimRobotTest {
      */
     private static SimRobot createRobot() {
         return new SimRobot(ROBOT_SPEC, new Random(SEED), new Random(SEED),
-                INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL, STALEMATE_INTERVAL,
-                0, 0, MAX_PPS, 0, 0);
+                INTERVAL, 0, MESSAGE_INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL, STALEMATE_INTERVAL,
+                0, 0, RobotSpec.MAX_PPS, 0, 0);
     }
 
     /**
@@ -102,7 +101,7 @@ class SimRobotTest {
     @Test
     void testMoveFrom0To0ByMAX() {
         // Given a robot connected and configured
-        int speed = MAX_PPS;
+        int speed = RobotSpec.MAX_PPS;
         long rt = 1000;
         TestSubscriber<WheellyMessage> subscriber = new TestSubscriber<>();
         robot.readMessages()

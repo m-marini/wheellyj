@@ -38,20 +38,17 @@ import static java.lang.String.format;
 /**
  * The camera event
  *
- * @param timestamp      the timestamp of captured data (ms)
  * @param simulationTime the simulation time (ms)
  * @param qrCode         the captured QRCode
  * @param points         the QRCode vertices
  * @param direction      the direction of label
  */
 public record CameraEvent(
-        long timestamp,
         long simulationTime,
         String qrCode,
         int width, int height,
         Point2D[] points,
         Complex direction) {
-    public static final String UNKNOWN_QR_CODE = "?";
     private static final int NUM_PARAMS = 13;
 
     /**
@@ -61,12 +58,14 @@ public record CameraEvent(
      * @param widthRatio the width ratio
      */
     static CameraEvent create(Timed<String> line, double widthRatio, long timeOffset) {
+        if (!line.value().startsWith("qr ")) {
+            return null;
+        }
         String[] params = line.value().split(" ");
         long time = line.time(TimeUnit.MILLISECONDS);
         if (params.length != NUM_PARAMS) {
             throw new IllegalArgumentException(format("Wrong status message \"%s\" (#params=%d)", line, params.length));
         }
-        long timestamp = Long.parseLong(params[1]);
         String qrcode = params[2];
         int width = Integer.parseInt(params[3]);
         int height = Integer.parseInt(params[4]);
@@ -78,14 +77,14 @@ public record CameraEvent(
             points[i] = new Point2D.Double(x, y);
             xTot += x;
         }
-        Complex direction = Complex.fromPoint(xTot / 4 * widthRatio, width);
-        return new CameraEvent(timestamp, time - timeOffset, qrcode, width, height, points, direction);
+        Complex direction = Complex.fromPoint(((xTot - width * 2) / 4) * widthRatio, width);
+        return new CameraEvent(time - timeOffset, qrcode, width, height, points, direction);
     }
 
     /**
      * Returns the unknown qrCode event
      */
     public static CameraEvent unknown(long timestamp) {
-        return new CameraEvent(timestamp, timestamp, UNKNOWN_QR_CODE, 0, 0, null, Complex.DEG0);
+        return new CameraEvent(timestamp, RobotSpec.UNKNOWN_QR_CODE, 0, 0, null, Complex.DEG0);
     }
 }

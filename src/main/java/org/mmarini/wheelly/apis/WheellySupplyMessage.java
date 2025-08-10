@@ -34,15 +34,12 @@ import static java.lang.Long.parseLong;
 import static java.lang.String.format;
 
 /**
- * The Wheelly status contain the sensor value of Wheelly
+ * Contains the supply voltage value
  *
- * @param localTime      the status localTime (ms)
  * @param simulationTime the simulation markerTime (ms)
- * @param remoteTime     the remote localTime (ms)
  * @param supplySensor   the supply voltage (U)
  */
-public record WheellySupplyMessage(long localTime, long simulationTime, long remoteTime, int supplySensor
-) implements WheellyMessage {
+public record WheellySupplyMessage(long simulationTime, int supplySensor) implements WheellyMessage {
     public static final int NO_PARAMS = 3;
 
     /**
@@ -58,7 +55,6 @@ public record WheellySupplyMessage(long localTime, long simulationTime, long rem
      * @param clockConverter the clock converter
      */
     public static WheellySupplyMessage create(Timed<String> line, ClockConverter clockConverter) {
-        long time = line.time(TimeUnit.MILLISECONDS);
         String[] params = line.value().split(" ");
         if (params.length != NO_PARAMS) {
             throw new IllegalArgumentException(format("Wrong supply message \"%s\" (#params=%d)", line.value(), params.length));
@@ -66,7 +62,7 @@ public record WheellySupplyMessage(long localTime, long simulationTime, long rem
         long remoteTime = parseLong(params[1]);
         int supplySensor = parseInt(params[2]);
         long simTime = clockConverter.fromRemote(remoteTime);
-        return new WheellySupplyMessage(time, simTime, remoteTime, supplySensor);
+        return new WheellySupplyMessage(simTime, supplySensor);
     }
 
     public static WheellySupplyMessage create(Timed<String> line, long timeOffset) {
@@ -75,20 +71,8 @@ public record WheellySupplyMessage(long localTime, long simulationTime, long rem
         if (params.length != NO_PARAMS) {
             throw new IllegalArgumentException(format("Wrong supply message \"%s\" (#params=%d)", line.value(), params.length));
         }
-        long remoteTime = parseLong(params[1]);
         int supplySensor = parseInt(params[2]);
         long simTime = time - timeOffset;
-        return new WheellySupplyMessage(time, simTime, remoteTime, supplySensor);
-    }
-
-    /**
-     * Returns the status with remote localTime instant set
-     *
-     * @param remoteTime the remote instant
-     */
-    public WheellySupplyMessage setRemoteTime(long remoteTime) {
-        return remoteTime != this.remoteTime
-                ? new WheellySupplyMessage(localTime, simulationTime, remoteTime, supplySensor)
-                : this;
+        return new WheellySupplyMessage(simTime, supplySensor);
     }
 }

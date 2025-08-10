@@ -54,7 +54,6 @@ import java.util.stream.Stream;
 
 import static java.lang.Math.abs;
 import static java.lang.String.format;
-import static org.mmarini.wheelly.apis.SimRobot.MAX_PPS;
 import static org.mmarini.wheelly.swing.Utils.createFrame;
 import static org.mmarini.wheelly.swing.Utils.layHorizontally;
 import static org.mmarini.yaml.Utils.fromFile;
@@ -70,7 +69,7 @@ public class RobotCheckUp {
     public static final double DISTANCE_TOLERANCE = 0.1;
     public static final String CHECKUP_SCHEMA_YML = "https://mmarini.org/wheelly/checkup-schema-1.0";
     private static final Logger logger = LoggerFactory.getLogger(RobotCheckUp.class);
-    private static final int TEST_SPEED = MAX_PPS / 2;
+    private static final int TEST_SPEED = RobotSpec.MAX_PPS / 2;
 
     /**
      * Returns the command line arguments parser
@@ -163,7 +162,7 @@ public class RobotCheckUp {
             @Override
             public List<ScannerResult> apply(RobotStatus status) {
                 long time = status.simulationTime();
-                RobotCommands command = RobotCommands.haltCommand();
+                RobotCommands command = RobotCommands.haltMove();
                 if (currentTest < 0) {
                     // First sample
                     currentTest = 0;

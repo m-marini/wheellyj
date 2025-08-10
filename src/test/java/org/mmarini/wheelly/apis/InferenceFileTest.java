@@ -38,8 +38,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 class InferenceFileTest {
 
@@ -50,23 +49,22 @@ class InferenceFileTest {
     public static final int NUM_SECTORS = 24;
     public static final Complex RECEPTIVE_ANGLE = Complex.fromDeg(15);
     public static final double MAX_RADAR_DISTANCE = 3d;
-    public static final WheellyProxyMessage PROXY_MESSAGE = new WheellyProxyMessage(1, 2, 3, 4,
+    public static final WheellyProxyMessage PROXY_MESSAGE = new WheellyProxyMessage(2, 4,
             5, 6, 7, 8);
-    public static final WheellyProxyMessage CAMERA_PROXY_MESSAGE = new WheellyProxyMessage(2, 3, 4, 5,
-            6, 7, 8, 9);
-    public static final WheellyMotionMessage MOTION_MESSAGE = new WheellyMotionMessage(1, 2, 3, 4, 5,
+    public static final WheellyMotionMessage MOTION_MESSAGE = new WheellyMotionMessage(2, 4, 5,
             6, 7, 8, 9, true, 10, 11, 12, 13);
-    public static final WheellyContactsMessage CONTACTS_MESSAGE = new WheellyContactsMessage(1, 2, 3, true,
+    public static final WheellyContactsMessage CONTACTS_MESSAGE = new WheellyContactsMessage(2, true,
             true, true, true);
-    public static final CameraEvent CAMERA_EVENT = new CameraEvent(1, simulationTime, "?", 3, 4, null, direction);
+    public static final CameraEvent CAMERA_EVENT = new CameraEvent(0, "?", 3, 4, null, Complex.DEG0);
+    public static final CorrelatedCameraEvent CORRELATED_CAMERA_EVENT = new CorrelatedCameraEvent(CAMERA_EVENT, PROXY_MESSAGE);
     public static final RobotCommands COMMANDS = new RobotCommands(true, Complex.DEG0, false, true, Complex.DEG90, 20);
-    private static final double CONTACT_RADIUS = 0.28;
-    private static final double MARKER_SIZE = 0.3;
-    private static final int GRID_MAP_SIZE = 31;
-    public static final WorldModelSpec WORLD_MODEL_SPEC = new WorldModelSpec(new RobotSpec(MAX_RADAR_DISTANCE, RECEPTIVE_ANGLE, CONTACT_RADIUS, cameraViewAngle),
+    public static final double CONTACT_RADIUS = 0.28;
+    public static final double MARKER_SIZE = 0.3;
+    public static final int GRID_MAP_SIZE = 31;
+    public static final WorldModelSpec WORLD_MODEL_SPEC = new WorldModelSpec(new RobotSpec(MAX_RADAR_DISTANCE, RECEPTIVE_ANGLE, CONTACT_RADIUS, Complex.DEG0),
             NUM_SECTORS, GRID_MAP_SIZE, MARKER_SIZE);
     public static final RobotStatus ROBOT_STATUS = new RobotStatus(WORLD_MODEL_SPEC.robotSpec(), 1, MOTION_MESSAGE, PROXY_MESSAGE,
-            CONTACTS_MESSAGE, InferenceFileReader.DEFAULT_SUPPLY_MESSAGE, InferenceFileReader.DEFAULT_DECODE_VOLTAGE, CAMERA_EVENT, CAMERA_PROXY_MESSAGE);
+            CONTACTS_MESSAGE, InferenceFileReader.DEFAULT_SUPPLY_MESSAGE, InferenceFileReader.DEFAULT_DECODE_VOLTAGE, CORRELATED_CAMERA_EVENT);
     private static final Map<String, LabelMarker> MARKERS = Map.of(
             "?", new LabelMarker("?", new Point2D.Double(1, 2), 1, 2, 3));
     public static final WorldModel MODEL = new WorldModel(WORLD_MODEL_SPEC, ROBOT_STATUS, RADAR, MARKERS, null, null, null);
@@ -91,6 +89,16 @@ class InferenceFileTest {
         try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
             CameraEvent cameraRead = reader.readCamera();
             assertEquals(CAMERA_EVENT, cameraRead);
+            assertThrows(IOException.class, reader::readByte);
+        }
+    }
+
+    @Test
+    void testCorrelatedCamera() throws IOException {
+        writer.write(CORRELATED_CAMERA_EVENT);
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
+            CorrelatedCameraEvent cameraRead = reader.readCorrelatedCamera();
+            assertEquals(CORRELATED_CAMERA_EVENT, cameraRead);
         }
     }
 
@@ -135,6 +143,7 @@ class InferenceFileTest {
         try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
             Map<String, LabelMarker> markersRead = reader.readMarkers();
             assertEquals(MARKERS, markersRead);
+            assertThrows(IOException.class, reader::readByte);
         }
     }
 
@@ -149,6 +158,7 @@ class InferenceFileTest {
             assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
             assertEquals(RADAR.topology(), radarRead.topology());
             assertArrayEquals(RADAR.cells(), radarRead.cells());
+            assertThrows(IOException.class, reader::readByte);
         }
     }
 
@@ -178,6 +188,7 @@ class InferenceFileTest {
             assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
             assertEquals(RADAR.topology(), radarRead.topology());
             assertArrayEquals(RADAR.cells(), radarRead.cells());
+            assertThrows(IOException.class, reader::readByte);
         }
     }
 
@@ -187,6 +198,7 @@ class InferenceFileTest {
         try (InferenceFileReader reader = InferenceFileReader.fromFile(WORLD_MODEL_SPEC, TOPOLOGY, FILE)) {
             RobotStatus contactsRead = reader.readStatus();
             assertEquals(ROBOT_STATUS, contactsRead);
+            assertThrows(IOException.class, reader::readByte);
         }
     }
 }

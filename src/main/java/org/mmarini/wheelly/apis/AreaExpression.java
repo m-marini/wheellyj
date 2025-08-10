@@ -19,7 +19,6 @@ import static org.mmarini.wheelly.apis.QVect.from;
  */
 public interface AreaExpression {
 
-
     /**
      * Returns the intersection (and) of the given expressions
      *
@@ -167,6 +166,23 @@ public interface AreaExpression {
     }
 
     /**
+     * Returns the area of the radia sensor
+     *
+     * @param from        the sensor loction
+     * @param direction   the direction
+     * @param range       the direction range
+     * @param minDistance the minumum distance (m)
+     * @param maxDistance the maximum distance (m)
+     */
+    static AreaExpression radialSensorArea(Point2D from, Complex direction, Complex range, double minDistance, double maxDistance) {
+        return AreaExpression.and(
+                AreaExpression.angle(from, direction, range),
+                AreaExpression.circle(from, maxDistance),
+                AreaExpression.not(
+                        AreaExpression.circle(from, minDistance)));
+    }
+
+    /**
      * Returns the negated predicate
      */
     static AreaExpression not(AreaExpression expression) {
@@ -222,6 +238,21 @@ public interface AreaExpression {
      */
     static AreaExpression or(Stream<AreaExpression> children) {
         return or(children.toArray(AreaExpression[]::new));
+    }
+
+    /**
+     * Returns the area expression of the segment with round cap
+     *
+     * @param end1  the first segment end
+     * @param end2  the second segment end
+     * @param width the segment width (m)
+     */
+    static AreaExpression roundSegment(Point2D end1, Point2D end2, double width) {
+        return AreaExpression.or(
+                rectangle(end1, end2, width),
+                circle(end1, width),
+                circle(end2, width)
+        );
     }
 
     /**

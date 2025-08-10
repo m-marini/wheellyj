@@ -69,16 +69,6 @@ public interface WheellyMessage {
     }
 
     /**
-     * Returns the local received localTime of message (local clock)
-     */
-    long localTime();
-
-    /**
-     * Returns the remote message localTime (remote clock)
-     */
-    long remoteTime();
-
-    /**
      * Returns the simulation markerTime
      */
     long simulationTime();

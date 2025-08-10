@@ -10,117 +10,91 @@ flow:
     mapping:
       $id: https://mmarini.org/wheelly/state-mapping-schema-0.1
       class: org.mmarini.wheelly.engines.MappingState
-      timeout: 300000
-      scanInterval: 1000
+      timeout: 600000
       transitions:
         blocked:
-          to: avoid
+          to: clearMap
         frontBlocked:
           to: avoid
         rearBlocked:
           to: avoid
         completed:
           to: findLabel
+        found:
+          to: findLabel
     findLabel:
-      $id: https://mmarini.org/wheelly/state-find-label-schema-0.1
-      class: org.mmarini.wheelly.engines.FindLabelState
+      $id: https://mmarini.org/wheelly/state-search-label-schema-0.1
+      class: org.mmarini.wheelly.engines.SearchLabelState
       maxSearchTime: 3000
       minGoals: 2
       distance: 0.8
       transitions:
         completed:
-          to: moveLabel
-          onTransition:
-            - moveLabel.path
-            - findLabel.path
-            - get
-            - put
+          to: labelStuck
         notFound:
           to: findUnknown
-    findUnknown:
-      $id: https://mmarini.org/wheelly/state-find-unknown-schema-0.1
-      class: org.mmarini.wheelly.engines.FindUnknownState
-      maxSearchTime: 3000
-      minGoals: 2
-      transitions:
-        completed:
-          to: moveUnknown
-          onTransition:
-            - moveUnknown.path
-            - findUnknown.path
-            - get
-            - put
-        notFound:
-          to: findRefresh
-    findRefresh:
-      $id: https://mmarini.org/wheelly/state-find-refresh-schema-0.1
-      class: org.mmarini.wheelly.engines.FindRefreshState
-      maxSearchTime: 3000
-      minGoals: 2
-      transitions:
-        completed:
-          to: moveRefresh
-          onTransition:
-            - moveRefresh.path
-            - findRefresh.path
-            - get
-            - put
-        notFound:
-          to: mapping
-    moveLabel:
-      $id: https://mmarini.org/wheelly/state-move-path-schema-0.1
-      class: org.mmarini.wheelly.engines.MovePathState
-      transitions:
-        completed:
-          to: labelStuck
         timeout:
           to: mapping
         blocked:
-          to: avoid
+          to: clearMap
         frontBlocked:
           to: avoid
         rearBlocked:
           to: avoid
+    findUnknown:
+      $id: https://mmarini.org/wheelly/state-search-unknown-schema-0.1
+      class: org.mmarini.wheelly.engines.SearchUnknownState
+      maxSearchTime: 3000
+      minGoals: 2
+      transitions:
+        completed:
+          to: mapping
+        timeout:
+          to: mapping
+        blocked:
+          to: clearMap
+        frontBlocked:
+          to: avoid
+        rearBlocked:
+          to: avoid
+        notFound:
+          to: findRefresh
+    findRefresh:
+      $id: https://mmarini.org/wheelly/state-search-refresh-schema-0.1
+      class: org.mmarini.wheelly.engines.SearchRefreshState
+      maxSearchTime: 3000
+      minGoals: 2
+      transitions:
+        completed:
+          to: mapping
+        timeout:
+          to: mapping
+        blocked:
+          to: clearMap
+        frontBlocked:
+          to: avoid
+        rearBlocked:
+          to: avoid
+        notFound:
+          to: mapping
     labelStuck:
       $id: https://mmarini.org/wheelly/state-label-stuck-schema-0.1
       class: org.mmarini.wheelly.engines.LabelStuckState
       distance: 0.5
       transitions:
         blocked:
-          to: avoid
+          to: clearMap
         frontBlocked:
           to: avoid
         rearBlocked:
           to: avoid
         notFound:
           to: mapping
-    moveUnknown:
-      $id: https://mmarini.org/wheelly/state-move-path-schema-0.1
-      class: org.mmarini.wheelly.engines.MovePathState
+    clearMap:
+      $id: https://mmarini.org/wheelly/state-clear-map-schema-0.1
+      class: org.mmarini.wheelly.engines.ClearMapState
       transitions:
-        completed:
-          to: mapping
-        timeout:
-          to: mapping
-        blocked:
-          to: avoid
-        frontBlocked:
-          to: avoid
-        rearBlocked:
-          to: avoid
-    moveRefresh:
-      $id: https://mmarini.org/wheelly/state-move-path-schema-0.1
-      class: org.mmarini.wheelly.engines.MovePathState
-      transitions:
-        completed:
-          to: mapping
-        timeout:
-          to: mapping
-        blocked:
-          to: avoid
-        frontBlocked:
-          to: avoid
-        rearBlocked:
+        ".*":
           to: avoid
     avoid:
       $id: https://mmarini.org/wheelly/state-avoid-schema-0.1
@@ -132,9 +106,3 @@ flow:
           to: mapping
         blocked:
           to: clearMap
-    clearMap:
-      $id: https://mmarini.org/wheelly/state-clear-map-schema-0.1
-      class: org.mmarini.wheelly.engines.ClearMapState
-      transitions:
-        completed:
-          to: mapping

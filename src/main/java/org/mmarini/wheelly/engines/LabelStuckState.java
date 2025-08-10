@@ -38,12 +38,12 @@ import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
 import java.util.Comparator;
-import java.util.Map;
 
+import static java.lang.Math.clamp;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Generates the behavior to get stuck to label point
+ * Generates the behaviour to get stuck to label point
  * Parameters are:
  * <ul>
  *     <li><code>distance</code> the distance from label (m)</li>
@@ -59,22 +59,22 @@ import static java.util.Objects.requireNonNull;
  * </ul>
  * </p>
  */
-public record LabelStuckState(String id, ProcessorCommand onInit, ProcessorCommand onEntry,
-                              ProcessorCommand onExit) implements ExtendedStateNode {
+public class LabelStuckState extends TimeOutState {
     public static final String MAX_DISTANCE_ID = "maxDistance";
-    private static final String NOT_FOUND = "notFound";
     public static final String DISTANCE_ID = "distance";
     public static final String SPEED_ID = "speed";
     public static final String DIRECTION_RANGE_ID = "directionRange";
     public static final double DEFAULT_MAX_DISTANCE = 3D;
     public static final double DEFAULT_DISTANCE = 0.8;
+    public static final int DEFAULT_DIRECTION_RANGE = 10;
+    public static final int DEFAULT_SPEED = 30;
+    private static final String NOT_FOUND = "notFound";
     private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-label-stuck-schema-0.1";
     private static final Tuple2<String, RobotCommands> NOT_FOUND_RESULT = Tuple2.of(
-            NOT_FOUND, RobotCommands.idle());
-    public static final int DEFAULT_DIRECTION_RANGE = 10;
+            NOT_FOUND, RobotCommands.haltCommand());
     private static final Logger logger = LoggerFactory.getLogger(LabelStuckState.class);
     private static final double EPSILON_DISTANCE = 0.3;
-    public static final int DEFAULT_SPEED = 30;
+    private static final String TIMEOUT_ID = "timeout";
 
     /**
      * Returns the exploring state from configuration
@@ -85,56 +85,54 @@ public record LabelStuckState(String id, ProcessorCommand onInit, ProcessorComma
      */
     public static LabelStuckState create(JsonNode root, Locator locator, String id) {
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        long timeout = locator.path(TIMEOUT_ID).getNode(root).asLong(DEFAULT_TIMEOUT);
         double maxDistance = locator.path(MAX_DISTANCE_ID).getNode(root).asDouble(DEFAULT_MAX_DISTANCE);
         double distance = locator.path(DISTANCE_ID).getNode(root).asDouble(DEFAULT_DISTANCE);
-        int directionRange = locator.path(DIRECTION_RANGE_ID).getNode(root).asInt(DEFAULT_DIRECTION_RANGE);
+        Complex directionRange = Complex.fromDeg(locator.path(DIRECTION_RANGE_ID).getNode(root).asInt(DEFAULT_DIRECTION_RANGE));
         int speed = locator.path(SPEED_ID).getNode(root).asInt(DEFAULT_SPEED);
-        ProcessorCommand onInit = ProcessorCommand.concat(
-                ExtendedStateNode.loadTimeout(root, locator, id),
-                ProcessorCommand.setProperties(Map.of(
-                        id + "." + MAX_DISTANCE_ID, maxDistance,
-                        id + "." + DISTANCE_ID, distance,
-                        id + "." + DIRECTION_RANGE_ID, directionRange,
-                        id + "." + SPEED_ID, speed
-                )),
-                ProcessorCommand.create(root, locator.path("onInit")));
+        ProcessorCommand onInit = ProcessorCommand.create(root, locator.path("onInit"));
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
-        return new LabelStuckState(id, onInit, onEntry, onExit);
+        return new LabelStuckState(id, onInit, onEntry, onExit, timeout, distance, maxDistance, directionRange, speed);
     }
 
+    private final double maxDistance;
+    private final double distance;
+    private final Complex directionRange;
+    private final int speed;
+
     /**
-     * Creates the exploring state
+     * Creates the abstract node
      *
-     * @param id      the identifier
-     * @param onInit  the initialise command
-     * @param onEntry the entry command
-     * @param onExit  the exit command
+     * @param id             the state identifier
+     * @param onInit         the init command
+     * @param onEntry        the entry command
+     * @param onExit         the exit command
+     * @param timeout        the timeout (ms)
+     * @param distance       the distance (m)
+     * @param maxDistance    the maximum distance (m)
+     * @param directionRange the direction range
+     * @param speed          the speed (pps)
      */
-    public LabelStuckState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit) {
-        this.id = requireNonNull(id);
-        this.onInit = onInit;
-        this.onEntry = onEntry;
-        this.onExit = onExit;
+    protected LabelStuckState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit, long timeout, double distance, double maxDistance, Complex directionRange, int speed) {
+        super(id, onInit, onEntry, onExit, timeout);
+        this.maxDistance = maxDistance;
+        this.distance = distance;
+        this.directionRange = requireNonNull(directionRange);
+        this.speed = speed;
     }
 
     @Override
     public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
-        Tuple2<String, RobotCommands> blockResult = getBlockResult(context);
-        if (blockResult != null) {
+        Tuple2<String, RobotCommands> result = super.step(context);
+        if (result != null) {
             // Halt the robot and move forward the sensor at block
-            return blockResult;
-        }
-        if (isTimeout(context)) {
-            // Halt the robot and move forward the sensor at timeout
-            return TIMEOUT_RESULT;
+            return result;
         }
 
         WorldModel worldModel = context.worldModel();
         RobotStatus status = worldModel.robotStatus();
         Point2D robotLocation = status.location();
-        double distance = getDouble(context, DISTANCE_ID);
-        double maxDistance = getDouble(context, MAX_DISTANCE_ID);
         Point2D target = worldModel.markers()
                 .values()
                 .stream()
@@ -145,28 +143,27 @@ public record LabelStuckState(String id, ProcessorCommand onInit, ProcessorComma
 
         if (target == null) {
             logger.atDebug().log("No label found");
-            remove(context, "target");
             return NOT_FOUND_RESULT;
         }
         double labelDistance = robotLocation.distance(target);
         Complex targetDir = Complex.direction(robotLocation, target);
         Complex robotDir = status.direction();
-        Complex epsilonAngle = Complex.fromDeg(getInt(context, DIRECTION_RANGE_ID));
-        int speed = getInt(context, SPEED_ID);
+        Complex sensorDir = Complex.fromDeg(clamp(targetDir.sub(robotDir).toIntDeg(), -90, 90));
+
         if (labelDistance < distance - EPSILON_DISTANCE) {
             // the robot is too close, move backward
-            RobotCommands command = RobotCommands.moveAndFrontScan(targetDir, -speed);
+            RobotCommands command = RobotCommands.moveAndScan(targetDir, -speed, sensorDir);
             return new Tuple2<>(NONE_EXIT, command);
         } else if (labelDistance > distance + EPSILON_DISTANCE) {
             // the robot is too far, move forward
-            RobotCommands command = RobotCommands.moveAndFrontScan(targetDir, speed);
+            RobotCommands command = RobotCommands.moveAndScan(targetDir, speed, sensorDir);
             return new Tuple2<>(NONE_EXIT, command);
-        } else if (!targetDir.isCloseTo(robotDir, epsilonAngle)) {
+        } else if (!targetDir.isCloseTo(robotDir, directionRange)) {
             // The robot is not directed to the label, turn the robot
-            RobotCommands command = RobotCommands.moveAndFrontScan(targetDir, 0);
+            RobotCommands command = RobotCommands.moveAndScan(targetDir, 0, sensorDir);
             return new Tuple2<>(NONE_EXIT, command);
         } else {
-            return new Tuple2<>(NONE_EXIT, RobotCommands.idle());
+            return new Tuple2<>(NONE_EXIT, RobotCommands.scan(sensorDir).setHalt());
         }
     }
 }

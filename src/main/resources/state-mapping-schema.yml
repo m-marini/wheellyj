@@ -20,8 +20,9 @@ properties:
   timeout:
     type: integer
     minimum: 1
-  scanInterval:
+  minNumberOfSamples:
     type: integer
+    minimum: 1
   turnAngle:
     type: integer
     minimum: 1

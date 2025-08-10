@@ -57,6 +57,10 @@ public interface TestFunctions {
         return msg -> msg.simulationTime() > time;
     }
 
+    static Predicate<WheellyMessage> before(long time) {
+        return msg -> msg.simulationTime() < time;
+    }
+
     static void execUntil(RobotApi robot, Predicate<WheellyMessage> pred) {
         robot.readMessages()
                 .filter(pred::test)

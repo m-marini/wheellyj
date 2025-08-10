@@ -20,19 +20,6 @@ properties:
   timeout:
     type: integer
     minimum: 1
-  scanInterval:
-    type: integer
-  minSensorDir:
-    type: integer
-    minimum: -90
-    maximum: 90
-  maxSensorDir:
-    type: integer
-    minimum: -90
-    maximum: 90
-  sensorDirNumber:
-    type: integer
-    minimum: 1
 required:
   - $id
   - class

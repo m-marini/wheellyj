@@ -26,9 +26,6 @@
 package org.mmarini.wheelly.apis;
 
 import org.mmarini.MapStream;
-import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.factory.Nd4j;
-import org.nd4j.linalg.ops.transforms.Transforms;
 
 import java.awt.*;
 import java.awt.geom.Point2D;
@@ -44,8 +41,8 @@ import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Ths obstacle map defines the location of obstacle in a grid space.
- * The map is organized in a list of obstacle cells each cell has the location in the grid map of n x n squares
+ * The obstacle map defines the location of obstacle in a grid space.
+ * The map is organised in a list of obstacle cells each cell has the location in the grid map of n x n squares
  * in the form horizontal, vertical index.
  *
  * @param cells    the cells
@@ -57,7 +54,7 @@ public record ObstacleMap(List<ObstacleCell> cells, double gridSize) {
      * Returns the map of obstacles
      *
      * @param hindered the hindered obstacle location indices
-     * @param labeled  the labeled obstacle location indices
+     * @param labeled  the labelled obstacle location indices
      * @param gridSize the gridSize
      */
     public static ObstacleMap create(Collection<Point> hindered, Collection<Point> labeled, double gridSize) {
@@ -79,7 +76,7 @@ public record ObstacleMap(List<ObstacleCell> cells, double gridSize) {
      * @param x        the x location (m)
      * @param y        the y location (m)
      * @param gridSize the grid size
-     * @param labeled  true if obstacle is labeled
+     * @param labeled  true if the obstacle is labelled
      */
     public static ObstacleCell create(double x, double y, double gridSize, boolean labeled) {
         Point index = toIndex(x, y, gridSize);
@@ -92,7 +89,7 @@ public record ObstacleMap(List<ObstacleCell> cells, double gridSize) {
      * @param x        the x location index
      * @param y        the y location index
      * @param gridSize the grid size
-     * @param labeled  true if obstacle is labeled
+     * @param labeled  true if the obstacle is labelled
      */
     public static ObstacleCell create(int x, int y, double gridSize, boolean labeled) {
         Point index = new Point(x, y);
@@ -182,79 +179,10 @@ public record ObstacleMap(List<ObstacleCell> cells, double gridSize) {
     }
 
     /**
-     * Returns the index of nearest obstacle from the given point to the given direction with given direction range
-     *
-     * @param x              the x point coordinate
-     * @param y              the y point coordinate
-     * @param direction      the direction
-     * @param directionRange the direction range
-     */
-    public ObstacleCell nearest(double x, double y, Complex direction, Complex directionRange) {
-        int n = getSize();
-        if (n == 0) {
-            return null;
-        }
-        INDArray point = Nd4j.createFromArray(x, y).reshape(1, 2);
-
-        // Computes the vectors of obstacles relative the given position (x,y)
-        INDArray coordinates = Nd4j.createFromArray(
-                cells.stream()
-                        .map(cell -> new float[]{(float) cell.location.getX(), (float) cell.location.getY()})
-                        .toArray(float[][]::new)
-        );
-        INDArray vect = coordinates.sub(point);
-
-        // Computes the distances of obstacles relative the given position
-        INDArray distances = vect.norm2(1).reshape(vect.shape()[0], 1);
-
-        // Computes the direction vectors obstacle relative to position
-        INDArray directions = vect.div(distances);
-
-        // Computes the direction vector of the given direction
-        INDArray dirVector = Nd4j.createFromArray((float) direction.x(), (float) direction.y()).reshape(1, 2);
-
-        // Computes the scalar product of direction vectors by direction vector (versus of points through the given direction)
-        INDArray cosDir = directions.mmul(dirVector.transpose());
-
-        // Computes the right orthogonal direction vector of the given direction
-        INDArray orthoVector = Nd4j.createFromArray((float) direction.y(), -(float) direction.x()).reshape(1, 2);
-
-        // Computes the vector product of direction vectors by direction vector (scalar product by orthogonal direction vector)
-        // (cos of point direction to respect the give direction)
-        INDArray sinDir = directions.mmul(orthoVector.transpose());
-        Transforms.abs(sinDir, false);
-
-        // Calculates the limit cosine of direction range
-        float sinThreshold = (float) directionRange.sin();
-
-        // Finds the eligible obstacle points
-        INDArray validCos = cosDir.gte(0);
-        INDArray validSin = sinDir.lte(sinThreshold);
-        INDArray valid = Transforms.and(validSin, validCos);
-
-        int index = -1;
-        float minDist = Float.MAX_VALUE;
-        // Find for nearest valid obstacles
-        for (int i = 0; i < n; i++) {
-            int val = valid.getInt(i, 0);
-            float dist = distances.getFloat(i, 0);
-            if (dist == 0) {
-                // the obstacle coincides with the given position
-                return cells.get(i);
-            } else if (val == 1 && dist < minDist) {
-                // the obstacle is valid and is near the previous found
-                index = i;
-                minDist = dist;
-            }
-        }
-        return index >= 0 ? cells.get(index) : null;
-    }
-
-    /**
      * The obstacle indexed cell
      *
      * @param index   the index
-     * @param labeled true if obstacle is labeled
+     * @param labeled true if the obstacle is labelled
      */
     public record ObstacleCell(Point index, Point2D location, boolean labeled) {
     }

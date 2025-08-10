@@ -44,7 +44,7 @@ import java.util.function.UnaryOperator;
 
 import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.apis.RobotApi.MAX_PPS;
+import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
 import static org.mmarini.wheelly.apis.Utils.linear;
 
 /**
@@ -191,10 +191,10 @@ public class WorldEnvironment implements EnvironmentApi {
                     speed(actions),
                     sensorDirection)
                     : sensorDirection.toIntDeg() == 0
-                    ? RobotCommands.haltCommand()
+                    ? RobotCommands.haltMove()
                     : RobotCommands.scan(sensorDirection);
         }
-        return RobotCommands.haltCommand();
+        return RobotCommands.haltMove();
     }
 
     @Override

@@ -35,7 +35,6 @@ import org.mmarini.yaml.Locator;
 import java.awt.geom.Point2D;
 
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.apis.AreaExpression.*;
 
 /**
  * Creates and updates the radar maps
@@ -102,9 +101,7 @@ public record RangeRadarModeller(GridTopology topology,
      * @param robotSpec the robot specification
      */
     public RadarMap update(RadarMap radarMap, SensorSignal signal, RobotSpec robotSpec) {
-        AreaExpression sensibleArea = and(
-                circle(signal.sensorLocation(), robotSpec.maxRadarDistance()),
-                angle(signal.sensorLocation(), signal.sensorDirection(), robotSpec.receptiveAngle()));
+        AreaExpression sensibleArea = robotSpec.proxySensorArea(signal.sensorLocation(), signal.sensorDirection());
         GridTopology topology = radarMap.topology();
         return radarMap.map(topology.indices()
                         .filter(topology.inArea(sensibleArea)),

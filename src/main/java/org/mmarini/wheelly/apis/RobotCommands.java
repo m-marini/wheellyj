@@ -45,8 +45,8 @@ public record RobotCommands(boolean scan, Complex scanDirection, boolean move, b
                             int speed) {
 
     private static final RobotCommands NONE = new RobotCommands(false, Complex.DEG0, false, false, Complex.DEG0, 0);
-    private static final RobotCommands HALT = new RobotCommands(false, Complex.DEG0, false, true, Complex.DEG0, 0);
-    private static final RobotCommands IDLE = new RobotCommands(true, Complex.DEG0, false, true, Complex.DEG0, 0);
+    private static final RobotCommands HALT_MOVE = new RobotCommands(false, Complex.DEG0, false, true, Complex.DEG0, 0);
+    private static final RobotCommands HALT = new RobotCommands(true, Complex.DEG0, false, true, Complex.DEG0, 0);
 
     /**
      * Returns the concatenation of commands
@@ -64,17 +64,17 @@ public record RobotCommands(boolean scan, Complex scanDirection, boolean move, b
     }
 
     /**
-     * Returns the haltCommand command
+     * Returns the idle command
      */
     public static RobotCommands haltCommand() {
         return HALT;
     }
 
     /**
-     * Returns the idle command
+     * Returns the haltCommand command
      */
-    public static RobotCommands idle() {
-        return IDLE;
+    public static RobotCommands haltMove() {
+        return HALT_MOVE;
     }
 
     /**

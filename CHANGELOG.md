@@ -10,10 +10,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 - Issue [#561](https://github.com/m-marini/wheellyj/issues/561): Add label direction to camera event
+- Issue [#564](https://github.com/m-marini/wheellyj/issues/564): Add number of samples parameters in state machine
 
 ### Fixed
 
 - Issue [#557](https://github.com/m-marini/wheellyj/issues/557): Ghost labels in simulated robot
+- Issue [#563](https://github.com/m-marini/wheellyj/issues/563): Fixed missing markers in real robot
 
 ## [0.24.0] 2025-07-25
 

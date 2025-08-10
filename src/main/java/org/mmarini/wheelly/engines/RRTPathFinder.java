@@ -47,20 +47,21 @@ import static org.mmarini.wheelly.swing.BaseShape.ROBOT_RADIUS;
  * Finds the best path to a generic goal.
  */
 public class RRTPathFinder {
+
     /**
      * Creates the pathfinder
      *
      * @param map            the radar map
      * @param initial        the initial position
+     * @param safetyDistance the safety distance (m)
      * @param growthDistance the growth distance (m)
      * @param targets        the target sector locations
      * @param random         the random number generator
      */
-    public static RRTPathFinder create(RadarMap map, Point2D initial, double growthDistance, Set<Point2D> targets, Random random) {
+    public static RRTPathFinder create(RadarMap map, Point2D initial, double safetyDistance, double growthDistance, Set<Point2D> targets, Random random) {
         requireNonNull(map);
         requireNonNull(initial);
         requireNonNull(random);
-        double safetyDistance = ROBOT_RADIUS + map.topology().gridSize() / sqrt(2);
         List<Point2D> freeLocations = map.safeSectors(safetyDistance)
                 .mapToObj(i -> map.cell(i).location())
                 .toList();
@@ -76,11 +77,12 @@ public class RRTPathFinder {
      * @param map            the radar map
      * @param location       the initial location
      * @param distance       the max target distance (m)
+     * @param safetyDistance the safety distance (m)
      * @param growthDistance the growth distance (m)
      * @param random         the random number generator
      * @param labels         the labels
      */
-    public static RRTPathFinder createLabelTargets(RadarMap map, Point2D location, double distance, double growthDistance, Random random, Stream<Point2D> labels) {
+    public static RRTPathFinder createLabelTargets(RadarMap map, Point2D location, double distance, double safetyDistance, double growthDistance, Random random, Stream<Point2D> labels) {
         AreaExpression noTargetArea = AreaExpression.not(AreaExpression.circle(location, ROBOT_RADIUS));
         AreaExpression targetArea = AreaExpression.or(labels.map(target ->
                 AreaExpression.circle(target, distance)));
@@ -90,7 +92,7 @@ public class RRTPathFinder {
                 .filter(map.cellIs(Predicate.not(MapCell::hindered)))
                 .mapToObj(i -> map.cell(i).location())
                 .collect(Collectors.toSet());
-        return create(map, location, growthDistance, targetLocations, random);
+        return create(map, location, safetyDistance, growthDistance, targetLocations, random);
     }
 
     /**
@@ -98,12 +100,12 @@ public class RRTPathFinder {
      *
      * @param map            the radar map
      * @param location       the initial location
+     * @param safetyDistance the safety distance (m)
      * @param growthDistance the growth distance (m)
      * @param maxDistance    the maximum allowed distance to target (m)
      */
-    public static RRTPathFinder createLeastEmptyTargets(RadarMap map, Point2D location, double growthDistance, double maxDistance, Random random) {
+    public static RRTPathFinder createLeastEmptyTargets(RadarMap map, Point2D location, double safetyDistance, double growthDistance, double maxDistance, Random random) {
         GridTopology topology = map.topology();
-        double safetyDistance = ROBOT_RADIUS + topology.gridSize() / 2;
         // Avoid all sectors near hindered ones
         Stream<AreaExpression> avoidAreas = Arrays.stream(map.cells())
                 .filter(MapCell::hindered)
@@ -133,7 +135,7 @@ public class RRTPathFinder {
                 .collect(Collectors.toSet())
                 : Set.of();
 
-        return create(map, location, growthDistance, targets, random);
+        return create(map, location, safetyDistance, growthDistance, targets, random);
     }
 
     /**
@@ -141,10 +143,11 @@ public class RRTPathFinder {
      *
      * @param map            the radar map
      * @param location       the initial location
+     * @param safetyDistance the safety distance (m)
      * @param growthDistance the growth distance (m)
      * @param random         the random number generator
      */
-    public static RRTPathFinder createUnknownTargets(RadarMap map, Point2D location, double growthDistance, Random random) {
+    public static RRTPathFinder createUnknownTargets(RadarMap map, Point2D location, double safetyDistance, double growthDistance, Random random) {
         AreaExpression area = AreaExpression.not(AreaExpression.circle(location, ROBOT_RADIUS));
         Set<Point2D> targetLocations = map.topology()
                 .contour(map.topology().indicesByArea(area)
@@ -153,7 +156,7 @@ public class RRTPathFinder {
                         .collect(Collectors.toSet()))
                 .mapToObj(i -> map.cell(i).location())
                 .collect(Collectors.toSet());
-        return create(map, location, growthDistance, targetLocations, random);
+        return create(map, location, safetyDistance, growthDistance, targetLocations, random);
     }
 
     /**
@@ -189,7 +192,7 @@ public class RRTPathFinder {
      * @param initial        the initial position
      * @param growthDistance the growth distance (m)
      * @param targets        the target sector locations
-     * @param freeLocations the free locations
+     * @param freeLocations  the free locations
      * @param random         the random number generator
      */
     protected RRTPathFinder(RadarMap map, Point2D initial, double growthDistance, Set<Point2D> targets, List<Point2D> freeLocations, Random random) {

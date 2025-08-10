@@ -26,40 +26,43 @@
  *
  */
 
-package org.mmarini.wheelly.apis;
+package org.mmarini.wheelly.engines;
 
-import io.reactivex.rxjava3.core.Flowable;
+import org.mmarini.Tuple2;
+import org.mmarini.wheelly.apis.RobotCommands;
 
-import java.util.function.Consumer;
-
-/**
- * The robot controller connector api
- */
-public interface RobotControllerConnector {
+public abstract class TimeOutState extends AbstractStateNode {
+    public static final String TIMEOUT_ID = "timeout";
+    public static final long DEFAULT_TIMEOUT = 60 * 60 * 1000L;
+    private final long timeout;
 
     /**
-     * Executes the command
+     * Creates the abstract node
      *
-     * @param command the command
+     * @param id      the state identifier
+     * @param onInit  the init command
+     * @param onEntry the entry command
+     * @param onExit  the exit command
+     * @param timeout the timeout (ms)
      */
-    void execute(RobotCommands command);
+    protected TimeOutState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit, long timeout) {
+        super(id, onInit, onEntry, onExit);
+        this.timeout = timeout;
+    }
 
     /**
-     * Returns the flow of controller ready
-     */
-    Flowable<Boolean> readReady();
-
-    /**
-     * Registers the consumer of inference event
+     * Returns true if time elapsed is grater than the timeout
      *
-     * @param callback the callback
+     * @param context the processor context
      */
-    void setOnInference(Consumer<RobotStatus> callback);
+    public boolean isTimeout(ProcessorContextApi context) {
+        return elapsedTime(context) >= timeout;
+    }
 
-    /**
-     * Registers the consumer of latch event
-     *
-     * @param callback the callback
-     */
-    void setOnLatch(Consumer<RobotStatus> callback);
+    @Override
+    public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
+        return isTimeout(context)
+                ? TIMEOUT_RESULT
+                : super.step(context);
+    }
 }

@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mmarini.RandomArgumentsGenerator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
@@ -38,8 +39,6 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mmarini.ArgumentsGenerator.createArgumentGenerator;
-import static org.mmarini.ArgumentsGenerator.createStream;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 
 class TDReluTest {
@@ -50,10 +49,10 @@ class TDReluTest {
     static Stream<Arguments> cases() {
         Random random = Nd4j.getRandom();
         random.setSeed(SEED);
-        return createStream(SEED,
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)), // inputs
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)) // grad
-        );
+        return RandomArgumentsGenerator.create(SEED)
+                .generate(() -> Nd4j.randn(random, 2, 2)) // inputs
+                .generate(() -> Nd4j.randn(random, 2, 2)) // grad
+                .build(100);
     }
 
     @ParameterizedTest
