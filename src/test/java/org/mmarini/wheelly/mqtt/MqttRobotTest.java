@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.mqtt;
 
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subscribers.TestSubscriber;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.junit.jupiter.api.AfterEach;
@@ -81,8 +82,9 @@ class MqttRobotTest {
         robot.readCamera().subscribe(cameraSub);
         robot.readReadLine().subscribe(readSub);
         robot.readWriteLine().subscribe(writeSub);
-        mockClient = new MockMqttClient();
+        mockClient = assertDoesNotThrow(MockMqttClient::new);
         mockClient.readMessages()
+                .observeOn(Schedulers.computation())
                 .subscribe(msg -> {
                     if (msg.startsWith("ck ")) {
                         mockClient.send(msg + " 0 0");
@@ -90,8 +92,7 @@ class MqttRobotTest {
                         mockClient.send("// " + msg);
                     }
                 });
-        mockClient.start();
-        mockClient.readConnected().blockingAwait();
+        assertDoesNotThrow(() -> mockClient.start());
     }
 
     @BeforeEach
@@ -118,7 +119,7 @@ class MqttRobotTest {
                 .firstElement()
                 .ignoreElement()
                 .blockingAwait(TIMEOUT, TimeUnit.MILLISECONDS);
-        mockClient.send(CAMERA_EVENT_TEXT);
+        assertDoesNotThrow(() -> mockClient.send(CAMERA_EVENT_TEXT));
         // And wait for message
         robot.readMessages()
                 .firstElement()
@@ -329,14 +330,12 @@ class MqttRobotTest {
     @Test
     void testMisconfiguration() {
         // Given...
-        assertDoesNotThrow(() -> {
-            mockClient.readConnected().blockingAwait();
-            mockClient.close();
-        });
+        assertDoesNotThrow(() -> mockClient.close());
 
 
-        mockClient = new MockMqttClient().start();
+        mockClient = assertDoesNotThrow(() -> new MockMqttClient().start());
         mockClient.readMessages()
+                .observeOn(Schedulers.computation())
                 .subscribe(msg -> {
                     if (msg.startsWith("ck ")) {
                         mockClient.send(msg + " 0 0");
@@ -344,7 +343,6 @@ class MqttRobotTest {
                         mockClient.send("!! Bad " + msg);
                     }
                 });
-        mockClient.readConnected().blockingAwait();
 
         // When ....
         robot.connect();
@@ -446,7 +444,7 @@ class MqttRobotTest {
                 .firstElement()
                 .ignoreElement()
                 .blockingAwait(TIMEOUT, TimeUnit.MILLISECONDS);
-        mockClient.send("px 0 0 0 0.0 0.0 0");
+        assertDoesNotThrow(() -> mockClient.send("px 0 0 0 0.0 0.0 0"));
         // And wait for message
         robot.readReadLine()
                 .filter(m -> m.startsWith("px "))

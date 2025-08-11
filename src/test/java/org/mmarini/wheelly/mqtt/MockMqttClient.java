@@ -28,12 +28,10 @@
 
 package org.mmarini.wheelly.mqtt;
 
-import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.processors.PublishProcessor;
-import io.reactivex.rxjava3.subjects.CompletableSubject;
 import io.reactivex.rxjava3.subscribers.TestSubscriber;
-import org.eclipse.paho.client.mqttv3.*;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,92 +47,48 @@ public class MockMqttClient implements Closeable {
     public static final String MQTT_PASSWORD = "JavaPass";
     public static final String CLIENT_ID = "mockRobot";
     private static final Logger logger = LoggerFactory.getLogger(MockMqttClient.class);
-    private final PublishProcessor<String> messages;
     private final TestSubscriber<String> messagesSub;
-    private final CompletableSubject connected;
-    private MqttAsyncClient mqttClient;
+    private final RxMqttClient client;
 
-    public MockMqttClient() {
-        this.messages = PublishProcessor.create();
-        this.connected = CompletableSubject.create();
+    public MockMqttClient() throws MqttException {
+        this.client = RxMqttClient.create(MQTT_BROKER, CLIENT_ID, MQTT_USER, MQTT_PASSWORD);
         messagesSub = new TestSubscriber<>();
-        messages.subscribe(messagesSub);
+        this.client.readMessages()
+                .map(t -> new String(t._2.getPayload()))
+                .subscribe(messagesSub);
     }
 
     @Override
     public void close() throws IOException {
         logger.atInfo().log("Closing ...");
-        if (mqttClient != null) {
-            try {
-                if (mqttClient.isConnected()) {
-                    mqttClient.unsubscribe(COMMAND_TOPIC).waitForCompletion();
-                    mqttClient.disconnect().waitForCompletion();
-                }
-                mqttClient.close();
-            } catch (MqttException e) {
-                logger.atError().setCause(e).log("Error closing mqtt");
-            } finally {
-                mqttClient = null;
-                messages.onComplete();
+        try {
+            if (client.isConnected()) {
+                client.unsubscribe(COMMAND_TOPIC).blockingGet();
+                client.disconnect().blockingGet();
             }
+            client.close();
+        } catch (MqttException e) {
+            logger.atError().setCause(e).log("Error closing mqtt");
         }
-    }
-
-    private void handleError(Throwable e) {
-        logger.atError().setCause(e).log("Error captured");
-        messages.onError(e);
-    }
-
-    private void onMessage(String msg) {
-        logger.atDebug().log("Message {}", msg);
-        messages.onNext(msg);
-    }
-
-    public Completable readConnected() {
-        return connected;
     }
 
     public Flowable<String> readMessages() {
-        return messages;
+        return client.readMessages().map(t -> new String(t._2.getPayload()));
     }
 
-    public void send(String s) {
+    public void send(String s) throws MqttException {
         logger.atDebug().log("Sending {} ...", s);
-        if (mqttClient.isConnected()) {
-            try {
-                mqttClient.publish(SENSOR_TOPIC, new MqttMessage(s.getBytes()));
-            } catch (MqttException e) {
-                handleError(e);
-            }
+        if (client.isConnected()) {
+            client.publish(SENSOR_TOPIC, new MqttMessage(s.getBytes())).blockingGet();
         }
     }
 
-    public MockMqttClient start() {
-        try {
-            mqttClient = new MqttAsyncClient(MQTT_BROKER, CLIENT_ID);
-            MqttConnectOptions mqttOptions = new MqttConnectOptions();
-            mqttOptions.setUserName(MQTT_USER);
-            mqttOptions.setPassword(MQTT_PASSWORD.toCharArray());
-            logger.atInfo().log("Connecting...");
-            IMqttToken token = mqttClient.connect(mqttOptions);
-            token.waitForCompletion();
-            if (token.isComplete()) {
-                logger.atInfo().log("Connection success {}", token.isComplete());
-                connected.onComplete();
-                try {
-                    mqttClient.subscribe(COMMAND_TOPIC, 0, (topic, msg) ->
-                            onMessage(new String(msg.getPayload())));
-                } catch (MqttException e) {
-                    handleError(e);
-                }
-            } else {
-                Throwable throwable = token.getException();
-                handleError(throwable);
-                connected.onError(throwable);
-            }
-        } catch (Throwable e) {
-            handleError(e);
-        }
+    public MockMqttClient start() throws MqttException {
+        logger.atInfo().log("Connecting...");
+        client.connect().blockingGet();
+        logger.atInfo().log("Subscribing...");
+        client.subscribe(COMMAND_TOPIC, 0).subscribe();
+        logger.atInfo().log("Subscribed");
         return this;
     }
 

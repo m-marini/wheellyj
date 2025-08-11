@@ -116,6 +116,14 @@ public class RxMqttClient implements AutoCloseable {
         return result;
     }
 
+    public String getClientId() {
+        return client.getClientId();
+    }
+
+    public String getServerURI() {
+        return client.getServerURI();
+    }
+
     public boolean isConnected() {
         return client.isConnected();
     }

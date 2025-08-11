@@ -24,35 +24,9 @@
  *
  *    END OF TERMS AND CONDITIONS
  *
- *//*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
- *
- *  Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- *    END OF TERMS AND CONDITIONS
- *
  */
 
-package org.mmarini.wheelly.apis;
+package org.mmarini.wheelly.mqtt;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Completable;
@@ -62,8 +36,12 @@ import io.reactivex.rxjava3.processors.BehaviorProcessor;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.schedulers.Timed;
-import org.eclipse.paho.client.mqttv3.*;
+import org.eclipse.paho.client.mqttv3.IMqttToken;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.mmarini.NotImplementedException;
+import org.mmarini.Tuple2;
+import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.wheelly.rx.RXFunc;
 import org.mmarini.yaml.Locator;
@@ -163,15 +141,11 @@ public class MqttRobot implements RobotApi {
      * @throws MqttException in case of error
      */
     public static MqttRobot create(String brokerUrl, String clientId, String user, String password, String sensorTopic, String commandTopic, long configureTimeout, long retryInterval, RobotSpec robotSpec, String... configCommands) throws MqttException {
-        MqttAsyncClient mqttClient = new MqttAsyncClient(brokerUrl, clientId);
-        MqttConnectOptions mqttOptions = new MqttConnectOptions();
-        mqttOptions.setUserName(user);
-        mqttOptions.setPassword(password.toCharArray());
-        return new MqttRobot(mqttClient, mqttOptions, sensorTopic, commandTopic, configureTimeout, retryInterval, robotSpec, configCommands);
+        RxMqttClient client = RxMqttClient.create(brokerUrl, clientId, user, password);
+        return new MqttRobot(client, sensorTopic, commandTopic, configureTimeout, retryInterval, robotSpec, configCommands);
     }
 
-    private final MqttAsyncClient mqttClient;
-    private final MqttConnectOptions mqttOptions;
+    private final RxMqttClient client;
     private final String sensorTopic;
     private final String commandTopic;
     private final long configureTimeout;
@@ -190,8 +164,7 @@ public class MqttRobot implements RobotApi {
     /**
      * Creates the mqtt robot
      *
-     * @param mqttClient       the mqtt client
-     * @param mqttOptions      the mqtt options
+     * @param client       the mqtt client
      * @param sensorTopic      the sensor topic
      * @param commandTopic     the command topic
      * @param configureTimeout the configuration timeout (ms)
@@ -199,9 +172,8 @@ public class MqttRobot implements RobotApi {
      * @param robotSpec        the robot specification
      * @param configCommands   the configuration commands
      */
-    public MqttRobot(MqttAsyncClient mqttClient, MqttConnectOptions mqttOptions, String sensorTopic, String commandTopic, long configureTimeout, long retryInterval, RobotSpec robotSpec, String[] configCommands) {
-        this.mqttClient = requireNonNull(mqttClient);
-        this.mqttOptions = requireNonNull(mqttOptions);
+    public MqttRobot(RxMqttClient client, String sensorTopic, String commandTopic, long configureTimeout, long retryInterval, RobotSpec robotSpec, String[] configCommands) {
+        this.client = requireNonNull(client);
         this.sensorTopic = requireNonNull(sensorTopic);
         this.commandTopic = requireNonNull(commandTopic);
         this.configureTimeout = configureTimeout;
@@ -217,6 +189,7 @@ public class MqttRobot implements RobotApi {
         this.messages = PublishProcessor.create();
         this.cameraEvents = PublishProcessor.create();
         this.sensorMessages = PublishProcessor.create();
+        client.readMessages().subscribe(this::onMessage);
     }
 
     @Override
@@ -250,7 +223,7 @@ public class MqttRobot implements RobotApi {
                         .map(x -> true)
                         .defaultIfEmpty(false)
                         .doOnSuccess(replied -> logger.atDebug().log("Configure={} command={}", replied, command))
-                        : Single.just(success));
+                        : Single.just(false));
     }
 
     /**
@@ -268,9 +241,7 @@ public class MqttRobot implements RobotApi {
             // Send all command the result is true if success
             Single<Boolean> allConfigCmd = Single.concat(list)
                     .filter(configured -> !configured)
-                    .doOnNext(configured -> logger.atDebug().log("Not configured={}", configured))
-                    .first(true)
-                    .doOnSuccess(configured -> logger.atDebug().log("All configuration command result={}", configured));
+                    .first(true);
             // Wait for synchronisation
             sync()
                     .flatMap(sync ->
@@ -290,18 +261,12 @@ public class MqttRobot implements RobotApi {
                 MqttRobotStatus s2 = status.updateAndGet(s1 -> s1.setConnecting().startTime(System.currentTimeMillis()));
                 states.onNext(s2);
                 try {
-                    logger.atDebug().log("Connecting to {} client {} ...", mqttClient.getServerURI(), mqttClient.getClientId());
-                    mqttClient.connect(mqttOptions, new IMqttActionListener() {
-                        @Override
-                        public void onFailure(IMqttToken token, Throwable throwable) {
-                            onConnectionFailure(token, throwable);
-                        }
-
-                        @Override
-                        public void onSuccess(IMqttToken token) {
-                            onConnection(token);
-                        }
-                    });
+                    logger.atDebug().log("Connecting to {} client {} ...", client.getServerURI(), client.getClientId());
+                    client.connect()
+                            .subscribe(
+                                    this::onConnection,
+                                    this::onConnectionFailure
+                            );
                 } catch (MqttException e) {
                     onMqttError(e);
                 }
@@ -351,23 +316,23 @@ public class MqttRobot implements RobotApi {
 
         states.onNext(st);
         try {
-            mqttClient.subscribe(sensorTopic, 0, this::onMessage);
+            client.subscribe(sensorTopic, 0).subscribe();
         } catch (MqttException e) {
             errors.onNext(e);
         }
         configure();
     }
 
-    private void onConnectionFailure(IMqttToken token, Throwable throwable) {
+    private void onConnectionFailure(Throwable throwable) {
         logger.atError().setCause(throwable).log("Error connecting broker");
         errors.onNext(throwable);
-        Completable.timer(retryInterval, TimeUnit.MILLISECONDS)
+        Completable.timer(retryInterval, TimeUnit.MILLISECONDS, Schedulers.computation())
                 .subscribe(this::reconnect);
     }
 
-    private void onMessage(String topic, MqttMessage mqttMessage) {
-        String text = new String(mqttMessage.getPayload());
-        logger.atDebug().log("{}", text);
+    private void onMessage(Tuple2<String, MqttMessage> mqttMessage) {
+        String text = new String(mqttMessage._2.getPayload());
+        logger.atDebug().log("Message received {}", text);
         Timed<String> line = new Timed<>(text, System.currentTimeMillis(), TimeUnit.MILLISECONDS);
         sensorMessages.onNext(line);
         readLines.onNext(text);
@@ -431,8 +396,8 @@ public class MqttRobot implements RobotApi {
             MqttRobotStatus s2 = status.updateAndGet(MqttRobotStatus::setConnecting);
             states.onNext(s2);
             try {
-                logger.atDebug().log("Reconnecting to {} client {} ...", mqttClient.getServerURI(), mqttClient.getClientId());
-                mqttClient.reconnect();
+                logger.atDebug().log("Reconnecting to {} client {} ...", client.getServerURI(), client.getClientId());
+                client.reconnect();
             } catch (MqttException e) {
                 onMqttError(e);
             }
@@ -478,22 +443,25 @@ public class MqttRobot implements RobotApi {
                                     return true;
                                 })
                                 .defaultIfEmpty(false)
-                        : Single.just(success));
+                        : Single.just(false));
     }
 
     private Single<Boolean> writeCommand(String command) {
-        return mqttClient.isConnected()
-                ? Single.fromSupplier(() -> {
-            try {
-                logger.atDebug().log("Sending {}", command);
-                mqttClient.publish(commandTopic, new MqttMessage(command.getBytes())).waitForCompletion();
-                writeLines.onNext(command);
-                return true;
-            } catch (MqttException e) {
-                logger.atError().setCause(e).log("Error sending message");
-                return false;
-            }
-        })
-                : Single.just(false);
+        if (client.isConnected()) {
+            return Single.just(true)
+                    .flatMap(ignored -> {
+                        logger.atDebug().log("Sending {}", command);
+                        try {
+                            return client.publish(commandTopic, new MqttMessage(command.getBytes()))
+                                    .map(token -> true)
+                                    .doOnSuccess(t -> writeLines.onNext(command));
+                        } catch (MqttException e) {
+                            logger.atError().setCause(e).log("Error sending message");
+                            return Single.just(false);
+                        }
+                    });
+        } else {
+            return Single.just(false);
+        }
     }
 }
