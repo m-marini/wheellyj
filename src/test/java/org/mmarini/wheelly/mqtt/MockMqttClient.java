@@ -26,7 +26,7 @@
  *
  */
 
-package org.mmarini.wheelly.apis;
+package org.mmarini.wheelly.mqtt;
 
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
@@ -40,8 +40,8 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.io.IOException;
 
-import static org.mmarini.wheelly.apis.MqttRobotTest.COMMAND_TOPIC;
-import static org.mmarini.wheelly.apis.MqttRobotTest.SENSOR_TOPIC;
+import static org.mmarini.wheelly.mqtt.MqttRobotTest.COMMAND_TOPIC;
+import static org.mmarini.wheelly.mqtt.MqttRobotTest.SENSOR_TOPIC;
 
 public class MockMqttClient implements Closeable {
     public static final String MQTT_BROKER = "tcp://localhost:1883";

@@ -26,13 +26,14 @@
  *
  */
 
-package org.mmarini.wheelly.apis;
+package org.mmarini.wheelly.mqtt;
 
 import io.reactivex.rxjava3.subscribers.TestSubscriber;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mmarini.wheelly.apis.*;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
