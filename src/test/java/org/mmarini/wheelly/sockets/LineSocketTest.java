@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2023 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -26,36 +26,36 @@
  *
  */
 
-package org.mmarini.wheelly.apis;
+package org.mmarini.wheelly.sockets;
 
-import io.reactivex.rxjava3.schedulers.Timed;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
-class RobotSocketTest {
+public class LineSocketTest {
 
-    public static final long READ_TIMEOUT = 1000L;
-    public static final long CONNECTION_TIMEOUT = 1000L;
-    public static final int PORT = 22;
     public static final String ROBOT_HOST = "192.168.1.43";
-    private static final Logger logger = LoggerFactory.getLogger(RobotSocketTest.class);
+    public static final int PORT = 22;
+    public static final int CONNECTION_TIMEOUT = 10000;
+    public static final int READ_TIMEOUT = CONNECTION_TIMEOUT;
+    private LineSocket socket;
 
-    public static void main(String[] args) {
-        LineSocket socket = new LineSocket(ROBOT_HOST, PORT, CONNECTION_TIMEOUT, READ_TIMEOUT);
-        logger.atDebug().log("Connecting...");
+    // @Test
+    void connectTest() throws InterruptedException {
         socket.connect();
-        logger.atDebug().log("Reading...");
-
         socket.writeCommand("sc 90");
-
-        Timed<String> line = socket.readLines()
-                .firstElement()
-                .blockingGet();
-        logger.atDebug().setMessage("Read {}").addArgument(line).log();
-
-        logger.atDebug().log("Closing...");
-        socket.close();
-        logger.atDebug().log("Closed.");
+        Thread.sleep(1000);
+        socket.writeCommand("sc -90");
+        Thread.sleep(1000);
+        socket.writeCommand("sc 0");
     }
 
+    @BeforeEach
+    void setUp() {
+        socket = new LineSocket(ROBOT_HOST, PORT, CONNECTION_TIMEOUT, READ_TIMEOUT);
+    }
+
+    @AfterEach
+    void tearDown() {
+        socket.close();
+    }
 }

@@ -1,11 +1,8 @@
 ---
-$schema: https://mmarini.org/wheelly/real-robot-schema-0.2
-class: org.mmarini.wheelly.sockets.RealRobot
-robotHost: 192.168.1.43
-cameraHost: localhost
-connectionRetryInterval: 10000
-readTimeout: 10000
+$schema: https://mmarini.org/wheelly/mqtt-robot-schema-0.1
+class: org.mmarini.wheelly.mqtt.MqttRobot
 configureTimeout: 2000
+retryInterval: 500
 watchDogInterval: 500
 watchDogTimeout: 5000
 contactRadius: 0.28

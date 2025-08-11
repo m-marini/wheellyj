@@ -37,9 +37,9 @@ import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.eclipse.paho.client.mqttv3.IMqttToken;
+import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.mmarini.NotImplementedException;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.apps.JsonSchemas;
@@ -96,6 +96,11 @@ import static java.util.Objects.requireNonNull;
 public class MqttRobot implements RobotApi {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/mqtt-robot-schema-0.1";
     public static final String HALLO_MESSAGE = "hi";
+    public static final String DEFAULT_BROKER_URL = "tcp://localhost:1883";
+    public static final long DEFAULT_CONFIGURE_INTERVAL = 1000;
+    public static final long DEFAULT_RETRY_INTERVAL = 500;
+    public static final String DEFAULT_COMMAND_TOPIC = "/wheelly/commands";
+    public static final String DEFAULT_SENSOR_TOPIC = "/wheelly/sensors";
     private static final Logger logger = LoggerFactory.getLogger(MqttRobot.class);
 
     /**
@@ -107,9 +112,14 @@ public class MqttRobot implements RobotApi {
     public static MqttRobot create(JsonNode root, File file) {
         Locator locator = Locator.root();
         JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-        long configureTimeout = locator.path("configureTimeout").getNode(root).asLong();
-        long watchDogInterval = locator.path("watchDogInterval").getNode(root).asLong();
-        long watchDogTimeout = locator.path("watchDogTimeout").getNode(root).asLong();
+        String brokerUrl = locator.path("brokerUrl").getNode(root).asText(DEFAULT_BROKER_URL);
+        String clientId = locator.path("clientId").getNode(root).asText(MqttAsyncClient.generateClientId());
+        String user = locator.path("user").getNode(root).asText();
+        String password = locator.path("password").getNode(root).asText();
+        String sensorTopic = locator.path("sensorTopic").getNode(root).asText(DEFAULT_SENSOR_TOPIC);
+        String commandTopic = locator.path("commandTopic").getNode(root).asText(DEFAULT_COMMAND_TOPIC);
+        long configureTimeout = locator.path("configureTimeout").getNode(root).asLong(DEFAULT_CONFIGURE_INTERVAL);
+        long retryInterval = locator.path("retryInterval").getNode(root).asLong(DEFAULT_RETRY_INTERVAL);
 
         double maxRadarDistance = locator.path("maxRadarDistance").getNode(root).asDouble();
         double contactRadius = locator.path("contactRadius").getNode(root).asDouble();
@@ -122,7 +132,12 @@ public class MqttRobot implements RobotApi {
                 ? configCommandsLoc.elements(root).map(l -> l.getNode(root).asText()).toArray(String[]::new)
                 : new String[0];
 
-        throw new NotImplementedException();
+        try {
+            return create(brokerUrl, clientId, user, password, sensorTopic, commandTopic, configureTimeout, retryInterval, robotSpec, configCommands);
+        } catch (MqttException e) {
+            logger.atError().setCause(e).log("Error creating mqtt robot");
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -164,7 +179,7 @@ public class MqttRobot implements RobotApi {
     /**
      * Creates the mqtt robot
      *
-     * @param client       the mqtt client
+     * @param client           the mqtt client
      * @param sensorTopic      the sensor topic
      * @param commandTopic     the command topic
      * @param configureTimeout the configuration timeout (ms)

@@ -18,7 +18,7 @@
 
     <logger name="com.networknt.schema" level="INFO"/>
 
-    <logger name="org.mmarini.wheelly.apis.LineSocket" level="DEBUG"/>
+    <logger name="org.mmarini.wheelly.sockets.LineSocket" level="DEBUG"/>
     <logger name="org.mmarini.wheelly.apis.SimRobotObstacleTest" level="INFO"/>
     <logger name="org.mmarini.wheelly.apis.RobotControllerStatus" level="INFO"/>
     <logger name="org.mmarini.wheelly.apis.SimRobot" level="INFO"/>

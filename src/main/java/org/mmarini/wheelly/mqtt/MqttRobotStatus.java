@@ -26,7 +26,11 @@
  *
  */
 
-package org.mmarini.wheelly.apis;
+package org.mmarini.wheelly.mqtt;
+
+import org.mmarini.wheelly.apis.ClockConverter;
+import org.mmarini.wheelly.apis.RobotStatusApi;
+import org.mmarini.wheelly.apis.WatchDog;
 
 import java.util.Objects;
 
