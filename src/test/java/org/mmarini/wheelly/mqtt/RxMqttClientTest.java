@@ -40,12 +40,12 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RxMqttClientTest {
-    public static final String MQTT_BROKER = "tcp://localhost:1883";
+    public static final String MQTT_BROKER = "tcp://192.168.1.145:1883";
     public static final String MQTT_TOPIC = "/test/topic";
-    public static final String MQTT_USER = "JavaClient";
-    public static final String MQTT_PASSWORD = "JavaPass";
+    public static final String MQTT_USER = "";
+    public static final String MQTT_PASSWORD = "";
     public static final String MQTT_MESSAGE = "Hi from the Java application";
-    public static final String MQTT_CLIENT = "mqttClient";
+    public static final String MQTT_CLIENT = "testMqtt";
     private static final Logger logger = LoggerFactory.getLogger(RxMqttClientTest.class);
 
     @Test

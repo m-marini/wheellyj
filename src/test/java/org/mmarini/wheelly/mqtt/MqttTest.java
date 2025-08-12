@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.TimeUnit;
 
 public class MqttTest {
-    public static final String MQTT_BROKER = "tcp://localhost:1883";
+    public static final String MQTT_BROKER = "tcp://192.168.1.145:1883";
     public static final String MQTT_TOPIC = "/test/topic";
     public static final String MQTT_USER = "JavaClient";
     public static final String MQTT_PASSWORD = "JavaPass";
