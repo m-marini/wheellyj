@@ -29,10 +29,10 @@
 package org.mmarini.wheelly.apis;
 
 import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.processors.BehaviorProcessor;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.subjects.CompletableSubject;
-import org.mmarini.NotImplementedException;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;
@@ -154,8 +154,7 @@ public class MockRobot implements RobotApi {
     private final CompletableSubject closed;
     private final Point2D robotPos;
     private final Complex robotDir;
-    private final PublishProcessor<WheellyMessage> messages;
-    private final Flowable<CameraEvent> cameraEvents;
+    private final PublishProcessor<WheellyMotionMessage> motionMessages;
     private final Flowable<Throwable> errors;
     private final BehaviorProcessor<RobotStatusApi> robotLineStatus;
     private long simulationTime;
@@ -165,8 +164,7 @@ public class MockRobot implements RobotApi {
         this.robotDir = robotDir;
         this.closed = CompletableSubject.create();
         this.robotLineStatus = BehaviorProcessor.createDefault(UNCONNECTED);
-        this.messages = PublishProcessor.create();
-        this.cameraEvents = Flowable.empty();
+        this.motionMessages = PublishProcessor.create();
         this.errors = Flowable.empty();
     }
 
@@ -178,7 +176,7 @@ public class MockRobot implements RobotApi {
     public void close() throws IOException {
         closed.onComplete();
         robotLineStatus.onComplete();
-        messages.onComplete();
+        motionMessages.onComplete();
     }
 
     @Override
@@ -189,8 +187,8 @@ public class MockRobot implements RobotApi {
     }
 
     @Override
-    public boolean halt() {
-        return true;
+    public Single<Boolean> halt() {
+        return Single.just(true);
     }
 
     @Override
@@ -199,13 +197,33 @@ public class MockRobot implements RobotApi {
     }
 
     @Override
-    public boolean move(int dir, int speed) {
-        return true;
+    public Single<Boolean> move(int dir, int speed) {
+        return Single.just(true);
     }
 
     @Override
     public Flowable<CameraEvent> readCamera() {
-        return cameraEvents;
+        return Flowable.empty();
+    }
+
+    @Override
+    public Flowable<WheellyContactsMessage> readContacts() {
+        return Flowable.empty();
+    }
+
+    @Override
+    public Flowable<WheellyMotionMessage> readMotion() {
+        return motionMessages;
+    }
+
+    @Override
+    public Flowable<WheellyProxyMessage> readProxy() {
+        return Flowable.empty();
+    }
+
+    @Override
+    public Flowable<WheellySupplyMessage> readSupply() {
+        return Flowable.empty();
     }
 
     @Override
@@ -213,15 +231,6 @@ public class MockRobot implements RobotApi {
         return errors;
     }
 
-    @Override
-    public Flowable<WheellyMessage> readMessages() {
-        return messages;
-    }
-
-    @Override
-    public Flowable<String> readReadLine() {
-        throw new NotImplementedException();
-    }
 
     @Override
     public Flowable<RobotStatusApi> readRobotStatus() {
@@ -229,13 +238,7 @@ public class MockRobot implements RobotApi {
     }
 
     @Override
-    public Flowable<String> readWriteLine() {
-        throw new NotImplementedException();
-    }
-
-    @Override
     public void reconnect() {
-
     }
 
     @Override
@@ -244,8 +247,8 @@ public class MockRobot implements RobotApi {
     }
 
     @Override
-    public boolean scan(int dir) {
-        return true;
+    public Single<Boolean> scan(int dir) {
+        return Single.just(true);
     }
 
     public MockRobot sendStatus(int count, long interval) {
@@ -257,7 +260,7 @@ public class MockRobot implements RobotApi {
 
     public MockRobot sendStatus(long time) {
         this.simulationTime += time;
-        messages.onNext(new WheellyMotionMessage(
+        motionMessages.onNext(new WheellyMotionMessage(
                 simulationTime,
                 distance2Pulse(robotPos.getX()),
                 distance2Pulse(robotPos.getY()),

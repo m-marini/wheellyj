@@ -28,6 +28,8 @@ package org.mmarini.wheelly.apis;
 import io.reactivex.rxjava3.schedulers.Timed;
 
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.Long.parseLong;
@@ -41,6 +43,8 @@ import static java.lang.String.format;
  */
 public record WheellySupplyMessage(long simulationTime, int supplySensor) implements WheellyMessage {
     public static final int NO_PARAMS = 3;
+    // [sampleTime] [voltage (U)]
+    public static final Pattern ARG_PATTERN = Pattern.compile("^\\d+,(\\d+)$");
 
     /**
      * Returns the Wheelly supply event from string
@@ -73,6 +77,26 @@ public record WheellySupplyMessage(long simulationTime, int supplySensor) implem
         }
         int supplySensor = parseInt(params[2]);
         long simTime = time - timeOffset;
+        return new WheellySupplyMessage(simTime, supplySensor);
+    }
+
+    /**
+     * Returns the supply message from argument string
+     * The string status is formatted as:
+     * <pre>
+     *     [sampleTime]
+     *     [voltage (U)]
+     * </pre>
+     *
+     * @param simTime the simulation time (ms)
+     * @param arg     the argument string
+     */
+    public static WheellySupplyMessage parse(long simTime, String arg) {
+        Matcher m = ARG_PATTERN.matcher(arg);
+        if (!m.matches()) {
+            throw new IllegalArgumentException(format("Wrong supply message \"%s\"", arg));
+        }
+        int supplySensor = parseInt(m.group(1));
         return new WheellySupplyMessage(simTime, supplySensor);
     }
 }

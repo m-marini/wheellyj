@@ -26,36 +26,32 @@
  *
  */
 
-package org.mmarini.wheelly.apis;
+package org.mmarini.wheelly.mqtt;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
 
-public class LineSocketTest {
+/**
+ * The device string command
+ */
+public record StringCommand(String id, MqttMessage arg) implements DeviceCommand<String> {
 
-    public static final String ROBOT_HOST = "192.168.1.43";
-    public static final int PORT = 22;
-    public static final int CONNECTION_TIMEOUT = 10000;
-    public static final int READ_TIMEOUT = CONNECTION_TIMEOUT;
-    private LineSocket socket;
-
-    // @Test
-    void connectTest() throws InterruptedException {
-        socket.connect();
-        socket.writeCommand("sc 90");
-        Thread.sleep(1000);
-        socket.writeCommand("sc -90");
-        Thread.sleep(1000);
-        socket.writeCommand("sc 0");
+    /**
+     * Returns the string command
+     *
+     * @param id  the command identifier (the topic suffix)
+     * @param arg the arguments
+     */
+    public static StringCommand create(String id, String arg) {
+        return new StringCommand(id, new MqttMessage(arg.getBytes()));
     }
 
-    @BeforeEach
-    void setUp() {
-        socket = new LineSocket(ROBOT_HOST, PORT, CONNECTION_TIMEOUT, READ_TIMEOUT);
+    @Override
+    public String response(MqttMessage message) {
+        return new String(message.getPayload());
     }
 
-    @AfterEach
-    void tearDown() {
-        socket.close();
+    @Override
+    public MqttMessage toMessage() {
+        return arg;
     }
 }

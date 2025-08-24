@@ -55,9 +55,9 @@ public class RestApi {
      * @param address the robot address
      * @throws IOException in case of error
      */
-    public static NetworkConfig getNetworkConfig(String address) throws IOException {
+    public static RobotConfig getConfig(String address) throws IOException {
         requireNonNull(address);
-        String apiUrl = format("http://%s/api/v1/wheelly/networks/network", address);
+        String apiUrl = format("http://%s/api/v2/wheelly/config", address);
         logger.info("GET {}", apiUrl);
         Client client = ClientBuilder.newClient();
         WebTarget target = client.target(apiUrl);
@@ -65,7 +65,26 @@ public class RestApi {
         if (response.getStatus() != 200) {
             throw new IOException(format("Http Status %d", response.getStatus()));
         }
-        return response.readEntity(NetworkConfig.class);
+        return response.readEntity(RobotConfig.class);
+    }
+
+    /**
+     * Returns the network configuration
+     *
+     * @param address the robot address
+     * @throws IOException in case of error
+     */
+    public static String getWheellyId(String address) throws IOException {
+        requireNonNull(address);
+        String apiUrl = format("http://%s/api/v2/wheelly/id", address);
+        logger.info("GET {}", apiUrl);
+        Client client = ClientBuilder.newClient();
+        WebTarget target = client.target(apiUrl);
+        Response response = target.request(MediaType.APPLICATION_JSON).get();
+        if (response.getStatus() != 200) {
+            throw new IOException(format("Http Status %d", response.getStatus()));
+        }
+        return response.readEntity(JsonNode.class).path("id").asText();
     }
 
     /**
@@ -76,7 +95,7 @@ public class RestApi {
      */
     public static List<String> getNetworks(String address) throws IOException {
         requireNonNull(address);
-        String apiUrl = format("http://%s/api/v1/wheelly/networks", address);
+        String apiUrl = format("http://%s/api/v2/wheelly/networks", address);
         logger.info("GET {}", apiUrl);
         Client client = ClientBuilder.newClient();
         WebTarget target = client.target(apiUrl);
@@ -102,27 +121,22 @@ public class RestApi {
     /**
      * Changes the configuration and returns the new configuration
      *
-     * @param address  the robot address
-     * @param active   true if activated configuration
-     * @param ssid     the network ssid
-     * @param password the pass phrase of network
+     * @param address the robot address
+     * @param config  the configuration
      * @throws IOException in case of error
      */
-    public static NetworkConfig postConfig(String address, boolean active, String ssid, String password) throws IOException {
-        requireNonNull(address);
-        requireNonNull(ssid);
-        requireNonNull(password);
-        String apiUrl = format("http://%s/api/v1/wheelly/networks/network", address);
-        NetworkConfig body = new NetworkConfig(active, ssid, password);
+    public static RobotConfig postConfig(String address, RobotConfig config) throws IOException {
+        requireNonNull(config);
+        String apiUrl = format("http://%s/api/v2/wheelly/config", address);
         logger.info("POST {}", apiUrl);
         Client client = ClientBuilder.newClient();
         WebTarget target = client.target(apiUrl);
         Response response = target.request(MediaType.APPLICATION_JSON)
-                .post(Entity.entity(body, MediaType.APPLICATION_JSON));
+                .post(Entity.entity(config, MediaType.APPLICATION_JSON));
         if (response.getStatus() != 200) {
             throw new IOException(format("Http Status %d", response.getStatus()));
         }
-        return response.readEntity(NetworkConfig.class);
+        return response.readEntity(RobotConfig.class);
     }
 
     /**
@@ -131,9 +145,9 @@ public class RestApi {
      * @param address the robot address
      * @throws IOException in case of error
      */
-    public static NetworkConfig postRestart(String address) throws IOException {
+    public static JsonNode postRestart(String address) throws IOException {
         requireNonNull(address);
-        String apiUrl = format("http://%s/api/v1/wheelly/restart", address);
+        String apiUrl = format("http://%s/api/v2/wheelly/restart", address);
         logger.info("POST {}", apiUrl);
         Client client = ClientBuilder.newClient();
         WebTarget target = client.target(apiUrl);
@@ -142,6 +156,6 @@ public class RestApi {
         if (response.getStatus() != 200) {
             throw new IOException(format("Http Status %d", response.getStatus()));
         }
-        return response.readEntity(NetworkConfig.class);
+        return response.readEntity(JsonNode.class);
     }
 }

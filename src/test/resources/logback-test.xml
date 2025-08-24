@@ -8,6 +8,7 @@
         </encoder>
     </appender>
 
+    <!--
     <appender name="DATA_FILE" class="ch.qos.logback.core.FileAppender">
         <append>false</append>
         <file>test-data.log</file>
@@ -15,17 +16,22 @@
             <pattern>%d{HH:mm:ss.SSS} - %msg%n</pattern>
         </encoder>
     </appender>
+    -->
 
     <logger name="com.networknt.schema" level="INFO"/>
 
-    <logger name="org.mmarini.wheelly.apis.LineSocket" level="DEBUG"/>
+    <logger name="org.mmarini.wheelly.sockets.LineSocket" level="DEBUG"/>
     <logger name="org.mmarini.wheelly.apis.SimRobotObstacleTest" level="INFO"/>
     <logger name="org.mmarini.wheelly.apis.RobotControllerStatus" level="INFO"/>
     <logger name="org.mmarini.wheelly.apis.SimRobot" level="INFO"/>
+    <logger name="org.mmarini.wheelly.mqtt.RxMqttClient" level="DEBUG"/>
+    <logger name="org.mmarini.wheelly.mqtt.MqttRobot" level="DEBUG"/>
+    <logger name="org.mmarini.wheelly.mqtt.MockMqttClient" level="DEBUG"/>
+    <logger name="org.mmarini.wheelly.mqtt.RemoteDevice" level="DEBUG"/>
 
     <logger name="org.mmarini.wheelly.engines.AStar" level="INFO"/>
 
-    <root level="INFO">
+    <root level="DEBUG">
         <appender-ref ref="STDOUT"/>
     </root>
 </configuration>

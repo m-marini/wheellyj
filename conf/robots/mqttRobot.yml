@@ -1,22 +1,25 @@
 ---
-$schema: https://mmarini.org/wheelly/real-robot-schema-0.2
-class: org.mmarini.wheelly.sockets.RealRobot
-robotHost: 192.168.1.43
-cameraHost: localhost
-connectionRetryInterval: 10000
-readTimeout: 10000
+$schema: https://mmarini.org/wheelly/mqtt-robot-schema-0.1
+class: org.mmarini.wheelly.mqtt.MqttRobot
+#brokerUrl: tcp://localhost:1883
+user: wheellyj
+password: wheellyj
+robotId: "wheelly/e05a1b66f89c/v0"
+cameraId: "wheellycam/38182bb1a31c/v0"
+qrDeviceId: "wheellyqr/d94775b8c6f4/v0"
 configureTimeout: 2000
-watchDogInterval: 500
-watchDogTimeout: 5000
+retryInterval: 3000
+cameraInterval: 800
+#cameraTimeout: 2000
 contactRadius: 0.28
 sensorReceptiveAngle: 15
 cameraViewAngle: 120
 maxRadarDistance: 3
 configCommands:
   # 500 ms decay time of low pass filter of motion sensors
-  - cs 500
+  - "cs,500"
 # 5 DEG min rotation, 30 DEG max rotation, 20 pps max speed during rotation
-  - cc 10 30 20
+  - "cc,10,30,20"
 #  - tcsl 32 41 180 -32 -81 -180 400 50
 #  - tcsr 32 41 180 -32 -92 -180 400 50
 #  - fl 0 0
@@ -26,10 +29,13 @@ configCommands:
 #  ...,
 # 400 u/s maximum power velocity (anti-slip regulation),
 # 50 % alpha factor (sensitivity to power correction)
-  - tcsl 50 140 200 -50 -140 -200 400 50
-  - tcsr 50 140 200 -50 -140 -200 400 50
+  - "tcsl,50,140,200,-50,-140,-200,400,50"
+  - "tcsr,50,140,200,-50,-140,-200,400,50"
 # 10000 mU/pps/s feedback motor controller factor
-  - fl 10000 10000
-  - fr 10000 10000
+  - "fl,10000,10000"
+  - "fr,10000,10000"
 # 500 ms status interval, 500 ms proxy interval
-  - ci 500 500
+  - "ci,500,500"
+cameraConfigCommands:
+  # led intensity 255, frame size 9 (800x600)
+  - "cf,255,10"

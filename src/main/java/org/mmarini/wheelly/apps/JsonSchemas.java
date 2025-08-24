@@ -63,6 +63,7 @@ public class JsonSchemas {
             "/env-world-schema.yml",
             "/executor-schema.yml",
             "/monitor-schema.yml",
+            "/mqtt-robot-schema.yml",
             "/network-list-schema.yml",
             "/network-schema.yml",
             "/ppo-agent-schema.yml",

@@ -24,35 +24,9 @@
  *
  *    END OF TERMS AND CONDITIONS
  *
- *//*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
- *
- *  Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- *    END OF TERMS AND CONDITIONS
- *
  */
 
-package org.mmarini.wheelly.apis;
+package org.mmarini.wheelly.sockets;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Flowable;
@@ -61,6 +35,8 @@ import io.reactivex.rxjava3.processors.BehaviorProcessor;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.schedulers.Timed;
+import org.mmarini.NotImplementedException;
+import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.wheelly.rx.RXFunc;
 import org.mmarini.yaml.Locator;
@@ -258,7 +234,7 @@ public class RealRobot implements RobotApi {
         RealRobotStatus s0 = status.get();
         RealRobotStatus st = status.updateAndGet(RealRobotStatus::setConfiguring);
         if (!s0.configured()) {
-            // if not configured
+            // if not robotConfigured
             states.onNext(st);
             // Send configure commands
             List<Single<Boolean>> list = Stream.of(configCommands)
@@ -267,7 +243,7 @@ public class RealRobot implements RobotApi {
             // Send all command the result is true if success
             Single<Boolean> allConfigCmd = Single.concat(list)
                     .filter(configured -> !configured)
-                    .doOnNext(configured -> logger.atDebug().log("Not configured={}", configured))
+                    .doOnNext(configured -> logger.atDebug().log("Not robotConfigured={}", configured))
                     .first(true)
                     .doOnSuccess(configured -> logger.atDebug().log("All configuration command result={}", configured));
             // Wait for synchronisation
@@ -282,7 +258,7 @@ public class RealRobot implements RobotApi {
     }
 
     /**
-     * Sends the configuration command and wait for confirmation for a maximum of configured timeout
+     * Sends the configuration command and wait for confirmation for a maximum of robotConfigured timeout
      *
      * @param command the configuration command
      */
@@ -362,7 +338,7 @@ public class RealRobot implements RobotApi {
     }
 
     @Override
-    public boolean halt() {
+    public Single<Boolean> halt() {
         return writeCommand("ha");
     }
 
@@ -372,7 +348,7 @@ public class RealRobot implements RobotApi {
     }
 
     @Override
-    public boolean move(int dir, int speed) {
+    public Single<Boolean> move(int dir, int speed) {
         return writeCommand(format(Locale.ENGLISH, "mv %d %d", dir, speed));
     }
 
@@ -394,7 +370,7 @@ public class RealRobot implements RobotApi {
     /**
      * Handles the configuration event
      *
-     * @param configured true if configured
+     * @param configured true if robotConfigured
      */
     private void onConfiguration(boolean configured) {
         logger.atDebug().log("Configured={}", configured);
@@ -505,16 +481,30 @@ public class RealRobot implements RobotApi {
     }
 
     @Override
+    public Flowable<WheellyContactsMessage> readContacts() {
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public Flowable<WheellyMotionMessage> readMotion() {
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public Flowable<WheellyProxyMessage> readProxy() {
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public Flowable<WheellySupplyMessage> readSupply() {
+        throw new NotImplementedException();
+    }
+
+    @Override
     public Flowable<Throwable> readErrors() {
         return errors;
     }
 
-    @Override
-    public Flowable<WheellyMessage> readMessages() {
-        return messages;
-    }
-
-    @Override
     public Flowable<String> readReadLine() {
         return readLines;
     }
@@ -524,7 +514,6 @@ public class RealRobot implements RobotApi {
         return states;
     }
 
-    @Override
     public Flowable<String> readWriteLine() {
         return writeLines;
     }
@@ -557,7 +546,7 @@ public class RealRobot implements RobotApi {
     }
 
     @Override
-    public boolean scan(int dir) {
+    public Single<Boolean> scan(int dir) {
         return writeCommand("sc " + dir);
     }
 
@@ -601,15 +590,15 @@ public class RealRobot implements RobotApi {
      *
      * @param cmd the command
      */
-    private boolean writeCommand(String cmd) {
+    private Single<Boolean> writeCommand(String cmd) {
         LineSocket robotSocket = status.get().robotSocket();
         if (robotSocket == null) {
-            return false;
+            return Single.just(false);
         }
         boolean result = robotSocket.writeCommand(cmd);
         if (result) {
             writeLines.onNext(cmd);
         }
-        return result;
+        return Single.just(result);
     }
 }

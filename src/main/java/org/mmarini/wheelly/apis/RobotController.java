@@ -121,8 +121,17 @@ public class RobotController implements RobotControllerApi {
         this.robot.readCamera()
                 .doOnNext(this::onCamera)
                 .subscribe();
-        this.robot.readMessages()
-                .doOnNext(this::onMessage)
+        this.robot.readProxy()
+                .doOnNext(this::onProxyMessage)
+                .subscribe();
+        this.robot.readMotion()
+                .doOnNext(this::onMotionMessage)
+                .subscribe();
+        this.robot.readSupply()
+                .doOnNext(this::onSupplyMessage)
+                .subscribe();
+        this.robot.readContacts()
+                .doOnNext(this::onContactsMessage)
                 .subscribe();
         this.robot.readRobotStatus()
                 .distinctUntilChanged(RobotStatusApi::configured)
@@ -170,11 +179,20 @@ public class RobotController implements RobotControllerApi {
         syncActions(robotStatus);
     }
 
-    @Override
-    public Flowable<Boolean> readReady() {
-        return readControllerStatus()
-                .map(RobotControllerStatusApi::ready)
-                .distinctUntilChanged();
+    /**
+     * Handles contacts messages
+     *
+     * @param message the message
+     */
+    private void onContactsMessage(WheellyContactsMessage message) {
+        RobotStatus status = this.status.updateAndGet(st ->
+                        st.robotStatus(st.robotStatus()
+                                .setContactsMessage(message)
+                                .setSimulationTime(message.simulationTime())))
+                .robotStatus();
+        statusMessages.onNext(status);
+        scheduleInference(status);
+        syncActions(status);
     }
 
     /**
@@ -197,30 +215,32 @@ public class RobotController implements RobotControllerApi {
     }
 
     /**
-     * Handles wheelly messages
+     * Handles motion messages
      *
-     * @param message the wheelly message
+     * @param message the message
      */
-    private void onMessage(WheellyMessage message) {
-        RobotControllerStatus st1 = this.status.updateAndGet(st -> {
-            RobotStatus s = st.robotStatus();
-            RobotStatus s1 = switch (message) {
-                case null -> null;
-                case WheellyContactsMessage msg ->
-                        s.setContactsMessage(msg).setSimulationTime(message.simulationTime());
-                case WheellyMotionMessage msg -> s.setMotionMessage(msg).setSimulationTime(message.simulationTime());
-                case WheellyProxyMessage msg -> s.setProxyMessage(msg).setSimulationTime(message.simulationTime());
-                case WheellySupplyMessage msg -> s.setSupplyMessage(msg).setSimulationTime(message.simulationTime());
-                default -> {
-                    logger.atError().log("Unknown message {}", message.getClass());
-                    yield null;
-                }
-            };
-            return s1 != null
-                    ? st.robotStatus(s1)
-                    : st;
-        });
-        RobotStatus status = st1.robotStatus();
+    private void onMotionMessage(WheellyMotionMessage message) {
+        RobotStatus status = this.status.updateAndGet(st ->
+                        st.robotStatus(st.robotStatus()
+                                .setMotionMessage(message)
+                                .setSimulationTime(message.simulationTime())))
+                .robotStatus();
+        statusMessages.onNext(status);
+        scheduleInference(status);
+        syncActions(status);
+    }
+
+    /**
+     * Handles proxy messages
+     *
+     * @param message the message
+     */
+    private void onProxyMessage(WheellyProxyMessage message) {
+        RobotStatus status = this.status.updateAndGet(st ->
+                        st.robotStatus(st.robotStatus()
+                                .setProxyMessage(message)
+                                .setSimulationTime(message.simulationTime())))
+                .robotStatus();
         statusMessages.onNext(status);
         scheduleInference(status);
         syncActions(status);
@@ -232,9 +252,25 @@ public class RobotController implements RobotControllerApi {
      * @param status the status
      */
     private void onRobotConfigured(RobotStatusApi status) {
-        logger.atDebug().log("Robot configured {}", status.configured());
+        logger.atDebug().log("Robot robotConfigured {}", status.configured());
         RobotControllerStatus st = this.status.updateAndGet(s -> s.ready(status.configured()));
         controllerStatus.onNext(st);
+    }
+
+    /**
+     * Handles supply messages
+     *
+     * @param message the message
+     */
+    private void onSupplyMessage(WheellySupplyMessage message) {
+        RobotStatus status = this.status.updateAndGet(st ->
+                        st.robotStatus(st.robotStatus()
+                                .setSupplyMessage(message)
+                                .setSimulationTime(message.simulationTime())))
+                .robotStatus();
+        statusMessages.onNext(status);
+        scheduleInference(status);
+        syncActions(status);
     }
 
     @Override
@@ -253,8 +289,10 @@ public class RobotController implements RobotControllerApi {
     }
 
     @Override
-    public Flowable<String> readReadLine() {
-        return robot.readReadLine();
+    public Flowable<Boolean> readReady() {
+        return readControllerStatus()
+                .map(RobotControllerStatusApi::ready)
+                .distinctUntilChanged();
     }
 
     @Override
@@ -265,11 +303,6 @@ public class RobotController implements RobotControllerApi {
     @Override
     public Completable readShutdown() {
         return shutdownCompletable;
-    }
-
-    @Override
-    public Flowable<String> readWriteLine() {
-        return robot.readWriteLine();
     }
 
     @Override
@@ -340,6 +373,7 @@ public class RobotController implements RobotControllerApi {
             } catch (IOException e) {
                 logger.atError().setCause(e).log("Error closing robot");
             }
+            robot.readMotion().blockingSubscribe();
             statusMessages.onComplete();
             controllerErrors.onComplete();
             commands.onComplete();
@@ -347,7 +381,7 @@ public class RobotController implements RobotControllerApi {
             controllerStatus.onNext(st);
             controllerStatus.onComplete();
             shutdownCompletable.onComplete();
-            logger.atInfo().log("Shutdown.");
+            logger.atInfo().log("Shut down.");
         }
     }
 

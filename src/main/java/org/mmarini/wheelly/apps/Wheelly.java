@@ -49,6 +49,7 @@ import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.envs.EnvironmentApi;
 import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.wheelly.envs.WorldEnvironment;
+import org.mmarini.wheelly.mqtt.MqttRobot;
 import org.mmarini.wheelly.swing.*;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -103,8 +104,6 @@ public class Wheelly {
         parser.addArgument("-c", "--config")
                 .setDefault("wheelly.yml")
                 .help("specify yaml configuration path");
-        parser.addArgument("-d", "--dump")
-                .help("specify dump signal path");
         parser.addArgument("-i", "--inference")
                 .help("specify inference output path");
         parser.addArgument("-k", "--kpis")
@@ -167,7 +166,6 @@ public class Wheelly {
     private GridPanel gridPanel;
     private long prevRobotStep;
     private long prevStep;
-    private ComDumper dumper;
     private List<JFrame> allFrames;
     private boolean active;
     private KpiBinWriter kpiWriter;
@@ -255,15 +253,6 @@ public class Wheelly {
             this.kpiWriter = KpiBinWriter.createFromLabels(new File(kpis), this.args.getString("labels"));
         }
 
-        // Creates the com line dumper
-        Optional.ofNullable(this.args.getString("dump")).ifPresent(file -> {
-            try {
-                this.dumper = ComDumper.fromFile(file);
-            } catch (IOException e) {
-                logger.atError().setCause(e).log("Error dumping to {}", file);
-            }
-        });
-
         // Creates the model dumper
         Optional.ofNullable(this.args.getString("inference")).ifPresent(file -> {
             try {
@@ -280,8 +269,6 @@ public class Wheelly {
      */
     private void createFlows() {
         controller.readRobotStatus().subscribe(this::handleStatusReady);
-        controller.readReadLine().subscribe(this::handleReadLine);
-        controller.readWriteLine().subscribe(this::handleWrittenLine);
         controller.readCommand().subscribe(sensorMonitor::onCommand);
         controller.readErrors().subscribe(err -> {
             comMonitor.onError(err);
@@ -306,6 +293,10 @@ public class Wheelly {
         Observable.mergeArray(windowObs)
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
                 .subscribe(this::handleWindowClosing);
+
+        if (robot instanceof MqttRobot mqttRobot) {
+            comMonitor.addRobot(mqttRobot);
+        }
 
         if (kpiWriter != null) {
             agent.readKpis()
@@ -519,18 +510,6 @@ public class Wheelly {
     }
 
     /**
-     * Handles read line
-     *
-     * @param line read line
-     */
-    private void handleReadLine(String line) {
-        comMonitor.onReadLine(line);
-        if (dumper != null) {
-            dumper.dumpReadLine(line);
-        }
-    }
-
-    /**
      * @param actionEvent the action event
      */
     private void handleRelocateButton(ActionEvent actionEvent) {
@@ -569,13 +548,6 @@ public class Wheelly {
             trainer.get().agent().close();
         } catch (IOException e) {
             logger.atError().setCause(e).log("Error closing agent");
-        }
-        if (dumper != null) {
-            try {
-                dumper.close();
-            } catch (IOException e) {
-                logger.atError().setCause(e).log("Error closing dumper");
-            }
         }
         if (modelDumper != null) {
             try {
@@ -655,18 +627,6 @@ public class Wheelly {
      */
     private void handleWindowOpened(WindowEvent e) {
         controller.start();
-    }
-
-    /**
-     * Handles written line
-     *
-     * @param line written line
-     */
-    private void handleWrittenLine(String line) {
-        comMonitor.onWriteLine(line);
-        if (dumper != null) {
-            dumper.dumpWrittenLine(line);
-        }
     }
 
     /**

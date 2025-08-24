@@ -15,8 +15,8 @@
     <logger name="com.networknt.schema" level="INFO"/>
     <logger name="io.netty" level="INFO"/>
 
-    <logger name="org.mmarini.wheelly.apis.LineSocket" level="INFO"/>
-    <logger name="org.mmarini.wheelly.apis.RealRobot" level="INFO"/>
+    <logger name="org.mmarini.wheelly.sockets.LineSocket" level="INFO"/>
+    <logger name="org.mmarini.wheelly.sockets.RealRobot" level="INFO"/>
     <logger name="org.mmarini.wheelly.apis.SimRobot" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.apis.RobotController" level="INFO"/>

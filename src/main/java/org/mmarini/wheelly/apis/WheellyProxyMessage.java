@@ -29,6 +29,8 @@ import io.reactivex.rxjava3.schedulers.Timed;
 
 import java.awt.geom.Point2D;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static java.lang.Double.parseDouble;
 import static java.lang.Integer.parseInt;
@@ -54,6 +56,8 @@ public record WheellyProxyMessage(long simulationTime,
                                   double xPulses, double yPulses, int robotYawDeg,
                                   Complex robotYaw) implements WheellyMessage {
     public static final int NUM_PARAMS = 7;
+    // [sampleTime] [sensorDirectionDeg] [distanceTime (us)] [xLocation] [yLocation] [yaw]
+    public static final Pattern ARG_PATTERN = Pattern.compile("^\\d+,(-?\\d+),(\\d+),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+)$");
 
     /**
      * Returns the Wheelly status from status string
@@ -99,6 +103,34 @@ public record WheellyProxyMessage(long simulationTime,
         int robotYaw = parseInt(params[6]);
 
         long simTime = time - timeOffset;
+        return new WheellyProxyMessage(simTime, echoDirection, echoDelay, x, y, robotYaw);
+    }
+
+    /**
+     * Returns the proxy message from argument string
+     * The string status is formatted as:
+     * <pre>
+     *     [sampleTime]
+     *     [sensorDirectionDeg]
+     *     [distanceTime (us)]
+     *     [xLocation]
+     *     [yLocation]
+     *     [yaw]
+     * </pre>
+     *
+     * @param simTime the simulation time
+     * @param arg     the status string
+     */
+    public static WheellyProxyMessage parse(long simTime, String arg) {
+        Matcher m = ARG_PATTERN.matcher(arg);
+        if (!m.matches()) {
+            throw new IllegalArgumentException(format("Wrong contacts message \"%s\"", arg));
+        }
+        int echoDirection = parseInt(m.group(1));
+        int echoDelay = parseInt(m.group(2));
+        double x = parseDouble(m.group(3));
+        double y = parseDouble(m.group(4));
+        int robotYaw = parseInt(m.group(5));
         return new WheellyProxyMessage(simTime, echoDirection, echoDelay, x, y, robotYaw);
     }
 

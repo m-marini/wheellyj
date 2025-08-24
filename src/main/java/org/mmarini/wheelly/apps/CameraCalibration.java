@@ -190,10 +190,6 @@ public class CameraCalibration {
                     comMonitor.onError(er);
                     logger.atError().setCause(er).log("Error:");
                 });
-        controller.readReadLine()
-                .subscribe(this::onReadLine);
-        controller.readWriteLine()
-                .subscribe(this::onWriteLine);
         controller.readShutdown()
                 .subscribe(this::onShutdown);
         controller.readControllerStatus()
@@ -296,16 +292,6 @@ public class CameraCalibration {
     }
 
     /**
-     * Handles the read line
-     *
-     * @param line the read line
-     */
-    private void onReadLine(String line) {
-        comMonitor.onReadLine(line);
-        logger.atDebug().setMessage("--> {}").addArgument(line).log();
-    }
-
-    /**
      * Handles the reconnect button action
      *
      * @param actionEvent the event
@@ -330,16 +316,6 @@ public class CameraCalibration {
      */
     private void onStatus(RobotStatus status) {
         sensorMonitor.onStatus(status);
-    }
-
-    /**
-     * Handles the written line
-     *
-     * @param line the written line
-     */
-    private void onWriteLine(String line) {
-        logger.atDebug().setMessage("<-- {}").addArgument(line).log();
-        comMonitor.onWriteLine(line);
     }
 
     private void positioning(RobotStatus status) {

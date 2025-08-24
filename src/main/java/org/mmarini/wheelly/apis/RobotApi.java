@@ -27,6 +27,7 @@ package org.mmarini.wheelly.apis;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.core.Single;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -37,7 +38,7 @@ import java.io.IOException;
 /**
  * API Interface for robot
  */
-public interface RobotApi extends Closeable, WithWheellyMessageFlowable, WithCameraFlowable, WithIOFlowable, WithErrorFlowable {
+public interface RobotApi extends Closeable, WithWheellyMessageFlowable, WithCameraFlowable, WithErrorFlowable {
 
     /**
      * Returns the robot api from configuration
@@ -67,7 +68,7 @@ public interface RobotApi extends Closeable, WithWheellyMessageFlowable, WithCam
     /**
      * Halts the robot returning true on success
      */
-    boolean halt();
+    Single<Boolean> halt();
 
     /**
      * Returns true if the robot is halted
@@ -80,7 +81,7 @@ public interface RobotApi extends Closeable, WithWheellyMessageFlowable, WithCam
      * @param dir   the direction (DEG)
      * @param speed the speed (PPS)
      */
-    boolean move(int dir, int speed);
+    Single<Boolean> move(int dir, int speed);
 
     /**
      * Returns the robot line status
@@ -102,7 +103,7 @@ public interface RobotApi extends Closeable, WithWheellyMessageFlowable, WithCam
      *
      * @param direction the direction (DEG)
      */
-    boolean scan(int direction);
+    Single<Boolean> scan(int direction);
 
     /**
      * Returns the simulation speed

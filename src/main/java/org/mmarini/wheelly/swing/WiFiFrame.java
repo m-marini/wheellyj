@@ -25,12 +25,13 @@
 
 package org.mmarini.wheelly.swing;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.schedulers.Schedulers;
-import org.mmarini.Tuple2;
 import org.mmarini.swing.GridLayoutHelper;
-import org.mmarini.wheelly.apis.NetworkConfig;
 import org.mmarini.wheelly.apis.RestApi;
+import org.mmarini.wheelly.apis.RobotConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +49,12 @@ public class WiFiFrame extends JFrame {
 
     private static final Logger logger = LoggerFactory.getLogger(WiFiFrame.class);
     private final JTextField address;
-    private final JPasswordField password;
+    private final JPasswordField wifiPassword;
+    private final JTextField wheellyId;
+    private final JTextField mqttBrokerUri;
+    private final JTextField mqttUser;
+    private final JFormattedTextField mqttPort;
+    private final JPasswordField mqttPassword;
     private final JButton activateBtn;
     private final JButton inactivateBtn;
     private final JButton reloadBtn;
@@ -60,15 +66,22 @@ public class WiFiFrame extends JFrame {
         setTitle("WiFi Configuration");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         address = new JTextField();
-        password = new JPasswordField();
+        wheellyId = new JTextField();
+        wifiPassword = new JPasswordField();
         activateBtn = new JButton("Activate");
         inactivateBtn = new JButton("Inactivate");
         reloadBtn = new JButton("Reload");
         active = new JLabel();
         networks = new DefaultListModel<>();
         this.netList = new JList<>(networks);
+        this.mqttBrokerUri = new JTextField();
+        this.mqttUser = new JTextField();
+        this.mqttPort = new JFormattedTextField();
+        this.mqttPassword = new JPasswordField();
 
         netList.setVisibleRowCount(VISIBLE_NETWORK_NUMBER);
+        mqttPort.setValue(1883);
+        wheellyId.setEditable(false);
         createContent();
 
         reloadBtn.addActionListener(ev -> reload());
@@ -77,42 +90,42 @@ public class WiFiFrame extends JFrame {
     }
 
     private void act() {
-        blockUI();
+        enableUI(false);
         logger.debug("reload");
-        String ssid = netList.getSelectedValue();
-        String psw = String.valueOf(password.getPassword());
-        Single<NetworkConfig> confRequest = Single.fromCallable(() -> RestApi.postConfig(address.getText(), true, ssid, psw))
+        Single<RobotConfig> confRequest = Single.fromCallable(() -> RestApi.postConfig(address.getText(), config(true)))
                 .subscribeOn(Schedulers.io());
-        Single<NetworkConfig> restartRequest = Single.fromCallable(() -> RestApi.postRestart(address.getText()))
+        Single<JsonNode> restartRequest = Single.fromCallable(() ->
+                        RestApi.postRestart(address.getText()))
                 .subscribeOn(Schedulers.io());
         confRequest.flatMap(ignored ->
                         restartRequest)
                 .delay(1000, TimeUnit.MILLISECONDS)
                 .subscribe(this::onActConfirm,
                         err -> {
-                            releaseUI();
+                            enableUI(true);
                             handleError(err);
                         });
     }
 
-    /**
-     * Block user interface
-     */
-    private void blockUI() {
-        activateBtn.setEnabled(false);
-        inactivateBtn.setEnabled(false);
-        reloadBtn.setEnabled(false);
-        address.setEnabled(false);
-        netList.setEnabled(false);
-        password.setEnabled(false);
-        this.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+    private RobotConfig config(boolean wifiActive) {
+        return new RobotConfig(wifiActive,
+                netList.getSelectedValue(),
+                String.valueOf(wifiPassword.getPassword()),
+                mqttBrokerUri.getText(),
+                (Integer) mqttPort.getValue(),
+                mqttUser.getText(),
+                String.valueOf(mqttPassword.getPassword())
+        );
     }
 
     private void createContent() {
         JPanel upper = new GridLayoutHelper<>(new JPanel())
-                .modify("insets,2 at,0,0 noweight nofill").add("Address")
+                .modify("insets,2")
+                .modify("at,0,0 noweight nofill").add("Address")
                 .modify("at,1,0 weight,1,0 hfill").add(address)
-                .modify("at,2,0 noweight nofill").add(reloadBtn)
+                .modify("at,0,1 noweight nofill").add("Wheelly ID")
+                .modify("at,1,1 weight,1,0 hfill").add(wheellyId)
+                .modify("at,2,0 noweight nofill s vspan,2").add(reloadBtn)
                 .getContainer();
 
         JPanel centerLeft = new GridLayoutHelper<>(new JPanel())
@@ -120,14 +133,33 @@ public class WiFiFrame extends JFrame {
                 .modify("insets,5 at,0,1 weight,1,1 fill n").add(new JScrollPane(netList))
                 .getContainer();
 
-        JPanel centerRight = new GridLayoutHelper<>(new JPanel())
-                .modify("insets,4 at,0,0 noweight nofill nw").add("Status")
-                .modify("at,1,0 weight,1,0").add(active)
-                .modify("at,0,1 span,2,1").add("Password")
-                .modify("at,0,2 weight,1,1 hfill").add(password)
+        JPanel wifiConf = new GridLayoutHelper<>(new JPanel())
+                .modify("insets,4 w")
+                .modify("at,0,0 noweight nofill").add("Wifi Status")
+                .modify("at,1,0 hw,1").add(active)
+                .modify("at,0,1 noweight span,2,1").add("Wifi Password")
+                .modify("at,0,2 hw,1 hfill").add(wifiPassword)
                 .getContainer();
-        centerRight.setBorder(BorderFactory.createEtchedBorder());
+        wifiConf.setBorder(BorderFactory.createTitledBorder("WiFi Confgiuration"));
 
+        JPanel mqttConf = new GridLayoutHelper<>(new JPanel())
+                .modify("insets,4 w")
+                .modify("at,0,0 noweight nofill").add("Broker host")
+                .modify("at,0,1 hw,1 hfill").add(mqttBrokerUri)
+                .modify("at,0,2 noweight nofill").add("Broker Port")
+                .modify("at,0,3 hw,1 hfill").add(mqttPort)
+                .modify("at,0,4 noweight nofill").add("MQTT User")
+                .modify("at,0,5 hw,1 hfill").add(mqttUser)
+                .modify("at,0,6 noweight nofill").add("MQTT Password")
+                .modify("at,0,7 hw,1 hfill").add(mqttPassword)
+                .getContainer();
+        mqttConf.setBorder(BorderFactory.createTitledBorder("MQTT Configuration"));
+
+        JPanel centerRight = new GridLayoutHelper<>(new JPanel())
+                .modify("insets,2")
+                .modify("at,0,0 noweight fill").add(wifiConf)
+                .modify("at,0,1 weight,1,1 fill").add(mqttConf)
+                .getContainer();
         JPanel center = new GridLayoutHelper<>(new JPanel())
                 .modify("insets,2 at,0,0 weight,1,1 fill").add(centerLeft)
                 .modify("at,1,0").add(centerRight)
@@ -150,21 +182,36 @@ public class WiFiFrame extends JFrame {
         JOptionPane.showMessageDialog(this, err.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     }
 
+    private void enableUI(boolean enabled) {
+        activateBtn.setEnabled(enabled);
+        inactivateBtn.setEnabled(enabled);
+        reloadBtn.setEnabled(enabled);
+        address.setEnabled(enabled);
+        netList.setEnabled(enabled);
+        wifiPassword.setEnabled(enabled);
+        mqttBrokerUri.setEnabled(enabled);
+        mqttPort.setEnabled(enabled);
+        mqttUser.setEnabled(enabled);
+        mqttPassword.setEnabled(enabled);
+
+        this.setCursor(Cursor.getPredefinedCursor(enabled
+                ? Cursor.DEFAULT_CURSOR
+                : Cursor.WAIT_CURSOR));
+    }
+
     private void inact() {
-        blockUI();
+        enableUI(false);
         logger.debug("reload");
-        String ssid = netList.getSelectedValue();
-        String psw = String.valueOf(password.getPassword());
-        Single<NetworkConfig> confRequest = Single.fromCallable(() -> RestApi.postConfig(address.getText(), false, ssid, psw))
+        Single<RobotConfig> confRequest = Single.fromCallable(() -> RestApi.postConfig(address.getText(), config(false)))
                 .subscribeOn(Schedulers.io());
-        Single<NetworkConfig> restartRequest = Single.fromCallable(() -> RestApi.postRestart(address.getText()))
+        Single<JsonNode> restartRequest = Single.fromCallable(() -> RestApi.postRestart(address.getText()))
                 .subscribeOn(Schedulers.io());
 
         confRequest.flatMap(ignored ->
                         restartRequest)
                 .subscribe(this::onInactConfig,
                         err -> {
-                            releaseUI();
+                            enableUI(true);
                             handleError(err);
                         });
     }
@@ -172,14 +219,13 @@ public class WiFiFrame extends JFrame {
     /**
      * Handles the activation confirmation
      *
-     * @param networkConfig the configuration
+     * @param restart the json node response
      */
-    private void onActConfirm(NetworkConfig networkConfig) {
-        setConfig(networkConfig);
-        releaseUI();
+    private void onActConfirm(JsonNode restart) {
+        enableUI(true);
         JOptionPane.showMessageDialog(this,
                 new String[]{
-                        format("Activated network: \"%s\"", networkConfig.getSsid()),
+                        format("Activated network: \"%s\"", netList.getSelectedValue()),
                         "Wheelly has been restarted to reload new configuration."
                 },
                 "Activated",
@@ -190,14 +236,13 @@ public class WiFiFrame extends JFrame {
     /**
      * Handles the inactivation confirmation
      *
-     * @param networkConfig the configuration
+     * @param restart the configuration
      */
-    private void onInactConfig(NetworkConfig networkConfig) {
-        setConfig(networkConfig);
-        releaseUI();
+    private void onInactConfig(JsonNode restart) {
+        enableUI(true);
         JOptionPane.showMessageDialog(this,
                 new String[]{
-                        format("Inactivated network: \"%s\"", networkConfig.getSsid()),
+                        format("Inactivated network: \"%s\"", netList.getSelectedValue()),
                         "Wheelly has been restarted to reload new configuration.",
                         "Wheelly will act as access point for the \"Wheelly\" network without pass phrase",
                         "at default address 192.168.4.1."
@@ -207,53 +252,57 @@ public class WiFiFrame extends JFrame {
         reload();
     }
 
-    private void releaseUI() {
-        activateBtn.setEnabled(true);
-        inactivateBtn.setEnabled(true);
-        reloadBtn.setEnabled(true);
-        address.setEnabled(true);
-        netList.setEnabled(true);
-        password.setEnabled(true);
-        this.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-    }
-
     private void reload() {
-        blockUI();
+        enableUI(false);
         logger.debug("reload");
+        Single<String> idRequest = Single.fromCallable(() -> RestApi.getWheellyId(address.getText()))
+                .subscribeOn(Schedulers.io())
+                .doOnSuccess(this::setWheellyId);
         Single<List<String>> listRequest = Single.fromCallable(() -> RestApi.getNetworks(address.getText()))
-                .subscribeOn(Schedulers.io());
-        Single<NetworkConfig> confRequest = Single.fromCallable(() -> RestApi.getNetworkConfig(address.getText()))
-                .subscribeOn(Schedulers.io());
+                .subscribeOn(Schedulers.io())
+                .doOnSuccess(this::setNetworks);
+        Single<RobotConfig> confRequest = Single.fromCallable(() -> RestApi.getConfig(address.getText()))
+                .subscribeOn(Schedulers.io())
+                .doOnSuccess(this::setConfig);
 
-        listRequest.flatMap(
-                l -> confRequest.map(c -> Tuple2.of(l, c))
+        Flowable.merge(
+                idRequest.map(ignore -> true).toFlowable(),
+                Flowable.concat(
+                        listRequest.map(ignore -> true).toFlowable(),
+                        confRequest.map(ignore -> true).toFlowable()
+                )
         ).subscribe(
-                t -> {
-                    setNetworks(t._1);
-                    setConfig(t._2);
-                    releaseUI();
-                },
+                t ->
+                        enableUI(true),
                 err -> {
-                    releaseUI();
+                    enableUI(true);
                     handleError(err);
                 });
     }
 
-    private void setConfig(NetworkConfig conf) {
-        password.setText(conf.getPassword());
+    private void setWheellyId(String id) {
+        wheellyId.setText(id);
+    }
+
+    private void setConfig(RobotConfig conf) {
+        wifiPassword.setText(conf.getWifiPassword());
         int index = -1;
         for (int i = 0; i < networks.size(); i++) {
-            if (networks.getElementAt(i).equals(conf.getSsid())) {
+            if (networks.getElementAt(i).equals(conf.getWifiSsid())) {
                 index = i;
                 break;
             }
         }
         if (index < 0) {
-            networks.insertElementAt(conf.getSsid(), 0);
+            networks.insertElementAt(conf.getWifiSsid(), 0);
             index = 0;
         }
         netList.setSelectedIndex(index);
-        active.setText(conf.isActive() ? "Active" : "Inactive");
+        active.setText(conf.isWifiActive() ? "Active" : "Inactive");
+        mqttBrokerUri.setText(conf.getMqttBrokerHost());
+        mqttPort.setValue(conf.getMqttBrokerPort());
+        mqttUser.setText(conf.getMqttUser());
+        mqttPassword.setText(conf.getMqttPassword());
     }
 
     private void setNetworks(List<String> list) {

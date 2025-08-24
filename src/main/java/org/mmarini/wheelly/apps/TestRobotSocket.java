@@ -1,7 +1,7 @@
 package org.mmarini.wheelly.apps;
 
 import io.reactivex.Flowable;
-import org.mmarini.wheelly.apis.LineSocket;
+import org.mmarini.wheelly.sockets.LineSocket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

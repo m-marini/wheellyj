@@ -32,10 +32,8 @@ import io.reactivex.rxjava3.core.Flowable;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
@@ -62,14 +60,14 @@ public class MatrixTable extends JPanel {
     }
 
     private final List<MatrixColumn> columns;
-    private final Map<String, MatrixColumn> columByKey;
+    private final Map<String, MatrixColumn> columnByKey;
 
     /**
      * Creates the matrix table
      */
     public MatrixTable() {
         columns = new ArrayList<>();
-        columByKey = new HashMap<>();
+        columnByKey = new HashMap<>();
         setLayout(new BoxLayout(this, BoxLayout.LINE_AXIS));
         setBackground(Color.BLACK);
         Flowable.interval(1000 / 30, TimeUnit.MILLISECONDS)
@@ -97,7 +95,7 @@ public class MatrixTable extends JPanel {
      */
     public MatrixColumn addColumn(String key, MatrixColumn column) {
         columns.add(column);
-        columByKey.put(key, column);
+        columnByKey.put(key, column);
         add(column);
         invalidate();
         return column;
@@ -119,7 +117,7 @@ public class MatrixTable extends JPanel {
     }
 
     public MatrixColumn getColumn(String key) {
-        return columByKey.get(key);
+        return columnByKey.get(key);
     }
 
     public MatrixColumn getColumn(int i) {
@@ -128,6 +126,10 @@ public class MatrixTable extends JPanel {
 
     public int getColumnNumber() {
         return columns.size();
+    }
+
+    public Set<String> getColumnKeys() {
+        return columnByKey.keySet();
     }
 
     public void printf(String key, String pattern, Object... args) {
