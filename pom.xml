@@ -32,7 +32,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.mmarini</groupId>
     <artifactId>wheelly</artifactId>
-    <version>0.24.1</version>
+    <version>0.25.0</version>
     <name>Wheelly</name>
     <description>Wheelly</description>
     <properties>
@@ -46,6 +46,8 @@
         <mockito.version>5.8.0</mockito.version>
         <dl4j-master.version>1.0.0-M2.1</dl4j-master.version>
         <guava.version>33.4.8-jre</guava.version>
+        <guava.version>33.4.8-jre</guava.version>
+        <mqtt.version>1.2.5</mqtt.version>
         <maven-shade-plugin.version>3.3.0</maven-shade-plugin.version>
     </properties>
     <build>
@@ -215,6 +217,11 @@
             <version>3.0.2</version>
         </dependency>
         <dependency>
+            <groupId>org.eclipse.paho</groupId>
+            <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
+            <version>${mqtt.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.glassfish.jersey.core</groupId>
             <artifactId>jersey-client</artifactId>
             <version>2.27</version>
@@ -326,7 +333,6 @@
             <artifactId>jbox2d-library</artifactId>
             <version>2.2.1.1</version>
         </dependency>
-
 
         <dependency>
             <groupId>org.junit.jupiter</groupId>

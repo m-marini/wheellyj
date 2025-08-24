@@ -44,7 +44,7 @@ public record ClockSyncEvent(long originateTimestamp,
      * @param data                 the sync string
      * @param destinationTimestamp the destination timestamp in local clock ticks (ms)
      */
-    static ClockSyncEvent from(String data, long destinationTimestamp) {
+    public static ClockSyncEvent from(String data, long destinationTimestamp) {
         String[] fields = data.split(" ");
         if (fields.length != 4) {
             throw new IllegalArgumentException(format("Wrong clock message \"%s\"", data));

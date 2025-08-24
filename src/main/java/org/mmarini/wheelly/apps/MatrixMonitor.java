@@ -35,6 +35,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.mqtt.MqttRobot;
 import org.mmarini.wheelly.swing.ComMonitor;
 import org.mmarini.wheelly.swing.ControllerStatusMapper;
 import org.mmarini.wheelly.swing.Messages;
@@ -49,7 +50,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.text.DecimalFormat;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.Math.max;
@@ -79,8 +79,6 @@ public class MatrixMonitor {
         parser.addArgument("-c", "--config")
                 .setDefault("monitor.yml")
                 .help("specify yaml configuration file");
-        parser.addArgument("-d", "--dump")
-                .help("specify dump signal file");
         return parser;
     }
 
@@ -118,7 +116,6 @@ public class MatrixMonitor {
     private JFrame commandFrame;
     private JFrame sensorFrame;
     private RobotControllerApi controller;
-    private ComDumper dumper;
     private boolean halt;
     private Namespace parseArgs;
     //    private int commandDuration;
@@ -272,16 +269,6 @@ public class MatrixMonitor {
         this.comFrame = comMonitor.createFrame();
 
         layHorizontally(commandFrame, sensorFrame, comFrame);
-
-        // Creates the dumper if configured
-        Optional.ofNullable(parseArgs.getString("dump"))
-                .ifPresent(file -> {
-                    try {
-                        this.dumper = ComDumper.fromFile(file);
-                    } catch (IOException e) {
-                        logger.atError().setCause(e).log();
-                    }
-                });
     }
 
     /**
@@ -295,10 +282,6 @@ public class MatrixMonitor {
                     comMonitor.onError(er);
                     logger.atError().setCause(er).log("Error:");
                 });
-        controller.readReadLine()
-                .subscribe(this::handleReadLine);
-        controller.readWriteLine()
-                .subscribe(this::handleWriteLine);
         controller.readShutdown()
                 .subscribe(this::handleShutdown);
         controller.readControllerStatus()
@@ -311,6 +294,7 @@ public class MatrixMonitor {
                 .subscribe(this::handleControlStatus);
         controller.setOnLatch(this::onLatch);
         controller.setOnInference(this::onInference);
+
         Observable.mergeArray(
                         SwingObservable.window(commandFrame, SwingObservable.WINDOW_ACTIVE),
                         SwingObservable.window(sensorFrame, SwingObservable.WINDOW_ACTIVE),
@@ -318,6 +302,9 @@ public class MatrixMonitor {
                 .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
                 .subscribe(this::handleClose);
         Stream.of(comFrame, sensorFrame, commandFrame).forEach(f -> f.setVisible(true));
+        if (robot instanceof MqttRobot mqttRobot) {
+            comMonitor.addRobot(mqttRobot);
+        }
     }
 
     /**
@@ -350,19 +337,6 @@ public class MatrixMonitor {
         halt = true;
         runButton.setEnabled(true);
         timeSlider.setEnabled(true);
-    }
-
-    /**
-     * Handles the read line
-     *
-     * @param line the read line
-     */
-    private void handleReadLine(String line) {
-        comMonitor.onReadLine(line);
-        if (dumper != null) {
-            dumper.dumpReadLine(line);
-        }
-        logger.atDebug().setMessage("--> {}").addArgument(line).log();
     }
 
     /**
@@ -414,12 +388,6 @@ public class MatrixMonitor {
         commandFrame.dispose();
         sensorFrame.dispose();
         comFrame.dispose();
-        if (dumper != null) {
-            try {
-                dumper.close();
-            } catch (IOException ignored) {
-            }
-        }
     }
 
     /**
@@ -450,19 +418,6 @@ public class MatrixMonitor {
         int commandDuration = max(timeSlider.getValue(), MIN_TIME);
         timeSlider.setValue(commandDuration);
         timeField.setValue(commandDuration);
-    }
-
-    /**
-     * Handles the written line
-     *
-     * @param line the written line
-     */
-    private void handleWriteLine(String line) {
-        logger.atDebug().setMessage("<-- {}").addArgument(line).log();
-        if (dumper != null) {
-            dumper.dumpWrittenLine(line);
-        }
-        comMonitor.onWriteLine(line);
     }
 
     /**

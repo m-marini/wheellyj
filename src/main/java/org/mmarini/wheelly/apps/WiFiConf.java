@@ -32,17 +32,12 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
-import org.mmarini.wheelly.apis.NetworkConfig;
-import org.mmarini.wheelly.apis.RestApi;
 import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.wheelly.swing.WiFiFrame;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.List;
-
-import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
 public class WiFiConf {
     private static final Logger logger = LoggerFactory.getLogger(WiFiConf.class);
@@ -56,105 +51,32 @@ public class WiFiConf {
         parser.addArgument("-v", "--version")
                 .action(Arguments.version())
                 .help("show current version");
-        parser.addArgument("-s", "--ssid")
-                .help("specify the SSID (network identification)");
         parser.addArgument("-a", "--address")
                 .setDefault("wheelly")
                 .help("specify the host name or ip address");
         parser.addArgument("-p", "--password")
                 .help("specify the network pass phrase");
-        parser.addArgument("action")
-                .choices("list", "show", "act", "inact", "ui")
-                .help("specify the action");
-
         return parser;
     }
 
     public static void main(String[] args) {
-        new WiFiConf().run(args);
-    }
-
-    private Namespace args;
-
-    private void act() throws IOException {
-        String ssid = args.getString("ssid");
-        if (ssid == null) {
-            throw new IllegalArgumentException("Missing SSID");
-        }
-        String password = args.getString("password");
-        if (password == null) {
-            throw new IllegalArgumentException("Missing pass phrase");
-        }
-        NetworkConfig conf = RestApi.postConfig(args.get("address"), true, ssid, password);
-        System.out.printf("Activated network: \"%s\"%n", conf.getSsid());
-        System.out.println("Wheelly restart required to reload new configuration.");
-    }
-
-    private void inact() throws IOException {
-        String ssid = args.getString("ssid");
-        if (ssid == null) {
-            throw new IllegalArgumentException("Missing SSID");
-        }
-        String password = args.getString("password");
-        if (password == null) {
-            throw new IllegalArgumentException("Missing pass phrase");
-        }
-        NetworkConfig conf = RestApi.postConfig(args.get("address"), false, ssid, password);
-        System.out.printf("Inactivated network: \"%s\"%n", conf.getSsid());
-        System.out.println("Wheelly restart required to reload new configuration.");
-        System.out.println("Wheelly will act as access point for the \"Wheelly\" network without pass phrase at default address 192.168.4.1.");
-    }
-
-    private void list() throws IOException {
-        List<String> netList = RestApi.getNetworks(args.getString("address"));
-        System.out.println("Networks");
-        for (String network : netList) {
-            System.out.println("  " + network);
-        }
-    }
-
-    private void run(String[] args) {
+        logger.atInfo().log("WifiConf");
         ArgumentParser parser = createParser();
         try {
-            this.args = parser.parseArgs(args);
-            String action = this.args.getString("action");
-            switch (action) {
-                case "list":
-                    list();
-                    break;
-                case "show":
-                    show();
-                    break;
-                case "act":
-                    act();
-                    break;
-                case "inact":
-                    inact();
-                    break;
-                case "ui":
-                    ui();
-                    break;
-                default:
-                    throw new IllegalArgumentException(format("Wrong action \"%s\"", action));
-            }
+            new WiFiConf(parser.parseArgs(args)).run();
         } catch (ArgumentParserException e) {
             parser.handleError(e);
             System.exit(1);
-        } catch (IOException e) {
-            logger.error(e.getMessage(), e);
-            System.exit(1);
         }
     }
 
-    private void show() throws IOException {
-        NetworkConfig conf = RestApi.getNetworkConfig(args.getString("address"));
-        System.out.println("Configuration:");
-        System.out.printf(" Status: %s%n", conf.isActive() ? "active" : "inactive");
-        System.out.printf(" Network SSID: \"%s\"%n", conf.getSsid());
-        System.out.println(" Password: ***");
+    private final Namespace args;
+
+    public WiFiConf(Namespace args) {
+        this.args = requireNonNull(args);
     }
 
-    private void ui() throws IOException {
+    private void run() {
         new WiFiFrame().start(args.getString("address"));
     }
 }

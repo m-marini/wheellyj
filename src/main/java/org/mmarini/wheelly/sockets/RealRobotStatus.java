@@ -26,7 +26,11 @@
  *
  */
 
-package org.mmarini.wheelly.apis;
+package org.mmarini.wheelly.sockets;
+
+import org.mmarini.wheelly.apis.ClockConverter;
+import org.mmarini.wheelly.apis.RobotStatusApi;
+import org.mmarini.wheelly.apis.WatchDog;
 
 import java.util.Objects;
 
@@ -94,7 +98,7 @@ public record RealRobotStatus(
     }
 
     /**
-     * Returns the configured state
+     * Returns the robotConfigured state
      */
     public RealRobotStatus setConfigured() {
         return !(!connecting && connected && !configuring && configured)
@@ -104,7 +108,7 @@ public record RealRobotStatus(
     }
 
     /**
-     * Returns the configuring state
+     * Returns the robotConfiguring state
      */
     public RealRobotStatus setConfiguring() {
         return !(!connecting && connected && configuring && !configured)

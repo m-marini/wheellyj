@@ -26,11 +26,14 @@
 package org.mmarini.wheelly;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.reactivex.rxjava3.core.Flowable;
 import org.hamcrest.CustomMatcher;
 import org.hamcrest.Matcher;
 import org.junit.jupiter.params.provider.Arguments;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apis.GridTopology;
+import org.mmarini.wheelly.apis.RobotApi;
+import org.mmarini.wheelly.apis.WheellyMessage;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -41,6 +44,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -53,43 +57,28 @@ import static org.mmarini.Utils.zipWithIndex;
 import static org.mmarini.yaml.Utils.fromResource;
 
 public interface TestFunctions {
-    static Predicate<WheellyMessage> after(long time) {
+    static Predicate<? super WheellyMessage> after(long time) {
         return msg -> msg.simulationTime() > time;
     }
 
-    static Predicate<WheellyMessage> before(long time) {
+    static Predicate<? super WheellyMessage> before(long time) {
         return msg -> msg.simulationTime() < time;
     }
 
-    static void execUntil(RobotApi robot, Predicate<WheellyMessage> pred) {
-        robot.readMessages()
-                .filter(pred::test)
-                .firstElement()
-                .blockingGet();
+    static <T extends WheellyMessage> T findMessage(List<T> messages, Predicate<? super WheellyMessage> pred) {
+        return messages.stream().filter(pred).findFirst().orElse(null);
     }
 
-    static void execUntil(RobotApi robot, Predicate<WheellyMessage> pred, long time) {
-        Predicate<WheellyMessage> pred1 = msg -> msg.simulationTime() >= time;
-        execUntil(robot, pred1.or(pred));
-    }
-
-    static WheellyContactsMessage findContact(List<WheellyMessage> messages, Predicate<WheellyMessage> pred) {
-        Predicate<WheellyMessage> classPred = msg -> msg instanceof WheellyContactsMessage;
-        return findMessage(messages, classPred.and(pred));
-    }
-
-    static <T extends WheellyMessage> T findMessage(List<WheellyMessage> messages, Predicate<WheellyMessage> pred) {
-        return (T) messages.stream().filter(pred).findFirst().orElse(null);
-    }
-
-    static WheellyMotionMessage findMotion(List<WheellyMessage> messages, Predicate<WheellyMessage> pred) {
-        Predicate<WheellyMessage> classPred = msg -> msg instanceof WheellyMotionMessage;
-        return findMessage(messages, classPred.and(pred));
-    }
-
-    static WheellyProxyMessage findProxy(List<WheellyMessage> messages, Predicate<WheellyMessage> pred) {
-        Predicate<WheellyMessage> classPred = msg -> msg instanceof WheellyProxyMessage;
-        return findMessage(messages, classPred.and(pred));
+    /**
+     * Pause the execution until simulation time >= time
+     *
+     * @param robot the robot
+     * @param time  the time
+     */
+    static void pause(RobotApi robot, long time) {
+        robot.readMotion()
+                .filter(msg -> msg.simulationTime() >= time)
+                .blockingFirst();
     }
 
     static ArgumentJsonParser jsonFileArguments(String resource) throws IOException {
@@ -141,10 +130,10 @@ public interface TestFunctions {
         return builder.build();
     }
 
-    static void pause(RobotApi robot, long time) {
-        robot.readMessages()
-                .filter(m -> m.simulationTime() >= time)
+    static <T extends WheellyMessage> void waitFor(Flowable<T> messages, Predicate<T> pred, long timeout) {
+        messages.filter(pred::test)
                 .firstElement()
+                .timeout(timeout, TimeUnit.MILLISECONDS)
                 .blockingGet();
     }
 

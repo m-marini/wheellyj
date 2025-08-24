@@ -128,6 +128,21 @@ public record RobotSpec(double maxRadarDistance, Complex receptiveAngle, double 
     }
 
     /**
+     * Creates the robot specification
+     *
+     * @param maxRadarDistance the maximum radar distance (m)
+     * @param receptiveAngle   the receptive angle
+     * @param contactRadius    the contact radius (m)
+     * @param cameraViewAngle  the camera view angle
+     */
+    public RobotSpec(double maxRadarDistance, Complex receptiveAngle, double contactRadius, Complex cameraViewAngle) {
+        this.maxRadarDistance = maxRadarDistance;
+        this.receptiveAngle = requireNonNull(receptiveAngle);
+        this.contactRadius = contactRadius;
+        this.cameraViewAngle = requireNonNull(cameraViewAngle);
+    }
+
+    /**
      * Returns the camera sensor area
      *
      * @param location  the camera location
@@ -151,20 +166,5 @@ public record RobotSpec(double maxRadarDistance, Complex receptiveAngle, double 
                 location, direction, receptiveAngle,
                 RobotSpec.ROBOT_RADIUS, maxRadarDistance
         );
-    }
-
-    /**
-     * Creates the robot specification
-     *
-     * @param maxRadarDistance the maximum radar distance (m)
-     * @param receptiveAngle   the receptive angle
-     * @param contactRadius    the contact radius (m)
-     * @param cameraViewAngle  the camera view angle
-     */
-    public RobotSpec(double maxRadarDistance, Complex receptiveAngle, double contactRadius, Complex cameraViewAngle) {
-        this.maxRadarDistance = maxRadarDistance;
-        this.receptiveAngle = requireNonNull(receptiveAngle);
-        this.contactRadius = contactRadius;
-        this.cameraViewAngle = requireNonNull(cameraViewAngle);
     }
 }

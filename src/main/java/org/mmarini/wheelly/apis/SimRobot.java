@@ -31,6 +31,7 @@ package org.mmarini.wheelly.apis;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.processors.BehaviorProcessor;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Schedulers;
@@ -147,10 +148,11 @@ public class SimRobot implements RobotApi {
     private final double errSigma;
     private final int maxAngularSpeed;
     private final PublishProcessor<CameraEvent> cameraEvents;
-    private final PublishProcessor<WheellyMessage> messages;
     private final PublishProcessor<Throwable> errors;
-    private final PublishProcessor<String> readLines;
-    private final PublishProcessor<String> writeLines;
+    private final PublishProcessor<WheellyContactsMessage> contactsMessages;
+    private final PublishProcessor<WheellyMotionMessage> motionMessages;
+    private final PublishProcessor<WheellyProxyMessage> proxyMessages;
+    private final PublishProcessor<WheellySupplyMessage> supplyMessages;
     private final BehaviorProcessor<ObstacleMap> obstacleChanged;
     private final BehaviorProcessor<RobotStatusApi> robotLineState;
     private final AtomicReference<SimRobotStatus> status;
@@ -200,10 +202,11 @@ public class SimRobot implements RobotApi {
         this.maxAngularSpeed = maxAngularSpeed;
         this.simulationInterval = simulationInterval;
         this.cameraEvents = PublishProcessor.create();
-        this.messages = PublishProcessor.create();
+        this.contactsMessages = PublishProcessor.create();
+        this.motionMessages = PublishProcessor.create();
+        this.supplyMessages = PublishProcessor.create();
+        this.proxyMessages = PublishProcessor.create();
         this.errors = PublishProcessor.create();
-        this.readLines = PublishProcessor.create();
-        this.writeLines = PublishProcessor.create();
         this.obstacleChanged = BehaviorProcessor.create();
         // Creates the jbox2 physic world
         this.world = new World(GRAVITY);
@@ -287,10 +290,11 @@ public class SimRobot implements RobotApi {
         if (!status.getAndUpdate(status -> status.closed(true)).closed()) {
             robotLineState.onNext(status.get());
             robotLineState.onComplete();
-            readLines.onComplete();
-            writeLines.onComplete();
             cameraEvents.onComplete();
-            messages.onComplete();
+            proxyMessages.onComplete();
+            contactsMessages.onComplete();
+            motionMessages.onComplete();
+            supplyMessages.onComplete();
             errors.onComplete();
         }
     }
@@ -411,14 +415,14 @@ public class SimRobot implements RobotApi {
     }
 
     @Override
-    public boolean halt() {
+    public Single<Boolean> halt() {
         SimRobotStatus s0 = status.getAndUpdate(s -> s.speed(0)
                 .sensorDirection(Complex.DEG0)
                 .leftPps(0)
                 .rightPps(0)
                 .direction(direction()));
         logger.atDebug().log("{}: Halt", s0.simulationTime());
-        return true;
+        return Single.just(true);
     }
 
     /**
@@ -490,11 +494,11 @@ public class SimRobot implements RobotApi {
     }
 
     @Override
-    public boolean move(int dir, int speed) {
+    public Single<Boolean> move(int dir, int speed) {
         status.updateAndGet(s -> s.direction(Complex.fromDeg(dir))
                 .speed(clip(speed, -RobotSpec.MAX_PPS, RobotSpec.MAX_PPS)));
         checkForSpeed();
-        return true;
+        return Single.just(true);
     }
 
     /**
@@ -515,13 +519,18 @@ public class SimRobot implements RobotApi {
     }
 
     @Override
+    public Flowable<WheellyContactsMessage> readContacts() {
+        return contactsMessages;
+    }
+
+    @Override
     public Flowable<Throwable> readErrors() {
         return errors;
     }
 
     @Override
-    public Flowable<WheellyMessage> readMessages() {
-        return messages;
+    public Flowable<WheellyMotionMessage> readMotion() {
+        return motionMessages;
     }
 
     /**
@@ -532,8 +541,8 @@ public class SimRobot implements RobotApi {
     }
 
     @Override
-    public Flowable<String> readReadLine() {
-        return readLines;
+    public Flowable<WheellyProxyMessage> readProxy() {
+        return proxyMessages;
     }
 
     @Override
@@ -542,8 +551,8 @@ public class SimRobot implements RobotApi {
     }
 
     @Override
-    public Flowable<String> readWriteLine() {
-        return writeLines;
+    public Flowable<WheellySupplyMessage> readSupply() {
+        return supplyMessages;
     }
 
     @Override
@@ -594,12 +603,12 @@ public class SimRobot implements RobotApi {
     }
 
     @Override
-    public boolean scan(int direction) {
+    public Single<Boolean> scan(int direction) {
         Complex dir = Complex.fromDeg(clip(direction, -90, 90));
         status.updateAndGet(s ->
                 s.sensorDirection(dir)
         );
-        return true;
+        return Single.just(true);
     }
 
     /**
@@ -642,7 +651,7 @@ public class SimRobot implements RobotApi {
                 s.canMoveBackward()
         );
         logger.atDebug().log("On contacts {}", msg);
-        messages.onNext(msg);
+        contactsMessages.onNext(msg);
     }
 
     /**
@@ -662,7 +671,7 @@ public class SimRobot implements RobotApi {
                 0, s.speed() == 0,
                 (int) round(s.leftPps()), (int) round(s.rightPps()),
                 0, 0);
-        messages.onNext(msg);
+        motionMessages.onNext(msg);
         status.updateAndGet(s1 -> s1.motionTimeout(s1.simulationTime() + motionInterval));
     }
 
@@ -680,7 +689,7 @@ public class SimRobot implements RobotApi {
                 s.simulationTime(),
                 s.sensorDirection().toIntDeg(), echoDelay, xPulses, yPulses, robotYaw.toIntDeg());
         logger.atDebug().log("proxy R{} D{}", msg.sensorDirection().toDeg(), msg.echoDistance());
-        messages.onNext(msg);
+        proxyMessages.onNext(msg);
         status.updateAndGet(s1 -> s1.proxyTimeout(s1.simulationTime() + proxyInterval));
     }
 

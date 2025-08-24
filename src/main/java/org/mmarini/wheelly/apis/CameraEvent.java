@@ -32,6 +32,8 @@ import io.reactivex.rxjava3.schedulers.Timed;
 
 import java.awt.geom.Point2D;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static java.lang.String.format;
 
@@ -49,6 +51,7 @@ public record CameraEvent(
         int width, int height,
         Point2D[] points,
         Complex direction) {
+    public static final Pattern ARG_PATTERN = Pattern.compile("^\\d+,(\\S+),(\\d+),(\\d+),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*)$");
     private static final int NUM_PARAMS = 13;
 
     /**
@@ -57,7 +60,7 @@ public record CameraEvent(
      * @param line  the data line
      * @param widthRatio the width ratio
      */
-    static CameraEvent create(Timed<String> line, double widthRatio, long timeOffset) {
+    public static CameraEvent create(Timed<String> line, double widthRatio, long timeOffset) {
         if (!line.value().startsWith("qr ")) {
             return null;
         }
@@ -79,6 +82,34 @@ public record CameraEvent(
         }
         Complex direction = Complex.fromPoint(((xTot - width * 2) / 4) * widthRatio, width);
         return new CameraEvent(time - timeOffset, qrcode, width, height, points, direction);
+    }
+
+
+    /**
+     * Returns the camera event from line
+     *
+     * @param simTime    the simulation time
+     * @param arg        the data line
+     * @param widthRatio the width ratio
+     */
+    public static CameraEvent parse(long simTime, String arg, double widthRatio) {
+        Matcher m = ARG_PATTERN.matcher(arg);
+        if (!m.matches()) {
+            throw new IllegalArgumentException(format("Wrong camera message \"%s\"", arg));
+        }
+        String qrcode = m.group(1);
+        int width = Integer.parseInt(m.group(2));
+        int height = Integer.parseInt(m.group(3));
+        Point2D[] points = new Point2D[4];
+        double xTot = 0;
+        for (int i = 0; i < 4; i++) {
+            double x = Double.parseDouble(m.group(i * 2 + 4));
+            double y = Double.parseDouble(m.group(i * 2 + 5));
+            points[i] = new Point2D.Double(x, y);
+            xTot += x;
+        }
+        Complex direction = Complex.fromPoint(((xTot - width * 2) / 4) * widthRatio, width);
+        return new CameraEvent(simTime, qrcode, width, height, points, direction);
     }
 
     /**

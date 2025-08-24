@@ -317,8 +317,6 @@ public class RobotCheckUp {
         }).subscribe();
 
         // Create flow
-        controller.readReadLine().doOnNext(comMonitor::onReadLine).subscribe();
-        controller.readWriteLine().doOnNext(comMonitor::onWriteLine).subscribe();
         controller.readControllerStatus()
                 .map(ControllerStatusMapper::map)
                 .distinct()

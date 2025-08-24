@@ -1,38 +1,37 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/real-robot-schema-0.2
+$id: https://mmarini.org/wheelly/mqtt-robot-schema-0.1
 title: Robot
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/real-robot-schema-0.2
+    const: https://mmarini.org/wheelly/mqtt-robot-schema-0.1
   class:
-    const: org.mmarini.wheelly.sockets.RealRobot
-  robotHost:
+    const: org.mmarini.wheelly.mqtt.MqttRobot
+  brokerUrl:
     type: string
-  robotPort:
-    type: integer
-    minimum: 1
-    maximum: 32768
-  cameraHost:
+  clientId:
     type: string
-  cameraPort:
+  user:
+    type: string
+  password:
+    type: string
+  robotId:
+    type: string
+  cameraId:
+    type: string
+  qrDeviceId:
+    type: string
+  cameraInterval:
     type: integer
     minimum: 1
-    maximum: 32768
-  connectionRetryInterval:
+  cameraTimeout:
     type: integer
     minimum: 1
-  readTimeout:
+  retryInterval:
     type: integer
     minimum: 1
   configureTimeout:
-    type: integer
-    minimum: 1
-  watchDogInterval:
-    type: integer
-    minimum: 1
-  watchDogTimeout:
     type: integer
     minimum: 1
   contactRadius:
@@ -54,17 +53,20 @@ properties:
     items:
       type: string
       minLength: 3
+  cameraConfigCommand:
+    type: array
+    items:
+      type: string
+      minLength: 3
 required:
   - $schema
   - class
+  - user
+  - password
+  - robotId
+  - cameraId
+  - qrDeviceId
   - contactRadius
   - sensorReceptiveAngle
   - cameraViewAngle
   - maxRadarDistance
-  - robotHost
-  - cameraHost
-  - connectionRetryInterval
-  - readTimeout
-  - configureTimeout
-  - watchDogInterval
-  - watchDogTimeout

@@ -21,3 +21,4 @@ docs/sonar-map.dxf~
 /csv/**/*
 /kpis/*
 /model/**/*
+/**/.lck

@@ -1,6 +1,6 @@
 ---
 $schema: https://mmarini.org/wheelly/executor-schema-2.0
-#robot: conf/robots/realRobot.yml
+#robot: conf/robots/mqttRobot.yml
 #robot: conf/robots/simRobot0Obstacles.yml
 #robot: conf/robots/simRobot1Obstacles.yml
 robot: conf/robots/simRobot10Obstacles.yml

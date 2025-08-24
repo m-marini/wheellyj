@@ -37,6 +37,7 @@ import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.engines.ProcessorContextApi;
 import org.mmarini.wheelly.engines.StateMachineAgent;
 import org.mmarini.wheelly.engines.StateNode;
+import org.mmarini.wheelly.mqtt.MqttRobot;
 import org.mmarini.wheelly.swing.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +48,6 @@ import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.swing.BaseShape.PATH_COLOR;
@@ -85,8 +85,6 @@ public class RobotExecutor {
                 .setDefault(43200L)
                 .type(Long.class)
                 .help("specify number of seconds of session duration");
-        parser.addArgument("-d", "--dump")
-                .help("specify dump signal file");
         return parser;
     }
 
@@ -123,7 +121,6 @@ public class RobotExecutor {
     private long robotStartTimestamp;
     private long prevRobotStep;
     private long prevRealStep;
-    private ComDumper dumper;
     private List<JFrame> allFrames;
     private RobotControllerApi controller;
     private WorldModeller modeller;
@@ -171,17 +168,6 @@ public class RobotExecutor {
                 new File(config.path("agent").asText()));
         agent.connect(modeller);
 
-        // Creating the dumper
-        Optional.ofNullable(this.args.getString("dump"))
-                .ifPresent(file -> {
-                    logger.atInfo().log("Creating dumper {} ...", file);
-                    try {
-                        dumper = ComDumper.fromFile(file);
-                    } catch (IOException e) {
-                        logger.atError().setCause(e).log("Error dumping file");
-                    }
-                });
-
         this.sessionDuration = this.args.getLong("localTime") * 1000;
         logger.atInfo().setMessage("Session will be running for {} sec...").addArgument(sessionDuration).log();
     }
@@ -190,9 +176,16 @@ public class RobotExecutor {
      * Creates the reactive flows
      */
     private void createFlows() {
-        if (robot instanceof SimRobot sim) {
-            sim.readObstacleMap()
-                    .subscribe(this::onObstacleMap);
+        switch (robot) {
+            case SimRobot sim:
+                sim.readObstacleMap()
+                        .subscribe(this::onObstacleMap);
+                break;
+            case MqttRobot mqttRobot:
+                comMonitor.addRobot(mqttRobot);
+                break;
+            case null, default:
+                break;
         }
         controller.readShutdown()
                 .subscribe(this::onShutdown);
@@ -201,10 +194,6 @@ public class RobotExecutor {
                     comMonitor.onError(err);
                     logger.atError().setCause(err).log("Controller error");
                 });
-        controller.readReadLine()
-                .subscribe(this::onReadLine);
-        controller.readWriteLine()
-                .subscribe(this::onWrittenLine);
         controller.readControllerStatus()
                 .map(ControllerStatusMapper::map)
                 .subscribe(this::onControllerStatus);
@@ -222,15 +211,6 @@ public class RobotExecutor {
                 .subscribe(this::onPath);
         agent.readTriggers()
                 .subscribe(this::onTrigger);
-    }
-
-    /**
-     * Handles the path event
-     *
-     * @param path the path
-     */
-    private void onPath(List<Point2D> path) {
-        envPanel.path(PATH_COLOR, path.toArray(Point2D[]::new));
     }
 
     /**
@@ -300,15 +280,12 @@ public class RobotExecutor {
     }
 
     /**
-     * Handles read line
+     * Handles the path event
      *
-     * @param line the read line
+     * @param path the path
      */
-    private void onReadLine(String line) {
-        comMonitor.onReadLine(line);
-        if (dumper != null) {
-            dumper.dumpReadLine(line);
-        }
+    private void onPath(List<Point2D> path) {
+        envPanel.path(PATH_COLOR, path.toArray(Point2D[]::new));
     }
 
     /**
@@ -316,13 +293,6 @@ public class RobotExecutor {
      */
     private void onShutdown() {
         allFrames.forEach(JFrame::dispose);
-        if (dumper != null) {
-            try {
-                dumper.close();
-            } catch (IOException e) {
-                logger.atError().setCause(e).log("Error closing dumper");
-            }
-        }
         if (!args.getBoolean("silent")) {
             JOptionPane.showMessageDialog(null,
                     "Completed", "Information", JOptionPane.INFORMATION_MESSAGE);
@@ -386,18 +356,6 @@ public class RobotExecutor {
      */
     private void onWindowClosing(WindowEvent windowEvent) {
         controller.shutdown();
-    }
-
-    /**
-     * Handles written line
-     *
-     * @param line the written line
-     */
-    private void onWrittenLine(String line) {
-        comMonitor.onWriteLine(line);
-        if (dumper != null) {
-            dumper.dumpWrittenLine(line);
-        }
     }
 
     /**

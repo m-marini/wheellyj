@@ -103,7 +103,7 @@ import java.io.IOException;
  * </code>
  * </p>
  */
-public interface RobotControllerApi extends RobotControllerConnector, WithRobotStatusFlowable, WithIOFlowable, WithErrorFlowable, WithCommandFlowable, WithControllerFlowable {
+public interface RobotControllerApi extends RobotControllerConnector, WithRobotStatusFlowable, WithErrorFlowable, WithCommandFlowable, WithControllerFlowable {
     /**
      * Returns the robot controller from configuration JSON
      *

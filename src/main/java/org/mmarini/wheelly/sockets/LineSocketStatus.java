@@ -26,7 +26,7 @@
  *
  */
 
-package org.mmarini.wheelly.apis;
+package org.mmarini.wheelly.sockets;
 
 import java.nio.channels.AsynchronousSocketChannel;
 import java.util.Objects;

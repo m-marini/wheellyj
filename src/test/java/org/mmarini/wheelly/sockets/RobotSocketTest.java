@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2023-2025 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,29 +26,36 @@
  *
  */
 
-package org.mmarini.wheelly.apis;
+package org.mmarini.wheelly.sockets;
 
-/**
- * The robot status
- */
-public interface RobotStatusApi {
-    /**
-     * Returns true if robot is robotConfigured
-     */
-    boolean configured();
+import io.reactivex.rxjava3.schedulers.Timed;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-    /**
-     * Returns true if robot is robotConfiguring
-     */
-    boolean configuring();
+class RobotSocketTest {
 
-    /**
-     * Returns true if robot is connected
-     */
-    boolean connected();
+    public static final long READ_TIMEOUT = 1000L;
+    public static final long CONNECTION_TIMEOUT = 1000L;
+    public static final int PORT = 22;
+    public static final String ROBOT_HOST = "192.168.1.43";
+    private static final Logger logger = LoggerFactory.getLogger(RobotSocketTest.class);
 
-    /**
-     * Returns true if robot is connecting
-     */
-    boolean connecting();
+    public static void main(String[] args) {
+        LineSocket socket = new LineSocket(ROBOT_HOST, PORT, CONNECTION_TIMEOUT, READ_TIMEOUT);
+        logger.atDebug().log("Connecting...");
+        socket.connect();
+        logger.atDebug().log("Reading...");
+
+        socket.writeCommand("sc 90");
+
+        Timed<String> line = socket.readLines()
+                .firstElement()
+                .blockingGet();
+        logger.atDebug().setMessage("Read {}").addArgument(line).log();
+
+        logger.atDebug().log("Closing...");
+        socket.close();
+        logger.atDebug().log("Closed.");
+    }
+
 }

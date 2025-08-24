@@ -29,6 +29,8 @@ import io.reactivex.rxjava3.schedulers.Timed;
 
 import java.awt.geom.Point2D;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static java.lang.Double.parseDouble;
 import static java.lang.Integer.parseInt;
@@ -61,6 +63,9 @@ public record WheellyMotionMessage(long simulationTime, double xPulses, double y
                                    int rightPower)
         implements WheellyMessage {
     public static final int NO_STATUS_PARAMS = 15;
+    // [sampleTime] [xLocation] [yLocation] [yaw] [leftPps] [rightPps] [imuFailure] [haltCommand] [move directionDeg]
+    // [move speed] [left target pps] [right target pps] [left power] [right power]
+    public static final Pattern ARG_PATTERN = Pattern.compile("^\\d+,(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+),([01]),(-?\\d+),(-?\\d+),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+),(-?\\d+)$");
 
     /**
      * Returns the Wheelly status from status string
@@ -86,7 +91,6 @@ public record WheellyMotionMessage(long simulationTime, double xPulses, double y
      * @param line           the status string
      * @param clockConverter the clock converter
      */
-
     public static WheellyMotionMessage create(Timed<String> line, ClockConverter clockConverter) {
         String[] params = line.value().split(" ");
         if (params.length != NO_STATUS_PARAMS) {
@@ -146,6 +150,55 @@ public record WheellyMotionMessage(long simulationTime, double xPulses, double y
         long simTime = time - timeOffset;
         return new WheellyMotionMessage(simTime, x,
                 y,
+                robotDeg, left,
+                right, imuFailure,
+                halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
+    }
+
+    /**
+     * Returns the motion message status from argument string
+     * The string status is formatted as:
+     * <pre>
+     *     [sampleTime]
+     *     [xLocation]
+     *     [yLocation]
+     *     [yaw]
+     *     [leftPps]
+     *     [rightPps]
+     *     [imuFailure]
+     *     [haltCommand]
+     *     [move directionDeg]
+     *     [move speed]
+     *     [left target pps]
+     *     [right target pps]
+     *     [left power]
+     *     [right power]
+     * </pre>
+     *
+     * @param simTime the simulation time (ms)
+     * @param arg     the argument string
+     */
+    public static WheellyMotionMessage parse(long simTime, String arg) {
+        Matcher m = ARG_PATTERN.matcher(arg);
+        if (!m.matches()) {
+            throw new IllegalArgumentException(format("Wrong contacts message \"%s\"", arg));
+        }
+
+        double x = parseDouble(m.group(1));
+        double y = parseDouble(m.group(2));
+        int robotDeg = parseInt(m.group(3));
+
+        double left = parseDouble(m.group(4));
+        double right = parseDouble(m.group(5));
+
+        int imuFailure = Integer.parseInt(m.group(6));
+        boolean halt = Integer.parseInt(m.group(7)) != 0;
+        int leftTargetPps = Integer.parseInt(m.group(10));
+        int rightTargetPps = Integer.parseInt(m.group(11));
+        int leftPower = Integer.parseInt(m.group(12));
+        int rightPower = Integer.parseInt(m.group(13));
+
+        return new WheellyMotionMessage(simTime, x, y,
                 robotDeg, left,
                 right, imuFailure,
                 halt, leftTargetPps, rightTargetPps, leftPower, rightPower);

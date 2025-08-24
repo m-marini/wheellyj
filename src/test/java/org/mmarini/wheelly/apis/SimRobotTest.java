@@ -25,6 +25,7 @@
 
 package org.mmarini.wheelly.apis;
 
+import io.reactivex.Completable;
 import io.reactivex.rxjava3.subscribers.TestSubscriber;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.awt.geom.Point2D;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import static java.lang.Math.*;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -55,6 +57,7 @@ class SimRobotTest {
     public static final int STALEMATE_INTERVAL = 60000;
     public static final int INTERVAL = 10;
     private static final double PULSES_EPSILON = 1;
+    public static final int CLOSE_DELAY = 100;
 
     /**
      * Given a simulated robot with an obstacles map grid of 0.2 m without obstacles
@@ -100,11 +103,11 @@ class SimRobotTest {
 
     @Test
     void testMoveFrom0To0ByMAX() {
-        // Given a robot connected and configured
+        // Given a robot connected and robotConfigured
         int speed = RobotSpec.MAX_PPS;
         long rt = 1000;
-        TestSubscriber<WheellyMessage> subscriber = new TestSubscriber<>();
-        robot.readMessages()
+        TestSubscriber<WheellyMotionMessage> subscriber = new TestSubscriber<>();
+        robot.readMotion()
                 .subscribe(subscriber);
 
         // When move to 0 DEG at max speed
@@ -117,8 +120,8 @@ class SimRobotTest {
         // Then ...
         subscriber.assertComplete();
         subscriber.assertNoErrors();
-        List<WheellyMessage> messages = subscriber.values();
-        WheellyMotionMessage motion = findMotion(messages, after(MESSAGE_INTERVAL));
+        List<WheellyMotionMessage> messages = subscriber.values();
+        WheellyMotionMessage motion = findMessage(messages, after(MESSAGE_INTERVAL));
 
         double yPulses = expectedPulses(speed, rt);
 
@@ -131,9 +134,9 @@ class SimRobotTest {
     @ParameterizedTest
     @ValueSource(ints = {5, 15, 30, 45, 60, 90, 135, -180, -135, -90, -60, -45, -30, -15, -5})
     void testRotate(int dir) {
-        // Given a robot connected and configured
-        TestSubscriber<WheellyMessage> subscriber = new TestSubscriber<>();
-        robot.readMessages()
+        // Given a robot connected and robotConfigured
+        TestSubscriber<WheellyMotionMessage> subscriber = new TestSubscriber<>();
+        robot.readMotion()
                 .subscribe(subscriber);
 
         // When move to 5 DEG at 0 speed
@@ -141,14 +144,16 @@ class SimRobotTest {
         robot.move(dir, 0);
         pause(robot, MESSAGE_INTERVAL + 1);
         robot.close();
+        robot.readRobotStatus().blockingSubscribe();
+        Completable.timer(CLOSE_DELAY, TimeUnit.MILLISECONDS).blockingAwait();
 
         // Then ...
         subscriber.assertComplete();
         subscriber.assertNoErrors();
-        List<WheellyMessage> messages = subscriber.values();
+        List<WheellyMotionMessage> messages = subscriber.values();
 
         // And the robot should emit motion at (0, 0) toward 5 DEG
-        WheellyMotionMessage motion = findMotion(messages, after(0));
+        WheellyMotionMessage motion = findMessage(messages, after(0));
         long rt = MESSAGE_INTERVAL;
         int maxRot = (int) round(toDegrees(MAX_ANGULAR_VELOCITY * rt / 1e-3));
         int da = (int) round(toDegrees(MAX_ANGULAR_VELOCITY * INTERVAL / 1e-3));
@@ -166,10 +171,10 @@ class SimRobotTest {
     @ParameterizedTest
     @ValueSource(ints = {-90, -45, -30, -15, -5, 0, 5, 15, 30, 45, 90})
     void testScan(int dir) {
-        // Given a sim robot connected and configured
-        // Given a robot connected and configured
-        TestSubscriber<WheellyMessage> subscriber = new TestSubscriber<>();
-        robot.readMessages()
+        // Given a sim robot connected and robotConfigured
+        // Given a robot connected and robotConfigured
+        TestSubscriber<WheellyProxyMessage> subscriber = new TestSubscriber<>();
+        robot.readProxy()
                 .subscribe(subscriber);
 
         // When scan 90 DEG
@@ -181,9 +186,9 @@ class SimRobotTest {
         // Then the consumer should be invoked
         subscriber.assertComplete();
         subscriber.assertNoErrors();
-        List<WheellyMessage> messages = subscriber.values();
+        List<WheellyProxyMessage> messages = subscriber.values();
 
-        WheellyProxyMessage proxy = findProxy(messages, after(0));
+        WheellyProxyMessage proxy = findMessage(messages, after(0));
         assertNotNull(proxy);
         assertEquals(500L, proxy.simulationTime());
         assertEquals(dir, proxy.sensorDirectionDeg());
