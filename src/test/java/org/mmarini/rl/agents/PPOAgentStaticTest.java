@@ -47,7 +47,7 @@ class PPOAgentStaticTest {
         float r1 = 1;
         float r2 = -1;
         INDArray rewards = Nd4j.createFromArray(r0, r1, r2).reshape(3, 1);
-        // And average reward
+        // And average rewards
         float avg0 = 0.3f;
         float avg1 = 0.2f;
         float avg2 = -0.1f;

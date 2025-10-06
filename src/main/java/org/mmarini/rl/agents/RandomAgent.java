@@ -28,8 +28,10 @@ package org.mmarini.rl.agents;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Flowable;
 import org.mmarini.MapStream;
+import org.mmarini.NotImplementedException;
 import org.mmarini.rl.envs.*;
 import org.mmarini.rl.nets.TDNetwork;
+import org.mmarini.wheelly.apis.BatchAgent;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
@@ -44,7 +46,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * Agent that produces a random behavior
  */
-public class RandomAgent implements Agent {
+public class RandomAgent implements AgentRL {
     /**
      * Returns the  random agent from spec
      *
@@ -109,7 +111,7 @@ public class RandomAgent implements Agent {
     }
 
     @Override
-    public Agent alphas(Map<String, Float> alphas) {
+    public BatchAgent alphas(Map<String, Float> alphas) {
         return null;
     }
 
@@ -119,8 +121,7 @@ public class RandomAgent implements Agent {
     }
 
     @Override
-    public Agent backup() {
-        return null;
+    public void backup() {
     }
 
     @Override
@@ -129,7 +130,17 @@ public class RandomAgent implements Agent {
     }
 
     @Override
+    public Agent clearTrajectory() {
+        throw new NotImplementedException();
+    }
+
+    @Override
     public void close() {
+    }
+
+    @Override
+    public Agent dup() {
+        return this;
     }
 
     @Override
@@ -138,7 +149,7 @@ public class RandomAgent implements Agent {
     }
 
     @Override
-    public Agent eta(float eta) {
+    public RandomAgent eta(float eta) {
         return null;
     }
 
@@ -150,6 +161,11 @@ public class RandomAgent implements Agent {
     @Override
     public boolean isReadyForTrain() {
         return false;
+    }
+
+    @Override
+    public Agent trainByTrajectory() {
+        throw new NotImplementedException();
     }
 
     @Override
@@ -184,7 +200,6 @@ public class RandomAgent implements Agent {
 
     @Override
     public void save() {
-
     }
 
     @Override
@@ -193,22 +208,12 @@ public class RandomAgent implements Agent {
     }
 
     @Override
-    public Agent trainByTrajectory(List<ExecutionResult> trajectory) {
-        throw new RuntimeException("Not implemented");
+    public AgentRL trainMiniBatch(long epoch, long startStep, long numStepsParm, Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards, Map<String, INDArray> actionProb0) {
+        throw new NotImplementedException();
     }
 
     @Override
-    public Agent trainMiniBatch(long epoch, long startStep, long numStepsParm, Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards, Map<String, INDArray> actionProb0) {
-        throw new RuntimeException("Not implemented");
-    }
-
-    @Override
-    public List<ExecutionResult> trajectory() {
-        throw new RuntimeException("Not implemented");
-    }
-
-    @Override
-    public Agent trajectory(List<ExecutionResult> trajectory) {
-        throw new RuntimeException("Not implemented");
+    public AgentRL trajectory(List<ExecutionResult> trajectory) {
+        throw new NotImplementedException();
     }
 }

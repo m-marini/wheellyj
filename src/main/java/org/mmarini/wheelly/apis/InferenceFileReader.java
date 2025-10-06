@@ -28,6 +28,8 @@
 
 package org.mmarini.wheelly.apis;
 
+import org.mmarini.Tuple2;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -45,34 +47,55 @@ public class InferenceFileReader extends DataFileReader implements InferenceRead
     public static final WheellySupplyMessage DEFAULT_SUPPLY_MESSAGE = new WheellySupplyMessage(0, 0);
     public static final IntToDoubleFunction DEFAULT_DECODE_VOLTAGE = x -> 12d;
 
+
     /**
      * Returns the world model dumper
      *
-     * @param spec     the world spec
-     * @param topology the radar map topology
-     * @param file     the files
+     * @param file the files
      * @throws IOException in case of error
      */
-    public static InferenceFileReader fromFile(WorldModelSpec spec, GridTopology topology, File file) throws IOException {
+    public static InferenceFileReader fromFile(File file) throws IOException {
+        requireNonNull(file);
         file.getCanonicalFile().getParentFile().mkdirs();
-        return new InferenceFileReader(spec, topology, new FileInputStream(requireNonNull(file)), file.length());
+        FileInputStream stream = new FileInputStream(file);
+        return new InferenceFileReader(stream, file.length()).init();
     }
 
-    private final WorldModelSpec worldSpec;
-    private final GridTopology topology;
+    private WorldModelSpec worldSpec;
+    private GridTopology topology;
 
     /**
      * Creates the world model reader
      *
-     * @param worldSpec the world spec
-     * @param topology  the radar grid topology
-     * @param file      the file
-     * @param size      the size of file
+     * @param file the file
+     * @param size the size of file
      */
-    protected InferenceFileReader(WorldModelSpec worldSpec, GridTopology topology, InputStream file, long size) {
+    protected InferenceFileReader(InputStream file, long size) {
         super(file, size);
-        this.worldSpec = requireNonNull(worldSpec);
-        this.topology = requireNonNull(topology);
+    }
+
+    /**
+     * Initialises file by reading the header
+     */
+    private InferenceFileReader init() throws IOException {
+        Tuple2<WorldModelSpec, GridTopology> header = readHeader();
+        worldSpec = header._1;
+        topology = header._2;
+        return this;
+    }
+
+    /**
+     * Returns the grid topology
+     */
+    public GridTopology topology() {
+        return topology;
+    }
+
+    /**
+     * Returns the world model spec
+     */
+    public WorldModelSpec worldSpec() {
+        return worldSpec;
     }
 
     @Override

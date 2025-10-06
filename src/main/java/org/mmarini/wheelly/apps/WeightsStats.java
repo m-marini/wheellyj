@@ -32,7 +32,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
 import org.mmarini.rl.agents.TDAgentSingleNN;
-import org.mmarini.wheelly.swing.Messages;
+import org.mmarini.swing.Messages;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;

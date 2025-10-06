@@ -34,9 +34,9 @@ import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
 import org.mmarini.Tuple2;
+import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.rx.RXFunc;
 import org.mmarini.wheelly.sockets.LineSocket;
-import org.mmarini.wheelly.swing.Messages;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

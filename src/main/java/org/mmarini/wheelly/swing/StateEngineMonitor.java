@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.swing;
 
+import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.engines.StateNode;
 
 import javax.swing.*;

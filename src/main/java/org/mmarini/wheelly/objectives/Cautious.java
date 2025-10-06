@@ -28,9 +28,7 @@ package org.mmarini.wheelly.objectives;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apis.PolarMap;
 import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WithPolarMap;
-import org.mmarini.wheelly.apis.WithRobotStatus;
-import org.mmarini.wheelly.apps.JsonSchemas;
+import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.yaml.Locator;
 
@@ -56,26 +54,21 @@ public interface Cautious {
     static RewardFunction cautious(double maxDistance) {
         return (s0, a, s1) -> {
             Objects.requireNonNull(s1);
-            if (s1 instanceof WithRobotStatus withRobotStatus) {
-                RobotStatus status = withRobotStatus.getRobotStatus();
-                if (!status.halt() && status.sensorDirection().toIntDeg() != 0) {
-                    // Avoid rotated sensor during movement
-                    return -0.5;
-                }
-                if (s1 instanceof WithPolarMap withPolarMap) {
-                    PolarMap polarMap = withPolarMap.getPolarMap();
-                    Point2D target = polarMap.safeCentroid(maxDistance);
-                    double distance = target.distance(polarMap.center());
-                    Point2D nearest = polarMap.nearestHindered();
-                    if (nearest != null) {
-                        double minDistance = nearest.distance(polarMap.center());
-                        return minDistance > distance ? 1 - distance / minDistance : 0;
-                    } else {
-                        return 1 - distance / maxDistance;
-                    }
-                }
+            RobotStatus status = s1.robotStatus();
+            if (!status.halt() && status.sensorDirection().toIntDeg() != 0) {
+                // Avoid rotated sensor during movement
+                return -0.5;
             }
-            return 0;
+            PolarMap polarMap = s1.polarMap();
+            Point2D target = polarMap.safeCentroid(maxDistance);
+            double distance = target.distance(polarMap.center());
+            Point2D nearest = polarMap.nearestHindered();
+            if (nearest != null) {
+                double minDistance = nearest.distance(polarMap.center());
+                return minDistance > distance ? 1 - distance / minDistance : 0;
+            } else {
+                return 1 - distance / maxDistance;
+            }
         };
     }
 
@@ -86,7 +79,7 @@ public interface Cautious {
      * @param locator the locator
      */
     static RewardFunction create(JsonNode root, Locator locator) {
-        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double maxDistance = locator.path("maxDistance").getNode(root).asDouble();
         return cautious(maxDistance);
     }

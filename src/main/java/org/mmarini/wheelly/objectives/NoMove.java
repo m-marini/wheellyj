@@ -29,9 +29,8 @@ package org.mmarini.wheelly.objectives;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apps.JsonSchemas;
+import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.wheelly.envs.RewardFunction;
-import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 
 import static java.lang.Math.abs;
@@ -51,7 +50,7 @@ public interface NoMove {
      * @param locator the locator
      */
     static RewardFunction create(JsonNode root, Locator locator) {
-        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         float velocityThreshold = (float) locator.path("velocityThreshold").getNode(root).asDouble(DEFAULT_VELOCITY_THRESHOLD);
         double reward = locator.path("reward").getNode(root).asDouble(DEFAULT_REWARD);
         Complex sensorRange = Complex.fromDeg(locator.path("sensorRange").getNode(root).asDouble());
@@ -67,13 +66,11 @@ public interface NoMove {
      */
     static RewardFunction noMove(float velocityThreshold, Complex sensorRange, double reward) {
         return (s0, a, s1) -> {
-            if (s1 instanceof WorldState worldState) {
-                RobotStatus status = worldState.model().robotStatus();
-                if (abs(status.leftPps()) < velocityThreshold
-                        && abs(status.rightPps()) < velocityThreshold
-                        && status.sensorDirection().isCloseTo(Complex.DEG0, sensorRange)) {
-                    return reward;
-                }
+            RobotStatus status = s1.robotStatus();
+            if (abs(status.leftPps()) < velocityThreshold
+                    && abs(status.rightPps()) < velocityThreshold
+                    && status.sensorDirection().isCloseTo(Complex.DEG0, sensorRange)) {
+                return reward;
             }
             return 0;
         };

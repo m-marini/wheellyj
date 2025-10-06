@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,24 +26,18 @@
  *
  */
 
-package org.mmarini.wheelly.envs;
-
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.rl.envs.SignalSpec;
-
-import java.util.Map;
+package org.mmarini.rl.agents;
 
 /**
- * Represents the state of environment and produces the state signals
+ * Provides the training data from trajectory
  */
-public interface State {
+@FunctionalInterface
+public interface RLTrainingDataProvider {
     /**
-     * Returns the signals of state
+     * Returns the training data from trajectory
+     *
+     * @param trajectory the trajectory
+     * @param avgReward  the initial average reward
      */
-    Map<String, Signal> signals();
-
-    /**
-     * Returns the specification of state signals
-     */
-    Map<String, SignalSpec> spec();
+    RLTrainingData get(DLAgent.Trajectory trajectory, float avgReward);
 }

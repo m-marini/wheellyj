@@ -10,8 +10,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.MissingResourceException;
-import java.util.ResourceBundle;
 import java.util.function.BiFunction;
 
 import static java.lang.String.format;
@@ -257,7 +255,7 @@ public class GridLayoutHelper<T extends Container> {
         return n;
     }
 
-    private final ResourceBundle bundle;
+    private final Messages.MessagesBundle messages;
     private final T container;
     private final GridBagLayout layout;
     private GridBagConstraints constraints;
@@ -266,15 +264,15 @@ public class GridLayoutHelper<T extends Container> {
      * @param container
      */
     public GridLayoutHelper(final T container) {
-        this(null, container);
+        this(Messages.messages(), container);
     }
 
     /**
-     * @param bundle
-     * @param container
+     * @param messages the messages
+     * @param container the container
      */
-    public GridLayoutHelper(final ResourceBundle bundle, final T container) {
-        this.bundle = bundle;
+    public GridLayoutHelper(final Messages.MessagesBundle messages, final T container) {
+        this.messages = messages;
         this.container = container;
         layout = new GridBagLayout();
         constraints = new GridBagConstraints();
@@ -355,14 +353,9 @@ public class GridLayoutHelper<T extends Container> {
      * @return
      */
     private String getString(final String key) {
-        if (bundle != null)
-            try {
-                return bundle.getString(key);
-            } catch (final MissingResourceException e) {
-                return '!' + key + '!';
-            }
-        else
-            return key;
+        return messages != null
+                ? messages.getString(key)
+                : key;
     }
 
     public GridLayoutHelper<T> hfill() {

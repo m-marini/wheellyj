@@ -29,10 +29,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.LabelMarker;
 import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WorldModel;
-import org.mmarini.wheelly.apps.JsonSchemas;
+import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.wheelly.envs.RewardFunction;
-import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 
 import java.awt.geom.Point2D;
@@ -42,9 +40,9 @@ import java.util.function.IntUnaryOperator;
 
 import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.RobotSpec.MAX_DIRECTION_ACTION;
 import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
 import static org.mmarini.wheelly.apis.Utils.linear;
-import static org.mmarini.wheelly.envs.WorldEnvironment.MAX_DIRECTION_ACTION;
 
 /**
  * The move to label goal returns the reward
@@ -79,7 +77,7 @@ public interface MoveToLabel {
      * @param locator the locator
      */
     static RewardFunction create(JsonNode root, Locator locator) {
-        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         Complex directionRange = Complex.fromDeg(locator.path("directionRange").getNode(root).asInt(DEFAULT_DIRECTION_RANGE));
         Complex sensorRange = Complex.fromDeg(locator.path("sensorRange").getNode(root).asInt(DEFAULT_SENSOR_RANGE));
         double reward = locator.path("reward").getNode(root).asDouble(DEFAULT_REWARD);
@@ -113,16 +111,13 @@ public interface MoveToLabel {
         requireNonNull(action2Dir);
         requireNonNull(action2Speed);
         return (s0, a, s1) -> {
-            if (s0 instanceof WorldState worldState
-                    && a.containsKey("move")) {
-                WorldModel model = worldState.model();
-                RobotStatus state = model.robotStatus();
+            if (a.move()) {
+                RobotStatus state = s1.robotStatus();
                 Point2D robotLocation = state.location();
-                int actionCode = a.get("move").getInt(0);
-                Complex actionDir = action2Dir.apply(actionCode);
-                int speed = action2Speed.applyAsInt(actionCode);
+                Complex actionDir = a.moveDirection();
+                int speed = a.speed();
                 Complex targetRobotDir = state.direction().add(actionDir);
-                Map<String, LabelMarker> markers = model.markers();
+                Map<String, LabelMarker> markers = s1.markers();
                 if (speed >= minSpeed
                         && speed <= maxSpeed
                         && state.sensorDirection().isCloseTo(Complex.DEG0, sensorRange)

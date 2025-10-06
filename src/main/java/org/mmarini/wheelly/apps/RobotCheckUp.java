@@ -34,8 +34,12 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
+import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.apis.*;
-import org.mmarini.wheelly.swing.*;
+import org.mmarini.wheelly.swing.ComMonitor;
+import org.mmarini.wheelly.swing.ControllerStatusMapper;
+import org.mmarini.wheelly.swing.SensorMonitor;
+import org.mmarini.wheelly.swing.SensorsPanel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -302,7 +306,7 @@ public class RobotCheckUp {
         logger.info("Robot check started.");
         File configFile = new File(parseArgs.getString("config"));
         JsonNode config = fromFile(configFile);
-        JsonSchemas.instance().validateOrThrow(config, CHECKUP_SCHEMA_YML);
+        WheellyJsonSchemas.instance().validateOrThrow(config, CHECKUP_SCHEMA_YML);
 
         logger.info("Creating robot ...");
         RobotApi robot = AppYaml.robotFromJson(config);

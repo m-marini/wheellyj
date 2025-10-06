@@ -30,6 +30,9 @@ package org.mmarini;
 
 import io.reactivex.rxjava3.core.Flowable;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.Function;
@@ -42,6 +45,15 @@ import java.util.stream.Stream;
 import static java.util.Map.entry;
 
 public interface Utils {
+
+    static void deleteRecursive(File file) throws IOException {
+        if (file.isDirectory()) {
+            for (File f : file.listFiles()) {
+                deleteRecursive(f);
+            }
+        }
+        Files.deleteIfExists(file.toPath());
+    }
 
     /**
      * Returns the collector of Map

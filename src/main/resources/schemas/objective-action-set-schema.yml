@@ -1,19 +1,25 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/objective-action-set-schema-1.0
+$id: https://mmarini.org/wheelly/objective-action-set-schema-2.0
 title: Environment
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/objective-action-set-schema-1.0
+    const: https://mmarini.org/wheelly/objective-action-set-schema-2.0
   class:
     const: org.mmarini.wheelly.objectives.ActionSet
-  move:
+  speed:
     type: integer
-    minimum: 0
+    minimum: -60
+    maximum: 60
+  direction:
+    type: integer
+    minimum: -180
+    maximum: 179
   sensor:
     type: integer
-    minimum: 0
+    minimum: -90
+    maximum: 90
   reward:
     type: number
 required:

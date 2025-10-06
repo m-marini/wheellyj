@@ -37,8 +37,9 @@ import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.wheelly.apis.*;
-import org.mmarini.wheelly.envs.State;
-import org.mmarini.wheelly.envs.WorldEnvironment;
+import org.mmarini.wheelly.envs.ActionFunction;
+import org.mmarini.wheelly.envs.DLEnvironment;
+import org.mmarini.wheelly.envs.RLActionFunction;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
@@ -52,6 +53,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -64,13 +66,14 @@ public class SignalGenerator implements SignalGeneratorApi {
     private static final String ACTION_MASKS_PREFIX_KEY = "masks.";
 
     private final WorldModeller modeller;
-    private final WorldEnvironment environment;
+    private final DLEnvironment environment;
     private final AbstractAgentNN agent;
     private final File outputPath;
     private final String[] signalKeys;
     private final String[] actionKeys;
     private final PublishProcessor<GeneratorInfo> infoProcessor;
     private final File file;
+    private final RLActionFunction actionFunction;
     private Map<String, BinArrayFile> keyFileMap;
     private boolean stopping;
 
@@ -85,7 +88,7 @@ public class SignalGenerator implements SignalGeneratorApi {
      * @param signalKeys  the signal keys
      * @param actionKeys  the action key
      */
-    public SignalGenerator(File file, WorldModeller modeller, WorldEnvironment environment,
+    public SignalGenerator(File file, WorldModeller modeller, DLEnvironment environment,
                            AbstractAgentNN agent, File outputPath, String[] signalKeys, String[] actionKeys) {
         this.file = requireNonNull(file);
         this.modeller = requireNonNull(modeller);
@@ -95,28 +98,29 @@ public class SignalGenerator implements SignalGeneratorApi {
         this.signalKeys = requireNonNull(signalKeys);
         this.actionKeys = requireNonNull(actionKeys);
         this.infoProcessor = PublishProcessor.create();
+        ActionFunction actionFunction = environment.actionFunction();
+        if (actionFunction instanceof RLActionFunction a) {
+            this.actionFunction = a;
+        } else {
+            throw new IllegalArgumentException(format("Environment must have %s action function (%s)",
+                    RLActionFunction.class.getName(),
+                    actionFunction.getClass().getName()));
+        }
         logger.atDebug().log("SignalGenerator from {}", file);
-    }
-
-    /**
-     * Returns the action masks
-     *
-     * @param data the inference data
-     */
-    private Map<String, INDArray> createActionMasks(InferenceData data) {
-        return createMasks(data.commands());
     }
 
     /**
      * Returns the file data from inference
      *
-     * @param data the inference
+     * @param state   the world state
+     * @param actions the actions
+     * @param reward  the reward
      */
-    private Map<String, INDArray> createData(InferenceData data) {
+    private Map<String, INDArray> createData(Map<String, Signal> state, Map<String, Signal> actions, float reward) {
         Map<String, INDArray> result = new HashMap<>();
-        result.putAll(createSignals(data.s0));
-        result.putAll(createActionMasks(data));
-        result.put(REWARD_KEY, Nd4j.createFromArray(createReward(data)).reshape(1, 1));
+        result.putAll(createSignals(state));
+        result.putAll(createMasks(actions));
+        result.put(REWARD_KEY, Nd4j.createFromArray(reward).reshape(1, 1));
         return result;
     }
 
@@ -169,21 +173,11 @@ public class SignalGenerator implements SignalGeneratorApi {
     }
 
     /**
-     * Returns the reward
-     *
-     * @param data the inference data
-     */
-    private double createReward(InferenceData data) {
-        return environment.reward(data.s0(), data.commands(), data.s1);
-    }
-
-    /**
      * Returns the input signals
      *
-     * @param data the inference data
+     * @param signals the inference data
      */
-    private Map<String, INDArray> createSignals(State data) {
-        Map<String, Signal> signals = data.signals();
+    private Map<String, INDArray> createSignals(Map<String, Signal> signals) {
         signals = agent.processSignals(signals);
         Map<String, INDArray> inputs = AbstractAgentNN.getInput(signals);
         return Arrays.stream(signalKeys)
@@ -196,27 +190,32 @@ public class SignalGenerator implements SignalGeneratorApi {
     @Override
     public Map<String, BinArrayFile> generate() throws IOException {
         keyFileMap = createResultFiles();
-        try (InferenceFileReader f = InferenceFileReader.fromFile(modeller.worldModelSpec(), modeller.radarModeller().topology(), file)) {
+        try (InferenceFileReader f = InferenceFileReader.fromFile(file)) {
             long n = 0;
 
-            State state0 = null;
-            Map<String, Signal> action0 = null;
+            Map<String, Signal> state0 = null;
+            Map<String, Signal> actions0 = null;
+            WorldModel model0 = null;
+            RobotCommands command0 = null;
             for (; ; ) {
                 Tuple2<WorldModel, RobotCommands> t = readData(f);
                 if (t == null || stopping) {
                     break;
                 }
-                WorldModel model = modeller.updateForInference(t._1);
-                State state1 = environment.state(model);
-                Complex robotDirection = model.robotStatus().direction();
-                Map<String, Signal> actions = environment.actions(t._2, robotDirection);
+                WorldModel model1 = modeller.updateForInference(t._1);
+                // State state1 = environment.state(model);
+                Map<String, Signal> state1 = environment.state(model1);
+
                 if (state0 != null) {
-                    processData(new InferenceData(state0, action0, state1));
+                    double reward = environment.reward(model0, command0, model1);
+                    processData(state0, actions0, (float) reward);
                 }
 
                 // Process state0, action, state1
+                model0 = model1;
                 state0 = state1;
-                action0 = actions;
+                actions0 = this.actionFunction.actions(t._2, model1);
+                command0 = t._2;
                 n++;
                 infoProcessor.onNext(new GeneratorInfo(n, f.position(), f.size()));
             }
@@ -229,10 +228,12 @@ public class SignalGenerator implements SignalGeneratorApi {
     /**
      * Process the inference data
      *
-     * @param inferenceData the inference data
+     * @param state   the state signals
+     * @param actions the actin signals
+     * @param reward  the reward
      */
-    private void processData(InferenceData inferenceData) throws IOException {
-        Map<String, INDArray> data = createData(inferenceData);
+    private void processData(Map<String, Signal> state, Map<String, Signal> actions, float reward) throws IOException {
+        Map<String, INDArray> data = createData(state, actions, reward);
         writeData(data);
     }
 
@@ -243,7 +244,7 @@ public class SignalGenerator implements SignalGeneratorApi {
      */
     private Tuple2<WorldModel, RobotCommands> readData(InferenceReader f) throws IOException {
         try {
-            return f.read();
+            return f.readRecord();
         } catch (EOFException ex) {
             return null;
         }
@@ -274,15 +275,12 @@ public class SignalGenerator implements SignalGeneratorApi {
         }
     }
 
-    private record InferenceData(State s0, Map<String, Signal> commands, State s1) {
-    }
-
     /**
      * It stores process info
      *
      * @param numProcessedRecords number of processed records
      * @param processedBytes      number of processed bytes
-     * @param totalBytes          total number of bytes
+     * @param totalBytes          maximumValue number of bytes
      */
     public record GeneratorInfo(long numProcessedRecords, long processedBytes, long totalBytes) {
     }

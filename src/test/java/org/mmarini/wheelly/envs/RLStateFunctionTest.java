@@ -28,7 +28,6 @@
 
 package org.mmarini.wheelly.envs;
 
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -37,14 +36,14 @@ import org.mmarini.rl.envs.FloatSignalSpec;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.apis.WorldModelBuilder;
+import org.mmarini.wheelly.apis.WorldModelSpec;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
 import java.awt.geom.Point2D;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasKey;
@@ -53,7 +52,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
 
-class WorldStateTest {
+class RLStateFunctionTest {
 
     public static final int GRID_MAP_SIZE = 5;
     public static final double GRID_SIZE = 0.5;
@@ -62,54 +61,16 @@ class WorldStateTest {
     public static final List<String> MARKERS = List.of("A", "B");
     public static final double MARKER_SIZE = 0.3;
     public static final WorldModelSpec WORLD_SPEC = new WorldModelSpec(ROBOT_SPEC, SECTOR_NUMBERS, GRID_MAP_SIZE, MARKER_SIZE);
-    public static final Map<String, SignalSpec> SIGNAL_SPEC = WorldEnvironment.createStateSpec(WORLD_SPEC, MARKERS.size());
     private static final int RADAR_SIZE = 11;
     private static final float MAX_RADAR_DISTANCE = 3f;
     private static final long NUM_MARKERS = MARKERS.size();
 
-    private static LabelMarker createLabel(String labelA, double xa, double ya) {
-        return new LabelMarker(labelA, new Point2D.Double(xa, ya), 1, 0, 0);
-    }
-
-    private static PolarMap createPolarMap() {
-        return PolarMap.create(SECTOR_NUMBERS);
-    }
-
-    @NotNull
-    private static RadarMap createRadarMap() {
-        return RadarMap.empty(GridTopology.create(new Point2D.Float(), RADAR_SIZE, RADAR_SIZE, GRID_SIZE))
-                .updateCellAt(0, 0, cell -> cell.addEchogenic(100, 0));
-    }
-
-    private static RobotStatus createRobotStatus(double robotX, double robotY, int robotDeg) {
-        return RobotStatus.create(ROBOT_SPEC, x -> 12)
-                .setLocation(new Point2D.Double(robotX, robotY))
-                .setDirection(Complex.fromDeg(robotDeg));
-    }
-
-    static WorldModel createWorldModel(RobotStatus status, LabelMarker... markers) {
-        RadarMap radarMap = createRadarMap();
-        PolarMap polarMap = createPolarMap();
-        GridMap gridMap = GridMap.create(radarMap, status.location(), status.direction(), GRID_MAP_SIZE);
-        Map<String, LabelMarker> markerMap = Arrays.stream(markers)
-                .filter(m -> !RobotSpec.UNKNOWN_QR_CODE.equals(m.label()))
-                .collect(Collectors.toMap(
-                        LabelMarker::label,
-                        x -> x
-                ));
-        return new WorldModel(WORLD_SPEC, status, radarMap, markerMap, polarMap, gridMap, null);
-    }
-
-    @Test
-    void createTest() {
-        // Given a mock status
-        WorldModel model = createWorldModel(createRobotStatus(0, 0, 0));
-
-        // When create a state from world state
-        WorldState state = WorldState.create(model, SIGNAL_SPEC, MARKERS);
-
-        // Then ...
-        assertSame(model, state.model());
+    static WorldModelBuilder modelBuilder() {
+        return new WorldModelBuilder()
+                .radarSize(RADAR_SIZE, RADAR_SIZE)
+                .gridMapSize(GRID_MAP_SIZE)
+                .numSectors(SECTOR_NUMBERS)
+                .addEchoCell(new Point2D.Double());
     }
 
     @ParameterizedTest(name = "[{index}] R{0} {1}@{2},{3} {4}@{5},{6}")
@@ -123,18 +84,21 @@ class WorldStateTest {
             "0, A,0,1, B,1,0, 1,1, 1,1, 0,90",
             "0, A,0,3.001, B,3.001,0, 0,0, 0,0, 0,0",
     })
-    void markerSignalsTest(int robotDeg, String labelA, double xa, double ya, String labelB, double xb, double yb,
+    void testMarkerSignals(int robotDeg, String labelA, double xa, double ya, String labelB, double xb, double yb,
                            float expStateA, float expStateB,
                            float expDistA, float expDistB,
                            int expDirA, int expDirB
     ) {
         // Given ...
-        RobotStatus status = createRobotStatus(0, 0, robotDeg);
-        WorldModel model = createWorldModel(status, createLabel(labelA, xa, ya), createLabel(labelB, xb, yb));
-        WorldState state = WorldState.create(model, SIGNAL_SPEC, MARKERS);
+        WorldModel model = modelBuilder()
+                .robotDir(robotDeg)
+                .addLabel(labelA, new Point2D.Double(xa, ya))
+                .addLabel(labelB, new Point2D.Double(xb, yb))
+                .build();
+        RLStateFunction func = RLStateFunction.create(model.worldSpec(), MARKERS);
 
         // When ...
-        Map<String, Signal> signals = state.signals();
+        Map<String, Signal> signals = func.signals(model);
 
         // Then
         Signal markerStates = signals.get("markerStates");
@@ -155,13 +119,12 @@ class WorldStateTest {
     }
 
     @Test
-    void markersSpecTest() {
+    void testMarkersSpec() {
         // Given ...
-        WorldModel model = createWorldModel(createRobotStatus(0, 0, 0));
-        WorldState state = WorldState.create(model, SIGNAL_SPEC, MARKERS);
+        RLStateFunction func = RLStateFunction.create(WORLD_SPEC, MARKERS);
 
         // When ...
-        Map<String, SignalSpec> spec = state.spec();
+        Map<String, SignalSpec> spec = func.spec();
 
         // Then marker states spec should be int spec
         SignalSpec makerState = spec.get("markerStates");
@@ -194,22 +157,29 @@ class WorldStateTest {
     @ValueSource(ints = {
             46, 90, 133
     })
-    void signalsTest(int robotDeg) {
+    void testSignals(int robotDeg) {
         // Given ...
-        RobotStatus status = createRobotStatus(0, -0.5, robotDeg);
-        WorldModel model = createWorldModel(status);
-        WorldState state = WorldState.create(model, SIGNAL_SPEC, MARKERS);
+        //RobotStatus status = createRobotStatus(0, -0.5, robotDeg);
+        WorldModel model = new WorldModelBuilder()
+                .radarSize(RADAR_SIZE, RADAR_SIZE)
+                .gridMapSize(GRID_MAP_SIZE)
+                .numSectors(SECTOR_NUMBERS)
+                .robotLocation(new Point2D.Double(0, -0.5))
+                .robotDir(robotDeg)
+                .addEchoCell(new Point2D.Double())
+                .build();
+        RLStateFunction func = RLStateFunction.create(model.worldSpec(), MARKERS);
 
         // When ...
-        Map<String, Signal> signals = state.signals();
+        Map<String, Signal> signals = func.signals(model);
 
         // Then
         assertThat(signals, hasKey("cellStates"));
         INDArray cellStates = signals.get("cellStates").toINDArray();
         assertThat(cellStates, matrixCloseTo(new long[]{25}, 1e-3,
+                0f, 0, 0, 0, 0,
                 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0,
-                0, 2, 0, 0, 0,
+                2, 0, 0, 0, 0,
                 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0
         ));
@@ -221,13 +191,12 @@ class WorldStateTest {
     }
 
     @Test
-    void specCellTest() {
+    void testSpecCellTest() {
         // Given ...
-        WorldModel model = createWorldModel(createRobotStatus(0, 0, 0));
-        WorldState state = WorldState.create(model, SIGNAL_SPEC, MARKERS);
+        RLStateFunction func = RLStateFunction.create(WORLD_SPEC, MARKERS);
 
         // When ...
-        Map<String, SignalSpec> spec = state.spec();
+        Map<String, SignalSpec> spec = func.spec();
 
         // Then ...
         SignalSpec cellStates = spec.get("cellStates");

@@ -34,7 +34,6 @@ import org.mmarini.wheelly.apis.LabelMarker;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.envs.RewardFunction;
-import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -50,7 +49,7 @@ import static org.mockito.Mockito.when;
 
 class LabelTest {
 
-    static WorldState createState(Complex robotDir, Complex sensorDir, double leftPps, double rightPps, Complex obstacleDir, double distance) {
+    static WorldModel createState(Complex robotDir, Complex sensorDir, double leftPps, double rightPps, Complex obstacleDir, double distance) {
         Point2D.Double robotLocation = new Point2D.Double();
         long timestamp = System.currentTimeMillis();
         Point2D obstacleLocation = obstacleDir.at(robotLocation, distance);
@@ -64,10 +63,7 @@ class LabelTest {
         WorldModel model = mock();
         when(model.markers()).thenReturn(markers);
         when(model.robotStatus()).thenReturn(status);
-
-        WorldState state = mock();
-        when(state.model()).thenReturn(model);
-        return state;
+        return model;
     }
 
     @ParameterizedTest(
@@ -120,12 +116,12 @@ class LabelTest {
         ));
         RewardFunction f = Label.create(root, Locator.root());
 
-        WorldState state = createState(Complex.fromDeg(robotDir),
+        WorldModel state = createState(Complex.fromDeg(robotDir),
                 Complex.fromDeg(sensorDir),
                 leftPps, rightPps,
                 Complex.fromDeg(obstacleDir), distance);
 
-        double result = f.apply(null, null, state);
+        double result = f.applyAsDouble(null, null, state);
 
         assertThat(result, closeTo(expected, 1e-4));
     }

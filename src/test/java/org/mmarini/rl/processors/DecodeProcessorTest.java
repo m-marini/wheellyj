@@ -116,7 +116,7 @@ class DecodeProcessorTest {
         Map<String, Signal> result = encoder.apply(input);
         assertThat(result, hasKey("out"));
         INDArray features = result.get("out").toINDArray();
-        assertThat(features, matrixCloseTo(new long[]{1}, EPSILON, y));
+        assertThat(features, matrixCloseTo(new long[]{1, 1}, EPSILON, y));
     }
 
     @ParameterizedTest
@@ -164,7 +164,7 @@ class DecodeProcessorTest {
         Map<String, Signal> result = proc.apply(input);
         assertThat(result, hasKey("out"));
         INDArray features = result.get("out").toINDArray();
-        assertThat(features, matrixCloseTo(new long[]{1}, 1e-3, y));
+        assertThat(features, matrixCloseTo(new long[]{1, 1}, 1e-3, y));
     }
 
     @Test

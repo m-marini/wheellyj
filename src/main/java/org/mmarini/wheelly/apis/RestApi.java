@@ -27,7 +27,6 @@ package org.mmarini.wheelly.apis;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.networknt.schema.ValidationMessage;
-import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,7 +103,7 @@ public class RestApi {
             throw new IOException(format("Http Status %d", response.getStatus()));
         }
         JsonNode netList = response.readEntity(JsonNode.class);
-        Set<ValidationMessage> errors = JsonSchemas.instance().validate(netList, "https://mmarini.org/wheelly/network-list-schema");
+        Set<ValidationMessage> errors = WheellyJsonSchemas.instance().validate(netList, "https://mmarini.org/wheelly/network-list-schema");
         if (!errors.isEmpty()) {
             String text = errors.stream()
                     .map(ValidationMessage::toString)

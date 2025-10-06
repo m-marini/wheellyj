@@ -1,0 +1,20 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/state-func-dl-schema-0.1
+title: RL state function
+type: object
+properties:
+  $schema:
+    const: https://mmarini.org/wheelly/state-func-dl-schema-0.1
+  class:
+    const: org.mmarini.wheelly.envs.DLStateFunction
+  markerLabels:
+    type: array
+    items:
+      type: string
+      minLength: 1
+    minItems: 1
+required:
+  - $schema
+  - class
+  - markerLabels

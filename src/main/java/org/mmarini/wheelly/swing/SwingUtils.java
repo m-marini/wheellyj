@@ -28,10 +28,10 @@
  */
 package org.mmarini.wheelly.swing;
 
+import org.mmarini.swing.Messages;
+
 import javax.swing.*;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Various functionalities used in the user interface.
@@ -48,23 +48,6 @@ public class SwingUtils {
      */
     public static SwingUtils getInstance() {
         return instance;
-    }
-
-    /**
-     * @param key the key
-     */
-    public static String[] loadPatterns(final String key) {
-        final List<String> list = new ArrayList<>(0);
-        int i = 0;
-        for (; ; ) {
-            final String text = Messages.getString(key + "." + i);
-            if (text.startsWith("!")) {
-                break;
-            }
-            list.add(text);
-            ++i;
-        }
-        return list.toArray(new String[0]);
     }
 
     /**

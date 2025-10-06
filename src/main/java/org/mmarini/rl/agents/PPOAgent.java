@@ -29,18 +29,22 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.MapStream;
+import org.mmarini.NotImplementedException;
+import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.ExecutionResult;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.rl.nets.TDNetworkState;
 import org.mmarini.rl.processors.InputProcessor;
-import org.mmarini.wheelly.apps.JsonSchemas;
+import org.mmarini.wheelly.apis.BatchAgent;
+import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
+import org.nd4j.linalg.dataset.api.MultiDataSet;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
@@ -75,7 +79,7 @@ public class PPOAgent extends AbstractAgentNN {
      */
     static INDArray computeAdvantage(INDArray rewards, INDArray avgRewards, INDArray vPrediction) {
         // Computes the advantage A(t) for next n steps t = 0...n-1
-        // we known reward r(t), R(t), advantage prediction v(t), v(n)
+        // we known rewards r(t), R(t), advantage prediction v(t), v(n)
         // A(t,n) = r(t) - R(t) + r(t+1) - R(t+1) + ... + r(n-1) - R(n-1) + v(t) - v(n)
         // A(t,n) = sum_i [r(i) - R(i)] + v(t) - v(n) for i = t...n-1
         // lets returns be a(t,n) = sum_i [r(i) - R(i)] for i = t...n-1
@@ -112,7 +116,7 @@ public class PPOAgent extends AbstractAgentNN {
      */
     public static PPOAgent create(JsonNode root, WithSignalsSpec env) {
         Locator locator = Locator.root();
-        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         File path = new File(locator.path("modelPath").getNode(root).asText());
         Random random = Nd4j.getRandom();
         long seed = locator.path("seed").getNode(root).asLong(0);
@@ -173,8 +177,8 @@ public class PPOAgent extends AbstractAgentNN {
      *
      * @param state       the states
      * @param actions     the actions
-     * @param avgReward   the average reward
-     * @param rewardAlpha the reward alpha parameter
+     * @param avgReward   the average rewards
+     * @param rewardAlpha the rewards alpha parameter
      * @param eta         the learning rate hyperparameter
      * @param alphas      the network training alpha parameter by output
      * @param lambda      the TD lambda factor
@@ -210,7 +214,7 @@ public class PPOAgent extends AbstractAgentNN {
      */
     public static PPOAgent fromJson(JsonNode spec, Locator locator, Map<String, INDArray> props,
                                     File path, Random random) {
-        JsonSchemas.instance().validateOrThrow(locator.getNode(spec), SPEC_SCHEMA_NAME);
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(spec), SPEC_SCHEMA_NAME);
         Map<String, SignalSpec> state = SignalSpec.createSignalSpecMap(spec, locator.path("state"));
         Map<String, SignalSpec> actions = SignalSpec.createSignalSpecMap(spec, locator.path("actions"));
         Map<String, Float> alphas = locator.path("alphas").propertyNames(spec)
@@ -291,8 +295,8 @@ public class PPOAgent extends AbstractAgentNN {
      *
      * @param state         the states
      * @param actions       the actions
-     * @param avgReward     the average reward
-     * @param rewardAlpha   the reward alpha parameter
+     * @param avgReward     the average rewards
+     * @param rewardAlpha   the rewards alpha parameter
      * @param eta           the learning rate hyperparameter
      * @param alphas        the network training alpha parameter by output
      * @param lambda        the TD lambda factor
@@ -342,6 +346,21 @@ public class PPOAgent extends AbstractAgentNN {
                 ? new PPOAgent(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
                 indicatorsPub, postTrainKpis, ppoEpsilon)
                 : this;
+    }
+
+    @Override
+    public Tuple2<MultiDataSet, Float> createDataSet(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards, float avgReward) {
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public Agent dup() {
+        return this;
+    }
+
+    @Override
+    public BatchAgent train(RLDatasetIterator datasetIterator, int numEpochs) {
+        throw new NotImplementedException();
     }
 
     @Override

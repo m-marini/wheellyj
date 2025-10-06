@@ -40,8 +40,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TDAgentSingleNNStaticTest {
 
-    private static final float EPSILON = 1e-6f;
-
     @Test
     void chooseAction() {
         Random random = Nd4j.getRandom();
@@ -85,8 +83,8 @@ class TDAgentSingleNNStaticTest {
         Random random = Nd4j.getRandom();
         Map<String, Signal> actions = TDAgentSingleNN.chooseActions(pis, random);
 
-        assertEquals(0, actions.get("a").getInt(0));
-        assertEquals(1, actions.get("b").getInt(0));
-        assertEquals(2, actions.get("c").getInt(0));
+        assertEquals(0, actions.get("a").getInt(0, 0));
+        assertEquals(1, actions.get("b").getInt(0, 0));
+        assertEquals(2, actions.get("c").getInt(0, 0));
     }
 }

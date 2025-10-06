@@ -29,10 +29,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.LabelMarker;
 import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WorldModel;
-import org.mmarini.wheelly.apps.JsonSchemas;
+import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.wheelly.envs.RewardFunction;
-import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 
 import java.awt.geom.Point2D;
@@ -58,7 +56,7 @@ public interface SensorLabel {
      * @param locator the locator
      */
     static RewardFunction create(JsonNode root, Locator locator) {
-        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double minDistance = locator.path("minDistance").getNode(root).asDouble();
         double maxDistance = locator.path("maxDistance").getNode(root).asDouble();
         double velocityThreshold = locator.path("velocityThreshold").getNode(root).asDouble(DEFAULT_VELOCITY_THRESHOLD);
@@ -81,25 +79,23 @@ public interface SensorLabel {
                                 Complex sensorRange,
                                 double reward) {
         return (s0, a, s1) -> {
-            if (s1 instanceof WorldState state) {
-                // the environment supports radar map
-                WorldModel model = state.model();
-                RobotStatus robotStatus = model.robotStatus();
-                double echoDistance = robotStatus.echoDistance();
-                Point2D robotLocation = robotStatus.location();
-                // Get the nearest marker
-                Optional<LabelMarker> marker = model.markers().values().stream()
-                        .min(Comparator.comparingDouble(m -> m.location().distanceSq(robotLocation)));
-                // echo distance in range
-                if (echoDistance >= minDistance
-                        && echoDistance <= maxDistance
-                        // check robot speed in range
-                        && abs(robotStatus.leftPps()) < velocityThreshold
-                        && abs(robotStatus.rightPps()) < velocityThreshold
-                        // and any sector in sensor direction range with a labeled target in distance range
-                        && robotStatus.sensorDirection().isCloseTo(Complex.DEG0, sensorRange)
-                        // and marker not null
-                        && marker.isPresent()
+            // the environment supports radar map
+            RobotStatus robotStatus = s1.robotStatus();
+            double echoDistance = robotStatus.echoDistance();
+            Point2D robotLocation = robotStatus.location();
+            // Get the nearest marker
+            Optional<LabelMarker> marker = s1.markers().values().stream()
+                    .min(Comparator.comparingDouble(m -> m.location().distanceSq(robotLocation)));
+            // echo distance in range
+            if (echoDistance >= minDistance
+                    && echoDistance <= maxDistance
+                    // check robot speed in range
+                    && abs(robotStatus.leftPps()) < velocityThreshold
+                    && abs(robotStatus.rightPps()) < velocityThreshold
+                    // and any sector in sensor direction range with a labeled target in distance range
+                    && robotStatus.sensorDirection().isCloseTo(Complex.DEG0, sensorRange)
+                    // and marker not null
+                    && marker.isPresent()
                     /*
                         // and qr code recognized (!= "?")
                         && !CameraEvent.UNKNOWN_QR_CODE.equals(qrCode)
@@ -108,9 +104,8 @@ public interface SensorLabel {
                     // TODO && robotStatus.isCorrelated(mapState.getRadarMap().correlationInterval())
 
                      */
-                ) {
-                    return reward;
-                }
+            ) {
+                return reward;
             }
             return 0;
         };

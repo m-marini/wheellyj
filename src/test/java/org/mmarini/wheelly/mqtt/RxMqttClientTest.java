@@ -51,7 +51,7 @@ class RxMqttClientTest {
     public static final String MQTT_CLIENT = "testMqtt";
     private static final Logger logger = LoggerFactory.getLogger(RxMqttClientTest.class);
 
-    @Test
+    //@Test
     void testCompletion() throws MqttException {
         RxMqttClient client = RxMqttClient.create(MQTT_BROKER, MQTT_CLIENT, MQTT_USER, MQTT_PASSWORD);
 

@@ -29,7 +29,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apps.JsonSchemas;
+import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
@@ -188,7 +188,7 @@ public class TDNetwork {
      * @param random     the random generator
      */
     public static TDNetwork fromJson(JsonNode spec, Locator locator, Map<String, INDArray> parameters, Random random) {
-        JsonSchemas.instance().validateOrThrow(locator.getNode(spec), NETWORK_SCHEMA_YML);
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(spec), NETWORK_SCHEMA_YML);
         // Loads the layers
         List<TDLayer> layers = locator.path("layers").elements(spec)
                 .map(l -> TDLayer.fromJson(spec, l)

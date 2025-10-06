@@ -32,7 +32,6 @@ import org.mmarini.wheelly.TestFunctions;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.envs.RewardFunction;
-import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -45,15 +44,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class AvoidTest {
-    static WorldState createState(boolean canMoveForward, boolean canMoveBackward) {
+    static WorldModel createState(boolean canMoveForward, boolean canMoveBackward) {
         RobotStatus status = RobotStatus.create(ROBOT_SPEC, x -> 12d)
                 .setCanMoveForward(canMoveForward)
                 .setCanMoveBackward(canMoveBackward);
         WorldModel worldModel = mock();
         when(worldModel.robotStatus()).thenReturn(status);
-        WorldState state = mock();
-        when(state.model()).thenReturn(worldModel);
-        return state;
+        return worldModel;
     }
 
     @ParameterizedTest
@@ -70,9 +67,9 @@ class AvoidTest {
                 "$schema: " + AvoidContact.SCHEMA_NAME,
                 "class: " + AvoidContact.class.getName()));
         RewardFunction f = AvoidContact.create(root, Locator.root());
-        WorldState state = createState(canMoveForward != 0, canMoveBackward != 0);
+        WorldModel state = createState(canMoveForward != 0, canMoveBackward != 0);
 
-        double result = f.apply(null, null, state);
+        double result = f.applyAsDouble(null, null, state);
 
         assertThat(result, closeTo(expected, 1e-4));
     }
@@ -92,9 +89,9 @@ class AvoidTest {
                 "class: " + AvoidContact.class.getName(),
                 "reward: -2"));
         RewardFunction f = AvoidContact.create(root, Locator.root());
-        WorldState state = createState(canMoveForward != 0, canMoveBackward != 0);
+        WorldModel state = createState(canMoveForward != 0, canMoveBackward != 0);
 
-        double result = f.apply(null, null, state);
+        double result = f.applyAsDouble(null, null, state);
 
         assertThat(result, closeTo(expected, 1e-4));
     }

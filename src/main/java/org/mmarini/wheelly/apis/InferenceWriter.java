@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.apis;
 
+import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.util.Map;
 
@@ -40,12 +41,11 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      *
      * @param camera the camera event
      */
-    default InferenceWriter write(CameraEvent camera) throws IOException {
-        write(camera.simulationTime())
+    default <T extends InferenceWriter> T write(CameraEvent camera) throws IOException {
+        return write(camera.simulationTime())
                 .write(camera.qrCode())
                 .write(camera.width())
                 .write(camera.height());
-        return this;
     }
 
     /**
@@ -53,10 +53,9 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      *
      * @param camera the camera event
      */
-    default InferenceWriter write(CorrelatedCameraEvent camera) throws IOException {
-        write(camera.camerEvent())
+    default <T extends InferenceWriter> T write(CorrelatedCameraEvent camera) throws IOException {
+        return write(camera.camerEvent())
                 .write(camera.proxy());
-        return this;
     }
 
     /**
@@ -64,14 +63,13 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      *
      * @param commands the commands
      */
-    default InferenceWriter write(RobotCommands commands) throws IOException {
-        write(commands.scan())
+    default <T extends InferenceWriter> T write(RobotCommands commands) throws IOException {
+        return write(commands.scan())
                 .write(commands.scanDirection().toIntDeg())
                 .write(commands.move())
                 .write(commands.halt())
                 .write(commands.moveDirection().toIntDeg())
                 .write(commands.speed());
-        return this;
     }
 
     /**
@@ -79,13 +77,12 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      *
      * @param contacts the contact message
      */
-    default InferenceWriter write(WheellyContactsMessage contacts) throws IOException {
-        write(contacts.simulationTime())
+    default <T extends InferenceWriter> T write(WheellyContactsMessage contacts) throws IOException {
+        return write(contacts.simulationTime())
                 .write(contacts.frontSensors())
                 .write(contacts.rearSensors())
                 .write(contacts.canMoveForward())
                 .write(contacts.canMoveBackward());
-        return this;
     }
 
     /**
@@ -93,7 +90,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      *
      * @param markers the markers
      */
-    default InferenceWriter write(Map<String, LabelMarker> markers) throws IOException {
+    default <T extends InferenceWriter> T write(Map<String, LabelMarker> markers) throws IOException {
         write(markers.size());
         for (LabelMarker marker : markers.values()) {
             write(marker.label())
@@ -103,7 +100,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
                     .write(marker.markerTime())
                     .write(marker.cleanTime());
         }
-        return this;
+        return (T) this;
     }
 
     /**
@@ -111,8 +108,8 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      *
      * @param motion the motion message
      */
-    default InferenceWriter write(WheellyMotionMessage motion) throws IOException {
-        write(motion.simulationTime())
+    default <T extends InferenceWriter> T write(WheellyMotionMessage motion) throws IOException {
+        return write(motion.simulationTime())
                 .write((float) motion.xPulses())
                 .write((float) motion.yPulses())
                 .write(motion.directionDeg())
@@ -124,7 +121,6 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
                 .write(motion.rightTargetPps())
                 .write(motion.leftPower())
                 .write(motion.rightPower());
-        return this;
     }
 
     /**
@@ -132,7 +128,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      *
      * @param radarMap the radar map
      */
-    default InferenceWriter write(RadarMap radarMap) throws IOException {
+    default <T extends InferenceWriter> T write(RadarMap radarMap) throws IOException {
         write(radarMap.cleanTimestamp());
         MapCell[] cells = radarMap.cells();
         for (MapCell cell : cells) {
@@ -140,7 +136,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
                     .write((float) cell.echoWeight())
                     .write(cell.contactTime());
         }
-        return this;
+        return (T) this;
     }
 
     /**
@@ -148,14 +144,13 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      *
      * @param proxy the proxy message
      */
-    default InferenceWriter write(WheellyProxyMessage proxy) throws IOException {
-        write(proxy.simulationTime())
+    default <T extends InferenceWriter> T write(WheellyProxyMessage proxy) throws IOException {
+        return write(proxy.simulationTime())
                 .write(proxy.sensorDirectionDeg())
                 .write(proxy.echoDelay())
                 .write((float) proxy.xPulses())
                 .write((float) proxy.yPulses())
                 .write(proxy.robotYawDeg());
-        return this;
     }
 
     /**
@@ -164,7 +159,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * @param model    the model
      * @param commands the commands
      */
-    default InferenceWriter write(WorldModel model, RobotCommands commands) throws IOException {
+    default <T extends InferenceWriter> T write(WorldModel model, RobotCommands commands) throws IOException {
         return write(model)
                 .write(commands);
     }
@@ -174,7 +169,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      *
      * @param model the model
      */
-    default InferenceWriter write(WorldModel model) throws IOException {
+    default <T extends InferenceWriter> T write(WorldModel model) throws IOException {
         return write(model.robotStatus())
                 .write(model.markers())
                 .write(model.radarMap());
@@ -185,11 +180,67 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      *
      * @param status the status
      */
-    default InferenceWriter write(RobotStatus status) throws IOException {
+    default <T extends InferenceWriter> T write(RobotStatus status) throws IOException {
         write(status.simulationTime());
         return write(status.motionMessage())
                 .write(status.proxyMessage())
                 .write(status.contactsMessage())
                 .write(status.cameraEvent());
+    }
+
+    /**
+     * Writes the point
+     *
+     * @param point the point
+     */
+    default <T extends InferenceWriter> T write(Point2D point) throws IOException {
+        return write(point.getX())
+                .write(point.getY());
+    }
+
+    /**
+     * Write the topology
+     *
+     * @param topology the topology
+     */
+    default <T extends InferenceWriter> T write(GridTopology topology) throws IOException {
+        return write(topology.center())
+                .write(topology.width())
+                .write(topology.height())
+                .write(topology.gridSize());
+    }
+
+    /**
+     * Writes the robot spec
+     *
+     * @param spec the robot spec
+     */
+    default <T extends InferenceWriter> T write(RobotSpec spec) throws IOException {
+        return write(spec.maxRadarDistance())
+                .write(spec.receptiveAngle().toIntDeg())
+                .write(spec.contactRadius())
+                .write(spec.cameraViewAngle().toIntDeg());
+    }
+
+    /**
+     * Writes the world spec
+     *
+     * @param spec the world spec
+     */
+    default <T extends InferenceWriter> T write(WorldModelSpec spec) throws IOException {
+        return write(spec.robotSpec())
+                .write(spec.numSectors())
+                .write(spec.gridSize())
+                .write(spec.markerSize());
+    }
+
+    /**
+     * Write the header of inference file
+     *
+     * @param spec     the world spec
+     * @param topology the grid topology
+     */
+    default <T extends InferenceWriter> T writeHeader(WorldModelSpec spec, GridTopology topology) throws IOException {
+        return write(spec).write(topology);
     }
 }

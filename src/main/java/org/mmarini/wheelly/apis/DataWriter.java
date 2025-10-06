@@ -40,7 +40,7 @@ public interface DataWriter extends AutoCloseable {
      * @param data the number
      * @throws IOException in case of error
      */
-    DataWriter write(long data) throws IOException;
+    <T extends DataWriter> T write(long data) throws IOException;
 
     /**
      * Writes an int number
@@ -48,7 +48,7 @@ public interface DataWriter extends AutoCloseable {
      * @param data the number
      * @throws IOException in case of error
      */
-    DataWriter write(int data) throws IOException;
+    <T extends DataWriter> T write(int data) throws IOException;
 
     /**
      * Writes an short number
@@ -56,7 +56,7 @@ public interface DataWriter extends AutoCloseable {
      * @param data the number
      * @throws IOException in case of error
      */
-    DataWriter write(short data) throws IOException;
+    <T extends DataWriter> T write(short data) throws IOException;
 
     /**
      * Writes a boolean value
@@ -64,7 +64,7 @@ public interface DataWriter extends AutoCloseable {
      * @param data the value
      * @throws IOException in case of error
      */
-    DataWriter write(boolean data) throws IOException;
+    <T extends DataWriter> T write(boolean data) throws IOException;
 
     /**
      * Writes a float value
@@ -72,7 +72,7 @@ public interface DataWriter extends AutoCloseable {
      * @param data the value
      * @throws IOException in case of error
      */
-    DataWriter write(float data) throws IOException;
+    <T extends DataWriter> T write(float data) throws IOException;
 
     /**
      * Writes a double value
@@ -80,7 +80,7 @@ public interface DataWriter extends AutoCloseable {
      * @param data the value
      * @throws IOException in case of error
      */
-    DataWriter write(double data) throws IOException;
+    <T extends DataWriter> T write(double data) throws IOException;
 
     /**
      * Writes a string value
@@ -88,7 +88,7 @@ public interface DataWriter extends AutoCloseable {
      * @param data the value
      * @throws IOException in case of error
      */
-    DataWriter write(String data) throws IOException;
+    <T extends DataWriter> T write(String data) throws IOException;
 
     /**
      * Writes the buffer data
@@ -98,7 +98,7 @@ public interface DataWriter extends AutoCloseable {
      * @param size   the number of bytes to write
      * @throws IOException in case of error
      */
-    DataWriter write(byte[] buffer, int offset, int size) throws IOException;
+    <T extends DataWriter> T write(byte[] buffer, int offset, int size) throws IOException;
 
     /**
      * Write a byte
@@ -106,5 +106,5 @@ public interface DataWriter extends AutoCloseable {
      * @param data the byte
      * @throws IOException in case of error
      */
-    DataWriter write(byte data) throws IOException;
+    <T extends DataWriter> T write(byte data) throws IOException;
 }

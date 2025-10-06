@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -28,42 +28,114 @@
 
 package org.mmarini.wheelly.envs;
 
-import org.mmarini.rl.envs.ArraySignal;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.rl.envs.SignalSpec;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.rl.envs.*;
 import org.mmarini.wheelly.apis.*;
+import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
 import java.awt.geom.Point2D;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.Utils.clip;
 
-/**
- * The state of polar robot
- *
- * @param signals the signals
- * @param model   the world model
- * @param spec    the signal specification
- */
-public record WorldState(WorldModel model,
-                         Map<String, SignalSpec> spec,
-                         Map<String, Signal> signals) implements State {
+public class RLStateFunction implements StateFunction {
+    public static final int MAX_SENSOR_DIR = 90;
+    public static final int NUM_CELL_STATES = 4;
+    public static final int NUM_SECTOR_STATES = 3;
+    public static final int MAX_ROBOT_MAP_DIR = 45;
+    public static final FloatSignalSpec SENSOR_SPEC = new FloatSignalSpec(new long[]{1}, -MAX_SENSOR_DIR, MAX_SENSOR_DIR);
+    public static final FloatSignalSpec ROBOT_MAP_DIR_SPEC = new FloatSignalSpec(new long[]{1}, -MAX_ROBOT_MAP_DIR, MAX_ROBOT_MAP_DIR);
+    public static final int NUM_CAN_MOVE_STATES = 6;
+    public static final IntSignalSpec CAN_MOVE_SPEC = new IntSignalSpec(new long[]{1}, NUM_CAN_MOVE_STATES);
+    public static final int NUM_MARKER_STATE_VALUES = 2;
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-func-rl-schema-0.1";
 
     /**
-     * Returns the default polar robot state from the world model
+     * Returns the state function
      *
-     * @param model       the world model
-     * @param signalSpecs the signal specification
-     * @param markers     the marker labels
+     * @param worldSpec the world model specifications
      */
-    public static WorldState create(WorldModel model, Map<String, SignalSpec> signalSpecs, List<String> markers) {
-        requireNonNull(model);
-        requireNonNull(markers);
+    public static RLStateFunction create(WorldModelSpec worldSpec, List<String> markers) {
+        return new RLStateFunction(createStateSpec(worldSpec, markers.size()), markers);
+    }
+
+    /**
+     * Returns the rl actin function from a jaon doc
+     *
+     * @param root    the root json doc
+     * @param locator the locator
+     */
+    public static Function<WorldModelSpec, StateFunction> create(JsonNode root, Locator locator) throws IOException {
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        List<String> markers = locator.path("markerLabels").elements(root)
+                .map(l -> l.getNode(root).asText())
+                .toList();
+        return spec -> RLStateFunction.create(spec, markers);
+    }
+
+    /**
+     * Returns the world signal specifications
+     *
+     * @param worldSpec  the world specification
+     * @param numMarkers the number of recognised markers
+     */
+    static Map<String, SignalSpec> createStateSpec(WorldModelSpec worldSpec, long numMarkers) {
+        RobotSpec robotSpec = worldSpec.robotSpec();
+        float maxRadarDistance = (float) robotSpec.maxRadarDistance();
+        int numSectors = worldSpec.numSectors();
+        long radarSize = worldSpec.gridSize();
+        return Map.of(
+                "sensor", SENSOR_SPEC,
+                "robotMapDir", ROBOT_MAP_DIR_SPEC,
+                "distance", new FloatSignalSpec(new long[]{1}, 0, maxRadarDistance),
+                "canMoveStates", CAN_MOVE_SPEC,
+                "sectorStates", new IntSignalSpec(new long[]{numSectors}, NUM_SECTOR_STATES),
+                "sectorDistances", new FloatSignalSpec(new long[]{numSectors}, 0, maxRadarDistance),
+
+                "cellStates", new IntSignalSpec(new long[]{radarSize * radarSize}, NUM_CELL_STATES),
+                "markerStates", new IntSignalSpec(new long[]{numMarkers}, NUM_MARKER_STATE_VALUES),
+                "markerDistances", new FloatSignalSpec(new long[]{numMarkers}, 0, maxRadarDistance),
+                "markerDirections", new FloatSignalSpec(new long[]{numMarkers}, (float) -Math.PI, (float) Math.PI)
+        );
+    }
+
+    /**
+     * Returns the status code value of a cell
+     * <pre>
+     *     0 - unknown
+     *     1 - contact
+     *     2 - echo
+     *     3 - anechoic
+     * </pre>
+     *
+     * @param cell the cell
+     */
+    private static int decodeStatus(MapCell cell) {
+        return cell.hasContact() ? 1
+                : cell.echogenic() ? 2
+                : cell.anechoic() ? 3
+                : 0;
+    }
+
+    private final Map<String, SignalSpec> spec;
+    private final List<String> markers;
+
+    public RLStateFunction(Map<String, SignalSpec> spec, List<String> markers) {
+        this.spec = requireNonNull(spec);
+        this.markers = requireNonNull(markers);
+    }
+
+    @Override
+    public Map<String, Signal> signals(WorldModel... states) {
+        requireNonNull(states);
+        WorldModel model = states[0];
 
         RobotStatus robotStatus = model.robotStatus();
         Point2D robotLocation = robotStatus.location();
@@ -144,7 +216,7 @@ public record WorldState(WorldModel model,
                 }
             }
         }
-        Map<String, Signal> signals = Map.of(
+        return Map.of(
                 "sensor", new ArraySignal(sensor),
                 "robotMapDir", new ArraySignal(robotMapDir),
                 "distance", new ArraySignal(distance),
@@ -156,37 +228,10 @@ public record WorldState(WorldModel model,
                 "markerDistances", new ArraySignal(markerDistances),
                 "markerDirections", new ArraySignal(markerDirections)
         );
-        return new WorldState(model, signalSpecs, signals);
     }
 
-    /**
-     * Returns the status code value of a cell
-     * <pre>
-     *     0 - unknown
-     *     1 - contact
-     *     2 - echo
-     *     3 - anechoic
-     * </pre>
-     *
-     * @param cell the cell
-     */
-    private static int decodeStatus(MapCell cell) {
-        return cell.hasContact() ? 1
-                : cell.echogenic() ? 2
-                : cell.anechoic() ? 3
-                : 0;
-    }
-
-    /**
-     * Creates the polar robot state
-     *
-     * @param model   the world model
-     * @param spec    the signal specification
-     * @param signals the signals
-     */
-    public WorldState(WorldModel model, Map<String, SignalSpec> spec, Map<String, Signal> signals) {
-        this.model = requireNonNull(model);
-        this.spec = requireNonNull(spec);
-        this.signals = requireNonNull(signals);
+    @Override
+    public Map<String, SignalSpec> spec() {
+        return spec;
     }
 }

@@ -45,14 +45,14 @@ public class InferenceFileWriter extends DataFileWriter implements InferenceWrit
      */
     public static InferenceFileWriter fromFile(File file) throws IOException {
         file.getCanonicalFile().getParentFile().mkdirs();
-        OutputStream stream = new FileOutputStream(file, true);
+        OutputStream stream = new FileOutputStream(file, false);
         return new InferenceFileWriter(stream);
     }
 
     /**
      * Creates the world model writer
      *
-     * @param stream the file
+     * @param stream   the file
      */
     protected InferenceFileWriter(OutputStream stream) {
         super(stream);

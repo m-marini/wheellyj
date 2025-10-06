@@ -39,7 +39,7 @@ import org.mmarini.ParallelProcess;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.agents.BinArrayFile;
 import org.mmarini.rl.agents.KeyFileMap;
-import org.mmarini.wheelly.swing.Messages;
+import org.mmarini.swing.Messages;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;

@@ -1,0 +1,124 @@
+---
+$schema: https://mmarini.org/wheelly/dl-agent-builder-schema-0.1
+class: org.mmarini.rl.agents.DLAgentBuilder
+numEpochs: 3
+trajectorySize: 256
+batchSize: 32
+alpha: 0.8
+beta: 0.9
+avgReward: 0.1
+path: tmp/model
+network:
+  activation: Identity
+  updater:
+    type: RmsProp
+    learningRate: 0.1
+    decayRms: 0.96
+    epsilon: 1e-3
+    optimizationAlgo:
+  weightInit:
+    type: TruncatedNormalDistribution
+    mean: 0
+    stddev: 0.5
+  l1: 1e-7
+  l2: 5e-5
+  graphBuilder:
+    inputs:
+      map:
+        type: Convolutional
+        width: 125
+        height: 125
+        depth: 4
+        format: NHWC
+    hiddens:
+      stem0:
+        inputs: [ map ]
+        type: ZeroPaddingLayer
+        padding: [ 3, 3 ]
+      stem-cnn1:
+        inputs: [ stem0 ]
+        type: ConvolutionLayer
+        nOut: 64
+        kernelSize: [ 7, 7 ]
+        stride: [ 2, 2 ]
+      stem-batch1:
+        inputs: [ stem-cnn1 ]
+        type: BatchNormalizationLayer
+      stem-act1:
+        inputs: [ stem-batch1 ]
+        type: ActivationLayer
+        activation: Relu
+      maxpool-in:
+        inputs: [ stem-act1 ]
+        type: SubsamplingLayer
+        kernelSize: [ 3, 3 ]
+        stride: [ 1, 1 ]
+        poolingType: Max
+      maxpool-out:
+        inputs: [ resnet33 ]
+        type: SubsamplingLayer
+        kernelSize: [ 3, 3 ]
+        poolingType: Max
+    blocks:
+      resnet11:
+        inputs: [ maxpool-in ]
+        type: ConvolutionResNetBlock
+        kernelSize: [ 3, 3 ]
+        filters: [ 64, 64, 256 ]
+        stride: [ 2, 2 ]
+      resnet12:
+        inputs: [ resnet11 ]
+        type: IdentityResNetBlock
+        kernelSize: [ 3, 3 ]
+        filters: [ 64, 64, 256 ]
+      resnet13:
+        inputs: [ resnet12 ]
+        type: IdentityResNetBlock
+        kernelSize: [ 3, 3 ]
+        filters: [ 64, 64, 256 ]
+      resnet21:
+        inputs: [ resnet13 ]
+        type: ConvolutionResNetBlock
+        kernelSize: [ 3, 3 ]
+        filters: [ 128, 128, 512 ]
+        stride: [ 2, 2 ]
+      resnet22:
+        inputs: [ resnet21 ]
+        type: IdentityResNetBlock
+        kernelSize: [ 3, 3 ]
+        filters: [ 128, 128, 512 ]
+      resnet23:
+        inputs: [ resnet22 ]
+        type: IdentityResNetBlock
+        kernelSize: [ 3, 3 ]
+        filters: [ 128, 128, 512 ]
+      resnet31:
+        inputs: [ resnet23 ]
+        type: ConvolutionResNetBlock
+        kernelSize: [ 3, 3 ]
+        filters: [ 256, 256, 1024 ]
+        stride: [ 2, 2 ]
+      resnet32:
+        inputs: [ resnet31 ]
+        type: IdentityResNetBlock
+        kernelSize: [ 3, 3 ]
+        filters: [ 256, 256, 1024 ]
+      resnet33:
+        inputs: [ resnet32 ]
+        type: IdentityResNetBlock
+        kernelSize: [ 3, 3 ]
+        filters: [ 256, 256, 1024 ]
+    outputs:
+      critic:
+        type: OutputLayer
+        inputs: [ maxpool-out ]
+        nOut: 1
+        activation: Identity
+        lossFunction: SquaredLoss
+      action:
+        type: OutputLayer
+        inputs: [ maxpool-out ]
+        nOut: 2
+        activation: SoftMax
+        lossFunction: NegativeLogLikelihood
+    vertices: { }

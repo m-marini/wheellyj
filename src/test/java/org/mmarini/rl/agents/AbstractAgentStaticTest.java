@@ -52,7 +52,7 @@ class AbstractAgentStaticTest {
         float v2 = -0.3f;
         float v3 = -0.2f;
         INDArray vPrediction = Nd4j.createFromArray(v0, v1, v2, v3).reshape(4, 1);
-        // and an initial average reward
+        // and an initial average rewards
         float initialAvgReward = 0.3f;
         // And expected averages and deltas
         float a0 = initialAvgReward;

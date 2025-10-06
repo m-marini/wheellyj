@@ -53,7 +53,7 @@ class MDPTrajectoryTest {
      * Returns the agent
      *
      * @param mdp         the mdp
-     * @param rewardAlpha the reward alpha
+     * @param rewardAlpha the rewards alpha
      * @param numSteps    the number of steps
      * @param numEpochs   the number of epochs
      * @param batchSize   the batch size
@@ -105,7 +105,7 @@ class MDPTrajectoryTest {
         // and the trajectory from current policy
         List<ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
         //trajectory(agent, numSteps);
-        // and the average reward
+        // and the average rewards
         float avg0 = (float) trajectory.stream()
                 .mapToDouble(ExecutionResult::reward)
                 .average()
@@ -124,7 +124,7 @@ class MDPTrajectoryTest {
         double pi00Trained = pi1.getDouble(0, 0);
         double pi11Trained = pi1.getDouble(1, 1);
 
-        // Then the average reward should tend to 0
+        // Then the average rewards should tend to 0
         assertThat((double) avgReward, closeTo(avg0, 0.6));
         // And the policy for state 0 should increase the action 0
         assertThat(pi00Trained, greaterThan(pi00));
@@ -145,7 +145,7 @@ class MDPTrajectoryTest {
         TDAgentSingleNN agent = createAgent(mdp, 1F / (numSteps + 1), numSteps, numEpochs, batchSize);
         // and the trajectory from current policy
         List<ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
-        // and the average reward
+        // and the average rewards
         float avg0 = (float) trajectory.stream()
                 .mapToDouble(ExecutionResult::reward)
                 .average()
@@ -164,7 +164,7 @@ class MDPTrajectoryTest {
         double trainedPi00 = trainedPi.getDouble(0, 0);
         double trainedPi11 = trainedPi.getDouble(1, 1);
 
-        // Then the average reward should tend to 0
+        // Then the average rewards should tend to 0
         assertThat((double) avgReward, closeTo(avg0, 0.6));
         // And the policy for state 0 should increase action 0
         assertThat(trainedPi00, greaterThan(pi00));
@@ -185,7 +185,7 @@ class MDPTrajectoryTest {
         TDAgentSingleNN agent = createAgent(mdp, 1F / (numSteps + 1), numSteps, numEpochs, batchSize);
         // and the trajectory from current policy
         List<ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
-        // and the average reward
+        // and the average rewards
         float avg0 = (float) trajectory.stream()
                 .mapToDouble(ExecutionResult::reward)
                 .average()
@@ -204,7 +204,7 @@ class MDPTrajectoryTest {
         double trainedPi00 = trainedPi.getDouble(0, 0);
         double trainedPi11 = trainedPi.getDouble(1, 1);
 
-        // Then the average reward should tend to 0
+        // Then the average rewards should tend to 0
         assertThat((double) avgReward, closeTo(avg0, 0.6));
         // And the policy for state 0 should increase action 0
         assertThat(trainedPi00, greaterThan(pi00));
@@ -227,7 +227,7 @@ class MDPTrajectoryTest {
         TDAgentSingleNN agent = createAgent(mdp, 1F / (numSteps + 1), numSteps, numEpochs, batchSize);
         // and the trajectory from current policy
         List<ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
-        // and the average reward
+        // and the average rewards
         float avg0 = (float) trajectory.stream()
                 .mapToDouble(ExecutionResult::reward)
                 .average()
@@ -250,7 +250,7 @@ class MDPTrajectoryTest {
         double trainedPi00 = trainedPi.getDouble(0, 0);
         double trainedPi11 = trainedPi.getDouble(1, 1);
 
-        // Then the average reward should tend to 1
+        // Then the average rewards should tend to 1
         assertThat((double) avgReward, closeTo(0.75, 0.25));
         // And the policy for state 0 should increase action 0
         assertThat(trainedPi00, greaterThan(0.75));
@@ -284,7 +284,7 @@ class MDPTrajectoryTest {
                 mdp.result(1, 0),
                 mdp.result(1, 1)
         );
-        // and the average reward
+        // and the average rewards
         float avg0 = (float) trajectory.stream()
                 .mapToDouble(ExecutionResult::reward)
                 .average()
@@ -303,7 +303,7 @@ class MDPTrajectoryTest {
         double pi00Trained = trainedPi.getDouble(0, 0);
         double pi11Trained = trainedPi.getDouble(1, 1);
 
-        // Then the average reward should tend to 0
+        // Then the average rewards should tend to 0
         assertThat((double) avgReward, closeTo(0, 0.11));
         // And the policy for state 0 should increase action 0
         assertThat(pi00Trained, greaterThan(pi00));

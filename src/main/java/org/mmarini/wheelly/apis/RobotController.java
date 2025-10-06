@@ -35,7 +35,6 @@ import io.reactivex.rxjava3.processors.BehaviorProcessor;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.CompletableSubject;
-import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,7 +68,7 @@ public class RobotController implements RobotControllerApi {
      */
     public static RobotController create(JsonNode root, File file) {
         Locator locator = Locator.root();
-        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         long reactionInterval = locator.path("reactionInterval").getNode(root).asLong();
         long commandInterval = locator.path("commandInterval").getNode(root).asLong();
         int[] supplyValues = loadIntArray(root, locator.path("supplyValues"));

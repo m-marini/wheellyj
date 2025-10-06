@@ -29,21 +29,22 @@
 package org.mmarini.wheelly.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.rl.envs.Signal;
+import org.mmarini.ToDoubleFunction3;
+import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 import static java.lang.String.format;
 
 /**
  * Computes the reward base on initial state, action signals and resulting state
  */
-public interface RewardFunction {
+public interface RewardFunction extends ToDoubleFunction3<WorldModel, RobotCommands, WorldModel> {
 
     /**
      * Returns the composed objective from the objective list
@@ -54,7 +55,7 @@ public interface RewardFunction {
         return (state0, action, state1) -> {
             double value = 0;
             for (RewardFunction objective : objectives) {
-                value = objective.apply(state0, action, state1);
+                value = objective.applyAsDouble(state0, action, state1);
                 if (value != 0) {
                     break;
                 }
@@ -76,18 +77,9 @@ public interface RewardFunction {
                     root.getNodeType().name()
             ));
         }
-        List<RewardFunction> objs = Locator.root().elements(root)
+        List<RewardFunction> objectives = Locator.root().elements(root)
                 .map(locator -> Utils.<RewardFunction>createObject(root, locator, new Object[0], new Class[0]))
                 .toList();
-        return composeObjective(objs);
+        return composeObjective(objectives);
     }
-
-    /**
-     * Returns the reward
-     *
-     * @param s0     the initial state
-     * @param action the action signal
-     * @param s1     the resulting state
-     */
-    double apply(State s0, Map<String, Signal> action, State s1);
 }

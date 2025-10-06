@@ -1,0 +1,36 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/dl-agent-schema-0.1
+title: Agent
+type: object
+properties:
+  $schema:
+    const: https://mmarini.org/wheelly/dl-agent-schema-0.1
+  class:
+    const: org.mmarini.rl.agents.DLAgent
+  alpha:
+    type: number
+    exclusiveMinimum: 0
+  avgReward:
+    type: number
+  beta:
+    type: number
+    exclusiveMinimum: 0
+  numEpochs:
+    type: integer
+    minimum: 1
+  trajectorySize:
+    type: integer
+    minimum: 1
+  batchSize:
+    type: integer
+    minimum: 1
+required:
+  - $schema
+  - class
+  - numEpochs
+  - trajectorySize
+  - batchSize
+  - alpha
+  - beta
+  - avgReward

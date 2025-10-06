@@ -29,17 +29,22 @@
 package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.apps.JsonSchemas;
+import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.yaml.Locator;
 
-import java.util.Map;
 import java.util.function.Predicate;
 
+import static java.lang.Math.sin;
+import static java.lang.Math.toRadians;
+
 public interface ActionSet {
-    String SCHEMA_NAME = "https://mmarini.org/wheelly/objective-action-set-schema-1.0";
+    String SCHEMA_NAME = "https://mmarini.org/wheelly/objective-action-set-schema-2.0";
     double DEFAULT_REWARD = 1d;
+    double SIN_DEG1 = sin(toRadians(1));
+    int NO_VALUE = Integer.MIN_VALUE;
 
     /**
      * Returns the reward function from configuration
@@ -48,36 +53,46 @@ public interface ActionSet {
      * @param locator the locator
      */
     static RewardFunction create(JsonNode root, Locator locator) {
-        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-
-        int move = locator.path("move").getNode(root).asInt(-1);
-        int sensor = locator.path("sensor").getNode(root).asInt(-1);
-        if (move < 0 && sensor < 0) {
-            throw new IllegalArgumentException("Missing ActionSet objective values");
-        }
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        int speed = locator.path("speed").getNode(root).asInt(NO_VALUE);
+        int dirDeg = locator.path("direction").getNode(root).asInt(NO_VALUE);
+        int sensorDeg = locator.path("sensor").getNode(root).asInt(NO_VALUE);
         double reward = locator.path("reward").getNode(root).asDouble(DEFAULT_REWARD);
-        return inactive(move, sensor, reward);
+        return inactive(dirDeg, speed, sensorDeg, reward);
     }
 
     /**
      * Returns the function that rewards the action set behavior
      *
-     * @param targetMoveIndex   the target move index
-     * @param targetSensorIndex the target sensor index
-     * @param reward            the reward when matched gaol
+     * @param directionDeg the expected direction (DEG)
+     * @param speed        the expected speed (PPS)
+     * @param sensorDeg    the expected sensor direction (DEG)
+     * @param reward       the reward when matched gaol
      */
-    static RewardFunction inactive(int targetMoveIndex,
-                                   int targetSensorIndex, double reward) {
-        Predicate<Map<String, Signal>> actionPredicate = null;
-        if (targetMoveIndex >= 0) {
-            actionPredicate = x -> x.get("move").getInt(0) == targetMoveIndex;
+    static RewardFunction inactive(int directionDeg,
+                                   int speed,
+                                   int sensorDeg,
+                                   double reward) {
+        Predicate<RobotCommands> predicate = null;
+        if (directionDeg != NO_VALUE) {
+            Complex direction = Complex.fromDeg(directionDeg);
+            predicate = x ->
+                    x.moveDirection().isCloseTo(direction, SIN_DEG1);
         }
-        if (targetSensorIndex >= 0) {
-            Predicate<Map<String, Signal>> sensorPredicate = x -> x.get("sensorAction").getInt(0) == targetSensorIndex;
-            actionPredicate = actionPredicate != null ? actionPredicate.and(sensorPredicate) : sensorPredicate;
+        if (speed != NO_VALUE) {
+            Predicate<RobotCommands> speedPredicate = x ->
+                    x.speed() == speed;
+            predicate = predicate != null ? predicate.and(speedPredicate) : speedPredicate;
         }
-        Predicate<Map<String, Signal>> finalPredicate = actionPredicate;
-        return (s0, a, s1) ->
-                finalPredicate.test(a) ? reward : 0;
+        if (sensorDeg != NO_VALUE) {
+            Complex direction = Complex.fromDeg(sensorDeg);
+            Predicate<RobotCommands> sensorPredicate = x ->
+                    x.scanDirection().isCloseTo(direction, SIN_DEG1);
+            predicate = predicate != null ? predicate.and(sensorPredicate) : sensorPredicate;
+        }
+        Predicate<RobotCommands> finalPredicate = predicate;
+        return (s0, a, s1) -> finalPredicate != null && finalPredicate.test(a)
+                ? reward
+                : 0;
     }
 }

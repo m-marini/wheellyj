@@ -29,11 +29,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.apis.WorldModelBuilder;
 import org.mmarini.wheelly.envs.RewardFunction;
-import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -41,25 +39,13 @@ import java.io.IOException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
-import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class StuckTest {
-    static WorldState createEnvironment(int sensorDir, double distance) {
-        RobotStatus status = RobotStatus.create(ROBOT_SPEC, x -> 12d)
-                // Use complex
-                .setSensorDirection(Complex.fromDeg(sensorDir))
-                .setCanMoveBackward(true)
-                .setCanMoveForward(true)
-                .setEchoDistance(distance);
-
-        WorldModel model = mock();
-        when(model.robotStatus()).thenReturn(status);
-
-        WorldState state = mock();
-        when(state.model()).thenReturn(model);
-        return state;
+    static WorldModel createEnvironment(int sensorDir, double distance) {
+        return new WorldModelBuilder()
+                .sensorDir(sensorDir)
+                .echoDistance(distance)
+                .build();
     }
 
     @ParameterizedTest
@@ -91,8 +77,8 @@ class StuckTest {
                 "distance3: 1.5",
                 "sensorRange: 20"));
         RewardFunction f = Stuck.create(root, Locator.root());
-        WorldState env = createEnvironment(sensorDir, distance);
-        double result = f.apply(null, null, env);
+        WorldModel env = createEnvironment(sensorDir, distance);
+        double result = f.applyAsDouble(null, null, env);
         assertThat(result, closeTo(expected, 1e-3));
     }
 
@@ -122,9 +108,9 @@ class StuckTest {
         double x4 = 1.5;
         int directionRange = 20;
         RewardFunction f = Stuck.stuck(x1, x2, x3, x4, directionRange);
-        WorldState state = createEnvironment(sensorDir, distance);
+        WorldModel state = createEnvironment(sensorDir, distance);
 
-        double result = f.apply(state, null, state);
+        double result = f.applyAsDouble(state, null, state);
 
         assertThat(result, closeTo(expected, 1e-3));
     }

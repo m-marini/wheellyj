@@ -31,7 +31,7 @@ import java.util.StringJoiner;
 import static java.util.Objects.requireNonNull;
 
 /**
- * The environment interface
+ * The reinforcement learning execution step (SARS)
  */
 public record ExecutionResult(Map<String, Signal> state0, Map<String, Signal> actions, double reward,
                               Map<String, Signal> state1) {

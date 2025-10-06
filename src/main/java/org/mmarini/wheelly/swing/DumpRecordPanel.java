@@ -32,6 +32,7 @@ import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.BackpressureStrategy;
 import io.reactivex.rxjava3.core.Flowable;
 import org.mmarini.swing.GridLayoutHelper;
+import org.mmarini.swing.Messages;
 import org.mmarini.swing.SwingUtils;
 import org.mmarini.wheelly.apis.DumpRecord;
 
@@ -129,7 +130,7 @@ public class DumpRecordPanel extends JPanel {
                 scrollDataPanel.getPreferredSize().height
         ));
         // Creates the status panel content
-        new GridLayoutHelper<>(Messages.RESOURCE_BUNDLE, statusPanel)
+        new GridLayoutHelper<>(Messages.messages(), statusPanel)
                 .modify("insets,4,4")
                 .modify("at,0,0 w weight,1,0")
                 .add("DumpRecordPanel.direction.label")
@@ -178,7 +179,7 @@ public class DumpRecordPanel extends JPanel {
                 .modify("at,0,12 span,2,1")
                 .add(haltField);
         // Creates the content
-        new GridLayoutHelper<>(Messages.RESOURCE_BUNDLE, this)
+        new GridLayoutHelper<>(Messages.messages(), this)
                 .modify("insets,4,4")
                 .modify("at,0,0 w")
                 .add("DumpRecordPanel.instant.label")

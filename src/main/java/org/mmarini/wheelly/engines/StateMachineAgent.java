@@ -32,10 +32,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.WorldModel;
-import org.mmarini.wheelly.apis.WorldModellerConnector;
-import org.mmarini.wheelly.apps.JsonSchemas;
+import org.mmarini.wheelly.apis.*;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.slf4j.Logger;
@@ -46,7 +43,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
-import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.engines.StateNode.*;
 
 /**
@@ -62,7 +58,7 @@ import static org.mmarini.wheelly.engines.StateNode.*;
  *     It is a mutable object
  * </p>
  */
-public class StateMachineAgent implements ProcessorContextApi {
+public class StateMachineAgent implements ProcessorContextApi, InferenceConnector {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/agent-state-machine-schema-0.4";
     private static final Logger logger = LoggerFactory.getLogger(StateMachineAgent.class);
 
@@ -73,7 +69,7 @@ public class StateMachineAgent implements ProcessorContextApi {
      * @param locator the locator of agent specification in the document
      */
     public static StateMachineAgent create(JsonNode root, Locator locator) {
-        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         StateFlow flow = StateFlow.create(root, locator.path("flow"));
         return new StateMachineAgent(flow);
     }
@@ -86,7 +82,7 @@ public class StateMachineAgent implements ProcessorContextApi {
     public static StateMachineAgent fromFile(File file) throws IOException {
         JsonNode root = Utils.fromFile(file);
         Locator locator = Locator.root();
-        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         StateFlow flow = StateFlow.create(root, locator.path("flow"));
         return new StateMachineAgent(flow);
     }
@@ -122,16 +118,6 @@ public class StateMachineAgent implements ProcessorContextApi {
     @Override
     public void clearMap() {
         this.modeller.clearRadarMap();
-    }
-
-    /**
-     * Connects the world modeller
-     *
-     * @param modeller the world modeller
-     */
-    public void connect(WorldModellerConnector modeller) {
-        this.modeller = requireNonNull(modeller);
-        modeller.setOnInference(this::onInference);
     }
 
     @Override
@@ -174,7 +160,8 @@ public class StateMachineAgent implements ProcessorContextApi {
      *
      * @param worldModel the world model
      */
-    private RobotCommands onInference(WorldModel worldModel) {
+    @Override
+    public RobotCommands onInference(WorldModel worldModel) {
         this.worldModel = worldModel;
         if (this.currentNode == null) {
             initContext();

@@ -29,10 +29,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.LabelMarker;
 import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WorldModel;
-import org.mmarini.wheelly.apps.JsonSchemas;
+import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.wheelly.envs.RewardFunction;
-import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 
 import java.awt.geom.Point2D;
@@ -58,7 +56,7 @@ public interface Label {
      * @param locator the locator
      */
     static RewardFunction create(JsonNode root, Locator locator) {
-        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         String label = locator.path("label").getNode(root).asText();
         double minDistance = locator.path("minDistance").getNode(root).asDouble();
         double maxDistance = locator.path("maxDistance").getNode(root).asDouble();
@@ -86,26 +84,23 @@ public interface Label {
                                 Complex sensorRange,
                                 double reward) {
         return (s0, a, s1) -> {
-            if (s1 instanceof WorldState state) {
-                WorldModel model = state.model();
-                RobotStatus robotStatus = model.robotStatus();
-                Map<String, LabelMarker> markers = model.markers();
-                // Get the nearest labeled obstacle
-                Point2D robotLocation = robotStatus.location();
-                LabelMarker labelMarker = markers.get(label);
-                // check robot speed in range
-                if (labelMarker != null
-                        && abs(robotStatus.leftPps()) < velocityThreshold
-                        && abs(robotStatus.rightPps()) < velocityThreshold) {
-                    Point2D markerLocation = labelMarker.location();
-                    double distance = markerLocation.distance(robotLocation);
-                    Complex labeledDir = Complex.direction(robotLocation, markerLocation);
-                    if (distance >= minDistance && distance <= maxDistance
-                            && labeledDir.isCloseTo(robotStatus.direction(), directionRange)
-                            // and any sector in sensor direction range with a labeled target in distance range
-                            && robotStatus.sensorDirection().isCloseTo(Complex.DEG0, sensorRange)) {
-                        return reward;
-                    }
+            RobotStatus robotStatus = s1.robotStatus();
+            Map<String, LabelMarker> markers = s1.markers();
+            // Get the nearest labeled obstacle
+            Point2D robotLocation = robotStatus.location();
+            LabelMarker labelMarker = markers.get(label);
+            // check robot speed in range
+            if (labelMarker != null
+                    && abs(robotStatus.leftPps()) < velocityThreshold
+                    && abs(robotStatus.rightPps()) < velocityThreshold) {
+                Point2D markerLocation = labelMarker.location();
+                double distance = markerLocation.distance(robotLocation);
+                Complex labeledDir = Complex.direction(robotLocation, markerLocation);
+                if (distance >= minDistance && distance <= maxDistance
+                        && labeledDir.isCloseTo(robotStatus.direction(), directionRange)
+                        // and any sector in sensor direction range with a labeled target in distance range
+                        && robotStatus.sensorDirection().isCloseTo(Complex.DEG0, sensorRange)) {
+                    return reward;
                 }
             }
             return 0;

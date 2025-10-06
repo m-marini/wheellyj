@@ -31,7 +31,7 @@ package org.mmarini.wheelly.engines;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apps.JsonSchemas;
+import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,7 +62,7 @@ public class HaltState extends TimeOutState {
      * @param id      the status identifier
      */
     public static HaltState create(JsonNode root, Locator locator, String id) {
-        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         long timeout = locator.path(TIMEOUT_ID).getNode(root).asLong();
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));

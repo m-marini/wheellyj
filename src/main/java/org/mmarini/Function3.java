@@ -35,6 +35,7 @@ package org.mmarini;
  * @param <T3>
  * @param <R>
  */
+@FunctionalInterface
 public interface Function3<T1, T2, T3, R> {
     /**
      * @param t1

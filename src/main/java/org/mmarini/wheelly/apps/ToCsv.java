@@ -36,7 +36,7 @@ import org.mmarini.ParallelProcess;
 import org.mmarini.rl.agents.BinArrayFile;
 import org.mmarini.rl.agents.CSVWriter;
 import org.mmarini.rl.agents.KeyFileMap;
-import org.mmarini.wheelly.swing.Messages;
+import org.mmarini.swing.Messages;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

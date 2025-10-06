@@ -41,7 +41,6 @@ import org.jbox2d.collision.shapes.PolygonShape;
 import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.*;
 import org.jbox2d.dynamics.contacts.Contact;
-import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -107,7 +106,7 @@ public class SimRobot implements RobotApi {
      */
     public static SimRobot create(JsonNode root, File file) {
         Locator locator = Locator.root();
-        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         long mapSeed = locator.path("mapSeed").getNode(root).asLong(0);
         long robotSeed = locator.path("robotSeed").getNode(root).asLong(0);
         int numObstacles = locator.path("numObstacles").getNode(root).asInt();

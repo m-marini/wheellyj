@@ -31,8 +31,8 @@ package org.mmarini.wheelly.engines;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.wheelly.apis.WorldModel;
-import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,7 +70,7 @@ public class SearchRefreshState extends AbstractSearchAndMoveState {
      * @param id      the state identifier
      */
     public static SearchRefreshState create(JsonNode root, Locator locator, String id) {
-        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double growthDistance = locator.path(GROWTH_DISTANCE_ID).getNode(root).asDouble(DEFAULT_GROWTH_DISTANCE);
         long seed = locator.path(SEED_ID).getNode(root).asLong();
         Random random = seed == 0

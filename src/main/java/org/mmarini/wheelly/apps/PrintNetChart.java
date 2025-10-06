@@ -34,15 +34,17 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.agents.AbstractAgentNN;
 import org.mmarini.rl.agents.Agent;
+import org.mmarini.rl.agents.AgentRL;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.rl.nets.*;
+import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotControllerApi;
+import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.wheelly.apis.WorldModeller;
 import org.mmarini.wheelly.envs.EnvironmentApi;
 import org.mmarini.wheelly.envs.RewardFunction;
-import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
@@ -99,7 +101,7 @@ public class PrintNetChart {
     }
 
     protected Namespace args;
-    private Agent agent;
+    private AgentRL agent;
     private PrintWriter output;
 
     /**
@@ -139,7 +141,7 @@ public class PrintNetChart {
         try {
             this.args = parser.parseArgs(args);
             JsonNode config = fromFile(this.args.getString("config"));
-            JsonSchemas.instance().validateOrThrow(config, Wheelly.WHEELLY_SCHEMA_YML);
+            WheellyJsonSchemas.instance().validateOrThrow(config, Wheelly.WHEELLY_SCHEMA_YML);
 
             logger.atInfo().log("Creating robot ...");
             RobotApi robot = AppYaml.robotFromJson(config);
@@ -164,7 +166,7 @@ public class PrintNetChart {
             logger.atInfo().log("Creating agent ...");
             Function<WithSignalsSpec, Agent> agentBuilder = Agent.fromFile(
                     new File(Locator.locate("agent").getNode(config).asText()));
-            this.agent = agentBuilder.apply(environment);
+            this.agent = (AgentRL) agentBuilder.apply(environment);
 
             environment.connect(agent);
 
