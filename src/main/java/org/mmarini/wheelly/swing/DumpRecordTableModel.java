@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.swing;
 
+import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.apis.DumpRecord;
 
 import javax.swing.table.AbstractTableModel;
@@ -145,17 +146,12 @@ public class DumpRecordTableModel extends AbstractTableModel {
 
     @Override
     public Object getValueAt(int row, int col) {
-        switch (col) {
-            case TIMESTAMP_COLUMN:
-                return records.get(row).instant();
-            case ELAPSED_COLUMN:
-                return formatDuration(Duration.between(timeOffset, records.get(row).instant()));
-            case TYPE_COLUMN:
-                return records.get(row).comDirection();
-            case DATA_COLUMN:
-                return records.get(row).data();
-            default:
-                return "?";
-        }
+        return switch (col) {
+            case TIMESTAMP_COLUMN -> records.get(row).instant();
+            case ELAPSED_COLUMN -> formatDuration(Duration.between(timeOffset, records.get(row).instant()));
+            case TYPE_COLUMN -> records.get(row).comDirection();
+            case DATA_COLUMN -> records.get(row).data();
+            default -> "?";
+        };
     }
 }

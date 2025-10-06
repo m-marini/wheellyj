@@ -33,6 +33,8 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
+import org.mmarini.Tuple2;
+import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.engines.ProcessorContextApi;
 import org.mmarini.wheelly.engines.StateMachineAgent;
@@ -69,22 +71,24 @@ public class RobotExecutor {
                 .defaultHelp(true)
                 .version(Messages.getString("Wheelly.title"))
                 .description("Run a session of interaction between robot and environment.");
-        parser.addArgument("-v", "--version")
-                .action(Arguments.version())
-                .help("show current version");
         parser.addArgument("-c", "--config")
                 .setDefault("executor.yml")
                 .help("specify yaml configuration file");
+        parser.addArgument("-d", "--dump")
+                .help("specify inference dump file");
         parser.addArgument("-s", "--silent")
                 .action(Arguments.storeTrue())
                 .help("specify silent closing (no window messages)");
-        parser.addArgument("-w", "--windows")
-                .action(Arguments.storeTrue())
-                .help("use multiple windows");
-        parser.addArgument("-t", "--localTime")
+        parser.addArgument("-t", "--time")
                 .setDefault(43200L)
                 .type(Long.class)
                 .help("specify number of seconds of session duration");
+        parser.addArgument("-v", "--version")
+                .action(Arguments.version())
+                .help("show current version");
+        parser.addArgument("-w", "--windows")
+                .action(Arguments.storeTrue())
+                .help("use multiple windows");
         return parser;
     }
 
@@ -124,6 +128,7 @@ public class RobotExecutor {
     private List<JFrame> allFrames;
     private RobotControllerApi controller;
     private WorldModeller modeller;
+    private InferenceFileWriter dumpFile;
 
     /**
      * Creates the roboto executor
@@ -145,12 +150,13 @@ public class RobotExecutor {
     }
 
     /**
-     * Returns the agent from configuration files
+     * Creates the context.
+     * It consists of the robot, the controller, the modeller and the state machine agent
      */
     void createContext() throws IOException {
         File confFile = new File(this.args.getString("config"));
         JsonNode config = org.mmarini.yaml.Utils.fromFile(confFile);
-        JsonSchemas.instance().validateOrThrow(config, EXECUTOR_SCHEMA_YML);
+        WheellyJsonSchemas.instance().validateOrThrow(config, EXECUTOR_SCHEMA_YML);
 
         logger.atInfo().log("Creating robot ...");
         this.robot = AppYaml.robotFromJson(config);
@@ -161,16 +167,26 @@ public class RobotExecutor {
 
         logger.atInfo().log("Creating world modeller ...");
         this.modeller = AppYaml.modellerFromJson(config);
+        modeller.setRobotSpec(robot.robotSpec());
         modeller.connectController(controller);
 
         logger.atInfo().log("Creating agent ...");
         this.agent = StateMachineAgent.fromFile(
                 new File(config.path("agent").asText()));
-        agent.connect(modeller);
+        modeller.connect(agent);
 
-        this.sessionDuration = this.args.getLong("localTime") * 1000;
+        this.sessionDuration = this.args.getLong("time") * 1000;
         logger.atInfo().setMessage("Session will be running for {} sec...").addArgument(sessionDuration).log();
+
+        String dumpFile = this.args.getString("dump");
+        if (dumpFile != null) {
+            File file = new File(dumpFile);
+            file.delete();
+            this.dumpFile = InferenceFileWriter.fromFile(file);
+            logger.atInfo().log("Writing dump {}", file);
+        }
     }
+
 
     /**
      * Creates the reactive flows
@@ -211,6 +227,31 @@ public class RobotExecutor {
                 .subscribe(this::onPath);
         agent.readTriggers()
                 .subscribe(this::onTrigger);
+
+        modeller.readInference()
+                .subscribe(this::onInference);
+    }
+
+    /**
+     * Handles the inference result
+     *
+     * @param result the inference result
+     */
+    private void onInference(Tuple2<WorldModel, RobotCommands> result) {
+        if (dumpFile != null) {
+            WorldModel world = result._1;
+            RobotCommands commands = result._2;
+            try {
+                dumpFile.write(world, commands);
+            } catch (IOException e) {
+                logger.atError().setCause(e).log("Error writing dump file {}", args.getString("dump"));
+                try {
+                    dumpFile.close();
+                } catch (IOException ex) {
+                }
+                dumpFile = null;
+            }
+        }
     }
 
     /**
@@ -293,6 +334,14 @@ public class RobotExecutor {
      */
     private void onShutdown() {
         allFrames.forEach(JFrame::dispose);
+        if (dumpFile != null) {
+            try {
+                dumpFile.close();
+                logger.atInfo().log("Closed dump file {}", args.getString("dump"));
+            } catch (IOException e) {
+                logger.atError().setCause(e).log("Error closing dump file {}", args.getString("dump"));
+            }
+        }
         if (!args.getBoolean("silent")) {
             JOptionPane.showMessageDialog(null,
                     "Completed", "Information", JOptionPane.INFORMATION_MESSAGE);
@@ -369,6 +418,9 @@ public class RobotExecutor {
         createContext();
         createFlows();
         initUI();
+        if (dumpFile != null) {
+            dumpFile.writeHeader(modeller.worldModelSpec(), modeller.radarModeller().topology());
+        }
 
         // Configure the user interface
         logger.atInfo().log("Starting session ...");

@@ -28,8 +28,6 @@
 
 package org.mmarini.wheelly.apis;
 
-import java.util.function.Function;
-
 /**
  * Allows connecting to the world modeller
  */
@@ -40,11 +38,11 @@ public interface WorldModellerConnector {
     WorldModel clearRadarMap();
 
     /**
-     * Sets the on inference callback
+     * Connect the environment
      *
-     * @param onInference the call back
+     * @param inference the inference
      */
-    WorldModeller setOnInference(Function<WorldModel, RobotCommands> onInference);
+    WorldModellerConnector connect(InferenceConnector inference);
 
     /**
      * Returns the world model specification

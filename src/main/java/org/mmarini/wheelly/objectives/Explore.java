@@ -28,9 +28,8 @@ package org.mmarini.wheelly.objectives;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apis.MapCell;
 import org.mmarini.wheelly.apis.RadarMap;
-import org.mmarini.wheelly.apps.JsonSchemas;
+import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.wheelly.envs.RewardFunction;
-import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 
 import java.util.Arrays;
@@ -55,7 +54,7 @@ public interface Explore {
      * @param locator the locator
      */
     static RewardFunction create(JsonNode root, Locator locator) {
-        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double reward = locator.path("reward").getNode(root).asDouble(1d);
         return explore(reward);
     }
@@ -65,21 +64,16 @@ public interface Explore {
      */
     static RewardFunction explore(double reward) {
         return (s0, a, s1) -> {
-            if (s0 instanceof WorldState state0
-                    && s1 instanceof WorldState state1) {
-                RadarMap radarMap0 = state0.model().radarMap();
-                RadarMap radarMap1 = state1.model().radarMap();
-                long knownSectors0Number = Arrays.stream(radarMap0.cells())
-                        .filter(Predicate.not(MapCell::unknown))
-                        .count();
-                long knownSector10Number = Arrays.stream(radarMap1.cells())
-                        .filter(Predicate.not(MapCell::unknown))
-                        .count();
-                if (knownSector10Number > knownSectors0Number) {
-                    return reward;
-                }
-            }
-            return 0;
+            RadarMap radarMap0 = s0.radarMap();
+            RadarMap radarMap1 = s1.radarMap();
+            long knownSectors0Number = Arrays.stream(radarMap0.cells())
+                    .filter(Predicate.not(MapCell::unknown))
+                    .count();
+            long knownSector10Number = Arrays.stream(radarMap1.cells())
+                    .filter(Predicate.not(MapCell::unknown))
+                    .count();
+            return knownSector10Number > knownSectors0Number
+                    ? reward : 0;
         };
     }
 

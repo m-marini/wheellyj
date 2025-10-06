@@ -1,0 +1,102 @@
+---
+$schema: https://mmarini.org/wheelly/dl-agent-builder-schema-0.1
+class: org.mmarini.rl.agents.DLAgentBuilder
+numEpochs: 1
+trajectorySize: 256
+batchSize: 32
+alpha: 1e-6
+beta: 3e-3
+avgReward: 0.5
+path: models/resnet13
+network:
+  activation: Identity
+  updater:
+    type: RmsProp
+    learningRate: 0.001
+    decayRms: 0.96
+    epsilon: 1e-3
+  optimizationAlog: StochasticGradientDescent
+  weightInit:
+    type: Xavier
+  #weightInit:
+  #  type: TruncatedNormalDistribution
+  #  mean: 0
+  #  stddev: 0.5
+  l1: 1e-7
+  l2: 5e-5
+  graphBuilder:
+    inputs:
+      map:
+        type: Convolutional
+        width: 125
+        height: 125
+        depth: 5
+        format: NCHW
+    hiddens:
+      stem0:
+        inputs: [ map ]
+        type: ZeroPaddingLayer
+        padding: [ 3, 3 ]
+      stem-cnn1:
+        inputs: [ stem0 ]
+        type: ConvolutionLayer
+        nOut: 64
+        kernelSize: [ 7, 7 ]
+        stride: [ 2, 2 ]
+      stem-batch1:
+        inputs: [ stem-cnn1 ]
+        type: BatchNormalizationLayer
+      stem-act1:
+        inputs: [ stem-batch1 ]
+        type: ActivationLayer
+        activation: Relu
+      maxpool-in:
+        inputs: [ stem-act1 ]
+        type: SubsamplingLayer
+        kernelSize: [ 3, 3 ]
+        stride: [ 1, 1 ]
+        poolingType: Max
+      maxpool-out:
+        inputs: [ resnet31 ]
+        type: SubsamplingLayer
+        kernelSize: [ 3, 3 ]
+        poolingType: Max
+    blocks:
+      resnet11:
+        inputs: [ maxpool-in ]
+        type: ConvolutionResNetBlock
+        kernelSize: [ 3, 3 ]
+        filters: [ 64, 64, 256 ]
+        stride: [ 2, 2 ]
+      resnet21:
+        inputs: [ resnet11 ]
+        type: ConvolutionResNetBlock
+        kernelSize: [ 3, 3 ]
+        filters: [ 128, 128, 512 ]
+        stride: [ 2, 2 ]
+      resnet31:
+        inputs: [ resnet21 ]
+        type: ConvolutionResNetBlock
+        kernelSize: [ 3, 3 ]
+        filters: [ 256, 256, 1024 ]
+        stride: [ 2, 2 ]
+    outputs:
+      critic:
+        type: OutputLayer
+        inputs: [ maxpool-out ]
+        nOut: 1
+        activation: Identity
+        lossFunction: SquaredLoss
+      move:
+        type: OutputLayer
+        inputs: [ maxpool-out ]
+        nOut: 40
+        activation: SoftMax
+        lossFunction: NegativeLogLikelihood
+      sensorAction:
+        type: OutputLayer
+        inputs: [ maxpool-out ]
+        nOut: 7
+        activation: SoftMax
+        lossFunction: NegativeLogLikelihood
+    vertices: { }

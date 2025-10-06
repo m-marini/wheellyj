@@ -1,0 +1,8 @@
+---
+$schema: https://mmarini.org/wheelly/env-world-schema-0.1
+class: org.mmarini.wheelly.envs.WorldEnvironment
+numSpeeds: 5
+numDirections: 8
+numSensorDirections: 7
+markerLabels:
+  - A

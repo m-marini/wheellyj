@@ -29,8 +29,6 @@
 package org.mmarini.swing;
 
 
-import org.mmarini.wheelly.swing.Messages;
-
 import javax.swing.*;
 import java.util.Optional;
 

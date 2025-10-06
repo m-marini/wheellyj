@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2023 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2023-2025 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -26,7 +26,7 @@
  *
  */
 
-package org.mmarini.wheelly.apps;
+package org.mmarini.yaml;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.networknt.schema.JsonSchema;
@@ -34,7 +34,6 @@ import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
 import org.mmarini.Tuple2;
-import org.mmarini.yaml.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,49 +52,12 @@ import static java.lang.String.format;
 public class JsonSchemas {
     private static final Logger logger = LoggerFactory.getLogger(JsonSchemas.class);
 
-    private static final JsonSchemas singleton = create(
-            "/agent-single-nn-schema.yml",
-            "/agent-state-machine-schema.yml",
-            "/batch-schema.yml",
-            "/camera-calibration-schema.yml",
-            "/checkup-schema.yml",
-            "/controller-schema.yml",
-            "/env-world-schema.yml",
-            "/executor-schema.yml",
-            "/monitor-schema.yml",
-            "/mqtt-robot-schema.yml",
-            "/network-list-schema.yml",
-            "/network-schema.yml",
-            "/ppo-agent-schema.yml",
-            "/ppo-agent-spec-schema.yml",
-            "/tdagent-spec-schema.yml",
-            "/objective-avoid-contact-schema.yml",
-            "/objective-cautious-schema.yml",
-            "/objective-nomove-schema.yml",
-            "/objective-explore-schema.yml",
-            "/objective-stuck-schema.yml",
-            "/objective-constant-schema.yml",
-            "/objective-label-schema.yml",
-            "/objective-moveToLabel-schema.yml",
-            "/objective-sensor-label-schema.yml",
-            "/objective-action-set-schema.yml",
-            "/real-robot-schema.yml",
-            "/sim-robot-schema.yml",
-            "/signal-schema.yml",
-            "/state-avoid-schema.yml",
-            "/state-clear-map-schema.yml",
-            "/state-search-label-schema.yml",
-            "/state-search-refresh-schema.yml",
-            "/state-search-unknown-schema.yml",
-            "/state-halt-schema.yml",
-            "/state-label-stuck-schema.yml",
-            "/state-mapping-schema.yml",
-            "/state-move-path-schema.yml",
-            "/wheelly-schema.yml",
-            "/world-modeller-schema.yml"
-    );
-
-    private static JsonSchemas create(String... schemas) {
+    /**
+     * Returns the JSON schema loaded from the file list
+     *
+     * @param schemas schema file list
+     */
+    public static JsonSchemas load(String... schemas) {
         JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
 
         Map<String, JsonSchema> schemaMap = Arrays.stream(schemas)
@@ -121,13 +83,6 @@ public class JsonSchemas {
                 ))
                 .collect(Tuple2.toMap());
         return new JsonSchemas(schemaMap);
-    }
-
-    /**
-     * Returns the singleton instance
-     */
-    public static JsonSchemas instance() {
-        return singleton;
     }
 
     private final Map<String, JsonSchema> cache;

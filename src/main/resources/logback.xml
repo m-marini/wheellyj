@@ -6,7 +6,7 @@
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
             <level>DEBUG</level>
         </filter>
-        <encoder>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
@@ -50,7 +50,6 @@
     <logger name="org.mmarini.rl.agents.BinArrayFile" level="INFO"/>
     <logger name="org.mmarini.rl.agents.CSVWriter" level="INFO"/>
     <logger name="org.mmarini.rl.agents.TDAgentSingleNN" level="INFO"/>
-
 
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>

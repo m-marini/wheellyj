@@ -28,15 +28,14 @@ package org.mmarini.wheelly.objectives;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.mmarini.rl.envs.IntSignal;
-import org.mmarini.rl.envs.Signal;
 import org.mmarini.wheelly.TestFunctions;
+import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
 import java.io.IOException;
-import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
@@ -45,99 +44,109 @@ class ActionSetTest {
 
     @ParameterizedTest
     @CsvSource({
-            "1, 0,0",
-            "0, 0,1",
-            "0, 1,0",
-            "0, 1,1",
+            "1, 0,0,0",
+            "0, 0,0,5",
+            "0, 0,5,0",
+            "0, 0,5,5",
+            "0, 1,0,0",
+            "0, 1,0,5",
+            "0, 1,5,0",
+            "0, 1,5,5",
     })
     void createAll(double expected,
-                   int move,
+                   int speed,
+                   int direction,
                    int sensor) throws IOException {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + ActionSet.SCHEMA_NAME,
                 "class: " + ActionSet.class.getName(),
-                "move: 0",
+                "speed: 0",
+                "direction: 0",
                 "sensor: 0"));
         RewardFunction f = ActionSet.create(root, Locator.root());
-        Map<String, Signal> action = Map.of(
-                "move", IntSignal.create(move),
-                "sensorAction", IntSignal.create(sensor)
-        );
-        double result = f.apply(null, action, null);
+        RobotCommands cmd = RobotCommands.moveAndScan(Complex.fromDeg(direction), speed, Complex.fromDeg(sensor));
+        double result = f.applyAsDouble(null, cmd, null);
 
         assertThat(result, closeTo(expected, 1e-4));
     }
 
     @ParameterizedTest
     @CsvSource({
-            "2, 0,0",
-            "0, 0,1",
-            "0, 1,0",
-            "0, 1,1",
+            "2, 0,0,0",
+            "0, 0,0,5",
+            "0, 0,5,0",
+            "0, 0,5,5",
+            "0, 1,0,0",
+            "0, 1,0,5",
+            "0, 1,5,0",
+            "0, 1,5,5",
     })
     void createAllWithReward(double expected,
-                             int move,
+                             int speed,
+                             int direction,
                              int sensor) throws IOException {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + ActionSet.SCHEMA_NAME,
                 "class: " + ActionSet.class.getName(),
-                "move: 0",
+                "speed: 0",
+                "direction: 0",
                 "sensor: 0",
                 "reward: 2"));
         RewardFunction f = ActionSet.create(root, Locator.root());
-        Map<String, Signal> action = Map.of(
-                "move", IntSignal.create(move),
-                "sensorAction", IntSignal.create(sensor)
-        );
-        double result = f.apply(null, action, null);
+        RobotCommands cmd = RobotCommands.moveAndScan(Complex.fromDeg(direction), speed, Complex.fromDeg(sensor));
+        double result = f.applyAsDouble(null, cmd, null);
 
         assertThat(result, closeTo(expected, 1e-4));
     }
 
     @ParameterizedTest
     @CsvSource({
-            "1, 0,0",
-            "1, 0,1",
-            "0, 1,0",
-            "0, 1,1",
-    })
-    void createMoveTest(double expected,
-                        int move,
-                        int sensor) throws IOException {
-        JsonNode root = Utils.fromText(TestFunctions.text("---",
-                "$schema: " + ActionSet.SCHEMA_NAME,
-                "class: " + ActionSet.class.getName(),
-                "move: 0"));
-        RewardFunction f = ActionSet.create(root, Locator.root());
-        Map<String, Signal> action = Map.of(
-                "move", IntSignal.create(move),
-                "sensorAction", IntSignal.create(sensor)
-        );
-        double result = f.apply(null, action, null);
-
-        assertThat(result, closeTo(expected, 1e-4));
-    }
-
-    @ParameterizedTest
-    @CsvSource({
-            "1, 0,0",
-            "0, 0,1",
-            "1, 1,0",
-            "0, 1,1",
+            "1, 0,0,0",
+            "0, 0,0,5",
+            "1, 0,5,0",
+            "0, 0,5,5",
+            "1, 1,0,0",
+            "0, 1,0,5",
+            "1, 1,5,0",
+            "0, 1,5,5",
     })
     void createSensor(double expected,
-                      int move,
+                      int speed,
+                      int direction,
                       int sensor) throws IOException {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + ActionSet.SCHEMA_NAME,
                 "class: " + ActionSet.class.getName(),
                 "sensor: 0"));
         RewardFunction f = ActionSet.create(root, Locator.root());
-        Map<String, Signal> action = Map.of(
-                "move", IntSignal.create(move),
-                "sensorAction", IntSignal.create(sensor)
-        );
-        double result = f.apply(null, action, null);
+        RobotCommands cmd = RobotCommands.moveAndScan(Complex.fromDeg(direction), speed, Complex.fromDeg(sensor));
+        double result = f.applyAsDouble(null, cmd, null);
+
+        assertThat(result, closeTo(expected, 1e-4));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "1, 0,0,0",
+            "1, 0,0,5",
+            "1, 0,5,0",
+            "1, 0,5,5",
+            "0, 1,0,0",
+            "0, 1,0,5",
+            "0, 1,5,0",
+            "0, 1,5,5",
+    })
+    void createSpeedTest(double expected,
+                         int speed,
+                         int direction,
+                         int sensor) throws IOException {
+        JsonNode root = Utils.fromText(TestFunctions.text("---",
+                "$schema: " + ActionSet.SCHEMA_NAME,
+                "class: " + ActionSet.class.getName(),
+                "speed: 0"));
+        RewardFunction f = ActionSet.create(root, Locator.root());
+        RobotCommands cmd = RobotCommands.moveAndScan(Complex.fromDeg(direction), speed, Complex.fromDeg(sensor));
+        double result = f.applyAsDouble(null, cmd, null);
 
         assertThat(result, closeTo(expected, 1e-4));
     }

@@ -39,8 +39,8 @@
         <java.version>21</java.version>
         <rxjava.version>3.0.0-RC2</rxjava.version>
         <jackson.version>2.12.5</jackson.version>
-        <slf4j.version>2.0.6</slf4j.version>
-        <logback.version>1.3.5</logback.version>
+        <slf4j.version>2.0.17</slf4j.version>
+        <logback.version>1.5.15</logback.version>
         <junit.version>5.5.2</junit.version>
         <hamcrest.version>2.2</hamcrest.version>
         <mockito.version>5.8.0</mockito.version>
@@ -48,6 +48,8 @@
         <guava.version>33.4.8-jre</guava.version>
         <guava.version>33.4.8-jre</guava.version>
         <mqtt.version>1.2.5</mqtt.version>
+        <simple-openai.version>3.22.1</simple-openai.version>
+        <okhttp.version>5.1.0</okhttp.version>
         <maven-shade-plugin.version>3.3.0</maven-shade-plugin.version>
     </properties>
     <build>
@@ -164,32 +166,30 @@
     </build>
     <dependencies>
         <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${logback.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <dependency>
             <groupId>net.sourceforge.argparse4j</groupId>
             <artifactId>argparse4j</artifactId>
             <version>0.9.0</version>
         </dependency>
-        <!--
-        <dependency>
-            <groupId>net.java.jinput</groupId>
-            <artifactId>jinput</artifactId>
-            <version>2.0.9</version>
-        </dependency>
-        <dependency>
-            <groupId>net.java.jinput</groupId>
-            <artifactId>jinput</artifactId>
-            <version>2.0.9</version>
-            <classifier>natives-all</classifier>
-        </dependency>
-        <dependency>
-            <groupId>io.github.java-native</groupId>
-            <artifactId>jssc</artifactId>
-            <version>2.9.4</version>
-        </dependency>
-        -->
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-yaml</artifactId>
             <version>${jackson.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-simple:jar</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -215,6 +215,17 @@
             <groupId>com.github.akarnokd</groupId>
             <artifactId>rxjava3-bridge</artifactId>
             <version>3.0.2</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.sashirestela</groupId>
+            <artifactId>simple-openai</artifactId>
+            <version>${simple-openai.version}</version>
+        </dependency>
+        <!-- OkHttp dependency is optional if you decide to use it with simple-openai -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>${okhttp.version}</version>
         </dependency>
         <dependency>
             <groupId>org.eclipse.paho</groupId>
@@ -258,16 +269,6 @@
             <artifactId>activation</artifactId>
             <version>1.1.1</version>
         </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>${slf4j.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>${logback.version}</version>
-        </dependency>
         <!-- deeplearning4j-core: contains main functionality and neural networks -->
         <dependency>
             <groupId>org.deeplearning4j</groupId>
@@ -308,7 +309,11 @@
             <classifier>linux-x86_64-avx512</classifier>
             -->
         </dependency>
-        <!--
+        <dependency>
+            <groupId>org.deeplearning4j</groupId>
+            <artifactId>deeplearning4j-ui</artifactId>
+            <version>${dl4j-master.version}</version>
+        </dependency>        <!--
         <dependency>
             <groupId>org.bytedeco</groupId>
             <artifactId>cuda-platform-redist</artifactId>

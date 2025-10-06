@@ -26,7 +26,7 @@
 package org.mmarini.rl.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apps.JsonSchemas;
+import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 
 import java.util.Arrays;
@@ -58,7 +58,7 @@ public abstract class SignalSpec {
     }
 
     public static Map<String, SignalSpec> createSignalSpecMap(JsonNode node, Locator locator) {
-        JsonSchemas.instance().validateOrThrow(locator.getNode(node), SIGNAL_SCHEMA_YML);
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(node), SIGNAL_SCHEMA_YML);
         return locator.propertyNames(node)
                 .mapValues((name, l) -> SignalSpec.create(node, l))
                 .toMap();

@@ -28,6 +28,7 @@ package org.mmarini.wheelly;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Flowable;
 import org.hamcrest.CustomMatcher;
+import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.junit.jupiter.params.provider.Arguments;
 import org.mmarini.Tuple2;
@@ -110,6 +111,16 @@ public interface TestFunctions {
             public boolean matches(Object o) {
                 return o instanceof INDArray
                         && Arrays.equals(((INDArray) o).shape(), expShape);
+            }
+
+            @Override
+            public void describeMismatch(Object item, Description description) {
+                if (item instanceof INDArray value) {
+                    description.appendText("was ")
+                            .appendText(Arrays.toString(value.shape()));
+                } else {
+                    super.describeMismatch(item, description);
+                }
             }
         };
     }

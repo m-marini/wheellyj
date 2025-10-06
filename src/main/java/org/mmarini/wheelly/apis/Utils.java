@@ -25,12 +25,13 @@
 
 package org.mmarini.wheelly.apis;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.jbox2d.common.Vec2;
+import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Utils {
-
     private static final Logger logger = LoggerFactory.getLogger(Utils.class);
 
     public static double clip(double value, double min, double max) {
@@ -51,6 +52,30 @@ public class Utils {
 
     public static float linear(float x, float xmin, float xmax, float ymin, float ymax) {
         return (x - xmin) * (ymax - ymin) / (xmax - xmin) + ymin;
+    }
+
+    public static int[] loadIntArray(JsonNode root, Locator locator) {
+        return !locator.getNode(root).isMissingNode()
+                ? locator.elements(root)
+                .mapToInt(l ->
+                        l.getNode(root).asInt()
+                ).toArray()
+                : null;
+    }
+
+    /**
+     * Returns the string array located in the JSON document
+     *
+     * @param root    the json document
+     * @param locator the locator
+     */
+    public static String[] loadStringArray(JsonNode root, Locator locator) {
+        return !locator.getNode(root).isMissingNode()
+                ? locator.elements(root)
+                .map(l ->
+                        l.getNode(root).asText()
+                ).toArray(String[]::new)
+                : null;
     }
 
     public static Vec2 vec2(float[] x) {

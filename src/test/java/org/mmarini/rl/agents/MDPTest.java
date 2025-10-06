@@ -101,12 +101,12 @@ class MDPTest {
         return state -> {
             Map<String, Signal> s0 = mdp.state(state);
             Map<String, Signal> action = agent.act(s0);
-            return action.get("action").getInt(0);
+            return action.get("action").getInt(0, 0);
         };
     }
 
     /**
-     * Test for positive reward
+     * Test for positive rewards
      */
     @Test
     void neg4RewardTest() {
@@ -141,7 +141,7 @@ class MDPTest {
         double pi00Trained = pi1.getDouble(0, 0);
         double pi13Trained = pi1.getDouble(1, 3);
 
-        // Then the average reward should tend to 0
+        // Then the average rewards should tend to 0
         assertThat((double) avgReward, closeTo(0, 1d / 3));
         // And the policy for state 0 should increase action 0
         assertThat(pi00Trained, greaterThan(pi00));
@@ -153,7 +153,7 @@ class MDPTest {
 
 
     /**
-     * Test for positive reward
+     * Test for positive rewards
      */
     @Test
     void neg4RewardTest1() {
@@ -198,7 +198,7 @@ class MDPTest {
         double pi00Trained = pi1.getDouble(0, 0);
         double pi13Trained = pi1.getDouble(1, 3);
 
-        // Then the average reward should tend to 0
+        // Then the average rewards should tend to 0
         assertThat((double) avgReward, closeTo(0, 1d / 3));
         // And the policy for state 0 should increase action 0
         assertThat(pi00Trained, greaterThan(pi00));
@@ -209,7 +209,7 @@ class MDPTest {
     }
 
     /**
-     * Test for positive reward
+     * Test for positive rewards
      */
     @Test
     void negRewardTest() {
@@ -243,7 +243,7 @@ class MDPTest {
         double pi00Trained = pi1.getDouble(0, 0);
         double pi11Trained = pi1.getDouble(1, 1);
 
-        // Then the average reward should tend to 0
+        // Then the average rewards should tend to 0
         assertThat((double) avgReward, closeTo(0, 1d / 3));
         // And the policy for state 0 should increase action 0
         assertThat(pi00Trained, greaterThan(pi00));
@@ -254,7 +254,7 @@ class MDPTest {
     }
 
     /**
-     * Test for positive reward
+     * Test for positive rewards
      */
     @Test
     void pos4RewardTest() {
@@ -289,7 +289,7 @@ class MDPTest {
         double pi00Trained = pi1.getDouble(0, 0);
         double pi13Trained = pi1.getDouble(1, 3);
 
-        // Then the average reward should tend to 0
+        // Then the average rewards should tend to 0
         assertThat((double) avgReward, closeTo(1, 1d / 3));
         // And the policy for state 0 should increase action 0
         assertThat(pi00Trained, greaterThan(pi00));
@@ -300,7 +300,7 @@ class MDPTest {
     }
 
     /**
-     * Test for positive reward
+     * Test for positive rewards
      */
     @Test
     void posRewardTest() {
@@ -334,7 +334,7 @@ class MDPTest {
         double pi00Trained = pi1.getDouble(0, 0);
         double pi11Trained = pi1.getDouble(1, 1);
 
-        // Then the average reward should tend to 0
+        // Then the average rewards should tend to 0
         assertThat((double) avgReward, closeTo(1, 1d / 3));
         // And the policy for state 0 should increase action 0
         assertThat(pi00Trained, greaterThan(pi00));

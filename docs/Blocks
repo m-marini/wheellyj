@@ -1,0 +1,59 @@
+# NN Blocks
+
+## Convolution Resnet Blocks
+
+```mermaid
+graph TD;
+
+id_2a[Convolution<br>1 x 1 x filter0<br>stride0]
+id_batch_2a[BatchNormalization]
+id_act_2a[RELU]
+id_2b[Convolution<br>width x height x filter1<br>stride1]
+id_batch_2b[BatchNormalization]
+id_act_2b[RELU]
+id_2c[Convolution<br>1 x 1 x filter2<br>stride2]
+id_batch_1[BatchNormalization]
+id_1["\+"]
+id[RELU]
+inputs --> id_2a
+id_2a --> id_batch_2a
+id_batch_2a --> id_act_2a
+id_act_2a --> id_2b
+id_2b --> id_batch_2b
+id_batch_2b --> id_act_2b
+id_act_2b --> id_2c
+id_2c --> id_batch_2c
+id_batch_2c --> id_1
+inputs --> id_1
+id_1 --> id_batch_1
+id_batch_1 --> id
+
+```
+## Identity Resnet Blocks
+
+```mermaid
+graph TD;
+
+id_2a[Convolution<br>1 x 1 x filter0<br>]
+id_batch_2a[BatchNormalization]
+id_act_2a[RELU]
+id_2b[Convolution<br>width x height x filter1]
+id_batch_2b[BatchNormalization]
+id_act_2b[RELU]
+id_2c[Convolution<br>1 x 1 x filter2]
+id_batch_2c[BatchNormalization]
+id_short["\+"]
+id[RELU]
+inputs --> id_2a
+id_2a --> id_batch_2a
+id_batch_2a --> id_act_2a
+id_act_2a --> id_2b
+id_2b --> id_batch_2b
+id_batch_2b --> id_act_2b
+id_act_2b --> id_2c
+id_2c --> id_batch_2c
+id_batch_2c --> id_short
+inputs --> id_short
+id_short --> id
+
+```

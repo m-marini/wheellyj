@@ -34,7 +34,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.ParallelProcess;
-import org.mmarini.wheelly.swing.Messages;
+import org.mmarini.swing.Messages;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;

@@ -64,8 +64,8 @@ class RandomAgentTest {
         Map<String, Signal> state = Map.of();
         for (int i = 0; i < NUM_ITERS; i++) {
             Map<String, Signal> actions = agent.act(state);
-            int a = actions.get("a").getInt(0);
-            int b = actions.get("b").getInt(0);
+            int a = actions.get("a").getInt(0, 0);
+            int b = actions.get("b").getInt(0, 0);
             aCounters[a]++;
             bCounters[b]++;
         }

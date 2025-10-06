@@ -1,0 +1,449 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/dl-agent-builder-schema-0.1
+title: Agent
+type: object
+properties:
+  $schema:
+    const: https://mmarini.org/wheelly/dl-agent-builder-schema-0.1
+  class:
+    const: org.mmarini.rl.agents.DLAgentBuilder
+  alpha:
+    type: number
+    exclusiveMinimum: 0
+  avgReward:
+    type: number
+  beta:
+    type: number
+    exclusiveMinimum: 0
+  numEpochs:
+    type: integer
+    minimum: 1
+  trajectorySize:
+    type: integer
+    minimum: 1
+  batchSize:
+    type: integer
+    minimum: 1
+  path:
+    type: string
+  network:
+    $ref: "#/$defs/Network"
+required:
+  - $schema
+  - class
+  - numEpochs
+  - trajectorySize
+  - batchSize
+  - alpha
+  - beta
+  - path
+  - network
+$defs:
+  Activation:
+    type: string
+    enum:
+      - Identity
+      - Relu
+      - SoftMax
+      - Tanh
+  Block:
+    anyOf:
+      - $ref: "#/$defs/Blocks/ConvolutionResNetBlock"
+      - $ref: "#/$defs/Blocks/IdentityResNetBlock"
+  Blocks:
+    ConvolutionResNetBlock:
+      type: object
+      properties:
+        inputs:
+          type: array
+          items:
+            type: string
+            minItems: 1
+            maxItems: 1
+        type:
+          const: ConvolutionResNetBlock
+        kernelSize:
+          type: array
+          items:
+            type: integer
+            minItems: 2
+            maxItems: 2
+        stride:
+          type: array
+          items:
+            type: integer
+            minItems: 2
+            maxItems: 2
+        filters:
+          type: array
+          items:
+            type: integer
+            minItems: 3
+            maxItems: 3
+      required:
+        - type
+        - inputs
+        - kernelSize
+        - stride
+        - filters
+    IdentityResNetBlock:
+      type: object
+      properties:
+        inputs:
+          type: array
+          items:
+            type: string
+            minItems: 1
+            maxItems: 1
+        type:
+          const: IdentityResNetBlock
+        kernelSize:
+          type: array
+          items:
+            type: integer
+            minItems: 2
+            maxItems: 2
+        filters:
+          type: array
+          items:
+            type: integer
+            minItems: 3
+            maxItems: 3
+      required:
+        - type
+        - inputs
+        - kernelSize
+        - filters
+  CNN2DFormat:
+    type: string
+    enum:
+      - NCHW
+      - NHWC
+  DropOut:
+    type: number
+    minimum: 0
+    maximum: 1
+  GraphBuilder:
+    type: object
+    properties:
+      inputs:
+        type: object
+        additionalProperties:
+          $ref: "#/$defs/Input"
+      outputs:
+        type: object
+        additionalProperties:
+          $ref: "#/$defs/Layer"
+      hiddens:
+        type: object
+        additionalProperties:
+          $ref: "#/$defs/Layer"
+      vertices:
+        type: object
+        additionalProperties:
+          $ref: "#/$defs/Vertex"
+      blocks:
+        type: object
+        additionalProperties:
+          $ref: "#/$defs/Block"
+    required:
+      - inputs
+      - outputs
+  Input:
+    anyOf:
+      - $ref: "#/$defs/Inputs/FeedForward"
+      - $ref: "#/$defs/Inputs/Convolutional"
+  Inputs:
+    FeedForward:
+      type: object
+      properties:
+        type:
+          const: FeedForward
+        size:
+          type: integer
+      required:
+        - type
+        - size
+    Convolutional:
+      type: object
+      properties:
+        type:
+          const: Convolutional
+        width:
+          type: integer
+        height:
+          type: integer
+        depth:
+          type: integer
+        format:
+          $ref: "#/$defs/CNN2DFormat"
+      required:
+        - type
+        - width
+        - height
+        - depth
+  Layer:
+    anyOf:
+      - $ref: "#/$defs/Layers/ActivationLayer"
+      - $ref: "#/$defs/Layers/BatchNormalizationLayer"
+      - $ref: "#/$defs/Layers/ConvolutionLayer"
+      - $ref: "#/$defs/Layers/OutputLayer"
+      - $ref: "#/$defs/Layers/SubsamplingLayer"
+      - $ref: "#/$defs/Layers/ZeroPaddingLayer"
+  Layers:
+    ActivationLayer:
+      type: object
+      properties:
+        inputs:
+          type: array
+          items:
+            type: string
+        type:
+          const: ActivationLayer
+        activation:
+          $ref: "#/$defs/Activation"
+      required:
+        - type
+        - inputs
+    BatchNormalizationLayer:
+      type: object
+      properties:
+        inputs:
+          type: array
+          items:
+            type: string
+        type:
+          const: BatchNormalizationLayer
+      required:
+        - type
+        - inputs
+    ConvolutionLayer:
+      type: object
+      properties:
+        inputs:
+          type: array
+          items:
+            type: string
+        type:
+          const: ConvolutionLayer
+        kernelSize:
+          type: array
+          items:
+            type: integer
+        # default [ 5, 5 ]
+        stride:
+          type: array
+          items:
+            type: integer
+        # default [ 1, 1 ]
+        nOut:
+          type: integer
+          minimum: 1
+      required:
+        - type
+        - inputs
+        - kernelSize
+        - nOut
+    OutputLayer:
+      type: object
+      properties:
+        inputs:
+          type: array
+          items:
+            type: string
+        type:
+          const: OutputLayer
+        nOut:
+          type: integer
+          minimum: 1
+        activation:
+          $ref: "#/$defs/Activation"
+        lossFunction:
+          $ref: "#/$defs/LossFunction"
+        dropOut:
+          $ref: "#/$defs/DropOut"
+      required:
+        - type
+        - inputs
+        - nOut
+    SubsamplingLayer:
+      type: object
+      properties:
+        inputs:
+          type: array
+          items:
+            type: string
+        type:
+          const: SubsamplingLayer
+        kernelSize:
+          type: array
+          items:
+            type: integer
+        stride:
+          type: array
+          items:
+            type: integer
+        poolingType:
+          $ref: "#/$defs/PoolingType"
+      required:
+        - type
+        - inputs
+        - kernelSize
+    ZeroPaddingLayer:
+      type: object
+      properties:
+        inputs:
+          type: array
+          items:
+            type: string
+        type:
+          const: ZeroPaddingLayer
+        padding:
+          type: array
+          items:
+            type: integer
+      required:
+        - type
+        - inputs
+        - padding
+  LossFunction:
+    type: string
+    enum:
+      - CosineProximity
+      - Mcxent
+      - Hinge
+      - KLDivergence
+      - L1
+      - L2
+      - MeanAbsoluteError
+      - MeanAbsolutePercentageError
+      - MeanSquaredLogarithmicError
+      - Mse
+      - NegativeLogLikelihood
+      - Poisson
+      - ReconstructionCrossentropy
+      - SparseMcxent
+      - SquaredLoss
+      - SquaredHinge
+      - Wasserstein
+      - Xent
+  Network:
+    type: object
+    properties:
+      activation:
+        $ref: "#/$defs/Activation"
+      dropOut:
+        $ref: "#/$defs/DropOut"
+      graphBuilder:
+        $ref: "#/$defs/GraphBuilder"
+      optimizationAlgo:
+        $ref: "#/$defs/OptimizationAlgos"
+      updater:
+        $ref: "#/$defs/Updater"
+      weightInit:
+        $ref: "#/$defs/WeightInit"
+      l1:
+        type: number
+      l2:
+        type: number
+    required:
+      - graphBuilder
+  OptimizationAlog:
+    type: string
+    enum:
+      - ConjucateGradient
+      - Lbfgs
+      - LineGradientDescent
+      - StochasticGradientDescent
+  PoolingType:
+    type: string
+    enum:
+      - Avg
+      - Max
+      - PNorm
+      - Sum
+  Updater:
+    anyOf:
+      - $ref: "#/$defs/Updaters/Adam"
+      - $ref: "#/$defs/Updaters/Sgd"
+      - $ref: "#/$defs/Updaters/RmsProp"
+  Updaters:
+    Adam:
+      type: object
+      properties:
+        type:
+          const: Adam
+        learningRate:
+          type: number
+        beta:
+          type: number
+        beta1:
+          type: number
+        epsilon:
+          type: number
+      required:
+        - type
+    Sgd:
+      type: object
+      properties:
+        type:
+          const: Sgd
+        learning:
+          type: number
+      required:
+        - type
+    RmsProp:
+      type: object
+      properties:
+        type:
+          const: RmsProp
+        learningRate:
+          type: number
+        rmsDecay:
+          type: number
+        epsilon:
+          type: number
+      required:
+        - type
+  Vertex:
+    anyOf:
+      - $ref: "#/$defs/Vertices/ElementWiseVertex"
+  Vertices:
+    ElementWiseVertex:
+      type: object
+      properties:
+        type:
+          const: ElementWiseVertex
+        inputs:
+          type: array
+          items:
+            type: string
+      required:
+        - type
+        - inputs
+  WeightInit:
+    anyOf:
+      - $ref: "#/$defs/WeightInits/TruncatedNormalDistribution"
+      - $ref: "#/$defs/WeightInits/Xavier"
+  WeightInits:
+    TruncatedNormalDistribution:
+      type: object
+      properties:
+        type:
+          const: TruncatedNormalDistribution
+        mean:
+          type: number
+        stddev:
+          type: number
+      required:
+        - type
+        - mean
+        - stddev
+    Xavier:
+      type: object
+      properties:
+        type:
+          const: Xavier
+      required:
+        - type

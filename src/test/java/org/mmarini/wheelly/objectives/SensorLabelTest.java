@@ -34,7 +34,6 @@ import org.mmarini.wheelly.apis.LabelMarker;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.envs.RewardFunction;
-import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -52,7 +51,7 @@ class SensorLabelTest {
 
     private static final long MARKER_TIME = 1;
 
-    static WorldState createState(Complex sensorDir, double leftPps, double rightPps, double distance, String qrCode) {
+    static WorldModel createState(Complex sensorDir, double leftPps, double rightPps, double distance, String qrCode) {
         RobotStatus status = RobotStatus.create(ROBOT_SPEC, x -> 12)
                 .setSensorDirection(sensorDir)
                 .setSpeeds(leftPps, rightPps)
@@ -67,10 +66,7 @@ class SensorLabelTest {
         WorldModel model = mock();
         when(model.robotStatus()).thenReturn(status);
         when(model.markers()).thenReturn(markers);
-        WorldState state = mock();
-        when(state.model()).thenReturn(model);
-
-        return state;
+        return model;
     }
 
     @ParameterizedTest(
@@ -108,14 +104,14 @@ class SensorLabelTest {
                 "sensorRange: 30",
                 "reward: 2"
         ));
-        WorldState state = createState(
+        WorldModel state = createState(
                 Complex.fromDeg(sensorDir),
                 leftPps,
                 rightPps,
                 distance, qrCode);
         RewardFunction f = SensorLabel.create(root, Locator.root());
 
-        double result = f.apply(null, null, state);
+        double result = f.applyAsDouble(null, null, state);
 
         assertThat(result, closeTo(expectedReward, 1e-4));
     }

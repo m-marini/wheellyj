@@ -80,6 +80,11 @@ public class DataFileReader implements DataReader {
     }
 
     @Override
+    public int available() throws IOException {
+        return file.available();
+    }
+
+    @Override
     public boolean readBoolean() throws IOException {
         return readLong() != 0;
     }

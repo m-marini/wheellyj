@@ -59,7 +59,7 @@ class KpisMDPTrajectoryTest {
      * Returns the agent
      *
      * @param mdp         the mdp
-     * @param rewardAlpha the reward alpha
+     * @param rewardAlpha the rewards alpha
      * @param numSteps    the number of steps
      * @param numEpochs   the number of epochs
      * @param batchSize   the batch size
@@ -111,7 +111,7 @@ class KpisMDPTrajectoryTest {
         TDAgentSingleNN agent = createAgent(mdp, 1F / (numSteps + 1), numSteps, numEpochs, batchSize);
         // and the trajectory from current policy
         List<ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
-        // and the average reward
+        // and the average rewards
         float avg0 = (float) trajectory.stream()
                 .mapToDouble(ExecutionResult::reward)
                 .average()
@@ -147,14 +147,14 @@ class KpisMDPTrajectoryTest {
         sub.assertNotComplete();
         sub.assertNoErrors();
         sub.assertValueCount(2);
-        // And first kpis must be the s0, action, reward kpis
+        // And first kpis must be the s0, action, rewards kpis
         /*
         Map<String, INDArray> kpis = sub.values().getFirst();
         assertThat(kpis, hasEntry(
                 equalTo("s0.input"),
                 matrixCloseTo(expStates.get("input"), 1e-3)));
         assertThat(kpis, hasEntry(
-                equalTo("reward"),
+                equalTo("rewards"),
                 matrixCloseTo(expRewards, 1e-3)
         ));
         assertThat(kpis, hasEntry(
@@ -270,7 +270,7 @@ class KpisMDPTrajectoryTest {
         // and the trajectory from current policy
 //        List<ExecutionResult> trajectory = trajectory(agent, numSteps);
         List<ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
-        // and the average reward
+        // and the average rewards
         float avg0 = (float) trajectory.stream()
                 .mapToDouble(ExecutionResult::reward)
                 .average()

@@ -30,6 +30,7 @@ package org.mmarini.wheelly.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.rl.envs.WithSignalsSpec;
+import org.mmarini.wheelly.apis.InferenceConnector;
 import org.mmarini.wheelly.apis.RobotControllerApi;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
@@ -40,7 +41,7 @@ import java.io.IOException;
 /**
  * Manages the interaction between robot controller and TD agent
  */
-public interface EnvironmentApi extends EnvironmentConnector, WithSignalsSpec {
+public interface EnvironmentApi extends EnvironmentConnector, InferenceConnector, WithSignalsSpec {
 
     /**
      * Returns the robot environment from configuration
@@ -71,6 +72,7 @@ public interface EnvironmentApi extends EnvironmentConnector, WithSignalsSpec {
     static EnvironmentApi fromFile(File file) throws IOException {
         return Utils.createObject(file);
     }
+
 
     /**
      * Sets the reward function

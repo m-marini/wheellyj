@@ -32,7 +32,6 @@ import org.mmarini.yaml.Utils;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -119,20 +118,11 @@ class PPOAgentPolarMapTest {
         }
     };
 
-    static void deleteRecursive(File file) throws IOException {
-        if (file.isDirectory()) {
-            for (File f : file.listFiles()) {
-                deleteRecursive(f);
-            }
-        }
-        Files.deleteIfExists(file.toPath());
-    }
-
     @Test
     void createTest() throws IOException {
         // Given an agent
         File path = new File("models/test");
-        deleteRecursive(path);
+        org.mmarini.Utils.deleteRecursive(path);
         JsonNode spec = Utils.fromText(YAML);
         PPOAgent agent = PPOAgent.create(spec, MOCK_ENV);
         // And an input state

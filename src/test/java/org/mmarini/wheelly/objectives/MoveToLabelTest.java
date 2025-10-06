@@ -28,12 +28,9 @@ package org.mmarini.wheelly.objectives;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.mmarini.rl.envs.IntSignal;
-import org.mmarini.rl.envs.Signal;
 import org.mmarini.wheelly.TestFunctions;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.envs.RewardFunction;
-import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -41,12 +38,9 @@ import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.util.Map;
 
-import static java.lang.Math.round;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
-import static org.mmarini.wheelly.apis.Utils.linear;
-import static org.mmarini.wheelly.envs.WorldEnvironment.MAX_DIRECTION_ACTION;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -57,14 +51,8 @@ class MoveToLabelTest {
     public static final int MAP_SIZE = 15;
     public static final double GRID_SIZE = 0.2;
     public static final int ECHO_TIME = 100;
-    public static final int MAX_SPEED_PPS = 60;
 
-    static int actionCode(int actionDeg, int actionSpeed) {
-        return round(linear(actionDeg, -MAX_DIRECTION_ACTION, MAX_DIRECTION_ACTION, 0, 8)) * 5
-                + round(linear(actionSpeed, -MAX_SPEED_PPS, MAX_SPEED_PPS, 0, 4));
-    }
-
-    static WorldState createState(Complex robotDir, Complex sensorDir, Complex obstacleDir) {
+    static WorldModel createState(Complex robotDir, Complex sensorDir, Complex obstacleDir) {
         Point2D obstacleLocation = obstacleDir.at(new Point2D.Float(), OBSTACLE_DISTANCE);
         RadarMap map = RadarMap.empty(GridTopology.create(new Point2D.Float(), MAP_SIZE, MAP_SIZE,
                         GRID_SIZE))
@@ -81,10 +69,7 @@ class MoveToLabelTest {
         when(model.radarMap()).thenReturn(map);
         when(model.robotStatus()).thenReturn(status);
         when(model.markers()).thenReturn(markers);
-
-        WorldState state = mock();
-        when(state.model()).thenReturn(model);
-        return state;
+        return model;
     }
 
     @ParameterizedTest(
@@ -127,6 +112,7 @@ class MoveToLabelTest {
                 int actionDeg,
                 int actionSpeed
     ) throws IOException {
+        // Given a move to label objective
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + MoveToLabel.SCHEMA_NAME,
                 "class: " + MoveToLabel.class.getName(),
@@ -139,15 +125,13 @@ class MoveToLabelTest {
                 "maxSpeed: 30"
         ));
         RewardFunction f = MoveToLabel.create(root, Locator.root());
-
-        WorldState state = createState(Complex.fromDeg(robotDeg),
+        // And a world state with robot directed to robotDeg, sensor directed to sensorDeg
+        // and obstacle directed to obstacleDeg
+        WorldModel state = createState(Complex.fromDeg(robotDeg),
                 Complex.fromDeg(sensorDeg), Complex.fromDeg(obstacleDeg));
-        int actionCode = actionCode(actionDeg, actionSpeed);
-        IntSignal actionSignal = IntSignal.create(actionCode);
-        Map<String, Signal> action = Map.of(
-                "move", actionSignal
-        );
-        double result = f.apply(state, action, null);
+        // And command move to actionDeg at speed actionSpeed
+        RobotCommands cmd = RobotCommands.moveAndScan(Complex.fromDeg(actionDeg), actionSpeed, Complex.DEG0);
+        double result = f.applyAsDouble(null, cmd, state);
 
         assertThat(result, closeTo(expected, 1e-4));
     }

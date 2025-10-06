@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2019 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -25,32 +25,15 @@
  *    END OF TERMS AND CONDITIONS
  *
  */
-package org.mmarini.wheelly.swing;
 
-import java.util.MissingResourceException;
-import java.util.Optional;
-import java.util.ResourceBundle;
+package org.mmarini.wheelly.batch;
 
 /**
- * @author marco.marini@mmarini.org
+ * The progress info record
+ *
+ * @param message      the message
+ * @param progress     the progress value
+ * @param maximumValue the maximumValue values
  */
-public class Messages {
-    private static final String BUNDLE_NAME = "resources"; //$NON-NLS-1$
-
-    public static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle(BUNDLE_NAME);
-
-    public static String getString(final String key) {
-        return getStringOpt(key).orElseGet(() -> '!' + key + '!');
-    }
-
-    public static Optional<String> getStringOpt(final String key) {
-        try {
-            return Optional.of(RESOURCE_BUNDLE.getString(key));
-        } catch (final MissingResourceException e) {
-            return Optional.empty();
-        }
-    }
-
-    private Messages() {
-    }
+public record ProgressInfo(String message, int progress, int maximumValue) {
 }

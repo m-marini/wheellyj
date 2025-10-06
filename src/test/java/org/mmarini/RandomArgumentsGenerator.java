@@ -37,6 +37,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Supplier;
+import java.util.stream.DoubleStream;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -135,6 +137,16 @@ public class RandomArgumentsGenerator {
         return Stream.concat(
                 fixed.build(), random == null ? Stream.empty() : random.map(Arguments::of)
         );
+    }
+
+    public RandomArgumentsGenerator choice(int... values) {
+        Object[] values1 = IntStream.of(values).boxed().toArray();
+        return add(() -> random.ints(0, values.length).mapToObj(i -> values[i]), values1);
+    }
+
+    public RandomArgumentsGenerator choice(double... values) {
+        Object[] values1 = DoubleStream.of(values).boxed().toArray();
+        return add(() -> random.ints(0, values.length).mapToObj(i -> values[i]), values1);
     }
 
     public RandomArgumentsGenerator exponential(double min, double max) {

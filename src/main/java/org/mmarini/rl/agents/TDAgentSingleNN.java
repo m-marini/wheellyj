@@ -29,17 +29,21 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.MapStream;
+import org.mmarini.NotImplementedException;
+import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.ExecutionResult;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.rl.nets.TDNetworkState;
 import org.mmarini.rl.processors.InputProcessor;
-import org.mmarini.wheelly.apps.JsonSchemas;
+import org.mmarini.wheelly.apis.BatchAgent;
+import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
+import org.nd4j.linalg.dataset.api.MultiDataSet;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.INDArrayIndex;
 import org.nd4j.linalg.indexing.NDArrayIndex;
@@ -70,8 +74,8 @@ public class TDAgentSingleNN extends AbstractAgentNN {
      *
      * @param state       the states
      * @param actions     the actions
-     * @param avgReward   the average reward
-     * @param rewardAlpha the reward alpha parameter
+     * @param avgReward   the average rewards
+     * @param rewardAlpha the rewards alpha parameter
      * @param eta         the learning rate hyper parameter
      * @param alphas      the network training alpha parameter by output
      * @param lambda      the TD lambda factor
@@ -114,7 +118,7 @@ public class TDAgentSingleNN extends AbstractAgentNN {
      */
     public static TDAgentSingleNN create(JsonNode root, WithSignalsSpec env) {
         Locator locator = Locator.root();
-        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         File path = new File(locator.path("modelPath").getNode(root).asText());
         Random random = Nd4j.getRandom();
         long seed = locator.path("seed").getNode(root).asLong(0);
@@ -169,7 +173,7 @@ public class TDAgentSingleNN extends AbstractAgentNN {
      */
     public static TDAgentSingleNN fromJson(JsonNode spec, Locator locator, Map<String, INDArray> props,
                                            File path, Random random) {
-        JsonSchemas.instance().validateOrThrow(locator.getNode(spec), SPEC_SCHEMA_NAME);
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(spec), SPEC_SCHEMA_NAME);
         Map<String, SignalSpec> state = SignalSpec.createSignalSpecMap(spec, locator.path("state"));
         Map<String, SignalSpec> actions = SignalSpec.createSignalSpecMap(spec, locator.path("actions"));
         Map<String, Float> alphas = locator.path("alphas").propertyNames(spec)
@@ -234,8 +238,8 @@ public class TDAgentSingleNN extends AbstractAgentNN {
      *
      * @param state         the states
      * @param actions       the actions
-     * @param avgReward     the average reward
-     * @param rewardAlpha   the reward alpha parameter
+     * @param avgReward     the average rewards
+     * @param rewardAlpha   the rewards alpha parameter
      * @param eta           the learning rate hyper parameter
      * @param alphas        the network training alpha parameter by output
      * @param lambda        the TD lambda factor
@@ -265,7 +269,7 @@ public class TDAgentSingleNN extends AbstractAgentNN {
     }
 
     @Override
-    public TDAgentSingleNN alphas(Map<String, Float> alphas) {
+    public BatchAgent alphas(Map<String, Float> alphas) {
         return alphas != this.alphas
                 ? new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
                 indicatorsPub, postTrainKpis)
@@ -281,6 +285,21 @@ public class TDAgentSingleNN extends AbstractAgentNN {
                 ? new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
                 indicatorsPub, postTrainKpis)
                 : this;
+    }
+
+    @Override
+    public Tuple2<MultiDataSet, Float> createDataSet(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards, float avgReward) {
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public TDAgentSingleNN dup() {
+        return this;
+    }
+
+    @Override
+    public BatchAgent train(RLDatasetIterator datasetIterator, int numEpochs) {
+        throw new NotImplementedException();
     }
 
     @Override

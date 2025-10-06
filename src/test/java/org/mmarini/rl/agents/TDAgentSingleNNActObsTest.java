@@ -37,6 +37,7 @@ import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.isA;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TDAgentSingleNNActObsTest {
@@ -106,10 +107,8 @@ class TDAgentSingleNNActObsTest {
             assertThat(actions.get("output.b"), isA(IntSignal.class));
             long[] as = ((IntSignal) actions.get("output.a")).getShape();
             long[] bs = ((IntSignal) actions.get("output.b")).getShape();
-            assertEquals(1, as.length);
-            assertEquals(1, bs.length);
-            assertEquals(1L, as[0]);
-            assertEquals(1L, bs[0]);
+            assertArrayEquals(new long[]{1, 1}, as);
+            assertArrayEquals(new long[]{1, 1}, bs);
             assertEquals(s0, s0Org);
         }
     }

@@ -40,16 +40,6 @@ import java.util.Map;
  *
  */
 public interface EnvironmentConnector {
-
-
-    /**
-     * Returns the robot commands for the chosen actions
-     *
-     * @param state   the current state
-     * @param actions the chosen actions
-     */
-    RobotCommands command(State state, Map<String, Signal> actions);
-
     /**
      * Connects the word modeller connector
      *
@@ -71,12 +61,12 @@ public interface EnvironmentConnector {
      * @param actions the chosen actions
      * @param state1  the final state
      */
-    double reward(State state0, Map<String, Signal> actions, State state1);
+    double reward(WorldModel state0, RobotCommands actions, WorldModel state1);
 
     /**
      * Returns the state for the given world model
      *
      * @param model the world model
      */
-    State state(WorldModel model);
+    Map<String, Signal> state(WorldModel model);
 }

@@ -88,7 +88,7 @@ class PPOAgentTrainTrajectoryTest {
      * 1, 1, 1, -1
      * 1, 0, 0, 1
      * When trains for 100 epochs and 4 steps
-     * Then average reward should tend to 0
+     * Then average rewards should tend to 0
      * and pi(s0=0, a=0) -> 0
      * and pi(s0=0, a=1) -> 1
      * and pi(s0=1, a=0) -> 1
@@ -121,18 +121,18 @@ class PPOAgentTrainTrajectoryTest {
                 new ExecutionResult(s1, action0, 1, s0)
         );
 
-        // When trains with positive reward
+        // When trains with positive rewards
         AbstractAgentNN trained = agent.trainByTrajectory(trajectory);
         float avg = trained.avgReward();
 
-        // Then average reward should increase
+        // Then average rewards should increase
         assertThat((double) avg, closeTo(0, 1e-3));
     }
 
     /**
      * Given an agent
-     * When trains with negative reward
-     * Then average reward should decrease
+     * When trains with negative rewards
+     * Then average rewards should decrease
      * and probabilities of selected actions should decrease
      * and probabilities of not selected actions should decrease
      * and eligibility vectors should not be zeros
@@ -198,8 +198,8 @@ class PPOAgentTrainTrajectoryTest {
 
     /**
      * Given an agent
-     * When trains with positive reward
-     * Then average reward should increase
+     * When trains with positive rewards
+     * Then average rewards should increase
      * and probabilities of selected actions should increase
      * and probabilities of not selected actions should decrease
      * and eligibility vectors should not be zeros
@@ -226,11 +226,11 @@ class PPOAgentTrainTrajectoryTest {
         );
         ExecutionResult result = new ExecutionResult(s0, actions, 1, s1);
 
-        // When trains with positive reward
+        // When trains with positive rewards
         AbstractAgentNN trained = agent.trainByTrajectory(List.of(result));
         float avg = trained.avgReward();
 
-        // Then average reward should increase
+        // Then average rewards should increase
         netResults = trained.network().forward(input).state();
         float v10 = netResults.getValues("critic").getFloat(0);
         INDArray pi1 = netResults.getValues("output");

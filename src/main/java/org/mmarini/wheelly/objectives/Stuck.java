@@ -27,9 +27,8 @@ package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apps.JsonSchemas;
+import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.wheelly.envs.RewardFunction;
-import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 
 import static java.lang.Math.abs;
@@ -48,7 +47,7 @@ public interface Stuck {
      * @param locator the locator
      */
     static RewardFunction create(JsonNode root, Locator locator) {
-        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double distance0 = locator.path("distance0").getNode(root).asDouble();
         double distance1 = locator.path("distance1").getNode(root).asDouble();
         double distance2 = locator.path("distance2").getNode(root).asDouble();
@@ -68,16 +67,13 @@ public interface Stuck {
      */
     static RewardFunction stuck(double x1, double x2, double x3, double x4, int sensorRange) {
         return (s0, e, s1) -> {
-            if (s1 instanceof WorldState state) {
-                RobotStatus status = state.model().robotStatus();
-                double dist = status.echoDistance();
-                int sensor = status.sensorDirection().toIntDeg();
-                double isInRange = between(dist, x1, x2, x3, x4);
-                double isInDirection = not(positive(abs(sensor), sensorRange));
-                double isTarget = and(isInRange, isInDirection);
-                return defuzzy(0, 1, isTarget);
-            }
-            return 0;
+            RobotStatus status = s1.robotStatus();
+            double dist = status.echoDistance();
+            int sensor = status.sensorDirection().toIntDeg();
+            double isInRange = between(dist, x1, x2, x3, x4);
+            double isInDirection = not(positive(abs(sensor), sensorRange));
+            double isTarget = and(isInRange, isInDirection);
+            return defuzzy(0, 1, isTarget);
         };
     }
 }

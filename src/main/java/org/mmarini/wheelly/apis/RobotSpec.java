@@ -76,6 +76,7 @@ public record RobotSpec(double maxRadarDistance, Complex receptiveAngle, double 
      * Robot trak, distance between wheels (m)
      */
     public static final double ROBOT_TRACK = 0.136;
+    public static final int MAX_DIRECTION_ACTION = 180;
     /**
      * Robot mass (Kg)
      */

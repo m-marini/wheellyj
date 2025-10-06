@@ -6,5 +6,5 @@ controller: conf/controllers/controller.yml
 modeller: conf/modellers/modeller.yml
 environment: conf/environments/env.yml
 rewardFunction: conf/objectives/findLabel1.yml
-agent: conf/agents/rlAgent.yml
+agent: conf/agents/resnet13Agent.yml
 savingInterval: 300000

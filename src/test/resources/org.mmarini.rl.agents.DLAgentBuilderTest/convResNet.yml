@@ -1,0 +1,47 @@
+---
+$schema: https://mmarini.org/wheelly/dl-agent-builder-schema-0.1
+class: org.mmarini.rl.agents.DLAgentBuilder
+numEpochs: 5
+trajectorySize: 255
+batchSize: 32
+alpha: 0.8
+beta: 0.9
+avgReward: 0.1
+path: tmp/model
+network:
+  activation: Identity
+  updater:
+    type: RmsProp
+    learningRate: 0.1
+    decayRms: 0.96
+    epsilon: 1e-3
+    optimizationAlgo:
+  weightInit:
+    type: TruncatedNormalDistribution
+    mean: 0
+    stddev: 0.5
+  l1: 1e-7
+  l2: 5e-5
+  graphBuilder:
+    inputs:
+      map:
+        type: Convolutional
+        width: 50
+        height: 50
+        depth: 4
+    hiddens: { }
+    blocks:
+      convResnet:
+        inputs: [ map ]
+        type: ConvolutionResNetBlock
+        kernelSize: [ 3, 3 ]
+        filters: [ 64, 64, 256 ]
+        stride: [ 2, 2 ]
+    outputs:
+      action:
+        type: OutputLayer
+        lossFunction: NegativeLogLikelihood
+        inputs: [ convResnet ]
+        nOut: 10
+        activation: SoftMax
+        dropOut: 0.8

@@ -183,6 +183,12 @@ public record GridTopology(Point2D center, int width, int height, double gridSiz
         }
     }
 
+    public GridTopology size(int width, int height) {
+        return this.width != width || this.height != height
+                ? GridTopology.create(center, width, height, gridSize)
+                : this;
+    }
+
     /**
      * Returns the snap the point to grid or null if not in grid
      *

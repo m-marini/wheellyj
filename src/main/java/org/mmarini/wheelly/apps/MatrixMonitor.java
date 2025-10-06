@@ -34,11 +34,11 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.swing.GridLayoutHelper;
+import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.mqtt.MqttRobot;
 import org.mmarini.wheelly.swing.ComMonitor;
 import org.mmarini.wheelly.swing.ControllerStatusMapper;
-import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.wheelly.swing.SensorMonitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -259,7 +259,7 @@ public class MatrixMonitor {
      */
     private void createContext() throws IOException {
         JsonNode config = org.mmarini.yaml.Utils.fromFile(parseArgs.getString("config"));
-        JsonSchemas.instance().validateOrThrow(config, MONITOR_SCHEMA_YML);
+        WheellyJsonSchemas.instance().validateOrThrow(config, MONITOR_SCHEMA_YML);
         this.robot = AppYaml.robotFromJson(config);
         this.controller = AppYaml.controllerFromJson(config);
 

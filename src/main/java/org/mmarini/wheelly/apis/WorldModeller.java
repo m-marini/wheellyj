@@ -33,7 +33,6 @@ import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -41,7 +40,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 
@@ -69,7 +67,7 @@ public class WorldModeller implements WorldModellerApi {
      * @param locator the locator of radar map definition
      */
     public static WorldModeller create(JsonNode root, Locator locator) {
-        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         RadarModeller radarModeller = PointRadarModeller.create(root, locator);
         PolarMapModeller polarModeller = PolarMapModeller.create(root, locator);
         MarkerLocator markerModeller = MarkerLocator.create(root, locator);
@@ -93,8 +91,8 @@ public class WorldModeller implements WorldModellerApi {
     private final PublishProcessor<Tuple2<WorldModel, RobotCommands>> inferenceProcessor;
     private WorldModelSpec worldSpec;
     private WorldModel currentModel;
-    private Function<WorldModel, RobotCommands> onInference;
     private RobotControllerConnector controller;
+    private InferenceConnector inference;
 
     /**
      * Creates the world modeller
@@ -144,18 +142,10 @@ public class WorldModeller implements WorldModellerApi {
         }
     }
 
-    /**
-     * Handles the robot status inference
-     *
-     * @param robotStatus the robot status
-     */
-    public void onInference(RobotStatus robotStatus) {
-        WorldModel model = this.updateForInference(this.currentModel);
-        if (onInference != null) {
-            RobotCommands commands = onInference.apply(model);
-            controller.execute(commands);
-            inferenceProcessor.onNext(Tuple2.of(model, commands));
-        }
+    @Override
+    public WorldModellerConnector connect(InferenceConnector inference) {
+        this.inference = inference;
+        return this;
     }
 
     /**
@@ -184,10 +174,18 @@ public class WorldModeller implements WorldModellerApi {
         return inferenceProcessor;
     }
 
-    @Override
-    public WorldModeller setOnInference(Function<WorldModel, RobotCommands> onInference) {
-        this.onInference = onInference;
-        return this;
+    /**
+     * Handles the robot status inference
+     *
+     * @param robotStatus the robot status
+     */
+    public void onInference(RobotStatus robotStatus) {
+        WorldModel model = this.updateForInference(this.currentModel);
+        if (inference != null) {
+            RobotCommands commands = inference.onInference(model);
+            controller.execute(commands);
+            inferenceProcessor.onNext(Tuple2.of(model, commands));
+        }
     }
 
     /**

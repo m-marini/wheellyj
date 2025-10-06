@@ -33,6 +33,7 @@ import org.mmarini.MapStream;
 import org.mmarini.rl.envs.*;
 import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.rl.processors.InputProcessor;
+import org.mmarini.wheelly.apis.BatchAgent;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -55,7 +56,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * Agent based on Temporal Difference Actor-Critic with single neural network
  */
-public abstract class AbstractAgentNN implements Agent {
+public abstract class AbstractAgentNN implements AgentRL, BatchAgent {
     public static final int DEFAULT_NUM_STEPS = 2048;
     public static final int DEFAULT_NUM_EPOCHS = 1;
     public static final int DEFAULT_BATCH_SIZE = 32;
@@ -97,13 +98,13 @@ public abstract class AbstractAgentNN implements Agent {
     /**
      * Returns the advantage record
      *
-     * @param rewards          the reward R(n)
+     * @param rewards          the rewards R(n)
      * @param vPrediction      the advantage prediction v(n+1)
-     * @param initialAvgReward the initial average reward
-     * @param rewardAlpha      the reward alpha hyperparameter
+     * @param initialAvgReward the initial average rewards
+     * @param rewardAlpha      the rewards alpha hyperparameter
      */
     static AdvantageRecord computeAdvPrediction(INDArray rewards, INDArray vPrediction, float initialAvgReward, float rewardAlpha) {
-        // Computes the  average reward r(t)
+        // Computes the  average rewards r(t)
         // delta(t) = R(t) - r(t) + v(t+1) - v(t)
         // dv(t) = v(t) - v(t+1)
         // dr(t) = R(t) - r(t)
@@ -230,8 +231,8 @@ public abstract class AbstractAgentNN implements Agent {
      *
      * @param state         the states
      * @param actions       the actions
-     * @param avgReward     the average reward
-     * @param rewardAlpha   the reward alpha parameter
+     * @param avgReward     the average rewards
+     * @param rewardAlpha   the rewards alpha parameter
      * @param eta           the learning rate hyperparameter
      * @param alphas        the network training alpha parameter by output
      * @param lambda        the TD lambda factor
@@ -301,7 +302,7 @@ public abstract class AbstractAgentNN implements Agent {
     }
 
     /**
-     * Returns the average reward
+     * Returns the average rewards
      */
     public float avgReward() {
         return avgReward;
@@ -312,10 +313,8 @@ public abstract class AbstractAgentNN implements Agent {
      */
     public abstract AbstractAgentNN avgReward(float avgReward);
 
-    /**
-     * Backup the model
-     */
-    public Agent backup() {
+    @Override
+    public void backup() {
         if (modelPath != null) {
             String backupFileName = format("agent-%1$tY%1$tm%1$td-%1$tH%1$tM%1$tS", Calendar.getInstance());
             File ymlFile = new File(modelPath, "agent.yml");
@@ -333,7 +332,6 @@ public abstract class AbstractAgentNN implements Agent {
             }
             save();
         }
-        return this;
     }
 
     @Override
@@ -392,6 +390,11 @@ public abstract class AbstractAgentNN implements Agent {
     }
 
     @Override
+    public AbstractAgentNN clearTrajectory() {
+        return trajectory(List.of());
+    }
+
+    @Override
     public AbstractAgentNN observe(ExecutionResult result) {
         List<ExecutionResult> newTrajectory = new ArrayList<>(trajectory);
         newTrajectory.add(result);
@@ -409,7 +412,7 @@ public abstract class AbstractAgentNN implements Agent {
 
         // Generate kpis
         Map<String, INDArray> kpis = new HashMap<>();
-        kpis.put("reward", rewards);
+        kpis.put("rewards", rewards);
         kpis.putAll(MapUtils.addKeyPrefix(actions, "actions."));
         kpis.putAll(MapUtils.addKeyPrefix(states, "s0."));
 
@@ -449,8 +452,8 @@ public abstract class AbstractAgentNN implements Agent {
      * <code>
      *     s0 - Map<String, INDArray> state signals
      *     actions - Map<String, INDArray> action signals
-     *     reward - INDArray reward
-     *     avgReward - INDArray average reward
+     *     rewards - INDArray rewards
+     *     avgReward - INDArray average rewards
      *     delta - INDArray training error
      *     trainingLayers - Map<String, INDArray> the training layers
      *     trainedLayers -Map<String, INDArray> the trained layers
@@ -462,13 +465,6 @@ public abstract class AbstractAgentNN implements Agent {
     @Override
     public Flowable<Map<String, INDArray>> readKpis() {
         return indicatorsPub.onBackpressureBuffer(KPIS_CAPACITY);
-    }
-
-    /**
-     * Returns the reward alpha discount meta-parameter
-     */
-    public float rewardAlpha() {
-        return rewardAlpha;
     }
 
     @Override
@@ -504,6 +500,13 @@ public abstract class AbstractAgentNN implements Agent {
     }
 
     /**
+     * Returns the rewards alpha discount meta-parameter
+     */
+    public float rewardAlpha() {
+        return rewardAlpha;
+    }
+
+    /**
      * Returns the agent trained with batch
      *
      * @param states      the states
@@ -513,6 +516,22 @@ public abstract class AbstractAgentNN implements Agent {
     protected abstract AbstractAgentNN trainBatch(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards);
 
     @Override
+    public AbstractAgentNN trainByTrajectory() {
+        List<ExecutionResult> tr = trajectory;
+        if (tr.isEmpty()) {
+            return this;
+        } else if (tr.size() > numSteps) {
+            tr = tr.stream().skip(tr.size() - numSteps)
+                    .toList();
+        }
+        return trainByTrajectory(tr);
+    }
+
+    /**
+     * Returns the agent trained with trajectory
+     *
+     * @param trajectory the trajectory
+     */
     public AbstractAgentNN trainByTrajectory(List<ExecutionResult> trajectory) {
         // Extracts states from trajectory
         List<Map<String, INDArray>> state0 = trajectory.stream()
@@ -554,7 +573,9 @@ public abstract class AbstractAgentNN implements Agent {
         return trainBatch(states, actionMasks, rewards);
     }
 
-    @Override
+    /**
+     * Returns the current trajectory
+     */
     public List<ExecutionResult> trajectory() {
         return trajectory;
     }

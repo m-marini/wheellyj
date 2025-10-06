@@ -1,0 +1,71 @@
+  ---
+  $schema: https://mmarini.org/wheelly/dl-agent-builder-schema-0.1
+  class: org.mmarini.rl.agents.DLAgentBuilder
+  numEpochs: 5
+  trajectorySize: 255
+  batchSize: 32
+  alpha: 0.8
+  beta: 0.9
+  avgReward: 0.1
+  path: tmp/model
+  network:
+    activation: Identity
+    updater:
+      type: RmsProp
+      learningRate: 0.1
+      decayRms: 0.96
+      epsilon: 1e-3
+      optimizationAlgo:
+    weightInit:
+      type: TruncatedNormalDistribution
+      mean: 0
+      stddev: 0.5
+    l1: 1e-7
+    l2: 5e-5
+    graphBuilder:
+      inputs:
+        - id: other
+          type: FeedForward
+          size: 1
+        - id: map
+          type: Convolutional
+          width: 50
+          height: 50
+          depth: 4
+      hiddens:
+        - id: stem0
+          inputs: [ map ]
+          type: ZeroPaddingLayer
+          padding: [ 3, 3 ]
+        - id: stem-cnn1
+          inputs: [ stem0 ]
+          type: ConvolutionLayer
+          nOut: 64
+          kernelSize: [ 7, 7 ]
+          stride: [ 2, 2 ]
+        - id: stem-batch1
+          inputs: [ stem-cnn1 ]
+          type: BatchNormalizationLayer
+        - id: stem-act1
+          inputs: [ stem-batch1 ]
+          type: ActivationLayer
+          activation: Relu
+        - id: stem-maxpool1
+          inputs: [ stem-act1 ]
+          type: SubsamplingLayer
+          kernelSize: [ 3, 3 ]
+          stride: [ 2, 2 ]
+          poolingType: Max
+      outputs:
+        - id: critic
+          type: OutputLayer
+          inputs: [ other ]
+          nOut: 1
+          activation: Identity
+          lossFunction: SquaredLoss
+        - id: action
+          type: OutputLayer
+          inputs: [ map ]
+          nOut: 10
+          activation: SoftMax
+          dropOut: 0.8

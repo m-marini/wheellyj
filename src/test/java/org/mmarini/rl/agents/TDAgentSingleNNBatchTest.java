@@ -116,8 +116,8 @@ class TDAgentSingleNNBatchTest {
             | 0,1 | 1,0 | -1 |
             | 0,1 | 0,1 |  2 |
 
-            mean(reward) = 0.5
-            Adv = reward - mean(reward)
+            mean(rewards) = 0.5
+            Adv = rewards - mean(rewards)
 
             |  s  |  a  |   r  |
             |-----|-----|------|

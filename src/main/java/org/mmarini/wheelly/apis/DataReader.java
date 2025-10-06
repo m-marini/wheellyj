@@ -34,6 +34,9 @@ import java.io.IOException;
  * Reads infrence data
  */
 public interface DataReader extends AutoCloseable {
+
+    int available() throws IOException;
+
     /**
      * Returns a boolean from reader
      *

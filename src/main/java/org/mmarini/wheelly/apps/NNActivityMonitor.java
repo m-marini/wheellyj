@@ -44,13 +44,14 @@ import org.mmarini.rl.agents.PPOAgent;
 import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.rl.nets.TDNetwork;
 import org.mmarini.swing.GridLayoutHelper;
+import org.mmarini.swing.Messages;
 import org.mmarini.swing.SwingUtils;
 import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.RobotControllerApi;
+import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.wheelly.apis.WorldModeller;
 import org.mmarini.wheelly.envs.EnvironmentApi;
 import org.mmarini.wheelly.envs.RewardFunction;
-import org.mmarini.wheelly.swing.Messages;
 import org.mmarini.wheelly.swing.NNActivityPanel;
 import org.mmarini.wheelly.swing.Utils;
 import org.mmarini.yaml.Locator;
@@ -205,7 +206,7 @@ public class NNActivityMonitor {
             @Override
             public Object getValueAt(int rowIndex, int columnIndex) {
                 return columnIndex == 0
-                        ? format(Messages.getString("NNActivityMonitor.detailIndex.name"), rowIndex)
+                        ? Messages.format("NNActivityMonitor.detailIndex.name", rowIndex)
                         : detailData != null
                         ? detailData.getFloat(0L, (long) rowIndex)
                         : Float.NaN;
@@ -285,7 +286,7 @@ public class NNActivityMonitor {
         Box layersPanel = Box.createHorizontalBox();
         layersPanel.add(new JScrollPane(layers));
         layersPanel.setBorder(BorderFactory.createTitledBorder(Messages.getString("NNActivityMonitor.layers.name")));
-        return new GridLayoutHelper<>(Messages.RESOURCE_BUNDLE,
+        return new GridLayoutHelper<>(Messages.messages(),
                 new JPanel()).modify("insets,5")
                 .modify("at,0,0 e").add("NNActivityMonitor.reward.name")
                 .modify("at,1,0 w").add(reward)
@@ -344,7 +345,7 @@ public class NNActivityMonitor {
      */
     private void loadNetwork() throws IOException {
         JsonNode config = fromFile(args.getString("config"));
-        JsonSchemas.instance().validateOrThrow(config, WHEELLY_SCHEMA_YML);
+        WheellyJsonSchemas.instance().validateOrThrow(config, WHEELLY_SCHEMA_YML);
 
         logger.atInfo().log("Creating robot ...");
         RobotApi robot = AppYaml.robotFromJson(config);

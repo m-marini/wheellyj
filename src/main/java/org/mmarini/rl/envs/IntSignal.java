@@ -42,7 +42,7 @@ public class IntSignal implements Signal {
      * @param value the value
      */
     public static IntSignal create(int value) {
-        return new IntSignal(new long[]{1}, value);
+        return new IntSignal(new long[]{1, 1}, value);
     }
 
     /**

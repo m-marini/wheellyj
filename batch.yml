@@ -4,7 +4,7 @@ robot: conf/robots/simRobot10Obstacles.yml
 controller: conf/controllers/controller.yml
 modeller: conf/modellers/modeller.yml
 environment: conf/environments/env.yml
-agent: conf/agents/rlAgent.yml
 rewardFunction: conf/objectives/findLabel1.yml
+agent: conf/agents/resnet13Agent.yml
 seed: 1234
 numEpochs: 4

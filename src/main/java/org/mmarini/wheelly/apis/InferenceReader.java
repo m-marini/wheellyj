@@ -39,19 +39,55 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 /**
- * Reads infrence data
+ * Reads inference data
  */
 public interface InferenceReader extends AutoCloseable, DataReader {
+
+    /**
+     * Returns the world model from file or null if end of file
+     */
+    default Tuple2<WorldModelSpec, GridTopology> readHeader() throws IOException {
+        return Tuple2.of(readWorldSpec(), readTopology());
+    }
+
+    default Point2D readPoint2D() throws IOException {
+        return new Point2D.Double(
+                readDouble(),
+                readDouble()
+        );
+    }
 
     /**
      * Returns the world model from file or null if end of file
      *
      * @throws IOException in case of error
      */
-    default Tuple2<WorldModel, RobotCommands> read() throws IOException {
+    default Tuple2<WorldModel, RobotCommands> readRecord() throws IOException {
         WorldModel model = readModel();
         RobotCommands commands = readCommands();
         return Tuple2.of(model, commands);
+    }
+
+    default RobotSpec readRobotSpec() throws IOException {
+        return new RobotSpec(readDouble(),
+                Complex.fromDeg(readInt()),
+                readDouble(),
+                Complex.fromDeg(readInt()));
+    }
+
+    default GridTopology readTopology() throws IOException {
+        return GridTopology.create(readPoint2D(),
+                readInt(),
+                readInt(),
+                readDouble());
+    }
+
+    default WorldModelSpec readWorldSpec() throws IOException {
+        RobotSpec robotSpec = readRobotSpec();
+        int numSector = readInt();
+        int gridSize = readInt();
+        double markerSize = readDouble();
+        return new WorldModelSpec(robotSpec, numSector, gridSize, markerSize);
     }
 
     /**

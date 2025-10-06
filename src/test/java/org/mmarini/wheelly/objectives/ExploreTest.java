@@ -33,7 +33,6 @@ import org.mmarini.wheelly.apis.GridTopology;
 import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.envs.RewardFunction;
-import org.mmarini.wheelly.envs.WorldState;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -50,18 +49,15 @@ class ExploreTest {
 
     public static final double DECAY = 10000d;
 
-    static WorldState createState(int knownCount) {
+    static WorldModel createState(int knownCount) {
+
         long timestamp = System.currentTimeMillis();
         RadarMap radarMap = RadarMap.empty(GridTopology.create(new Point2D.Float(), 10, 10, 0.2))
                 .map(IntStream.range(0, knownCount), cell -> cell.addAnechoic(timestamp, DECAY));
 
         WorldModel model = mock();
         when(model.radarMap()).thenReturn(radarMap);
-
-        WorldState state = mock();
-        when(state.model()).thenReturn(model);
-
-        return state;
+        return model;
     }
 
     @ParameterizedTest
@@ -78,10 +74,10 @@ class ExploreTest {
                 "$schema: " + Explore.SCHEMA_NAME,
                 "class: " + Explore.class.getName()));
         RewardFunction f = Explore.create(root, Locator.root());
-        WorldState state0 = createState(knownCount0);
-        WorldState state1 = createState(knownCount1);
+        WorldModel state0 = createState(knownCount0);
+        WorldModel state1 = createState(knownCount1);
 
-        double result = f.apply(state0, null, state1);
+        double result = f.applyAsDouble(state0, null, state1);
 
         assertThat(result, closeTo(expected, 1e-4));
     }
@@ -101,10 +97,10 @@ class ExploreTest {
                 "class: " + Explore.class.getName(),
                 "reward: 2"));
         RewardFunction f = Explore.create(root, Locator.root());
-        WorldState state0 = createState(knownCount0);
-        WorldState state1 = createState(knownCount1);
+        WorldModel state0 = createState(knownCount0);
+        WorldModel state1 = createState(knownCount1);
 
-        double result = f.apply(state0, null, state1);
+        double result = f.applyAsDouble(state0, null, state1);
 
         assertThat(result, closeTo(expected, 1e-4));
     }

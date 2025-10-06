@@ -37,7 +37,6 @@ import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.schedulers.Timed;
 import org.mmarini.NotImplementedException;
 import org.mmarini.wheelly.apis.*;
-import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.wheelly.rx.RXFunc;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
@@ -107,7 +106,7 @@ public class RealRobot implements RobotApi {
      */
     public static RealRobot create(JsonNode root, File file) {
         Locator locator = Locator.root();
-        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         String robotHost = locator.path("robotHost").getNode(root).asText();
         int robotPort = locator.path("robotPort").getNode(root).asInt(DEFAULT_ROBOT_PORT);
         String cameraHost = locator.path("cameraHost").getNode(root).asText();

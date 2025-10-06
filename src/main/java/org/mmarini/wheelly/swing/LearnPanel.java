@@ -34,6 +34,7 @@ import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.MapStream;
 import org.mmarini.swing.GridLayoutHelper;
+import org.mmarini.swing.Messages;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;

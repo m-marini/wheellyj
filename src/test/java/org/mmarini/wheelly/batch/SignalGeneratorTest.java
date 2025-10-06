@@ -35,7 +35,7 @@ import org.mmarini.rl.agents.AbstractAgentNN;
 import org.mmarini.rl.agents.BinArrayFile;
 import org.mmarini.rl.agents.PPOAgent;
 import org.mmarini.wheelly.apis.*;
-import org.mmarini.wheelly.envs.WorldEnvironment;
+import org.mmarini.wheelly.envs.DLEnvironment;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -93,13 +93,19 @@ class SignalGeneratorTest {
             """;
     private static final String ENV_DEF = """
             ---
-            $schema: https://mmarini.org/wheelly/env-world-schema-0.1
-            class: org.mmarini.wheelly.envs.WorldEnvironment
-            numSpeeds: 5
-            numDirections: 8
-            numSensorDirections: 7
-            markerLabels:
-              - A
+            $schema: https://mmarini.org/wheelly/env-dl-schema-0.1
+            class: org.mmarini.wheelly.envs.DLEnvironment
+            stateFunction:
+                $schema: https://mmarini.org/wheelly/state-func-rl-schema-0.1
+                class: org.mmarini.wheelly.envs.RLStateFunction
+                markerLabels:
+                  - A
+            actionFunction:
+                $schema: https://mmarini.org/wheelly/action-func-rl-schema-0.1
+                class: org.mmarini.wheelly.envs.RLActionFunction
+                numSpeeds: 5
+                numDirections: 8
+                numSensorDirections: 7
             """;
     private static final String[] SIGNAL_KEYS = new String[]{
             "canMoveFeatures",
@@ -172,12 +178,13 @@ class SignalGeneratorTest {
     void setUp() throws IOException {
         FILE.delete();
         try (InferenceFileWriter file = InferenceFileWriter.fromFile(FILE)) {
-            file.write(MODEL0, COMMANDS)
+            file.writeHeader(MODEL0.worldSpec(), MODEL0.radarMap().topology())
+                    .write(MODEL0, COMMANDS)
                     .write(MODEL1, COMMANDS);
         }
         WorldModeller modeller = WorldModeller.create(Utils.fromText(MODELLER_DEF), Locator.root());
         modeller.setRobotSpec(ROBOT_SPEC);
-        WorldEnvironment environment = WorldEnvironment.create(Utils.fromText(ENV_DEF), Locator.root());
+        DLEnvironment environment = DLEnvironment.create(Utils.fromText(ENV_DEF), Locator.root());
         environment.connect(modeller);
         JsonNode spec = Utils.fromResource("/rlAgent.yml");
         AbstractAgentNN agent = PPOAgent.create(spec, environment);

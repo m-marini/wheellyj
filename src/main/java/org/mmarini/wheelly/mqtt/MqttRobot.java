@@ -40,7 +40,6 @@ import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.mmarini.wheelly.apis.*;
-import org.mmarini.wheelly.apps.JsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,7 +104,7 @@ public class MqttRobot implements RobotApi {
      */
     public static MqttRobot create(JsonNode root, File file) {
         Locator locator = Locator.root();
-        JsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         String brokerUrl = locator.path("brokerUrl").getNode(root).asText(DEFAULT_BROKER_URL);
         String clientId = locator.path("clientId").getNode(root).asText(MqttAsyncClient.generateClientId());
         String user = locator.path("user").getNode(root).asText();

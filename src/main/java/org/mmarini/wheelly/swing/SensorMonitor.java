@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.swing;
 
+import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.slf4j.Logger;
