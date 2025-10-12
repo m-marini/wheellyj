@@ -7,6 +7,10 @@ The code of Webcam controller is at [Wheellycam project](https://github.com/m-ma
 
 The documentation is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
+## Release 0.25.1
+
+- Add MQTT architecture and convolution network to radar map
+
 ## Release 0.24.1
 
 - Add label direction to camera event and number of samples parameters in state machine

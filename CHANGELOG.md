@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.25.0] 2025-10-12
+
 ### Add
 
 - Issue [#565](https://github.com/m-marini/wheellyj/issues/565): Add MQTT architecture
