@@ -61,7 +61,7 @@ public interface EnvironmentApi extends EnvironmentConnector, InferenceConnector
      * @param controller the controller
      * @throws IOException in case of error
      */
-    static EnvironmentApi fromFile(File file, RobotControllerApi controller) throws IOException {
+    static EnvironmentApi fromFile(File file, RobotControllerApi controller) throws Throwable {
         return Utils.createObject(file, new Object[]{controller}, new Class[]{RobotControllerApi.class});
     }
 
@@ -69,7 +69,7 @@ public interface EnvironmentApi extends EnvironmentConnector, InferenceConnector
      * @param file the configuration file
      * @throws IOException in case of error
      */
-    static EnvironmentApi fromFile(File file) throws IOException {
+    static EnvironmentApi fromFile(File file) throws Throwable {
         return Utils.createObject(file);
     }
 

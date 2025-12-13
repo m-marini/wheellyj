@@ -48,12 +48,36 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * Converts the world model to signal for reinforcement learning
+ * The signal are composed by
+ * <dl>
+ *     <dt>sensor</dt>
+ *     <dd>(n x 1 FLOAT) (direction of head +- 135 DEG)</dd>
+ *     <dt>canMoveStates</dt>
+ *     <dd>(n x 1 INTEGER) values 0 ... 5 with the state code</dd>
+ *     <dt>map</dt>
+ *     <dd>(n x # channel x map width x map height INTEGER) 0, 1 value</dd>
+ * </dl>
+ * canMoveStates values are
+ * <pre>
+ * | Value | Description                    |
+ * |-------|--------------------------------|
+ * |   0   | Blocked with front contact     |
+ * |   1   | Front obstacle with contact    |
+ * |   2   | Rear contact                   |
+ * |   3   | No contact                     |
+ * |   4   | Blocked without front contact  |
+ * |   5   | Front obstacle without contact |
+ * </pre>
+ * <p>
+ * The map channels are composed by four channels for the state of cell
+ * (unknown state cell, empty cell, contact cell, hindered cell)
+ * plus a channel for each recognised label.
+ * </p>
  */
 public class DLStateFunction implements StateFunction {
     public static final int MAX_SENSOR_DIR = 135;
     public static final FloatSignalSpec SENSOR_SPEC = new FloatSignalSpec(new long[]{1}, -MAX_SENSOR_DIR, MAX_SENSOR_DIR);
     public static final String SENSOR_SIGNAL_ID = "sensor";
-    public static final String DISTANCE_SIGNAL_ID = "distance";
     public static final String MOVE_SENSOR_SIGNAL_ID = "canMoveStates";
     public static final String MAP_SIGNAL_ID = "map";
     public static final int NUM_CELL_STATES = 4; // unknown, empty, eco, contact
@@ -99,13 +123,10 @@ public class DLStateFunction implements StateFunction {
      * @param numMarkers the number of recognised markers
      */
     private static Map<String, SignalSpec> createSpec(WorldModelSpec worldSpec, int numMarkers) {
-        RobotSpec robotSpec = worldSpec.robotSpec();
-        float maxRadarDistance = (float) robotSpec.maxRadarDistance();
         long radarSize = worldSpec.gridSize();
         int numChannels = numMarkers + NUM_CELL_STATES;
         return Map.of(
                 SENSOR_SIGNAL_ID, SENSOR_SPEC,
-                DISTANCE_SIGNAL_ID, new FloatSignalSpec(new long[]{1}, 0, maxRadarDistance),
                 MOVE_SENSOR_SIGNAL_ID, CAN_MOVE_SPEC,
                 MAP_SIGNAL_ID, new IntSignalSpec(new long[]{numChannels, radarSize, radarSize}, 2)
         );
@@ -130,7 +151,6 @@ public class DLStateFunction implements StateFunction {
     public Map<String, Signal> signals(WorldModel... states) {
         int n = states.length;
         INDArray sensor = Nd4j.zeros(n, 1).castTo(DataType.FLOAT);
-        INDArray distance = Nd4j.zeros(n, 1).castTo(DataType.FLOAT);
         INDArray canMoveStates = Nd4j.zeros(n, 1).castTo(DataType.FLOAT);
 
         long numMarkers = markers.size();
@@ -149,10 +169,9 @@ public class DLStateFunction implements StateFunction {
             Complex mapDir = map.direction();
 
             int[] indices = {k, 0};
-            Complex sensorMapRelativeDir = robotStatus.echoDirection().sub(mapDir);
 
+            Complex sensorMapRelativeDir = robotStatus.headAbsDirection().sub(mapDir);
             sensor.putScalar(indices, (float) sensorMapRelativeDir.toIntDeg());
-            distance.putScalar(indices, (float) robotStatus.echoDistance());
 
             /*
              * can move state by sensor state
@@ -212,7 +231,6 @@ public class DLStateFunction implements StateFunction {
         }
         return Map.of(
                 SENSOR_SIGNAL_ID, new ArraySignal(sensor),
-                DISTANCE_SIGNAL_ID, new ArraySignal(distance),
                 MOVE_SENSOR_SIGNAL_ID, new ArraySignal(canMoveStates),
                 MAP_SIGNAL_ID, new ArraySignal(mapSignals));
     }

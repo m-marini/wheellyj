@@ -50,7 +50,7 @@ public record LabelMarker(String label, Point2D location, double weight, long ma
      * @param location   the marker location
      * @param weight     the weight of marker signals
      * @param markerTime the instant of the last camera event (ms)
-     * @param cleanTime  the clean time (ms)
+     * @param cleanTime  the instant of the last clean time (ms)
      */
     public LabelMarker(String label, Point2D location, double weight, long markerTime, long cleanTime) {
         this.label = requireNonNull(label);

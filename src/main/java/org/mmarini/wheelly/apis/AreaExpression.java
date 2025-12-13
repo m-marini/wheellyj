@@ -54,11 +54,29 @@ public interface AreaExpression {
      *
      * @param a         the point
      * @param direction the direction
-     * @param width     the direction width
+     * @param width     the width
      */
     static AreaExpression angle(Point2D a, Complex direction, Complex width) {
         return and(rightHalfPlane(a, direction.sub(width)),
                 rightHalfPlane(a, direction.add(width).opposite()));
+    }
+
+    /**
+     * Returns the angle area from center to the given direction and field of view with the given lateral band
+     *
+     * @param center    the point
+     * @param direction the direction
+     * @param fov       the field of view
+     * @param size      the size of lateral bend (m)
+     */
+    static AreaExpression angle(Point2D center, Complex direction, Complex fov, double size) {
+        Complex halfFov = fov.divAngle(2);
+        Complex rightDir = direction.sub(halfFov);
+        Point2D rightPoint = rightDir.add(Complex.DEG270).at(center, size);
+        Complex leftDir = direction.add(halfFov);
+        Point2D leftPoint = leftDir.add(Complex.DEG90).at(center, size);
+        return and(rightHalfPlane(rightPoint, rightDir),
+                rightHalfPlane(leftPoint, leftDir.opposite()));
     }
 
     /**
@@ -166,23 +184,6 @@ public interface AreaExpression {
     }
 
     /**
-     * Returns the area of the radia sensor
-     *
-     * @param from        the sensor loction
-     * @param direction   the direction
-     * @param range       the direction range
-     * @param minDistance the minumum distance (m)
-     * @param maxDistance the maximum distance (m)
-     */
-    static AreaExpression radialSensorArea(Point2D from, Complex direction, Complex range, double minDistance, double maxDistance) {
-        return AreaExpression.and(
-                AreaExpression.angle(from, direction, range),
-                AreaExpression.circle(from, maxDistance),
-                AreaExpression.not(
-                        AreaExpression.circle(from, minDistance)));
-    }
-
-    /**
      * Returns the negated predicate
      */
     static AreaExpression not(AreaExpression expression) {
@@ -241,18 +242,39 @@ public interface AreaExpression {
     }
 
     /**
-     * Returns the area expression of the segment with round cap
+     * Returns the area of the radial sensor
      *
-     * @param end1  the first segment end
-     * @param end2  the second segment end
-     * @param width the segment width (m)
+     * @param from        the sensor location
+     * @param direction   the direction
+     * @param fov         the field of view
+     * @param minDistance the minimum distance (m)
+     * @param maxDistance the maximum distance (m)
      */
-    static AreaExpression roundSegment(Point2D end1, Point2D end2, double width) {
-        return AreaExpression.or(
-                rectangle(end1, end2, width),
-                circle(end1, width),
-                circle(end2, width)
-        );
+    static AreaExpression radialSensorArea(Point2D from, Complex direction, Complex fov, double minDistance, double maxDistance) {
+        return AreaExpression.and(
+                AreaExpression.angle(from, direction, fov.divAngle(2)),
+                AreaExpression.circle(from, maxDistance),
+                AreaExpression.not(
+                        AreaExpression.circle(from, minDistance)));
+    }
+
+    /**
+     * Returns the area of the radial sensor
+     *
+     * @param from        the sensor location
+     * @param direction   the direction
+     * @param fov         the field of view
+     * @param size        the lateral band size (m)
+     * @param innerRadius the radius of sensitive inner area (m)
+     * @param outerRadius the radius of sensitive outer area (m)
+     */
+    static AreaExpression radialSensorArea(Point2D from, Complex direction, Complex fov, double size, double innerRadius, double outerRadius) {
+        return AreaExpression.and(
+                AreaExpression.angle(from, direction, fov, size),
+                AreaExpression.rightHalfPlane(from, direction.add(Complex.DEG270)),
+                AreaExpression.circle(from, outerRadius),
+                AreaExpression.not(
+                        AreaExpression.circle(from, innerRadius)));
     }
 
     /**
@@ -289,6 +311,21 @@ public interface AreaExpression {
     static AreaExpression.Leaf rightHalfPlane(Point2D point, Complex direction) {
         QVect matrix = QVect.line(point, direction);
         return ineq(matrix);
+    }
+
+    /**
+     * Returns the area expression of the segment with round cap
+     *
+     * @param end1  the first segment end
+     * @param end2  the second segment end
+     * @param width the segment width (m)
+     */
+    static AreaExpression roundSegment(Point2D end1, Point2D end2, double width) {
+        return AreaExpression.or(
+                rectangle(end1, end2, width),
+                circle(end1, width),
+                circle(end2, width)
+        );
     }
 
     /**

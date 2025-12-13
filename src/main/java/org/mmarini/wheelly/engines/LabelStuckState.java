@@ -67,13 +67,12 @@ public class LabelStuckState extends TimeOutState {
     public static final double DEFAULT_DISTANCE = 0.8;
     public static final int DEFAULT_DIRECTION_RANGE = 10;
     public static final int DEFAULT_SPEED = 30;
-    private static final String NOT_FOUND = "notFound";
-    private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-label-stuck-schema-0.1";
-    private static final Tuple2<String, RobotCommands> NOT_FOUND_RESULT = Tuple2.of(
+    public static final String NOT_FOUND = "notFound";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-label-stuck-schema-0.1";
+    public static final Tuple2<String, RobotCommands> NOT_FOUND_RESULT = Tuple2.of(
             NOT_FOUND, RobotCommands.haltCommand());
     private static final Logger logger = LoggerFactory.getLogger(LabelStuckState.class);
-    private static final double EPSILON_DISTANCE = 0.3;
-    private static final String TIMEOUT_ID = "timeout";
+    public static final double EPSILON_DISTANCE = 0.3;
 
     /**
      * Returns the exploring state from configuration
@@ -125,13 +124,13 @@ public class LabelStuckState extends TimeOutState {
     public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
         Tuple2<String, RobotCommands> result = super.step(context);
         if (result != null) {
-            // Halt the robot and move forward the sensor at block
             return result;
         }
 
         WorldModel worldModel = context.worldModel();
         RobotStatus status = worldModel.robotStatus();
         Point2D robotLocation = status.location();
+        // Finds the nearest target marker
         Point2D target = worldModel.markers()
                 .values()
                 .stream()
@@ -139,15 +138,16 @@ public class LabelStuckState extends TimeOutState {
                 .filter(t -> robotLocation.distance(t) <= maxDistance)
                 .min(Comparator.comparingDouble(robotLocation::distanceSq))
                 .orElse(null);
-
         if (target == null) {
+            // No target found
             logger.atDebug().log("No label found");
             return NOT_FOUND_RESULT;
         }
         double labelDistance = robotLocation.distance(target);
         Complex targetDir = Complex.direction(robotLocation, target);
         Complex robotDir = status.direction();
-        Complex sensorDir = Complex.fromDeg(clamp(targetDir.sub(robotDir).toIntDeg(), -90, 90));
+        double headHalfFovRad = status.robotSpec().headFOV().toRad() / 2;
+        Complex sensorDir = Complex.fromRad(clamp(targetDir.sub(robotDir).toRad(), -headHalfFovRad, headHalfFovRad));
 
         if (labelDistance < distance - EPSILON_DISTANCE) {
             // the robot is too close, move backward

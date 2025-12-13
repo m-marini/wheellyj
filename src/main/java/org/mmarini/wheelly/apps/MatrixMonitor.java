@@ -56,7 +56,6 @@ import static java.lang.Math.max;
 import static org.mmarini.wheelly.swing.Utils.createFrame;
 import static org.mmarini.wheelly.swing.Utils.layHorizontally;
 
-
 public class MatrixMonitor {
     public static final int TIME_MAJOR_TICK_SPACING = 10;
     public static final String MONITOR_SCHEMA_YML = "https://mmarini.org/wheelly/monitor-schema-1.0";
@@ -220,15 +219,15 @@ public class MatrixMonitor {
         sensorCmdPanel.setBorder(BorderFactory.createTitledBorder("Sensor direction (DEG)"));
 
         JPanel otherPanel = new GridLayoutHelper<>(new JPanel())
-                .modify("at,0,0 insets,4 span,2,1").add("Direction (DEG)")
+                .modify("at,0,0 insets,4 span,2,1").add("MatrixMonitor.robotDir.label")
                 .modify("at,0,1 hfill").add(robotDirSlider)
                 .modify("at,0,2 nofill").add(robotDirField)
 
-                .modify("at,0,3 weight,1,0 nospan").add("Speed (pps)")
+                .modify("at,0,3 weight,1,0 nospan").add("MatrixMonitor.speed.label")
                 .modify("at,0,4 weight,0,1 vfill").add(speedSlider)
                 .modify("at,0,5 noweight nofill").add(speedField)
 
-                .modify("at,1,3 weight,1,0 nospan").add("Duration (ms)")
+                .modify("at,1,3 weight,1,0 nospan").add("MatrixMonitor.time.label")
                 .modify("at,1,4 noweight vfill").add(timeSlider)
                 .modify("at,1,5 nofill").add(timeField)
 
@@ -257,7 +256,7 @@ public class MatrixMonitor {
      *
      * @throws IOException in case of error
      */
-    private void createContext() throws IOException {
+    private void createContext() throws Throwable {
         JsonNode config = org.mmarini.yaml.Utils.fromFile(parseArgs.getString("config"));
         WheellyJsonSchemas.instance().validateOrThrow(config, MONITOR_SCHEMA_YML);
         this.robot = AppYaml.robotFromJson(config);
@@ -479,7 +478,7 @@ public class MatrixMonitor {
     /**
      * Runs the application
      */
-    private void run() throws IOException {
+    private void run() throws Throwable {
         logger.info("Robot check started.");
         createContext();
         createConnections();

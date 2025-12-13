@@ -46,6 +46,7 @@ import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
  * Moves the robot forward or backward depending the obstacle position.<br>
  * <code>completed</code> is generated at completion (no blocking signals).<br>
  * <code>timeout</code> is generated at timeout.
+ * <code>blocked</code> is generated blocking state (no move possible).<br>
  * </p>
  */
 public class AvoidingState extends TimeOutState {
@@ -54,11 +55,19 @@ public class AvoidingState extends TimeOutState {
     public static final String SPEED_ID = "speed";
     public static final double SAFE_DISTANCE_GAP = 0.2;
     public static final String MAX_DISTANCE_ID = "MAX_DISTANCE";
-    private static final Logger logger = LoggerFactory.getLogger(AvoidingState.class);
-    private static final double DEFAULT_SAFE_DISTANCE = 0.3;
-    private static final double DEFAULT_MAX_DISTANCE = 1;
-    private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-avoid-schema-0.1";
+    public static final double DEFAULT_SAFE_DISTANCE = 0.3;
+    public static final double DEFAULT_MAX_DISTANCE = 1;
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-avoid-schema-0.1";
 
+    private static final Logger logger = LoggerFactory.getLogger(AvoidingState.class);
+
+    /**
+     * Returns the avoid state from JSON node
+     *
+     * @param root    the JSON node
+     * @param locator the definition document locator
+     * @param id      the node identifier
+     */
     public static AvoidingState create(JsonNode root, Locator locator, String id) {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double safeDistance = locator.path(SAFE_DISTANCE_ID).getNode(root).asDouble(DEFAULT_SAFE_DISTANCE);
@@ -68,7 +77,6 @@ public class AvoidingState extends TimeOutState {
         ProcessorCommand onInit = ProcessorCommand.create(root, locator.path("onInit"));
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
-
         return new AvoidingState(id, onInit, onEntry, onExit, timeout, safeDistance, maxDistance, speed);
     }
 
@@ -110,12 +118,12 @@ public class AvoidingState extends TimeOutState {
         Point2D robotLocation = status.location();
         if (!status.canMoveForward()) {
             // Robot blocked forward
-            contactPoint = robotLocation;
+            contactPoint = status.contactPoint();
             logger.atDebug().log("Avoid front contact at {}", robotLocation);
             if (status.canMoveBackward()) {
                 // Robot can move backward
-                // Sets the escape direction the robot direction and backward speed
-                // moves the robot backward
+                // Sets the escape direction to the robot direction and backward speed
+                // moves the robot backward scanning for the front contacts
                 contactDirection = direction;
                 frontContact = true;
                 logger.atDebug().log("Move {} DEG at {} pps", direction, -speed);
@@ -130,7 +138,7 @@ public class AvoidingState extends TimeOutState {
         } else if (!status.canMoveBackward()) {
             // Robot can move forward
             // move robot forward
-            contactPoint = robotLocation;
+            contactPoint = status.contactPoint();
             logger.atDebug().log("Avoid rear contact at {}", robotLocation);
             contactDirection = direction;
             frontContact = false;
@@ -145,7 +153,7 @@ public class AvoidingState extends TimeOutState {
     public void entry(ProcessorContextApi context) {
         super.entry(context);
         contactDirection = null;
-        contactPoint = null;
+        contactPoint = context.worldModel().robotStatus().contactPoint();
         safePoint = null;
         computeReaction(context);
     }
@@ -161,6 +169,17 @@ public class AvoidingState extends TimeOutState {
             return result;
         }
 
+        // Check for the escape direction
+        if (contactDirection == null) {
+            // Contact disappeared after entry and before step
+            // robot in a safe location without movement
+            logger.atDebug()
+                    .setMessage("{}: safety without any contact")
+                    .addArgument(this::id)
+                    .log();
+            return COMPLETED_RESULT;
+        }
+
         // contact disappeared
         WorldModel worldModel = ctx.worldModel();
         RobotStatus status = worldModel.robotStatus();
@@ -172,19 +191,10 @@ public class AvoidingState extends TimeOutState {
             logger.atDebug().log("Avoided contact at {} m", contactDistance);
             return COMPLETED_RESULT;
         }
-        // Check for the escape direction
-        if (contactDirection == null) {
-            // robot in safe location without movement
-            logger.atDebug()
-                    .setMessage("{}: safety without any contact")
-                    .addArgument(this::id)
-                    .log();
-            return COMPLETED_RESULT;
-        }
 
         // Check for free point
         if (safePoint == null) {
-            //  No free point set: search for it
+            //  No safe point set: search for it
             Optional<Point2D> target = worldModel.radarMap().findSafeTarget(
                     robotLocation,
                     frontContact
@@ -197,7 +207,7 @@ public class AvoidingState extends TimeOutState {
         Complex escapeDir;
         int escapeSpeed;
         if (safePoint == null) {
-            // no free point found: move away
+            // no safe point found: move away
             escapeDir = contactDirection;
             // Compute speed
             escapeSpeed = frontContact

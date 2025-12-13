@@ -5,6 +5,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mmarini.RandomArgumentsGenerator;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;
@@ -14,6 +15,7 @@ import java.util.function.Predicate;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static java.lang.Math.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.jupiter.api.Assertions.*;
@@ -21,6 +23,9 @@ import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.TestFunctions.ArgumentJsonParser.allIndicesByValue;
 import static org.mmarini.wheelly.TestFunctions.jsonFileArguments;
 import static org.mmarini.wheelly.apis.AreaExpression.*;
+import static org.mmarini.wheelly.apis.Obstacle.DEFAULT_OBSTACLE_RADIUS;
+import static org.mmarini.wheelly.apis.RobotSpec.*;
+import static org.mmarini.wheelly.apis.Utils.MM;
 
 class AreaExpressionTest {
 
@@ -28,6 +33,35 @@ class AreaExpressionTest {
     public static final int WIDTH = 8;
     public static final double GRID_SIZE = 1;
     public static final GridTopology GRID_TOPOLOGY = GridTopology.create(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
+    public static final int SEED = 1234;
+    public static final double MAX_RADIAL_DISTANCE = 1.0;
+    // distance between the centre and the sized centre
+    static final double CENTRES_DISTANCE = DEFAULT_OBSTACLE_RADIUS / sin(toRadians((double) DEFAULT_LIDAR_FOV_DEG / 2));
+    /**
+     * <pre>
+     *  C      B
+     *  +---+
+     *  |\  |
+     *  \ \ |
+     *   \ \+ O
+     *    \ |
+     *     \|
+     *      + A
+     *
+     *  OA = CENTRES_DISTANCE
+     *  OC = MAX_RADAR_DISTANCE
+     *  ^BOC = DEFAULT_LIFAR_FOV / 2
+     *  AC^2 = AB^2 + BC^2
+     *  AB = OA + OB
+     *  BC = OC sin(alpha)
+     *  OB = OC cos(alpha)
+     *  BC = OA + OB
+     *  AC = sqrt(OA^2 + OC^2 + 2 OA OC cos(alpha))
+     * </pre>
+     */
+    static final double MAX_RADIAL_DISTANCE1 = sqrt(MAX_RADAR_DISTANCE * MAX_RADIAL_DISTANCE
+            + CENTRES_DISTANCE * CENTRES_DISTANCE
+            + 2 * CENTRES_DISTANCE * MAX_RADAR_DISTANCE * cos((double) DEFAULT_LIDAR_FOV_DEG / 2));
 
     public static Stream<Arguments> andNotTestDataset() throws IOException {
         return jsonFileArguments("/org/mmarini/wheelly/apis/AreaExpressionTest/andNotTest.yml")
@@ -70,6 +104,56 @@ class AreaExpressionTest {
                 .addDouble("y0")
                 .addDouble("radius")
                 .parse();
+    }
+
+    public static Stream<Arguments> dataRadialBehind() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-1.0, 1.0, 17) // x
+                .uniform(-1.0, 1.0, 17) // y
+                .uniform(0, 359) // dirDeg
+                .uniform(DEFAULT_LIDAR_FOV_DEG / 2 + 1, 360 - DEFAULT_LIDAR_FOV_DEG / 2 - 1) // ptDir
+                .exponential(max(ROBOT_RADIUS, DEFAULT_OBSTACLE_RADIUS) + MM, MAX_RADIAL_DISTANCE1, 17) // ptDist
+                .build(100);
+    }
+
+    public static Stream<Arguments> dataRadialFar() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-1.0, 1.0, 17) // x
+                .uniform(-1.0, 1.0, 17) // y
+                .uniform(0, 359) // dirDeg
+                .uniform(0, 359) // ptDir
+                .exponential(MAX_RADIAL_DISTANCE1 + 2 * MM, 3.0, 17) // ptDist
+                .build(100);
+    }
+
+    public static Stream<Arguments> dataRadialInner() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-1.0, 1.0, 17) // x
+                .uniform(-1.0, 1.0, 17) // y
+                .uniform(0, 359) // dirDeg
+                .uniform(-DEFAULT_LIDAR_FOV_DEG / 2 + 1, DEFAULT_LIDAR_FOV_DEG / 2 - 1) // ptDir
+                .exponential(ROBOT_RADIUS, MAX_RADAR_DISTANCE - 10 * MM, 17) // ptDist
+                .build(100);
+    }
+
+    public static Stream<Arguments> dataRadialNear() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-1.0, 1.0, 17) // x
+                .uniform(-1.0, 1.0, 17) // y
+                .uniform(0, 359) // dirDeg
+                .uniform(0, 359) // ptDir
+                .uniform(0.08, DEFAULT_OBSTACLE_RADIUS - MM, 17) // ptDist
+                .build(100);
+    }
+
+    public static Stream<Arguments> dataRadialRight() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-1.0, 1.0, 17) // x
+                .uniform(-1.0, 1.0, 17) // y
+                .uniform(-180, 179) // dirDeg
+                .uniform(DEFAULT_LIDAR_FOV_DEG / 2 + 1, 179) // ptDir
+                .exponential(max(ROBOT_RADIUS, DEFAULT_OBSTACLE_RADIUS) + MM, MAX_RADIAL_DISTANCE1, 17) // ptDist
+                .build(100);
     }
 
     public static Stream<Arguments> notTestDataset() throws IOException {
@@ -118,7 +202,7 @@ class AreaExpressionTest {
     void andNotTest(int index, boolean expected,
                     double x0, double y0, double radius0,
                     double x1, double y1, double radius1) {
-        // Given a right half plane expression
+        // Given a right half-plane expression
         AreaExpression exp = and(
                 circle(new Point2D.Double(x0, y0), radius0),
                 not(circle(new Point2D.Double(x1, y1), radius1)));
@@ -139,7 +223,7 @@ class AreaExpressionTest {
     void andTest(int index, boolean expected,
                  double x0, double y0, double radius0,
                  double x1, double y1, double radius1) {
-        // Given a right half plane expression
+        // Given a right half-plane expression
         AreaExpression exp = and(
                 circle(new Point2D.Double(x0, y0), radius0),
                 circle(new Point2D.Double(x1, y1), radius1));
@@ -160,7 +244,7 @@ class AreaExpressionTest {
     void angleTest(int index, boolean expected,
                    double x0, double y0,
                    double direction, double width) {
-        // Given a right half plane expression
+        // Given a right half-plane expression
         AreaExpression exp = angle(
                 new Point2D.Double(x0, y0),
                 Complex.fromDeg(direction),
@@ -180,7 +264,7 @@ class AreaExpressionTest {
     @ParameterizedTest(name = "[{index}] center({2},{3}) radius {4} DEG cell={0}")
     @MethodSource("circleTestDataset")
     void circleTest(int index, boolean expected, double x0, double y0, double radius) {
-        // Given a right half plane expression
+        // Given a right half-plane expression
         AreaExpression exp = circle(new Point2D.Double(x0, y0), radius);
         GridTopology.create(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
         QVect[] vertices = createQVertices(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
@@ -228,7 +312,7 @@ class AreaExpressionTest {
 
     @Test
     void ineqTest() {
-        // Given a right half plane expression
+        // Given a right half-plane expression
         AreaExpression exp = AreaExpression.ineq(QVect.zeros());
 
         // When ...
@@ -248,7 +332,7 @@ class AreaExpressionTest {
     @MethodSource("notTestDataset")
     void notTest(int index, boolean expected,
                  double x0, double y0, double radius0) {
-        // Given a right half plane expression
+        // Given a right half-plane expression
         AreaExpression exp = not(circle(new Point2D.Double(x0, y0), radius0));
         GridTopology.create(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
         QVect[] vertices = createQVertices(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
@@ -267,7 +351,7 @@ class AreaExpressionTest {
     void orTest(int index, boolean expected,
                 double x0, double y0, double radius0,
                 double x1, double y1, double radius1) {
-        // Given a right half plane expression
+        // Given a right half-plane expression
         AreaExpression exp = or(
                 circle(new Point2D.Double(x0, y0), radius0),
                 circle(new Point2D.Double(x1, y1), radius1));
@@ -288,7 +372,7 @@ class AreaExpressionTest {
     void rectangleTest(int index, boolean expected,
                        double x0, double y0,
                        double x1, double y1, double width) {
-        // Given a right half plane expression
+        // Given a right half-plane expression
         AreaExpression exp = rectangle(
                 new Point2D.Double(x0, y0),
                 new Point2D.Double(x1, y1),
@@ -307,7 +391,7 @@ class AreaExpressionTest {
     @ParameterizedTest(name = "[{index}] from({2},{3}) to {4} DEG cell={0}")
     @MethodSource("rightHalfPlaneTestDataset")
     void rightHalfPlaneTest1(int index, boolean expected, double x0, double y0, int direction) {
-        // Given a right half plane expression
+        // Given a right half-plane expression
         AreaExpression exp = AreaExpression.rightHalfPlane(new Point2D.Double(x0, y0), Complex.fromDeg(direction));
         QVect[] vertices = createQVertices(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
         int[][] verticesByCell = createVerticesIndices(WIDTH, HEIGHT);
@@ -318,6 +402,41 @@ class AreaExpressionTest {
 
         // Then ...
         assertEquals(expected, result);
+    }
+
+    @ParameterizedTest(name = "[{index}] O({0},{1}) R{2}, P {3} DEG, D {4} m")
+    @MethodSource("dataRadialInner")
+    void testRadialInner(double x, double y, int dirDeg, int ptDir, double ptDist) {
+        Point2D.Double centre = new Point2D.Double(x, y);
+        Complex dir = Complex.fromDeg(dirDeg);
+        AreaExpression exp = radialSensorArea(centre,
+                dir, Complex.fromDeg(DEFAULT_LIDAR_FOV_DEG),
+                DEFAULT_OBSTACLE_RADIUS, ROBOT_RADIUS, MAX_RADAR_DISTANCE);
+        // sized center
+        Point2D p0 = dir.opposite().at(centre, CENTRES_DISTANCE);
+        // target point
+        Point2D p = dir.add(Complex.fromDeg(ptDir)).at(p0, ptDist + CENTRES_DISTANCE);
+        assertTrue(exp.createParser().test(p));
+    }
+
+    @ParameterizedTest(name = "[{index}] O({0},{1}) R{2} P{3},D{4}")
+    @MethodSource({
+            "dataRadialNear",
+            "dataRadialFar",
+            "dataRadialBehind",
+    })
+    void testRadialOuter(double x, double y, int dirDeg, int ptDir, double ptDist) {
+        Point2D.Double centre = new Point2D.Double(x, y);
+        Complex dir = Complex.fromDeg(dirDeg);
+        AreaExpression exp = radialSensorArea(centre,
+                dir, Complex.fromDeg(DEFAULT_LIDAR_FOV_DEG),
+                DEFAULT_OBSTACLE_RADIUS,
+                DEFAULT_OBSTACLE_RADIUS, MAX_RADAR_DISTANCE);
+        // sized center
+        Point2D p0 = dir.opposite().at(centre, CENTRES_DISTANCE);
+        // target point
+        Point2D p = dir.add(Complex.fromDeg(ptDir)).at(p0, ptDist + CENTRES_DISTANCE);
+        assertFalse(exp.createParser().test(p));
     }
 
     @ParameterizedTest

@@ -35,7 +35,9 @@ import static java.lang.Math.abs;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.*;
 
 /**
- * A set of reward function
+ * The objective function that fuzzy rewards the robot stuck to obstacle behaviour.
+ * The reward is given if the robot stays at a distance range
+ * with sensor directed to the frontal direction within the given range.
  */
 public interface Stuck {
     String SCHEMA_NAME = "https://mmarini.org/wheelly/objective-stuck-schema-0.1";
@@ -68,8 +70,8 @@ public interface Stuck {
     static RewardFunction stuck(double x1, double x2, double x3, double x4, int sensorRange) {
         return (s0, e, s1) -> {
             RobotStatus status = s1.robotStatus();
-            double dist = status.echoDistance();
-            int sensor = status.sensorDirection().toIntDeg();
+            double dist = status.frontDistance();
+            int sensor = status.headDirection().toIntDeg();
             double isInRange = between(dist, x1, x2, x3, x4);
             double isInDirection = not(positive(abs(sensor), sensorRange));
             double isTarget = and(isInRange, isInDirection);

@@ -1,11 +1,11 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/mqtt-robot-schema-0.1
+$id: https://mmarini.org/wheelly/mqtt-robot-schema-1.0
 title: Robot
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/mqtt-robot-schema-0.1
+    const: https://mmarini.org/wheelly/mqtt-robot-schema-1.0
   class:
     const: org.mmarini.wheelly.mqtt.MqttRobot
   brokerUrl:
@@ -40,11 +40,29 @@ properties:
   maxRadarDistance:
     type: number
     exclusiveMinimum: 0
-  sensorReceptiveAngle:
+  lidarFOV:
     type: integer
     minimum: 1
     maximum: 90
-  cameraViewAngle:
+  headMinAngle:
+    type: integer
+    minimum: -180
+    maximum: 360
+  headMaxAngle:
+    type: integer
+    minimum: -180
+    maximum: 360
+  headX:
+    type: number
+  headY:
+    type: number
+  frontLidarDistance:
+    type: number
+  rearLidarDistance:
+    type: number
+  cameraDistance:
+    type: number
+  cameraFOV:
     type: integer
     minimum: 1
     maximum: 179
@@ -67,6 +85,6 @@ required:
   - cameraId
   - qrDeviceId
   - contactRadius
-  - sensorReceptiveAngle
-  - cameraViewAngle
+  - lidarFOV
+  - cameraFOV
   - maxRadarDistance

@@ -32,7 +32,6 @@ import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.yaml.Utils;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.function.Function;
 
 public interface Agent extends AgentConnector, AutoCloseable {
@@ -42,7 +41,7 @@ public interface Agent extends AgentConnector, AutoCloseable {
      *
      * @param file the configuration file
      */
-    static Function<WithSignalsSpec, Agent> fromFile(File file) throws IOException {
+    static Function<WithSignalsSpec, Agent> fromFile(File file) throws Throwable {
         return Utils.createObject(file);
     }
 

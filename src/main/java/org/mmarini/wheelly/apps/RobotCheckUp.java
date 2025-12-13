@@ -49,7 +49,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.WindowEvent;
 import java.awt.geom.Point2D;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -186,13 +185,13 @@ public class RobotCheckUp {
                     sensorPanel.setInfo(format("Checking sensor to %d DEG ...", directions[currentTest].toIntDeg()));
                 }
                 Complex sensDir = directions[currentTest];
-                Complex dir = status.sensorDirection();
+                Complex dir = status.headDirection();
                 if (dir.equals(sensDir)) {
                     sampleCount++;
                     if (scannerMoveTime == 0) {
                         scannerMoveTime = time - measureStart;
                     }
-                    double sensorDistance = status.echoDistance();
+                    double sensorDistance = status.frontDistance();
                     if (sensorDistance > 0) {
                         totDistance += sensorDistance;
                         measureCount++;
@@ -302,7 +301,7 @@ public class RobotCheckUp {
     /**
      * Runs the check
      */
-    private void run() throws IOException {
+    private void run() throws Throwable {
         logger.info("Robot check started.");
         File configFile = new File(parseArgs.getString("config"));
         JsonNode config = fromFile(configFile);

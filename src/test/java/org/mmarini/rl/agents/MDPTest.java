@@ -63,7 +63,7 @@ class MDPTest {
     }
 
     /**
-     * Returns the agent
+     * Returns the agent.yml
      *
      * @param mdp the mdp
      */
@@ -111,7 +111,7 @@ class MDPTest {
     @Test
     void neg4RewardTest() {
         // Give a mdp of 2 states
-        // And an agent for the mdp
+        // And an agent.yml for the mdp
         TestSequenceMDP mdp = TestSequenceMDP.builder(-1)
                 .add(0, 0, 1, 0)
                 .add(1, 3, 0, 0)
@@ -158,7 +158,7 @@ class MDPTest {
     @Test
     void neg4RewardTest1() {
         // Give a mdp of 2 states
-        // And an agent for the mdp
+        // And an agent.yml for the mdp
         TestSequenceMDP mdp = TestSequenceMDP.builder(-1)
                 .add(0, 0, 1, 0)
                 .add(1, 3, 0, 0)
@@ -219,7 +219,7 @@ class MDPTest {
                 .add(1, 1, 0, 0)
                 .build();
         Map<String, INDArray> allStates = allState(mdp);
-        // And an agent for the mdp
+        // And an agent.yml for the mdp
         TDAgentSingleNN agent = createAgent(mdp);
         // And the initial policy
         INDArray pi = agent.network().forward(allStates).state().getValues("action");
@@ -264,7 +264,7 @@ class MDPTest {
                 .add(1, 3, 0, 1)
                 .build();
         Map<String, INDArray> allStates = allState(mdpPos);
-        // And an agent for the mdp
+        // And an agent.yml for the mdp
         TDAgentSingleNN agent = createAgent(mdpPos);
         // And the initial policy
         TDNetworkState initialNetState = agent.network().forward(allStates).state();
@@ -310,7 +310,7 @@ class MDPTest {
                 .add(1, 1, 0, 1)
                 .build();
         Map<String, INDArray> allStates = allState(mdp);
-        // And an agent for the mdp
+        // And an agent.yml for the mdp
         TDAgentSingleNN agent = createAgent(mdp);
         // And the initial policy
         INDArray pi = agent.network().forward(allStates).state().getValues("action");

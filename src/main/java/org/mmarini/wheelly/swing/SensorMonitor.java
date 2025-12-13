@@ -42,7 +42,8 @@ import java.util.List;
  */
 public class SensorMonitor extends MatrixTable {
 
-    public static final String ECHO_DIST_KEY = "echoDistance";
+    public static final String FRONT_DIST_KEY = "distance";
+    public static final String REAR_DIST_KEY = "rearDistance";
     public static final String QR_CODE_KEY = "qrCode";
     public static final String SENSOR_DIR_KEY = "sensorDir";
     public static final String HEAD_KEY = "head";
@@ -73,7 +74,8 @@ public class SensorMonitor extends MatrixTable {
         List.of(
                         addColumn(HEAD_KEY, Messages.getString("SensorMonitor.head"), 4),
                         addColumn(SENSOR_DIR_KEY, Messages.getString("SensorMonitor.sensorDir"), 3),
-                        addColumn(ECHO_DIST_KEY, Messages.getString("SensorMonitor.echoDistance"), 3),
+                        addColumn(FRONT_DIST_KEY, Messages.getString("SensorMonitor.frontDistance"), 4),
+                        addColumn(REAR_DIST_KEY, Messages.getString("SensorMonitor.rearDistance"), 4),
                         addColumn(QR_CODE_KEY, Messages.getString("SensorMonitor.qrCode"), 3),
                         addColumn(LEFT_PPS_KEY, Messages.getString("SensorMonitor.leftPps"), 3),
                         addColumn(RIGHT_PPS_KEY, Messages.getString("SensorMonitor.rightPps"), 3),
@@ -141,8 +143,9 @@ public class SensorMonitor extends MatrixTable {
      */
     public void onStatus(RobotStatus status) {
         printf(HEAD_KEY, "%4d", status.direction().toIntDeg());
-        printf(SENSOR_DIR_KEY, "%4d", status.sensorDirection().toIntDeg());
-        printf(ECHO_DIST_KEY, "%3.1f", status.echoDistance());
+        printf(SENSOR_DIR_KEY, "%4d", status.headDirection().toIntDeg());
+        printf(FRONT_DIST_KEY, "%4d", status.lidarMessage().frontDistance());
+        printf(REAR_DIST_KEY, "%4d", status.lidarMessage().rearDistance());
         printf(QR_CODE_KEY, status.qrCode());
         printf(LEFT_PPS_KEY, "%3.0f", status.leftPps());
         printf(RIGHT_PPS_KEY, "%3.0f", status.rightPps());

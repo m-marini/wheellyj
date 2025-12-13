@@ -44,11 +44,11 @@ class StuckTest {
     static WorldModel createEnvironment(int sensorDir, double distance) {
         return new WorldModelBuilder()
                 .sensorDir(sensorDir)
-                .echoDistance(distance)
+                .frontDistance(distance)
                 .build();
     }
 
-    @ParameterizedTest
+    @ParameterizedTest(name = "[{index}] Sensor {1} DEG, D {2} m")
     @CsvSource({
             "1,0,1",
             "1,0,0.9",

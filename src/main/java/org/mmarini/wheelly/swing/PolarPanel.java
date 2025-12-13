@@ -179,71 +179,73 @@ public class PolarPanel extends JComponent {
      * @param markers  the markers
      */
     public void setPolarMap(PolarMap polarMap, Collection<LabelMarker> markers) {
-        int n = polarMap.sectorsNumber();
-        if (numSector != n) {
-            numSector = n;
-            this.gridShapes = createGridShapes(radarMaxDistance, GRID_SIZE, numSector);
-        }
-        List<ColoredShape> shapes = new ArrayList<>();
+        if (polarMap != null) {
+            int n = polarMap.sectorsNumber();
+            if (numSector != n) {
+                numSector = n;
+                this.gridShapes = createGridShapes(radarMaxDistance, GRID_SIZE, numSector);
+            }
+            List<ColoredShape> shapes = new ArrayList<>();
 
-        double sectorAngle = toDegrees(polarMap.sectorAngle());
-        Point2D center = polarMap.center();
-        AffineTransform transform = AffineTransform.getRotateInstance(polarMap.direction().toRad());
-        transform.translate(-center.getX(), -center.getY());
-        // Create marker shapes
-        markerShape = new CompositeShape(
-                markers.stream()
-                        .map(marker ->
-                                createCircle(LABELED_COLOR, BORDER_STROKE, true,
-                                        transform.transform(marker.location(), null),
-                                        markerSize / 2))
-                        .toArray(BaseShape[]::new));
+            double sectorAngle = toDegrees(polarMap.sectorAngle());
+            Point2D center = polarMap.center();
+            AffineTransform transform = AffineTransform.getRotateInstance(polarMap.direction().toRad());
+            transform.translate(-center.getX(), -center.getY());
+            // Create marker shapes
+            markerShape = new CompositeShape(
+                    markers.stream()
+                            .map(marker ->
+                                    createCircle(LABELED_COLOR, BORDER_STROKE, true,
+                                            transform.transform(marker.location(), null),
+                                            markerSize / 2))
+                            .toArray(BaseShape[]::new));
 
-        // First pass for empty shapes
-        for (int i = 0; i < n; i++) {
-            CircularSector sector = polarMap.sector(i);
-            double angle = polarMap.sectorDirection(i).toDeg() - 90;
-            if (sector.known()) {
-                double distance = sector.distance(center);
-                if (distance == 0 || sector.empty()) {
-                    shapes.add(new ColoredShape(
-                            createPie(angle - sectorAngle / 2, sectorAngle, radarMaxDistance + SECTOR_SIZE),
-                            BaseShape.EMPTY_COLOR));
-                } else {
-                    Shape innerPie = createPie(angle - sectorAngle / 2, sectorAngle, distance);
-                    shapes.add(new ColoredShape(innerPie, BaseShape.EMPTY_COLOR));
+            // First pass for empty shapes
+            for (int i = 0; i < n; i++) {
+                CircularSector sector = polarMap.sector(i);
+                double angle = polarMap.sectorDirection(i).toDeg() - 90;
+                if (sector.known()) {
+                    double distance = sector.distance(center);
+                    if (distance == 0 || sector.empty()) {
+                        shapes.add(new ColoredShape(
+                                createPie(angle - sectorAngle / 2, sectorAngle, radarMaxDistance + SECTOR_SIZE),
+                                BaseShape.EMPTY_COLOR));
+                    } else {
+                        Shape innerPie = createPie(angle - sectorAngle / 2, sectorAngle, distance);
+                        shapes.add(new ColoredShape(innerPie, BaseShape.EMPTY_COLOR));
+                    }
                 }
             }
-        }
-        // Second pass for filled shapes
-        for (int i = 0; i < n; i++) {
-            CircularSector sector = polarMap.sector(i);
-            double angle = polarMap.sectorDirection(i).toDeg() - 90;
-            if (sector.known()) {
-                double distance = sector.distance(center);
-                if (!(distance == 0 || sector.empty())) {
-                    Shape outerPie = createPie(angle - sectorAngle / 2, sectorAngle, radarMaxDistance + SECTOR_SIZE);
-                    Shape innerPie = createPie(angle - sectorAngle / 2, sectorAngle, distance);
-                    Area outerSector = new Area(outerPie);
-                    outerSector.subtract(new Area(innerPie));
-                    shapes.add(new ColoredShape(outerSector, BaseShape.FILLED_COLOR));
+            // Second pass for filled shapes
+            for (int i = 0; i < n; i++) {
+                CircularSector sector = polarMap.sector(i);
+                double angle = polarMap.sectorDirection(i).toDeg() - 90;
+                if (sector.known()) {
+                    double distance = sector.distance(center);
+                    if (!(distance == 0 || sector.empty())) {
+                        Shape outerPie = createPie(angle - sectorAngle / 2, sectorAngle, radarMaxDistance + SECTOR_SIZE);
+                        Shape innerPie = createPie(angle - sectorAngle / 2, sectorAngle, distance);
+                        Area outerSector = new Area(outerPie);
+                        outerSector.subtract(new Area(innerPie));
+                        shapes.add(new ColoredShape(outerSector, BaseShape.FILLED_COLOR));
+                    }
                 }
             }
-        }
-        // Third pass for ping shapes
-        for (int i = 0; i < n; i++) {
-            CircularSector sector = polarMap.sector(i);
-            if (sector.known()) {
-                double distance = sector.distance(center);
-                if (!(distance == 0 || sector.empty())) {
-                    Shape pingShape = createPing(
-                            transform.transform(sector.location(), null));
-                    shapes.add(new ColoredShape(pingShape, BaseShape.PING_COLOR));
+            // Third pass for ping shapes
+            for (int i = 0; i < n; i++) {
+                CircularSector sector = polarMap.sector(i);
+                if (sector.known()) {
+                    double distance = sector.distance(center);
+                    if (!(distance == 0 || sector.empty())) {
+                        Shape pingShape = createPing(
+                                transform.transform(sector.location(), null));
+                        shapes.add(new ColoredShape(pingShape, BaseShape.PING_COLOR));
+                    }
                 }
             }
+            this.shapes = shapes;
+            repaint();
         }
-        this.shapes = shapes;
-        repaint();
     }
 
     /**

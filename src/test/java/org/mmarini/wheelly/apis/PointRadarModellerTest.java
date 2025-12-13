@@ -114,12 +114,12 @@ class PointRadarModellerTest {
     void update1Test() {
         // Given a empty map
         RadarMap map = modeller.empty();
-        // And a sensor signal at 0,0 directed to 0 DEG with echo ping at 0.8 m
+        // And a sensor signal at 0,0 directed to 0 DEG with hasObstacle ping at 0.8 m
         Point2D sensor = new Point2D.Double();
         Complex direction = Complex.DEG0;
         double distance = 0.8;
         long timestamp = System.currentTimeMillis();
-        SensorSignal signal = new SensorSignal(sensor, direction, distance, timestamp, true);
+        SensorSignal signal = new SensorSignal(sensor, direction, distance, timestamp);
 
         // When updating the map by point modeller
         map = modeller.update(map, signal, null);

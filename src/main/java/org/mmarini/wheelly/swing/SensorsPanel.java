@@ -208,9 +208,8 @@ public class SensorsPanel extends JPanel {
         xPulses.setValue(status.xPulse());
         yPulses.setValue(status.yPulse());
         direction.setValue(status.direction());
-        sensorDirection.setValue(status.sensorDirection());
-        echoTime.setValue(status.echoDelay());
-        distance.setValue(status.echoDistance());
+        sensorDirection.setValue(status.headDirection());
+        distance.setValue(status.frontDistance());
         leftSpeed.setValue(status.leftPps());
         rightSpeed.setValue(status.rightPps());
         voltage.setValue(status.supplyVoltage());

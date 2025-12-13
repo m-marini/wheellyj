@@ -33,7 +33,7 @@ import static java.util.Objects.requireNonNull;
  * Circular sector is a space area that keeps the distance of the nearest obstacle in the area and if it has been scanned
  *
  * @param timestamp the sector timestamp
- * @param echo      true if the sector contains an echo
+ * @param echo      true if the sector contains an hasObstacle
  * @param location  location of echogenic
  */
 public record CircularSector(long timestamp, boolean echo, Point2D location) {
@@ -71,7 +71,7 @@ public record CircularSector(long timestamp, boolean echo, Point2D location) {
      * Creates the circular sector
      *
      * @param timestamp the sector timestamp
-     * @param echo      true if the sector contains an echo
+     * @param echo      true if the sector contains an hasObstacle
      * @param location  location of echogenic
      */
     public CircularSector(long timestamp, boolean echo, Point2D location) {

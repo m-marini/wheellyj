@@ -47,12 +47,12 @@ import static org.nd4j.common.util.MathUtils.round;
  */
 public class MapPanel extends LayeredCanvas {
     public static final int DEFAULT_WINDOW_SIZE = 800;
-    public static final float PING_RADIUS = 0.05f;
-    public static final float DEFAULT_MARKER_SIZE = 0.3f;
+    public static final float PING_SIZE = 40e-3f;
+    public static final float DEFAULT_MARKER_SIZE = 50e-3f;
     public static final int MAP_INSETS = 10;
     public static final double DEFAULT_SCALE = 80; // 100 pix/m
     private static final float TARGET_SIZE = ROBOT_RADIUS;
-    private float markerSize;
+    private final float markerSize;
 
     /**
      * Creates the map panel
@@ -83,15 +83,6 @@ public class MapPanel extends LayeredCanvas {
     }
 
     /**
-     * Sets the marker size
-     *
-     * @param markerSize the marker size (m)
-     */
-    public void markerSize(float markerSize) {
-        this.markerSize = markerSize;
-    }
-
-    /**
      * Sets the obstacle map
      *
      * @param markers the markers
@@ -100,7 +91,7 @@ public class MapPanel extends LayeredCanvas {
         BaseShape shape = markers != null
                 ? CompositeShape.create(markers.stream()
                 .map(marker ->
-                        createCircle(LABELED_COLOR, BORDER_STROKE, false, marker.location(), markerSize / 2)
+                        createCircle(LABELED_COLOR, BORDER_STROKE, true, marker.location(), markerSize / 2)
                 )
                 .toList())
                 : null;
@@ -124,6 +115,24 @@ public class MapPanel extends LayeredCanvas {
                             createRectangle(LABELED_PHANTOM_COLOR, BORDER_STROKE, true, obs, obstacleSize, obstacleSize))
                     .toArray(BaseShape[]::new));
             setLayer(Layers.OBSTACLES.ordinal(), new CompositeShape(hindereds, labeleds));
+        } else {
+            setLayer(Layers.OBSTACLES.ordinal(), null);
+        }
+    }
+
+    /**
+     * Sets the obstacle map
+     *
+     * @param map the map
+     */
+    public void obstacles(Collection<Obstacle> map) {
+        if (map != null) {
+            BaseShape[] shapes = map.stream()
+                    .map(o -> {
+                        Color color = o.label() != null ? LABELED_PHANTOM_COLOR : OBSTACLE_PHANTOM_COLOR;
+                        return createCircle(color, BORDER_STROKE, true, o.centre(), (float) o.radius());
+                    }).toArray(BaseShape[]::new);
+            setLayer(Layers.OBSTACLES.ordinal(), new CompositeShape(shapes));
         } else {
             setLayer(Layers.OBSTACLES.ordinal(), null);
         }
@@ -155,14 +164,16 @@ public class MapPanel extends LayeredCanvas {
     }
 
     /**
-     * Sets the sensor obstacle ping
+     * Sets the sensor obstacle pings
      *
-     * @param location the location
+     * @param locations the locations
      */
-    public void pingLocation(Point2D location) {
-        setLayer(Layers.PING.ordinal(), location != null
-                ? createCircle(PING_COLOR, BORDER_STROKE, true, location, PING_RADIUS)
-                : null);
+    public void pingLocations(Point2D... locations) {
+        List<BaseShape> shapes = Arrays.stream(locations)
+                .map(l -> createCircle(PING_COLOR, BORDER_STROKE, true, l, PING_SIZE / 2))
+                .toList();
+        CompositeShape shape = CompositeShape.create(shapes);
+        setLayer(Layers.PING.ordinal(), shape);
     }
 
     /**
@@ -187,14 +198,15 @@ public class MapPanel extends LayeredCanvas {
      * @param location  the location
      * @param direction the direction
      * @param sensorDir the sensor direction
+     * @param maxRadarDistance the max radar distance (m)
      */
-    public void robot(Point2D location, Complex direction, Complex sensorDir) {
+    public void robot(Point2D location, Complex direction, Complex sensorDir, double maxRadarDistance) {
         List<BaseShape> shapes = new ArrayList<>();
         if (location != null) {
             if (direction != null) {
                 shapes.add(createRobotShape(location, direction));
                 if (sensorDir != null) {
-                    shapes.add(createSensorShape(location, direction.add(sensorDir)));
+                    shapes.add(createSensorShape(location, direction.add(sensorDir), (float) maxRadarDistance));
                 }
             }
         }
@@ -210,8 +222,12 @@ public class MapPanel extends LayeredCanvas {
      * @param status the status
      */
     public void robotStatus(RobotStatus status) {
-        robot(status.location(), status.direction(), status.sensorDirection());
-        pingLocation(status.sensorObstacle().orElse(null));
+        robot(status.location(), status.direction(), status.headDirection(), status.robotSpec().maxRadarDistance());
+        Point2D[] pings = Stream.concat(
+                        status.frontObstacleCentre(0).stream(),
+                        status.rearObstacleCentre(0).stream())
+                .toArray(Point2D[]::new);
+        pingLocations(pings);
     }
 
     /**
@@ -223,17 +239,6 @@ public class MapPanel extends LayeredCanvas {
      */
     public void sectors(float sectorSize, Color color, Collection<Point2D> sectors) {
         sectors(sectorSize, color, sectors != null ? sectors.stream() : null);
-    }
-
-    /**
-     * Sets the cells over the map
-     *
-     * @param sectorSize the sector size (m)
-     * @param color      the color
-     * @param sectors    the sectors
-     */
-    public void sectors(float sectorSize, Color color, Point2D... sectors) {
-        sectors(sectorSize, color, sectors != null ? Arrays.stream(sectors) : null);
     }
 
     /**
@@ -273,11 +278,11 @@ public class MapPanel extends LayeredCanvas {
         RADAR_MAP,
         OBSTACLES,
         CUSTOM_SECTORS,
-        MARKERS,
         EDGES,
         PATH,
         TARGETS,
         ROBOT,
         PING,
+        MARKERS,
     }
 }

@@ -34,32 +34,34 @@ import org.junit.jupiter.params.provider.CsvSource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-class WheellyProxyMessageTest {
+class WheellyLidarMessageTest {
+
+    public static final long SIM_TIME = 1234L;
 
     @ParameterizedTest
     @CsvSource({
-            "'4321,0,0,0,0,0', 0, 0, 0, 0, 0",
-            "'4321,10,0,0,0,0', 10, 0, 0, 0, 0",
-            "'4321,-10,0,0,0,0', -10, 0, 0, 0, 0",
-            "'4321,0,10,0,0,0', 0, 10, 0, 0, 0",
-            "'4321,0,100,0,0,0', 0, 100, 0, 0, 0",
-            "'4321,0,0,0.0,0,0', 0, 0, 0, 0, 0",
-            "'4321,0,0,10.51,0,0', 0, 0, 10.51, 0, 0",
-            "'4321,0,0,-10.51,0,0', 0, 0, -10.51, 0, 0",
-            "'4321,0,0,0,0.0,0', 0, 0, 0, 0, 0",
-            "'4321,0,0,0,12.34,0', 0, 0, 0, 12.34, 0",
-            "'4321,0,0,0,-12.34,0', 0, 0, 0, -12.34, 0",
-            "'4321,0,0,0,0,179',0, 0, 0, 0, 179",
-            "'4321,0,0,0,0,-179',0, 0, 0, 0, -179",
+            "'4321,0,0,0,0,0,0', 0, 0, 0, 0, 0, 0",
+
+            "'4321,0,0,0,0,90,0', 0, 0, 0, 0, 0, 90",
+            "'4321,0,0,0,0,-90,0', 0, 0, 0, 0, 0, -90",
+
+            "'4321,0,0,10,20,0,0', 0, 0, 0, 10, 20, 0",
+            "'4321,0,0,-10,-20,0,0', 0, 0, 0, -10, -20, 0",
+
+            "'4321,100,200,0,0,0,0', 0, 100, 200, 0, 0, 0",
+
+            "'4321,0,0,0,0,0,90', 90, 0, 0, 0, 0, 0",
+            "'4321,0,0,0,0,0,-90', -90, 0, 0, 0, 0, 0",
     })
-    void testParse(String arg, short sensorDeg, long echoDelay, double x, double y, int yaw) {
-        // [sampleTime] [sensorDirectionDeg] [distanceTime (us)] [xLocation] [yLocation] [yaw]
-        WheellyProxyMessage m = WheellyProxyMessage.parse(1234, arg);
+    void testParse(String arg, short sensorDeg, int frontDistance, int rearDistance, double x, double y, int yaw) {
+        // [sampleTime] [headDirectionDeg] [distance (mm)] [rearDistance (mm)] [xLocation] [yLocation] [yaw]
+        WheellyLidarMessage m = WheellyLidarMessage.parse(SIM_TIME, arg);
 
         assertNotNull(m);
-        assertEquals(1234L, m.simulationTime());
-        assertEquals(sensorDeg, m.sensorDirectionDeg());
-        assertEquals(echoDelay, m.echoDelay());
+        assertEquals(SIM_TIME, m.simulationTime());
+        assertEquals(sensorDeg, m.headDirectionDeg());
+        assertEquals(frontDistance, m.frontDistance());
+        assertEquals(rearDistance, m.rearDistance());
         assertEquals(x, m.xPulses());
         assertEquals(y, m.yPulses());
         assertEquals(yaw, m.robotYawDeg());

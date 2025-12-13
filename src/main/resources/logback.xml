@@ -16,7 +16,6 @@
     <logger name="io.netty" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.sockets.LineSocket" level="INFO"/>
-    <logger name="org.mmarini.wheelly.sockets.RealRobot" level="INFO"/>
     <logger name="org.mmarini.wheelly.apis.SimRobot" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.apis.RobotController" level="INFO"/>

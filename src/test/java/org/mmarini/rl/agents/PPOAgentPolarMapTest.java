@@ -120,7 +120,7 @@ class PPOAgentPolarMapTest {
 
     @Test
     void createTest() throws IOException {
-        // Given an agent
+        // Given an agent.yml
         File path = new File("models/test");
         org.mmarini.Utils.deleteRecursive(path);
         JsonNode spec = Utils.fromText(YAML);
@@ -131,7 +131,7 @@ class PPOAgentPolarMapTest {
                 "sectorDistances", ArraySignal.create(new long[]{1, 4}, 0, 0, 0, 3)
         );
 
-        // When acts the agent with signal
+        // When acts the agent.yml with signal
         Map<String, Signal> out = agent.processSignals(state);
 
         // Then ...

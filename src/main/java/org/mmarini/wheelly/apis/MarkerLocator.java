@@ -60,7 +60,21 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
     public static final Complex CLEAR_REDUCTION_ANGLE = Complex.fromDeg(3);
 
     /**
-     * Returns the empty radar from definition
+     * Returns the marker locator
+     *
+     * @param locationDecay       the decay marker time (ms)
+     * @param cleanDecay          the clean decay time (ms)
+     * @param correlationInterval the correlation interval (ms)
+     * @param markerSize          the marker size (m)
+     * @param minNumberEvents     the minimum number of unknown qr code events to update the marker map
+     */
+    public static MarkerLocator create(double locationDecay, double cleanDecay, long correlationInterval, double markerSize, int minNumberEvents) {
+        return new MarkerLocator(locationDecay, cleanDecay, correlationInterval, minNumberEvents, markerSize,
+                new AtomicReference<>(new MarkerLocatorStatus(0, null)));
+    }
+
+    /**
+     * Returns the marker locator from definition
      *
      * @param root    the document
      * @param locator the locator of radar map definition
@@ -71,21 +85,22 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
         long correlationInterval = locator.path("correlationInterval").getNode(root).asLong();
         double markerSize = locator.path("markerSize").getNode(root).asDouble();
         int minNumberEvents = locator.path("minNumberEvents").getNode(root).asInt(1);
-        return new MarkerLocator(decay, cleanDecay, correlationInterval, minNumberEvents, markerSize, new AtomicReference<>(new MarkerLocatorStatus(0, null)));
+        return create(decay, cleanDecay, correlationInterval, markerSize, minNumberEvents);
     }
 
     /**
-     * Returns the cleaning area
+     * Returns the cleaning area.
+     * It is a circular sector of the given angle directed to the given direction of given radius
      *
-     * @param centre         the centre of the area
-     * @param direction      the direction of area
-     * @param distance       the echo siatance (m)
-     * @param receptiveAngle the sensor receptive angle
+     * @param centre    the centre of the area
+     * @param direction the direction of area
+     * @param radius    the signal distance (m)
+     * @param fov       the field of view
      */
-    private static Parser createCleaningArea(Point2D centre, Complex direction, double distance, Complex receptiveAngle) {
+    private static Parser createCleaningArea(Point2D centre, Complex direction, double radius, Complex fov) {
         return and(
-                circle(centre, distance),
-                angle(centre, direction, receptiveAngle)
+                circle(centre, radius),
+                angle(centre, direction, fov.divAngle(2))
         ).createParser();
     }
 
@@ -127,25 +142,26 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
     /**
      * Returns the filtered map area
      *
-     * @param map            the map of marker
-     * @param centre         the centre of cleaning area
-     * @param direction      the direction of cleaning area
-     * @param receptiveAngle the receptive sensor angle
-     * @param time           the current time (ms)
+     * @param map       the map of marker
+     * @param centre    the centre of cleaning area
+     * @param direction the direction of cleaning area
+     * @param fov       the receptive sensor angle
+     * @param time      the current time (ms)
      */
     private Map<String, LabelMarker> filterCleaningArea(Map<String, LabelMarker> map,
                                                         Point2D centre, Complex direction, double distance,
-                                                        Complex receptiveAngle, long time) {
+                                                        Complex fov, long time) {
         List<LabelMarker> markers = map.values().stream().toList();
-        Parser parser = createCleaningArea(centre, direction, distance, receptiveAngle);
+        Parser parser = createCleaningArea(centre, direction, distance, fov);
         return markers.stream()
                 .map(marker -> {
                     if (parser.test(marker.location())) {
                         // clean marker
-                        double alpha = min((time - marker.cleanTime()) / cleanDecay, 1);
-                        // dt -> 0 => alpha -> 0, echoWeight -> echoWeight
-                        // dt -> decay => alpha -> 1, echoWeight -> -1
-                        // weight = (-1-echoWeight)*alpha + echoWeight;
+                        long dt = time - marker.cleanTime();
+                        double alpha = min(dt / cleanDecay, 1);
+                        // dt -> 0 => alpha -> 0, weight -> weight
+                        // dt -> decay => alpha -> 1, weight -> -1
+                        // weight -> (-1-weight) * alpha + weight;
                         double weight = marker.weight();
                         weight = -(1 + weight) * alpha + weight;
                         return marker.setCleanTime(time).setWeight(weight);
@@ -169,63 +185,63 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
     public Map<String, LabelMarker> update(Map<String, LabelMarker> map, CorrelatedCameraEvent cameraEvent, RobotSpec robotSpec) {
         requireNonNull(map);
         requireNonNull(cameraEvent);
-        long cameraTime = cameraEvent.simulationTime();
-        long proxyTime = cameraEvent.proxyTime();
-        long elaps = cameraTime - proxyTime;
+        long cameraTime = cameraEvent.cameraTime();
+        long lidarTime = cameraEvent.lidarTime();
+        long elaps = cameraTime - lidarTime;
         if (elaps >= 0 && elaps <= correlationInterval) {
             // Correlated messages
-            Point2D cameraLocation = cameraEvent.cameraLocation();
             double distance = cameraEvent.markerDistance();
             double maxDistance = robotSpec.maxRadarDistance();
-            Complex receptiveAngle = robotSpec.receptiveAngle();
-            Complex halfViewAngle = robotSpec.cameraViewAngle().divAngle(2);
-            Complex cameraAzimuth = cameraEvent.cameraAzimuth();
-            double clearDistance = (distance == 0 ? maxDistance : distance) + markerSize / 2;
+            Complex lidarFov = robotSpec.lidarFOV();
+            Complex cameraFov = robotSpec.cameraFOV();
+            Complex cameraAzimuth = cameraEvent.lidarYaw();
+            double clearDistance = (distance == 0 ? maxDistance : distance);
+            Point2D lidarLocation = robotSpec.frontLidarLocation(cameraEvent.robotLocation(), cameraEvent.robotDirection(), cameraEvent.headDirection());
 
             if (distance == 0) {
-                // echo not present
+                // obstacle is not present
                 // Clear area
                 status.updateAndGet(s -> s.markEvent(cameraEvent));
-                return filterCleaningArea(map, cameraLocation, cameraAzimuth,
-                        clearDistance, receptiveAngle, cameraTime);
+                return filterCleaningArea(map, lidarLocation, cameraAzimuth,
+                        clearDistance, lidarFov, lidarTime);
             }
-            Complex clearAngle = Complex.fromRad(min(halfViewAngle.toRad(), receptiveAngle.toRad()));
             CorrelatedCameraEvent prevEvent = status.get().prevEvent();
+            Complex cleanFov = Complex.fromRad(min(lidarFov.toRad(), cameraFov.toRad()));
             if (!RobotSpec.UNKNOWN_QR_CODE.equals(cameraEvent.qrCode())
                     // qr code recognized
-                    && cameraEvent.camerEvent().direction().isCloseTo(Complex.DEG0, robotSpec.receptiveAngle())
-                // direction correlated with the proxy receptive angle
+                    && cameraEvent.camerEvent().direction().isCloseTo(Complex.DEG0, robotSpec.lidarFOV())
+                // camera label direction correlated with the lidar receptive angle
             ) {
                 // Marker recognized
-                Complex markerDirection = cameraEvent.markerAzimuth();
-                Point2D markerLocation = markerDirection.at(cameraLocation, distance + markerSize / 2);
-                LabelMarker marker = map.get(cameraEvent.qrCode());
-                Map<String, LabelMarker> map1 = filterCleaningArea(map, cameraLocation, cameraAzimuth,
-                        clearDistance, clearAngle, cameraTime);
+                Complex markerDirection = cameraEvent.markerYaw();
+                Point2D markerLocation = markerDirection.at(lidarLocation, distance);
+                LabelMarker mapMarker = map.get(cameraEvent.qrCode());
+                Map<String, LabelMarker> map1 = filterCleaningArea(map, lidarLocation, cameraAzimuth,
+                        clearDistance, cleanFov, lidarTime);
                 LabelMarker newMarker;
-                if (marker != null) {
+                if (mapMarker != null) {
                     // existing label
                     // Time interval between previous proxy markerTime
-                    long dt = cameraTime - marker.markerTime();
+                    long dt = lidarTime - mapMarker.markerTime();
 
                     double gamma = Math.expm1(-(double) dt / locationDecay) + 1;
                     double notGamma = 1 - gamma;
-                    double x = marker.location().getX() * gamma + markerLocation.getX() * notGamma;
-                    double y = marker.location().getY() * gamma + markerLocation.getY() * notGamma;
-                    newMarker = marker.setLocation(new Point2D.Double(x, y))
-                            .setMarkerTime(cameraTime)
+                    double x = mapMarker.location().getX() * gamma + markerLocation.getX() * notGamma;
+                    double y = mapMarker.location().getY() * gamma + markerLocation.getY() * notGamma;
+                    newMarker = mapMarker.setLocation(new Point2D.Double(x, y))
+                            .setMarkerTime(lidarTime)
                             .setWeight(1);
                 } else {
                     // new valid label
-                    newMarker = new LabelMarker(cameraEvent.qrCode(), markerLocation, 1, cameraTime, cameraTime);
+                    newMarker = new LabelMarker(cameraEvent.qrCode(), markerLocation, 1, lidarTime, lidarTime);
                 }
                 Map<String, LabelMarker> newMap = new HashMap<>(map1);
                 newMap.put(newMarker.label(), newMarker);
                 status.updateAndGet(s -> s.markEvent(cameraEvent));
                 return newMap;
             } else if (prevEvent != null
-                    && (cameraTime <= prevEvent.simulationTime()
-                    || !cameraEvent.cameraAzimuth().isCloseTo(prevEvent.cameraAzimuth(), EPSILON_1DEG))) {
+                    && (cameraTime <= prevEvent.cameraTime()
+                    || !cameraEvent.lidarYaw().isCloseTo(prevEvent.lidarYaw(), EPSILON_1DEG))) {
                 // Event not changed or
                 status.updateAndGet(s -> s.markEvent(cameraEvent));
                 return map;
@@ -233,8 +249,9 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
                 // Marker not recognised and camera event counter reached the threshold
                 // Clear area
                 status.updateAndGet(s -> s.markEvent(cameraEvent));
-                return filterCleaningArea(map, cameraLocation, cameraAzimuth,
-                        clearDistance, clearAngle.sub(CLEAR_REDUCTION_ANGLE), cameraTime);
+                return filterCleaningArea(map, lidarLocation, cameraAzimuth,
+                        clearDistance, cleanFov.sub(CLEAR_REDUCTION_ANGLE),
+                        lidarTime);
             } else {
                 // camera event ignored
                 status.updateAndGet(s -> s.prevEvent(cameraEvent));

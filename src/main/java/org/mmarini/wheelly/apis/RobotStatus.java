@@ -35,6 +35,8 @@ import java.util.function.IntToDoubleFunction;
 
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.RobotSpec.distance2Pulse;
+import static org.mmarini.wheelly.apis.Utils.m2mm;
+import static org.mmarini.wheelly.apis.Utils.mm2m;
 
 /**
  * Creates the robot status
@@ -42,16 +44,17 @@ import static org.mmarini.wheelly.apis.RobotSpec.distance2Pulse;
  * @param robotSpec       the robot specification
  * @param simulationTime  the simulated markerTime (ms)
  * @param motionMessage   the motion message
- * @param proxyMessage    the proxy message
  * @param contactsMessage the contact's message
  * @param supplyMessage   the supply message
  * @param decodeVoltage   the voltage decode function
  * @param cameraEvent     the camera event
+ * @param lidarMessage    the lidar message
  */
 public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotionMessage motionMessage,
-                          WheellyProxyMessage proxyMessage, WheellyContactsMessage contactsMessage,
+                          WheellyContactsMessage contactsMessage,
                           WheellySupplyMessage supplyMessage, IntToDoubleFunction decodeVoltage,
-                          CorrelatedCameraEvent cameraEvent) {
+                          CorrelatedCameraEvent cameraEvent,
+                          WheellyLidarMessage lidarMessage) {
     public static final float OBSTACLE_SIZE = 0.2f;
 
     /**
@@ -61,29 +64,26 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      * @param decodeVoltage the decode voltage function
      */
     public static RobotStatus create(RobotSpec robotSpec, IntToDoubleFunction decodeVoltage) {
-        WheellyProxyMessage proxyMessage1 = new WheellyProxyMessage(0, 0, 0, 0, 0, 0);
         return new RobotStatus(robotSpec, 0,
-                new WheellyMotionMessage(0, 0, 0,
-                        0, 0, 0, 0, true, 0, 0, 0, 0),
-                proxyMessage1,
-                new WheellyContactsMessage(0, true, true, true, true),
-                new WheellySupplyMessage(0, 0),
+                WheellyMotionMessage.DEFAULT_MESSAGE,
+                WheellyContactsMessage.DEFAULT_MESSAGE,
+                WheellySupplyMessage.DEFAULT_MESSAGE,
                 decodeVoltage,
-                new CorrelatedCameraEvent(CameraEvent.unknown(0), proxyMessage1)
-        );
+                CorrelatedCameraEvent.DEFAULT_MESSAGE,
+                WheellyLidarMessage.DEFAULT_MESSAGE);
     }
 
-    public RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotionMessage motionMessage, WheellyProxyMessage proxyMessage,
+    public RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotionMessage motionMessage,
                        WheellyContactsMessage contactsMessage, WheellySupplyMessage supplyMessage,
-                       IntToDoubleFunction decodeVoltage, CorrelatedCameraEvent cameraEvent) {
+                       IntToDoubleFunction decodeVoltage, CorrelatedCameraEvent cameraEvent, WheellyLidarMessage lidarMessage) {
         this.motionMessage = requireNonNull(motionMessage);
-        this.proxyMessage = requireNonNull(proxyMessage);
         this.contactsMessage = requireNonNull(contactsMessage);
         this.supplyMessage = requireNonNull(supplyMessage);
         this.robotSpec = requireNonNull(robotSpec);
         this.decodeVoltage = requireNonNull(decodeVoltage);
         this.simulationTime = simulationTime;
         this.cameraEvent = requireNonNull(cameraEvent);
+        this.lidarMessage = requireNonNull(lidarMessage);
     }
 
     /**
@@ -102,6 +102,23 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
     }
 
     /**
+     * Returns the contacts point or null if not present
+     */
+    public Point2D contactPoint() {
+        return contactsMessage == null
+                // No contacts message
+                ? null
+                : !canMoveForward()
+                // front contact
+                ? direction().at(location(), robotSpec.contactRadius())
+                : !canMoveBackward()
+                // rear contact
+                ? direction().opposite().at(location(), robotSpec.contactRadius())
+                // No contacts
+                : null;
+    }
+
+    /**
      * Returns the robot direction
      */
     public Complex direction() {
@@ -109,32 +126,43 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
     }
 
     /**
-     * Returns the echo delay (us)
+     * Returns the front distance (m)
      */
-    public long echoDelay() {
-        return proxyMessage.echoDelay();
+    public double frontDistance() {
+        return mm2m(lidarMessage.frontDistance());
     }
 
     /**
-     * Returns the echo absolute direction
+     * Returns the front lidar location
      */
-    public Complex echoDirection() {
-        return proxyMessage.echoDirection();
-    }
-
-    public double echoDistance() {
-        return proxyMessage.echoDistance();
+    public Point2D frontLidarLocation() {
+        return robotSpec.frontLidarLocation(lidarMessage.robotLocation(), lidarMessage.robotYaw(), lidarMessage.headDirection());
     }
 
     /**
-     * Returns the robot location at ping localTime (pulses)
+     * Returns the obstacle location
      */
-    public Point2D echoRobotLocation() {
-        return RobotSpec.pulses2Location(proxyMessage.xPulses(), proxyMessage.yPulses());
+    public Optional<Point2D> frontObstacleCentre() {
+        return frontObstacleCentre(OBSTACLE_SIZE / 2);
     }
 
     /**
-     * Returns true if front sensor is clear
+     * Returns the obstacle location
+     *
+     * @param radius the obstacle radius (m)
+     */
+    public Optional<Point2D> frontObstacleCentre(double radius) {
+        double dist = frontDistance();
+        if (dist == 0) {
+            return Optional.empty();
+        }
+        double d = (dist + radius);
+        Point2D location = frontLidarLocation();
+        return Optional.of(headAbsDirection().at(location, d));
+    }
+
+    /**
+     * Returns true if the front sensor is clear
      */
     public boolean frontSensor() {
         return contactsMessage.frontSensors();
@@ -147,6 +175,23 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
         return motionMessage.halt();
     }
 
+    /**
+     * Returns the world relative sensor direction
+     */
+    public Complex headAbsDirection() {
+        return lidarMessage.headDirection().add(lidarMessage.robotYaw());
+    }
+
+    /**
+     * Returns the robot relative sensor direction
+     */
+    public Complex headDirection() {
+        return lidarMessage.headDirection();
+    }
+
+    /**
+     * Returns imu failure code
+     */
     public int imuFailure() {
         return motionMessage.imuFailure();
     }
@@ -187,6 +232,42 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
     }
 
     /**
+     * Returns the rear distance (m)
+     */
+    public double rearDistance() {
+        return mm2m(lidarMessage.rearDistance());
+    }
+
+    /**
+     * Returns the front lidar location
+     */
+    public Point2D rearLidarLocation() {
+        return robotSpec.rearLidarLocation(lidarMessage.robotLocation(), lidarMessage.robotYaw(), lidarMessage.headDirection());
+    }
+
+    /**
+     * Returns the obstacle location
+     */
+    public Optional<Point2D> rearObstacleCentre() {
+        return rearObstacleCentre(OBSTACLE_SIZE / 2);
+    }
+
+    /**
+     * Returns the obstacle location
+     *
+     * @param radius the obstacle radius (m)
+     */
+    public Optional<Point2D> rearObstacleCentre(double radius) {
+        double dist = rearDistance();
+        if (dist == 0) {
+            return Optional.empty();
+        }
+        double d = (dist + radius);
+        Point2D location = rearLidarLocation();
+        return Optional.of(headAbsDirection().opposite().at(location, d));
+    }
+
+    /**
      * Returns true if rear sensor is clear
      */
     public boolean rearSensor() {
@@ -205,28 +286,9 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
         return motionMessage.rightTargetPps();
     }
 
-    /**
-     * Returns the sensor direction
-     */
-    public Complex sensorDirection() {
-        return proxyMessage.sensorDirection();
-    }
-
-    /**
-     * Returns the obstacle location
-     */
-    public Optional<Point2D> sensorObstacle() {
-        double sampleDistance = echoDistance();
-        if (sampleDistance > 0) {
-            float d = (float) (sampleDistance + OBSTACLE_SIZE / 2);
-            Point2D location = location();
-            Complex angle = Complex.DEG90.sub(proxyMessage.echoDirection());
-            float x = (float) (d * angle.cos() + location.getX());
-            float y = (float) (d * angle.sin() + location.getY());
-            return Optional.of(new Point2D.Float(x, y));
-        } else {
-            return Optional.empty();
-        }
+    @Override
+    public RobotSpec robotSpec() {
+        return robotSpec;
     }
 
     /**
@@ -237,12 +299,12 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
     public RobotStatus setCameraMessage(CorrelatedCameraEvent cameraEvent) {
         return Objects.equals(cameraEvent, this.cameraEvent)
                 ? this
-                : new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage,
-                supplyMessage, decodeVoltage, cameraEvent);
+                : new RobotStatus(robotSpec, simulationTime, motionMessage, contactsMessage,
+                supplyMessage, decodeVoltage, cameraEvent, lidarMessage);
     }
 
     /**
-     * Returns the status with the set can move backward flag
+     * Returns the status with the set can move the backward flag
      *
      * @param canMoveBackward true if the robot can move backward
      */
@@ -253,7 +315,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
     }
 
     /**
-     * Returns the status with the set can move forward flag
+     * Returns the status with the set can move the forward flag
      *
      * @param canMoveForward true if the robot can move forward
      */
@@ -270,36 +332,60 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      */
     public RobotStatus setContactsMessage(WheellyContactsMessage contactsMessage) {
         return !Objects.equals(this.contactsMessage, contactsMessage)
-                ? new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent)
+                ? new RobotStatus(robotSpec, simulationTime, motionMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, lidarMessage)
                 : this;
     }
 
     /**
-     * Returns the robot status with direction set
+     * Returns the robot status with the direction set
      *
      * @param direction the direction
      */
     public RobotStatus setDirection(Complex direction) {
         return setMotionMessage(
-                motionMessage.setDirection(direction.toIntDeg())
-                        .setSimulationTime(simulationTime));
+                motionMessage.setDirection(direction.toIntDeg()));
     }
 
     /**
-     * Returns the robot status by setting the echo distance
+     * Sets the front distance
      *
-     * @param echoDistance the echo distance (m)
+     * @param distance distance (m)
      */
-    public RobotStatus setEchoDistance(double echoDistance) {
-        return setProxyMessage(
-                proxyMessage.setEchoDistance(echoDistance)
-                        .setSimulationTime(simulationTime));
+    public RobotStatus setFrontDistance(double distance) {
+        return setLidarMessage(lidarMessage.frontDistance(m2mm(distance)));
     }
 
+    /**
+     * Sets the halt status
+     *
+     * @param halt true if robot is halt
+     */
     public RobotStatus setHalt(boolean halt) {
         return setMotionMessage(
                 motionMessage.setHalt(halt)
                         .setSimulationTime(simulationTime));
+    }
+
+    /**
+     * Returns the status updated by proxy message
+     *
+     * @param lidarMessage the message
+     */
+    public RobotStatus setLidarMessage(WheellyLidarMessage lidarMessage) {
+        return !Objects.equals(this.lidarMessage, lidarMessage)
+                ? new RobotStatus(robotSpec, simulationTime, motionMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, lidarMessage)
+                : this;
+    }
+
+    /**
+     * Returns the robot status updated by motion message
+     *
+     * @param motionMessage the motion message
+     */
+    public RobotStatus setMotionMessage(WheellyMotionMessage motionMessage) {
+        return !Objects.equals(this.motionMessage, motionMessage)
+                ? new RobotStatus(robotSpec, simulationTime, motionMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, lidarMessage)
+                : this;
     }
 
     /**
@@ -316,35 +402,21 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
     }
 
     /**
-     * Returns the robot status updated by motion message
+     * Sets the front distance
      *
-     * @param motionMessage the motion message
+     * @param distance distance (m)
      */
-    public RobotStatus setMotionMessage(WheellyMotionMessage motionMessage) {
-        return !Objects.equals(this.motionMessage, motionMessage)
-                ? new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent)
-                : this;
+    public RobotStatus setRearDistance(double distance) {
+        return setLidarMessage(lidarMessage.rearDistance(m2mm(distance)));
     }
 
     /**
-     * Returns the status updated by proxy message
-     *
-     * @param proxyMessage the message
-     */
-    public RobotStatus setProxyMessage(WheellyProxyMessage proxyMessage) {
-        return !Objects.equals(this.proxyMessage, proxyMessage)
-                ? new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent)
-                : this;
-    }
-
-    /**
-     * Returns the roboto status with sensor direction set
+     * Returns the robot status with the sensor direction set
      *
      * @param dir the sensor direction
      */
     public RobotStatus setSensorDirection(Complex dir) {
-        return setProxyMessage(proxyMessage.setSensorDirection(dir.toIntDeg())
-                .setSimulationTime(simulationTime));
+        return setLidarMessage(lidarMessage.sensorDirection(dir.toIntDeg()));
     }
 
     /**
@@ -354,7 +426,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      */
     public RobotStatus setSimulationTime(long simulationTime) {
         return simulationTime != this.simulationTime ?
-                new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent)
+                new RobotStatus(robotSpec, simulationTime, motionMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, lidarMessage)
                 : this;
     }
 
@@ -377,7 +449,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      */
     public RobotStatus setSupplyMessage(WheellySupplyMessage supplyMessage) {
         return !Objects.equals(this.supplyMessage, supplyMessage)
-                ? new RobotStatus(robotSpec, simulationTime, motionMessage, proxyMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent)
+                ? new RobotStatus(robotSpec, simulationTime, motionMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, lidarMessage)
                 : this;
     }
 

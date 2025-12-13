@@ -33,19 +33,27 @@ import java.awt.geom.Point2D;
 /**
  * Sensor signal information
  *
- * @param sensorLocation  the sensor location
- * @param sensorDirection the sensor direction
- * @param distance        the distance (m)
- * @param timestamp       the timestamp (ms)
- * @param echo            true if there is an echo ping
+ * @param location  the sensor location
+ * @param direction the sensor direction
+ * @param distance  the front distance (m)
+ * @param timestamp the timestamp (ms)
  */
-public record SensorSignal(Point2D sensorLocation, Complex sensorDirection, double distance, long timestamp,
-                           boolean echo) {
+public record SensorSignal(Point2D location, Complex direction, double distance,
+                           long timestamp
+) {
 
     /**
-     * Returns the echo ping location if distance > 0
+     * Returns true if has obstacle
      */
-    public Point2D echoPing() {
-        return distance > 0 ? sensorDirection.at(sensorLocation, distance) : null;
+    public boolean hasObstacle() {
+        return distance > 0;
     }
+
+    /**
+     * Returns the front location or null if distance = 0
+     */
+    public Point2D obstacleLocation() {
+        return distance > 0 ? direction.at(location, distance) : null;
+    }
+
 }

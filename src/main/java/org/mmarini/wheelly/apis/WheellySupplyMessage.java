@@ -45,6 +45,7 @@ public record WheellySupplyMessage(long simulationTime, int supplySensor) implem
     public static final int NO_PARAMS = 3;
     // [sampleTime] [voltage (U)]
     public static final Pattern ARG_PATTERN = Pattern.compile("^\\d+,(\\d+)$");
+    public static final WheellySupplyMessage DEFAULT_MESSAGE = new WheellySupplyMessage(0, 0);
 
     /**
      * Returns the Wheelly supply event from string

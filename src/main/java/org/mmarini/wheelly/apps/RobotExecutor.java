@@ -49,6 +49,7 @@ import java.awt.event.WindowEvent;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
@@ -104,7 +105,7 @@ public class RobotExecutor {
         } catch (ArgumentParserException e) {
             parser.handleError(e);
             System.exit(1);
-        } catch (IOException e) {
+        } catch (Throwable e) {
             logger.atError().setCause(e).log("Error running application");
             System.exit(1);
         }
@@ -153,7 +154,7 @@ public class RobotExecutor {
      * Creates the context.
      * It consists of the robot, the controller, the modeller and the state machine agent
      */
-    void createContext() throws IOException {
+    void createContext() throws Throwable {
         File confFile = new File(this.args.getString("config"));
         JsonNode config = org.mmarini.yaml.Utils.fromFile(confFile);
         WheellyJsonSchemas.instance().validateOrThrow(config, EXECUTOR_SCHEMA_YML);
@@ -174,6 +175,7 @@ public class RobotExecutor {
         this.agent = StateMachineAgent.fromFile(
                 new File(config.path("agent").asText()));
         modeller.connect(agent);
+        agent.modeller(modeller);
 
         this.sessionDuration = this.args.getLong("time") * 1000;
         logger.atInfo().setMessage("Session will be running for {} sec...").addArgument(sessionDuration).log();
@@ -288,7 +290,6 @@ public class RobotExecutor {
     private void initUI() {
         double radarMaxDistance = robot.robotSpec().maxRadarDistance();
         polarPanel.setRadarMaxDistance(radarMaxDistance);
-        envPanel.markerSize((float) modeller.worldModelSpec().markerSize());
         if (args.getBoolean("windows")) {
             createMultiFrames();
         } else {
@@ -316,7 +317,7 @@ public class RobotExecutor {
      *
      * @param map the obstacle map
      */
-    private void onObstacleMap(ObstacleMap map) {
+    private void onObstacleMap(Collection<Obstacle> map) {
         envPanel.obstacles(map);
     }
 
@@ -414,7 +415,7 @@ public class RobotExecutor {
      * Initializes the UI components
      * Opens the application frames (environment and radar)
      */
-    private void run() throws IOException {
+    private void run() throws Throwable {
         createContext();
         createFlows();
         initUI();

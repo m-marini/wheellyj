@@ -40,7 +40,7 @@ import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
-import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
+import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -52,15 +52,22 @@ class MoveToLabelTest {
     public static final double GRID_SIZE = 0.2;
     public static final int ECHO_TIME = 100;
 
-    static WorldModel createState(Complex robotDir, Complex sensorDir, Complex obstacleDir) {
+    /**
+     * Returns the world model with the given robot status and obstacle at 1.2 m from the origin to the given direction
+     *
+     * @param robotDir    the robot direction
+     * @param headDeg     the head direction
+     * @param obstacleDir the obstacle direction
+     */
+    static WorldModel createState(Complex robotDir, Complex headDeg, Complex obstacleDir) {
         Point2D obstacleLocation = obstacleDir.at(new Point2D.Float(), OBSTACLE_DISTANCE);
         RadarMap map = RadarMap.empty(GridTopology.create(new Point2D.Float(), MAP_SIZE, MAP_SIZE,
                         GRID_SIZE))
                 .updateCellAt(obstacleLocation.getX(), obstacleLocation.getY(), cell ->
                         cell.addEchogenic(ECHO_TIME, DECAY));
-        RobotStatus status = RobotStatus.create(ROBOT_SPEC, x -> 12)
+        RobotStatus status = RobotStatus.create(DEFAULT_ROBOT_SPEC, x -> 12)
                 .setDirection(robotDir)
-                .setSensorDirection(sensorDir);
+                .setSensorDirection(headDeg);
         Map<String, LabelMarker> markers = Map.of(
                 "A", new LabelMarker("A", obstacleLocation, 1, 0, 0)
         );
@@ -81,14 +88,14 @@ class MoveToLabelTest {
             "2, 0, 0, 45, 45, 30",
             // obstacle at right front
             "2, 0, 0, 315, 315, 30",
-            // obstacle at left
+            // obstacle at the left
             "2, 0, 0, 90, 90, 30",
             // obstacle at right
             "2, 0, 0, 270, 270, 30",
 
-            // obstacle out of direction
+            // obstacle out of the direction
             "0, 31, 0, 0, 0, 30",
-            // obstacle out of direction
+            // obstacle out of the direction
             "0, 329, 0, 0, 0, 30",
             // sensor out of range
             "0, 0, 31, 0, 0, 30",
@@ -112,7 +119,7 @@ class MoveToLabelTest {
                 int actionDeg,
                 int actionSpeed
     ) throws IOException {
-        // Given a move to label objective
+        // Given a move to label goal
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + MoveToLabel.SCHEMA_NAME,
                 "class: " + MoveToLabel.class.getName(),

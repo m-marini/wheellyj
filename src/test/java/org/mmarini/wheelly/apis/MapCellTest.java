@@ -38,21 +38,21 @@ class MapCellTest {
 
     @Test
     void cleanContactOnlyTest() {
-        // Given a cell with echo and contact set at 100 ms
+        // Given a cell with hasObstacle and contact set at 100 ms
         long t0 = 1000;
         long tv = t0 - 1;
         MapCell cell = MapCell.unknown(new Point2D.Float(0, 2F))
                 .addEchogenic(t0, 100)
                 .setContact(t0);
 
-        // When clean echo before 100 ms (not expired) and contact before 99 ms (expired)
+        // When clean hasObstacle before 100 ms (not expired) and contact before 99 ms (expired)
         cell = cell.clean(tv, t0);
 
-        // Then cell should has echo
+        // Then cell should has hasObstacle
         assertTrue(cell.echogenic());
         // And should not have contact
         assertFalse(cell.hasContact());
-        // And echo markerTime should be 100 ms
+        // And hasObstacle markerTime should be 100 ms
         assertEquals(t0, cell.echoTime());
         // And contact markerTime should be 0 ms
         assertEquals(0, cell.contactTime());
@@ -60,7 +60,7 @@ class MapCellTest {
 
     @Test
     void cleanEchoOnlyTest() {
-        // Given a cell with echo and contact set at 100 ms
+        // Given a cell with hasObstacle and contact set at 100 ms
         long t0 = 1000;
         long tv = t0 - 1;
         MapCell cell = MapCell.unknown(new Point2D.Float(0, 2F))
@@ -68,7 +68,7 @@ class MapCellTest {
                 .addEchogenic(t0, 100)
                 .setContact(t0);
 
-        // When clean echo before 100 ms (not expired) and contact after 100 ms (expired)
+        // When clean hasObstacle before 100 ms (not expired) and contact after 100 ms (expired)
         cell = cell.clean(t0, tv);
 
         // Then cell should be echogenic
@@ -77,7 +77,7 @@ class MapCellTest {
         assertFalse(cell.anechoic());
         // And should have contact
         assertTrue(cell.hasContact());
-        // And echo markerTime should be 100 ms
+        // And hasObstacle markerTime should be 100 ms
         assertEquals(0, cell.echoTime());
         // And contact markerTime should be 0 ms
         assertEquals(t0, cell.contactTime());
@@ -86,7 +86,7 @@ class MapCellTest {
 
     @Test
     void cleanFullCleanTest() {
-        // Given a cell with echo and contact set at 100 ms
+        // Given a cell with hasObstacle and contact set at 100 ms
         long t0 = 1000;
         MapCell cell = MapCell.unknown(new Point2D.Float(0, 2F))
                 .addEchogenic(t0, 100)
@@ -95,7 +95,7 @@ class MapCellTest {
         // When clean t0<=t (expiration)
         cell = cell.clean(t0, t0);
 
-        // Then cell should has echo
+        // Then cell should has hasObstacle
         assertFalse(cell.echogenic());
         // And contact
         assertFalse(cell.hasContact());
@@ -106,7 +106,7 @@ class MapCellTest {
 
     @Test
     void cleanNoExpirationTest() {
-        // Given a cell with echo and contact set at 100 ms
+        // Given a cell with hasObstacle and contact set at 100 ms
         long t0 = 1000;
         long tv = t0 - 1;
         MapCell cell = MapCell.unknown(new Point2D.Float(0, 2F))

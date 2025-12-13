@@ -40,8 +40,8 @@ import java.util.Optional;
 import static java.lang.Math.abs;
 
 /**
- * The label objective returns reward if the robot is stopped with a labeled target in front (within range) within a given distance range
- * and sensor oriented (within range) toward a labeled target
+ * The label objective returns reward if the robot is stopped in front of a labelled target
+ * within distance range and sensor oriented (within range) toward a label target
  */
 public interface SensorLabel {
     float DEFAULT_VELOCITY_THRESHOLD = 0.01f;
@@ -50,7 +50,7 @@ public interface SensorLabel {
     double DEFAULT_REWARD = 1d;
 
     /**
-     * Returns the function that implements the label objective
+     * Returns the function that implements the label goal
      *
      * @param root    the root json document
      * @param locator the locator
@@ -81,29 +81,21 @@ public interface SensorLabel {
         return (s0, a, s1) -> {
             // the environment supports radar map
             RobotStatus robotStatus = s1.robotStatus();
-            double echoDistance = robotStatus.echoDistance();
+            double frontDistance = robotStatus.frontDistance();
             Point2D robotLocation = robotStatus.location();
             // Get the nearest marker
             Optional<LabelMarker> marker = s1.markers().values().stream()
                     .min(Comparator.comparingDouble(m -> m.location().distanceSq(robotLocation)));
-            // echo distance in range
-            if (echoDistance >= minDistance
-                    && echoDistance <= maxDistance
+            // obstacle distance in range
+            if (frontDistance >= minDistance
+                    && frontDistance <= maxDistance
                     // check robot speed in range
                     && abs(robotStatus.leftPps()) < velocityThreshold
                     && abs(robotStatus.rightPps()) < velocityThreshold
-                    // and any sector in sensor direction range with a labeled target in distance range
-                    && robotStatus.sensorDirection().isCloseTo(Complex.DEG0, sensorRange)
+                    // and any sector in sensor direction range with a labelled target in distance range
+                    && robotStatus.headDirection().isCloseTo(Complex.DEG0, sensorRange)
                     // and marker not null
                     && marker.isPresent()
-                    /*
-                        // and qr code recognized (!= "?")
-                        && !CameraEvent.UNKNOWN_QR_CODE.equals(qrCode)
-                        // and proxy and camera signals correlated
-                        && robotStatus.isCorrelated(mapState.getRadarMap().correlationInterval())
-                    // TODO && robotStatus.isCorrelated(mapState.getRadarMap().correlationInterval())
-
-                     */
             ) {
                 return reward;
             }

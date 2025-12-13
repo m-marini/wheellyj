@@ -61,6 +61,7 @@ public class SearchUnknownState extends AbstractSearchAndMoveState {
     public static final double CM = 10e-3;
     private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-search-unknown-schema-0.1";
     private static final Logger logger = LoggerFactory.getLogger(SearchUnknownState.class);
+    public static final int DEFAULT_MIN_GOALS = 1;
 
     /**
      * Returns the exploring state from configuration
@@ -73,11 +74,8 @@ public class SearchUnknownState extends AbstractSearchAndMoveState {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double growthDistance = locator.path(GROWTH_DISTANCE_ID).getNode(root).asDouble(DEFAULT_GROWTH_DISTANCE);
         long seed = locator.path(SEED_ID).getNode(root).asLong();
-        Random random = seed == 0
-                ? new Random()
-                : new Random(seed);
         int maxIterations = locator.path(MAX_ITERATIONS_ID).getNode(root).asInt(Integer.MAX_VALUE);
-        int minGoals = locator.path(MIN_GOALS_ID).getNode(root).asInt(1);
+        int minGoals = locator.path(MIN_GOALS_ID).getNode(root).asInt(DEFAULT_MIN_GOALS);
         long maxSearchTime = locator.path(MAX_SEARCH_TIME_ID).getNode(root).asLong(DEFAULT_MAX_SEARCH_TIME);
         ProcessorCommand onInit = ProcessorCommand.create(root, locator.path("onInit"));
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
@@ -86,11 +84,38 @@ public class SearchUnknownState extends AbstractSearchAndMoveState {
         int speed = locator.path(SPEED_ID).getNode(root).asInt(MAX_PPS);
         double approachDistance = locator.path(APPROACH_DISTANCE_ID).getNode(root).asDouble(DEFAULT_APPROACH_DISTANCE);
         double safetyDistance = locator.path(SAFETY_DISTANCE_ID).getNode(root).asDouble(DEFAULT_SAFETY_DISTANCE);
+        return create(id, onInit, onEntry, onExit, seed, timeout, approachDistance, speed, maxIterations, minGoals, maxSearchTime, safetyDistance, growthDistance);
+    }
+
+    /**
+     * Returns the exploring state
+     *
+     * @param id               the node identifier
+     * @param onInit           the initialisation command or null if none
+     * @param onEntry          the entry command or null if none
+     * @param onExit           the exit command or null if none
+     * @param seed             the random generator seed
+     * @param timeout          the timeout (ms)
+     * @param approachDistance the approach distance (m)
+     * @param speed            the maximum speed (pps)
+     * @param maxIterations    the maximum number of iterations
+     * @param minGoals         the minimum number of goals
+     * @param maxSearchTime    the maximum search time (ms)
+     * @param safetyDistance   the maximum safety distance (m)
+     * @param growthDistance   the growth distance(m)
+     */
+    public static SearchUnknownState create(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit,
+                                            long seed, long timeout, double approachDistance, int speed, int maxIterations, int minGoals,
+                                            long maxSearchTime, double safetyDistance, double growthDistance) {
+        Random random = seed == 0
+                ? new Random()
+                : new Random(seed);
         Function<ProcessorContextApi, RRTPathFinder> pathFinderSupplier = context -> {
             WorldModel worldModel = context.worldModel();
             RadarMap map = worldModel.radarMap();
             RobotStatus status = worldModel.robotStatus();
-            return RRTPathFinder.createUnknownTargets(map, status.location(), safetyDistance + CM, growthDistance, random);
+            return RRTPathFinder.createUnknownTargets(map, status.location(),
+                    safetyDistance + CM, growthDistance, random);
         };
         return new SearchUnknownState(id, onInit, onEntry, onExit, timeout, approachDistance, speed, maxIterations, minGoals, maxSearchTime, pathFinderSupplier);
     }

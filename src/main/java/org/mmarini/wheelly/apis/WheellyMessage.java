@@ -45,24 +45,8 @@ public interface WheellyMessage {
             return Optional.of((T) WheellyContactsMessage.create(line, clockConverter));
         } else if (line.value().startsWith("mt ")) {
             return Optional.of((T) WheellyMotionMessage.create(line, clockConverter));
-        } else if (line.value().startsWith("px ")) {
-            return Optional.of((T) WheellyProxyMessage.create(line, clockConverter));
         } else if (line.value().startsWith("sv ")) {
             return Optional.of((T) WheellySupplyMessage.create(line, clockConverter));
-        } else {
-            return Optional.empty();
-        }
-    }
-
-    static <T extends WheellyMessage> Optional<T> fromLine(Timed<String> line, long timeOffset) {
-        if (line.value().startsWith("ct ")) {
-            return Optional.of((T) WheellyContactsMessage.create(line, timeOffset));
-        } else if (line.value().startsWith("mt ")) {
-            return Optional.of((T) WheellyMotionMessage.create(line, timeOffset));
-        } else if (line.value().startsWith("px ")) {
-            return Optional.of((T) WheellyProxyMessage.create(line, timeOffset));
-        } else if (line.value().startsWith("sv ")) {
-            return Optional.of((T) WheellySupplyMessage.create(line, timeOffset));
         } else {
             return Optional.empty();
         }

@@ -111,7 +111,7 @@ public class EnvironmentPanel extends MapPanel {
         drawLine(g1, format("Time     %s %.1fx", strDate(status.simulationTime()), timeRatio), 0, Color.GREEN);
         drawLine(g1, format("Reaction: %.3f s / %.3f s", reactionRobotTime, reactionRealTime), 1, Color.GREEN);
         drawLine(g1, format("Reward   %.2f", reward), 2, Color.GREEN);
-        drawLine(g1, format("Distance %.2f m", status.echoDistance()), 3, Color.GREEN);
+        drawLine(g1, format("Distance %.2f m", status.frontDistance()), 3, Color.GREEN);
         drawLine(g1, format("Contacts %s %s",
                         status.frontSensor() ? "-" : "F",
                         status.rearSensor() ? "-" : "B"),

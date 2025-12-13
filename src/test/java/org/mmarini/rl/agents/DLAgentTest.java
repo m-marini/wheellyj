@@ -199,7 +199,7 @@ class DLAgentTest {
     void testBackup() throws IOException {
         agent.save();
         agent.backup();
-        File[] list = FILE.listFiles(new PatternFilenameFilter("agent-.*\\.yml"));
+        File[] list = FILE.listFiles(new PatternFilenameFilter("agent.yml-.*\\.yml"));
         assertThat(list, arrayWithSize(greaterThan(0)));
         list = FILE.listFiles(new PatternFilenameFilter("model-.*\\.zip"));
         assertThat(list, arrayWithSize(greaterThan(0)));

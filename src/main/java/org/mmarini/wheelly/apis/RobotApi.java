@@ -33,7 +33,6 @@ import org.mmarini.yaml.Utils;
 
 import java.io.Closeable;
 import java.io.File;
-import java.io.IOException;
 
 /**
  * API Interface for robot
@@ -54,9 +53,8 @@ public interface RobotApi extends Closeable, WithWheellyMessageFlowable, WithCam
      * Returns the robot api from configuration
      *
      * @param file the configuration file
-     * @throws IOException in case of error
      */
-    static RobotApi fromFile(File file) throws IOException {
+    static RobotApi fromFile(File file) throws Throwable {
         return Utils.createObject(file, new Object[0], new Class[0]);
     }
 

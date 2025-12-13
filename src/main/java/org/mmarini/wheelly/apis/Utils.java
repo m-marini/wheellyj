@@ -31,8 +31,11 @@ import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.nd4j.common.util.MathUtils.round;
+
 public class Utils {
     private static final Logger logger = LoggerFactory.getLogger(Utils.class);
+    public static final double MM = 1e-3;
 
     public static double clip(double value, double min, double max) {
         return Math.min(Math.max(value, min), max);
@@ -44,6 +47,24 @@ public class Utils {
 
     public static int clip(int value, int min, int max) {
         return Math.min(Math.max(value, min), max);
+    }
+
+    /**
+     * Returns the distance in millimeters from meters
+     *
+     * @param distance the distance (m)
+     */
+    public static int m2mm(double distance) {
+        return round(distance / MM);
+    }
+
+    /**
+     * Returns the distance in meters from millimeters
+     *
+     * @param distance the distance (mm)
+     */
+    public static double mm2m(int distance) {
+        return distance * MM;
     }
 
     public static double linear(double x, double xmin, double xmax, double ymin, double ymax) {

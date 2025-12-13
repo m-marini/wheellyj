@@ -28,23 +28,20 @@
 
 package org.mmarini.wheelly.apis;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.awt.geom.Point2D;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
+import static org.mmarini.wheelly.apis.Utils.m2mm;
+
 public class WorldModelBuilder {
     public static final int NUM_SECTORS = 24;
     public static final int GRID_MAP_SIZE = 31;
     public static final double MARKER_SIZE = 0.3;
     public static final double GRID_SIZE = 0.2;
-    public static final Complex RECEPTIVE_ANGLE = Complex.fromDeg(15);
-    public static final double MAX_RADAR_DISTANCE = 3d;
-    public static final double CONTACT_RADIUS = 0.28;
-    public static final RobotSpec ROBOT_SPEC = new RobotSpec(MAX_RADAR_DISTANCE, RECEPTIVE_ANGLE, CONTACT_RADIUS, Complex.DEG0);
     public static final double EPSILON = 1e-5;
     public static final GridTopology TOPOLOGY = GridTopology.create(new Point2D.Double(), 51, 51, GRID_SIZE);
     public static final int DECAY = 1000;
@@ -58,7 +55,8 @@ public class WorldModelBuilder {
     private long simulationTime;
     private int robotDirDeg;
     private int sensorDirDeg;
-    private double echoDistance;
+    private final double rearDistance;
+    private double frontDistance;
     private boolean canMoveForward;
     private boolean canMoveBackward;
     private boolean rearSensor;
@@ -78,6 +76,7 @@ public class WorldModelBuilder {
         this.topology = TOPOLOGY;
         this.gridMapSize = GRID_MAP_SIZE;
         this.numSectors = NUM_SECTORS;
+        this.rearDistance = 0;
     }
 
     public WorldModelBuilder addContactsCell(Point2D location) {
@@ -125,7 +124,7 @@ public class WorldModelBuilder {
         RadarModeller radarModeller = new RangeRadarModeller(TOPOLOGY, 1000, 1000, 1000, 1000, 1000);
         PolarMapModeller polarModeller = new PolarMapModeller(numSectors, 0.2);
         MarkerLocator markerLocator = new MarkerLocator(1000, 1000, 1000, 1, MARKER_SIZE);
-        WorldModelSpec worldSpec = new WorldModelSpec(robotStatus.robotSpec(), numSectors, gridMapSize, MARKER_SIZE);
+        WorldModelSpec worldSpec = new WorldModelSpec(robotStatus.robotSpec(), numSectors, gridMapSize);
         WorldModel model = new WorldModel(worldSpec, robotStatus, radarMap, markers, null, null, null);
         return new WorldModeller(radarModeller, polarModeller, markerLocator, gridMapSize).updateForInference(model);
     }
@@ -140,23 +139,23 @@ public class WorldModelBuilder {
         return this;
     }
 
-    private @NotNull RobotStatus createRobotStatus() {
+    private RobotStatus createRobotStatus() {
         double xPulses = RobotSpec.distance2Pulse(robotLocation.getX());
         double yPulses = RobotSpec.distance2Pulse(robotLocation.getY());
         WheellyMotionMessage motion = new WheellyMotionMessage(simulationTime,
                 xPulses,
                 yPulses,
                 robotDirDeg, 0, 0, 0, true, 0, 0, 0, 0);
-        WheellyProxyMessage proxy = new WheellyProxyMessage(simulationTime, sensorDirDeg, RobotSpec.distance2Delay(echoDistance), xPulses, yPulses, robotDirDeg);
         WheellyContactsMessage contacts = new WheellyContactsMessage(simulationTime, frontSensor, rearSensor, canMoveForward, canMoveBackward);
         CameraEvent camera = new CameraEvent(simulationTime, "?", 3, 4, null, Complex.DEG0);
-        return new RobotStatus(ROBOT_SPEC, 1, motion, proxy, contacts,
+        WheellyLidarMessage lidars = new WheellyLidarMessage(simulationTime, m2mm(frontDistance), m2mm(rearDistance), xPulses, yPulses, robotDirDeg, sensorDirDeg);
+        return new RobotStatus(DEFAULT_ROBOT_SPEC, 1, motion, contacts,
                 InferenceFileReader.DEFAULT_SUPPLY_MESSAGE,
-                InferenceFileReader.DEFAULT_DECODE_VOLTAGE, new CorrelatedCameraEvent(camera, proxy));
+                InferenceFileReader.DEFAULT_DECODE_VOLTAGE, new CorrelatedCameraEvent(camera, lidars), lidars);
     }
 
-    public WorldModelBuilder echoDistance(double echoDistance) {
-        this.echoDistance = echoDistance;
+    public WorldModelBuilder frontDistance(double frontDistance) {
+        this.frontDistance = frontDistance;
         return this;
     }
 

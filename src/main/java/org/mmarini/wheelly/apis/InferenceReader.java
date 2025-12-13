@@ -68,11 +68,19 @@ public interface InferenceReader extends AutoCloseable, DataReader {
         return Tuple2.of(model, commands);
     }
 
-    default RobotSpec readRobotSpec() throws IOException {
-        return new RobotSpec(readDouble(),
-                Complex.fromDeg(readInt()),
-                readDouble(),
-                Complex.fromDeg(readInt()));
+    /**
+     * Returns the robot command
+     *
+     * @throws IOException in case of error
+     */
+    default RobotCommands readCommands() throws IOException {
+        boolean scan = readBoolean();
+        Complex scanDirection = readDeg();
+        boolean move = readBoolean();
+        boolean halt = readBoolean();
+        Complex moveDirection = readDeg();
+        int speed = readInt();
+        return new RobotCommands(scan, scanDirection, move, halt, moveDirection, speed);
     }
 
     default GridTopology readTopology() throws IOException {
@@ -82,12 +90,22 @@ public interface InferenceReader extends AutoCloseable, DataReader {
                 readDouble());
     }
 
-    default WorldModelSpec readWorldSpec() throws IOException {
-        RobotSpec robotSpec = readRobotSpec();
-        int numSector = readInt();
-        int gridSize = readInt();
-        double markerSize = readDouble();
-        return new WorldModelSpec(robotSpec, numSector, gridSize, markerSize);
+    /**
+     * Returns the camera event
+     *
+     * @throws IOException in case of error
+     */
+    default CorrelatedCameraEvent readCorrelatedCamera() throws IOException {
+        CameraEvent camera = readCamera();
+        WheellyLidarMessage lidar = readLidarMessage();
+        return new CorrelatedCameraEvent(camera, lidar);
+    }
+
+    /**
+     * Returns the angle (DEG) from file or null if end of file
+     */
+    default Complex readDeg() throws IOException {
+        return Complex.fromDeg(readInt());
     }
 
     /**
@@ -119,29 +137,17 @@ public interface InferenceReader extends AutoCloseable, DataReader {
     }
 
     /**
-     * Returns the robot command
-     *
-     * @throws IOException in case of error
+     * Returns the lidar message
      */
-    default RobotCommands readCommands() throws IOException {
-        boolean scan = readBoolean();
-        Complex scanDirection = Complex.fromDeg(readInt());
-        boolean move = readBoolean();
-        boolean halt = readBoolean();
-        Complex moveDirection = Complex.fromDeg(readInt());
-        int speed = readInt();
-        return new RobotCommands(scan, scanDirection, move, halt, moveDirection, speed);
-    }
-
-    /**
-     * Returns the camera event
-     *
-     * @throws IOException in case of error
-     */
-    default CorrelatedCameraEvent readCorrelatedCamera() throws IOException {
-        CameraEvent camera = readCamera();
-        WheellyProxyMessage proxy = readProxy();
-        return new CorrelatedCameraEvent(camera, proxy);
+    default WheellyLidarMessage readLidarMessage() throws IOException {
+        long simTime = readLong();
+        int headDirectionDeg = readInt();
+        int frontDistance = readInt();
+        int rearDistance = readInt();
+        double xPulses = readDouble();
+        double yPulses = readDouble();
+        int robotYawDeg = readInt();
+        return new WheellyLidarMessage(simTime, frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, headDirectionDeg);
     }
 
     /**
@@ -154,7 +160,7 @@ public interface InferenceReader extends AutoCloseable, DataReader {
         List<LabelMarker> markers = new ArrayList<>();
         for (int i = 0; i < n; i++) {
             String qrCode = readString();
-            Point2D location = new Point2D.Float(readFloat(), readFloat());
+            Point2D location = readPoint2D();
             double weight = readFloat();
             long markerTime = readLong();
             long cleanTime = readLong();
@@ -165,6 +171,25 @@ public interface InferenceReader extends AutoCloseable, DataReader {
                         LabelMarker::label,
                         UnaryOperator.identity()
                 ));
+    }
+
+    default RobotSpec readRobotSpec() throws IOException {
+        return new RobotSpec(readDouble(),
+                readDeg(),
+                readDouble(),
+                readDeg(),
+                readPoint2D(),
+                readDouble(),
+                readDouble(),
+                readDouble(),
+                readDeg());
+    }
+
+    default WorldModelSpec readWorldSpec() throws IOException {
+        RobotSpec robotSpec = readRobotSpec();
+        int numSector = readInt();
+        int gridSize = readInt();
+        return new WorldModelSpec(robotSpec, numSector, gridSize);
     }
 
     /**
@@ -194,21 +219,6 @@ public interface InferenceReader extends AutoCloseable, DataReader {
         int rightPower = readInt();
         return new WheellyMotionMessage(simulationTime, xPulses, yPulses,
                 directionDeg, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
-    }
-
-    /**
-     * Returns the wheelly motion message
-     *
-     * @throws IOException in case of error
-     */
-    default WheellyProxyMessage readProxy() throws IOException {
-        long simTime = readLong();
-        int sensorDirectionDeg = readInt();
-        long echoDelay = readLong();
-        double xPulse = readFloat();
-        double yPulse = readFloat();
-        int echoYawDeg = readInt();
-        return new WheellyProxyMessage(simTime, sensorDirectionDeg, echoDelay, xPulse, yPulse, echoYawDeg);
     }
 
     /**

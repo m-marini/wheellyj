@@ -58,18 +58,19 @@ public interface NoMove {
     }
 
     /**
-     * Returns the function that rewards the no move behavior
+     * Returns the function that rewards the no move behaviour
      *
      * @param velocityThreshold the velocity threshold
      * @param sensorRange       the range of sensor direction
      * @param reward            the reward
      */
     static RewardFunction noMove(float velocityThreshold, Complex sensorRange, double reward) {
+        double epsilon = sensorRange.sin();
         return (s0, a, s1) -> {
             RobotStatus status = s1.robotStatus();
             if (abs(status.leftPps()) < velocityThreshold
                     && abs(status.rightPps()) < velocityThreshold
-                    && status.sensorDirection().isCloseTo(Complex.DEG0, sensorRange)) {
+                    && status.headDirection().isCloseTo(Complex.DEG0, epsilon)) {
                 return reward;
             }
             return 0;

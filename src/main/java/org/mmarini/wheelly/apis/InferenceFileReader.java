@@ -124,10 +124,10 @@ public class InferenceFileReader extends DataFileReader implements InferenceRead
     public RobotStatus readStatus() throws IOException {
         long simTime = readLong();
         WheellyMotionMessage motion = readMotion();
-        WheellyProxyMessage proxy = readProxy();
         WheellyContactsMessage contacts = readContacts();
         CorrelatedCameraEvent camera = readCorrelatedCamera();
-        return new RobotStatus(worldSpec.robotSpec(), simTime, motion, proxy, contacts,
-                DEFAULT_SUPPLY_MESSAGE, DEFAULT_DECODE_VOLTAGE, camera);
+        WheellyLidarMessage lidar = readLidarMessage();
+        return new RobotStatus(worldSpec.robotSpec(), simTime, motion, contacts,
+                DEFAULT_SUPPLY_MESSAGE, DEFAULT_DECODE_VOLTAGE, camera, lidar);
     }
 }

@@ -66,7 +66,7 @@ public class Utils {
      * @param argClasses the method argument class
      * @param <T>        the type of object
      */
-    public static <T> T createObject(File file, Object[] args, Class<?>[] argClasses) throws IOException {
+    public static <T> T createObject(File file, Object[] args, Class<?>[] argClasses) throws Throwable {
         return createObject(file, "create", args, argClasses);
     }
 
@@ -76,7 +76,7 @@ public class Utils {
      * @param file the configuration file
      * @param <T>  the type of object
      */
-    public static <T> T createObject(File file) throws IOException {
+    public static <T> T createObject(File file) throws Throwable {
         return createObject(file, "create", new Object[0], new Class[0]);
     }
 
@@ -89,7 +89,7 @@ public class Utils {
      * @param argClasses the method argument class
      * @param <T>        the type of object
      */
-    public static <T> T createObject(File file, String method, Object[] args, Class<?>[] argClasses) throws IOException {
+    public static <T> T createObject(File file, String method, Object[] args, Class<?>[] argClasses) throws Throwable {
         JsonNode conf = Utils.fromFile(file);
         try {
             String className = conf.path("class").asText();
@@ -105,11 +105,8 @@ public class Utils {
                             Arrays.stream(args))
                     .toArray(Object[]::new);
             return (T) creator.invoke(null, builderArgs);
-        } catch (ClassNotFoundException | NoSuchMethodException |
-                 IllegalAccessException e) {
-            throw new RuntimeException(e);
         } catch (InvocationTargetException e) {
-            throw new RuntimeException(e.getCause());
+            throw e.getCause();
         }
     }
 

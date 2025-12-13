@@ -41,7 +41,7 @@ import static java.util.Objects.requireNonNull;
  *
  * @param topology            the grid topology
  * @param cleanInterval       the clean interval (ms)
- * @param echoPersistence     the echo persistence (ms)
+ * @param echoPersistence     the obstacle persistence (ms)
  * @param contactPersistence  the contact persistence (ms)
  * @param correlationInterval the correlation interval (ms)
  * @param decay               the decay parameters
@@ -66,11 +66,11 @@ public record RangeRadarModeller(GridTopology topology,
         double radarGrid = locator.path("radarGrid").getNode(root).asDouble();
         long radarCleanInterval = locator.path("radarCleanInterval").getNode(root).asLong();
         long correlationInterval1 = locator.path("correlationInterval").getNode(root).asLong();
-        long echoPersistence = locator.path("echoPersistence").getNode(root).asLong();
+        long obstaclePersistence = locator.path("obstaclePersistence").getNode(root).asLong();
         long contactPersistence = locator.path("contactPersistence").getNode(root).asLong();
         double decay1 = locator.path("decay").getNode(root).asDouble(DEFAULT_DECAY);
         GridTopology topology = GridTopology.create(new Point2D.Float(), radarWidth, radarHeight, radarGrid);
-        return new RangeRadarModeller(topology, radarCleanInterval, echoPersistence, contactPersistence, correlationInterval1, decay1);
+        return new RangeRadarModeller(topology, radarCleanInterval, obstaclePersistence, contactPersistence, correlationInterval1, decay1);
     }
 
     /**
@@ -78,7 +78,7 @@ public record RangeRadarModeller(GridTopology topology,
      *
      * @param topology            the grid topology
      * @param cleanInterval       the clean interval (ms)
-     * @param echoPersistence     the echo persistence (ms)
+     * @param echoPersistence     the hasObstacle persistence (ms)
      * @param contactPersistence  the contact persistence (ms)
      * @param correlationInterval the correlation interval (ms)
      * @param decay               the decay parameters
@@ -101,7 +101,7 @@ public record RangeRadarModeller(GridTopology topology,
      * @param robotSpec the robot specification
      */
     public RadarMap update(RadarMap radarMap, SensorSignal signal, RobotSpec robotSpec) {
-        AreaExpression sensibleArea = robotSpec.proxySensorArea(signal.sensorLocation(), signal.sensorDirection());
+        AreaExpression sensibleArea = robotSpec.proxySensorArea(signal.location(), signal.direction());
         GridTopology topology = radarMap.topology();
         return radarMap.map(topology.indices()
                         .filter(topology.inArea(sensibleArea)),
@@ -119,25 +119,27 @@ public record RangeRadarModeller(GridTopology topology,
      */
     MapCell update(MapCell cell, SensorSignal signal, RobotSpec robotSpec) {
         long t0 = signal.timestamp();
-        Point2D q = signal.sensorLocation();
+        Point2D sensorLocation = signal.location();
         double distance = signal.distance();
-        Tuple2<Point2D, Point2D> interval = Geometry.squareArcInterval(cell.location(), topology.gridSize(), q,
-                signal.sensorDirection(),
-                robotSpec.receptiveAngle());
+        // Search for bound points of cell (nearest and farthest) related to the given signal
+        Tuple2<Point2D, Point2D> interval = Geometry.squareArcInterval(cell.location(), topology.gridSize(), sensorLocation,
+                signal.direction(),
+                robotSpec.lidarFOV().divAngle(2));
         if (interval == null) {
+            // No cell intersection
             return cell;
         }
-        double near = interval._1.distance(q);
-        double far = interval._2.distance(q);
+        double near = interval._1.distance(sensorLocation);
+        double far = interval._2.distance(sensorLocation);
         if (near > 0 && near <= robotSpec.maxRadarDistance()) {
-            // cell is in receptive zone
-            boolean echo = signal.echo();
-            if (echo && distance >= near && distance <= far) {
-                // signal echo inside the cell
+            // intersection cell is in receptive zone
+            boolean hasObstacle = signal.hasObstacle();
+            if (hasObstacle && distance >= near && distance <= far) {
+                // signal is in the cell range
                 return cell.addEchogenic(t0, decay);
             }
-            if (!echo || distance > far) {
-                // signal is not echo or echo is far away the cell
+            if (!hasObstacle || distance > far) {
+                // the signal has no obstacle or is far away the cell
                 return cell.addAnechoic(t0, decay);
             }
         }

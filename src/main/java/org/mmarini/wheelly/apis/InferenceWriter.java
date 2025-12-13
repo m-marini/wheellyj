@@ -55,7 +55,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      */
     default <T extends InferenceWriter> T write(CorrelatedCameraEvent camera) throws IOException {
         return write(camera.camerEvent())
-                .write(camera.proxy());
+                .write(camera.lidar());
     }
 
     /**
@@ -64,11 +64,11 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * @param commands the commands
      */
     default <T extends InferenceWriter> T write(RobotCommands commands) throws IOException {
-        return write(commands.scan())
-                .write(commands.scanDirection().toIntDeg())
+        write(commands.scan());
+        write(commands.scanDirection())
                 .write(commands.move())
-                .write(commands.halt())
-                .write(commands.moveDirection().toIntDeg())
+                .write(commands.halt());
+        return write(commands.moveDirection())
                 .write(commands.speed());
     }
 
@@ -93,9 +93,8 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
     default <T extends InferenceWriter> T write(Map<String, LabelMarker> markers) throws IOException {
         write(markers.size());
         for (LabelMarker marker : markers.values()) {
-            write(marker.label())
-                    .write((float) marker.location().getX())
-                    .write((float) marker.location().getY())
+            write(marker.label());
+            write(marker.location())
                     .write((float) marker.weight())
                     .write(marker.markerTime())
                     .write(marker.cleanTime());
@@ -140,20 +139,6 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
     }
 
     /**
-     * Writes the proxy message
-     *
-     * @param proxy the proxy message
-     */
-    default <T extends InferenceWriter> T write(WheellyProxyMessage proxy) throws IOException {
-        return write(proxy.simulationTime())
-                .write(proxy.sensorDirectionDeg())
-                .write(proxy.echoDelay())
-                .write((float) proxy.xPulses())
-                .write((float) proxy.yPulses())
-                .write(proxy.robotYawDeg());
-    }
-
-    /**
      * Writes the model
      *
      * @param model    the model
@@ -183,9 +168,9 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
     default <T extends InferenceWriter> T write(RobotStatus status) throws IOException {
         write(status.simulationTime());
         return write(status.motionMessage())
-                .write(status.proxyMessage())
                 .write(status.contactsMessage())
-                .write(status.cameraEvent());
+                .write(status.cameraEvent())
+                .write(status.lidarMessage());
     }
 
     /**
@@ -211,15 +196,42 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
     }
 
     /**
+     * Writes the angle (int deg)
+     *
+     * @param angle the robot spec
+     */
+    default <T extends InferenceWriter> T write(Complex angle) throws IOException {
+        return write(angle.toIntDeg());
+    }
+
+    /**
+     * Returns the lidar message
+     */
+    default <T extends InferenceWriter> T write(WheellyLidarMessage message) throws IOException {
+        return write(message.simulationTime())
+                .write(message.headDirectionDeg())
+                .write(message.frontDistance())
+                .write(message.rearDistance())
+                .write(message.xPulses())
+                .write(message.yPulses())
+                .write(message.robotYawDeg());
+    }
+
+    /**
      * Writes the robot spec
      *
      * @param spec the robot spec
      */
     default <T extends InferenceWriter> T write(RobotSpec spec) throws IOException {
-        return write(spec.maxRadarDistance())
-                .write(spec.receptiveAngle().toIntDeg())
-                .write(spec.contactRadius())
-                .write(spec.cameraViewAngle().toIntDeg());
+        write(spec.maxRadarDistance());
+        write(spec.lidarFOV())
+                .write(spec.contactRadius());
+        write(spec.cameraFOV())
+                .write(spec.headLocation())
+                .write(spec.frontLidarDistance())
+                .write(spec.rearLidarDistance())
+                .write(spec.cameraDistance());
+        return write(spec.headFOV());
     }
 
     /**
@@ -230,8 +242,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
     default <T extends InferenceWriter> T write(WorldModelSpec spec) throws IOException {
         return write(spec.robotSpec())
                 .write(spec.numSectors())
-                .write(spec.gridSize())
-                .write(spec.markerSize());
+                .write(spec.gridSize());
     }
 
     /**

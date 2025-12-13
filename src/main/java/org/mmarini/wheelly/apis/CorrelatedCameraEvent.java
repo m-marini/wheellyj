@@ -31,71 +31,88 @@ package org.mmarini.wheelly.apis;
 import java.awt.geom.Point2D;
 
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.Utils.mm2m;
 
 /**
- * Contains the correlation between camera event and proxy message
+ * Contains the correlation between camera event and lidar message
  *
  * @param camerEvent the camera event
- * @param proxy      the proxy message
+ * @param lidar      the lidar message
  */
-public record CorrelatedCameraEvent(CameraEvent camerEvent, WheellyProxyMessage proxy) {
+public record CorrelatedCameraEvent(CameraEvent camerEvent, WheellyLidarMessage lidar) {
+    public static final CorrelatedCameraEvent DEFAULT_MESSAGE = new CorrelatedCameraEvent(CameraEvent.DEFAULT_EVENT, WheellyLidarMessage.DEFAULT_MESSAGE);
+
     /**
      * Creates the event
      *
      * @param camerEvent the camera event
-     * @param proxy      the proxy message
+     * @param lidar      the proxy message
      */
-    public CorrelatedCameraEvent(CameraEvent camerEvent, WheellyProxyMessage proxy) {
+    public CorrelatedCameraEvent(CameraEvent camerEvent, WheellyLidarMessage lidar) {
         this.camerEvent = requireNonNull(camerEvent);
-        this.proxy = requireNonNull(proxy);
+        this.lidar = requireNonNull(lidar);
     }
 
     /**
-     * Returns the camera azimuth (direction relative to environment)
+     * Returns the camera simulation time (ms)
      */
-    public Complex cameraAzimuth() {
-        return proxy.robotYaw().add(proxy.sensorDirection());
+    public long cameraTime() {
+        return camerEvent.simulationTime();
     }
 
     /**
-     * Returns the camera location
+     * Returns the head direction relative the robot at the lidar message
      */
-    public Point2D cameraLocation() {
-        return proxy.sensorLocation();
+    public Complex headDirection() {
+        return lidar.headDirection();
     }
 
     /**
-     * Returns the marker azimuth (direction relative to environment)
+     * Returns the lidar message simulation time (ms)
      */
-    public Complex markerAzimuth() {
-        return cameraAzimuth().add(camerEvent().direction());
+    public long lidarTime() {
+        return lidar.simulationTime();
+    }
+
+    /**
+     * Returns the lidar azimuth (direction relative to environment)
+     */
+    public Complex lidarYaw() {
+        return lidar.robotYaw().add(lidar.headDirection());
     }
 
     /**
      * Returns the marker distance or 0 if unable to locate the distance (m)
      */
     public double markerDistance() {
-        return proxy.echoDistance();
+        return mm2m(lidar.frontDistance());
     }
 
     /**
-     * Returns the proxy simulation time (ms)
+     * Returns the marker yaw (direction relative to environment)
      */
-    public long proxyTime() {
-        return proxy.simulationTime();
+    public Complex markerYaw() {
+        return lidarYaw().add(camerEvent().direction());
     }
 
     /**
-     * Returns the qr code recognized
+     * Returns the qr code recognised
      */
     public String qrCode() {
         return camerEvent.qrCode();
     }
 
     /**
-     * Returns the camera simulation time (ms)
+     * Returns the robot direction relative the environment
      */
-    public long simulationTime() {
-        return camerEvent.simulationTime();
+    public Complex robotDirection() {
+        return lidar.robotYaw();
+    }
+
+    /**
+     * Returns the robot location at the lidar message
+     */
+    public Point2D robotLocation() {
+        return lidar.robotLocation();
     }
 }

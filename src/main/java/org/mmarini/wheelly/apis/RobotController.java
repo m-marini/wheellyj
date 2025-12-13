@@ -118,24 +118,37 @@ public class RobotController implements RobotControllerApi {
         this.controllerStatus.onNext(st);
         statusMessages.onNext(robotStatus);
         this.robot.readCamera()
-                .doOnNext(this::onCamera)
-                .subscribe();
-        this.robot.readProxy()
-                .doOnNext(this::onProxyMessage)
-                .subscribe();
+                .subscribe(this::onCamera);
+        this.robot.readLidar()
+                .subscribe(this::onLidarMessage);
         this.robot.readMotion()
-                .doOnNext(this::onMotionMessage)
-                .subscribe();
+                .subscribe(this::onMotionMessage);
         this.robot.readSupply()
-                .doOnNext(this::onSupplyMessage)
-                .subscribe();
+                .subscribe(this::onSupplyMessage);
         this.robot.readContacts()
-                .doOnNext(this::onContactsMessage)
-                .subscribe();
+                .subscribe(this::onContactsMessage);
         this.robot.readRobotStatus()
                 .distinctUntilChanged(RobotStatusApi::configured)
                 .subscribe(this::onRobotConfigured);
         return this;
+    }
+
+    /**
+     * Handles camera events
+     *
+     * @param cameraEvent the camera event
+     */
+    private void onCamera(CameraEvent cameraEvent) {
+        RobotControllerStatus st = status.updateAndGet(s -> {
+            RobotStatus s1 = s.robotStatus()
+                    .setCameraMessage(new CorrelatedCameraEvent(cameraEvent, s.robotStatus().lidarMessage()))
+                    .setSimulationTime(robot.simulationTime());
+            return s.robotStatus(s1);
+        });
+        RobotStatus robotStatus = st.robotStatus();
+        statusMessages.onNext(robotStatus);
+        scheduleInference(robotStatus);
+        syncActions(robotStatus);
     }
 
     @Override
@@ -161,21 +174,19 @@ public class RobotController implements RobotControllerApi {
     }
 
     /**
-     * Handles camera events
+     * Handles lidar messages
      *
-     * @param cameraEvent the camera event
+     * @param message the message
      */
-    private void onCamera(CameraEvent cameraEvent) {
-        RobotControllerStatus st = status.updateAndGet(s -> {
-            RobotStatus s1 = s.robotStatus()
-                    .setCameraMessage(new CorrelatedCameraEvent(cameraEvent, s.robotStatus().proxyMessage()))
-                    .setSimulationTime(robot.simulationTime());
-            return s.robotStatus(s1);
-        });
-        RobotStatus robotStatus = st.robotStatus();
-        statusMessages.onNext(robotStatus);
-        scheduleInference(robotStatus);
-        syncActions(robotStatus);
+    private void onLidarMessage(WheellyLidarMessage message) {
+        RobotStatus status = this.status.updateAndGet(st ->
+                        st.robotStatus(st.robotStatus()
+                                .setLidarMessage(message)
+                                .setSimulationTime(message.simulationTime())))
+                .robotStatus();
+        statusMessages.onNext(status);
+        scheduleInference(status);
+        syncActions(status);
     }
 
     /**
@@ -222,22 +233,6 @@ public class RobotController implements RobotControllerApi {
         RobotStatus status = this.status.updateAndGet(st ->
                         st.robotStatus(st.robotStatus()
                                 .setMotionMessage(message)
-                                .setSimulationTime(message.simulationTime())))
-                .robotStatus();
-        statusMessages.onNext(status);
-        scheduleInference(status);
-        syncActions(status);
-    }
-
-    /**
-     * Handles proxy messages
-     *
-     * @param message the message
-     */
-    private void onProxyMessage(WheellyProxyMessage message) {
-        RobotStatus status = this.status.updateAndGet(st ->
-                        st.robotStatus(st.robotStatus()
-                                .setProxyMessage(message)
                                 .setSimulationTime(message.simulationTime())))
                 .robotStatus();
         statusMessages.onNext(status);

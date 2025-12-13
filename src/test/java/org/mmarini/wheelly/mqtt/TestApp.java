@@ -39,7 +39,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.concurrent.TimeUnit;
 
-import static org.mmarini.wheelly.mqtt.MqttRobotTest.ROBOT_SPEC;
+import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
 
 public class TestApp {
     private static final Logger logger = LoggerFactory.getLogger(TestApp.class);
@@ -61,7 +61,7 @@ public class TestApp {
         try {
             this.robot = MqttRobot.create(BROKER_URL, null, USER_NAME, PASSWORD,
                     "wheelly", "wheellycam", "wheellyqr",
-                    5000, 3000, CAMERA_INTERVAL, CAMERA_TIMEOUT, ROBOT_SPEC
+                    5000, 3000, CAMERA_INTERVAL, CAMERA_TIMEOUT, DEFAULT_ROBOT_SPEC
                     , new String[0], new String[0]);
         } catch (MqttException e) {
             throw new RuntimeException(e);

@@ -165,7 +165,7 @@ public class CameraCalibration {
      *
      * @throws IOException in case of error
      */
-    private void createContext() throws IOException {
+    private void createContext() throws Throwable {
         JsonNode config = org.mmarini.yaml.Utils.fromFile(parseArgs.getString("config"));
         WheellyJsonSchemas.instance().validateOrThrow(config, MONITOR_SCHEMA_YML);
         this.robot = AppYaml.robotFromJson(config);
@@ -319,8 +319,8 @@ public class CameraCalibration {
     }
 
     private void positioning(RobotStatus status) {
-        WheellyProxyMessage proxy = status.proxyMessage();
-        if (proxy.sensorDirectionDeg() != direction) {
+        WheellyLidarMessage lidar = status.lidarMessage();
+        if (lidar.headDirectionDeg() != direction) {
             controller.execute(RobotCommands.scan(Complex.fromDeg(direction)));
         } else {
             sample().accept(status);
@@ -368,7 +368,7 @@ public class CameraCalibration {
     /**
      * Runs the application
      */
-    private void run() throws IOException {
+    private void run() throws Throwable {
         logger.info("Robot check started.");
         createContext();
         createConnections();
@@ -388,7 +388,7 @@ public class CameraCalibration {
 
     private void sampling(RobotStatus status) {
         CameraEvent cameraEvent = status.cameraEvent().camerEvent();
-        WheellyProxyMessage proxy = status.proxyMessage();
+        WheellyLidarMessage lidar = status.lidarMessage();
         long t0 = cameraEvent.simulationTime();
         if (samplingStart == 0) {
             samplingStart = t0;
@@ -397,7 +397,7 @@ public class CameraCalibration {
         if (!RobotSpec.UNKNOWN_QR_CODE.equals(cameraEvent.qrCode())
                 && t0 > samplingStart) {
             // Valid sample
-            Complex sensorDir = proxy.sensorDirection();
+            Complex sensorDir = lidar.headDirection();
             Point2D[] points = cameraEvent.points();
             double xCamera = 0;
             for (Point2D point : points) {

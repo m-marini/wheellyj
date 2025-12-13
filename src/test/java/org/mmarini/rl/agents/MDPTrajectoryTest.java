@@ -50,7 +50,7 @@ class MDPTrajectoryTest {
     public static final float ETA = 10e-3f;
 
     /**
-     * Returns the agent
+     * Returns the agent.yml
      *
      * @param mdp         the mdp
      * @param rewardAlpha the rewards alpha
@@ -100,11 +100,11 @@ class MDPTrajectoryTest {
         int numSteps = 8;
         int numEpochs = 10;
         int batchSize = 4;
-        // And an agent for the mdp
+        // And an agent.yml for the mdp
         TDAgentSingleNN agent = createAgent(mdp, 1F / (numSteps + 1), numSteps, numEpochs, batchSize);
         // and the trajectory from current policy
         List<ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
-        //trajectory(agent, numSteps);
+        //trajectory(agent.yml, numSteps);
         // and the average rewards
         float avg0 = (float) trajectory.stream()
                 .mapToDouble(ExecutionResult::reward)
@@ -141,7 +141,7 @@ class MDPTrajectoryTest {
         int numSteps = 8;
         int numEpochs = 1;
         int batchSize = 4;
-        // And an agent for the mdp
+        // And an agent.yml for the mdp
         TDAgentSingleNN agent = createAgent(mdp, 1F / (numSteps + 1), numSteps, numEpochs, batchSize);
         // and the trajectory from current policy
         List<ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
@@ -181,7 +181,7 @@ class MDPTrajectoryTest {
         int numSteps = 8;
         int numEpochs = 1;
         int batchSize = 8;
-        // And an agent for the mdp
+        // And an agent.yml for the mdp
         TDAgentSingleNN agent = createAgent(mdp, 1F / (numSteps + 1), numSteps, numEpochs, batchSize);
         // and the trajectory from current policy
         List<ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
@@ -223,7 +223,7 @@ class MDPTrajectoryTest {
         int numSteps = 128;
         int numEpochs = 10;
         int batchSize = 32;
-        // And an agent for the mdp
+        // And an agent.yml for the mdp
         TDAgentSingleNN agent = createAgent(mdp, 1F / (numSteps + 1), numSteps, numEpochs, batchSize);
         // and the trajectory from current policy
         List<ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
@@ -289,7 +289,7 @@ class MDPTrajectoryTest {
                 .mapToDouble(ExecutionResult::reward)
                 .average()
                 .orElseThrow();
-        // And an agent for the mdp
+        // And an agent.yml for the mdp
         TDAgentSingleNN agent = createAgent(mdp, 1F / 4, 4, numEpochs, batchSize).avgReward(avg0);
         // And the initial policy
         INDArray pi = agent.network().forward(allStates).state().getValues("action");

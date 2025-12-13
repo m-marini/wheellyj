@@ -56,7 +56,7 @@ class KpisMDPTrajectoryTest {
     public static final float ETA = 1e-3f;
 
     /**
-     * Returns the agent
+     * Returns the agent.yml
      *
      * @param mdp         the mdp
      * @param rewardAlpha the rewards alpha
@@ -107,7 +107,7 @@ class KpisMDPTrajectoryTest {
         int numSteps = 8;
         int numEpochs = 1;
         int batchSize = 4;
-        // And an agent for the mdp
+        // And an agent.yml for the mdp
         TDAgentSingleNN agent = createAgent(mdp, 1F / (numSteps + 1), numSteps, numEpochs, batchSize);
         // and the trajectory from current policy
         List<ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
@@ -265,10 +265,10 @@ class KpisMDPTrajectoryTest {
         int numSteps = 8;
         int numEpochs = 1;
         int batchSize = 4;
-        // And an agent for the mdp
+        // And an agent.yml for the mdp
         TDAgentSingleNN agent = createAgent(mdp, 1F / (numSteps + 1), numSteps, numEpochs, batchSize);
         // and the trajectory from current policy
-//        List<ExecutionResult> trajectory = trajectory(agent, numSteps);
+//        List<ExecutionResult> trajectory = trajectory(agent.yml, numSteps);
         List<ExecutionResult> trajectory = mdp.trajectory(numSteps, 0, next(agent, mdp));
         // and the average rewards
         float avg0 = (float) trajectory.stream()

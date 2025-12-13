@@ -47,9 +47,10 @@ class FuzzyFunctionsTest {
     private static final double X1 = 4;
     private static final double X2 = 6;
     private static final double X3 = 8;
+    public static final int SEED = 1234;
 
     static Stream<Arguments> argPositive() {
-        return RandomArgumentsGenerator.create(1234)
+        return RandomArgumentsGenerator.create(SEED)
                 .uniform(-RANGE, RANGE)
                 .exponential(MIN_DELTA, MAX_DELTA)
                 .build(100);

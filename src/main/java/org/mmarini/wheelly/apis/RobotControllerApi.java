@@ -34,7 +34,6 @@ import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
 import java.io.File;
-import java.io.IOException;
 
 /**
  * Manages the processing threads and event generation to interface the robot.
@@ -120,7 +119,7 @@ public interface RobotControllerApi extends RobotControllerConnector, WithRobotS
      *
      * @param file the configuration file
      */
-    static RobotControllerApi fromFile(File file) throws IOException {
+    static RobotControllerApi fromFile(File file) throws Throwable {
         return Utils.createObject(file);
     }
 

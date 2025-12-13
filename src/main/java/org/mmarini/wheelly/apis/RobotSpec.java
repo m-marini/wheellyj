@@ -28,22 +28,45 @@
 
 package org.mmarini.wheelly.apis;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.yaml.Locator;
+
+import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
 
 import static java.lang.Math.PI;
-import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
 
+
 /**
- * Returns the robot specifications
+ * Robot specification (geometries of robot)
  *
- * @param maxRadarDistance the maximum radar distance (m)
- * @param receptiveAngle   the receptive angle
- * @param contactRadius    the contact radius (m)
- * @param cameraViewAngle  the camera view angle
+ * @param maxRadarDistance   the maximum radar distance (m)
+ * @param lidarFOV           the lidar field of view
+ * @param contactRadius      the contact radius (m)
+ * @param cameraFOV          the camera field of view
+ * @param headLocation       the relative sensor pivot location
+ * @param frontLidarDistance the distance of front lidar from head (m)
+ * @param rearLidarDistance  the distance of rear lidar from head (m)
+ * @param cameraDistance     the distance of camera from head (m)
+ * @param headFOV            the head field of view (the head rotation angle limit)
  */
-public record RobotSpec(double maxRadarDistance, Complex receptiveAngle, double contactRadius,
-                        Complex cameraViewAngle) {
+public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contactRadius,
+                        Complex cameraFOV, Point2D headLocation, double frontLidarDistance,
+                        double rearLidarDistance, double cameraDistance,
+                        Complex headFOV) {
+
+    public static final double MAX_RADAR_DISTANCE = 2.0;
+    public static final int DEFAULT_LIDAR_FOV_DEG = 25;
+    public static final double DEFAULT_CONTACT_RADIUS = 180e-3;
+    public static final int DEFAULT_CAMERA_FOV_DEG = 60;
+    public static final double DEFAULT_HEAD_X = 0;
+    public static final double DEFAULT_HEAD_Y = 30e-3;
+    public static final double DEFAULT_FRONT_LIDAR_DISTANCE = 15e-3;
+    public static final double DEFAULT_REAR_LIDAR_DISTANCE = 15e-3;
+    public static final double DEFAULT_CAMERA_DISTANCE = 15e-3;
+    public static final int DEFAULT_HEAD_FOV_DEG = 130;
+
     /**
      * Number of pulses per wheel root
      */
@@ -51,15 +74,11 @@ public record RobotSpec(double maxRadarDistance, Complex receptiveAngle, double 
     /**
      * Wheel diameter (m)
      */
-    public static final double WHEEL_DIAMETER = 0.067;
+    public static final double WHEEL_DIAMETER = 67e-3;
     /**
      * Distance per pulse (m)
      */
     public static final double DISTANCE_PER_PULSE = WHEEL_DIAMETER * PI / PULSES_PER_ROOT;
-    /**
-     * Scale distance per echo delay (m/us)
-     */
-    public static final double DISTANCE_SCALE = 1D / 5882;
     /**
      * Unknown qr code
      */
@@ -67,37 +86,62 @@ public record RobotSpec(double maxRadarDistance, Complex receptiveAngle, double 
     /**
      * Roboto radius (m)
      */
-    public static final float ROBOT_RADIUS = 0.15f;
+    public static final float ROBOT_RADIUS = 180e-3f;
     /**
      * Max whells speed (pps)
      */
     public static final int MAX_PPS = 60;
     /**
-     * Robot trak, distance between wheels (m)
+     * Robot track, distance between wheels (m)
      */
-    public static final double ROBOT_TRACK = 0.136;
+    public static final double ROBOT_TRACK = 136e-3;
     public static final int MAX_DIRECTION_ACTION = 180;
+
     /**
      * Robot mass (Kg)
      */
-    static final double ROBOT_MASS = 0.785;
+    public static final double ROBOT_MASS = 0.785;
 
     /**
-     * Returns the distance from the echo delay (m)
-     *
-     * @param delay the echo delay (us)
+     * Default robot specification
      */
-    public static double delay2Distance(long delay) {
-        return delay * DISTANCE_SCALE;
+    public static final RobotSpec DEFAULT_ROBOT_SPEC = create(MAX_RADAR_DISTANCE, DEFAULT_LIDAR_FOV_DEG,
+            DEFAULT_CONTACT_RADIUS, DEFAULT_CAMERA_FOV_DEG, 0, DEFAULT_HEAD_Y,
+            DEFAULT_FRONT_LIDAR_DISTANCE, DEFAULT_REAR_LIDAR_DISTANCE, DEFAULT_CAMERA_DISTANCE, DEFAULT_HEAD_FOV_DEG);
+
+    /**
+     * Applies the transformation from robot coordinate to absolute coordinate
+     *
+     * @param trans         the current transformation
+     * @param robotLocation the robot location
+     * @param robotDir      the robot direction
+     */
+    public static AffineTransform applyRobotView(AffineTransform trans, Point2D robotLocation, Complex robotDir) {
+        trans.translate(robotLocation.getX(), robotLocation.getY());
+        trans.rotate(-robotDir.toRad());
+        return trans;
     }
 
     /**
-     * Returns the echo delay from the distance (us)
+     * Creates the robot specification
      *
-     * @param distance the distance (m)
+     * @param maxRadarDistance   the maximum radar distance (m)
+     * @param lidarFOVDeg        the lidar field of view (DEG)
+     * @param contactRadius      the contact radius (m)
+     * @param cameraFOVDeg       the camera field of view (DEG)
+     * @param headX              the relative sensor pivot location abscissa
+     * @param headY              the relative sensor pivot location ordinate
+     * @param frontLidarDistance the distance of front lidar from head (m)
+     * @param rearLidarDistance  the distance of rear lidar from head (m)
+     * @param cameraDistance     the distance of camera from head (m)
+     * @param headFOVDeg         the head field of view (the head rotation angle limit) (DEG)
      */
-    public static long distance2Delay(double distance) {
-        return round(distance / RobotSpec.DISTANCE_SCALE);
+    public static RobotSpec create(double maxRadarDistance, int lidarFOVDeg, double contactRadius, int cameraFOVDeg,
+                                   double headX, double headY, double frontLidarDistance, double rearLidarDistance,
+                                   double cameraDistance, int headFOVDeg) {
+        return new RobotSpec(maxRadarDistance, Complex.fromDeg(lidarFOVDeg), contactRadius, Complex.fromDeg(cameraFOVDeg),
+                new Point2D.Double(headX, headY), frontLidarDistance, rearLidarDistance, cameraDistance,
+                Complex.fromDeg(headFOVDeg));
     }
 
     /**
@@ -107,6 +151,28 @@ public record RobotSpec(double maxRadarDistance, Complex receptiveAngle, double 
      */
     public static double distance2Pulse(double distance) {
         return distance / DISTANCE_PER_PULSE;
+    }
+
+    /**
+     * Returns the robot specification from JSON configuration
+     *
+     * @param root    the json document
+     * @param locator the locator
+     */
+    public static RobotSpec fromJson(JsonNode root, Locator locator) {
+        int lidarFOV = locator.path("lidarFOV").getNode(root).asInt(DEFAULT_LIDAR_FOV_DEG);
+        double maxRadarDistance = locator.path("maxRadarDistance").getNode(root).asDouble();
+        int cameraFOV = locator.path("cameraFOV").getNode(root).asInt();
+        double contactRadius = locator.path("contactRadius").getNode(root).asDouble();
+        int headFOV = locator.path("headFOV").getNode(root).asInt(DEFAULT_HEAD_FOV_DEG);
+        double headX = locator.path("headX").getNode(root).asDouble(DEFAULT_HEAD_X);
+        double headY = locator.path("headY").getNode(root).asDouble(DEFAULT_HEAD_Y);
+        double frontLidarDistance = locator.path("frontLidarDistance").getNode(root).asDouble(DEFAULT_FRONT_LIDAR_DISTANCE);
+        double rearLidarDistance = locator.path("rearLidarDistance").getNode(root).asDouble(DEFAULT_REAR_LIDAR_DISTANCE);
+        double cameraDistance = locator.path("cameraDistance").getNode(root).asDouble(DEFAULT_CAMERA_DISTANCE);
+        return create(maxRadarDistance, lidarFOV, contactRadius, cameraFOV,
+                headX, headY, frontLidarDistance, rearLidarDistance, cameraDistance,
+                headFOV);
     }
 
     /**
@@ -129,31 +195,109 @@ public record RobotSpec(double maxRadarDistance, Complex receptiveAngle, double 
     }
 
     /**
-     * Creates the robot specification
+     * Returns the location (m) for the given pulses
      *
-     * @param maxRadarDistance the maximum radar distance (m)
-     * @param receptiveAngle   the receptive angle
-     * @param contactRadius    the contact radius (m)
-     * @param cameraViewAngle  the camera view angle
+     * @param x the abscissa (m)
+     * @param y the ordinate (m)
      */
-    public RobotSpec(double maxRadarDistance, Complex receptiveAngle, double contactRadius, Complex cameraViewAngle) {
-        this.maxRadarDistance = maxRadarDistance;
-        this.receptiveAngle = requireNonNull(receptiveAngle);
-        this.contactRadius = contactRadius;
-        this.cameraViewAngle = requireNonNull(cameraViewAngle);
+    public static Point2D location2Pulses(double x, double y) {
+        return new Point2D.Double(distance2Pulse(x), distance2Pulse(y));
     }
 
     /**
-     * Returns the camera sensor area
+     * Creates the robot specification
      *
-     * @param location  the camera location
-     * @param direction the camera direction
+     * @param maxRadarDistance   the maximum radar distance (m)
+     * @param lidarFOV           the receptive angle
+     * @param contactRadius      the contact radius (m)
+     * @param cameraFOV          the camera view angle
+     * @param headLocation       the relative sensor pivot location
+     * @param frontLidarDistance the distance of front lidar from head (m)
+     * @param rearLidarDistance  the distance of rear lidar from head (m)
+     * @param cameraDistance     the distance of camera from head (m)
+     * @param headFOV            the head field of view (the head rotation angle limit)
      */
-    public AreaExpression cameraSensorArea(Point2D location, Complex direction) {
-        return AreaExpression.radialSensorArea(
-                location, direction, cameraViewAngle.divAngle(2),
-                RobotSpec.ROBOT_RADIUS, maxRadarDistance
-        );
+    public RobotSpec(double maxRadarDistance, Complex lidarFOV, double contactRadius, Complex cameraFOV, Point2D headLocation, double frontLidarDistance, double rearLidarDistance, double cameraDistance, Complex headFOV) {
+        this.maxRadarDistance = maxRadarDistance;
+        this.lidarFOV = requireNonNull(lidarFOV);
+        this.contactRadius = contactRadius;
+        this.cameraFOV = requireNonNull(cameraFOV);
+        this.headLocation = requireNonNull(headLocation);
+        this.frontLidarDistance = frontLidarDistance;
+        this.rearLidarDistance = rearLidarDistance;
+        this.cameraDistance = cameraDistance;
+        this.headFOV = requireNonNull(headFOV);
+    }
+
+    /**
+     * Applies the transformation from camera view coordinates to absolute coordinates
+     *
+     * @param trans         the current transformation
+     * @param robotLocation the robot location
+     * @param robotDir      the robot direction
+     * @param sensorDir     the relative sensor direction
+     */
+    public AffineTransform applyCameraView(AffineTransform trans, Point2D robotLocation, Complex robotDir, Complex sensorDir) {
+        AffineTransform trans1 = applyRobotView(trans, robotLocation, robotDir);
+        trans1.translate(headLocation.getX(), headLocation.getY());
+        trans1.rotate(-sensorDir.toRad());
+        trans1.translate(0, cameraDistance);
+        return trans1;
+    }
+
+    /**
+     * Applies the transformation from front lidar view coordinates to absolute coordinates
+     *
+     * @param trans         the current transformation
+     * @param robotLocation the robot location
+     * @param robotDir      the robot direction
+     * @param sensorDir     the relative sensor direction
+     */
+    public AffineTransform applyFrontLidarView(AffineTransform trans, Point2D robotLocation, Complex robotDir, Complex sensorDir) {
+        AffineTransform trans1 = applyRobotView(trans, robotLocation, robotDir);
+        trans1.translate(headLocation.getX(), headLocation.getY());
+        trans1.rotate(-sensorDir.toRad());
+        trans1.translate(0, frontLidarDistance);
+        return trans1;
+    }
+
+    /**
+     * Applies the transformation from rear lidar view coordinates to absolute coordinates
+     *
+     * @param trans         the current transformation
+     * @param robotLocation the robot location
+     * @param robotDir      the robot direction
+     * @param sensorDir     the relative sensor direction
+     */
+    public AffineTransform applyRearLidarView(AffineTransform trans, Point2D robotLocation, Complex robotDir, Complex sensorDir) {
+        AffineTransform trans1 = applyRobotView(trans, robotLocation, robotDir);
+        trans1.translate(headLocation.getX(), headLocation.getY());
+        trans1.rotate(PI - sensorDir.toRad());
+        trans1.translate(0, rearLidarDistance);
+        return trans1;
+    }
+
+    /**
+     * Returns the camera location
+     *
+     * @param robotLocation the robot location
+     * @param robotDir      the robot direction
+     * @param sensorDir     the relative sensor direction
+     */
+    public Point2D cameraLocation(Point2D robotLocation, Complex robotDir, Complex sensorDir) {
+        return applyCameraView(new AffineTransform(), robotLocation, robotDir, sensorDir)
+                .transform(new Point2D.Double(), null);
+    }
+
+    /**
+     * Returns the front lidar absolute location
+     *
+     * @param robotLocation the robot location
+     * @param robotDir      the robot direction
+     * @param sensorDir     the relative sensor direction
+     */
+    public Point2D frontLidarLocation(Point2D robotLocation, Complex robotDir, Complex sensorDir) {
+        return applyFrontLidarView(new AffineTransform(), robotLocation, robotDir, sensorDir).transform(new Point2D.Double(), null);
     }
 
     /**
@@ -164,8 +308,19 @@ public record RobotSpec(double maxRadarDistance, Complex receptiveAngle, double 
      */
     public AreaExpression proxySensorArea(Point2D location, Complex direction) {
         return AreaExpression.radialSensorArea(
-                location, direction, receptiveAngle,
+                location, direction, lidarFOV,
                 RobotSpec.ROBOT_RADIUS, maxRadarDistance
         );
+    }
+
+    /**
+     * Returns the front lidar absolute location
+     *
+     * @param robotLocation the robot location
+     * @param robotDir      the robot direction
+     * @param sensorDir     the relative sensor direction
+     */
+    public Point2D rearLidarLocation(Point2D robotLocation, Complex robotDir, Complex sensorDir) {
+        return applyRearLidarView(new AffineTransform(), robotLocation, robotDir, sensorDir).transform(new Point2D.Double(), null);
     }
 }
