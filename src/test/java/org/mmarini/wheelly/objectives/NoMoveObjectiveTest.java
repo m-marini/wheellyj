@@ -40,14 +40,14 @@ import java.io.IOException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
-import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
+import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class NoMoveTest {
+class NoMoveObjectiveTest {
 
     static WorldModel createState(int sensorDir, double leftPps, double rightPps) {
-        RobotStatus status = RobotStatus.create(ROBOT_SPEC, x -> 12d)
+        RobotStatus status = RobotStatus.create(DEFAULT_ROBOT_SPEC, x -> 12d)
                 .setSensorDirection(Complex.fromDeg(sensorDir))
                 .setSpeeds(leftPps, rightPps);
         WorldModel model = mock();
@@ -55,7 +55,7 @@ class NoMoveTest {
         return model;
     }
 
-    @ParameterizedTest
+    @ParameterizedTest(name = "[index] head {1} DEG, speed({2},{3})")
     @CsvSource({
             "1,0,0,0",
             "0,1,0,0",

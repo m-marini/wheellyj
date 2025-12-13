@@ -49,13 +49,13 @@ public interface Cautious {
     /**
      * Returns the function of reward for the given environment
      *
-     * @param maxDistance the maximum distance in polar map (m)
+     * @param maxDistance the maximum distance in the polar map (m)
      */
     static RewardFunction cautious(double maxDistance) {
         return (s0, a, s1) -> {
             Objects.requireNonNull(s1);
             RobotStatus status = s1.robotStatus();
-            if (!status.halt() && status.sensorDirection().toIntDeg() != 0) {
+            if (!status.halt() && status.headDirection().toIntDeg() != 0) {
                 // Avoid rotated sensor during movement
                 return -0.5;
             }
@@ -73,7 +73,7 @@ public interface Cautious {
     }
 
     /**
-     * Returns the function that fuzzy rewards explore behavior from configuration
+     * Returns the function that fuzzy rewards explore behaviour from configuration
      *
      * @param root    the root json document
      * @param locator the locator

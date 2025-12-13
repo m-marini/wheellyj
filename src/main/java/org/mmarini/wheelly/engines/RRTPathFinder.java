@@ -148,14 +148,21 @@ public class RRTPathFinder {
      * @param random         the random number generator
      */
     public static RRTPathFinder createUnknownTargets(RadarMap map, Point2D location, double safetyDistance, double growthDistance, Random random) {
+        // Find the unknown cell indices with distance from location greater than the robot radius
+        // These are all the target cells
         AreaExpression area = AreaExpression.not(AreaExpression.circle(location, ROBOT_RADIUS));
+        Set<Integer> targetIndices = map.topology().indicesByArea(area)
+                .filter(map.cellIs(MapCell::unknown))
+                .boxed()
+                .collect(Collectors.toSet());
+        // Find the contour of the found cell indices
         Set<Point2D> targetLocations = map.topology()
-                .contour(map.topology().indicesByArea(area)
-                        .filter(map.cellIs(MapCell::unknown))
-                        .boxed()
-                        .collect(Collectors.toSet()))
+                .contour(targetIndices)
+                .filter(map.cellIs(MapCell::unknown))
+                // And convert to location
                 .mapToObj(i -> map.cell(i).location())
                 .collect(Collectors.toSet());
+        // Create the pathfinder to any of the resulting target locations
         return create(map, location, safetyDistance, growthDistance, targetLocations, random);
     }
 

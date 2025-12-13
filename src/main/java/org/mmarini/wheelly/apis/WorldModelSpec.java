@@ -36,9 +36,8 @@ import static java.util.Objects.requireNonNull;
  * @param robotSpec  the robot specification
  * @param numSectors the number of polar map sectors
  * @param gridSize   the size of grid map among all dimensions
- * @param markerSize
  */
-public record WorldModelSpec(RobotSpec robotSpec, int numSectors, int gridSize, double markerSize) {
+public record WorldModelSpec(RobotSpec robotSpec, int numSectors, int gridSize) {
     /**
      * Returns the woeld model specification with robot specification
      *
@@ -47,6 +46,6 @@ public record WorldModelSpec(RobotSpec robotSpec, int numSectors, int gridSize, 
     public WorldModelSpec setRobotSpec(RobotSpec robotSpec) {
         return requireNonNull(robotSpec).equals(this.robotSpec)
                 ? this
-                : new WorldModelSpec(robotSpec, numSectors, gridSize, markerSize);
+                : new WorldModelSpec(robotSpec, numSectors, gridSize);
     }
 }

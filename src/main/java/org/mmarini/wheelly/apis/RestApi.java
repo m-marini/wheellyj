@@ -103,7 +103,7 @@ public class RestApi {
             throw new IOException(format("Http Status %d", response.getStatus()));
         }
         JsonNode netList = response.readEntity(JsonNode.class);
-        Set<ValidationMessage> errors = WheellyJsonSchemas.instance().validate(netList, "https://mmarini.org/wheelly/network-list-schema");
+        Set<ValidationMessage> errors = WheellyJsonSchemas.instance().validate(netList, "https://mmarini.org/wheelly/network-list-schema", null);
         if (!errors.isEmpty()) {
             String text = errors.stream()
                     .map(ValidationMessage::toString)

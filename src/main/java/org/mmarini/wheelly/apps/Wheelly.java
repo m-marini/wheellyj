@@ -59,10 +59,8 @@ import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -125,7 +123,7 @@ public class Wheelly {
         } catch (ArgumentParserException e) {
             parser.handleError(e);
             System.exit(1);
-        } catch (IOException e) {
+        } catch (Throwable e) {
             logger.atError().setCause(e).log("IO exception");
             System.exit(1);
         }
@@ -194,7 +192,7 @@ public class Wheelly {
      * @param config the configuration
      * @throws IOException in case of error
      */
-    private void createContext(JsonNode config) throws IOException {
+    private void createContext(JsonNode config) throws Throwable {
         logger.atInfo().log("Creating robot ...");
         this.robot = AppYaml.robotFromJson(config);
 
@@ -343,7 +341,6 @@ public class Wheelly {
         RobotSpec robotSpec = robot.robotSpec();
         double radarMaxDistance = robotSpec.maxRadarDistance();
         polarPanel.setRadarMaxDistance(radarMaxDistance);
-        envPanel.markerSize((float) worldModeller.worldModelSpec().markerSize());
         this.gridPanel = new GridPanel();
     }
 
@@ -523,7 +520,7 @@ public class Wheelly {
      *
      * @param map the obstacle map
      */
-    private void onObstacleMap(ObstacleMap map) {
+    private void onObstacleMap(Collection<Obstacle> map) {
         envPanel.obstacles(map);
     }
 
@@ -654,7 +651,7 @@ public class Wheelly {
     /**
      * Starts the application
      */
-    protected void run() throws IOException {
+    protected void run() throws Throwable {
         logger.atInfo().log("Creating environment");
         JsonNode config = loadConfig();
 

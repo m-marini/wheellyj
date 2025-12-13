@@ -33,8 +33,8 @@ import static java.lang.Math.min;
  * MapCell keeps the presence of obstacles in the sector
  *
  * @param location    the cell location
- * @param echoTime    the timestamp of last echo
- * @param echoWeight  the weight of signal echo and no echo
+ * @param echoTime    the timestamp of last hasObstacle
+ * @param echoWeight  the weight of signal hasObstacle and no hasObstacle
  * @param contactTime the timestamp of last contact signals
  */
 public record MapCell(Point2D location, long echoTime, double echoWeight, long contactTime) {
@@ -48,7 +48,7 @@ public record MapCell(Point2D location, long echoTime, double echoWeight, long c
     }
 
     /**
-     * Returns the cell with new no echo registered
+     * Returns the cell with new no hasObstacle registered
      *
      * @param echoTime the registration markerTime (ms)
      * @param decay    the decay factor (ms)
@@ -67,7 +67,7 @@ public record MapCell(Point2D location, long echoTime, double echoWeight, long c
     }
 
     /**
-     * Returns the cell with new echo registered
+     * Returns the cell with new hasObstacle registered
      *
      * @param echoTime the registration markerTime (ms)
      * @param decay    the decay factor (ms)
@@ -86,7 +86,7 @@ public record MapCell(Point2D location, long echoTime, double echoWeight, long c
     }
 
     /**
-     * Returns true if cell is anechoic (no echo)
+     * Returns true if cell is anechoic (no hasObstacle)
      */
     public boolean anechoic() {
         return echoTime > 0 && echoWeight <= 0;
@@ -95,7 +95,7 @@ public record MapCell(Point2D location, long echoTime, double echoWeight, long c
     /**
      * Returns the cleaned cell if timeout
      *
-     * @param expiredEcho    instant of the echo before which the state is canceled
+     * @param expiredEcho    instant of the hasObstacle before which the state is canceled
      * @param expiredContact instant of the contact before which the state is canceled
      */
     public MapCell clean(long expiredEcho, long expiredContact) {
@@ -103,7 +103,7 @@ public record MapCell(Point2D location, long echoTime, double echoWeight, long c
                 ? contactTime <= expiredContact
                 // both times expired
                 ? MapCell.unknown(location)
-                // only echo expired
+                // only hasObstacle expired
                 : new MapCell(location, 0, 0, contactTime)
                 : contactTime <= expiredContact
                 // only contact expired
@@ -113,14 +113,14 @@ public record MapCell(Point2D location, long echoTime, double echoWeight, long c
     }
 
     /**
-     * Returns true if the cell is echogenic (echo)
+     * Returns true if the cell is echogenic (hasObstacle)
      */
     public boolean echogenic() {
         return echoTime > 0 && echoWeight > 0;
     }
 
     /**
-     * Return true if the cell is empty (no echo and no contact)
+     * Return true if the cell is empty (no hasObstacle and no contact)
      */
     public boolean empty() {
         return !unknown() && !hasContact() && anechoic();
@@ -134,7 +134,7 @@ public record MapCell(Point2D location, long echoTime, double echoWeight, long c
     }
 
     /**
-     * Returns true if the cell is hindered (echo or contacts)
+     * Returns true if the cell is hindered (hasObstacle or contacts)
      */
     public boolean hindered() {
         return echogenic() || hasContact();

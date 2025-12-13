@@ -30,6 +30,7 @@ package org.mmarini;
 
 import io.reactivex.rxjava3.core.Flowable;
 
+import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -45,6 +46,46 @@ import java.util.stream.Stream;
 import static java.util.Map.entry;
 
 public interface Utils {
+
+    /**
+     * Returns the sum of 2 points vectors (a + b)
+     *
+     * @param a the first point
+     * @param b the second point
+     */
+    static Point2D add(Point2D a, Point2D b) {
+        return new Point2D.Double(a.getX() + b.getX(), a.getY() + b.getY());
+    }
+
+    /**
+     * Returns the product of the point vector and the scalar
+     *
+     * @param a      the point vector
+     * @param lambda the scalar
+     */
+    static Point2D mul(Point2D a, double lambda) {
+        return new Point2D.Double(a.getX() * lambda, a.getY() * lambda);
+    }
+
+    /**
+     * Returns the scalar product of two point vectors
+     *
+     * @param a the point vector
+     * @param b the second point
+     */
+    static double mul(Point2D a, Point2D b) {
+        return a.getX() * b.getX() + b.getX() + a.getY() * b.getY();
+    }
+
+    /**
+     * Returns the difference of 2 points vectors (a - b)
+     *
+     * @param a the first point
+     * @param b the second point
+     */
+    static Point2D sub(Point2D a, Point2D b) {
+        return new Point2D.Double(a.getX() - b.getX(), a.getY() - b.getY());
+    }
 
     static void deleteRecursive(File file) throws IOException {
         if (file.isDirectory()) {

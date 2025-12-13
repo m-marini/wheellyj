@@ -28,8 +28,6 @@
 
 package org.mmarini.wheelly.apis;
 
-import java.awt.geom.Point2D;
-
 /**
  * Creates and updates the radar maps
  */
@@ -59,7 +57,7 @@ public interface AbstractRadarModeller extends RadarModeller {
     long contactPersistence();
 
     /**
-     * Returns the echo persistence (ms)
+     * Returns the hasObstacle persistence (ms)
      */
     long echoPersistence();
 
@@ -73,20 +71,24 @@ public interface AbstractRadarModeller extends RadarModeller {
     default RadarMap update(RadarMap map, RobotStatus status) {
         // Updates the radar map
         RobotSpec robotSpec = status.robotSpec();
-        double distance = status.echoDistance();
-        Point2D location = status.echoRobotLocation();
         long time = status.simulationTime();
-        double maxRadarDistance = robotSpec.maxRadarDistance();
-        SensorSignal signal = new SensorSignal(location,
-                status.echoDirection(),
-                distance, time,
-                distance > 0 && distance < maxRadarDistance);
-        RadarMap hinderedMap = update(map, signal, robotSpec);
+        SensorSignal frontSignal = new SensorSignal(status.frontLidarLocation(),
+                status.headAbsDirection(),
+                status.frontDistance(), time
+        );
+        SensorSignal rearSignal = new SensorSignal(status.rearLidarLocation(),
+                status.headAbsDirection().opposite(),
+                status.rearDistance(), time
+        );
+        RadarMap hinderedMap = update(map, frontSignal, robotSpec);
+        hinderedMap = update(hinderedMap, rearSignal, robotSpec);
+
         boolean frontContact = !status.frontSensor();
         boolean rearContact = !status.rearSensor();
         double contactRadius = robotSpec.contactRadius();
         RadarMap contactMap = frontContact || rearContact
-                ? hinderedMap.setContactsAt(location, status.direction(), frontContact, rearContact, contactRadius, time)
+                ? hinderedMap.setContactsAt(status.location(), status.direction(), frontContact, rearContact,
+                contactRadius, time)
                 : hinderedMap;
         return clean(contactMap, time);
     }

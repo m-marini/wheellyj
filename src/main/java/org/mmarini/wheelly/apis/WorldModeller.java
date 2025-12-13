@@ -48,7 +48,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class WorldModeller implements WorldModellerApi {
 
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/world-modeller-schema-0.1";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/world-modeller-schema-0.2";
 
     /**
      * Returns the world map modeller
@@ -81,7 +81,7 @@ public class WorldModeller implements WorldModellerApi {
      * @param file the filename
      * @throws IOException in case of error
      */
-    public static WorldModeller fromFile(File file) throws IOException {
+    public static WorldModeller fromFile(File file) throws Throwable {
         return Utils.createObject(file);
     }
 
@@ -105,7 +105,7 @@ public class WorldModeller implements WorldModellerApi {
     public WorldModeller(RadarModeller radarModeller, PolarMapModeller polarModeller, MarkerLocator markerLocator, int gridSize) {
         this.radarModeller = requireNonNull(radarModeller);
         this.polarModeller = requireNonNull(polarModeller);
-        this.worldSpec = new WorldModelSpec(null, polarModeller.numSectors(), gridSize, markerLocator.markerSize());
+        this.worldSpec = new WorldModelSpec(null, polarModeller.numSectors(), gridSize);
         this.markerLocator = requireNonNull(markerLocator);
         this.inferenceProcessor = PublishProcessor.create();
     }
@@ -153,7 +153,7 @@ public class WorldModeller implements WorldModellerApi {
      *
      * @param robotStatus the robot status
      */
-    void onLatch(RobotStatus robotStatus) {
+    public void onLatch(RobotStatus robotStatus) {
         WorldModel model = currentModel;
         if (model == null) {
             RadarMap radarMap = radarModeller.empty();
@@ -206,7 +206,9 @@ public class WorldModeller implements WorldModellerApi {
      */
     public WorldModel updateForInference(WorldModel model) {
         RobotStatus robotStatus = model.robotStatus();
-        PolarMap polarMap = polarModeller.create(model.radarMap(), robotStatus.location(), robotStatus.direction(), robotStatus.robotSpec().maxRadarDistance());
+        PolarMap polarMap = worldSpec.numSectors() > 0
+                ? polarModeller.create(model.radarMap(), robotStatus.location(), robotStatus.direction(), robotStatus.robotSpec().maxRadarDistance())
+                : null;
         GridMap gridMap = GridMap.create(model.radarMap(), robotStatus.location(), robotStatus.direction(), worldSpec.gridSize());
         return model.setPolarMap(polarMap).setGridMap(gridMap);
     }

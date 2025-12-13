@@ -43,7 +43,7 @@ import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
-import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
+import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -52,10 +52,10 @@ class SensorLabelTest {
     private static final long MARKER_TIME = 1;
 
     static WorldModel createState(Complex sensorDir, double leftPps, double rightPps, double distance, String qrCode) {
-        RobotStatus status = RobotStatus.create(ROBOT_SPEC, x -> 12)
+        RobotStatus status = RobotStatus.create(DEFAULT_ROBOT_SPEC, x -> 12)
                 .setSensorDirection(sensorDir)
                 .setSpeeds(leftPps, rightPps)
-                .setEchoDistance(distance);
+                .setFrontDistance(distance);
 
         // Create markers
         Point2D markerLocation = sensorDir.at(new Point2D.Double(), distance);

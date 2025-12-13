@@ -55,9 +55,7 @@ public class RRTTestApp {
     public static final int NUM_OBSTACLES = 8;
     public static final int CLEAN_TIME = 10000;
     public static final Point2D.Double ROBOT_LOCATION = new Point2D.Double(-1.2, -2.6);
-    public static final Point2D.Double TARGET = new Point2D.Double(2, -2.2);
     public static final Complex ROBOT_DIRECTION = Complex.DEG0;
-    public static final Complex SENSOR_DIRECTION = Complex.DEG0;
     public static final int PERIOD = 50;
     public static final double DISTANCE = 0.6;
     public static final int MIN_GOALS = 4;
@@ -73,7 +71,7 @@ public class RRTTestApp {
 
     private static ObstacleMap createObstacles() {
         Random random = new Random(SEED);
-        return MapBuilder.create(TOPOLOGY.gridSize())
+        return MapBuilderOld.create(TOPOLOGY.gridSize())
                 .rect(false, -WORLD_WIDTH / 2,
                         -WORLD_HEIGHT / 2, WORLD_WIDTH / 2, WORLD_HEIGHT / 2)
                 .rand(NUM_OBSTACLES, NUM_LABELS, new Point2D.Double(), MAX_OBSTACLE_DISTANCE,
@@ -182,7 +180,7 @@ public class RRTTestApp {
                 .map(pt -> new LabelMarker("A", pt, 1, 1, CLEAN_TIME))
                 .toList());
         mapPanel.target(target);
-        mapPanel.robot(robotLocation, robotDirection, null);
+        mapPanel.robot(robotLocation, robotDirection, null, 2);
         frame.setVisible(true);
         restart();
     }
@@ -208,6 +206,6 @@ public class RRTTestApp {
         mapPanel.sectors((float) map.topology().gridSize(), SECTOR_COLOR,
                 pathFinder.freeLocations());
                 */
-        mapPanel.pingLocation(path != null ? path.getLast() : pathFinder.last());
+        mapPanel.pingLocations(path != null ? path.getLast() : pathFinder.last());
     }
 }

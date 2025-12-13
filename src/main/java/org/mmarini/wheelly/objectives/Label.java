@@ -99,7 +99,7 @@ public interface Label {
                 if (distance >= minDistance && distance <= maxDistance
                         && labeledDir.isCloseTo(robotStatus.direction(), directionRange)
                         // and any sector in sensor direction range with a labeled target in distance range
-                        && robotStatus.sensorDirection().isCloseTo(Complex.DEG0, sensorRange)) {
+                        && robotStatus.headDirection().isCloseTo(Complex.DEG0, sensorRange)) {
                     return reward;
                 }
             }

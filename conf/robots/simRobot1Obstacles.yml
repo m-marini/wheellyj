@@ -1,5 +1,5 @@
 ---
-$schema: https://mmarini.org/wheelly/sim-robot-schema-2.0
+$schema: https://mmarini.org/wheelly/sim-robot-schema-3.0
 class: org.mmarini.wheelly.apis.SimRobot
 # robotSeed: 1234
 mapSeed: 1234
@@ -10,10 +10,12 @@ errSigma: 0.05
 errSensor: 0.05
 sensorReceptiveAngle: 15
 maxAngularSpeed: 5
+lidarFOV: 15
 stalemateInterval: 60000
 contactRadius: 0.28
-maxRadarDistance: 3
+maxRadarDistance: 2
 interval: 100
 cameraInterval: 500
 motionInterval: 500
 proxyInterval: 500
+tickInterval: 0

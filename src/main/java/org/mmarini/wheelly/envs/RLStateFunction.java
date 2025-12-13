@@ -111,7 +111,7 @@ public class RLStateFunction implements StateFunction {
      * <pre>
      *     0 - unknown
      *     1 - contact
-     *     2 - echo
+     *     2 - hasObstacle
      *     3 - anechoic
      * </pre>
      *
@@ -143,8 +143,8 @@ public class RLStateFunction implements StateFunction {
         PolarMap polarMap = model.polarMap();
         GridMap gridMap = model.gridMap();
 
-        INDArray sensor = Nd4j.createFromArray((float) robotStatus.sensorDirection().toIntDeg());
-        INDArray distance = Nd4j.createFromArray((float) robotStatus.echoDistance());
+        INDArray sensor = Nd4j.createFromArray((float) robotStatus.headDirection().toIntDeg());
+        INDArray distance = Nd4j.createFromArray((float) robotStatus.frontDistance());
         /*
          * can move state by sensor state
          * | Value | Description                    |

@@ -69,6 +69,20 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
     private List<Point2D> path;
 
     /**
+     * Returns the path
+     */
+    List<Point2D> path() {
+        return path;
+    }
+
+    /**
+     * Returns the current target index
+     */
+    int targetIndex() {
+        return targetIndex;
+    }
+
+    /**
      * Create the abstract node
      *
      * @param id                 the node identifier
@@ -95,6 +109,7 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
         this.maxSearchTime = maxSearchTime;
         this.pathFinderSupplier = requireNonNull(pathFinderSupplier);
     }
+
 
     /**
      * Creates path

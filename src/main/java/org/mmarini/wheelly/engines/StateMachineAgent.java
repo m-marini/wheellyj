@@ -115,6 +115,13 @@ public class StateMachineAgent implements ProcessorContextApi, InferenceConnecto
         this.pathProcessor = PublishProcessor.create();
     }
 
+    /**
+     * Returns the state flow
+     */
+    public StateFlow flow() {
+        return flow;
+    }
+
     @Override
     public void clearMap() {
         this.modeller.clearRadarMap();
@@ -153,6 +160,15 @@ public class StateMachineAgent implements ProcessorContextApi, InferenceConnecto
         logger.debug("{}: entry", currentNode.id());
         this.currentNode.entry(this);
         stateProcessor.onNext(currentNode);
+    }
+
+    /**
+     * Sets the modeller
+     *
+     * @param modeller the modeller
+     */
+    public void modeller(WorldModeller modeller) {
+        this.modeller = modeller;
     }
 
     /**

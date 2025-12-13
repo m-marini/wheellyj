@@ -48,7 +48,7 @@ public interface WithWheellyMessageFlowable {
     /**
      * Returns the stream of wheelly proxy messages
      */
-    Flowable<WheellyProxyMessage> readProxy();
+    Flowable<WheellyLidarMessage> readLidar();
 
     /**
      * Returns the stream of wheelly supply messages

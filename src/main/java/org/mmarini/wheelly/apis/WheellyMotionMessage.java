@@ -59,13 +59,15 @@ import static org.mmarini.wheelly.apis.RobotSpec.pulses2Location;
 public record WheellyMotionMessage(long simulationTime, double xPulses, double yPulses,
                                    int directionDeg, Complex direction,
                                    double leftPps, double rightPps,
-                                   int imuFailure, boolean halt, int leftTargetPps, int rightTargetPps, int leftPower,
-                                   int rightPower)
+                                   int imuFailure, boolean halt, int leftTargetPps, int rightTargetPps,
+                                   int leftPower, int rightPower)
         implements WheellyMessage {
     public static final int NO_STATUS_PARAMS = 15;
     // [sampleTime] [xLocation] [yLocation] [yaw] [leftPps] [rightPps] [imuFailure] [haltCommand] [move directionDeg]
     // [move speed] [left target pps] [right target pps] [left power] [right power]
     public static final Pattern ARG_PATTERN = Pattern.compile("^\\d+,(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+),([01]),(-?\\d+),(-?\\d+),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+),(-?\\d+)$");
+    public static final WheellyMotionMessage DEFAULT_MESSAGE = new WheellyMotionMessage(0, 0, 0,
+            0, 0, 0, 0, true, 0, 0, 0, 0);
 
     /**
      * Returns the Wheelly status from status string

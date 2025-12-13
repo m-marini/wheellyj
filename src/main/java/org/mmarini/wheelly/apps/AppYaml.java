@@ -46,7 +46,7 @@ public interface AppYaml {
      *
      * @param config the root node
      */
-    static RobotControllerApi controllerFromJson(JsonNode config) throws IOException {
+    static RobotControllerApi controllerFromJson(JsonNode config) throws Throwable {
         return RobotControllerApi.fromFile(new File(config.path("controller").asText()));
     }
 
@@ -55,7 +55,7 @@ public interface AppYaml {
      *
      * @param config the json document
      */
-    static EnvironmentApi envFromJson(JsonNode config) throws IOException {
+    static EnvironmentApi envFromJson(JsonNode config) throws Throwable {
         return EnvironmentApi.fromFile(new File(config.path("environment").asText()));
     }
 
@@ -89,7 +89,7 @@ public interface AppYaml {
      * @param config the JSON configuration
      * @throws IOException in case of error
      */
-    static WorldModeller modellerFromJson(JsonNode config) throws IOException {
+    static WorldModeller modellerFromJson(JsonNode config) throws Throwable {
         return WorldModeller.fromFile(new File(config.path("modeller").asText()));
     }
 
@@ -109,7 +109,7 @@ public interface AppYaml {
      * @param config the JSON configuration
      * @throws IOException in case of error
      */
-    static RobotApi robotFromJson(JsonNode config) throws IOException {
+    static RobotApi robotFromJson(JsonNode config) throws Throwable {
         return RobotApi.fromFile(new File(config.path("robot").asText()));
     }
 

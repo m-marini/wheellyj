@@ -1,11 +1,11 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/sim-robot-schema-2.0
+$id: https://mmarini.org/wheelly/sim-robot-schema-3.0
 title: Robot
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/sim-robot-schema-2.0
+    const: https://mmarini.org/wheelly/sim-robot-schema-3.0
   class:
     const: org.mmarini.wheelly.apis.SimRobot
   mapSeed:
@@ -20,7 +20,7 @@ properties:
   errSensor:
     type: number
     minimum: 0
-  sensorReceptiveAngle:
+  lidarFOV:
     type: integer
     minimum: 1
     maximum: 90
@@ -39,16 +39,37 @@ properties:
   maxRadarDistance:
     type: number
     exclusiveMinimum: 0
+  headMinAngle:
+    type: integer
+    minimum: -180
+    maximum: 360
+  headMaxAngle:
+    type: integer
+    minimum: -180
+    maximum: 360
+  headX:
+    type: number
+  headY:
+    type: number
+  frontLidarDistance:
+    type: number
+  rearLidarDistance:
+    type: number
+  cameraDistance:
+    type: number
   changeObstaclesPeriod:
     type: integer
     minimum: 1
   interval:
     type: integer
     minimum: 1
+  tickInterval:
+    type: integer
+    minimum: 0
   cameraInterval:
     type: integer
     minimum: 1
-  proxyInterval:
+  lidarInterval:
     type: integer
     minimum: 1
   motionInterval:
@@ -61,5 +82,6 @@ required:
   - $schema
   - class
   - contactRadius
-  - sensorReceptiveAngle
+  - lidarFOV
   - maxRadarDistance
+  - interval

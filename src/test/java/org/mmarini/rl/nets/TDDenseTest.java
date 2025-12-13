@@ -77,6 +77,18 @@ class TDDenseTest {
                 .generate(() -> Nd4j.randn(random, 2, 1)) // delta
                 .generate(() -> Nd4j.randn(random, 2, 3)) // grad
                 .build(100);
+        /*
+        return ComboRandomArgumentsGenerator.create(SEED)
+                .generate(() -> Nd4j.randn(random, 2, 2)) // inputs
+                .generate(() -> Nd4j.randn(random, 1, 3)) // eb
+                .generate(() -> Nd4j.randn(random, 2, 3)) // ew
+                .generate(() -> Nd4j.randn(random, 1, 3)) // b
+                .generate(() -> Nd4j.randn(random, 2, 3)) // w
+                .exponential(1e-3f, 100e-3f) // alpha
+                .borderUniform(0f, 0.5f) // lambda
+                .generate(() -> Nd4j.randn(random, 2, 1)) // delta
+                .generate(() -> Nd4j.randn(random, 2, 3)) // grad
+                .build(100);
                 /*
         return createStream(SEED,
                 createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)), // inputs

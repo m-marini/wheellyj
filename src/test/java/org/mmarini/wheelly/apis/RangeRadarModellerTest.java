@@ -41,7 +41,7 @@ import static java.lang.Math.round;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.pointCloseTo;
-import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
+import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
 
 class RangeRadarModellerTest {
 
@@ -50,26 +50,38 @@ class RangeRadarModellerTest {
     public static final int HEIGHT = 11;
     public static final GridTopology GRID_TOPOLOGY = GridTopology.create(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
     public static final double DECAY = 100000;
-    private static final double MAX_RADAR_DISTANCE = 3;
     private static final long CLEAN_INTERVAL = 10000;
-    private static final long ECHO_PRESISTANCE = 10000;
-    private static final long CONTACT_PRESISTENCE = 10000;
+    private static final long ECHO_PERSISTENCE = 10000;
+    private static final long CONTACT_PERSISTENCE = 10000;
     private static final long CORRELATION_INTERVAL = 10000;
 
-    private static MapCell createInitialCell(String initialCell, Point2D cellLocation) {
+    /**
+     * Returns the cell at given location and given state
+     *
+     * @param state    the state
+     * @param location the location
+     */
+    private static MapCell createInitialCell(String state, Point2D location) {
         final long t = System.currentTimeMillis();
-        return switch (initialCell) {
-            case "hindered" -> new MapCell(cellLocation, t, 1, 0);
-            case "unknown" -> MapCell.unknown(cellLocation);
-            case "empty" -> new MapCell(cellLocation, t, 0, 0);
-            default -> throw new IllegalStateException("Unexpected value: " + initialCell);
+        return switch (state) {
+            case "hindered" -> new MapCell(location, t, 1, 0);
+            case "unknown" -> MapCell.unknown(location);
+            case "empty" -> new MapCell(location, t, 0, 0);
+            default -> throw new IllegalStateException("Unexpected value: " + state);
         };
     }
 
     private RangeRadarModeller modeller;
 
+    @BeforeEach
+    void setUp() {
+        modeller = new RangeRadarModeller(GRID_TOPOLOGY,
+                CLEAN_INTERVAL, ECHO_PERSISTENCE, CONTACT_PERSISTENCE, CORRELATION_INTERVAL,
+                DECAY);
+    }
+
     @Test
-    void cleanNoTimeout() {
+    void testCleanNoTimeout() {
         long timestamp = System.currentTimeMillis();
         RadarMap map0 = modeller.empty()
                 .map(IntStream.range(10, 20),
@@ -82,11 +94,11 @@ class RangeRadarModellerTest {
     }
 
     @Test
-    void cleanTimeout() {
+    void testCleanTimeout() {
         long timestamp = System.currentTimeMillis();
         RadarMap map0 = modeller.empty()
                 .map(IntStream.range(10, 20),
-                        cell -> cell.addEchogenic(timestamp - ECHO_PRESISTANCE - 1, DECAY))
+                        cell -> cell.addEchogenic(timestamp - ECHO_PERSISTENCE - 1, DECAY))
                 .setCleanTimestamp(timestamp - CLEAN_INTERVAL - 1);
 
         RadarMap map = modeller.clean(map0, timestamp);
@@ -106,7 +118,7 @@ class RangeRadarModellerTest {
     }
 
     @Test
-    void createTest() {
+    void testCreateTest() {
         RadarMap map = modeller.empty();
 
         assertEquals(GRID_SIZE, map.topology().gridSize());
@@ -124,23 +136,16 @@ class RangeRadarModellerTest {
         assertTrue(cells2.unknown());
     }
 
-    @BeforeEach
-    void setUp() {
-        modeller = new RangeRadarModeller(GRID_TOPOLOGY,
-                CLEAN_INTERVAL, ECHO_PRESISTANCE, CONTACT_PRESISTENCE, CORRELATION_INTERVAL,
-                DECAY);
-    }
-
     @Test
-    void update1Test() {
+    void testUpdate1Test() {
         RadarMap map = modeller.empty();
         Point2D sensor = new Point2D.Double();
         Complex direction = Complex.DEG0;
         double distance = 0.8;
         long timestamp = System.currentTimeMillis();
-        SensorSignal signal = new SensorSignal(sensor, direction, distance, timestamp, true);
+        SensorSignal signal = new SensorSignal(sensor, direction, distance, timestamp);
 
-        map = modeller.update(map, signal, ROBOT_SPEC);
+        map = modeller.update(map, signal, DEFAULT_ROBOT_SPEC);
 
         Optional<MapCell> sectorOpt = map.cell(0, 0);
 
@@ -165,50 +170,65 @@ class RangeRadarModellerTest {
     }
 
     /**
-     * Given a cell at test location in test state
-     * And a sensor at 0,0 to the test direction and test echo distance
-     * When update the cell
-     * Than the cell should be updated as expected and state should be as expected
+     * Given a cell at given location in the given state
+     * And a sensor at 0,0 to the given direction and test hasObstacle distance.
+     * When update the cell.
+     * Then the cell should be updated as expected and state should be as expected
      */
     @ParameterizedTest(name = "[{index}] {2}, {7}")
     @CsvSource({
-            // cell at x,y, state, sensor dir, echo distance, expected unknown, expected updated
-            "0,2,    unknown, -3,2,  false, true,  Echo -> hindered",
-            "0,2.99, unknown, 0,0,   false, true,  No echo -> empty",
-            "0,2.99, unknown, -15,0, false, true,  No echo left -> empty",
-            "0,2.99, unknown, 15,0,  false, true,  No echo right -> empty",
-            "0,1,    unknown, 30,2,  true, false, Cell not in directionDeg of echo -> unknown",
-            "0,1,    unknown, -6,2,  false, true,  Cell before echo -> empty",
-            "0,2.21, unknown, 0,2,   true, false, Cell far away echo -> unknown",
-            "0,3.2,  unknown, 0,0,   true, false, Cell far away no echo -> unknown",
-            "0,0.049,unknown, 0,0.5, true, false, Cell in sensor -> unknown",
+            // cell at x,y, state, sensor dir, distance, expected unknown, expected updated
+            // cell fov at 1.99 = 2* atan(0.2/1.99/2) = 6 DEG => cell-sensor fov = sensor fov + cell fov = 31 DEG
+            // Cell unknown
+            // in range
+            "0,1.99, unknown, -3,1.99,  false, true,  Cell in signal -> hindered",
+            // in range for empty
+            "0,1.99, unknown, 0,0,      false, true,  No signal -> empty",
+            "0,1.99, unknown, -15,0,    false, true,  No signal left -> empty",
+            "0,1.99, unknown, 15,0,     false, true,  No signal right -> empty",
+            "0,1,    unknown, -6,1,     false, true,  Cell before signal -> empty",
+            // out of range
+            "0,1.99, unknown, -16,1.99, true, false, Signal too left -> unknown",
+            "0,1.99, unknown, 16,1.99,  true, false, Signal to right -> unknown",
+            "0,1.21, unknown, 0,1,      true, false, Cell far away signal -> unknown",
+            "0,2.2,  unknown, 0,0,      true, false, Cell far away no signal -> unknown",
+            "0,0.049,unknown, 0,0.5,    true, false, Cell in sensor -> unknown",
 
-            "0,2,    empty, -3,2,  false, true,  Echo -> hindered",
-            "0,2.99, empty, 0,0,   false, true,  No echo -> empty",
-            "0,2.99, empty, -15,0, false, true,  No echo left -> empty",
-            "0,2.99, empty, 15,0,  false, true,  No echo right -> empty",
-            "0,1,    empty, 30,2,  false, false, Cell not in directionDeg of echo -> empty",
-            "0,1,    empty, -6,2,  false, true,  Cell before echo -> empty",
-            "0,2.21, empty, 0,2,   false, false, Cell far away echo -> empty",
-            "0,3.2,  empty, 0,0,   false, false, Cell far away no echo -> empty",
-            "0,0.049,empty, 0,0.5, false, false, Cell in sensor -> empty",
+            // Cell empty
+            // in range
+            "0,1.99, empty, -3,1.99, false, true,  Signal -> hindered",
+            // in range for empty
+            "0,1.99, empty, 0,0,      false, true,  No signal -> empty",
+            "0,1.99, empty, -15,0,    false, true,  No signal left -> empty",
+            "0,1.99, empty, 15,0,     false, true,  No signal right -> empty",
+            "0,1,    empty, -6,1,     false, true,  Cell before signal -> empty",
+            // out of range
+            "0,1.99, empty, -16,1.99, false, false, Signal too left -> empty",
+            "0,1.99, empty, 16,1.99,  false, false, Signal too right -> empty",
+            "0,1.21, empty, 0,1,      false, false, Cell far away signal -> empty",
+            "0,2.2,  empty, 0,0,      false, false, Cell far away no signal -> empty",
+            "0,0.049,empty, 0,0.5,    false, false, Cell in sensor -> empty",
 
-            "0,2,    hindered, -3,2,  false, true,  Echo -> hindered",
-            "0,2.99, hindered, 0,0,   false, true,  No echo -> empty",
-            "0,2.99, hindered, -15,0, false, true,  No echo left -> empty",
-            "0,2.99, hindered, 15,0,  false, true,  No echo right -> empty",
-            "0,1,    hindered, 30,2,  false, false, Cell not in directionDeg of echo -> hindered",
-            "0,1,    hindered, -6,2,  false, true,  Cell before echo -> empty",
-            "0,2.21, hindered, 0,2,   false, false, Cell far away echo -> hindered",
-            "0,3.2,  hindered, 0,0,   false, false, Cell far away no echo -> hindered",
+            // Cell hindered
+            // in range
+            "0,1.99, hindered, -3,1.99,  false, true,  Signal -> hindered",
+            // in range for empty
+            "0,1.99, hindered, 0,0,   false, true,  No signal -> empty",
+            "0,1.99, hindered, -15,0, false, true,  No signal left -> empty",
+            "0,1.99, hindered, 15,0,  false, true,  No signal right -> empty",
+            "0,1,    hindered, -6,1,  false, true,  Cell before signal -> empty",
+            // out of range
+            "0,1.99, hindered, -16,1.99, false, false, Signal too left -> hindered",
+            "0,1.99, hindered, 16,1.99,  false, false, Signal too right -> hindered",
+            "0,1.21, hindered, 0,1,   false, false, Cell far away signal -> hindered",
+            "0,2.2,  hindered, 0,0,   false, false, Cell far away no signal -> hindered",
             "0,0.049,hindered, 0,0.5, false, false, Cell in sensor -> hindered",
     })
-    void updateTest(double xCell, double yCell,
-                    String initialCell,
-                    int sensDir, double distance,
-                    boolean expUnknown,
-                    boolean expUpdated,
-                    String txt) {
+    void testUpdateCellTest(double xCell, double yCell,
+                            String initialCell,
+                            int sensDir, double distance,
+                            boolean expUnknown,
+                            boolean expUpdated) {
         // Given an initial cell
         Point2D cellLocation = new Point2D.Double(xCell, yCell);
         MapCell cell0 = createInitialCell(initialCell, cellLocation);
@@ -217,11 +237,11 @@ class RangeRadarModellerTest {
         // And a sensor signal
         Point2D sensLocation = new Point2D.Double();
         SensorSignal signal = new SensorSignal(sensLocation,
-                Complex.fromDeg(sensDir), distance, t1,
-                distance > 0 && distance < MAX_RADAR_DISTANCE);
+                Complex.fromDeg(sensDir), distance, t1
+        );
 
         // When update cell
-        MapCell cell = modeller.update(cell0, signal, ROBOT_SPEC);
+        MapCell cell = modeller.update(cell0, signal, DEFAULT_ROBOT_SPEC);
 
         // Then ...
         assertEquals(expUnknown, cell.unknown());

@@ -30,6 +30,7 @@
     <logger name="org.mmarini.wheelly.mqtt.RemoteDevice" level="DEBUG"/>
 
     <logger name="org.mmarini.wheelly.engines.AStar" level="INFO"/>
+    <logger name="org.mmarini.wheelly.engines.MappingState" level="INFO"/>
 
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>

@@ -204,6 +204,8 @@ public class PrintNetChart {
         } catch (IOException e) {
             logger.atError().setCause(e).log("IO Error");
             System.exit(1);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
         }
     }
 

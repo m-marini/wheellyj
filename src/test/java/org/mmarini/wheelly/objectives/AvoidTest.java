@@ -39,13 +39,13 @@ import java.io.IOException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
-import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
+import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class AvoidTest {
     static WorldModel createState(boolean canMoveForward, boolean canMoveBackward) {
-        RobotStatus status = RobotStatus.create(ROBOT_SPEC, x -> 12d)
+        RobotStatus status = RobotStatus.create(DEFAULT_ROBOT_SPEC, x -> 12d)
                 .setCanMoveForward(canMoveForward)
                 .setCanMoveBackward(canMoveBackward);
         WorldModel worldModel = mock();

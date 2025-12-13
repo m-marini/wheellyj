@@ -106,29 +106,6 @@ class TDNetworkTest {
                 .generate(() -> Nd4j.randn(random, 1, 2)) // grad8
                 .generate(() -> Nd4j.randn(random, 1, 1)) // delta
                 .build(100);
-        /*
-        return createStream(SEED,
-                exponential(1e-3f, 100e-3f), // alpha
-                uniform(0f, 0.5f), // lambda
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 2)), // eb2
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 3, 2)), // ew2
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 2)), // b2
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 3, 2)), // w2
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 2)), // eb4
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)), // ew4
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 2)), // b4
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)), // w4
-                gaussian(0f, 1f), // b7
-                gaussian(0f, 1f), // w7
-                exponential(0.3f, 3f), // temperature
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 1)), // input0
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 2)), // input1
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 2)), // grad7
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 2)), // grad8
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 1, 1)) // delta
-        );
-
-         */
     }
 
     static TDNetwork createNet(INDArray eb2,

@@ -52,6 +52,7 @@ public record CameraEvent(
         Point2D[] points,
         Complex direction) {
     public static final Pattern ARG_PATTERN = Pattern.compile("^\\d+,(\\S+),(\\d+),(\\d+),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*)$");
+    public static final CameraEvent DEFAULT_EVENT = unknown(0);
     private static final int NUM_PARAMS = 13;
 
     /**

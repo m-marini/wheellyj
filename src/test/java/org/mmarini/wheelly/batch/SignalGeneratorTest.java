@@ -50,22 +50,19 @@ import static org.hamcrest.Matchers.hasKey;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
+import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
 
 class SignalGeneratorTest {
 
     public static final File FILE = new File("tmp/dump.bin");
     public static final double GRID_SIZE = 0.3;
-    public static final Complex RECEPTIVE_ANGLE = Complex.fromDeg(15);
-    public static final double MAX_RADAR_DISTANCE = 3d;
-    public static final double CONTACT_RADIUS = 0.28;
-    public static final RobotSpec ROBOT_SPEC = new RobotSpec(MAX_RADAR_DISTANCE, RECEPTIVE_ANGLE, CONTACT_RADIUS, Complex.DEG0);
     public static final File OUTPUT_PATH = new File("tmp");
     public static final double EPSILON = 1e-6;
     public static final GridTopology TOPOLOGY = GridTopology.create(new Point2D.Double(), 51, 51, GRID_SIZE);
     public static final RadarMap RADAR = RadarMap.empty(TOPOLOGY);
     public static final int NUM_SECTORS = 24;
-    public static final WheellyProxyMessage PROXY_MESSAGE = new WheellyProxyMessage(2, 0,
-            5, 6, 7, 8);
+    public static final WheellyLidarMessage LIDAR_MESSAGE = new WheellyLidarMessage(2, 100,
+            150, 6, 7, 8, 9);
     public static final WheellyMotionMessage MOTION_MESSAGE = new WheellyMotionMessage(2, 4, 5,
             45, 7, 8, 9, true, 10, 11, 12, 13);
     public static final WheellyContactsMessage CONTACTS_MESSAGE = new WheellyContactsMessage(2, true,
@@ -115,11 +112,10 @@ class SignalGeneratorTest {
             "move",
             "sensorAction"
     };
-    private static final double MARKER_SIZE = 0.3;
     private static final int GRID_MAP_SIZE = 31;
-    public static final WorldModelSpec WORLD_MODEL_SPEC = new WorldModelSpec(ROBOT_SPEC, NUM_SECTORS, GRID_MAP_SIZE, MARKER_SIZE);
-    public static final RobotStatus ROBOT_STATUS = new RobotStatus(WORLD_MODEL_SPEC.robotSpec(), 1, MOTION_MESSAGE, PROXY_MESSAGE,
-            CONTACTS_MESSAGE, InferenceFileReader.DEFAULT_SUPPLY_MESSAGE, InferenceFileReader.DEFAULT_DECODE_VOLTAGE, new CorrelatedCameraEvent(CAMERA_EVENT, PROXY_MESSAGE));
+    public static final WorldModelSpec WORLD_MODEL_SPEC = new WorldModelSpec(DEFAULT_ROBOT_SPEC, NUM_SECTORS, GRID_MAP_SIZE);
+    public static final RobotStatus ROBOT_STATUS = new RobotStatus(DEFAULT_ROBOT_SPEC, 1, MOTION_MESSAGE,
+            CONTACTS_MESSAGE, InferenceFileReader.DEFAULT_SUPPLY_MESSAGE, InferenceFileReader.DEFAULT_DECODE_VOLTAGE, new CorrelatedCameraEvent(CAMERA_EVENT, LIDAR_MESSAGE), LIDAR_MESSAGE);
     private static final Map<String, LabelMarker> MARKERS0 = Map.of(
             "?", new LabelMarker("?", new Point2D.Double(1, 2), 1, 2, 3));
     public static final WorldModel MODEL0 = new WorldModel(WORLD_MODEL_SPEC, ROBOT_STATUS, RADAR, MARKERS0, null, null, null);
@@ -128,8 +124,25 @@ class SignalGeneratorTest {
     public static final WorldModel MODEL1 = new WorldModel(WORLD_MODEL_SPEC, ROBOT_STATUS, RADAR, MARKERS1, null, null, null);
     private SignalGenerator generator;
 
+    @BeforeEach
+    void setUp() throws IOException {
+        FILE.delete();
+        try (InferenceFileWriter file = InferenceFileWriter.fromFile(FILE)) {
+            file.writeHeader(MODEL0.worldSpec(), MODEL0.radarMap().topology())
+                    .write(MODEL0, COMMANDS)
+                    .write(MODEL1, COMMANDS);
+        }
+        WorldModeller modeller = WorldModeller.create(Utils.fromText(MODELLER_DEF), Locator.root());
+        modeller.setRobotSpec(DEFAULT_ROBOT_SPEC);
+        DLEnvironment environment = DLEnvironment.create(Utils.fromText(ENV_DEF), Locator.root());
+        environment.connect(modeller);
+        JsonNode spec = Utils.fromResource("/rlAgent.yml");
+        AbstractAgentNN agent = PPOAgent.create(spec, environment);
+        this.generator = new SignalGenerator(FILE, modeller, environment, agent, OUTPUT_PATH, SIGNAL_KEYS, ACTION_KEYS);
+    }
+
     @Test
-    void generate() throws IOException {
+    void testGenerate() throws IOException {
         Map<String, BinArrayFile> files = generator.generate();
         assertNotNull(files);
         assertThat(files, hasKey("reward"));
@@ -167,27 +180,10 @@ class SignalGeneratorTest {
                 0, 0, 0, 1, 0, 0,
                 0, 0, 0, 1, 0, 0));
 
-        BinArrayFile MarkerState = files.get("s0.markerStates");
-        assertEquals(2, MarkerState.size());
-        INDArray state = MarkerState.seek(0).read(2);
+        BinArrayFile markerState = files.get("s0.markerStates");
+        assertEquals(2, markerState.size());
+        INDArray state = markerState.seek(0).read(2);
         assertThat(state, matrixCloseTo(new long[]{2, 1}, EPSILON,
                 0, 1));
-    }
-
-    @BeforeEach
-    void setUp() throws IOException {
-        FILE.delete();
-        try (InferenceFileWriter file = InferenceFileWriter.fromFile(FILE)) {
-            file.writeHeader(MODEL0.worldSpec(), MODEL0.radarMap().topology())
-                    .write(MODEL0, COMMANDS)
-                    .write(MODEL1, COMMANDS);
-        }
-        WorldModeller modeller = WorldModeller.create(Utils.fromText(MODELLER_DEF), Locator.root());
-        modeller.setRobotSpec(ROBOT_SPEC);
-        DLEnvironment environment = DLEnvironment.create(Utils.fromText(ENV_DEF), Locator.root());
-        environment.connect(modeller);
-        JsonNode spec = Utils.fromResource("/rlAgent.yml");
-        AbstractAgentNN agent = PPOAgent.create(spec, environment);
-        this.generator = new SignalGenerator(FILE, modeller, environment, agent, OUTPUT_PATH, SIGNAL_KEYS, ACTION_KEYS);
     }
 }

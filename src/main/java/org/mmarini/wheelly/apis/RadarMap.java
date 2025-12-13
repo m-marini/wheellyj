@@ -32,6 +32,7 @@ import java.awt.geom.Point2D;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
@@ -134,7 +135,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
     /**
      * Returns cleans up the map for timeout
      *
-     * @param echoLimit    the echo markerTime limit (ms)
+     * @param echoLimit    the hasObstacle markerTime limit (ms)
      * @param contactLimit the contact limit (ms)
      */
     public RadarMap clean(long echoLimit, long contactLimit) {
@@ -234,21 +235,31 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
     }
 
     /**
-     * Returns the safeSectors
+     * Returns the safe cell indices
      *
      * @param safetyDistance the safety distance
      */
     public IntStream safeSectors(double safetyDistance) {
-        AreaExpression[] areas = topology.contour(
-                topology.indices()
-                        .filter(cellIs(MapCell::hindered))
-                        .boxed()
-                        .collect(Collectors.toSet())
-        ).mapToObj(
-                i ->
-                        not(circle(cell(i).location(), safetyDistance))
-        ).toArray(AreaExpression[]::new);
+        // Filter the hindered indices (
+        Set<Integer> hinderedIndices = topology.indices()
+                .filter(cellIs(MapCell::hindered))
+                .boxed()
+                .collect(Collectors.toSet());
+        if (hinderedIndices.isEmpty()) {
+            // If there is no hindered cell returns all the indices
+            return topology.indices();
+        }
+        // extracts the contour cells of the hindered areas
+        AreaExpression[] areas = topology.contour(hinderedIndices)
+                .mapToObj(
+                        // convert each cell into safety area (outer circle of radius equals to safety distance)
+                        i -> not(circle(cell(i).location(), safetyDistance))
+                ).toArray(AreaExpression[]::new);
+        if (areas.length == 0) {
+            return IntStream.empty();
+        }
         AreaExpression area = or(areas);
+        // Returns any index of not hindered cells in the safety areas
         return topology.indicesByArea(area)
                 .filter(cellIs(cell -> !cell.hindered()));
     }

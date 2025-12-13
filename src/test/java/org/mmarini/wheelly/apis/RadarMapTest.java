@@ -69,7 +69,7 @@ class RadarMapTest {
         return radarMap;
     }
 
-    public static Stream<Arguments> findSafeTargetDataset() throws IOException {
+    public static Stream<Arguments> dataFindSafeTarget() throws IOException {
         return jsonFileArguments("/org/mmarini/wheelly/apis/RadarMapTest/findSafeTargetTest.yml")
                 .addMap("map", stream -> Stream.of(new Object[]{createRadarMap(stream)}))
                 .addMap("map", anyPointOfValue(GRID_TOPOLOGY, "X"))
@@ -80,7 +80,7 @@ class RadarMapTest {
                 .parse();
     }
 
-    public static Stream<Arguments> setContactsDataset() throws IOException {
+    public static Stream<Arguments> dataSetContacts() throws IOException {
         return jsonFileArguments("/org/mmarini/wheelly/apis/RadarMapTest/setContactsTest.yml")
                 .forEachCell("map", allIndicesByValue(GRID_TOPOLOGY, "O"))
                 .addDouble("direction")
@@ -95,7 +95,7 @@ class RadarMapTest {
     }
 
     @Test
-    void createTest() {
+    void testCreate() {
         RadarMap map = createRadarMap();
 
         assertEquals(GRID_SIZE, map.topology().gridSize());
@@ -114,8 +114,8 @@ class RadarMapTest {
     }
 
     @ParameterizedTest(name = "[{index}] at ({1}) to({2} DEG) min({3} m) max({4} m) {0}")
-    @MethodSource("findSafeTargetDataset")
-    void findSafeTargetTest(RadarMap map, Point2D location, double escapeDir, double safeDistance, double maxDistance, Point2D expected) {
+    @MethodSource("dataFindSafeTarget")
+    void testFindSafeTargetTest(RadarMap map, Point2D location, double escapeDir, double safeDistance, double maxDistance, Point2D expected) {
         // Given a radar map with obstacles
         // And max distance
         // And safe distance
@@ -138,7 +138,7 @@ class RadarMapTest {
             "-0.4,-0.4, 0.688,0.688, 1,1, false",
             "-0.4,-0.4, 0.687,0.687, 1,1, true",
     })
-    void freeTrajectoryTest(double xFrom, double yFrom, double xTo, double yTo, double xObstacle,
+    void testFreeTrajectory(double xFrom, double yFrom, double xTo, double yTo, double xObstacle,
                             double yObstacle, boolean freeTrajectory) {
         // Given a map with obstacle at xObstacle, yObstacle
         RadarMap map = createRadarMap();
@@ -158,7 +158,7 @@ class RadarMapTest {
     }
 
     @Test
-    void sectorIndex0() {
+    void testSectorIndex0() {
         RadarMap map = createRadarMap();
 
         int idx = map.indexOf(0, 0);
@@ -167,7 +167,7 @@ class RadarMapTest {
     }
 
     @Test
-    void sectorIndexBottomLeft() {
+    void testSectorIndexBottomLeft() {
         RadarMap map = createRadarMap();
 
         int idx = map.indexOf(-1.0999, -1.0999);
@@ -178,7 +178,7 @@ class RadarMapTest {
     }
 
     @Test
-    void sectorIndexOutBottomLeft() {
+    void testSectorIndexOutBottomLeft() {
         RadarMap map = createRadarMap();
 
         int idx = map.indexOf(-1.101, -1.101);
@@ -192,7 +192,7 @@ class RadarMapTest {
     }
 
     @Test
-    void sectorIndexOutTopRight() {
+    void testSectorIndexOutTopRight() {
         RadarMap map = createRadarMap();
 
         int idx = map.indexOf(1.1001, 1.1001);
@@ -207,7 +207,7 @@ class RadarMapTest {
     }
 
     @Test
-    void sectorIndexTopRight() {
+    void testSectorIndexTopRight() {
         RadarMap map = createRadarMap();
 
         int idx = map.indexOf(1, 1);
@@ -221,8 +221,8 @@ class RadarMapTest {
     }
 
     @ParameterizedTest(name = "[{index}] front({3}) rear=({4}) toward {2} DEG cell({0}) ")
-    @MethodSource("setContactsDataset")
-    void setContactsTest(int index, boolean expected, double direction, boolean frontContact, boolean rearContact) {
+    @MethodSource("dataSetContacts")
+    void testSetContacts(int index, boolean expected, double direction, boolean frontContact, boolean rearContact) {
         // Given a radar map
         RadarMap map = createRadarMap();
         Point2D point = new Point2D.Double();

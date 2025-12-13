@@ -50,6 +50,7 @@ public record WheellyContactsMessage(long simulationTime,
     public static final int NO_PARAMS = 6;
     // [sampleTime] [frontSignals] [rearSignals] [canMoveForward] [canMoveBackward]
     public static final Pattern ARG_PATTERN = Pattern.compile("^\\d+,([01]),([01]),([01]),([01])$");
+    public static final WheellyContactsMessage DEFAULT_MESSAGE = new WheellyContactsMessage(0, true, true, true, true);
 
     /**
      * Returns the Wheelly status from status string

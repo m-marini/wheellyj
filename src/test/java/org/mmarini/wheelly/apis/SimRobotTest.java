@@ -43,7 +43,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mmarini.wheelly.TestFunctions.*;
-import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
+import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
 import static org.mmarini.wheelly.apis.RobotSpec.DISTANCE_PER_PULSE;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_ANGULAR_VELOCITY;
 import static rocks.cleancode.hamcrest.record.HasFieldMatcher.field;
@@ -60,11 +60,11 @@ class SimRobotTest {
     public static final int CLOSE_DELAY = 100;
 
     /**
-     * Given a simulated robot with an obstacles map grid of 0.2 m without obstacles
+     * Given a simulated robot with an obstacle map grid of 0.2 m without obstacles
      */
     private static SimRobot createRobot() {
-        return new SimRobot(ROBOT_SPEC, new Random(SEED), new Random(SEED),
-                INTERVAL, 0, MESSAGE_INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL, STALEMATE_INTERVAL,
+        return new SimRobot(DEFAULT_ROBOT_SPEC, new Random(SEED), new Random(SEED),
+                0, INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL, STALEMATE_INTERVAL,
                 0, 0, RobotSpec.MAX_PPS, 0, 0);
     }
 
@@ -97,7 +97,8 @@ class SimRobotTest {
         assertEquals(new Point2D.Float(), robot.location());
         assertEquals(0, robot.direction().toIntDeg());
         assertEquals(0, robot.sensorDirection().toIntDeg());
-        assertEquals(0d, robot.echoDistance());
+        assertEquals(0d, robot.frontDistance());
+        assertEquals(0d, robot.rearDistance());
         assertEquals(0L, robot.simulationTime());
     }
 
@@ -154,8 +155,7 @@ class SimRobotTest {
 
         // And the robot should emit motion at (0, 0) toward 5 DEG
         WheellyMotionMessage motion = findMessage(messages, after(0));
-        long rt = MESSAGE_INTERVAL;
-        int maxRot = (int) round(toDegrees(MAX_ANGULAR_VELOCITY * rt / 1e-3));
+        int maxRot = (int) round(toDegrees(MAX_ANGULAR_VELOCITY * MESSAGE_INTERVAL / 1e-3));
         int da = (int) round(toDegrees(MAX_ANGULAR_VELOCITY * INTERVAL / 1e-3));
         int expDir = min(maxRot, dir);
         int minDir = expDir - da;
@@ -173,8 +173,8 @@ class SimRobotTest {
     void testScan(int dir) {
         // Given a sim robot connected and robotConfigured
         // Given a robot connected and robotConfigured
-        TestSubscriber<WheellyProxyMessage> subscriber = new TestSubscriber<>();
-        robot.readProxy()
+        TestSubscriber<WheellyLidarMessage> subscriber = new TestSubscriber<>();
+        robot.readLidar()
                 .subscribe(subscriber);
 
         // When scan 90 DEG
@@ -186,11 +186,11 @@ class SimRobotTest {
         // Then the consumer should be invoked
         subscriber.assertComplete();
         subscriber.assertNoErrors();
-        List<WheellyProxyMessage> messages = subscriber.values();
+        List<WheellyLidarMessage> messages = subscriber.values();
 
-        WheellyProxyMessage proxy = findMessage(messages, after(0));
+        WheellyLidarMessage proxy = findMessage(messages, after(0));
         assertNotNull(proxy);
         assertEquals(500L, proxy.simulationTime());
-        assertEquals(dir, proxy.sensorDirectionDeg());
+        assertEquals(dir, proxy.headDirectionDeg());
     }
 }

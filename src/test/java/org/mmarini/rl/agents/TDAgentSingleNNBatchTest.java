@@ -100,7 +100,7 @@ class TDAgentSingleNNBatchTest {
     @BeforeEach
     void setUp() {
         // Given the meta parameters
-        // And the agent
+        // And the agent.yml
         this.agent = createAgent();
         // And input data of process with 2 state and two actions
         /*

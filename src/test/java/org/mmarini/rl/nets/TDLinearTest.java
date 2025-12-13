@@ -59,15 +59,6 @@ class TDLinearTest {
                 .gaussian(0f, 1f) // w
                 .generate(() -> Nd4j.randn(random, 2, 2)) // grad
                 .build(100);
-        /*
-        return createStream(SEED,
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)), // inputs
-                gaussian(0f, 1f), // b
-                gaussian(0f, 1f), // w
-                createArgumentGenerator((ignored) -> Nd4j.randn(random, 2, 2)) // grad
-        );
-
-         */
     }
 
     @Test

@@ -97,12 +97,15 @@ public class JsonSchemas {
     /**
      * Returns the schema from resource
      *
-     * @param id the resource schema
+     * @param id       the resource schema
+     * @param filename the document filename
      */
-    public JsonSchema get(String id) {
+    public JsonSchema get(String id, String filename) {
         JsonSchema jsonSchema = cache.get(id);
         if (jsonSchema == null) {
-            throw new IllegalArgumentException(format("Schema %s not found", id));
+            throw new IllegalArgumentException(format("%s: Schema %s not found",
+                    filename,
+                    id));
         }
         return jsonSchema;
     }
@@ -110,11 +113,12 @@ public class JsonSchemas {
     /**
      * Returns the validation error set for a JSON instance against the schema
      *
-     * @param node   the instance
-     * @param schema the schema
+     * @param node     the instance
+     * @param schema   the schema
+     * @param filename the document filename
      */
-    public Set<ValidationMessage> validate(JsonNode node, String schema) throws IOException {
-        return get(schema).validate(node);
+    public Set<ValidationMessage> validate(JsonNode node, String schema, String filename) throws IOException {
+        return get(schema, filename).validate(node);
     }
 
     /**
@@ -124,16 +128,31 @@ public class JsonSchemas {
      * @param schema the schema
      */
     public void validateOrThrow(JsonNode node, String schema) {
+        validateOrThrow(node, schema, null);
+    }
+
+    /**
+     * Throws exception in case of validation error
+     *
+     * @param node     the document instance
+     * @param schema   the schema name
+     * @param filename the filename
+     */
+    public void validateOrThrow(JsonNode node, String schema, String filename) {
+        if (filename == null) {
+            filename = "";
+        }
+        Set<ValidationMessage> errors;
         try {
-            Set<ValidationMessage> errors = validate(node, schema);
-            if (!errors.isEmpty()) {
-                String text = errors.stream()
-                        .map(ValidationMessage::toString)
-                        .collect(Collectors.joining(", "));
-                throw new IllegalArgumentException(format("Errors: %s", text));
-            }
+            errors = validate(node, schema, filename);
         } catch (IOException ex) {
-            throw new RuntimeException(ex);
+            throw new RuntimeException(format("%s: %s", filename, ex.getMessage()), ex);
+        }
+        if (!errors.isEmpty()) {
+            String text = errors.stream()
+                    .map(ValidationMessage::toString)
+                    .collect(Collectors.joining(", "));
+            throw new IllegalArgumentException(format("%s: %s", filename, text));
         }
     }
 }

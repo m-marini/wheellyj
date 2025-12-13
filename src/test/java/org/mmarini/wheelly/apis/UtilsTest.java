@@ -45,11 +45,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class UtilsTest {
 
     static final double MAX_COORD = 3d;
+    public static final int SEED = 1234;
 
     static Stream<Arguments> vect2dArgs() {
-        return RandomArgumentsGenerator.create(1234)
-                .uniform(-MAX_COORD, MAX_COORD)
-                .uniform(-MAX_COORD, MAX_COORD)
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-MAX_COORD, MAX_COORD, 17)
+                .uniform(-MAX_COORD, MAX_COORD, 17)
                 .build(100);
     }
 

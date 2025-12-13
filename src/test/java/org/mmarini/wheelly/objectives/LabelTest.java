@@ -43,7 +43,7 @@ import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
-import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
+import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -55,7 +55,7 @@ class LabelTest {
         Point2D obstacleLocation = obstacleDir.at(robotLocation, distance);
         Map<String, LabelMarker> markers = Map.of(
                 "A", new LabelMarker("A", obstacleLocation, 1, timestamp, timestamp));
-        RobotStatus status = RobotStatus.create(ROBOT_SPEC, x -> 12)
+        RobotStatus status = RobotStatus.create(DEFAULT_ROBOT_SPEC, x -> 12)
                 .setDirection(robotDir)
                 .setSensorDirection(sensorDir)
                 .setSpeeds(leftPps, rightPps);

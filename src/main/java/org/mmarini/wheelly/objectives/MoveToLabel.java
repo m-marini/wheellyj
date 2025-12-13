@@ -120,7 +120,7 @@ public interface MoveToLabel {
                 Map<String, LabelMarker> markers = s1.markers();
                 if (speed >= minSpeed
                         && speed <= maxSpeed
-                        && state.sensorDirection().isCloseTo(Complex.DEG0, sensorRange)
+                        && state.headDirection().isCloseTo(Complex.DEG0, sensorRange)
                         && markers.values().stream()
                         .anyMatch(marker ->
                                 Complex.direction(robotLocation, marker.location())

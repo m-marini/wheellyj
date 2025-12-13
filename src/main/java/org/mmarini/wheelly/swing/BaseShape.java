@@ -41,7 +41,7 @@ import java.util.stream.Stream;
 import static java.lang.Math.max;
 
 /**
- * The base shape with color and stroke
+ * The base shape with colour and stroke
  */
 public interface BaseShape {
     float ROBOT_RADIUS = 0.15f;
@@ -49,16 +49,11 @@ public interface BaseShape {
     float ROBOT_ARROW_Y = 0.102f;
     float ROBOT_ARROW_BACK = 0.05f;
 
-    float[][] ROBOT_POINTS = {
-            {0, ROBOT_RADIUS},
-            {-ROBOT_ARROW_X, -ROBOT_ARROW_Y},
-            {0, -ROBOT_ARROW_BACK},
-            {ROBOT_ARROW_X, -ROBOT_ARROW_Y}
-    };
-    float SENSOR_LENGTH = 3f;
-    float[][] SENSOR_POINTS = {
-            {0, 0},
-            {0, SENSOR_LENGTH}
+    float[] ROBOT_POINTS = {
+            0, ROBOT_RADIUS,
+            -ROBOT_ARROW_X, -ROBOT_ARROW_Y,
+            0, -ROBOT_ARROW_BACK,
+            ROBOT_ARROW_X, -ROBOT_ARROW_Y
     };
 
     Color ROBOT_COLOR = new Color(255, 255, 0);
@@ -67,9 +62,9 @@ public interface BaseShape {
     Color EMPTY_COLOR = new Color(64, 64, 64, 128);
     Color FILLED_COLOR = new Color(200, 0, 0, 128);
     Color CONTACT_COLOR = new Color(200, 0, 200, 128);
-    Color LABELED_COLOR = new Color(0, 255, 255, 255);
+    Color LABELED_COLOR = new Color(0, 200, 200);
     Color TARGET_COLOR = new Color(0, 200, 0);
-    Color PING_COLOR = new Color(255, 128, 128);
+    Color PING_COLOR = new Color(255, 0, 0);
     Color OBSTACLE_PHANTOM_COLOR = new Color(128, 128, 128);
     Color LABELED_PHANTOM_COLOR = new Color(0, 200, 200);
     Color HUD_BACKGROUND_COLOR = new Color(32, 32, 32);
@@ -91,15 +86,15 @@ public interface BaseShape {
     /**
      * Returns the circle shape
      *
-     * @param color   the color
-     * @param stroke  the stroke
-     * @param fillled true if filled
-     * @param center  the center location
-     * @param radius  the radius
+     * @param color  the colour
+     * @param stroke the stroke
+     * @param filled true if filled
+     * @param center the centre location
+     * @param radius the radius
      */
-    static BaseShape createCircle(Color color, BasicStroke stroke, boolean fillled, Point2D center, float radius) {
+    static BaseShape createCircle(Color color, BasicStroke stroke, boolean filled, Point2D center, float radius) {
         Ellipse2D shape = new Ellipse2D.Float((float) (center.getX() - radius), (float) (center.getY() - radius), radius * 2, radius * 2);
-        return new SingleShape(shape, color, stroke, fillled);
+        return new SingleShape(shape, color, stroke, filled);
     }
 
     /**
@@ -140,7 +135,7 @@ public interface BaseShape {
     }
 
     /**
-     * Return cell points with the color
+     * Return cell points with the colour
      *
      * @param size  the cell size (m)
      * @param cells the cells
@@ -161,7 +156,7 @@ public interface BaseShape {
     }
 
     /**
-     * Return cell points with the color
+     * Return cell points with the colour
      *
      * @param size  the cell size (m)
      * @param cells the cells
@@ -177,17 +172,17 @@ public interface BaseShape {
     /**
      * Returns a polygonal shape
      *
-     * @param color  the color
+     * @param color  the colour
      * @param stroke the stroke
      * @param filled true if filled
      * @param at     the affine transformation
      * @param points the points
      */
-    static BaseShape createPolygon(Color color, Stroke stroke, boolean filled, AffineTransform at, float[][] points) {
+    static BaseShape createPolygon(Color color, Stroke stroke, boolean filled, AffineTransform at, float... points) {
         Path2D.Float shape = new Path2D.Float();
-        shape.moveTo(points[0][0], points[0][1]);
-        for (int i = 1; i < points.length; i++) {
-            shape.lineTo(points[i][0], points[i][1]);
+        shape.moveTo(points[0], points[1]);
+        for (int i = 2; i < points.length - 1; i += 2) {
+            shape.lineTo(points[i], points[i + 1]);
         }
         shape.transform(at);
         return new SingleShape(shape, color, stroke, filled);
@@ -217,18 +212,18 @@ public interface BaseShape {
     /**
      * Returns the rectangle shape
      *
-     * @param color   the color
-     * @param stroke  the stroke
-     * @param fillled true if filled
-     * @param center  the center location
-     * @param width   the width
-     * @param height  the height
+     * @param color  the colour
+     * @param stroke the stroke
+     * @param filled true if filled
+     * @param center the centre location
+     * @param width  the width
+     * @param height the height
      */
-    static BaseShape createRectangle(Color color, BasicStroke stroke, boolean fillled, Point2D center, float width, float height) {
+    static BaseShape createRectangle(Color color, BasicStroke stroke, boolean filled, Point2D center, float width, float height) {
         Rectangle2D shape = new Rectangle2D.Float(
                 (float) (center.getX() - width / 2), (float) (center.getY() - height / 2),
                 width, height);
-        return new SingleShape(shape, color, stroke, fillled);
+        return new SingleShape(shape, color, stroke, filled);
     }
 
     /**
@@ -250,9 +245,12 @@ public interface BaseShape {
      *
      * @param location        the sensor location
      * @param sensorDirection the sensor direction
+     * @param length          the length of sensor (m)
      */
-    static BaseShape createSensorShape(Point2D location, Complex sensorDirection) {
-        return createPolygon(SENSOR_COLOR, BORDER_STROKE, false, at(location, sensorDirection), SENSOR_POINTS);
+    static BaseShape createSensorShape(Point2D location, Complex sensorDirection, float length) {
+        return createPolygon(SENSOR_COLOR, BORDER_STROKE, false, at(location, sensorDirection),
+                0, -length,
+                0, length);
     }
 
     /**

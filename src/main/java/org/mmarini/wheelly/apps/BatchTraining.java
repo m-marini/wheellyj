@@ -165,7 +165,7 @@ public class BatchTraining {
      *
      * @throws IOException in case of error
      */
-    private void createContext() throws IOException {
+    private void createContext() throws Throwable {
         // Load configuration
         JsonNode config = loadConfiguration();
 
@@ -367,7 +367,7 @@ public class BatchTraining {
     /**
      * Starts the training
      */
-    protected void run() throws Exception {
+    protected void run() throws Throwable {
         // Create the application context
         createContext();
 

@@ -41,7 +41,7 @@ public interface WorldModellerApi extends WorldModellerConnector {
      *
      * @param controller the controller
      */
-    WorldModeller connectController(RobotControllerConnector controller);
+    WorldModellerApi connectController(RobotControllerConnector controller);
 
     /**
      * Returns the radar modeller

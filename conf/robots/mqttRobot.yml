@@ -1,5 +1,5 @@
 ---
-$schema: https://mmarini.org/wheelly/mqtt-robot-schema-0.1
+$schema: https://mmarini.org/wheelly/mqtt-robot-schema-1.0
 class: org.mmarini.wheelly.mqtt.MqttRobot
 #brokerUrl: tcp://localhost:1883
 user: wheellyj
@@ -11,15 +11,16 @@ configureTimeout: 2000
 retryInterval: 3000
 cameraInterval: 800
 #cameraTimeout: 2000
+maxRadarDistance: 2
+lidarFOV: 15
 contactRadius: 0.28
+cameraFOV: 60
 sensorReceptiveAngle: 15
-cameraViewAngle: 120
-maxRadarDistance: 3
 configCommands:
   # 500 ms decay time of low pass filter of motion sensors
   - "cs,500"
-# 5 DEG min rotation, 30 DEG max rotation, 20 pps max speed during rotation
-  - "cc,10,30,20"
+  # 5 DEG min rotation, 30 DEG max rotation, 10 pps max speed during rotation
+  - "cc,10,30,10"
 #  - tcsl 32 41 180 -32 -81 -180 400 50
 #  - tcsr 32 41 180 -32 -92 -180 400 50
 #  - fl 0 0

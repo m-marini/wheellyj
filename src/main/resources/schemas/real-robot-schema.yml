@@ -59,7 +59,7 @@ required:
   - class
   - contactRadius
   - sensorReceptiveAngle
-  - cameraViewAngle
+  - cameraFOV
   - maxRadarDistance
   - robotHost
   - cameraHost

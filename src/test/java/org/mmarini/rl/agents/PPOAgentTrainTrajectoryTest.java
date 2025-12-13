@@ -81,7 +81,7 @@ class PPOAgentTrainTrajectoryTest {
     }
 
     /**
-     * Given an agent
+     * Given an agent.yml
      * and a continuous task with observations:
      * 0, 0, 0, -1
      * 0, 1, 1, 1
@@ -130,7 +130,7 @@ class PPOAgentTrainTrajectoryTest {
     }
 
     /**
-     * Given an agent
+     * Given an agent.yml
      * When trains with negative rewards
      * Then average rewards should decrease
      * and probabilities of selected actions should decrease
@@ -197,7 +197,7 @@ class PPOAgentTrainTrajectoryTest {
     }
 
     /**
-     * Given an agent
+     * Given an agent.yml
      * When trains with positive rewards
      * Then average rewards should increase
      * and probabilities of selected actions should increase

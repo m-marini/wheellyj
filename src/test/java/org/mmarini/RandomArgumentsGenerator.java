@@ -1,8 +1,7 @@
 /*
+ * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
  *
- * Copyright (c) 2021 Marco Marini, marco.marini@mmarini.org
- *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -29,6 +28,7 @@
 
 package org.mmarini;
 
+
 import org.junit.jupiter.params.provider.Arguments;
 import org.nd4j.shade.guava.collect.Streams;
 
@@ -37,10 +37,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Supplier;
-import java.util.stream.DoubleStream;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static java.lang.Math.exp;
+import static java.lang.Math.round;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
@@ -58,6 +58,18 @@ import static java.util.Objects.requireNonNull;
  * </pre>
  * </code>
  * </p>
+ *
+ * <code>
+ * <pre>
+ *     contiuous - uniform (double, float)
+ *               - exponential (double, float)
+ *               - gaussian (double, float)
+ *     discrete - random (0 ... n-1)
+ *              - choice (object, int, double, float)
+ *              - uniform (int, double, float)
+ *              - exponential (int, double, float)
+ * </pre>
+ * </code>
  */
 public class RandomArgumentsGenerator {
     public static RandomArgumentsGenerator create(long seed) {
@@ -65,7 +77,6 @@ public class RandomArgumentsGenerator {
     }
 
     private final Random random;
-    private final List<Object[]> fixedValues;
     private final List<Supplier<Stream<Object>>> randomGenerators;
 
     /**
@@ -75,23 +86,19 @@ public class RandomArgumentsGenerator {
      */
     public RandomArgumentsGenerator(Random random) {
         this.random = requireNonNull(random);
-        this.fixedValues = new ArrayList<>();
         this.randomGenerators = new ArrayList<>();
     }
 
-    RandomArgumentsGenerator add(Supplier<Stream<Object>> random, Object... fixed) {
-        fixedValues.add(fixed);
+    RandomArgumentsGenerator add(Supplier<Stream<Object>> random) {
         randomGenerators.add(random);
         return this;
     }
 
     /**
-     * Returns the stream of limited test cases
-     *
-     * @param numTestCases the number of test cases
+     * Generates random booleans
      */
-    public Stream<Arguments> build(int numTestCases) {
-        return build().limit(numTestCases);
+    public RandomArgumentsGenerator booleans() {
+        return choiceObj(false, true);
     }
 
     /**
@@ -99,29 +106,6 @@ public class RandomArgumentsGenerator {
      */
     public Stream<Arguments> build() {
         List<Stream<Object>> randomStreams = randomGenerators.stream().map(Supplier::get).toList();
-        Stream.Builder<Arguments> fixed = Stream.builder();
-        Object[] args = new Object[fixedValues.size()];
-        int[] indices = new int[fixedValues.size()];
-        int numArgs = fixedValues.size();
-        for (int i = 0; i < fixedValues.size(); i++) {
-            args[i] = fixedValues.get(i)[0];
-        }
-        int i = numArgs - 1;
-        while (i >= 0) {
-            fixed.add(Arguments.of(args));
-            args = Arrays.copyOf(args, args.length);
-            i = numArgs - 1;
-            while (i >= 0) {
-                Object[] values = fixedValues.get(i);
-                if (++indices[i] < values.length) {
-                    args[i] = values[indices[i]];
-                    break;
-                }
-                indices[i] = 0;
-                args[i] = values[0];
-                i--;
-            }
-        }
         Stream<Object[]> random = null;
         for (Stream<Object> randomStream : randomStreams) {
             if (random == null) {
@@ -134,21 +118,65 @@ public class RandomArgumentsGenerator {
                 });
             }
         }
-        return Stream.concat(
-                fixed.build(), random == null ? Stream.empty() : random.map(Arguments::of)
-        );
+        return random.map(Arguments::of);
     }
 
-    public RandomArgumentsGenerator choice(int... values) {
-        Object[] values1 = IntStream.of(values).boxed().toArray();
-        return add(() -> random.ints(0, values.length).mapToObj(i -> values[i]), values1);
+    /**
+     * Returns the stream of limited test cases
+     *
+     * @param numRandomTestCases the number of random test cases
+     */
+    public Stream<Arguments> build(int numRandomTestCases) {
+        return build().limit(numRandomTestCases);
     }
 
+    /**
+     * Generates random values
+     *
+     * @param values the values
+     */
     public RandomArgumentsGenerator choice(double... values) {
-        Object[] values1 = DoubleStream.of(values).boxed().toArray();
-        return add(() -> random.ints(0, values.length).mapToObj(i -> values[i]), values1);
+        return choiceObj(Arrays.stream(values).boxed().toArray());
     }
 
+    /**
+     * Generates random values
+     *
+     * @param values the values
+     */
+    public RandomArgumentsGenerator choice(float... values) {
+        Object[] val = new Object[values.length];
+        for (int i = 0; i < values.length; i++) {
+            val[i] = values[i];
+        }
+        return choiceObj(val);
+    }
+
+    /**
+     * Generates random values
+     *
+     * @param values the values
+     */
+    public RandomArgumentsGenerator choice(int... values) {
+        return choiceObj(Arrays.stream(values).boxed().toArray());
+    }
+
+    /**
+     * Generates random values
+     *
+     * @param values the values
+     */
+    public <T> RandomArgumentsGenerator choiceObj(T... values) {
+        return add(() -> random.ints(0, values.length)
+                .mapToObj(i -> values[i]));
+    }
+
+    /**
+     * Generates exponential random double in the min max range
+     *
+     * @param min the minimum number
+     * @param max the maximum number
+     */
     public RandomArgumentsGenerator exponential(double min, double max) {
         if (min <= 0) {
             throw new IllegalArgumentException(format("minimum value should be greater then 0 (%f)", min));
@@ -158,10 +186,16 @@ public class RandomArgumentsGenerator {
         }
         double minExp = Math.log(min);
         double maxExp = Math.log(max);
-        return add(() -> random.doubles(minExp, maxExp).map(Math::exp).mapToObj(x -> x), min, max);
+        return add(() -> random.doubles(minExp, maxExp).map(Math::exp).mapToObj(x -> x));
     }
 
 
+    /**
+     * Generates exponential random double in the min max range
+     *
+     * @param min the minimum number
+     * @param max the maximum number
+     */
     public RandomArgumentsGenerator exponential(float min, float max) {
         if (min <= 0) {
             throw new IllegalArgumentException(format("minimum value should be greater then 0 (%f)", min));
@@ -171,15 +205,111 @@ public class RandomArgumentsGenerator {
         }
         double minExp = Math.log(min);
         double maxExp = Math.log(max);
-        return add(() -> random.doubles(minExp, maxExp).map(Math::exp).mapToObj(x -> (float) x),
-                min, max);
+        return add(() -> random.doubles(minExp, maxExp).map(Math::exp).mapToObj(x -> (float) x));
     }
 
+    /**
+     * Generates exponential random discrete double in the min max range
+     *
+     * @param min the minimum number
+     * @param max the maximum number
+     * @param n   the number of values
+     */
+    public RandomArgumentsGenerator exponential(double min, double max, int n) {
+        if (min <= 0) {
+            throw new IllegalArgumentException(format("minimum value should be greater then 0 (%f)", min));
+        }
+        if (min > max) {
+            throw new IllegalArgumentException(format("minimum value (%f) should be greater then maximum value (%f)", min, max));
+        }
+        double minExp = Math.log(min);
+        double maxExp = Math.log(max);
+        Object[] values = new Object[n];
+        values[0] = min;
+        values[n - 1] = max;
+        double expScale = (maxExp - minExp) / (n - 1);
+        for (int i = 1; i < n - 1; i++) {
+            values[i] = exp(minExp + i * expScale);
+        }
+        return choiceObj(values);
+    }
+
+    /**
+     * Generates exponential random discrete float in the min max range
+     *
+     * @param min the minimum number
+     * @param max the maximum number
+     * @param n   the number of values
+     */
+    public RandomArgumentsGenerator exponential(float min, float max, int n) {
+        if (min <= 0) {
+            throw new IllegalArgumentException(format("minimum value should be greater then 0 (%f)", min));
+        }
+        if (min > max) {
+            throw new IllegalArgumentException(format("minimum value (%f) should be greater then maximum value (%f)", min, max));
+        }
+        double minExp = Math.log(min);
+        double maxExp = Math.log(max);
+        Object[] values = new Object[n];
+        values[0] = min;
+        values[n - 1] = max;
+        double expScale = (maxExp - minExp) / (n - 1);
+        for (int i = 1; i < n - 1; i++) {
+            values[i] = (float) exp(minExp + i * expScale);
+        }
+        return choiceObj(values);
+    }
+
+    /**
+     * Generates exponential random discrete int in the min max range
+     *
+     * @param min the minimum number
+     * @param max the maximum number
+     * @param n   the number of values
+     */
+    public RandomArgumentsGenerator exponential(int min, int max, int n) {
+        if (min <= 0) {
+            throw new IllegalArgumentException(format("minimum value should be greater then 0 (%d)", min));
+        }
+        if (min > max) {
+            throw new IllegalArgumentException(format("minimum value (%d) should be greater then maximum value (%d)", min, max));
+        }
+        double minExp = Math.log(min);
+        double maxExp = Math.log(max);
+        Object[] values = new Object[n];
+        values[0] = min;
+        values[n - 1] = max;
+        double expScale = (maxExp - minExp) / (n - 1);
+        for (int i = 1; i < n - 1; i++) {
+            values[i] = (int) round(exp(minExp + i * expScale));
+        }
+        return choiceObj(values);
+    }
+
+    /**
+     * Generates gaussian random double
+     *
+     * @param mean  the mean value
+     * @param sigma the standard deviation value
+     */
+    public RandomArgumentsGenerator gaussian(double mean, double sigma) {
+        if (sigma < 0) {
+            throw new IllegalArgumentException(format("sigma (%g) must be greater or equal then 0", sigma));
+        }
+        return generate(() -> random.nextGaussian() * sigma + mean);
+    }
+
+    /**
+     * Generates gaussian random double
+     *
+     * @param mean  the mean value
+     * @param sigma the standard deviation value
+     */
     public RandomArgumentsGenerator gaussian(float mean, float sigma) {
         if (sigma < 0) {
             throw new IllegalArgumentException(format("sigma (%g) must be greater or equal then 0", sigma));
         }
-        return generate(() -> (float) random.nextGaussian() * sigma + mean, mean);
+        return generate(() -> (float) random.nextGaussian() * sigma + mean);
     }
 
     /**
@@ -188,48 +318,16 @@ public class RandomArgumentsGenerator {
      * @param generator the generator function
      */
     public RandomArgumentsGenerator generate(Supplier<Object> generator) {
-        return add(() -> Stream.generate(generator), generator.get());
+        return add(() -> Stream.generate(generator));
     }
 
     /**
-     * Generates objects via the generator function
+     * Generates random natural number in 0 ... n-1 range
      *
-     * @param generator the generator function
+     * @param n the number of values
      */
-    public RandomArgumentsGenerator generate(Supplier<Object> generator, Object... values) {
-        return add(() -> Stream.generate(generator), values);
-    }
-
-    /**
-     * Generates uniform random int in the min max range
-     *
-     * @param min the minimum number
-     * @param max the maximum number
-     */
-    public RandomArgumentsGenerator uniform(int min, int max, int... values) {
-        Object[] values1 = new Object[2 + values.length];
-        values1[0] = min;
-        values1[1] = max;
-        for (int i = 0; i < values.length; i++) {
-            values1[i + 2] = values[i];
-        }
-        return add(() -> random.ints(min, max + 1).mapToObj(i -> i), values1);
-    }
-
-    /**
-     * Generates uniform random long in the min max range
-     *
-     * @param min the minimum number
-     * @param max the maximum number
-     */
-    public RandomArgumentsGenerator uniform(long min, long max, long... values) {
-        Object[] values1 = new Object[2 + values.length];
-        values1[0] = min;
-        values1[1] = max;
-        for (int i = 0; i < values.length; i++) {
-            values1[i + 2] = values[i];
-        }
-        return add(() -> random.longs(min, max + 1).mapToObj(i -> i), values1);
+    public RandomArgumentsGenerator random(int n) {
+        return generate(() -> random.nextInt(n));
     }
 
     /**
@@ -238,32 +336,97 @@ public class RandomArgumentsGenerator {
      * @param min the minimum number
      * @param max the maximum number
      */
-    public RandomArgumentsGenerator uniform(double min, double max, double... values) {
-        Object[] values1 = new Object[2 + values.length];
-        values1[0] = min;
-        values1[1] = max;
-        for (int i = 0; i < values.length; i++) {
-            values1[i + 2] = values[i];
+    public RandomArgumentsGenerator uniform(int min, int max) {
+        if (min > max) {
+            throw new IllegalArgumentException(format("minimum value (%d) should be greater then maximum value (%d)", min, max));
         }
-        return add(() -> random.doubles(min, max).mapToObj(i -> i), values1);
+        return add(() -> random.ints(min, max + 1).mapToObj(i -> i));
     }
 
     /**
-     * Generates uniform random float in the min max range
+     * Generates uniform random double in the min max range
      *
      * @param min the minimum number
      * @param max the maximum number
      */
-    public RandomArgumentsGenerator uniform(float min, float max, float... values) {
-        Object[] values1 = new Object[2 + values.length];
-        values1[0] = min;
-        values1[1] = max;
-        for (int i = 0; i < values.length; i++) {
-            values1[i + 2] = values[i];
+    public RandomArgumentsGenerator uniform(double min, double max) {
+        if (min > max) {
+            throw new IllegalArgumentException(format("minimum value (%g) should be greater then maximum value (%g)", min, max));
+        }
+        return add(() -> random.doubles(min, max).mapToObj(i -> i));
+    }
+
+    /**
+     * Generates uniform random double in the min max range
+     *
+     * @param min the minimum number
+     * @param max the maximum number
+     */
+    public RandomArgumentsGenerator uniform(float min, float max) {
+        if (min > max) {
+            throw new IllegalArgumentException(format("minimum value (%g) should be greater then maximum value (%g)", min, max));
         }
         float scale = max - min;
-        return add(() -> Stream.generate(random::nextFloat)
-                        .map(x -> x * scale + min),
-                values1);
+        return add(() -> Stream.generate(random::nextFloat).map(i -> i * scale + min));
+    }
+
+    /**
+     * Generates random discrete double in the min max range
+     *
+     * @param min the minimum number
+     * @param max the maximum number
+     */
+    public RandomArgumentsGenerator uniform(double min, double max, int n) {
+        if (min > max) {
+            throw new IllegalArgumentException(format("minimum value (%g) should be greater then maximum value (%g)", min, max));
+        }
+        Object[] values = new Object[n];
+        values[0] = min;
+        values[n - 1] = max;
+        double scale = (max - min) / (n - 1);
+        for (int i = 1; i < n - 1; i++) {
+            values[i] = min + i * scale;
+        }
+        return choiceObj(values);
+    }
+
+    /**
+     * Generates random discrete double in the min max range
+     *
+     * @param min the minimum number
+     * @param max the maximum number
+     */
+    public RandomArgumentsGenerator uniform(float min, float max, int n) {
+        if (min > max) {
+            throw new IllegalArgumentException(format("minimum value (%g) should be greater then maximum value (%g)", min, max));
+        }
+        Object[] values = new Object[n];
+        values[0] = min;
+        values[n - 1] = max;
+        double scale = (max - min) / (n - 1);
+        for (int i = 1; i < n - 1; i++) {
+            values[i] = (float) (min + i * scale);
+        }
+        return choiceObj(values);
+    }
+
+    /**
+     * Generates random discrete double in the min max range
+     *
+     * @param min the minimum number
+     * @param max the maximum number
+     */
+    public RandomArgumentsGenerator uniform(int min, int max, int n) {
+        if (min > max) {
+            throw new IllegalArgumentException(format("minimum value (%d) should be greater then maximum value (%d)", min, max));
+        }
+        Object[] values = new Object[n];
+        values[0] = min;
+        values[n - 1] = max;
+        int m = max - min;
+        for (int i = 1; i < n - 1; i++) {
+            values[i] = min + i * m / (n - 1);
+        }
+        return choiceObj(values);
     }
 }

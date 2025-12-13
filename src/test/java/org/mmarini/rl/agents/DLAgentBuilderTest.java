@@ -74,7 +74,7 @@ class DLAgentBuilderTest {
     void testConvResNet() throws IOException {
         // Given a JSON configuration
         JsonNode root = Utils.fromResource("/org.mmarini.rl.agents.DLAgentBuilderTest/convResNet.yml");
-        // When create agent
+        // When create agent.yml
         agent = DLAgentBuilder.create(root, env);
 
         // Then
@@ -101,7 +101,7 @@ class DLAgentBuilderTest {
     void testIdentityResNet() throws IOException {
         // Given a JSON configuration
         JsonNode root = Utils.fromResource("/org.mmarini.rl.agents.DLAgentBuilderTest/identityResNet.yml");
-        // When create agent
+        // When create agent.yml
         agent = DLAgentBuilder.create(root, env);
 
         // Then
@@ -126,7 +126,7 @@ class DLAgentBuilderTest {
     void testInOut() throws IOException {
         // Given a JSON configuration
         JsonNode root = Utils.fromResource("/org.mmarini.rl.agents.DLAgentBuilderTest/testInOut.yml");
-        // When create agent
+        // When create agent.yml
         agent = DLAgentBuilder.create(root, env);
 
         // Then
@@ -141,7 +141,7 @@ class DLAgentBuilderTest {
     void testVertex() throws IOException {
         // Given a JSON configuration
         JsonNode root = Utils.fromResource("/org.mmarini.rl.agents.DLAgentBuilderTest/vertex.yml");
-        // When create agent
+        // When create agent.yml
         agent = DLAgentBuilder.create(root, env);
 
         // Then

@@ -49,13 +49,13 @@ import java.util.concurrent.TimeUnit;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
 
 class MqttRobotTest {
     public static final String BROKER_URL = "tcp://localhost:1883";
     public static final String WRONG_BROKER_URL = "tcp://localhost:1884";
     public static final String USER = "wheellyj";
     public static final String PASSWORD = "wheellyj";
-    public static final RobotSpec ROBOT_SPEC = new RobotSpec(3, Complex.fromDeg(15), 0.18, Complex.fromDeg(120));
     public static final int CONFIGURE_TIMEOUT = 1000;
     public static final String CAMERA_EVENT_TEXT = "0,A,200,200,0,0,0,0,0,0,0,0";
     public static final int RETRY_INTERVAL = 500;
@@ -74,7 +74,6 @@ class MqttRobotTest {
     private TestSubscriber<RobotStatusApi> statusSub;
     private TestSubscriber<Throwable> errorSub;
     private TestSubscriber<CameraEvent> cameraSub;
-    private TestSubscriber<WheellyProxyMessage> proxySub;
     private TestSubscriber<WheellyContactsMessage> contactsSub;
     private TestSubscriber<WheellyMotionMessage> motionSub;
     private MockMqttClient mockClient;
@@ -82,21 +81,18 @@ class MqttRobotTest {
     void createRobot(String url) throws MqttException {
         robot = assertDoesNotThrow(() -> MqttRobot.create(url, CLIENT_ID, USER, PASSWORD,
                 ROBOT_ID, CAMERA_ID, QR_ID,
-                CONFIGURE_TIMEOUT, RETRY_INTERVAL, CAMERA_INTERVAL, CAMERA_TIMEOUT, ROBOT_SPEC,
+                CONFIGURE_TIMEOUT, RETRY_INTERVAL, CAMERA_INTERVAL, CAMERA_TIMEOUT, DEFAULT_ROBOT_SPEC,
                 new String[]{"cs,100,100", "ci,200,200"}, new String[]{"cf,255,5"}));
         assertNotNull(robot);
         statusSub = new TestSubscriber<>();
         errorSub = new TestSubscriber<>();
         cameraSub = new TestSubscriber<>();
-        this.proxySub = new TestSubscriber<>();
         this.motionSub = new TestSubscriber<>();
         this.contactsSub = new TestSubscriber<>();
         robot.readRobotStatus().subscribe(statusSub);
         robot.readErrors().subscribe(errorSub);
         robot.readCamera()
                 .subscribe(cameraSub);
-        robot.readProxy()
-                .subscribe(proxySub);
         robot.readContacts()
                 .subscribe(contactsSub);
         robot.readMotion()
@@ -239,10 +235,6 @@ class MqttRobotTest {
         motionSub.assertComplete();
         motionSub.assertNoErrors();
         motionSub.assertNoValues();
-
-        proxySub.assertComplete();
-        proxySub.assertNoErrors();
-        proxySub.assertNoValues();
 
         contactsSub.assertComplete();
         contactsSub.assertNoErrors();
@@ -495,46 +487,6 @@ class MqttRobotTest {
         errorSub.assertNoErrors();
         errorSub.assertComplete();
         errorSub.assertValueCount(0);
-
-        cameraSub.assertNoErrors();
-        cameraSub.assertComplete();
-        cameraSub.assertValueCount(0);
-    }
-
-    @Test
-    void testProxyMessage() throws IOException {
-        // Given ...
-        TestSubscriber<WheellyProxyMessage> proxySub = new TestSubscriber<>();
-        robot.readProxy().subscribe(proxySub);
-
-        // When connect
-        robot.connect();
-        // And waiting for robotConfigured
-        robot.readRobotStatus()
-                .filter(RobotStatusApi::configured)
-                .firstElement()
-                .ignoreElement()
-                .blockingAwait(TIMEOUT, TimeUnit.MILLISECONDS);
-
-        Completable.timer(10, TimeUnit.MILLISECONDS).blockingAwait();
-        mockClient.sendRobot("px", "0,90,0,0.0,0.0,0");
-        Completable.timer(MESSAGE_DELAY, TimeUnit.MILLISECONDS).blockingAwait();
-
-        robot.close();
-        robot.readRobotStatus().ignoreElements().blockingAwait();
-        mockClient.close();
-
-        errorSub.assertNoErrors();
-        errorSub.assertComplete();
-        errorSub.assertValueCount(0);
-
-        proxySub.assertNoErrors();
-        proxySub.assertComplete();
-        proxySub.assertValueCount(1);
-
-        List<WheellyProxyMessage> msgs = proxySub.values();
-        assertThat(msgs.getFirst().simulationTime(), greaterThanOrEqualTo(10L));
-        assertEquals(90, msgs.getFirst().sensorDirectionDeg());
 
         cameraSub.assertNoErrors();
         cameraSub.assertComplete();

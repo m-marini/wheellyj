@@ -343,7 +343,7 @@ public class NNActivityMonitor {
      *
      * @throws IOException in case of error
      */
-    private void loadNetwork() throws IOException {
+    private void loadNetwork() throws Throwable {
         JsonNode config = fromFile(args.getString("config"));
         WheellyJsonSchemas.instance().validateOrThrow(config, WHEELLY_SCHEMA_YML);
 
@@ -459,7 +459,7 @@ public class NNActivityMonitor {
     /**
      * Runs the application
      */
-    private void run() throws IOException {
+    private void run() throws Throwable {
         loadNetwork();
 
         // Prepare the input data

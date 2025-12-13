@@ -50,7 +50,8 @@ import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
-import static org.mmarini.wheelly.apis.MockRobot.ROBOT_SPEC;
+import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
+import static org.mmarini.wheelly.apis.RobotSpec.MAX_RADAR_DISTANCE;
 
 class RLStateFunctionTest {
 
@@ -59,10 +60,8 @@ class RLStateFunctionTest {
     public static final int SECTOR_NUMBERS = 4;
     public static final int MAP_DEG = 90;
     public static final List<String> MARKERS = List.of("A", "B");
-    public static final double MARKER_SIZE = 0.3;
-    public static final WorldModelSpec WORLD_SPEC = new WorldModelSpec(ROBOT_SPEC, SECTOR_NUMBERS, GRID_MAP_SIZE, MARKER_SIZE);
+    public static final WorldModelSpec WORLD_SPEC = new WorldModelSpec(DEFAULT_ROBOT_SPEC, SECTOR_NUMBERS, GRID_MAP_SIZE);
     private static final int RADAR_SIZE = 11;
-    private static final float MAX_RADAR_DISTANCE = 3f;
     private static final long NUM_MARKERS = MARKERS.size();
 
     static WorldModelBuilder modelBuilder() {

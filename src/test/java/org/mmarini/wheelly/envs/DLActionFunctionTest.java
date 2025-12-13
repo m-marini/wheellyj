@@ -62,13 +62,14 @@ class DLActionFunctionTest {
     public static final int NUM_MOVE_ACTIONS = NUM_DIRECTIONS * NUM_SPEEDS;
     public static final int NUM_SENSOR_DIRECTIONS = 9;
     public static final double EPSILON = 1e-5;
+    public static final int SEED = 1234;
 
     static Stream<Arguments> dataActionSignals() {
-        return RandomArgumentsGenerator.create(1234)
-                .uniform(0, 359, 90, 180, 270)
-                .uniform(-90, 90, 0)
-                .uniform(-90, 90, 0)
-                .build(50);
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(0, 359)
+                .uniform(-90, 90)
+                .uniform(-90, 90)
+                .build(100);
     }
 
     private DLActionFunction dataGen;

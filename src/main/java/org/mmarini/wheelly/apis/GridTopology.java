@@ -89,9 +89,9 @@ public record GridTopology(Point2D center, int width, int height, double gridSiz
     }
 
     /**
-     * Returns the index of contour sector
+     * Returns the area contour indices
      *
-     * @param indices the indices
+     * @param indices the indices of selected area
      */
     public IntStream contour(Set<Integer> indices) {
         return indices.stream()
@@ -99,7 +99,7 @@ public record GridTopology(Point2D center, int width, int height, double gridSiz
                 .filter(i -> {
                     int ix = i % width;
                     int iy = i / width;
-                    if (ix == 0 || ix >= width || iy == 0 || iy >= height) {
+                    if (ix == 0 || ix >= width - 1 || iy == 0 || iy >= height - 1) {
                         return true;
                     }
                     Set<Integer> adj = Set.of(

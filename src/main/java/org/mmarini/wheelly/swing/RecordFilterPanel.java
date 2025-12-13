@@ -34,9 +34,10 @@ import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.SwingUtils;
-import org.mmarini.wheelly.apis.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.mmarini.wheelly.apis.DumpRecord;
+import org.mmarini.wheelly.apis.WheellyContactsMessage;
+import org.mmarini.wheelly.apis.WheellyMotionMessage;
+import org.mmarini.wheelly.apis.WheellySupplyMessage;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
@@ -48,8 +49,6 @@ import java.util.stream.Stream;
  * Shows the record filters' user interface
  */
 public class RecordFilterPanel extends JPanel {
-    public static final Predicate<DumpRecord> PROXY_FILTER = record -> record instanceof DumpRecord.MessageDumpRecord &&
-            ((DumpRecord.MessageDumpRecord<?>) record).message() instanceof WheellyProxyMessage;
     public static final Predicate<DumpRecord> CONTACT_FILTER = record -> record instanceof DumpRecord.MessageDumpRecord &&
             ((DumpRecord.MessageDumpRecord<?>) record).message() instanceof WheellyContactsMessage;
     public static final Predicate<DumpRecord> MOTION_FILTER = record -> record instanceof DumpRecord.MessageDumpRecord &&
@@ -58,8 +57,7 @@ public class RecordFilterPanel extends JPanel {
             ((DumpRecord.MessageDumpRecord<?>) record).message() instanceof WheellySupplyMessage;
     public static final Predicate<DumpRecord> ERROR_FILTER = record -> record instanceof DumpRecord.ReadDumpRecordIntf && record.data().startsWith("!! ");
     public static final Predicate<DumpRecord> OTHER_READ_FILTER = Predicate.not(
-                    PROXY_FILTER
-                            .or(SUPPLY_FILTER)
+                    SUPPLY_FILTER
                             .or(MOTION_FILTER)
                             .or(ERROR_FILTER)
                             .or(CONTACT_FILTER))
@@ -70,7 +68,6 @@ public class RecordFilterPanel extends JPanel {
     public static final Predicate<DumpRecord> OTHER_WRITE_FILTER = Predicate.not(MOVE_FILTER.or(HALT_FILTER).or(SCAN_FILTER))
             .and(record -> record instanceof DumpRecord.WriteDumpRecord);
     private static final Predicate<DumpRecord> NONE_FILTER = record -> false;
-    private static final Logger logger = LoggerFactory.getLogger(RecordFilterPanel.class);
 
     private final JCheckBox motionBtn;
     private final JCheckBox proxyBtn;
@@ -159,9 +156,6 @@ public class RecordFilterPanel extends JPanel {
         Predicate<DumpRecord> motionFilter = motionBtn.isSelected()
                 ? MOTION_FILTER
                 : NONE_FILTER;
-        Predicate<DumpRecord> proxyFilter = proxyBtn.isSelected()
-                ? PROXY_FILTER
-                : NONE_FILTER;
         Predicate<DumpRecord> supplyFilter = supplyBtn.isSelected()
                 ? SUPPLY_FILTER
                 : NONE_FILTER;
@@ -187,7 +181,7 @@ public class RecordFilterPanel extends JPanel {
                 ? OTHER_WRITE_FILTER
                 : NONE_FILTER;
 
-        Predicate<DumpRecord> typesFilter = Stream.of(motionFilter, proxyFilter, supplyFilter, contactsFilter, errorFilter, readFilter,
+        Predicate<DumpRecord> typesFilter = Stream.of(motionFilter, supplyFilter, contactsFilter, errorFilter, readFilter,
                         moveFilter, haltFilter, scanFilter, writeFilter)
                 .reduce(Predicate::or)
                 .orElseThrow();

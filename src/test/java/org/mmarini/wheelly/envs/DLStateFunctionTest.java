@@ -54,15 +54,16 @@ import static org.mmarini.wheelly.envs.DLStateFunction.*;
 class DLStateFunctionTest {
     public static final double EPSILON = 1e-5;
     public static final int LABEL_CHANNEL = 4;
+    public static final long SEED = 1234;
 
-    public static Stream<Arguments> dataMap() {
-        return RandomArgumentsGenerator.create(1234)
-                .choice(0, 90, 180, 270)
-                .choice(-0.4, 0D, 0.4)
-                .choice(-0.4, 0D, 0.4)
-                .choice(-0.4, 0D, 0.4)
-                .choice(-0.4, 0D, 0.4)
-                .build(350);
+    static Stream<Arguments> dataMap() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(0, 359, 5) // directionDeg
+                .uniform(-0.4, 0.4, 5) // xRobot
+                .uniform(-0.4, 0.4, 5) // yRobot
+                .uniform(-0.4, 0.4, 5) // xCell
+                .uniform(-0.4, 0.4, 5) // yCell
+                .build(100);
     }
 
     private DLStateFunction dataGen;
