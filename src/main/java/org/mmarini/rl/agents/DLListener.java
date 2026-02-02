@@ -57,7 +57,7 @@ public class DLListener implements TrainingListener {
 
     @Override
     public void iterationDone(Model model, int iteration, int epoch) {
-        progressInfo.onNext(new ProgressInfo("Iteration", iteration, numIterations));
+        progressInfo.onNext(new ProgressInfo("Iteration", iteration, epoch));
     }
 
     @Override

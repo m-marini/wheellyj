@@ -203,7 +203,7 @@ public class RRTTestApp {
         mapPanel.sectors((float) map.topology().gridSize(), SECTOR_COLOR,
                 pathFinder.targets());
         /*
-        mapPanel.sectors((float) map.topology().gridSize(), SECTOR_COLOR,
+        mapPanel.sectors((float) map.topology().robotMapSize(), SECTOR_COLOR,
                 pathFinder.freeLocations());
                 */
         mapPanel.pingLocations(path != null ? path.getLast() : pathFinder.last());

@@ -123,7 +123,7 @@ public class DLStateFunction implements StateFunction {
      * @param numMarkers the number of recognised markers
      */
     private static Map<String, SignalSpec> createSpec(WorldModelSpec worldSpec, int numMarkers) {
-        long radarSize = worldSpec.gridSize();
+        long radarSize = worldSpec.robotMapSize();
         int numChannels = numMarkers + NUM_CELL_STATES;
         return Map.of(
                 SENSOR_SIGNAL_ID, SENSOR_SPEC,

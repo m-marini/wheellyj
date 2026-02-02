@@ -31,9 +31,12 @@ import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static java.lang.Math.sin;
+import static java.lang.Math.toRadians;
 import static org.nd4j.common.util.MathUtils.round;
 
 public class Utils {
+    public static final double SIN_1DEG = sin(toRadians(1));
     private static final Logger logger = LoggerFactory.getLogger(Utils.class);
     public static final double MM = 1e-3;
 

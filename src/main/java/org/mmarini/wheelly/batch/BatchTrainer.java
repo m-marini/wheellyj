@@ -32,6 +32,7 @@ import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.mmarini.rl.agents.BinArrayFile;
+import org.mmarini.rl.agents.RLDatasetIterator;
 import org.mmarini.wheelly.apis.BatchAgent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,7 +64,7 @@ public class BatchTrainer {
      * @param rewards the rewards
      */
     public BatchTrainer(BatchAgent agent, Map<String, BinArrayFile> states, Map<String, BinArrayFile> actions, BinArrayFile rewards) {
-        this.status = new AtomicReference<>(new BatchTrainerStatus(agent, false));
+        this.status = new AtomicReference<>(new BatchTrainerStatus(agent, null, false));
         this.states = requireNonNull(states);
         this.actions = requireNonNull(actions);
         this.rewards = requireNonNull(rewards);
@@ -82,7 +83,11 @@ public class BatchTrainer {
      * Stops the batch trainer
      */
     public void stop() {
-        status.updateAndGet(s -> s.stop(true));
+        BatchTrainerStatus st = status.updateAndGet(s -> s.stop(true));
+        RLDatasetIterator iterator = st.datasetIterator();
+        if (iterator != null) {
+            iterator.stop();
+        }
     }
 
     /**
@@ -92,9 +97,11 @@ public class BatchTrainer {
         // Backup the agent
         BatchAgent agent = status.get().agent();
         agent.backup();
+        // Creates the dataset iterator
         BinFilesDatasetIterator datasetIterator = new BinFilesDatasetIterator(states, actions, rewards,
                 agent.batchSize(), agent.avgReward(),
                 agent::createDataSet);
+        // Registers for dataset iterator progress info
         datasetIterator.readProgressInfo()
                 .subscribeOn(Schedulers.computation())
                 .subscribe(progressInfo::onNext,
@@ -102,9 +109,20 @@ public class BatchTrainer {
                         () -> {
                         }
                 );
+        // Sets the dataset iterator into the batch status
+        this.status.updateAndGet(s -> {
+            if (s.stop()) {
+                datasetIterator.stop();
+            }
+            return s.datasetIterator(datasetIterator);
+        });
+        // Train agent
         BatchAgent trained = agent.train(datasetIterator, numEpochs);
+        // Save agent
         trained.save();
+        // Completes the progress info flow
         progressInfo.onComplete();
-        return status.updateAndGet(s -> s.agent(trained)).agent();
+        // Sets the trained agent into the batch status
+        return this.status.updateAndGet(s -> s.agent(trained)).agent();
     }
 }

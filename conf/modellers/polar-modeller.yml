@@ -9,6 +9,7 @@ contactPersistence: 300000
 radarCleanInterval: 3600000
 correlationInterval: 2000
 radarDecay: 120000
+numSectors: 24
 minRadarDistance: 0.3
 markerDecay: 1000
 markerCleanDecay: 300000

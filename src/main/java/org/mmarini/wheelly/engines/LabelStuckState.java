@@ -61,7 +61,7 @@ import static java.util.Objects.requireNonNull;
 public class LabelStuckState extends TimeOutState {
     public static final String MAX_DISTANCE_ID = "maxDistance";
     public static final String DISTANCE_ID = "distance";
-    public static final String SPEED_ID = "speed";
+    public static final String SPEED_ID = "power";
     public static final String DIRECTION_RANGE_ID = "directionRange";
     public static final double DEFAULT_MAX_DISTANCE = 3D;
     public static final double DEFAULT_DISTANCE = 0.8;
@@ -110,7 +110,7 @@ public class LabelStuckState extends TimeOutState {
      * @param distance       the distance (m)
      * @param maxDistance    the maximum distance (m)
      * @param directionRange the direction range
-     * @param speed          the speed (pps)
+     * @param speed          the power (pps)
      */
     protected LabelStuckState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit, long timeout, double distance, double maxDistance, Complex directionRange, int speed) {
         super(id, onInit, onEntry, onExit, timeout);

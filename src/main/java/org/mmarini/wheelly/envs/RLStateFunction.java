@@ -90,7 +90,7 @@ public class RLStateFunction implements StateFunction {
         RobotSpec robotSpec = worldSpec.robotSpec();
         float maxRadarDistance = (float) robotSpec.maxRadarDistance();
         int numSectors = worldSpec.numSectors();
-        long radarSize = worldSpec.gridSize();
+        long radarSize = worldSpec.robotMapSize();
         return Map.of(
                 "sensor", SENSOR_SPEC,
                 "robotMapDir", ROBOT_MAP_DIR_SPEC,

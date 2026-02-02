@@ -173,8 +173,8 @@ public class SimRobot implements RobotApi {
      * @param stalemateInterval     the stalemate interval (ms)
      * @param changeObstaclesPeriod the change obstacle period (ms)
      * @param errSensor             the relative error sensor
-     * @param errSigma              the relative error on speed simulation
-     * @param maxAngularSpeed       the maximum angular speed
+     * @param errSigma              the relative error on power simulation
+     * @param maxAngularSpeed       the maximum angular power
      * @param numObstacles          the number of obstacles
      * @param numLabels             the number of labels
      */
@@ -849,12 +849,12 @@ public class SimRobot implements RobotApi {
         // Direction difference
         double dAngle = direction().sub(status.direction()).toRad();
 
-        // Relative angular speed to fix the direction
+        // Relative angular power to fix the direction
         double angularVelocityPps = clip(
                 Utils.linear(dAngle, -RAD_10, RAD_10, -maxAngularSpeed, maxAngularSpeed),
                 -maxAngularSpeed, maxAngularSpeed);
 
-        // Relative linear speed to fix the speed
+        // Relative linear power to fix the power
         double linearVelocityPps = status.speed() *
                 clip(
                         Utils.linear(abs(dAngle), 0, RAD_30, 1, 0),
@@ -885,13 +885,13 @@ public class SimRobot implements RobotApi {
         // Real forward velocity
         double forwardVelocity = (left + right) / 2;
 
-        // target real speed
+        // target real power
         Vec2 targetVelocity = robot.getWorldVector(Utils.vec2(forwardVelocity * JBOX_SCALE, 0));
-        // Difference of speed
+        // Difference of power
         Vec2 dv = targetVelocity.sub(robot.getLinearVelocity());
-        // Impulse to fix the speed
+        // Impulse to fix the power
         Vec2 dq = dv.mul(robot.getMass());
-        // Force to fix the speed
+        // Force to fix the power
         Vec2 force = dq.mul((float) (1 / dt));
         // Robot relative force
         Vec2 localForce = robot.getLocalVector(force);

@@ -303,7 +303,7 @@ class LabelStuckStateTest {
         // Then the result should be none exit
         assertNotNull(result);
         assertEquals(NONE_EXIT, result._1);
-        // And the speed should be backward
+        // And the power should be backward
         assertFalse(result._2.move());
         assertTrue(result._2.scan());
         // And the scan direction should be toward marker
@@ -337,7 +337,7 @@ class LabelStuckStateTest {
         assertEquals(NONE_EXIT, result._1);
         assertTrue(result._2.move());
         assertTrue(result._2.scan());
-        // And the speed should be 0
+        // And the power should be 0
         assertEquals(0, result._2.speed());
         assertThat(result._2.moveDirection(), angleCloseTo(markerAbsDir, SIN_DEG1));
         // And the scan direction should be toward marker
@@ -421,7 +421,7 @@ class LabelStuckStateTest {
         assertEquals(NONE_EXIT, result._1);
         assertTrue(result._2.move());
         assertTrue(result._2.scan());
-        // And the speed should be 0
+        // And the power should be 0
         assertEquals(0, result._2.speed());
         assertThat(result._2.moveDirection(), angleCloseTo(markerAbsDir, SIN_DEG1));
         // And the scan direction should be toward marker
@@ -455,7 +455,7 @@ class LabelStuckStateTest {
         assertEquals(NONE_EXIT, result._1);
         assertTrue(result._2.move());
         assertTrue(result._2.scan());
-        // And the speed should be 0
+        // And the power should be 0
         assertEquals(0, result._2.speed());
         assertThat(result._2.moveDirection(), angleCloseTo(markerAbsDir, SIN_DEG1));
         // And the scan direction should be toward marker
@@ -489,7 +489,7 @@ class LabelStuckStateTest {
         assertEquals(NONE_EXIT, result._1);
         assertTrue(result._2.move());
         assertTrue(result._2.scan());
-        // And the speed should be backward
+        // And the power should be backward
         assertEquals(-LabelStuckState.DEFAULT_SPEED, result._2.speed());
         // And the direction should be toward marker
         assertThat(result._2.moveDirection(), angleCloseTo(markerAbsDir, SIN_DEG1));
@@ -525,7 +525,7 @@ class LabelStuckStateTest {
         assertEquals(NONE_EXIT, result._1);
         assertTrue(result._2.move());
         assertTrue(result._2.scan());
-        // And the speed should be backward
+        // And the power should be backward
         assertEquals(-LabelStuckState.DEFAULT_SPEED, result._2.speed());
         // And the direction should be toward marker
         assertThat(result._2.moveDirection(), angleCloseTo(markerAbsDir, SIN_DEG1));
@@ -560,7 +560,7 @@ class LabelStuckStateTest {
         assertEquals(NONE_EXIT, result._1);
         assertTrue(result._2.move());
         assertTrue(result._2.scan());
-        // And the speed should be backward
+        // And the power should be backward
         assertEquals(-LabelStuckState.DEFAULT_SPEED, result._2.speed());
         // And the direction should be toward marker
         assertThat(result._2.moveDirection(), angleCloseTo(markerAbsDir, SIN_DEG1));
@@ -596,7 +596,7 @@ class LabelStuckStateTest {
         assertEquals(NONE_EXIT, result._1);
         assertTrue(result._2.move());
         assertTrue(result._2.scan());
-        // And the speed should be backward
+        // And the power should be backward
         assertEquals(-LabelStuckState.DEFAULT_SPEED, result._2.speed());
         // And the direction should be toward marker
         assertThat(result._2.moveDirection(), angleCloseTo(markerAbsDir, SIN_DEG1));
@@ -631,7 +631,7 @@ class LabelStuckStateTest {
         assertEquals(NONE_EXIT, result._1);
         assertTrue(result._2.move());
         assertTrue(result._2.scan());
-        // And the speed should be backward
+        // And the power should be backward
         assertEquals(LabelStuckState.DEFAULT_SPEED, result._2.speed());
         // And the direction should be toward marker
         assertThat(result._2.moveDirection(), angleCloseTo(markerAbsDir, SIN_DEG1));
@@ -667,7 +667,7 @@ class LabelStuckStateTest {
         assertEquals(NONE_EXIT, result._1);
         assertTrue(result._2.move());
         assertTrue(result._2.scan());
-        // And the speed should be backward
+        // And the power should be backward
         assertEquals(LabelStuckState.DEFAULT_SPEED, result._2.speed());
         // And the direction should be toward marker
         assertThat(result._2.moveDirection(), angleCloseTo(markerAbsDir, SIN_DEG1));
@@ -702,7 +702,7 @@ class LabelStuckStateTest {
         assertEquals(NONE_EXIT, result._1);
         assertTrue(result._2.move());
         assertTrue(result._2.scan());
-        // And the speed should be backward
+        // And the power should be backward
         assertEquals(LabelStuckState.DEFAULT_SPEED, result._2.speed());
         // And the direction should be toward marker
         assertThat(result._2.moveDirection(), angleCloseTo(markerAbsDir, SIN_DEG1));
@@ -737,7 +737,7 @@ class LabelStuckStateTest {
         assertEquals(NONE_EXIT, result._1);
         assertTrue(result._2.move());
         assertTrue(result._2.scan());
-        // And the speed should be backward
+        // And the power should be backward
         assertEquals(LabelStuckState.DEFAULT_SPEED, result._2.speed());
         // And the direction should be toward marker
         assertThat(result._2.moveDirection(), angleCloseTo(markerAbsDir, SIN_DEG1));

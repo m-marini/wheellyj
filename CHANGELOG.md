@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Add
+
+- Issue [#576](https://github.com/m-marini/wheellyj/issues/576): Add lidars
+
+### Changed
+
+- Issue [#577](https://github.com/m-marini/wheellyj/issues/577): Robot lidar check
+
 ## [0.25.0] 2025-10-12
 
 ### Add

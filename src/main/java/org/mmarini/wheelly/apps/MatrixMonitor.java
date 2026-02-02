@@ -390,7 +390,7 @@ public class MatrixMonitor {
     }
 
     /**
-     * Handles the speed slider event
+     * Handles the power slider event
      *
      * @param changeEvent eht event
      */

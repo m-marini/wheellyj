@@ -13,9 +13,6 @@ properties:
   correlationInterval:
     type: integer
     minimum: 1
-  gridMapSize:
-    type: integer
-    minimum: 1
   markerCleanDecay:
     type: number
     exclusiveMinimum: 0
@@ -49,6 +46,9 @@ properties:
   radarWidth:
     type: integer
     minimum: 1
+  robotMapSize:
+    type: integer
+    minimum: 1
 required:
   - $schema
   - radarWidth
@@ -62,4 +62,4 @@ required:
   - markerDecay
   - markerCleanDecay
   - minRadarDistance
-  - gridMapSize
+  - robotMapSize

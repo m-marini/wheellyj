@@ -62,6 +62,7 @@ public class BinFilesDatasetIterator implements RLDatasetIterator, AutoCloseable
     private float avgReward;
     private long cursor;
     private MultiDataSetPreProcessor preProcessor;
+    private boolean stop;
 
     /**
      * Creates dataset iterator
@@ -105,6 +106,11 @@ public class BinFilesDatasetIterator implements RLDatasetIterator, AutoCloseable
     }
 
     @Override
+    public boolean hasNext() {
+        return cursor < size() && !stop;
+    }
+
+    @Override
     public void close() {
     }
 
@@ -116,16 +122,6 @@ public class BinFilesDatasetIterator implements RLDatasetIterator, AutoCloseable
     @Override
     public void setPreProcessor(MultiDataSetPreProcessor preProcessor) {
         this.preProcessor = preProcessor;
-    }
-
-    @Override
-    public boolean hasNext() {
-        return cursor < size();
-    }
-
-    @Override
-    public MultiDataSet next() {
-        return next(batchSize);
     }
 
     @Override
@@ -154,11 +150,22 @@ public class BinFilesDatasetIterator implements RLDatasetIterator, AutoCloseable
             this.avgReward = result._2;
             cursor += n;
             int size = (int) rewardsFile.size();
+            logger.atDebug().log("Record {} / {}", cursor, size);
             progressInfo.onNext(new ProgressInfo("Read record", (int) cursor, size));
             return result._1;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public MultiDataSet next() {
+        return next(batchSize);
+    }
+
+    @Override
+    public void stop() {
+        stop = true;
     }
 
     /**

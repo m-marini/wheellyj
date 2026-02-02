@@ -75,8 +75,8 @@ class SensorLabelTest {
             "2, 0, 0,0, 0.8, A",
             "2, 29, 0,0, 0.8, A", // sensor in range
             "2, 331, 0,0, 0.8, A", // sensor in range
-            "2, 0, 4.9,4.9, 0.8, A", // speed in range
-            "2, 0, -4.9,-4.9, 0.8, A", // speed in range
+            "2, 0, 4.9,4.9, 0.8, A", // power in range
+            "2, 0, -4.9,-4.9, 0.8, A", // power in range
             "2, 0, 0,0, 0.51, A", // distance in range
             "2, 0, 0,0, 0.99, A", // distance in range
 
@@ -85,10 +85,10 @@ class SensorLabelTest {
             "0, 329, 0,0, 0.8, A", // sensor out of range
             "0, 0, 0,0, 0.4, A", // too near
             "0, 0, 0,0, 1.1, A", // too far
-            "0, 0, 5.1,0, 0.8, A", // speed out of range
-            "0, 0, -5.1,0, 0.8, A", // speed out of range
-            "0, 0, 0,5.1, 0.8, A", // speed out of range
-            "0, 0, 0,-5.1, 0.8, A", // speed out of range
+            "0, 0, 5.1,0, 0.8, A", // power out of range
+            "0, 0, -5.1,0, 0.8, A", // power out of range
+            "0, 0, 0,5.1, 0.8, A", // power out of range
+            "0, 0, 0,-5.1, 0.8, A", // power out of range
     })
     void create(double expectedReward,
                 int sensorDir,

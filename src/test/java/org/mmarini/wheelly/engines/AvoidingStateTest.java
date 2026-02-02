@@ -244,7 +244,7 @@ class AvoidingStateTest {
         assertTrue(result._2.move());
         // And the move direction should be the robot direction
         assertThat(result._2.moveDirection(), angleCloseTo(robotDeg, 1));
-        // And the speed should be negative speed
+        // And the power should be negative power
         assertEquals(-SPEED, result._2.speed());
         // And the head should be frontal
         assertThat(result._2.scanDirection(), angleCloseTo(0, 1));
@@ -295,7 +295,7 @@ class AvoidingStateTest {
         Complex expDir = Complex.direction(safePoint, robotLocation);
 
         assertThat(result._2.moveDirection(), angleCloseTo(expDir, SIN_DEG1));
-        // And the speed should be negative speed
+        // And the power should be negative power
         assertEquals(-SPEED, result._2.speed());
         // And the head should be frontal
         assertThat(result._2.scanDirection(), angleCloseTo(0, 1));
@@ -399,7 +399,7 @@ class AvoidingStateTest {
         assertTrue(result._2.move());
         // And the move direction should be the robot direction
         assertThat(result._2.moveDirection(), angleCloseTo(robotDeg, 1));
-        // And the speed should be negative speed
+        // And the power should be negative power
         assertEquals(-SPEED, result._2.speed());
         // And the head should be frontal
         assertThat(result._2.scanDirection(), angleCloseTo(0, 1));
@@ -431,7 +431,7 @@ class AvoidingStateTest {
         assertTrue(result._2.move());
         // And the move direction should be the robot direction
         assertThat(result._2.moveDirection(), angleCloseTo(robotDeg, 1));
-        // And the speed should be positive speed
+        // And the power should be positive power
         assertEquals(SPEED, result._2.speed());
         // And the head should be frontal
         assertThat(result._2.scanDirection(), angleCloseTo(0, 1));
@@ -482,7 +482,7 @@ class AvoidingStateTest {
         Complex expDir = Complex.direction(robotLocation, safePoint);
 
         assertThat(result._2.moveDirection(), angleCloseTo(expDir, SIN_DEG1));
-        // And the speed should be negative speed
+        // And the power should be negative power
         assertEquals(SPEED, result._2.speed());
         // And the head should be frontal
         assertThat(result._2.scanDirection(), angleCloseTo(0, 1));
@@ -521,7 +521,7 @@ class AvoidingStateTest {
         assertTrue(result._2.move());
         // And the move direction should be the robot direction
         assertThat(result._2.moveDirection(), angleCloseTo(robotDeg, 1));
-        // And the speed should be positive speed
+        // And the power should be positive power
         assertEquals(SPEED, result._2.speed());
         // And the head should be frontal
         assertThat(result._2.scanDirection(), angleCloseTo(0, 1));

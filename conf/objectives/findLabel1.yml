@@ -1,13 +1,12 @@
 ---
-# The robot should rest in front of labeled obstacle at a distance between 80 cm and 1 m
 - $schema: https://mmarini.org/wheelly/objective-avoid-contact-schema-0.1
   class: org.mmarini.wheelly.objectives.AvoidContact
-# The robot should rest in front of labeled obstacle at a distance between 50 cm and 1 m
+# The robot should rest in front of a labeled obstacle at a distance between 50 cm and 1 m
 - $schema: https://mmarini.org/wheelly/objective-sensor-label-schema-0.1
   class: org.mmarini.wheelly.objectives.SensorLabel
   minDistance: 0.5
   maxDistance: 1.0
-# or should be in range of a labeled obstacle
+# or should be in range of a labelled obstacle
 - $schema: https://mmarini.org/wheelly/objective-label-schema-1.0
   class: org.mmarini.wheelly.objectives.Label
   label: A
@@ -16,7 +15,7 @@
   velocityThresholds: 100
   directionRange: 180
   sensorRange: 90
-# or should direct to labeled
+# or should direct to labelled
 - $schema: https://mmarini.org/wheelly/objective-moveToLabel-schema-0.1
   class: org.mmarini.wheelly.objectives.MoveToLabel
   directionRange: 15
@@ -25,6 +24,6 @@
   numDirectionValues: 8
   minSpeed: 1
   maxSpeed: 100
-# or should explore the space looking for labeled obstacle
+# or should explore the space looking for a labeled obstacle
 - $schema: https://mmarini.org/wheelly/objective-explore-schema-0.2
   class: org.mmarini.wheelly.objectives.Explore

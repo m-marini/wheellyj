@@ -146,7 +146,7 @@ public interface RobotControllerApi extends RobotControllerConnector, WithRobotS
     void shutdown();
 
     /**
-     * Returns the real simulation speed
+     * Returns the real simulation power
      */
     double simRealSpeed();
 

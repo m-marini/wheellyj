@@ -298,7 +298,7 @@ public class NNActivityMonitor {
     }
 
     /**
-     * Runs player at fast speed
+     * Runs player at fast power
      */
     private void fastPlay() {
         if (fastPlay.isSelected()) {
@@ -435,7 +435,7 @@ public class NNActivityMonitor {
     }
 
     /**
-     * Runs player at normal speed
+     * Runs player at normal power
      */
     private void play() {
         if (play.isSelected()) {

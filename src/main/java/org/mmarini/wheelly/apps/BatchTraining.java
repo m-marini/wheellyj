@@ -48,6 +48,7 @@ import org.mmarini.wheelly.envs.DLEnvironment;
 import org.mmarini.wheelly.envs.EnvironmentApi;
 import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.wheelly.swing.KpisPanel;
+import org.mmarini.wheelly.swing.Utils;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
@@ -57,18 +58,19 @@ import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.swing.Utils.*;
+import static org.mmarini.wheelly.swing.Utils.layHorizontally;
 import static org.mmarini.yaml.Utils.fromFile;
 
 /**
@@ -99,9 +101,6 @@ public class BatchTraining {
         parser.addArgument("-v", "--version")
                 .action(Arguments.version())
                 .help("show current version");
-        parser.addArgument("-w", "--windows")
-                .action(Arguments.storeTrue())
-                .help("use multiple windows");
         parser.addArgument("path")
                 .required(true)
                 .help("specify dataset path");
@@ -128,7 +127,7 @@ public class BatchTraining {
     private final JProgressBar progressBar;
     private final JTextField infoBar;
     private BatchTrainer trainer;
-    private List<JFrame> allFrames;
+    private JFrame frame;
     private final KpisPanel kpisPanel;
     private int numEpochs;
     private BatchAgent agent;
@@ -155,7 +154,7 @@ public class BatchTraining {
         JPanel content = new JPanel();
         content.setLayout(new BorderLayout());
         content.add(infoBar, BorderLayout.NORTH);
-        content.add(kpisPanel, BorderLayout.CENTER);
+        content.add(new JScrollPane(kpisPanel), BorderLayout.CENTER);
         content.add(progressBar, BorderLayout.SOUTH);
         return content;
     }
@@ -240,12 +239,9 @@ public class BatchTraining {
     /**
      * Creates multi frames
      */
-    private void createFrames() {
-        JFrame frame = createFrame(Messages.getString("BatchTraining.title"),
+    private void createFrame() {
+        frame = Utils.createFrame(Messages.getString("BatchTraining.title"),
                 createContent());
-
-        this.allFrames = List.of(frame);
-
         layHorizontally(frame);
     }
 
@@ -257,26 +253,6 @@ public class BatchTraining {
         JsonNode config = fromFile(configFile);
         WheellyJsonSchemas.instance().validateOrThrow(config, BATCH_SCHEMA_YML);
         return config;
-    }
-
-    /**
-     * Creates the application single frame
-     */
-    private void createSingleFrames() {
-        // Create the frame
-        JTabbedPane tabPanel = new JTabbedPane();
-        tabPanel.addTab(Messages.getString("BatchTraining.tabPanel.kpis"), createContent());
-
-        JFrame frame = createFrame(Messages.getString("BatchTraining.title"), tabPanel);
-
-        this.allFrames = List.of(frame);
-
-        center(frame);
-
-        allFrames.forEach(f -> {
-            f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            f.setVisible(true);
-        });
     }
 
     /**
@@ -306,7 +282,9 @@ public class BatchTraining {
      * Handles the batch completion
      */
     private void onBatchCompletion() {
-        allFrames.forEach(Window::dispose);
+        logger.atInfo().log("Batch completed");
+        frame.dispose();
+        System.exit(0);
     }
 
     /**
@@ -317,15 +295,6 @@ public class BatchTraining {
     private void onBatchError(Throwable ex) {
         logger.atError().setCause(ex).log("Error running batch");
         info("Error running batch %s", ex.getMessage());
-    }
-
-    /**
-     * Handle shutdown
-     */
-    private void onShutdown() {
-        info("Shutting down ...");
-        trainer.stop();
-        info("Shutting down completed");
     }
 
     /**
@@ -365,24 +334,32 @@ public class BatchTraining {
     }
 
     /**
+     * Handles window close event
+     *
+     * @param e the event
+     */
+    private void onWindowClose(WindowEvent e) {
+        logger.atInfo().log("Window closed");
+        trainer.stop();
+    }
+
+    /**
      * Starts the training
      */
     protected void run() throws Throwable {
         // Create the application context
         createContext();
 
-        Thread hook = new Thread(this::onShutdown);
-        Runtime.getRuntime().addShutdownHook(hook);
-
         // Create the windows
-        if (args.getBoolean("windows")) {
-            createFrames();
-        } else {
-            createSingleFrames();
-        }
-        allFrames.forEach(f -> {
-            f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            f.setVisible(true);
+        createFrame();
+        //f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
+        frame.setVisible(true);
+        frame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                onWindowClose(e);
+            }
         });
 
         // Creates and start the batch
@@ -390,6 +367,7 @@ public class BatchTraining {
                 .subscribeOn(Schedulers.computation())
                 .subscribe(this::onBatchCompletion,
                         this::onBatchError);
+        logger.atInfo().log("Run completed");
     }
 
     /**
@@ -420,13 +398,19 @@ public class BatchTraining {
             } else {
                 dlAgent.network().setListeners(listener);
             }
+            /*
             listener.readProgressInfo()
                     .observeOn(Schedulers.computation())
                     .throttleLatest(PROGRESS_INTERVAL, TimeUnit.MILLISECONDS)
                     .subscribe(this::onProgress);
+
+             */
         }
         this.trainer = new BatchTrainer(agent, stateFiles, actionMaskFiles, rewardFile);
-
+        trainer.readProgressInfo()
+                .observeOn(Schedulers.computation())
+                .throttleLatest(PROGRESS_INTERVAL, TimeUnit.MILLISECONDS)
+                .subscribe(this::onProgress);
         // Runs the training session
         progressBar.setValue(0);
         info("Training ...");

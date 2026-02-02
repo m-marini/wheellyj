@@ -60,7 +60,7 @@ class ActionSetTest {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + ActionSet.SCHEMA_NAME,
                 "class: " + ActionSet.class.getName(),
-                "speed: 0",
+                "power: 0",
                 "direction: 0",
                 "sensor: 0"));
         RewardFunction f = ActionSet.create(root, Locator.root());
@@ -88,7 +88,7 @@ class ActionSetTest {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + ActionSet.SCHEMA_NAME,
                 "class: " + ActionSet.class.getName(),
-                "speed: 0",
+                "power: 0",
                 "direction: 0",
                 "sensor: 0",
                 "reward: 2"));
@@ -143,7 +143,7 @@ class ActionSetTest {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + ActionSet.SCHEMA_NAME,
                 "class: " + ActionSet.class.getName(),
-                "speed: 0"));
+                "power: 0"));
         RewardFunction f = ActionSet.create(root, Locator.root());
         RobotCommands cmd = RobotCommands.moveAndScan(Complex.fromDeg(direction), speed, Complex.fromDeg(sensor));
         double result = f.applyAsDouble(null, cmd, null);

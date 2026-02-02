@@ -327,7 +327,7 @@ class MappingStateTest {
         assertTrue(result._2.scan());
         // And the scan direction should be 65
         assertThat(result._2.scanDirection(), angleCloseTo(0, 1));
-        // And the speed should be 0
+        // And the power should be 0
         assertEquals(0, result._2.speed());
         // And the direction should be 120 DEG right
         assertThat(result._2.moveDirection(), angleCloseTo(Complex.fromDeg(robotDeg + MappingState.DEFAULT_TURN_ANGLE), SIN_DEG1));

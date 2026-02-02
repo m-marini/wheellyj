@@ -26,7 +26,7 @@ import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
  * <ul>
  *     <li><code>timeout</code> the timeout interval (ms) </li>
  *     <li><code>path</code> the list of path locations </li>
- *     <li><code>speed</code> the move speed (pps) </li>
+ *     <li><code>power</code> the move power (pps) </li>
  *     <li><code>approachDistance</code> the approach distance (m) </li>
  * </ul>
  * </p>
@@ -49,7 +49,7 @@ import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
  * </p>
  */
 public class MovePathState extends TimeOutState {
-    public static final String SPEED_ID = "speed";
+    public static final String SPEED_ID = "power";
     public static final String APPROACH_DISTANCE_ID = "approachDistance";
     public static final double NEAR_DISTANCE = 0.4;
     public static final String TIMEOUT_ID = "timeout";
@@ -107,7 +107,7 @@ public class MovePathState extends TimeOutState {
      * @param onExit           the exit command or null if none
      * @param timeout          the timeout (ms)
      * @param approachDistance the approach distance (m)
-     * @param speed            the maximum speed (pps)
+     * @param speed            the maximum power (pps)
      * @param safetyDistance   the safety distance (m)
      * @param defaultPath      the default path
      */
@@ -156,10 +156,10 @@ public class MovePathState extends TimeOutState {
         }
         // Computes direction
         Complex direction = Complex.direction(robotLocation, target);
-        // Computes speed
+        // Computes power
         double isFar = positive(distance - approachDistance, NEAR_DISTANCE);
         int speed = (int) round(defuzzy(MIN_PPS, this.speed, isFar));
-        logger.atDebug().log("move to {} DEG, speed {}", direction, speed);
+        logger.atDebug().log("move to {} DEG, power {}", direction, speed);
         return Tuple2.of(NONE_EXIT, moveAndFrontScan(direction, speed));
     }
 

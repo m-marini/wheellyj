@@ -19,22 +19,12 @@ sensorReceptiveAngle: 15
 configCommands:
   # 500 ms decay time of low pass filter of motion sensors
   - "cs,500"
-  # 5 DEG min rotation, 30 DEG max rotation, 10 pps max speed during rotation
-  - "cc,10,30,10"
-#  - tcsl 32 41 180 -32 -81 -180 400 50
-#  - tcsr 32 41 180 -32 -92 -180 400 50
-#  - fl 0 0
-#  - fr 0 0
-
-# 32u power for moving friction, 100u power for stationary stiction, 200u power for max speed (60pps),
-#  ...,
-# 400 u/s maximum power velocity (anti-slip regulation),
-# 50 % alpha factor (sensitivity to power correction)
-  - "tcsl,50,140,200,-50,-140,-200,400,50"
-  - "tcsr,50,140,200,-50,-140,-200,400,50"
-# 10000 mU/pps/s feedback motor controller factor
-  - "fl,10000,10000"
-  - "fr,10000,10000"
+  # 5 DEG min rotation, 30 DEG max rotation, 15 pps max power during rotation
+  - "cc,5,30,15"
+  # 200000 mU/pps/s voltage feedback motor controller factor
+  # 400 mU/s voltage asr factor
+  - "tcsl,904,5127,669,5261,-690,1680,-499,1702,3000,3000,50,400"
+  - "tcsr,628,2165,490,2322,-620,1569,-414,1468,3000,3000,50,400"
 # 500 ms status interval, 500 ms proxy interval
   - "ci,500,500"
 cameraConfigCommands:

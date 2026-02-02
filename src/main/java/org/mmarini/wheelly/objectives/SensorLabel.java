@@ -89,7 +89,7 @@ public interface SensorLabel {
             // obstacle distance in range
             if (frontDistance >= minDistance
                     && frontDistance <= maxDistance
-                    // check robot speed in range
+                    // check robot power in range
                     && abs(robotStatus.leftPps()) < velocityThreshold
                     && abs(robotStatus.rightPps()) < velocityThreshold
                     // and any sector in sensor direction range with a labelled target in distance range

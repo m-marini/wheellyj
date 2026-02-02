@@ -27,7 +27,9 @@ package org.mmarini.wheelly.rx;
 
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Maybe;
+import io.reactivex.rxjava3.functions.Consumer;
 import io.reactivex.rxjava3.functions.Predicate;
+import org.slf4j.Logger;
 
 import java.util.concurrent.TimeUnit;
 
@@ -61,4 +63,16 @@ public interface RXFunc {
                         ? Flowable.just(item)
                         : Flowable.error(new IllegalArgumentException("Wrong item")));
     }
+
+    /**
+     * Returns the function to log a flow error
+     *
+     * @param logger  the logger
+     * @param message the message
+     */
+    static Consumer<? super Throwable> logError(Logger logger, String message) {
+        return err ->
+                logger.atError().setCause(err).log(message);
+    }
+
 }

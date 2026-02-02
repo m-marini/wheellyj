@@ -258,9 +258,9 @@ public class DLActionFunction implements ActionFunction {
     }
 
     /**
-     * Returns the speed signal index
+     * Returns the power signal index
      *
-     * @param direction the speed (pps)
+     * @param direction the power (pps)
      */
     public int sensorIndex(Complex direction) {
         int idx = (int) floor((direction.toDeg() + 135) * numSensorDirections / 2 / 135);
@@ -273,7 +273,7 @@ public class DLActionFunction implements ActionFunction {
     }
 
     /**
-     * Returns the speed for the given movement action index
+     * Returns the power for the given movement action index
      *
      * @param moveIdx the movement action index
      */
@@ -282,9 +282,9 @@ public class DLActionFunction implements ActionFunction {
     }
 
     /**
-     * Returns the speed action index for the given speed
+     * Returns the power action index for the given power
      *
-     * @param speed the speed (PPS)
+     * @param speed the power (PPS)
      */
     public int speedIndex(int speed) {
         int idx = (speed + MAX_PPS) * numSpeeds / 2 / MAX_PPS;

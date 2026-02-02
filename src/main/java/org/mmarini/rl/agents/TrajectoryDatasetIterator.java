@@ -50,6 +50,7 @@ class TrajectoryDatasetIterator implements RLDatasetIterator, AutoCloseable {
     private int cursor;
     private RLTrainingData data;
     private MultiDataSetPreProcessor preProcessor;
+    private boolean stop;
 
     /**
      * Creates dataset iterator
@@ -77,6 +78,11 @@ class TrajectoryDatasetIterator implements RLDatasetIterator, AutoCloseable {
     }
 
     @Override
+    public boolean hasNext() {
+        return cursor < trajectory.size() && !stop;
+    }
+
+    @Override
     public void close() {
         if (data != null) {
             data.close();
@@ -95,8 +101,8 @@ class TrajectoryDatasetIterator implements RLDatasetIterator, AutoCloseable {
     }
 
     @Override
-    public boolean hasNext() {
-        return cursor < trajectory.size();
+    public void stop() {
+        stop = true;
     }
 
     @Override

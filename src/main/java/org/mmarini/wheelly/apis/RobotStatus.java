@@ -204,14 +204,14 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
     }
 
     /**
-     * Returns the left speed (pps)
+     * Returns the left power (pps)
      */
     public double leftPps() {
         return motionMessage.leftPps();
     }
 
     /**
-     * Returns the left target speed (pps)
+     * Returns the left target power (pps)
      */
     public int leftTargetPps() {
         return motionMessage.leftTargetPps();
@@ -431,10 +431,10 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
     }
 
     /**
-     * Returns the status with speed
+     * Returns the status with power
      *
-     * @param leftPps  the left speed
-     * @param rightPps the right speed
+     * @param leftPps  the left power
+     * @param rightPps the right power
      */
     public RobotStatus setSpeeds(double leftPps, double rightPps) {
         return setMotionMessage(
