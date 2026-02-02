@@ -88,7 +88,7 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
      */
     public static final float ROBOT_RADIUS = 180e-3f;
     /**
-     * Max whells speed (pps)
+     * Max whells power (pps)
      */
     public static final int MAX_PPS = 60;
     /**

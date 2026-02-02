@@ -39,7 +39,7 @@ import java.util.Optional;
  * @param move          true if movement command
  * @param halt          true if haltCommand command
  * @param moveDirection the move direction
- * @param speed         the speed (pps)
+ * @param speed         the power (pps)
  */
 public record RobotCommands(boolean scan, Complex scanDirection, boolean move, boolean halt, Complex moveDirection,
                             int speed) {
@@ -81,7 +81,7 @@ public record RobotCommands(boolean scan, Complex scanDirection, boolean move, b
      * Returns the only move command
      *
      * @param direction the move direction
-     * @param speed     the speed (pps)
+     * @param speed     the power (pps)
      */
     public static RobotCommands move(Complex direction, int speed) {
         return new RobotCommands(false, Complex.DEG0, true, false, direction, speed);
@@ -91,7 +91,7 @@ public record RobotCommands(boolean scan, Complex scanDirection, boolean move, b
      * Returns the move command and front scan
      *
      * @param direction the move direction
-     * @param speed     the speed (pps)
+     * @param speed     the power (pps)
      */
     public static RobotCommands moveAndFrontScan(Complex direction, int speed) {
         return new RobotCommands(true, Complex.DEG0, true, false, direction, speed);
@@ -101,7 +101,7 @@ public record RobotCommands(boolean scan, Complex scanDirection, boolean move, b
      * Returns the move command and scan
      *
      * @param direction     the move direction
-     * @param speed         the speed (pps)
+     * @param speed         the power (pps)
      * @param scanDirection the scan direction
      */
     public static RobotCommands moveAndScan(Complex direction, int speed, Complex scanDirection) {
@@ -149,7 +149,7 @@ public record RobotCommands(boolean scan, Complex scanDirection, boolean move, b
      * Returns the command with move command
      *
      * @param direction the move direction
-     * @param speed     the speed (pps)
+     * @param speed     the power (pps)
      */
     public RobotCommands setMove(Complex direction, int speed) {
         return new RobotCommands(scan, scanDirection, true, false, direction, speed);

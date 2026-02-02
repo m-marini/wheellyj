@@ -70,15 +70,15 @@ class SimRobotTest {
 
     /**
      * Returns the space traveled (m) in the given markerTime with uniformly accelerated motion
-     * till max speed
+     * till max power
      *
-     * @param maxSpeed the max speed
+     * @param maxSpeed the max power
      * @param dt       the markerTime
      */
     private static double expectedPulses(int maxSpeed, long dt) {
         // Computes space limited by markerTime in uniformly accelerated motion
         double sa = ACCELERATION * dt * dt / 2 / 1e6;
-        // Computes space limited by speed in uniformly accelerated motion
+        // Computes space limited by power in uniformly accelerated motion
         double sb = maxSpeed * maxSpeed / ACCELERATION / 2;
         double sl = maxSpeed * dt / 1e3 - sb;
         return sa <= sb ? sa
@@ -111,7 +111,7 @@ class SimRobotTest {
         robot.readMotion()
                 .subscribe(subscriber);
 
-        // When move to 0 DEG at max speed
+        // When move to 0 DEG at max power
         robot.connect();
         robot.move(0, speed);
         // And waiting for messages with time > 500
@@ -140,7 +140,7 @@ class SimRobotTest {
         robot.readMotion()
                 .subscribe(subscriber);
 
-        // When move to 5 DEG at 0 speed
+        // When move to 5 DEG at 0 power
         robot.connect();
         robot.move(dir, 0);
         pause(robot, MESSAGE_INTERVAL + 1);

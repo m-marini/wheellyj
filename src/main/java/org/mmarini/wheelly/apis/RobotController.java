@@ -52,6 +52,7 @@ import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
 import static org.mmarini.wheelly.apis.Utils.linear;
 import static org.mmarini.wheelly.apps.AppYaml.loadDoubleArray;
 import static org.mmarini.wheelly.apps.AppYaml.loadIntArray;
+import static org.mmarini.wheelly.rx.RXFunc.logError;
 
 /**
  * Robot controller
@@ -118,37 +119,32 @@ public class RobotController implements RobotControllerApi {
         this.controllerStatus.onNext(st);
         statusMessages.onNext(robotStatus);
         this.robot.readCamera()
-                .subscribe(this::onCamera);
+                .subscribeOn(Schedulers.computation())
+                .subscribe(this::onCamera,
+                        logError(logger, "Error reading camera messages"));
         this.robot.readLidar()
-                .subscribe(this::onLidarMessage);
+                .subscribeOn(Schedulers.computation())
+                .subscribe(this::onLidarMessage,
+                        logError(logger, "Error reading lidar messages"));
         this.robot.readMotion()
-                .subscribe(this::onMotionMessage);
+                .subscribeOn(Schedulers.computation())
+                .subscribe(this::onMotionMessage,
+                        logError(logger, "Error reading motion messages"));
         this.robot.readSupply()
-                .subscribe(this::onSupplyMessage);
+                .subscribeOn(Schedulers.computation())
+                .subscribe(this::onSupplyMessage,
+                        logError(logger, "Error reading supply messages"));
         this.robot.readContacts()
-                .subscribe(this::onContactsMessage);
+                .subscribeOn(Schedulers.computation())
+                .subscribe(this::onContactsMessage,
+                        logError(logger, "Error reading contacts messages"));
         this.robot.readRobotStatus()
+                .subscribeOn(Schedulers.computation())
                 .distinctUntilChanged(RobotStatusApi::configured)
-                .subscribe(this::onRobotConfigured);
+                .subscribe(this::onRobotConfigured,
+                        logError(logger, "Error reading robot configuration status")
+                );
         return this;
-    }
-
-    /**
-     * Handles camera events
-     *
-     * @param cameraEvent the camera event
-     */
-    private void onCamera(CameraEvent cameraEvent) {
-        RobotControllerStatus st = status.updateAndGet(s -> {
-            RobotStatus s1 = s.robotStatus()
-                    .setCameraMessage(new CorrelatedCameraEvent(cameraEvent, s.robotStatus().lidarMessage()))
-                    .setSimulationTime(robot.simulationTime());
-            return s.robotStatus(s1);
-        });
-        RobotStatus robotStatus = st.robotStatus();
-        statusMessages.onNext(robotStatus);
-        scheduleInference(robotStatus);
-        syncActions(robotStatus);
     }
 
     @Override
@@ -174,19 +170,21 @@ public class RobotController implements RobotControllerApi {
     }
 
     /**
-     * Handles lidar messages
+     * Handles camera events
      *
-     * @param message the message
+     * @param cameraEvent the camera event
      */
-    private void onLidarMessage(WheellyLidarMessage message) {
-        RobotStatus status = this.status.updateAndGet(st ->
-                        st.robotStatus(st.robotStatus()
-                                .setLidarMessage(message)
-                                .setSimulationTime(message.simulationTime())))
-                .robotStatus();
-        statusMessages.onNext(status);
-        scheduleInference(status);
-        syncActions(status);
+    private void onCamera(CameraEvent cameraEvent) {
+        RobotControllerStatus st = status.updateAndGet(s -> {
+            RobotStatus s1 = s.robotStatus()
+                    .setCameraMessage(new CorrelatedCameraEvent(cameraEvent, s.robotStatus().lidarMessage()))
+                    .setSimulationTime(robot.simulationTime());
+            return s.robotStatus(s1);
+        });
+        RobotStatus robotStatus = st.robotStatus();
+        statusMessages.onNext(robotStatus);
+        scheduleInference(robotStatus);
+        syncActions(robotStatus);
     }
 
     /**
@@ -225,6 +223,22 @@ public class RobotController implements RobotControllerApi {
     }
 
     /**
+     * Handles lidar messages
+     *
+     * @param message the message
+     */
+    private void onLidarMessage(WheellyLidarMessage message) {
+        RobotStatus status = this.status.updateAndGet(st ->
+                        st.robotStatus(st.robotStatus()
+                                .setLidarMessage(message)
+                                .setSimulationTime(message.simulationTime())))
+                .robotStatus();
+        statusMessages.onNext(status);
+        scheduleInference(status);
+        syncActions(status);
+    }
+
+    /**
      * Handles motion messages
      *
      * @param message the message
@@ -246,7 +260,7 @@ public class RobotController implements RobotControllerApi {
      * @param status the status
      */
     private void onRobotConfigured(RobotStatusApi status) {
-        logger.atDebug().log("Robot robotConfigured {}", status.configured());
+        logger.atDebug().log("Robot configured {}", status.configured());
         RobotControllerStatus st = this.status.updateAndGet(s -> s.ready(status.configured()));
         controllerStatus.onNext(st);
     }

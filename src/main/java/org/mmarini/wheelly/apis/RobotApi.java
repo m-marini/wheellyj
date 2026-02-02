@@ -74,10 +74,10 @@ public interface RobotApi extends Closeable, WithWheellyMessageFlowable, WithCam
     boolean isHalt();
 
     /**
-     * Moves robot to the given direction at the given speed returning true on success
+     * Moves robot to the given direction at the given power returning true on success
      *
      * @param dir   the direction (DEG)
-     * @param speed the speed (PPS)
+     * @param speed the power (PPS)
      */
     Single<Boolean> move(int dir, int speed);
 
@@ -104,7 +104,7 @@ public interface RobotApi extends Closeable, WithWheellyMessageFlowable, WithCam
     Single<Boolean> scan(int direction);
 
     /**
-     * Returns the simulation speed
+     * Returns the simulation power
      */
     double simulationSpeed();
 

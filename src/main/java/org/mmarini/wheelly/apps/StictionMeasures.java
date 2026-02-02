@@ -54,7 +54,9 @@ import static java.lang.String.format;
 
 
 /**
- * Run a test to check for robot environment with random behaviour agent
+ * Run a session of measure tests for stiction
+ * The specific Wheelly stiction measure sketch installation is required.
+ * The mqtt interface is yet not supported.
  */
 public class StictionMeasures {
     public static final int CONNECTION_TIMEOUT = 3000;

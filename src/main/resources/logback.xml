@@ -15,12 +15,11 @@
     <logger name="com.networknt.schema" level="INFO"/>
     <logger name="io.netty" level="INFO"/>
 
-    <logger name="org.mmarini.wheelly.sockets.LineSocket" level="INFO"/>
+    <logger name="org.mmarini.wheelly.mqtt.MqttRobot" level="DEBUG"/>
+
     <logger name="org.mmarini.wheelly.apis.SimRobot" level="INFO"/>
-
-    <logger name="org.mmarini.wheelly.apis.RobotController" level="INFO"/>
+    <logger name="org.mmarini.wheelly.apis.RobotController" level="DEBUG"/>
     <logger name="org.mmarini.wheelly.apis.RobotControllerStatus" level="INFO"/>
-
     <logger name="org.mmarini.wheelly.apis.RadarMap" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.engines.StateMachineAgent" level="INFO"/>
@@ -49,6 +48,8 @@
     <logger name="org.mmarini.rl.agents.BinArrayFile" level="INFO"/>
     <logger name="org.mmarini.rl.agents.CSVWriter" level="INFO"/>
     <logger name="org.mmarini.rl.agents.TDAgentSingleNN" level="INFO"/>
+
+    <logger name="org.mmarini.wheelly.batch.BinFilesDatasetIterator" level="INFO"/>
 
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>

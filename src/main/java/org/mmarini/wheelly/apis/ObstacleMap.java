@@ -55,7 +55,7 @@ public record ObstacleMap(List<ObstacleCell> cells, double gridSize) {
      *
      * @param hindered the hindered obstacle location indices
      * @param labeled  the labelled obstacle location indices
-     * @param gridSize the gridSize
+     * @param gridSize the robotMapSize
      */
     public static ObstacleMap create(Collection<Point> hindered, Collection<Point> labeled, double gridSize) {
         // Creates the unique indices

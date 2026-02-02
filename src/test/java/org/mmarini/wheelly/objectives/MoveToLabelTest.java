@@ -102,13 +102,13 @@ class MoveToLabelTest {
             // sensor out of range
             "0, 0, 329, 0, 0, 30",
 
-            // speed out of range
+            // power out of range
             "0, 0, 0, 0, 0, 0",
-            // speed out of range
+            // power out of range
             "0, 0, 0, 0, 0, 0",
-            // speed out of range
+            // power out of range
             "0, 0, 0, 0, 0, 60",
-            // speed out of range
+            // power out of range
             "0, 0, 0, 0, 0, 60",
 
     })
@@ -136,7 +136,7 @@ class MoveToLabelTest {
         // and obstacle directed to obstacleDeg
         WorldModel state = createState(Complex.fromDeg(robotDeg),
                 Complex.fromDeg(sensorDeg), Complex.fromDeg(obstacleDeg));
-        // And command move to actionDeg at speed actionSpeed
+        // And command move to actionDeg at power actionSpeed
         RobotCommands cmd = RobotCommands.moveAndScan(Complex.fromDeg(actionDeg), actionSpeed, Complex.DEG0);
         double result = f.applyAsDouble(null, cmd, state);
 

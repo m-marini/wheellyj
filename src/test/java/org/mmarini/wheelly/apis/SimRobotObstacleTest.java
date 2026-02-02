@@ -238,7 +238,7 @@ class SimRobotObstacleTest {
         assertEquals(0L, motion.simulationTime());
         assertThat(motion.robotLocation(), pointCloseTo(contactPoint, DISTANCE_EPSILON));
 
-        // And when move ahead at max speed
+        // And when move ahead at max power
         robot.move(robotDir.toIntDeg(), RobotSpec.MAX_PPS);
         robot.simulate();
         robot.close();
@@ -342,9 +342,9 @@ class SimRobotObstacleTest {
     /*
      * Robot location for collision (250,250) = obstacle size 200 mm / 2 + robot radius 150 mm
      */
-    @ParameterizedTest(name = "[{index}] Robot at ({0},{1}) head R{2} speed {3} pps")
+    @ParameterizedTest(name = "[{index}] Robot at ({0},{1}) head R{2} power {3} pps")
     @CsvSource({
-            // x,y, dir, sensorDir, speed, expMovement
+            // x,y, dir, sensorDir, power, expMovement
             "0,1000, 0, 422", // no collision, max movement = 416mm
             "0,1000, 270, 422",
     })
@@ -494,7 +494,7 @@ class SimRobotObstacleTest {
         assertEquals(0L, motion.simulationTime());
         assertThat(motion.robotLocation(), pointCloseTo(contactPoint, DISTANCE_EPSILON));
 
-        // And when move backward at max speed
+        // And when move backward at max power
         robot.move(locationDir.toIntDeg(), -RobotSpec.MAX_PPS);
         robot.simulate();
         robot.close();

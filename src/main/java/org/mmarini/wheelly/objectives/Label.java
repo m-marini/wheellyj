@@ -89,7 +89,7 @@ public interface Label {
             // Get the nearest labeled obstacle
             Point2D robotLocation = robotStatus.location();
             LabelMarker labelMarker = markers.get(label);
-            // check robot speed in range
+            // check robot power in range
             if (labelMarker != null
                     && abs(robotStatus.leftPps()) < velocityThreshold
                     && abs(robotStatus.rightPps()) < velocityThreshold) {

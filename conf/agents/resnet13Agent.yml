@@ -1,7 +1,7 @@
 ---
 $schema: https://mmarini.org/wheelly/dl-agent-builder-schema-0.1
 class: org.mmarini.rl.agents.DLAgentBuilder
-numEpochs: 1
+numEpochs: 10
 trajectorySize: 256
 batchSize: 32
 alpha: 1e-6
@@ -12,7 +12,7 @@ network:
   activation: Identity
   updater:
     type: RmsProp
-    learningRate: 0.001
+    learningRate: 1e-6
     decayRms: 0.96
     epsilon: 1e-3
   optimizationAlog: StochasticGradientDescent

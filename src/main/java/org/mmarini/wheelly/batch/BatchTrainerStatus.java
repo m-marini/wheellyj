@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.batch;
 
+import org.mmarini.rl.agents.RLDatasetIterator;
 import org.mmarini.wheelly.apis.BatchAgent;
 
 import java.util.Objects;
@@ -35,18 +36,21 @@ import java.util.Objects;
 import static java.util.Objects.requireNonNull;
 
 /**
- * @param agent the agent
- * @param stop  true if stop requested
+ * @param agent           the agent
+ * @param datasetIterator dataset iterator
+ * @param stop
  */
-public record BatchTrainerStatus(BatchAgent agent, boolean stop) {
+public record BatchTrainerStatus(BatchAgent agent, RLDatasetIterator datasetIterator, boolean stop) {
     /**
      * Creates the batch trainer status
      *
-     * @param agent the agent
-     * @param stop  true if stop requested
+     * @param agent           the agent
+     * @param datasetIterator dataset iterator
+     * @param stop            true if stop requested
      */
-    public BatchTrainerStatus(BatchAgent agent, boolean stop) {
+    public BatchTrainerStatus(BatchAgent agent, RLDatasetIterator datasetIterator, boolean stop) {
         this.agent = requireNonNull(agent);
+        this.datasetIterator = datasetIterator;
         this.stop = stop;
     }
 
@@ -57,7 +61,18 @@ public record BatchTrainerStatus(BatchAgent agent, boolean stop) {
      */
     BatchTrainerStatus agent(BatchAgent agent) {
         return !Objects.equals(agent, this.agent)
-                ? new BatchTrainerStatus(agent, stop)
+                ? new BatchTrainerStatus(agent, datasetIterator, stop)
+                : this;
+    }
+
+    /**
+     * Sets the dataset iterator
+     *
+     * @param datasetIterator the dataset iterator
+     */
+    public BatchTrainerStatus datasetIterator(RLDatasetIterator datasetIterator) {
+        return !Objects.equals(datasetIterator, this.datasetIterator)
+                ? new BatchTrainerStatus(agent, datasetIterator, stop)
                 : this;
     }
 
@@ -66,9 +81,9 @@ public record BatchTrainerStatus(BatchAgent agent, boolean stop) {
      *
      * @param stop true if stop request
      */
-    BatchTrainerStatus stop(boolean stop) {
-        return stop != stop
-                ? new BatchTrainerStatus(agent, stop)
+    public BatchTrainerStatus stop(boolean stop) {
+        return stop != this.stop
+                ? new BatchTrainerStatus(agent, datasetIterator, stop)
                 : this;
     }
 }

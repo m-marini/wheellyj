@@ -46,9 +46,9 @@ import static org.mmarini.wheelly.apis.SimRobot.SAFE_DISTANCE;
  * @param frontSensor         true if front sensor without contact
  * @param rearSensor          true if rear sensor without contect
  * @param direction           the robot direction
- * @param speed               the speed (pps)
- * @param leftPps             the left speed (pps)
- * @param rightPps            the right speed (pps)
+ * @param speed               the power (pps)
+ * @param leftPps             the left power (pps)
+ * @param rightPps            the right power (pps)
  * @param obstacleMap         the obstacle map
  * @param motionTimeout       the motion message timeout (ms)
  * @param lidarTimeout        the lidar message timeout (ms)
@@ -188,9 +188,9 @@ public record SimRobotStatus(
     }
 
     /**
-     * Returns status with the changed left speed
+     * Returns status with the changed left power
      *
-     * @param leftSpeed the left speed (pps)
+     * @param leftSpeed the left power (pps)
      */
     public SimRobotStatus leftPps(double leftSpeed) {
         return this.leftPps == leftSpeed
@@ -266,9 +266,9 @@ public record SimRobotStatus(
     }
 
     /**
-     * Returns status with the changed right speed
+     * Returns status with the changed right power
      *
-     * @param rightSpeed the right speed (pps)
+     * @param rightSpeed the right power (pps)
      */
     public SimRobotStatus rightPps(double rightSpeed) {
         return this.rightPps == rightSpeed
@@ -305,9 +305,9 @@ public record SimRobotStatus(
     }
 
     /**
-     * Returns status with the changed speed
+     * Returns status with the changed power
      *
-     * @param speed the speed
+     * @param speed the power
      */
     public SimRobotStatus speed(int speed) {
         return this.speed == speed

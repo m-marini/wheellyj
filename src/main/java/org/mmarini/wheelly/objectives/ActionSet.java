@@ -54,7 +54,7 @@ public interface ActionSet {
      */
     static RewardFunction create(JsonNode root, Locator locator) {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-        int speed = locator.path("speed").getNode(root).asInt(NO_VALUE);
+        int speed = locator.path("power").getNode(root).asInt(NO_VALUE);
         int dirDeg = locator.path("direction").getNode(root).asInt(NO_VALUE);
         int sensorDeg = locator.path("sensor").getNode(root).asInt(NO_VALUE);
         double reward = locator.path("reward").getNode(root).asDouble(DEFAULT_REWARD);
@@ -65,7 +65,7 @@ public interface ActionSet {
      * Returns the function that rewards the action set behavior
      *
      * @param directionDeg the expected direction (DEG)
-     * @param speed        the expected speed (PPS)
+     * @param speed        the expected power (PPS)
      * @param sensorDeg    the expected sensor direction (DEG)
      * @param reward       the reward when matched gaol
      */

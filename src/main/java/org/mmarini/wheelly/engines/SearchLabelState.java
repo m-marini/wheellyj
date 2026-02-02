@@ -109,7 +109,7 @@ public class SearchLabelState extends AbstractSearchAndMoveState {
      * @param minGoals           the minimum number of goals
      * @param maxSearchTime      the maximum search time (ms)
      * @param approachDistance   the approach distance (m)
-     * @param speed              the speed (pps)
+     * @param speed              the power (pps)
      * @param pathFinderSupplier the pathfinder supplier
      */
     protected SearchLabelState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit,

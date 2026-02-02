@@ -106,7 +106,7 @@ public class SearchRefreshState extends AbstractSearchAndMoveState {
      * @param onExit             the exit command or null if none
      * @param timeout            the timeout (ms)
      * @param approachDistance   the approach distance (m)
-     * @param speed              the maximum speed (pps)
+     * @param speed              the maximum power (pps)
      * @param maxIterations      the maximum number of iterations
      * @param minGoals           the minimum number of goals
      * @param maxSearchTime      the maximum search time (ms)

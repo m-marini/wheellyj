@@ -7,4 +7,4 @@ environment: conf/environments/env.yml
 rewardFunction: conf/objectives/findLabel1.yml
 agent: conf/agents/resnet13Agent.yml
 seed: 1234
-numEpochs: 4
+numEpochs: 1

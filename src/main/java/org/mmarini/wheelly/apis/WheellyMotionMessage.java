@@ -47,8 +47,8 @@ import static org.mmarini.wheelly.apis.RobotSpec.pulses2Location;
  * @param yPulses        the y robot location pulses
  * @param directionDeg   the robot direction DEG
  * @param direction      the robot direction
- * @param leftPps        the left motor speed (pulse per seconds)
- * @param rightPps       the right motor speed (pulse per seconds)
+ * @param leftPps        the left motor power (pulse per seconds)
+ * @param rightPps       the right motor power (pulse per seconds)
  * @param imuFailure     true if imu failure
  * @param halt           true if in haltCommand
  * @param leftTargetPps  the left target pps
@@ -64,7 +64,7 @@ public record WheellyMotionMessage(long simulationTime, double xPulses, double y
         implements WheellyMessage {
     public static final int NO_STATUS_PARAMS = 15;
     // [sampleTime] [xLocation] [yLocation] [yaw] [leftPps] [rightPps] [imuFailure] [haltCommand] [move directionDeg]
-    // [move speed] [left target pps] [right target pps] [left power] [right power]
+    // [move power] [left target pps] [right target pps] [left power] [right power]
     public static final Pattern ARG_PATTERN = Pattern.compile("^\\d+,(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+),([01]),(-?\\d+),(-?\\d+),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+),(-?\\d+)$");
     public static final WheellyMotionMessage DEFAULT_MESSAGE = new WheellyMotionMessage(0, 0, 0,
             0, 0, 0, 0, true, 0, 0, 0, 0);
@@ -83,7 +83,7 @@ public record WheellyMotionMessage(long simulationTime, double xPulses, double y
      *     [imuFailure]
      *     [haltCommand]
      *     [move directionDeg]
-     *     [move speed]
+     *     [move power]
      *     [left target pps]
      *     [right target pps]
      *     [left power]
@@ -170,7 +170,7 @@ public record WheellyMotionMessage(long simulationTime, double xPulses, double y
      *     [imuFailure]
      *     [haltCommand]
      *     [move directionDeg]
-     *     [move speed]
+     *     [move power]
      *     [left target pps]
      *     [right target pps]
      *     [left power]
@@ -213,8 +213,8 @@ public record WheellyMotionMessage(long simulationTime, double xPulses, double y
      * @param xPulses        the x robot location pulses
      * @param yPulses        the y robot location pulses
      * @param directionDeg   the robot direction DEG
-     * @param leftPps        the left motor speed (pulse per seconds)
-     * @param rightPps       the right motor speed (pulse per seconds)
+     * @param leftPps        the left motor power (pulse per seconds)
+     * @param rightPps       the right motor power (pulse per seconds)
      * @param imuFailure     true if imu failure
      * @param halt           true if in haltCommand
      * @param leftTargetPps  the left target pps
@@ -237,8 +237,8 @@ public record WheellyMotionMessage(long simulationTime, double xPulses, double y
      * @param yPulses        the y robot location pulses
      * @param directionDeg   the robot direction DEG
      * @param direction      the robot direction
-     * @param leftPps        the left motor speed (pulse per seconds)
-     * @param rightPps       the right motor speed (pulse per seconds)
+     * @param leftPps        the left motor power (pulse per seconds)
+     * @param rightPps       the right motor power (pulse per seconds)
      * @param imuFailure     true if imu failure
      * @param halt           true if in haltCommand
      * @param leftTargetPps  the left target pps
@@ -318,10 +318,10 @@ public record WheellyMotionMessage(long simulationTime, double xPulses, double y
     }
 
     /**
-     * Returns the status with motor speed set
+     * Returns the status with motor power set
      *
-     * @param leftPps  the left motor speed (pps)
-     * @param rightPps the left motor speed (pps)
+     * @param leftPps  the left motor power (pps)
+     * @param rightPps the left motor power (pps)
      */
     public WheellyMotionMessage setSpeeds(double leftPps, double rightPps) {
         return leftPps != this.leftPps || rightPps != this.rightPps

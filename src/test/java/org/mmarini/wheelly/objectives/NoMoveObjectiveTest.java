@@ -55,7 +55,7 @@ class NoMoveObjectiveTest {
         return model;
     }
 
-    @ParameterizedTest(name = "[index] head {1} DEG, speed({2},{3})")
+    @ParameterizedTest(name = "[index] head {1} DEG, power({2},{3})")
     @CsvSource({
             "1,0,0,0",
             "0,1,0,0",

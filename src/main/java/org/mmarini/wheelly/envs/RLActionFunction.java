@@ -199,7 +199,7 @@ public class RLActionFunction implements ActionFunction {
     }
 
     /**
-     * Returns the speed (pps) from the action signals
+     * Returns the power (pps) from the action signals
      *
      * @param actions the action signals
      */

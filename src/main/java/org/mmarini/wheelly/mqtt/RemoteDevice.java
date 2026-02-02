@@ -67,6 +67,13 @@ public class RemoteDevice {
     }
 
     /**
+     * Returns the mqtt client
+     */
+    public RxMqttClient client() {
+        return client;
+    }
+
+    /**
      * Returns the completion of close
      */
     public Completable closed() {

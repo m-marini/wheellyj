@@ -44,7 +44,8 @@ import java.util.Objects;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Models the world by interpreting the event flow
+ * Models the world by interpreting the event flow,
+ * creating the radar map, the polar map and the robot relative radar map.
  */
 public class WorldModeller implements WorldModellerApi {
 
@@ -71,7 +72,7 @@ public class WorldModeller implements WorldModellerApi {
         RadarModeller radarModeller = PointRadarModeller.create(root, locator);
         PolarMapModeller polarModeller = PolarMapModeller.create(root, locator);
         MarkerLocator markerModeller = MarkerLocator.create(root, locator);
-        int gridSize = locator.path("gridMapSize").getNode(root).asInt();
+        int gridSize = locator.path("robotMapSize").getNode(root).asInt();
         return new WorldModeller(radarModeller, polarModeller, markerModeller, gridSize);
     }
 
@@ -100,12 +101,12 @@ public class WorldModeller implements WorldModellerApi {
      * @param radarModeller the radar modeller
      * @param polarModeller the polar map modeller
      * @param markerLocator the marker locator
-     * @param gridSize      the grid map size
+     * @param robotMapSize  the robot relative map size
      */
-    public WorldModeller(RadarModeller radarModeller, PolarMapModeller polarModeller, MarkerLocator markerLocator, int gridSize) {
+    public WorldModeller(RadarModeller radarModeller, PolarMapModeller polarModeller, MarkerLocator markerLocator, int robotMapSize) {
         this.radarModeller = requireNonNull(radarModeller);
         this.polarModeller = requireNonNull(polarModeller);
-        this.worldSpec = new WorldModelSpec(null, polarModeller.numSectors(), gridSize);
+        this.worldSpec = new WorldModelSpec(null, polarModeller.numSectors(), robotMapSize);
         this.markerLocator = requireNonNull(markerLocator);
         this.inferenceProcessor = PublishProcessor.create();
     }
@@ -118,6 +119,12 @@ public class WorldModeller implements WorldModellerApi {
             currentModel = model;
         }
         return model;
+    }
+
+    @Override
+    public WorldModellerConnector connect(InferenceConnector inference) {
+        this.inference = inference;
+        return this;
     }
 
     @Override
@@ -142,10 +149,18 @@ public class WorldModeller implements WorldModellerApi {
         }
     }
 
-    @Override
-    public WorldModellerConnector connect(InferenceConnector inference) {
-        this.inference = inference;
-        return this;
+    /**
+     * Handles the robot status inference
+     *
+     * @param robotStatus the robot status
+     */
+    public void onInference(RobotStatus robotStatus) {
+        WorldModel model = this.updateForInference(this.currentModel);
+        if (inference != null) {
+            RobotCommands commands = inference.onInference(model);
+            controller.execute(commands);
+            inferenceProcessor.onNext(Tuple2.of(model, commands));
+        }
     }
 
     /**
@@ -175,20 +190,6 @@ public class WorldModeller implements WorldModellerApi {
     }
 
     /**
-     * Handles the robot status inference
-     *
-     * @param robotStatus the robot status
-     */
-    public void onInference(RobotStatus robotStatus) {
-        WorldModel model = this.updateForInference(this.currentModel);
-        if (inference != null) {
-            RobotCommands commands = inference.onInference(model);
-            controller.execute(commands);
-            inferenceProcessor.onNext(Tuple2.of(model, commands));
-        }
-    }
-
-    /**
      * Sets the robot specification
      *
      * @param robotSpec the robot specification
@@ -209,7 +210,7 @@ public class WorldModeller implements WorldModellerApi {
         PolarMap polarMap = worldSpec.numSectors() > 0
                 ? polarModeller.create(model.radarMap(), robotStatus.location(), robotStatus.direction(), robotStatus.robotSpec().maxRadarDistance())
                 : null;
-        GridMap gridMap = GridMap.create(model.radarMap(), robotStatus.location(), robotStatus.direction(), worldSpec.gridSize());
+        GridMap gridMap = GridMap.create(model.radarMap(), robotStatus.location(), robotStatus.direction(), worldSpec.robotMapSize());
         return model.setPolarMap(polarMap).setGridMap(gridMap);
     }
 

@@ -1,7 +1,7 @@
 ---
 $schema: https://mmarini.org/wheelly/wheelly-schema-3.0
 robot: conf/robots/simRobot1Obstacles.yml
-#robot: conf/robots/realRobot.yml
+#robot: conf/robots/mqttRobot.yml
 controller: conf/controllers/controller.yml
 modeller: conf/modellers/modeller.yml
 environment: conf/environments/env.yml

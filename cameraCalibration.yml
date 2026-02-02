@@ -1,4 +1,4 @@
 ---
 $schema: https://mmarini.org/wheelly/camera-calibration-schema-0.1
-robot: conf/robots/realRobot.yml
+robot: conf/robots/mqttRobot.yml
 controller: conf/controllers/controller.yml

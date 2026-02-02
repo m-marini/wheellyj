@@ -55,7 +55,7 @@ public class NNActivityPanel extends JPanel {
             "sectorStateFeatures", 24,
             "direction", 1,
             "sensorAction", 1,
-            "speed", 1
+            "power", 1
     );
     private Map<String, ActivityMap> layerMaps;
 

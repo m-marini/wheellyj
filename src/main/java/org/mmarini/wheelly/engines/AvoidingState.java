@@ -52,7 +52,7 @@ import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
 public class AvoidingState extends TimeOutState {
 
     public static final String SAFE_DISTANCE_ID = "safeDistance";
-    public static final String SPEED_ID = "speed";
+    public static final String SPEED_ID = "power";
     public static final double SAFE_DISTANCE_GAP = 0.2;
     public static final String MAX_DISTANCE_ID = "MAX_DISTANCE";
     public static final double DEFAULT_SAFE_DISTANCE = 0.3;
@@ -98,7 +98,7 @@ public class AvoidingState extends TimeOutState {
      * @param timeout      the timeout (ms)
      * @param safeDistance the safety distance (m)
      * @param maxDistance  the maximum distance (m)
-     * @param speed        the speed (pps)
+     * @param speed        the power (pps)
      */
     protected AvoidingState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit, long timeout, double safeDistance, double maxDistance, int speed) {
         super(id, onInit, onEntry, onExit, timeout);
@@ -122,7 +122,7 @@ public class AvoidingState extends TimeOutState {
             logger.atDebug().log("Avoid front contact at {}", robotLocation);
             if (status.canMoveBackward()) {
                 // Robot can move backward
-                // Sets the escape direction to the robot direction and backward speed
+                // Sets the escape direction to the robot direction and backward power
                 // moves the robot backward scanning for the front contacts
                 contactDirection = direction;
                 frontContact = true;
@@ -209,7 +209,7 @@ public class AvoidingState extends TimeOutState {
         if (safePoint == null) {
             // no safe point found: move away
             escapeDir = contactDirection;
-            // Compute speed
+            // Compute power
             escapeSpeed = frontContact
                     ? -speed : speed;
             logger.atDebug().log("Avoiding without safe point to {} DEG at {} pps", escapeDir, escapeSpeed);

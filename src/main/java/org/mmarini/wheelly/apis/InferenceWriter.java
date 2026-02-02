@@ -242,7 +242,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
     default <T extends InferenceWriter> T write(WorldModelSpec spec) throws IOException {
         return write(spec.robotSpec())
                 .write(spec.numSectors())
-                .write(spec.gridSize());
+                .write(spec.robotMapSize());
     }
 
     /**

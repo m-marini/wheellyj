@@ -14,7 +14,7 @@ docs/sonar-map.dxf~
 /data/**/*.bin
 /batch/*
 /*.txt
-/tmp/**/*
+/tmp1/**/*
 /reports/**/*
 /report/**/*
 /test/**/*
@@ -22,3 +22,5 @@ docs/sonar-map.dxf~
 /kpis/*
 /model/**/*
 /**/.lck
+/paho*/*
+/*.csv

@@ -39,4 +39,6 @@ public interface RLDatasetIterator extends MultiDataSetIterator {
      * Returns the mini batch final average reward
      */
     float avgReward();
+
+    void stop();
 }

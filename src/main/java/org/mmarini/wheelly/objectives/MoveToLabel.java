@@ -97,10 +97,10 @@ public interface MoveToLabel {
      * @param reward         the reward
      * @param directionRange the direction range
      * @param sensorRange    the sensor range
-     * @param minSpeed       the minimum speed (pps)
-     * @param maxSpeed       the maximum speed (pps)
+     * @param minSpeed       the minimum power (pps)
+     * @param maxSpeed       the maximum power (pps)
      * @param action2Dir     convert action to direction function
-     * @param action2Speed   convert action to speed
+     * @param action2Speed   convert action to power
      */
     static RewardFunction moveToLabel(double reward, Complex directionRange, Complex sensorRange,
                                       int minSpeed, int maxSpeed,

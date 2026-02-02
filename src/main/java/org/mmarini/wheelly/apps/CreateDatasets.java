@@ -63,7 +63,7 @@ import static org.mmarini.wheelly.swing.Utils.createFrame;
 import static org.mmarini.yaml.Utils.fromFile;
 
 /**
- * Run the batch training of agent from kpis files
+ * Creates training datasets from an inference file
  */
 public class CreateDatasets {
     public static final int PROGRESS_INTERVAL = 1000;

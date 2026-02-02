@@ -32,14 +32,19 @@ import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.wheelly.apis.RobotStatus;
 
 import javax.swing.*;
+import java.awt.*;
 import java.text.DecimalFormat;
 import java.util.List;
+
+import static org.mmarini.swing.SwingUtils.createButton;
+import static org.mmarini.swing.SwingUtils.createCheckBox;
 
 public class SensorsPanel extends JPanel {
     private final JFormattedTextField direction;
     private final JFormattedTextField sensorDirection;
     private final JFormattedTextField echoTime;
-    private final JFormattedTextField distance;
+    private final JFormattedTextField frontDistance;
+    private final JFormattedTextField rearDistance;
     private final JFormattedTextField robotX;
     private final JFormattedTextField robotY;
     private final JFormattedTextField xPulses;
@@ -54,8 +59,11 @@ public class SensorsPanel extends JPanel {
     private final JCheckBox halt;
     private final JCheckBox frontSensors;
     private final JCheckBox rearSensors;
-    private final JTextField info;
-    private final JButton checkUpButton;
+    private final JLabel info;
+    private final JButton scanButton;
+    private final JButton rotateButton;
+    private final JButton moveButton;
+    private final JCheckBox verboseButton;
 
     /**
      * Creates the sensor panel.
@@ -63,18 +71,20 @@ public class SensorsPanel extends JPanel {
      */
     public SensorsPanel() {
         DecimalFormat cmFormat = new DecimalFormat("#0.00");
+        DecimalFormat mmFormat = new DecimalFormat("#0.000");
         DecimalFormat degFormat = new DecimalFormat("##0");
         DecimalFormat microsFormat = new DecimalFormat("##,##0");
         DecimalFormat pulsesFormat = new DecimalFormat("#,##0.0");
         DecimalFormat voltageFormat = new DecimalFormat("#0.0");
         DecimalFormat intFormat = new DecimalFormat("#0");
-        this.robotX = new JFormattedTextField(cmFormat);
-        this.robotY = new JFormattedTextField(cmFormat);
+        this.robotX = new JFormattedTextField(mmFormat);
+        this.robotY = new JFormattedTextField(mmFormat);
         this.direction = new JFormattedTextField(degFormat);
         this.echoTime = new JFormattedTextField(microsFormat);
         this.xPulses = new JFormattedTextField(pulsesFormat);
         this.yPulses = new JFormattedTextField(pulsesFormat);
-        this.distance = new JFormattedTextField(cmFormat);
+        this.frontDistance = new JFormattedTextField(mmFormat);
+        this.rearDistance = new JFormattedTextField(mmFormat);
         this.sensorDirection = new JFormattedTextField(degFormat);
         this.leftSpeed = new JFormattedTextField(cmFormat);
         this.rightSpeed = new JFormattedTextField(cmFormat);
@@ -86,8 +96,11 @@ public class SensorsPanel extends JPanel {
         this.canMoveForward = new JCheckBox();
         this.canMoveBackward = new JCheckBox();
         this.halt = new JCheckBox();
-        this.info = new JTextField(50);
-        this.checkUpButton = new JButton("Check up");
+        this.info = new JLabel("Info bar");
+        this.scanButton = createButton("SensorsPanel.scanButton");
+        this.rotateButton = createButton("SensorsPanel.rotateButton");
+        this.moveButton = createButton("SensorsPanel.moveButton");
+        this.verboseButton = createCheckBox("SensorsPanel.verboseButton");
         createContent();
         init();
     }
@@ -96,15 +109,14 @@ public class SensorsPanel extends JPanel {
      * Creates the content
      */
     private void createContent() {
-
         JPanel robotPane = new GridLayoutHelper<>(new JPanel())
-                .modify("insets,2 at,0,0 noweight nospan nofill e").add("Robot X (m)")
-                .modify("at,0,1").add("Robot Y (m)")
-                .modify("at,0,2").add("Direction (DEG)")
-                .modify("at,0,3").add("Power supply (V)")
-                .modify("at,0,4").add("Halt")
-                .modify("at,0,5").add("IMU failure code")
-                .modify("at,0,6 weight,0,1").add("")
+                .modify("insets,2 at,0,0 noweight nospan nofill e").add("SensorsPanel.robotX")
+                .modify("at,0,1").add("SensorsPanel.robotY")
+                .modify("at,0,2").add("SensorsPanel.robotDeg")
+                .modify("at,0,3").add("SensorsPanel.powerSupply")
+                .modify("at,0,4").add("SensorsPanel.halt")
+                .modify("at,0,5").add("SensorsPanel.imuFailure")
+                .modify("at,0,6 weight,0,1").add("SensorsPanel.filler")
                 .modify("at,1,0 noweight w").add(robotX)
                 .modify("at,1,1").add(robotY)
                 .modify("at,1,2").add(direction)
@@ -118,30 +130,30 @@ public class SensorsPanel extends JPanel {
         robotPane.setBorder(BorderFactory.createTitledBorder("Robot"));
 
         JPanel speedPane = new GridLayoutHelper<>(new JPanel())
-                .modify("insets,2 at,0,0 weight,1,0 nospan nofill center").add("Left")
-                .modify("at,1,0").add("Right")
+                .modify("insets,2 at,0,0 weight,1,0 nospan nofill center").add("SensorsPanel.left")
+                .modify("at,1,0").add("SensorsPanel.right")
                 .modify("at,0,1").add(leftSpeed)
                 .modify("at,1,1").add(rightSpeed)
                 .getContainer();
         speedPane.setBorder(BorderFactory.createTitledBorder("Speed (pps)"));
 
         JPanel sensorPanel = new GridLayoutHelper<>(new JPanel())
-                .modify("insets,2 at,0,0 noweight nospan nofill e").add("Sensor (DEG)")
-                .modify("at,0,1").add("Distance (m)")
-                .modify("at,2,1").add("(us)")
-                .modify("at,0,2 weight,0,1").add("")
+                .modify("insets,2 at,0,0 noweight nospan nofill e").add("SensorsPanel.sensorDeg")
+                .modify("at,0,1").add("SensorsPanel.frontDistance")
+                .modify("at,0,2").add("SensorsPanel.rearDistance")
+                .modify("at,0,3 weight,0,1").add("SensorsPanel.filler")
                 .modify("at,1,0 w noweight").add(sensorDirection)
-                .modify("at,1,1").add(distance)
-                .modify("at,3,1 weight,1,0 w").add(echoTime)
+                .modify("at,1,1").add(frontDistance)
+                .modify("at,1,2").add(rearDistance)
                 .getContainer();
-        sensorPanel.setBorder(BorderFactory.createTitledBorder("Distance sensor"));
+        sensorPanel.setBorder(BorderFactory.createTitledBorder("Lidar sensor"));
 
         JPanel proxyPanel = new GridLayoutHelper<>(new JPanel())
-                .modify("insets,2 at,0,0 noweight nospan nofill e").add("Can move forward")
-                .modify("at,0,1").add("Can move backward")
-                .modify("at,0,2").add("FrontSensors")
-                .modify("at,0,3").add("RearSensors")
-                .modify("at,0,4 weight,0,1").add("")
+                .modify("insets,2 at,0,0 noweight nospan nofill e").add("SensorsPanel.canMoveForward")
+                .modify("at,0,1").add("SensorsPanel.canMoveBackward")
+                .modify("at,0,2").add("SensorsPanel.frontSensors")
+                .modify("at,0,3").add("SensorsPanel.rearSensors")
+                .modify("at,0,4 weight,0,1").add("SensorsPanel.filler")
                 .modify("at,1,0 w weight,1,0").add(canMoveForward)
                 .modify("at,1,1").add(canMoveBackward)
                 .modify("at,1,2").add(frontSensors)
@@ -149,17 +161,37 @@ public class SensorsPanel extends JPanel {
                 .getContainer();
         proxyPanel.setBorder(BorderFactory.createTitledBorder("Proximity sensors"));
 
-        new GridLayoutHelper<>(this)
-                .modify("insets,4 at,0,0 hfill span,2,1").add(info)
-                .modify("at,0,1 nospan fill weight,1,0").add(robotPane)
-                .modify("at,0,2").add(speedPane)
-                .modify("at,1,1").add(sensorPanel)
-                .modify("at,1,2").add(proxyPanel)
-                .modify("at,0,4 span,2,1 center noweight nofill").add(checkUpButton);
+        JPanel buttonsPanel = new GridLayoutHelper<>(new JPanel())
+                .modify("insets,2 noweight nospan nofill center")
+                .modify("at,0,0").add(scanButton)
+                .modify("at,1,0").add(rotateButton)
+                .modify("at,2,0").add(moveButton)
+                .getContainer();
+
+        JPanel content = new GridLayoutHelper<>(new JPanel())
+                .modify("insets,4")
+                .modify("at,0,0 nospan fill weight,1,0").add(robotPane)
+                .modify("at,0,1").add(speedPane)
+                .modify("at,1,0").add(sensorPanel)
+                .modify("at,1,1").add(proxyPanel)
+                .modify("at,0,2 span,2,1 center noweight nofill").add(verboseButton)
+                .modify("at,0,3 span,2,1 center noweight nofill").add(buttonsPanel)
+                .getContainer();
+
+        setLayout(new BorderLayout());
+        add(content, BorderLayout.CENTER);
+        add(info, BorderLayout.SOUTH);
     }
 
-    public JButton getCheckUpButton() {
-        return checkUpButton;
+    /**
+     * Enables or disable the buttons
+     *
+     * @param enabled true if enabled
+     */
+    public void enableButtons(boolean enabled) {
+        scanButton.setEnabled(enabled);
+        moveButton.setEnabled(enabled);
+        rotateButton.setEnabled(enabled);
     }
 
     /**
@@ -167,7 +199,8 @@ public class SensorsPanel extends JPanel {
      * Sets the attributes of UI components
      */
     private void init() {
-        for (JTextField x : List.of(robotX, robotY, direction, sensorDirection, distance, leftSpeed, rightSpeed,
+        for (JTextField x : List.of(robotX, robotY, direction, sensorDirection, frontDistance, rearDistance,
+                leftSpeed, rightSpeed,
                 voltage, imuFailure, supplySensor)) {
             x.setColumns(5);
             x.setHorizontalAlignment(JTextField.RIGHT);
@@ -180,14 +213,35 @@ public class SensorsPanel extends JPanel {
         yPulses.setColumns(8);
         yPulses.setHorizontalAlignment(JTextField.RIGHT);
 
-        for (JTextField x : List.of(robotX, robotY, direction, sensorDirection, distance,
-                leftSpeed, rightSpeed, voltage, imuFailure, info, echoTime,
+        for (JTextField x : List.of(robotX, robotY, direction, sensorDirection, frontDistance, rearDistance,
+                leftSpeed, rightSpeed, voltage, imuFailure, echoTime,
                 supplySensor, xPulses, yPulses)) {
             x.setEditable(false);
         }
         for (JCheckBox x : List.of(canMoveBackward, canMoveForward, halt, frontSensors, rearSensors)) {
             x.setEnabled(false);
         }
+    }
+
+    /**
+     * Returns the movement button
+     */
+    public JButton moveButton() {
+        return moveButton;
+    }
+
+    /**
+     * Returns the rotation button
+     */
+    public JButton rotateButton() {
+        return rotateButton;
+    }
+
+    /**
+     * Returns the scan button
+     */
+    public JButton scanButton() {
+        return scanButton;
     }
 
     /**
@@ -207,9 +261,10 @@ public class SensorsPanel extends JPanel {
         robotY.setValue(status.location().getY());
         xPulses.setValue(status.xPulse());
         yPulses.setValue(status.yPulse());
-        direction.setValue(status.direction());
-        sensorDirection.setValue(status.headDirection());
-        distance.setValue(status.frontDistance());
+        direction.setValue(status.direction().toIntDeg());
+        sensorDirection.setValue(status.headDirection().toIntDeg());
+        frontDistance.setValue(status.frontDistance());
+        rearDistance.setValue(status.rearDistance());
         leftSpeed.setValue(status.leftPps());
         rightSpeed.setValue(status.rightPps());
         voltage.setValue(status.supplyVoltage());
@@ -220,5 +275,21 @@ public class SensorsPanel extends JPanel {
         canMoveBackward.setSelected(status.canMoveBackward());
         canMoveForward.setSelected(status.canMoveForward());
         halt.setSelected(status.halt());
+    }
+
+    /**
+     * Returns true if verbose report is required
+     */
+    public boolean verbose() {
+        return verboseButton.isSelected();
+    }
+
+    /**
+     * Sets the verbose report
+     *
+     * @param verbose true if the verbose report is required
+     */
+    public void verbose(boolean verbose) {
+        verboseButton.setSelected(verbose);
     }
 }
