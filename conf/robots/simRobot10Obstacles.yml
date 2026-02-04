@@ -1,11 +1,14 @@
 ---
-$schema: https://mmarini.org/wheelly/sim-robot-schema-3.0
+$schema: https://mmarini.org/wheelly/sim-robot-schema-3.1
 class: org.mmarini.wheelly.apis.SimRobot
 # robotSeed: 1234
 mapSeed: 1234
-numObstacles: 10
+mapFiles:
+  - conf/maps/room10x10.yml
+mapPeriod: 600000
+randomPeriod: 600000
 numLabels: 1
-changeObstaclesPeriod: 600000
+numObstacles: 10
 errSigma: 0.05
 errSensor: 0.05
 sensorReceptiveAngle: 15

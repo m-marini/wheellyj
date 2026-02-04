@@ -1,0 +1,80 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/map-schema-0.1
+title: Obstacle Map
+type: object
+properties:
+  $schema:
+    const: https://mmarini.org/wheelly/map-schema-0.1
+  class:
+    const: org.mmarini.wheelly.apis.MapBuilder
+  shapes:
+    type: array
+    items:
+      $ref: "#/$defs/Shape"
+required:
+  - $schema
+  - class
+  - shapes
+$defs:
+  Obstacle:
+    anyOf:
+      - $ref: "#/$defs/Obstacles/Singles"
+      - $ref: "#/$defs/Obstacles/Rectangle"
+      - $ref: "#/$defs/Obstacles/Lines"
+  Obstacles:
+    Singles:
+      type: object
+      properties:
+        singles:
+          type: array
+          items:
+            $ref: "#/$defs/Point"
+      required:
+        - singles
+    Rectangle:
+      type: object
+      properties:
+        rect:
+          type: object
+          properties:
+            corner:
+              $ref: "#/$defs/Point"
+            size:
+              $ref: "#/$defs/Point"
+          required:
+            - corner
+            - size
+      required:
+        - rect
+    Lines:
+      type: object
+      properties:
+        lines:
+          type: array
+          items:
+            $ref: "#/$defs/Point"
+          minItems: 2
+      required:
+        - lines
+  Point:
+    type: array
+    items:
+      type: number
+    minItems: 2
+    maxItems: 2
+  Shape:
+    type: object
+    properties:
+      radius:
+        type: number
+        minimum: 0
+      label:
+        type: string
+      components:
+        type: array
+        items:
+          $ref: "#/$defs/Obstacle"
+    required:
+      - radius
+      - components

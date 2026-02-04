@@ -1,43 +1,102 @@
 /*
- * MIT License
+ * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Copyright (c) 2022 Marco Marini
+ *  Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ *    END OF TERMS AND CONDITIONS
  *
  */
 
 package org.mmarini.wheelly.apis;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.yaml.Locator;
+
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
 import static java.lang.Math.abs;
 import static java.lang.Math.sqrt;
+import static org.mmarini.wheelly.apps.AppYaml.loadDoubleArray;
 
 /**
  * The builder of point Map
  */
 public class MapBuilder {
+    public static final String LABEL_ID = "label";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/map-schema-0.1";
+    public static final String RADIUS_ID = "radius";
+    public static final String SHAPES_ID = "shapes";
+    public static final String SINGLES_ID = "singles";
+    public static final String RECT_ID = "rect";
+    public static final String LINES_ID = "lines";
+    public static final String SIZE_ID = "size";
+    public static final String CORNER_ID = "corner";
+    public static final String COMPONENTS_ID = "components";
     private static final double EPSILON = 1e-4;
+
+    /**
+     * Returns the map builder from JSON document
+     *
+     * @param root    the document
+     * @param locator the map builder locator
+     */
+    public static MapBuilder create(JsonNode root, Locator locator) {
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
+        MapBuilder builder = create();
+        locator.path(SHAPES_ID).elements(root)
+                .forEach(shapeLocator -> {
+                    double radius = shapeLocator.path(RADIUS_ID).getNode(root).asDouble();
+                    String label = shapeLocator.path(LABEL_ID).getNode(root).asText(null);
+                    shapeLocator.path(COMPONENTS_ID).elements(root)
+                            .forEach(componentLocator -> {
+                                Locator singlesLocator = componentLocator.path(SINGLES_ID);
+                                Locator rectLocator = componentLocator.path(RECT_ID);
+                                Locator linesLocator = componentLocator.path(LINES_ID);
+                                if (!singlesLocator.getNode(root).isMissingNode()) {
+                                    singlesLocator.elements(root)
+                                            .forEach(ptsLocator -> {
+                                                double[] center = loadDoubleArray(root, ptsLocator);
+                                                builder.put(radius, label, center[0], center[1]);
+                                            });
+                                } else if (!rectLocator.getNode(root).isMissingNode()) {
+                                    double[] corner = loadDoubleArray(root, rectLocator.path(CORNER_ID));
+                                    double[] size = loadDoubleArray(root, rectLocator.path(SIZE_ID));
+                                    builder.rect(radius, label, corner[0], corner[1], corner[0] + size[0], corner[1] + size[1]);
+                                } else if (!linesLocator.getNode(root).isMissingNode()) {
+                                    double[] coords = linesLocator.elements(root)
+                                            .flatMap(ptsLocator -> ptsLocator.elements(root).map(
+                                                    l -> l.getNode(root).asDouble())
+                                            ).mapToDouble(x -> x)
+                                            .toArray();
+                                    builder.lines(radius, label, coords);
+                                }
+                            });
+                });
+        return builder;
+    }
 
     /**
      * Returns the obstacle map builder
@@ -46,6 +105,18 @@ public class MapBuilder {
         return new MapBuilder();
     }
 
+    /**
+     * Returns the obstacle map builder from a template map
+     *
+     * @param template the template map
+     */
+    public static MapBuilder create(Collection<Obstacle> template) {
+        MapBuilder mapBuilder = new MapBuilder();
+        for (Obstacle obstacle : template) {
+            mapBuilder.put(obstacle.radius(), obstacle.label(), obstacle.centre());
+        }
+        return mapBuilder;
+    }
     private final List<Obstacle> map;
 
     /**
@@ -154,11 +225,22 @@ public class MapBuilder {
      *
      * @param radius the obstacle radius (m)
      * @param label  the label
-     * @param x      x coordinate
-     * @param y      y coordinate
+     * @param centre the centre of obstacle
+     */
+    public boolean put(double radius, String label, Point2D centre) {
+        return put(new Obstacle(centre, radius, label));
+    }
+
+    /**
+     * Adds an obstacle
+     *
+     * @param radius the obstacle radius (m)
+     * @param label  the label
+     * @param x      x coordinate (m)
+     * @param y      y coordinate (m)
      */
     public boolean put(double radius, String label, double x, double y) {
-        return put(new Obstacle(new Point2D.Double(x, y), radius, label));
+        return put(radius, label, new Point2D.Double(x, y));
     }
 
     /**
@@ -204,7 +286,7 @@ public class MapBuilder {
     }
 
     /**
-     * Adds obstacle by creating a rectangle
+     * Adds the obstacle by creating a rectangle
      *
      * @param radius the obstacle radius (m)
      * @param label  the label
