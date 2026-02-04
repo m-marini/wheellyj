@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -46,6 +46,7 @@ import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
 import java.io.File;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -66,10 +67,9 @@ import static org.mmarini.wheelly.apis.Utils.m2mm;
  * Simulated robot
  */
 public class SimRobot implements RobotApi {
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/sim-robot-schema-3.0";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/sim-robot-schema-3.1";
     public static final double GRID_SIZE = 0.2;
     public static final double WORLD_SIZE = 10;
-    public static final double MAX_OBSTACLE_DISTANCE = 3;
     public static final double MAX_ANGULAR_PPS = 20;
     public static final double MAX_ANGULAR_VELOCITY = MAX_ANGULAR_PPS * DISTANCE_PER_PULSE / RobotSpec.ROBOT_TRACK * 2; // RAD/s
     public static final double SAFE_DISTANCE = 0.2;
@@ -83,7 +83,6 @@ public class SimRobot implements RobotApi {
     public static final long DEFAULT_LIDAR_INTERVAL = 500;
     public static final long DEFAULT_CAMERA_INTERVAL = 500;
     public static final String LABEL = "A";
-    private static final double MIN_OBSTACLE_DISTANCE = 1;
     private static final Logger logger = LoggerFactory.getLogger(SimRobot.class);
     private static final Vec2 GRAVITY = new Vec2();
     private static final double ROBOT_FRICTION = 1;
@@ -119,15 +118,28 @@ public class SimRobot implements RobotApi {
         int maxAngularSpeed = locator.path("maxAngularSpeed").getNode(root).asInt(DEFAULT_MAX_ANGULAR_SPEED);
         long motionInterval = locator.path("motionInterval").getNode(root).asLong(DEFAULT_MOTION_INTERVAL);
         long lidarInterval = locator.path("lidarInterval").getNode(root).asLong(DEFAULT_LIDAR_INTERVAL);
-        long changeObstaclesPeriod = locator.path("changeObstaclesPeriod").getNode(root).asLong(0);
         long stalemateInterval = locator.path("stalemateInterval").getNode(root).asLong(DEFAULT_STALEMATE_INTERVAL);
         long cameraInterval = locator.path("cameraInterval").getNode(root).asLong(DEFAULT_CAMERA_INTERVAL);
         long interval = locator.path("interval").getNode(root).asLong();
         long tickInterval = locator.path("tickInterval").getNode(root).asLong();
+        long mapPeriod = locator.path("mapPeriod").getNode(root).asLong();
+        long randomPeriod = locator.path("randomPeriod").getNode(root).asLong();
         RobotSpec robotSpec = RobotSpec.fromJson(root, locator);
+        List<List<Obstacle>> maps = locator.path("mapFiles").elements(root)
+                .map(l -> {
+                    String filename = l.getNode(root).asText();
+                    try {
+                        JsonNode mapYaml = org.mmarini.yaml.Utils.fromFile(filename);
+                        return MapBuilder.create(mapYaml, Locator.root()).build();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .toList();
         return new SimRobot(robotSpec, robotRandom, mapRandom,
-                tickInterval, interval, motionInterval, lidarInterval, cameraInterval, stalemateInterval, changeObstaclesPeriod,
-                errSensor, errSigma, maxAngularSpeed, numObstacles, numLabels);
+                tickInterval, interval, motionInterval, lidarInterval, cameraInterval, stalemateInterval,
+                errSensor, errSigma, maxAngularSpeed,
+                maps, numObstacles, numLabels, mapPeriod, randomPeriod);
     }
 
     private final RobotSpec robotSpec;
@@ -137,9 +149,10 @@ public class SimRobot implements RobotApi {
     private final long lidarInterval;
     private final long cameraInterval;
     private final long stalemateInterval;
+    private final long mapPeriod;
+    private final long randomPeriod;
     private final int numObstacles;
     private final int numLabels;
-    private final long changeObstaclesPeriod;
     private final double errSensor;
     private final double errSigma;
     private final int maxAngularSpeed;
@@ -151,6 +164,7 @@ public class SimRobot implements RobotApi {
     private final BehaviorProcessor<Collection<Obstacle>> obstacleChanged;
     private final BehaviorProcessor<RobotStatusApi> robotLineState;
     private final AtomicReference<SimRobotStatus> status;
+    private final List<List<Obstacle>> maps;
     private final World world;
     private final Body robot;
     private final Fixture robotFixture;
@@ -162,27 +176,27 @@ public class SimRobot implements RobotApi {
     /**
      * Creates the simulated robot
      *
-     * @param robotSpec             the robot specification
-     * @param random                the robot random generator
-     * @param mapRandom             the map random generator
-     * @param tickInterval          the tick interval (ms)
-     * @param interval              the simulation interval (ms)
-     * @param motionInterval        the motion message interval (ms)
-     * @param lidarInterval         the proxy message interval (ms)
-     * @param cameraInterval        the camera event interval (ms)
-     * @param stalemateInterval     the stalemate interval (ms)
-     * @param changeObstaclesPeriod the change obstacle period (ms)
-     * @param errSensor             the relative error sensor
-     * @param errSigma              the relative error on power simulation
-     * @param maxAngularSpeed       the maximum angular power
-     * @param numObstacles          the number of obstacles
-     * @param numLabels             the number of labels
+     * @param robotSpec         the robot specification
+     * @param random            the robot random generator
+     * @param mapRandom         the map random generator
+     * @param tickInterval      the tick interval (ms)
+     * @param interval          the simulation interval (ms)
+     * @param motionInterval    the motion message interval (ms)
+     * @param lidarInterval     the proxy message interval (ms)
+     * @param cameraInterval    the camera event interval (ms)
+     * @param stalemateInterval the stalemate interval (ms)
+     * @param errSensor         the relative error sensor
+     * @param errSigma          the relative error on power simulation
+     * @param maxAngularSpeed   the maximum angular power
+     * @param maps              the list of maps
+     * @param numObstacles      the number of obstacles
+     * @param numLabels         the number of labels
+     * @param mapPeriod         the change map period (ms)
+     * @param randomPeriod      the change obstacle period (ms)
      */
     public SimRobot(RobotSpec robotSpec, Random random, Random mapRandom,
                     long tickInterval, long interval, long motionInterval, long lidarInterval, long cameraInterval, long stalemateInterval,
-                    long changeObstaclesPeriod,
-                    double errSensor, double errSigma, int maxAngularSpeed,
-                    int numObstacles, int numLabels) {
+                    double errSensor, double errSigma, int maxAngularSpeed, List<List<Obstacle>> maps, int numObstacles, int numLabels, long mapPeriod, long randomPeriod) {
         this.robotSpec = requireNonNull(robotSpec);
         this.random = requireNonNull(random);
         this.mapRandom = requireNonNull(mapRandom);
@@ -190,14 +204,16 @@ public class SimRobot implements RobotApi {
         this.lidarInterval = lidarInterval;
         this.cameraInterval = cameraInterval;
         this.stalemateInterval = stalemateInterval;
+        this.mapPeriod = mapPeriod;
+        this.randomPeriod = randomPeriod;
         this.numObstacles = numObstacles;
         this.numLabels = numLabels;
-        this.changeObstaclesPeriod = changeObstaclesPeriod;
         this.errSensor = errSensor;
         this.errSigma = errSigma;
         this.maxAngularSpeed = maxAngularSpeed;
         this.interval = interval;
         this.tickInterval = tickInterval;
+        this.maps = requireNonNull(maps);
         this.cameraEvents = PublishProcessor.create();
         this.contactsMessages = PublishProcessor.create();
         this.motionMessages = PublishProcessor.create();
@@ -221,14 +237,15 @@ public class SimRobot implements RobotApi {
         fixDef.density = (float) ROBOT_DENSITY;
         fixDef.restitution = (float) ROBOT_RESTITUTION;
         this.robotFixture = robot.createFixture(fixDef);
-        this.status = new AtomicReference<>(new SimRobotStatus(0,
+        SimRobotStatus initialStatus = new SimRobotStatus(0,
                 false, false, false,
                 Complex.DEG0, 0, 0, true, true,
                 direction(), 0, 0, 0,
-                null, 0, 0, 0, 0,
-                0, 0));
+                0, 0, 0, 0, 0, 0, List.of(), null,
+                0, 0);
+        this.status = new AtomicReference<>(initialStatus);
+        generateRandomMap();
         this.robotLineState = BehaviorProcessor.createDefault(status.get());
-        createObstacleMap();
     }
 
     /**
@@ -393,24 +410,6 @@ public class SimRobot implements RobotApi {
     }
 
     /**
-     * Returns the obstacle map
-     */
-    private void createObstacleMap() {
-        List<Obstacle> map = MapBuilder.create()
-                // Adds perimeter
-                .rect(DEFAULT_OBSTACLE_RADIUS, null, -WORLD_SIZE / 2,
-                        -WORLD_SIZE / 2, WORLD_SIZE / 2, WORLD_SIZE / 2)
-                // add obstacles
-                .rand(mapRandom, DEFAULT_OBSTACLE_RADIUS, null, new Point2D.Double(), MAX_OBSTACLE_DISTANCE,
-                        location(), MIN_OBSTACLE_DISTANCE, numObstacles)
-                // add labels
-                .rand(mapRandom, DEFAULT_OBSTACLE_RADIUS, LABEL, new Point2D.Double(), MAX_OBSTACLE_DISTANCE,
-                        location(), MIN_OBSTACLE_DISTANCE, numLabels)
-                .build();
-        obstacleMap(map);
-    }
-
-    /**
      * Returns the robot direction
      */
     public Complex direction() {
@@ -570,15 +569,25 @@ public class SimRobot implements RobotApi {
     }
 
     /**
-     * Sets the obstacle map
-     *
-     * @param map the map
+     * Generates a random map and returns the simulated status
      */
-    public SimRobot obstacleMap(Collection<Obstacle> map) {
-        status.updateAndGet(s -> s.obstacleMap(map));
-        createObstacleBody(map);
-        obstacleChanged.onNext(map);
-        return this;
+    private SimRobotStatus generateRandomMap() {
+        List<Obstacle> template = randomTemplate();
+        SimRobotStatus currentStatus = status.updateAndGet(s ->
+                s.template(template).createObstacleMap(mapRandom, location(), numObstacles, numLabels, mapPeriod, randomPeriod)
+        );
+        obstacleChanged.onNext(currentStatus.obstacleMap());
+        return currentStatus;
+    }
+
+    /**
+     * Generates a random content map and returns the simulated status
+     */
+    private void generateRandomMapContent() {
+        SimRobotStatus currentStatus = status.updateAndGet(s ->
+                s.createObstacleMap(mapRandom, location(), numObstacles, numLabels, mapPeriod, randomPeriod)
+        );
+        obstacleChanged.onNext(currentStatus.obstacleMap());
     }
 
     @Override
@@ -808,21 +817,44 @@ public class SimRobot implements RobotApi {
     }
 
     /**
+     * Sets the obstacle map
+     *
+     * @param map the map
+     */
+    public SimRobot obstacleMap(Collection<Obstacle> map) {
+        status.updateAndGet(s -> s.obstacleMap(map));
+        createObstacleBody(map);
+        obstacleChanged.onNext(map);
+        return this;
+    }
+
+    /**
+     * Returns a random template map
+     */
+    private List<Obstacle> randomTemplate() {
+        return maps.isEmpty()
+                ? List.of()
+                : maps.size() == 1
+                ? maps.getFirst()
+                : maps.get(mapRandom.nextInt(maps.size()));
+    }
+
+    /**
      * Simulate the time interval
      */
     void simulate() {
         SimRobotStatus initialStatus = status.get();
-        status.updateAndGet(s ->
+        SimRobotStatus currentStatus = status.updateAndGet(s ->
                 s.simulationTime(s.simulationTime() + interval)
                         .lastTick(System.nanoTime()));
 
-        // Change obstacles
-        if (changeObstaclesPeriod > 0) {
-            double lambda = 1D / changeObstaclesPeriod;
-            double p = 1 - exp(-lambda * interval);
-            if (mapRandom.nextDouble() < p) {
-                createObstacleMap();
-            }
+        // Check for map expiration
+        if (currentStatus.simulationTime() >= currentStatus.mapExpiration()) {
+            currentStatus = generateRandomMap();
+        }
+        // Check for random map expiration
+        if (currentStatus.simulationTime() >= currentStatus.randomMapExpiration()) {
+            generateRandomMapContent();
         }
         // Simulate robot motion
         simulatePhysics();

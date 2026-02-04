@@ -1,25 +1,28 @@
 /*
- * MIT License
+ * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Copyright (c) 2022 Marco Marini
+ *  Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ *    END OF TERMS AND CONDITIONS
  *
  */
 
@@ -31,54 +34,50 @@ import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static java.lang.Math.sin;
-import static java.lang.Math.toRadians;
-import static org.nd4j.common.util.MathUtils.round;
+import java.util.Random;
 
-public class Utils {
-    public static final double SIN_1DEG = sin(toRadians(1));
-    private static final Logger logger = LoggerFactory.getLogger(Utils.class);
-    public static final double MM = 1e-3;
+import static java.lang.Math.*;
 
-    public static double clip(double value, double min, double max) {
+/**
+ * Utilities functions
+ */
+public interface Utils {
+    double SIN_1DEG = sin(toRadians(1));
+    Logger logger = LoggerFactory.getLogger(Utils.class);
+    double MM = 1e-3;
+
+    static double clip(double value, double min, double max) {
         return Math.min(Math.max(value, min), max);
     }
 
-    public static float clip(float value, float min, float max) {
+    static float clip(float value, float min, float max) {
         return Math.min(Math.max(value, min), max);
     }
 
-    public static int clip(int value, int min, int max) {
+    static int clip(int value, int min, int max) {
         return Math.min(Math.max(value, min), max);
     }
 
     /**
-     * Returns the distance in millimeters from meters
+     * Returns a random number with exponential distribution probability
      *
-     * @param distance the distance (m)
+     * @param random the random generator
+     * @param mean   the mean value
      */
-    public static int m2mm(double distance) {
-        return round(distance / MM);
+    static long expRandom(Random random, long mean) {
+        double u = random.nextDouble();
+        return round(-mean * log(1 - u));
     }
 
-    /**
-     * Returns the distance in meters from millimeters
-     *
-     * @param distance the distance (mm)
-     */
-    public static double mm2m(int distance) {
-        return distance * MM;
-    }
-
-    public static double linear(double x, double xmin, double xmax, double ymin, double ymax) {
+    static float linear(float x, float xmin, float xmax, float ymin, float ymax) {
         return (x - xmin) * (ymax - ymin) / (xmax - xmin) + ymin;
     }
 
-    public static float linear(float x, float xmin, float xmax, float ymin, float ymax) {
+    static double linear(double x, double xmin, double xmax, double ymin, double ymax) {
         return (x - xmin) * (ymax - ymin) / (xmax - xmin) + ymin;
     }
 
-    public static int[] loadIntArray(JsonNode root, Locator locator) {
+    static int[] loadIntArray(JsonNode root, Locator locator) {
         return !locator.getNode(root).isMissingNode()
                 ? locator.elements(root)
                 .mapToInt(l ->
@@ -93,7 +92,7 @@ public class Utils {
      * @param root    the json document
      * @param locator the locator
      */
-    public static String[] loadStringArray(JsonNode root, Locator locator) {
+    static String[] loadStringArray(JsonNode root, Locator locator) {
         return !locator.getNode(root).isMissingNode()
                 ? locator.elements(root)
                 .map(l ->
@@ -102,22 +101,40 @@ public class Utils {
                 : null;
     }
 
-    public static Vec2 vec2(float[] x) {
+    /**
+     * Returns the distance in millimeters from meters
+     *
+     * @param distance the distance (m)
+     */
+    static int m2mm(double distance) {
+        return (int) round(distance / MM);
+    }
+
+    /**
+     * Returns the distance in meters from millimeters
+     *
+     * @param distance the distance (mm)
+     */
+    static double mm2m(int distance) {
+        return distance * MM;
+    }
+
+    static Vec2 vec2(float[] x) {
         return vec2(x[0], x[1]);
     }
 
-    public static Vec2 vec2(float x, float y) {
+    static Vec2 vec2(float x, float y) {
         Vec2 vec2 = new Vec2();
         vec2.x = x;
         vec2.y = y;
         return vec2;
     }
 
-    public static Vec2 vec2(double[] x) {
+    static Vec2 vec2(double[] x) {
         return vec2(x[0], x[1]);
     }
 
-    public static Vec2 vec2(double x, double y) {
+    static Vec2 vec2(double x, double y) {
         return vec2((float) x, (float) y);
     }
 }

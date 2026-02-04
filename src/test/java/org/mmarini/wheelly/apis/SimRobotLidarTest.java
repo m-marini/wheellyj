@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -55,7 +55,8 @@ public class SimRobotLidarTest {
     public static final long SEED = 1234;
     public static final double MIN_OBSTALCE_DISTANCE = DEFAULT_OBSTACLE_RADIUS + ROBOT_RADIUS + MM;
     public static final double MAX_OBSTALCE_DISTANCE = MAX_RADAR_DISTANCE - DEFAULT_OBSTACLE_RADIUS - DEFAULT_HEAD_Y - DEFAULT_FRONT_LIDAR_DISTANCE;
-    static final double CENTRES_DISTANCE = MIN_OBSTALCE_DISTANCE / sin(toRadians((double) DEFAULT_LIDAR_FOV_DEG / 2));
+    public static final double CENTRES_DISTANCE = MIN_OBSTALCE_DISTANCE / sin(toRadians((double) DEFAULT_LIDAR_FOV_DEG / 2));
+    public static final long CHANGE_MAP_PERIOD = 600000;
 
     public static Stream<Arguments> dataLidarFarObstacle() {
         return RandomArgumentsGenerator.create(SEED)
@@ -141,7 +142,8 @@ public class SimRobotLidarTest {
         robot = new SimRobot(DEFAULT_ROBOT_SPEC, new Random(SEED), new Random(SEED),
                 0, 10,
                 SimRobot.DEFAULT_MOTION_INTERVAL, 5, SimRobot.DEFAULT_CAMERA_INTERVAL, SimRobot.DEFAULT_STALEMATE_INTERVAL,
-                Long.MAX_VALUE, 0, 0, SimRobot.DEFAULT_MAX_ANGULAR_SPEED, 1, 0);
+                0, 0, SimRobot.DEFAULT_MAX_ANGULAR_SPEED, List.of(), 1, 0,
+                CHANGE_MAP_PERIOD, CHANGE_MAP_PERIOD);
         robot.robotPos(xRobot, yRobot);
         robot.robotDir(Complex.fromDeg(robotDirDeg));
         robot.sensorDirection(Complex.fromDeg(headDirDeg));

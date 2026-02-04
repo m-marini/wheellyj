@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2023-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -50,6 +50,7 @@ public interface WheellyJsonSchemas {
             "/schemas/env-world-schema.yml",
             "/schemas/env-dl-schema.yml",
             "/schemas/executor-schema.yml",
+            "/schemas/map-schema.yml",
             "/schemas/monitor-schema.yml",
             "/schemas/mqtt-robot-schema.yml",
             "/schemas/network-list-schema.yml",

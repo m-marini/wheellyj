@@ -1,0 +1,9 @@
+---
+$schema: https://mmarini.org/wheelly/map-schema-0.1
+class: org.mmarini.wheelly.apis.MapBuilder
+shapes:
+  - radius: 0.1
+    components:
+      - rect:
+          corner: [ -5, -5 ]
+          size: [ 10, 10 ]

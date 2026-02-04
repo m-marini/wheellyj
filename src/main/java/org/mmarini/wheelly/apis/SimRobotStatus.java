@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -28,10 +28,16 @@
 
 package org.mmarini.wheelly.apis;
 
+import java.awt.geom.Point2D;
 import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
+import java.util.Random;
 
+import static org.mmarini.wheelly.apis.Obstacle.DEFAULT_OBSTACLE_RADIUS;
+import static org.mmarini.wheelly.apis.SimRobot.LABEL;
 import static org.mmarini.wheelly.apis.SimRobot.SAFE_DISTANCE;
+import static org.mmarini.wheelly.apis.Utils.expRandom;
 
 /**
  * The simulated robot status
@@ -49,13 +55,16 @@ import static org.mmarini.wheelly.apis.SimRobot.SAFE_DISTANCE;
  * @param speed               the power (pps)
  * @param leftPps             the left power (pps)
  * @param rightPps            the right power (pps)
- * @param obstacleMap         the obstacle map
  * @param motionTimeout       the motion message timeout (ms)
  * @param lidarTimeout        the lidar message timeout (ms)
  * @param cameraTimeout       the camera event timeout (ms)
  * @param stalemateTimeout    the stalemate timeout (ms)
  * @param startSimulationTime the start simulation instant (ns)
  * @param lastTick            the last tick instant (ns)
+ * @param template            the template map
+ * @param obstacleMap         the obstacle map
+ * @param mapExpiration       the map expiration (change map time) (ms)
+ * @param randomMapExpiration the map random expiration (change che content of the map) (ms)
  */
 public record SimRobotStatus(
         long simulationTime,
@@ -64,23 +73,13 @@ public record SimRobotStatus(
         boolean stalemate, Complex sensorDirection, double frontDistance, double rearDistance,
         boolean frontSensor, boolean rearSensor,
         Complex direction, int speed, double leftPps, double rightPps,
-        Collection<Obstacle> obstacleMap,
-        long motionTimeout, long lidarTimeout, long cameraTimeout,
-        long stalemateTimeout, long startSimulationTime,
-        long lastTick) implements RobotStatusApi {
+        long motionTimeout, long lidarTimeout, long cameraTimeout, long stalemateTimeout, long startSimulationTime,
+        long lastTick, Collection<Obstacle> template, Collection<Obstacle> obstacleMap,
+        long mapExpiration,
+        long randomMapExpiration
+) implements RobotStatusApi {
 
-    /**
-     * Returns status with the changed camera timeout
-     *
-     * @param cameraTimeout the camera timeout (ms)
-     */
-    public SimRobotStatus cameraTimeout(long cameraTimeout) {
-        return this.cameraTimeout == cameraTimeout
-                ? this
-                : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
-                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap,
-                motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick);
-    }
+    public static final double MAX_OBSTACLE_DISTANCE = 3;
 
     /**
      * Returns true if robot can move backward
@@ -96,17 +95,19 @@ public record SimRobotStatus(
         return frontSensor && (frontDistance == 0 || frontDistance > SAFE_DISTANCE);
     }
 
+    public static final double MIN_OBSTACLE_DISTANCE = 1;
+
     /**
-     * Returns status with the changed closed flag
+     * Returns status with the changed camera timeout
      *
-     * @param closed true if the robot is closed
+     * @param cameraTimeout the camera timeout (ms)
      */
-    public SimRobotStatus closed(boolean closed) {
-        return this.closed == closed
+    public SimRobotStatus cameraTimeout(long cameraTimeout) {
+        return this.cameraTimeout == cameraTimeout
                 ? this
                 : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
-                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap,
-                motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick);
+                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap,
+                mapExpiration, randomMapExpiration);
     }
 
     @Override
@@ -120,6 +121,19 @@ public record SimRobotStatus(
     }
 
     /**
+     * Returns status with the changed closed flag
+     *
+     * @param closed true if the robot is closed
+     */
+    public SimRobotStatus closed(boolean closed) {
+        return this.closed == closed
+                ? this
+                : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
+                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap,
+                mapExpiration, randomMapExpiration);
+    }
+
+    /**
      * Returns status with the changed connected flag
      *
      * @param connected true if the robot is connected
@@ -127,12 +141,40 @@ public record SimRobotStatus(
     public SimRobotStatus connected(boolean connected) {
         return this.connected == connected
                 ? this
-                : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection, frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick);
+                : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection, frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap, mapExpiration, randomMapExpiration);
     }
 
     @Override
     public boolean connecting() {
         return false;
+    }
+
+    /**
+     * Creates a new obstacle map from the current template and sets the map expiration and random map expiration
+     *
+     * @param random          the random number generator
+     * @param robotLocation   the robot location
+     * @param numObstacles    the number of obstacles
+     * @param numLabels       the number of labels
+     * @param mapPeriod       the map period (ms)
+     * @param mapRandomPeriod the random map period (ms)
+     */
+    public SimRobotStatus createObstacleMap(Random random, Point2D robotLocation,
+                                            int numObstacles, int numLabels,
+                                            long mapPeriod, long mapRandomPeriod) {
+        List<Obstacle> map = MapBuilder.create(template)
+                // add obstacles
+                .rand(random, DEFAULT_OBSTACLE_RADIUS, null, new Point2D.Double(), MAX_OBSTACLE_DISTANCE,
+                        robotLocation, MIN_OBSTACLE_DISTANCE, numObstacles)
+                // add labels
+                .rand(random, DEFAULT_OBSTACLE_RADIUS, LABEL, new Point2D.Double(), MAX_OBSTACLE_DISTANCE,
+                        robotLocation, MIN_OBSTACLE_DISTANCE, numLabels)
+                .build();
+        long mapExpiration = simulationTime + expRandom(random, mapPeriod);
+        long mapRandomExpiration = simulationTime + expRandom(random, mapRandomPeriod);
+        return obstacleMap(map)
+                .mapExipiration(mapExpiration)
+                .randomMapExpiration(mapRandomExpiration);
     }
 
     /**
@@ -144,8 +186,8 @@ public record SimRobotStatus(
         return Objects.equals(this.direction, direction)
                 ? this
                 : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
-                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap,
-                motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick);
+                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap,
+                mapExpiration, randomMapExpiration);
     }
 
     /**
@@ -157,8 +199,8 @@ public record SimRobotStatus(
         return this.frontDistance == frontDistance
                 ? this
                 : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
-                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap,
-                motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick);
+                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap,
+                mapExpiration, randomMapExpiration);
     }
 
     /**
@@ -170,8 +212,8 @@ public record SimRobotStatus(
         return this.frontSensor == frontSensor
                 ? this
                 : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
-                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap,
-                motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick);
+                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap,
+                mapExpiration, randomMapExpiration);
     }
 
     /**
@@ -183,8 +225,8 @@ public record SimRobotStatus(
         return this.lastTick == lastTick
                 ? this
                 : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
-                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap,
-                motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick);
+                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap,
+                mapExpiration, randomMapExpiration);
     }
 
     /**
@@ -196,8 +238,8 @@ public record SimRobotStatus(
         return this.leftPps == leftSpeed
                 ? this
                 : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
-                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap,
-                motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick);
+                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap,
+                mapExpiration, randomMapExpiration);
     }
 
     /**
@@ -209,8 +251,21 @@ public record SimRobotStatus(
         return this.lidarTimeout == lidarTimeout
                 ? this
                 : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
-                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap,
-                motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick);
+                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap,
+                mapExpiration, randomMapExpiration);
+    }
+
+    /**
+     * Returns status with the changed map expiration
+     *
+     * @param mapExpiration the map expiration instant (ns)
+     */
+    public SimRobotStatus mapExipiration(long mapExpiration) {
+        return this.mapExpiration == mapExpiration
+                ? this
+                : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
+                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap,
+                mapExpiration, randomMapExpiration);
     }
 
     /**
@@ -222,8 +277,8 @@ public record SimRobotStatus(
         return this.motionTimeout == motionTimeout
                 ? this
                 : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
-                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap,
-                motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick);
+                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap,
+                mapExpiration, randomMapExpiration);
     }
 
     /**
@@ -234,9 +289,22 @@ public record SimRobotStatus(
     public SimRobotStatus obstacleMap(Collection<Obstacle> obstacleMap) {
         return !Objects.equals(this.obstacleMap, obstacleMap)
                 ? new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
-                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap,
-                motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick)
+                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap,
+                mapExpiration, randomMapExpiration)
                 : this;
+    }
+
+    /**
+     * Returns status with the changed map random expiration
+     *
+     * @param randomMapExpiration the map random expiration instant (ns)
+     */
+    public SimRobotStatus randomMapExpiration(long randomMapExpiration) {
+        return this.randomMapExpiration == randomMapExpiration
+                ? this
+                : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
+                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap,
+                mapExpiration, randomMapExpiration);
     }
 
     /**
@@ -248,8 +316,8 @@ public record SimRobotStatus(
         return this.rearDistance == rearDistance
                 ? this
                 : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
-                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap,
-                motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick);
+                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap,
+                mapExpiration, randomMapExpiration);
     }
 
     /**
@@ -261,8 +329,8 @@ public record SimRobotStatus(
         return this.rearSensor == rearSensor
                 ? this
                 : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
-                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap,
-                motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick);
+                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap,
+                mapExpiration, randomMapExpiration);
     }
 
     /**
@@ -274,8 +342,8 @@ public record SimRobotStatus(
         return this.rightPps == rightSpeed
                 ? this
                 : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
-                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap,
-                motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick);
+                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap,
+                mapExpiration, randomMapExpiration);
     }
 
     /**
@@ -287,8 +355,8 @@ public record SimRobotStatus(
         return Objects.equals(this.sensorDirection, sensorDirection)
                 ? this
                 : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
-                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap,
-                motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick);
+                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap,
+                mapExpiration, randomMapExpiration);
     }
 
     /**
@@ -300,8 +368,8 @@ public record SimRobotStatus(
         return this.simulationTime == simulationTime
                 ? this
                 : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
-                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap,
-                motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick);
+                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap,
+                mapExpiration, randomMapExpiration);
     }
 
     /**
@@ -313,8 +381,8 @@ public record SimRobotStatus(
         return this.speed == speed
                 ? this
                 : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
-                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap,
-                motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick);
+                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap,
+                mapExpiration, randomMapExpiration);
     }
 
     /**
@@ -326,8 +394,8 @@ public record SimRobotStatus(
         return this.stalemate == stalemate
                 ? this
                 : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
-                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap,
-                motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick);
+                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap,
+                mapExpiration, randomMapExpiration);
     }
 
     /**
@@ -339,8 +407,8 @@ public record SimRobotStatus(
         return this.stalemateTimeout == stalemateTimeout
                 ? this
                 : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
-                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap,
-                motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick);
+                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap,
+                mapExpiration, randomMapExpiration);
     }
 
     /**
@@ -352,7 +420,20 @@ public record SimRobotStatus(
         return this.startSimulationTime == startSimulationTime
                 ? this
                 : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
-                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, obstacleMap,
-                motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick);
+                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap,
+                mapExpiration, randomMapExpiration);
+    }
+
+    /**
+     * Returns status with the template map
+     *
+     * @param template the template map
+     */
+    public SimRobotStatus template(Collection<Obstacle> template) {
+        return Objects.equals(this.template, template)
+                ? this
+                : new SimRobotStatus(simulationTime, connected, closed, stalemate, sensorDirection,
+                frontDistance, rearDistance, frontSensor, rearSensor, direction, speed, leftPps, rightPps, motionTimeout, lidarTimeout, cameraTimeout, stalemateTimeout, startSimulationTime, lastTick, template, obstacleMap,
+                mapExpiration, randomMapExpiration);
     }
 }

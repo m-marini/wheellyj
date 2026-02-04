@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Add
 
 - Issue [#576](https://github.com/m-marini/wheellyj/issues/576): Add lidars
+- Issue [#578](https://github.com/m-marini/wheellyj/issues/578): Add robot simulation map
 
 ### Changed
 
