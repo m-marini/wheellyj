@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -310,7 +310,7 @@ public class MappingState extends TimeOutState {
             case RIGHT_SCANNING -> rightScanning(ctx);
             case LEFT_SCANNING -> leftScanning(ctx);
             case TURING_ROBOT -> turningRobot(ctx);
-            default -> COMPLETED_RESULT;
+            default -> StateNode.completedResult(ctx);
         };
     }
 
@@ -343,7 +343,7 @@ public class MappingState extends TimeOutState {
         if (targetRobotDir.isCloseTo(initialDir, EPSILON)) {
             // Mapping completed
             logger.atDebug().log("Mapping completed");
-            return COMPLETED_RESULT;
+            return StateNode.completedResult(context);
         }
         logger.atDebug().log("Turning robot completed");
         status = RIGHT_SCANNING;

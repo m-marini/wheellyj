@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -59,6 +59,13 @@ class LabelStuckStateTest {
     public static final int NUM_TEST_CASE = 100;
     private static final long SEED = 1234;
 
+    private static RobotStatus createRobotStatus1(Point2D robotLocation, Complex robotDir, Complex headDir,
+                                                  boolean frontSensor, boolean rearSensor, boolean canMoveForward, boolean canMoveBackward,
+                                                  double frontDistance) {
+        return createRobotStatus(robotLocation, robotDir, headDir, frontSensor, rearSensor, canMoveForward, canMoveBackward)
+                .setFrontDistance(frontDistance);
+    }
+
     static Stream<Arguments> dataBlocked() {
         return RandomArgumentsGenerator.create(SEED)
                 .uniform(-5, 5., 9) // robotX
@@ -75,7 +82,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(-DEFAULT_HEAD_FOV_DEG / 2 + 1, -DEFAULT_DIRECTION_RANGE - 1) // markerDeg
-                .uniform(DEFAULT_DISTANCE - EPSILON_DISTANCE + MM_1, DEFAULT_DISTANCE + EPSILON_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(DEFAULT_MIN_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -86,7 +93,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(-DEFAULT_DIRECTION_RANGE + 1, DEFAULT_DIRECTION_RANGE - 1) // markerDeg
-                .uniform(DEFAULT_DISTANCE - EPSILON_DISTANCE + MM_1, DEFAULT_DISTANCE + EPSILON_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(DEFAULT_MIN_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -97,7 +104,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(DEFAULT_DIRECTION_RANGE + 1, DEFAULT_HEAD_FOV_DEG / 2 - 1) // markerDeg
-                .uniform(DEFAULT_DISTANCE - EPSILON_DISTANCE + MM_1, DEFAULT_DISTANCE + EPSILON_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(DEFAULT_MIN_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -108,7 +115,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(-180, -DEFAULT_HEAD_FOV_DEG / 2 - 1) // markerDeg
-                .uniform(DEFAULT_DISTANCE - EPSILON_DISTANCE + MM_1, DEFAULT_DISTANCE + EPSILON_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(DEFAULT_MIN_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -119,7 +126,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(DEFAULT_HEAD_FOV_DEG / 2 + 1, 179) // markerDeg
-                .uniform(DEFAULT_DISTANCE - EPSILON_DISTANCE + MM_1, DEFAULT_DISTANCE + EPSILON_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(DEFAULT_MIN_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -130,7 +137,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(0, 359) // markerDeg
-                .uniform(DEFAULT_MAX_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE * 2, 9) // markerDistance
+                .uniform(DEFAULT_SEARCH_DISTANCE + MM_1, DEFAULT_SEARCH_DISTANCE * 2, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -141,7 +148,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(-DEFAULT_DIRECTION_RANGE, DEFAULT_DIRECTION_RANGE) // markerDeg
-                .uniform(RobotSpec.ROBOT_RADIUS, DEFAULT_DISTANCE - EPSILON_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(RobotSpec.ROBOT_RADIUS, DEFAULT_MIN_DISTANCE - MM_1, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -152,7 +159,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(-DEFAULT_HEAD_FOV_DEG / 2 + 1, -DEFAULT_DIRECTION_RANGE - 1) // markerDeg
-                .uniform(RobotSpec.ROBOT_RADIUS, DEFAULT_DISTANCE - EPSILON_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(RobotSpec.ROBOT_RADIUS, DEFAULT_MIN_DISTANCE - MM_1, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -163,7 +170,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(DEFAULT_DIRECTION_RANGE + 1, DEFAULT_HEAD_FOV_DEG / 2 - 1) // markerDeg
-                .uniform(RobotSpec.ROBOT_RADIUS, DEFAULT_DISTANCE - EPSILON_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(RobotSpec.ROBOT_RADIUS, DEFAULT_MIN_DISTANCE - MM_1, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -174,7 +181,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(-180, -DEFAULT_HEAD_FOV_DEG / 2 - 1) // markerDeg
-                .uniform(RobotSpec.ROBOT_RADIUS, DEFAULT_DISTANCE - EPSILON_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(RobotSpec.ROBOT_RADIUS, DEFAULT_MIN_DISTANCE - MM_1, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -185,7 +192,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(DEFAULT_HEAD_FOV_DEG / 2 + 1, 179) // markerDeg
-                .uniform(RobotSpec.ROBOT_RADIUS, DEFAULT_DISTANCE - EPSILON_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(RobotSpec.ROBOT_RADIUS, DEFAULT_MIN_DISTANCE - MM_1, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -196,7 +203,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(-DEFAULT_DIRECTION_RANGE, DEFAULT_DIRECTION_RANGE) // markerDeg
-                .uniform(DEFAULT_DISTANCE + EPSILON_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(DEFAULT_MAX_DISTANCE + MM_1, DEFAULT_SEARCH_DISTANCE - MM_1, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -207,7 +214,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(-DEFAULT_HEAD_FOV_DEG / 2 + 1, -DEFAULT_DIRECTION_RANGE - 1) // markerDeg
-                .uniform(DEFAULT_DISTANCE + EPSILON_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(DEFAULT_MAX_DISTANCE + MM_1, DEFAULT_SEARCH_DISTANCE - MM_1, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -218,7 +225,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(DEFAULT_DIRECTION_RANGE + 1, DEFAULT_HEAD_FOV_DEG / 2 - 1) // markerDeg
-                .uniform(DEFAULT_DISTANCE + EPSILON_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(DEFAULT_MAX_DISTANCE + MM_1, DEFAULT_SEARCH_DISTANCE - MM_1, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -229,7 +236,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(-180, -DEFAULT_HEAD_FOV_DEG / 2 - 1) // markerDeg
-                .uniform(DEFAULT_DISTANCE + EPSILON_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(DEFAULT_MAX_DISTANCE + MM_1, DEFAULT_SEARCH_DISTANCE - MM_1, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -240,7 +247,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(DEFAULT_HEAD_FOV_DEG / 2 + 1, 179) // markerDeg
-                .uniform(DEFAULT_DISTANCE + EPSILON_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(DEFAULT_MAX_DISTANCE + MM_1, DEFAULT_SEARCH_DISTANCE - MM_1, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -250,8 +257,8 @@ class LabelStuckStateTest {
     void setUp() {
         this.state = new LabelStuckState("stuck", null, null, null,
                 AvoidingState.DEFAULT_TIMEOUT,
-                DEFAULT_DISTANCE, DEFAULT_MAX_DISTANCE,
-                Complex.fromDeg(DEFAULT_DIRECTION_RANGE), DEFAULT_SPEED);
+                DEFAULT_MIN_DISTANCE, DEFAULT_MAX_DISTANCE, DEFAULT_SEARCH_DISTANCE,
+                DEFAULT_CORRELATION_DISTANCE, Complex.fromDeg(DEFAULT_DIRECTION_RANGE), DEFAULT_SPEED, t -> true);
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
@@ -275,7 +282,7 @@ class LabelStuckStateTest {
 
         // Then the result should be blocked result
         assertNotNull(result);
-        assertEquals(AvoidingState.BLOCKED_RESULT, result);
+        assertEquals(AvoidingState.BLOCKED_EXIT, result._1);
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG, marker {4} DEG {5} m")
@@ -285,8 +292,8 @@ class LabelStuckStateTest {
         Point2D robotLocation = new Point2D.Double(robotX, robotY);
         Complex robotDir = Complex.fromDeg(robotDeg);
         Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
-                true, true, true, true);
+        RobotStatus status = createRobotStatus1(robotLocation, robotDir, headDir,
+                true, true, true, true, markerDistance);
         // And the processor context with the robot status
         Complex markerAbsDir = Complex.fromDeg(markerDeg).add(robotDir);
         Point2D markerLocation = markerAbsDir.at(robotLocation, markerDistance);
@@ -308,6 +315,33 @@ class LabelStuckStateTest {
         assertTrue(result._2.scan());
         // And the scan direction should be toward marker
         assertThat(result._2.scanDirection(), angleCloseTo(markerDeg, 1));
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG, marker {4} DEG {5} m")
+    @MethodSource("dataFrontMarker")
+    void testFrontMarkerUncorrelated(double robotX, double robotY, int robotDeg, double headDeg, int markerDeg, double markerDistance) {
+        // Given a robot status with both sensors not clear
+        Point2D robotLocation = new Point2D.Double(robotX, robotY);
+        Complex robotDir = Complex.fromDeg(robotDeg);
+        Complex headDir = Complex.fromDeg(headDeg);
+        RobotStatus status = createRobotStatus1(robotLocation, robotDir, headDir,
+                true, true, true, true, markerDistance + DEFAULT_CORRELATION_DISTANCE + 10 * MM_1);
+        // And the processor context with the robot status
+        Complex markerAbsDir = Complex.fromDeg(markerDeg).add(robotDir);
+        Point2D markerLocation = markerAbsDir.at(robotLocation, markerDistance);
+        LabelMarker marker = new LabelMarker(LABEL_A, markerLocation, WEIGHT, MARKER_TIME, CLEAN_TIME);
+        ProcessorContextApi context = createContext(status, null, Map.of(LABEL_A, marker));
+
+        // When init state
+        state.init(context);
+        // And entering state
+        state.entry(context);
+        // And stepping state
+        Tuple2<String, RobotCommands> result = state.step(context);
+
+        // Then the result should be none exit
+        assertNotNull(result);
+        assertEquals(NOT_FOUND_EXIT, result._1);
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG, marker {4} DEG {5} m")
@@ -367,7 +401,7 @@ class LabelStuckStateTest {
 
         // Then the result should be blocked result
         assertNotNull(result);
-        assertEquals(LabelStuckState.NOT_FOUND_RESULT, result);
+        assertEquals(NOT_FOUND_EXIT, result._1);
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
@@ -391,7 +425,7 @@ class LabelStuckStateTest {
 
         // Then the result should be blocked result
         assertNotNull(result);
-        assertEquals(LabelStuckState.NOT_FOUND_RESULT, result);
+        assertEquals(NOT_FOUND_EXIT, result._1);
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG, marker {4} DEG {5} m")

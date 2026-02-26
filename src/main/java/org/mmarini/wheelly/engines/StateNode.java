@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -49,12 +49,36 @@ public interface StateNode {
     String NONE_EXIT = "none";
     String TARGET_ID = "target";
     String PATH_ID = "path";
-    Tuple2<String, RobotCommands> TIMEOUT_RESULT = Tuple2.of(TIMEOUT_EXIT, RobotCommands.haltCommand());
+
     Tuple2<String, RobotCommands> BLOCKED_RESULT = Tuple2.of(BLOCKED_EXIT, RobotCommands.haltCommand());
-    Tuple2<String, RobotCommands> FRONT_BLOCKED_RESULT = Tuple2.of(FRONT_BLOCKED_EXIT, RobotCommands.haltCommand());
-    Tuple2<String, RobotCommands> REAR_BLOCKED_RESULT = Tuple2.of(REAR_BLOCKED_EXIT, RobotCommands.haltCommand());
-    Tuple2<String, RobotCommands> NONE_HALT_RESULT = Tuple2.of(NONE_EXIT, RobotCommands.haltCommand());
+    Tuple2<String, RobotCommands> BLOCKED_NONE_RESULT = Tuple2.of(BLOCKED_EXIT, RobotCommands.none());
     Tuple2<String, RobotCommands> COMPLETED_RESULT = Tuple2.of(COMPLETED_EXIT, RobotCommands.haltCommand());
+    Tuple2<String, RobotCommands> COMPLETED_NONE_RESULT = Tuple2.of(StateNode.COMPLETED_EXIT, RobotCommands.none());
+    Tuple2<String, RobotCommands> TIMEOUT_RESULT = Tuple2.of(TIMEOUT_EXIT, RobotCommands.haltCommand());
+    Tuple2<String, RobotCommands> TIMEOUT_NONE_RESULT = Tuple2.of(TIMEOUT_EXIT, RobotCommands.none());
+    Tuple2<String, RobotCommands> FRONT_BLOCKED_RESULT = Tuple2.of(FRONT_BLOCKED_EXIT, RobotCommands.haltCommand());
+    Tuple2<String, RobotCommands> FRONT_BLOCKED_NONE_RESULT = Tuple2.of(FRONT_BLOCKED_EXIT, RobotCommands.none());
+    Tuple2<String, RobotCommands> REAR_BLOCKED_RESULT = Tuple2.of(REAR_BLOCKED_EXIT, RobotCommands.haltCommand());
+    Tuple2<String, RobotCommands> REAR_BLOCKED_NONE_RESULT = Tuple2.of(REAR_BLOCKED_EXIT, RobotCommands.none());
+    Tuple2<String, RobotCommands> NONE_HALT_RESULT = Tuple2.of(NONE_EXIT, RobotCommands.haltCommand());
+
+    /**
+     * Returns the block result
+     *
+     * @param context the process context
+     */
+    static Tuple2<String, RobotCommands> blockResult(ProcessorContextApi context) {
+        return context.worldModel().robotStatus().halt() ? BLOCKED_NONE_RESULT : BLOCKED_RESULT;
+    }
+
+    /**
+     * Returns the completed result
+     *
+     * @param context the process context
+     */
+    static Tuple2<String, RobotCommands> completedResult(ProcessorContextApi context) {
+        return context.worldModel().robotStatus().halt() ? COMPLETED_NONE_RESULT : COMPLETED_RESULT;
+    }
 
     /**
      * Returns the state node from yaml document
@@ -80,19 +104,31 @@ public interface StateNode {
     }
 
     /**
-     * Processes the entry of state node
+     * Returns the front block result
      *
-     * @param context the processor context
+     * @param context the process context
      */
-    void entry(ProcessorContextApi context);
-
+    static Tuple2<String, RobotCommands> frontBlockResult(ProcessorContextApi context) {
+        return context.worldModel().robotStatus().halt() ? FRONT_BLOCKED_NONE_RESULT : FRONT_BLOCKED_RESULT;
+    }
 
     /**
-     * Processes the exit of state node
+     * Returns the rear block result
      *
-     * @param context the processor context
+     * @param context the process context
      */
-    void exit(ProcessorContextApi context);
+    static Tuple2<String, RobotCommands> rearBlockResult(ProcessorContextApi context) {
+        return context.worldModel().robotStatus().halt() ? REAR_BLOCKED_NONE_RESULT : REAR_BLOCKED_RESULT;
+    }
+
+    /**
+     * Returns the completed result
+     *
+     * @param context the process context
+     */
+    static Tuple2<String, RobotCommands> timeoutResult(ProcessorContextApi context) {
+        return context.worldModel().robotStatus().halt() ? TIMEOUT_NONE_RESULT : TIMEOUT_RESULT;
+    }
 
     /**
      * Returns the elapsed localTime (ms) from state entry localTime
@@ -102,11 +138,25 @@ public interface StateNode {
     long elapsedTime(ProcessorContextApi context);
 
     /**
+     * Processes the entry of state node
+     *
+     * @param context the processor context
+     */
+    void entry(ProcessorContextApi context);
+
+    /**
      * Returns the state entry localTime (ms)
      *
      * @param context the processor context
      */
     long entryTime(ProcessorContextApi context);
+
+    /**
+     * Processes the exit of state node
+     *
+     * @param context the processor context
+     */
+    void exit(ProcessorContextApi context);
 
     /**
      * Returns the state identifier

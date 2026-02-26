@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -401,7 +401,7 @@ public class MqttRobot implements RobotApi {
                                     this::onConnectionFailure
                             );
                 } catch (MqttException e) {
-                    notifyError(e);
+                    notifyError("Error connecting to mqtt", e);
                 }
             }
         }
@@ -421,7 +421,7 @@ public class MqttRobot implements RobotApi {
             try {
                 return cameraDevice.execute(StringCommand.create(command, arg), timeout);
             } catch (Throwable e) {
-                notifyError(e);
+                notifyError("Error executing camera command", e);
                 return Maybe.error(e);
             }
         }
@@ -441,7 +441,7 @@ public class MqttRobot implements RobotApi {
             try {
                 return robotDevice.execute(StringCommand.create(command, arg), timeout);
             } catch (Throwable e) {
-                notifyError(e);
+                notifyError("Error executing robot command", e);
                 return Maybe.error(e);
             }
         }
@@ -472,14 +472,15 @@ public class MqttRobot implements RobotApi {
     /**
      * Notifies error
      *
+     * @param message the message
      * @param error the error
      */
-    private void notifyError(Throwable error) {
+    private void notifyError(String message, Throwable error) {
         if (error instanceof TimeoutException) {
-            logger.atError().setCause(error).log("Timeout error");
+            logger.atError().setCause(error).log(message);
             errors.onNext(error);
         } else {
-            logger.atError().setCause(error.getCause()).log("Error");
+            logger.atError().setCause(error.getCause()).log(message);
             errors.onNext(error);
         }
     }
@@ -490,7 +491,7 @@ public class MqttRobot implements RobotApi {
      * @param error the error
      */
     private void onCameraCaptureError(Throwable error) {
-        notifyError(error);
+        notifyError("Error capturing image", error);
         Completable.timer(cameraInterval, TimeUnit.MILLISECONDS)
                 .subscribe(this::captureCamera);
     }
@@ -562,7 +563,7 @@ public class MqttRobot implements RobotApi {
      * @param error the error
      */
     private void onConnectionFailure(Throwable error) {
-        notifyError(error);
+        notifyError("Error mqtt", error);
         Completable.timer(retryInterval, TimeUnit.MILLISECONDS, Schedulers.computation())
                 .subscribe(this::reconnect);
     }
