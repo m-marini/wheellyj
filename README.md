@@ -9,6 +9,11 @@ The documentation is in the [Wiki section](https://github.com/m-marini/wheellyj/
 
 ## Release 0.25.1
 
+- Add lidars
+- Add robot simulation map
+
+## Release 0.25.1
+
 - Add MQTT architecture and convolution network to radar map
 
 ## Release 0.24.1
