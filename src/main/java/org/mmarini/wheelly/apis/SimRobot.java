@@ -792,7 +792,7 @@ public class SimRobot implements RobotApi {
                 s.simulationTime(),
                 xPulses, yPulses, robotDir.toIntDeg(),
                 s.leftPps(), s.rightPps(),
-                0, s.speed() == 0,
+                0, isHalt(),
                 (int) round(s.leftPps()), (int) round(s.rightPps()),
                 0, 0);
         motionMessages.onNext(msg);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -222,8 +222,8 @@ public abstract class AbstractStateNode implements StateNode {
         RobotStatus status = context.worldModel().robotStatus();
         return !status.canMoveForward()
                 ? !status.canMoveBackward()
-                ? StateNode.BLOCKED_RESULT : StateNode.FRONT_BLOCKED_RESULT
+                ? StateNode.blockResult(context) : StateNode.frontBlockResult(context)
                 : !status.canMoveBackward()
-                ? StateNode.REAR_BLOCKED_RESULT : null;
+                ? StateNode.rearBlockResult(context) : null;
     }
 }

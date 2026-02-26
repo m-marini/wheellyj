@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -132,7 +132,7 @@ public class AvoidingState extends TimeOutState {
                 // Robot completely blocked
                 // holt robot
                 logger.atWarn().setMessage("{}: Robot blocked").addArgument(this::id).log();
-                return BLOCKED_RESULT;
+                return StateNode.blockResult(context);
 
             }
         } else if (!status.canMoveBackward()) {
@@ -161,7 +161,7 @@ public class AvoidingState extends TimeOutState {
     @Override
     public Tuple2<String, RobotCommands> step(ProcessorContextApi ctx) {
         Tuple2<String, RobotCommands> result = super.step(ctx);
-        if (result != null && TIMEOUT_RESULT._1.equals(result._1)) {
+        if (result != null && result._1.equals(TIMEOUT_EXIT)) {
             return result;
         }
         result = computeReaction(ctx);
@@ -177,7 +177,7 @@ public class AvoidingState extends TimeOutState {
                     .setMessage("{}: safety without any contact")
                     .addArgument(this::id)
                     .log();
-            return COMPLETED_RESULT;
+            return StateNode.completedResult(ctx);
         }
 
         // contact disappeared
@@ -189,7 +189,7 @@ public class AvoidingState extends TimeOutState {
         if (contactDistance >= safeDistance) {
             // Robot at safe distance: halt at exit
             logger.atDebug().log("Avoided contact at {} m", contactDistance);
-            return COMPLETED_RESULT;
+            return StateNode.completedResult(ctx);
         }
 
         // Check for free point

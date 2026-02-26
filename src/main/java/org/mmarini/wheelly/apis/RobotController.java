@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -217,6 +217,7 @@ public class RobotController implements RobotControllerApi {
      * @param e the error
      */
     private void onInferenceError(Throwable e) {
+        logger.atError().setCause(e).log("Error on inference");
         controllerErrors.onNext(e);
         RobotControllerStatus st1 = status.updateAndGet(RobotControllerStatus::clearInference);
         controllerStatus.onNext(st1);
@@ -336,6 +337,7 @@ public class RobotController implements RobotControllerApi {
                 try {
                     onLatch.accept(currentStatus);
                 } catch (Throwable ex) {
+                    logger.atError().setCause(ex).log("Error on latch");
                     controllerErrors.onNext(ex);
                 }
             }

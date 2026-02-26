@@ -16,6 +16,7 @@ lidarFOV: 15
 contactRadius: 0.28
 cameraFOV: 60
 sensorReceptiveAngle: 15
+headFOV: 130
 configCommands:
   # 500 ms decay time of low pass filter of motion sensors
   - "cs,500"
@@ -27,6 +28,8 @@ configCommands:
   - "tcsr,628,2165,490,2322,-620,1569,-414,1468,3000,3000,50,400"
 # 500 ms status interval, 500 ms proxy interval
   - "ci,500,500"
+  # +/- 65 DEG head rotation (same of headFOV)
+  - "ch,-65,65"
 cameraConfigCommands:
   # led intensity 255, frame size 9 (800x600)
   - "cf,255,10"

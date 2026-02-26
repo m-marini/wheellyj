@@ -1,12 +1,12 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/state-label-stuck-schema-0.1
+$id: https://mmarini.org/wheelly/state-label-stuck-schema-1.0
 title: State machine agent
 description: State Agent Schema
 type: object
 properties:
   $id:
-    const: https://mmarini.org/wheelly/state-label-stuck-schema-0.1
+    const: https://mmarini.org/wheelly/state-label-stuck-schema-1.0
   class:
     const: org.mmarini.wheelly.engines.LabelStuckState
   onInit:
@@ -20,16 +20,24 @@ properties:
   timeout:
     type: integer
     minimum: 1
+  minDistance:
+    type: number
+    exclusiveMinimum: 0
   maxDistance:
     type: number
     exclusiveMinimum: 0
-  distance:
+  searchDistance:
+    type: number
+    exclusiveMinimum: 0
+  correlationDistance:
     type: number
     exclusiveMinimum: 0
   directionRange:
     type: integer
     minimum: 0
     maximum: 180
+  pattern:
+    type string
 required:
   - $id
   - class

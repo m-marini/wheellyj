@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -62,7 +62,7 @@ public abstract class TimeOutState extends AbstractStateNode {
     @Override
     public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
         return isTimeout(context)
-                ? TIMEOUT_RESULT
+                ? StateNode.timeoutResult(context)
                 : super.step(context);
     }
 }
