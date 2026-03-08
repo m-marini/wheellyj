@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+
+- Issue [#587](https://github.com/m-marini/wheellyj/issues/587): Matrix monitor with goto commands
+
+## [0.26.0] 2026-02-26
+
 ### Add
 
 - Issue [#576](https://github.com/m-marini/wheellyj/issues/576): Add lidars
