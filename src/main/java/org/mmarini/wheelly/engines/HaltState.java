@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -30,7 +30,7 @@ package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommandsOld;
 import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
@@ -85,8 +85,8 @@ public class HaltState extends TimeOutState {
     }
 
     @Override
-    public Tuple2<String, RobotCommands> step(ProcessorContextApi ctx) {
-        Tuple2<String, RobotCommands> result = super.step(ctx);
+    public Tuple2<String, RobotCommandsOld> step(ProcessorContextApi ctx) {
+        Tuple2<String, RobotCommandsOld> result = super.step(ctx);
         if (result != null) {
             return result;
         }

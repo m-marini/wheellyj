@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -35,7 +35,7 @@ import org.mmarini.Tuple2;
 import org.mmarini.rl.agents.BinArrayFile;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.wheelly.apis.InferenceFileReader;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommandsOld;
 import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apis.WorldModeller;
 import org.mmarini.wheelly.envs.DLActionFunction;
@@ -110,9 +110,9 @@ public class DatasetBuilder {
 
         // Reads the inference records and convert to signals, actin masks and rewards
         DLActionFunction actionFunction = (DLActionFunction) env.actionFunction();
-        Tuple2<WorldModel, RobotCommands> record;
+        Tuple2<WorldModel, RobotCommandsOld> record;
         WorldModel s0 = null;
-        RobotCommands commands = null;
+        RobotCommandsOld commands = null;
         int tot = reader.available();
         int totMB = tot / KB;
         try (INDArray reward = Nd4j.create(1, 1)) {

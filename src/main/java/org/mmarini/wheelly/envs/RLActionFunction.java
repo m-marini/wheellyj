@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -34,7 +34,7 @@ import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommandsOld;
 import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.yaml.Locator;
@@ -48,7 +48,7 @@ import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
 import static org.mmarini.wheelly.apis.Utils.linear;
 
 /**
- * Generate commands from old RL style action signals
+ * Generate command from old RL style action signals
  */
 public class RLActionFunction implements ActionFunction {
     public static final int MAX_DIRECTION_ACTION = 180;
@@ -92,12 +92,12 @@ public class RLActionFunction implements ActionFunction {
     }
 
     /**
-     * Returns the actions from commands
+     * Returns the actions from command
      *
-     * @param commands the commands
+     * @param commands the command
      * @param state    the world state
      */
-    public Map<String, Signal> actions(RobotCommands commands, WorldModel state) {
+    public Map<String, Signal> actions(RobotCommandsOld commands, WorldModel state) {
         Complex sensDir = commands.scanDirection();
         int sensorSignal = round(linear(sensDir.toIntDeg(),
                 -MAX_SENSOR_DIR, MAX_SENSOR_DIR,
@@ -120,17 +120,17 @@ public class RLActionFunction implements ActionFunction {
     }
 
     @Override
-    public List<RobotCommands> commands(Map<String, Signal> actions, WorldModel... states) {
+    public List<RobotCommandsOld> commands(Map<String, Signal> actions, WorldModel... states) {
         WorldModel state = states[0];
         Complex sensorDirection = sensorDir(actions);
         Complex robotDirection = state.robotStatus().direction();
-        RobotCommands command = !isHalt(actions)
-                ? RobotCommands.moveAndScan(moveDirection(actions, robotDirection),
+        RobotCommandsOld command = !isHalt(actions)
+                ? RobotCommandsOld.moveAndScan(moveDirection(actions, robotDirection),
                 speed(actions),
                 sensorDirection)
                 : sensorDirection.toIntDeg() == 0
-                ? RobotCommands.haltMove()
-                : RobotCommands.scan(sensorDirection);
+                ? RobotCommandsOld.haltMove()
+                : RobotCommandsOld.scan(sensorDirection);
         return List.of(command);
     }
 

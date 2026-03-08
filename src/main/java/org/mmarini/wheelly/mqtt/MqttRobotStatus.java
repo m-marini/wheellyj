@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -36,19 +36,31 @@ import java.util.Objects;
 public record MqttRobotStatus(
         boolean started, boolean closed, boolean connecting, boolean connected,
         boolean robotConfiguring, boolean robotConfigured,
-        boolean cameraConfiguring, boolean cameraConfigured, boolean halted,
-        long startTime,
+        boolean halted,
+        int configIndex, long startTime,
         long lastActivity,
         WatchDog watchDog) implements RobotStatusApi {
 
-    @Override
-    public boolean configured() {
-        return robotConfigured && cameraConfigured;
+    /**
+     * Returns the real robot state with the changed config index
+     *
+     * @param configIndex the config index
+     */
+    public MqttRobotStatus configIndex(int configIndex) {
+        return this.configIndex != configIndex
+                ? new MqttRobotStatus(started, closed, connecting, connected, robotConfiguring, robotConfigured,
+                halted, configIndex, startTime, lastActivity, watchDog)
+                : this;
     }
 
     @Override
     public boolean configuring() {
         return robotConfiguring || connecting;
+    }
+
+    @Override
+    public boolean configured() {
+        return robotConfigured;
     }
 
     /**
@@ -59,7 +71,7 @@ public record MqttRobotStatus(
     public MqttRobotStatus halted(boolean halted) {
         return this.halted != halted
                 ? new MqttRobotStatus(started, closed, connecting, connected, robotConfiguring, robotConfigured,
-                cameraConfiguring, cameraConfigured, halted, startTime, lastActivity, watchDog)
+                halted, configIndex, startTime, lastActivity, watchDog)
                 : this;
     }
 
@@ -71,47 +83,22 @@ public record MqttRobotStatus(
     public MqttRobotStatus lastActivity(long lastActivity) {
         return this.lastActivity != lastActivity
                 ? new MqttRobotStatus(started, closed, connecting, connected, robotConfiguring, robotConfigured,
-                cameraConfiguring, cameraConfigured, halted, startTime, lastActivity, watchDog)
+                halted, configIndex, startTime, lastActivity, watchDog)
                 : this;
     }
 
     /**
-     * Returns the robotConfigured state
+     * Returns the real robot state with the next config index
      */
-    public MqttRobotStatus setCameraConfigured() {
-        return !(!cameraConfiguring && cameraConfigured)
-                ? new MqttRobotStatus(started, closed, connecting, connected, robotConfiguring, robotConfigured,
-                false, true, halted,
-                startTime, lastActivity, watchDog)
-                : this;
-    }
-
-    /**
-     * Returns the robotConfiguring state
-     */
-    public MqttRobotStatus setCameraConfiguring() {
-        return !(cameraConfiguring && !cameraConfigured)
-                ? new MqttRobotStatus(started, closed, connecting, connected, robotConfiguring, robotConfigured,
-                true, false, halted,
-                startTime, lastActivity, watchDog)
-                : this;
-    }
-
-    /**
-     * Returns the robotConfigured state
-     */
-    public MqttRobotStatus setCameraNotConfigured() {
-        return !(!cameraConfiguring && !cameraConfigured)
-                ? new MqttRobotStatus(started, closed, connecting, connected, robotConfiguring, robotConfigured,
-                false, false, halted,
-                startTime, lastActivity, watchDog)
-                : this;
+    public MqttRobotStatus nextConfigIndex() {
+        return new MqttRobotStatus(started, closed, connecting, connected, robotConfiguring, robotConfigured,
+                halted, configIndex + 1, startTime, lastActivity, watchDog);
     }
 
     public MqttRobotStatus setClosed() {
-        return !(closed && !connecting && connected && !robotConfiguring && robotConfigured && !cameraConfiguring && !cameraConfigured)
+        return !(closed && !connecting && connected && !robotConfiguring && robotConfigured)
                 ? new MqttRobotStatus(started, true, false, false, false, false,
-                false, false, false, startTime, lastActivity, watchDog)
+                false, configIndex, startTime, lastActivity, watchDog)
                 : this;
     }
 
@@ -121,7 +108,7 @@ public record MqttRobotStatus(
     public MqttRobotStatus setConnected() {
         return !(connected && !connecting)
                 ? new MqttRobotStatus(started, closed, false, true, robotConfiguring, robotConfigured,
-                cameraConfiguring, cameraConfigured, halted, startTime, lastActivity, watchDog)
+                halted, configIndex, startTime, lastActivity, watchDog)
                 : this;
     }
 
@@ -131,8 +118,8 @@ public record MqttRobotStatus(
     public MqttRobotStatus setConnecting() {
         return !(connecting && !connected)
                 ? new MqttRobotStatus(started, closed, true, false, robotConfiguring, robotConfigured,
-                cameraConfiguring, cameraConfigured, halted,
-                startTime, lastActivity, watchDog)
+                halted,
+                configIndex, startTime, lastActivity, watchDog)
                 : this;
     }
 
@@ -141,8 +128,8 @@ public record MqttRobotStatus(
      */
     public MqttRobotStatus setRobotConfigured() {
         return !(!robotConfiguring && robotConfigured)
-                ? new MqttRobotStatus(started, closed, connecting, connected, false, true, cameraConfiguring, cameraConfigured, halted,
-                startTime, lastActivity, watchDog)
+                ? new MqttRobotStatus(started, closed, connecting, connected, false, true, halted,
+                configIndex, startTime, lastActivity, watchDog)
                 : this;
     }
 
@@ -151,8 +138,8 @@ public record MqttRobotStatus(
      */
     public MqttRobotStatus setRobotConfiguring() {
         return !(robotConfiguring && !robotConfigured)
-                ? new MqttRobotStatus(started, closed, connecting, connected, true, false, cameraConfiguring, cameraConfigured, halted,
-                startTime, lastActivity, watchDog)
+                ? new MqttRobotStatus(started, closed, connecting, connected, true, false, halted,
+                configIndex, startTime, lastActivity, watchDog)
                 : this;
     }
 
@@ -161,8 +148,8 @@ public record MqttRobotStatus(
      */
     public MqttRobotStatus setRobotNotConfigured() {
         return !(!robotConfiguring && !robotConfigured)
-                ? new MqttRobotStatus(started, closed, connecting, connected, false, false, cameraConfiguring, cameraConfigured, halted,
-                startTime, lastActivity, watchDog)
+                ? new MqttRobotStatus(started, closed, connecting, connected, false, false, halted,
+                configIndex, startTime, lastActivity, watchDog)
                 : this;
     }
 
@@ -171,8 +158,8 @@ public record MqttRobotStatus(
      */
     public MqttRobotStatus setUnconnected() {
         return !(!connecting && !connected)
-                ? new MqttRobotStatus(started, closed, false, false, robotConfiguring, robotConfigured, cameraConfiguring, cameraConfigured, halted,
-                startTime, lastActivity, watchDog)
+                ? new MqttRobotStatus(started, closed, false, false, robotConfiguring, robotConfigured, halted,
+                configIndex, startTime, lastActivity, watchDog)
                 : this;
     }
 
@@ -183,7 +170,7 @@ public record MqttRobotStatus(
      */
     public MqttRobotStatus startTime(long startTime) {
         return this.startTime != startTime
-                ? new MqttRobotStatus(started, closed, connecting, connected, robotConfiguring, robotConfigured, cameraConfiguring, cameraConfigured, halted, startTime, lastActivity, watchDog)
+                ? new MqttRobotStatus(started, closed, connecting, connected, robotConfiguring, robotConfigured, halted, configIndex, startTime, lastActivity, watchDog)
                 : this;
     }
 
@@ -194,7 +181,7 @@ public record MqttRobotStatus(
      */
     public MqttRobotStatus started(boolean started) {
         return this.started != started
-                ? new MqttRobotStatus(started, closed, connecting, connected, robotConfiguring, robotConfigured, cameraConfiguring, cameraConfigured, halted, startTime, lastActivity, watchDog)
+                ? new MqttRobotStatus(started, closed, connecting, connected, robotConfiguring, robotConfigured, halted, configIndex, startTime, lastActivity, watchDog)
                 : this;
     }
 
@@ -205,7 +192,7 @@ public record MqttRobotStatus(
      */
     public MqttRobotStatus watchDog(WatchDog watchDog) {
         return !Objects.equals(this.watchDog, watchDog)
-                ? new MqttRobotStatus(started, closed, connecting, connected, robotConfiguring, robotConfigured, cameraConfiguring, cameraConfigured, halted, startTime, lastActivity, watchDog)
+                ? new MqttRobotStatus(started, closed, connecting, connected, robotConfiguring, robotConfigured, halted, configIndex, startTime, lastActivity, watchDog)
                 : this;
     }
 }

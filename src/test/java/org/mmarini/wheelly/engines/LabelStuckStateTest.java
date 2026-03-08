@@ -278,7 +278,7 @@ class LabelStuckStateTest {
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the result should be blocked result
         assertNotNull(result);
@@ -305,7 +305,7 @@ class LabelStuckStateTest {
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the result should be none exit
         assertNotNull(result);
@@ -337,7 +337,7 @@ class LabelStuckStateTest {
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the result should be none exit
         assertNotNull(result);
@@ -364,7 +364,7 @@ class LabelStuckStateTest {
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the result should be none exit
         assertNotNull(result);
@@ -397,7 +397,7 @@ class LabelStuckStateTest {
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the result should be blocked result
         assertNotNull(result);
@@ -421,7 +421,7 @@ class LabelStuckStateTest {
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the result should be blocked result
         assertNotNull(result);
@@ -448,7 +448,7 @@ class LabelStuckStateTest {
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the result should be none exit
         assertNotNull(result);
@@ -482,7 +482,7 @@ class LabelStuckStateTest {
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the result should be none exit
         assertNotNull(result);
@@ -516,7 +516,7 @@ class LabelStuckStateTest {
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the result should be none exit
         assertNotNull(result);
@@ -552,7 +552,7 @@ class LabelStuckStateTest {
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the result should be none exit
         assertNotNull(result);
@@ -587,7 +587,7 @@ class LabelStuckStateTest {
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the result should be none exit
         assertNotNull(result);
@@ -623,7 +623,7 @@ class LabelStuckStateTest {
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the result should be none exit
         assertNotNull(result);
@@ -658,7 +658,7 @@ class LabelStuckStateTest {
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the result should be none exit
         assertNotNull(result);
@@ -694,7 +694,7 @@ class LabelStuckStateTest {
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the result should be none exit
         assertNotNull(result);
@@ -729,7 +729,7 @@ class LabelStuckStateTest {
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the result should be none exit
         assertNotNull(result);
@@ -764,7 +764,7 @@ class LabelStuckStateTest {
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the result should be none exit
         assertNotNull(result);

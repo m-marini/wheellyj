@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -68,9 +68,9 @@ public record ProcessorCommand(String id, Consumer<ProcessorContextApi> command)
     }
 
     /**
-     * Returns the command that performs a sequence of commands
+     * Returns the command that performs a sequence of command
      *
-     * @param commands the commands
+     * @param commands the command
      */
     public static ProcessorCommand concat(ProcessorCommand... commands) {
         ProcessorCommand[] compress = Arrays.stream(commands).filter(Objects::nonNull)

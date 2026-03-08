@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -68,7 +68,7 @@ class SignalGeneratorTest {
     public static final WheellyContactsMessage CONTACTS_MESSAGE = new WheellyContactsMessage(2, true,
             true, true, true);
     public static final CameraEvent CAMERA_EVENT = new CameraEvent(0, "?", 3, 4, null, Complex.DEG0);
-    public static final RobotCommands COMMANDS = new RobotCommands(true, Complex.DEG0, false, true, Complex.DEG90, 20);
+    public static final RobotCommandsOld COMMANDS = new RobotCommandsOld(true, Complex.DEG0, false, true, Complex.DEG90, 20);
     private static final String MODELLER_DEF = """
             ---
             $schema: https://mmarini.org/wheelly/world-modeller-schema-0.1

@@ -1,15 +1,14 @@
 ---
-$schema: https://mmarini.org/wheelly/mqtt-robot-schema-1.0
+$schema: https://mmarini.org/wheelly/mqtt-robot-schema-1.2
 class: org.mmarini.wheelly.mqtt.MqttRobot
 #brokerUrl: tcp://localhost:1883
+brokerUrl: tcp://mosquitto.home:1883
 user: wheellyj
 password: wheellyj
-robotId: "wheelly/e05a1b66f89c/v0"
-cameraId: "wheellycam/38182bb1a31c/v0"
+robotId: "wheelly/e05a1b66f89c/v1"
 qrDeviceId: "wheellyqr/d94775b8c6f4/v0"
 configureTimeout: 2000
 retryInterval: 3000
-cameraInterval: 800
 #cameraTimeout: 2000
 maxRadarDistance: 2
 lidarFOV: 15
@@ -17,19 +16,19 @@ contactRadius: 0.28
 cameraFOV: 60
 sensorReceptiveAngle: 15
 headFOV: 130
-configCommands:
-  # 500 ms decay time of low pass filter of motion sensors
-  - "cs,500"
-  # 5 DEG min rotation, 30 DEG max rotation, 15 pps max power during rotation
-  - "cc,5,30,15"
-  # 200000 mU/pps/s voltage feedback motor controller factor
-  # 400 mU/s voltage asr factor
-  - "tcsl,904,5127,669,5261,-690,1680,-499,1702,3000,3000,50,400"
-  - "tcsr,628,2165,490,2322,-620,1569,-414,1468,3000,3000,50,400"
-# 500 ms status interval, 500 ms proxy interval
-  - "ci,500,500"
-  # +/- 65 DEG head rotation (same of headFOV)
-  - "ch,-65,65"
-cameraConfigCommands:
-  # led intensity 255, frame size 9 (800x600)
-  - "cf,255,10"
+config:
+  - tau: 500
+    asr: 200
+    lambdaFactor: 30
+    maxPulseInterval: 200
+    delayedInterval: 10
+  - minRotRange: 5
+    maxRotRange: 30
+    maxRotPps: 15
+    maxSpeed: 40
+    haltDistance: 20
+    decelerateDistance: 80
+  - sendInterval: 500
+    scanInterval: 500
+    minHeadDir: -65
+    maxHeadDir: 65

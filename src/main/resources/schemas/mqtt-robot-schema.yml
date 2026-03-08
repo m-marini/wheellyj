@@ -1,11 +1,11 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/mqtt-robot-schema-1.0
+$id: https://mmarini.org/wheelly/mqtt-robot-schema-1.2
 title: Robot
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/mqtt-robot-schema-1.0
+    const: https://mmarini.org/wheelly/mqtt-robot-schema-1.2
   class:
     const: org.mmarini.wheelly.mqtt.MqttRobot
   brokerUrl:
@@ -18,16 +18,8 @@ properties:
     type: string
   robotId:
     type: string
-  cameraId:
-    type: string
   qrDeviceId:
     type: string
-  cameraInterval:
-    type: integer
-    minimum: 1
-  cameraTimeout:
-    type: integer
-    minimum: 1
   retryInterval:
     type: integer
     minimum: 1
@@ -66,25 +58,90 @@ properties:
     type: integer
     minimum: 1
     maximum: 179
-  configCommands:
+  directionRange:
+    type: integer
+    minimum: 1
+    maximum: 90
+  targetRange:
+    type: number
+    exclusiveMinimum: 0
+  config:
     type: array
     items:
-      type: string
-      minLength: 3
-  cameraConfigCommand:
-    type: array
-    items:
-      type: string
-      minLength: 3
+      $ref: "#/$defs/Config"
 required:
   - $schema
   - class
   - user
   - password
   - robotId
-  - cameraId
   - qrDeviceId
   - contactRadius
   - lidarFOV
   - cameraFOV
   - maxRadarDistance
+$defs:
+  Config:
+    type: object
+    properties:
+      asr:
+        type: integer
+        minimum: 0
+        maximum: 16383
+      lambdaFactor:
+        type: integer
+        minimum: 0
+        maximum: 100
+      maxPulseInterval:
+        type: integer
+        minimum: 1
+        maximum: 10000
+      delayedInterval:
+        type: integer
+        minimum: 1
+        maximum: 10000
+      tau:
+        type: integer
+        minimum: 1
+        maximum: 10000
+      minRotRange:
+        type: integer
+        minimum: 0
+        maximum: 180
+      maxRotRange:
+        type: integer
+        minimum: 0
+        maximum: 180
+      maxRotPps:
+        type: integer
+        minimum: 0
+        maximum: 20
+      maxSpeed:
+        type: integer
+        minimum: 0
+        maximum: 60
+      haltDistance:
+        type: integer
+        minimum: 0
+        maximum: 1000
+      decelerateDistance:
+        type: integer
+        minimum: 0
+        maximum: 1000
+      minHeadDir:
+        type: integer
+        minimum: -90
+        maximum: 90
+      maxHeadDir:
+        type: integer
+        minimum: -90
+        maximum: 90
+      sendInterval:
+        type: integer
+        minimum: 1
+        maximum: 60000
+      scanInterval:
+        type: integer
+        minimum: 1
+        maximum: 60000
+

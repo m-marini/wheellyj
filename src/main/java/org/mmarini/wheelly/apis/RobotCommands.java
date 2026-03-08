@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2023 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -28,149 +28,116 @@
 
 package org.mmarini.wheelly.apis;
 
-import java.util.Arrays;
-import java.util.Optional;
+import java.awt.geom.Point2D;
+import java.util.Objects;
+
+import static java.util.Objects.requireNonNull;
 
 /**
- * Store the possible commands combination haltCommand, move, scan
+ * Store the command parameters for the required robot state
  *
- * @param scan          true if scan command
- * @param scanDirection the scan direction
- * @param move          true if movement command
- * @param halt          true if haltCommand command
- * @param moveDirection the move direction
- * @param speed         the power (pps)
+ * @param status            the status
+ * @param scanDirection     the scan direction
+ * @param rotationDirection the rotation direction
+ * @param target            the target location
  */
-public record RobotCommands(boolean scan, Complex scanDirection, boolean move, boolean halt, Complex moveDirection,
-                            int speed) {
+public record RobotCommands(StatusCommand status, Complex scanDirection, Complex rotationDirection,
+                            Point2D target) {
 
-    private static final RobotCommands NONE = new RobotCommands(false, Complex.DEG0, false, false, Complex.DEG0, 0);
-    private static final RobotCommands HALT_MOVE = new RobotCommands(false, Complex.DEG0, false, true, Complex.DEG0, 0);
-    private static final RobotCommands HALT = new RobotCommands(true, Complex.DEG0, false, true, Complex.DEG0, 0);
+    static RobotCommands HALT = new RobotCommands(StatusCommand.HALT, Complex.DEG0, null, null);
 
     /**
-     * Returns the concatenation of commands
-     * The last scan with last move or haltCommand command is returned
+     * Returns the goto backward command
      *
-     * @param commands the commands
+     * @param scanDirection the scan direction
+     * @param target        the target location
      */
-    public static RobotCommands concat(RobotCommands... commands) {
-        Optional<RobotCommands> scanCmd = Arrays.stream(commands).filter(RobotCommands::scan).reduce((a, b) -> b);
-        Optional<RobotCommands> movementCmd = Arrays.stream(commands).filter(RobotCommands::isMovement).reduce((a, b) -> b);
-        return movementCmd.map(mv ->
-                scanCmd.map(sc -> mv.setScan(sc.scanDirection())).orElse(mv)
-        ).orElse(
-                scanCmd.orElse(RobotCommands.none()));
+    public static RobotCommands backward(Complex scanDirection, Point2D target) {
+        return new RobotCommands(StatusCommand.BACKWARD, scanDirection, null, target);
     }
 
     /**
-     * Returns the idle command
+     * Returns the goto forward command
+     *
+     * @param scanDirection the scan direction
+     * @param target        the target location
      */
-    public static RobotCommands haltCommand() {
+    public static RobotCommands forward(Complex scanDirection, Point2D target) {
+        return new RobotCommands(StatusCommand.FORWARD, scanDirection, null, target);
+    }
+
+    /**
+     * Returns the halt command
+     *
+     * @param scanDirection the scan direction
+     */
+    public static RobotCommands halt(Complex scanDirection) {
+        return new RobotCommands(StatusCommand.HALT, scanDirection, null, null);
+    }
+
+    /**
+     * Returns the halt command
+     */
+    public static RobotCommands halt() {
         return HALT;
     }
 
     /**
-     * Returns the haltCommand command
-     */
-    public static RobotCommands haltMove() {
-        return HALT_MOVE;
-    }
-
-    /**
-     * Returns the only move command
+     * Returns the rotate command
      *
-     * @param direction the move direction
-     * @param speed     the power (pps)
+     * @param scanDirection     the scan direction
+     * @param rotationDirection the rotation direction
      */
-    public static RobotCommands move(Complex direction, int speed) {
-        return new RobotCommands(false, Complex.DEG0, true, false, direction, speed);
+    public static RobotCommands rotate(Complex scanDirection, Complex rotationDirection) {
+        return new RobotCommands(StatusCommand.ROTATE, scanDirection, rotationDirection, null);
     }
 
     /**
-     * Returns the move command and front scan
+     * Creates the robot status command
      *
-     * @param direction the move direction
-     * @param speed     the power (pps)
+     * @param status            the status
+     * @param scanDirection     the scan direction
+     * @param rotationDirection the rotation direction
+     * @param target            the target location
      */
-    public static RobotCommands moveAndFrontScan(Complex direction, int speed) {
-        return new RobotCommands(true, Complex.DEG0, true, false, direction, speed);
+    public RobotCommands(StatusCommand status, Complex scanDirection, Complex rotationDirection, Point2D target) {
+        this.status = requireNonNull(status);
+        this.scanDirection = requireNonNull(scanDirection);
+        this.rotationDirection = rotationDirection;
+        this.target = target;
     }
 
     /**
-     * Returns the move command and scan
+     * Returns true if halt command
+     */
+    public boolean isHalt() {
+        return StatusCommand.HALT.equals(status);
+    }
+
+    /**
+     * Returns true if rotate command
+     */
+    public boolean isRotate() {
+        return StatusCommand.ROTATE.equals(status);
+    }
+
+    /**
+     * Sets the scan direction
      *
-     * @param direction     the move direction
-     * @param speed         the power (pps)
-     * @param scanDirection the scan direction
+     * @param scanDirection scan direction
      */
-    public static RobotCommands moveAndScan(Complex direction, int speed, Complex scanDirection) {
-        return new RobotCommands(true, scanDirection, true, false, direction, speed);
+    public RobotCommands scanDirection(Complex scanDirection) {
+        return Objects.equals(scanDirection, this.scanDirection) ? this
+                : new RobotCommands(status, scanDirection, rotationDirection, target);
     }
 
     /**
-     * Returns the none command
+     * The required status command
      */
-    public static RobotCommands none() {
-        return NONE;
+    public enum StatusCommand {
+        HALT,
+        FORWARD,
+        BACKWARD,
+        ROTATE
     }
-
-    /**
-     * Returns the only scan command
-     *
-     * @param direction the scanner direction
-     */
-    public static RobotCommands scan(Complex direction) {
-        return new RobotCommands(true, direction, false, false, Complex.DEG0, 0);
-    }
-
-    /**
-     * Returns the command with cleared scan
-     */
-    public RobotCommands clearScan() {
-        return new RobotCommands(false, Complex.DEG0, move, halt, moveDirection, speed);
-    }
-
-    /**
-     * Returns true if movement command (move o haltCommand)
-     */
-    public boolean isMovement() {
-        return halt || move;
-    }
-
-    /**
-     * Returns the command with haltCommand command
-     */
-    public RobotCommands setHalt() {
-        return new RobotCommands(scan, scanDirection, false, true, Complex.DEG0, 0);
-    }
-
-    /**
-     * Returns the command with move command
-     *
-     * @param direction the move direction
-     * @param speed     the power (pps)
-     */
-    public RobotCommands setMove(Complex direction, int speed) {
-        return new RobotCommands(scan, scanDirection, true, false, direction, speed);
-    }
-
-    /**
-     * Returns the command with set scan
-     *
-     * @param scanDirection the scan direction (DEG)
-     */
-    public RobotCommands setScan(Complex scanDirection) {
-        return new RobotCommands(true, scanDirection, move, halt, moveDirection, speed);
-    }
-
-    /**
-     * Returns the concatenation of this command with another
-     *
-     * @param other the other command
-     */
-    public RobotCommands then(RobotCommands other) {
-        return concat(this, other);
-    }
-
 }

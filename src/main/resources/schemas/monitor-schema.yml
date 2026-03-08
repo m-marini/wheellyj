@@ -13,6 +13,13 @@ properties:
     type: string
   controller:
     type: string
+  distanceRange:
+    type: number
+    exclusiveMinimum: 0
+  directionRange:
+    type: int
+    minimum: 0
+    maximum: 179
 required:
   - $schema
   - robot

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -59,11 +59,11 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
     }
 
     /**
-     * Writes robot commands
+     * Writes robot command
      *
-     * @param commands the commands
+     * @param commands the command
      */
-    default <T extends InferenceWriter> T write(RobotCommands commands) throws IOException {
+    default <T extends InferenceWriter> T write(RobotCommandsOld commands) throws IOException {
         write(commands.scan());
         write(commands.scanDirection())
                 .write(commands.move())
@@ -142,9 +142,9 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * Writes the model
      *
      * @param model    the model
-     * @param commands the commands
+     * @param commands the command
      */
-    default <T extends InferenceWriter> T write(WorldModel model, RobotCommands commands) throws IOException {
+    default <T extends InferenceWriter> T write(WorldModel model, RobotCommandsOld commands) throws IOException {
         return write(model)
                 .write(commands);
     }

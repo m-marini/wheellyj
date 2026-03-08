@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -36,31 +36,24 @@ import java.util.Objects;
 /**
  * The controller status
  *
- * @param robotStatus             the current robot status
- * @param inferencing             true if the controller is inferencing
- * @param inferenceRequested      true if the controller has to schedule inference
- * @param ready                   true if the controller is ready
- * @param started                 true if the controller is started
- * @param moveCommand             the last move command
- * @param lastMoveCommand         the lat move command instant
- * @param lastRobotMoveTimestamp  the last roboto movement instant
- * @param lastSensorMoveTimestamp the last sensor movement instant
- * @param sensorDir               the requested sensor direction
- * @param prevSensorDir           the previous sensor direction requested
- * @param lastInference           the last inference instant
+ * @param robotStatus        the current robot status
+ * @param command            the last command
+ * @param inferencing        true if the controller is inferencing
+ * @param inferenceRequested true if the controller has to schedule inference
+ * @param ready              true if the controller is ready
+ * @param started            true if the controller is started
+ * @param lastInference      the last inference instant
+ * @param nextSyncTime       the next sync time
+ * @param lastSyncCommand    the last sync command
  */
 public record RobotControllerStatus(
         RobotStatus robotStatus,
+        RobotCommands command,
         boolean inferencing,
         boolean inferenceRequested, boolean ready,
         boolean started,
-        RobotCommands moveCommand,
-        RobotCommands lastMoveCommand,
-        long lastRobotMoveTimestamp,
-        long lastSensorMoveTimestamp,
-        int sensorDir,
-        int prevSensorDir,
-        long lastInference) implements RobotControllerStatusApi {
+        long lastInference,
+        long nextSyncTime, RobotCommands lastSyncCommand) implements RobotControllerStatusApi {
 
     private static final Logger logger = LoggerFactory.getLogger(RobotControllerStatus.class);
 
@@ -71,7 +64,18 @@ public record RobotControllerStatus(
         logger.atDebug().log("Clear inference");
         return !inferencing && !inferenceRequested
                 ? this
-                : new RobotControllerStatus(robotStatus, false, false, ready, started, moveCommand, lastMoveCommand, lastRobotMoveTimestamp, lastSensorMoveTimestamp, sensorDir, prevSensorDir, lastInference);
+                : new RobotControllerStatus(robotStatus, command, false, false, ready, started, lastInference, nextSyncTime, lastSyncCommand);
+    }
+
+    /**
+     * Returns the controller status with changed command
+     *
+     * @param command the command
+     */
+    public RobotControllerStatus command(RobotCommands command) {
+        return Objects.equals(this.command, command)
+                ? this
+                : new RobotControllerStatus(robotStatus, command, inferencing, inferenceRequested, ready, started, lastInference, nextSyncTime, lastSyncCommand);
     }
 
     /**
@@ -82,58 +86,14 @@ public record RobotControllerStatus(
     }
 
     /**
-     * Returns the controller status with the changed last move command
+     * Returns the controller status with changed next sync time
      *
-     * @param lastMoveCommand the last move command
+     * @param nextSyncTime the next sync instant (ms)
      */
-    public RobotControllerStatus lastMoveCommand(RobotCommands lastMoveCommand) {
-        return Objects.equals(this.lastMoveCommand, lastMoveCommand)
+    public RobotControllerStatus nextSyncTime(long nextSyncTime) {
+        return this.nextSyncTime == nextSyncTime
                 ? this
-                : new RobotControllerStatus(robotStatus, inferencing, inferenceRequested, ready, started, moveCommand, lastMoveCommand, lastRobotMoveTimestamp, lastSensorMoveTimestamp, sensorDir, prevSensorDir, lastInference);
-    }
-
-    /**
-     * Returns the controller status with changed last move instant
-     *
-     * @param lastRobotMoveTimestamp the last move instant (ms)
-     */
-    public RobotControllerStatus lastRobotMoveTimestamp(long lastRobotMoveTimestamp) {
-        return this.lastRobotMoveTimestamp == lastRobotMoveTimestamp
-                ? this
-                : new RobotControllerStatus(robotStatus, inferencing, inferenceRequested, ready, started, moveCommand, lastMoveCommand, lastRobotMoveTimestamp, lastSensorMoveTimestamp, sensorDir, prevSensorDir, lastInference);
-    }
-
-    /**
-     * Returns the controller status with changed last sensor move instant
-     *
-     * @param lastSensorMoveTimestamp the sensor move instant (ms)
-     */
-    public RobotControllerStatus lastSensorMoveTimestamp(long lastSensorMoveTimestamp) {
-        return this.lastSensorMoveTimestamp == lastSensorMoveTimestamp
-                ? this
-                : new RobotControllerStatus(robotStatus, inferencing, inferenceRequested, ready, started, moveCommand, lastMoveCommand, lastRobotMoveTimestamp, lastSensorMoveTimestamp, sensorDir, prevSensorDir, lastInference);
-    }
-
-    /**
-     * Returns the controller status with changed move command
-     *
-     * @param moveCommand the move command
-     */
-    public RobotControllerStatus moveCommand(RobotCommands moveCommand) {
-        return Objects.equals(this.moveCommand, moveCommand)
-                ? this
-                : new RobotControllerStatus(robotStatus, inferencing, inferenceRequested, ready, started, moveCommand, lastMoveCommand, lastRobotMoveTimestamp, lastSensorMoveTimestamp, sensorDir, prevSensorDir, lastInference);
-    }
-
-    /**
-     * Returns the controller status with the changed previous sensor direction
-     *
-     * @param prevSensorDir the previous sensor direction (DEG)
-     */
-    public RobotControllerStatus prevSensorDir(int prevSensorDir) {
-        return this.prevSensorDir == prevSensorDir
-                ? this
-                : new RobotControllerStatus(robotStatus, inferencing, inferenceRequested, ready, started, moveCommand, lastMoveCommand, lastRobotMoveTimestamp, lastSensorMoveTimestamp, sensorDir, prevSensorDir, lastInference);
+                : new RobotControllerStatus(robotStatus, command, inferencing, inferenceRequested, ready, started, lastInference, nextSyncTime, command);
     }
 
     /**
@@ -144,7 +104,7 @@ public record RobotControllerStatus(
     public RobotControllerStatus ready(boolean ready) {
         return this.ready == ready
                 ? this
-                : new RobotControllerStatus(robotStatus, inferencing, inferenceRequested, ready, started, moveCommand, lastMoveCommand, lastRobotMoveTimestamp, lastSensorMoveTimestamp, sensorDir, prevSensorDir, lastInference);
+                : new RobotControllerStatus(robotStatus, command, inferencing, inferenceRequested, ready, started, lastInference, nextSyncTime, lastSyncCommand);
     }
 
     /**
@@ -156,10 +116,10 @@ public record RobotControllerStatus(
     public RobotControllerStatus requestInference(long time, long inferenceInterval) {
         if (inferenceRequested) {
             logger.atDebug().log("Inference already requested inferencing={}", inferencing);
-            return new RobotControllerStatus(robotStatus, inferencing, false, ready, started, moveCommand, lastMoveCommand, lastRobotMoveTimestamp, lastSensorMoveTimestamp, sensorDir, prevSensorDir, lastInference);
+            return new RobotControllerStatus(robotStatus, command, inferencing, false, ready, started, lastInference, nextSyncTime, lastSyncCommand);
         } else if (ready && !((inferencing || time < lastInference + inferenceInterval))) {
             logger.atDebug().log("Scheduling inference");
-            return new RobotControllerStatus(robotStatus, true, true, ready, started, moveCommand, lastMoveCommand, lastRobotMoveTimestamp, lastSensorMoveTimestamp, sensorDir, prevSensorDir, time);
+            return new RobotControllerStatus(robotStatus, command, true, true, true, started, time, nextSyncTime, lastSyncCommand);
         } else {
             return this;
         }
@@ -173,18 +133,7 @@ public record RobotControllerStatus(
     public RobotControllerStatus robotStatus(RobotStatus robotStatus) {
         return Objects.equals(this.robotStatus, robotStatus)
                 ? this
-                : new RobotControllerStatus(robotStatus, inferencing, inferenceRequested, ready, started, moveCommand, lastMoveCommand, lastRobotMoveTimestamp, lastSensorMoveTimestamp, sensorDir, prevSensorDir, lastInference);
-    }
-
-    /**
-     * Returns the controller status with the changed sensor direction
-     *
-     * @param sensorDir the sensor direction (DEG)
-     */
-    public RobotControllerStatus sensorDir(int sensorDir) {
-        return this.sensorDir == sensorDir
-                ? this
-                : new RobotControllerStatus(robotStatus, inferencing, inferenceRequested, ready, started, moveCommand, lastMoveCommand, lastRobotMoveTimestamp, lastSensorMoveTimestamp, sensorDir, prevSensorDir, lastInference);
+                : new RobotControllerStatus(robotStatus, command, inferencing, inferenceRequested, ready, started, lastInference, nextSyncTime, lastSyncCommand);
     }
 
     /**
@@ -195,6 +144,11 @@ public record RobotControllerStatus(
     public RobotControllerStatus started(boolean started) {
         return this.started == started
                 ? this
-                : new RobotControllerStatus(robotStatus, inferencing, inferenceRequested, ready, started, moveCommand, lastMoveCommand, lastRobotMoveTimestamp, lastSensorMoveTimestamp, sensorDir, prevSensorDir, lastInference);
+                : new RobotControllerStatus(robotStatus, command, inferencing, inferenceRequested, ready, started, lastInference, nextSyncTime, lastSyncCommand);
+    }
+
+    @Override
+    public boolean syncRequired(long time) {
+        return time >= nextSyncTime || !command.equals(lastSyncCommand);
     }
 }

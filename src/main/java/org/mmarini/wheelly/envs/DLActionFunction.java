@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -35,7 +35,7 @@ import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommandsOld;
 import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.yaml.Locator;
@@ -95,9 +95,9 @@ public class DLActionFunction implements ActionFunction {
      * Returns action masks
      *
      * @param worldModels   the world model
-     * @param robotCommands the roboto commands
+     * @param robotCommands the roboto command
      */
-    public Map<String, INDArray> actionMasks(List<WorldModel> worldModels, List<RobotCommands> robotCommands) {
+    public Map<String, INDArray> actionMasks(List<WorldModel> worldModels, List<RobotCommandsOld> robotCommands) {
         return actionMasks(actions(worldModels, robotCommands));
     }
 
@@ -126,10 +126,10 @@ public class DLActionFunction implements ActionFunction {
      * Returns the robot command from signals
      *
      * @param states   the states
-     * @param commands the commands
+     * @param commands the command
      */
-    public List<RobotCommands> actions(List<WorldModel> states, Map<String, Signal> commands) {
-        List<RobotCommands> result = new ArrayList<>();
+    public List<RobotCommandsOld> actions(List<WorldModel> states, Map<String, Signal> commands) {
+        List<RobotCommandsOld> result = new ArrayList<>();
         INDArray moves = requireNonNull(commands.get(MOVE_ACTION_ID)).toINDArray();
         INDArray sensors = requireNonNull(commands.get(SENSOR_ACTION_ID)).toINDArray();
         int n = (int) min(states.size(), min(moves.size(0), sensors.size(0)));
@@ -140,9 +140,9 @@ public class DLActionFunction implements ActionFunction {
             WorldModel model = states.get(i);
             Complex direction = direction(model, direction(moveIdx));
             Complex sensorDir = sensorDirection(model, sensorDirection(scanIdx));
-            RobotCommands cmd = speed == 0 && direction.isCloseTo(model.robotStatus().direction(), SIN_DEG1)
-                    ? RobotCommands.haltCommand()
-                    : RobotCommands.move(direction, speed);
+            RobotCommandsOld cmd = speed == 0 && direction.isCloseTo(model.robotStatus().direction(), SIN_DEG1)
+                    ? RobotCommandsOld.haltCommand()
+                    : RobotCommandsOld.move(direction, speed);
             cmd = cmd.setScan(sensorDir);
             result.add(cmd);
         }
@@ -150,18 +150,18 @@ public class DLActionFunction implements ActionFunction {
     }
 
     /**
-     * Returns the action signals relative to robot commands
+     * Returns the action signals relative to robot command
      *
      * @param states   the states
-     * @param commands the commands
+     * @param commands the command
      */
-    public Map<String, Signal> actions(List<WorldModel> states, List<RobotCommands> commands) {
+    public Map<String, Signal> actions(List<WorldModel> states, List<RobotCommandsOld> commands) {
         int n = min(states.size(), commands.size());
         INDArray moveAction = Nd4j.zeros(DataType.FLOAT, n, 1);
         INDArray sensorAction = Nd4j.zeros(DataType.FLOAT, n, 1);
         for (int i = 0; i < n; i++) {
             WorldModel state = states.get(i);
-            RobotCommands command = commands.get(i);
+            RobotCommandsOld command = commands.get(i);
             Complex mapDir = state.gridMap().direction();
             Complex moveDir = command.moveDirection().sub(mapDir);
             int moveIdx = moveIndex(moveDir, command.speed());
@@ -178,8 +178,8 @@ public class DLActionFunction implements ActionFunction {
     }
 
     @Override
-    public List<RobotCommands> commands(Map<String, Signal> actions, WorldModel... states) {
-        List<RobotCommands> result = new ArrayList<>();
+    public List<RobotCommandsOld> commands(Map<String, Signal> actions, WorldModel... states) {
+        List<RobotCommandsOld> result = new ArrayList<>();
         INDArray moves = requireNonNull(actions.get(MOVE_ACTION_ID)).toINDArray();
         INDArray sensors = requireNonNull(actions.get(SENSOR_ACTION_ID)).toINDArray();
         int n = (int) min(states.length, min(moves.size(0), sensors.size(0)));
@@ -190,9 +190,9 @@ public class DLActionFunction implements ActionFunction {
             WorldModel model = states[i];
             Complex direction = direction(model, direction(moveIdx));
             Complex sensorDir = sensorDirection(model, sensorDirection(scanIdx));
-            RobotCommands cmd = speed == 0 && direction.isCloseTo(model.robotStatus().direction(), SIN_DEG1)
-                    ? RobotCommands.haltCommand()
-                    : RobotCommands.move(direction, speed);
+            RobotCommandsOld cmd = speed == 0 && direction.isCloseTo(model.robotStatus().direction(), SIN_DEG1)
+                    ? RobotCommandsOld.haltCommand()
+                    : RobotCommandsOld.move(direction, speed);
             cmd = cmd.setScan(sensorDir);
             result.add(cmd);
         }

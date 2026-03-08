@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -46,7 +46,7 @@ import java.util.concurrent.TimeUnit;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Handles the remote device allowing to receive the sensor data and to send commands
+ * Handles the remote device allowing to receive the sensor data and to send command
  */
 public class RemoteDevice {
     private static final Logger logger = LoggerFactory.getLogger(RemoteDevice.class);

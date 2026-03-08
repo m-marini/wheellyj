@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -51,7 +51,7 @@ public interface WorldModellerApi extends WorldModellerConnector {
     /**
      * Returns the flow of inference events
      */
-    Flowable<Tuple2<WorldModel, RobotCommands>> readInference();
+    Flowable<Tuple2<WorldModel, RobotCommandsOld>> readInference();
 
     /**
      * Returns the world model specification

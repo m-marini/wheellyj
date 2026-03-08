@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2023 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2023-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -48,7 +48,7 @@ public class ComMonitor extends MatrixTable {
     public static final String ERROR_KEY = "error";
     public static final String CONTROLLER_KEY = "controller";
     public static final String SENSORS_KEY = "sensors";
-    public static final String COMMANDS_KEY = "commands";
+    public static final String COMMANDS_KEY = "command";
 
     private static final Logger logger = LoggerFactory.getLogger(ComMonitor.class);
     private static final Pattern NAME_PATTERN = Pattern.compile("^([^/]+)/[^/]+/[^/]+/[^/]+/(.*)$");

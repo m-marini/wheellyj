@@ -74,7 +74,7 @@ public class MappingState extends TimeOutState {
     public static final String MIN_NUMBER_OF_SAMPLES_ID = "minNumberOfSamples";
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-mapping-schema-0.1";
     public static final String FOUND_EXIT = "found";
-    public static final Tuple2<String, RobotCommands> FOUND_RESULT = Tuple2.of(FOUND_EXIT, RobotCommands.haltCommand());
+    public static final Tuple2<String, RobotCommandsOld> FOUND_RESULT = Tuple2.of(FOUND_EXIT, RobotCommandsOld.haltCommand());
     private static final Logger logger = LoggerFactory.getLogger(MappingState.class);
 
     /**
@@ -154,15 +154,15 @@ public class MappingState extends TimeOutState {
      *
      * @param context the context
      */
-    private Tuple2<String, RobotCommands> checkForRange(ProcessorContextApi context) {
+    private Tuple2<String, RobotCommandsOld> checkForRange(ProcessorContextApi context) {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         int sensorDir = robotStatus.headDirection().toIntDeg();
         long lidarTime = robotStatus.lidarMessage().simulationTime();
         if (sensorDir != targetSensorDir || prevLidarTime == lidarTime) {
             return Tuple2.of(NONE_EXIT,
                     targetSensorDir == 0
-                            ? RobotCommands.haltCommand()
-                            : RobotCommands.scan(Complex.fromDeg(targetSensorDir)));
+                            ? RobotCommandsOld.haltCommand()
+                            : RobotCommandsOld.scan(Complex.fromDeg(targetSensorDir)));
         }
         // Valid signal
         prevLidarTime = lidarTime;
@@ -172,8 +172,8 @@ public class MappingState extends TimeOutState {
                 // run scan command
                 ? Tuple2.of(NONE_EXIT,
                 targetSensorDir == 0
-                        ? RobotCommands.haltCommand()
-                        : RobotCommands.scan(Complex.fromDeg(targetSensorDir)))
+                        ? RobotCommandsOld.haltCommand()
+                        : RobotCommandsOld.scan(Complex.fromDeg(targetSensorDir)))
                 // Head direction is correct, and lidar signal has changed and the number of signal reaches the required number of signals
                 // Scan completed
                 : null;
@@ -204,9 +204,9 @@ public class MappingState extends TimeOutState {
      *
      * @param context the context
      */
-    Tuple2<String, RobotCommands> leftScanning(ProcessorContextApi context) {
+    Tuple2<String, RobotCommandsOld> leftScanning(ProcessorContextApi context) {
         // Check for lidar range completed
-        Tuple2<String, RobotCommands> result = checkForRange(context);
+        Tuple2<String, RobotCommandsOld> result = checkForRange(context);
         if (result != null) {
             return result;
         }
@@ -220,7 +220,7 @@ public class MappingState extends TimeOutState {
                 targetSensorDir = 0;
             }
             logger.atDebug().log("Scanning {} ...", targetSensorDir);
-            RobotCommands command = RobotCommands.scan(Complex.fromDeg(targetSensorDir));
+            RobotCommandsOld command = RobotCommandsOld.scan(Complex.fromDeg(targetSensorDir));
             return Tuple2.of(NONE_EXIT, command);
         }
         // Left scan completed, turn clockwise the robot
@@ -238,7 +238,7 @@ public class MappingState extends TimeOutState {
         this.targetRobotDir = targetDir;
         numberOfSamples = 0;
         status = TURING_ROBOT;
-        return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(targetDir, 0));
+        return Tuple2.of(NONE_EXIT, RobotCommandsOld.moveAndFrontScan(targetDir, 0));
     }
 
     /**
@@ -260,9 +260,9 @@ public class MappingState extends TimeOutState {
      *
      * @param context the context
      */
-    Tuple2<String, RobotCommands> rightScanning(ProcessorContextApi context) {
+    Tuple2<String, RobotCommandsOld> rightScanning(ProcessorContextApi context) {
         // Check for scan completed
-        Tuple2<String, RobotCommands> result = checkForRange(context);
+        Tuple2<String, RobotCommandsOld> result = checkForRange(context);
         if (result != null) {
             return result;
         }
@@ -278,7 +278,7 @@ public class MappingState extends TimeOutState {
                 targetSensorDir = maxAngle;
             }
             logger.atDebug().log("Scanning {} ...", targetSensorDir);
-            RobotCommands command = RobotCommands.scan(Complex.fromDeg(targetSensorDir));
+            RobotCommandsOld command = RobotCommandsOld.scan(Complex.fromDeg(targetSensorDir));
             return Tuple2.of(NONE_EXIT, command);
         }
         logger.atDebug().log("Right scanning completed");
@@ -286,7 +286,7 @@ public class MappingState extends TimeOutState {
         numberOfSamples = 0;
         status = LEFT_SCANNING;
         logger.atDebug().log("Scanning {} ...", targetSensorDir);
-        RobotCommands command = RobotCommands.scan(Complex.fromDeg(targetSensorDir));
+        RobotCommandsOld command = RobotCommandsOld.scan(Complex.fromDeg(targetSensorDir));
         return Tuple2.of(NONE_EXIT, command);
     }
 
@@ -298,8 +298,8 @@ public class MappingState extends TimeOutState {
     }
 
     @Override
-    public Tuple2<String, RobotCommands> step(ProcessorContextApi ctx) {
-        Tuple2<String, RobotCommands> result = super.step(ctx);
+    public Tuple2<String, RobotCommandsOld> step(ProcessorContextApi ctx) {
+        Tuple2<String, RobotCommandsOld> result = super.step(ctx);
         if (result != null) {
             return result;
         }
@@ -333,11 +333,11 @@ public class MappingState extends TimeOutState {
      *
      * @param context the context
      */
-    Tuple2<String, RobotCommands> turningRobot(ProcessorContextApi context) {
+    Tuple2<String, RobotCommandsOld> turningRobot(ProcessorContextApi context) {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         Complex robotDir = robotStatus.direction();
         if (!robotDir.isCloseTo(targetRobotDir, Complex.fromDeg(5))) {
-            RobotCommands commands = RobotCommands.moveAndFrontScan(targetRobotDir, 0);
+            RobotCommandsOld commands = RobotCommandsOld.moveAndFrontScan(targetRobotDir, 0);
             return Tuple2.of(NONE_EXIT, commands);
         }
         if (targetRobotDir.isCloseTo(initialDir, EPSILON)) {
@@ -348,6 +348,6 @@ public class MappingState extends TimeOutState {
         logger.atDebug().log("Turning robot completed");
         status = RIGHT_SCANNING;
         targetSensorDir = 0;
-        return Tuple2.of(NONE_EXIT, RobotCommands.scan(Complex.DEG0));
+        return Tuple2.of(NONE_EXIT, RobotCommandsOld.scan(Complex.DEG0));
     }
 }

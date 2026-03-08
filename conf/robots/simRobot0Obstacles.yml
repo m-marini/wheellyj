@@ -1,5 +1,5 @@
 ---
-$schema: https://mmarini.org/wheelly/sim-robot-schema-3.1
+$schema: https://mmarini.org/wheelly/sim-robot-schema-3.2
 class: org.mmarini.wheelly.apis.SimRobot
 # robotSeed: 1234
 mapSeed: 1234

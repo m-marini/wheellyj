@@ -28,7 +28,10 @@
 
 package org.mmarini.wheelly.mqtt;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Maybe;
@@ -44,13 +47,17 @@ import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.geom.Point2D;
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 
+import static java.lang.Math.round;
 import static java.lang.Math.tan;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.RobotSpec.location2Pulses;
 import static org.mmarini.wheelly.rx.RXFunc.logError;
 
 /**
@@ -88,13 +95,11 @@ import static org.mmarini.wheelly.rx.RXFunc.logError;
  * </p>
  */
 public class MqttRobot implements RobotApi {
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/mqtt-robot-schema-1.0";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/mqtt-robot-schema-1.2";
     public static final String DEFAULT_BROKER_URL = "tcp://localhost:1883";
     public static final long DEFAULT_CONFIGURE_INTERVAL = 1000;
     public static final long DEFAULT_RETRY_INTERVAL = 500;
-    public static final long DEFAULT_CAMERA_INTERVAL = 500;
     public static final long DEFAULT_COMMAND_TIMEOUT = 3000;
-    public static final int DEFAULT_CAMERA_TIMEOUT = 2000;
     private static final Logger logger = LoggerFactory.getLogger(MqttRobot.class);
 
     /**
@@ -112,28 +117,31 @@ public class MqttRobot implements RobotApi {
         String password = locator.path("password").getNode(root).asText();
         long configureTimeout = locator.path("configureTimeout").getNode(root).asLong(DEFAULT_CONFIGURE_INTERVAL);
         long retryInterval = locator.path("retryInterval").getNode(root).asLong(DEFAULT_RETRY_INTERVAL);
-        long cameraInterval = locator.path("cameraInterval").getNode(root).asLong(DEFAULT_CAMERA_INTERVAL);
-        long cameraTimeout = locator.path("cameraTimeout").getNode(root).asLong(DEFAULT_CAMERA_TIMEOUT);
         String robotId = locator.path("robotId").getNode(root).asText();
-        String cameraId = locator.path("cameraId").getNode(root).asText();
         String qrDeviceId = locator.path("qrDeviceId").getNode(root).asText();
 
         RobotSpec robotSpec = RobotSpec.fromJson(root, locator);
-
-        Locator configCommandsLoc = locator.path("configCommands");
-        String[] robotConfigCommands = !configCommandsLoc.getNode(root).isMissingNode()
-                ? configCommandsLoc.elements(root).map(l -> l.getNode(root).asText()).toArray(String[]::new)
-                : new String[0];
-        Locator cameraConfigCommandsLoc = locator.path("cameraConfigCommands");
-        String[] cameraConfigCommands = !cameraConfigCommandsLoc.getNode(root).isMissingNode()
-                ? cameraConfigCommandsLoc.elements(root).map(l -> l.getNode(root).asText()).toArray(String[]::new)
+        ObjectMapper objectMapper = new ObjectMapper(new JsonFactory());
+        Locator cameraConfigCommandsLoc = locator.path("config");
+        String[] cfg = !cameraConfigCommandsLoc.getNode(root).isMissingNode()
+                ? cameraConfigCommandsLoc.elements(root).map(l -> {
+                    JsonNode json = l.getNode(root);
+                    try {
+                        return objectMapper.writeValueAsString(json);
+                    } catch (JsonProcessingException e) {
+                        logger.atError().setCause(e).log("Error converting configuration to json");
+                        return "";
+                    }
+                })
+                .filter(Predicate.not(String::isEmpty))
+                .toArray(String[]::new)
                 : new String[0];
 
         try {
             return create(brokerUrl, clientId, user, password,
                     robotId,
-                    cameraId, qrDeviceId, configureTimeout, retryInterval, cameraInterval,
-                    cameraTimeout, robotSpec, robotConfigCommands, cameraConfigCommands);
+                    qrDeviceId, configureTimeout, retryInterval,
+                    robotSpec, cfg);
         } catch (MqttException e) {
             logger.atError().setCause(e).log("Error creating mqtt robot");
             throw new RuntimeException(e);
@@ -143,44 +151,35 @@ public class MqttRobot implements RobotApi {
     /**
      * Return MQTT robot interface
      *
-     * @param brokerUrl            the broker url
-     * @param clientId             the client id
-     * @param user                 the mqtt client username
-     * @param password             mqtt client password
-     * @param robotId              robot device id
-     * @param cameraId             the camera device
-     * @param qrId                 QRCODE device id
-     * @param configureTimeout     the configuration timeout (ms)
-     * @param retryInterval        the retry configuration interval (ms)
-     * @param cameraInterval       the camera interval (ms)
-     * @param cameraTimeout        the camera response timeout (ms)
-     * @param robotSpec            the robot specification
-     * @param robotConfigCommands  the robot configuration commands
-     * @param cameraConfigCommands the camera configuration commands
+     * @param brokerUrl        the broker url
+     * @param clientId         the client id
+     * @param user             the mqtt client username
+     * @param password         mqtt client password
+     * @param robotId          robot device id
+     * @param qrId             QRCODE device id
+     * @param configureTimeout the configuration timeout (ms)
+     * @param retryInterval    the retry configuration interval (ms)
+     * @param robotSpec        the robot specification
+     * @param robotConfig      the robot configurations
      * @throws MqttException in case of error
      */
     public static MqttRobot create(String brokerUrl, String clientId, String user, String password,
-                                   String robotId, String cameraId, String qrId,
-                                   long configureTimeout, long retryInterval, long cameraInterval,
-                                   long cameraTimeout, RobotSpec robotSpec, String[] robotConfigCommands, String[] cameraConfigCommands) throws MqttException {
+                                   String robotId, String qrId,
+                                   long configureTimeout, long retryInterval,
+                                   RobotSpec robotSpec, String[] robotConfig) throws MqttException {
         RxMqttClient client = RxMqttClient.create(brokerUrl, clientId, user, password);
         RemoteDevice robotDevice = new RemoteDevice(robotId, client);
-        RemoteDevice cameraDevice = new RemoteDevice(cameraId, client);
         RemoteDevice qrDevice = new RemoteDevice(qrId, client);
-        return new MqttRobot(client, robotDevice, cameraDevice, qrDevice, configureTimeout, retryInterval, cameraInterval, cameraTimeout, robotSpec,
-                robotConfigCommands, cameraConfigCommands);
+        return new MqttRobot(client, robotDevice, qrDevice, configureTimeout, retryInterval, robotSpec,
+                robotConfig);
     }
 
     private final RxMqttClient client;
     private final RemoteDevice robotDevice;
-    private final RemoteDevice cameraDevice;
     private final RemoteDevice qrDetectorDevice;
     private final long configureTimeout;
     private final long retryInterval;
-    private final long cameraInterval;
-    private final long cameraTimeout;
     private final RobotSpec robotSpec;
-    private final String[] cameraConfigCommands;
     private final AtomicReference<MqttRobotStatus> status;
     private final BehaviorProcessor<RobotStatusApi> states;
     private final PublishProcessor<Throwable> errors;
@@ -189,37 +188,29 @@ public class MqttRobot implements RobotApi {
     private final PublishProcessor<WheellyLidarMessage> lidarMessages;
     private final PublishProcessor<WheellyContactsMessage> contactMessages;
     private final PublishProcessor<WheellySupplyMessage> supplyMessages;
-    private String[] configCommands;
+    private final String[] config;
 
     /**
      * Creates the mqtt robot
      *
-     * @param client               the mqtt client
-     * @param robotDevice          the robot device
-     * @param cameraDevice         the camera device
-     * @param qrDetectorDevice     the qr detector device
-     * @param configureTimeout     the configuration timeout (ms)
-     * @param retryInterval        the retry configuration interval (ms)
-     * @param cameraInterval       the camera interval (ms)
-     * @param cameraTimeout        the camera response timeout (ms)
-     * @param robotSpec            the robot specification
-     * @param configCommands       the configuration commands
-     * @param cameraConfigCommands the camera configuration commands
+     * @param client           the mqtt client
+     * @param robotDevice      the robot device
+     * @param qrDetectorDevice the qr detector device
+     * @param configureTimeout the configuration timeout (ms)
+     * @param retryInterval    the retry configuration interval (ms)
+     * @param robotSpec        the robot specification
+     * @param config           the configuratios
      */
-    public MqttRobot(RxMqttClient client, RemoteDevice robotDevice, RemoteDevice cameraDevice, RemoteDevice qrDetectorDevice, long configureTimeout, long retryInterval, long cameraInterval, long cameraTimeout, RobotSpec robotSpec, String[] configCommands, String[] cameraConfigCommands) {
+    public MqttRobot(RxMqttClient client, RemoteDevice robotDevice, RemoteDevice qrDetectorDevice, long configureTimeout, long retryInterval, RobotSpec robotSpec, String[] config) {
         this.client = requireNonNull(client);
         this.robotDevice = requireNonNull(robotDevice);
         this.qrDetectorDevice = requireNonNull(qrDetectorDevice);
-        this.cameraDevice = cameraDevice;
         this.configureTimeout = configureTimeout;
         this.retryInterval = retryInterval;
-        this.cameraInterval = cameraInterval;
-        this.cameraTimeout = cameraTimeout;
         this.robotSpec = requireNonNull(robotSpec);
-        this.configCommands = requireNonNull(configCommands);
-        this.cameraConfigCommands = requireNonNull(cameraConfigCommands);
+        this.config = requireNonNull(config);
         status = new AtomicReference<>(new MqttRobotStatus(false, false, false, false,
-                false, false, false, false, false, 0,
+                false, false, false, 0, 0,
                 0, null));
         this.states = BehaviorProcessor.createDefault(status.get());
         this.errors = PublishProcessor.create();
@@ -254,22 +245,26 @@ public class MqttRobot implements RobotApi {
                         cameraEvents::onNext,
                         cameraEvents::onError,
                         cameraEvents::onComplete);
-        cameraDevice.readData("hi", m -> new String(m.getPayload()))
-                .subscribe(this::onCameraHiMessage,
-                        supplyMessages::onError,
-                        supplyMessages::onComplete);
+    }
+
+    @Override
+    public Single<Boolean> backward(Point2D location) {
+        if (!status.get().connected()) {
+            return Single.just(false);
+        }
+        Point2D pulses = location2Pulses(location);
+        int x = (int) round(pulses.getX());
+        int y = (int) round(pulses.getY());
+        return executeRobotCommand("bw", x + "," + y, DEFAULT_COMMAND_TIMEOUT)
+                .isEmpty()
+                .map(s -> !s);
     }
 
     /**
-     *
+     * Returns the configuration command
      */
-    private void captureCamera() {
-        MqttRobotStatus s = status.get();
-        if (s.cameraConfigured() && !s.closed()) {
-            cameraDevice.execute(new StringCommand("ca", new MqttMessage(new byte[0])), cameraTimeout)
-                    .subscribe(this::onCameraCaptured,
-                            this::onCameraCaptureError);
-        }
+    public String[] config() {
+        return config;
     }
 
     @Override
@@ -300,76 +295,34 @@ public class MqttRobot implements RobotApi {
     }
 
     /**
-     * Returns the configuration commands
+     * Forces robot configuration
      */
-    public String[] configCommands() {
-        return configCommands;
-    }
-
-    /**
-     * Forces roboto configuration
-     *
-     * @param commands the command list
-     */
-    public void configure(String[] commands) {
-        this.configCommands = commands;
-        MqttRobotStatus s1 = status.updateAndGet(MqttRobotStatus::setRobotNotConfigured);
-        states.onNext(s1);
-        configureRobot();
-    }
-
-    /**
-     * Configures camera
-     *
-     * @param command the configuration command
-     */
-    private Single<Boolean> configureCamera(String command) {
-        String[] split = command.split(",", 2);
-        return executeCameraCommand(split[0], split[1], configureTimeout)
-                .map(res ->
-                        res.equals(split[1]))
-                .defaultIfEmpty(false);
-    }
-
-    private void configureCamera() {
-        MqttRobotStatus st = status.getAndUpdate(MqttRobotStatus::setCameraConfiguring);
-        states.onNext(status.get());
-        if (!st.cameraConfiguring() && !st.closed() && st.connected()) {
-            // if not robotConfiguring
-            // Send configure commands
-            Flowable.fromArray(cameraConfigCommands)
-                    .subscribeOn(Schedulers.computation())
-                    .parallel()
-                    .map(this::configureCamera)
-                    .flatMap(Single::toFlowable)
-                    .sequential()
-                    .all(success -> success)
-                    .doOnSuccess(success -> logger.atDebug().log("Configuration={}", success))
-                    .subscribe(this::onCameraConfiguration,
-                            logError(logger, "Error configuring camera"));
-        }
-    }
-
-    /**
-     * Configures robot
-     */
-    private void configureRobot() {
-        MqttRobotStatus st = status.getAndUpdate(MqttRobotStatus::setRobotConfiguring);
+    public void configure() {
+        MqttRobotStatus st = status.getAndUpdate(s ->
+                s.setRobotConfiguring().configIndex(0));
         states.onNext(status.get());
         if (!st.robotConfiguring() && !st.closed() && st.connected()) {
             // if not robotConfiguring
-            // Send configure commands
-            Flowable.fromArray(configCommands)
-                    .subscribeOn(Schedulers.computation())
-                    .parallel()
-                    .map(this::configureRobot)
-                    .flatMap(Single::toFlowable)
-                    .sequential()
-                    .all(success -> success)
+            // Send configure command
+            configureRobot();
+        }
+    }
+
+    void configureRobot() {
+        MqttRobotStatus st = status.get();
+        if (st.configIndex() < config.length) {
+            // Send configuration file
+            configureRobot(config[st.configIndex()])
                     .doOnSuccess(success ->
-                            logger.atDebug().log("Configuration={}", success))
+                            logger.atDebug().log("Configuration {}/{} {}",
+                                    status.get().configIndex() + 1, config.length, success ? "OK" : "KO"))
                     .subscribe(this::onRobotConfiguration,
                             logError(logger, "Error configuring robot"));
+        } else {
+            // Robot configured
+            MqttRobotStatus s1 = status.updateAndGet(MqttRobotStatus::setRobotConfigured);
+            states.onNext(s1);
+            logger.atInfo().log("Robot configured");
         }
     }
 
@@ -379,10 +332,9 @@ public class MqttRobot implements RobotApi {
      * @param command the command
      */
     private Single<Boolean> configureRobot(String command) {
-        String[] split = command.split(",", 2);
-        return executeRobotCommand(split[0], split[1], configureTimeout)
+        return executeRobotCommand("cf", command, configureTimeout)
                 .map(res ->
-                        res.equals(split[1]))
+                        res.equals(command))
                 .defaultIfEmpty(false);
     }
 
@@ -414,26 +366,6 @@ public class MqttRobot implements RobotApi {
      * @param arg     the command argument
      * @param timeout the execution timeout
      */
-    private Maybe<String> executeCameraCommand(String command, String arg, long timeout) {
-        if (!client.isConnected()) {
-            return Maybe.empty();
-        } else {
-            try {
-                return cameraDevice.execute(StringCommand.create(command, arg), timeout);
-            } catch (Throwable e) {
-                notifyError("Error executing camera command", e);
-                return Maybe.error(e);
-            }
-        }
-    }
-
-    /**
-     * Executes the command returning the command response
-     *
-     * @param command the command
-     * @param arg     the command argument
-     * @param timeout the execution timeout
-     */
     private Maybe<String> executeRobotCommand(String command, String arg, long timeout) {
         if (!client.isConnected()) {
             return Maybe.empty();
@@ -445,6 +377,19 @@ public class MqttRobot implements RobotApi {
                 return Maybe.error(e);
             }
         }
+    }
+
+    @Override
+    public Single<Boolean> forward(Point2D location) {
+        if (!status.get().connected()) {
+            return Single.just(false);
+        }
+        Point2D pulses = location2Pulses(location);
+        int x = (int) round(pulses.getX());
+        int y = (int) round(pulses.getY());
+        return executeRobotCommand("fw", x + "," + y, DEFAULT_COMMAND_TIMEOUT)
+                .isEmpty()
+                .map(s -> !s);
     }
 
     @Override
@@ -473,7 +418,7 @@ public class MqttRobot implements RobotApi {
      * Notifies error
      *
      * @param message the message
-     * @param error the error
+     * @param error   the error
      */
     private void notifyError(String message, Throwable error) {
         if (error instanceof TimeoutException) {
@@ -483,58 +428,6 @@ public class MqttRobot implements RobotApi {
             logger.atError().setCause(error.getCause()).log(message);
             errors.onNext(error);
         }
-    }
-
-    /**
-     * Handles the camera capture error
-     *
-     * @param error the error
-     */
-    private void onCameraCaptureError(Throwable error) {
-        notifyError("Error capturing image", error);
-        Completable.timer(cameraInterval, TimeUnit.MILLISECONDS)
-                .subscribe(this::captureCamera);
-    }
-
-    /**
-     * Handles the camera capture response
-     *
-     * @param arg the argument
-     */
-    private void onCameraCaptured(String arg) {
-        Completable.timer(cameraInterval, TimeUnit.MILLISECONDS)
-                .subscribe(this::captureCamera, err -> {
-                });
-    }
-
-    /**
-     * Handles the configuration success
-     *
-     * @param success true if configuration success
-     */
-    private void onCameraConfiguration(boolean success) {
-        if (success) {
-            logger.atDebug().log("Camera configured");
-            MqttRobotStatus s1 = status.updateAndGet(MqttRobotStatus::setCameraConfigured);
-            states.onNext(s1);
-            captureCamera();
-        } else {
-            logger.atDebug().log("Camera configuration failed");
-            MqttRobotStatus s1 = status.updateAndGet(MqttRobotStatus::setCameraNotConfigured);
-            states.onNext(s1);
-            Completable.timer(retryInterval, TimeUnit.MILLISECONDS, Schedulers.computation())
-                    .subscribe(this::configureCamera);
-        }
-    }
-
-    /**
-     * Handles the hello camera message
-     *
-     * @param arg the argument
-     */
-    private void onCameraHiMessage(String arg) {
-        status.getAndUpdate(MqttRobotStatus::setCameraNotConfigured);
-        configureCamera();
     }
 
     /**
@@ -549,8 +442,7 @@ public class MqttRobot implements RobotApi {
                     s.setConnected().lastActivity(System.currentTimeMillis())
             );
             states.onNext(st);
-            configureRobot();
-            configureCamera();
+            configure();
         } else {
             MqttRobotStatus st = this.status.updateAndGet(MqttRobotStatus::setUnconnected);
             states.onNext(st);
@@ -575,15 +467,15 @@ public class MqttRobot implements RobotApi {
      */
     private void onRobotConfiguration(boolean success) {
         if (success) {
-            logger.atDebug().log("Robot configured");
-            MqttRobotStatus s1 = status.updateAndGet(MqttRobotStatus::setRobotConfigured);
+            MqttRobotStatus s1 = status.updateAndGet(MqttRobotStatus::nextConfigIndex);
             states.onNext(s1);
+            configureRobot();
         } else {
             logger.atDebug().log("Robot configuration failed");
             MqttRobotStatus s1 = status.updateAndGet(MqttRobotStatus::setRobotNotConfigured);
             states.onNext(s1);
             Completable.timer(retryInterval, TimeUnit.MILLISECONDS, Schedulers.computation())
-                    .subscribe(this::configureRobot);
+                    .subscribe(this::configure);
         }
     }
 
@@ -593,8 +485,9 @@ public class MqttRobot implements RobotApi {
      * @param arg the argument
      */
     private void onRobotHiMessage(String arg) {
-        status.getAndUpdate(MqttRobotStatus::setRobotNotConfigured);
-        configureRobot();
+        MqttRobotStatus st = status.updateAndGet(MqttRobotStatus::setRobotNotConfigured);
+        states.onNext(st);
+        configure();
     }
 
     /**
@@ -653,6 +546,16 @@ public class MqttRobot implements RobotApi {
     @Override
     public RobotSpec robotSpec() {
         return robotSpec;
+    }
+
+    @Override
+    public Single<Boolean> rotate(int dir) {
+        if (!status.get().connected()) {
+            return Single.just(false);
+        }
+        return executeRobotCommand("ro", String.valueOf(dir), DEFAULT_COMMAND_TIMEOUT)
+                .isEmpty()
+                .map(s -> !s);
     }
 
     @Override

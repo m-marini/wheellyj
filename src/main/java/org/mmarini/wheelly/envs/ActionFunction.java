@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -30,24 +30,24 @@ package org.mmarini.wheelly.envs;
 
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommandsOld;
 import org.mmarini.wheelly.apis.WorldModel;
 
 import java.util.List;
 import java.util.Map;
 
 /**
- * Converts the signal action to roboto commands
+ * Converts the signal action to roboto command
  */
 public interface ActionFunction {
 
     /**
-     * Returns the roboto commands for the given action signals in the given world context
+     * Returns the roboto command for the given action signals in the given world context
      *
      * @param states  the world contexts
      * @param actions the actions
      */
-    List<RobotCommands> commands(Map<String, Signal> actions, WorldModel... states);
+    List<RobotCommandsOld> commands(Map<String, Signal> actions, WorldModel... states);
 
     /**
      * Returns the action signal specification

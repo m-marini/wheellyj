@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -49,7 +49,7 @@ public class TestApp {
     public static final int CAMERA_INTERVAL = 500;
     public static final int CAMERA_TIMEOUT = 5000;
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         new TestApp().run();
     }
 
@@ -60,9 +60,9 @@ public class TestApp {
         this.frame = new JFrame("Test");
         try {
             this.robot = MqttRobot.create(BROKER_URL, null, USER_NAME, PASSWORD,
-                    "wheelly", "wheellycam", "wheellyqr",
-                    5000, 3000, CAMERA_INTERVAL, CAMERA_TIMEOUT, DEFAULT_ROBOT_SPEC
-                    , new String[0], new String[0]);
+                    "wheelly", "wheellyqr",
+                    5000, 3000, DEFAULT_ROBOT_SPEC
+                    , new String[0]);
         } catch (MqttException e) {
             throw new RuntimeException(e);
         }
