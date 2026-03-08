@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2023 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2023-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -29,7 +29,7 @@
 package org.mmarini.wheelly.swing;
 
 import org.mmarini.swing.Messages;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommandsOld;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +38,7 @@ import javax.swing.*;
 import java.util.List;
 
 /**
- * Displays the robot status, controller status and roboto commands as matrix table
+ * Displays the robot status, controller status and roboto command as matrix table
  */
 public class SensorMonitor extends MatrixTable {
 
@@ -111,7 +111,7 @@ public class SensorMonitor extends MatrixTable {
      *
      * @param command the command
      */
-    public void onCommand(RobotCommands command) {
+    public void onCommand(RobotCommandsOld command) {
         if (command.move()) {
             printf(MOVE_HEAD, "%4d", command.moveDirection().toIntDeg());
             printf(MOVE_SPEED, "%3d", command.speed());

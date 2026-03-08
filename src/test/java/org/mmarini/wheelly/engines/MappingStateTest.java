@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -82,7 +82,7 @@ class MappingStateTest {
                 .build(NUM_TEST_CASE);
     }
 
-    static RobotStatus nextStatus(RobotStatus status, RobotCommands commands) {
+    static RobotStatus nextStatus(RobotStatus status, RobotCommandsOld commands) {
         long t = status.simulationTime() + DELTA_TIME;
         status = status.setSimulationTime(t).setLidarMessage(status.lidarMessage().simulationTime(t));
         if (commands.scan()) {
@@ -119,7 +119,7 @@ class MappingStateTest {
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the result should be blocked result
         assertNotNull(result);
@@ -145,7 +145,7 @@ class MappingStateTest {
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the result should be blocked result
         assertNotNull(result);
@@ -166,7 +166,7 @@ class MappingStateTest {
         // And entering state
         state.entry(ctx0);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(ctx0);
+        Tuple2<String, RobotCommandsOld> result = state.step(ctx0);
 
         // Then the result should be halt and scan
         assertNotNull(result);
@@ -200,7 +200,7 @@ class MappingStateTest {
         state.init(ctx0);
         // And entering state
         state.entry(ctx0);
-        Tuple2<String, RobotCommands> result = state.step(ctx0);
+        Tuple2<String, RobotCommandsOld> result = state.step(ctx0);
         // And advancing till left scanning
         RobotStatus status = s0;
         while (!LEFT_SCANNING.equals(state.status())) {
@@ -355,7 +355,7 @@ class MappingStateTest {
         state.entry(ctx0);
         // And stepping
         state.init(ctx0);
-        Tuple2<String, RobotCommands> result = state.step(ctx0);
+        Tuple2<String, RobotCommandsOld> result = state.step(ctx0);
 
         // ------------------------------------
         // Repeat tests till max right head direction reached
@@ -493,7 +493,7 @@ class MappingStateTest {
         state.init(ctx0);
         // And entering state
         state.entry(ctx0);
-        Tuple2<String, RobotCommands> result = state.step(ctx0);
+        Tuple2<String, RobotCommandsOld> result = state.step(ctx0);
 
         RobotStatus status = s0;
         while (!TURING_ROBOT.equals(state.status())) {
@@ -539,7 +539,7 @@ class MappingStateTest {
         state.init(ctx0);
         // And entering state
         state.entry(ctx0);
-        Tuple2<String, RobotCommands> result = state.step(ctx0);
+        Tuple2<String, RobotCommandsOld> result = state.step(ctx0);
         // And completion of 3 scan phases
         RobotStatus status = s0;
         do {

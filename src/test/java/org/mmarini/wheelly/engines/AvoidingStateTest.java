@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -164,7 +164,7 @@ class AvoidingStateTest {
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the result should be blocked result
         assertNotNull(result);
@@ -188,7 +188,7 @@ class AvoidingStateTest {
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the result should be blocked result
         assertNotNull(result);
@@ -212,7 +212,7 @@ class AvoidingStateTest {
         // And entering state
         state.entry(context);
         // And second stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the exit should be "none"
         assertEquals(AvoidingState.COMPLETED_RESULT, result);
@@ -235,7 +235,7 @@ class AvoidingStateTest {
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the exit should be "none"
         assertNotNull(result);
@@ -283,7 +283,7 @@ class AvoidingStateTest {
         // And stepping state
         state.step(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context1);
+        Tuple2<String, RobotCommandsOld> result = state.step(context1);
 
         // Then the exit should be "none"
         assertNotNull(result);
@@ -326,7 +326,7 @@ class AvoidingStateTest {
         // And stepping state
         state.step(context);
         // And second stepping state
-        Tuple2<String, RobotCommands> result = state.step(context1);
+        Tuple2<String, RobotCommandsOld> result = state.step(context1);
 
         // Then the exit should be "none"
         assertNotNull(result);
@@ -360,7 +360,7 @@ class AvoidingStateTest {
         // And stepping state
         state.step(context);
         // And second stepping state
-        Tuple2<String, RobotCommands> result = state.step(context1);
+        Tuple2<String, RobotCommandsOld> result = state.step(context1);
 
         // Then the exit should be "none"
         assertEquals(TimeOutState.TIMEOUT_RESULT, result);
@@ -390,7 +390,7 @@ class AvoidingStateTest {
         // And stepping state
         state.step(context);
         // And second stepping state
-        Tuple2<String, RobotCommands> result = state.step(context1);
+        Tuple2<String, RobotCommandsOld> result = state.step(context1);
 
         // Then the exit should be "none"
         assertNotNull(result);
@@ -422,7 +422,7 @@ class AvoidingStateTest {
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context);
+        Tuple2<String, RobotCommandsOld> result = state.step(context);
 
         // Then the exit should be "none"
         assertNotNull(result);
@@ -470,7 +470,7 @@ class AvoidingStateTest {
         // And stepping state
         state.step(context);
         // And stepping state
-        Tuple2<String, RobotCommands> result = state.step(context1);
+        Tuple2<String, RobotCommandsOld> result = state.step(context1);
 
         // Then the exit should be "none"
         assertNotNull(result);
@@ -512,7 +512,7 @@ class AvoidingStateTest {
         // And stepping state
         state.step(context);
         // And second stepping state
-        Tuple2<String, RobotCommands> result = state.step(context1);
+        Tuple2<String, RobotCommandsOld> result = state.step(context1);
 
         // Then the exit should be "none"
         assertNotNull(result);

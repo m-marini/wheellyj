@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -177,12 +177,12 @@ public class StateMachineAgent implements ProcessorContextApi, InferenceConnecto
      * @param worldModel the world model
      */
     @Override
-    public RobotCommands onInference(WorldModel worldModel) {
+    public RobotCommandsOld onInference(WorldModel worldModel) {
         this.worldModel = worldModel;
         if (this.currentNode == null) {
             initContext();
         }
-        RobotCommands commands = step();
+        RobotCommandsOld commands = step();
         stepUpProcessor.onNext(this);
         return commands;
     }
@@ -273,12 +273,12 @@ public class StateMachineAgent implements ProcessorContextApi, InferenceConnecto
     /**
      * Returns the robot command by processing the next transition
      */
-    public RobotCommands step() {
+    public RobotCommandsOld step() {
         // Process the state node
-        Tuple2<String, RobotCommands> result = currentNode.step(this);
+        Tuple2<String, RobotCommandsOld> result = currentNode.step(this);
         // Execute robot command
         String exitTag = result._1;
-        RobotCommands commands = result._2;
+        RobotCommandsOld commands = result._2;
         triggerProcessor.onNext(exitTag);
         if (!NONE_EXIT.equals(exitTag)) {
             //find for transition match

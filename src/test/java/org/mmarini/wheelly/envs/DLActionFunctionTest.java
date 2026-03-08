@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -37,7 +37,7 @@ import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.rl.envs.ArraySignal;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommandsOld;
 import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 import org.nd4j.linalg.api.buffer.DataType;
@@ -150,12 +150,12 @@ class DLActionFunctionTest {
                                 .reshape(2, 1))
         );
         // When ...
-        List<RobotCommands> commands = dataGen.actions(states, signals);
+        List<RobotCommandsOld> commands = dataGen.actions(states, signals);
 
         // Then ...
         assertThat(commands, hasSize(2));
         for (int i = 0; i < 2; i++) {
-            RobotCommands command = commands.get(i);
+            RobotCommandsOld command = commands.get(i);
             assertTrue(command.scan());
             assertEquals(expHalt, command.halt());
             assertEquals(!expHalt, command.move());
@@ -174,8 +174,8 @@ class DLActionFunctionTest {
                 .sensorDir(sensorDeg)
                 .build();
         List<WorldModel> states = List.of(model, model);
-        RobotCommands command = RobotCommands.scan(Complex.fromDeg(scanDeg));
-        List<RobotCommands> commands = List.of(command, command);
+        RobotCommandsOld command = RobotCommandsOld.scan(Complex.fromDeg(scanDeg));
+        List<RobotCommandsOld> commands = List.of(command, command);
 
         // When ...
         Map<String, Signal> signals = dataGen.actions(states, commands);

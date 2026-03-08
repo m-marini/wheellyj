@@ -76,10 +76,10 @@ public class LabelStuckState extends TimeOutState {
     public static final int DEFAULT_SPEED = 30;
     public static final String NOT_FOUND_EXIT = "notFound";
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-label-stuck-schema-1.0";
-    public static final Tuple2<String, RobotCommands> NOT_FOUND_RESULT = Tuple2.of(
-            NOT_FOUND_EXIT, RobotCommands.haltCommand());
-    public static final Tuple2<String, RobotCommands> NOT_FOUND_NONE_RESULT = Tuple2.of(
-            NOT_FOUND_EXIT, RobotCommands.none());
+    public static final Tuple2<String, RobotCommandsOld> NOT_FOUND_RESULT = Tuple2.of(
+            NOT_FOUND_EXIT, RobotCommandsOld.haltCommand());
+    public static final Tuple2<String, RobotCommandsOld> NOT_FOUND_NONE_RESULT = Tuple2.of(
+            NOT_FOUND_EXIT, RobotCommandsOld.none());
     private static final Logger logger = LoggerFactory.getLogger(LabelStuckState.class);
     public static final String PATTERN_ID = "pattern";
 
@@ -115,7 +115,7 @@ public class LabelStuckState extends TimeOutState {
      *
      * @param context the context
      */
-    public static Tuple2<String, RobotCommands> notFoundResult(ProcessorContextApi context) {
+    public static Tuple2<String, RobotCommandsOld> notFoundResult(ProcessorContextApi context) {
         return context.worldModel().robotStatus().halt() ? NOT_FOUND_NONE_RESULT : NOT_FOUND_RESULT;
     }
 
@@ -155,8 +155,8 @@ public class LabelStuckState extends TimeOutState {
     }
 
     @Override
-    public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
-        Tuple2<String, RobotCommands> result = super.step(context);
+    public Tuple2<String, RobotCommandsOld> step(ProcessorContextApi context) {
+        Tuple2<String, RobotCommandsOld> result = super.step(context);
         if (result != null) {
             return result;
         }
@@ -187,15 +187,15 @@ public class LabelStuckState extends TimeOutState {
         Complex targetSensorDir = Complex.direction(status.frontLidarLocation(), target);
         if (labelDistance < minDistance) {
             // the robot is too close, move backward
-            RobotCommands command = RobotCommands.moveAndScan(targetDir, -speed, sensorDir);
+            RobotCommandsOld command = RobotCommandsOld.moveAndScan(targetDir, -speed, sensorDir);
             return new Tuple2<>(NONE_EXIT, command);
         } else if (labelDistance > maxDistance) {
             // the robot is too far, move forward
-            RobotCommands command = RobotCommands.moveAndScan(targetDir, speed, sensorDir);
+            RobotCommandsOld command = RobotCommandsOld.moveAndScan(targetDir, speed, sensorDir);
             return new Tuple2<>(NONE_EXIT, command);
         } else if (!targetDir.isCloseTo(robotDir, directionRange)) {
             // The robot is not directed to the label, turn the robot
-            RobotCommands command = RobotCommands.moveAndScan(targetDir, 0, sensorDir);
+            RobotCommandsOld command = RobotCommandsOld.moveAndScan(targetDir, 0, sensorDir);
             return new Tuple2<>(NONE_EXIT, command);
         } else if (frontDistance > 0
                 && targetSensorDir.isCloseTo(status.headAbsDirection(), directionRange)
@@ -206,7 +206,7 @@ public class LabelStuckState extends TimeOutState {
             return notFoundResult(context);
         } else {
             // halt the robot and move head toward the target label
-            return new Tuple2<>(NONE_EXIT, RobotCommands.scan(sensorDir).setHalt());
+            return new Tuple2<>(NONE_EXIT, RobotCommandsOld.scan(sensorDir).setHalt());
         }
     }
 }

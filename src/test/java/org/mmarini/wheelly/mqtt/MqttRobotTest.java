@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -80,9 +80,9 @@ class MqttRobotTest {
 
     void createRobot(String url) throws MqttException {
         robot = assertDoesNotThrow(() -> MqttRobot.create(url, CLIENT_ID, USER, PASSWORD,
-                ROBOT_ID, CAMERA_ID, QR_ID,
-                CONFIGURE_TIMEOUT, RETRY_INTERVAL, CAMERA_INTERVAL, CAMERA_TIMEOUT, DEFAULT_ROBOT_SPEC,
-                new String[]{"cs,100,100", "ci,200,200"}, new String[]{"cf,255,5"}));
+                ROBOT_ID, QR_ID,
+                CONFIGURE_TIMEOUT, RETRY_INTERVAL, DEFAULT_ROBOT_SPEC,
+                new String[]{"cs,100,100", "ci,200,200"}));
         assertNotNull(robot);
         statusSub = new TestSubscriber<>();
         errorSub = new TestSubscriber<>();

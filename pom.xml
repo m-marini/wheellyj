@@ -1,7 +1,7 @@
 <!--
-  ~ Copyright (c) 2019 Marco Marini, marco.marini@mmarini.org
+  ~ Copyright (c) 2019-2026 Marco Marini, marco.marini@mmarini.org
   ~
-  ~ Permission is hereby granted, free of charge, to any person
+  ~  Permission is hereby granted, free of charge, to any person
   ~ obtaining a copy of this software and associated documentation
   ~ files (the "Software"), to deal in the Software without
   ~ restriction, including without limitation the rights to use,
@@ -32,11 +32,11 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.mmarini</groupId>
     <artifactId>wheelly</artifactId>
-    <version>0.26.0</version>
+    <version>0.27.0</version>
     <name>Wheelly</name>
     <description>Wheelly</description>
     <properties>
-        <java.version>21</java.version>
+        <java.version>25</java.version>
         <rxjava.version>3.0.0-RC2</rxjava.version>
         <jackson.version>2.12.5</jackson.version>
         <slf4j.version>2.0.17</slf4j.version>

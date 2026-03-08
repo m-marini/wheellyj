@@ -101,7 +101,7 @@ public class RobotExecutor {
      *
      * @param args command line arguments
      */
-    public static void main(String[] args) {
+    static void main(String[] args) {
         ArgumentParser parser = createParser();
         try {
             new RobotExecutor(parser.parseArgs(args)).run();
@@ -242,10 +242,10 @@ public class RobotExecutor {
      *
      * @param result the inference result
      */
-    private void onInference(Tuple2<WorldModel, RobotCommands> result) {
+    private void onInference(Tuple2<WorldModel, RobotCommandsOld> result) {
         if (dumpFile != null) {
             WorldModel world = result._1;
-            RobotCommands commands = result._2;
+            RobotCommandsOld commands = result._2;
             try {
                 dumpFile.write(world, commands);
             } catch (IOException e) {

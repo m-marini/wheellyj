@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -196,9 +196,9 @@ public class SignalGenerator implements SignalGeneratorApi {
             Map<String, Signal> state0 = null;
             Map<String, Signal> actions0 = null;
             WorldModel model0 = null;
-            RobotCommands command0 = null;
+            RobotCommandsOld command0 = null;
             for (; ; ) {
-                Tuple2<WorldModel, RobotCommands> t = readData(f);
+                Tuple2<WorldModel, RobotCommandsOld> t = readData(f);
                 if (t == null || stopping) {
                     break;
                 }
@@ -242,7 +242,7 @@ public class SignalGenerator implements SignalGeneratorApi {
      *
      * @throws IOException in case of error
      */
-    private Tuple2<WorldModel, RobotCommands> readData(InferenceReader f) throws IOException {
+    private Tuple2<WorldModel, RobotCommandsOld> readData(InferenceReader f) throws IOException {
         try {
             return f.readRecord();
         } catch (EOFException ex) {

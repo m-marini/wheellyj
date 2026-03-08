@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -48,7 +48,7 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * Connects the world modeller to reinforcement learning agent
- * generating state signals and converting actions to robot commands
+ * generating state signals and converting actions to robot command
  */
 public class DLEnvironment implements EnvironmentApi {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/env-dl-schema-0.1";
@@ -85,7 +85,7 @@ public class DLEnvironment implements EnvironmentApi {
     private RewardFunction rewardFunc;
     private AgentConnector agent;
     private WorldModel prevState;
-    private RobotCommands prevCommands;
+    private RobotCommandsOld prevCommands;
     private Map<String, Signal> signals0;
     private Map<String, Signal> prevActions;
 
@@ -127,14 +127,14 @@ public class DLEnvironment implements EnvironmentApi {
     }
 
     @Override
-    public RobotCommands onInference(WorldModel state) {
+    public RobotCommandsOld onInference(WorldModel state) {
         requireNonNull(state);
         requireNonNull(agent);
         requireNonNull(stateFunc);
 
         Map<String, Signal> signals1 = state(state);
         Map<String, Signal> actions = agent.act(signals1);
-        RobotCommands commands = actionFunc.commands(actions, state).getFirst();
+        RobotCommandsOld commands = actionFunc.commands(actions, state).getFirst();
 
         if (prevState != null) {
             double reward = reward(prevState, prevCommands, state);
@@ -152,7 +152,7 @@ public class DLEnvironment implements EnvironmentApi {
     }
 
     @Override
-    public double reward(WorldModel state0, RobotCommands actions, WorldModel state1) {
+    public double reward(WorldModel state0, RobotCommandsOld actions, WorldModel state1) {
         return rewardFunc != null ? rewardFunc.applyAsDouble(state0, actions, state1) : 0;
     }
 

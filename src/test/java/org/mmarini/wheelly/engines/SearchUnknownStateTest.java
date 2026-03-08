@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -95,7 +95,7 @@ class SearchUnknownStateTest {
         // And entering state
         state.entry(ctx);
         // And stepping
-        Tuple2<String, RobotCommands> result = state.step(ctx);
+        Tuple2<String, RobotCommandsOld> result = state.step(ctx);
 
         // Then the path should contain 2 points
         assertThat(state.path(), hasSize(2));

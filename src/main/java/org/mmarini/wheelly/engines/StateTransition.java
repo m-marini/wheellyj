@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -43,7 +43,7 @@ import static java.util.Objects.requireNonNull;
  * @param trigger      the trigger regex
  * @param from         the source state
  * @param to           the target state
- * @param onTransition the on transition commands
+ * @param onTransition the on transition command
  */
 public record StateTransition(Pattern trigger, String from, String to, ProcessorCommand onTransition) {
 
@@ -91,7 +91,7 @@ public record StateTransition(Pattern trigger, String from, String to, Processor
      * @param trigger      the trigger regex
      * @param from         the source state
      * @param to           the target state
-     * @param onTransition the on transition commands
+     * @param onTransition the on transition command
      */
     public StateTransition(Pattern trigger, String from, String to, ProcessorCommand onTransition) {
         this.trigger = requireNonNull(trigger);

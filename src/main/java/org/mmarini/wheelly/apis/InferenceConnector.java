@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -38,5 +38,5 @@ public interface InferenceConnector {
      *
      * @param state the world model status
      */
-    RobotCommands onInference(WorldModel state);
+    RobotCommandsOld onInference(WorldModel state);
 }

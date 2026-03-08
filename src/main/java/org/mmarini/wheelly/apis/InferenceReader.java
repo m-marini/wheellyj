@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -58,29 +58,29 @@ public interface InferenceReader extends AutoCloseable, DataReader {
     }
 
     /**
-     * Returns the world model from file or null if end of file
-     *
-     * @throws IOException in case of error
-     */
-    default Tuple2<WorldModel, RobotCommands> readRecord() throws IOException {
-        WorldModel model = readModel();
-        RobotCommands commands = readCommands();
-        return Tuple2.of(model, commands);
-    }
-
-    /**
      * Returns the robot command
      *
      * @throws IOException in case of error
      */
-    default RobotCommands readCommands() throws IOException {
+    default RobotCommandsOld readCommands() throws IOException {
         boolean scan = readBoolean();
         Complex scanDirection = readDeg();
         boolean move = readBoolean();
         boolean halt = readBoolean();
         Complex moveDirection = readDeg();
         int speed = readInt();
-        return new RobotCommands(scan, scanDirection, move, halt, moveDirection, speed);
+        return new RobotCommandsOld(scan, scanDirection, move, halt, moveDirection, speed);
+    }
+
+    /**
+     * Returns the world model from file or null if end of file
+     *
+     * @throws IOException in case of error
+     */
+    default Tuple2<WorldModel, RobotCommandsOld> readRecord() throws IOException {
+        WorldModel model = readModel();
+        RobotCommandsOld commands = readCommands();
+        return Tuple2.of(model, commands);
     }
 
     default GridTopology readTopology() throws IOException {
@@ -182,7 +182,9 @@ public interface InferenceReader extends AutoCloseable, DataReader {
                 readDouble(),
                 readDouble(),
                 readDouble(),
-                readDeg());
+                readDeg(),
+                // TODO
+                0, Complex.DEG0);
     }
 
     default WorldModelSpec readWorldSpec() throws IOException {

@@ -29,7 +29,7 @@
 package org.mmarini.wheelly.engines;
 
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommandsOld;
 
 public abstract class TimeOutState extends AbstractStateNode {
     public static final String TIMEOUT_ID = "timeout";
@@ -60,7 +60,7 @@ public abstract class TimeOutState extends AbstractStateNode {
     }
 
     @Override
-    public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
+    public Tuple2<String, RobotCommandsOld> step(ProcessorContextApi context) {
         return isTimeout(context)
                 ? StateNode.timeoutResult(context)
                 : super.step(context);

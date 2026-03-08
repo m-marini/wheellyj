@@ -552,6 +552,18 @@ public class SimRobot implements RobotApi {
         return st.speed() == 0 && abs(st.leftPps()) < 1 && abs(st.rightPps()) < 1;
     }
 
+    @Override
+    public Single<Boolean> backward(Point2D location) {
+        // TODO
+        return null;
+    }
+
+    @Override
+    public Single<Boolean> forward(Point2D location) {
+        // TODO
+        return null;
+    }
+
     /**
      * Returns the robot location
      */
@@ -566,6 +578,12 @@ public class SimRobot implements RobotApi {
                 .speed(clip(speed, -RobotSpec.MAX_PPS, RobotSpec.MAX_PPS)));
         checkForSpeed();
         return Single.just(true);
+    }
+
+    @Override
+    public Single<Boolean> rotate(int dir) {
+        //TODO
+        return null;
     }
 
     /**

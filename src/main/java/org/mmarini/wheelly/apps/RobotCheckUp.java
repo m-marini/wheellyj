@@ -1,25 +1,28 @@
 /*
- * MIT License
+ * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Copyright (c) 2022 Marco Marini
+ *  Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ *    END OF TERMS AND CONDITIONS
  *
  */
 
@@ -119,7 +122,7 @@ public class RobotCheckUp {
      *
      * @param args the command line arguments
      */
-    public static void main(String[] args) {
+    static void main(String[] args) {
         try {
             new RobotCheckUp().init(args).run();
         } catch (Throwable e) {
@@ -199,7 +202,7 @@ public class RobotCheckUp {
             @Override
             public List<ScannerResult> apply(RobotStatus status) {
                 long time = status.simulationTime();
-                RobotCommands command = RobotCommands.haltMove();
+                RobotCommandsOld command = RobotCommandsOld.haltMove();
                 // Check for first sample
                 if (currentTest < 0) {
                     // First sample
@@ -295,11 +298,11 @@ public class RobotCheckUp {
     /**
      * Handles command changed
      *
-     * @param commands the commands
+     * @param commands the command
      */
     private void onCommandsChange(String[] commands) {
         if (robot instanceof MqttRobot mqttRobot) {
-            mqttRobot.configure(commands);
+            // TODO  mqttRobot.configure(commands);
         }
     }
 
@@ -461,9 +464,12 @@ public class RobotCheckUp {
         monitorFrame.setVisible(true);
         monitorFrame.setState(JFrame.ICONIFIED);
         if (robot instanceof MqttRobot mqttRobot) {
+            /* TODO
             motionConfigPanel.commands(
-                    mqttRobot.configCommands()
+                    mqttRobot.config()
             );
+
+             */
         }
 
         controller.start();
@@ -724,23 +730,8 @@ public class RobotCheckUp {
     /**
      * Rotation result
      */
-    static class RotateResult {
-        public final Complex directionError;
-        public final int imuFailure;
-        public final double locationError;
-        public final Complex rotationAngle;
-        public final Complex targetDir;
-        public final long testDuration;
-
-
-        RotateResult(long testDuration, Complex targetDir, Complex directionError, double distanceError, Complex rotationAngle, int imuFailure) {
-            this.testDuration = testDuration;
-            this.targetDir = targetDir;
-            this.directionError = directionError;
-            this.locationError = distanceError;
-            this.imuFailure = imuFailure;
-            this.rotationAngle = rotationAngle;
-        }
+    record RotateResult(long testDuration, Complex targetDir, Complex directionError, double locationError,
+                        Complex rotationAngle, int imuFailure) {
     }
 
     /**
@@ -782,7 +773,7 @@ public class RobotCheckUp {
                 @Override
                 public boolean test(RobotStatus status) {
                     long time = status.simulationTime();
-                    RobotCommands command = RobotCommands.none();
+                    RobotCommandsOld command = RobotCommandsOld.none();
                     if (startLocation == null) {
                         // store start location, time, rotation at the beginning of test
                         startLocation = status.location();
@@ -837,7 +828,7 @@ public class RobotCheckUp {
                 public boolean test(RobotStatus status) {
                     long time = status.simulationTime();
                     Complex dir = status.direction();
-                    RobotCommands command = RobotCommands.none();
+                    RobotCommandsOld command = RobotCommandsOld.none();
                     if (startLocation == null) {
                         // store start location, time, rotation at the beginning of test
                         startLocation = status.location();

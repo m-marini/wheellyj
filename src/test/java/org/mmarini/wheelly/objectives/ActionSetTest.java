@@ -1,25 +1,28 @@
 /*
- * MIT License
+ * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Copyright (c) 2022 Marco Marini
+ *  Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ *    END OF TERMS AND CONDITIONS
  *
  */
 
@@ -30,7 +33,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommandsOld;
 import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
@@ -64,7 +67,7 @@ class ActionSetTest {
                 "direction: 0",
                 "sensor: 0"));
         RewardFunction f = ActionSet.create(root, Locator.root());
-        RobotCommands cmd = RobotCommands.moveAndScan(Complex.fromDeg(direction), speed, Complex.fromDeg(sensor));
+        RobotCommandsOld cmd = RobotCommandsOld.moveAndScan(Complex.fromDeg(direction), speed, Complex.fromDeg(sensor));
         double result = f.applyAsDouble(null, cmd, null);
 
         assertThat(result, closeTo(expected, 1e-4));
@@ -93,7 +96,7 @@ class ActionSetTest {
                 "sensor: 0",
                 "reward: 2"));
         RewardFunction f = ActionSet.create(root, Locator.root());
-        RobotCommands cmd = RobotCommands.moveAndScan(Complex.fromDeg(direction), speed, Complex.fromDeg(sensor));
+        RobotCommandsOld cmd = RobotCommandsOld.moveAndScan(Complex.fromDeg(direction), speed, Complex.fromDeg(sensor));
         double result = f.applyAsDouble(null, cmd, null);
 
         assertThat(result, closeTo(expected, 1e-4));
@@ -119,7 +122,7 @@ class ActionSetTest {
                 "class: " + ActionSet.class.getName(),
                 "sensor: 0"));
         RewardFunction f = ActionSet.create(root, Locator.root());
-        RobotCommands cmd = RobotCommands.moveAndScan(Complex.fromDeg(direction), speed, Complex.fromDeg(sensor));
+        RobotCommandsOld cmd = RobotCommandsOld.moveAndScan(Complex.fromDeg(direction), speed, Complex.fromDeg(sensor));
         double result = f.applyAsDouble(null, cmd, null);
 
         assertThat(result, closeTo(expected, 1e-4));
@@ -145,7 +148,7 @@ class ActionSetTest {
                 "class: " + ActionSet.class.getName(),
                 "power: 0"));
         RewardFunction f = ActionSet.create(root, Locator.root());
-        RobotCommands cmd = RobotCommands.moveAndScan(Complex.fromDeg(direction), speed, Complex.fromDeg(sensor));
+        RobotCommandsOld cmd = RobotCommandsOld.moveAndScan(Complex.fromDeg(direction), speed, Complex.fromDeg(sensor));
         double result = f.applyAsDouble(null, cmd, null);
 
         assertThat(result, closeTo(expected, 1e-4));

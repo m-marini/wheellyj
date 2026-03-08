@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2023 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2023-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -156,7 +156,7 @@ class RobotControllerTest {
                 .filter(RobotControllerStatusApi::ready)
                 .firstElement()
                 .blockingGet();
-        controller.execute(RobotCommands.move(Complex.DEG90, 10));
+        controller.execute(RobotCommandsOld.move(Complex.DEG90, 10));
         mockRobot.sendStatus(10, MESSAGE_INTERVAL);
         controller.shutdown();
         controller.readShutdown().blockingAwait();
@@ -212,7 +212,7 @@ class RobotControllerTest {
                 .filter(RobotControllerStatusApi::ready)
                 .firstElement()
                 .blockingGet();
-        controller.execute(RobotCommands.scan(Complex.DEG90));
+        controller.execute(RobotCommandsOld.scan(Complex.DEG90));
         mockRobot.sendStatus(10, MESSAGE_INTERVAL);
         controller.shutdown();
         controller.readShutdown().blockingAwait();

@@ -41,7 +41,7 @@ import java.util.List;
 import static java.lang.Math.round;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.defuzzy;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.positive;
-import static org.mmarini.wheelly.apis.RobotCommands.moveAndFrontScan;
+import static org.mmarini.wheelly.apis.RobotCommandsOld.moveAndFrontScan;
 import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
 
 /**
@@ -83,7 +83,7 @@ public class MovePathState extends TimeOutState {
     public static final String TIMEOUT_ID = "timeout";
     public static final String PATH_ID = "path";
     public static final String NOT_FOUND_EXIT = "notFound";
-    public static final Tuple2<String, RobotCommands> NOT_FOUND_RESULT = Tuple2.of(NOT_FOUND_EXIT, RobotCommands.haltCommand());
+    public static final Tuple2<String, RobotCommandsOld> NOT_FOUND_RESULT = Tuple2.of(NOT_FOUND_EXIT, RobotCommandsOld.haltCommand());
     private static final Logger logger = LoggerFactory.getLogger(MovePathState.class);
     private static final int MIN_PPS = 10;
     private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-move-path-schema-0.1";
@@ -163,7 +163,7 @@ public class MovePathState extends TimeOutState {
      *
      * @param context the context
      */
-    private Tuple2<String, RobotCommands> move(ProcessorContextApi context) {
+    private Tuple2<String, RobotCommandsOld> move(ProcessorContextApi context) {
         if (path == null) {
             context.path(null).target(null);
             return NOT_FOUND_RESULT;
@@ -196,7 +196,7 @@ public class MovePathState extends TimeOutState {
      *
      * @param context the context
      */
-    private Tuple2<String, RobotCommands> nextLocation(ProcessorContextApi context) {
+    private Tuple2<String, RobotCommandsOld> nextLocation(ProcessorContextApi context) {
         if (++targetIndex >= path.size()) {
             context.path(null).target(null);
             logger.atDebug().log("Completed");
@@ -207,8 +207,8 @@ public class MovePathState extends TimeOutState {
     }
 
     @Override
-    public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
-        Tuple2<String, RobotCommands> result = super.step(context);
+    public Tuple2<String, RobotCommandsOld> step(ProcessorContextApi context) {
+        Tuple2<String, RobotCommandsOld> result = super.step(context);
         return result != null
                 // Halt the robot and move forward the sensor at block
                 ? result

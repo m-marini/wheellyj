@@ -29,7 +29,7 @@
 package org.mmarini.wheelly.engines;
 
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommandsOld;
 import org.mmarini.wheelly.apis.RobotStatus;
 
 import static java.lang.String.format;
@@ -218,7 +218,7 @@ public abstract class AbstractStateNode implements StateNode {
     }
 
     @Override
-    public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
+    public Tuple2<String, RobotCommandsOld> step(ProcessorContextApi context) {
         RobotStatus status = context.worldModel().robotStatus();
         return !status.canMoveForward()
                 ? !status.canMoveBackward()

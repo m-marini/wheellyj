@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -46,4 +46,11 @@ public interface RobotControllerStatusApi {
      * Returns true if the controller is started
      */
     boolean started();
+
+    /**
+     * Returns true if sync is required
+     *
+     * @param time the current time
+     */
+    boolean syncRequired(long time);
 }

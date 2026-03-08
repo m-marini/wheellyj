@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2024-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -30,7 +30,7 @@ package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommandsOld;
 import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.yaml.Locator;
@@ -73,24 +73,24 @@ public interface ActionSet {
                                    int speed,
                                    int sensorDeg,
                                    double reward) {
-        Predicate<RobotCommands> predicate = null;
+        Predicate<RobotCommandsOld> predicate = null;
         if (directionDeg != NO_VALUE) {
             Complex direction = Complex.fromDeg(directionDeg);
             predicate = x ->
                     x.moveDirection().isCloseTo(direction, SIN_DEG1);
         }
         if (speed != NO_VALUE) {
-            Predicate<RobotCommands> speedPredicate = x ->
+            Predicate<RobotCommandsOld> speedPredicate = x ->
                     x.speed() == speed;
             predicate = predicate != null ? predicate.and(speedPredicate) : speedPredicate;
         }
         if (sensorDeg != NO_VALUE) {
             Complex direction = Complex.fromDeg(sensorDeg);
-            Predicate<RobotCommands> sensorPredicate = x ->
+            Predicate<RobotCommandsOld> sensorPredicate = x ->
                     x.scanDirection().isCloseTo(direction, SIN_DEG1);
             predicate = predicate != null ? predicate.and(sensorPredicate) : sensorPredicate;
         }
-        Predicate<RobotCommands> finalPredicate = predicate;
+        Predicate<RobotCommandsOld> finalPredicate = predicate;
         return (s0, a, s1) -> finalPredicate != null && finalPredicate.test(a)
                 ? reward
                 : 0;

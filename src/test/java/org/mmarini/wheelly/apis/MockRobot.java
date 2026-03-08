@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -194,7 +194,22 @@ public class MockRobot implements RobotApi {
     }
 
     @Override
+    public Single<Boolean> backward(Point2D location) {
+        return Single.just(true);
+    }
+
+    @Override
+    public Single<Boolean> forward(Point2D location) {
+        return Single.just(true);
+    }
+
+    @Override
     public Single<Boolean> move(int dir, int speed) {
+        return Single.just(true);
+    }
+
+    @Override
+    public Single<Boolean> rotate(int dir) {
         return Single.just(true);
     }
 

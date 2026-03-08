@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -50,7 +50,7 @@ public class MotionConfigPanel extends JPanel {
     public static final Pattern tcsrParser = Pattern.compile("^tcsr,([-+]?\\d+),([-+]?\\d+),([-+]?\\d+),([-+]?\\d+),([-+]?\\d+),([-+]?\\d+),([-+]?\\d+),([-+]?\\d+),([-+]?\\d+),([-+]?\\d+),([-+]?\\d+),([-+]?\\d+)$");
 
     /**
-     * Returns the new commands list with a single command changed or null if not changed
+     * Returns the new command list with a single command changed or null if not changed
      *
      * @param commands the command list
      * @param cmd      the command
@@ -229,7 +229,7 @@ public class MotionConfigPanel extends JPanel {
     }
 
     /**
-     * Returns the commands from current panel values
+     * Returns the command from current panel values
      */
     private String[] configs() {
         return new String[]{
@@ -413,7 +413,7 @@ public class MotionConfigPanel extends JPanel {
     }
 
     /**
-     * Returns the commands flow
+     * Returns the command flow
      */
     public Flowable<String[]> readCommands() {
         return commandsFlow;

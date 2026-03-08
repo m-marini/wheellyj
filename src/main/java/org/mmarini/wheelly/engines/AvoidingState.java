@@ -112,7 +112,7 @@ public class AvoidingState extends TimeOutState {
      *
      * @param context the context
      */
-    private Tuple2<String, RobotCommands> computeReaction(ProcessorContextApi context) {
+    private Tuple2<String, RobotCommandsOld> computeReaction(ProcessorContextApi context) {
         RobotStatus status = context.worldModel().robotStatus();
         Complex direction = status.direction();
         Point2D robotLocation = status.location();
@@ -127,7 +127,7 @@ public class AvoidingState extends TimeOutState {
                 contactDirection = direction;
                 frontContact = true;
                 logger.atDebug().log("Move {} DEG at {} pps", direction, -speed);
-                return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(direction, -speed));
+                return Tuple2.of(NONE_EXIT, RobotCommandsOld.moveAndFrontScan(direction, -speed));
             } else {
                 // Robot completely blocked
                 // holt robot
@@ -143,7 +143,7 @@ public class AvoidingState extends TimeOutState {
             contactDirection = direction;
             frontContact = false;
             logger.atDebug().log("Move {} DEG at {} pps", direction, speed);
-            return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(direction, speed));
+            return Tuple2.of(NONE_EXIT, RobotCommandsOld.moveAndFrontScan(direction, speed));
         } else {
             return null;
         }
@@ -159,8 +159,8 @@ public class AvoidingState extends TimeOutState {
     }
 
     @Override
-    public Tuple2<String, RobotCommands> step(ProcessorContextApi ctx) {
-        Tuple2<String, RobotCommands> result = super.step(ctx);
+    public Tuple2<String, RobotCommandsOld> step(ProcessorContextApi ctx) {
+        Tuple2<String, RobotCommandsOld> result = super.step(ctx);
         if (result != null && result._1.equals(TIMEOUT_EXIT)) {
             return result;
         }
@@ -224,6 +224,6 @@ public class AvoidingState extends TimeOutState {
             escapeSpeed = speed;
             logger.atDebug().log("Avoiding rear contact to {} DEG at {} pps", escapeDir, escapeSpeed);
         }
-        return Tuple2.of(NONE_EXIT, RobotCommands.moveAndFrontScan(escapeDir, escapeSpeed));
+        return Tuple2.of(NONE_EXIT, RobotCommandsOld.moveAndFrontScan(escapeDir, escapeSpeed));
     }
 }
