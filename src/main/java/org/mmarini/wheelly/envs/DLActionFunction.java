@@ -30,14 +30,12 @@ package org.mmarini.wheelly.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.MapStream;
+import org.mmarini.NotImplementedException;
 import org.mmarini.rl.envs.ArraySignal;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommandsOld;
-import org.mmarini.wheelly.apis.WheellyJsonSchemas;
-import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.apis.*;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -178,7 +176,8 @@ public class DLActionFunction implements ActionFunction {
     }
 
     @Override
-    public List<RobotCommandsOld> commands(Map<String, Signal> actions, WorldModel... states) {
+    public List<RobotCommands> commands(Map<String, Signal> actions, WorldModel... states) {
+        /* TODO
         List<RobotCommandsOld> result = new ArrayList<>();
         INDArray moves = requireNonNull(actions.get(MOVE_ACTION_ID)).toINDArray();
         INDArray sensors = requireNonNull(actions.get(SENSOR_ACTION_ID)).toINDArray();
@@ -197,6 +196,9 @@ public class DLActionFunction implements ActionFunction {
             result.add(cmd);
         }
         return result;
+
+         */
+        throw new NotImplementedException();
     }
 
     /**

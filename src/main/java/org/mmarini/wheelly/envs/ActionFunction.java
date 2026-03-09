@@ -30,7 +30,7 @@ package org.mmarini.wheelly.envs;
 
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
-import org.mmarini.wheelly.apis.RobotCommandsOld;
+import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.WorldModel;
 
 import java.util.List;
@@ -47,7 +47,7 @@ public interface ActionFunction {
      * @param states  the world contexts
      * @param actions the actions
      */
-    List<RobotCommandsOld> commands(Map<String, Signal> actions, WorldModel... states);
+    List<RobotCommands> commands(Map<String, Signal> actions, WorldModel... states);
 
     /**
      * Returns the action signal specification

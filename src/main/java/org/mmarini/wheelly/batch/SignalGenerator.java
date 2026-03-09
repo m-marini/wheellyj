@@ -30,13 +30,17 @@ package org.mmarini.wheelly.batch;
 
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
+import org.mmarini.NotImplementedException;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.agents.AbstractAgentNN;
 import org.mmarini.rl.agents.BinArrayFile;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apis.InferenceReader;
+import org.mmarini.wheelly.apis.RobotCommandsOld;
+import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.apis.WorldModeller;
 import org.mmarini.wheelly.envs.ActionFunction;
 import org.mmarini.wheelly.envs.DLEnvironment;
 import org.mmarini.wheelly.envs.RLActionFunction;
@@ -189,6 +193,8 @@ public class SignalGenerator implements SignalGeneratorApi {
 
     @Override
     public Map<String, BinArrayFile> generate() throws IOException {
+        throw new NotImplementedException();
+        /* TODO
         keyFileMap = createResultFiles();
         try (InferenceFileReader f = InferenceFileReader.fromFile(file)) {
             long n = 0;
@@ -223,6 +229,8 @@ public class SignalGenerator implements SignalGeneratorApi {
             infoProcessor.onComplete();
         }
         return keyFileMap;
+
+         */
     }
 
     /**

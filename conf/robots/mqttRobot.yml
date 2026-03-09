@@ -24,7 +24,7 @@ config:
     delayedInterval: 10
   - minRotRange: 5
     maxRotRange: 30
-    maxRotPps: 15
+    maxRotPps: 20
     maxSpeed: 40
     haltDistance: 20
     decelerateDistance: 80

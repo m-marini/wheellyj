@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.NotImplementedException;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.yaml.Locator;
@@ -40,7 +41,6 @@ import java.util.Comparator;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
-import static java.lang.Math.abs;
 import static java.lang.Math.clamp;
 import static java.util.Objects.requireNonNull;
 
@@ -115,8 +115,12 @@ public class LabelStuckState extends TimeOutState {
      *
      * @param context the context
      */
-    public static Tuple2<String, RobotCommandsOld> notFoundResult(ProcessorContextApi context) {
+    public static Tuple2<String, RobotCommands> notFoundResult(ProcessorContextApi context) {
+        throw new NotImplementedException();
+        /* TODO
         return context.worldModel().robotStatus().halt() ? NOT_FOUND_NONE_RESULT : NOT_FOUND_RESULT;
+
+         */
     }
 
     private final double minDistance;
@@ -155,8 +159,8 @@ public class LabelStuckState extends TimeOutState {
     }
 
     @Override
-    public Tuple2<String, RobotCommandsOld> step(ProcessorContextApi context) {
-        Tuple2<String, RobotCommandsOld> result = super.step(context);
+    public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
+        Tuple2<String, RobotCommands> result = super.step(context);
         if (result != null) {
             return result;
         }
@@ -185,6 +189,8 @@ public class LabelStuckState extends TimeOutState {
         Complex sensorDir = Complex.fromRad(clamp(targetDir.sub(robotDir).toRad(), -headHalfFovRad, headHalfFovRad));
         double frontDistance = status.frontDistance();
         Complex targetSensorDir = Complex.direction(status.frontLidarLocation(), target);
+        throw new NotImplementedException();
+        /* TODO
         if (labelDistance < minDistance) {
             // the robot is too close, move backward
             RobotCommandsOld command = RobotCommandsOld.moveAndScan(targetDir, -speed, sensorDir);
@@ -208,5 +214,7 @@ public class LabelStuckState extends TimeOutState {
             // halt the robot and move head toward the target label
             return new Tuple2<>(NONE_EXIT, RobotCommandsOld.scan(sensorDir).setHalt());
         }
+
+         */
     }
 }

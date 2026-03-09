@@ -29,8 +29,11 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.NotImplementedException;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommandsOld;
+import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,10 +41,6 @@ import org.slf4j.LoggerFactory;
 import java.awt.geom.Point2D;
 import java.util.List;
 
-import static java.lang.Math.round;
-import static org.mmarini.wheelly.apis.FuzzyFunctions.defuzzy;
-import static org.mmarini.wheelly.apis.FuzzyFunctions.positive;
-import static org.mmarini.wheelly.apis.RobotCommandsOld.moveAndFrontScan;
 import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
 
 /**
@@ -163,7 +162,9 @@ public class MovePathState extends TimeOutState {
      *
      * @param context the context
      */
-    private Tuple2<String, RobotCommandsOld> move(ProcessorContextApi context) {
+    private Tuple2<String, RobotCommands> move(ProcessorContextApi context) {
+        throw new NotImplementedException();
+        /* TODO
         if (path == null) {
             context.path(null).target(null);
             return NOT_FOUND_RESULT;
@@ -189,6 +190,8 @@ public class MovePathState extends TimeOutState {
         int speed = (int) round(defuzzy(MIN_PPS, this.speed, isFar));
         logger.atDebug().log("move to {} DEG, power {}", direction, speed);
         return Tuple2.of(NONE_EXIT, moveAndFrontScan(direction, speed));
+
+         */
     }
 
     /**
@@ -196,7 +199,7 @@ public class MovePathState extends TimeOutState {
      *
      * @param context the context
      */
-    private Tuple2<String, RobotCommandsOld> nextLocation(ProcessorContextApi context) {
+    private Tuple2<String, RobotCommands> nextLocation(ProcessorContextApi context) {
         if (++targetIndex >= path.size()) {
             context.path(null).target(null);
             logger.atDebug().log("Completed");
@@ -207,8 +210,8 @@ public class MovePathState extends TimeOutState {
     }
 
     @Override
-    public Tuple2<String, RobotCommandsOld> step(ProcessorContextApi context) {
-        Tuple2<String, RobotCommandsOld> result = super.step(context);
+    public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
+        Tuple2<String, RobotCommands> result = super.step(context);
         return result != null
                 // Halt the robot and move forward the sensor at block
                 ? result

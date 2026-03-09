@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.NotImplementedException;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.yaml.Locator;
@@ -112,10 +113,12 @@ public class AvoidingState extends TimeOutState {
      *
      * @param context the context
      */
-    private Tuple2<String, RobotCommandsOld> computeReaction(ProcessorContextApi context) {
+    private Tuple2<String, RobotCommands> computeReaction(ProcessorContextApi context) {
         RobotStatus status = context.worldModel().robotStatus();
         Complex direction = status.direction();
         Point2D robotLocation = status.location();
+        throw new NotImplementedException();
+        /* TODO
         if (!status.canMoveForward()) {
             // Robot blocked forward
             contactPoint = status.contactPoint();
@@ -147,6 +150,8 @@ public class AvoidingState extends TimeOutState {
         } else {
             return null;
         }
+
+         */
     }
 
     @Override
@@ -159,8 +164,8 @@ public class AvoidingState extends TimeOutState {
     }
 
     @Override
-    public Tuple2<String, RobotCommandsOld> step(ProcessorContextApi ctx) {
-        Tuple2<String, RobotCommandsOld> result = super.step(ctx);
+    public Tuple2<String, RobotCommands> step(ProcessorContextApi ctx) {
+        Tuple2<String, RobotCommands> result = super.step(ctx);
         if (result != null && result._1.equals(TIMEOUT_EXIT)) {
             return result;
         }
@@ -224,6 +229,10 @@ public class AvoidingState extends TimeOutState {
             escapeSpeed = speed;
             logger.atDebug().log("Avoiding rear contact to {} DEG at {} pps", escapeDir, escapeSpeed);
         }
+        throw new NotImplementedException();
+        /* TODO
         return Tuple2.of(NONE_EXIT, RobotCommandsOld.moveAndFrontScan(escapeDir, escapeSpeed));
+
+         */
     }
 }

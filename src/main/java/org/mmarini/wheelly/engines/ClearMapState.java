@@ -30,7 +30,7 @@ package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.RobotCommandsOld;
+import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
@@ -78,11 +78,11 @@ public class ClearMapState extends AbstractStateNode {
     }
 
     @Override
-    public Tuple2<String, RobotCommandsOld> step(ProcessorContextApi ctx) {
+    public Tuple2<String, RobotCommands> step(ProcessorContextApi ctx) {
         // Clear the map
         logger.atDebug().log("Clearing map ...");
         ctx.clearMap();
-        Tuple2<String, RobotCommandsOld> result = super.step(ctx);
+        Tuple2<String, RobotCommands> result = super.step(ctx);
         if (result == null) {
             return StateNode.completedResult(ctx);
         }

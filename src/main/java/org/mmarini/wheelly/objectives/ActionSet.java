@@ -29,13 +29,10 @@
 package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommandsOld;
+import org.mmarini.NotImplementedException;
 import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.yaml.Locator;
-
-import java.util.function.Predicate;
 
 import static java.lang.Math.sin;
 import static java.lang.Math.toRadians;
@@ -73,11 +70,14 @@ public interface ActionSet {
                                    int speed,
                                    int sensorDeg,
                                    double reward) {
-        Predicate<RobotCommandsOld> predicate = null;
+        throw new NotImplementedException();
+        /* TODO
+        Predicate<RobotCommands> predicate = null;
         if (directionDeg != NO_VALUE) {
             Complex direction = Complex.fromDeg(directionDeg);
             predicate = x ->
                     x.moveDirection().isCloseTo(direction, SIN_DEG1);
+
         }
         if (speed != NO_VALUE) {
             Predicate<RobotCommandsOld> speedPredicate = x ->
@@ -90,9 +90,10 @@ public interface ActionSet {
                     x.scanDirection().isCloseTo(direction, SIN_DEG1);
             predicate = predicate != null ? predicate.and(sensorPredicate) : sensorPredicate;
         }
-        Predicate<RobotCommandsOld> finalPredicate = predicate;
+        Predicate<RobotCommands> finalPredicate = predicate;
         return (s0, a, s1) -> finalPredicate != null && finalPredicate.test(a)
                 ? reward
                 : 0;
+             */
     }
 }

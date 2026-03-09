@@ -89,7 +89,7 @@ public class WorldModeller implements WorldModellerApi {
     private final RadarModeller radarModeller;
     private final PolarMapModeller polarModeller;
     private final MarkerLocator markerLocator;
-    private final PublishProcessor<Tuple2<WorldModel, RobotCommandsOld>> inferenceProcessor;
+    private final PublishProcessor<Tuple2<WorldModel, RobotCommands>> inferenceProcessor;
     private WorldModelSpec worldSpec;
     private WorldModel currentModel;
     private RobotControllerConnector controller;
@@ -157,7 +157,7 @@ public class WorldModeller implements WorldModellerApi {
     public void onInference(RobotStatus robotStatus) {
         WorldModel model = this.updateForInference(this.currentModel);
         if (inference != null) {
-            RobotCommandsOld commands = inference.onInference(model);
+            RobotCommands commands = inference.onInference(model);
             controller.execute(commands);
             inferenceProcessor.onNext(Tuple2.of(model, commands));
         }
@@ -185,7 +185,7 @@ public class WorldModeller implements WorldModellerApi {
     }
 
     @Override
-    public Flowable<Tuple2<WorldModel, RobotCommandsOld>> readInference() {
+    public Flowable<Tuple2<WorldModel, RobotCommands>> readInference() {
         return inferenceProcessor;
     }
 

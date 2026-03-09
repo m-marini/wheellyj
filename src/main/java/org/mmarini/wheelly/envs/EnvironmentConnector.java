@@ -30,7 +30,7 @@ package org.mmarini.wheelly.envs;
 
 import org.mmarini.rl.agents.AgentConnector;
 import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.apis.RobotCommandsOld;
+import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apis.WorldModellerConnector;
 
@@ -61,7 +61,7 @@ public interface EnvironmentConnector {
      * @param actions the chosen actions
      * @param state1  the final state
      */
-    double reward(WorldModel state0, RobotCommandsOld actions, WorldModel state1);
+    double reward(WorldModel state0, RobotCommands actions, WorldModel state1);
 
     /**
      * Returns the state for the given world model
