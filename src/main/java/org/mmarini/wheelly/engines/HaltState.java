@@ -29,8 +29,9 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.NotImplementedException;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.RobotCommandsOld;
+import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
@@ -85,11 +86,15 @@ public class HaltState extends TimeOutState {
     }
 
     @Override
-    public Tuple2<String, RobotCommandsOld> step(ProcessorContextApi ctx) {
-        Tuple2<String, RobotCommandsOld> result = super.step(ctx);
+    public Tuple2<String, RobotCommands> step(ProcessorContextApi ctx) {
+        Tuple2<String, RobotCommands> result = super.step(ctx);
         if (result != null) {
             return result;
         }
+        throw new NotImplementedException();
+        /* TODO
         return NONE_HALT_RESULT;
+
+         */
     }
 }

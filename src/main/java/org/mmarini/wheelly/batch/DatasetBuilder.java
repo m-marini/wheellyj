@@ -30,23 +30,18 @@ package org.mmarini.wheelly.batch;
 
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
-import org.mmarini.MapStream;
+import org.mmarini.NotImplementedException;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.agents.BinArrayFile;
-import org.mmarini.rl.envs.Signal;
 import org.mmarini.wheelly.apis.InferenceFileReader;
 import org.mmarini.wheelly.apis.RobotCommandsOld;
 import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apis.WorldModeller;
 import org.mmarini.wheelly.envs.DLActionFunction;
 import org.mmarini.wheelly.envs.DLEnvironment;
-import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.factory.Nd4j;
 
-import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
@@ -112,6 +107,7 @@ public class DatasetBuilder {
         DLActionFunction actionFunction = (DLActionFunction) env.actionFunction();
         Tuple2<WorldModel, RobotCommandsOld> record;
         WorldModel s0 = null;
+        /* TODO
         RobotCommandsOld commands = null;
         int tot = reader.available();
         int totMB = tot / KB;
@@ -162,6 +158,9 @@ public class DatasetBuilder {
         for (BinArrayFile value : actionMasks.values()) {
             value.close();
         }
+
+         */
+        throw new NotImplementedException();
     }
 
     /**

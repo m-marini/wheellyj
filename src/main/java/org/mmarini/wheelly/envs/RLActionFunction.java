@@ -29,14 +29,12 @@
 package org.mmarini.wheelly.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.NotImplementedException;
 import org.mmarini.rl.envs.IntSignal;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommandsOld;
-import org.mmarini.wheelly.apis.WheellyJsonSchemas;
-import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.apis.*;
 import org.mmarini.yaml.Locator;
 
 import java.io.IOException;
@@ -120,11 +118,13 @@ public class RLActionFunction implements ActionFunction {
     }
 
     @Override
-    public List<RobotCommandsOld> commands(Map<String, Signal> actions, WorldModel... states) {
+    public List<RobotCommands> commands(Map<String, Signal> actions, WorldModel... states) {
+        throw new NotImplementedException();
+        /* TODO
         WorldModel state = states[0];
         Complex sensorDirection = sensorDir(actions);
         Complex robotDirection = state.robotStatus().direction();
-        RobotCommandsOld command = !isHalt(actions)
+        RobotCommands command = !isHalt(actions)
                 ? RobotCommandsOld.moveAndScan(moveDirection(actions, robotDirection),
                 speed(actions),
                 sensorDirection)
@@ -132,6 +132,8 @@ public class RLActionFunction implements ActionFunction {
                 ? RobotCommandsOld.haltMove()
                 : RobotCommandsOld.scan(sensorDirection);
         return List.of(command);
+
+         */
     }
 
     /**

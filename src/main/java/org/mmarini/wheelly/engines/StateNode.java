@@ -29,7 +29,9 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.NotImplementedException;
 import org.mmarini.Tuple2;
+import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotCommandsOld;
 import org.mmarini.yaml.Locator;
 
@@ -76,8 +78,12 @@ public interface StateNode {
      *
      * @param context the process context
      */
-    static Tuple2<String, RobotCommandsOld> completedResult(ProcessorContextApi context) {
+    static Tuple2<String, RobotCommands> completedResult(ProcessorContextApi context) {
+        throw new NotImplementedException();
+        /* TODO
         return context.worldModel().robotStatus().halt() ? COMPLETED_NONE_RESULT : COMPLETED_RESULT;
+
+         */
     }
 
     /**
@@ -126,8 +132,12 @@ public interface StateNode {
      *
      * @param context the process context
      */
-    static Tuple2<String, RobotCommandsOld> timeoutResult(ProcessorContextApi context) {
+    static Tuple2<String, RobotCommands> timeoutResult(ProcessorContextApi context) {
+        throw new NotImplementedException();
+        /* TODO
         return context.worldModel().robotStatus().halt() ? TIMEOUT_NONE_RESULT : TIMEOUT_RESULT;
+
+         */
     }
 
     /**
@@ -175,5 +185,5 @@ public interface StateNode {
      *
      * @param context the processor context
      */
-    Tuple2<String, RobotCommandsOld> step(ProcessorContextApi context);
+    Tuple2<String, RobotCommands> step(ProcessorContextApi context);
 }

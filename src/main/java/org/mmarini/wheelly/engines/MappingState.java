@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.NotImplementedException;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.yaml.Locator;
@@ -298,11 +299,13 @@ public class MappingState extends TimeOutState {
     }
 
     @Override
-    public Tuple2<String, RobotCommandsOld> step(ProcessorContextApi ctx) {
-        Tuple2<String, RobotCommandsOld> result = super.step(ctx);
+    public Tuple2<String, RobotCommands> step(ProcessorContextApi ctx) {
+        Tuple2<String, RobotCommands> result = super.step(ctx);
         if (result != null) {
             return result;
         }
+        throw new NotImplementedException();
+        /* TODO
         if (markerFound(ctx)) {
             return FOUND_RESULT;
         }
@@ -312,6 +315,8 @@ public class MappingState extends TimeOutState {
             case TURING_ROBOT -> turningRobot(ctx);
             default -> StateNode.completedResult(ctx);
         };
+
+         */
     }
 
     /**
@@ -333,11 +338,13 @@ public class MappingState extends TimeOutState {
      *
      * @param context the context
      */
-    Tuple2<String, RobotCommandsOld> turningRobot(ProcessorContextApi context) {
+    Tuple2<String, RobotCommands> turningRobot(ProcessorContextApi context) {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         Complex robotDir = robotStatus.direction();
+        throw new NotImplementedException();
+        /* TODO
         if (!robotDir.isCloseTo(targetRobotDir, Complex.fromDeg(5))) {
-            RobotCommandsOld commands = RobotCommandsOld.moveAndFrontScan(targetRobotDir, 0);
+            RobotCommands commands = RobotCommands.moveAndFrontScan(targetRobotDir, 0);
             return Tuple2.of(NONE_EXIT, commands);
         }
         if (targetRobotDir.isCloseTo(initialDir, EPSILON)) {
@@ -349,5 +356,7 @@ public class MappingState extends TimeOutState {
         status = RIGHT_SCANNING;
         targetSensorDir = 0;
         return Tuple2.of(NONE_EXIT, RobotCommandsOld.scan(Complex.DEG0));
+
+         */
     }
 }

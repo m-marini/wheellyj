@@ -455,7 +455,7 @@ public class Wheelly {
      *
      * @param inferenceResult the inference result
      */
-    private void onInference(Tuple2<WorldModel, RobotCommandsOld> inferenceResult) {
+    private void onInference(Tuple2<WorldModel, RobotCommands> inferenceResult) {
         WorldModel worldModel = inferenceResult._1;
         RobotStatus robotStatus = worldModel.robotStatus();
         Map<String, LabelMarker> markers = worldModel.markers();
@@ -503,10 +503,10 @@ public class Wheelly {
         prevStep = time;
     }
 
-    private RobotCommandsOld onInferenceProcess(WorldModel state) {
+    private RobotCommands onInferenceProcess(WorldModel state) {
         return active
                 ? environment.onInference(state)
-                : RobotCommandsOld.haltCommand();
+                : RobotCommands.halt();
     }
 
     /**

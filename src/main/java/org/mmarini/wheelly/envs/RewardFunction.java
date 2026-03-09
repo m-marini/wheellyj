@@ -30,7 +30,7 @@ package org.mmarini.wheelly.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.ToDoubleFunction3;
-import org.mmarini.wheelly.apis.RobotCommandsOld;
+import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
@@ -44,7 +44,7 @@ import static java.lang.String.format;
 /**
  * Computes the reward base on initial state, action signals and resulting state
  */
-public interface RewardFunction extends ToDoubleFunction3<WorldModel, RobotCommandsOld, WorldModel> {
+public interface RewardFunction extends ToDoubleFunction3<WorldModel, RobotCommands, WorldModel> {
 
     /**
      * Returns the composed objective from the objective list

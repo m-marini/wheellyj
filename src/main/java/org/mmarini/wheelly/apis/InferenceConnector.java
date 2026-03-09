@@ -38,5 +38,5 @@ public interface InferenceConnector {
      *
      * @param state the world model status
      */
-    RobotCommandsOld onInference(WorldModel state);
+    RobotCommands onInference(WorldModel state);
 }

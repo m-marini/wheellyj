@@ -28,11 +28,9 @@
 
 package org.mmarini.wheelly.engines;
 
+import org.mmarini.NotImplementedException;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommandsOld;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.apis.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +42,6 @@ import static java.lang.Math.round;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.defuzzy;
 import static org.mmarini.wheelly.apis.FuzzyFunctions.positive;
-import static org.mmarini.wheelly.apis.RobotCommandsOld.moveAndFrontScan;
 
 /**
  * Generates the behaviour to move robot through path
@@ -164,7 +161,7 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
      *
      * @param context the context
      */
-    private Tuple2<String, RobotCommandsOld> move(ProcessorContextApi context) {
+    private Tuple2<String, RobotCommands> move(ProcessorContextApi context) {
         Point2D target = path.get(targetIndex);
         WorldModel worldModel = context.worldModel();
         RobotStatus robotStatus = worldModel.robotStatus();
@@ -180,7 +177,11 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
         double isFar = positive(distance - approachDistance, NEAR_DISTANCE);
         int speed = (int) round(defuzzy(MIN_PPS, this.speed, isFar));
         logger.atDebug().log("move to {} DEG, power {}", direction, speed);
+        throw new NotImplementedException();
+        /* TODO
         return Tuple2.of(NONE_EXIT, moveAndFrontScan(direction, speed));
+
+         */
     }
 
     /**
@@ -188,7 +189,7 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
      *
      * @param context the context
      */
-    private Tuple2<String, RobotCommandsOld> nextLocation(ProcessorContextApi context) {
+    private Tuple2<String, RobotCommands> nextLocation(ProcessorContextApi context) {
         if (++targetIndex >= path.size()) {
             logger.atDebug().log("Completed");
             context.path(null)
@@ -228,14 +229,18 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
     }
 
     @Override
-    public Tuple2<String, RobotCommandsOld> step(ProcessorContextApi context) {
-        Tuple2<String, RobotCommandsOld> result = super.step(context);
+    public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
+        Tuple2<String, RobotCommands> result = super.step(context);
         if (result != null) {
             context.path(null).target(null);
             return result;
         }
+        throw new NotImplementedException();
+        /* TODO
         return path == null
                 ? NOT_FOUND_RESULT
                 : move(context);
+
+         */
     }
 }

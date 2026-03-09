@@ -51,7 +51,7 @@ public interface WorldModellerApi extends WorldModellerConnector {
     /**
      * Returns the flow of inference events
      */
-    Flowable<Tuple2<WorldModel, RobotCommandsOld>> readInference();
+    Flowable<Tuple2<WorldModel, RobotCommands>> readInference();
 
     /**
      * Returns the world model specification

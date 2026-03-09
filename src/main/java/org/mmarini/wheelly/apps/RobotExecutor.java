@@ -242,10 +242,10 @@ public class RobotExecutor {
      *
      * @param result the inference result
      */
-    private void onInference(Tuple2<WorldModel, RobotCommandsOld> result) {
+    private void onInference(Tuple2<WorldModel, RobotCommands> result) {
         if (dumpFile != null) {
             WorldModel world = result._1;
-            RobotCommandsOld commands = result._2;
+            RobotCommands commands = result._2;
             try {
                 dumpFile.write(world, commands);
             } catch (IOException e) {

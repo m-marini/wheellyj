@@ -28,6 +28,8 @@
 
 package org.mmarini.wheelly.apis;
 
+import org.mmarini.NotImplementedException;
+
 import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.util.Map;
@@ -63,13 +65,17 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      *
      * @param commands the command
      */
-    default <T extends InferenceWriter> T write(RobotCommandsOld commands) throws IOException {
+    default <T extends InferenceWriter> T write(RobotCommands commands) throws IOException {
+        throw new NotImplementedException();
+        /* TODO
         write(commands.scan());
         write(commands.scanDirection())
                 .write(commands.move())
                 .write(commands.halt());
         return write(commands.moveDirection())
                 .write(commands.speed());
+
+         */
     }
 
     /**
@@ -144,7 +150,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * @param model    the model
      * @param commands the command
      */
-    default <T extends InferenceWriter> T write(WorldModel model, RobotCommandsOld commands) throws IOException {
+    default <T extends InferenceWriter> T write(WorldModel model, RobotCommands commands) throws IOException {
         return write(model)
                 .write(commands);
     }

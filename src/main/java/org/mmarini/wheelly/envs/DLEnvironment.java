@@ -85,7 +85,7 @@ public class DLEnvironment implements EnvironmentApi {
     private RewardFunction rewardFunc;
     private AgentConnector agent;
     private WorldModel prevState;
-    private RobotCommandsOld prevCommands;
+    private RobotCommands prevCommands;
     private Map<String, Signal> signals0;
     private Map<String, Signal> prevActions;
 
@@ -127,14 +127,14 @@ public class DLEnvironment implements EnvironmentApi {
     }
 
     @Override
-    public RobotCommandsOld onInference(WorldModel state) {
+    public RobotCommands onInference(WorldModel state) {
         requireNonNull(state);
         requireNonNull(agent);
         requireNonNull(stateFunc);
 
         Map<String, Signal> signals1 = state(state);
         Map<String, Signal> actions = agent.act(signals1);
-        RobotCommandsOld commands = actionFunc.commands(actions, state).getFirst();
+        RobotCommands commands = actionFunc.commands(actions, state).getFirst();
 
         if (prevState != null) {
             double reward = reward(prevState, prevCommands, state);
@@ -152,7 +152,7 @@ public class DLEnvironment implements EnvironmentApi {
     }
 
     @Override
-    public double reward(WorldModel state0, RobotCommandsOld actions, WorldModel state1) {
+    public double reward(WorldModel state0, RobotCommands actions, WorldModel state1) {
         return rewardFunc != null ? rewardFunc.applyAsDouble(state0, actions, state1) : 0;
     }
 

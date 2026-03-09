@@ -177,12 +177,12 @@ public class StateMachineAgent implements ProcessorContextApi, InferenceConnecto
      * @param worldModel the world model
      */
     @Override
-    public RobotCommandsOld onInference(WorldModel worldModel) {
+    public RobotCommands onInference(WorldModel worldModel) {
         this.worldModel = worldModel;
         if (this.currentNode == null) {
             initContext();
         }
-        RobotCommandsOld commands = step();
+        RobotCommands commands = step();
         stepUpProcessor.onNext(this);
         return commands;
     }
@@ -273,12 +273,12 @@ public class StateMachineAgent implements ProcessorContextApi, InferenceConnecto
     /**
      * Returns the robot command by processing the next transition
      */
-    public RobotCommandsOld step() {
+    public RobotCommands step() {
         // Process the state node
-        Tuple2<String, RobotCommandsOld> result = currentNode.step(this);
+        Tuple2<String, RobotCommands> result = currentNode.step(this);
         // Execute robot command
         String exitTag = result._1;
-        RobotCommandsOld commands = result._2;
+        RobotCommands commands = result._2;
         triggerProcessor.onNext(exitTag);
         if (!NONE_EXIT.equals(exitTag)) {
             //find for transition match
