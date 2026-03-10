@@ -115,7 +115,7 @@ public class LabelStuckState extends TimeOutState {
      *
      * @param context the context
      */
-    public static Tuple2<String, RobotCommands> notFoundResult(ProcessorContextApi context) {
+    public static StateResult notFoundResult(ProcessorContextApi context) {
         throw new NotImplementedException();
         /* TODO
         return context.worldModel().robotStatus().halt() ? NOT_FOUND_NONE_RESULT : NOT_FOUND_RESULT;
@@ -160,7 +160,7 @@ public class LabelStuckState extends TimeOutState {
 
     @Override
     public StateResult step(ProcessorContextApi context) {
-        Tuple2<String, RobotCommands> result = super.step(context);
+        StateResult result = super.step(context);
         if (result != null) {
             return result;
         }

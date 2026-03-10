@@ -43,7 +43,6 @@ import org.mmarini.wheelly.mqtt.MqttRobot;
 import org.mmarini.wheelly.swing.ComMonitor;
 import org.mmarini.wheelly.swing.ControllerStatusMapper;
 import org.mmarini.wheelly.swing.SensorMonitor;
-import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -263,8 +262,8 @@ public class MatrixMonitor {
         WheellyJsonSchemas.instance().validateOrThrow(config, MONITOR_SCHEMA_YML);
         this.robot = AppYaml.robotFromJson(config);
         this.controller = AppYaml.controllerFromJson(config);
-        this.distanceRange = Locator.locate("distanceRange").getNode(config).asDouble(DEFAULT_DISTANCE_RANGE);
-        this.directionEpsilon = Complex.fromDeg(Locator.locate("directionRange").getNode(config).asInt(DEFAULT_DIRECTION_RANGE)).sin();
+        this.distanceRange = robot.robotSpec().targetRange();
+        this.directionEpsilon = robot.robotSpec().directionRange().sin();
 
         // Creates the frames
         this.commandFrame = createFrame(Messages.getString("MatrixMonitor.title"), commandPanel);
@@ -432,8 +431,10 @@ public class MatrixMonitor {
         logger.atDebug().log("onInference");
         if (!halt
                 && status.halt()
-                && (command.isRotate() && status.direction().isCloseTo(Complex.fromDeg(robotDirSlider.getValue()), directionEpsilon)
-                || (!command.isHalt() && !command.isRotate() && status.location().distance(target) < distanceRange)
+                && (command.isRotate() && status.direction().isCloseTo(
+                Complex.fromDeg(robotDirSlider.getValue()), directionEpsilon)
+                || (!command.isHalt() && !command.isRotate()
+                && status.location().distance(target) < distanceRange)
         )
         ) {
             command = RobotCommands.halt();

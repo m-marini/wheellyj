@@ -838,6 +838,7 @@ public class RobotCheckUp {
                         controller.execute(RobotCommands.rotate(Complex.DEG0, direction));
                         sensorPanel.setInfo(format("Checking rotation to %d DEG ...", direction.toIntDeg()));
                     }
+                    // Check for rotation max duration
                     if (time >= rotationStart + ROTATION_TIMEOUT) {
                         // Rotation timeout: compute the direction error
                         Complex directionError = dir.sub(direction);
@@ -851,32 +852,34 @@ public class RobotCheckUp {
                         sensorPanel.setInfo("");
                         return true;
                     }
-                    // Check for robot speed
-                    if (status.leftPps() == 0 && status.rightPps() == 0) {
-                        // the robot is not moving
-                        if (haltTime == 0) {
-                            // Store halt time
-                            haltTime = time;
-                        }
-                        Complex directionError = dir.sub(direction);
-                        Complex rotationAngle = dir.sub(startAngle);
-                        double distanceError = status.location().distance(startLocation);
-                        if (directionError.isCloseTo(Complex.DEG0, ROTATION_TOLERANCE)) {
-                            // Rotation completed: generate the test result
-                            rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.imuFailure()));
-                            controller.execute(RobotCommands.halt());
-                            sensorPanel.setInfo("");
-                            return true;
-                        } else if (time >= haltTime + HALT_TIMEOUT) {
-                            // Halt timeout: generate test result
-                            rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.imuFailure()));
-                            controller.execute(RobotCommands.halt());
-                            sensorPanel.setInfo("");
-                            return true;
-                        }
-                    } else {
+                    // Check for robot moving
+                    if (!status.halt()) {
                         // The robot is moving
                         haltTime = 0;
+                        return false;
+                    }
+                    if (haltTime == 0) {
+                        // Store halt time
+                        haltTime = time;
+                    }
+                    Complex directionError = dir.sub(direction);
+                    Complex rotationAngle = dir.sub(startAngle);
+                    double distanceError = status.location().distance(startLocation);
+                    // Check for direction
+                    if (directionError.isCloseTo(Complex.DEG0, robot.robotSpec().directionRange())) {
+                        // Rotation completed: generate the test result
+                        rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.imuFailure()));
+                        controller.execute(RobotCommands.halt());
+                        sensorPanel.setInfo("");
+                        return true;
+                    }
+                    // CHeck for robot halt duration
+                    if (time >= haltTime + HALT_TIMEOUT) {
+                        // Halt timeout: generate test result
+                        rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.imuFailure()));
+                        controller.execute(RobotCommands.halt());
+                        sensorPanel.setInfo("");
+                        return true;
                     }
                     return false;
                 }

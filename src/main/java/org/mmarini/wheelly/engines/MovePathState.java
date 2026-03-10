@@ -199,22 +199,30 @@ public class MovePathState extends TimeOutState {
      *
      * @param context the context
      */
-    private Tuple2<String, RobotCommands> nextLocation(ProcessorContextApi context) {
+    private StateResult nextLocation(ProcessorContextApi context) {
         if (++targetIndex >= path.size()) {
             context.path(null).target(null);
             logger.atDebug().log("Completed");
             return StateNode.completedResult(context);
         }
         logger.atDebug().log("Move to {}", path.get(targetIndex));
+        throw new NotImplementedException();
+        /* TODO
         return move(context);
+
+         */
     }
 
     @Override
     public StateResult step(ProcessorContextApi context) {
-        Tuple2<String, RobotCommands> result = super.step(context);
+        StateResult result = super.step(context);
+        throw new NotImplementedException();
+        /* TODO
         return result != null
                 // Halt the robot and move forward the sensor at block
                 ? result
                 : move(context);
+
+         */
     }
 }

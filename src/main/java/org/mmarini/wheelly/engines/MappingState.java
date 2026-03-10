@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.Utils.clip;
+import static org.mmarini.wheelly.engines.StateResult.NONE_EXIT;
 
 /**
  * Generates the behaviour by mapping the environment
@@ -300,7 +301,7 @@ public class MappingState extends TimeOutState {
 
     @Override
     public StateResult step(ProcessorContextApi ctx) {
-        Tuple2<String, RobotCommands> result = super.step(ctx);
+        StateResult result = super.step(ctx);
         if (result != null) {
             return result;
         }

@@ -30,7 +30,10 @@ package org.mmarini.wheelly.engines;
 
 import org.mmarini.NotImplementedException;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.RobotCommandsOld;
+import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.WorldModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -161,7 +164,7 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
      *
      * @param context the context
      */
-    private Tuple2<String, RobotCommands> move(ProcessorContextApi context) {
+    private StateResult move(ProcessorContextApi context) {
         Point2D target = path.get(targetIndex);
         WorldModel worldModel = context.worldModel();
         RobotStatus robotStatus = worldModel.robotStatus();
@@ -189,7 +192,7 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
      *
      * @param context the context
      */
-    private Tuple2<String, RobotCommands> nextLocation(ProcessorContextApi context) {
+    private StateResult nextLocation(ProcessorContextApi context) {
         if (++targetIndex >= path.size()) {
             logger.atDebug().log("Completed");
             context.path(null)
@@ -230,7 +233,7 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
 
     @Override
     public StateResult step(ProcessorContextApi context) {
-        Tuple2<String, RobotCommands> result = super.step(context);
+        StateResult result = super.step(context);
         if (result != null) {
             context.path(null).target(null);
             return result;
