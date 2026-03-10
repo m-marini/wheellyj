@@ -65,6 +65,30 @@ properties:
   targetRange:
     type: number
     exclusiveMinimum: 0
+  maxRotRange:
+    type: integer
+    minimum: 0
+    maximum: 180
+  maxRotPps:
+    type: integer
+    minimum: 0
+    maximum: 20
+  maxSpeed:
+    type: integer
+    minimum: 0
+    maximum: 60
+  decelerateDistance:
+    type: number
+    exclusiveMinimum: 0
+    maximum: 5
+  sendInterval:
+    type: integer
+    minimum: 1
+    maximum: 60000
+  scanInterval:
+    type: integer
+    minimum: 1
+    maximum: 60000
   config:
     type: array
     items:
@@ -104,44 +128,4 @@ $defs:
         type: integer
         minimum: 1
         maximum: 10000
-      minRotRange:
-        type: integer
-        minimum: 0
-        maximum: 180
-      maxRotRange:
-        type: integer
-        minimum: 0
-        maximum: 180
-      maxRotPps:
-        type: integer
-        minimum: 0
-        maximum: 20
-      maxSpeed:
-        type: integer
-        minimum: 0
-        maximum: 60
-      haltDistance:
-        type: integer
-        minimum: 0
-        maximum: 1000
-      decelerateDistance:
-        type: integer
-        minimum: 0
-        maximum: 1000
-      minHeadDir:
-        type: integer
-        minimum: -90
-        maximum: 90
-      maxHeadDir:
-        type: integer
-        minimum: -90
-        maximum: 90
-      sendInterval:
-        type: integer
-        minimum: 1
-        maximum: 60000
-      scanInterval:
-        type: integer
-        minimum: 1
-        maximum: 60000
 

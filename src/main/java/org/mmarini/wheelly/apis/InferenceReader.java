@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.apis;
 
+import org.mmarini.NotImplementedException;
 import org.mmarini.Tuple2;
 
 import java.awt.geom.Point2D;
@@ -174,6 +175,8 @@ public interface InferenceReader extends AutoCloseable, DataReader {
     }
 
     default RobotSpec readRobotSpec() throws IOException {
+        throw new NotImplementedException();
+        /* TODO
         return new RobotSpec(readDouble(),
                 readDeg(),
                 readDouble(),
@@ -185,6 +188,8 @@ public interface InferenceReader extends AutoCloseable, DataReader {
                 readDeg(),
                 // TODO
                 0, Complex.DEG0);
+
+         */
     }
 
     default WorldModelSpec readWorldSpec() throws IOException {

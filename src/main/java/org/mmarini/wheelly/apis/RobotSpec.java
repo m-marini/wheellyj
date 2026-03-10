@@ -37,9 +37,8 @@ import java.awt.geom.Point2D;
 import static java.lang.Math.PI;
 import static java.util.Objects.requireNonNull;
 
-
 /**
- * Robot specification (geometries of robot)
+ * Robot specification (geometries of robot and behaviour parameters)
  *
  * @param maxRadarDistance   the maximum radar distance (m)
  * @param lidarFOV           the lidar field of view
@@ -50,13 +49,25 @@ import static java.util.Objects.requireNonNull;
  * @param rearLidarDistance  the distance of rear lidar from head (m)
  * @param cameraDistance     the distance of camera from head (m)
  * @param headFOV            the head field of view (the head rotation angle limit)
- * @param targetRange        the target range (m)
- * @param directionRange     the direction range
+ * @param targetRange the target distance below which the robot stops the movement (m)
+ * @param directionRange     the minimum rotation range below which the robot stops rotation
+ * @param maxRotRange        the maximum rotation range beyond which the robot rotates at maximum speed
+ * @param maxRotPps          the maximum rotation speed (pps)
+ * @param maxSpeed           the maximum linear speed (pps)
+ * @param decelerateDistance the decelerate distance beyond which the robot moves at maximum speed
+ * @param sendInterval       the send status interval (ms)
+ * @param scanInterval       the scan interval (ms)
  */
 public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contactRadius,
                         Complex cameraFOV, Point2D headLocation, double frontLidarDistance,
                         double rearLidarDistance, double cameraDistance,
-                        Complex headFOV, double targetRange, Complex directionRange) {
+                        Complex headFOV, double targetRange, Complex directionRange,
+                        Complex maxRotRange,
+                        int maxRotPps,
+                        int maxSpeed,
+                        double decelerateDistance,
+                        long sendInterval,
+                        long scanInterval) {
 
     public static final double MAX_RADAR_DISTANCE = 2.0;
     public static final int DEFAULT_LIDAR_FOV_DEG = 25;
@@ -70,6 +81,7 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
     public static final int DEFAULT_HEAD_FOV_DEG = 130;
     public static final int DEFAULT_DIRECTION_RANGE = 5;
     public static final double DEFAULT_TARGET_RANGE = 0.1;
+    public static final int DEFAULT_MAX_ROT_RANGE = 30;
 
     /**
      * Number of pulses per wheel root
@@ -106,13 +118,19 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
      */
     public static final double ROBOT_MASS = 0.785;
 
+
+    public static final int DEFAULT_MAX_ROT_PPS = 20;
+    public static final int DEFAULT_SEND_INTERVAL = 500;
+    public static final int DEFAULT_SCAN_INTERVAL = 500;
+    public static final double DEFAULT_DECELERATE_DISTANCE = 0.4;
     /**
      * Default robot specification
      */
     public static final RobotSpec DEFAULT_ROBOT_SPEC = create(MAX_RADAR_DISTANCE, DEFAULT_LIDAR_FOV_DEG,
             DEFAULT_CONTACT_RADIUS, DEFAULT_CAMERA_FOV_DEG, 0, DEFAULT_HEAD_Y,
             DEFAULT_FRONT_LIDAR_DISTANCE, DEFAULT_REAR_LIDAR_DISTANCE, DEFAULT_CAMERA_DISTANCE, DEFAULT_HEAD_FOV_DEG,
-            DEFAULT_TARGET_RANGE, DEFAULT_DIRECTION_RANGE);
+            DEFAULT_TARGET_RANGE, DEFAULT_DIRECTION_RANGE, DEFAULT_MAX_ROT_RANGE, DEFAULT_MAX_ROT_PPS, MAX_PPS,
+            DEFAULT_DECELERATE_DISTANCE, DEFAULT_SEND_INTERVAL, DEFAULT_SCAN_INTERVAL);
 
     /**
      * Applies the transformation from robot coordinate to absolute coordinate
@@ -142,13 +160,20 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
      * @param headFOVDeg         the head field of view (the head rotation angle limit) (DEG)
      * @param targetRange        the target range (m)
      * @param directionRangeDeg  the direction range (DEG)
+     * @param maxRotRange        the maximum rotation range beyond which the robot rotates at maximum speed (DEG)
+     * @param maxRotPps          the maximum rotation speed (pps)
+     * @param maxSpeed           the maximum linear speed (pps)
+     * @param decelerateDistance the decelerate distance beyond which the robot moves at maximum speed
+     * @param sendInterval       the send status interval (ms)
+     * @param scanInterval       the scan interval (ms)
      */
     public static RobotSpec create(double maxRadarDistance, int lidarFOVDeg, double contactRadius, int cameraFOVDeg,
                                    double headX, double headY, double frontLidarDistance, double rearLidarDistance,
-                                   double cameraDistance, int headFOVDeg, double targetRange, int directionRangeDeg) {
+                                   double cameraDistance, int headFOVDeg, double targetRange, int directionRangeDeg, int maxRotRange, int maxRotPps, int maxSpeed, double decelerateDistance, long sendInterval, long scanInterval) {
         return new RobotSpec(maxRadarDistance, Complex.fromDeg(lidarFOVDeg), contactRadius, Complex.fromDeg(cameraFOVDeg),
                 new Point2D.Double(headX, headY), frontLidarDistance, rearLidarDistance, cameraDistance,
-                Complex.fromDeg(headFOVDeg), targetRange, Complex.fromDeg(directionRangeDeg));
+                Complex.fromDeg(headFOVDeg), targetRange, Complex.fromDeg(directionRangeDeg),
+                Complex.fromDeg(maxRotRange), maxRotPps, maxSpeed, decelerateDistance, sendInterval, scanInterval);
     }
 
     /**
@@ -179,9 +204,16 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
         double cameraDistance = locator.path("cameraDistance").getNode(root).asDouble(DEFAULT_CAMERA_DISTANCE);
         double targetRange = locator.path("targetRange").getNode(root).asDouble(DEFAULT_TARGET_RANGE);
         int directionRange = locator.path("directionRange").getNode(root).asInt(DEFAULT_DIRECTION_RANGE);
+        int maxRotRange = locator.path("maxRotRange").getNode(root).asInt(DEFAULT_MAX_ROT_RANGE);
+        int maxRotPps = locator.path("maxRotPps").getNode(root).asInt(DEFAULT_MAX_ROT_PPS);
+        int maxSpeed = locator.path("maxSpeed").getNode(root).asInt(MAX_PPS);
+        double decelerateDistance = locator.path("decelerateDistance").getNode(root).asDouble(DEFAULT_DECELERATE_DISTANCE);
+        long sendInterval = locator.path("sendInterval").getNode(root).asLong(DEFAULT_SEND_INTERVAL);
+        long scanInterval = locator.path("scanInterval").getNode(root).asLong(DEFAULT_SEND_INTERVAL);
         return create(maxRadarDistance, lidarFOV, contactRadius, cameraFOV,
                 headX, headY, frontLidarDistance, rearLidarDistance, cameraDistance,
-                headFOV, targetRange, directionRange);
+                headFOV, targetRange, directionRange, maxRotRange, maxRotPps, maxSpeed, decelerateDistance,
+                sendInterval, scanInterval);
     }
 
     /**
@@ -226,18 +258,24 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
      * Creates the robot specification
      *
      * @param maxRadarDistance   the maximum radar distance (m)
-     * @param lidarFOV           the receptive angle
+     * @param lidarFOV           the lidar field of view
      * @param contactRadius      the contact radius (m)
-     * @param cameraFOV          the camera view angle
+     * @param cameraFOV          the camera field of view
      * @param headLocation       the relative sensor pivot location
      * @param frontLidarDistance the distance of front lidar from head (m)
      * @param rearLidarDistance  the distance of rear lidar from head (m)
      * @param cameraDistance     the distance of camera from head (m)
      * @param headFOV            the head field of view (the head rotation angle limit)
-     * @param targetRange        the target range (m)
-     * @param directionRange     the direction range
+     * @param targetRange the target distance below which the robot stops the movement (m)
+     * @param directionRange     the minimum rotation range below which the robot stops rotation
+     * @param maxRotRange        the maximum rotation range beyond which the robot rotates at maximum speed
+     * @param maxRotPps          the maximum rotation speed (pps)
+     * @param maxSpeed           the maximum linear speed (pps)
+     * @param decelerateDistance the decelerate distance beyond which the robot moves at maximum speed
+     * @param sendInterval       the send status interval (ms)
+     * @param scanInterval       the scan interval (ms)
      */
-    public RobotSpec(double maxRadarDistance, Complex lidarFOV, double contactRadius, Complex cameraFOV, Point2D headLocation, double frontLidarDistance, double rearLidarDistance, double cameraDistance, Complex headFOV, double targetRange, Complex directionRange) {
+    public RobotSpec(double maxRadarDistance, Complex lidarFOV, double contactRadius, Complex cameraFOV, Point2D headLocation, double frontLidarDistance, double rearLidarDistance, double cameraDistance, Complex headFOV, double targetRange, Complex directionRange, Complex maxRotRange, int maxRotPps, int maxSpeed, double decelerateDistance, long sendInterval, long scanInterval) {
         this.maxRadarDistance = maxRadarDistance;
         this.lidarFOV = requireNonNull(lidarFOV);
         this.contactRadius = contactRadius;
@@ -249,6 +287,12 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
         this.headFOV = requireNonNull(headFOV);
         this.targetRange = targetRange;
         this.directionRange = requireNonNull(directionRange);
+        this.maxRotRange = maxRotRange;
+        this.maxRotPps = maxRotPps;
+        this.maxSpeed = maxSpeed;
+        this.decelerateDistance = decelerateDistance;
+        this.sendInterval = sendInterval;
+        this.scanInterval = scanInterval;
     }
 
     /**
