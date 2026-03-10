@@ -144,7 +144,7 @@ class AvoidingStateTest {
 
     @BeforeEach
     void setUp() {
-        state = new AvoidingState("avoid", null, null, null, AvoidingState.DEFAULT_TIMEOUT, AvoidingState.DEFAULT_SAFE_DISTANCE, AvoidingState.DEFAULT_MAX_DISTANCE, SPEED);
+        state = new AvoidingState("avoid", null, null, null, AvoidingState.DEFAULT_TIMEOUT, AvoidingState.DEFAULT_SAFE_DISTANCE, AvoidingState.DEFAULT_MAX_DISTANCE);
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")

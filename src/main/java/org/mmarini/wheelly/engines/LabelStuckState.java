@@ -159,7 +159,7 @@ public class LabelStuckState extends TimeOutState {
     }
 
     @Override
-    public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
+    public StateResult step(ProcessorContextApi context) {
         Tuple2<String, RobotCommands> result = super.step(context);
         if (result != null) {
             return result;

@@ -28,9 +28,7 @@
 
 package org.mmarini.wheelly.engines;
 
-import org.mmarini.NotImplementedException;
-import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotStatus;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -218,16 +216,12 @@ public abstract class AbstractStateNode implements StateNode {
     }
 
     @Override
-    public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
-        throw new NotImplementedException();
-        /* TODO
+    public StateResult step(ProcessorContextApi context) {
         RobotStatus status = context.worldModel().robotStatus();
         return !status.canMoveForward()
                 ? !status.canMoveBackward()
                 ? StateNode.blockResult(context) : StateNode.frontBlockResult(context)
                 : !status.canMoveBackward()
                 ? StateNode.rearBlockResult(context) : null;
-
-         */
     }
 }
