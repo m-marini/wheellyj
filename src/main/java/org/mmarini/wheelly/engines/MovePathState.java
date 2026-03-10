@@ -210,7 +210,7 @@ public class MovePathState extends TimeOutState {
     }
 
     @Override
-    public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
+    public StateResult step(ProcessorContextApi context) {
         Tuple2<String, RobotCommands> result = super.step(context);
         return result != null
                 // Halt the robot and move forward the sensor at block

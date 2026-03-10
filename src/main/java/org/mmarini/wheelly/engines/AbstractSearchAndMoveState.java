@@ -229,7 +229,7 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
     }
 
     @Override
-    public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
+    public StateResult step(ProcessorContextApi context) {
         Tuple2<String, RobotCommands> result = super.step(context);
         if (result != null) {
             context.path(null).target(null);

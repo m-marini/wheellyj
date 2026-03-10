@@ -299,7 +299,7 @@ public class MappingState extends TimeOutState {
     }
 
     @Override
-    public Tuple2<String, RobotCommands> step(ProcessorContextApi ctx) {
+    public StateResult step(ProcessorContextApi ctx) {
         Tuple2<String, RobotCommands> result = super.step(ctx);
         if (result != null) {
             return result;
