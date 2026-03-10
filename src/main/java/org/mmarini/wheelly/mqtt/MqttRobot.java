@@ -32,6 +32,7 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Maybe;
@@ -44,6 +45,7 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.yaml.Locator;
+import org.mmarini.yaml.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,10 +55,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 import static java.lang.Math.round;
 import static java.lang.Math.tan;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.RobotSpec.distance2Pulse;
 import static org.mmarini.wheelly.apis.RobotSpec.location2Pulses;
 import static org.mmarini.wheelly.rx.RXFunc.logError;
 
@@ -103,6 +107,37 @@ public class MqttRobot implements RobotApi {
     private static final Logger logger = LoggerFactory.getLogger(MqttRobot.class);
 
     /**
+     * Returns the stream of config strings
+     *
+     * @param spec the robot specification
+     */
+    private static Stream<String> configText(RobotSpec spec) {
+        try {
+            ObjectMapper mapper = new ObjectMapper(new JsonFactory());
+            ObjectNode json = Utils.objectMapper.createObjectNode();
+            // Create motion controller configuration
+            json.put("minRotRange", spec.directionRange().toIntDeg())
+                    .put("maxRotRange", spec.maxRotRange().toIntDeg())
+                    .put("maxRotPps", spec.maxRotPps())
+                    .put("maxSpeed", spec.maxSpeed())
+                    .put("haltDistance", (int) round(distance2Pulse(spec.targetRange())))
+                    .put("decelerateDistance", (int) (round(distance2Pulse(spec.decelerateDistance()))));
+
+            String cfg0 = mapper.writeValueAsString(json);
+            json.removeAll()
+                    .put("minHeadDir", -spec.headFOV().toIntDeg() / 2)
+                    .put("maxHeadDir", spec.headFOV().toIntDeg() / 2)
+                    .put("sendInterval", spec.sendInterval())
+                    .put("scanInterval", spec.scanInterval());
+            String cfg1 = mapper.writeValueAsString(json);
+            return Stream.of(cfg0, cfg1);
+        } catch (JsonProcessingException e) {
+            logger.atError().setCause(e).log("Error create config string");
+            return Stream.empty();
+        }
+    }
+
+    /**
      * Returns the robot from configuration
      *
      * @param root the configuration document
@@ -123,7 +158,7 @@ public class MqttRobot implements RobotApi {
         RobotSpec robotSpec = RobotSpec.fromJson(root, locator);
         ObjectMapper objectMapper = new ObjectMapper(new JsonFactory());
         Locator cameraConfigCommandsLoc = locator.path("config");
-        String[] cfg = !cameraConfigCommandsLoc.getNode(root).isMissingNode()
+        Stream<String> cfgStream = !cameraConfigCommandsLoc.getNode(root).isMissingNode()
                 ? cameraConfigCommandsLoc.elements(root).map(l -> {
                     JsonNode json = l.getNode(root);
                     try {
@@ -134,9 +169,9 @@ public class MqttRobot implements RobotApi {
                     }
                 })
                 .filter(Predicate.not(String::isEmpty))
-                .toArray(String[]::new)
-                : new String[0];
-
+                : Stream.empty();
+        String[] cfg = Stream.concat(configText(robotSpec), cfgStream)
+                .toArray(String[]::new);
         try {
             return create(brokerUrl, clientId, user, password,
                     robotId,

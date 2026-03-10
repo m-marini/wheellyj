@@ -16,19 +16,17 @@ contactRadius: 0.28
 cameraFOV: 60
 sensorReceptiveAngle: 15
 headFOV: 130
+maxRotRange: 30
+maxRotPps: 20
+maxSpeed: 40
+targetRange: 0.1
+directionRange: 5
+decelerateDistance: 0.4
+sendInterval: 500
+scanInterval: 500
 config:
   - tau: 500
     asr: 200
     lambdaFactor: 30
     maxPulseInterval: 200
     delayedInterval: 10
-  - minRotRange: 5
-    maxRotRange: 30
-    maxRotPps: 20
-    maxSpeed: 40
-    haltDistance: 20
-    decelerateDistance: 80
-  - sendInterval: 500
-    scanInterval: 500
-    minHeadDir: -65
-    maxHeadDir: 65
