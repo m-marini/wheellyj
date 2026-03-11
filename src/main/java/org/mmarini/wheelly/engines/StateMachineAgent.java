@@ -281,10 +281,11 @@ public class StateMachineAgent implements ProcessorContextApi, InferenceConnecto
         triggerProcessor.onNext(exitTag);
         if (!NONE_EXIT.equals(exitTag)) {
             //find for transition match
-            Optional<StateTransition> tx = flow.transitions().stream()
-                    .filter(t -> t.from().equals(currentNode.id()) && t.isTriggered(exitTag))
-                    .findFirst();
-            tx.ifPresentOrElse(t -> {
+            flow.transitions().stream()
+                    .filter(t ->
+                            t.from().equals(currentNode.id()) && t.isTriggered(exitTag))
+                    .findFirst()
+                    .ifPresentOrElse(t -> {
                         // trigger the exit call back
                         logger.debug("{}: Trigger {}", currentNode.id(), result);
                         currentNode.exit(this);

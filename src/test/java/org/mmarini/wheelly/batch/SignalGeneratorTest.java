@@ -68,7 +68,7 @@ class SignalGeneratorTest {
     public static final WheellyContactsMessage CONTACTS_MESSAGE = new WheellyContactsMessage(2, true,
             true, true, true);
     public static final CameraEvent CAMERA_EVENT = new CameraEvent(0, "?", 3, 4, null, Complex.DEG0);
-    public static final RobotCommandsOld COMMANDS = new RobotCommandsOld(true, Complex.DEG0, false, true, Complex.DEG90, 20);
+    public static final RobotCommands COMMANDS = RobotCommands.halt();
     private static final String MODELLER_DEF = """
             ---
             $schema: https://mmarini.org/wheelly/world-modeller-schema-0.1

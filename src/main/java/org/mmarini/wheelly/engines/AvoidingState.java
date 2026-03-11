@@ -29,10 +29,7 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WheellyJsonSchemas;
+import org.mmarini.wheelly.apis.*;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,19 +58,6 @@ public class AvoidingState extends TimeOutState {
     private static final Logger logger = LoggerFactory.getLogger(AvoidingState.class);
 
     /**
-     * Returns the safe direction of null if blocked
-     *
-     * @param status the robot status
-     */
-    private static Complex computeSafeDirection(RobotStatus status) {
-        return status.canMoveForward()
-                ? status.direction()
-                : status.canMoveBackward()
-                ? status.direction().opposite()
-                : null;
-    }
-
-    /**
      * Returns the avoid state from JSON node
      *
      * @param root    the JSON node
@@ -90,10 +74,12 @@ public class AvoidingState extends TimeOutState {
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
         return new AvoidingState(id, onInit, onEntry, onExit, timeout, safeDistance, maxDistance);
     }
+
     private final double safeDistance;
     private final double maxDistance;
-    private Point2D safePoint;
     private Point2D contactPoint;
+    private Complex contactDirection;
+    private boolean forwardEscape;
 
     /**
      * Creates the abstract node
@@ -113,66 +99,61 @@ public class AvoidingState extends TimeOutState {
     }
 
     /**
-     * Computes the reaction on block conditions
+     * Returns the safe point when contact (opposite the robot direction)
      *
-     * @param context the context
-     * @return the state result or null if no block condition
+     * @param ctx the processor context
      */
-    private StateResult computeReaction(ProcessorContextApi context) {
-        RobotStatus status = context.worldModel().robotStatus();
-        Complex direction = status.direction();
-        Point2D contactPoint = status.contactPoint();
-        if (!status.canMoveForward()) {
-            // forward block condition
-            if (status.canMoveBackward()) {
-                // Backward movement available
-                // Safe location at safe distance from contact location opposite the robot direction
-                logger.atDebug().log("Avoid front contact at {}", contactPoint);
-                // Robot can move backward
-                // moves the robot backward to safety distance scanning for the front contacts
-                Point2D target = direction.opposite().at(contactPoint, safeDistance);
-                return new StateResult(NONE_EXIT, RobotCommands.backward(Complex.DEG0, target));
-            } else {
-                // Robot completely blocked
-                // halt robot
-                logger.atWarn().setMessage("{}: Robot blocked").addArgument(this::id).log();
-                return StateNode.blockResult(context);
-            }
-        } else if (!status.canMoveBackward()) {
-            // backward block condition
-            // forward movement available
-            // Safe location at safe distance from contact location to the robot direction
-            logger.atDebug().log("Avoid rear contact at {}", contactPoint);
-            // Robot can move backward
-            // moves the robot backward to safety distance scanning for the front contacts
-            Point2D target = direction.at(contactPoint, safeDistance);
-            return new StateResult(NONE_EXIT, RobotCommands.forward(Complex.DEG0, target));
-        } else {
-            return null;
-        }
+    private Point2D computeContactSafePoint(ProcessorContextApi ctx) {
+        return (forwardEscape ? contactDirection : contactDirection.opposite())
+                .at(contactPoint, safeDistance
+                        + ctx.worldModel().robotStatus().robotSpec().targetRange());
     }
 
     /**
      * Returns the safe point
      *
-     * @param context the context
+     * @param ctx the processor context
      */
-    private Point2D computeSafePoint(ProcessorContextApi context) {
-        RobotStatus status = context.worldModel().robotStatus();
-        Complex safeDirection = computeSafeDirection(status);
-        if (safeDirection == null) {
-            return null;
-        }
-        Point2D robotLocation = status.location();
-        return safeDirection.at(robotLocation, safeDistance);
+    private Point2D computeSafePoint(ProcessorContextApi ctx) {
+        // heck for
+        // Check for free point
+        //  No safe point set: search for it in the map
+        WorldModel worldModel = ctx.worldModel();
+        /*
+        Point2D targetPoint = worldModel.radarMap().findSafeTarget(
+                        contactPoint,
+                        forwardEscape
+                                ? contactDirection
+                                : contactDirection.opposite(),
+                        safeDistance + worldModel.robotStatus().robotSpec().targetRange(),
+                        maxDistance)
+                .orElse(null);
+
+         */
+        Point2D targetPoint = worldModel.radarMap().findSafeTarget(
+                        contactPoint,
+                        forwardEscape
+                                ? contactDirection
+                                : contactDirection.opposite(),
+                        safeDistance + worldModel.robotStatus().robotSpec().targetRange(),
+                        maxDistance)
+                .orElse(null);
+
+
+        return targetPoint != null
+                ? targetPoint
+                // no safe point in the map
+                : computeContactSafePoint(ctx);
     }
 
     @Override
     public void entry(ProcessorContextApi context) {
         super.entry(context);
         RobotStatus status = context.worldModel().robotStatus();
-        safePoint = computeSafePoint(context);
+        context.target(null);
         contactPoint = status.location();
+        contactDirection = status.direction();
+        forwardEscape = status.canMoveForward();
     }
 
     @Override
@@ -189,13 +170,16 @@ public class AvoidingState extends TimeOutState {
         Point2D robotLocation = status.location();
         if (!status.canMoveBackward() || !status.canMoveForward()) {
             contactPoint = robotLocation;
-            safePoint = computeSafePoint(ctx);
+            contactDirection = status.direction();
+            forwardEscape = status.canMoveForward();
+            Point2D targetPoint = computeContactSafePoint(ctx);
+            ctx.target(targetPoint);
             return new StateResult(NONE_EXIT,
-                    status.canMoveForward()
-                            ? RobotCommands.forward(Complex.DEG0, safePoint)
-                            : RobotCommands.backward(Complex.DEG0, safePoint));
+                    forwardEscape
+                            ? RobotCommands.forward(Complex.DEG0, targetPoint)
+                            : RobotCommands.backward(Complex.DEG0, targetPoint));
         }
-        // No more contacts
+        // No contacts
         // Check for robot safe location
         double contactDistance = robotLocation.distance(contactPoint);
         if (contactDistance >= safeDistance) {
@@ -203,96 +187,12 @@ public class AvoidingState extends TimeOutState {
             logger.atDebug().log("Avoided contact at {} m", contactDistance);
             return StateNode.completedResult(ctx);
         }
-        // TODO check for safe point changed
-        /*
-        // Check for free point
-        if (safePoint == null) {
-            //  No safe point set: search for it
-            Optional<Point2D> target = worldModel.radarMap().findSafeTarget(
-                    robotLocation,
-                    frontContact
-                            ? contactDirection.opposite()
-                            : contactDirection,
-                    safeDistance + SAFE_DISTANCE_GAP, maxDistance);
-            safePoint = target.orElse(null);
-        }
-
-         */
-
+        // Compute the new safe point
+        Point2D targetPoint = computeSafePoint(ctx);
+        ctx.target(targetPoint);
         return new StateResult(NONE_EXIT,
-                status.canMoveForward()
-                        ? RobotCommands.forward(Complex.DEG0, safePoint)
-                        : RobotCommands.backward(Complex.DEG0, safePoint));
-    }
-
-    public StateResult stepOld(ProcessorContextApi ctx) {
-        // Computes reaction on block conditions
-        return computeReaction(ctx);
-
-        /*
-        if (result != null) {
-            return result;
-        }
-
-        return result
-        // No block conditions
-        // Check for the escape direction
-        if (contactDirection == null) {
-            // Contact disappeared after entry and before step
-            // robot in a safe location without movement
-            logger.atDebug()
-                    .setMessage("{}: safety without any contact")
-                    .addArgument(this::id)
-                    .log();
-            return StateNode.completedResult(ctx);
-        }
-
-        // contact disappeared
-        WorldModel worldModel = ctx.worldModel();
-        RobotStatus status = worldModel.robotStatus();
-        Point2D robotLocation = status.location();
-        // Check for the robot at safety distance
-        double contactDistance = contactPoint.distance(status.location());
-        if (contactDistance >= safeDistance) {
-            // Robot at safe distance: halt at exit
-            logger.atDebug().log("Avoided contact at {} m", contactDistance);
-            return StateNode.completedResult(ctx);
-        }
-
-        // Robot not at safety distance
-        // Check for free point
-        if (safePoint == null) {
-            //  No safe point set: search for it
-            Optional<Point2D> target = worldModel.radarMap().findSafeTarget(
-                    robotLocation,
-                    frontContact
-                            ? contactDirection.opposite()
-                            : contactDirection,
-                    safeDistance + SAFE_DISTANCE_GAP, maxDistance);
-            safePoint = target.orElse(null);
-        }
-        if (safePoint == null) {
-            // no safe point found: move away
-            Complex escapeDir = contactDirection;
-            // Compute power
-            escapeSpeed = frontContact
-                    ? -speed : speed;
-            logger.atDebug().log("Avoiding without safe point to {} DEG at {} pps", escapeDir, escapeSpeed);
-            return new StateResult(NONE_EXIT, RobotCommandsOld.moveAndFrontScan(escapeDir, escapeSpeed));
-        }
-        if (frontContact) {
-            // escape from front contact
-            escapeDir = Complex.direction(safePoint, robotLocation);
-            escapeSpeed = -speed;
-            logger.atDebug().log("Avoiding front contact safe point to {} DEG at {} pps", escapeDir, escapeSpeed);
-            return new StateResult(NONE_EXIT, RobotCommandsOld.moveAndFrontScan(escapeDir, escapeSpeed));
-        }
-            // escape from rear contact
-            escapeDir = Complex.direction(robotLocation, safePoint);
-            escapeSpeed = speed;
-            logger.atDebug().log("Avoiding rear contact to {} DEG at {} pps", escapeDir, escapeSpeed);
-        return new StateResult(NONE_EXIT, RobotCommandsOld.moveAndFrontScan(escapeDir, escapeSpeed));
-
-         */
+                forwardEscape
+                        ? RobotCommands.forward(Complex.DEG0, targetPoint)
+                        : RobotCommands.backward(Complex.DEG0, targetPoint));
     }
 }
