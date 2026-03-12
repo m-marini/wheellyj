@@ -50,6 +50,15 @@ public interface StateNode {
     }
 
     /**
+     * Returns the block result
+     *
+     * @param context the process context
+     */
+    static StateResult noneHaltResult(ProcessorContextApi context) {
+        return context.worldModel().robotStatus().halt() ? NONE_RESULT : NONE_HALT_RESULT;
+    }
+
+    /**
      * Returns the completed result
      *
      * @param context the process context

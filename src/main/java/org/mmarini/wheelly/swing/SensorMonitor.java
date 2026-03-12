@@ -29,7 +29,7 @@
 package org.mmarini.wheelly.swing;
 
 import org.mmarini.swing.Messages;
-import org.mmarini.wheelly.apis.RobotCommandsOld;
+import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -111,10 +111,16 @@ public class SensorMonitor extends MatrixTable {
      *
      * @param command the command
      */
-    public void onCommand(RobotCommandsOld command) {
-        if (command.move()) {
-            printf(MOVE_HEAD, "%4d", command.moveDirection().toIntDeg());
-            printf(MOVE_SPEED, "%3d", command.speed());
+    public void onCommand(RobotCommands command) {
+        // TODO
+        switch (command.status()) {
+            case ROTATE -> {
+                printf(MOVE_HEAD, "%4d", command.rotationDirection().toIntDeg());
+            }
+            case FORWARD -> {
+            }
+            case BACKWARD -> {
+            }
         }
     }
 

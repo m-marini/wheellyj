@@ -38,6 +38,6 @@ public interface WithCommandFlowable {
     /**
      * Returns the flowable of command
      */
-    Flowable<RobotCommandsOld> readCommand();
+    Flowable<RobotCommands> readCommand();
 
 }

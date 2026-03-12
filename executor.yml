@@ -6,5 +6,7 @@ robot: conf/robots/mqttRobot.yml
 #robot: conf/robots/simRobot10Obstacles.yml
 controller: conf/controllers/controller.yml
 modeller: conf/modellers/modeller.yml
-agent: conf/agents/findLabelAgent.yml
+#agent: conf/agents/findLabelAgent.yml
+#agent: conf/agents/idleAgent.yml
+agent: conf/agents/guardAgent.yml
 

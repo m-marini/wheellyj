@@ -220,8 +220,10 @@ public abstract class AbstractStateNode implements StateNode {
         RobotStatus status = context.worldModel().robotStatus();
         return !status.canMoveForward()
                 ? !status.canMoveBackward()
-                ? StateNode.blockResult(context) : StateNode.frontBlockResult(context)
+                ? StateNode.blockResult(context)
+                : StateNode.frontBlockResult(context)
                 : !status.canMoveBackward()
-                ? StateNode.rearBlockResult(context) : null;
+                ? StateNode.rearBlockResult(context)
+                : null;
     }
 }

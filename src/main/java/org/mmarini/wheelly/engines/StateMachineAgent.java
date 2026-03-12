@@ -275,6 +275,7 @@ public class StateMachineAgent implements ProcessorContextApi, InferenceConnecto
     public RobotCommands step() {
         // Process the state node
         StateResult result = currentNode.step(this);
+        logger.atDebug().log("node: {}, result: {}", currentNode, result);
         // Execute robot command
         String exitTag = result.exitCode();
         RobotCommands commands = result.commands();

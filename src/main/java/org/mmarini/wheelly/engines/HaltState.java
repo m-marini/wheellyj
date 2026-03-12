@@ -34,8 +34,6 @@ import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.mmarini.wheelly.engines.StateResult.NONE_HALT_RESULT;
-
 /**
  * Generates the behaviour to haltCommand the robot
  * <p>
@@ -63,7 +61,7 @@ public class HaltState extends TimeOutState {
      */
     public static HaltState create(JsonNode root, Locator locator, String id) {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-        long timeout = locator.path(TIMEOUT_ID).getNode(root).asLong();
+        long timeout = locator.path(TIMEOUT_ID).getNode(root).asLong(DEFAULT_TIMEOUT);
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
         ProcessorCommand onInit = ProcessorCommand.create(root, locator.path("onInit"));
@@ -90,6 +88,6 @@ public class HaltState extends TimeOutState {
         if (result != null) {
             return result;
         }
-        return NONE_HALT_RESULT;
+        return StateNode.noneHaltResult(ctx);
     }
 }

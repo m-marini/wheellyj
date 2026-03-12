@@ -59,6 +59,7 @@ public record StateResult(String exitCode, RobotCommands commands) {
     public static StateResult REAR_BLOCKED_RESULT = new StateResult(REAR_BLOCKED_EXIT, RobotCommands.halt());
     public static StateResult REAR_BLOCKED_NONE_RESULT = new StateResult(REAR_BLOCKED_EXIT, null);
     public static StateResult NONE_HALT_RESULT = new StateResult(NONE_EXIT, RobotCommands.halt());
+    public static StateResult NONE_RESULT = new StateResult(NONE_EXIT, null);
 
     /**
      * Creates the state result

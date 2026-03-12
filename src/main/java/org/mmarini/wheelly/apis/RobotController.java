@@ -35,7 +35,6 @@ import io.reactivex.rxjava3.processors.BehaviorProcessor;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.CompletableSubject;
-import org.mmarini.NotImplementedException;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +42,7 @@ import org.slf4j.LoggerFactory;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.IntToDoubleFunction;
@@ -91,7 +91,7 @@ public class RobotController implements RobotControllerApi {
     private final CompletableSubject shutdownCompletable;
     private final BehaviorProcessor<RobotStatus> statusMessages;
     private final PublishProcessor<Throwable> controllerErrors;
-    private final PublishProcessor<RobotCommandsOld> commands;
+    private final PublishProcessor<RobotCommands> commands;
     private final BehaviorProcessor<RobotControllerStatusApi> controllerStatus;
     private final AtomicReference<RobotControllerStatus> status;
     private RobotApi robot;
@@ -101,7 +101,7 @@ public class RobotController implements RobotControllerApi {
     /**
      * Creates the robot controller
      *
-     * @param reactionInterval the rection interval (ms)
+     * @param reactionInterval the reaction interval (ms)
      * @param commandInterval  the command interval (ms)
      * @param decodeVoltage    the decode voltage function
      */
@@ -156,30 +156,16 @@ public class RobotController implements RobotControllerApi {
         return this;
     }
 
-    // TODO remove
-    @Override
-    public void execute(RobotCommandsOld command) {
-        throw new NotImplementedException();
-            /*
-        // Validates the command
-        if (command.halt() || command.move()) {
-            if (command.move()
-                    && !(command.speed() >= -MAX_PPS && command.speed() <= MAX_PPS)) {
-                logger.atError().setMessage("Wrong move command {}").addArgument(command).log();
-            } else {
-                status.updateAndGet(s -> s.moveCommand(command.clearScan()));
-            }
+    /**
+     * Synchronises the robot actions
+     */
+    private void checkForSync(RobotStatus robotStatus) {
+        long time = robotStatus.simulationTime();
+        RobotControllerStatus s = status.get();
+        // Check for the command interval
+        if (s.syncRequired(time)) {
+            syncActions(robotStatus);
         }
-        if (command.scan()) {
-            int scanDeg = command.scanDirection().toIntDeg();
-            if (abs(scanDeg) <= 90) {
-                status.updateAndGet(s -> s.sensorDir(scanDeg));
-            } else {
-                logger.atError().log("Wrong scan direction {}", scanDeg);
-            }
-        }
-        command.onNext(command);
-             */
     }
 
     @Override
@@ -188,11 +174,14 @@ public class RobotController implements RobotControllerApi {
         int scanDeg = command.scanDirection().toIntDeg();
         if (abs(scanDeg) > 90) {
             logger.atError().log("Wrong scan direction {}", scanDeg);
-        } else {
-            status.updateAndGet(s -> s.command(command));
+            return;
         }
-        // TODO
-        //command.onNext(command);
+        RobotControllerStatus prevStatus = status.getAndUpdate(s -> s.command(command));
+        if (!Objects.equals(prevStatus.command(), command)) {
+            // command changed
+            syncActions(status.get().robotStatus());
+            commands.onNext(command);
+        }
     }
 
     /**
@@ -210,23 +199,7 @@ public class RobotController implements RobotControllerApi {
         RobotStatus robotStatus = st.robotStatus();
         statusMessages.onNext(robotStatus);
         scheduleInference(robotStatus);
-        syncActions(robotStatus);
-    }
-
-    /**
-     * Handles contacts messages
-     *
-     * @param message the message
-     */
-    private void onContactsMessage(WheellyContactsMessage message) {
-        RobotStatus status = this.status.updateAndGet(st ->
-                        st.robotStatus(st.robotStatus()
-                                .setContactsMessage(message)
-                                .setSimulationTime(message.simulationTime())))
-                .robotStatus();
-        statusMessages.onNext(status);
-        scheduleInference(status);
-        syncActions(status);
+        checkForSync(robotStatus);
     }
 
     /**
@@ -250,6 +223,22 @@ public class RobotController implements RobotControllerApi {
     }
 
     /**
+     * Handles contacts messages
+     *
+     * @param message the message
+     */
+    private void onContactsMessage(WheellyContactsMessage message) {
+        RobotStatus status = this.status.updateAndGet(st ->
+                        st.robotStatus(st.robotStatus()
+                                .setContactsMessage(message)
+                                .setSimulationTime(message.simulationTime())))
+                .robotStatus();
+        statusMessages.onNext(status);
+        scheduleInference(status);
+        checkForSync(status);
+    }
+
+    /**
      * Handles lidar messages
      *
      * @param message the message
@@ -262,7 +251,7 @@ public class RobotController implements RobotControllerApi {
                 .robotStatus();
         statusMessages.onNext(status);
         scheduleInference(status);
-        syncActions(status);
+        checkForSync(status);
     }
 
     /**
@@ -278,11 +267,11 @@ public class RobotController implements RobotControllerApi {
                 .robotStatus();
         statusMessages.onNext(status);
         scheduleInference(status);
-        syncActions(status);
+        checkForSync(status);
     }
 
     /**
-     * Handles the roboto connection
+     * Handles the robot connection
      *
      * @param status the status
      */
@@ -305,12 +294,7 @@ public class RobotController implements RobotControllerApi {
                 .robotStatus();
         statusMessages.onNext(status);
         scheduleInference(status);
-        syncActions(status);
-    }
-
-    @Override
-    public Flowable<RobotCommandsOld> readCommand() {
-        return commands;
+        checkForSync(status);
     }
 
     @Override
@@ -434,54 +418,56 @@ public class RobotController implements RobotControllerApi {
         }
     }
 
+    @Override
+    public Flowable<RobotCommands> readCommand() {
+        return commands;
+    }
+
     /**
-     * Synchronises the robot actions
+     * Synchronises the robot status to commands
      */
     private void syncActions(RobotStatus robotStatus) {
         long time = robotStatus.simulationTime();
         RobotControllerStatus s = status.get();
         RobotCommands cmd = s.command();
-        // Check for the command interval
-        if (s.syncRequired(time)) {
-            // Check for commands required
-            switch (cmd.status()) {
-                case HALT -> {
-                    if (!robotStatus.halt()) {
-                        robot.halt();
-                    }
-                }
-                case ROTATE -> {
-                    // Rotate command
-                    if (!cmd.rotationDirection().isCloseTo(robotStatus.direction(), robotStatus.robotSpec().directionRange())) {
-                        robot.rotate(cmd.rotationDirection().toIntDeg());
-                    }
-                }
-                case FORWARD -> {
-                    // forward command
-                    Point2D robotLocation = robotStatus.location();
-                    Point2D target = cmd.target();
-                    double distance = robotLocation.distance(target);
-                    if (distance > robot.robotSpec().targetRange()) {
-                        robot.forward(target);
-                    }
-                }
-                case BACKWARD -> {
-                    // backward command
-                    Point2D robotLocation = robotStatus.location();
-                    Point2D target = cmd.target();
-                    double distance = robotLocation.distance(target);
-                    if (distance > robot.robotSpec().targetRange()) {
-                        robot.backward(target);
-                    }
+        // Check for commands required
+        switch (cmd.status()) {
+            case HALT -> {
+                if (!robotStatus.halt()) {
+                    robot.halt();
                 }
             }
-            // Check for the head direction
-            int scanDeg = cmd.scanDirection().toIntDeg();
-            if (scanDeg != 0) {
-                robot.scan(scanDeg);
+            case ROTATE -> {
+                // Rotate command
+                if (!cmd.rotationDirection().isCloseTo(robotStatus.direction(), robotStatus.robotSpec().directionRange())) {
+                    robot.rotate(cmd.rotationDirection().toIntDeg());
+                }
             }
-            status.updateAndGet(s1 ->
-                    s1.nextSyncTime(time + commandInterval));
+            case FORWARD -> {
+                // forward command
+                Point2D robotLocation = robotStatus.location();
+                Point2D target = cmd.target();
+                double distance = robotLocation.distance(target);
+                if (distance > robot.robotSpec().targetRange()) {
+                    robot.forward(target);
+                }
+            }
+            case BACKWARD -> {
+                // backward command
+                Point2D robotLocation = robotStatus.location();
+                Point2D target = cmd.target();
+                double distance = robotLocation.distance(target);
+                if (distance > robot.robotSpec().targetRange()) {
+                    robot.backward(target);
+                }
+            }
         }
+        // Check for the head direction
+        int scanDeg = cmd.scanDirection().toIntDeg();
+        if (scanDeg != 0 || robotStatus.headDirection().toDeg() != 0) {
+            robot.scan(scanDeg);
+        }
+        status.updateAndGet(s1 ->
+                s1.nextSyncTime(time + commandInterval));
     }
 }

@@ -36,15 +36,6 @@ import java.util.function.Consumer;
  * The robot controller connector api
  */
 public interface RobotControllerConnector {
-
-    /**
-     * Executes the command
-     *
-     * @param command the command
-     */
-    @Deprecated
-    void execute(RobotCommandsOld command);
-
     /**
      * Executes the command
      *
