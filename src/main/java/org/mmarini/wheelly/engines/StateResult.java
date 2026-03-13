@@ -45,24 +45,75 @@ public record StateResult(String exitCode, RobotCommands commands) {
     public static String BLOCKED_EXIT = "blocked";
     public static String COMPLETED_EXIT = "completed";
     public static String NONE_EXIT = "none";
+    public static String FOUND_EXIT = "found";
     public static String NOT_FOUND_EXIT = "notFound";
     public static String TARGET_ID = "target";
     public static String PATH_ID = "path";
 
-    public static StateResult BLOCKED_RESULT = new StateResult(BLOCKED_EXIT, RobotCommands.halt());
-    public static StateResult BLOCKED_NONE_RESULT = new StateResult(BLOCKED_EXIT, null);
-    public static StateResult COMPLETED_RESULT = new StateResult(COMPLETED_EXIT, RobotCommands.halt());
-    public static StateResult COMPLETED_NONE_RESULT = new StateResult(COMPLETED_EXIT, null);
-    public static StateResult TIMEOUT_RESULT = new StateResult(TIMEOUT_EXIT, RobotCommands.halt());
-    public static StateResult TIMEOUT_NONE_RESULT = new StateResult(TIMEOUT_EXIT, null);
-    public static StateResult FRONT_BLOCKED_RESULT = new StateResult(FRONT_BLOCKED_EXIT, RobotCommands.halt());
-    public static StateResult FRONT_BLOCKED_NONE_RESULT = new StateResult(FRONT_BLOCKED_EXIT, null);
-    public static StateResult REAR_BLOCKED_RESULT = new StateResult(REAR_BLOCKED_EXIT, RobotCommands.halt());
-    public static StateResult REAR_BLOCKED_NONE_RESULT = new StateResult(REAR_BLOCKED_EXIT, null);
+    public static StateResult BLOCKED_HALT_RESULT = new StateResult(BLOCKED_EXIT, RobotCommands.halt());
+    public static StateResult COMPLETED_HALT_RESULT = new StateResult(COMPLETED_EXIT, RobotCommands.halt());
+    public static StateResult TIMEOUT_HALT_RESULT = new StateResult(TIMEOUT_EXIT, RobotCommands.halt());
+    public static StateResult FRONT_BLOCKED_HALT_RESULT = new StateResult(FRONT_BLOCKED_EXIT, RobotCommands.halt());
+    public static StateResult REAR_BLOCKED_HALT_RESULT = new StateResult(REAR_BLOCKED_EXIT, RobotCommands.halt());
     public static StateResult NONE_HALT_RESULT = new StateResult(NONE_EXIT, RobotCommands.halt());
-    public static StateResult NONE_RESULT = new StateResult(NONE_EXIT, null);
-    public static StateResult NOT_FOUND_RESULT = new StateResult(NOT_FOUND_EXIT, RobotCommands.halt());
-    public static StateResult NOT_FOUND_NONE_RESULT = new StateResult(NOT_FOUND_EXIT, null);
+    public static StateResult NOT_FOUND_HALT_RESULT = new StateResult(NOT_FOUND_EXIT, RobotCommands.halt());
+    public static StateResult FOUND_HALT_RESULT = new StateResult(FOUND_EXIT, RobotCommands.halt());
+
+    /**
+     * Returns the completed halt result
+     */
+    public static StateResult blocked() {
+        return BLOCKED_HALT_RESULT;
+    }
+
+    /**
+     * Returns the completed halt result
+     */
+    public static StateResult completed() {
+        return COMPLETED_HALT_RESULT;
+    }
+
+    /**
+     * Returns the found result
+     */
+    public static StateResult found() {
+        return FOUND_HALT_RESULT;
+    }
+
+    /**
+     * Returns the front block result
+     */
+    public static StateResult frontBlocked() {
+        return FRONT_BLOCKED_HALT_RESULT;
+    }
+
+    /**
+     * Returns the none halt result
+     */
+    public static StateResult noneHalt() {
+        return NONE_HALT_RESULT;
+    }
+
+    /**
+     * Returns the not found result
+     */
+    public static StateResult notFound() {
+        return NOT_FOUND_HALT_RESULT;
+    }
+
+    /**
+     * Returns the rear block result
+     */
+    public static StateResult rearBlocked() {
+        return REAR_BLOCKED_HALT_RESULT;
+    }
+
+    /**
+     * Returns the timeout result
+     */
+    public static StateResult timeout() {
+        return TIMEOUT_HALT_RESULT;
+    }
 
     /**
      * Creates the state result
@@ -72,6 +123,6 @@ public record StateResult(String exitCode, RobotCommands commands) {
      */
     public StateResult(String exitCode, RobotCommands commands) {
         this.exitCode = requireNonNull(exitCode);
-        this.commands = commands;
+        this.commands = requireNonNull(commands);
     }
 }

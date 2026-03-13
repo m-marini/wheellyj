@@ -30,7 +30,6 @@ package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.NotImplementedException;
-import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
@@ -43,6 +42,7 @@ import java.util.regex.Pattern;
 
 import static java.lang.Math.clamp;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.engines.StateResult.notFound;
 
 /**
  * Generates the behaviour to get stuck to label point
@@ -76,10 +76,6 @@ public class LabelStuckState extends TimeOutState {
     public static final int DEFAULT_SPEED = 30;
     public static final String NOT_FOUND_EXIT = "notFound";
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-label-stuck-schema-1.0";
-    public static final Tuple2<String, RobotCommandsOld> NOT_FOUND_RESULT = Tuple2.of(
-            NOT_FOUND_EXIT, RobotCommandsOld.haltCommand());
-    public static final Tuple2<String, RobotCommandsOld> NOT_FOUND_NONE_RESULT = Tuple2.of(
-            NOT_FOUND_EXIT, RobotCommandsOld.none());
     private static final Logger logger = LoggerFactory.getLogger(LabelStuckState.class);
     public static final String PATTERN_ID = "pattern";
 
@@ -108,19 +104,6 @@ public class LabelStuckState extends TimeOutState {
         return new LabelStuckState(id, onInit, onEntry, onExit, timeout,
                 minDistance, maxDistance, searchDistance, correlationDistance,
                 directionRange, speed, labelMarkerFilter);
-    }
-
-    /**
-     * Returns the not found result
-     *
-     * @param context the context
-     */
-    public static StateResult notFoundResult(ProcessorContextApi context) {
-        throw new NotImplementedException();
-        /* TODO
-        return context.worldModel().robotStatus().halt() ? NOT_FOUND_NONE_RESULT : NOT_FOUND_RESULT;
-
-         */
     }
 
     private final double minDistance;
@@ -180,7 +163,7 @@ public class LabelStuckState extends TimeOutState {
         if (target == null) {
             // No target found
             logger.atDebug().log("No label found");
-            return notFoundResult(context);
+            return notFound();
         }
         double labelDistance = robotLocation.distance(target);
         Complex targetDir = Complex.direction(robotLocation, target);

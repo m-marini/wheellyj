@@ -65,8 +65,6 @@ import static org.mmarini.wheelly.swing.Utils.layHorizontally;
 public class MatrixMonitor {
     public static final String MONITOR_SCHEMA_YML = "https://mmarini.org/wheelly/monitor-schema-1.0";
     public static final int MAX_DISTANCE = 200;
-    public static final double DEFAULT_DISTANCE_RANGE = 0.2;
-    public static final int DEFAULT_DIRECTION_RANGE = 15;
     private static final Logger logger = LoggerFactory.getLogger(MatrixMonitor.class);
 
     /**
@@ -127,7 +125,7 @@ public class MatrixMonitor {
     private RobotCommands command;
     private Point2D target;
     private double distanceRange;
-    private double directionEpsilon;
+    private int directionRange;
 
     /**
      * Creates the matrix monitor application
@@ -193,7 +191,6 @@ public class MatrixMonitor {
         distanceField.setHorizontalAlignment(SwingConstants.RIGHT);
         distanceField.setValue(0);
 
-//        distanceSlider.setOrientation(JSlider.VERTICAL);
         distanceSlider.setMinimum(0);
         distanceSlider.setMaximum(MAX_DISTANCE);
         distanceSlider.setValue(0);
@@ -263,7 +260,7 @@ public class MatrixMonitor {
         this.robot = AppYaml.robotFromJson(config);
         this.controller = AppYaml.controllerFromJson(config);
         this.distanceRange = robot.robotSpec().targetRange();
-        this.directionEpsilon = robot.robotSpec().directionRange().sin();
+        this.directionRange = robot.robotSpec().directionRange().toIntDeg();
 
         // Creates the frames
         this.commandFrame = createFrame(Messages.getString("MatrixMonitor.title"), commandPanel);
@@ -431,8 +428,8 @@ public class MatrixMonitor {
         logger.atDebug().log("onInference");
         if (!halt
                 && status.halt()
-                && (command.isRotate() && status.direction().isCloseTo(
-                Complex.fromDeg(robotDirSlider.getValue()), directionEpsilon)
+                && (command.isRotate() && status.direction().isCloseTo(robotDirSlider.getValue(),
+                directionRange)
                 || (!command.isHalt() && !command.isRotate()
                 && status.location().distance(target) < distanceRange)
         )

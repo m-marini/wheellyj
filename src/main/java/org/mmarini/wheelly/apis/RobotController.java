@@ -171,7 +171,7 @@ public class RobotController implements RobotControllerApi {
     @Override
     public void execute(RobotCommands command) {
         // Validates the command
-        int scanDeg = command.scanDirection().toIntDeg();
+        int scanDeg = command.scanDirection();
         if (abs(scanDeg) > 90) {
             logger.atError().log("Wrong scan direction {}", scanDeg);
             return;
@@ -439,8 +439,9 @@ public class RobotController implements RobotControllerApi {
             }
             case ROTATE -> {
                 // Rotate command
-                if (!cmd.rotationDirection().isCloseTo(robotStatus.direction(), robotStatus.robotSpec().directionRange())) {
-                    robot.rotate(cmd.rotationDirection().toIntDeg());
+                if (!robotStatus.direction().isCloseTo(cmd.rotationDirection(),
+                        robotStatus.robotSpec().directionRange().toIntDeg())) {
+                    robot.rotate(cmd.rotationDirection());
                 }
             }
             case FORWARD -> {
@@ -463,8 +464,8 @@ public class RobotController implements RobotControllerApi {
             }
         }
         // Check for the head direction
-        int scanDeg = cmd.scanDirection().toIntDeg();
-        if (scanDeg != 0 || robotStatus.headDirection().toDeg() != 0) {
+        int scanDeg = cmd.scanDirection();
+        if (scanDeg != 0 || !cmd.isHalt()) {
             robot.scan(scanDeg);
         }
         status.updateAndGet(s1 ->

@@ -28,6 +28,8 @@
 
 package org.mmarini.wheelly.engines;
 
+import static org.mmarini.wheelly.engines.StateResult.timeout;
+
 public abstract class TimeOutState extends AbstractStateNode {
     public static final String TIMEOUT_ID = "timeout";
     public static final long DEFAULT_TIMEOUT = 60 * 60 * 1000L;
@@ -59,7 +61,7 @@ public abstract class TimeOutState extends AbstractStateNode {
     @Override
     public StateResult step(ProcessorContextApi context) {
         return isTimeout(context)
-                ? StateNode.timeoutResult(context)
+                ? timeout()
                 : super.step(context);
     }
 }

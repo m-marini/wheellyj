@@ -32,6 +32,7 @@ import org.mmarini.wheelly.apis.RobotStatus;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.engines.StateResult.*;
 
 /**
  * Abstract state node
@@ -220,10 +221,10 @@ public abstract class AbstractStateNode implements StateNode {
         RobotStatus status = context.worldModel().robotStatus();
         return !status.canMoveForward()
                 ? !status.canMoveBackward()
-                ? StateNode.blockResult(context)
-                : StateNode.frontBlockResult(context)
+                ? blocked()
+                : frontBlocked()
                 : !status.canMoveBackward()
-                ? StateNode.rearBlockResult(context)
+                ? rearBlocked()
                 : null;
     }
 }

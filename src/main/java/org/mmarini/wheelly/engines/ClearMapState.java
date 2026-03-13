@@ -34,6 +34,8 @@ import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.mmarini.wheelly.engines.StateResult.completed;
+
 /**
  * Generates the behavior to clear map
  * <p>
@@ -82,7 +84,7 @@ public class ClearMapState extends AbstractStateNode {
         ctx.clearMap();
         StateResult result = super.step(ctx);
         if (result == null) {
-            return StateNode.completedResult(ctx);
+            return completed();
         }
         return result;
     }

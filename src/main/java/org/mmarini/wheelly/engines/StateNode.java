@@ -33,48 +33,12 @@ import org.mmarini.yaml.Locator;
 
 import java.util.List;
 
-import static org.mmarini.wheelly.engines.StateResult.*;
 import static org.mmarini.yaml.Utils.createObject;
 
 /**
  * The state machine node generates a simple behaviour of robot
  */
 public interface StateNode {
-    /**
-     * Returns the block result
-     *
-     * @param context the process context
-     */
-    static StateResult blockResult(ProcessorContextApi context) {
-        return context.worldModel().robotStatus().halt() ? BLOCKED_NONE_RESULT : BLOCKED_RESULT;
-    }
-
-    /**
-     * Returns the block result
-     *
-     * @param context the process context
-     */
-    static StateResult noneHaltResult(ProcessorContextApi context) {
-        return context.worldModel().robotStatus().halt() ? NONE_RESULT : NONE_HALT_RESULT;
-    }
-
-    /**
-     * Returns the not found result
-     *
-     * @param context the process context
-     */
-    static StateResult notFoundResult(ProcessorContextApi context) {
-        return context.worldModel().robotStatus().halt() ? NOT_FOUND_NONE_RESULT : NOT_FOUND_RESULT;
-    }
-
-    /**
-     * Returns the completed result
-     *
-     * @param context the process context
-     */
-    static StateResult completedResult(ProcessorContextApi context) {
-        return context.worldModel().robotStatus().halt() ? COMPLETED_NONE_RESULT : COMPLETED_RESULT;
-    }
 
     /**
      * Returns the state node from yaml document
@@ -97,33 +61,6 @@ public interface StateNode {
         return locator.propertyNames(root)
                 .mapToObj((key, value) -> createNode(root, value, key))
                 .toList();
-    }
-
-    /**
-     * Returns the front block result
-     *
-     * @param context the process context
-     */
-    static StateResult frontBlockResult(ProcessorContextApi context) {
-        return context.worldModel().robotStatus().halt() ? FRONT_BLOCKED_NONE_RESULT : FRONT_BLOCKED_RESULT;
-    }
-
-    /**
-     * Returns the rear block result
-     *
-     * @param context the process context
-     */
-    static StateResult rearBlockResult(ProcessorContextApi context) {
-        return context.worldModel().robotStatus().halt() ? REAR_BLOCKED_NONE_RESULT : REAR_BLOCKED_RESULT;
-    }
-
-    /**
-     * Returns the completed result
-     *
-     * @param context the process context
-     */
-    static StateResult timeoutResult(ProcessorContextApi context) {
-        return context.worldModel().robotStatus().halt() ? TIMEOUT_NONE_RESULT : StateResult.TIMEOUT_RESULT;
     }
 
     /**

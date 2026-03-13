@@ -114,9 +114,7 @@ public class SensorMonitor extends MatrixTable {
     public void onCommand(RobotCommands command) {
         // TODO
         switch (command.status()) {
-            case ROTATE -> {
-                printf(MOVE_HEAD, "%4d", command.rotationDirection().toIntDeg());
-            }
+            case ROTATE -> printf(MOVE_HEAD, "%4d", command.rotationDirection());
             case FORWARD -> {
             }
             case BACKWARD -> {

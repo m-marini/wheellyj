@@ -29,7 +29,10 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.WheellyJsonSchemas;
+import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +41,7 @@ import java.awt.geom.Point2D;
 import java.util.List;
 
 import static org.mmarini.wheelly.apis.RobotSpec.DISTANCE_PER_PULSE;
-import static org.mmarini.wheelly.engines.StateResult.NONE_EXIT;
+import static org.mmarini.wheelly.engines.StateResult.*;
 
 /**
  * Generates the behaviour to move robot through path
@@ -141,7 +144,7 @@ public class MovePathState extends TimeOutState {
     private StateResult move(ProcessorContextApi context) {
         if (path == null) {
             context.path(null).target(null);
-            return StateNode.notFoundResult(context);
+            return notFound();
         }
         WorldModel worldModel = context.worldModel();
         RobotStatus robotStatus = worldModel.robotStatus();
@@ -154,7 +157,7 @@ public class MovePathState extends TimeOutState {
             logger.atDebug().log("Target reached");
             return nextLocation(context);
         }
-        return new StateResult(NONE_EXIT, RobotCommands.forward(Complex.DEG0, target));
+        return new StateResult(NONE_EXIT, RobotCommands.forward(target));
     }
 
     /**
@@ -168,11 +171,11 @@ public class MovePathState extends TimeOutState {
             // path completed
             context.path(null).target(null);
             logger.atDebug().log("Completed");
-            return StateNode.completedResult(context);
+            return completed();
         }
         Point2D target = path.get(targetIndex);
         logger.atDebug().log("Move to {}", target);
-        return new StateResult(NONE_EXIT, RobotCommands.forward(Complex.DEG0, target));
+        return new StateResult(NONE_EXIT, RobotCommands.forward(target));
     }
 
     @Override

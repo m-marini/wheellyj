@@ -55,7 +55,6 @@ import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
 public class DLActionFunction implements ActionFunction {
     public static final String MOVE_ACTION_ID = "move";
     public static final String SENSOR_ACTION_ID = "sensorAction";
-    public static final double SIN_DEG1 = sin(toRadians(1));
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/action-func-dl-schema-0.1";
 
     private static final Logger logger = LoggerFactory.getLogger(DLActionFunction.class);
@@ -138,7 +137,7 @@ public class DLActionFunction implements ActionFunction {
             WorldModel model = states.get(i);
             Complex direction = direction(model, direction(moveIdx));
             Complex sensorDir = sensorDirection(model, sensorDirection(scanIdx));
-            RobotCommandsOld cmd = speed == 0 && direction.isCloseTo(model.robotStatus().direction(), SIN_DEG1)
+            RobotCommandsOld cmd = speed == 0 && direction.isCloseTo(model.robotStatus().direction())
                     ? RobotCommandsOld.haltCommand()
                     : RobotCommandsOld.move(direction, speed);
             cmd = cmd.setScan(sensorDir);

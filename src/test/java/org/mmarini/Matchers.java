@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022-2023  Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -42,19 +42,23 @@ import static org.hamcrest.Matchers.equalTo;
 
 public interface Matchers {
 
-    static Matcher<Complex> angleCloseTo(Complex expected, double epsilon) {
-        return angleCloseTo(expected, Complex.fromDeg(epsilon));
+    static Matcher<Complex> angleCloseTo(Complex expected, double range) {
+        return angleCloseTo(expected, Complex.fromDeg(range));
     }
 
-    static Matcher<Complex> angleCloseTo(int expected, int epsilon) {
-        return angleCloseTo(Complex.fromDeg(expected), Complex.fromDeg(epsilon));
+    static Matcher<Complex> angleCloseTo(Complex expected) {
+        return angleCloseTo(expected, Complex.fromDeg(1));
     }
 
-    static Matcher<Complex> angleCloseTo(Complex expected, Complex epsilon) {
+    static Matcher<Complex> angleCloseTo(int expected) {
+        return angleCloseTo(Complex.fromDeg(expected));
+    }
+
+    static Matcher<Complex> angleCloseTo(Complex expected, Complex range) {
         requireNonNull(expected);
         return new CustomMatcher<>(format("Angle close to %f DEG within +- %f DEG",
                 expected.toDeg(),
-                epsilon.toDeg())) {
+                range.toDeg())) {
             @Override
             public void describeMismatch(Object item, Description description) {
                 if (item instanceof Complex complex) {
@@ -66,7 +70,7 @@ public interface Matchers {
                             .appendText(" DEG by ")
                             .appendValue(da.toDeg())
                             .appendText(" DEG (more then ")
-                            .appendValue(epsilon.toDeg())
+                            .appendValue(range.toDeg())
                             .appendText(")");
                 } else {
                     super.describeMismatch(item, description);
@@ -76,7 +80,7 @@ public interface Matchers {
             @Override
             public boolean matches(Object o) {
                 if (!(o instanceof Complex complex)) return false;
-                return complex.isCloseTo(expected, epsilon);
+                return complex.isCloseTo(expected, range);
             }
         };
     }

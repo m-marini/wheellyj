@@ -87,6 +87,6 @@ public class HaltState extends TimeOutState {
         if (result != null) {
             return result;
         }
-        return StateNode.noneHaltResult(ctx);
+        return StateResult.noneHalt();
     }
 }

@@ -43,11 +43,11 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mmarini.Matchers.angleCloseTo;
 import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_TARGET_RANGE;
 import static org.mmarini.wheelly.apis.Utils.MM;
 import static org.mmarini.wheelly.engines.AvoidingState.DEFAULT_SAFE_DISTANCE;
+import static org.mmarini.wheelly.engines.StateResult.BLOCKED_HALT_RESULT;
 
 class AvoidingStateTest {
     public static final int NUM_SECTORS = 24;
@@ -134,7 +134,7 @@ class AvoidingStateTest {
     public static RobotStatus createRobotStatus(long simulationTime, Point2D robotLocation, Complex robotDir, Complex headDir,
                                                 boolean frontSensor, boolean rearSensor,
                                                 boolean canMoveForward, boolean canMoveBackward) {
-        RobotStatus status = RobotStatus.create(RobotSpec.DEFAULT_ROBOT_SPEC, x -> 12);
+        RobotStatus status = RobotStatus.create(RobotSpec.DEFAULT_ROBOT_SPEC, ignored -> 12);
         status = status.setSimulationTime(simulationTime)
                 .setLocation(robotLocation)
                 .setDirection(robotDir)
@@ -185,7 +185,7 @@ class AvoidingStateTest {
 
         // Then the result should be blocked result
         assertNotNull(result);
-        assertEquals(StateResult.BLOCKED_NONE_RESULT, result);
+        assertEquals(BLOCKED_HALT_RESULT, result);
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
@@ -241,7 +241,7 @@ class AvoidingStateTest {
         Point2D safePoint = robotDir.opposite().at(robotLocation, DEFAULT_SAFE_DISTANCE + DEFAULT_TARGET_RANGE);
         assertThat(commands.target(), pointCloseTo(safePoint, MM));
         // And the head should be frontal
-        assertThat(commands.scanDirection(), angleCloseTo(0, 1));
+        assertEquals(0, commands.scanDirection());
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
@@ -287,7 +287,7 @@ class AvoidingStateTest {
         assertEquals(RobotCommands.StatusCommand.BACKWARD, commands.status());
         assertThat(commands.target(), pointCloseTo(safeX, safeY, MM));
         // And the head should be frontal
-        assertThat(commands.scanDirection(), angleCloseTo(0, 1));
+        assertEquals(0, commands.scanDirection());
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
@@ -349,7 +349,7 @@ class AvoidingStateTest {
         StateResult result = state.step(context1);
 
         // Then the exit should be "none"
-        assertEquals(StateResult.TIMEOUT_NONE_RESULT, result);
+        assertEquals(StateResult.timeout(), result);
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
@@ -388,7 +388,7 @@ class AvoidingStateTest {
         Point2D safePoint = robotDir.opposite().at(robotLocation, DEFAULT_SAFE_DISTANCE + DEFAULT_TARGET_RANGE);
         assertThat(commands.target(), pointCloseTo(safePoint, MM));
         // And the head should be frontal
-        assertThat(commands.scanDirection(), angleCloseTo(0, 1));
+        assertEquals(0, commands.scanDirection());
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
@@ -420,9 +420,7 @@ class AvoidingStateTest {
         Point2D safePoint = robotDir.at(robotLocation, DEFAULT_SAFE_DISTANCE + DEFAULT_TARGET_RANGE);
         assertThat(commands.target(), pointCloseTo(safePoint, MM));
         // And the head should be frontal
-        assertThat(commands.scanDirection(), angleCloseTo(0, 1));
-        // And the head should be frontal
-        assertThat(commands.scanDirection(), angleCloseTo(0, 1));
+        assertEquals(0, commands.scanDirection());
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
@@ -469,7 +467,7 @@ class AvoidingStateTest {
         // And target should be ...
         assertThat(commands.target(), pointCloseTo(safeX, safeY, MM));
         // And the head should be frontal
-        assertThat(commands.scanDirection(), angleCloseTo(0, 1));
+        assertEquals(0, commands.scanDirection());
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
@@ -508,6 +506,6 @@ class AvoidingStateTest {
         Point2D safePoint = robotDir.at(robotLocation, DEFAULT_SAFE_DISTANCE + DEFAULT_TARGET_RANGE);
         assertThat(commands.target(), pointCloseTo(safePoint, MM));
         // And the head should be frontal
-        assertThat(commands.scanDirection(), angleCloseTo(0, 1));
+        assertEquals(0, commands.scanDirection());
     }
 }

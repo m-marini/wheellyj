@@ -193,7 +193,7 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
             logger.atDebug().log("Completed");
             context.path(null)
                     .target(null);
-            return StateNode.completedResult(context);
+            return StateResult.completed();
         }
         logger.atDebug().log("Move to {}", path.get(targetIndex));
         return move(context);

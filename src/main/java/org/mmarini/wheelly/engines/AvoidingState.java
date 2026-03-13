@@ -35,6 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
+import java.util.Optional;
 
 import static org.mmarini.wheelly.engines.StateResult.*;
 
@@ -130,20 +131,14 @@ public class AvoidingState extends TimeOutState {
                 .orElse(null);
 
          */
-        Point2D targetPoint = worldModel.radarMap().findSafeTarget(
+        Optional<Point2D> targetPoint = worldModel.radarMap().findSafeTarget(
                         contactPoint,
                         forwardEscape
                                 ? contactDirection
                                 : contactDirection.opposite(),
                         safeDistance + worldModel.robotStatus().robotSpec().targetRange(),
-                        maxDistance)
-                .orElse(null);
-
-
-        return targetPoint != null
-                ? targetPoint
-                // no safe point in the map
-                : computeContactSafePoint(ctx);
+                maxDistance);
+        return targetPoint.orElseGet(() -> computeContactSafePoint(ctx));
     }
 
     @Override
@@ -176,8 +171,8 @@ public class AvoidingState extends TimeOutState {
             ctx.target(targetPoint);
             return new StateResult(NONE_EXIT,
                     forwardEscape
-                            ? RobotCommands.forward(Complex.DEG0, targetPoint)
-                            : RobotCommands.backward(Complex.DEG0, targetPoint));
+                            ? RobotCommands.forward(targetPoint)
+                            : RobotCommands.backward(targetPoint));
         }
         // No contacts
         // Check for robot safe location
@@ -185,14 +180,15 @@ public class AvoidingState extends TimeOutState {
         if (contactDistance >= safeDistance) {
             // Robot at safe distance: halt at exit
             logger.atDebug().log("Avoided contact at {} m", contactDistance);
-            return StateNode.completedResult(ctx);
+            ctx.target(null);
+            return completed();
         }
         // Compute the new safe point
         Point2D targetPoint = computeSafePoint(ctx);
         ctx.target(targetPoint);
         return new StateResult(NONE_EXIT,
                 forwardEscape
-                        ? RobotCommands.forward(Complex.DEG0, targetPoint)
-                        : RobotCommands.backward(Complex.DEG0, targetPoint));
+                        ? RobotCommands.forward(targetPoint)
+                        : RobotCommands.backward(targetPoint));
     }
 }
