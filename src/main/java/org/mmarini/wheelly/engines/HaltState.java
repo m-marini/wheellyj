@@ -50,7 +50,6 @@ public class HaltState extends TimeOutState {
 
     private static final Logger logger = LoggerFactory.getLogger(HaltState.class);
     private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-halt-schema-0.1";
-    public static final String TIMEOUT_ID = "TIMEOUT";
 
     /**
      * Returns the haltCommand state from configuration

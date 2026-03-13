@@ -59,6 +59,15 @@ public interface StateNode {
     }
 
     /**
+     * Returns the not found result
+     *
+     * @param context the process context
+     */
+    static StateResult notFoundResult(ProcessorContextApi context) {
+        return context.worldModel().robotStatus().halt() ? NOT_FOUND_NONE_RESULT : NOT_FOUND_RESULT;
+    }
+
+    /**
      * Returns the completed result
      *
      * @param context the process context

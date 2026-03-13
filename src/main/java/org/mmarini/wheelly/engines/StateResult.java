@@ -45,6 +45,7 @@ public record StateResult(String exitCode, RobotCommands commands) {
     public static String BLOCKED_EXIT = "blocked";
     public static String COMPLETED_EXIT = "completed";
     public static String NONE_EXIT = "none";
+    public static String NOT_FOUND_EXIT = "notFound";
     public static String TARGET_ID = "target";
     public static String PATH_ID = "path";
 
@@ -60,6 +61,8 @@ public record StateResult(String exitCode, RobotCommands commands) {
     public static StateResult REAR_BLOCKED_NONE_RESULT = new StateResult(REAR_BLOCKED_EXIT, null);
     public static StateResult NONE_HALT_RESULT = new StateResult(NONE_EXIT, RobotCommands.halt());
     public static StateResult NONE_RESULT = new StateResult(NONE_EXIT, null);
+    public static StateResult NOT_FOUND_RESULT = new StateResult(NOT_FOUND_EXIT, RobotCommands.halt());
+    public static StateResult NOT_FOUND_NONE_RESULT = new StateResult(NOT_FOUND_EXIT, null);
 
     /**
      * Creates the state result

@@ -29,9 +29,7 @@
 package org.mmarini.wheelly.engines;
 
 import org.mmarini.NotImplementedException;
-import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommandsOld;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WorldModel;
 import org.slf4j.Logger;
@@ -81,8 +79,6 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
     public static final double DEFAULT_APPROACH_DISTANCE = 0.2;
     public static final double DEFAULT_GROWTH_DISTANCE = 0.5;
     public static final long DEFAULT_MAX_SEARCH_TIME = 3600000;
-    public static final String NOT_FOUND_EXIT = "notFound";
-    public static final Tuple2<String, RobotCommandsOld> NOT_FOUND_RESULT = Tuple2.of(NOT_FOUND_EXIT, RobotCommandsOld.haltCommand());
     public static final String SAFETY_DISTANCE_ID = "safetyDistance";
     public static final double DEFAULT_SAFETY_DISTANCE = 0.3;
     private static final Logger logger = LoggerFactory.getLogger(AbstractSearchAndMoveState.class);
