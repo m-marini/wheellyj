@@ -142,6 +142,7 @@ class AvoidingStateTest {
                 .setContactsMessage(
                         new WheellyContactsMessage(0L, frontSensor, rearSensor, canMoveForward, canMoveBackward)
                 )
+                .setLidarMessage(status.lidarMessage().setRobotLocation(robotLocation))
                 .setFrontDistance(0)
                 .setRearDistance(0);
 
