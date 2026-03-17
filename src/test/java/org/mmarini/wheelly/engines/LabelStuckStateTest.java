@@ -34,37 +34,28 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
-import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.RobotSpec;
+import org.mmarini.wheelly.apis.RobotStatus;
 
 import java.awt.geom.Point2D;
-import java.util.Map;
 import java.util.stream.Stream;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static java.lang.Math.clamp;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mmarini.Matchers.angleCloseTo;
 import static org.mmarini.wheelly.apis.MarkerLocatorTest.LABEL_A;
 import static org.mmarini.wheelly.apis.MarkerLocatorTest.MM_1;
+import static org.mmarini.wheelly.apis.RobotCommands.StatusCommand.BACKWARD;
+import static org.mmarini.wheelly.apis.RobotCommands.StatusCommand.FORWARD;
 import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_HEAD_FOV_DEG;
-import static org.mmarini.wheelly.engines.AvoidingStateTest.*;
+import static org.mmarini.wheelly.apis.RobotSpec.MAX_RADAR_DISTANCE;
 import static org.mmarini.wheelly.engines.LabelStuckState.*;
-import static org.mmarini.wheelly.engines.StateNode.NONE_EXIT;
+import static org.mmarini.wheelly.engines.StateResult.*;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class LabelStuckStateTest {
-    public static final long MARKER_TIME = 1;
-    public static final long CLEAN_TIME = 1;
-    public static final double WEIGHT = 1;
     public static final int NUM_TEST_CASE = 100;
     private static final long SEED = 1234;
-
-    private static RobotStatus createRobotStatus1(Point2D robotLocation, Complex robotDir, Complex headDir,
-                                                  boolean frontSensor, boolean rearSensor, boolean canMoveForward, boolean canMoveBackward,
-                                                  double frontDistance) {
-        return createRobotStatus(robotLocation, robotDir, headDir, frontSensor, rearSensor, canMoveForward, canMoveBackward)
-                .setFrontDistance(frontDistance);
-    }
 
     static Stream<Arguments> dataBlocked() {
         return RandomArgumentsGenerator.create(SEED)
@@ -80,7 +71,7 @@ class LabelStuckStateTest {
                 .uniform(-5, 5., 9) // robotX
                 .uniform(-5, 5., 9) // robotY
                 .uniform(0, 359) // robotDeg
-                .uniform(-90, 90, 9) // headDeg
+                .uniform(-DEFAULT_HEAD_FOV_DEG / 2 + 1, DEFAULT_HEAD_FOV_DEG / 2 - 1, 9) // headDeg
                 .uniform(-DEFAULT_HEAD_FOV_DEG / 2 + 1, -DEFAULT_DIRECTION_RANGE - 1) // markerDeg
                 .uniform(DEFAULT_MIN_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
                 .build(NUM_TEST_CASE);
@@ -91,9 +82,33 @@ class LabelStuckStateTest {
                 .uniform(-5, 5., 9) // robotX
                 .uniform(-5, 5., 9) // robotY
                 .uniform(0, 359) // robotDeg
-                .uniform(-90, 90, 9) // headDeg
+                .uniform(-DEFAULT_HEAD_FOV_DEG / 2 + 1, DEFAULT_HEAD_FOV_DEG / 2 - 1, 9) // headDeg
                 .uniform(-DEFAULT_DIRECTION_RANGE + 1, DEFAULT_DIRECTION_RANGE - 1) // markerDeg
                 .uniform(DEFAULT_MIN_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
+                .build(NUM_TEST_CASE);
+    }
+
+    static Stream<Arguments> dataFrontMarkerUncorrelatedFar() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-5, 5., 9) // robotX
+                .uniform(-5, 5., 9) // robotY
+                .uniform(0, 359) // robotDeg
+                .uniform(-DEFAULT_HEAD_FOV_DEG / 2 + 1, DEFAULT_HEAD_FOV_DEG / 2 - 1, 9) // headDeg
+                .uniform(-DEFAULT_DIRECTION_RANGE + 1, DEFAULT_DIRECTION_RANGE - 1) // markerDeg
+                .uniform(DEFAULT_MIN_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(DEFAULT_CORRELATION_DISTANCE + MM_1, MAX_RADAR_DISTANCE, 9) // markerDistance
+                .build(NUM_TEST_CASE);
+    }
+
+    static Stream<Arguments> dataFrontMarkerUncorrelatedNear() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-5, 5., 9) // robotX
+                .uniform(-5, 5., 9) // robotY
+                .uniform(0, 359) // robotDeg
+                .uniform(-DEFAULT_HEAD_FOV_DEG / 2 + 1, DEFAULT_HEAD_FOV_DEG / 2 - 1, 9) // headDeg
+                .uniform(-DEFAULT_DIRECTION_RANGE + 1, DEFAULT_DIRECTION_RANGE - 1) // markerDeg
+                .uniform(DEFAULT_MIN_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(-DEFAULT_MIN_DISTANCE, -DEFAULT_CORRELATION_DISTANCE - MM_1, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -102,7 +117,7 @@ class LabelStuckStateTest {
                 .uniform(-5, 5., 9) // robotX
                 .uniform(-5, 5., 9) // robotY
                 .uniform(0, 359) // robotDeg
-                .uniform(-90, 90, 9) // headDeg
+                .uniform(-DEFAULT_HEAD_FOV_DEG / 2 + 1, DEFAULT_HEAD_FOV_DEG / 2 - 1, 9) // headDeg
                 .uniform(DEFAULT_DIRECTION_RANGE + 1, DEFAULT_HEAD_FOV_DEG / 2 - 1) // markerDeg
                 .uniform(DEFAULT_MIN_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
                 .build(NUM_TEST_CASE);
@@ -146,8 +161,8 @@ class LabelStuckStateTest {
                 .uniform(-5, 5., 9) // robotX
                 .uniform(-5, 5., 9) // robotY
                 .uniform(0, 359) // robotDeg
-                .uniform(-90, 90, 9) // headDeg
-                .uniform(-DEFAULT_DIRECTION_RANGE, DEFAULT_DIRECTION_RANGE) // markerDeg
+                .uniform(-DEFAULT_HEAD_FOV_DEG / 2 + 1, DEFAULT_HEAD_FOV_DEG / 2 - 1, 9) // headDeg
+                .uniform(-DEFAULT_DIRECTION_RANGE + 1, DEFAULT_DIRECTION_RANGE - 1) // markerDeg
                 .uniform(RobotSpec.ROBOT_RADIUS, DEFAULT_MIN_DISTANCE - MM_1, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
@@ -258,524 +273,225 @@ class LabelStuckStateTest {
         this.state = new LabelStuckState("stuck", null, null, null,
                 AvoidingState.DEFAULT_TIMEOUT,
                 DEFAULT_MIN_DISTANCE, DEFAULT_MAX_DISTANCE, DEFAULT_SEARCH_DISTANCE,
-                DEFAULT_CORRELATION_DISTANCE, Complex.fromDeg(DEFAULT_DIRECTION_RANGE), DEFAULT_SPEED, t -> true);
+                DEFAULT_CORRELATION_DISTANCE, Complex.fromDeg(DEFAULT_DIRECTION_RANGE), ignored -> true);
+    }
+
+    private static int headMarkerAngle(ProcessorContextApi context) {
+        RobotStatus status = context.worldModel().robotStatus();
+        return clamp(Complex.direction(status.robotSpec().headLocation(), context.worldModel().markers().get(org.mmarini.wheelly.apis.MarkerLocatorTest.LABEL_A).location())
+                .sub(status.direction())
+                .toIntDeg(), -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
+    }
+
+    private static int robotMarkerDir(ProcessorContextApi context) {
+        return Complex.direction(context.worldModel().robotStatus().location(),
+                context.worldModel().markers().get(org.mmarini.wheelly.apis.MarkerLocatorTest.LABEL_A).location()).toIntDeg();
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
     @MethodSource("dataBlocked")
-    void testBlocked(double robotX, double robotY, int robotDeg, double headDeg) {
+    void testBlocked(double robotX, double robotY, int robotDeg, int headDeg) {
         // Given a robot status with both sensors not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
-                false, false, false, false);
-        // And the processor context with the robot status
-        ProcessorContextApi context = createContext(status);
+        ProcessorContextApi context = new ProcessorContextBuilder(robotX, robotY, robotDeg, headDeg)
+                .frontSensor(false)
+                .rearSensor(false)
+                .canMoveForward(false)
+                .canMoveBackward(false)
+                .build();
 
         // When init state
         state.init(context);
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
+        StateResult result = state.step(context);
 
         // Then the result should be blocked result
         assertNotNull(result);
-        assertEquals(AvoidingState.BLOCKED_EXIT, result._1);
+        assertEquals(BLOCKED_HALT_RESULT, result);
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG, marker {4} DEG {5} m")
     @MethodSource("dataFrontMarker")
-    void testFrontMarker(double robotX, double robotY, int robotDeg, double headDeg, int markerDeg, double markerDistance) {
-        // Given a robot status with both sensors not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus1(robotLocation, robotDir, headDir,
-                true, true, true, true, markerDistance);
-        // And the processor context with the robot status
-        Complex markerAbsDir = Complex.fromDeg(markerDeg).add(robotDir);
-        Point2D markerLocation = markerAbsDir.at(robotLocation, markerDistance);
-        LabelMarker marker = new LabelMarker(LABEL_A, markerLocation, WEIGHT, MARKER_TIME, CLEAN_TIME);
-        ProcessorContextApi context = createContext(status, null, Map.of(LABEL_A, marker));
+    void testFrontMarker(double robotX, double robotY, int robotDeg, int headDeg, int markerDeg, double markerDistance) {
+        // Given a robot status with front marker
+        ProcessorContextApi context = new ProcessorContextBuilder(robotX, robotY, robotDeg, headDeg)
+                .addMarker(LABEL_A, markerDeg, markerDistance)
+                .frontDistanceAtMarker(LABEL_A)
+                .build();
 
         // When init state
         state.init(context);
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
+        StateResult result = state.step(context);
 
         // Then the result should be none exit
         assertNotNull(result);
-        assertEquals(NONE_EXIT, result._1);
+        assertEquals(NONE_EXIT, result.exitCode());
         // And the power should be backward
-        assertFalse(result._2.move());
-        assertTrue(result._2.scan());
+        assertTrue(result.commands().isHalt());
         // And the scan direction should be toward marker
-        assertThat(result._2.scanDirection(), angleCloseTo(markerDeg, 1));
+        assertEquals(headMarkerAngle(context), result.commands().scanDirection());
     }
 
-    @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG, marker {4} DEG {5} m")
-    @MethodSource("dataFrontMarker")
-    void testFrontMarkerUncorrelated(double robotX, double robotY, int robotDeg, double headDeg, int markerDeg, double markerDistance) {
-        // Given a robot status with both sensors not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus1(robotLocation, robotDir, headDir,
-                true, true, true, true, markerDistance + DEFAULT_CORRELATION_DISTANCE + 10 * MM_1);
-        // And the processor context with the robot status
-        Complex markerAbsDir = Complex.fromDeg(markerDeg).add(robotDir);
-        Point2D markerLocation = markerAbsDir.at(robotLocation, markerDistance);
-        LabelMarker marker = new LabelMarker(LABEL_A, markerLocation, WEIGHT, MARKER_TIME, CLEAN_TIME);
-        ProcessorContextApi context = createContext(status, null, Map.of(LABEL_A, marker));
+    @ParameterizedTest(name = "[{index}] R=@({0}, {1}) R{2}, H={3} DEG, M={4} DEG, {5} m, dD={6}m")
+    @MethodSource({"dataFrontMarkerUncorrelatedFar",
+            "dataFrontMarkerUncorrelatedNear"})
+    void testFrontMarkerUncorrelated(double robotX, double robotY, int robotDeg, int headDeg, int markerDeg, double markerDistance, double deltaFrontDistance) {
+        // Given a robot status with front marker
+
+        // When init state
+        ProcessorContextApi context = new ProcessorContextBuilder(robotX, robotY, robotDeg, headDeg)
+                .addMarker(LABEL_A, markerDeg, markerDistance)
+                .frontDistanceAtMarker(LABEL_A, deltaFrontDistance)
+                .build();
+        state.init(context);
+        // And entering state
+        state.entry(context);
+        // And stepping state
+        StateResult result = state.step(context);
+
+        // Then the result should be none exit
+        assertNotNull(result);
+        assertEquals(StateResult.notFound(), result);
+    }
+
+    @ParameterizedTest(name = "[{index}] R=@({0}, {1}) R{2}, H={3} DEG, M={4} DEG, {5} m")
+    @MethodSource({"dataFrontRightMarker",
+            "dataFrontLeftMarker",
+            "dataRearLeftMarker",
+            "dataRearRightMarker"})
+    void testLateralMarker(double robotX, double robotY, int robotDeg, int headDeg, int markerDeg, double markerDistance) {
+        // Given a robot status with front marker
+        ProcessorContextApi context = new ProcessorContextBuilder(robotX, robotY, robotDeg, headDeg)
+                .addMarker(LABEL_A, markerDeg, markerDistance)
+                .frontDistanceAtMarker(LABEL_A)
+                .build();
 
         // When init state
         state.init(context);
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
+        StateResult result = state.step(context);
 
         // Then the result should be none exit
         assertNotNull(result);
-        assertEquals(NOT_FOUND_EXIT, result._1);
-    }
-
-    @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG, marker {4} DEG {5} m")
-    @MethodSource({"dataFrontRightMarker", "dataFrontLeftMarker"})
-    void testLateralMarker(double robotX, double robotY, int robotDeg, double headDeg, int markerDeg, double markerDistance) {
-        // Given a robot status with both sensors not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
-                true, true, true, true);
-        // And the processor context with the robot status
-        Complex markerAbsDir = Complex.fromDeg(markerDeg).add(robotDir);
-        Point2D markerLocation = markerAbsDir.at(robotLocation, markerDistance);
-        LabelMarker marker = new LabelMarker(LABEL_A, markerLocation, WEIGHT, MARKER_TIME, CLEAN_TIME);
-        ProcessorContextApi context = createContext(status, null, Map.of(LABEL_A, marker));
-
-        // When init state
-        state.init(context);
-        // And entering state
-        state.entry(context);
-        // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
-
-        // Then the result should be none exit
-        assertNotNull(result);
-        assertEquals(NONE_EXIT, result._1);
-        assertTrue(result._2.move());
-        assertTrue(result._2.scan());
-        // And the power should be 0
-        assertEquals(0, result._2.speed());
-        assertThat(result._2.moveDirection(), angleCloseTo(markerAbsDir, SIN_DEG1));
-        // And the scan direction should be toward marker
-        assertThat(result._2.scanDirection(), angleCloseTo(markerDeg, 1));
+        assertEquals(NONE_EXIT, result.exitCode());
+        // And the scan direction should be toward marker clamped by head fov
+        assertEquals(headMarkerAngle(context), result.commands().scanDirection());
+        assertTrue(result.commands().isRotate());
+        // And the direction should be close the robotMarker direction
+        assertEquals(robotMarkerDir(context), result.commands().rotationDirection());
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG, marker {4} DEG D{5}")
     @MethodSource("dataTargetNotInRange")
-    void testMarkerNotInRange(double robotX, double robotY, int robotDeg, double headDeg, int markerDeg, double markerDistance) {
-        // Given a robot status with both sensors not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
-                true, true, true, true);
-        // And the processor context with the robot status
-        Point2D markerLocation = Complex.fromDeg(markerDeg).at(robotLocation, markerDistance);
-        LabelMarker marker = new LabelMarker(LABEL_A, markerLocation, WEIGHT, MARKER_TIME, CLEAN_TIME);
-        ProcessorContextApi context = createContext(status, null, Map.of(LABEL_A, marker));
+    void testMarkerNotInRange(double robotX, double robotY, int robotDeg, int headDeg, int markerDeg, double markerDistance) {
+        // Given a robot status with front marker
+        ProcessorContextApi context = new ProcessorContextBuilder(robotX, robotY, robotDeg, headDeg)
+                .addMarker(LABEL_A, markerDeg, markerDistance)
+                .frontDistanceAtMarker(LABEL_A)
+                .build();
 
         // When init state
         state.init(context);
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
+        StateResult result = state.step(context);
 
         // Then the result should be blocked result
         assertNotNull(result);
-        assertEquals(NOT_FOUND_EXIT, result._1);
+        assertEquals(NOT_FOUND_HALT_RESULT, result);
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
     @MethodSource("dataBlocked")
-    void testNoTarget(double robotX, double robotY, int robotDeg, double headDeg) {
-        // Given a robot status with both sensors not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
-                true, true, true, true);
-        // And the processor context with the robot status
-        ProcessorContextApi context = createContext(status);
+    void testNoTarget(double robotX, double robotY, int robotDeg, int headDeg) {
+        // Given a robot status with robot location, direction head direction, marker direction relative the robot,
+        // marker distance relative the robot
+        ProcessorContextApi context = new ProcessorContextBuilder(robotX, robotY, robotDeg, headDeg)
+                .build();
 
         // When init state
         state.init(context);
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
+        StateResult result = state.step(context);
 
         // Then the result should be blocked result
         assertNotNull(result);
-        assertEquals(NOT_FOUND_EXIT, result._1);
-    }
-
-    @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG, marker {4} DEG {5} m")
-    @MethodSource("dataRearLeftMarker")
-    void testRearLeftMarker(double robotX, double robotY, int robotDeg, double headDeg, int markerDeg, double markerDistance) {
-        // Given a robot status with both sensors not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
-                true, true, true, true);
-        // And the processor context with the robot status
-        Complex markerAbsDir = Complex.fromDeg(markerDeg).add(robotDir);
-        Point2D markerLocation = markerAbsDir.at(robotLocation, markerDistance);
-        LabelMarker marker = new LabelMarker(LABEL_A, markerLocation, WEIGHT, MARKER_TIME, CLEAN_TIME);
-        ProcessorContextApi context = createContext(status, null, Map.of(LABEL_A, marker));
-
-        // When init state
-        state.init(context);
-        // And entering state
-        state.entry(context);
-        // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
-
-        // Then the result should be none exit
-        assertNotNull(result);
-        assertEquals(NONE_EXIT, result._1);
-        assertTrue(result._2.move());
-        assertTrue(result._2.scan());
-        // And the power should be 0
-        assertEquals(0, result._2.speed());
-        assertThat(result._2.moveDirection(), angleCloseTo(markerAbsDir, SIN_DEG1));
-        // And the scan direction should be toward marker
-        assertThat(result._2.scanDirection(), angleCloseTo(-DEFAULT_HEAD_FOV_DEG / 2, 1));
-    }
-
-    @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG, marker {4} DEG {5} m")
-    @MethodSource("dataRearRightMarker")
-    void testRearRightMarker(double robotX, double robotY, int robotDeg, double headDeg, int markerDeg, double markerDistance) {
-        // Given a robot status with both sensors not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
-                true, true, true, true);
-        // And the processor context with the robot status
-        Complex markerAbsDir = Complex.fromDeg(markerDeg).add(robotDir);
-        Point2D markerLocation = markerAbsDir.at(robotLocation, markerDistance);
-        LabelMarker marker = new LabelMarker(LABEL_A, markerLocation, WEIGHT, MARKER_TIME, CLEAN_TIME);
-        ProcessorContextApi context = createContext(status, null, Map.of(LABEL_A, marker));
-
-        // When init state
-        state.init(context);
-        // And entering state
-        state.entry(context);
-        // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
-
-        // Then the result should be none exit
-        assertNotNull(result);
-        assertEquals(NONE_EXIT, result._1);
-        assertTrue(result._2.move());
-        assertTrue(result._2.scan());
-        // And the power should be 0
-        assertEquals(0, result._2.speed());
-        assertThat(result._2.moveDirection(), angleCloseTo(markerAbsDir, SIN_DEG1));
-        // And the scan direction should be toward marker
-        assertThat(result._2.scanDirection(), angleCloseTo(DEFAULT_HEAD_FOV_DEG / 2, 1));
-    }
-
-    @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG, marker R{4} D{5}")
-    @MethodSource("dataTooCloseFrontMarker")
-    void testTooCloseFrontMarker(double robotX, double robotY, int robotDeg, double headDeg, int markerDeg, double markerDistance) {
-        // Given a robot status with both sensors not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
-                true, true, true, true);
-        // And the processor context with the robot status
-        Complex markerAbsDir = Complex.fromDeg(markerDeg).add(robotDir);
-        Point2D markerLocation = markerAbsDir.at(robotLocation, markerDistance);
-        LabelMarker marker = new LabelMarker(LABEL_A, markerLocation, WEIGHT, MARKER_TIME, CLEAN_TIME);
-        ProcessorContextApi context = createContext(status, null, Map.of(LABEL_A, marker));
-
-        // When init state
-        state.init(context);
-        // And entering state
-        state.entry(context);
-        // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
-
-        // Then the result should be none exit
-        assertNotNull(result);
-        assertEquals(NONE_EXIT, result._1);
-        assertTrue(result._2.move());
-        assertTrue(result._2.scan());
-        // And the power should be backward
-        assertEquals(-LabelStuckState.DEFAULT_SPEED, result._2.speed());
-        // And the direction should be toward marker
-        assertThat(result._2.moveDirection(), angleCloseTo(markerAbsDir, SIN_DEG1));
-        // And the scan direction should be toward marker
-        assertThat(result._2.scanDirection(), angleCloseTo(markerDeg, 1));
+        assertEquals(NOT_FOUND_HALT_RESULT, result);
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG, marker {4} DEG D{5}")
-    @MethodSource({"dataTooCloseLateralLeftMarker",
-            "dataTooCloseLateralRightMarker"})
-    void testTooCloseLateralMarker(double robotX, double robotY, int robotDeg, double headDeg, int markerDeg, double markerDistance) {
-        // Given a robot status with both sensors not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
-                true, true, true, true);
-        // And the processor context with the robot status
-        Complex markerAbsDir = Complex.fromDeg(markerDeg).add(robotDir);
-        Point2D markerLocation = markerAbsDir.at(robotLocation, markerDistance);
-        LabelMarker marker = new LabelMarker(LABEL_A, markerLocation, WEIGHT, MARKER_TIME, CLEAN_TIME);
-        ProcessorContextApi context = createContext(status, null, Map.of(LABEL_A, marker));
+    @MethodSource({"dataTooCloseFrontMarker",
+            "dataTooCloseLateralLeftMarker",
+            "dataTooCloseLateralRightMarker",
+            "dataTooCloseRearLeftMarker",
+            "dataTooCloseRearRightMarker",
+    })
+    void testTooCloseMarker(double robotX, double robotY, int robotDeg, int headDeg, int markerDeg, double markerDistance) {
+        // Given a robot status with robot location, direction head direction, marker direction relative the robot,
+        // marker distance relative the robot
+        ProcessorContextApi context = new ProcessorContextBuilder(robotX, robotY, robotDeg, headDeg)
+                .addMarker(LABEL_A, markerDeg, markerDistance)
+                .frontDistanceAtMarker(LABEL_A)
+                .build();
 
         // When init state
         state.init(context);
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
+        StateResult result = state.step(context);
 
         // Then the result should be none exit
         assertNotNull(result);
-        assertEquals(NONE_EXIT, result._1);
-        assertTrue(result._2.move());
-        assertTrue(result._2.scan());
-        // And the power should be backward
-        assertEquals(-LabelStuckState.DEFAULT_SPEED, result._2.speed());
-        // And the direction should be toward marker
-        assertThat(result._2.moveDirection(), angleCloseTo(markerAbsDir, SIN_DEG1));
-        // And the scan direction should be toward marker
-        assertThat(result._2.scanDirection(), angleCloseTo(markerDeg, 1));
+        assertEquals(NONE_EXIT, result.exitCode());
+        assertEquals(BACKWARD, result.commands().status());
+        // And the scan direction should be toward marker clamped by head fov
+        assertEquals(headMarkerAngle(context), result.commands().scanDirection());
+        // and the target-marker direction should be the same of robot marker
+        Point2D markerLocation = context.worldModel().markers().get(LABEL_A).location();
+        int targetMarkerDir = Complex.direction(result.commands().target(), markerLocation).toIntDeg();
+        assertEquals(targetMarkerDir, robotMarkerDir(context));
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG, marker R{4} D{5}")
-    @MethodSource("dataTooCloseRearLeftMarker")
-    void testTooCloseRearLeftMarker(double robotX, double robotY, int robotDeg, double headDeg, int markerDeg, double markerDistance) {
+    @MethodSource({"dataTooFarFrontMarker",
+            "dataTooFarLateralLeftMarker",
+            "dataTooFarLateralRightMarker",
+            "dataTooFarRearLeftMarker",
+            "dataTooFarRearRightMarker"
+    })
+    void testTooFarMarker(double robotX, double robotY, int robotDeg, int headDeg, int markerDeg, double markerDistance) {
         // Given a robot status with both sensors not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
-                true, true, true, true);
-        // And the processor context with the robot status
-        Complex markerAbsDir = Complex.fromDeg(markerDeg).add(robotDir);
-        Point2D markerLocation = markerAbsDir.at(robotLocation, markerDistance);
-        LabelMarker marker = new LabelMarker(LABEL_A, markerLocation, WEIGHT, MARKER_TIME, CLEAN_TIME);
-        ProcessorContextApi context = createContext(status, null, Map.of(LABEL_A, marker));
+        ProcessorContextApi context = new ProcessorContextBuilder(robotX, robotY, robotDeg, headDeg)
+                .addMarker(LABEL_A, markerDeg, markerDistance)
+                .frontDistanceAtMarker(LABEL_A)
+                .build();
 
         // When init state
         state.init(context);
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
+        StateResult result = state.step(context);
 
         // Then the result should be none exit
         assertNotNull(result);
-        assertEquals(NONE_EXIT, result._1);
-        assertTrue(result._2.move());
-        assertTrue(result._2.scan());
-        // And the power should be backward
-        assertEquals(-LabelStuckState.DEFAULT_SPEED, result._2.speed());
-        // And the direction should be toward marker
-        assertThat(result._2.moveDirection(), angleCloseTo(markerAbsDir, SIN_DEG1));
+        assertEquals(NONE_EXIT, result.exitCode());
+        assertEquals(FORWARD, result.commands().status());
         // And the scan direction should be toward marker
-        assertThat(result._2.scanDirection(), angleCloseTo(-DEFAULT_HEAD_FOV_DEG / 2, 1));
-    }
-
-
-    @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG, marker R{4} D{5}")
-    @MethodSource("dataTooCloseRearRightMarker")
-    void testTooCloseRearRightMarker(double robotX, double robotY, int robotDeg, double headDeg, int markerDeg, double markerDistance) {
-        // Given a robot status with both sensors not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
-                true, true, true, true);
-        // And the processor context with the robot status
-        Complex markerAbsDir = Complex.fromDeg(markerDeg).add(robotDir);
-        Point2D markerLocation = markerAbsDir.at(robotLocation, markerDistance);
-        LabelMarker marker = new LabelMarker(LABEL_A, markerLocation, WEIGHT, MARKER_TIME, CLEAN_TIME);
-        ProcessorContextApi context = createContext(status, null, Map.of(LABEL_A, marker));
-
-        // When init state
-        state.init(context);
-        // And entering state
-        state.entry(context);
-        // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
-
-        // Then the result should be none exit
-        assertNotNull(result);
-        assertEquals(NONE_EXIT, result._1);
-        assertTrue(result._2.move());
-        assertTrue(result._2.scan());
-        // And the power should be backward
-        assertEquals(-LabelStuckState.DEFAULT_SPEED, result._2.speed());
-        // And the direction should be toward marker
-        assertThat(result._2.moveDirection(), angleCloseTo(markerAbsDir, SIN_DEG1));
-        // And the scan direction should be toward marker
-        assertThat(result._2.scanDirection(), angleCloseTo(DEFAULT_HEAD_FOV_DEG / 2, 1));
-    }
-
-    @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG, marker R{4} D{5}")
-    @MethodSource("dataTooFarFrontMarker")
-    void testTooFarFrontMarker(double robotX, double robotY, int robotDeg, double headDeg, int markerDeg, double markerDistance) {
-        // Given a robot status with both sensors not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
-                true, true, true, true);
-        // And the processor context with the robot status
-        Complex markerAbsDir = Complex.fromDeg(markerDeg).add(robotDir);
-        Point2D markerLocation = markerAbsDir.at(robotLocation, markerDistance);
-        LabelMarker marker = new LabelMarker(LABEL_A, markerLocation, WEIGHT, MARKER_TIME, CLEAN_TIME);
-        ProcessorContextApi context = createContext(status, null, Map.of(LABEL_A, marker));
-
-        // When init state
-        state.init(context);
-        // And entering state
-        state.entry(context);
-        // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
-
-        // Then the result should be none exit
-        assertNotNull(result);
-        assertEquals(NONE_EXIT, result._1);
-        assertTrue(result._2.move());
-        assertTrue(result._2.scan());
-        // And the power should be backward
-        assertEquals(LabelStuckState.DEFAULT_SPEED, result._2.speed());
-        // And the direction should be toward marker
-        assertThat(result._2.moveDirection(), angleCloseTo(markerAbsDir, SIN_DEG1));
-        // And the scan direction should be toward marker
-        assertThat(result._2.scanDirection(), angleCloseTo(markerDeg, 1));
-    }
-
-    @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG, marker R{4} D{5}")
-    @MethodSource({"dataTooFarLateralLeftMarker",
-            "dataTooFarLateralRightMarker"})
-    void testTooFarLateralMarker(double robotX, double robotY, int robotDeg, double headDeg, int markerDeg, double markerDistance) {
-        // Given a robot status with both sensors not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
-                true, true, true, true);
-        // And the processor context with the robot status
-        Complex markerAbsDir = Complex.fromDeg(markerDeg).add(robotDir);
-        Point2D markerLocation = markerAbsDir.at(robotLocation, markerDistance);
-        LabelMarker marker = new LabelMarker(LABEL_A, markerLocation, WEIGHT, MARKER_TIME, CLEAN_TIME);
-        ProcessorContextApi context = createContext(status, null, Map.of(LABEL_A, marker));
-
-        // When init state
-        state.init(context);
-        // And entering state
-        state.entry(context);
-        // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
-
-        // Then the result should be none exit
-        assertNotNull(result);
-        assertEquals(NONE_EXIT, result._1);
-        assertTrue(result._2.move());
-        assertTrue(result._2.scan());
-        // And the power should be backward
-        assertEquals(LabelStuckState.DEFAULT_SPEED, result._2.speed());
-        // And the direction should be toward marker
-        assertThat(result._2.moveDirection(), angleCloseTo(markerAbsDir, SIN_DEG1));
-        // And the scan direction should be toward marker
-        assertThat(result._2.scanDirection(), angleCloseTo(markerDeg, 1));
-    }
-
-    @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG, marker R{4} D{5}")
-    @MethodSource({"dataTooFarRearLeftMarker"})
-    void testTooFarRearLeftMarker(double robotX, double robotY, int robotDeg, double headDeg, int markerDeg, double markerDistance) {
-        // Given a robot status with both sensors not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
-                true, true, true, true);
-        // And the processor context with the robot status
-        Complex markerAbsDir = Complex.fromDeg(markerDeg).add(robotDir);
-        Point2D markerLocation = markerAbsDir.at(robotLocation, markerDistance);
-        LabelMarker marker = new LabelMarker(LABEL_A, markerLocation, WEIGHT, MARKER_TIME, CLEAN_TIME);
-        ProcessorContextApi context = createContext(status, null, Map.of(LABEL_A, marker));
-
-        // When init state
-        state.init(context);
-        // And entering state
-        state.entry(context);
-        // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
-
-        // Then the result should be none exit
-        assertNotNull(result);
-        assertEquals(NONE_EXIT, result._1);
-        assertTrue(result._2.move());
-        assertTrue(result._2.scan());
-        // And the power should be backward
-        assertEquals(LabelStuckState.DEFAULT_SPEED, result._2.speed());
-        // And the direction should be toward marker
-        assertThat(result._2.moveDirection(), angleCloseTo(markerAbsDir, SIN_DEG1));
-        // And the scan direction should be toward marker
-        assertThat(result._2.scanDirection(), angleCloseTo(-DEFAULT_HEAD_FOV_DEG / 2, 1));
-    }
-
-    @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG, marker R{4} D{5}")
-    @MethodSource({"dataTooFarRearRightMarker"})
-    void testTooFarRearRightMarker(double robotX, double robotY, int robotDeg, double headDeg, int markerDeg, double markerDistance) {
-        // Given a robot status with both sensors not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
-                true, true, true, true);
-        // And the processor context with the robot status
-        Complex markerAbsDir = Complex.fromDeg(markerDeg).add(robotDir);
-        Point2D markerLocation = markerAbsDir.at(robotLocation, markerDistance);
-        LabelMarker marker = new LabelMarker(LABEL_A, markerLocation, WEIGHT, MARKER_TIME, CLEAN_TIME);
-        ProcessorContextApi context = createContext(status, null, Map.of(LABEL_A, marker));
-
-        // When init state
-        state.init(context);
-        // And entering state
-        state.entry(context);
-        // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
-
-        // Then the result should be none exit
-        assertNotNull(result);
-        assertEquals(NONE_EXIT, result._1);
-        assertTrue(result._2.move());
-        assertTrue(result._2.scan());
-        // And the power should be backward
-        assertEquals(LabelStuckState.DEFAULT_SPEED, result._2.speed());
-        // And the direction should be toward marker
-        assertThat(result._2.moveDirection(), angleCloseTo(markerAbsDir, SIN_DEG1));
-        // And the scan direction should be toward marker
-        assertThat(result._2.scanDirection(), angleCloseTo(DEFAULT_HEAD_FOV_DEG / 2, 1));
+        assertEquals(headMarkerAngle(context), result.commands().scanDirection());
+        // and the target-marker direction should be the same of robot marker
+        Point2D markerLocation = context.worldModel().markers().get(LABEL_A).location();
+        int targetMarkerDir = Complex.direction(result.commands().target(), markerLocation).toIntDeg();
+        assertEquals(targetMarkerDir, robotMarkerDir(context));
     }
 }

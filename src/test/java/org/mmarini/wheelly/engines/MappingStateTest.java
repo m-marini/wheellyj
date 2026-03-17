@@ -33,37 +33,32 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
-import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotSpec;
+import org.mmarini.wheelly.apis.RobotStatus;
 
 import java.awt.geom.Point2D;
-import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.angleCloseTo;
 import static org.mmarini.wheelly.apis.MarkerLocatorTest.LABEL_A;
-import static org.mmarini.wheelly.engines.AvoidingStateTest.SIN_DEG1;
-import static org.mmarini.wheelly.engines.AvoidingStateTest.createContext;
-import static org.mmarini.wheelly.engines.MappingState.*;
-import static org.mmarini.wheelly.engines.StateNode.NONE_EXIT;
+import static org.mmarini.wheelly.engines.MappingState.DEFAULT_TURN_ANGLE;
+import static org.mmarini.wheelly.engines.MappingState.MappingStateStatus;
+import static org.mmarini.wheelly.engines.MappingState.MappingStateStatus.RIGHT_SCANNING;
+import static org.mmarini.wheelly.engines.MappingState.MappingStateStatus.TURING_ROBOT;
+import static org.mmarini.wheelly.engines.StateResult.*;
 
 class MappingStateTest {
 
-    public static final int CLEAN_TIME = 1;
-    public static final int MARKER_TIME = 1;
     public static final long DELTA_TIME = 10;
     public static final int NUMBER_OF_SAMPLES = 2;
     public static final int DELTA_DIR = 4;
     public static final int MAX_HEAD_DEG = RobotSpec.DEFAULT_HEAD_FOV_DEG / 2;
     private static final long SEED = 1234;
     private static final int NUM_TEST_CASE = 100;
-
-    static RobotStatus createRobotStatus(Point2D robotLocation, Complex robotDir) {
-        RobotStatus robotStatus = AvoidingStateTest.createRobotStatus(0, robotLocation, robotDir, Complex.DEG0, true, true, true, true);
-        return robotStatus.setLidarMessage(robotStatus.lidarMessage().simulationTime(0));
-    }
 
     static Stream<Arguments> dataBlocked() {
         return RandomArgumentsGenerator.create(SEED)
@@ -82,16 +77,14 @@ class MappingStateTest {
                 .build(NUM_TEST_CASE);
     }
 
-    static RobotStatus nextStatus(RobotStatus status, RobotCommandsOld commands) {
-        long t = status.simulationTime() + DELTA_TIME;
-        status = status.setSimulationTime(t).setLidarMessage(status.lidarMessage().simulationTime(t));
-        if (commands.scan()) {
-            status = status.setLidarMessage(status.lidarMessage().headDirection(commands.scanDirection()));
+    static ProcessorContextBuilder nextBuilder(ProcessorContextBuilder builder, RobotCommands commands) {
+        builder = builder.addSimulationTime(DELTA_TIME)
+                .headAngle(commands.scanDirection())
+                .updateLidar();
+        if (commands.isRotate()) {
+            builder = builder.robotDirection(commands.rotationDirection());
         }
-        if (commands.move()) {
-            status = status.setDirection(commands.moveDirection());
-        }
-        return status;
+        return builder;
     }
 
     private MappingState state;
@@ -99,116 +92,106 @@ class MappingStateTest {
     @BeforeEach
     void setUp() {
         this.state = new MappingState("stuck", null, null, null,
-                AvoidingState.DEFAULT_TIMEOUT, Complex.fromDeg(MappingState.DEFAULT_TURN_ANGLE),
+                AvoidingState.DEFAULT_TIMEOUT, Complex.fromDeg(DEFAULT_TURN_ANGLE),
                 NUMBER_OF_SAMPLES);
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
     @MethodSource("dataBlocked")
-    void testBlocked(double robotX, double robotY, int robotDeg, double headDeg) {
+    void testBlocked(double robotX, double robotY, int robotDeg, int headDeg) {
         // Given a robot status with both sensors not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = AvoidingStateTest.createRobotStatus(robotLocation, robotDir, headDir, false, false, false, false);
-        // And the processor context with the robot status
-        ProcessorContextApi context = createContext(status);
+        ProcessorContextApi context = new ProcessorContextBuilder(robotX, robotY, robotDeg, headDeg)
+                .canMoveForward(false)
+                .canMoveBackward(false)
+                .frontSensor(false)
+                .rearSensor(false)
+                .build();
 
         // When init state
         state.init(context);
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
+        StateResult result = state.step(context);
 
         // Then the result should be blocked result
         assertNotNull(result);
-        assertEquals(AvoidingState.BLOCKED_RESULT, result);
+        assertEquals(BLOCKED_HALT_RESULT, result);
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
     @MethodSource("dataBlocked")
-    void testMarkerFound(double robotX, double robotY, int robotDeg, double headDeg) {
+    void testMarkerFound(double robotX, double robotY, int robotDeg, int headDeg) {
         // Given a robot status with both sensors not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = AvoidingStateTest.createRobotStatus(robotLocation, robotDir, headDir,
-                true, true, true, true);
-        // And the processor context with the robot status and a marker
-        Point2D markerLocation = new Point2D.Double();
-        LabelMarker marker = new LabelMarker(LABEL_A, markerLocation, 1, MARKER_TIME, CLEAN_TIME);
-        ProcessorContextApi context = createContext(status, null, Map.of(LABEL_A, marker));
+        ProcessorContextApi context = new ProcessorContextBuilder(robotX, robotY, robotDeg, headDeg)
+                .addMarker(LABEL_A, new Point2D.Double())
+                .build();
 
         // When init state
         state.init(context);
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
+        StateResult result = state.step(context);
 
         // Then the result should be blocked result
         assertNotNull(result);
-        assertEquals(MappingState.FOUND_RESULT, result);
+        assertEquals(FOUND_HALT_RESULT, result);
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
     @MethodSource("dataFrontScan")
     void testScanInit(double robotX, double robotY, int robotDeg) {
         // Given a robot status with head toward the front
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        // And an initial status
-        ProcessorContextApi ctx0 = createContext(createRobotStatus(robotLocation, robotDir));
+        ProcessorContextBuilder builder = new ProcessorContextBuilder(robotX, robotY, robotDeg, 0);
+        ProcessorContextApi ctx0 = builder.build();
 
         // When init state
         state.init(ctx0);
         // And entering state
         state.entry(ctx0);
         // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(ctx0);
+        StateResult result = state.step(ctx0);
 
         // Then the result should be halt and scan
         assertNotNull(result);
-        assertEquals(NONE_EXIT, result._1);
-        assertTrue(result._2.halt());
-        assertFalse(result._2.move());
-        assertTrue(result._2.scan());
+        assertEquals(NONE_EXIT, result.exitCode());
+        assertNotNull(result.commands());
+        assertTrue(result.commands().isHalt());
         // And the scan direction should be 0
-        assertThat(result._2.scanDirection(), angleCloseTo(0, 1));
+        assertEquals(0, result.commands().scanDirection());
         // And no sample already registered
         assertEquals(0, state.numberOfSamples());
         // And target sensor dir should be 0
         assertEquals(0, state.targetSensorDir());
         // And lidar time should be 0
         assertEquals(0, state.prevLidarTime());
-        assertEquals(MappingState.RIGHT_SCANNING, state.status());
-        assertThat(state.initialDir(), angleCloseTo(robotDeg, 1));
+        assertEquals(RIGHT_SCANNING, state.status());
+        assertThat(state.initialDir(), angleCloseTo(robotDeg));
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
     @MethodSource("dataFrontScan")
     void testScanLeft(double robotX, double robotY, int robotDeg) {
-        // Given a robot status with head toward the front
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        // And an initial status
-        RobotStatus s0 = createRobotStatus(robotLocation, robotDir);
-        ProcessorContextApi ctx0 = createContext(s0);
+        ProcessorContextBuilder builder = new ProcessorContextBuilder(robotX, robotY, robotDeg, 0);
+        ProcessorContextApi ctx0 = builder.build();
 
         // When init state
         state.init(ctx0);
         // And entering state
         state.entry(ctx0);
-        Tuple2<String, RobotCommandsOld> result = state.step(ctx0);
+        StateResult result = state.step(ctx0);
         // And advancing till left scanning
-        RobotStatus status = s0;
-        while (!LEFT_SCANNING.equals(state.status())) {
-            status = nextStatus(status, result._2);
-            result = state.step(createContext(status));
+        RobotStatus status = ctx0.worldModel().robotStatus();
+        ProcessorContextApi ctx;
+        while (!MappingStateStatus.LEFT_SCANNING.equals(state.status())) {
+            builder = nextBuilder(builder, result.commands());
+            ctx = builder.build();
+            status = ctx.worldModel().robotStatus();
+            result = state.step(ctx);
         }
         // And the status of flow state should be ...
-        assertEquals(LEFT_SCANNING, state.status());
+        assertEquals(MappingStateStatus.LEFT_SCANNING, state.status());
         assertEquals(status.simulationTime(), state.prevLidarTime());
         assertEquals(0, state.numberOfSamples());
         assertEquals(-MAX_HEAD_DEG, state.targetSensorDir());
@@ -219,37 +202,37 @@ class MappingStateTest {
         int head = -MAX_HEAD_DEG;
         while (head < -DELTA_DIR) {
             // When stepping state with the first signal
-            status = nextStatus(status, result._2);
-            result = state.step(createContext(status));
+            builder = nextBuilder(builder, result.commands());
+            ctx = builder.build();
+            status = ctx.worldModel().robotStatus();
+            result = state.step(ctx);
 
             // Then the result should be halt and scan
             assertNotNull(result);
-            assertEquals(NONE_EXIT, result._1);
-            assertFalse(result._2.halt());
-            assertFalse(result._2.move());
-            assertTrue(result._2.scan());
+            assertEquals(NONE_EXIT, result.exitCode());
+            assertTrue(result.commands().isHalt());
             // And the scan direction should be 0
-            assertThat(result._2.scanDirection(), angleCloseTo(head, 1));
+            assertEquals(head, result.commands().scanDirection());
             // And the status of flow state should be ...
-            assertEquals(LEFT_SCANNING, state.status());
+            assertEquals(MappingStateStatus.LEFT_SCANNING, state.status());
             assertEquals(status.simulationTime(), state.prevLidarTime());
             assertEquals(1, state.numberOfSamples());
             assertEquals(head, state.targetSensorDir());
 
             // When stepping state with second signal
-            status = nextStatus(status, result._2);
-            result = state.step(createContext(status));
+            builder = nextBuilder(builder, result.commands());
+            ctx = builder.build();
+            status = ctx.worldModel().robotStatus();
+            result = state.step(ctx);
 
             // Then the result should be halt and scan
             assertNotNull(result);
-            assertEquals(NONE_EXIT, result._1);
-            assertFalse(result._2.halt());
-            assertFalse(result._2.move());
-            assertTrue(result._2.scan());
+            assertEquals(NONE_EXIT, result.exitCode());
+            assertTrue(result.commands().isHalt());
             // And the scan direction should be 4
-            assertThat(result._2.scanDirection(), angleCloseTo(head + DELTA_DIR, 1));
+            assertThat(Complex.fromDeg(result.commands().scanDirection()), angleCloseTo(head + DELTA_DIR));
             // And the status of flow state should be ...
-            assertEquals(LEFT_SCANNING, state.status());
+            assertEquals(MappingStateStatus.LEFT_SCANNING, state.status());
             assertEquals(status.simulationTime(), state.prevLidarTime());
             assertEquals(0, state.numberOfSamples());
             assertEquals(head + DELTA_DIR, state.targetSensorDir());
@@ -260,37 +243,37 @@ class MappingStateTest {
         // ------------------------------------
         // When sampling (-1 DEG)
         // ------------------------------------
-        status = nextStatus(status, result._2);
-        result = state.step(createContext(status));
+        builder = nextBuilder(builder, result.commands());
+        ctx = builder.build();
+        status = ctx.worldModel().robotStatus();
+        result = state.step(ctx);
 
         // Then the result should be halt and scan
         assertNotNull(result);
-        assertEquals(NONE_EXIT, result._1);
-        assertFalse(result._2.halt());
-        assertFalse(result._2.move());
-        assertTrue(result._2.scan());
+        assertEquals(NONE_EXIT, result.exitCode());
+        assertTrue(result.commands().isHalt());
         // And the scan direction should be 0
-        assertThat(result._2.scanDirection(), angleCloseTo(head, 1));
+        assertThat(Complex.fromDeg(result.commands().scanDirection()), angleCloseTo(head));
         // And the status of flow state should be ...
-        assertEquals(LEFT_SCANNING, state.status());
+        assertEquals(MappingStateStatus.LEFT_SCANNING, state.status());
         assertEquals(status.simulationTime(), state.prevLidarTime());
         assertEquals(1, state.numberOfSamples());
         assertEquals(head, state.targetSensorDir());
 
         // When stepping state with second signal
-        status = nextStatus(status, result._2);
-        result = state.step(createContext(status));
+        builder = nextBuilder(builder, result.commands());
+        ctx = builder.build();
+        status = ctx.worldModel().robotStatus();
+        result = state.step(ctx);
 
         // Then the result should be halt and scan
         assertNotNull(result);
-        assertEquals(NONE_EXIT, result._1);
-        assertFalse(result._2.halt());
-        assertFalse(result._2.move());
-        assertTrue(result._2.scan());
+        assertEquals(NONE_EXIT, result.exitCode());
+        assertTrue(result.commands().isHalt());
         // And the scan direction should be 65
-        assertThat(result._2.scanDirection(), angleCloseTo(0, 1));
+        assertEquals(0, result.commands().scanDirection());
         // And the status of flow state should be ...
-        assertEquals(LEFT_SCANNING, state.status());
+        assertEquals(MappingStateStatus.LEFT_SCANNING, state.status());
         assertEquals(status.simulationTime(), state.prevLidarTime());
         assertEquals(0, state.numberOfSamples());
         assertEquals(0, state.targetSensorDir());
@@ -298,56 +281,50 @@ class MappingStateTest {
         // ------------------------------------
         // When sampling (0 DEG)
         // ------------------------------------
-        status = nextStatus(status, result._2);
-        result = state.step(createContext(status));
+        builder = nextBuilder(builder, result.commands());
+        ctx = builder.build();
+        status = ctx.worldModel().robotStatus();
+        result = state.step(ctx);
 
         // Then the result should be halt and scan
         assertNotNull(result);
-        assertEquals(NONE_EXIT, result._1);
-        assertTrue(result._2.halt());
-        assertFalse(result._2.move());
-        assertTrue(result._2.scan());
+        assertEquals(NONE_EXIT, result.exitCode());
+        assertTrue(result.commands().isHalt());
         // And the scan direction should be 0
-        assertThat(result._2.scanDirection(), angleCloseTo(0, 1));
+        assertEquals(0, result.commands().scanDirection());
         // And the status of flow state should be ...
-        assertEquals(LEFT_SCANNING, state.status());
+        assertEquals(MappingStateStatus.LEFT_SCANNING, state.status());
         assertEquals(status.simulationTime(), state.prevLidarTime());
         assertEquals(1, state.numberOfSamples());
         assertEquals(0, state.targetSensorDir());
 
         // And stepping state with second signal
-        status = nextStatus(status, result._2);
-        result = state.step(createContext(status));
+        builder = nextBuilder(builder, result.commands());
+        ctx = builder.build();
+        status = ctx.worldModel().robotStatus();
+        result = state.step(ctx);
 
         // Then the result should be halt and scan
         assertNotNull(result);
-        assertEquals(NONE_EXIT, result._1);
-        assertFalse(result._2.halt());
-        assertTrue(result._2.move());
-        assertTrue(result._2.scan());
+        assertEquals(NONE_EXIT, result.exitCode());
+        assertTrue(result.commands().isRotate());
         // And the scan direction should be 65
-        assertThat(result._2.scanDirection(), angleCloseTo(0, 1));
-        // And the power should be 0
-        assertEquals(0, result._2.speed());
+        assertEquals(0, result.commands().scanDirection());
         // And the direction should be 120 DEG right
-        assertThat(result._2.moveDirection(), angleCloseTo(Complex.fromDeg(robotDeg + MappingState.DEFAULT_TURN_ANGLE), SIN_DEG1));
+        assertThat(Complex.fromDeg(result.commands().rotationDirection()), angleCloseTo(robotDeg + DEFAULT_TURN_ANGLE));
         // And the status of flow state should be ...
         assertEquals(TURING_ROBOT, state.status());
         assertEquals(status.simulationTime(), state.prevLidarTime());
         assertEquals(0, state.numberOfSamples());
         assertEquals(0, state.targetSensorDir());
-        assertThat(state.targetRobotDir(), angleCloseTo(Complex.fromDeg(robotDeg + DEFAULT_TURN_ANGLE), SIN_DEG1));
+        assertThat(state.targetRobotDir(), angleCloseTo(robotDeg + DEFAULT_TURN_ANGLE));
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
     @MethodSource("dataFrontScan")
     void testScanRight(double robotX, double robotY, int robotDeg) {
-        // Given a robot status with head toward the front
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        // And an initial status
-        RobotStatus s0 = createRobotStatus(robotLocation, robotDir);
-        ProcessorContextApi ctx0 = createContext(s0);
+        ProcessorContextBuilder builder = new ProcessorContextBuilder(robotX, robotY, robotDeg, 0);
+        ProcessorContextApi ctx0 = builder.build();
 
         // When init state
         state.init(ctx0);
@@ -355,48 +332,49 @@ class MappingStateTest {
         state.entry(ctx0);
         // And stepping
         state.init(ctx0);
-        Tuple2<String, RobotCommandsOld> result = state.step(ctx0);
+        StateResult result = state.step(ctx0);
 
         // ------------------------------------
         // Repeat tests till max right head direction reached
         // ------------------------------------
         int maxHead = (MAX_HEAD_DEG + DELTA_DIR - 2) / DELTA_DIR * DELTA_DIR;
         int head = 0;
-        RobotStatus status = s0;
+        RobotStatus status;
+        ProcessorContextApi ctx;
         while (head < maxHead) {
             // When stepping state with the first signal
-            status = nextStatus(status, result._2);
-            result = state.step(createContext(status));
+            builder = nextBuilder(builder, result.commands());
+            ctx = builder.build();
+            status = ctx.worldModel().robotStatus();
+            result = state.step(ctx);
 
             // Then the result should be halt and scan
             assertNotNull(result);
-            assertEquals(NONE_EXIT, result._1);
-            assertEquals(head == 0, result._2.halt());
-            assertFalse(result._2.move());
-            assertTrue(result._2.scan());
+            assertEquals(NONE_EXIT, result.exitCode());
+            assertTrue(result.commands().isHalt());
             // And the scan direction should be 0
-            assertThat(result._2.scanDirection(), angleCloseTo(head, 1));
+            assertEquals(head, result.commands().scanDirection());
             // And the status of flow state should be ...
-            assertEquals(MappingState.RIGHT_SCANNING, state.status());
+            assertEquals(RIGHT_SCANNING, state.status());
             assertEquals(status.simulationTime(), state.prevLidarTime());
             assertEquals(1, state.numberOfSamples());
             assertEquals(head, state.targetSensorDir());
 
             // When stepping state with second signal
-            status = nextStatus(status, result._2);
-            result = state.step(createContext(status));
+            builder = nextBuilder(builder, result.commands());
+            ctx = builder.build();
+            status = ctx.worldModel().robotStatus();
+            result = state.step(ctx);
 
             // Then the result should be halt and scan
             assertNotNull(result);
-            assertEquals(NONE_EXIT, result._1);
-            assertFalse(result._2.halt());
-            assertFalse(result._2.move());
-            assertTrue(result._2.scan());
+            assertEquals(NONE_EXIT, result.exitCode());
+            assertTrue(result.commands().isHalt());
             // And the scan direction should be 4
-            assertThat(result._2.scanDirection(), angleCloseTo(head + DELTA_DIR, 1));
+            assertThat(Complex.fromDeg(result.commands().scanDirection()), angleCloseTo(head + DELTA_DIR));
 
             // And the status of flow state should be ...
-            assertEquals(MappingState.RIGHT_SCANNING, state.status());
+            assertEquals(RIGHT_SCANNING, state.status());
             assertEquals(status.simulationTime(), state.prevLidarTime());
             assertEquals(0, state.numberOfSamples());
             assertEquals(head + DELTA_DIR, state.targetSensorDir());
@@ -406,36 +384,36 @@ class MappingStateTest {
         // ------------------------------------
         // When sampling (64 DEG)
         // ------------------------------------
-        status = nextStatus(status, result._2);
-        result = state.step(createContext(status));
+        builder = nextBuilder(builder, result.commands());
+        ctx = builder.build();
+        status = ctx.worldModel().robotStatus();
+        result = state.step(ctx);
 
         // Then the result should be halt and scan
         assertNotNull(result);
-        assertEquals(NONE_EXIT, result._1);
-        assertFalse(result._2.halt());
-        assertFalse(result._2.move());
-        assertTrue(result._2.scan());
+        assertEquals(NONE_EXIT, result.exitCode());
+        assertTrue(result.commands().isHalt());
         // And the scan direction should be 0
-        assertThat(result._2.scanDirection(), angleCloseTo(head, 1));
+        assertEquals(head, result.commands().scanDirection());
         // And the status of flow state should be ...
-        assertEquals(MappingState.RIGHT_SCANNING, state.status());
+        assertEquals(RIGHT_SCANNING, state.status());
         assertEquals(status.simulationTime(), state.prevLidarTime());
         assertEquals(1, state.numberOfSamples());
         assertEquals(head, state.targetSensorDir());
 
         // When stepping state with second signal
-        status = nextStatus(status, result._2);
-        result = state.step(createContext(status));
+        builder = nextBuilder(builder, result.commands());
+        ctx = builder.build();
+        status = ctx.worldModel().robotStatus();
+        result = state.step(ctx);
 
         // Then the result should be halt and scan
         assertNotNull(result);
-        assertFalse(result._2.halt());
-        assertFalse(result._2.move());
-        assertTrue(result._2.scan());
+        assertTrue(result.commands().isHalt());
         // And the scan direction should be 65
-        assertThat(result._2.scanDirection(), angleCloseTo(MAX_HEAD_DEG, 1));
+        assertEquals(MAX_HEAD_DEG, result.commands().scanDirection());
         // And the status of flow state should be ...
-        assertEquals(MappingState.RIGHT_SCANNING, state.status());
+        assertEquals(RIGHT_SCANNING, state.status());
         assertEquals(status.simulationTime(), state.prevLidarTime());
         assertEquals(0, state.numberOfSamples());
         assertEquals(MAX_HEAD_DEG, state.targetSensorDir());
@@ -443,37 +421,37 @@ class MappingStateTest {
         // ------------------------------------
         // When sampling last right head direction (65 DEG)
         // ------------------------------------
-        status = nextStatus(status, result._2);
-        result = state.step(createContext(status));
+        builder = nextBuilder(builder, result.commands());
+        ctx = builder.build();
+        status = ctx.worldModel().robotStatus();
+        result = state.step(ctx);
 
         // Then the result should be halt and scan
         assertNotNull(result);
-        assertEquals(NONE_EXIT, result._1);
-        assertFalse(result._2.halt());
-        assertFalse(result._2.move());
-        assertTrue(result._2.scan());
+        assertEquals(NONE_EXIT, result.exitCode());
+        assertTrue(result.commands().isHalt());
         // And the scan direction should be 0
-        assertThat(result._2.scanDirection(), angleCloseTo(MAX_HEAD_DEG, 1));
+        assertEquals(MAX_HEAD_DEG, result.commands().scanDirection());
         // And the status of flow state should be ...
-        assertEquals(MappingState.RIGHT_SCANNING, state.status());
+        assertEquals(RIGHT_SCANNING, state.status());
         assertEquals(status.simulationTime(), state.prevLidarTime());
         assertEquals(1, state.numberOfSamples());
         assertEquals(MAX_HEAD_DEG, state.targetSensorDir());
 
         // When stepping state with second signal
-        status = nextStatus(status, result._2);
-        result = state.step(createContext(status));
+        builder = nextBuilder(builder, result.commands());
+        ctx = builder.build();
+        status = ctx.worldModel().robotStatus();
+        result = state.step(ctx);
 
         // Then the result should be halt and scan
         assertNotNull(result);
-        assertEquals(NONE_EXIT, result._1);
-        assertFalse(result._2.halt());
-        assertFalse(result._2.move());
-        assertTrue(result._2.scan());
+        assertEquals(NONE_EXIT, result.exitCode());
+        assertTrue(result.commands().isHalt());
         // And the scan direction should be -65
-        assertThat(result._2.scanDirection(), angleCloseTo(-MAX_HEAD_DEG, 1));
+        assertEquals(-MAX_HEAD_DEG, result.commands().scanDirection());
         // And the status of flow state should be ...
-        assertEquals(LEFT_SCANNING, state.status());
+        assertEquals(MappingStateStatus.LEFT_SCANNING, state.status());
         assertEquals(status.simulationTime(), state.prevLidarTime());
         assertEquals(0, state.numberOfSamples());
         assertEquals(-MAX_HEAD_DEG, state.targetSensorDir());
@@ -483,23 +461,24 @@ class MappingStateTest {
     @MethodSource("dataFrontScan")
     void testTurn1(double robotX, double robotY, int robotDeg) {
         // Given a robot status with head toward the front
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        // And an initial status
-        RobotStatus s0 = createRobotStatus(robotLocation, robotDir);
-        ProcessorContextApi ctx0 = createContext(s0);
+        ProcessorContextBuilder builder = new ProcessorContextBuilder(robotX, robotY, robotDeg, 0);
+        ProcessorContextApi ctx0 = builder.build();
 
         // When init state
         state.init(ctx0);
-        // And entering state
+        // And entering states
         state.entry(ctx0);
-        Tuple2<String, RobotCommandsOld> result = state.step(ctx0);
 
-        RobotStatus status = s0;
+        StateResult result = state.step(ctx0);
+
+        RobotStatus status = ctx0.worldModel().robotStatus();
         while (!TURING_ROBOT.equals(state.status())) {
-            status = nextStatus(status, result._2);
-            result = state.step(createContext(status));
+            builder = nextBuilder(builder, result.commands());
+            ProcessorContextApi ctx = builder.build();
+            status = ctx.worldModel().robotStatus();
+            result = state.step(ctx);
         }
+
         // And the status of flow state should be ...
         assertEquals(TURING_ROBOT, state.status());
         assertEquals(status.simulationTime(), state.prevLidarTime());
@@ -507,17 +486,16 @@ class MappingStateTest {
         assertEquals(0, state.targetSensorDir());
 
         // When turning robot
-        status = nextStatus(status, result._2);
-        result = state.step(createContext(status));
+        builder = nextBuilder(builder, result.commands());
+        ProcessorContextApi ctx = builder.build();
+        result = state.step(ctx);
 
         // Then transition should be none
-        assertEquals(NONE_EXIT, result._1);
+        assertEquals(NONE_EXIT, result.exitCode());
         // And command should be "scan" only
-        assertFalse(result._2.halt());
-        assertFalse(result._2.move());
-        assertTrue(result._2.scan());
+        assertTrue(result.commands().isHalt());
         // And should be front scan
-        assertThat(result._2.scanDirection(), angleCloseTo(0, 1));
+        assertEquals(0, result.commands().scanDirection());
 
         // And the status of flow state should be ...
         assertEquals(RIGHT_SCANNING, state.status());
@@ -528,53 +506,50 @@ class MappingStateTest {
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
     @MethodSource("dataFrontScan")
     void testTurn3(double robotX, double robotY, int robotDeg) {
-        // Given a robot status with head toward the front
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        // And an initial status
-        RobotStatus s0 = createRobotStatus(robotLocation, robotDir);
-        ProcessorContextApi ctx0 = createContext(s0);
+        ProcessorContextBuilder builder = new ProcessorContextBuilder(robotX, robotY, robotDeg, 0);
+        ProcessorContextApi ctx0 = builder.build();
 
         // When init state
         state.init(ctx0);
         // And entering state
         state.entry(ctx0);
-        Tuple2<String, RobotCommandsOld> result = state.step(ctx0);
+        StateResult result = state.step(ctx0);
         // And completion of 3 scan phases
-        RobotStatus status = s0;
         do {
-            status = nextStatus(status, result._2);
-            result = state.step(createContext(status));
+            builder = nextBuilder(builder, result.commands());
+            result = state.step(builder.build());
         } while (!TURING_ROBOT.equals(state.status()));
         do {
-            status = nextStatus(status, result._2);
-            result = state.step(createContext(status));
+            builder = nextBuilder(builder, result.commands());
+            result = state.step(builder.build());
         } while (!TURING_ROBOT.equals(state.status()));
+        RobotStatus status;
         do {
-            status = nextStatus(status, result._2);
-            result = state.step(createContext(status));
+            builder = nextBuilder(builder, result.commands());
+            ProcessorContextApi ctx = builder.build();
+            status = ctx.worldModel().robotStatus();
+            result = state.step(ctx);
         } while (!TURING_ROBOT.equals(state.status()));
         // And the status of flow state should be ...
         assertEquals(TURING_ROBOT, state.status());
         assertEquals(status.simulationTime(), state.prevLidarTime());
         assertEquals(0, state.numberOfSamples());
         assertEquals(0, state.targetSensorDir());
-        assertThat(state.targetRobotDir(), angleCloseTo(robotDeg, 1));
+        assertThat(state.targetRobotDir(), angleCloseTo(robotDeg));
 
         // When turning robot half way the completion
-        status = nextStatus(status, result._2);
         Complex halfWayDir = Complex.fromDeg(robotDeg - (double) DEFAULT_TURN_ANGLE / 2);
-        status = status.setDirection(halfWayDir);
-        result = state.step(createContext(status));
+        //status = status.setDirection(halfWayDir);
+        builder = nextBuilder(builder, result.commands())
+                .robotDirection(halfWayDir);
+        result = state.step(builder.build());
 
         // Then transition should be none
-        assertEquals(NONE_EXIT, result._1);
+        assertEquals(NONE_EXIT, result.exitCode());
         // And command should be "scan" only
-        assertFalse(result._2.halt());
-        assertTrue(result._2.move());
-        assertTrue(result._2.scan());
+        assertTrue(result.commands().isRotate());
         // And should be front scan
-        assertThat(result._2.scanDirection(), angleCloseTo(0, 1));
+        assertEquals(0, result.commands().scanDirection());
 
         // And the status of flow state should be ...
         assertEquals(TURING_ROBOT, state.status());
@@ -582,16 +557,14 @@ class MappingStateTest {
         assertEquals(0, state.targetSensorDir());
 
         // When turning robot finally direction
-        status = nextStatus(status, result._2);
-        result = state.step(createContext(status));
+        builder = nextBuilder(builder, result.commands());
+        result = state.step(builder.build());
 
         // Then transition should be none
-        assertEquals(COMPLETED_EXIT, result._1);
+        assertEquals(COMPLETED_EXIT, result.exitCode());
         // And command should be "scan" only
-        assertTrue(result._2.halt());
-        assertFalse(result._2.move());
-        assertTrue(result._2.scan());
+        assertTrue(result.commands().isHalt());
         // And should be front scan
-        assertThat(result._2.scanDirection(), angleCloseTo(0, 1));
+        assertEquals(0, result.commands().scanDirection());
     }
 }

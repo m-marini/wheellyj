@@ -1,3 +1,31 @@
+/*
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
+ *
+ *  Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ *    END OF TERMS AND CONDITIONS
+ *
+ */
+
 package org.mmarini.wheelly.apis;
 
 import java.awt.geom.Point2D;
@@ -134,23 +162,37 @@ public record Complex(double x, double y) {
     }
 
     /**
-     * Returns true if the Complex is close to other witin epsilon abscissa
+     * Returns true if angle is close zero by epsilon abscissa
      *
-     * @param other   the other complex
-     * @param epsilon the abscissa interval
+     * @param range range (RAD)
      */
-    public boolean isCloseTo(Complex other, double epsilon) {
-        return sub(other).isFront(epsilon);
+    public boolean isClose0(double range) {
+        return Math.abs(toRad()) <= range;
     }
 
     /**
-     * Returns true if the Complex is close to other witin epsilon abscissa
+     * Returns true if angle is close zero by epsilon abscissa
      *
-     * @param other   the other complex
-     * @param epsilon the direction interval
+     * @param range range
      */
-    public boolean isCloseTo(Complex other, Complex epsilon) {
-        return sub(other).isFront(epsilon.x);
+    public boolean isClose0(Complex range) {
+        return isClose0(range.toRad());
+    }
+
+    /**
+     * Returns true if angle is close zero by range
+     *
+     * @param range range in DEG
+     */
+    public boolean isClose0(int range) {
+        return Math.abs(toIntDeg()) <= range;
+    }
+
+    /**
+     * Returns true if angle is close zero by 1 DEG range
+     */
+    public boolean isClose0() {
+        return isClose0(1);
     }
 
     /**
@@ -158,8 +200,66 @@ public record Complex(double x, double y) {
      *
      * @param epsilon epsilon abscissa
      */
-    public boolean isFront(double epsilon) {
+    public boolean isClose0Epsilon(double epsilon) {
         return y > 0 && Math.abs(x) <= epsilon;
+    }
+
+    /**
+     * Returns true if the Complex is close to other within range
+     *
+     * @param other the other complex
+     * @param range the range
+     */
+    public boolean isCloseTo(Complex other, Complex range) {
+        return sub(other).isClose0(range);
+    }
+
+    /**
+     * Returns true if the Complex is close to other within range
+     *
+     * @param other the other complex
+     * @param range the range (DEG)
+     */
+    public boolean isCloseTo(Complex other, int range) {
+        return sub(other).isClose0(range);
+    }
+
+    /**
+     * Returns true if the Complex is close to other within range
+     *
+     * @param other the other angle (DEG)
+     * @param range the range (DEG)
+     */
+    public boolean isCloseTo(int other, int range) {
+        return sub(Complex.fromDeg(other)).isClose0(range);
+    }
+
+    /**
+     * Returns true if the Complex is close to other within 1 DEG range
+     *
+     * @param other the other complex
+     */
+    public boolean isCloseTo(Complex other) {
+        return sub(other).isClose0();
+    }
+
+    /**
+     * Returns true if the Complex is close to other within 1 DEG range
+     *
+     * @param other the other angle (DEG)
+     */
+    public boolean isCloseTo(int other) {
+        return sub(Complex.fromDeg(other)).isClose0();
+    }
+
+    /**
+     * Returns true if the Complex is close to other within epsilon abscissa
+     *
+     * @param other   the other complex
+     * @param epsilon the abscissa interval
+     */
+    public boolean isCloseToEpsilon(Complex other, double epsilon) {
+        return sub(other).isClose0Epsilon(epsilon);
     }
 
     /**

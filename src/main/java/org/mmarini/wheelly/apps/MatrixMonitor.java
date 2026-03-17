@@ -43,7 +43,6 @@ import org.mmarini.wheelly.mqtt.MqttRobot;
 import org.mmarini.wheelly.swing.ComMonitor;
 import org.mmarini.wheelly.swing.ControllerStatusMapper;
 import org.mmarini.wheelly.swing.SensorMonitor;
-import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,8 +65,6 @@ import static org.mmarini.wheelly.swing.Utils.layHorizontally;
 public class MatrixMonitor {
     public static final String MONITOR_SCHEMA_YML = "https://mmarini.org/wheelly/monitor-schema-1.0";
     public static final int MAX_DISTANCE = 200;
-    public static final double DEFAULT_DISTANCE_RANGE = 0.2;
-    public static final int DEFAULT_DIRECTION_RANGE = 15;
     private static final Logger logger = LoggerFactory.getLogger(MatrixMonitor.class);
 
     /**
@@ -128,7 +125,7 @@ public class MatrixMonitor {
     private RobotCommands command;
     private Point2D target;
     private double distanceRange;
-    private double directionEpsilon;
+    private int directionRange;
 
     /**
      * Creates the matrix monitor application
@@ -194,7 +191,6 @@ public class MatrixMonitor {
         distanceField.setHorizontalAlignment(SwingConstants.RIGHT);
         distanceField.setValue(0);
 
-//        distanceSlider.setOrientation(JSlider.VERTICAL);
         distanceSlider.setMinimum(0);
         distanceSlider.setMaximum(MAX_DISTANCE);
         distanceSlider.setValue(0);
@@ -263,8 +259,8 @@ public class MatrixMonitor {
         WheellyJsonSchemas.instance().validateOrThrow(config, MONITOR_SCHEMA_YML);
         this.robot = AppYaml.robotFromJson(config);
         this.controller = AppYaml.controllerFromJson(config);
-        this.distanceRange = Locator.locate("distanceRange").getNode(config).asDouble(DEFAULT_DISTANCE_RANGE);
-        this.directionEpsilon = Complex.fromDeg(Locator.locate("directionRange").getNode(config).asInt(DEFAULT_DIRECTION_RANGE)).sin();
+        this.distanceRange = robot.robotSpec().targetRange();
+        this.directionRange = robot.robotSpec().directionRange().toIntDeg();
 
         // Creates the frames
         this.commandFrame = createFrame(Messages.getString("MatrixMonitor.title"), commandPanel);
@@ -432,8 +428,10 @@ public class MatrixMonitor {
         logger.atDebug().log("onInference");
         if (!halt
                 && status.halt()
-                && (command.isRotate() && status.direction().isCloseTo(Complex.fromDeg(robotDirSlider.getValue()), directionEpsilon)
-                || (!command.isHalt() && !command.isRotate() && status.location().distance(target) < distanceRange)
+                && (command.isRotate() && status.direction().isCloseTo(robotDirSlider.getValue(),
+                directionRange)
+                || (!command.isHalt() && !command.isRotate()
+                && status.location().distance(target) < distanceRange)
         )
         ) {
             command = RobotCommands.halt();

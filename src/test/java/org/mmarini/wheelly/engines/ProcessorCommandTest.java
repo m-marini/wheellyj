@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -56,7 +56,7 @@ class ProcessorCommandTest {
             "- put");
 
     @Test
-    void add() {
+    void testAdd() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("add");
         ProcessorContextApi ctx = mock();
         when(ctx.popDouble()).thenReturn(2D, 1D);
@@ -70,7 +70,7 @@ class ProcessorCommandTest {
     }
 
     @Test
-    void constDouble() {
+    void testConstDouble() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("1.1");
         ProcessorContextApi ctx = mock();
 
@@ -80,7 +80,7 @@ class ProcessorCommandTest {
     }
 
     @Test
-    void constInt() {
+    void testConstInt() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("1");
         ProcessorContextApi ctx = mock();
 
@@ -90,7 +90,7 @@ class ProcessorCommandTest {
     }
 
     @Test
-    void constString() {
+    void testConstString() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("a.b");
         ProcessorContextApi ctx = mock();
 
@@ -100,7 +100,7 @@ class ProcessorCommandTest {
     }
 
     @Test
-    void create() throws IOException {
+    void testCreate() throws IOException {
         JsonNode root = fromText(YAML);
         ProcessorCommand cmd = ProcessorCommand.create(root, Locator.root());
         ProcessorContextApi ctx = mock();
@@ -133,7 +133,7 @@ class ProcessorCommandTest {
     }
 
     @Test
-    void div() {
+    void testDiv() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("div");
         ProcessorContextApi ctx = mock();
         when(ctx.popDouble()).thenReturn(2D, 3D);
@@ -147,7 +147,7 @@ class ProcessorCommandTest {
     }
 
     @Test
-    void get() {
+    void testGet() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("get");
         ProcessorContextApi ctx = mock();
         when(ctx.get("a.b")).thenReturn(1D);
@@ -162,7 +162,7 @@ class ProcessorCommandTest {
     }
 
     @Test
-    void mul() {
+    void testMul() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("mul");
         ProcessorContextApi ctx = mock();
         when(ctx.popDouble()).thenReturn(3.5, 2D);
@@ -176,7 +176,7 @@ class ProcessorCommandTest {
     }
 
     @Test
-    void neg() {
+    void testNeg() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("neg");
         ProcessorContextApi ctx = mock();
         when(ctx.popDouble()).thenReturn(-1D);
@@ -190,7 +190,7 @@ class ProcessorCommandTest {
     }
 
     @Test
-    void put() {
+    void testPut() {
         ProcessorCommand cmd = ProcessorCommand.parse("a.b", "1", "put");
         ProcessorContextApi ctx = mock();
         when(ctx.pop()).thenReturn(1D);
@@ -209,7 +209,7 @@ class ProcessorCommandTest {
     }
 
     @Test
-    void sub() {
+    void testSub() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("sub");
         ProcessorContextApi ctx = mock();
         when(ctx.popDouble()).thenReturn(2D, 1D);
@@ -223,7 +223,7 @@ class ProcessorCommandTest {
     }
 
     @Test
-    void swap() {
+    void testSwap() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("swap");
         ProcessorContextApi ctx = mock();
         when(ctx.pop()).thenReturn(2D, 1D);
@@ -238,7 +238,7 @@ class ProcessorCommandTest {
     }
 
     @Test
-    void time() {
+    void testTime() {
         // Given ...
         ProcessorCommand cmd = ProcessorCommand.parseCommand("localTime");
 

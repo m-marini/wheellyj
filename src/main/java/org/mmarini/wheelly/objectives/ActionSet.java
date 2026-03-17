@@ -34,13 +34,9 @@ import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.yaml.Locator;
 
-import static java.lang.Math.sin;
-import static java.lang.Math.toRadians;
-
 public interface ActionSet {
     String SCHEMA_NAME = "https://mmarini.org/wheelly/objective-action-set-schema-2.0";
     double DEFAULT_REWARD = 1d;
-    double SIN_DEG1 = sin(toRadians(1));
     int NO_VALUE = Integer.MIN_VALUE;
 
     /**

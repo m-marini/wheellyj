@@ -1,0 +1,70 @@
+---
+######################################
+# Cautious agent
+######################################
+$schema: https://mmarini.org/wheelly/agent-state-machine-schema-0.4
+class: org.mmarini.wheelly.engines.StateMachineAgent
+flow:
+  entry: idle
+  states:
+    idle:
+      $id: https://mmarini.org/wheelly/state-halt-schema-0.1
+      class: org.mmarini.wheelly.engines.HaltState
+      timeout: 10000
+      transitions:
+        timeout:
+          to: mapping
+        blocked:
+          to: clearMap
+        frontBlocked:
+          to: avoid
+        rearBlocked:
+          to: avoid
+    mapping:
+      $id: https://mmarini.org/wheelly/state-mapping-schema-0.1
+      class: org.mmarini.wheelly.engines.MappingState
+      timeout: 600000
+      transitions:
+        blocked:
+          to: clearMap
+        frontBlocked:
+          to: avoid
+        rearBlocked:
+          to: avoid
+        completed:
+          to: idle
+        found:
+          to: labelStuck
+    labelStuck:
+      $id: https://mmarini.org/wheelly/state-label-stuck-schema-1.0
+      class: org.mmarini.wheelly.engines.LabelStuckState
+      minDistance: 0.5
+      maxDistance: 0.8
+      #      correlationDistance: 0.5
+      transitions:
+        blocked:
+          to: clearMap
+        frontBlocked:
+          to: avoid
+        rearBlocked:
+          to: avoid
+        notFound:
+          to: mapping
+        timeout:
+          to: mapping
+    clearMap:
+      $id: https://mmarini.org/wheelly/state-clear-map-schema-0.1
+      class: org.mmarini.wheelly.engines.ClearMapState
+      transitions:
+        ".*":
+          to: avoid
+    avoid:
+      $id: https://mmarini.org/wheelly/state-avoid-schema-0.1
+      class: org.mmarini.wheelly.engines.AvoidingState
+      safeDistance: 0.5
+      timeout: 10000
+      transitions:
+        completed:
+          to: mapping
+        timeout:
+          to: clearMap

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -39,8 +39,6 @@ import java.util.Arrays;
 import java.util.Random;
 import java.util.function.Function;
 
-import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
-
 /**
  * Generates the behaviour to select the path to the nearest label sector
  * <p>
@@ -79,8 +77,6 @@ public class SearchLabelState extends AbstractSearchAndMoveState {
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
         long timeout = locator.path(TIMEOUT_ID).getNode(root).asLong(DEFAULT_TIMEOUT);
-        int speed = locator.path(SPEED_ID).getNode(root).asInt(MAX_PPS);
-        double approachDistance = locator.path(APPROACH_DISTANCE_ID).getNode(root).asDouble(DEFAULT_APPROACH_DISTANCE);
         double safetyDistance = locator.path(SAFETY_DISTANCE_ID).getNode(root).asDouble(DEFAULT_SAFETY_DISTANCE);
         Function<ProcessorContextApi, RRTPathFinder> pathFinderSupplier = context -> {
             WorldModel worldModel = context.worldModel();
@@ -94,7 +90,7 @@ public class SearchLabelState extends AbstractSearchAndMoveState {
                     Arrays.stream(labels));
 
         };
-        return new SearchLabelState(id, onInit, onEntry, onExit, timeout, maxIterations, minGoals, maxSearchTime, approachDistance, speed, pathFinderSupplier);
+        return new SearchLabelState(id, onInit, onEntry, onExit, timeout, maxIterations, minGoals, maxSearchTime, pathFinderSupplier);
     }
 
     /**
@@ -108,15 +104,12 @@ public class SearchLabelState extends AbstractSearchAndMoveState {
      * @param maxIterations      the maximum number of iterations
      * @param minGoals           the minimum number of goals
      * @param maxSearchTime      the maximum search time (ms)
-     * @param approachDistance   the approach distance (m)
-     * @param speed              the power (pps)
      * @param pathFinderSupplier the pathfinder supplier
      */
     protected SearchLabelState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit,
                                long timeout, int maxIterations, int minGoals, long maxSearchTime,
-                               double approachDistance, int speed,
                                Function<ProcessorContextApi, RRTPathFinder> pathFinderSupplier) {
-        super(id, onInit, onEntry, onExit, timeout, maxIterations, minGoals, maxSearchTime, approachDistance, speed, pathFinderSupplier);
+        super(id, onInit, onEntry, onExit, timeout, maxIterations, minGoals, maxSearchTime, pathFinderSupplier);
         logger.atDebug().log("Created");
     }
 }

@@ -31,7 +31,6 @@ package org.mmarini.wheelly.engines;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
-import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
@@ -43,7 +42,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
-import static org.mmarini.wheelly.engines.StateNode.*;
+import static org.mmarini.wheelly.engines.StateResult.*;
 
 /**
  * State machine agent acts the robot basing on state machine flow.
@@ -275,17 +274,19 @@ public class StateMachineAgent implements ProcessorContextApi, InferenceConnecto
      */
     public RobotCommands step() {
         // Process the state node
-        Tuple2<String, RobotCommands> result = currentNode.step(this);
+        StateResult result = currentNode.step(this);
+        logger.atDebug().log("node: {}, result: {}", currentNode, result);
         // Execute robot command
-        String exitTag = result._1;
-        RobotCommands commands = result._2;
+        String exitTag = result.exitCode();
+        RobotCommands commands = result.commands();
         triggerProcessor.onNext(exitTag);
         if (!NONE_EXIT.equals(exitTag)) {
             //find for transition match
-            Optional<StateTransition> tx = flow.transitions().stream()
-                    .filter(t -> t.from().equals(currentNode.id()) && t.isTriggered(exitTag))
-                    .findFirst();
-            tx.ifPresentOrElse(t -> {
+            flow.transitions().stream()
+                    .filter(t ->
+                            t.from().equals(currentNode.id()) && t.isTriggered(exitTag))
+                    .findFirst()
+                    .ifPresentOrElse(t -> {
                         // trigger the exit call back
                         logger.debug("{}: Trigger {}", currentNode.id(), result);
                         currentNode.exit(this);

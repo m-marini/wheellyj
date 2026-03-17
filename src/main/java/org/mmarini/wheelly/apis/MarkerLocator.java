@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -39,7 +39,7 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-import static java.lang.Math.*;
+import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.AreaExpression.*;
 
@@ -56,7 +56,6 @@ import static org.mmarini.wheelly.apis.AreaExpression.*;
 public record MarkerLocator(double locationDecay, double cleanDecay, long correlationInterval, int minNumberEvents,
                             double markerSize, AtomicReference<MarkerLocatorStatus> status) {
 
-    public static final double EPSILON_1DEG = sin(toRadians(1));
     public static final Complex CLEAR_REDUCTION_ANGLE = Complex.fromDeg(3);
 
     /**
@@ -209,7 +208,7 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
             Complex cleanFov = Complex.fromRad(min(lidarFov.toRad(), cameraFov.toRad()));
             if (!RobotSpec.UNKNOWN_QR_CODE.equals(cameraEvent.qrCode())
                     // qr code recognized
-                    && cameraEvent.camerEvent().direction().isCloseTo(Complex.DEG0, robotSpec.lidarFOV())
+                    && cameraEvent.camerEvent().direction().isClose0(robotSpec.lidarFOV())
                 // camera label direction correlated with the lidar receptive angle
             ) {
                 // Marker recognized
@@ -241,7 +240,7 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
                 return newMap;
             } else if (prevEvent != null
                     && (cameraTime <= prevEvent.cameraTime()
-                    || !cameraEvent.lidarYaw().isCloseTo(prevEvent.lidarYaw(), EPSILON_1DEG))) {
+                    || !cameraEvent.lidarYaw().isCloseTo(prevEvent.lidarYaw()))) {
                 // Event not changed or
                 status.updateAndGet(s -> s.markEvent(cameraEvent));
                 return map;

@@ -37,13 +37,6 @@ properties:
   safetyDistance:
     type: number
     exclusiveMinimum: 0
-  approachDistance:
-    type: number
-    exclusiveMinimum: 0
-  speed:
-    type: integer
-    minimum: 10
-    maximum: 60
 required:
   - $id
   - class

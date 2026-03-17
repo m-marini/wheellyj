@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2023 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2023-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -267,10 +267,10 @@ public interface Geometry {
         double xr;
         if (y > yq) {
             // front intersection
-            xl = al.isFront(BROAD_EPSILON)
+            xl = al.isClose0Epsilon(BROAD_EPSILON)
                     ? v
                     : Double.NEGATIVE_INFINITY;
-            xr = ar.isFront(BROAD_EPSILON)
+            xr = ar.isClose0Epsilon(BROAD_EPSILON)
                     ? v1
                     : Double.POSITIVE_INFINITY;
         } else {

@@ -104,7 +104,6 @@ flow:
       $id: https://mmarini.org/wheelly/state-avoid-schema-0.1
       class: org.mmarini.wheelly.engines.AvoidingState
       safeDistance: 0.5
-      speed: 20
       transitions:
         completed:
           to: mapping

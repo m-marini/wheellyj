@@ -29,10 +29,6 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.NotImplementedException;
-import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.RobotCommandsOld;
 import org.mmarini.yaml.Locator;
 
 import java.util.List;
@@ -43,48 +39,6 @@ import static org.mmarini.yaml.Utils.createObject;
  * The state machine node generates a simple behaviour of robot
  */
 public interface StateNode {
-    String TIMEOUT_EXIT = "timeout";
-    String FRONT_BLOCKED_EXIT = "frontBlocked";
-    String REAR_BLOCKED_EXIT = "rearBlocked";
-    String BLOCKED_EXIT = "blocked";
-    String COMPLETED_EXIT = "completed";
-    String NONE_EXIT = "none";
-    String TARGET_ID = "target";
-    String PATH_ID = "path";
-
-    Tuple2<String, RobotCommandsOld> BLOCKED_RESULT = Tuple2.of(BLOCKED_EXIT, RobotCommandsOld.haltCommand());
-    Tuple2<String, RobotCommandsOld> BLOCKED_NONE_RESULT = Tuple2.of(BLOCKED_EXIT, RobotCommandsOld.none());
-    Tuple2<String, RobotCommandsOld> COMPLETED_RESULT = Tuple2.of(COMPLETED_EXIT, RobotCommandsOld.haltCommand());
-    Tuple2<String, RobotCommandsOld> COMPLETED_NONE_RESULT = Tuple2.of(StateNode.COMPLETED_EXIT, RobotCommandsOld.none());
-    Tuple2<String, RobotCommandsOld> TIMEOUT_RESULT = Tuple2.of(TIMEOUT_EXIT, RobotCommandsOld.haltCommand());
-    Tuple2<String, RobotCommandsOld> TIMEOUT_NONE_RESULT = Tuple2.of(TIMEOUT_EXIT, RobotCommandsOld.none());
-    Tuple2<String, RobotCommandsOld> FRONT_BLOCKED_RESULT = Tuple2.of(FRONT_BLOCKED_EXIT, RobotCommandsOld.haltCommand());
-    Tuple2<String, RobotCommandsOld> FRONT_BLOCKED_NONE_RESULT = Tuple2.of(FRONT_BLOCKED_EXIT, RobotCommandsOld.none());
-    Tuple2<String, RobotCommandsOld> REAR_BLOCKED_RESULT = Tuple2.of(REAR_BLOCKED_EXIT, RobotCommandsOld.haltCommand());
-    Tuple2<String, RobotCommandsOld> REAR_BLOCKED_NONE_RESULT = Tuple2.of(REAR_BLOCKED_EXIT, RobotCommandsOld.none());
-    Tuple2<String, RobotCommandsOld> NONE_HALT_RESULT = Tuple2.of(NONE_EXIT, RobotCommandsOld.haltCommand());
-
-    /**
-     * Returns the block result
-     *
-     * @param context the process context
-     */
-    static Tuple2<String, RobotCommandsOld> blockResult(ProcessorContextApi context) {
-        return context.worldModel().robotStatus().halt() ? BLOCKED_NONE_RESULT : BLOCKED_RESULT;
-    }
-
-    /**
-     * Returns the completed result
-     *
-     * @param context the process context
-     */
-    static Tuple2<String, RobotCommands> completedResult(ProcessorContextApi context) {
-        throw new NotImplementedException();
-        /* TODO
-        return context.worldModel().robotStatus().halt() ? COMPLETED_NONE_RESULT : COMPLETED_RESULT;
-
-         */
-    }
 
     /**
      * Returns the state node from yaml document
@@ -107,37 +61,6 @@ public interface StateNode {
         return locator.propertyNames(root)
                 .mapToObj((key, value) -> createNode(root, value, key))
                 .toList();
-    }
-
-    /**
-     * Returns the front block result
-     *
-     * @param context the process context
-     */
-    static Tuple2<String, RobotCommandsOld> frontBlockResult(ProcessorContextApi context) {
-        return context.worldModel().robotStatus().halt() ? FRONT_BLOCKED_NONE_RESULT : FRONT_BLOCKED_RESULT;
-    }
-
-    /**
-     * Returns the rear block result
-     *
-     * @param context the process context
-     */
-    static Tuple2<String, RobotCommandsOld> rearBlockResult(ProcessorContextApi context) {
-        return context.worldModel().robotStatus().halt() ? REAR_BLOCKED_NONE_RESULT : REAR_BLOCKED_RESULT;
-    }
-
-    /**
-     * Returns the completed result
-     *
-     * @param context the process context
-     */
-    static Tuple2<String, RobotCommands> timeoutResult(ProcessorContextApi context) {
-        throw new NotImplementedException();
-        /* TODO
-        return context.worldModel().robotStatus().halt() ? TIMEOUT_NONE_RESULT : TIMEOUT_RESULT;
-
-         */
     }
 
     /**
@@ -185,5 +108,5 @@ public interface StateNode {
      *
      * @param context the processor context
      */
-    Tuple2<String, RobotCommands> step(ProcessorContextApi context);
+    StateResult step(ProcessorContextApi context);
 }

@@ -20,13 +20,6 @@ properties:
   timeout:
     type: integer
     minimum: 1
-  approachDistance:
-    type: number
-    exclusiveMinimum: 0
-  speed:
-    type: integer
-    minimum: 10
-    maximum: 60
   safetyDistance:
     type: number
     exclusiveMinimum: 0

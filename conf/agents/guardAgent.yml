@@ -26,7 +26,7 @@ flow:
       stopDistance: 0.1
       path:
         - [0, 0]
-        - [0, 2]
+        - [ 0.71, 0.71 ]
       transitions:
         completed:
           to: moving
@@ -35,6 +35,8 @@ flow:
         frontBlocked:
           to: avoid
         blocked:
+          to: clearMap
+        notFound:
           to: clearMap
     clearMap:
       $id: https://mmarini.org/wheelly/state-clear-map-schema-0.1

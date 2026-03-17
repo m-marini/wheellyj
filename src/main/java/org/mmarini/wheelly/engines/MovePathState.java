@@ -29,11 +29,10 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.NotImplementedException;
-import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.RobotCommandsOld;
+import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WheellyJsonSchemas;
+import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +40,8 @@ import org.slf4j.LoggerFactory;
 import java.awt.geom.Point2D;
 import java.util.List;
 
-import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
+import static org.mmarini.wheelly.apis.RobotSpec.DISTANCE_PER_PULSE;
+import static org.mmarini.wheelly.engines.StateResult.*;
 
 /**
  * Generates the behaviour to move robot through path
@@ -76,19 +76,10 @@ import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
  * </p>
  */
 public class MovePathState extends TimeOutState {
-    public static final String SPEED_ID = "power";
-    public static final String APPROACH_DISTANCE_ID = "approachDistance";
-    public static final double NEAR_DISTANCE = 0.4;
     public static final String TIMEOUT_ID = "timeout";
     public static final String PATH_ID = "path";
-    public static final String NOT_FOUND_EXIT = "notFound";
-    public static final Tuple2<String, RobotCommandsOld> NOT_FOUND_RESULT = Tuple2.of(NOT_FOUND_EXIT, RobotCommandsOld.haltCommand());
     private static final Logger logger = LoggerFactory.getLogger(MovePathState.class);
-    private static final int MIN_PPS = 10;
     private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-move-path-schema-0.1";
-    private static final double DEFAULT_APPROACH_DISTANCE = 0.4;
-    public static final String SAFETY_DISTANCE_ID = "safetyDistance";
-    private static final double DEFAULT_SAFETY_DISTANCE = 0.5;
 
     /**
      * Returns the exploring state from configuration
@@ -100,9 +91,6 @@ public class MovePathState extends TimeOutState {
     public static MovePathState create(JsonNode root, Locator locator, String id) {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         long timeout = locator.path(TIMEOUT_ID).getNode(root).asLong(DEFAULT_TIMEOUT);
-        int speed = locator.path(SPEED_ID).getNode(root).asInt(MAX_PPS);
-        double approachDistance = locator.path(APPROACH_DISTANCE_ID).getNode(root).asDouble(DEFAULT_APPROACH_DISTANCE);
-        double safetyDistance = locator.path(SAFETY_DISTANCE_ID).getNode(root).asDouble(DEFAULT_SAFETY_DISTANCE);
         ProcessorCommand onInit = ProcessorCommand.create(root, locator.path("onInit"));
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
@@ -115,12 +103,9 @@ public class MovePathState extends TimeOutState {
                     return new Point2D.Double(coords[0], coords[1]);
                 })
                 .toList();
-        return new MovePathState(id, onInit, onEntry, onExit, timeout, approachDistance, speed, safetyDistance, path.isEmpty() ? null : path);
+        return new MovePathState(id, onInit, onEntry, onExit, timeout, path.isEmpty() ? null : path);
     }
 
-    private final double approachDistance;
-    private final int speed;
-    private final double safetyDistance;
     private final List<Point2D> defaultPath;
     private int targetIndex;
     private List<Point2D> path;
@@ -133,16 +118,10 @@ public class MovePathState extends TimeOutState {
      * @param onEntry          the entry command or null if none
      * @param onExit           the exit command or null if none
      * @param timeout          the timeout (ms)
-     * @param approachDistance the approach distance (m)
-     * @param speed            the maximum power (pps)
-     * @param safetyDistance   the safety distance (m)
      * @param defaultPath      the default path
      */
-    public MovePathState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit, long timeout, double approachDistance, int speed, double safetyDistance, List<Point2D> defaultPath) {
+    public MovePathState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit, long timeout, List<Point2D> defaultPath) {
         super(id, onInit, onEntry, onExit, timeout);
-        this.approachDistance = approachDistance;
-        this.speed = speed;
-        this.safetyDistance = safetyDistance;
         this.defaultPath = defaultPath;
     }
 
@@ -162,36 +141,23 @@ public class MovePathState extends TimeOutState {
      *
      * @param context the context
      */
-    private Tuple2<String, RobotCommands> move(ProcessorContextApi context) {
-        throw new NotImplementedException();
-        /* TODO
+    private StateResult move(ProcessorContextApi context) {
         if (path == null) {
             context.path(null).target(null);
-            return NOT_FOUND_RESULT;
+            return notFound();
         }
         WorldModel worldModel = context.worldModel();
-        RadarMap map = worldModel.radarMap();
         RobotStatus robotStatus = worldModel.robotStatus();
         Point2D robotLocation = robotStatus.location();
         Point2D target = path.get(targetIndex);
-        if (!map.freeTrajectory(robotLocation, target, safetyDistance)) {
-            context.path(null).target(null);
-            return NOT_FOUND_RESULT;
-        }
         double distance = robotLocation.distance(target);
-        if (distance <= approachDistance) {
-            // Target reached
+        logger.atDebug().log("Target distance {}", distance);
+        if (distance <= robotStatus.robotSpec().targetRange() + DISTANCE_PER_PULSE) {
+            // Target reached goto next trajectory target
+            logger.atDebug().log("Target reached");
             return nextLocation(context);
         }
-        // Computes direction
-        Complex direction = Complex.direction(robotLocation, target);
-        // Computes power
-        double isFar = positive(distance - approachDistance, NEAR_DISTANCE);
-        int speed = (int) round(defuzzy(MIN_PPS, this.speed, isFar));
-        logger.atDebug().log("move to {} DEG, power {}", direction, speed);
-        return Tuple2.of(NONE_EXIT, moveAndFrontScan(direction, speed));
-
-         */
+        return new StateResult(NONE_EXIT, RobotCommands.forward(target));
     }
 
     /**
@@ -199,22 +165,26 @@ public class MovePathState extends TimeOutState {
      *
      * @param context the context
      */
-    private Tuple2<String, RobotCommands> nextLocation(ProcessorContextApi context) {
+    private StateResult nextLocation(ProcessorContextApi context) {
+        // Check for newxt target
         if (++targetIndex >= path.size()) {
+            // path completed
             context.path(null).target(null);
             logger.atDebug().log("Completed");
-            return StateNode.completedResult(context);
+            return completed();
         }
-        logger.atDebug().log("Move to {}", path.get(targetIndex));
-        return move(context);
+        Point2D target = path.get(targetIndex);
+        logger.atDebug().log("Move to {}", target);
+        return new StateResult(NONE_EXIT, RobotCommands.forward(target));
     }
 
     @Override
-    public Tuple2<String, RobotCommands> step(ProcessorContextApi context) {
-        Tuple2<String, RobotCommands> result = super.step(context);
+    public StateResult step(ProcessorContextApi context) {
+        StateResult result = super.step(context);
         return result != null
                 // Halt the robot and move forward the sensor at block
                 ? result
                 : move(context);
+
     }
 }
