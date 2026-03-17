@@ -29,12 +29,12 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.mmarini.wheelly.engines.StateResult.completed;
 
 /**
  * Generates the behavior to clear map
@@ -78,13 +78,13 @@ public class ClearMapState extends AbstractStateNode {
     }
 
     @Override
-    public Tuple2<String, RobotCommands> step(ProcessorContextApi ctx) {
+    public StateResult step(ProcessorContextApi ctx) {
         // Clear the map
         logger.atDebug().log("Clearing map ...");
         ctx.clearMap();
-        Tuple2<String, RobotCommands> result = super.step(ctx);
+        StateResult result = super.step(ctx);
         if (result == null) {
-            return StateNode.completedResult(ctx);
+            return completed();
         }
         return result;
     }

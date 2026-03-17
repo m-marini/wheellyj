@@ -40,8 +40,7 @@ import org.mmarini.yaml.Utils;
 
 import java.io.IOException;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.closeTo;
+import static org.junit.jupiter.api.Assertions.fail;
 
 class ActionSetTest {
 
@@ -68,9 +67,13 @@ class ActionSetTest {
                 "sensor: 0"));
         RewardFunction f = ActionSet.create(root, Locator.root());
         RobotCommandsOld cmd = RobotCommandsOld.moveAndScan(Complex.fromDeg(direction), speed, Complex.fromDeg(sensor));
+        fail();
+        /* TODO
         double result = f.applyAsDouble(null, cmd, null);
 
         assertThat(result, closeTo(expected, 1e-4));
+
+         */
     }
 
     @ParameterizedTest
@@ -97,9 +100,13 @@ class ActionSetTest {
                 "reward: 2"));
         RewardFunction f = ActionSet.create(root, Locator.root());
         RobotCommandsOld cmd = RobotCommandsOld.moveAndScan(Complex.fromDeg(direction), speed, Complex.fromDeg(sensor));
+        fail();
+        /* TODO
         double result = f.applyAsDouble(null, cmd, null);
 
         assertThat(result, closeTo(expected, 1e-4));
+
+         */
     }
 
     @ParameterizedTest
@@ -123,9 +130,14 @@ class ActionSetTest {
                 "sensor: 0"));
         RewardFunction f = ActionSet.create(root, Locator.root());
         RobotCommandsOld cmd = RobotCommandsOld.moveAndScan(Complex.fromDeg(direction), speed, Complex.fromDeg(sensor));
+        fail();
+        /* TODO
+
         double result = f.applyAsDouble(null, cmd, null);
 
         assertThat(result, closeTo(expected, 1e-4));
+
+         */
     }
 
     @ParameterizedTest
@@ -149,8 +161,13 @@ class ActionSetTest {
                 "power: 0"));
         RewardFunction f = ActionSet.create(root, Locator.root());
         RobotCommandsOld cmd = RobotCommandsOld.moveAndScan(Complex.fromDeg(direction), speed, Complex.fromDeg(sensor));
+        fail();
+        /* TODO
+
         double result = f.applyAsDouble(null, cmd, null);
 
         assertThat(result, closeTo(expected, 1e-4));
+
+         */
     }
 }

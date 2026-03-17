@@ -36,6 +36,7 @@ import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
+import org.mmarini.NotImplementedException;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.apis.*;
@@ -216,7 +217,9 @@ public class CameraCalibration {
 
     private void halt() {
         currentState = null;
-        controller.execute(RobotCommandsOld.haltCommand());
+        throw new NotImplementedException();
+        // TODO
+        //controller.execute(RobotCommandsOld.haltCommand());
     }
 
     /**
@@ -324,7 +327,9 @@ public class CameraCalibration {
     private void positioning(RobotStatus status) {
         WheellyLidarMessage lidar = status.lidarMessage();
         if (lidar.headDirectionDeg() != direction) {
-            controller.execute(RobotCommandsOld.scan(Complex.fromDeg(direction)));
+            throw new NotImplementedException();
+            // TODO
+            // controller.execute(RobotCommandsOld.scan(Complex.fromDeg(direction)));
         } else {
             sample().accept(status);
         }

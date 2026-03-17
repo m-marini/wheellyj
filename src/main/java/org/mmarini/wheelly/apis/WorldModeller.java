@@ -158,8 +158,10 @@ public class WorldModeller implements WorldModellerApi {
         WorldModel model = this.updateForInference(this.currentModel);
         if (inference != null) {
             RobotCommands commands = inference.onInference(model);
-            controller.execute(commands);
-            inferenceProcessor.onNext(Tuple2.of(model, commands));
+            if (commands != null) {
+                controller.execute(commands);
+                inferenceProcessor.onNext(Tuple2.of(model, commands));
+            }
         }
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -40,8 +40,6 @@ import org.slf4j.LoggerFactory;
 import java.util.Random;
 import java.util.function.Function;
 
-import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
-
 /**
  * Generates the behaviour to select the path to the nearest unknown sector
  * <p>
@@ -81,10 +79,8 @@ public class SearchUnknownState extends AbstractSearchAndMoveState {
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
         long timeout = locator.path(TIMEOUT_ID).getNode(root).asLong(DEFAULT_TIMEOUT);
-        int speed = locator.path(SPEED_ID).getNode(root).asInt(MAX_PPS);
-        double approachDistance = locator.path(APPROACH_DISTANCE_ID).getNode(root).asDouble(DEFAULT_APPROACH_DISTANCE);
         double safetyDistance = locator.path(SAFETY_DISTANCE_ID).getNode(root).asDouble(DEFAULT_SAFETY_DISTANCE);
-        return create(id, onInit, onEntry, onExit, seed, timeout, approachDistance, speed, maxIterations, minGoals, maxSearchTime, safetyDistance, growthDistance);
+        return create(id, onInit, onEntry, onExit, seed, timeout, maxIterations, minGoals, maxSearchTime, safetyDistance, growthDistance);
     }
 
     /**
@@ -96,8 +92,6 @@ public class SearchUnknownState extends AbstractSearchAndMoveState {
      * @param onExit           the exit command or null if none
      * @param seed             the random generator seed
      * @param timeout          the timeout (ms)
-     * @param approachDistance the approach distance (m)
-     * @param speed            the maximum power (pps)
      * @param maxIterations    the maximum number of iterations
      * @param minGoals         the minimum number of goals
      * @param maxSearchTime    the maximum search time (ms)
@@ -105,7 +99,7 @@ public class SearchUnknownState extends AbstractSearchAndMoveState {
      * @param growthDistance   the growth distance(m)
      */
     public static SearchUnknownState create(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit,
-                                            long seed, long timeout, double approachDistance, int speed, int maxIterations, int minGoals,
+                                            long seed, long timeout, int maxIterations, int minGoals,
                                             long maxSearchTime, double safetyDistance, double growthDistance) {
         Random random = seed == 0
                 ? new Random()
@@ -117,7 +111,7 @@ public class SearchUnknownState extends AbstractSearchAndMoveState {
             return RRTPathFinder.createUnknownTargets(map, status.location(),
                     safetyDistance + CM, growthDistance, random);
         };
-        return new SearchUnknownState(id, onInit, onEntry, onExit, timeout, approachDistance, speed, maxIterations, minGoals, maxSearchTime, pathFinderSupplier);
+        return new SearchUnknownState(id, onInit, onEntry, onExit, timeout, maxIterations, minGoals, maxSearchTime, pathFinderSupplier);
     }
 
     /**
@@ -128,17 +122,15 @@ public class SearchUnknownState extends AbstractSearchAndMoveState {
      * @param onEntry            the entry command or null if none
      * @param onExit             the exit command or null if none
      * @param timeout            the timeout (ms)
-     * @param approachDistance   the approach distance (m)
-     * @param speed              the maximum power (pps)
      * @param maxIterations      the maximum number of iterations
      * @param minGoals           the minimum number of goals
      * @param maxSearchTime      the maximum search time (ms)
      * @param pathFinderSupplier the pathfinder supplier
      */
     public SearchUnknownState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit,
-                              long timeout, double approachDistance, int speed, int maxIterations, int minGoals,
+                              long timeout, int maxIterations, int minGoals,
                               long maxSearchTime, Function<ProcessorContextApi, RRTPathFinder> pathFinderSupplier) {
-        super(id, onInit, onEntry, onExit, timeout, maxIterations, minGoals, maxSearchTime, approachDistance, speed, pathFinderSupplier);
+        super(id, onInit, onEntry, onExit, timeout, maxIterations, minGoals, maxSearchTime, pathFinderSupplier);
         logger.atDebug().log("Created");
     }
 }

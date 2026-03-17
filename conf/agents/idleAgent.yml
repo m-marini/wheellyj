@@ -12,16 +12,10 @@ flow:
       class: org.mmarini.wheelly.engines.HaltState
       transitions:
         blocked:
-          to: clearMap
+          to: avoid
         frontBlocked:
           to: avoid
         rearBlocked:
-          to: avoid
-    clearMap:
-      $id: https://mmarini.org/wheelly/state-clear-map-schema-0.1
-      class: org.mmarini.wheelly.engines.ClearMapState
-      transitions:
-        ".*":
           to: avoid
     avoid:
       $id: https://mmarini.org/wheelly/state-avoid-schema-0.1
@@ -31,5 +25,3 @@ flow:
       transitions:
         completed:
           to: halt
-        blocked:
-          to: clearMap

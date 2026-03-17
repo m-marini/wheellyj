@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -41,8 +41,6 @@ import java.awt.geom.Point2D;
 import java.util.Random;
 import java.util.function.Function;
 
-import static org.mmarini.wheelly.apis.RobotSpec.MAX_PPS;
-
 /**
  * Generates the behaviour to select the path to the least empty sector
  * <p>
@@ -83,8 +81,6 @@ public class SearchRefreshState extends AbstractSearchAndMoveState {
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
         long timeout = locator.path(TIMEOUT_ID).getNode(root).asLong(DEFAULT_TIMEOUT);
-        int speed = locator.path(SPEED_ID).getNode(root).asInt(MAX_PPS);
-        double approachDistance = locator.path(APPROACH_DISTANCE_ID).getNode(root).asDouble(DEFAULT_APPROACH_DISTANCE);
         double safetyDistance = locator.path(SAFETY_DISTANCE_ID).getNode(root).asDouble(DEFAULT_SAFETY_DISTANCE);
         Function<ProcessorContextApi, RRTPathFinder> pathFinderSupplier = context -> {
             WorldModel worldModel = context.worldModel();
@@ -94,7 +90,7 @@ public class SearchRefreshState extends AbstractSearchAndMoveState {
             double maxDistance = status.robotSpec().maxRadarDistance();
             return RRTPathFinder.createLeastEmptyTargets(map, robotLocation, safetyDistance + CM, growthDistance, maxDistance, random);
         };
-        return new SearchRefreshState(id, onInit, onEntry, onExit, timeout, approachDistance, speed, maxIterations, minGoals, maxSearchTime, pathFinderSupplier);
+        return new SearchRefreshState(id, onInit, onEntry, onExit, timeout, maxIterations, minGoals, maxSearchTime, pathFinderSupplier);
     }
 
     /**
@@ -105,17 +101,15 @@ public class SearchRefreshState extends AbstractSearchAndMoveState {
      * @param onEntry            the entry command or null if none
      * @param onExit             the exit command or null if none
      * @param timeout            the timeout (ms)
-     * @param approachDistance   the approach distance (m)
-     * @param speed              the maximum power (pps)
      * @param maxIterations      the maximum number of iterations
      * @param minGoals           the minimum number of goals
      * @param maxSearchTime      the maximum search time (ms)
      * @param pathFinderSupplier the pathfinder supplier
      */
     public SearchRefreshState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit,
-                              long timeout, double approachDistance, int speed, int maxIterations, int minGoals,
+                              long timeout, int maxIterations, int minGoals,
                               long maxSearchTime, Function<ProcessorContextApi, RRTPathFinder> pathFinderSupplier) {
-        super(id, onInit, onEntry, onExit, timeout, maxIterations, minGoals, maxSearchTime, approachDistance, speed, pathFinderSupplier);
+        super(id, onInit, onEntry, onExit, timeout, maxIterations, minGoals, maxSearchTime, pathFinderSupplier);
         logger.atDebug().log("Created");
     }
 }

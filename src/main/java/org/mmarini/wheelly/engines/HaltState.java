@@ -29,9 +29,6 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.NotImplementedException;
-import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
@@ -53,7 +50,6 @@ public class HaltState extends TimeOutState {
 
     private static final Logger logger = LoggerFactory.getLogger(HaltState.class);
     private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-halt-schema-0.1";
-    public static final String TIMEOUT_ID = "TIMEOUT";
 
     /**
      * Returns the haltCommand state from configuration
@@ -64,7 +60,7 @@ public class HaltState extends TimeOutState {
      */
     public static HaltState create(JsonNode root, Locator locator, String id) {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-        long timeout = locator.path(TIMEOUT_ID).getNode(root).asLong();
+        long timeout = locator.path(TIMEOUT_ID).getNode(root).asLong(DEFAULT_TIMEOUT);
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
         ProcessorCommand onInit = ProcessorCommand.create(root, locator.path("onInit"));
@@ -86,15 +82,11 @@ public class HaltState extends TimeOutState {
     }
 
     @Override
-    public Tuple2<String, RobotCommands> step(ProcessorContextApi ctx) {
-        Tuple2<String, RobotCommands> result = super.step(ctx);
+    public StateResult step(ProcessorContextApi ctx) {
+        StateResult result = super.step(ctx);
         if (result != null) {
             return result;
         }
-        throw new NotImplementedException();
-        /* TODO
-        return NONE_HALT_RESULT;
-
-         */
+        return StateResult.noneHalt();
     }
 }

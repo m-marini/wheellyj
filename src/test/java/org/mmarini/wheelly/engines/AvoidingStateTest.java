@@ -34,101 +34,67 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
-import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.Utils;
 
 import java.awt.geom.Point2D;
-import java.util.Map;
 import java.util.stream.Stream;
 
-import static java.lang.Math.sin;
-import static java.lang.Math.toRadians;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mmarini.Matchers.angleCloseTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mmarini.Matchers.pointCloseTo;
+import static org.mmarini.wheelly.apis.RobotCommands.StatusCommand.BACKWARD;
+import static org.mmarini.wheelly.apis.RobotCommands.StatusCommand.FORWARD;
+import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_TARGET_RANGE;
+import static org.mmarini.wheelly.apis.Utils.MM;
+import static org.mmarini.wheelly.engines.AvoidingState.DEFAULT_SAFE_DISTANCE;
+import static org.mmarini.wheelly.engines.StateResult.*;
 
 class AvoidingStateTest {
-    public static final int NUM_SECTORS = 24;
-    public static final int GRID_MAP_SIZE = 125;
-    public static final int RADAR_WIDTH = 125;
-    public static final int RADAR_HEIGHT = 125;
-    public static final double RADAR_GRID = 0.1;
     public static final long SEED = 1234L;
-    public static final int SPEED = 20;
-    public static final double SIN_DEG1 = sin(toRadians(1));
     public static final int TEST_CASES = 100;
-
-    public static ProcessorContextApi createContext(RobotStatus robotStatus, RadarMap radarMap, Map<String, LabelMarker> markers) {
-        WorldModelSpec worldSpec = new WorldModelSpec(RobotSpec.DEFAULT_ROBOT_SPEC, NUM_SECTORS, GRID_MAP_SIZE);
-        GridTopology radarTopology = GridTopology.create(new Point2D.Double(), RADAR_WIDTH, RADAR_HEIGHT, RADAR_GRID);
-        if (radarMap == null) {
-            radarMap = RadarMap.empty(radarTopology);
-        }
-        if (markers == null) {
-            markers = Map.of();
-        }
-        GridMap gridMap = GridMap.create(radarMap, robotStatus.location(), robotStatus.direction(), GRID_MAP_SIZE);
-        WorldModel worldModel = new WorldModel(worldSpec, robotStatus, radarMap, markers, null, gridMap, null);
-        return new MockProcessorContext(worldModel);
-    }
-
-    public static ProcessorContextApi createContext(RobotStatus robotStatus) {
-        return createContext(robotStatus, null, null);
-    }
-
-    public static ProcessorContextApi createContextWithNoSafePoint(RobotStatus robotStatus) {
-        GridTopology radarTopology = GridTopology.create(new Point2D.Double(), RADAR_WIDTH, RADAR_HEIGHT, RADAR_GRID);
-        RadarMap radarMap = RadarMap.empty(radarTopology)
-                .map(cell -> cell.setContact(1));
-        return createContext(robotStatus, radarMap, null);
-    }
+    public static final double STEP2_DISTANCE = 50 * Utils.MM;
 
     /**
-     * Returns the robot status
+     * Returns the processor context
      *
-     * @param robotLocation   the robot location
-     * @param robotDir        the robot direction
-     * @param headDir         the head direction
+     * @param robotX          the robot abscissa
+     * @param robotY          the robot ordinate
+     * @param robotDir        the robot direction (DEG)
+     * @param headAngle       the head rotation angle (DEG)
      * @param frontSensor     true if the front sensor is clear
      * @param rearSensor      true if the rear sensor is clear
      * @param canMoveForward  true if the robot can move forward
      * @param canMoveBackward true if the robot can move forward
      */
-    public static RobotStatus createRobotStatus(Point2D robotLocation, Complex robotDir, Complex headDir,
-                                                boolean frontSensor, boolean rearSensor,
-                                                boolean canMoveForward, boolean canMoveBackward) {
-        return createRobotStatus(0, robotLocation, robotDir, headDir,
-                frontSensor, rearSensor,
-                canMoveForward, canMoveBackward);
+    private static ProcessorContextApi createContext(double robotX, double robotY, int robotDir, int headAngle,
+                                                    boolean frontSensor, boolean rearSensor,
+                                                    boolean canMoveForward, boolean canMoveBackward) {
+        return createContextBuilder(robotX, robotY, robotDir, headAngle, frontSensor, rearSensor, canMoveForward, canMoveBackward)
+                .build();
     }
 
     /**
-     * Returns the robot status
+     * Returns the processor context builder
      *
-     * @param simulationTime  the simulation time (ms)
-     * @param robotLocation   the robot location
-     * @param robotDir        the robot direction
-     * @param headDir         the head direction
+     * @param robotX          the robot abscissa
+     * @param robotY          the robot ordinate
+     * @param robotDir        the robot direction (DEG)
+     * @param headAngle       the head rotation angle (DEG)
      * @param frontSensor     true if the front sensor is clear
      * @param rearSensor      true if the rear sensor is clear
      * @param canMoveForward  true if the robot can move forward
      * @param canMoveBackward true if the robot can move forward
      */
-    public static RobotStatus createRobotStatus(long simulationTime, Point2D robotLocation, Complex robotDir, Complex headDir,
-                                                boolean frontSensor, boolean rearSensor,
-                                                boolean canMoveForward, boolean canMoveBackward) {
-        RobotStatus status = RobotStatus.create(RobotSpec.DEFAULT_ROBOT_SPEC, x -> 12);
-        status = status.setSimulationTime(simulationTime)
-                .setLocation(robotLocation)
-                .setDirection(robotDir)
-                .setSensorDirection(headDir)
-                .setContactsMessage(
-                        new WheellyContactsMessage(0L, frontSensor, rearSensor, canMoveForward, canMoveBackward)
-                )
-                .setFrontDistance(0)
-                .setRearDistance(0);
-
-        return status;
+    private static ProcessorContextBuilder createContextBuilder(double robotX, double robotY, double robotDir, double headAngle, boolean frontSensor, boolean rearSensor, boolean canMoveForward, boolean canMoveBackward) {
+        return new ProcessorContextBuilder(robotX, robotY, robotDir, headAngle)
+                .frontSensor(frontSensor)
+                .rearSensor(rearSensor)
+                .canMoveForward(canMoveForward)
+                .canMoveBackward(canMoveBackward);
     }
 
     static Stream<Arguments> dataBlocked() {
@@ -144,386 +110,370 @@ class AvoidingStateTest {
 
     @BeforeEach
     void setUp() {
-        state = new AvoidingState("avoid", null, null, null, AvoidingState.DEFAULT_TIMEOUT, AvoidingState.DEFAULT_SAFE_DISTANCE, AvoidingState.DEFAULT_MAX_DISTANCE, SPEED);
+        state = new AvoidingState("avoid", null, null, null, AvoidingState.DEFAULT_TIMEOUT, DEFAULT_SAFE_DISTANCE, AvoidingState.DEFAULT_MAX_DISTANCE);
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
     @MethodSource("dataBlocked")
-    void testBlockedContacts(double robotX, double robotY, int robotDeg, double headDeg) {
-        // Given a robot status with both sensors not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
-                false, false, false, false);
-        // And the processor context with the robot status
-        ProcessorContextApi context = createContext(status);
-
-        // When init state
-        state.init(context);
-        // And entering state
-        state.entry(context);
-        // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
-
-        // Then the result should be blocked result
-        assertNotNull(result);
-        assertEquals(AvoidingState.BLOCKED_RESULT, result);
-    }
-
-    @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
-    @MethodSource("dataBlocked")
-    void testBlockedNoContact(double robotX, double robotY, int robotDeg, double headDeg) {
+    void testBlockedContacts(double robotX, double robotY, int robotDeg, int headDeg) {
         // Given a robot status with both sensors clear and blocked move
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
-                true, true, false, false);
-        // And the processor context with the robot status
-        ProcessorContextApi context = createContext(status);
+        ProcessorContextApi context = createContext(robotX, robotY, robotDeg, headDeg,
+                false, false, false, false);
 
         // When init state
         state.init(context);
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
+        StateResult result = state.step(context);
 
         // Then the result should be blocked result
         assertNotNull(result);
-        assertEquals(AvoidingState.BLOCKED_RESULT, result);
+        assertEquals(BLOCKED_HALT_RESULT, result);
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
     @MethodSource("dataBlocked")
-    void testFalseFrontContact(double robotX, double robotY, int robotDeg, double headDeg) {
-        // Given a robot status with front sensor not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
-                true, true, true, true);
-        // And the processor context with the robot status
-        ProcessorContextApi context = createContext(status);
-
-        // When init state
-        state.init(context);
-        // And entering state
-        state.entry(context);
-        // And second stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
-
-        // Then the exit should be "none"
-        assertEquals(AvoidingState.COMPLETED_RESULT, result);
-    }
-
-    @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
-    @MethodSource("dataBlocked")
-    void testFrontContact(double robotX, double robotY, int robotDeg, double headDeg) {
-        // Given a robot status with front sensor not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
-                false, true, false, true);
-        // And the processor context with the robot status
-        ProcessorContextApi context = createContext(status);
+    void testBlockedNoContact(double robotX, double robotY, int robotDeg, int headDeg) {
+        // Given a robot status with both sensors clear and blocked move
+        ProcessorContextApi context = createContext(robotX, robotY, robotDeg, headDeg,
+                true, true, false, false);
 
         // When init state
         state.init(context);
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
+        StateResult result = state.step(context);
+
+        // Then the result should be blocked result
+        assertNotNull(result);
+        assertEquals(StateResult.BLOCKED_EXIT, result.exitCode());
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
+    @MethodSource("dataBlocked")
+    void testFrontContact(double robotX, double robotY, int robotDeg, int headDeg) {
+        // Given the processor context
+        ProcessorContextApi context = createContext(robotX, robotY, robotDeg, headDeg,
+                false, true, false, true);
+        // When init state
+        state.init(context);
+        // And entering state
+        state.entry(context);
+        // And stepping state
+        StateResult result = state.step(context);
 
         // Then the exit should be "none"
         assertNotNull(result);
-        assertEquals(AvoidingState.NONE_EXIT, result._1);
-        // And the command should be move command
-        assertTrue(result._2.move());
-        // And the move direction should be the robot direction
-        assertThat(result._2.moveDirection(), angleCloseTo(robotDeg, 1));
-        // And the power should be negative power
-        assertEquals(-SPEED, result._2.speed());
+        assertEquals(NONE_EXIT, result.exitCode());
+        // And the command should move backward to safe point
+        RobotCommands commands = result.commands();
+        assertEquals(BACKWARD, commands.status());
+        // And the target point must at the safety distance
+        Complex robotDir = context.worldModel().robotStatus().direction();
+        Point2D robotLocation = context.worldModel().robotStatus().location();
+        Point2D safePoint = robotDir.opposite().at(robotLocation, DEFAULT_SAFE_DISTANCE + DEFAULT_TARGET_RANGE);
+        assertThat(commands.target(), pointCloseTo(safePoint, MM));
         // And the head should be frontal
-        assertThat(result._2.scanDirection(), angleCloseTo(0, 1));
+        assertEquals(0, commands.scanDirection());
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
     @CsvSource({
-            "0,0, 0,0, -0.3,-0.5",
-            "0,0, 90,0, -0.3,-0.5",
-            "0,0, 180,0, -0.5,0.3",
-            "0,0, 270,0, 0.3,-0.5",
+            "0,0, 0,0, 0,-0.5",
+            "0,0, 90,0, -0.5,0",
+            "0,0, 180,0, 0,0.5",
+            "0,0, 270,0, 0.5,0",
 
-            "-1,-1, 0,0, -0.7,-1.5",
-            "-1,-1, 90,0, -1.5,-0.7",
-            "-1,-1, 180,0, -1.5,-0.7",
-            "-1,-1, 270,0, -0.7,-1.5",
+            "-1,-1, 0,0, -0.6,-1.3",
+            "-1,-1, 90,0, -1.3,-0.6",
+            "-1,-1, 180,0, -0.6,-0.7",
+            "-1,-1, 270,0, -0.6,-0.7",
     })
-    void testFrontContact2Step(double robotX, double robotY, int robotDeg, int headDeg, double safeX, double safeY) {
-        // Given a robot status with front sensor not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
-                false, true, false, true);
-        // And the processor context with the robot status
-        ProcessorContextApi context = createContext(status);
-        // And a robot status after the first step with front sensor cleared
-        RobotStatus status1 = createRobotStatus(robotLocation, robotDir, headDir,
-                true, true, true, true);
-        ProcessorContextApi context1 = createContext(status1);
+    void testFrontContact2NoContact(double robotX, double robotY, int robotDeg, int headDeg, double safeX, double safeY) {
+        // Given the processor context
+        ProcessorContextApi context0 = createContext(robotX, robotY, robotDeg, headDeg, false, true, false, true);
+        // And next step context backward
+        ProcessorContextApi context1 = new ProcessorContextBuilder(context0)
+                .canMoveForward(true)
+                .frontSensor(true)
+                .backward(STEP2_DISTANCE)
+                .build();
 
         // When init state
-        state.init(context);
+        state.init(context0);
         // And entering state
-        state.entry(context);
+        state.entry(context0);
         // And stepping state
-        state.step(context);
-        // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context1);
+        state.step(context0);
+        // And next stepping backward
+        StateResult result = state.step(context1);
 
         // Then the exit should be "none"
         assertNotNull(result);
-        assertEquals(AvoidingState.NONE_EXIT, result._1);
-        // And the command should be move command
-        assertTrue(result._2.move());
-        // And the move direction should be backward to the safe point
-        Point2D.Double safePoint = new Point2D.Double(safeX, safeY);
-        Complex expDir = Complex.direction(safePoint, robotLocation);
-
-        assertThat(result._2.moveDirection(), angleCloseTo(expDir, SIN_DEG1));
-        // And the power should be negative power
-        assertEquals(-SPEED, result._2.speed());
+        assertEquals(NONE_EXIT, result.exitCode());
+        // And the command should move backward to safe point
+        RobotCommands commands = result.commands();
+        assertEquals(BACKWARD, commands.status());
+        // And the target point must at the safety distance
+        assertThat(commands.target(), pointCloseTo(safeX, safeY, MM));
         // And the head should be frontal
-        assertThat(result._2.scanDirection(), angleCloseTo(0, 1));
+        assertEquals(0, commands.scanDirection());
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
     @MethodSource("dataBlocked")
-    void testFrontContactAndSafe(double robotX, double robotY, int robotDeg, double headDeg) {
-        // Given a robot status with front sensor not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
+    void testFrontContact2StillContact(double robotX, double robotY, int robotDeg, int headDeg) {
+        // Given the processor context
+        ProcessorContextApi context0 = createContext(robotX, robotY, robotDeg, headDeg,
                 false, true, false, true);
-        // And the processor context with the robot status
-        ProcessorContextApi context = createContext(status);
-        // And a next status with clear front sensor and robot at safe distance
-        Point2D robotLocation1 = robotDir.opposite().at(robotLocation, AvoidingState.DEFAULT_SAFE_DISTANCE);
-        RobotStatus status1 = createRobotStatus(robotLocation1, robotDir, headDir,
-                true, true, true, true);
-        // And the processor context with the robot status
-        ProcessorContextApi context1 = createContext(status1);
+        // And next step context backward
+        ProcessorContextApi context1 = new ProcessorContextBuilder(context0)
+                .backward(STEP2_DISTANCE)
+                .build();
 
         // When init state
-        state.init(context);
+        state.init(context0);
         // And entering state
-        state.entry(context);
+        state.entry(context0);
         // And stepping state
-        state.step(context);
-        // And second stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context1);
+        state.step(context0);
+        // And next stepping backward
+        StateResult result = state.step(context1);
 
         // Then the exit should be "none"
         assertNotNull(result);
-        assertEquals(AvoidingState.COMPLETED_EXIT, result._1);
-        // And the command should be halt
-        assertTrue(result._2.halt());
-    }
+        assertEquals(NONE_EXIT, result.exitCode());
+        // And the command should move backward to safe point
+        RobotCommands commands = result.commands();
 
-    @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
-    @MethodSource("dataBlocked")
-    void testFrontContactAndTimeout(double robotX, double robotY, int robotDeg, double headDeg) {
-        // Given a robot status with front sensor not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
-                false, true, false, true);
-        // And the processor context with the robot status
-        ProcessorContextApi context = createContext(status);
-        // And a next status with clear front sensor and robot at safe distance
-        Point2D robotLocation1 = robotDir.opposite().at(robotLocation, AvoidingState.DEFAULT_SAFE_DISTANCE);
-        RobotStatus status1 = createRobotStatus(AvoidingState.DEFAULT_TIMEOUT, robotLocation1, robotDir, headDir,
-                true, true, true, true);
-        // And the processor context with the robot status
-        ProcessorContextApi context1 = createContext(status1);
-
-        // When init state
-        state.init(context);
-        // And entering state
-        state.entry(context);
-        // And stepping state
-        state.step(context);
-        // And second stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context1);
-
-        // Then the exit should be "none"
-        assertEquals(TimeOutState.TIMEOUT_RESULT, result);
-    }
-
-    @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
-    @MethodSource("dataBlocked")
-    void testFrontContactNoSafePoint(double robotX, double robotY, int robotDeg, double headDeg) {
-        // Given a robot status with front sensor not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
-                false, true, false, true);
-        // And the processor context with the robot status
-        ProcessorContextApi context = createContextWithNoSafePoint(status);
-        // And a next status with clear front sensor and robot at safe distance
-        RobotStatus status1 = createRobotStatus(robotLocation, robotDir, headDir,
-                true, true, true, true);
-        // And the processor context with the robot status
-        ProcessorContextApi context1 = createContextWithNoSafePoint(status1);
-
-        // When init state
-        state.init(context);
-        // And entering state
-        state.entry(context);
-        // And stepping state
-        state.step(context);
-        // And second stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context1);
-
-        // Then the exit should be "none"
-        assertNotNull(result);
-        assertEquals(AvoidingState.NONE_EXIT, result._1);
-        // And the command should be move command
-        assertTrue(result._2.move());
-        // And the move direction should be the robot direction
-        assertThat(result._2.moveDirection(), angleCloseTo(robotDeg, 1));
-        // And the power should be negative power
-        assertEquals(-SPEED, result._2.speed());
+        assertEquals(BACKWARD, commands.status());
+        // And the target point must at the safety distance
+        RobotStatus status1 = context1.worldModel().robotStatus();
+        Point2D safePoint = status1.direction().opposite().at(status1.location(), DEFAULT_SAFE_DISTANCE + DEFAULT_TARGET_RANGE);
+        assertThat(commands.target(), pointCloseTo(safePoint, MM));
         // And the head should be frontal
-        assertThat(result._2.scanDirection(), angleCloseTo(0, 1));
+        assertEquals(0, commands.scanDirection());
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
     @MethodSource("dataBlocked")
-    void testRearContact(double robotX, double robotY, int robotDeg, double headDeg) {
-        // Given a robot status with front sensor not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
+    void testFrontContact3SafePoint(double robotX, double robotY, int robotDeg, int headDeg) {
+        // Given the processor context
+        ProcessorContextBuilder builder = createContextBuilder(robotX, robotY, robotDeg, headDeg,
+                false, true, false, true);
+        ProcessorContextApi context0 = builder.build();
+
+        // When init state
+        state.init(context0);
+        // And entering state
+        state.entry(context0);
+        // And stepping state
+        state.step(context0);
+        // And stepping back
+        ProcessorContextApi context1 = builder.canMoveForward(true)
+                .frontSensor(true)
+                .backward(STEP2_DISTANCE)
+                .build();
+        StateResult result = state.step(context1);
+        // And stepping to safe target
+        ProcessorContextApi context2 = builder
+                .robotLocation(result.commands().target())
+                .build();
+        result = state.step(context2);
+
+        // Then the exit should be "none"
+        assertNotNull(result);
+        assertEquals(COMPLETED_HALT_RESULT, result);
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
+    @MethodSource("dataBlocked")
+    void testFrontContactNoSafePoint(double robotX, double robotY, int robotDeg, int headDeg) {
+        // Given the processor context
+        ProcessorContextBuilder builder = createContextBuilder(robotX, robotY, robotDeg, headDeg, false, true, false, true)
+                .mapRadar(cell -> cell.setContact(1));
+        ProcessorContextApi context0 = builder.build();
+
+        // When init state
+        state.init(context0);
+        // And entering state
+        state.entry(context0);
+        // And stepping state
+        StateResult result = state.step(context0);
+        // And second stepping state
+        // And a next status with clear front sensor and robot at safe distance
+        ProcessorContextApi context1 = builder.frontSensor(true).canMoveForward(true)
+                .robotLocation(result.commands().target())
+                .build();
+        // And the processor context with the robot status
+        result = state.step(context1);
+
+        // Then the exit should be "completed"
+        assertNotNull(result);
+        assertEquals(COMPLETED_HALT_RESULT, result);
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
+    @MethodSource("dataBlocked")
+    void testFrontContactTimeout(double robotX, double robotY, int robotDeg, int headDeg) {
+        // Given the processor context
+        ProcessorContextApi context0 = createContext(robotX, robotY, robotDeg, headDeg, false, true, false, true);
+
+        // When init state
+        state.init(context0);
+        // And entering state
+        state.entry(context0);
+        // And stepping state
+        StateResult result = state.step(context0);
+        // And a next status with clear front sensor and robot at safe distance
+        // and timeout elapsed
+        ProcessorContextApi context1 = new ProcessorContextBuilder(context0)
+                .simulationTime(AvoidingState.DEFAULT_TIMEOUT)
+                .robotLocation(result.commands().target())
+                .frontSensor(true)
+                .rearSensor(true)
+                .build();
+        result = state.step(context1);
+
+        // Then the exit should be "none"
+        assertEquals(StateResult.timeout(), result);
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
+    @MethodSource("dataBlocked")
+    void testRearContact(double robotX, double robotY, int robotDeg, int headDeg) {
+        // Given the processor context
+        ProcessorContextApi context = createContext(robotX, robotY, robotDeg, headDeg,
                 true, false, true, false);
-        // And the processor context with the robot status
-        ProcessorContextApi context = createContext(status);
-
         // When init state
         state.init(context);
         // And entering state
         state.entry(context);
         // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context);
+        StateResult result = state.step(context);
 
         // Then the exit should be "none"
         assertNotNull(result);
-        assertEquals(AvoidingState.NONE_EXIT, result._1);
-        // And the command should be move command
-        assertTrue(result._2.move());
-        // And the move direction should be the robot direction
-        assertThat(result._2.moveDirection(), angleCloseTo(robotDeg, 1));
-        // And the power should be positive power
-        assertEquals(SPEED, result._2.speed());
+        assertEquals(NONE_EXIT, result.exitCode());
+        // And the command should move backward to safe point
+        RobotCommands commands = result.commands();
+        assertEquals(FORWARD, commands.status());
+        // And the target point must at the safety distance
+        Complex robotDir = context.worldModel().robotStatus().direction();
+        Point2D robotLocation = context.worldModel().robotStatus().location();
+        Point2D safePoint = robotDir.at(robotLocation, DEFAULT_SAFE_DISTANCE + DEFAULT_TARGET_RANGE);
+        assertThat(commands.target(), pointCloseTo(safePoint, MM));
         // And the head should be frontal
-        assertThat(result._2.scanDirection(), angleCloseTo(0, 1));
+        assertEquals(0, commands.scanDirection());
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
     @CsvSource({
-            "0,0, 0,0, -0.5,0.3",
-            "0,0, 90,0, 0.3,-0.5",
-            "0,0, 180,0, -0.3,-0.5",
-            "0,0, 270,0, -0.3,-0.5",
+            "0,0, 0,0, 0,0.5",
+            "0,0, 90,0, 0.5,0",
+            "0,0, 180,0, 0,-0.5",
+            "0,0, 270,0, -0.5,0",
 
-            "-1,-1, 0,0, -1.5,-0.7",
-            "-1,-1, 90,0, -0.7,-1.5",
-            "-1,-1, 180,0, -0.7,-1.5",
-            "-1,-1, 270,0, -1.5,-0.7",
+            "-1,-1, 0,0, -0.6,-0.7",
+            "-1,-1, 90,0, -0.6,-0.7",
+            "-1,-1, 180,0, -0.6,-1.3",
+            "-1,-1, 270,0, -1.3,-0.6"
     })
-    void testRearContact2Step(double robotX, double robotY, int robotDeg, int headDeg, double safeX, double safeY) {
-        // Given a robot status with front sensor not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
+    void testRearContact2NoContact(double robotX, double robotY, int robotDeg, int headDeg, double safeX, double safeY) {
+        // Given the processor context
+        ProcessorContextApi context0 = createContext(robotX, robotY, robotDeg, headDeg,
                 true, false, true, false);
-        // And the processor context with the robot status
-        ProcessorContextApi context = createContext(status);
-        // And a robot status after the first step with front sensor cleared
-        RobotStatus status1 = createRobotStatus(robotLocation, robotDir, headDir,
-                true, true, true, true);
-        ProcessorContextApi context1 = createContext(status1);
+        // And next step context backward
+        ProcessorContextApi context1 = new ProcessorContextBuilder(context0)
+                .canMoveBackward(true)
+                .rearSensor(true)
+                .forward(STEP2_DISTANCE)
+                .build();
 
         // When init state
-        state.init(context);
+        state.init(context0);
         // And entering state
-        state.entry(context);
+        state.entry(context0);
         // And stepping state
-        state.step(context);
-        // And stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context1);
+        state.step(context0);
+        // And next stepping backward
+        StateResult result = state.step(context1);
 
         // Then the exit should be "none"
         assertNotNull(result);
-        assertEquals(AvoidingState.NONE_EXIT, result._1);
-        // And the command should be move command
-        assertTrue(result._2.move());
-        // And the move direction should be forward to the safe point
-        Point2D.Double safePoint = new Point2D.Double(safeX, safeY);
-        Complex expDir = Complex.direction(robotLocation, safePoint);
-
-        assertThat(result._2.moveDirection(), angleCloseTo(expDir, SIN_DEG1));
-        // And the power should be negative power
-        assertEquals(SPEED, result._2.speed());
+        assertEquals(NONE_EXIT, result.exitCode());
+        // And the command should move backward to safe point
+        RobotCommands commands = result.commands();
+        assertEquals(FORWARD, commands.status());
+        // And the target point must at the safety distance
+        assertThat(commands.target(), pointCloseTo(safeX, safeY, MM));
         // And the head should be frontal
-        assertThat(result._2.scanDirection(), angleCloseTo(0, 1));
+        assertEquals(0, commands.scanDirection());
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
     @MethodSource("dataBlocked")
-    void testRearContactNoSafePoint(double robotX, double robotY, int robotDeg, double headDeg) {
-        // Given a robot status with front sensor not clear
-        Point2D robotLocation = new Point2D.Double(robotX, robotY);
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
-        RobotStatus status = createRobotStatus(robotLocation, robotDir, headDir,
+    void testRearContact2StillContact(double robotX, double robotY, int robotDeg, int headDeg) {
+        // Given the processor context
+        ProcessorContextApi context0 = createContext(robotX, robotY, robotDeg, headDeg,
                 true, false, true, false);
-        // And the processor context with the robot status
-        ProcessorContextApi context = createContextWithNoSafePoint(status);
-        // And a next status with clear front sensor and robot at safe distance
-        RobotStatus status1 = createRobotStatus(robotLocation, robotDir, headDir,
-                true, true, true, true);
-        // And the processor context with the robot status
-        ProcessorContextApi context1 = createContextWithNoSafePoint(status1);
+        // And next step context backward
+        ProcessorContextApi context1 = new ProcessorContextBuilder(context0)
+                .forward(STEP2_DISTANCE)
+                .build();
 
         // When init state
-        state.init(context);
+        state.init(context0);
         // And entering state
-        state.entry(context);
+        state.entry(context0);
         // And stepping state
-        state.step(context);
-        // And second stepping state
-        Tuple2<String, RobotCommandsOld> result = state.step(context1);
+        state.step(context0);
+        // And next stepping backward
+        StateResult result = state.step(context1);
 
         // Then the exit should be "none"
         assertNotNull(result);
-        assertEquals(AvoidingState.NONE_EXIT, result._1);
-        // And the command should be move command
-        assertTrue(result._2.move());
-        // And the move direction should be the robot direction
-        assertThat(result._2.moveDirection(), angleCloseTo(robotDeg, 1));
-        // And the power should be positive power
-        assertEquals(SPEED, result._2.speed());
+        assertEquals(NONE_EXIT, result.exitCode());
+        // And the command should move backward to safe point
+        RobotCommands commands = result.commands();
+        assertEquals(FORWARD, commands.status());
+        // And the target point must at the safety distance
+        RobotStatus status1 = context1.worldModel().robotStatus();
+        Point2D safePoint = status1.direction()
+                .at(status1.location(),
+                        DEFAULT_SAFE_DISTANCE + DEFAULT_TARGET_RANGE);
+        assertThat(commands.target(), pointCloseTo(safePoint, MM));
         // And the head should be frontal
-        assertThat(result._2.scanDirection(), angleCloseTo(0, 1));
+        assertEquals(0, commands.scanDirection());
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
+    @MethodSource("dataBlocked")
+    void testRearContactNoSafePoint(double robotX, double robotY, int robotDeg, int headDeg) {
+        // Given the processor context
+        ProcessorContextBuilder builder = createContextBuilder(robotX, robotY, robotDeg, headDeg,
+                true, false, true, false)
+                .mapRadar(cell -> cell.setContact(1));
+        ProcessorContextApi context0 = builder.build();
+
+        // When init state
+        state.init(context0);
+        // And entering state
+        state.entry(context0);
+        // And stepping state
+        StateResult result = state.step(context0);
+        // And second stepping state
+        // And a next status with clear front sensor and robot at safe distance
+        ProcessorContextApi context1 = builder.rearSensor(true).canMoveBackward(true)
+                .robotLocation(result.commands().target())
+                .build();
+        // And the processor context with the robot status
+        result = state.step(context1);
+
+        // Then the exit should be "completed"
+        assertNotNull(result);
+        assertEquals(COMPLETED_HALT_RESULT, result);
     }
 }

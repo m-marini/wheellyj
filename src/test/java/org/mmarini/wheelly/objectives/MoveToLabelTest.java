@@ -41,8 +41,7 @@ import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.util.Map;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.closeTo;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -140,9 +139,13 @@ class MoveToLabelTest {
         WorldModel state = createState(Complex.fromDeg(robotDeg),
                 Complex.fromDeg(sensorDeg), Complex.fromDeg(obstacleDeg));
         // And command move to actionDeg at power actionSpeed
+        fail();
+        /* TODO
         RobotCommandsOld cmd = RobotCommandsOld.moveAndScan(Complex.fromDeg(actionDeg), actionSpeed, Complex.DEG0);
         double result = f.applyAsDouble(null, cmd, state);
 
         assertThat(result, closeTo(expected, 1e-4));
+
+         */
     }
 }
