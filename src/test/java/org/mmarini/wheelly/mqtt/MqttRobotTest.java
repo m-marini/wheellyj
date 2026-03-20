@@ -62,13 +62,11 @@ class MqttRobotTest {
     public static final String CLIENT_ID = "testRobot";
     public static final int TIMEOUT = 2000;
     public static final String ROBOT_ID = "wheelly";
-    public static final String CAMERA_ID = "wheellycam";
     public static final String QR_ID = "wheellyqr";
     public static final int CLOSE_DELAY = 100;
     private static final Logger logger = LoggerFactory.getLogger(MqttRobotTest.class);
     public static final int MESSAGE_DELAY = 100;
     public static final long CAMERA_INTERVAL = 500L;
-    public static final int CAMERA_TIMEOUT = 5000;
 
     private MqttRobot robot;
     private TestSubscriber<RobotStatusApi> statusSub;
@@ -452,45 +450,6 @@ class MqttRobotTest {
         cameraSub.assertNoErrors();
         cameraSub.assertComplete();
         cameraSub.assertNoErrors();
-    }
-
-    @Test
-    void testMove() throws IOException {
-        // Given ...
-
-        // When connect
-        robot.connect();
-        // And waiting for robotConfigured
-        robot.readRobotStatus()
-                .filter(RobotStatusApi::configured)
-                .firstElement()
-                .ignoreElement()
-                .blockingAwait(TIMEOUT, TimeUnit.MILLISECONDS);
-        robot.move(90, 60);
-        robot.close();
-        robot.readRobotStatus().ignoreElements().blockingAwait();
-
-        mockClient.close();
-        Completable.timer(CLOSE_DELAY, TimeUnit.MILLISECONDS).blockingAwait();
-
-        // Then
-        TestSubscriber<Tuple2<String, MqttMessage>> mockSub = mockClient.subscriber();
-        mockSub.assertComplete();
-        mockSub.assertNoErrors();
-        assertThat(mockSub.values().stream()
-                .filter(t ->
-                        t._1.endsWith("/mv")
-                                && Arrays.equals(t._2.getPayload(), "90,60".getBytes()))
-                .count(), greaterThanOrEqualTo(1L));
-
-
-        errorSub.assertNoErrors();
-        errorSub.assertComplete();
-        errorSub.assertValueCount(0);
-
-        cameraSub.assertNoErrors();
-        cameraSub.assertComplete();
-        cameraSub.assertValueCount(0);
     }
 
     @Test

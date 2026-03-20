@@ -45,10 +45,10 @@ import static java.lang.Math.clamp;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.wheelly.apis.MarkerLocatorTest.LABEL_A;
 import static org.mmarini.wheelly.apis.MarkerLocatorTest.MM_1;
-import static org.mmarini.wheelly.apis.RobotCommands.StatusCommand.BACKWARD;
-import static org.mmarini.wheelly.apis.RobotCommands.StatusCommand.FORWARD;
 import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_HEAD_FOV_DEG;
 import static org.mmarini.wheelly.apis.RobotSpec.MAX_RADAR_DISTANCE;
+import static org.mmarini.wheelly.apis.RobotStatusId.BACKWARD;
+import static org.mmarini.wheelly.apis.RobotStatusId.FORWARD;
 import static org.mmarini.wheelly.engines.LabelStuckState.*;
 import static org.mmarini.wheelly.engines.StateResult.*;
 

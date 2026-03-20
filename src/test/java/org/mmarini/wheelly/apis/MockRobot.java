@@ -204,11 +204,6 @@ public class MockRobot implements RobotApi {
     }
 
     @Override
-    public Single<Boolean> move(int dir, int speed) {
-        return Single.just(true);
-    }
-
-    @Override
     public Single<Boolean> rotate(int dir) {
         return Single.just(true);
     }

@@ -59,7 +59,6 @@ class SimRobotObstacleTest {
     public static final int SEED = 1234;
     public static final double DISTANCE_EPSILON = 1.5e-3;
     public static final double MM1 = 1e-3;
-    public static final double EPSILON_COLLISION = 5 * MM1;
     public static final float GRID_SIZE = 200e-3f;
     public static final int STALEMATE_INTERVAL = 60000;
     public static final long MESSAGE_INTERVAL = 500;
@@ -106,7 +105,7 @@ class SimRobotObstacleTest {
         Random random = new Random(SEED);
         SimRobot simRobot = new SimRobot(DEFAULT_ROBOT_SPEC, random, random,
                 0, INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL,
-                0, 0, RobotSpec.MAX_PPS,
+                0, 0,
                 List.of(), 0, 0, CHANGE_MAP_PERIOD, CHANGE_MAP_PERIOD
         );
         simRobot.robotPos(location.getX(), location.getY());
@@ -184,14 +183,14 @@ class SimRobotObstacleTest {
          */
         long maxTime = 1500;
         do {
-            robot.move(robotDir.toIntDeg(), MAX_PPS);
+            robot.forward(new Point2D.Double());
             robot.simulate();
+
         } while (!(robot.simulationTime() >= maxTime
                 || !robot.status().frontSensor()
                 || !robot.status().rearSensor()));
         robot.close();
         robot.readContacts().ignoreElements().blockingAwait();
-
 
         // Then
         contactsSub.assertComplete();
@@ -245,7 +244,8 @@ class SimRobotObstacleTest {
         assertThat(motion.robotLocation(), pointCloseTo(contactPoint, DISTANCE_EPSILON));
 
         // And when move ahead at max power
-        robot.move(robotDir.toIntDeg(), RobotSpec.MAX_PPS);
+        robot.forward(new Point2D.Double());
+        // robot.move(robotDir.toIntDeg(), RobotSpec.MAX_PPS);
         robot.simulate();
         robot.close();
 
@@ -320,7 +320,7 @@ class SimRobotObstacleTest {
          */
         long maxTime = 1500;
         do {
-            robot.move(robotDir.toIntDeg(), MAX_PPS);
+            robot.forward(new Point2D.Double());
             robot.simulate();
         } while (!(robot.simulationTime() >= maxTime
                 || !robot.status().canMoveForward()
@@ -348,7 +348,7 @@ class SimRobotObstacleTest {
     /*
      * Robot location for collision (250,250) = obstacle size 200 mm / 2 + robot radius 150 mm
      */
-    @ParameterizedTest(name = "[{index}] Robot at ({0},{1}) head R{2} power {3} pps")
+    @ParameterizedTest(name = "[{index}] Robot at ({0},{1}) head R{2} move by {3} mm")
     @CsvSource({
             // x,y, dir, sensorDir, power, expMovement
             "0,1000, 0, 422", // no collision, max movement = 416mm
@@ -362,9 +362,9 @@ class SimRobotObstacleTest {
          */
         Point2D robotLocation = new Point2D.Double(robotX * MM1, robotY * MM1);
         Complex robotDirection = Complex.fromDeg(robotDeg);
-        robotDeg = robotDirection.toIntDeg();
         Complex sensorDirection = Complex.DEG0;
         robot = createRobotWithObstacles(robotLocation, robotDirection, sensorDirection);
+        Point2D moveLocation = robotDirection.at(robotLocation, expMovement * MM1);
 
         // When connect and wait for simulated 500 ms
         robot.syncConnect();
@@ -373,9 +373,9 @@ class SimRobotObstacleTest {
         /*
          When moving the robot to a given direction until contact
          */
-        long maxTime = 1500;
+        long maxTime = 3000;
         do {
-            robot.move(robotDeg, MAX_PPS);
+            robot.forward(moveLocation);
             robot.simulate();
         } while (!(robot.simulationTime() >= maxTime));
         robot.close();
@@ -400,14 +400,13 @@ class SimRobotObstacleTest {
         /*
          and the last robot location should be the expected location
          */
-        Point2D moveLocation = robotDirection.at(robotLocation, expMovement * MM1);
         motionSub.assertComplete();
         motionSub.assertNoErrors();
         assertThat(motionSub.values(), hasSize(greaterThanOrEqualTo(1)));
         WheellyMotionMessage motion = motionSub.values().getLast();
         double movement = robotLocation.distance(motion.robotLocation());
-        assertThat(movement, closeTo(abs(expMovement * MM1), EPSILON_COLLISION));
-        assertThat(motion.robotLocation(), pointCloseTo(moveLocation, EPSILON_COLLISION));
+        assertThat(movement, closeTo(abs(expMovement * MM1), DEFAULT_TARGET_RANGE));
+        assertThat(motion.robotLocation(), pointCloseTo(moveLocation, DEFAULT_TARGET_RANGE));
     }
 
     @ParameterizedTest(name = "[{index}] Robot at R{0}")
@@ -439,7 +438,7 @@ class SimRobotObstacleTest {
          */
         long maxTime = 1500;
         do {
-            robot.move(locationDir.toIntDeg(), -MAX_PPS);
+            robot.backward(new Point2D.Double());
             robot.simulate();
         } while (!(robot.simulationTime() >= maxTime
                 || !robot.status().frontSensor()
@@ -501,7 +500,7 @@ class SimRobotObstacleTest {
         assertThat(motion.robotLocation(), pointCloseTo(contactPoint, DISTANCE_EPSILON));
 
         // And when move backward at max power
-        robot.move(locationDir.toIntDeg(), -RobotSpec.MAX_PPS);
+        robot.backward(new Point2D.Double());
         robot.simulate();
         robot.close();
 
@@ -577,7 +576,7 @@ class SimRobotObstacleTest {
          */
         long maxTime = 1500;
         do {
-            robot.move(locationDir.toIntDeg(), -MAX_PPS);
+            robot.backward(new Point2D.Double());
             robot.simulate();
         } while (!(robot.simulationTime() >= maxTime
                 || !robot.status().canMoveForward()
@@ -624,6 +623,7 @@ class SimRobotObstacleTest {
                 DEFAULT_OBSTACLE_RADIUS + SAFE_DISTANCE + DEFAULT_HEAD_Y + DEFAULT_FRONT_LIDAR_DISTANCE - MM1);
         Complex robotDir = locationDir.opposite();
         robot = createRobot(location, robotDir, Complex.DEG0, 0, 0);
+        Point2D target = locationDir.at(location, SAFE_DISTANCE + DEFAULT_TARGET_RANGE);
 
         /*
          * When connect robot
@@ -637,7 +637,7 @@ class SimRobotObstacleTest {
         // When moving backward
         long maxTime = 1500;
         do {
-            robot.move(robotDir.toIntDeg(), -MAX_PPS);
+            robot.backward(target);
             robot.simulate();
         } while (!(robot.simulationTime() >= maxTime
                 || robot.status().canMoveForward() && robot.status().canMoveBackward()));
@@ -674,6 +674,8 @@ class SimRobotObstacleTest {
         Point2D location = locationDir.at(new Point2D.Float(), DEFAULT_OBSTACLE_RADIUS + ROBOT_RADIUS - MM1);
         Complex robotDir = locationDir.opposite();
         robot = createRobot(location, robotDir);
+        Point2D target = locationDir.at(location, SAFE_DISTANCE + DEFAULT_TARGET_RANGE);
+
         /*
          * When connect robot
          */
@@ -686,7 +688,7 @@ class SimRobotObstacleTest {
         // When moving backward
         long maxTime = 1500;
         do {
-            robot.move(robotDir.toIntDeg(), -MAX_PPS);
+            robot.backward(target);
             robot.simulate();
         } while (!(robot.simulationTime() >= maxTime
                 || robot.status().frontSensor() && robot.status().rearSensor()));
@@ -727,6 +729,7 @@ class SimRobotObstacleTest {
         Point2D location = locationDir.at(new Point2D.Float(),
                 DEFAULT_OBSTACLE_RADIUS - MM + SAFE_DISTANCE + DEFAULT_REAR_LIDAR_DISTANCE - DEFAULT_HEAD_Y);
         robot = createRobot(location, locationDir, Complex.DEG0, 0, 0);
+        Point2D target = locationDir.at(location, SAFE_DISTANCE + DEFAULT_TARGET_RANGE);
 
         /*
          * When connect robot
@@ -740,7 +743,7 @@ class SimRobotObstacleTest {
         // When moving forward
         long maxTime = 1500;
         do {
-            robot.move(locationDir.toIntDeg(), MAX_PPS);
+            robot.forward(target);
             robot.simulate();
         } while (!(robot.simulationTime() >= maxTime
                 || robot.status().canMoveForward() && robot.status().canMoveBackward()));
@@ -778,6 +781,7 @@ class SimRobotObstacleTest {
         Complex locationDir = Complex.fromDeg(locationDeg);
         Point2D location = locationDir.at(new Point2D.Float(), DEFAULT_OBSTACLE_RADIUS + ROBOT_RADIUS - MM1);
         robot = createRobot(location, locationDir);
+        Point2D target = locationDir.at(location, SAFE_DISTANCE + DEFAULT_TARGET_RANGE);
 
         /*
          * When connect robot
@@ -791,7 +795,7 @@ class SimRobotObstacleTest {
         // When moving forward
         long maxTime = 1500;
         do {
-            robot.move(locationDir.toIntDeg(), MAX_PPS);
+            robot.forward(target);
             robot.simulate();
         } while (!(robot.simulationTime() >= maxTime
                 || robot.status().frontSensor() && robot.status().rearSensor()));

@@ -40,10 +40,10 @@ import static java.util.Objects.requireNonNull;
  * @param rotationDirection the rotation direction (DEG)
  * @param target            the target location
  */
-public record RobotCommands(StatusCommand status, int scanDirection, int rotationDirection,
+public record RobotCommands(RobotStatusId status, int scanDirection, int rotationDirection,
                             Point2D target) {
 
-    static RobotCommands HALT = new RobotCommands(StatusCommand.HALT, 0, 0, null);
+    static RobotCommands HALT = new RobotCommands(RobotStatusId.HALT, 0, 0, null);
 
     /**
      * Returns the goto backward command
@@ -51,7 +51,7 @@ public record RobotCommands(StatusCommand status, int scanDirection, int rotatio
      * @param target the target location
      */
     public static RobotCommands backward(Point2D target) {
-        return new RobotCommands(StatusCommand.BACKWARD, 0, 0, target);
+        return new RobotCommands(RobotStatusId.BACKWARD, 0, 0, target);
     }
 
     /**
@@ -61,7 +61,7 @@ public record RobotCommands(StatusCommand status, int scanDirection, int rotatio
      * @param target        the target location
      */
     public static RobotCommands backward(int scanDirection, Point2D target) {
-        return new RobotCommands(StatusCommand.BACKWARD, scanDirection, 0, target);
+        return new RobotCommands(RobotStatusId.BACKWARD, scanDirection, 0, target);
     }
 
     /**
@@ -90,7 +90,7 @@ public record RobotCommands(StatusCommand status, int scanDirection, int rotatio
      * @param target        the target location
      */
     public static RobotCommands forward(int scanDirection, Point2D target) {
-        return new RobotCommands(StatusCommand.FORWARD, scanDirection, 0, target);
+        return new RobotCommands(RobotStatusId.FORWARD, scanDirection, 0, target);
     }
 
     /**
@@ -120,7 +120,7 @@ public record RobotCommands(StatusCommand status, int scanDirection, int rotatio
     public static RobotCommands halt(int scanDirection) {
         return scanDirection == 0
                 ? HALT
-                : new RobotCommands(StatusCommand.HALT, scanDirection, 0, null);
+                : new RobotCommands(RobotStatusId.HALT, scanDirection, 0, null);
     }
 
     /**
@@ -147,7 +147,7 @@ public record RobotCommands(StatusCommand status, int scanDirection, int rotatio
      * @param rotationDirection the rotation direction (DEG)
      */
     public static RobotCommands rotate(int scanDirection, int rotationDirection) {
-        return new RobotCommands(StatusCommand.ROTATE, scanDirection, rotationDirection, null);
+        return new RobotCommands(RobotStatusId.ROTATE, scanDirection, rotationDirection, null);
     }
 
     /**
@@ -176,7 +176,7 @@ public record RobotCommands(StatusCommand status, int scanDirection, int rotatio
      * @param rotationDirection the rotation direction
      * @param target            the target location
      */
-    public RobotCommands(StatusCommand status, int scanDirection, int rotationDirection, Point2D target) {
+    public RobotCommands(RobotStatusId status, int scanDirection, int rotationDirection, Point2D target) {
         this.status = requireNonNull(status);
         this.scanDirection = scanDirection;
         this.rotationDirection = rotationDirection;
@@ -187,14 +187,14 @@ public record RobotCommands(StatusCommand status, int scanDirection, int rotatio
      * Returns true if halt command
      */
     public boolean isHalt() {
-        return StatusCommand.HALT.equals(status);
+        return RobotStatusId.HALT.equals(status);
     }
 
     /**
      * Returns true if rotate command
      */
     public boolean isRotate() {
-        return StatusCommand.ROTATE.equals(status);
+        return RobotStatusId.ROTATE.equals(status);
     }
 
     /**
@@ -216,13 +216,4 @@ public record RobotCommands(StatusCommand status, int scanDirection, int rotatio
                 : new RobotCommands(status, scanDirection, rotationDirection, target);
     }
 
-    /**
-     * The required status command
-     */
-    public enum StatusCommand {
-        HALT,
-        FORWARD,
-        BACKWARD,
-        ROTATE
-    }
 }

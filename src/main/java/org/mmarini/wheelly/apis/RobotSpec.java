@@ -49,7 +49,7 @@ import static java.util.Objects.requireNonNull;
  * @param rearLidarDistance  the distance of rear lidar from head (m)
  * @param cameraDistance     the distance of camera from head (m)
  * @param headFOV            the head field of view (the head rotation angle limit)
- * @param targetRange the target distance below which the robot stops the movement (m)
+ * @param targetRange        the target distance below which the robot stops the movement (m)
  * @param directionRange     the minimum rotation range below which the robot stops rotation
  * @param maxRotRange        the maximum rotation range beyond which the robot rotates at maximum speed
  * @param maxRotPps          the maximum rotation speed (pps)
@@ -82,6 +82,10 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
     public static final int DEFAULT_DIRECTION_RANGE = 5;
     public static final double DEFAULT_TARGET_RANGE = 0.1;
     public static final int DEFAULT_MAX_ROT_RANGE = 30;
+    public static final int DEFAULT_MAX_ROT_PPS = 20;
+    public static final int DEFAULT_SEND_INTERVAL = 500;
+    public static final int DEFAULT_SCAN_INTERVAL = 500;
+    public static final double DEFAULT_DECELERATE_DISTANCE = 0.4;
 
     /**
      * Number of pulses per wheel root
@@ -118,18 +122,14 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
      */
     public static final double ROBOT_MASS = 0.785;
 
-
-    public static final int DEFAULT_MAX_ROT_PPS = 20;
-    public static final int DEFAULT_SEND_INTERVAL = 500;
-    public static final int DEFAULT_SCAN_INTERVAL = 500;
-    public static final double DEFAULT_DECELERATE_DISTANCE = 0.4;
+    public static final int DEFAULT_MAX_SPEED = 40;
     /**
      * Default robot specification
      */
     public static final RobotSpec DEFAULT_ROBOT_SPEC = create(MAX_RADAR_DISTANCE, DEFAULT_LIDAR_FOV_DEG,
             DEFAULT_CONTACT_RADIUS, DEFAULT_CAMERA_FOV_DEG, 0, DEFAULT_HEAD_Y,
             DEFAULT_FRONT_LIDAR_DISTANCE, DEFAULT_REAR_LIDAR_DISTANCE, DEFAULT_CAMERA_DISTANCE, DEFAULT_HEAD_FOV_DEG,
-            DEFAULT_TARGET_RANGE, DEFAULT_DIRECTION_RANGE, DEFAULT_MAX_ROT_RANGE, DEFAULT_MAX_ROT_PPS, MAX_PPS,
+            DEFAULT_TARGET_RANGE, DEFAULT_DIRECTION_RANGE, DEFAULT_MAX_ROT_RANGE, DEFAULT_MAX_ROT_PPS, DEFAULT_MAX_SPEED,
             DEFAULT_DECELERATE_DISTANCE, DEFAULT_SEND_INTERVAL, DEFAULT_SCAN_INTERVAL);
 
     /**
@@ -266,7 +266,7 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
      * @param rearLidarDistance  the distance of rear lidar from head (m)
      * @param cameraDistance     the distance of camera from head (m)
      * @param headFOV            the head field of view (the head rotation angle limit)
-     * @param targetRange the target distance below which the robot stops the movement (m)
+     * @param targetRange        the target distance below which the robot stops the movement (m)
      * @param directionRange     the minimum rotation range below which the robot stops rotation
      * @param maxRotRange        the maximum rotation range beyond which the robot rotates at maximum speed
      * @param maxRotPps          the maximum rotation speed (pps)
