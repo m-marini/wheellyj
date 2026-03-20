@@ -92,16 +92,6 @@ public interface RobotApi extends Closeable, WithWheellyMessageFlowable, WithCam
     Single<Boolean> forward(Point2D location);
 
     /**
-     * Moves robot to the given direction at the given power returning true on success
-     *
-     * @param dir   the direction (DEG)
-     * @param speed the power (PPS)
-     *
-     */
-    @Deprecated
-    Single<Boolean> move(int dir, int speed);
-
-    /**
      * Rotate robot to the given direction returning true on success
      *
      * @param dir the direction (DEG)

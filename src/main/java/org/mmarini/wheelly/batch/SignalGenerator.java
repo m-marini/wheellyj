@@ -38,7 +38,7 @@ import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.wheelly.apis.InferenceReader;
-import org.mmarini.wheelly.apis.RobotCommandsOld;
+import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apis.WorldModeller;
 import org.mmarini.wheelly.envs.ActionFunction;
@@ -250,7 +250,7 @@ public class SignalGenerator implements SignalGeneratorApi {
      *
      * @throws IOException in case of error
      */
-    private Tuple2<WorldModel, RobotCommandsOld> readData(InferenceReader f) throws IOException {
+    private Tuple2<WorldModel, RobotCommands> readData(InferenceReader f) throws IOException {
         try {
             return f.readRecord();
         } catch (EOFException ex) {

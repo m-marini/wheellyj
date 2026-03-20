@@ -28,8 +28,6 @@
 
 package org.mmarini.wheelly.apis;
 
-import org.mmarini.NotImplementedException;
-
 import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.util.Map;
@@ -66,16 +64,13 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * @param commands the command
      */
     default <T extends InferenceWriter> T write(RobotCommands commands) throws IOException {
-        throw new NotImplementedException();
-        /* TODO
-        write(commands.scan());
-        write(commands.scanDirection())
-                .write(commands.move())
-                .write(commands.halt());
-        return write(commands.moveDirection())
-                .write(commands.speed());
-
-         */
+        write(commands.status().ordinal())
+                .write(commands.scanDirection());
+        switch (commands.status()) {
+            case ROTATE -> write(commands.rotationDirection());
+            case FORWARD, BACKWARD -> write(commands.target());
+        }
+        return (T) this;
     }
 
     /**
@@ -237,7 +232,15 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
                 .write(spec.frontLidarDistance())
                 .write(spec.rearLidarDistance())
                 .write(spec.cameraDistance());
-        return write(spec.headFOV());
+        write(spec.headFOV())
+                .write(spec.targetRange());
+        write(spec.directionRange());
+        return write(spec.maxRotRange())
+                .write(spec.maxRotPps())
+                .write(spec.maxSpeed())
+                .write(spec.decelerateDistance())
+                .write(spec.sendInterval())
+                .write(spec.scanInterval());
     }
 
     /**

@@ -97,7 +97,7 @@ class InferenceFileTest {
     void testCommands() throws IOException {
         writer.write(COMMANDS);
         try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
-            RobotCommandsOld commandRead = reader.readCommands();
+            RobotCommands commandRead = reader.readCommands();
             assertEquals(COMMANDS, commandRead);
         }
     }
@@ -141,7 +141,7 @@ class InferenceFileTest {
     void testInference() throws IOException {
         writer.write(MODEL, COMMANDS);
         try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
-            Tuple2<WorldModel, RobotCommandsOld> t = reader.readRecord();
+            Tuple2<WorldModel, RobotCommands> t = reader.readRecord();
             WorldModel model = t._1;
             RadarMap radarRead = model.radarMap();
             assertEquals(MODEL.robotStatus(), model.robotStatus());
@@ -152,7 +152,7 @@ class InferenceFileTest {
             assertEquals(RADAR.topology().gridSize(), radarRead.topology().gridSize());
             assertEquals(RADAR.topology().center(), radarRead.topology().center());
             assertArrayEquals(RADAR.cells(), radarRead.cells());
-            RobotCommandsOld commands = t._2;
+            RobotCommands commands = t._2;
             assertEquals(COMMANDS, commands);
         }
     }

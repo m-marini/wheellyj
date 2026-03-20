@@ -187,7 +187,7 @@ public class DLActionFunction implements ActionFunction {
             int speed = speed(moveIdx);
             WorldModel model = states[i];
             Complex direction = direction(model, direction(moveIdx));
-            Complex sensorDir = sensorDirection(model, sensorDirection(scanIdx));
+            Complex sensorDir = headRotation(model, headRotation(scanIdx));
             RobotCommandsOld cmd = speed == 0 && direction.isCloseTo(model.robotStatus().direction(), SIN_DEG1)
                     ? RobotCommandsOld.haltCommand()
                     : RobotCommandsOld.move(direction, speed);

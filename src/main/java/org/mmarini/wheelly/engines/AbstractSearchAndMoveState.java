@@ -152,11 +152,10 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
         RobotStatus robotStatus = worldModel.robotStatus();
         Point2D robotLocation = robotStatus.location();
         double distance = robotLocation.distance(target);
-        if (distance <= robotStatus.robotSpec().targetRange()) {
-            // Target reached
-            return nextLocation(context);
-        }
-        return new StateResult(NONE_EXIT, forward(target));
+        return distance <= robotStatus.robotSpec().targetRange()
+                // Target reached
+                ? nextLocation(context)
+                : new StateResult(NONE_EXIT, forward(target));
     }
 
     /**
@@ -207,7 +206,7 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
     public StateResult step(ProcessorContextApi context) {
         StateResult result = super.step(context);
         if (result != null) {
-            context.path(null).target(null);
+            //context.path(null).target(null);
             return result;
         }
         return path == null

@@ -176,12 +176,13 @@ public class RobotController implements RobotControllerApi {
             logger.atError().log("Wrong scan direction {}", scanDeg);
             return;
         }
+        robot.scan(scanDeg);
         RobotControllerStatus prevStatus = status.getAndUpdate(s -> s.command(command));
         if (!Objects.equals(prevStatus.command(), command)) {
             // command changed
             syncActions(status.get().robotStatus());
-            commands.onNext(command);
         }
+        commands.onNext(command);
     }
 
     /**

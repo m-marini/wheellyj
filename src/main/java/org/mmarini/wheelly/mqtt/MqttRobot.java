@@ -439,16 +439,6 @@ public class MqttRobot implements RobotApi {
         return status.get().halted();
     }
 
-    @Override
-    public Single<Boolean> move(int dir, int speed) {
-        if (!status.get().connected()) {
-            return Single.just(false);
-        }
-        return executeRobotCommand("mv", dir + "," + speed, DEFAULT_COMMAND_TIMEOUT)
-                .isEmpty()
-                .map(s -> !s);
-    }
-
     /**
      * Notifies error
      *

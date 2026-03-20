@@ -122,15 +122,15 @@ public class RLActionFunction implements ActionFunction {
         throw new NotImplementedException();
         /* TODO
         WorldModel state = states[0];
-        Complex sensorDirection = sensorDir(actions);
+        Complex headRotation = sensorDir(actions);
         Complex robotDirection = state.robotStatus().direction();
         RobotCommands command = !isHalt(actions)
                 ? RobotCommandsOld.moveAndScan(moveDirection(actions, robotDirection),
                 speed(actions),
-                sensorDirection)
-                : sensorDirection.toIntDeg() == 0
+                headRotation)
+                : headRotation.toIntDeg() == 0
                 ? RobotCommandsOld.haltMove()
-                : RobotCommandsOld.scan(sensorDirection);
+                : RobotCommandsOld.scan(headRotation);
         return List.of(command);
 
          */

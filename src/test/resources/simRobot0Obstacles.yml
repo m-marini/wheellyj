@@ -5,10 +5,11 @@ class: org.mmarini.wheelly.apis.SimRobot
 mapSeed: 1234
 mapFiles:
   - conf/maps/room10x10.yml
-mapPeriod: 3600000
-randomPeriod: 3600000
-numLabels: 1
-numObstacles: 10
+mapPeriod: 600000
+numRandomLabels: 1
+labelPeriod: 600000
+numRandomObstacles: 0
+obstaclePeriod: 600000
 errSigma: 0.05
 errSensor: 0.05
 sensorReceptiveAngle: 15
@@ -21,4 +22,4 @@ interval: 100
 cameraInterval: 500
 motionInterval: 500
 proxyInterval: 500
-tickInterval: 1
+tickInterval: 0

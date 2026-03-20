@@ -33,59 +33,56 @@ import io.reactivex.rxjava3.subscribers.TestSubscriber;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mmarini.RandomArgumentsGenerator;
 
 import java.awt.geom.Point2D;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import static java.lang.Math.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.TestFunctions.*;
 import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
-import static org.mmarini.wheelly.apis.RobotSpec.DISTANCE_PER_PULSE;
+import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_TARGET_RANGE;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_ANGULAR_VELOCITY;
 import static rocks.cleancode.hamcrest.record.HasFieldMatcher.field;
 
 class SimRobotTest {
 
-    public static final int SEED = 1234;
+    public static final long SEED = 1234;
     public static final long MESSAGE_INTERVAL = 500;
     public static final float GRID_SIZE = 0.2f;
-    public static final double ACCELERATION = 1d / DISTANCE_PER_PULSE; // ppss
     public static final int STALEMATE_INTERVAL = 60000;
     public static final int INTERVAL = 10;
     private static final double PULSES_EPSILON = 1;
     public static final int CLOSE_DELAY = 100;
+    public static final int NUM_CASES = 100;
+    public static final double MAX_DISTANCE = 1;
 
     /**
      * Given a simulated robot with an obstacle map grid of 0.2 m without obstacles
      */
     private static SimRobot createRobot() {
         return new SimRobot(DEFAULT_ROBOT_SPEC, new Random(SEED), new Random(SEED),
-                0, INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL, 0, 0, RobotSpec.MAX_PPS, List.of(), 0, 0, 0, 0
+                0, INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL, 0, 0, List.of(), 0, 0, 0, 0
         );
     }
 
-    /**
-     * Returns the space traveled (m) in the given markerTime with uniformly accelerated motion
-     * till max power
-     *
-     * @param maxSpeed the max power
-     * @param dt       the markerTime
-     */
-    private static double expectedPulses(int maxSpeed, long dt) {
-        // Computes space limited by markerTime in uniformly accelerated motion
-        double sa = ACCELERATION * dt * dt / 2 / 1e6;
-        // Computes space limited by power in uniformly accelerated motion
-        double sb = maxSpeed * maxSpeed / ACCELERATION / 2;
-        double sl = maxSpeed * dt / 1e3 - sb;
-        return sa <= sb ? sa
-                : sl;
+    public static Stream<Arguments> dataFar() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(0, 359) // int robotDeg
+                .uniform(0, 359) // int targetDeg
+                .uniform(0, MAX_DISTANCE, 9) // double targetDistance
+                .build(NUM_CASES);
     }
 
     private SimRobot robot;
@@ -105,18 +102,24 @@ class SimRobotTest {
         assertEquals(0L, robot.simulationTime());
     }
 
-    @Test
-    void testMoveFrom0To0ByMAX() {
+    @ParameterizedTest(name = "[{index}] R{0}, Target {1} DEG, {2} m")
+    @MethodSource({
+            "dataFar",
+    })
+    void testBackward(int robotDeg, int targetAngle, double targetDistance) {
         // Given a robot connected and robotConfigured
-        int speed = RobotSpec.MAX_PPS;
-        long rt = 1000;
+        Complex robotDirection = Complex.fromDeg(robotDeg);
+        this.robot.robotDir(robotDirection);
+        Point2D target = Complex.fromDeg(targetAngle).add(robotDirection)
+                .at(new Point2D.Double(), targetDistance);
+        long rt = 10000;
         TestSubscriber<WheellyMotionMessage> subscriber = new TestSubscriber<>();
         robot.readMotion()
                 .subscribe(subscriber);
 
         // When move to 0 DEG at max power
         robot.connect();
-        robot.move(0, speed);
+        robot.backward(target);
         // And waiting for messages with time > 500
         pause(robot, rt + 1);
         robot.close();
@@ -125,14 +128,42 @@ class SimRobotTest {
         subscriber.assertComplete();
         subscriber.assertNoErrors();
         List<WheellyMotionMessage> messages = subscriber.values();
-        WheellyMotionMessage motion = findMessage(messages, after(MESSAGE_INTERVAL));
+        WheellyMotionMessage motion = messages.getLast();
 
-        double yPulses = expectedPulses(speed, rt);
+        assertNotNull(motion);
+        assertThat(motion.robotLocation(), pointCloseTo(target, DEFAULT_TARGET_RANGE));
+    }
 
-        assertThat(motion, field("simulationTime", equalTo(rt)));
-        assertThat(motion, field("xPulses", closeTo(0, PULSES_EPSILON)));
-        assertThat(motion, field("yPulses", closeTo(yPulses, PULSES_EPSILON)));
-        assertThat(motion, field("directionDeg", equalTo(0)));
+    @ParameterizedTest(name = "[{index}] R{0}, Target {1} DEG, {2} m")
+    @MethodSource({
+            "dataFar",
+    })
+    void testForward(int robotDeg, int targetAngle, double targetDistance) {
+        // Given a robot connected and robotConfigured
+        Complex robotDirection = Complex.fromDeg(robotDeg);
+        this.robot.robotDir(robotDirection);
+        Point2D target = Complex.fromDeg(targetAngle).add(robotDirection)
+                .at(new Point2D.Double(), targetDistance);
+        long rt = 10000;
+        TestSubscriber<WheellyMotionMessage> subscriber = new TestSubscriber<>();
+        robot.readMotion()
+                .subscribe(subscriber);
+
+        // When move to 0 DEG at max power
+        robot.connect();
+        robot.forward(target);
+        // And waiting for messages with time > 500
+        pause(robot, rt + 1);
+        robot.close();
+
+        // Then ...
+        subscriber.assertComplete();
+        subscriber.assertNoErrors();
+        List<WheellyMotionMessage> messages = subscriber.values();
+        WheellyMotionMessage motion = messages.getLast();
+
+        assertNotNull(motion);
+        assertThat(motion.robotLocation(), pointCloseTo(target, DEFAULT_TARGET_RANGE));
     }
 
     @ParameterizedTest
@@ -145,7 +176,7 @@ class SimRobotTest {
 
         // When move to 5 DEG at 0 power
         robot.connect();
-        robot.move(dir, 0);
+        robot.rotate(dir);
         pause(robot, MESSAGE_INTERVAL + 1);
         robot.close();
         robot.readRobotStatus().blockingSubscribe();

@@ -28,7 +28,6 @@
 
 package org.mmarini.wheelly.apis;
 
-import org.mmarini.NotImplementedException;
 import org.mmarini.Tuple2;
 
 import java.awt.geom.Point2D;
@@ -63,14 +62,15 @@ public interface InferenceReader extends AutoCloseable, DataReader {
      *
      * @throws IOException in case of error
      */
-    default RobotCommandsOld readCommands() throws IOException {
-        boolean scan = readBoolean();
-        Complex scanDirection = readDeg();
-        boolean move = readBoolean();
-        boolean halt = readBoolean();
-        Complex moveDirection = readDeg();
-        int speed = readInt();
-        return new RobotCommandsOld(scan, scanDirection, move, halt, moveDirection, speed);
+    default RobotCommands readCommands() throws IOException {
+        RobotStatusId status = RobotStatusId.values()[readInt()];
+        int headDeg = readInt();
+        return switch (status) {
+            case HALT -> RobotCommands.halt(headDeg);
+            case ROTATE -> RobotCommands.rotate(headDeg, readInt());
+            case FORWARD -> RobotCommands.forward(headDeg, readPoint2D());
+            case BACKWARD -> RobotCommands.backward(headDeg, readPoint2D());
+        };
     }
 
     /**
@@ -78,9 +78,9 @@ public interface InferenceReader extends AutoCloseable, DataReader {
      *
      * @throws IOException in case of error
      */
-    default Tuple2<WorldModel, RobotCommandsOld> readRecord() throws IOException {
+    default Tuple2<WorldModel, RobotCommands> readRecord() throws IOException {
         WorldModel model = readModel();
-        RobotCommandsOld commands = readCommands();
+        RobotCommands commands = readCommands();
         return Tuple2.of(model, commands);
     }
 
@@ -175,21 +175,24 @@ public interface InferenceReader extends AutoCloseable, DataReader {
     }
 
     default RobotSpec readRobotSpec() throws IOException {
-        throw new NotImplementedException();
-        /* TODO
-        return new RobotSpec(readDouble(),
-                readDeg(),
-                readDouble(),
-                readDeg(),
-                readPoint2D(),
-                readDouble(),
-                readDouble(),
-                readDouble(),
-                readDeg(),
-                // TODO
-                0, Complex.DEG0);
-
-         */
+        return new RobotSpec(readDouble(), // maxRadarDistance
+                readDeg(), // lidarFOV
+                readDouble(), // contactRadius
+                readDeg(), // cameraFOV
+                readPoint2D(), // headLocation
+                readDouble(), // frontLidarDistance
+                readDouble(), // rearLidarDistance
+                readDouble(), // cameraDistance
+                readDeg(), // headFOV
+                readDouble(), // targetRange
+                readDeg(), // directionRange
+                readDeg(), // maxRotRange
+                readInt(), // maxRotPps
+                readInt(), // maxSpeed
+                readDouble(), // decelerateDistance
+                readLong(), // sendInterval
+                readLong() // scanInterval
+        );
     }
 
     default WorldModelSpec readWorldSpec() throws IOException {
