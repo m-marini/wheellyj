@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#587](https://github.com/m-marini/wheellyj/issues/587): Matrix monitor with goto commands
 - Issue [#588](https://github.com/m-marini/wheellyj/issues/588): Checkup with goto commands
 - Issue [#592](https://github.com/m-marini/wheellyj/issues/592): Move partial robot config in robot spec
+- Issue [#596](https://github.com/m-marini/wheellyj/issues/596): Camera calibratin with goto commands
 
 ## [0.26.0] 2026-02-26
 

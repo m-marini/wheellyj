@@ -36,7 +36,6 @@ import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
-import org.mmarini.NotImplementedException;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.apis.*;
@@ -122,6 +121,7 @@ public class CameraCalibration {
     private int direction;
     private int samplingCounter;
     private long samplingStart;
+    private int maxHeadDeg;
 
     /**
      * Creates the camera calibration application
@@ -173,6 +173,7 @@ public class CameraCalibration {
         JsonNode config = org.mmarini.yaml.Utils.fromFile(parseArgs.getString("config"));
         WheellyJsonSchemas.instance().validateOrThrow(config, MONITOR_SCHEMA_YML);
         this.robot = AppYaml.robotFromJson(config);
+        this.maxHeadDeg = robot.robotSpec().headFOV().toIntDeg() / 2;
         this.controller = AppYaml.controllerFromJson(config);
 
         // Creates the frames
@@ -215,15 +216,16 @@ public class CameraCalibration {
         Stream.of(comFrame, sensorFrame, commandFrame).forEach(f -> f.setVisible(true));
     }
 
+    /**
+     * Halts the robot and reset the state
+     */
     private void halt() {
         currentState = null;
-        throw new NotImplementedException();
-        // TODO
-        //controller.execute(RobotCommandsOld.haltCommand());
+        controller.execute(RobotCommands.halt());
     }
 
     /**
-     * Initialize the check
+     * Initializes the check
      *
      * @param args the command line arguments
      * @throws ArgumentParserException in case of error
@@ -246,19 +248,30 @@ public class CameraCalibration {
         reconnectButton.addActionListener(this::onReconnectButton);
     }
 
-    private Consumer<RobotStatus> moveSensor(int direction) {
+    /**
+     * Moves the head
+     *
+     * @param direction the head angle (DEG)
+     */
+    private Consumer<RobotStatus> moveHead(int direction) {
         logger.atInfo().log("move {}", direction);
-        this.direction = clamp(direction, -90, 90);
+        this.direction = clamp(direction, -maxHeadDeg, maxHeadDeg);
         this.currentState = this::positioning;
         return currentState;
     }
 
+    /**
+     * Move to next direction
+     *
+     * @param status the robot status
+     * @param step   the head rotation step (DEG)
+     */
     private void nextDirection(RobotStatus status, int step) {
-        if (direction >= 90) {
+        if (direction >= maxHeadDeg) {
             halt();
             processSamples();
         } else {
-            moveSensor(direction + step).accept(status);
+            moveHead(direction + step).accept(status);
         }
     }
 
@@ -324,12 +337,15 @@ public class CameraCalibration {
         sensorMonitor.onStatus(status);
     }
 
+    /**
+     * Wait for head in correct position
+     *
+     * @param status the robot status
+     */
     private void positioning(RobotStatus status) {
         WheellyLidarMessage lidar = status.lidarMessage();
         if (lidar.headDirectionDeg() != direction) {
-            throw new NotImplementedException();
-            // TODO
-            // controller.execute(RobotCommandsOld.scan(Complex.fromDeg(direction)));
+            controller.execute(RobotCommands.halt(direction));
         } else {
             sample().accept(status);
         }
@@ -356,7 +372,7 @@ public class CameraCalibration {
         if (maxRight == null || maxLeft == null || minRight == null || minLeft == null) {
             logger.atError().log("Inconsistent samples");
             samples.clear();
-            moveSensor(-90);
+            moveHead(-90);
             return;
         }
         double x0 = maxLeft.xLabel;
@@ -382,10 +398,14 @@ public class CameraCalibration {
         createConnections();
         createFlows();
         comFrame.setState(JFrame.ICONIFIED);
-        moveSensor(-90);
+        moveHead(-maxHeadDeg);
         controller.start();
     }
 
+    /**
+     *
+     * Sets and returns the initialized state of sampling (counter = 0, start = 0)
+     */
     private Consumer<RobotStatus> sample() {
         logger.atDebug().log("Sampling");
         currentState = this::sampling;
@@ -394,6 +414,11 @@ public class CameraCalibration {
         return currentState;
     }
 
+    /**
+     * Handle the status during sampling
+     *
+     * @param status the robot status
+     */
     private void sampling(RobotStatus status) {
         CameraEvent cameraEvent = status.cameraEvent().camerEvent();
         WheellyLidarMessage lidar = status.lidarMessage();
