@@ -42,7 +42,7 @@ import java.util.Map;
 public interface ActionFunction {
 
     /**
-     * Returns the roboto command for the given action signals in the given world context
+     * Returns the robot commands for the given action signals in the given world context
      *
      * @param states  the world contexts
      * @param actions the actions

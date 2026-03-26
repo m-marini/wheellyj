@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -34,7 +34,6 @@ import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
-import org.mmarini.wheelly.apis.WorldModellerConnector;
 
 import java.util.List;
 import java.util.Map;
@@ -42,13 +41,9 @@ import java.util.Map;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasKey;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mmarini.wheelly.envs.DLActionFunction.MOVE_ACTION_ID;
-import static org.mmarini.wheelly.envs.DLActionFunction.SENSOR_ACTION_ID;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mmarini.wheelly.envs.DLActionFunction.*;
 
 class DLEnvironmentTest {
-    public static final int NUM_SPEED_VALUES = 3;
     public static final int NUM_SENSOR_VALUES = 4;
     public static final int NUM_DIRECTION_VALUES = 4;
 
@@ -59,22 +54,21 @@ class DLEnvironmentTest {
     void setUp() {
         this.worldModel = new WorldModelBuilder()
                 .build();
-
-        WorldModellerConnector controller = mock();
-        when(controller.worldModelSpec()).thenReturn(worldModel.worldSpec());
-
-        ActionFunction actionFunction = new DLActionFunction(NUM_DIRECTION_VALUES, NUM_SPEED_VALUES, NUM_SENSOR_VALUES);
-        List<String> markers = List.of("A");
-        this.env = new DLEnvironment(actionFunction, spec -> DLStateFunction.create(spec, markers));
+        ActionFunction actionFunction = DLActionFunction.create(NUM_DIRECTION_VALUES, NUM_SENSOR_VALUES,
+                DEFAULT_GRID_SIZE, DEFAULT_GRID_STEP, DEFAULT_HIDE_RADIUS);
+        this.env = new DLEnvironment(actionFunction, spec ->
+                DLStateFunction.create(spec, List.of("A")));
     }
 
     @Test
     void testActionSpec() {
         Map<String, SignalSpec> actions = env.actionSpec();
         assertThat(actions, hasKey(MOVE_ACTION_ID));
-        assertThat(actions, hasKey(SENSOR_ACTION_ID));
+        assertThat(actions, hasKey(HEAD_ACTION_ID));
 
-        assertEquals(new IntSignalSpec(new long[]{1}, NUM_DIRECTION_VALUES * NUM_SPEED_VALUES), actions.get(MOVE_ACTION_ID));
-        assertEquals(new IntSignalSpec(new long[]{1}, NUM_SENSOR_VALUES), actions.get(SENSOR_ACTION_ID));
+        assertEquals(new IntSignalSpec(new long[]{1},
+                        NUM_DIRECTION_VALUES + 1 + DLActionFunctionTest.DEFAULT_NUM_MOVE_ACTIONS * 2),
+                actions.get(MOVE_ACTION_ID));
+        assertEquals(new IntSignalSpec(new long[]{1}, NUM_SENSOR_VALUES), actions.get(HEAD_ACTION_ID));
     }
 }

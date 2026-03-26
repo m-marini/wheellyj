@@ -203,7 +203,7 @@ public class MatrixMonitor {
         targetField.setColumns(13);
         targetField.setEditable(false);
         targetField.setHorizontalAlignment(SwingConstants.CENTER);
-        updateTarget();
+        //updateTarget();
 
         haltButton.setBackground(Color.RED);
         haltButton.setForeground(Color.WHITE);
@@ -259,7 +259,7 @@ public class MatrixMonitor {
         WheellyJsonSchemas.instance().validateOrThrow(config, MONITOR_SCHEMA_YML);
         this.robot = AppYaml.robotFromJson(config);
         this.controller = AppYaml.controllerFromJson(config);
-        this.distanceRange = robot.robotSpec().targetRange();
+        this.distanceRange = robot.robotSpec().targetRange() + RobotSpec.DISTANCE_PER_PULSE;
         this.directionRange = robot.robotSpec().directionRange().toIntDeg();
 
         // Creates the frames
@@ -380,7 +380,6 @@ public class MatrixMonitor {
     private void onDistanceSlider(ChangeEvent changeEvent) {
         int distance = distanceSlider.getValue();
         distanceField.setValue(distance);
-        updateTarget();
     }
 
     /**
@@ -405,11 +404,9 @@ public class MatrixMonitor {
      * @param actionEvent the event
      */
     private void onHaltButton(ActionEvent actionEvent) {
-        sensorDirSlider.setValue(0);
-        command = RobotCommands.halt();
+        //sensorDirSlider.setValue(0);
+        command = RobotCommands.halt(this.sensorDirSlider.getValue());
         controller.execute(command);
-        robot.scan(0).subscribe();
-        robot.halt().subscribe();
         halt = true;
         forwardButton.setEnabled(true);
         rotateButton.setEnabled(true);
@@ -426,18 +423,18 @@ public class MatrixMonitor {
      */
     private void onInference(RobotStatus status) {
         logger.atDebug().log("onInference");
+        double distance = status.location().distance(target);
+        logger.atInfo().log("distance {}", distance);
         if (!halt
                 && status.halt()
                 && (command.isRotate() && status.direction().isCloseTo(robotDirSlider.getValue(),
                 directionRange)
                 || (!command.isHalt() && !command.isRotate()
-                && status.location().distance(target) < distanceRange)
+                && distance < distanceRange)
         )
         ) {
-            command = RobotCommands.halt();
+            command = RobotCommands.halt(sensorDirSlider.getValue());
             controller.execute(command);
-            robot.scan(0).subscribe();
-            robot.halt().subscribe();
             halt = true;
             forwardButton.setEnabled(true);
             rotateButton.setEnabled(true);
@@ -451,6 +448,7 @@ public class MatrixMonitor {
 
     private void onLatch(RobotStatus robotStatus) {
         logger.atDebug().log("onLatch");
+        updateTarget(robotStatus);
     }
 
     /**
@@ -470,7 +468,6 @@ public class MatrixMonitor {
     private void onRobotDirSlider(ChangeEvent changeEvent) {
         int robotDir = robotDirSlider.getValue();
         robotDirField.setValue(robotDir);
-        updateTarget();
     }
 
     /**
@@ -556,8 +553,10 @@ public class MatrixMonitor {
         return target;
     }
 
-    private void updateTarget() {
-        target = robotDir().at(new Point2D.Double(), mm2m(distanceSlider.getValue() * 10));
-        targetField.setText(format("%.3f %.3f", target.getX(), target.getY()));
+    private void updateTarget(RobotStatus status) {
+        if (halt) {
+            target = robotDir().at(status.location(), mm2m(distanceSlider.getValue() * 10));
+            targetField.setText(format("%.3f %.3f", target.getX(), target.getY()));
+        }
     }
 }

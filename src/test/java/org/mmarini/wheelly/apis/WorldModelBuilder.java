@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -33,6 +33,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.UnaryOperator;
+import java.util.stream.IntStream;
 
 import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
 import static org.mmarini.wheelly.apis.Utils.m2mm;
@@ -64,6 +66,10 @@ public class WorldModelBuilder {
     private Point2D robotLocation;
     private GridTopology topology;
     private int numSectors;
+    private double leftPps;
+    private double rightPps;
+    private IntStream cellIndexStream;
+    private UnaryOperator<MapCell> cellMapper;
 
     public WorldModelBuilder() {
         this.echoCells = new HashSet<>();
@@ -114,6 +120,9 @@ public class WorldModelBuilder {
             radarMap = radarMap.updateCellAt(location, cell ->
                     cell.setContact(simulationTime));
         }
+        if (cellIndexStream != null && cellMapper != null) {
+            radarMap = radarMap.map(cellIndexStream, cellMapper);
+        }
         Map<String, LabelMarker> markers = new HashMap<>();
         for (Map.Entry<String, Point2D> entry : labelCells.entrySet()) {
             String code = entry.getKey();
@@ -151,7 +160,8 @@ public class WorldModelBuilder {
         WheellyLidarMessage lidars = new WheellyLidarMessage(simulationTime, m2mm(frontDistance), m2mm(rearDistance), xPulses, yPulses, robotDirDeg, sensorDirDeg);
         return new RobotStatus(DEFAULT_ROBOT_SPEC, 1, motion, contacts,
                 InferenceFileReader.DEFAULT_SUPPLY_MESSAGE,
-                InferenceFileReader.DEFAULT_DECODE_VOLTAGE, new CorrelatedCameraEvent(camera, lidars), lidars);
+                InferenceFileReader.DEFAULT_DECODE_VOLTAGE, new CorrelatedCameraEvent(camera, lidars), lidars)
+                .setSpeeds(leftPps, rightPps);
     }
 
     public WorldModelBuilder frontDistance(double frontDistance) {
@@ -166,6 +176,12 @@ public class WorldModelBuilder {
 
     public WorldModelBuilder gridMapSize(int gridMapSize) {
         this.gridMapSize = gridMapSize;
+        return this;
+    }
+
+    public WorldModelBuilder mapRadar(IntStream range, UnaryOperator<MapCell> mapper) {
+        cellIndexStream = range;
+        cellMapper = mapper;
         return this;
     }
 
@@ -194,8 +210,14 @@ public class WorldModelBuilder {
         return this;
     }
 
-    public WorldModelBuilder sensorDir(int sensorDirDeg) {
+    public WorldModelBuilder headAngle(int sensorDirDeg) {
         this.sensorDirDeg = sensorDirDeg;
+        return this;
+    }
+
+    public WorldModelBuilder robotSpeed(double leftPps, double rightPps) {
+        this.leftPps = leftPps;
+        this.rightPps = rightPps;
         return this;
     }
 

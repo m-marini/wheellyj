@@ -29,334 +29,1300 @@
 package org.mmarini.wheelly.envs;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
-import org.mmarini.rl.envs.ArraySignal;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommandsOld;
-import org.mmarini.wheelly.apis.WorldModel;
-import org.mmarini.wheelly.apis.WorldModelBuilder;
-import org.nd4j.linalg.api.buffer.DataType;
-import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.factory.Nd4j;
+import org.mmarini.rl.envs.*;
+import org.mmarini.wheelly.apis.*;
 
+import java.awt.geom.Point2D;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static java.lang.Math.clamp;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mmarini.Matchers.angleCloseTo;
+import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
-import static org.mmarini.wheelly.envs.DLActionFunction.MOVE_ACTION_ID;
-import static org.mmarini.wheelly.envs.DLActionFunction.SENSOR_ACTION_ID;
+import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_HEAD_FOV_DEG;
+import static org.mmarini.wheelly.apis.Utils.MM;
+import static org.mmarini.wheelly.envs.DLActionFunction.*;
 
 class DLActionFunctionTest {
-    public static final int NUM_DIRECTIONS = 24;
-    public static final int NUM_SPEEDS = 5;
-    public static final int NUM_MOVE_ACTIONS = NUM_DIRECTIONS * NUM_SPEEDS;
-    public static final int NUM_SENSOR_DIRECTIONS = 9;
     public static final double EPSILON = 1e-5;
     public static final int SEED = 1234;
+    public static final int DEFAULT_NUM_MOVE_ACTIONS = DLActionFunction.DEFAULT_GRID_SIZE * DLActionFunction.DEFAULT_GRID_SIZE - 5;
+    public static final int NUM_RANDOM_TEST_CASES = 100;
+    public static final int FORWARD_SW = 37;
+    public static final int FORWARD_SE = 67;
+    public static final int FORWARD_NW = 962;
+    public static final int FORWARD_NE = 992;
+    public static final int BACKWARD_SW = 993;
+    public static final int BACKWARD_SE = 1023;
+    public static final int BACKWARD_NW = 1918;
+    public static final int BACKWARD_NE = 1948;
 
-    static Stream<Arguments> dataActionSignals() {
+    public static Stream<Arguments> dataDecodeCommandBackward() {
         return RandomArgumentsGenerator.create(SEED)
-                .uniform(0, 359)
-                .uniform(-90, 90)
-                .uniform(-90, 90)
-                .build(100);
+                .uniform(-2.0, 2.0, 9) // double robotX
+                .uniform(-2.0, 2.0, 9) // double robotY
+                .uniform(0, 359) // int robotDeg
+                .uniform(0, DEFAULT_NUM_HEAD_ROTATIONS - 1) // int headCommand                .
+                .uniform(DEFAULT_NUM_ROTATIONS + 1 + DEFAULT_NUM_MOVE_ACTIONS, DEFAULT_NUM_ROTATIONS + DEFAULT_NUM_MOVE_ACTIONS * 2) // int moveCommand                .
+                .build(NUM_RANDOM_TEST_CASES);
     }
 
-    private DLActionFunction dataGen;
+    public static Stream<Arguments> dataDecodeCommandForward() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-2.0, 2.0, 9) // double robotX
+                .uniform(-2.0, 2.0, 9) // double robotY
+                .uniform(0, 359) // int robotDeg
+                .uniform(0, DEFAULT_NUM_HEAD_ROTATIONS - 1) // int headCommand                .
+                .uniform(DEFAULT_NUM_ROTATIONS + 1, DEFAULT_NUM_ROTATIONS + DEFAULT_NUM_MOVE_ACTIONS) // int moveCommand                .
+                .build(NUM_RANDOM_TEST_CASES);
+    }
+
+    public static Stream<Arguments> dataDecodeCommandRotation() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-2.0, 2.0, 9) // double robotX
+                .uniform(-2.0, 2.0, 9) // double robotY
+                .uniform(0, 359) // int robotDeg
+                .uniform(0, DEFAULT_NUM_HEAD_ROTATIONS - 1) // int headCommand                .
+                .uniform(1, DEFAULT_NUM_ROTATIONS) // int rotateCommand                .
+                .build(NUM_RANDOM_TEST_CASES);
+    }
+
+    public static Stream<Arguments> dataE() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-2.0, 2.0, 9) // robotX
+                .uniform(-2.0, 2.0, 9) // robotY
+                .uniform(46, 134)
+                .build(NUM_RANDOM_TEST_CASES);
+    }
+
+    public static Stream<Arguments> dataHeadAngle() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-2.0, 2.0, 9) // double robotX
+                .uniform(-2.0, 2.0, 9) // double robotY
+                .uniform(0, 359) // int robotDeg
+                .uniform(0, DEFAULT_NUM_HEAD_ROTATIONS - 1) // int headCommand                .
+                .build(NUM_RANDOM_TEST_CASES);
+    }
+
+    public static Stream<Arguments> dataNE() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-2.0, 2.0, 9) // robotX
+                .uniform(-2.0, 2.0, 9) // robotY
+                .uniform(315, 359)
+                .build(NUM_RANDOM_TEST_CASES);
+    }
+
+    public static Stream<Arguments> dataNW() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-2.0, 2.0, 9) // robotX
+                .uniform(-2.0, 2.0, 9) // robotY
+                .uniform(0, 44)
+                .build(NUM_RANDOM_TEST_CASES);
+    }
+
+    public static Stream<Arguments> dataRotation() {
+        return IntStream.range(0, DEFAULT_NUM_ROTATIONS)
+                .mapToObj(i ->
+                        Arguments.of(
+                                i + 1,
+                                i * 360 / DEFAULT_NUM_ROTATIONS
+                        )
+                );
+    }
+
+    public static Stream<Arguments> dataS() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-2.0, 2.0, 9) // robotX
+                .uniform(-2.0, 2.0, 9) // robotY
+                .uniform(136, 224)
+                .build(NUM_RANDOM_TEST_CASES);
+    }
+
+    public static Stream<Arguments> dataW() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-2.0, 2.0, 9) // robotX
+                .uniform(-2.0, 2.0, 9) // robotY
+                .uniform(226, 314)
+                .build(NUM_RANDOM_TEST_CASES);
+    }
+
+    private DLActionFunction function;
+    private WorldModel model;
+
+    void createWorldModel(double robotX, double robotY, int robotDeg) {
+        this.model = new WorldModelBuilder()
+                .robotLocation(new Point2D.Double(robotX, robotY))
+                .robotDir(robotDeg)
+                .build();
+    }
 
     @BeforeEach
     void setUp() {
-        this.dataGen = new DLActionFunction(NUM_DIRECTIONS, NUM_SPEEDS, NUM_SENSOR_DIRECTIONS);
-
+        function = create(DEFAULT_NUM_ROTATIONS, DEFAULT_NUM_HEAD_ROTATIONS, DEFAULT_GRID_SIZE, DEFAULT_GRID_STEP, DEFAULT_HIDE_RADIUS);
     }
 
-    @ParameterizedTest(name = "[{index}] R{0} move={1}, scan={2}")
+    @ParameterizedTest
     @CsvSource({
-            "0, 0,0, -90,false,-180,-60",
-            "0, 0,1, -90,false,-180,-60",
-            "0, 0,2, -67,false,-180,-60",
-            "0, 0,4, 0,false,-180,-60",
-            "0, 0,6, 68,false,-180,-60",
-            "0, 0,7, 90,false,-180,-60",
-            "0, 0,8, 90,false,-180,-60",
+            "0,0, 0, -3,-3, 993",
+            "0,0, 0, 3,-3, 1023",
+            "0,0, 0, -3,3, 1918",
+            "0,0, 0, 3,3, 1948",
 
-            "0, 1,4, 0,false,-180,-30",
-            "0, 2,4, 0,false,-180,0",
-            "0, 3,4, 0,false,-180,30",
-            "0, 4,4, 0,false,-180,60",
+            "0,0, 90, -3,-3, 1023",
+            "0,0, 90, 3,-3, 1948",
+            "0,0, 90, -3,3, 993",
+            "0,0, 90, 3,3, 1918",
 
-            "0, 5,4, 0,false,-165,-60",
-            "0, 6,4, 0,false,-165,-30",
-            "0, 7,4, 0,false,-165,0",
-            "0, 8,4, 0,false,-165,30",
-            "0, 9,4, 0,false,-165,60",
+            "0,0, -90, -3,-3, 1918",
+            "0,0, -90, 3,-3, 993",
+            "0,0, -90, -3,3, 1948",
+            "0,0, -90, 3,3, 1023",
 
-            "0, 60,4, 0,false,0,-60",
-            "0, 61,4, 0,false,0,-30",
-            "0, 62,4, 0,true,0,0",
-            "0, 63,4, 0,false,0,30",
-            "0, 64,4, 0,false,0,60",
+            "0,0, -180, -3,-3, 1948",
+            "0,0, -180, 3,-3, 1918",
+            "0,0, -180, -3,3, 1023",
+            "0,0, -180, 3,3, 993",
 
-            "0, 115,4, 0,false,165,-60",
-            "0, 116,4, 0,false,165,-30",
-            "0, 117,4, 0,false,165,0",
-            "0, 118,4, 0,false,165,30",
-            "0, 119,4, 0,false,165,60",
+            "1,1, 0, -2,-2, 993",
+            "1,1, 0, 4,4, 1948",
+            "1,1, 90, -2,-2, 1023",
+            "1,1, 90, 4,4, 1918",
+            "1,1, -90, -2,-2, 1918",
+            "1,1, -90, 4,4, 1023",
+            "1,1, -180, -2,-2, 1948",
+            "1,1, -180, 4,4, 993",
+    })
+    void testBackwardIndex(double robotX, double robotY, int robotDeg, double targetX, double targetY, int expectedIndex) {
+        // Given the world model
+        createWorldModel(robotX, robotY, robotDeg);
+        Point2D target = new Point2D.Double(targetX, targetY);
+        RobotCommands cmd = RobotCommands.backward(target);
+        // When ...
+        int idx = function.moveIndex(cmd, model);
 
-            "-44, 0,0, -90,false,-180,-60",
-            "-44, 0,4, 44,false,-180,-60",
-            "-44, 0,8, 90,false,-180,-60",
+        // Then ...
+        assertEquals(expectedIndex, idx);
+    }
 
-            "44, 0,0, -90,false,-180,-60",
-            "44, 0,4, -44,false,-180,-60",
-            "44, 0,8, 90,false,-180,-60",
-
-            "-46, 0,0, -90,false,90,-60",
-            "-46, 0,4, -44,false,90,-60",
-            "-46, 0,8, 90,false,90,-60",
-
-            "-90, 0,0, -90,false,90,-60",
-            "-90, 0,4, 0,false,90,-60",
-            "-90, 0,8, 90,false,90,-60",
-
-            "-180, 0,0, -90,false,0,-60",
-            "-180, 0,4, 0,false,0,-60",
-            "-180, 0,8, 90,false,0,-60",})
-    void testActionCommand(int directionDeg, int moveAction, int scanAction,
-                           int expScan, boolean expHalt, int expDir, int expSpeed) {
-        // Given
-        WorldModel model = new WorldModelBuilder()
-                .robotDir(directionDeg)
-                .build();
-        List<WorldModel> states = List.of(model, model);
+    @ParameterizedTest(name = "[{index}], Robot @({0},{1}) R{2}, headCmd={3}")
+    @MethodSource("dataHeadAngle")
+    void testCommandHalt(double robotX, double robotY, int robotDeg, int headCommand) {
+        createWorldModel(robotX, robotY, robotDeg);
+        Complex relHeadAngle = Complex.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
+        Complex absHeadAngle = model.gridMap().direction().add(relHeadAngle);
+        int expectedHead = absHeadAngle.sub(model.robotStatus().direction()).toIntDeg();
+        expectedHead = clamp(expectedHead, -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
         Map<String, Signal> signals = Map.of(
-                MOVE_ACTION_ID, new ArraySignal(
-                        Nd4j.createFromArray(moveAction, moveAction)
-                                .castTo(DataType.FLOAT)
-                                .reshape(2, 1)),
-                SENSOR_ACTION_ID, new ArraySignal(
-                        Nd4j.createFromArray(scanAction, scanAction)
-                                .castTo(DataType.FLOAT)
-                                .reshape(2, 1))
+                HEAD_ACTION_ID, IntSignal.create(new long[]{2, 1}, headCommand, headCommand),
+                MOVE_ACTION_ID, IntSignal.create(new long[]{2, 1}, 0, 0)
         );
-        // When ...
-        List<RobotCommandsOld> commands = dataGen.actions(states, signals);
+
+        // When decode command
+        List<RobotCommands> cmd = function.commands(signals, model, model);
 
         // Then ...
-        assertThat(commands, hasSize(2));
-        for (int i = 0; i < 2; i++) {
-            RobotCommandsOld command = commands.get(i);
-            assertTrue(command.scan());
-            assertEquals(expHalt, command.halt());
-            assertEquals(!expHalt, command.move());
-            assertEquals(expScan, command.scanDirection().toIntDeg());
-            assertEquals(expDir, command.moveDirection().toIntDeg());
-            assertEquals(expSpeed, command.speed());
-        }
+        assertNotNull(cmd);
+        assertThat(cmd, hasSize(2));
+        assertTrue(cmd.getFirst().isHalt());
+        assertTrue(cmd.getLast().isHalt());
+        assertEquals(expectedHead, cmd.getFirst().scanDirection());
+        assertEquals(expectedHead, cmd.getLast().scanDirection());
     }
 
-    @ParameterizedTest
-    @MethodSource("dataActionSignals")
-    void testActionSignals(int directionDeg, int sensorDeg, int scanDeg) {
-        // Given
-        WorldModel model = new WorldModelBuilder()
-                .robotDir(directionDeg)
-                .sensorDir(sensorDeg)
-                .build();
-        List<WorldModel> states = List.of(model, model);
-        RobotCommandsOld command = RobotCommandsOld.scan(Complex.fromDeg(scanDeg));
-        List<RobotCommandsOld> commands = List.of(command, command);
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1}) R{2} headCmd={3} moveCmd={4}")
+    @MethodSource("dataDecodeCommandRotation")
+    void testCommandRotation(double robotX, double robotY, int robotDeg, int headCommand, int moveCommand) {
+        createWorldModel(robotX, robotY, robotDeg);
+        Complex relHeadAngle = Complex.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
+        Complex absHeadAngle = model.gridMap().direction().add(relHeadAngle);
+        int expectedHead = absHeadAngle.sub(model.robotStatus().direction()).toIntDeg();
+        expectedHead = clamp(expectedHead, -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
+        int expectedDir = Complex.fromDeg((double) ((moveCommand - 1) * 360) / DEFAULT_NUM_ROTATIONS)
+                .add(model.gridMap().direction())
+                .toIntDeg();
+        Map<String, Signal> signals = Map.of(
+                HEAD_ACTION_ID, IntSignal.create(new long[]{2, 1}, headCommand, headCommand),
+                MOVE_ACTION_ID, IntSignal.create(new long[]{2, 1}, moveCommand, moveCommand)
+        );
 
-        // When ...
-        Map<String, Signal> signals = dataGen.actions(states, commands);
+        // When decode command
+        List<RobotCommands> cmd = function.commands(signals, model, model);
 
         // Then ...
-        assertThat(signals, hasKey(MOVE_ACTION_ID));
-        INDArray move = signals.get(MOVE_ACTION_ID).toINDArray();
-        Complex mapDir = model.gridMap().direction();
-        Complex moveDir = command.moveDirection().sub(mapDir);
-        int expectedMoveIndex = dataGen.moveIndex(moveDir, command.speed());
-        assertThat(expectedMoveIndex, allOf(greaterThanOrEqualTo(0), lessThan(NUM_MOVE_ACTIONS)));
-        assertThat(move, matrixCloseTo(new long[]{2, 1}, EPSILON, expectedMoveIndex, expectedMoveIndex));
-
-        // And
-        assertThat(signals, hasKey(SENSOR_ACTION_ID));
-        INDArray sensor = signals.get(SENSOR_ACTION_ID).toINDArray();
-
-        Complex sensorMapDir = command.scanDirection().sub(mapDir);
-        int sensorIndex = dataGen.sensorIndex(sensorMapDir);
-        assertThat(sensor, matrixCloseTo(new long[]{2, 1}, EPSILON, sensorIndex, sensorIndex));
+        assertNotNull(cmd);
+        assertThat(cmd, hasSize(2));
+        assertTrue(cmd.getFirst().isRotate());
+        assertTrue(cmd.getLast().isRotate());
+        assertEquals(expectedHead, cmd.getFirst().scanDirection());
+        assertEquals(expectedHead, cmd.getLast().scanDirection());
+        assertEquals(expectedDir, cmd.getFirst().rotationDirection());
+        assertEquals(expectedDir, cmd.getLast().rotationDirection());
     }
 
-    @ParameterizedTest(name = "[{index}] move={1}")
-    @CsvSource({
-            "0, -180",
-            "1, -180",
-            "2, -180",
-            "3, -180",
-            "4, -180",
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1}) R{2} headCmd={3} moveCmd={4}")
+    @MethodSource("dataDecodeCommandBackward")
+    void testCommandsBackward(double robotX, double robotY, int robotDeg, int headCommand, int moveCommand) {
+        createWorldModel(robotX, robotY, robotDeg);
+        Complex relHeadAngle = Complex.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
+        Complex absHeadAngle = model.gridMap().direction().add(relHeadAngle);
+        int expectedHead = absHeadAngle.sub(model.robotStatus().direction()).toIntDeg();
+        expectedHead = clamp(expectedHead, -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
+        Point2D target = function.target(moveCommand, model.gridMap());
+        Map<String, Signal> signals = Map.of(
+                HEAD_ACTION_ID, IntSignal.create(new long[]{2, 1}, headCommand, headCommand),
+                MOVE_ACTION_ID, IntSignal.create(new long[]{2, 1}, moveCommand, moveCommand)
+        );
 
-            "5, -165",
-            "6, -165",
-            "7, -165",
-            "8, -165",
-            "9, -165",
+        // When decode command
+        List<RobotCommands> cmd = function.commands(signals, model, model);
 
-            "10, -150",
-            "11, -150",
-            "12, -150",
-            "13, -150",
-            "14, -150",
-
-            "62 ,0",
-
-            "115, 165",
-            "116, 165",
-            "117, 165",
-            "118, 165",
-            "119, 165",
-    })
-    void testDirection(int moveAction, int expDirDeg) {
-        assertEquals(expDirDeg, dataGen.direction(moveAction).toIntDeg());
+        // Then ...
+        assertNotNull(cmd);
+        assertThat(cmd, hasSize(2));
+        assertEquals(RobotStatusId.BACKWARD, cmd.getFirst().status());
+        assertEquals(RobotStatusId.BACKWARD, cmd.getLast().status());
+        assertEquals(expectedHead, cmd.getFirst().scanDirection());
+        assertEquals(expectedHead, cmd.getLast().scanDirection());
+        assertThat(cmd.getFirst().target(), pointCloseTo(target, MM));
+        assertThat(cmd.getLast().target(), pointCloseTo(target, MM));
     }
 
-    @ParameterizedTest
-    @CsvSource({
-            "-180, 0",
-            "-173, 0",
-            "-172, 1",
-            "-158, 1",
-            "-157, 2",
-            "-143, 2",
-            "-142, 3",
-            "-128, 3",
-            "-127, 4",
-            "-8, 11",
-            "-7, 12",
-            "7, 12",
-            "8, 13",
-            "157, 22",
-            "158, 23",
-            "172, 23",
-            "173, 0",
-            "179, 0",
-    })
-    void testDirectionIndex(int directionDeg, int expectedIndex) {
-        assertEquals(expectedIndex, dataGen.directionIndex(Complex.fromDeg(directionDeg)));
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1}) R{2} headCmd={3} moveCmd={4}")
+    @MethodSource("dataDecodeCommandForward")
+    void testCommandsForward(double robotX, double robotY, int robotDeg, int headCommand, int moveCommand) {
+        createWorldModel(robotX, robotY, robotDeg);
+        Complex relHeadAngle = Complex.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
+        Complex absHeadAngle = model.gridMap().direction().add(relHeadAngle);
+        int expectedHead = absHeadAngle.sub(model.robotStatus().direction()).toIntDeg();
+        expectedHead = clamp(expectedHead, -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
+        Point2D target = function.target(moveCommand, model.gridMap());
+        Map<String, Signal> signals = Map.of(
+                HEAD_ACTION_ID, IntSignal.create(new long[]{2, 1}, headCommand, headCommand),
+                MOVE_ACTION_ID, IntSignal.create(new long[]{2, 1}, moveCommand, moveCommand)
+        );
+
+        // When decode command
+        List<RobotCommands> cmd = function.commands(signals, model, model);
+
+        // Then ...
+        assertNotNull(cmd);
+        assertThat(cmd, hasSize(2));
+        assertEquals(RobotStatusId.FORWARD, cmd.getFirst().status());
+        assertEquals(RobotStatusId.FORWARD, cmd.getLast().status());
+        assertEquals(expectedHead, cmd.getFirst().scanDirection());
+        assertEquals(expectedHead, cmd.getLast().scanDirection());
+        assertThat(cmd.getFirst().target(), pointCloseTo(target, MM));
+        assertThat(cmd.getLast().target(), pointCloseTo(target, MM));
     }
 
     @ParameterizedTest
     @CsvSource({
-            "-180, -60, 0",
-            "-180, -30, 1",
-            "-180, 0, 2",
-            "-180, 30, 3",
-            "-180, 60, 4",
-            "0, -60, 60",
-            "0, -30, 61",
-            "0, 0, 62",
-            "0, 30, 63",
-            "0, 60, 64",
-            "179, -60, 0",
-            "179, -30, 1",
-            "179, 0, 2",
-            "179, 30, 3",
-            "179, 60, 4",
+            "5,0.20,0.25,20",
+            "5,0.20,0.30,16",
+            "9,0.20,0.30,72"
     })
-    void testMoveIndex(int directionDeg, int speed, int expectedIndex) {
-        assertEquals(expectedIndex, dataGen.moveIndex(Complex.fromDeg(directionDeg), speed));
-    }
+    void testCreate(int gridSize, double gridStep, double hideRadius, int numPoints) {
+        DLActionFunction function = create(DEFAULT_NUM_ROTATIONS, DEFAULT_NUM_HEAD_ROTATIONS, gridSize, gridStep, hideRadius);
 
-    @ParameterizedTest(name = "[{index}] move={1}")
-    @CsvSource({
-            "0, -135",
-            "1, -101",
-            "2, -67",
-            "3, -34",
-            "4, 0",
-            "5, 34",
-            "6, 68",
-            "7, 101",
-            "8, 135",
-    })
-    void testSensorDirection(int scanAction, int expDirDeg) {
-        assertEquals(expDirDeg, dataGen.sensorDirection(scanAction).toIntDeg());
+        // Then the map should contain n points
+        assertEquals(DEFAULT_NUM_ROTATIONS, function.numRotations());
+        assertEquals(DEFAULT_NUM_HEAD_ROTATIONS, function.numHeadRotations());
+        assertThat(function.indicesMap(), hasSize(numPoints));
     }
 
     @ParameterizedTest
     @CsvSource({
-            "-135, 0",
-            "-105, 0",
-            "-104, 1",
-            "-76, 1",
-            "-75, 2",
-            "-46, 2",
-            "-45, 3",
-            "-16, 3",
-            "-15, 4",
-            "14, 4",
-            "15, 5",
-            "44, 5",
-            "45, 6",
-            "74, 6",
-            "75, 7",
-            "104, 7",
-            "105, 8",
-            "135, 8",
+            "5,0.20,0.25,20",
+            "5,0.20,0.30,16",
+            "9,0.20,0.30,72"
     })
-    void testSensorIndex(int sensorDeg, int expectedIndex) {
-        assertEquals(expectedIndex, dataGen.sensorIndex(Complex.fromDeg(sensorDeg)));
+    void testCreateIndices(int gridSize, double gridStep, double hideRadius, int numPoints) {
+        List<Point2D> map = createIndicesMap(gridSize, gridStep, hideRadius);
+
+        // Then the map should contain n points
+        assertThat(map, hasSize(numPoints));
+        assertThat(map, hasItem(
+                pointCloseTo(
+                        -(gridSize - 1) * gridStep / 2,
+                        -(gridSize - 1) * gridStep / 2,
+                        MM)));
+        assertThat(map, hasItem(
+                pointCloseTo(
+                        (gridSize - 1) * gridStep / 2,
+                        -(gridSize - 1) * gridStep / 2,
+                        MM)));
+        assertThat(map, hasItem(
+                pointCloseTo(
+                        -(gridSize - 1) * gridStep / 2,
+                        (gridSize - 1) * gridStep / 2,
+                        MM)));
+        assertThat(map, hasItem(
+                pointCloseTo(
+                        (gridSize - 1) * gridStep / 2,
+                        (gridSize - 1) * gridStep / 2,
+                        MM)));
     }
 
-    @ParameterizedTest(name = "[{index}] scan={0}")
-    @CsvSource({
-            "0, -60",
-            "1, -30",
-            "2, 0",
-            "3, 30",
-            "4, 60",
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1}) R{2} headCmd={3} moveCmd={4}")
+    @MethodSource("dataDecodeCommandBackward")
+    void testDecodeCommandBackward(double robotX, double robotY, int robotDeg, int headCommand, int moveCommand) {
+        createWorldModel(robotX, robotY, robotDeg);
+        Complex relHeadAngle = Complex.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
+        Complex absHeadAngle = model.gridMap().direction().add(relHeadAngle);
+        int expectedHead = absHeadAngle.sub(model.robotStatus().direction()).toIntDeg();
+        expectedHead = clamp(expectedHead, -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
+        Point2D target = function.target(moveCommand, model.gridMap());
 
-            "5, -60",
-            "6, -30",
-            "7, 0",
+        // When decode command
+        RobotCommands cmd = function.decodeCommand(headCommand, moveCommand, model);
+
+        // Then ...
+        assertNotNull(cmd);
+        assertEquals(RobotStatusId.BACKWARD, cmd.status());
+        assertEquals(expectedHead, cmd.scanDirection());
+        assertThat(cmd.target(), pointCloseTo(target, MM));
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1}) R{2} headCmd={3} moveCmd={4}")
+    @MethodSource("dataDecodeCommandForward")
+    void testDecodeCommandForward(double robotX, double robotY, int robotDeg, int headCommand, int moveCommand) {
+        createWorldModel(robotX, robotY, robotDeg);
+        Complex relHeadAngle = Complex.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
+        Complex absHeadAngle = model.gridMap().direction().add(relHeadAngle);
+        int expectedHead = absHeadAngle.sub(model.robotStatus().direction()).toIntDeg();
+        expectedHead = clamp(expectedHead, -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
+        Point2D target = function.target(moveCommand, model.gridMap());
+
+        // When decode command
+        RobotCommands cmd = function.decodeCommand(headCommand, moveCommand, model);
+
+        // Then ...
+        assertNotNull(cmd);
+        assertEquals(RobotStatusId.FORWARD, cmd.status());
+        assertEquals(expectedHead, cmd.scanDirection());
+        assertThat(cmd.target(), pointCloseTo(target, MM));
+    }
+
+    @ParameterizedTest(name = "[{index}], Robot @({0},{1}) R{2}, command={3}")
+    @MethodSource("dataHeadAngle")
+    void testDecodeCommandHalt(double robotX, double robotY, int robotDeg, int headCommand) {
+        createWorldModel(robotX, robotY, robotDeg);
+        Complex relHeadAngle = Complex.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
+        Complex absHeadAngle = model.gridMap().direction().add(relHeadAngle);
+        int expectedHead = absHeadAngle.sub(model.robotStatus().direction()).toIntDeg();
+        expectedHead = clamp(expectedHead, -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
+        // When decode command
+        RobotCommands cmd = function.decodeCommand(headCommand, 0, model);
+        // Then ...
+        assertNotNull(cmd);
+        assertTrue(cmd.isHalt());
+        assertEquals(expectedHead, cmd.scanDirection());
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1}) R{2} headCmd={3} moveCmd={4}")
+    @MethodSource("dataDecodeCommandRotation")
+    void testDecodeCommandRotation(double robotX, double robotY, int robotDeg, int headCommand, int moveCommand) {
+        createWorldModel(robotX, robotY, robotDeg);
+        Complex relHeadAngle = Complex.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
+        Complex absHeadAngle = model.gridMap().direction().add(relHeadAngle);
+        int expectedHead = absHeadAngle.sub(model.robotStatus().direction()).toIntDeg();
+        expectedHead = clamp(expectedHead, -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
+        int expectedDir = Complex.fromDeg((double) ((moveCommand - 1) * 360) / DEFAULT_NUM_ROTATIONS)
+                .add(model.gridMap().direction())
+                .toIntDeg();
+
+        // When decode command
+        RobotCommands cmd = function.decodeCommand(headCommand, moveCommand, model);
+
+        // Then ...
+        assertNotNull(cmd);
+        assertTrue(cmd.isRotate());
+        assertEquals(expectedHead, cmd.scanDirection());
+        assertEquals(expectedDir, cmd.rotationDirection());
+    }
+
+    @Test
+    void testDefaultCreate() {
+        // Then the map should contain n points
+        assertEquals(DEFAULT_NUM_ROTATIONS, function.numRotations());
+        assertEquals(DEFAULT_NUM_HEAD_ROTATIONS, function.numHeadRotations());
+        assertThat(function.indicesMap(), hasSize(DEFAULT_NUM_MOVE_ACTIONS));
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1} R{2}")
+    @CsvSource({
+            "0,0,90",
+            "1,1,90"
+    })
+    @MethodSource({
+            "dataE"
+    })
+    void testETargetNE(double robotX, double robotY, int robotDeg) {
+        createWorldModel(robotX, robotY, robotDeg);
+        Point2D centre = model.gridMap().center();
+
+        // When ...
+        Point2D target = function.target(FORWARD_NE, model.gridMap());
+
+        // Then ...
+        assertThat(target, pointCloseTo(centre.getX() + 3, centre.getY() - 3, MM));
+
+        // When ...
+        target = function.target(BACKWARD_NE, model.gridMap());
+
+        // Then ...
+        assertThat(target, pointCloseTo(centre.getX() + 3, centre.getY() - 3, MM));
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1} R{2} command={3}")
+    @MethodSource({
+            "dataE",
+    })
+    void testETargetNW(double robotX, double robotY, int robotDeg) {
+        createWorldModel(robotX, robotY, robotDeg);
+
+        // When ...
+        Point2D target = function.target(FORWARD_NW, model.gridMap());
+
+        // Then ...
+        Point2D centre = model.gridMap().center();
+        assertThat(target, pointCloseTo(centre.getX() + 3, centre.getY() + 3, MM));
+
+        // When ...
+        target = function.target(BACKWARD_NW, model.gridMap());
+
+        // Then ...
+        assertThat(target, pointCloseTo(centre.getX() + 3, centre.getY() + 3, MM));
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1} R{2} command={3}")
+    @MethodSource({
+            "dataE",
+    })
+    void testETargetSE(double robotX, double robotY, int robotDeg) {
+        createWorldModel(robotX, robotY, robotDeg);
+
+        // When ...
+        Point2D target = function.target(FORWARD_SE, model.gridMap());
+
+        // Then ...
+        Point2D centre = model.gridMap().center();
+        assertThat(target, pointCloseTo(centre.getX() - 3, centre.getY() - 3, MM));
+
+        // When ...
+        target = function.target(BACKWARD_SE, model.gridMap());
+
+        // Then ...
+        assertThat(target, pointCloseTo(centre.getX() - 3, centre.getY() - 3, MM));
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1} R{2} command={3}")
+    @MethodSource({
+            "dataE",
+    })
+    void testETargetSW(double robotX, double robotY, int robotDeg) {
+        createWorldModel(robotX, robotY, robotDeg);
+
+        // When ...
+        Point2D target = function.target(FORWARD_SW, model.gridMap());
+
+        // Then ...
+        Point2D centre = model.gridMap().center();
+        assertThat(target, pointCloseTo(centre.getX() - 3, centre.getY() + 3, MM));
+
+        // When ...
+        target = function.target(BACKWARD_SW, model.gridMap());
+
+        // Then ...
+        assertThat(target, pointCloseTo(centre.getX() - 3, centre.getY() + 3, MM));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,0, 0, -3,-3, 37",
+            "0,0, 0, 3,-3, 67",
+            "0,0, 0, -3,3, 962",
+            "0,0, 0, 3,3, 992",
+
+            "0,0, 90, -3,-3, 67",
+            "0,0, 90, 3,-3, 992",
+            "0,0, 90, -3,3, 37",
+            "0,0, 90, 3,3, 962",
+
+            "0,0, -90, -3,-3, 962",
+            "0,0, -90, 3,-3, 37",
+            "0,0, -90, -3,3, 992",
+            "0,0, -90, 3,3, 67",
+
+            "0,0, -180, -3,-3, 992",
+            "0,0, -180, 3,-3, 962",
+            "0,0, -180, -3,3, 67",
+            "0,0, -180, 3,3, 37",
+
+            "1,1, 0, -2,-2, 37",
+            "1,1, 0, 4,4, 992",
+            "1,1, 90, -2,-2, 67",
+            "1,1, 90, 4,4, 962",
+            "1,1, -90, -2,-2, 962",
+            "1,1, -90, 4,4, 67",
+            "1,1, -180, -2,-2, 992",
+            "1,1, -180, 4,4, 37",
+    })
+    void testForwardIndex(double robotX, double robotY, int robotDeg, double targetX, double targetY, int expectedIndex) {
+        // Given the world model
+        createWorldModel(robotX, robotY, robotDeg);
+        Point2D target = new Point2D.Double(targetX, targetY);
+        RobotCommands cmd = RobotCommands.forward(target);
+        // When ...
+        int idx = function.moveIndex(cmd, model);
+
+        // Then ...
+        assertEquals(expectedIndex, idx);
+    }
+
+    @ParameterizedTest
+    @MethodSource({
+            "dataNW",
+            "dataNE",
+            "dataE",
+            "dataS",
+            "dataW",
+    })
+    void testHaltIndex(double robotX, double robotY, int robotDeg) {
+        // Given the world model
+        createWorldModel(robotX, robotY, robotDeg);
+        RobotCommands cmd = RobotCommands.halt();
+        // When ...
+        int idx = function.moveIndex(cmd, model);
+
+        // Then ...
+        assertEquals(0, idx);
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot R{0}, H {1} DEG")
+    @CsvSource({
+            "0, -90, 0",
+            "0, 0, 6",
+            "0, 90, 12",
+
+            "90, -90, 0",
+            "90, 0, 6",
+            "90, 90, 12",
+
+            "-90, -90, 0",
+            "-90, 0, 6",
+            "-90, 90, 12",
+
+            "15, -90, 1",
+            "15, 0, 7",
+            "15, 90, 12",
+
+            "-15, -90, 0",
+            "-15, 0, 5",
+            "-15, 90, 11",
+
+            "75, -90, 0",
+            "75, 0, 5",
+            "75, 90, 11",
+
+            "105, -90, 1",
+            "105, 0, 7",
+            "105, 90, 12",
+
+            "-180, -90, 0",
+            "-180, 0, 6",
+            "-180, 90, 12",
+
+            "165, -90, 0",
+            "165, 0, 5",
+            "165, 90, 11",
+
+            "-165, -90, 1",
+            "-165, 0, 7",
+            "-165, 90, 12",
+    })
+    void testHaltActions(int robotDeg, int headDeg, int expectedCommand) {
+        // Given the world model
+        createWorldModel(0, 0, robotDeg);
+        RobotCommands cmd = RobotCommands.halt(headDeg);
+
+        // When ...
+        Map<String, Signal> actions = function.actions(cmd, model);
+        // Then ...
+        assertNotNull(actions);
+        assertThat(actions.size(), is(2));
+        assertThat(actions, hasKey(MOVE_ACTION_ID));
+        assertThat(actions, hasKey(HEAD_ACTION_ID));
+
+        assertThat(actions.get(MOVE_ACTION_ID), isA(ArraySignal.class));
+        assertThat(actions.get(HEAD_ACTION_ID), isA(ArraySignal.class));
+
+        ArraySignal value = (ArraySignal) actions.get(MOVE_ACTION_ID);
+        assertThat(value.toINDArray(), matrixCloseTo(new long[]{1, 1}, EPSILON, 0));
+
+        value = (ArraySignal) actions.get(HEAD_ACTION_ID);
+        assertThat(value.toINDArray(), matrixCloseTo(new long[]{1, 1}, EPSILON, expectedCommand));
+    }
+
+    @ParameterizedTest(name = "[{index}], Robot @({0},{1}) R{2}, command={3}")
+    @CsvSource({
+            "0,0, 0, 0",
+            "0,0, 0, 1",
+            "0,0, 0, 2",
+            "0,0, 0, 3",
+            "0,0, 0, 4",
+            "0,0, 0, 5",
+    })
+    @MethodSource("dataHeadAngle")
+    void testHeadAngle(double robotX, double robotY, int robotDeg, int headCommand) {
+        createWorldModel(robotX, robotY, robotDeg);
+        // Then ...
+        Complex relHeadAngle = Complex.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
+        Complex absHeadAngle = model.gridMap().direction().add(relHeadAngle);
+        int expected = absHeadAngle.sub(model.robotStatus().direction()).toIntDeg();
+        expected = clamp(expected, -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
+        assertEquals(expected, function.headAngle(headCommand, model));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0, -90",
+            "1,-75",
+            "2, -60",
+            "3, -45",
+            "4, -30",
+            "5, -15",
+            "6, 0",
+            "7, 15",
             "8, 30",
-            "9, 60",
-
-            "115, -60",
-            "116, -30",
-            "117, 0",
-            "118, 30",
-            "119, 60",
+            "9, 45",
+            "10, 60",
+            "11, 75",
+            "12, 90",
     })
-    void testSpeed(int moveAction, int expSpeed) {
-        assertEquals(expSpeed, dataGen.speed(moveAction));
+    void testHeadAngle(int command, int expectedHeadDeg) {
+        // Then ...
+        assertThat(function.headAngle(command), angleCloseTo(expectedHeadDeg));
     }
 
     @ParameterizedTest
     @CsvSource({
-            "-60, 0",
-            "-37, 0",
-            "-36, 1",
-            "-13, 1",
-            "-12, 2",
-            "11, 2",
-            "12, 3",
-            "35, 3",
-            "36, 4",
-            "60, 4",
+            "-105, 0",
+            "-90, 0",
+            "-83, 0",
+            "-82, 1",
+            "-75, 1",
+            "-60, 2",
+            "-45, 3",
+            "-30, 4",
+            "-15, 5",
+            "-8, 5",
+            "-7, 6",
+            "0, 6",
+            "7, 6",
+            "8, 7",
+            "15, 7",
+            "30, 8",
+            "45, 9",
+            "60, 10",
+            "75, 11",
+            "82, 11",
+            "83, 12",
+            "90, 12",
+            "105, 12",
     })
-    void testSpeedIndex(int speed, int expectedIndex) {
-        assertEquals(expectedIndex, dataGen.speedIndex(speed));
+    void testHeadIndex(int headDeg, int expectedCommand) {
+        // When ...
+        int cmd = function.headIndex(Complex.fromDeg(headDeg));
+
+        // Then ...
+        assertEquals(expectedCommand, cmd);
     }
 
+    @ParameterizedTest(name = "[{index}] Robot R{0}, H {1} DEG")
+    @CsvSource({
+            "0, -90, 0",
+            "0, 0, 6",
+            "0, 90, 12",
+
+            "90, -90, 0",
+            "90, 0, 6",
+            "90, 90, 12",
+
+            "-90, -90, 0",
+            "-90, 0, 6",
+            "-90, 90, 12",
+
+            "15, -90, 1",
+            "15, 0, 7",
+            "15, 90, 12",
+
+            "-15, -90, 0",
+            "-15, 0, 5",
+            "-15, 90, 11",
+
+            "75, -90, 0",
+            "75, 0, 5",
+            "75, 90, 11",
+
+            "105, -90, 1",
+            "105, 0, 7",
+            "105, 90, 12",
+
+            "-180, -90, 0",
+            "-180, 0, 6",
+            "-180, 90, 12",
+
+            "165, -90, 0",
+            "165, 0, 5",
+            "165, 90, 11",
+
+            "-165, -90, 1",
+            "-165, 0, 7",
+            "-165, 90, 12",
+    })
+    void testHeadIndex(int robotDeg, int headDeg, int expectedCommand) {
+        createWorldModel(0, 0, robotDeg);
+
+        // When ...
+        int cmd = function.headIndex(RobotCommands.halt(headDeg), model);
+
+        // Then ...
+        assertEquals(expectedCommand, cmd);
+
+        // When ...
+        cmd = function.headIndex(RobotCommands.rotate(headDeg, 0), model);
+
+        // Then ...
+        assertEquals(expectedCommand, cmd);
+
+        // When ...
+        cmd = function.headIndex(RobotCommands.forward(headDeg, new Point2D.Double()), model);
+
+        // Then ...
+        assertEquals(expectedCommand, cmd);
+
+        // When ...
+        cmd = function.headIndex(RobotCommands.backward(headDeg, new Point2D.Double()), model);
+
+        // Then ...
+        assertEquals(expectedCommand, cmd);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0, false",
+            "1,false",
+            "35,false",
+            "36,false",
+            "37,true",
+            "38,true",
+            "991,true",
+            "992,true",
+            "993,false",
+            "994,false",
+            "1947,false",
+            "1948,false"
+    })
+    void testIsForward(int command, boolean expected) {
+        // Then ...
+        assertEquals(expected, function.isForward(command));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0, true",
+            "1,false",
+            "1947,false",
+            "1948,false"
+    })
+    void testIsHalt(int command, boolean expected) {
+        // Then ...
+        assertEquals(expected, function.isHalt(command));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0, false",
+            "1,true",
+            "2,true",
+            "35,true",
+            "36,true",
+            "37,false",
+            "1947,false",
+            "1948,false"
+    })
+    void testIsRotate(int command, boolean expected) {
+        // Then ...
+        assertEquals(expected, function.isRotate(command));
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1} R{2}")
+    @MethodSource({
+            "dataNE",
+            "dataNW"
+    })
+    void testNTargetNE(double robotX, double robotY, int robotDeg) {
+        createWorldModel(robotX, robotY, robotDeg);
+        Point2D centre = model.gridMap().center();
+
+        // When ...
+        Point2D target = function.target(FORWARD_NE, model.gridMap());
+
+        // Then ...
+        assertThat(target, pointCloseTo(centre.getX() + 3, centre.getY() + 3, MM));
+
+        // When ...
+        target = function.target(BACKWARD_NE, model.gridMap());
+
+        // Then ...
+        assertThat(target, pointCloseTo(centre.getX() + 3, centre.getY() + 3, MM));
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1} R{2} command={3}")
+    @MethodSource({
+            "dataNE",
+            "dataNW"
+    })
+    void testNTargetNW(double robotX, double robotY, int robotDeg) {
+        createWorldModel(robotX, robotY, robotDeg);
+
+        // When ...
+        Point2D target = function.target(FORWARD_NW, model.gridMap());
+
+        // Then ...
+        Point2D centre = model.gridMap().center();
+        assertThat(target, pointCloseTo(centre.getX() - 3, centre.getY() + 3, MM));
+
+        // When ...
+        target = function.target(BACKWARD_NW, model.gridMap());
+
+        // Then ...
+        assertThat(target, pointCloseTo(centre.getX() - 3, centre.getY() + 3, MM));
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1} R{2} command={3}")
+    @MethodSource({
+            "dataNE",
+            "dataNW"
+    })
+    void testNTargetSE(double robotX, double robotY, int robotDeg) {
+        createWorldModel(robotX, robotY, robotDeg);
+
+        // When ...
+        Point2D target = function.target(FORWARD_SE, model.gridMap());
+
+        // Then ...
+        Point2D centre = model.gridMap().center();
+        assertThat(target, pointCloseTo(centre.getX() + 3, centre.getY() - 3, MM));
+
+        // When ...
+        target = function.target(BACKWARD_SE, model.gridMap());
+
+        // Then ...
+        assertThat(target, pointCloseTo(centre.getX() + 3, centre.getY() - 3, MM));
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1} R{2} command={3}")
+    @MethodSource({
+            "dataNE",
+            "dataNW"
+    })
+    void testNTargetSW(double robotX, double robotY, int robotDeg) {
+        createWorldModel(robotX, robotY, robotDeg);
+
+        // When ...
+        Point2D target = function.target(FORWARD_SW, model.gridMap());
+
+        // Then ...
+        Point2D centre = model.gridMap().center();
+        assertThat(target, pointCloseTo(centre.getX() - 3, centre.getY() - 3, MM));
+
+        // When ...
+        target = function.target(BACKWARD_SW, model.gridMap());
+
+        // Then ...
+        assertThat(target, pointCloseTo(centre.getX() - 3, centre.getY() - 3, MM));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,0, 0, 0, 1",
+            "0,0, 0, 90, 10",
+            "0,0, 0, 180, 19",
+            "0,0, 0, 270, 28",
+            "0,0, 0, 350, 36",
+
+            "0,0, 90, 0, 28",
+            "0,0, 90, 90, 1",
+            "0,0, 90, 180, 10",
+            "0,0, 90, 270, 19",
+
+            "0,0, -90, 0, 10",
+            "0,0, -90, 90, 19",
+            "0,0, -90, 180, 28",
+            "0,0, -90, 270, 1",
+
+            "0,0, -90, 0, 10",
+            "0,0, -90, 90, 19",
+            "0,0, -90, 180, 28",
+            "0,0, -90, 270, 1",
+
+            "0,0, -180, 0, 19",
+            "0,0, -180, 90, 28",
+            "0,0, -180, 180, 1",
+            "0,0, -180, 270, 10",
+
+            "0,0, 44, 0, 1",
+            "0,0, 44, 90, 10",
+            "0,0, 44, 180, 19",
+            "0,0, 44, 270, 28",
+            "0,0, 44, 350, 36",
+
+            "1,1, 0, 0, 1",
+            "1,1, 0, 90, 10",
+            "1,1, 0, 180, 19",
+            "1,1, 0, 270, 28",
+            "1,1, 0, 350, 36",
+    })
+    void testRotateIndex(double robotX, double robotY, int robotDeg, int rotDeg, int expectedIndex) {
+        // Given the world model
+        createWorldModel(robotX, robotY, robotDeg);
+        RobotCommands cmd = RobotCommands.rotate(rotDeg);
+        // When ...
+        int idx = function.moveIndex(cmd, model);
+
+        // Then ...
+        assertEquals(expectedIndex, idx);
+    }
+
+    @ParameterizedTest
+    @MethodSource("dataRotation")
+    void testRotation(int command, int expectedDeg) {
+        // Then ...
+        assertThat(function.rotation(command), angleCloseTo(expectedDeg));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0, 0",
+            "4, 0",
+            "5, 1",
+            "90, 9",
+            "174, 17",
+            "175, 18",
+            "180, 18",
+            "185, 18",
+            "186, 19",
+            "270, 27",
+            "344, 34",
+            "345, 35",
+            "350, 35",
+            "354, 35",
+            "355, 0",
+    })
+    void testRotationIndex(int dirDeg, int expectedCommand) {
+        // When ...
+        int cmd = function.rotationIndex(Complex.fromDeg(dirDeg));
+
+        // Then ...
+        assertEquals(expectedCommand, cmd);
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1} R{2}")
+    @MethodSource({
+            "dataS",
+    })
+    void testSTargetNE(double robotX, double robotY, int robotDeg) {
+        // Given a robot directed to south (180 DEG +- 45)
+        createWorldModel(robotX, robotY, robotDeg);
+        Point2D centre = model.gridMap().center();
+
+        // When getting target location of forward command to NE of grid map
+        Point2D target = function.target(FORWARD_NE, model.gridMap());
+
+        // Then ...
+        assertThat(target, pointCloseTo(centre.getX() - 3, centre.getY() - 3, MM));
+
+        // When getting target location of backward command to NE of grid map
+        target = function.target(BACKWARD_NE, model.gridMap());
+
+        // Then ...
+        assertThat(target, pointCloseTo(centre.getX() - 3, centre.getY() - 3, MM));
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1} R{2} command={3}")
+    @MethodSource({
+            "dataS",
+    })
+    void testSTargetNW(double robotX, double robotY, int robotDeg) {
+        createWorldModel(robotX, robotY, robotDeg);
+
+        // When ...
+        Point2D target = function.target(FORWARD_NW, model.gridMap());
+
+        // Then ...
+        Point2D centre = model.gridMap().center();
+        assertThat(target, pointCloseTo(centre.getX() + 3, centre.getY() - 3, MM));
+
+        // When ...
+        target = function.target(BACKWARD_NW, model.gridMap());
+
+        // Then ...
+        assertThat(target, pointCloseTo(centre.getX() + 3, centre.getY() - 3, MM));
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1} R{2} command={3}")
+    @MethodSource({
+            "dataS",
+    })
+    void testSTargetSE(double robotX, double robotY, int robotDeg) {
+        createWorldModel(robotX, robotY, robotDeg);
+
+        // When ...
+        Point2D target = function.target(FORWARD_SE, model.gridMap());
+
+        // Then ...
+        Point2D centre = model.gridMap().center();
+        assertThat(target, pointCloseTo(centre.getX() - 3, centre.getY() + 3, MM));
+
+        // When ...
+        target = function.target(BACKWARD_SE, model.gridMap());
+
+        // Then ...
+        assertThat(target, pointCloseTo(centre.getX() - 3, centre.getY() + 3, MM));
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1} R{2} command={3}")
+    @MethodSource({
+            "dataS",
+    })
+    void testSTargetSW(double robotX, double robotY, int robotDeg) {
+        createWorldModel(robotX, robotY, robotDeg);
+
+        // When ...
+        Point2D target = function.target(FORWARD_SW, model.gridMap());
+
+        // Then ...
+        Point2D centre = model.gridMap().center();
+        assertThat(target, pointCloseTo(centre.getX() + 3, centre.getY() + 3, MM));
+
+        // When ...
+        target = function.target(BACKWARD_SW, model.gridMap());
+
+        // Then ...
+        assertThat(target, pointCloseTo(centre.getX() + 3, centre.getY() + 3, MM));
+    }
+
+    @Test
+    void testSpec() {
+        // Then the map should contain n points
+        Map<String, SignalSpec> spec = function.spec();
+        assertNotNull(spec);
+        assertThat(spec, hasKey(HEAD_ACTION_ID));
+        assertThat(spec, hasKey(MOVE_ACTION_ID));
+
+        assertThat(spec.get(HEAD_ACTION_ID), isA(IntSignalSpec.class));
+        IntSignalSpec signalSpec = (IntSignalSpec) spec.get(HEAD_ACTION_ID);
+        assertArrayEquals(new long[]{1}, signalSpec.shape());
+        assertEquals(DEFAULT_NUM_HEAD_ROTATIONS, signalSpec.numValues());
+
+        assertThat(spec.get(MOVE_ACTION_ID), isA(IntSignalSpec.class));
+        signalSpec = (IntSignalSpec) spec.get(MOVE_ACTION_ID);
+        assertArrayEquals(new long[]{1}, signalSpec.shape());
+        assertEquals(1 + DEFAULT_NUM_ROTATIONS + DEFAULT_NUM_MOVE_ACTIONS * 2, signalSpec.numValues());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "37, -3,-3",
+            "52, 0,-3",
+            "67, 3,-3",
+            "962, -3,3",
+            "977, 0,3",
+            "992, 3,3",
+
+            "993, -3,-3",
+            "1008, 0,-3",
+            "1023, 3,-3",
+            "1918, -3,3",
+            "1933, 0,3",
+            "1948, 3,3"
+    })
+    void testTarget(int command, double xTarget, double yTarget) {
+        // Then ...
+        assertThat(function.target(command), pointCloseTo(xTarget, yTarget, MM));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "-3,-3, 0",
+            "-2.901,-3, 0",
+            "-2.899,-3, 1",
+            "-2.8,-3, 1",
+            "-0.101,-3, 14",
+            "-0.099,-3, 15",
+            "0,-3, 15",
+            "0.099,-3, 15",
+            "0.101,-3, 16",
+            "2.899,-3, 29",
+            "2.901,-3, 30",
+            "3,-3, 30",
+
+            "-3,3, 925",
+            "-2.901,3, 925",
+            "-2.899,3, 926",
+            "-0.101,3, 939",
+            "-0.099,3, 940",
+            "0,3, 940",
+            "0.099,3, 940",
+            "0.101,3, 941",
+            "2.899,3, 954",
+            "2.901,3, 955",
+            "3,3, 955",
+    })
+    void testTargetIndex(double x, double y, int expectedIndex) {
+        // When ...
+        int idx = function.targetIndex(new Point2D.Double(x, y));
+
+        // Then ...
+        assertEquals(expectedIndex, idx);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,0, 0, -3,-3, 0",
+            "0,0, 0, 3,-3, 30",
+            "0,0, 0, -3,3, 925",
+            "0,0, 0, 3,3, 955",
+
+            "0,0, 90, -3,-3, 30",
+            "0,0, 90, 3,-3, 955",
+            "0,0, 90, -3,3, 0",
+            "0,0, 90, 3,3, 925",
+
+            "0,0, -90, -3,-3, 925",
+            "0,0, -90, 3,-3, 0",
+            "0,0, -90, -3,3, 955",
+            "0,0, -90, 3,3, 30",
+
+            "0,0, -180, -3,-3, 955",
+            "0,0, -180, 3,-3, 925",
+            "0,0, -180, -3,3, 30",
+            "0,0, -180, 3,3, 0",
+
+            "1,1, 0, -2,-2, 0",
+            "1,1, 0, 4,4, 955",
+            "1,1, 90, -2,-2, 30",
+            "1,1, 90, 4,4, 925",
+            "1,1, -90, -2,-2, 925",
+            "1,1, -90, 4,4, 30",
+            "1,1, -180, -2,-2, 955",
+            "1,1, -180, 4,4, 0",
+    })
+    void testTargetIndexAbsolute(double robotX, double robotY, int robotDeg, double targetX, double targetY, int expectedIndex) {
+        // Given the world model
+        createWorldModel(robotX, robotY, robotDeg);
+        // When ...
+        int idx = function.targetIndex(new Point2D.Double(targetX, targetY), model);
+
+        // Then ...
+        assertEquals(expectedIndex, idx);
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1} R{2}")
+    @MethodSource({
+            "dataW"
+    })
+    void testWTargetNE(double robotX, double robotY, int robotDeg) {
+        createWorldModel(robotX, robotY, robotDeg);
+        Point2D centre = model.gridMap().center();
+
+        // When ...
+        Point2D target = function.target(FORWARD_NE, model.gridMap());
+
+        // Then ...
+        assertThat(target, pointCloseTo(centre.getX() - 3, centre.getY() + 3, MM));
+
+        // When ...
+        target = function.target(BACKWARD_NE, model.gridMap());
+
+        // Then ...
+        assertThat(target, pointCloseTo(centre.getX() - 3, centre.getY() + 3, MM));
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1} R{2} command={3}")
+    @MethodSource({
+            "dataW",
+    })
+    void testWTargetNW(double robotX, double robotY, int robotDeg) {
+        createWorldModel(robotX, robotY, robotDeg);
+
+        // When ...
+        Point2D target = function.target(FORWARD_NW, model.gridMap());
+
+        // Then ...
+        Point2D centre = model.gridMap().center();
+        assertThat(target, pointCloseTo(centre.getX() - 3, centre.getY() - 3, MM));
+
+        // When ...
+        target = function.target(BACKWARD_NW, model.gridMap());
+
+        // Then ...
+        assertThat(target, pointCloseTo(centre.getX() - 3, centre.getY() - 3, MM));
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1} R{2} command={3}")
+    @MethodSource({
+            "dataW",
+    })
+    void testWTargetSE(double robotX, double robotY, int robotDeg) {
+        createWorldModel(robotX, robotY, robotDeg);
+
+        // When ...
+        Point2D target = function.target(FORWARD_SE, model.gridMap());
+
+        // Then ...
+        Point2D centre = model.gridMap().center();
+        assertThat(target, pointCloseTo(centre.getX() + 3, centre.getY() + 3, MM));
+
+        // When ...
+        target = function.target(BACKWARD_SE, model.gridMap());
+
+        // Then ...
+        assertThat(target, pointCloseTo(centre.getX() + 3, centre.getY() + 3, MM));
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1} R{2} command={3}")
+    @MethodSource({
+            "dataW",
+    })
+    void testWTargetSW(double robotX, double robotY, int robotDeg) {
+        createWorldModel(robotX, robotY, robotDeg);
+
+        // When ...
+        Point2D target = function.target(FORWARD_SW, model.gridMap());
+
+        // Then ...
+        Point2D centre = model.gridMap().center();
+        assertThat(target, pointCloseTo(centre.getX() + 3, centre.getY() - 3, MM));
+
+        // When ...
+        target = function.target(BACKWARD_SW, model.gridMap());
+
+        // Then ...
+        assertThat(target, pointCloseTo(centre.getX() + 3, centre.getY() - 3, MM));
+    }
 }

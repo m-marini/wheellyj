@@ -28,124 +28,85 @@
 
 package org.mmarini.wheelly.objectives;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
-import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.apis.*;
-import org.mmarini.wheelly.envs.RewardFunction;
-import org.mmarini.yaml.Locator;
-import org.mmarini.yaml.Utils;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.mmarini.RandomArgumentsGenerator;
+import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.awt.geom.Point2D;
-import java.io.IOException;
-import java.util.Map;
+import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.fail;
-import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class MoveToLabelTest {
 
-    public static final double OBSTACLE_DISTANCE = 1.2;
-    public static final double DECAY = 1;
-    public static final int MAP_SIZE = 15;
-    public static final double GRID_SIZE = 0.2;
-    public static final int ECHO_TIME = 100;
+    public static final int SEED = 1234;
+    public static final int NUM_RANDOM_TEST_CASES = 100;
 
-    /**
-     * Returns the world model with the given robot status and obstacle at 1.2 m from the origin to the given direction
-     *
-     * @param robotDir    the robot direction
-     * @param headDeg     the head direction
-     * @param obstacleDir the obstacle direction
-     */
-    static WorldModel createState(Complex robotDir, Complex headDeg, Complex obstacleDir) {
-        Point2D obstacleLocation = obstacleDir.at(new Point2D.Float(), OBSTACLE_DISTANCE);
-        RadarMap map = RadarMap.empty(GridTopology.create(new Point2D.Float(), MAP_SIZE, MAP_SIZE,
-                        GRID_SIZE))
-                .updateCellAt(obstacleLocation.getX(), obstacleLocation.getY(), cell ->
-                        cell.addEchogenic(ECHO_TIME, DECAY));
-        RobotStatus status = RobotStatus.create(DEFAULT_ROBOT_SPEC, x -> 12)
-                .setDirection(robotDir)
-                .setSensorDirection(headDeg);
-        Map<String, LabelMarker> markers = Map.of(
-                "A", new LabelMarker("A", obstacleLocation, 1, 0, 0)
-        );
-
-        WorldModel model = mock();
-        when(model.radarMap()).thenReturn(map);
-        when(model.robotStatus()).thenReturn(status);
-        when(model.markers()).thenReturn(markers);
-        return model;
+    static WorldModel createState(Point2D robotLocation, int robotDeg, Point2D marker) {
+        return new WorldModelBuilder()
+                .robotLocation(robotLocation)
+                .robotDir(robotDeg)
+                .addLabel("A", marker)
+                .build();
     }
 
-    @ParameterizedTest(
-            name = "[{index}] robot R{1},{2} obstacle R{3} move R{4}")
-    @CsvSource({
-            // obstacle in front
-            "2, 0, 0, 0, 0, 30",
-            // obstacle at left front
-            "2, 0, 0, 45, 45, 30",
-            // obstacle at right front
-            "2, 0, 0, 315, 315, 30",
-            // obstacle at the left
-            "2, 0, 0, 90, 90, 30",
-            // obstacle at right
-            "2, 0, 0, 270, 270, 30",
+    public static Stream<Arguments> dataReward() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-2.0, 2.0, 17) // robotX
+                .uniform(-2.0, 2.0, 17) // robotY
+                .uniform(0, 359) // robotDeg
+                .uniform(1.0, 2.0, 17) // markerDistance
+                .uniform(0, 359) // markerDeg
+                .exponential(0.1, 0.3, 17) // move distance
+                .uniform(-45, 45) // move direction
+                .exponential(0.1, 1, 17) // reward
+                .build(NUM_RANDOM_TEST_CASES);
+    }
 
-            // obstacle out of the direction
-            "0, 31, 0, 0, 0, 30",
-            // obstacle out of the direction
-            "0, 329, 0, 0, 0, 30",
-            // sensor out of range
-            "0, 0, 31, 0, 0, 30",
-            // sensor out of range
-            "0, 0, 329, 0, 0, 30",
+    public static Stream<Arguments> dataReward0() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-2.0, 2.0, 17) // robotX
+                .uniform(-2.0, 2.0, 17) // robotY
+                .uniform(0, 359) // robotDeg
+                .uniform(1.0, 2.0, 17) // markerDistance
+                .uniform(0, 359) // markerDeg
+                .exponential(0.1, 0.3, 17) // move distance
+                .uniform(135, 215) // move direction
+                .build(NUM_RANDOM_TEST_CASES);
+    }
 
-            // power out of range
-            "0, 0, 0, 0, 0, 0",
-            // power out of range
-            "0, 0, 0, 0, 0, 0",
-            // power out of range
-            "0, 0, 0, 0, 0, 60",
-            // power out of range
-            "0, 0, 0, 0, 0, 60",
+    @ParameterizedTest(name = "[{index}] robot R{0},{1} R{2} marker {3} m R{4} move {5} m R{6} reward {7}")
+    @MethodSource("dataReward")
+    void testReward(double robotX, double robotY, int robotDeg, double markerDistance, int markerDeg, double moveDistance, int moveToTargetDeg, double matchReward) {
+        // Given two states
+        Point2D.Double robotLocation0 = new Point2D.Double(robotX, robotY);
+        Point2D marker = Complex.fromDeg(markerDeg).at(robotLocation0, markerDistance);
+        WorldModel s0 = createState(robotLocation0, robotDeg, marker);
+        Point2D robotLocation1 = Complex.fromDeg(markerDeg + moveToTargetDeg).at(robotLocation0, moveDistance);
+        WorldModel s1 = createState(robotLocation1, robotDeg, marker);
 
-    })
-    void create(double expected,
-                int robotDeg,
-                int sensorDeg,
-                int obstacleDeg,
-                int actionDeg,
-                int actionSpeed
-    ) throws IOException {
-        // Given a move to label goal
-        JsonNode root = Utils.fromText(TestFunctions.text("---",
-                "$schema: " + MoveToLabel.SCHEMA_NAME,
-                "class: " + MoveToLabel.class.getName(),
-                "directionRange: 30",
-                "sensorRange: 30",
-                "reward: 2",
-                "numSpeedValues: 5",
-                "numDirectionValues: 8",
-                "minSpeed: 1",
-                "maxSpeed: 30"
-        ));
-        RewardFunction f = MoveToLabel.create(root, Locator.root());
-        // And a world state with robot directed to robotDeg, sensor directed to sensorDeg
-        // and obstacle directed to obstacleDeg
-        WorldModel state = createState(Complex.fromDeg(robotDeg),
-                Complex.fromDeg(sensorDeg), Complex.fromDeg(obstacleDeg));
-        // And command move to actionDeg at power actionSpeed
-        fail();
-        /* TODO
-        RobotCommandsOld cmd = RobotCommandsOld.moveAndScan(Complex.fromDeg(actionDeg), actionSpeed, Complex.DEG0);
-        double result = f.applyAsDouble(null, cmd, state);
+        double reward = MoveToLabel.moveToLabel(matchReward).applyAsDouble(s0, RobotCommands.halt(), s1);
 
-        assertThat(result, closeTo(expected, 1e-4));
+        assertEquals(matchReward, reward);
+    }
 
-         */
+    @ParameterizedTest(name = "[{index}] robot R{0},{1} R{2} marker {3} m R{4} move {5} m R{6}")
+    @MethodSource("dataReward0")
+    void testReward0(double robotX, double robotY, int robotDeg, double markerDistance, int markerDeg, double moveDistance, int moveToTargetDeg) {
+        // Given two states
+        Point2D.Double robotLocation0 = new Point2D.Double(robotX, robotY);
+        Point2D marker = Complex.fromDeg(markerDeg).at(robotLocation0, markerDistance);
+        WorldModel s0 = createState(robotLocation0, robotDeg, marker);
+        Point2D robotLocation1 = Complex.fromDeg(markerDeg + moveToTargetDeg).at(robotLocation0, moveDistance);
+        WorldModel s1 = createState(robotLocation1, robotDeg, marker);
+
+        double reward = MoveToLabel.moveToLabel(1).applyAsDouble(s0, RobotCommands.halt(), s1);
+
+        assertEquals(0, reward);
     }
 }

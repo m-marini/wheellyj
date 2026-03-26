@@ -93,7 +93,7 @@ network:
         nOut: 40
         activation: SoftMax
         lossFunction: NegativeLogLikelihood
-      sensorAction:
+      head:
         type: OutputLayer
         inputs: [ maxpool-out ]
         nOut: 7

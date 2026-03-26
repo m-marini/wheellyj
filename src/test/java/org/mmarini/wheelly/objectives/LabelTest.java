@@ -1,25 +1,28 @@
 /*
- * MIT License
+ * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Copyright (c) 2022 Marco Marini
+ *  Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ *    END OF TERMS AND CONDITIONS
  *
  */
 
@@ -30,40 +33,28 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.LabelMarker;
-import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.apis.WorldModelBuilder;
 import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;
-import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
-import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class LabelTest {
 
-    static WorldModel createState(Complex robotDir, Complex sensorDir, double leftPps, double rightPps, Complex obstacleDir, double distance) {
-        Point2D.Double robotLocation = new Point2D.Double();
-        long timestamp = System.currentTimeMillis();
-        Point2D obstacleLocation = obstacleDir.at(robotLocation, distance);
-        Map<String, LabelMarker> markers = Map.of(
-                "A", new LabelMarker("A", obstacleLocation, 1, timestamp, timestamp));
-        RobotStatus status = RobotStatus.create(DEFAULT_ROBOT_SPEC, x -> 12)
-                .setDirection(robotDir)
-                .setSensorDirection(sensorDir)
-                .setSpeeds(leftPps, rightPps);
-
-        WorldModel model = mock();
-        when(model.markers()).thenReturn(markers);
-        when(model.robotStatus()).thenReturn(status);
-        return model;
+    static WorldModel createState(int robotDeg, int headDeg, double leftPps, double rightPps, int obstacleDir, double distance) {
+        Point2D marker = Complex.fromDeg(obstacleDir).at(new Point2D.Double(0, 0), distance);
+        return new WorldModelBuilder()
+                .robotDir(robotDeg)
+                .headAngle(headDeg)
+                .robotSpeed(leftPps, rightPps)
+                .addLabel("A", marker)
+                .build();
     }
 
     @ParameterizedTest(
@@ -116,10 +107,10 @@ class LabelTest {
         ));
         RewardFunction f = Label.create(root, Locator.root());
 
-        WorldModel state = createState(Complex.fromDeg(robotDir),
-                Complex.fromDeg(sensorDir),
+        WorldModel state = createState(robotDir,
+                sensorDir,
                 leftPps, rightPps,
-                Complex.fromDeg(obstacleDir), distance);
+                obstacleDir, distance);
 
         double result = f.applyAsDouble(null, null, state);
 
