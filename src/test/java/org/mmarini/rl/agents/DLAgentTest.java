@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -61,8 +61,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Utils.deleteRecursive;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 import static org.mmarini.wheelly.TestFunctions.matrixShape;
+import static org.mmarini.wheelly.envs.DLActionFunction.HEAD_ACTION_ID;
 import static org.mmarini.wheelly.envs.DLActionFunction.MOVE_ACTION_ID;
-import static org.mmarini.wheelly.envs.DLActionFunction.SENSOR_ACTION_ID;
 import static org.mmarini.wheelly.envs.DLStateFunction.MAP_SIGNAL_ID;
 
 class DLAgentTest {
@@ -71,32 +71,30 @@ class DLAgentTest {
     public static final int NUM_CHANNELS = 4;
     public static final int GRID_SIZE = 9;
     public static final int NUM_EPOCHS = 10;
-    public static final int NUM_MOVEMENT_COMMANDS = NUM_EPOCHS;
+    public static final int NUM_MOVEMENT_COMMANDS = 10;
     public static final int NUM_SENSOR_COMMANDS = 7;
     public static final double ETA = 1e-3;
     public static final float REWARD = 0.5F;
     public static final double EPSILON = 1e-6;
     public static final float ALPHA = 1F;
     public static final float BETA = 0.8F;
-    public static final float REWAORD0 = 0F;
-    public static final int NUM_STEPS = NUM_EPOCHS;
+    public static final float REWARD0 = 0F;
+    public static final int NUM_STEPS = 10;
     public static final int BATCH_SIZE = 5;
     public static final File FILE = new File("tmp/model");
-    static final Logger logger = LoggerFactory.getLogger(DLAgent.class);
+    static final Logger logger = LoggerFactory.getLogger(DLAgentTest.class);
 
     static {
         Nd4j.getRandom().setSeed(SEED);
     }
 
-    static ComputationGraphConfiguration build(
-            int numChannels, int gridWidth, int gridHeight,
-            int numMovementCommands, int numSensorCommands) {
+    static ComputationGraphConfiguration build() {
         return new NeuralNetConfiguration.Builder()
                 .updater(new Sgd(ETA))
                 .weightInit(WeightInit.XAVIER)
                 .graphBuilder()
                 .addInputs(MAP_SIGNAL_ID)
-                .setInputTypes(new InputType.InputTypeConvolutional(gridHeight, gridWidth, numChannels))
+                .setInputTypes(new InputType.InputTypeConvolutional(DLAgentTest.GRID_SIZE, DLAgentTest.GRID_SIZE, DLAgentTest.NUM_CHANNELS))
                 .addLayer(DLAgent.CRITIC_ID,
                         new OutputLayer.Builder()
                                 .nOut(1)
@@ -107,19 +105,19 @@ class DLAgentTest {
                 )
                 .addLayer(MOVE_ACTION_ID,
                         new OutputLayer.Builder()
-                                .nOut(numMovementCommands)
+                                .nOut(DLAgentTest.NUM_MOVEMENT_COMMANDS)
                                 .activation(Activation.SOFTMAX)
                                 .build(),
                         MAP_SIGNAL_ID
                 )
-                .addLayer(SENSOR_ACTION_ID,
+                .addLayer(HEAD_ACTION_ID,
                         new OutputLayer.Builder()
-                                .nOut(numSensorCommands)
+                                .nOut(DLAgentTest.NUM_SENSOR_COMMANDS)
                                 .activation(Activation.SOFTMAX)
                                 .build(),
                         MAP_SIGNAL_ID
                 )
-                .setOutputs(DLAgent.CRITIC_ID, MOVE_ACTION_ID, SENSOR_ACTION_ID)
+                .setOutputs(DLAgent.CRITIC_ID, MOVE_ACTION_ID, HEAD_ACTION_ID)
                 .build();
     }
 
@@ -132,7 +130,7 @@ class DLAgentTest {
         );
         Map<String, Signal> actions = Map.of(
                 MOVE_ACTION_ID, IntSignal.create(Nd4j.getRandom().nextInt(NUM_MOVEMENT_COMMANDS)),
-                SENSOR_ACTION_ID, IntSignal.create(Nd4j.getRandom().nextInt(NUM_SENSOR_COMMANDS))
+                HEAD_ACTION_ID, IntSignal.create(Nd4j.getRandom().nextInt(NUM_SENSOR_COMMANDS))
         );
         return new ExecutionResult(s0, actions, reward, s1);
     }
@@ -145,9 +143,9 @@ class DLAgentTest {
         Map<String, SignalSpec> stateSpec = Map.of(MAP_SIGNAL_ID, new IntSignalSpec(new long[]{NUM_CHANNELS, GRID_SIZE, GRID_SIZE}, NUM_SAMPLES));
         Map<String, SignalSpec> actionSpec = Map.of(
                 MOVE_ACTION_ID, new IntSignalSpec(new long[]{1, 1}, NUM_MOVEMENT_COMMANDS),
-                SENSOR_ACTION_ID, new IntSignalSpec(new long[]{1, 1}, NUM_SENSOR_COMMANDS)
+                HEAD_ACTION_ID, new IntSignalSpec(new long[]{1, 1}, NUM_SENSOR_COMMANDS)
         );
-        ComputationGraphConfiguration conf = build(NUM_CHANNELS, GRID_SIZE, GRID_SIZE, NUM_MOVEMENT_COMMANDS, NUM_SENSOR_COMMANDS);
+        ComputationGraphConfiguration conf = build();
         logger.atInfo().log("{}", conf.toYaml());
         ComputationGraph net = new ComputationGraph(conf);
         net.init();
@@ -178,7 +176,7 @@ class DLAgentTest {
 
         // Then the output actions states ...
         assertThat(actions, hasKey(MOVE_ACTION_ID));
-        assertThat(actions, hasKey(SENSOR_ACTION_ID));
+        assertThat(actions, hasKey(HEAD_ACTION_ID));
 
         INDArray moveAry = actions.get(MOVE_ACTION_ID).toINDArray();
         assertThat(moveAry, matrixShape(2, 1));
@@ -187,7 +185,7 @@ class DLAgentTest {
         assertThat(moveAry.getInt(1), greaterThanOrEqualTo(0));
         assertThat(moveAry.getInt(1), lessThan(NUM_MOVEMENT_COMMANDS));
 
-        INDArray sensorAry = actions.get(SENSOR_ACTION_ID).toINDArray();
+        INDArray sensorAry = actions.get(HEAD_ACTION_ID).toINDArray();
         assertThat(sensorAry, matrixShape(2, 1));
         assertThat(sensorAry.getInt(0), greaterThanOrEqualTo(0));
         assertThat(sensorAry.getInt(0), lessThan(NUM_SENSOR_COMMANDS));
@@ -196,10 +194,10 @@ class DLAgentTest {
     }
 
     @Test
-    void testBackup() throws IOException {
+    void testBackup() {
         agent.save();
         agent.backup();
-        File[] list = FILE.listFiles(new PatternFilenameFilter("agent.yml-.*\\.yml"));
+        File[] list = FILE.listFiles(new PatternFilenameFilter("agent-.*\\.yml"));
         assertThat(list, arrayWithSize(greaterThan(0)));
         list = FILE.listFiles(new PatternFilenameFilter("model-.*\\.zip"));
         assertThat(list, arrayWithSize(greaterThan(0)));
@@ -237,8 +235,8 @@ class DLAgentTest {
     @Test
     void testCreateActionMasks() {
         // When create action masks
-        DLAgent.Trajectory traj = agent.createTrajectory(trajectory);
-        INDArray mask = DLAgent.createActionMasks(traj.actions().get(MOVE_ACTION_ID), NUM_MOVEMENT_COMMANDS);
+        DLAgent.Trajectory trajectory1 = agent.createTrajectory(trajectory);
+        INDArray mask = DLAgent.createActionMasks(trajectory1.actions().get(MOVE_ACTION_ID), NUM_MOVEMENT_COMMANDS);
         assertThat(mask, matrixShape(NUM_EPOCHS, NUM_MOVEMENT_COMMANDS));
     }
 
@@ -265,8 +263,8 @@ class DLAgentTest {
         Map<String, INDArray> actions = tr.actions();
         assertThat(actions, hasKey(MOVE_ACTION_ID));
         assertThat(actions.get(MOVE_ACTION_ID), matrixShape(NUM_STEPS, 1));
-        assertThat(actions, hasKey(SENSOR_ACTION_ID));
-        assertThat(actions.get(SENSOR_ACTION_ID), matrixShape(NUM_STEPS, 1));
+        assertThat(actions, hasKey(HEAD_ACTION_ID));
+        assertThat(actions.get(HEAD_ACTION_ID), matrixShape(NUM_STEPS, 1));
     }
 
     @Test
@@ -274,11 +272,11 @@ class DLAgentTest {
         Map<String, SignalSpec> stateSpec = Map.of(MAP_SIGNAL_ID, new IntSignalSpec(new long[]{NUM_CHANNELS, GRID_SIZE, GRID_SIZE}, NUM_SAMPLES));
         Map<String, SignalSpec> actionSpec = Map.of(
                 MOVE_ACTION_ID, new IntSignalSpec(new long[]{1, 1}, NUM_MOVEMENT_COMMANDS),
-                SENSOR_ACTION_ID, new IntSignalSpec(new long[]{1, 1}, NUM_SENSOR_COMMANDS),
+                HEAD_ACTION_ID, new IntSignalSpec(new long[]{1, 1}, NUM_SENSOR_COMMANDS),
                 "missing1", new IntSignalSpec(new long[]{1, 1}, NUM_SENSOR_COMMANDS),
                 "missing2", new IntSignalSpec(new long[]{1, 1}, NUM_SENSOR_COMMANDS)
         );
-        ComputationGraphConfiguration conf = build(NUM_CHANNELS, GRID_SIZE, GRID_SIZE, NUM_MOVEMENT_COMMANDS, NUM_SENSOR_COMMANDS);
+        ComputationGraphConfiguration conf = build();
         ComputationGraph net = new ComputationGraph(conf);
 
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(SEED);
@@ -292,9 +290,9 @@ class DLAgentTest {
         Map<String, SignalSpec> stateSpec = Map.of();
         Map<String, SignalSpec> actionSpec = Map.of(
                 MOVE_ACTION_ID, new IntSignalSpec(new long[]{1, 1}, NUM_MOVEMENT_COMMANDS),
-                SENSOR_ACTION_ID, new IntSignalSpec(new long[]{1, 1}, NUM_SENSOR_COMMANDS)
+                HEAD_ACTION_ID, new IntSignalSpec(new long[]{1, 1}, NUM_SENSOR_COMMANDS)
         );
-        ComputationGraphConfiguration conf = build(NUM_CHANNELS, GRID_SIZE, GRID_SIZE, NUM_MOVEMENT_COMMANDS, NUM_SENSOR_COMMANDS);
+        ComputationGraphConfiguration conf = build();
         ComputationGraph net = new ComputationGraph(conf);
 
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(SEED);
@@ -331,7 +329,7 @@ class DLAgentTest {
         // When create average
         INDArray rewards = Nd4j.ones(4, 1);
         INDArray prediction = Nd4j.ones(BATCH_SIZE, 1).muli(0.5);
-        Tuple2<INDArray, Float> t = DLAgent.processRewards(rewards, prediction, REWAORD0, 0.5F);
+        Tuple2<INDArray, Float> t = DLAgent.processRewards(rewards, prediction, REWARD0, 0.5F);
         INDArray deltas = t._1;
         float avg = t._2;
         assertEquals(0.9375F, avg);
@@ -349,7 +347,7 @@ class DLAgentTest {
         );
         Map<String, Signal> actions = Map.of(
                 MOVE_ACTION_ID, IntSignal.create(0),
-                SENSOR_ACTION_ID, IntSignal.create(0)
+                HEAD_ACTION_ID, IntSignal.create(0)
         );
         double reward = 0;
         ExecutionResult result = new ExecutionResult(s0, actions, reward, s1);

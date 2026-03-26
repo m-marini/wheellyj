@@ -16,14 +16,8 @@
   directionRange: 180
   sensorRange: 90
 # or should direct to labelled
-- $schema: https://mmarini.org/wheelly/objective-moveToLabel-schema-0.1
+- $schema: https://mmarini.org/wheelly/objective-moveToLabel-schema-1.0
   class: org.mmarini.wheelly.objectives.MoveToLabel
-  directionRange: 15
-  sensorRange: 90
-  numSpeedValues: 5
-  numDirectionValues: 8
-  minSpeed: 1
-  maxSpeed: 100
 # or should explore the space looking for a labeled obstacle
 - $schema: https://mmarini.org/wheelly/objective-explore-schema-0.2
   class: org.mmarini.wheelly.objectives.Explore

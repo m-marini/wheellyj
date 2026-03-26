@@ -24,3 +24,4 @@ docs/sonar-map.dxf~
 /**/.lck
 /paho*/*
 /*.csv
+/tmp/**/*

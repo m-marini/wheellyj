@@ -1,26 +1,29 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/action-func-dl-schema-0.1
-title: RL state function
+$id: https://mmarini.org/wheelly/action-func-dl-schema-1.0
+title: DL action function
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/action-func-dl-schema-0.1
+    const: https://mmarini.org/wheelly/action-func-dl-schema-1.0
   class:
     const: org.mmarini.wheelly.envs.DLActionFunction
-  numDirections:
+  numRotations:
     type: integer
     minimum: 2
-  numSensorDirections:
+  numHeadRotations:
     type: integer
     minimum: 2
-  numSpeeds:
+  gridSize:
     type: integer
-    minimum: 2
+    minimum: 3
+  gridStep:
+    type: number
+    exclusiveMinimum: 0
+  hideRadius:
+    type: number
+    minimum: 0
 required:
   - $schema
   - class
-  - numDirections
-  - numSpeeds
-  - numSensorDirections
 
