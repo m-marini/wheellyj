@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#596](https://github.com/m-marini/wheellyj/issues/596): Camera calibration with goto commands
 - Issue [#599](https://github.com/m-marini/wheellyj/issues/599): Batch with go commands
 
+### Fixed
+
+- Issue [#601](https://github.com/m-marini/wheellyj/issues/601): Bad character in source file
+
 ## [0.26.0] 2026-02-26
 
 ### Add
