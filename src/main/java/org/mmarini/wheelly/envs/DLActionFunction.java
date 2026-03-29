@@ -152,6 +152,33 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
     }
 
     /**
+     * Returns the action mask
+     *
+     * @param states   the states
+     * @param commands the
+     */
+    public Map<String, INDArray> actionMasks(List<WorldModel> states, List<RobotCommands> commands) {
+        int n = min(states.size(), commands.size());
+        long numMoves = ((IntSignalSpec) spec.get(MOVE_ACTION_ID)).numValues();
+        long numHeads = ((IntSignalSpec) spec.get(HEAD_ACTION_ID)).numValues();
+        INDArray moveAction = Nd4j.zeros(DataType.FLOAT, n, numMoves);
+        INDArray headAction = Nd4j.zeros(DataType.FLOAT, n, numHeads);
+        for (int i = 0; i < n; i++) {
+            RobotCommands cmd = commands.get(i);
+            WorldModel model = states.get(i);
+            int moveIdx = moveIndex(cmd, model);
+            moveAction.putScalar(i, moveIdx, 1);
+            int headIdx = headIndex(cmd, model);
+            headAction.putScalar(i, headIdx, 1);
+        }
+
+        return Map.of(
+                MOVE_ACTION_ID, moveAction,
+                HEAD_ACTION_ID, headAction
+        );
+    }
+
+    /**
      * Returns the action signals relative to robot command
      *
      * @param commands the command

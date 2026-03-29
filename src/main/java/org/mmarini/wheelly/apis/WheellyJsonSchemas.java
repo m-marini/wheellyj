@@ -67,7 +67,7 @@ public interface WheellyJsonSchemas {
             "/schemas/objective-label-schema.yml",
             "/schemas/objective-moveToLabel-schema.yml",
             "/schemas/objective-sensor-label-schema.yml",
-            "/schemas/objective-action-set-schema.yml",
+//            "/schemas/objective-action-set-schema.yml",
             "/schemas/real-robot-schema.yml",
             "/schemas/sim-robot-schema.yml",
             "/schemas/signal-schema.yml",

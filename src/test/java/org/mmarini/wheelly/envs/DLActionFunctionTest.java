@@ -37,6 +37,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.rl.envs.*;
 import org.mmarini.wheelly.apis.*;
+import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.factory.Nd4j;
 
 import java.awt.geom.Point2D;
 import java.util.List;
@@ -214,6 +216,68 @@ class DLActionFunctionTest {
 
         // Then ...
         assertEquals(expectedIndex, idx);
+    }
+
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,0, 0, -3,-3, 993",
+            "0,0, 0, 3,-3, 1023",
+            "0,0, 0, -3,3, 1918",
+            "0,0, 0, 3,3, 1948",
+
+            "0,0, 90, -3,-3, 1023",
+            "0,0, 90, 3,-3, 1948",
+            "0,0, 90, -3,3, 993",
+            "0,0, 90, 3,3, 1918",
+
+            "0,0, -90, -3,-3, 1918",
+            "0,0, -90, 3,-3, 993",
+            "0,0, -90, -3,3, 1948",
+            "0,0, -90, 3,3, 1023",
+
+            "0,0, -180, -3,-3, 1948",
+            "0,0, -180, 3,-3, 1918",
+            "0,0, -180, -3,3, 1023",
+            "0,0, -180, 3,3, 993",
+
+            "1,1, 0, -2,-2, 993",
+            "1,1, 0, 4,4, 1948",
+            "1,1, 90, -2,-2, 1023",
+            "1,1, 90, 4,4, 1918",
+            "1,1, -90, -2,-2, 1918",
+            "1,1, -90, 4,4, 1023",
+            "1,1, -180, -2,-2, 1948",
+            "1,1, -180, 4,4, 993",
+    })
+    void testBackwardMasks(double robotX, double robotY, int robotDeg, double targetX, double targetY, int expectedIndex) {
+        // Given the world model
+        createWorldModel(robotX, robotY, robotDeg);
+        Point2D target = new Point2D.Double(targetX, targetY);
+        RobotCommands cmd = RobotCommands.backward(target);
+        // When ...
+        Map<String, INDArray> masks = function.actionMasks(
+                List.of(model, model),
+                List.of(cmd, cmd));
+
+        // Then ...
+        assertNotNull(masks);
+        assertThat(masks, hasKey(MOVE_ACTION_ID));
+        assertThat(masks, hasKey(HEAD_ACTION_ID));
+        INDArray mask = masks.get(MOVE_ACTION_ID);
+        INDArray expected = Nd4j.zeros(2, 1 + DEFAULT_NUM_ROTATIONS + 2 * DEFAULT_NUM_MOVE_ACTIONS);
+        expected.putScalar(0, expectedIndex, 1);
+        expected.putScalar(1, expectedIndex, 1);
+        assertThat(mask, matrixCloseTo(expected, 1e-3));
+
+        /*
+        mask = masks.get(HEAD_ACTION_ID);
+        expected = Nd4j.zeros(2, DEFAULT_NUM_HEAD_ROTATIONS);
+        expected.putScalar(0, expectedIndex, 1);
+        expected.putScalar(1, expectedIndex, 1);
+        assertThat(mask, matrixCloseTo(expected, 1e-3));
+
+         */
     }
 
     @ParameterizedTest(name = "[{index}], Robot @({0},{1}) R{2}, headCmd={3}")
@@ -593,6 +657,58 @@ class DLActionFunctionTest {
     }
 
     @ParameterizedTest
+    @CsvSource({
+            "0,0, 0, -3,-3, 37",
+            "0,0, 0, 3,-3, 67",
+            "0,0, 0, -3,3, 962",
+            "0,0, 0, 3,3, 992",
+
+            "0,0, 90, -3,-3, 67",
+            "0,0, 90, 3,-3, 992",
+            "0,0, 90, -3,3, 37",
+            "0,0, 90, 3,3, 962",
+
+            "0,0, -90, -3,-3, 962",
+            "0,0, -90, 3,-3, 37",
+            "0,0, -90, -3,3, 992",
+            "0,0, -90, 3,3, 67",
+
+            "0,0, -180, -3,-3, 992",
+            "0,0, -180, 3,-3, 962",
+            "0,0, -180, -3,3, 67",
+            "0,0, -180, 3,3, 37",
+
+            "1,1, 0, -2,-2, 37",
+            "1,1, 0, 4,4, 992",
+            "1,1, 90, -2,-2, 67",
+            "1,1, 90, 4,4, 962",
+            "1,1, -90, -2,-2, 962",
+            "1,1, -90, 4,4, 67",
+            "1,1, -180, -2,-2, 992",
+            "1,1, -180, 4,4, 37",
+    })
+    void testForwardMask(double robotX, double robotY, int robotDeg, double targetX, double targetY, int expectedIndex) {
+        // Given the world model
+        createWorldModel(robotX, robotY, robotDeg);
+        Point2D target = new Point2D.Double(targetX, targetY);
+        RobotCommands cmd = RobotCommands.forward(target);
+        // When ...
+        Map<String, INDArray> masks = function.actionMasks(
+                List.of(model, model),
+                List.of(cmd, cmd));
+
+        // Then ...
+        assertNotNull(masks);
+        assertThat(masks, hasKey(MOVE_ACTION_ID));
+        assertThat(masks, hasKey(HEAD_ACTION_ID));
+        INDArray mask = masks.get(MOVE_ACTION_ID);
+        INDArray expected = Nd4j.zeros(2, 1 + DEFAULT_NUM_ROTATIONS + 2 * DEFAULT_NUM_MOVE_ACTIONS);
+        expected.putScalar(0, expectedIndex, 1);
+        expected.putScalar(1, expectedIndex, 1);
+        assertThat(mask, matrixCloseTo(expected, 1e-3));
+    }
+
+    @ParameterizedTest
     @MethodSource({
             "dataNW",
             "dataNE",
@@ -609,6 +725,75 @@ class DLActionFunctionTest {
 
         // Then ...
         assertEquals(0, idx);
+    }
+
+    @ParameterizedTest(name = "[{index}] Robot R{0}, H {1} DEG")
+    @CsvSource({
+            "0, -90, 0",
+            "0, 0, 6",
+            "0, 90, 12",
+
+            "90, -90, 0",
+            "90, 0, 6",
+            "90, 90, 12",
+
+            "-90, -90, 0",
+            "-90, 0, 6",
+            "-90, 90, 12",
+
+            "15, -90, 1",
+            "15, 0, 7",
+            "15, 90, 12",
+
+            "-15, -90, 0",
+            "-15, 0, 5",
+            "-15, 90, 11",
+
+            "75, -90, 0",
+            "75, 0, 5",
+            "75, 90, 11",
+
+            "105, -90, 1",
+            "105, 0, 7",
+            "105, 90, 12",
+
+            "-180, -90, 0",
+            "-180, 0, 6",
+            "-180, 90, 12",
+
+            "165, -90, 0",
+            "165, 0, 5",
+            "165, 90, 11",
+
+            "-165, -90, 1",
+            "-165, 0, 7",
+            "-165, 90, 12",
+    })
+    void testHaltActionMasks(int robotDeg, int headDeg, int expectedCommand) {
+        // Given the world model
+        createWorldModel(0, 0, robotDeg);
+        RobotCommands cmd = RobotCommands.halt(headDeg);
+
+        // When ...
+        Map<String, INDArray> masks = function.actionMasks(
+                List.of(model, model),
+                List.of(cmd, cmd));
+
+        // Then ...
+        assertNotNull(masks);
+        assertThat(masks, hasKey(MOVE_ACTION_ID));
+        assertThat(masks, hasKey(HEAD_ACTION_ID));
+        INDArray mask = masks.get(MOVE_ACTION_ID);
+        INDArray expected = Nd4j.zeros(2, 1 + DEFAULT_NUM_ROTATIONS + 2 * DEFAULT_NUM_MOVE_ACTIONS);
+        expected.putScalar(0, 0, 1);
+        expected.putScalar(1, 0, 1);
+        assertThat(mask, matrixCloseTo(expected, 1e-3));
+
+        mask = masks.get(HEAD_ACTION_ID);
+        expected = Nd4j.zeros(2, DEFAULT_NUM_HEAD_ROTATIONS);
+        expected.putScalar(0, expectedCommand, 1);
+        expected.putScalar(1, expectedCommand, 1);
+        assertThat(mask, matrixCloseTo(expected, 1e-3));
     }
 
     @ParameterizedTest(name = "[{index}] Robot R{0}, H {1} DEG")
@@ -1006,6 +1191,76 @@ class DLActionFunctionTest {
 
         // Then ...
         assertEquals(expectedIndex, idx);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,0, 0, 0, 1",
+            "0,0, 0, 90, 10",
+            "0,0, 0, 180, 19",
+            "0,0, 0, 270, 28",
+            "0,0, 0, 350, 36",
+
+            "0,0, 90, 0, 28",
+            "0,0, 90, 90, 1",
+            "0,0, 90, 180, 10",
+            "0,0, 90, 270, 19",
+
+            "0,0, -90, 0, 10",
+            "0,0, -90, 90, 19",
+            "0,0, -90, 180, 28",
+            "0,0, -90, 270, 1",
+
+            "0,0, -90, 0, 10",
+            "0,0, -90, 90, 19",
+            "0,0, -90, 180, 28",
+            "0,0, -90, 270, 1",
+
+            "0,0, -180, 0, 19",
+            "0,0, -180, 90, 28",
+            "0,0, -180, 180, 1",
+            "0,0, -180, 270, 10",
+
+            "0,0, 44, 0, 1",
+            "0,0, 44, 90, 10",
+            "0,0, 44, 180, 19",
+            "0,0, 44, 270, 28",
+            "0,0, 44, 350, 36",
+
+            "1,1, 0, 0, 1",
+            "1,1, 0, 90, 10",
+            "1,1, 0, 180, 19",
+            "1,1, 0, 270, 28",
+            "1,1, 0, 350, 36",
+    })
+    void testRotateMask(double robotX, double robotY, int robotDeg, int rotDeg, int expectedMoveIndex) {
+        // Given the world model
+        createWorldModel(robotX, robotY, robotDeg);
+        RobotCommands cmd = RobotCommands.rotate(rotDeg);
+        // When ...
+        Map<String, INDArray> masks = function.actionMasks(
+                List.of(model, model),
+                List.of(cmd, cmd));
+
+        // Then ...
+
+        // Then ...
+        assertNotNull(masks);
+        assertThat(masks, hasKey(MOVE_ACTION_ID));
+        assertThat(masks, hasKey(HEAD_ACTION_ID));
+        INDArray mask = masks.get(MOVE_ACTION_ID);
+        INDArray expected = Nd4j.zeros(2, 1 + DEFAULT_NUM_ROTATIONS + 2 * DEFAULT_NUM_MOVE_ACTIONS);
+        expected.putScalar(0, expectedMoveIndex, 1);
+        expected.putScalar(1, expectedMoveIndex, 1);
+        assertThat(mask, matrixCloseTo(expected, 1e-3));
+        /*
+        mask = masks.get(HEAD_ACTION_ID);
+        expected = Nd4j.zeros(2, DEFAULT_NUM_HEAD_ROTATIONS);
+        expected.putScalar(0, 9, 1);
+        expected.putScalar(1, 9, 1);
+        assertThat(mask, matrixCloseTo(expected, 1e-3));
+
+         */
     }
 
     @ParameterizedTest
