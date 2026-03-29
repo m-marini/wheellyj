@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
@@ -469,7 +469,6 @@ public class DLAgent implements BatchAgent {
 
     @Override
     public DLAgent init() {
-        // TODO
         return this;
     }
 
@@ -632,7 +631,7 @@ public class DLAgent implements BatchAgent {
     }
 
     /**
-     * // TODO replace with train by rlDatasetIterator
+     *
      * Trains the agent by trajectory
      *
      * @param trajectory the trajectory
