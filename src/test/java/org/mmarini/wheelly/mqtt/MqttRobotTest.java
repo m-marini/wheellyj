@@ -38,8 +38,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -64,9 +62,8 @@ class MqttRobotTest {
     public static final String ROBOT_ID = "wheelly";
     public static final String QR_ID = "wheellyqr";
     public static final int CLOSE_DELAY = 100;
-    private static final Logger logger = LoggerFactory.getLogger(MqttRobotTest.class);
     public static final int MESSAGE_DELAY = 100;
-    public static final long CAMERA_INTERVAL = 500L;
+    public static final String CONFIG_STRING = "{\"test\":1}";
 
     private MqttRobot robot;
     private TestSubscriber<RobotStatusApi> statusSub;
@@ -80,7 +77,7 @@ class MqttRobotTest {
         robot = assertDoesNotThrow(() -> MqttRobot.create(url, CLIENT_ID, USER, PASSWORD,
                 ROBOT_ID, QR_ID,
                 CONFIGURE_TIMEOUT, RETRY_INTERVAL, DEFAULT_ROBOT_SPEC,
-                new String[]{"cs,100,100", "ci,200,200"}));
+                new String[]{CONFIG_STRING}));
         assertNotNull(robot);
         statusSub = new TestSubscriber<>();
         errorSub = new TestSubscriber<>();
@@ -113,46 +110,6 @@ class MqttRobotTest {
         if (mockClient != null) {
             mockClient.close();
         }
-    }
-
-    @Test
-    void testCameraCapture() throws IOException {
-        // Given ...
-
-        // When connect
-        robot.connect();
-        // And waiting for robotConfigured
-        robot.readRobotStatus()
-                .filter(RobotStatusApi::configured)
-                .firstElement()
-                .ignoreElement()
-                .blockingAwait(TIMEOUT, TimeUnit.MILLISECONDS);
-        // And wait for 2 CAMERA_INTERVAL
-        Completable.timer(2 * CAMERA_INTERVAL, TimeUnit.MILLISECONDS).blockingAwait();
-        // And Closing robot
-        robot.close();
-        robot.readRobotStatus()
-                .ignoreElements()
-                .blockingAwait();
-
-        mockClient.close();
-        Completable.timer(CLOSE_DELAY, TimeUnit.MILLISECONDS).blockingAwait();
-
-        // Then
-        TestSubscriber<Tuple2<String, MqttMessage>> mockSub = mockClient.subscriber();
-        mockSub.assertComplete();
-        mockSub.assertNoErrors();
-        assertThat(mockSub.values().stream()
-                .filter(t -> "cmd/wheellycam/ca".equals(t._1))
-                .count(), greaterThanOrEqualTo(2L));
-
-        errorSub.assertNoErrors();
-        errorSub.assertComplete();
-        errorSub.assertValueCount(0);
-
-        cameraSub.assertNoErrors();
-        cameraSub.assertComplete();
-        cameraSub.assertValueCount(0);
     }
 
     @Test
@@ -267,12 +224,11 @@ class MqttRobotTest {
         TestSubscriber<Tuple2<String, MqttMessage>> subscriber = mockClient.subscriber();
         subscriber.assertComplete();
         subscriber.assertNoErrors();
-        assertTrue(subscriber.values().stream()
-                .anyMatch(t -> "cmd/wheelly/ci".equals(t._1)));
-        assertTrue(subscriber.values().stream()
-                .anyMatch(t -> "cmd/wheelly/cs".equals(t._1)));
-        assertTrue(subscriber.values().stream()
-                .anyMatch(t -> "cmd/wheellycam/cf".equals(t._1)));
+        assertEquals(CONFIG_STRING, subscriber.values().stream()
+                .filter(t -> "cmd/wheelly/cf".equals(t._1))
+                .map(t -> new String(t._2.getPayload()))
+                .findAny()
+                .get());
 
         errorSub.assertNoErrors();
         errorSub.assertComplete();

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
@@ -352,7 +352,7 @@ public class DLAgent implements BatchAgent {
      * Returns the training datasets (inputs, labels)
      *
      * @param states      the states
-     * @param actionMasks the actions masks
+     * @param actionMasks the actions mask
      * @param predictions the prediction
      * @param deltas      the deltas
      */
@@ -457,7 +457,7 @@ public class DLAgent implements BatchAgent {
         List<ExecutionResult> trajectory = this.trajectory;
         List<ExecutionResult> tr = trajectory.size() > trajectorySize
                 ? trajectory.stream()
-                .skip(trajectory.size() - trajectorySize).toList()
+                  .skip(trajectory.size() - trajectorySize).toList()
                 : trajectory;
         return createTrajectory(tr);
     }
