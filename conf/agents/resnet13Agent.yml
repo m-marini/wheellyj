@@ -90,7 +90,7 @@ network:
       move:
         type: OutputLayer
         inputs: [ maxpool-out ]
-        nOut: 40
+        nOut: 1941
         activation: SoftMax
         lossFunction: NegativeLogLikelihood
       head:

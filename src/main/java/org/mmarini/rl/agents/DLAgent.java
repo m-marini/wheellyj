@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+﻿/*
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -31,12 +31,10 @@ package org.mmarini.rl.agents;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
+import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.mmarini.Tuple2;
-import org.mmarini.rl.envs.ExecutionResult;
-import org.mmarini.rl.envs.IntSignal;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.rl.envs.SignalSpec;
+import org.mmarini.rl.envs.*;
 import org.mmarini.wheelly.apis.BatchAgent;
 import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
@@ -471,7 +469,6 @@ public class DLAgent implements BatchAgent {
 
     @Override
     public DLAgent init() {
-        // TODO
         return this;
     }
 
@@ -634,7 +631,7 @@ public class DLAgent implements BatchAgent {
     }
 
     /**
-     * // TODO replace with train by rlDatasetIterator
+     *
      * Trains the agent by trajectory
      *
      * @param trajectory the trajectory
@@ -697,6 +694,16 @@ public class DLAgent implements BatchAgent {
                 .orElse(null);
         if (missingLayers != null) {
             throw new IllegalArgumentException(format("Missing output layers [%s]", missingLayers));
+        }
+        // Check action size
+        for (String id : actionSpec.keySet()) {
+            long numNetOut = ((OutputLayer) network.getLayer(id).conf().getLayer()).getNOut();
+            long numActions = ((IntSignalSpec) actionSpec.get(id)).numValues();
+            if (numNetOut != numActions) {
+                throw new IllegalArgumentException(
+                        format("Unmatched number of actions of \"%s\": %d expected %d", id, numNetOut, numActions)
+                );
+            }
         }
     }
 
