@@ -65,11 +65,12 @@ class SimRobotObstacleTest {
     public static final long INTERVAL = 10;
     public static final long CHANGE_MAP_PERIOD = 100000L;
     public static final double MM10 = 10e-3;
+    public static final int NUM_RANDOM_TEST_CASES = 100;
 
     public static Stream<Arguments> dataAllDirection() {
         return RandomArgumentsGenerator.create(SEED)
                 .uniform(0, 359)
-                .build(100);
+                .build(NUM_RANDOM_TEST_CASES);
     }
 
     private SimRobot robot;

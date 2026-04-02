@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2024-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -91,8 +91,8 @@ class RLStateFunctionTest {
         // Given ...
         WorldModel model = modelBuilder()
                 .robotDir(robotDeg)
-                .addLabel(labelA, new Point2D.Double(xa, ya))
-                .addLabel(labelB, new Point2D.Double(xb, yb))
+                .addMarker(labelA, new Point2D.Double(xa, ya))
+                .addMarker(labelB, new Point2D.Double(xb, yb))
                 .build();
         RLStateFunction func = RLStateFunction.create(model.worldSpec(), MARKERS);
 

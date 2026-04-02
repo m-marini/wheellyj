@@ -29,212 +29,176 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.apis.WorldModelBuilder;
 import org.mmarini.yaml.Locator;
-import org.mockito.InOrder;
 
 import java.io.IOException;
 
-import static org.mmarini.wheelly.TestFunctions.text;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.yaml.Utils.fromText;
-import static org.mockito.Mockito.*;
 
 class ProcessorCommandTest {
 
 
-    static final String YAML = text("---",
-            "- a.1",
-            "- 1",
-            "- put",
-            "- a.2",
-            "- a.1",
-            "- get",
-            "- 2",
-            "- add",
-            "- put");
+    static final String YAML = """
+            ---
+            - a.1
+            - 1
+            - put
+            - a.2
+            - a.1
+            - get
+            - 2
+            - add
+            - put
+            """;
+
+    private MockProcessorContext ctx;
+
+    @BeforeEach
+    void setUp() {
+        ctx = new MockProcessorContext(new WorldModelBuilder().build());
+        ctx.push(1).push(2);
+        assertThat(ctx.pop(), equalTo(2));
+        assertThat(ctx.pop(), equalTo(1));
+        assertEquals(0, ctx.stackSize());
+    }
 
     @Test
     void testAdd() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("add");
-        ProcessorContextApi ctx = mock();
-        when(ctx.popDouble()).thenReturn(2D, 1D);
+        ctx.push(1D)
+                .push(2D);
 
         cmd.execute(ctx);
 
-        InOrder inOrder = inOrder(ctx);
-        inOrder.verify(ctx, times(2)).popDouble();
-        inOrder.verify(ctx).push(3D);
-        inOrder.verifyNoMoreInteractions();
+        assertEquals(1, ctx.stackSize());
+        assertThat(ctx.peek(), equalTo(3D));
     }
 
     @Test
     void testConstDouble() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("1.1");
-        ProcessorContextApi ctx = mock();
 
         cmd.execute(ctx);
 
-        verify(ctx, only()).push(1.1);
+        assertEquals(1, ctx.stackSize());
+        assertThat(ctx.peek(), equalTo(1.1));
     }
 
     @Test
     void testConstInt() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("1");
-        ProcessorContextApi ctx = mock();
 
         cmd.execute(ctx);
 
-        verify(ctx, only()).push(1D);
+        assertEquals(1, ctx.stackSize());
+        assertThat(ctx.peek(), equalTo(1.0));
     }
 
     @Test
     void testConstString() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("a.b");
-        ProcessorContextApi ctx = mock();
 
         cmd.execute(ctx);
 
-        verify(ctx, only()).push("a.b");
+        assertEquals(1, ctx.stackSize());
+        assertThat(ctx.peek(), equalTo("a.b"));
     }
 
     @Test
     void testCreate() throws IOException {
         JsonNode root = fromText(YAML);
         ProcessorCommand cmd = ProcessorCommand.create(root, Locator.root());
-        ProcessorContextApi ctx = mock();
-        when(ctx.pop()).thenReturn(1D, 3D);
-        when(ctx.popDouble()).thenReturn(1D, 2D);
-        when(ctx.popString()).thenReturn("a.1", "a.1", "a.2");
-        when(ctx.get("a.1")).thenReturn(1D);
 
         cmd.execute(ctx);
 
-        InOrder inOrder = inOrder(ctx);
-        inOrder.verify(ctx).push("a.1");
-        inOrder.verify(ctx).push(1D);
-        inOrder.verify(ctx).pop();
-        inOrder.verify(ctx).popString();
-        inOrder.verify(ctx).put("a.1", 1D);
-        inOrder.verify(ctx).push("a.2");
-        inOrder.verify(ctx).push("a.1");
-        inOrder.verify(ctx).popString();
-        inOrder.verify(ctx).get("a.1");
-        inOrder.verify(ctx).push(1D);
-        inOrder.verify(ctx).push(2D);
-        inOrder.verify(ctx, times(2)).popDouble();
-        inOrder.verify(ctx).push(3D);
-        inOrder.verify(ctx).pop();
-        inOrder.verify(ctx).popString();
-        inOrder.verify(ctx).put("a.2", 3D);
-        inOrder.verify(ctx).stackSize();
-        inOrder.verifyNoMoreInteractions();
+        assertEquals(0, ctx.stackSize());
+        assertThat(ctx.get("a.1"), equalTo(1D));
+        assertThat(ctx.get("a.2"), equalTo(3D));
     }
 
     @Test
     void testDiv() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("div");
-        ProcessorContextApi ctx = mock();
-        when(ctx.popDouble()).thenReturn(2D, 3D);
+        ctx.push(3D).push(2D);
 
         cmd.execute(ctx);
 
-        InOrder inOrder = inOrder(ctx);
-        inOrder.verify(ctx, times(2)).popDouble();
-        inOrder.verify(ctx).push(1.5D);
-        inOrder.verifyNoMoreInteractions();
+        assertEquals(1, ctx.stackSize());
+        assertThat(ctx.peek(), equalTo(1.5));
     }
 
     @Test
     void testGet() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("get");
-        ProcessorContextApi ctx = mock();
-        when(ctx.get("a.b")).thenReturn(1D);
-        when(ctx.popString()).thenReturn("a.b");
+        ctx.put("a.b", 1D)
+                .push("a.b");
 
         cmd.execute(ctx);
 
-        InOrder inOrder = inOrder(ctx);
-        inOrder.verify(ctx).popString();
-        inOrder.verify(ctx).push(1D);
-        inOrder.verifyNoMoreInteractions();
+        assertEquals(1, ctx.stackSize());
+        assertThat(ctx.peek(), equalTo(1D));
     }
 
     @Test
     void testMul() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("mul");
-        ProcessorContextApi ctx = mock();
-        when(ctx.popDouble()).thenReturn(3.5, 2D);
+        ctx.push(3.5D).push(2D);
 
         cmd.execute(ctx);
 
-        InOrder inOrder = inOrder(ctx);
-        inOrder.verify(ctx, times(2)).popDouble();
-        inOrder.verify(ctx).push(7D);
-        inOrder.verifyNoMoreInteractions();
+        assertEquals(1, ctx.stackSize());
+        assertThat(ctx.peek(), equalTo(7D));
     }
 
     @Test
     void testNeg() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("neg");
-        ProcessorContextApi ctx = mock();
-        when(ctx.popDouble()).thenReturn(-1D);
+        ctx.push(-1D);
 
         cmd.execute(ctx);
 
-        InOrder inOrder = inOrder(ctx);
-        inOrder.verify(ctx).popDouble();
-        inOrder.verify(ctx).push(1D);
-        inOrder.verifyNoMoreInteractions();
+        assertEquals(1, ctx.stackSize());
+        assertThat(ctx.peek(), equalTo(1D));
     }
 
     @Test
     void testPut() {
         ProcessorCommand cmd = ProcessorCommand.parse("a.b", "1", "put");
-        ProcessorContextApi ctx = mock();
-        when(ctx.pop()).thenReturn(1D);
-        when(ctx.popString()).thenReturn("a.b");
 
         cmd.execute(ctx);
 
-        InOrder inOrder = inOrder(ctx);
-        inOrder.verify(ctx).push("a.b");
-        inOrder.verify(ctx).push(1D);
-        inOrder.verify(ctx).pop();
-        inOrder.verify(ctx).popString();
-        inOrder.verify(ctx).put("a.b", 1D);
-        inOrder.verify(ctx).stackSize();
-        inOrder.verifyNoMoreInteractions();
+        assertEquals(0, ctx.stackSize());
+        assertThat(ctx.get("a.b"), equalTo(1D));
     }
 
     @Test
     void testSub() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("sub");
-        ProcessorContextApi ctx = mock();
-        when(ctx.popDouble()).thenReturn(2D, 1D);
+        ctx.push(1D)
+                .push(2D);
 
         cmd.execute(ctx);
 
-        InOrder inOrder = inOrder(ctx);
-        inOrder.verify(ctx, times(2)).popDouble();
-        inOrder.verify(ctx).push(-1D);
-        inOrder.verifyNoMoreInteractions();
+        assertEquals(1, ctx.stackSize());
+        assertThat(ctx.peek(), equalTo(-1D));
     }
 
     @Test
     void testSwap() {
         ProcessorCommand cmd = ProcessorCommand.parseCommand("swap");
-        ProcessorContextApi ctx = mock();
-        when(ctx.pop()).thenReturn(2D, 1D);
+        ctx.push(1D).push(2D);
 
         cmd.execute(ctx);
 
-        InOrder inOrder = inOrder(ctx);
-        inOrder.verify(ctx, times(2)).pop();
-        inOrder.verify(ctx).push(2D);
-        inOrder.verify(ctx).push(1D);
-        inOrder.verifyNoMoreInteractions();
+        assertEquals(2, ctx.stackSize());
+        assertThat(ctx.pop(), equalTo(1D));
+        assertThat(ctx.pop(), equalTo(2D));
     }
 
     @Test
@@ -242,22 +206,10 @@ class ProcessorCommandTest {
         // Given ...
         ProcessorCommand cmd = ProcessorCommand.parseCommand("localTime");
 
-        RobotStatus status = mock();
-        when(status.simulationTime()).thenReturn(100L);
-
-        WorldModel worldModel = mock();
-        when(worldModel.robotStatus()).thenReturn(status);
-
-        ProcessorContextApi ctx = mock();
-        when(ctx.worldModel()).thenReturn(worldModel);
-
         // When ...
         cmd.execute(ctx);
 
-        // Then ...
-        InOrder inOrder = inOrder(ctx, status);
-        inOrder.verify(status).simulationTime();
-        inOrder.verify(ctx).push(100L);
-        inOrder.verifyNoMoreInteractions();
+        assertEquals(1, ctx.stackSize());
+        assertThat(ctx.pop(), equalTo(1L));
     }
 }

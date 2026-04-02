@@ -165,20 +165,25 @@ public class LabelStuckState extends TimeOutState {
         double robotMarkerDistance = robotLocation.distance(marker);
         // robot-marker direction
         Complex robotMarkerDir = Complex.direction(robotLocation, marker);
+
         // lidar-label distance
         Point2D lidarLocation = status.frontLidarLocation();
         double lidarMarkerDistance = lidarLocation.distance(marker);
+
         // lidar-label direction
         Complex lidarMarkerDir = Complex.direction(lidarLocation, marker);
+
         // head-label direction
-        Complex headMarkerDir = Complex.direction(status.robotSpec().headLocation(), marker);
-        // Compute lidar-label direction relative to head (sensor direction
+        Point2D headLocation = status.headLocation();
+        Complex headMarkerDir = Complex.direction(headLocation, marker);
+
+        // Compute lidar-label direction relative to head (sensor direction)
         Complex robotDir = status.direction();
         double headHalfFovDeg = status.robotSpec().headFOV().toDeg() / 2;
-
         Complex headAngle = Complex.fromDeg(clamp(headMarkerDir.sub(robotDir).toDeg(), -headHalfFovDeg, headHalfFovDeg));
-        // Compute the robot optimal location
-        // location at middle distance plus front lidar distance plus head distance in direction opposite the robot direction
+
+        // Compute the robot optimal location.
+        // Location at middle distance plus front lidar distance plus head distance in direction opposite the robot direction
         double optimalDistance = (minDistance + maxDistance) / 2
                 + status.robotSpec().frontLidarDistance()
                 + status.robotSpec().headLocation().distance(new Point2D.Double());
@@ -187,13 +192,13 @@ public class LabelStuckState extends TimeOutState {
         // Check for label too close
         if (robotMarkerDistance < minDistance) {
             // the robot is too close, move backward
-            logger.atDebug().log("Robot to close {} m, move backward", lidarMarkerDistance);
+            logger.atDebug().log("Robot to close {} m, move backward to {} M @{}", lidarMarkerDistance, robotOptimalLocation, marker);
             return new StateResult(NONE_EXIT, RobotCommands.backward(headAngle, robotOptimalLocation));
         }
         // Check for label too far
         if (robotMarkerDistance > maxDistance) {
             // the robot is too far, move forward
-            logger.atDebug().log("Robot to far {} m, move forward", lidarMarkerDistance);
+            logger.atDebug().log("Robot to far {} m, move forward to {} M @{}", lidarMarkerDistance, robotOptimalLocation, marker);
             return new StateResult(NONE_EXIT, RobotCommands.forward(headAngle, robotOptimalLocation));
         }
         // Check for robot not pointing label
@@ -203,9 +208,11 @@ public class LabelStuckState extends TimeOutState {
             return new StateResult(NONE_EXIT, RobotCommands.rotate(headAngle, robotMarkerDir));
         }
         double frontDistance = status.frontDistance();
-        // Check for sensor signal
-        if (frontDistance == 0
-                || abs(lidarMarkerDistance - frontDistance) > correlationDistance) {
+        // Check for sensor signal and head direction
+        Complex lidarHalfFov = status.robotSpec().lidarFOV().divAngle(2);
+        Complex headDir = status.headAbsDirection();
+        if (headDir.isCloseTo(lidarMarkerDir, lidarHalfFov)
+                && (frontDistance == 0 || abs(lidarMarkerDistance - frontDistance) > correlationDistance)) {
             // no target or target hidden by front obstacle or sensorTargetDir
             logger.atDebug().log("No valid sensor signal");
             return notFound();

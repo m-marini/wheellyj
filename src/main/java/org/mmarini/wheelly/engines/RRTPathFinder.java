@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -80,11 +80,11 @@ public class RRTPathFinder {
      * @param safetyDistance the safety distance (m)
      * @param growthDistance the growth distance (m)
      * @param random         the random number generator
-     * @param labels         the labels
+     * @param markers         the labels
      */
-    public static RRTPathFinder createLabelTargets(RadarMap map, Point2D location, double distance, double safetyDistance, double growthDistance, Random random, Stream<Point2D> labels) {
+    public static RRTPathFinder createMarkerTargets(RadarMap map, Point2D location, double distance, double safetyDistance, double growthDistance, Random random, Stream<Point2D> markers) {
         AreaExpression noTargetArea = AreaExpression.not(AreaExpression.circle(location, ROBOT_RADIUS));
-        AreaExpression targetArea = AreaExpression.or(labels.map(target ->
+        AreaExpression targetArea = AreaExpression.or(markers.map(target ->
                 AreaExpression.circle(target, distance)));
         AreaExpression realTargetArea = AreaExpression.and(targetArea, noTargetArea);
         Set<Point2D> targetLocations = map.topology()

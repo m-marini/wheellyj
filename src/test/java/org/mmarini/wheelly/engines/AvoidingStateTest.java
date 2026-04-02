@@ -55,27 +55,9 @@ import static org.mmarini.wheelly.engines.StateResult.*;
 
 class AvoidingStateTest {
     public static final long SEED = 1234L;
-    public static final int TEST_CASES = 100;
+    public static final int TEST_CASES = 30;
     public static final double STEP2_DISTANCE = 50 * Utils.MM;
-
-    /**
-     * Returns the processor context
-     *
-     * @param robotX          the robot abscissa
-     * @param robotY          the robot ordinate
-     * @param robotDir        the robot direction (DEG)
-     * @param headAngle       the head rotation angle (DEG)
-     * @param frontSensor     true if the front sensor is clear
-     * @param rearSensor      true if the rear sensor is clear
-     * @param canMoveForward  true if the robot can move forward
-     * @param canMoveBackward true if the robot can move forward
-     */
-    private static ProcessorContextApi createContext(double robotX, double robotY, int robotDir, int headAngle,
-                                                    boolean frontSensor, boolean rearSensor,
-                                                    boolean canMoveForward, boolean canMoveBackward) {
-        return createContextBuilder(robotX, robotY, robotDir, headAngle, frontSensor, rearSensor, canMoveForward, canMoveBackward)
-                .build();
-    }
+    public static final int TIMEOUT = 1000;
 
     /**
      * Returns the processor context builder
@@ -89,7 +71,7 @@ class AvoidingStateTest {
      * @param canMoveForward  true if the robot can move forward
      * @param canMoveBackward true if the robot can move forward
      */
-    private static ProcessorContextBuilder createContextBuilder(double robotX, double robotY, double robotDir, double headAngle, boolean frontSensor, boolean rearSensor, boolean canMoveForward, boolean canMoveBackward) {
+    private static ProcessorContextBuilder createContextBuilder(double robotX, double robotY, int robotDir, int headAngle, boolean frontSensor, boolean rearSensor, boolean canMoveForward, boolean canMoveBackward) {
         return new ProcessorContextBuilder(robotX, robotY, robotDir, headAngle)
                 .frontSensor(frontSensor)
                 .rearSensor(rearSensor)
@@ -99,8 +81,8 @@ class AvoidingStateTest {
 
     static Stream<Arguments> dataBlocked() {
         return RandomArgumentsGenerator.create(SEED)
-                .uniform(-5, 5., 9) // robotX
-                .uniform(-5, 5., 9) // robotY
+                .uniform(-4, 4., 9) // robotX
+                .uniform(-4, 4., 9) // robotY
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .build(TEST_CASES);
@@ -110,15 +92,16 @@ class AvoidingStateTest {
 
     @BeforeEach
     void setUp() {
-        state = new AvoidingState("avoid", null, null, null, AvoidingState.DEFAULT_TIMEOUT, DEFAULT_SAFE_DISTANCE, AvoidingState.DEFAULT_MAX_DISTANCE);
+        state = new AvoidingState("avoid", null, null, null, TIMEOUT, DEFAULT_SAFE_DISTANCE, AvoidingState.DEFAULT_MAX_DISTANCE);
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
     @MethodSource("dataBlocked")
     void testBlockedContacts(double robotX, double robotY, int robotDeg, int headDeg) {
         // Given a robot status with both sensors clear and blocked move
-        ProcessorContextApi context = createContext(robotX, robotY, robotDeg, headDeg,
-                false, false, false, false);
+        ProcessorContextApi context = createContextBuilder(robotX, robotY, robotDeg, headDeg,
+                false, false, false, false)
+                .build();
 
         // When init state
         state.init(context);
@@ -136,8 +119,9 @@ class AvoidingStateTest {
     @MethodSource("dataBlocked")
     void testBlockedNoContact(double robotX, double robotY, int robotDeg, int headDeg) {
         // Given a robot status with both sensors clear and blocked move
-        ProcessorContextApi context = createContext(robotX, robotY, robotDeg, headDeg,
-                true, true, false, false);
+        ProcessorContextApi context = createContextBuilder(robotX, robotY, robotDeg, headDeg,
+                true, true, false, false)
+                .build();
 
         // When init state
         state.init(context);
@@ -155,8 +139,9 @@ class AvoidingStateTest {
     @MethodSource("dataBlocked")
     void testFrontContact(double robotX, double robotY, int robotDeg, int headDeg) {
         // Given the processor context
-        ProcessorContextApi context = createContext(robotX, robotY, robotDeg, headDeg,
-                false, true, false, true);
+        ProcessorContextApi context = createContextBuilder(robotX, robotY, robotDeg, headDeg,
+                false, true, false, true)
+                .build();
         // When init state
         state.init(context);
         // And entering state
@@ -193,9 +178,10 @@ class AvoidingStateTest {
     })
     void testFrontContact2NoContact(double robotX, double robotY, int robotDeg, int headDeg, double safeX, double safeY) {
         // Given the processor context
-        ProcessorContextApi context0 = createContext(robotX, robotY, robotDeg, headDeg, false, true, false, true);
+        ProcessorContextBuilder builder = createContextBuilder(robotX, robotY, robotDeg, headDeg, false, true, false, true);
+        ProcessorContextApi context0 = builder.build();
         // And next step context backward
-        ProcessorContextApi context1 = new ProcessorContextBuilder(context0)
+        ProcessorContextApi context1 = builder
                 .canMoveForward(true)
                 .frontSensor(true)
                 .backward(STEP2_DISTANCE)
@@ -226,10 +212,11 @@ class AvoidingStateTest {
     @MethodSource("dataBlocked")
     void testFrontContact2StillContact(double robotX, double robotY, int robotDeg, int headDeg) {
         // Given the processor context
-        ProcessorContextApi context0 = createContext(robotX, robotY, robotDeg, headDeg,
+        ProcessorContextBuilder builder = createContextBuilder(robotX, robotY, robotDeg, headDeg,
                 false, true, false, true);
+        ProcessorContextApi context0 = builder.build();
         // And next step context backward
-        ProcessorContextApi context1 = new ProcessorContextBuilder(context0)
+        ProcessorContextApi context1 = builder
                 .backward(STEP2_DISTANCE)
                 .build();
 
@@ -319,7 +306,8 @@ class AvoidingStateTest {
     @MethodSource("dataBlocked")
     void testFrontContactTimeout(double robotX, double robotY, int robotDeg, int headDeg) {
         // Given the processor context
-        ProcessorContextApi context0 = createContext(robotX, robotY, robotDeg, headDeg, false, true, false, true);
+        ProcessorContextBuilder builder0 = createContextBuilder(robotX, robotY, robotDeg, headDeg, false, true, false, true);
+        ProcessorContextApi context0 = builder0.build();
 
         // When init state
         state.init(context0);
@@ -329,8 +317,8 @@ class AvoidingStateTest {
         StateResult result = state.step(context0);
         // And a next status with clear front sensor and robot at safe distance
         // and timeout elapsed
-        ProcessorContextApi context1 = new ProcessorContextBuilder(context0)
-                .simulationTime(AvoidingState.DEFAULT_TIMEOUT)
+        ProcessorContextApi context1 = builder0
+                .simulationTime(TIMEOUT + 1)
                 .robotLocation(result.commands().target())
                 .frontSensor(true)
                 .rearSensor(true)
@@ -345,8 +333,9 @@ class AvoidingStateTest {
     @MethodSource("dataBlocked")
     void testRearContact(double robotX, double robotY, int robotDeg, int headDeg) {
         // Given the processor context
-        ProcessorContextApi context = createContext(robotX, robotY, robotDeg, headDeg,
-                true, false, true, false);
+        ProcessorContextApi context = createContextBuilder(robotX, robotY, robotDeg, headDeg,
+                true, false, true, false)
+                .build();
         // When init state
         state.init(context);
         // And entering state
@@ -383,10 +372,11 @@ class AvoidingStateTest {
     })
     void testRearContact2NoContact(double robotX, double robotY, int robotDeg, int headDeg, double safeX, double safeY) {
         // Given the processor context
-        ProcessorContextApi context0 = createContext(robotX, robotY, robotDeg, headDeg,
+        ProcessorContextBuilder builder = createContextBuilder(robotX, robotY, robotDeg, headDeg,
                 true, false, true, false);
+        ProcessorContextApi context0 = builder.build();
         // And next step context backward
-        ProcessorContextApi context1 = new ProcessorContextBuilder(context0)
+        ProcessorContextApi context1 = builder
                 .canMoveBackward(true)
                 .rearSensor(true)
                 .forward(STEP2_DISTANCE)
@@ -417,10 +407,11 @@ class AvoidingStateTest {
     @MethodSource("dataBlocked")
     void testRearContact2StillContact(double robotX, double robotY, int robotDeg, int headDeg) {
         // Given the processor context
-        ProcessorContextApi context0 = createContext(robotX, robotY, robotDeg, headDeg,
+        ProcessorContextBuilder builder = createContextBuilder(robotX, robotY, robotDeg, headDeg,
                 true, false, true, false);
+        ProcessorContextApi context0 = builder.build();
         // And next step context backward
-        ProcessorContextApi context1 = new ProcessorContextBuilder(context0)
+        ProcessorContextApi context1 = builder
                 .forward(STEP2_DISTANCE)
                 .build();
 

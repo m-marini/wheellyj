@@ -58,6 +58,7 @@ import java.util.stream.Stream;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.Utils.zipWithIndex;
+import static org.mmarini.wheelly.apis.RadarMapBuilder.parseMap;
 import static org.mmarini.yaml.Utils.fromResource;
 
 public interface TestFunctions {
@@ -131,18 +132,6 @@ public interface TestFunctions {
 
     static Predicate<WheellyMessage> notBefore(long time) {
         return msg -> msg.simulationTime() >= time;
-    }
-
-    static Stream<Tuple2<Point, String>> parseMap(String... lines) {
-        Stream.Builder<Tuple2<Point, String>> builder = Stream.builder();
-        for (int j = lines.length - 1; j >= 0; j--) {
-            String line = lines[j];
-            for (int i = 0; i < line.length(); i++) {
-                String ch = line.substring(i, i + 1);
-                builder.add(Tuple2.of(new Point(i, lines.length - 1 - j), ch));
-            }
-        }
-        return builder.build();
     }
 
     static <T extends WheellyMessage> void waitFor(Flowable<T> messages, Predicate<T> pred, long timeout) {
@@ -274,7 +263,7 @@ public interface TestFunctions {
                 if (node.isMissingNode()) {
                     throw new IllegalArgumentException(format("Missing node %s", fieldLocator));
                 }
-                return new Object[][]{processor.apply(parseMap(node.asText().split(" ")))
+                return new Object[][]{processor.apply(parseMap(node.asText()).stream())
                         .toArray(Object[]::new)};
             });
             return this;
@@ -318,7 +307,7 @@ public interface TestFunctions {
                 if (node.isMissingNode()) {
                     throw new IllegalArgumentException(format("Missing node %s", fieldLocator));
                 }
-                return processor.apply(parseMap(node.asText().split(" ")))
+                return processor.apply(parseMap(node.asText()).stream())
                         .toArray(Object[][]::new);
             });
             return this;

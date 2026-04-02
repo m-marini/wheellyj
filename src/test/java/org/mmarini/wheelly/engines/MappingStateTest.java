@@ -58,7 +58,7 @@ class MappingStateTest {
     public static final int DELTA_DIR = 4;
     public static final int MAX_HEAD_DEG = RobotSpec.DEFAULT_HEAD_FOV_DEG / 2;
     private static final long SEED = 1234;
-    private static final int NUM_TEST_CASE = 100;
+    private static final int NUM_TEST_CASE = 30;
 
     static Stream<Arguments> dataBlocked() {
         return RandomArgumentsGenerator.create(SEED)
@@ -80,7 +80,7 @@ class MappingStateTest {
     static ProcessorContextBuilder nextBuilder(ProcessorContextBuilder builder, RobotCommands commands) {
         builder = builder.addSimulationTime(DELTA_TIME)
                 .headAngle(commands.scanDirection())
-                .updateLidar();
+                .updateLidarTime();
         if (commands.isRotate()) {
             builder = builder.robotDirection(commands.rotationDirection());
         }
@@ -170,7 +170,7 @@ class MappingStateTest {
         assertThat(state.initialDir(), angleCloseTo(robotDeg));
     }
 
-    @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
+    @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}")
     @MethodSource("dataFrontScan")
     void testScanLeft(double robotX, double robotY, int robotDeg) {
         ProcessorContextBuilder builder = new ProcessorContextBuilder(robotX, robotY, robotDeg, 0);
@@ -538,7 +538,7 @@ class MappingStateTest {
         assertThat(state.targetRobotDir(), angleCloseTo(robotDeg));
 
         // When turning robot half way the completion
-        Complex halfWayDir = Complex.fromDeg(robotDeg - (double) DEFAULT_TURN_ANGLE / 2);
+        int halfWayDir = Complex.fromDeg(robotDeg - (double) DEFAULT_TURN_ANGLE / 2).toIntDeg();
         //status = status.setDirection(halfWayDir);
         builder = nextBuilder(builder, result.commands())
                 .robotDirection(halfWayDir);

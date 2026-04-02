@@ -62,13 +62,14 @@ class RobotControllerTest {
     public static final long COMMAND_INTERVAL = 1000L;
     public static final long REACTION_INTERVAL = 300L;
     public static final long TEST_DURATION = 20000L;
+    public static final int NUM_RANDOM_TEST_CASES = 30;
 
     public static Stream<Arguments> dataMove() {
         return RandomArgumentsGenerator.create(1234)
                 .uniform(-65, 65)
                 .uniform(0, 359)
                 .uniform(1.0, 2.0, 9)
-                .build(10);
+                .build(NUM_RANDOM_TEST_CASES);
     }
 
     private RobotController controller;
@@ -128,7 +129,7 @@ class RobotControllerTest {
     }
 
     @Test
-    void testConnect() throws Throwable {
+    void testConnect() {
         // Given a mock robot
         // and a controller
         TestSubscriber<RobotControllerStatusApi> lineSub = new TestSubscriber<>();
@@ -205,7 +206,7 @@ class RobotControllerTest {
                 .subscribe(statusSub);
 
         AtomicInteger counter = new AtomicInteger();
-        Consumer<RobotStatus> inferenceMock = s ->
+        Consumer<RobotStatus> inferenceMock = _ ->
                 counter.incrementAndGet();
         controller.setOnInference(inferenceMock);
 

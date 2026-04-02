@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -115,6 +115,27 @@ class RobotSpecTest {
                                 double expX, double expY) {
         Point2D.Double robotLocation = new Point2D.Double(xRobot, yRobot);
         Point2D location = spec.frontLidarLocation(robotLocation, Complex.fromDeg(robotDirDeg), Complex.fromDeg(sensorDirDeg));
+        assertThat(location, pointCloseTo(expX, expY, MM1));
+    }
+
+    @ParameterizedTest(
+            name = "[{index}] @({0},{1}) R{2}"
+    )
+    @CsvSource({
+            "0,0, 0,    0,30e-3", // 30
+            "0,0, -90,  -30e-3,0",
+            "0,0, -180, 0,-30e-3",
+            "0,0, 90,   30e-3,0",
+            "1,2, 0,    1,2.030", // 30 + 15
+            "1,2, -90,  0.97,2",
+            "1,2, -180, 1,1.97",
+            "1,2, 90,   1.03,2",
+    })
+    void testHeadLocation(double xRobot, double yRobot,
+                          int robotDirDeg,
+                          double expX, double expY) {
+        Point2D.Double robotLocation = new Point2D.Double(xRobot, yRobot);
+        Point2D location = spec.headLocation(robotLocation, Complex.fromDeg(robotDirDeg));
         assertThat(location, pointCloseTo(expX, expY, MM1));
     }
 

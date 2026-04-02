@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -82,7 +82,7 @@ public class RRTTestApp {
     private static RRTPathFinder createPathFinder(RadarMap map, ObstacleMap obstacles, Point2D location) {
         //return RRTPathFinder.createUnknownTargets(map, location, GROWTH_DISTANCE, new Random(SEED));
 //        return RRTPathFinder.createLeastEmptyTargets(map, location, GROWTH_DISTANCE, 3, new Random(SEED));
-        return RRTPathFinder.createLabelTargets(map, location, DISTANCE, SAFETY_DISTANCE, GROWTH_DISTANCE, new Random(SEED), obstacles.labeled());
+        return RRTPathFinder.createMarkerTargets(map, location, DISTANCE, SAFETY_DISTANCE, GROWTH_DISTANCE, new Random(SEED), obstacles.labeled());
     }
 
     private static RadarMap createRadarMap(ObstacleMap obstacles) {
@@ -103,7 +103,7 @@ public class RRTTestApp {
         });
     }
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         new RRTTestApp().run();
     }
 

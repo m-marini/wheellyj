@@ -51,7 +51,7 @@ class MoveToLabelTest {
         return new WorldModelBuilder()
                 .robotLocation(robotLocation)
                 .robotDir(robotDeg)
-                .addLabel("A", marker)
+                .addMarker("A", marker)
                 .build();
     }
 
