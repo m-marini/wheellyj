@@ -46,8 +46,6 @@ public class TestApp {
     public static final String BROKER_URL = "tcp://localhost:1883";
     public static final String USER_NAME = "wheellyj";
     public static final String PASSWORD = "wheellyj";
-    public static final int CAMERA_INTERVAL = 500;
-    public static final int CAMERA_TIMEOUT = 5000;
 
     static void main(String[] args) {
         new TestApp().run();

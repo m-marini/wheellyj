@@ -26,7 +26,7 @@ flow:
       $id: https://mmarini.org/wheelly/state-search-label-schema-0.1
       class: org.mmarini.wheelly.engines.SearchLabelState
       maxSearchTime: 3000
-      minGoals: 2
+      minGoals: 3
       distance: 0.8
       transitions:
         completed:

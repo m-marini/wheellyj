@@ -54,7 +54,7 @@ class SensorLabelTest {
                 .robotSpeed(leftPps, rightPps);
         if (!"?".equals(qrCode)) {
             Point2D markerLocation = Complex.fromDeg(headDeg).at(new Point2D.Double(), distance);
-            builder = builder.addLabel(qrCode, markerLocation);
+            builder = builder.addMarker(qrCode, markerLocation);
         }
         return builder.build();
     }

@@ -67,9 +67,6 @@ public class SearchLabelState extends AbstractSearchAndMoveState {
         double distance = locator.path(DISTANCE_ID).getNode(root).asDouble();
         double growthDistance = locator.path(GROWTH_DISTANCE_ID).getNode(root).asDouble(DEFAULT_GROWTH_DISTANCE);
         long seed = locator.path(SEED_ID).getNode(root).asLong();
-        Random random = seed == 0
-                ? new Random()
-                : new Random(seed);
         int maxIterations = locator.path(MAX_ITERATIONS_ID).getNode(root).asInt(Integer.MAX_VALUE);
         int minGoals = locator.path(MIN_GOALS_ID).getNode(root).asInt(1);
         long maxSearchTime = locator.path(MAX_SEARCH_TIME_ID).getNode(root).asLong(DEFAULT_MAX_SEARCH_TIME);
@@ -78,17 +75,48 @@ public class SearchLabelState extends AbstractSearchAndMoveState {
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
         long timeout = locator.path(TIMEOUT_ID).getNode(root).asLong(DEFAULT_TIMEOUT);
         double safetyDistance = locator.path(SAFETY_DISTANCE_ID).getNode(root).asDouble(DEFAULT_SAFETY_DISTANCE);
+        return create(id, timeout, maxIterations, minGoals, maxSearchTime, distance, growthDistance, seed, safetyDistance
+                , onInit, onEntry, onExit);
+    }
+
+    /**
+     * Create the search label state
+     *
+     * @param id             the state identifier
+     * @param timeout        the timeout (ms)
+     * @param maxIterations  the maximum number of iterations
+     * @param minGoals       the minimum number of goals
+     * @param maxSearchTime  the maximum search time (ms)
+     * @param distance       the maximum target distance (m)
+     * @param growthDistance the growth distance of rrt search algorithm (m)
+     * @param seed           the random generator seed
+     * @param safetyDistance the safety distance (m)
+     * @param onInit         the init command
+     * @param onEntry        the entry command
+     * @param onExit         the exit command
+     */
+    public static SearchLabelState create(String id,
+                                          long timeout, int maxIterations, int minGoals, long maxSearchTime, double distance,
+                                          double growthDistance,
+                                          long seed,
+                                          double safetyDistance,
+                                          ProcessorCommand onInit,
+                                          ProcessorCommand onEntry,
+                                          ProcessorCommand onExit
+    ) {
+        Random random = seed == 0
+                ? new Random()
+                : new Random(seed);
         Function<ProcessorContextApi, RRTPathFinder> pathFinderSupplier = context -> {
             WorldModel worldModel = context.worldModel();
             RadarMap map = worldModel.radarMap();
             RobotStatus status = worldModel.robotStatus();
             Point2D robotLocation = status.location();
-            Point2D[] labels = worldModel.markers().values().stream().map(LabelMarker::location).toArray(Point2D[]::new);
-            return labels.length == 0
+            Point2D[] markers = worldModel.markers().values().stream().map(LabelMarker::location).toArray(Point2D[]::new);
+            return markers.length == 0
                     ? null
-                    : RRTPathFinder.createLabelTargets(map, robotLocation, distance, safetyDistance + CM, growthDistance, random,
-                    Arrays.stream(labels));
-
+                    : RRTPathFinder.createMarkerTargets(map, robotLocation, distance, safetyDistance + CM, growthDistance, random,
+                    Arrays.stream(markers));
         };
         return new SearchLabelState(id, onInit, onEntry, onExit, timeout, maxIterations, minGoals, maxSearchTime, pathFinderSupplier);
     }

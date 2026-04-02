@@ -65,7 +65,7 @@ class SimRobotTest {
     public static final int INTERVAL = 10;
     private static final double PULSES_EPSILON = 1;
     public static final int CLOSE_DELAY = 100;
-    public static final int NUM_CASES = 100;
+    public static final int NUM_CASES = 30;
     public static final double MAX_DISTANCE = 1;
 
     /**

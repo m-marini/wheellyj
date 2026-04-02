@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2023 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2023-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -102,23 +102,6 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
     }
 
     /**
-     * Returns the contacts point or null if not present
-     */
-    public Point2D contactPoint() {
-        return contactsMessage == null
-                // No contacts message
-                ? null
-                : !canMoveForward()
-                // front contact
-                ? direction().at(location(), robotSpec.contactRadius())
-                : !canMoveBackward()
-                // rear contact
-                ? direction().opposite().at(location(), robotSpec.contactRadius())
-                // No contacts
-                : null;
-    }
-
-    /**
      * Returns the robot direction
      */
     public Complex direction() {
@@ -137,13 +120,6 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      */
     public Point2D frontLidarLocation() {
         return robotSpec.frontLidarLocation(lidarMessage.robotLocation(), lidarMessage.robotYaw(), lidarMessage.headDirection());
-    }
-
-    /**
-     * Returns the obstacle location
-     */
-    public Optional<Point2D> frontObstacleCentre() {
-        return frontObstacleCentre(OBSTACLE_SIZE / 2);
     }
 
     /**
@@ -187,6 +163,10 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      */
     public Complex headDirection() {
         return lidarMessage.headDirection();
+    }
+
+    public Point2D headLocation() {
+        return robotSpec.headLocation(lidarMessage.robotLocation(), lidarMessage.robotYaw());
     }
 
     /**
@@ -243,13 +223,6 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      */
     public Point2D rearLidarLocation() {
         return robotSpec.rearLidarLocation(lidarMessage.robotLocation(), lidarMessage.robotYaw(), lidarMessage.headDirection());
-    }
-
-    /**
-     * Returns the obstacle location
-     */
-    public Optional<Point2D> rearObstacleCentre() {
-        return rearObstacleCentre(OBSTACLE_SIZE / 2);
     }
 
     /**
@@ -408,15 +381,6 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      */
     public RobotStatus setRearDistance(double distance) {
         return setLidarMessage(lidarMessage.rearDistance(m2mm(distance)));
-    }
-
-    /**
-     * Returns the robot status with the sensor direction set
-     *
-     * @param dir the sensor direction
-     */
-    public RobotStatus setSensorDirection(Complex dir) {
-        return setLidarMessage(lidarMessage.sensorDirection(dir.toIntDeg()));
     }
 
     /**

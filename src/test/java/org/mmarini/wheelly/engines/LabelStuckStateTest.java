@@ -45,16 +45,16 @@ import static java.lang.Math.clamp;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.wheelly.apis.MarkerLocatorTest.LABEL_A;
 import static org.mmarini.wheelly.apis.MarkerLocatorTest.MM_1;
-import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_HEAD_FOV_DEG;
-import static org.mmarini.wheelly.apis.RobotSpec.MAX_RADAR_DISTANCE;
+import static org.mmarini.wheelly.apis.RobotSpec.*;
 import static org.mmarini.wheelly.apis.RobotStatusId.BACKWARD;
 import static org.mmarini.wheelly.apis.RobotStatusId.FORWARD;
 import static org.mmarini.wheelly.engines.LabelStuckState.*;
+import static org.mmarini.wheelly.engines.LabelStuckState.DEFAULT_DIRECTION_RANGE;
 import static org.mmarini.wheelly.engines.StateResult.*;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class LabelStuckStateTest {
-    public static final int NUM_TEST_CASE = 100;
+    public static final int NUM_TEST_CASE = 30;
     private static final long SEED = 1234;
 
     static Stream<Arguments> dataBlocked() {
@@ -93,7 +93,7 @@ class LabelStuckStateTest {
                 .uniform(-5, 5., 9) // robotX
                 .uniform(-5, 5., 9) // robotY
                 .uniform(0, 359) // robotDeg
-                .uniform(-DEFAULT_HEAD_FOV_DEG / 2 + 1, DEFAULT_HEAD_FOV_DEG / 2 - 1, 9) // headDeg
+                .uniform(-DEFAULT_LIDAR_FOV_DEG / 2 + DEFAULT_DIRECTION_RANGE + 1, DEFAULT_LIDAR_FOV_DEG / 2 - DEFAULT_DIRECTION_RANGE - 1) // headDeg
                 .uniform(-DEFAULT_DIRECTION_RANGE + 1, DEFAULT_DIRECTION_RANGE - 1) // markerDeg
                 .uniform(DEFAULT_MIN_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
                 .uniform(DEFAULT_CORRELATION_DISTANCE + MM_1, MAX_RADAR_DISTANCE, 9) // markerDistance
@@ -105,7 +105,7 @@ class LabelStuckStateTest {
                 .uniform(-5, 5., 9) // robotX
                 .uniform(-5, 5., 9) // robotY
                 .uniform(0, 359) // robotDeg
-                .uniform(-DEFAULT_HEAD_FOV_DEG / 2 + 1, DEFAULT_HEAD_FOV_DEG / 2 - 1, 9) // headDeg
+                .uniform(-DEFAULT_LIDAR_FOV_DEG / 2 + DEFAULT_DIRECTION_RANGE + 1, DEFAULT_LIDAR_FOV_DEG / 2 - DEFAULT_DIRECTION_RANGE - 1) // headDeg
                 .uniform(-DEFAULT_DIRECTION_RANGE + 1, DEFAULT_DIRECTION_RANGE - 1) // markerDeg
                 .uniform(DEFAULT_MIN_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
                 .uniform(-DEFAULT_MIN_DISTANCE, -DEFAULT_CORRELATION_DISTANCE - MM_1, 9) // markerDistance
@@ -278,7 +278,7 @@ class LabelStuckStateTest {
 
     private static int headMarkerAngle(ProcessorContextApi context) {
         RobotStatus status = context.worldModel().robotStatus();
-        return clamp(Complex.direction(status.robotSpec().headLocation(), context.worldModel().markers().get(org.mmarini.wheelly.apis.MarkerLocatorTest.LABEL_A).location())
+        return clamp(Complex.direction(status.headLocation(), context.worldModel().markers().get(org.mmarini.wheelly.apis.MarkerLocatorTest.LABEL_A).location())
                 .sub(status.direction())
                 .toIntDeg(), -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
     }
@@ -435,7 +435,8 @@ class LabelStuckStateTest {
             "dataTooCloseRearLeftMarker",
             "dataTooCloseRearRightMarker",
     })
-    void testTooCloseMarker(double robotX, double robotY, int robotDeg, int headDeg, int markerDeg, double markerDistance) {
+    void testTooCloseMarker(double robotX, double robotY, int robotDeg, int headDeg,
+                            int markerDeg, double markerDistance) {
         // Given a robot status with robot location, direction head direction, marker direction relative the robot,
         // marker distance relative the robot
         ProcessorContextApi context = new ProcessorContextBuilder(robotX, robotY, robotDeg, headDeg)

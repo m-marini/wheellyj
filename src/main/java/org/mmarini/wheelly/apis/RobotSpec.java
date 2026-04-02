@@ -115,7 +115,6 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
      * Robot track, distance between wheels (m)
      */
     public static final double ROBOT_TRACK = 136e-3;
-    public static final int MAX_DIRECTION_ACTION = 180;
 
     /**
      * Robot mass (Kg)
@@ -320,10 +319,22 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
      * @param sensorDir     the relative sensor direction
      */
     public AffineTransform applyFrontLidarView(AffineTransform trans, Point2D robotLocation, Complex robotDir, Complex sensorDir) {
-        AffineTransform trans1 = applyRobotView(trans, robotLocation, robotDir);
-        trans1.translate(headLocation.getX(), headLocation.getY());
+        AffineTransform trans1 = applyHeadView(trans, robotLocation, robotDir);
         trans1.rotate(-sensorDir.toRad());
         trans1.translate(0, frontLidarDistance);
+        return trans1;
+    }
+
+    /**
+     * Applies the transformation from head view coordinates to absolute coordinates
+     *
+     * @param trans         the current transformation
+     * @param robotLocation the robot location
+     * @param robotDir      the robot direction
+     */
+    private AffineTransform applyHeadView(AffineTransform trans, Point2D robotLocation, Complex robotDir) {
+        AffineTransform trans1 = applyRobotView(trans, robotLocation, robotDir);
+        trans1.translate(headLocation.getX(), headLocation.getY());
         return trans1;
     }
 
@@ -336,8 +347,7 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
      * @param sensorDir     the relative sensor direction
      */
     public AffineTransform applyRearLidarView(AffineTransform trans, Point2D robotLocation, Complex robotDir, Complex sensorDir) {
-        AffineTransform trans1 = applyRobotView(trans, robotLocation, robotDir);
-        trans1.translate(headLocation.getX(), headLocation.getY());
+        AffineTransform trans1 = applyHeadView(trans, robotLocation, robotDir);
         trans1.rotate(PI - sensorDir.toRad());
         trans1.translate(0, rearLidarDistance);
         return trans1;
@@ -364,6 +374,16 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
      */
     public Point2D frontLidarLocation(Point2D robotLocation, Complex robotDir, Complex sensorDir) {
         return applyFrontLidarView(new AffineTransform(), robotLocation, robotDir, sensorDir).transform(new Point2D.Double(), null);
+    }
+
+    /**
+     * Returns the head absolute location
+     *
+     * @param robotLocation the robot location
+     * @param robotDir      the robot direction
+     */
+    public Point2D headLocation(Point2D robotLocation, Complex robotDir) {
+        return applyHeadView(new AffineTransform(), robotLocation, robotDir).transform(new Point2D.Double(), null);
     }
 
     /**

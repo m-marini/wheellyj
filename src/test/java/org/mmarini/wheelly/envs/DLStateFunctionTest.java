@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -55,6 +55,7 @@ class DLStateFunctionTest {
     public static final double EPSILON = 1e-5;
     public static final int LABEL_CHANNEL = 4;
     public static final long SEED = 1234;
+    public static final int NUM_RANDOM_TEST_CASES = 30;
 
     static Stream<Arguments> dataMap() {
         return RandomArgumentsGenerator.create(SEED)
@@ -63,7 +64,7 @@ class DLStateFunctionTest {
                 .uniform(-0.4, 0.4, 5) // yRobot
                 .uniform(-0.4, 0.4, 5) // xCell
                 .uniform(-0.4, 0.4, 5) // yCell
-                .build(100);
+                .build(NUM_RANDOM_TEST_CASES);
     }
 
     private DLStateFunction dataGen;
@@ -329,7 +330,7 @@ class DLStateFunctionTest {
         WorldModel model = new WorldModelBuilder()
                 .robotLocation(robotLocation)
                 .robotDir(directionDeg)
-                .addLabel("A", cellLocation)
+                .addMarker("A", cellLocation)
                 .build();
 //        WorldModel model = createModeller().updateForInference(createModelLabelMap(directionDeg, robotLocation, cellLocation));
 

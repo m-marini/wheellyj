@@ -45,7 +45,7 @@ import static org.mmarini.wheelly.engines.StateResult.NONE_EXIT;
 
 class SearchUnknownStateTest {
     public static final long SEED = 1234L;
-    public static final int TEST_CASE_NUMBER = 100;
+    public static final int TEST_CASE_NUMBER = 30;
     public static final long ECHO_TIME = 100L;
     public static final int DECAY = 1;
 

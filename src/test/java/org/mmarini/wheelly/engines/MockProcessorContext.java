@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -31,9 +31,23 @@ package org.mmarini.wheelly.engines;
 import org.mmarini.wheelly.apis.WorldModel;
 
 import java.awt.geom.Point2D;
-import java.util.List;
+import java.util.*;
 
-public record MockProcessorContext(WorldModel worldModel) implements ProcessorContextApi {
+public class MockProcessorContext implements ProcessorContextApi {
+    private final WorldModel worldModel;
+    private final Deque<Object> stack;
+    private final Map<String, Object> properties;
+
+    MockProcessorContext(WorldModel worldModel) {
+        this.worldModel = worldModel;
+        this.stack = new ArrayDeque<>();
+        this.properties = new HashMap<>();
+    }
+
+    MockProcessorContext() {
+        this(null);
+    }
+
     @Override
     public void clearMap() {
     }
@@ -45,7 +59,7 @@ public record MockProcessorContext(WorldModel worldModel) implements ProcessorCo
 
     @Override
     public <T> T get(String key) {
-        return null;
+        return (T) properties.get(key);
     }
 
     @Override
@@ -55,31 +69,39 @@ public record MockProcessorContext(WorldModel worldModel) implements ProcessorCo
 
     @Override
     public <T> T peek() {
-        return null;
+        return (T) stack.getLast();
     }
 
     @Override
     public <T> T pop() {
-        return null;
+        return (T) stack.pollLast();
     }
 
     @Override
     public <T> ProcessorContextApi push(T value) {
+        stack.offerLast(value);
         return this;
     }
 
     @Override
     public <T> ProcessorContextApi put(String key, T value) {
+        properties.put(key, value);
         return this;
     }
 
     @Override
     public void remove(String key) {
+        properties.remove(key);
     }
 
     @Override
     public int stackSize() {
-        return 0;
+        return stack.size();
+    }
+
+    @Override
+    public WorldModel worldModel() {
+        return worldModel;
     }
 
     @Override

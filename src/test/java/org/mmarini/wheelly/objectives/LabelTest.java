@@ -53,7 +53,7 @@ class LabelTest {
                 .robotDir(robotDeg)
                 .headAngle(headDeg)
                 .robotSpeed(leftPps, rightPps)
-                .addLabel("A", marker)
+                .addMarker("A", marker)
                 .build();
     }
 

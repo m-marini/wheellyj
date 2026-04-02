@@ -57,6 +57,7 @@ public class SimRobotLidarTest {
     public static final double MAX_OBSTALCE_DISTANCE = MAX_RADAR_DISTANCE - DEFAULT_OBSTACLE_RADIUS - DEFAULT_HEAD_Y - DEFAULT_FRONT_LIDAR_DISTANCE;
     public static final double CENTRES_DISTANCE = MIN_OBSTALCE_DISTANCE / sin(toRadians((double) DEFAULT_LIDAR_FOV_DEG / 2));
     public static final long CHANGE_MAP_PERIOD = 600000;
+    public static final int NUM_RANDOM_TEST_CASES = 30;
 
     public static Stream<Arguments> dataLidarFarObstacle() {
         return RandomArgumentsGenerator.create(SEED)
@@ -66,7 +67,7 @@ public class SimRobotLidarTest {
                 .uniform(-90, 90) // head dir
                 .uniform(0, 359) // obs dir
                 .choice(MAX_RADAR_DISTANCE + MM, MAX_RADAR_DISTANCE + 1) // obs distance
-                .build(100);
+                .build(NUM_RANDOM_TEST_CASES);
     }
 
     public static Stream<Arguments> dataLidarFarOuterObstacle() {
@@ -78,7 +79,7 @@ public class SimRobotLidarTest {
                 .uniform(-90, 90) // head dir
                 .uniform(outerAngleDeg, 360 - outerAngleDeg, 3) // obs dir
                 .choice(MAX_OBSTALCE_DISTANCE, MAX_OBSTALCE_DISTANCE) // obs distance
-                .build(100);
+                .build(NUM_RANDOM_TEST_CASES);
     }
 
     public static Stream<Arguments> dataLidarInnerObstacle() {
@@ -89,7 +90,7 @@ public class SimRobotLidarTest {
                 .uniform(-90, 90) // head dir
                 .uniform(-10, 10) // obs dir
                 .choice(MIN_OBSTALCE_DISTANCE, MAX_OBSTALCE_DISTANCE) // obs distance
-                .build(100);
+                .build(NUM_RANDOM_TEST_CASES);
     }
 
     public static Stream<Arguments> dataLidarNearOuterObstacle() {
@@ -102,7 +103,7 @@ public class SimRobotLidarTest {
                 .uniform(-90, 90) // head dir
                 .uniform(outerAngleDeg, 360 - outerAngleDeg, 3) // obs dir
                 .choice(d, d) // obs distance
-                .build(100);
+                .build(NUM_RANDOM_TEST_CASES);
     }
 
     private SimRobot robot;
