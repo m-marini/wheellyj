@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 
 - Issue [#601](https://github.com/m-marini/wheellyj/issues/601): Bad character in source file
+- Issue [#605](https://github.com/m-marini/wheellyj/issues/605): Missing counter creating datasets
 
 ## [0.26.0] 2026-02-26
 

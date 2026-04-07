@@ -113,8 +113,7 @@ public class DatasetBuilder {
         Tuple2<WorldModel, RobotCommands> record;
         WorldModel s0 = null;
         RobotCommands commands = null;
-        int tot = reader.available();
-        int totMB = tot / KB;
+        int tot = reader.available() / KB;
         try (INDArray reward = Nd4j.create(1, 1)) {
             for (; ; ) {
                 try {
@@ -146,13 +145,13 @@ public class DatasetBuilder {
                     }
                     s0 = s1;
                     commands = record._2;
-                    int readMB = (tot - reader.available()) / KB;
-                    progressInfos.onNext(new ProgressInfo("Read inference (KB)", readMB, totMB));
+                    long byteRead = reader.position();
+                    progressInfos.onNext(new ProgressInfo("Read inference (KB)", (int) (byteRead / KB), tot));
                 } catch (EOFException ex) {
                     break;
                 }
             }
-            progressInfos.onNext(new ProgressInfo("Read inference completed (KB)", totMB, totMB));
+            progressInfos.onNext(new ProgressInfo("Read inference completed (KB)", tot, tot));
         }
         progressInfos.onComplete();
         rewards.close();
