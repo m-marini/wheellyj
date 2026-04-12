@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright 2026 Marco Marini, marco.marini@mmarini.org
  *
- *  Permission is hereby granted, free of charge, to any person
+ * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- *    END OF TERMS AND CONDITIONS
+ * END OF TERMS AND CONDITIONS
  *
  */
 
@@ -379,8 +379,8 @@ public class DLAgentBuilder {
     /**
      * Returns the agent from spec
      *
-     * @param root the spec document
-     * @param env  the environment
+     * @param root               the spec document
+     * @param env                the environment
      */
     public static DLAgent create(JsonNode root, WithSignalsSpec env) throws IOException {
         Random random = Nd4j.getRandom();
@@ -392,13 +392,13 @@ public class DLAgentBuilder {
     /**
      * Returns the builder of agant
      *
-     * @param root the configuration
-     * @param file the configuration file
+     * @param root               the configuration
+     * @param file               the configuration file
      */
     public static Function<WithSignalsSpec, DLAgent> create(JsonNode root, File file) {
         return env -> {
             try {
-                return create(root, env);
+                return DLAgentBuilder.create(root, env);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -416,7 +416,7 @@ public class DLAgentBuilder {
     /**
      * Creates the builder
      *
-     * @param root the root json node
+     * @param root the root JSON node
      */
     public DLAgentBuilder(JsonNode root) {
         this.root = root;
@@ -450,7 +450,7 @@ public class DLAgentBuilder {
     /**
      * Returns the agent
      *
-     * @param random the random number generator
+     * @param random             the random number generator
      */
     public DLAgent build(Random random) throws IOException {
         WheellyJsonSchemas.instance().validateOrThrow(root, SCHEMA_NAME);
@@ -467,7 +467,7 @@ public class DLAgentBuilder {
         int batchSize = Locator.locate(BATCH_SIZE_ID).getNode(root).asInt();
         float alpha = (float) Locator.locate(ALPHA_ID).getNode(root).asDouble();
         float beta = (float) Locator.locate(BETA_ID).getNode(root).asDouble();
-        return new DLAgent(filePath, network, random, numEpochs, trajectorySize, batchSize, alpha, beta, List.of(), 0F);
+        return DLAgent.create(filePath, network, random, numEpochs, trajectorySize, batchSize, alpha, beta, 0, false);
     }
 
     private ActivationLayer buildActivationLayer(Locator locator) {
@@ -746,8 +746,7 @@ public class DLAgentBuilder {
         }
         SubsamplingLayer.PoolingType poolingType = getOptByMap(locator.path(POOLING_TYPE_ID), poolingTypeMap);
         builder = builder.poolingType(poolingType);
-        SubsamplingLayer layer = builder.build();
-        return layer;
+        return builder.build();
     }
 
     private void buildTruncatedNormalDistribution(Locator locator) {

@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright 2026 Marco Marini, marco.marini@mmarini.org
  *
- *  Permission is hereby granted, free of charge, to any person
+ * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,13 +22,15 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- *    END OF TERMS AND CONDITIONS
+ * END OF TERMS AND CONDITIONS
  *
  */
 
 package org.mmarini.wheelly.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.rl.agents.AgentConnector;
 import org.mmarini.rl.envs.ExecutionResult;
 import org.mmarini.rl.envs.Signal;
@@ -81,6 +83,7 @@ public class DLEnvironment implements EnvironmentApi {
 
     private final ActionFunction actionFunc;
     private final Function<WorldModelSpec, StateFunction> stateFunctionBuilder;
+    private final PublishProcessor<Double> rewards;
     private StateFunction stateFunc;
     private RewardFunction rewardFunc;
     private AgentConnector agent;
@@ -98,6 +101,7 @@ public class DLEnvironment implements EnvironmentApi {
     public DLEnvironment(ActionFunction actionFunc, Function<WorldModelSpec, StateFunction> stateFunctionBuilder) {
         this.actionFunc = requireNonNull(actionFunc);
         this.stateFunctionBuilder = requireNonNull(stateFunctionBuilder);
+        this.rewards = PublishProcessor.create();
         logger.atDebug().log("Created");
     }
 
@@ -142,6 +146,7 @@ public class DLEnvironment implements EnvironmentApi {
                     signals0, prevActions, reward, signals1
             );
             agent = agent.observe(result);
+            rewards.onNext(reward);
         }
         // Split status
         prevState = state;
@@ -149,6 +154,13 @@ public class DLEnvironment implements EnvironmentApi {
         prevCommands = commands;
         prevActions = actions;
         return commands;
+    }
+
+    /**
+     * Returns the rewards flow
+     */
+    public Flowable<Double> readRewards() {
+        return rewards;
     }
 
     @Override

@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright 2026 Marco Marini, marco.marini@mmarini.org
  *
- *  Permission is hereby granted, free of charge, to any person
+ * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- *    END OF TERMS AND CONDITIONS
+ * END OF TERMS AND CONDITIONS
  *
  */
 
@@ -43,7 +43,7 @@ import static java.util.Objects.requireNonNull;
  * Produces mini-batch training data from trajectory
  */
 class TrajectoryDatasetIterator implements RLDatasetIterator, AutoCloseable {
-    private final DLAgent.Trajectory trajectory;
+    private final Trajectory trajectory;
     private final int batchSize;
     private final RLTrainingDataProvider generator;
     private float avgReward;
@@ -60,7 +60,7 @@ class TrajectoryDatasetIterator implements RLDatasetIterator, AutoCloseable {
      * @param avgReward  the initial average reward
      * @param generator  the data generator
      */
-    TrajectoryDatasetIterator(DLAgent.Trajectory trajectory, int batchSize, float avgReward, RLTrainingDataProvider generator) {
+    TrajectoryDatasetIterator(Trajectory trajectory, int batchSize, float avgReward, RLTrainingDataProvider generator) {
         this.trajectory = requireNonNull(trajectory);
         this.batchSize = batchSize;
         this.generator = requireNonNull(generator);
@@ -123,7 +123,7 @@ class TrajectoryDatasetIterator implements RLDatasetIterator, AutoCloseable {
                 .toMap();
 
         INDArray clipReward = trajectory.rewards().get(NDArrayIndex.interval(cursor, cursor + n), NDArrayIndex.all());
-        DLAgent.Trajectory minibatchTrajectory = new DLAgent.Trajectory(
+        Trajectory minibatchTrajectory = new Trajectory(
                 clipStates, clipActions, clipReward
         );
         this.data = generator.get(minibatchTrajectory, avgReward);

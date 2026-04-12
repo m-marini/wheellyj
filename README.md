@@ -7,27 +7,27 @@ The code of Webcam controller is at [Wheellycam project](https://github.com/m-ma
 
 The documentation is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
-## Release 0.26.0
+## Release [0.26.0](https://github.com/m-marini/wheellyj/releases/tag/v0.26.0)
 
 - Add lidars
 - Add robot simulation map
 
-## Release 0.25.0
+## Release [0.25.0](https://github.com/m-marini/wheellyj/releases/tag/v0.25.0)
 
 - Add MQTT architecture and convolution network to radar map
 
-## Release 0.24.1
+## Release [0.24.1](https://github.com/m-marini/wheellyj/releases/tag/v0.24.1)
 
 - Add label direction to camera event and number of samples parameters in state machine
 - Fixed  Ghost labels in simulated robot and missing markers in real robot
 
-## Release 0.24.0
+## Release [0.24.0](https://github.com/m-marini/wheellyj/releases/tag/v0.24.0)
 
 - Full reactive robot api
 - Add mapping, label stuck, find label, find unknown, find refresh, move path states
 - Point echo
 
-## Release 0.23.0
+## Release [0.23.0](https://github.com/m-marini/wheellyj/releases/tag/v0.23.0)
 
 - Add markers signals
 - Add state dump
@@ -35,11 +35,11 @@ The documentation is in the [Wiki section](https://github.com/m-marini/wheellyj/
 - Camera event following proxy
 - Move action masks creation
 
-## Release 0.22.0
+## Release [0.22.0](https://github.com/m-marini/wheellyj/releases/tag/v0.22.0)
 
 - Added relocate robot on stalemate
 
-## Release 0.21.0
+## Release [0.21.0](https://github.com/m-marini/wheellyj/releases/tag/v0.21.0)
 
 Added new features: 
 
@@ -58,19 +58,19 @@ Fixed some bugs:
 - Wrong learning for negative reward
 - Incorrect collision resolution
 
-## Release 0.20.0
+## Release [0.20.0](https://github.com/m-marini/wheellyj/releases/tag/v0.20.0)
 
 - Changed configuration files
 - Find label objective with parametrized direction and sensor check
 - Fixed missing batch session command and wrong model path in commands
 
-## Release 0.19.0
+## Release [0.19.0](https://github.com/m-marini/wheellyj/releases/tag/v0.19.0)
 
 - Add generation of report yaml
 - Combine move and direction into a single value action
 - Rescale learn panel values
 
-## Release 0.18.0
+## Release [0.18.0](https://github.com/m-marini/wheellyj/releases/tag/v0.18.0)
 
 - Add web cam processing
 - Add labels in polar radar map

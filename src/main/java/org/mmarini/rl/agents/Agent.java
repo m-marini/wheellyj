@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright 2026 Marco Marini, marco.marini@mmarini.org
  *
- *  Permission is hereby granted, free of charge, to any person
+ * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- *    END OF TERMS AND CONDITIONS
+ * END OF TERMS AND CONDITIONS
  *
  */
 
@@ -50,11 +50,6 @@ public interface Agent extends AgentConnector, AutoCloseable {
      */
     void backup();
 
-    /**
-     * Clears the trajectory
-     */
-    Agent clearTrajectory();
-
     @Override
     void close();
 
@@ -64,19 +59,7 @@ public interface Agent extends AgentConnector, AutoCloseable {
     Agent init();
 
     /**
-     * Returns true if the agent is read for train
-     */
-    boolean isReadyForTrain();
-
-    Agent dup();
-
-    /**
      * Saves the model
      */
     void save();
-
-    /**
-     * Returns the trained agent for the actual trajectory
-     */
-    Agent trainByTrajectory();
 }
