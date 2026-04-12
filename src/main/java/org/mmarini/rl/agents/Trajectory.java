@@ -28,16 +28,49 @@
 
 package org.mmarini.rl.agents;
 
+import org.nd4j.linalg.api.ndarray.INDArray;
+
+import java.util.Map;
+
+import static java.util.Objects.requireNonNull;
+
 /**
- * Provides the training data from trajectory
+ * The trajectory
+ *
+ * @param states  the states n+1 elements
+ * @param actions the actions n element
+ * @param rewards the rewards n element
  */
-@FunctionalInterface
-public interface RLTrainingDataProvider {
+public record Trajectory(Map<String, INDArray> states, Map<String, INDArray> actions,
+                         INDArray rewards) implements AutoCloseable {
     /**
-     * Returns the training data from trajectory
+     * Creates the trajectory
      *
-     * @param trajectory the trajectory
-     * @param avgReward  the initial average reward
+     * @param states  the states n+1 elements
+     * @param actions the actions n element
+     * @param rewards the rewards n element
      */
-    RLTrainingData get(Trajectory trajectory, float avgReward);
+    public Trajectory(Map<String, INDArray> states, Map<String, INDArray> actions, INDArray rewards) {
+        this.states = requireNonNull(states);
+        this.actions = requireNonNull(actions);
+        this.rewards = requireNonNull(rewards);
+    }
+
+    @Override
+    public void close() {
+        rewards.close();
+        for (INDArray value : states.values()) {
+            value.close();
+        }
+        for (INDArray value : actions.values()) {
+            value.close();
+        }
+    }
+
+    /**
+     * Returns the trajectory length (#states - 1) = (#actions) = #rewards
+     */
+    public long size() {
+        return rewards.size(0);
+    }
 }

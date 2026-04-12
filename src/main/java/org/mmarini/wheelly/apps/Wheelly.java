@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright 2026 Marco Marini, marco.marini@mmarini.org
  *
- *  Permission is hereby granted, free of charge, to any person
+ * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- *    END OF TERMS AND CONDITIONS
+ * END OF TERMS AND CONDITIONS
  *
  */
 
@@ -40,11 +40,15 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.Tuple2;
-import org.mmarini.rl.agents.*;
+import org.mmarini.rl.agents.AbstractAgentNN;
+import org.mmarini.rl.agents.Agent;
+import org.mmarini.rl.agents.DLAgent;
+import org.mmarini.rl.agents.TrainingKpis;
 import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.envs.DLEnvironment;
 import org.mmarini.wheelly.envs.EnvironmentApi;
 import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.wheelly.mqtt.MqttRobot;
@@ -92,14 +96,14 @@ public class Wheelly {
                 .defaultHelp(true)
                 .version(Messages.getString("Wheelly.title"))
                 .description("Run a session of interaction between robot and environment.");
-        parser.addArgument("-a", "--alternate")
-                .action(Arguments.storeTrue())
-                .help("specify alternate act/training");
         parser.addArgument("-c", "--config")
                 .setDefault("wheelly.yml")
                 .help("specify yaml configuration path");
         parser.addArgument("-i", "--inference")
                 .help("specify inference output path");
+        parser.addArgument("-p", "--parallel")
+                .action(Arguments.storeTrue())
+                .help("specify concurrent training");
         parser.addArgument("-s", "--silent")
                 .action(Arguments.storeTrue())
                 .help("specify silent closing (no window messages)");
@@ -139,7 +143,6 @@ public class Wheelly {
     private final SensorMonitor sensorMonitor;
     private final KpisPanel kpisPanel;
     private final CompletableSubject completion;
-    private final LearnPanel learnPanel;
     private final Namespace args;
     private final JButton stopButton;
     private final JButton startButton;
@@ -161,7 +164,6 @@ public class Wheelly {
     private Agent agent;
     private JFrame frame;
     private InferenceWriter modelDumper;
-    private OnLineAgent mediatorAgent;
 
     /**
      * Creates the server reinforcement learning engine server
@@ -173,7 +175,6 @@ public class Wheelly {
         this.envPanel = new EnvironmentPanel();
         this.kpisPanel = new KpisPanel();
         this.comMonitor = new ComMonitor();
-        this.learnPanel = new LearnPanel();
         this.sensorMonitor = new SensorMonitor();
         this.robotStartTimestamp = -1;
         this.reactionRobotTime = DoubleReducedValue.mean();
@@ -223,18 +224,14 @@ public class Wheelly {
         this.agent = agentBuilder.apply(environment);
 
         if (agent instanceof DLAgent dlAgent) {
+            dlAgent = dlAgent.concurrentTraining(args.getBoolean("parallel"));
             dlAgent.readKpis().observeOn(Schedulers.computation())
                     .subscribe(this::onKpis);
+            agent = dlAgent;
         }
 
         long savingInterval = Locator.locate("savingInterval").getNode(config).asLong();
-        this.mediatorAgent = new OnLineAgent(this.agent, savingInterval)
-                .merger((trained, online) ->
-                        trained instanceof AgentRL trainedRL && online instanceof AgentRL onlineRL
-                                ? trainedRL.eta(onlineRL.eta())
-                                .alphas(onlineRL.alphas())
-                                : trained);
-        environment.connect(mediatorAgent);
+        environment.connect(agent);
 
         kpisPanel.addActionColumns(environment.actionSpec()
                 .keySet().stream().sorted().toArray(String[]::new));
@@ -268,10 +265,6 @@ public class Wheelly {
         controller.readShutdown().subscribe(this::onShutdown);
         worldModeller.readInference().subscribe(this::onInference);
 
-        learnPanel.readActionAlphas()
-                .subscribe(this::onAlphasChange);
-        learnPanel.readEtas()
-                .subscribe(this::onEtaChange);
         Observable<WindowEvent>[] windowObs = allFrames.stream()
                 .map(f -> SwingObservable.window(f, SwingObservable.WINDOW_ACTIVE))
                 .toArray(Observable[]::new);
@@ -283,6 +276,14 @@ public class Wheelly {
             comMonitor.addRobot(mqttRobot);
         }
 
+        if (environment instanceof DLEnvironment dlEnvironment) {
+            dlEnvironment.readRewards()
+                    .subscribeOn(Schedulers.computation())
+                    .subscribe(reward -> {
+                        envPanel.setReward(reward);
+                        sensorMonitor.onReward(reward);
+                    });
+        }
         completion.onComplete();
     }
 
@@ -314,7 +315,6 @@ public class Wheelly {
         if (kpisFrame != null) {
             allFrames.add(kpisFrame);
         }
-        allFrames.add(learnPanel.createFrame());
         allFrames.add(sensorFrame);
         allFrames.add(comFrame);
 
@@ -335,11 +335,6 @@ public class Wheelly {
      * Creates the panels
      */
     private void createPanels() {
-        if (mediatorAgent.onlineAgent() instanceof AgentRL agent) {
-            learnPanel.setEta(agent.eta());
-            learnPanel.setActionAlphas(agent.alphas());
-        }
-
         this.polarPanel = new PolarPanel();
         RobotSpec robotSpec = robot.robotSpec();
         double radarMaxDistance = robotSpec.maxRadarDistance();
@@ -356,11 +351,6 @@ public class Wheelly {
         panel.addTab(Messages.getString("Wheelly.tabPanel.polarMap"), new JScrollPane(polarPanel));
         panel.addTab(Messages.getString("Wheelly.tabPanel.gridMap"), new JScrollPane(gridPanel));
         panel.addTab(Messages.getString("Wheelly.tabPanel.kpi"), new JScrollPane(kpisPanel));
-
-        JPanel panel1 = new GridLayoutHelper<>(new JPanel())
-                .modify("insets,10 center").add(learnPanel)
-                .getContainer();
-        panel.addTab(Messages.getString("Wheelly.tabPanel.learn"), panel1);
         panel.addTab(Messages.getString("Wheelly.tabPanel.sensor"), new JScrollPane(sensorMonitor));
         panel.addTab(Messages.getString("Wheelly.tabPanel.com"), new JScrollPane(comMonitor));
 
@@ -408,18 +398,6 @@ public class Wheelly {
     }
 
     /**
-     * Handles alphas changes
-     *
-     * @param alphas the alpha values
-     */
-    private void onAlphasChange(Map<String, Float> alphas) {
-        mediatorAgent.changeAgent(ag ->
-                ag instanceof AgentRL agent
-                        ? agent.alphas(alphas)
-                        : ag);
-    }
-
-    /**
      * Handles the clear map button event
      *
      * @param actionEvent the event
@@ -436,18 +414,6 @@ public class Wheelly {
     private void onControllerStatus(String status) {
         sensorMonitor.onControllerStatus(status);
         comMonitor.onControllerStatus(status);
-    }
-
-    /**
-     * Handles eta changes
-     *
-     * @param eta the eta value
-     */
-    private void onEtaChange(float eta) {
-        mediatorAgent.changeAgent(ag ->
-                ag instanceof AgentRL agent
-                        ? agent.eta(eta)
-                        : ag);
     }
 
     /**
@@ -512,7 +478,7 @@ public class Wheelly {
     /**
      * Handles the kpis event
      *
-     * @param kpis the kpis
+     * @param kpis the key performance indicators
      */
     private void onKpis(TrainingKpis kpis) {
         kpisPanel.print(kpis);
@@ -542,7 +508,7 @@ public class Wheelly {
      * @param actionEvent the action event
      */
     private void onResetButton(ActionEvent actionEvent) {
-        mediatorAgent.init();
+        agent.init();
     }
 
     /**
@@ -565,7 +531,7 @@ public class Wheelly {
         waitFrame.setVisible(true);
         Completable shuttingDown = Completable.fromAction(() -> {
                     // Shutting down
-                    mediatorAgent.close();
+                    agent.close();
                     if (modelDumper != null) {
                         try {
                             modelDumper.close();
@@ -643,7 +609,7 @@ public class Wheelly {
 
     /**
      * Handles the windows opened
-     * Initializes the agent
+     * Initialises the agent
      *
      * @param e the event
      */
@@ -666,8 +632,6 @@ public class Wheelly {
             agent = agentNN.setPostTrainKpis(true);
         }
 
-        boolean synchTraining = args.getBoolean("alternate");
-
         if (robot instanceof SimRobot robot1) {
             // Add the obstacles location changes
             robot1.readObstacleMap()
@@ -682,6 +646,9 @@ public class Wheelly {
         logger.atInfo().log("Session are running for {} sec...", sessionDuration);
         sessionDuration *= 1000;
 
+        // Create agent backup
+        agent.backup();
+
         // Create panels
         createPanels();
 
@@ -694,8 +661,6 @@ public class Wheelly {
 
         // Creates the flows
         createFlows();
-
-        agent.backup();
 
         // Starts the environment interaction
         active = true;

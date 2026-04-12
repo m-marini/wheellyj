@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright 2026 Marco Marini, marco.marini@mmarini.org
  *
- *  Permission is hereby granted, free of charge, to any person
+ * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- *    END OF TERMS AND CONDITIONS
+ * END OF TERMS AND CONDITIONS
  *
  */
 
@@ -37,7 +37,6 @@ import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.*;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -50,10 +49,8 @@ import java.io.File;
 import java.util.Map;
 import java.util.stream.IntStream;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mmarini.rl.agents.NNMediator.CRITIC_ID;
 
 public class MDPDLTest {
     public static final float ALPHA = 1F;
@@ -86,7 +83,7 @@ public class MDPDLTest {
                                 .build(),
                         INPUT_ID
                 )
-                .addLayer(DLAgent.CRITIC_ID,
+                .addLayer(CRITIC_ID,
                         new OutputLayer.Builder()
                                 .nOut(1)
                                 .activation(Activation.IDENTITY)
@@ -101,7 +98,7 @@ public class MDPDLTest {
                                 .build(),
                         HIDDEN_ID
                 )
-                .setOutputs(DLAgent.CRITIC_ID, ACTION_ID)
+                .setOutputs(CRITIC_ID, ACTION_ID)
                 .build();
     }
 
@@ -128,11 +125,13 @@ public class MDPDLTest {
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(SEED);
         ComputationGraph network = new ComputationGraph(conf());
         network.init();
-        agent = DLAgent.create(stateSpec, actionSpec, network, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHA, BETA, FILE);
+        agent = DLAgent.create(stateSpec, actionSpec, network, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHA, BETA, FILE, false);
     }
 
     @Test
     void testFSFS() {
+        fail();
+        /* TODO
         Map<String, INDArray> prediction0 = agent.predictFromState(allStates).collect(Tuple2.toMap());
         observe(0,
                 1, 0, 0, 1);
@@ -155,5 +154,7 @@ public class MDPDLTest {
                 greaterThan(0.9F));
         assertThat(prediction1.get(ACTION_ID).getFloat(1, 1),
                 greaterThan(0.9F));
+
+         */
     }
 }

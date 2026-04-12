@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright 2026 Marco Marini, marco.marini@mmarini.org
  *
- *  Permission is hereby granted, free of charge, to any person
+ * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- *    END OF TERMS AND CONDITIONS
+ * END OF TERMS AND CONDITIONS
  *
  */
 
@@ -38,7 +38,6 @@ import org.deeplearning4j.nn.weights.WeightInit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.*;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -51,15 +50,12 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.IntStream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Utils.deleteRecursive;
-import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 import static org.mmarini.wheelly.TestFunctions.matrixShape;
 import static org.mmarini.wheelly.envs.DLActionFunction.HEAD_ACTION_ID;
 import static org.mmarini.wheelly.envs.DLActionFunction.MOVE_ACTION_ID;
@@ -94,8 +90,8 @@ class DLAgentTest {
                 .weightInit(WeightInit.XAVIER)
                 .graphBuilder()
                 .addInputs(MAP_SIGNAL_ID)
-                .setInputTypes(new InputType.InputTypeConvolutional(DLAgentTest.GRID_SIZE, DLAgentTest.GRID_SIZE, DLAgentTest.NUM_CHANNELS))
-                .addLayer(DLAgent.CRITIC_ID,
+                .setInputTypes(new InputType.InputTypeConvolutional(GRID_SIZE, GRID_SIZE, NUM_CHANNELS))
+                .addLayer(NNMediator.CRITIC_ID,
                         new OutputLayer.Builder()
                                 .nOut(1)
                                 .activation(Activation.IDENTITY)
@@ -105,19 +101,19 @@ class DLAgentTest {
                 )
                 .addLayer(MOVE_ACTION_ID,
                         new OutputLayer.Builder()
-                                .nOut(DLAgentTest.NUM_MOVEMENT_COMMANDS)
+                                .nOut(NUM_MOVEMENT_COMMANDS)
                                 .activation(Activation.SOFTMAX)
                                 .build(),
                         MAP_SIGNAL_ID
                 )
                 .addLayer(HEAD_ACTION_ID,
                         new OutputLayer.Builder()
-                                .nOut(DLAgentTest.NUM_SENSOR_COMMANDS)
+                                .nOut(NUM_SENSOR_COMMANDS)
                                 .activation(Activation.SOFTMAX)
                                 .build(),
                         MAP_SIGNAL_ID
                 )
-                .setOutputs(DLAgent.CRITIC_ID, MOVE_ACTION_ID, HEAD_ACTION_ID)
+                .setOutputs(NNMediator.CRITIC_ID, MOVE_ACTION_ID, HEAD_ACTION_ID)
                 .build();
     }
 
@@ -136,7 +132,6 @@ class DLAgentTest {
     }
 
     private DLAgent agent;
-    private List<ExecutionResult> trajectory;
 
     @BeforeEach
     void setUp() throws IOException {
@@ -146,16 +141,12 @@ class DLAgentTest {
                 HEAD_ACTION_ID, new IntSignalSpec(new long[]{1, 1}, NUM_SENSOR_COMMANDS)
         );
         ComputationGraphConfiguration conf = build();
-        logger.atInfo().log("{}", conf.toYaml());
+        // logger.atDebug().log("yaml network {}", conf.toYaml());
         ComputationGraph net = new ComputationGraph(conf);
         net.init();
 
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(SEED);
-        this.agent = DLAgent.create(stateSpec, actionSpec, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHA, BETA, FILE);
-
-        this.trajectory = IntStream.range(0, NUM_STEPS)
-                .mapToObj(i -> createResult(i * REWARD / (NUM_STEPS - 1)))
-                .toList();
+        this.agent = DLAgent.create(stateSpec, actionSpec, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHA, BETA, FILE, false);
         deleteRecursive(FILE);
     }
 
@@ -204,70 +195,6 @@ class DLAgentTest {
     }
 
     @Test
-    void testClearTrajectory() {
-        agent = agent.observe(createResult(0));
-        agent = agent.observe(createResult(0));
-        assertThat(agent.trajectory(), hasSize(2));
-
-        // When observe result twice
-        agent = agent.clearTrajectory();
-        // Then ...
-        assertThat(agent.trajectory(), empty());
-    }
-
-    @Test
-    void testComputeNewPolicy() {
-        INDArray policy = Nd4j.createFromArray(
-                0.25F, 0.25F, 0.25F, 0.25F,
-                0.25F, 0.25F, 0.25F, 0.25F
-        ).reshape(2, 4);
-        INDArray deltas = Nd4j.createFromArray(
-                1F, 0F, 0F, 0F,
-                0F, 0F, 0F, 1F).reshape(2, 4);
-        INDArray newPolicy = DLAgent.computeNewPolicy(policy, deltas);
-
-        assertThat(newPolicy, matrixCloseTo(new long[]{2, 4}, 1e-4,
-                0.4754F, 0.1749F, 0.1749F, 0.1749F,
-                0.1749F, 0.1749F, 0.1749F, 0.4754F
-        ));
-    }
-
-    @Test
-    void testCreateActionMasks() {
-        // When create action masks
-        DLAgent.Trajectory trajectory1 = agent.createTrajectory(trajectory);
-        INDArray mask = DLAgent.createActionMasks(trajectory1.actions().get(MOVE_ACTION_ID), NUM_MOVEMENT_COMMANDS);
-        assertThat(mask, matrixShape(NUM_EPOCHS, NUM_MOVEMENT_COMMANDS));
-    }
-
-    @Test
-    void testCreateTrajectory() {
-        // Given ...
-        while (!agent.isReadyForTrain()) {
-            agent = agent.observe(createResult(0));
-        }
-
-        // When ...
-        DLAgent.Trajectory tr = agent.createTrajectory();
-
-        // Then ...
-        Map<String, INDArray> states = tr.states();
-        assertThat(states, hasKey(MAP_SIGNAL_ID));
-        assertThat(states.get(MAP_SIGNAL_ID), matrixShape(NUM_STEPS + 1, NUM_CHANNELS, GRID_SIZE, GRID_SIZE));
-
-        // And
-        INDArray rewards = tr.rewards();
-        assertThat(rewards, matrixShape(NUM_STEPS, 1));
-
-        // And
-        Map<String, INDArray> actions = tr.actions();
-        assertThat(actions, hasKey(MOVE_ACTION_ID));
-        assertThat(actions.get(MOVE_ACTION_ID), matrixShape(NUM_STEPS, 1));
-        assertThat(actions, hasKey(HEAD_ACTION_ID));
-        assertThat(actions.get(HEAD_ACTION_ID), matrixShape(NUM_STEPS, 1));
-    }
-
-    @Test
     void testMissingAction() {
         Map<String, SignalSpec> stateSpec = Map.of(MAP_SIGNAL_ID, new IntSignalSpec(new long[]{NUM_CHANNELS, GRID_SIZE, GRID_SIZE}, NUM_SAMPLES));
         Map<String, SignalSpec> actionSpec = Map.of(
@@ -281,7 +208,7 @@ class DLAgentTest {
 
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(SEED);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> DLAgent.create(stateSpec, actionSpec, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHA, BETA, FILE));
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> DLAgent.create(stateSpec, actionSpec, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHA, BETA, FILE, false));
         assertThat(ex.getMessage(), matchesPattern("Missing output layers \\[missing1, missing2]"));
     }
 
@@ -297,69 +224,20 @@ class DLAgentTest {
 
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(SEED);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> DLAgent.create(stateSpec, actionSpec, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHA, BETA, FILE));
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> DLAgent.create(stateSpec, actionSpec, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHA, BETA, FILE, false));
         assertThat(ex.getMessage(), matchesPattern("Missing input layers \\[map]"));
     }
 
     @Test
-    void testNotReadyForTrain() {
-        for (int i = 0; i < NUM_STEPS - 1; i++) {
-            agent = agent.observe(createResult(0));
-        }
-        assertThat(agent.trajectory(), hasSize(NUM_STEPS - 1));
-
-        // When clip trajectory
-        boolean ready = agent.isReadyForTrain();
-        // Then ...
-        assertFalse(ready);
-    }
-
-    @Test
     void testObserve() {
+        ComputationGraph net = agent.network();
         // When observe result twice
-        agent = agent.observe(createResult(0));
-        agent = agent.observe(createResult(0));
+        agent = agent.observe(createResult(0))
+                .observe(createResult(0));
 
         // Then ...
-        assertThat(agent.trajectory(), hasSize(2));
-    }
-
-    @Test
-    void testProcessRewards() {
-        // When create average
-        INDArray rewards = Nd4j.ones(4, 1);
-        INDArray prediction = Nd4j.ones(BATCH_SIZE, 1).muli(0.5);
-        Tuple2<INDArray, Float> t = DLAgent.processRewards(rewards, prediction, REWARD0, 0.5F);
-        INDArray deltas = t._1;
-        float avg = t._2;
-        assertEquals(0.9375F, avg);
-        assertThat(deltas, matrixCloseTo(new long[]{4, 1}, EPSILON,
-                1, 0.5F, 0.25F, 0.125F));
-    }
-
-    @Test
-    void testReadyForTrain() {
-        Map<String, Signal> s0 = Map.of(
-                MAP_SIGNAL_ID, new ArraySignal(Nd4j.rand(2, NUM_CHANNELS, GRID_SIZE, GRID_SIZE))
-        );
-        Map<String, Signal> s1 = Map.of(
-                MAP_SIGNAL_ID, new ArraySignal(Nd4j.rand(2, NUM_CHANNELS, GRID_SIZE, GRID_SIZE))
-        );
-        Map<String, Signal> actions = Map.of(
-                MOVE_ACTION_ID, IntSignal.create(0),
-                HEAD_ACTION_ID, IntSignal.create(0)
-        );
-        double reward = 0;
-        ExecutionResult result = new ExecutionResult(s0, actions, reward, s1);
-        for (int i = 0; i < NUM_STEPS; i++) {
-            agent = agent.observe(result);
-        }
-        assertThat(agent.trajectory(), hasSize(NUM_STEPS));
-
-        // When clip trajectory
-        boolean ready = agent.isReadyForTrain();
-        // Then ...
-        assertTrue(ready);
+        assertEquals(2, agent.status().trajectoryBuffer().size());
+        assertSame(net, agent.network());
     }
 
     @Test
@@ -374,10 +252,12 @@ class DLAgentTest {
 
     @Test
     void testTrain() {
-        while (!agent.isReadyForTrain()) {
+        ComputationGraph net = agent.network();
+        for (int i = 0; i < NUM_STEPS; i++) {
             agent = agent.observe(createResult(0));
         }
         // When train
-        agent.trainByTrajectory();
+        assertNotSame(net, agent.network());
+        assertEquals(0, agent.status().trajectoryBuffer().size());
     }
 }

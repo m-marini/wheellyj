@@ -16,13 +16,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#592](https://github.com/m-marini/wheellyj/issues/592): Move partial robot config in robot spec
 - Issue [#596](https://github.com/m-marini/wheellyj/issues/596): Camera calibration with goto commands
 - Issue [#599](https://github.com/m-marini/wheellyj/issues/599): Batch with go commands
+- Issue [#607](https://github.com/m-marini/wheellyj/issues/607): Change agent by concurrent training
 
 ### Fixed
 
 - Issue [#601](https://github.com/m-marini/wheellyj/issues/601): Bad character in source file
 - Issue [#605](https://github.com/m-marini/wheellyj/issues/605): Missing counter creating datasets
 
-## [0.26.0] 2026-02-26
+## [[0.26.0]](https://github.com/m-marini/wheellyj/releases/tag/v0.26.0) 2026-02-26
 
 ### Add
 
@@ -37,14 +38,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Issue [#581](https://github.com/m-marini/wheellyj/issues/581): Robot stuck when obstacle hides marker
 
-## [0.25.0] 2025-10-12
+## [[0.25.0]](https://github.com/m-marini/wheellyj/releases/tag/v0.25.0) 2025-10-12
 
 ### Add
 
 - Issue [#565](https://github.com/m-marini/wheellyj/issues/565): Add MQTT architecture
 - Issue [#570](https://github.com/m-marini/wheellyj/issues/570): Add convolution network to radar map
 
-## [0.24.1] 2025-08-10
+## [[0.24.1]](https://github.com/m-marini/wheellyj/releases/tag/v0.24.1) 2025-08-10
 
 ### Added
 

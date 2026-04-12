@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright 2026 Marco Marini, marco.marini@mmarini.org
  *
- *  Permission is hereby granted, free of charge, to any person
+ * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- *    END OF TERMS AND CONDITIONS
+ * END OF TERMS AND CONDITIONS
  *
  */
 
@@ -30,7 +30,7 @@ package org.mmarini.rl.agents;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.mmarini.Tuple2;
+import org.junit.jupiter.api.Test;
 import org.mmarini.rl.envs.*;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -42,9 +42,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.closeTo;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mmarini.wheelly.envs.DLStateFunction.MAP_SIGNAL_ID;
 
 class MDPConvTest {
@@ -118,8 +116,10 @@ class MDPConvTest {
         }
     }
 
-    // @Test
+    @Test
     void testTrain() {
+        fail();
+        /*
         while (!agent.isReadyForTrain()) {
             agent = agent.observe(createExecutionResult(0, 1, 0, 0))
                     .observe(createExecutionResult(0, 0, 1, 1))
@@ -158,5 +158,7 @@ class MDPConvTest {
         assertThat(out.get("action").getDouble(1, 1), greaterThanOrEqualTo(2D / 3));
         assertThat(out.get("action").getDouble(0, 0), greaterThanOrEqualTo(out0.get("action").getDouble(0, 0)));
         assertThat(out.get("action").getDouble(1, 1), greaterThanOrEqualTo(out0.get("action").getDouble(1, 1)));
+
+         */
     }
 }
