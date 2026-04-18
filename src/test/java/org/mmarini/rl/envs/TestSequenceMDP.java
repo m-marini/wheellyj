@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
+ * Copyright 2026 Marco Marini, marco.marini@mmarini.org
  *
- *  Permission is hereby granted, free of charge, to any person
+ * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- *    END OF TERMS AND CONDITIONS
+ * END OF TERMS AND CONDITIONS
  *
  */
 
@@ -224,7 +224,7 @@ public record TestSequenceMDP(int[][] nextState, double[][] reward) {
     public Map<String, Signal> state(int state) {
         int[] data = new int[numStates()];
         data[state] = 1;
-        return Map.of("input", new IntSignal(new long[]{numStates()}, data));
+        return Map.of("input", new IntSignal(new long[]{1, numStates()}, data));
     }
 
     /**

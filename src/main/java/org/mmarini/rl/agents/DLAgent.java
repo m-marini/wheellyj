@@ -173,8 +173,7 @@ public class DLAgent implements BatchAgent {
 
     @Override
     public Map<String, Signal> act(Map<String, Signal> state) {
-        return new NNMediator(status.get().network(), alpha, beta)
-                .chooseAction(random, state);
+        return mediator().chooseAction(random, state);
     }
 
     @Override
@@ -204,14 +203,14 @@ public class DLAgent implements BatchAgent {
     }
 
     @Override
-    public void close() {
-        save();
-        status.get().close();
+    public int batchSize() {
+        return batchSize;
     }
 
     @Override
-    public int batchSize() {
-        return batchSize;
+    public void close() {
+        save();
+        status.get().close();
     }
 
     /**
@@ -227,7 +226,7 @@ public class DLAgent implements BatchAgent {
 
     @Override
     public Tuple2<MultiDataSet, Float> createDataSet(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards, float avgReward) {
-        NNMediator mediator = new NNMediator(status.get().network(), alpha, beta);
+        NNMediator mediator = mediator();
         Map<String, INDArray> predictions = mediator.predictFromValue(states).collect(Tuple2.toMap());
         // Computes the deltas and the average rewards
         Tuple2<INDArray, Float> rlData = NNMediator.processRewards(rewards, predictions.get(CRITIC_ID), avgReward, beta);
@@ -259,6 +258,14 @@ public class DLAgent implements BatchAgent {
                 .put(NUM_EPOCHS_ID, numEpochs)
                 .put(TRAJECTORY_SIZE_ID, st.trajectoryBuffer().bufferSize())
                 .put(BATCH_SIZE_ID, batchSize);
+    }
+
+    /**
+     *
+     * Returns the NN mediator
+     */
+    NNMediator mediator() {
+        return new NNMediator(status.get().network(), alpha, beta);
     }
 
     /**
@@ -334,8 +341,9 @@ public class DLAgent implements BatchAgent {
      */
     private void train(ComputationGraph trainingNetwork, Trajectory trajectory) {
         logger.atDebug().log("Training network ...");
+
         float avg;
-        NNMediator trainingDataBuilder = new NNMediator(trainingNetwork, alpha, beta);
+        NNMediator trainingDataBuilder = mediator();
         try (TrajectoryDatasetIterator iterator = new TrajectoryDatasetIterator(trajectory, batchSize, status.get().averageReward(), trainingDataBuilder)) {
             trainingNetwork.fit(iterator, numEpochs);
             avg = iterator.avgReward();
