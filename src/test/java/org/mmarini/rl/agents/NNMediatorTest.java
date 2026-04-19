@@ -54,7 +54,7 @@ class NNMediatorTest {
         // logger.atDebug().log("yaml network {}", conf.toYaml());
         ComputationGraph net = new ComputationGraph(conf);
         net.init();
-        this.mediator = new NNMediator(net, 0, 0);
+        this.mediator = new NNMediator(net, 0, 0, 1);
         TrajectoryBuffer buffer = new TrajectoryBuffer(NUM_STEPS);
         for (int i = 0; i < NUM_STEPS; i++) {
             buffer.add(createResult(i * REWARD / (NUM_STEPS - 1)));
@@ -91,7 +91,7 @@ class NNMediatorTest {
         // When create average
         INDArray rewards = Nd4j.ones(4, 1);
         INDArray prediction = Nd4j.ones(BATCH_SIZE, 1).muli(0.5);
-        Tuple2<INDArray, Float> t = NNMediator.processRewards(rewards, prediction, REWARD0, 0.5F);
+        Tuple2<INDArray, Float> t = NNMediator.processRewards(rewards, prediction, REWARD0, 0.5F, 1);
         INDArray deltas = t._1;
         float avg = t._2;
         assertEquals(0.9375F, avg);

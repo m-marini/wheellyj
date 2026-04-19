@@ -11,11 +11,15 @@ properties:
   alpha:
     type: number
     exclusiveMinimum: 0
-  avgReward:
-    type: number
   beta:
     type: number
     exclusiveMinimum: 0
+  gamma:
+    type: number
+    minimum: 0
+    maximum: 1
+  avgReward:
+    type: number
   numEpochs:
     type: integer
     minimum: 1

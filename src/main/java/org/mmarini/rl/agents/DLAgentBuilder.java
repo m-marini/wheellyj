@@ -467,7 +467,8 @@ public class DLAgentBuilder {
         int batchSize = Locator.locate(BATCH_SIZE_ID).getNode(root).asInt();
         float alpha = (float) Locator.locate(ALPHA_ID).getNode(root).asDouble();
         float beta = (float) Locator.locate(BETA_ID).getNode(root).asDouble();
-        return DLAgent.create(filePath, network, random, numEpochs, trajectorySize, batchSize, alpha, beta, 0, false);
+        float gamma = (float) Locator.locate(GAMMA_ID).getNode(root).asDouble();
+        return DLAgent.create(filePath, network, random, numEpochs, trajectorySize, batchSize, alpha, beta, gamma, 0, false);
     }
 
     private ActivationLayer buildActivationLayer(Locator locator) {
