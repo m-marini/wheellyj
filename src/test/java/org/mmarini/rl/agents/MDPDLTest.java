@@ -55,22 +55,23 @@ import java.util.stream.IntStream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.rl.agents.NNMediator.CRITIC_ID;
 
 public class MDPDLTest {
     public static final float ALPHA = 1F;
-    public static final float BETA = 0.8F;
+    public static final float BETA = 0.5F;
+    public static final float GAMMA = 0.99F;
     public static final long SEED = 1234L;
     public static final String ACTION_ID = "action";
     public static final String STATE_ID = "state";
     public static final String HIDDEN_ID = "hidden";
-    public static final int TRAJECTORY_SIZE = 32;
+    public static final int TRAJECTORY_SIZE = 64;
     public static final int NUM_TRAJECTORIES = 128;
     public static final int NUM_EPOCHS = 4;
-    public static final int BATCH_SIZE = 8;
+    public static final int BATCH_SIZE = 16;
     public static final File FILE = new File("tmp/model");
     private static final double ETA = 0.1;
     private static final Logger logger = LoggerFactory.getLogger(MDPDLTest.class);
@@ -86,12 +87,12 @@ public class MDPDLTest {
         for (int i = 0; i < criticPrediction.size(0); i++) {
             builder.setLength(0);
             for (int j = 0; j < inputs.size(1); j++) {
-                builder.append(format("%d,", inputs.getInt(i, j)));
+                builder.append(format("%d ", inputs.getInt(i, j)));
             }
             String inpStr = builder.toString();
             builder.setLength(0);
             for (int j = 0; j < actionPrediction.size(1); j++) {
-                builder.append(format("%.3f,", actionPrediction.getFloat(i, j)));
+                builder.append(format("%.3f ", actionPrediction.getFloat(i, j)));
             }
             logger.atDebug().log("States={} Action={} Critic={}",
                     inpStr,
@@ -154,7 +155,7 @@ public class MDPDLTest {
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(SEED);
         ComputationGraph network = new ComputationGraph(conf());
         network.init();
-        agent = DLAgent.create(stateSpec, actionSpec, network, random, NUM_EPOCHS, TRAJECTORY_SIZE, BATCH_SIZE, ALPHA, BETA, FILE, false);
+        agent = DLAgent.create(stateSpec, actionSpec, network, random, NUM_EPOCHS, TRAJECTORY_SIZE, BATCH_SIZE, ALPHA, BETA, GAMMA, FILE, false);
     }
 
     @Test
@@ -196,8 +197,7 @@ public class MDPDLTest {
         assertThat(predictionPost.get(ACTION_ID).getFloat(1, 1),
                 greaterThanOrEqualTo(predictionPre.get(ACTION_ID).getFloat(1, 1)));
 
-        assertThat(avgRewardPost, greaterThanOrEqualTo(0.5F));
-        assertThat(avgRewardPost, lessThanOrEqualTo(1F));
+        assertThat((double) avgRewardPost, closeTo(1, 0.33));
 
         assertThat(predictionPost.get(ACTION_ID).getFloat(0, 0), greaterThanOrEqualTo(0.67F));
         assertThat(predictionPost.get(ACTION_ID).getFloat(1, 1), greaterThanOrEqualTo(0.67F));

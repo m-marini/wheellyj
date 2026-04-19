@@ -52,9 +52,10 @@ import static java.util.Objects.requireNonNull;
  * @param network the network
  * @param alpha   the alpha parameter
  * @param beta    the beta parameter
+ * @param decay   the decay reward parameter
  */
 public record NNMediator(ComputationGraph network, float alpha,
-                         float beta) implements RLTrainingDataProvider {
+                         float beta, float decay) implements RLTrainingDataProvider {
     public static final String CRITIC_ID = "critic";
 
     /**
@@ -115,8 +116,9 @@ public record NNMediator(ComputationGraph network, float alpha,
      *
      * @param rewards the rewards
      * @param beta    the decay factor
+     * @param decay   the decay average reward factor
      */
-    static Tuple2<INDArray, Float> processRewards(INDArray rewards, INDArray critic, float avg, float beta) {
+    static Tuple2<INDArray, Float> processRewards(INDArray rewards, INDArray critic, float avg, float beta, float decay) {
         int n = (int) rewards.size(0);
         INDArray deltas = Nd4j.create(n, 1);
         try (INDArray critic1 = critic.get(NDArrayIndex.interval(1, n + 1), NDArrayIndex.all())) {
@@ -125,7 +127,7 @@ public record NNMediator(ComputationGraph network, float alpha,
                     for (int i = 0; i < n; i++) {
                         float delta = rewards.getFloat(i, 0) - avg + criticDiff.getFloat(i, 0);
                         deltas.putScalar(i, 0, delta);
-                        avg += beta * delta;
+                        avg = avg * decay + beta * delta;
                     }
                 }
             }
@@ -148,11 +150,13 @@ public record NNMediator(ComputationGraph network, float alpha,
      * @param network the network
      * @param alpha   the alpha parameter
      * @param beta    the beta parameter
+     * @param decay   the decay average reward parameter
      */
-    public NNMediator(ComputationGraph network, float alpha, float beta) {
+    public NNMediator(ComputationGraph network, float alpha, float beta, float decay) {
         this.network = requireNonNull(network);
         this.alpha = alpha;
         this.beta = beta;
+        this.decay = decay;
     }
 
     /**
@@ -256,7 +260,7 @@ public record NNMediator(ComputationGraph network, float alpha,
         //TODO replace with createDataset
         Map<String, INDArray> predictions = predictFromValue(trajectory.states()).collect(Tuple2.toMap());
         // Computes the deltas and the average rewards
-        Tuple2<INDArray, Float> rlData = processRewards(trajectory.rewards(), predictions.get(CRITIC_ID), avgReward, beta);
+        Tuple2<INDArray, Float> rlData = processRewards(trajectory.rewards(), predictions.get(CRITIC_ID), avgReward, beta, decay);
         RLTrainingData result;
         try (INDArray deltas = rlData._1) {
             INDArray[][] datasets = createTrainingData(trajectory, predictions, deltas);
