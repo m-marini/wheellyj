@@ -51,22 +51,22 @@ public class BatchTrainer {
 
     private final AtomicReference<BatchTrainerStatus> status;
     private final Map<String, BinArrayFile> states;
-    private final Map<String, BinArrayFile> actions;
+    private final Map<String, BinArrayFile> actionMasks;
     private final BinArrayFile rewards;
     private final PublishProcessor<ProgressInfo> progressInfo;
 
     /**
      * Creates the batch trainer
      *
-     * @param agent   the network to train
-     * @param states  the states
-     * @param actions the actions
-     * @param rewards the rewards
+     * @param agent       the network to train
+     * @param states      the states
+     * @param actionMasks the action masks
+     * @param rewards     the rewards
      */
-    public BatchTrainer(BatchAgent agent, Map<String, BinArrayFile> states, Map<String, BinArrayFile> actions, BinArrayFile rewards) {
+    public BatchTrainer(BatchAgent agent, Map<String, BinArrayFile> states, Map<String, BinArrayFile> actionMasks, BinArrayFile rewards) {
         this.status = new AtomicReference<>(new BatchTrainerStatus(agent, null, false));
         this.states = requireNonNull(states);
-        this.actions = requireNonNull(actions);
+        this.actionMasks = requireNonNull(actionMasks);
         this.rewards = requireNonNull(rewards);
         this.progressInfo = PublishProcessor.create();
         logger.atDebug().log("Created");
@@ -98,7 +98,7 @@ public class BatchTrainer {
         BatchAgent agent = status.get().agent();
         agent.backup();
         // Creates the dataset iterator
-        BinFilesDatasetIterator datasetIterator = new BinFilesDatasetIterator(states, actions, rewards,
+        BinFilesDatasetIterator datasetIterator = new BinFilesDatasetIterator(states, actionMasks, rewards,
                 agent.batchSize(), agent.avgReward(),
                 agent::createDataSet);
         // Registers for dataset iterator progress info

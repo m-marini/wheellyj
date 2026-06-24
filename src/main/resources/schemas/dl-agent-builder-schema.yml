@@ -8,9 +8,11 @@ properties:
     const: https://mmarini.org/wheelly/dl-agent-builder-schema-0.1
   class:
     const: org.mmarini.rl.agents.DLAgentBuilder
-  alpha:
-    type: number
-    exclusiveMinimum: 0
+  alphas:
+    type: object
+    additionalProperties:
+      type: number
+      exclusiveMinimum: 0
   beta:
     type: number
     exclusiveMinimum: 0
@@ -39,7 +41,7 @@ required:
   - numEpochs
   - trajectorySize
   - batchSize
-  - alpha
+  - alphas
   - beta
   - path
   - network

@@ -1,25 +1,28 @@
 /*
- * MIT License
+ * Copyright 2026 Marco Marini, marco.marini@mmarini.org
  *
- * Copyright (c) 2022 Marco Marini
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * END OF TERMS AND CONDITIONS
  *
  */
 
@@ -95,6 +98,8 @@ public class BatchTraining {
         parser.addArgument("-c", "--config")
                 .setDefault("batch.yml")
                 .help("specify yaml configuration file");
+        parser.addArgument("-k", "--kpis")
+                .help("specify kpis path");
         parser.addArgument("-u", "--ui")
                 .action(Arguments.storeTrue())
                 .help("open performance page");
@@ -110,7 +115,7 @@ public class BatchTraining {
     /**
      * @param args command line arguments
      */
-    public static void main(String[] args) {
+    static void main(String[] args) {
         ArgumentParser parser = createParser();
         try {
             new BatchTraining(parser.parseArgs(args)).run();
@@ -126,13 +131,14 @@ public class BatchTraining {
     protected final Namespace args;
     private final JProgressBar progressBar;
     private final JTextField infoBar;
+    private final KpisPanel kpisPanel;
     private BatchTrainer trainer;
     private JFrame frame;
-    private final KpisPanel kpisPanel;
     private int numEpochs;
     private BatchAgent agent;
     private DLEnvironment environment;
     private StatsListener statsListener;
+    private KeyBinWriter kpisWriter;
 
     /**
      * Creates the application
@@ -230,6 +236,15 @@ public class BatchTraining {
                     }
                 }
             }
+            String kpisPathname = args.getString("kpis");
+            if (kpisPathname != null) {
+                File path = new File(kpisPathname);
+                if (!path.exists()) {
+                    this.kpisWriter = new KeyBinWriter(new File(kpisPathname));
+                } else {
+                    logger.atError().log("File {} already exists", path.getAbsoluteFile());
+                }
+            }
             dlAgent.readKpis()
                     .observeOn(Schedulers.computation())
                     .subscribe(this::onKpis);
@@ -243,16 +258,6 @@ public class BatchTraining {
         frame = Utils.createFrame(Messages.getString("BatchTraining.title"),
                 createContent());
         layHorizontally(frame);
-    }
-
-    /**
-     * Returns the validated configuration
-     */
-    private JsonNode loadConfiguration() throws IOException {
-        File configFile = new File(this.args.getString("config"));
-        JsonNode config = fromFile(configFile);
-        WheellyJsonSchemas.instance().validateOrThrow(config, BATCH_SCHEMA_YML);
-        return config;
     }
 
     /**
@@ -276,6 +281,16 @@ public class BatchTraining {
         infoBar.setHorizontalAlignment(JTextField.CENTER);
         infoBar.setFont(infoBar.getFont().deriveFont(Font.BOLD));
         infoBar.setEditable(false);
+    }
+
+    /**
+     * Returns the validated configuration
+     */
+    private JsonNode loadConfiguration() throws IOException {
+        File configFile = new File(this.args.getString("config"));
+        JsonNode config = fromFile(configFile);
+        WheellyJsonSchemas.instance().validateOrThrow(config, BATCH_SCHEMA_YML);
+        return config;
     }
 
     /**
@@ -305,6 +320,9 @@ public class BatchTraining {
     private void onKpis(TrainingKpis kpis) {
         try {
             kpisPanel.print(kpis);
+            if (kpisWriter != null) {
+                kpis.write(kpisWriter);
+            }
         } catch (Throwable e) {
             logger.atError().setCause(e).log("Error on print kpis");
         }
@@ -398,13 +416,6 @@ public class BatchTraining {
             } else {
                 dlAgent.network().setListeners(listener);
             }
-            /*
-            listener.readProgressInfo()
-                    .observeOn(Schedulers.computation())
-                    .throttleLatest(PROGRESS_INTERVAL, TimeUnit.MILLISECONDS)
-                    .subscribe(this::onProgress);
-
-             */
         }
         this.trainer = new BatchTrainer(agent, stateFiles, actionMaskFiles, rewardFile);
         trainer.readProgressInfo()
@@ -416,5 +427,9 @@ public class BatchTraining {
         info("Training ...");
         trainer.train(numEpochs);
         info("Training completed.");
+        if (kpisWriter != null) {
+            kpisWriter.close();
+            kpisWriter = null;
+        }
     }
 }

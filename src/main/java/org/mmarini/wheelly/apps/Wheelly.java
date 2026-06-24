@@ -40,10 +40,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.Tuple2;
-import org.mmarini.rl.agents.AbstractAgentNN;
-import org.mmarini.rl.agents.Agent;
-import org.mmarini.rl.agents.DLAgent;
-import org.mmarini.rl.agents.TrainingKpis;
+import org.mmarini.rl.agents.*;
 import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.Messages;
@@ -54,6 +51,7 @@ import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.wheelly.mqtt.MqttRobot;
 import org.mmarini.wheelly.swing.*;
 import org.mmarini.yaml.Locator;
+import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,6 +99,8 @@ public class Wheelly {
                 .help("specify yaml configuration path");
         parser.addArgument("-i", "--inference")
                 .help("specify inference output path");
+        parser.addArgument("-k", "--kpis")
+                .help("specify kpis output path");
         parser.addArgument("-p", "--parallel")
                 .action(Arguments.storeTrue())
                 .help("specify concurrent training");
@@ -123,7 +123,7 @@ public class Wheelly {
     /**
      * @param args command line arguments
      */
-    static void main(String[] args) {
+    public static void main(String[] args) {
         ArgumentParser parser = createParser();
         try {
             new Wheelly(parser.parseArgs(args)).run();
@@ -164,6 +164,7 @@ public class Wheelly {
     private Agent agent;
     private JFrame frame;
     private InferenceWriter modelDumper;
+    private KeyBinWriter kpisWriter;
 
     /**
      * Creates the server reinforcement learning engine server
@@ -227,14 +228,22 @@ public class Wheelly {
             dlAgent = dlAgent.concurrentTraining(args.getBoolean("parallel"));
             dlAgent.readKpis().observeOn(Schedulers.computation())
                     .subscribe(this::onKpis);
+            dlAgent.readRewards().observeOn(Schedulers.computation())
+                    .subscribe(this::onRewards);
             agent = dlAgent;
         }
 
+        // TODO manage auto saving
         long savingInterval = Locator.locate("savingInterval").getNode(config).asLong();
         environment.connect(agent);
 
         kpisPanel.addActionColumns(environment.actionSpec()
                 .keySet().stream().sorted().toArray(String[]::new));
+
+        String kpisPath = args.getString("kpis");
+        if (kpisPath != null) {
+            kpisWriter = new KeyBinWriter(new File(kpisPath));
+        }
 
         // Creates the model dumper
         Optional.ofNullable(this.args.getString("inference")).ifPresent(file -> {
@@ -482,6 +491,13 @@ public class Wheelly {
      */
     private void onKpis(TrainingKpis kpis) {
         kpisPanel.print(kpis);
+        if (kpisWriter != null) {
+            try {
+                kpis.write(kpisWriter);
+            } catch (IOException e) {
+                logger.atError().setCause(e).log("Error dumping kpis");
+            }
+        }
     }
 
     /**
@@ -509,6 +525,21 @@ public class Wheelly {
      */
     private void onResetButton(ActionEvent actionEvent) {
         agent.init();
+    }
+
+    /**
+     * Handles the reward flow
+     *
+     * @param rewards the rewards
+     */
+    private void onRewards(INDArray rewards) {
+        if (kpisWriter != null) {
+            try {
+                kpisWriter.write(Map.of("rewards", rewards));
+            } catch (IOException e) {
+                logger.atError().setCause(e).log("Error dumping rewards");
+            }
+        }
     }
 
     /**
@@ -555,6 +586,10 @@ public class Wheelly {
                     }
                     // Close all frame
                     allFrames.forEach(JFrame::dispose);
+                    if (kpisWriter != null) {
+                        kpisWriter.close();
+                        kpisWriter = null;
+                    }
                     // Notify completion
                     logger.atInfo().log("completed.");
                 });

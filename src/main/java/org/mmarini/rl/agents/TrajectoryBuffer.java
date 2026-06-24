@@ -130,9 +130,9 @@ public class TrajectoryBuffer implements AutoCloseable {
             INDArray buffer = states.get(key);
             buffer.get(NDArrayIndex.point(s1Index), NDArrayIndex.all()).assign(data);
         }
-        signals = result.actions();
-        for (String key : signals.keySet()) {
-            INDArray data = signals.get(key).toINDArray();
+        Map<String, Signal> actions0 = result.actions();
+        for (String key : actions0.keySet()) {
+            INDArray data = actions0.get(key).toINDArray();
             INDArray buffer = actions.get(key);
             buffer.get(NDArrayIndex.point(startIndex), NDArrayIndex.all()).assign(data);
         }

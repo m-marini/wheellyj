@@ -61,11 +61,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.rl.agents.NNMediator.CRITIC_ID;
 
 public class MDPDLTest {
-    public static final float ALPHA = 1F;
     public static final float BETA = 0.5F;
     public static final float GAMMA = 0.99F;
     public static final long SEED = 1234L;
     public static final String ACTION_ID = "action";
+    public static final Map<String, Float> ALPHAS = Map.of(ACTION_ID, 1F);
     public static final String STATE_ID = "state";
     public static final String HIDDEN_ID = "hidden";
     public static final int TRAJECTORY_SIZE = 64;
@@ -75,9 +75,6 @@ public class MDPDLTest {
     public static final File FILE = new File("tmp/model");
     private static final double ETA = 0.1;
     private static final Logger logger = LoggerFactory.getLogger(MDPDLTest.class);
-
-    DLAgent agent;
-    Map<String, Signal> allStates;
 
     static void logPrediction(Map<String, Signal> input, Map<String, INDArray> prediction) {
         INDArray inputs = input.get(STATE_ID).toINDArray();
@@ -101,6 +98,8 @@ public class MDPDLTest {
         }
     }
 
+    DLAgent agent;
+    Map<String, Signal> allStates;
     MDP mdp;
 
     ComputationGraphConfiguration conf() {
@@ -155,7 +154,7 @@ public class MDPDLTest {
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(SEED);
         ComputationGraph network = new ComputationGraph(conf());
         network.init();
-        agent = DLAgent.create(stateSpec, actionSpec, network, random, NUM_EPOCHS, TRAJECTORY_SIZE, BATCH_SIZE, ALPHA, BETA, GAMMA, FILE, false);
+        agent = DLAgent.create(stateSpec, actionSpec, network, random, NUM_EPOCHS, TRAJECTORY_SIZE, BATCH_SIZE, ALPHAS, BETA, GAMMA, FILE, false);
     }
 
     @Test
@@ -178,7 +177,6 @@ public class MDPDLTest {
             s0 = t._1;
         }
 
-        // Then ...
         logger.atDebug().log("Pre");
         logPrediction(allStates, predictionPre);
         logger.atDebug().log("avg reward={}", avgRewardPre);
@@ -188,18 +186,29 @@ public class MDPDLTest {
         float avgRewardPost = agent.avgReward();
         logger.atDebug().log("avg reward={}", avgRewardPost);
 
+        // Then the number of trained epochs should be the expected
         int epochCount = agent.network().getEpochCount();
-
         assertEquals(NUM_EPOCHS, epochCount);
 
+        // Then the predictions after training of action 0 at state 0
+        // should be greater than before training
         assertThat(predictionPost.get(ACTION_ID).getFloat(0, 0),
                 greaterThanOrEqualTo(predictionPre.get(ACTION_ID).getFloat(0, 0)));
+
+        // And the predictions after training of action 1 at state 1
+        // should be greater than before training
         assertThat(predictionPost.get(ACTION_ID).getFloat(1, 1),
                 greaterThanOrEqualTo(predictionPre.get(ACTION_ID).getFloat(1, 1)));
 
+        // And the average reward should tend to 1
         assertThat((double) avgRewardPost, closeTo(1, 0.33));
 
+        // And the predictions after training of action 0 at state 0
+        // should be greater than 0.67
         assertThat(predictionPost.get(ACTION_ID).getFloat(0, 0), greaterThanOrEqualTo(0.67F));
+
+        // And the predictions after training of action 1 at state 1
+        // should be greater than 0.67
         assertThat(predictionPost.get(ACTION_ID).getFloat(1, 1), greaterThanOrEqualTo(0.67F));
     }
 
@@ -231,7 +240,6 @@ public class MDPDLTest {
             s0 = t._1;
         }
 
-        // Then ...
         logger.atDebug().log("Pre");
         logPrediction(allStates, predictionPre);
         logger.atDebug().log("avg reward={}", avgRewardPre);
@@ -241,12 +249,16 @@ public class MDPDLTest {
         float avgRewardPost = agent.avgReward();
         logger.atDebug().log("avg reward={}", avgRewardPost);
 
+        // Then the number of trained epochs should be the expected
         int epochCount = agent.network().getEpochCount();
-
         assertEquals(NUM_EPOCHS, epochCount);
 
+        // And the predictions after training of action 0 at state 0
+        // should be greater than before training
         assertThat(predictionPost.get(ACTION_ID).getFloat(0, 0),
                 greaterThanOrEqualTo(predictionPre.get(ACTION_ID).getFloat(0, 0)));
+        // And the predictions after training of action 1 at state 1
+        // should be greater than before training
         assertThat(predictionPost.get(ACTION_ID).getFloat(1, 1),
                 greaterThanOrEqualTo(predictionPre.get(ACTION_ID).getFloat(1, 1)));
     }

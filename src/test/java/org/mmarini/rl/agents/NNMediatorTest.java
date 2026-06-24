@@ -37,6 +37,8 @@ import org.mmarini.wheelly.envs.DLActionFunction;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
+import java.util.Map;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.rl.agents.DLAgentTest.*;
@@ -54,7 +56,7 @@ class NNMediatorTest {
         // logger.atDebug().log("yaml network {}", conf.toYaml());
         ComputationGraph net = new ComputationGraph(conf);
         net.init();
-        this.mediator = new NNMediator(net, 0, 0, 1);
+        this.mediator = new NNMediator(net, Map.of(), 0, 1);
         TrajectoryBuffer buffer = new TrajectoryBuffer(NUM_STEPS);
         for (int i = 0; i < NUM_STEPS; i++) {
             buffer.add(createResult(i * REWARD / (NUM_STEPS - 1)));
@@ -80,9 +82,9 @@ class NNMediatorTest {
     }
 
     @Test
-    void testCreateActionMasks() {
+    void testCreateActionMask() {
         // When create action masks
-        INDArray mask = NNMediator.createActionMasks(trajectory.actions().get(DLActionFunction.MOVE_ACTION_ID), NUM_MOVEMENT_COMMANDS);
+        INDArray mask = NNMediator.createActionMask(trajectory.actions().get(DLActionFunction.MOVE_ACTION_ID), NUM_MOVEMENT_COMMANDS);
         assertThat(mask, matrixShape(NUM_EPOCHS, NUM_MOVEMENT_COMMANDS));
     }
 

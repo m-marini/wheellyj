@@ -4,7 +4,8 @@ class: org.mmarini.rl.agents.DLAgentBuilder
 numEpochs: 5
 trajectorySize: 255
 batchSize: 32
-alpha: 0.8
+alphas:
+  action: 0.8
 beta: 0.9
 avgReward: 0.1
 path: tmp/model

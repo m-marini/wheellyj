@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright 2026 Marco Marini, marco.marini@mmarini.org
  *
- *  Permission is hereby granted, free of charge, to any person
+ * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- *    END OF TERMS AND CONDITIONS
+ * END OF TERMS AND CONDITIONS
  *
  */
 
@@ -44,7 +44,7 @@ import static java.util.Objects.requireNonNull;
  * @param echoPersistence     the hasObstacle persistence (ms)
  * @param contactPersistence  the contact persistence (ms)
  * @param correlationInterval the correlation interval (ms)
- * @param decay               the decay parameters
+ * @param decay               the gamma parameters
  */
 public record PointRadarModeller(GridTopology topology,
                                  long cleanInterval, long echoPersistence, long contactPersistence,
@@ -63,7 +63,7 @@ public record PointRadarModeller(GridTopology topology,
      * @param correlationInterval the correlation interval (ms)
      * @param echoPersistence     the obstacle persistence (ms)
      * @param contactPersistence  the contact persistence
-     * @param decay               the decay factor
+     * @param decay               the gamma factor
      */
     public static PointRadarModeller create(int radarWidth, int radarHeight, double radarGrid,
                                             long radarCleanInterval, long correlationInterval,
@@ -87,7 +87,7 @@ public record PointRadarModeller(GridTopology topology,
         long correlationInterval = locator.path("correlationInterval").getNode(root).asLong();
         long echoPersistence = locator.path("echoPersistence").getNode(root).asLong();
         long contactPersistence = locator.path("contactPersistence").getNode(root).asLong();
-        double decay = locator.path("decay").getNode(root).asDouble(DEFAULT_DECAY);
+        double decay = locator.path("gamma").getNode(root).asDouble(DEFAULT_DECAY);
         return create(radarWidth, radarHeight, radarGrid, radarCleanInterval, correlationInterval, echoPersistence, contactPersistence, decay);
     }
 
@@ -99,7 +99,7 @@ public record PointRadarModeller(GridTopology topology,
      * @param echoPersistence     the obstacle persistence (ms)
      * @param contactPersistence  the contact persistence (ms)
      * @param correlationInterval the correlation interval (ms)
-     * @param decay               the decay factor
+     * @param decay               the gamma factor
      */
     public PointRadarModeller(GridTopology topology,
                               long cleanInterval, long echoPersistence, long contactPersistence, long correlationInterval,

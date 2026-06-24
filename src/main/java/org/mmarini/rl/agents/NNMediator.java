@@ -28,7 +28,9 @@
 
 package org.mmarini.rl.agents;
 
+import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.graph.ComputationGraph;
+import org.mmarini.MapStream;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.IntSignal;
 import org.mmarini.rl.envs.Signal;
@@ -50,12 +52,12 @@ import static java.util.Objects.requireNonNull;
  * Build the training data
  *
  * @param network the network
- * @param alpha   the alpha parameter
+ * @param alphas  the alpha parameters
  * @param beta    the beta parameter
- * @param decay   the decay reward parameter
+ * @param gamma   the gamma reward parameter
  */
-public record NNMediator(ComputationGraph network, float alpha,
-                         float beta, float decay) implements RLTrainingDataProvider {
+public record NNMediator(ComputationGraph network, Map<String, Float> alphas,
+                         float beta, float gamma) implements RLTrainingDataProvider {
     public static final String CRITIC_ID = "critic";
 
     /**
@@ -101,7 +103,7 @@ public record NNMediator(ComputationGraph network, float alpha,
      * @param actions    the selected actions
      * @param numActions number of actions
      */
-    static INDArray createActionMasks(INDArray actions, int numActions) {
+    static INDArray createActionMask(INDArray actions, int numActions) {
         long n = actions.size(0);
         INDArray result = Nd4j.zeros(n, numActions);
         for (int i = 0; i < n; i++) {
@@ -112,11 +114,26 @@ public record NNMediator(ComputationGraph network, float alpha,
     }
 
     /**
+     * Returns the action masks from actions
+     *
+     * @param actions the actions
+     * @param network the network
+     */
+    static Map<String, INDArray> createActionMasks(Map<String, INDArray> actions, ComputationGraph network) {
+        return MapStream.of(actions)
+                .mapValues((key, action) -> {
+                    int numNetOut = Math.toIntExact(((OutputLayer) network.getLayer(key).conf().getLayer()).getNOut());
+                    return createActionMask(action, numNetOut);
+                })
+                .toMap();
+    }
+
+    /**
      * Returns the deltas (n estimated errors) and final average reward
      *
      * @param rewards the rewards
-     * @param beta    the decay factor
-     * @param decay   the decay average reward factor
+     * @param beta    the gamma factor
+     * @param decay   the gamma average reward factor
      */
     static Tuple2<INDArray, Float> processRewards(INDArray rewards, INDArray critic, float avg, float beta, float decay) {
         int n = (int) rewards.size(0);
@@ -148,15 +165,15 @@ public record NNMediator(ComputationGraph network, float alpha,
      * Creates the builder
      *
      * @param network the network
-     * @param alpha   the alpha parameter
+     * @param alphas  the alpha parameter
      * @param beta    the beta parameter
-     * @param decay   the decay average reward parameter
+     * @param gamma   the decay average reward parameter
      */
-    public NNMediator(ComputationGraph network, float alpha, float beta, float decay) {
+    public NNMediator(ComputationGraph network, Map<String, Float> alphas, float beta, float gamma) {
         this.network = requireNonNull(network);
-        this.alpha = alpha;
+        this.alphas = alphas;
         this.beta = beta;
-        this.decay = decay;
+        this.gamma = gamma;
     }
 
     /**
@@ -206,22 +223,22 @@ public record NNMediator(ComputationGraph network, float alpha,
     INDArray[][] createTrainingData(Map<String, INDArray> states, Map<String, INDArray> actionMasks, Map<String, INDArray> predictions, INDArray deltas) {
         INDArray[] inputs = reducedInputFromValues(states);
         INDArray[] labels;
-        try (INDArray deltaPolicies = deltas.mul(alpha)) {
-            labels = network.getConfiguration().getNetworkOutputs().stream()
-                    .map(id -> {
-                        if (CRITIC_ID.equals(id)) {
-                            return createCriticLabel(predictions, deltas);
-                        } else {
-                            INDArray policy = predictions.get(id);
-                            try (INDArray clipped = policy.get(NDArrayIndex.interval(0, policy.size(0) - 1), NDArrayIndex.all())) {
+        labels = network.getConfiguration().getNetworkOutputs().stream()
+                .map(id -> {
+                    if (CRITIC_ID.equals(id)) {
+                        return createCriticLabel(predictions, deltas);
+                    } else {
+                        INDArray policy = predictions.get(id);
+                        try (INDArray clipped = policy.get(NDArrayIndex.interval(0, policy.size(0) - 1), NDArrayIndex.all())) {
+                            try (INDArray deltaPolicies = deltas.mul(alphas.get(id))) {
                                 try (INDArray deltaMasks = actionMasks.get(id).muli(deltaPolicies)) {
                                     return computeNewPolicy(clipped, deltaMasks);
                                 }
                             }
                         }
-                    })
-                    .toArray(INDArray[]::new);
-        }
+                    }
+                })
+                .toArray(INDArray[]::new);
         return new INDArray[][]{inputs, labels};
     }
 
@@ -235,23 +252,23 @@ public record NNMediator(ComputationGraph network, float alpha,
     INDArray[][] createTrainingData(Trajectory trajectory, Map<String, INDArray> predictions, INDArray deltas) {
         INDArray[] inputs = reducedInputFromValues(trajectory.states());
         INDArray[] labels;
-        try (INDArray deltaPolicies = deltas.mul(alpha)) {
-            labels = network.getConfiguration().getNetworkOutputs().stream()
-                    .map(id -> {
-                        if (CRITIC_ID.equals(id)) {
-                            return createCriticLabel(predictions, deltas);
-                        } else {
-                            INDArray policy = predictions.get(id);
-                            try (INDArray clipped = policy.get(NDArrayIndex.interval(0, policy.size(0) - 1), NDArrayIndex.all())) {
-                                try (INDArray deltaMasks = createActionMasks(trajectory.actions().get(id),
+        labels = network.getConfiguration().getNetworkOutputs().stream()
+                .map(id -> {
+                    if (CRITIC_ID.equals(id)) {
+                        return createCriticLabel(predictions, deltas);
+                    } else {
+                        INDArray policy = predictions.get(id);
+                        try (INDArray clipped = policy.get(NDArrayIndex.interval(0, policy.size(0) - 1), NDArrayIndex.all())) {
+                            try (INDArray deltaPolicies = deltas.mul(alphas.get(id))) {
+                                try (INDArray deltaMasks = createActionMask(trajectory.actions().get(id),
                                         (int) policy.size(1)).muli(deltaPolicies)) {
                                     return computeNewPolicy(clipped, deltaMasks);
                                 }
                             }
                         }
-                    })
-                    .toArray(INDArray[]::new);
-        }
+                    }
+                })
+                .toArray(INDArray[]::new);
         return new INDArray[][]{inputs, labels};
     }
 
@@ -260,7 +277,7 @@ public record NNMediator(ComputationGraph network, float alpha,
         //TODO replace with createDataset
         Map<String, INDArray> predictions = predictFromValue(trajectory.states()).collect(Tuple2.toMap());
         // Computes the deltas and the average rewards
-        Tuple2<INDArray, Float> rlData = processRewards(trajectory.rewards(), predictions.get(CRITIC_ID), avgReward, beta, decay);
+        Tuple2<INDArray, Float> rlData = processRewards(trajectory.rewards(), predictions.get(CRITIC_ID), avgReward, beta, gamma);
         RLTrainingData result;
         try (INDArray deltas = rlData._1) {
             INDArray[][] datasets = createTrainingData(trajectory, predictions, deltas);

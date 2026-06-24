@@ -103,7 +103,7 @@ public class DLAgentBuilder {
     public static final String RMS_DECAY_ID = "rmsDecay";
     public static final String OPTIMIZATION_ALGO_ID = "optimizationAlgo";
     public static final String LBFGS_ID = "Lbfgs";
-    public static final String CONJUCATE_GRADIENT_ID = "ConjucateGradient";
+    public static final String CONJUGATE_GRADIENT_ID = "ConjugateGradient";
     public static final String LINE_GRADIENT_DESCENT_ID = "LineGradientDescent";
     public static final String WEIGHT_INIT_ID = "weightInit";
     public static final String TRUNCATED_NORMAL_DISTRIBUTION_ID = "TruncatedNormalDistribution";
@@ -179,7 +179,7 @@ public class DLAgentBuilder {
             Map.entry(XENT_ID, LossFunctions.LossFunction.XENT)
     );
     private static final Map<String, OptimizationAlgorithm> optimizationAlgoMap = Map.of(
-            CONJUCATE_GRADIENT_ID, OptimizationAlgorithm.CONJUGATE_GRADIENT,
+            CONJUGATE_GRADIENT_ID, OptimizationAlgorithm.CONJUGATE_GRADIENT,
             LBFGS_ID, OptimizationAlgorithm.LBFGS,
             LINE_GRADIENT_DESCENT_ID, OptimizationAlgorithm.LINE_GRADIENT_DESCENT,
             STOCHASTIC_GRADIENT_DESCENT_ID, OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT
@@ -379,8 +379,8 @@ public class DLAgentBuilder {
     /**
      * Returns the agent from spec
      *
-     * @param root               the spec document
-     * @param env                the environment
+     * @param root the spec document
+     * @param env  the environment
      */
     public static DLAgent create(JsonNode root, WithSignalsSpec env) throws IOException {
         Random random = Nd4j.getRandom();
@@ -392,8 +392,8 @@ public class DLAgentBuilder {
     /**
      * Returns the builder of agant
      *
-     * @param root               the configuration
-     * @param file               the configuration file
+     * @param root the configuration
+     * @param file the configuration file
      */
     public static Function<WithSignalsSpec, DLAgent> create(JsonNode root, File file) {
         return env -> {
@@ -404,6 +404,7 @@ public class DLAgentBuilder {
             }
         };
     }
+
     private final JsonNode root;
     private final Map<String, Function<Locator, Layer>> layerMap;
     private final Map<String, Function<Locator, InputType>> inputTypeMap;
@@ -450,7 +451,7 @@ public class DLAgentBuilder {
     /**
      * Returns the agent
      *
-     * @param random             the random number generator
+     * @param random the random number generator
      */
     public DLAgent build(Random random) throws IOException {
         WheellyJsonSchemas.instance().validateOrThrow(root, SCHEMA_NAME);
@@ -465,10 +466,13 @@ public class DLAgentBuilder {
         int numEpochs = Locator.locate(NUM_EPOCHS_ID).getNode(root).asInt();
         int trajectorySize = Locator.locate(TRAJECTORY_SIZE_ID).getNode(root).asInt();
         int batchSize = Locator.locate(BATCH_SIZE_ID).getNode(root).asInt();
-        float alpha = (float) Locator.locate(ALPHA_ID).getNode(root).asDouble();
+        Map<String, Float> alphas = Locator.locate(ALPHAS_ID).propertyNames(root)
+                .mapValues(locator ->
+                        (float) locator.getNode(root).asDouble()
+                ).toMap();
         float beta = (float) Locator.locate(BETA_ID).getNode(root).asDouble();
         float gamma = (float) Locator.locate(GAMMA_ID).getNode(root).asDouble();
-        return DLAgent.create(filePath, network, random, numEpochs, trajectorySize, batchSize, alpha, beta, gamma, 0, false);
+        return DLAgent.create(filePath, network, random, numEpochs, trajectorySize, batchSize, alphas, beta, gamma, 0, false);
     }
 
     private ActivationLayer buildActivationLayer(Locator locator) {
