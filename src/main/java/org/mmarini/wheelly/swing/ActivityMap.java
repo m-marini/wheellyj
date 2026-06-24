@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
+ * Copyright 2026 Marco Marini, marco.marini@mmarini.org
  *
- *  Permission is hereby granted, free of charge, to any person
+ * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- *    END OF TERMS AND CONDITIONS
+ * END OF TERMS AND CONDITIONS
  *
  */
 
@@ -105,14 +105,14 @@ public class ActivityMap extends JComponent {
         if (avg == null) {
             avg = activity.dup();
         } else {
-            // avg = avg * decay + act * (1 - decay)
-            // avg = avg * decay + act - act * decay
-            // avg = (avg - act) * decay + act
+            // avg = avg * gamma + act * (1 - gamma)
+            // avg = avg * gamma + act - act * gamma
+            // avg = (avg - act) * gamma + act
 
-            // avg = avg * decay + avg * (1-decay) - avg * (1-decay) + act * (1 - decay)
-            // avg = avg * decay + avg * (1-decay) + (act-avg) * (1-decay)
-            // avg =  avg + (act-avg) * (1-decay)
-            // avg =  avg + (act-avg) * (1-decay)
+            // avg = avg * gamma + avg * (1-gamma) - avg * (1-gamma) + act * (1 - gamma)
+            // avg = avg * gamma + avg * (1-gamma) + (act-avg) * (1-gamma)
+            // avg =  avg + (act-avg) * (1-gamma)
+            // avg =  avg + (act-avg) * (1-gamma)
             try (INDArray delta = activity.sub(avg).muli(DECAY_1)) {
                 avg.addi(delta);
             }

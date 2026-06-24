@@ -29,6 +29,7 @@
 package org.mmarini.rl.agents;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
@@ -71,12 +72,12 @@ public class DLAgent implements BatchAgent {
     public static final String AGENT_FILENAME = "agent.yml";
     public static final String BATCH_SIZE_ID = "batchSize";
     public static final String AVG_REWARD_ID = "avgReward";
-    public static final String ALPHA_ID = "alpha";
+    public static final String ALPHAS_ID = "alphas";
     public static final String BETA_ID = "beta";
     public static final String GAMMA_ID = "gamma";
+    public static final double DEFAULT_GAMMA = 1D;
     private static final Logger logger = LoggerFactory.getLogger(DLAgent.class);
     private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/dl-agent-schema-0.1";
-    public static final double DEFAULT_GAMMA = 1D;
 
     /**
      * Returns the agent
@@ -88,14 +89,14 @@ public class DLAgent implements BatchAgent {
      * @param numEpochs          the number of epochs to train
      * @param numSteps           the minimum length of training trajectory
      * @param batchSize          the mini batch size
-     * @param alpha              the policy change factor
+     * @param alphas             the policy change factors
      * @param beta               the average rewards factor
-     * @param gamma              the average rewards decay factor
+     * @param gamma              the average rewards gamma factor
      * @param filePath           the file path for the agent save
      * @param concurrentTraining true if concurrent training
      */
-    public static DLAgent create(Map<String, SignalSpec> stateSpec, Map<String, SignalSpec> actionSpec, ComputationGraph network, Random random, int numEpochs, int numSteps, int batchSize, float alpha, float beta, float gamma, File filePath, boolean concurrentTraining) {
-        DLAgent agent = create(filePath, network, random, numEpochs, numSteps, batchSize, alpha, beta, gamma, 0, concurrentTraining);
+    public static DLAgent create(Map<String, SignalSpec> stateSpec, Map<String, SignalSpec> actionSpec, ComputationGraph network, Random random, int numEpochs, int numSteps, int batchSize, Map<String, Float> alphas, float beta, float gamma, File filePath, boolean concurrentTraining) {
+        DLAgent agent = create(filePath, network, random, numEpochs, numSteps, batchSize, alphas, beta, gamma, 0, concurrentTraining);
         agent.validate(stateSpec, actionSpec);
         return agent;
     }
@@ -108,16 +109,21 @@ public class DLAgent implements BatchAgent {
      * @param random             the random number generator
      * @param numEpochs          the number of epochs to train
      * @param batchSize          the mini batch size
-     * @param alpha              the policy change factor
+     * @param alphas             the policy change factors
      * @param beta               the average reward factor
-     * @param gamma              the average reward decay factor
+     * @param gamma              the average reward gamma factor
      * @param avgReward          the average reward
      * @param concurrentTraining true if concurrent training
      */
-    protected static DLAgent create(File filePath, ComputationGraph network, Random random, int numEpochs, int trajectorySize, int batchSize, float alpha, float beta, float gamma, float avgReward, boolean concurrentTraining) {
+    protected static DLAgent create(File filePath, ComputationGraph network, Random random, int numEpochs,
+                                    int trajectorySize, int batchSize,
+                                    Map<String, Float> alphas, float beta, float gamma, float avgReward,
+                                    boolean concurrentTraining) {
         TrajectoryBuffer trajectoryBuffer = new TrajectoryBuffer(trajectorySize);
-        AtomicReference<DLAgentStatus> status = new AtomicReference<>(new DLAgentStatus(network, null, trajectoryBuffer, null, false, avgReward));
-        return new DLAgent(filePath, random, numEpochs, batchSize, beta, alpha, gamma, concurrentTraining, PublishProcessor.create(), status);
+        AtomicReference<DLAgentStatus> status = new AtomicReference<>(new DLAgentStatus(network, null,
+                trajectoryBuffer, null, false, avgReward));
+        return new DLAgent(filePath, random, numEpochs, batchSize, beta, alphas, gamma, concurrentTraining,
+                PublishProcessor.create(), PublishProcessor.create(), status);
     }
 
     /**
@@ -134,22 +140,25 @@ public class DLAgent implements BatchAgent {
         int numEpochs = Locator.locate(NUM_EPOCHS_ID).getNode(json).asInt();
         int trajectorySize1 = Locator.locate(TRAJECTORY_SIZE_ID).getNode(json).asInt();
         int batchSize = Locator.locate(BATCH_SIZE_ID).getNode(json).asInt();
-        float alpha = (float) Locator.locate(ALPHA_ID).getNode(json).asDouble();
+        Map<String, Float> alphas = Locator.locate(ALPHAS_ID).propertyNames(json)
+                .mapValues(locator -> (float) locator.getNode(json).asDouble())
+                .toMap();
         float beta = (float) Locator.locate(BETA_ID).getNode(json).asDouble();
         float gamma = (float) Locator.locate(GAMMA_ID).getNode(json).asDouble(DEFAULT_GAMMA);
         float avgReward = (float) Locator.locate(BETA_ID).getNode(json).asDouble();
-        return create(filePath, network, random, numEpochs, trajectorySize1, batchSize, alpha, beta, gamma, avgReward, false);
+        return create(filePath, network, random, numEpochs, trajectorySize1, batchSize, alphas, beta, gamma, avgReward, false);
     }
 
     private final File filePath;
     private final Random random;
     private final int numEpochs;
     private final int batchSize;
-    private final float alpha;
+    private final Map<String, Float> alphas;
     private final float beta;
     private final float gamma;
     private final boolean concurrentTraining;
     private final PublishProcessor<TrainingKpis> kpis;
+    private final PublishProcessor<INDArray> rewards;
     private final AtomicReference<DLAgentStatus> status;
 
     /**
@@ -160,22 +169,24 @@ public class DLAgent implements BatchAgent {
      * @param numEpochs          the number of epochs to train
      * @param batchSize          the mini batch size
      * @param beta               the average reward factor
-     * @param alpha              the policy change factor
-     * @param gamma              the average reward decay factor
+     * @param alphas             the policy action factors
+     * @param gamma              the average reward gamma factor
      * @param concurrentTraining true if concurrent training
      * @param kpis               the kpi publisher
+     * @param rewards            the rewards publisher
      * @param status             the agent status
      */
-    protected DLAgent(File filePath, Random random, int numEpochs, int batchSize, float beta, float alpha, float gamma, boolean concurrentTraining, PublishProcessor<TrainingKpis> kpis, AtomicReference<DLAgentStatus> status) {
+    protected DLAgent(File filePath, Random random, int numEpochs, int batchSize, float beta, Map<String, Float> alphas, float gamma, boolean concurrentTraining, PublishProcessor<TrainingKpis> kpis, PublishProcessor<INDArray> rewards, AtomicReference<DLAgentStatus> status) {
         this.filePath = requireNonNull(filePath);
         this.random = requireNonNull(random);
         this.numEpochs = numEpochs;
         this.batchSize = batchSize;
         this.beta = beta;
-        this.alpha = alpha;
+        this.alphas = alphas;
         this.gamma = gamma;
         this.concurrentTraining = concurrentTraining;
         this.kpis = requireNonNull(kpis);
+        this.rewards = rewards;
         this.status = requireNonNull(status);
     }
 
@@ -228,27 +239,42 @@ public class DLAgent implements BatchAgent {
      */
     public DLAgent concurrentTraining(boolean concurrentTraining) {
         return this.concurrentTraining != concurrentTraining
-                ? new DLAgent(filePath, random, numEpochs, batchSize, beta, alpha, gamma, concurrentTraining, kpis, status)
+                ? new DLAgent(filePath, random, numEpochs, batchSize, beta, alphas, gamma, concurrentTraining, kpis, rewards, status)
                 : this;
     }
 
     @Override
     public Tuple2<MultiDataSet, Float> createDataSet(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards, float avgReward) {
         NNMediator mediator = mediator();
+        // Computes the predictions (critic + actor policy)
         Map<String, INDArray> predictions = mediator.predictFromValue(states).collect(Tuple2.toMap());
         // Computes the deltas and the average rewards
         Tuple2<INDArray, Float> rlData = NNMediator.processRewards(rewards, predictions.get(CRITIC_ID), avgReward, beta, gamma);
         INDArray deltas = rlData._1;
+        // Creates the training data
         INDArray[][] datasets = mediator.
                 createTrainingData(states, actionMasks, predictions, deltas);
         MultiDataSet dataset = new org.nd4j.linalg.dataset.MultiDataSet(datasets[0], datasets[1]);
-        kpis.onNext(new TrainingKpis(predictions, deltas, rlData._2));
-        return Tuple2.of(dataset, rlData._2);
+        float avgReward1 = rlData._2;
+        kpis.onNext(new TrainingKpis(predictions, deltas, avgReward1));
+        return Tuple2.of(dataset, avgReward1);
+    }
+
+    /**
+     * Returns the trajector data set iterator
+     *
+     * @param trajectory the trajectory
+     * @param batchSize  the batch size
+     * @param avgReward  the initial average reward
+     */
+    public TrajectoryDatasetIterator createTrajectoryIterator(Trajectory trajectory, int batchSize, float avgReward) {
+        Map<String, INDArray> actionMasks = NNMediator.createActionMasks(trajectory.actions(), network());
+        return new TrajectoryDatasetIterator(trajectory.states(), actionMasks, trajectory.rewards(), batchSize, avgReward, this::createDataSet);
     }
 
     @Override
     public DLAgent init() {
-        // TODO
+        // TODO recreate an initial network
         return this;
     }
 
@@ -257,11 +283,13 @@ public class DLAgent implements BatchAgent {
      */
     private JsonNode json() {
         DLAgentStatus st = status.get();
-        return Utils.objectMapper.createObjectNode()
+        ObjectNode jsonNode = Utils.objectMapper.createObjectNode()
                 .put("$schema", SCHEMA_NAME)
-                .put("class", DLAgent.class.getCanonicalName())
-                .put(ALPHA_ID, alpha)
-                .put(BETA_ID, beta)
+                .put("class", DLAgent.class.getCanonicalName());
+        ObjectNode alphasJson = Utils.objectMapper.createObjectNode();
+        alphas.forEach(alphasJson::put);
+        jsonNode.set(ALPHAS_ID, alphasJson);
+        return jsonNode.put(BETA_ID, beta)
                 .put(GAMMA_ID, gamma)
                 .put(AVG_REWARD_ID, st.averageReward())
                 .put(NUM_EPOCHS_ID, numEpochs)
@@ -274,7 +302,7 @@ public class DLAgent implements BatchAgent {
      * Returns the NN mediator
      */
     NNMediator mediator() {
-        return new NNMediator(status.get().network(), alpha, beta, gamma);
+        return new NNMediator(status.get().network(), alphas, beta, gamma);
     }
 
     /**
@@ -297,6 +325,7 @@ public class DLAgent implements BatchAgent {
         ComputationGraph trainingNetwork = st.trainingNetwork();
         if (trainingNetwork != null) {
             Trajectory trajectory = st.trajectory();
+            rewards.onNext(trajectory.rewards());
             if (concurrentTraining) {
                 Completable.complete()
                         .subscribeOn(Schedulers.computation())
@@ -314,6 +343,13 @@ public class DLAgent implements BatchAgent {
      */
     public Flowable<TrainingKpis> readKpis() {
         return kpis;
+    }
+
+    /**
+     * Returns the rewards flow
+     */
+    public Flowable<INDArray> readRewards() {
+        return rewards;
     }
 
     @Override
@@ -352,8 +388,7 @@ public class DLAgent implements BatchAgent {
         logger.atDebug().log("Training network ...");
 
         float avg;
-        NNMediator trainingDataBuilder = mediator();
-        try (TrajectoryDatasetIterator iterator = new TrajectoryDatasetIterator(trajectory, batchSize, status.get().averageReward(), trainingDataBuilder)) {
+        try (TrajectoryDatasetIterator iterator = createTrajectoryIterator(trajectory, batchSize, status.get().averageReward())) {
             trainingNetwork.fit(iterator, numEpochs);
             avg = iterator.avgReward();
         }

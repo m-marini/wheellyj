@@ -138,7 +138,7 @@ public class BinFilesDatasetIterator implements RLDatasetIterator, AutoCloseable
                             throw new RuntimeException(e);
                         }
                     }).toMap();
-            Map<String, INDArray> actionMask = MapStream.of(actionMasksFile)
+            Map<String, INDArray> actionMasks = MapStream.of(actionMasksFile)
                     .mapValues(file -> {
                         try {
                             return file.seek(cursor).read(n);
@@ -146,7 +146,7 @@ public class BinFilesDatasetIterator implements RLDatasetIterator, AutoCloseable
                             throw new RuntimeException(e);
                         }
                     }).toMap();
-            Tuple2<MultiDataSet, Float> result = generator.apply(states, actionMask, rewards, avgReward);
+            Tuple2<MultiDataSet, Float> result = generator.apply(states, actionMasks, rewards, avgReward);
             this.avgReward = result._2;
             cursor += n;
             int size = (int) rewardsFile.size();

@@ -72,14 +72,16 @@ class DLAgentTest {
     public static final double ETA = 1e-3;
     public static final float REWARD = 0.5F;
     public static final double EPSILON = 1e-6;
-    public static final float ALPHA = 1F;
+    public static final Map<String, Float> ALPHAS = Map.of(
+            HEAD_ACTION_ID, 1F,
+            MOVE_ACTION_ID, 1F);
     public static final float BETA = 0.8F;
     public static final float REWARD0 = 0F;
     public static final int NUM_STEPS = 10;
     public static final int BATCH_SIZE = 5;
     public static final File FILE = new File("tmp/model");
-    static final Logger logger = LoggerFactory.getLogger(DLAgentTest.class);
     public static final float GAMMA = 1F;
+    static final Logger logger = LoggerFactory.getLogger(DLAgentTest.class);
 
     static {
         Nd4j.getRandom().setSeed(SEED);
@@ -147,7 +149,7 @@ class DLAgentTest {
         net.init();
 
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(SEED);
-        this.agent = DLAgent.create(stateSpec, actionSpec, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHA, BETA, GAMMA, FILE, false);
+        this.agent = DLAgent.create(stateSpec, actionSpec, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHAS, BETA, GAMMA, FILE, false);
         deleteRecursive(FILE);
     }
 
@@ -209,7 +211,8 @@ class DLAgentTest {
 
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(SEED);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> DLAgent.create(stateSpec, actionSpec, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHA, BETA, GAMMA, FILE, false));
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                DLAgent.create(stateSpec, actionSpec, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHAS, BETA, GAMMA, FILE, false));
         assertThat(ex.getMessage(), matchesPattern("Missing output layers \\[missing1, missing2]"));
     }
 
@@ -225,7 +228,7 @@ class DLAgentTest {
 
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(SEED);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> DLAgent.create(stateSpec, actionSpec, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHA, BETA, GAMMA, FILE, false));
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> DLAgent.create(stateSpec, actionSpec, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHAS, BETA, GAMMA, FILE, false));
         assertThat(ex.getMessage(), matchesPattern("Missing input layers \\[map]"));
     }
 

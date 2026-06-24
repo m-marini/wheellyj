@@ -209,9 +209,11 @@ public class WorldModeller implements WorldModellerApi {
      */
     public WorldModel updateForInference(WorldModel model) {
         RobotStatus robotStatus = model.robotStatus();
+        // Create polar map
         PolarMap polarMap = worldSpec.numSectors() > 0
                 ? polarModeller.create(model.radarMap(), robotStatus.location(), robotStatus.direction(), robotStatus.robotSpec().maxRadarDistance())
                 : null;
+        // Create the robot-relative radar map
         GridMap gridMap = GridMap.create(model.radarMap(), robotStatus.location(), robotStatus.direction(), worldSpec.robotMapSize());
         return model.setPolarMap(polarMap).setGridMap(gridMap);
     }

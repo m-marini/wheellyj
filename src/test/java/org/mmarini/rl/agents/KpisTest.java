@@ -34,10 +34,16 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
+import static java.lang.Math.log10;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 
 public class KpisTest {
+
+    public static final double LOG10_0_1 = log10(0.1);
+    public static final double LOG10_0_2 = log10(0.2);
+    public static final double LOG10_0_5 = log10(0.5);
+    public static final double LOG10_0_6 = log10(0.6);
 
     @Test
     void maxGmRatioTest() {
@@ -97,6 +103,26 @@ public class KpisTest {
         assertThat(ratio, matrixCloseTo(new long[]{2, 1}, 1e-6,
                 expected,
                 expected
+        ));
+    }
+
+    @Test
+    void testLog10MaxGmRatioTest() {
+        // Given a dataset
+        // And a dataset
+        INDArray data = Nd4j.createFromArray(
+                0.1f, 0.2f, 0.5f, 0.2f,
+                0.1f, 0.6f, 0.2f, 0.1f
+        ).reshape(2, 4);
+
+        // When reset compute maxMinRatio
+        INDArray ratio = Kpis.log10MaxGeometricMeanRatio(data);
+
+        double mean0 = (LOG10_0_1 + LOG10_0_2 + LOG10_0_5 + LOG10_0_2) / 4;
+        double mean1 = (LOG10_0_1 + LOG10_0_6 + LOG10_0_2 + LOG10_0_1) / 4;
+        assertThat(ratio, matrixCloseTo(new long[]{2, 1}, 1e-6,
+                (float) (LOG10_0_5 - mean0),
+                (float) (LOG10_0_6 - mean1)
         ));
     }
 }

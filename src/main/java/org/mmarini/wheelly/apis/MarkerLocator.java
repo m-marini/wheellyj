@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright 2026 Marco Marini, marco.marini@mmarini.org
  *
- *  Permission is hereby granted, free of charge, to any person
+ * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- *    END OF TERMS AND CONDITIONS
+ * END OF TERMS AND CONDITIONS
  *
  */
 
@@ -46,8 +46,8 @@ import static org.mmarini.wheelly.apis.AreaExpression.*;
 /**
  * Computes the label marker locator
  *
- * @param locationDecay       the decay marker time (ms)
- * @param cleanDecay          the clean decay time (ms)
+ * @param locationDecay       the gamma marker time (ms)
+ * @param cleanDecay          the clean gamma time (ms)
  * @param correlationInterval the correlation interval (ms)
  * @param minNumberEvents     the minimum number of unknown qr code events to update the marker map
  * @param markerSize          the marker size (m)
@@ -61,8 +61,8 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
     /**
      * Returns the marker locator
      *
-     * @param locationDecay       the decay marker time (ms)
-     * @param cleanDecay          the clean decay time (ms)
+     * @param locationDecay       the gamma marker time (ms)
+     * @param cleanDecay          the clean gamma time (ms)
      * @param correlationInterval the correlation interval (ms)
      * @param markerSize          the marker size (m)
      * @param minNumberEvents     the minimum number of unknown qr code events to update the marker map
@@ -106,8 +106,8 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
     /**
      * Creates the marker locator
      *
-     * @param locationDecay       the decay marker time (ms)
-     * @param cleanDecay          the clean decay time (ms)
+     * @param locationDecay       the gamma marker time (ms)
+     * @param cleanDecay          the clean gamma time (ms)
      * @param correlationInterval the correlation interval (ms)
      * @param minNumberEvents     the minimum number of unknown qr code events to update the marker map
      * @param markerSize          the marker size (m)
@@ -121,8 +121,8 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
     /**
      * Creates the marker locator
      *
-     * @param locationDecay       the decay marker time (ms)
-     * @param cleanDecay          the clean decay time (ms)
+     * @param locationDecay       the gamma marker time (ms)
+     * @param cleanDecay          the clean gamma time (ms)
      * @param correlationInterval the correlation interval (ms)
      * @param minNumberEvents     the minimum number of unknown qr code events to update the marker map
      * @param markerSize          the marker size (m)
@@ -159,7 +159,7 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
                         long dt = time - marker.cleanTime();
                         double alpha = min(dt / cleanDecay, 1);
                         // dt -> 0 => alpha -> 0, weight -> weight
-                        // dt -> decay => alpha -> 1, weight -> -1
+                        // dt -> gamma => alpha -> 1, weight -> -1
                         // weight -> (-1-weight) * alpha + weight;
                         double weight = marker.weight();
                         weight = -(1 + weight) * alpha + weight;

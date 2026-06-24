@@ -29,28 +29,58 @@
 package org.mmarini.rl.agents;
 
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.factory.Nd4j;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Tracks the predictions, the RL error and the average rewards of a minibatch
- *
- * @param predictions the predictions
- * @param deltas      the RL errors
- * @param avgReward   the average rewards
+ * Writes data on csv files indexed by key
  */
-public record TrainingKpis(Map<String, INDArray> predictions, INDArray deltas, float avgReward) {
+public class KeyCsvWriter implements AutoCloseable {
+
+    private final File path;
+    private final Map<String, CSVWriter> files;
+
     /**
-     * Writes the kpis into kpis writer
+     * Creates the writer
      *
-     * @param writer the writer
+     * @param path the path
      */
-    public TrainingKpis write(KeyBinWriter writer) throws IOException {
-        writer.write(predictions);
-        writer.write(Map.of("deltas", deltas));
-        writer.write(Map.of("avgReward", Nd4j.createFromArray(avgReward)));
-        return this;
+    public KeyCsvWriter(File path) {
+        this.path = path;
+        this.files = new HashMap<>();
+    }
+
+    @Override
+    public void close() {
+        for (CSVWriter value : files.values()) {
+            value.close();
+        }
+        files.clear();
+    }
+
+    /**
+     * Writes the dataset
+     *
+     * @param data the dataset
+     * @throws IOException in case of error
+     */
+    public void write(Map<String, INDArray> data) throws IOException {
+        if (!data.isEmpty()) {
+            // Add file
+            for (Map.Entry<String, INDArray> entry : data.entrySet()) {
+                String key = entry.getKey();
+                CSVWriter writer = files.get(key);
+                if (writer == null) {
+                    File file = new File(path.getName() + File.separator + key, "data.csv");
+                    writer = new CSVWriter(file);
+                    writer.clear();
+                    files.put(key, writer);
+                }
+                writer.write(entry.getValue());
+            }
+        }
     }
 }

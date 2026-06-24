@@ -65,6 +65,21 @@ public interface Kpis {
      *
      * @param records the records
      */
+    static INDArray log10MaxGeometricMeanRatio(INDArray records) {
+        try (INDArray dataLog = Transforms.log(records, 10, true)) {
+            try (INDArray max = dataLog.max(true, 1)) {
+                try (INDArray mean = dataLog.mean(true, 1)) {
+                    return max.sub(mean);
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns the max/mean ratio
+     *
+     * @param records the records
+     */
     static INDArray maxGeometricMeanRatio(INDArray records) {
         INDArray max = records.max(true, 1);
         try (INDArray gm = geometricMean(records)) {

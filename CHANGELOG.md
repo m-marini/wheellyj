@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Add
+
+- Issue [#610](https://github.com/m-marini/wheellyj/issues/585): Added kpis dump
+
 ### Changed
 
 - Issue [#585](https://github.com/m-marini/wheellyj/issues/585): Robot simulator with goto commands

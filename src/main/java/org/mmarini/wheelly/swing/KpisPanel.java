@@ -29,7 +29,6 @@
 package org.mmarini.wheelly.swing;
 
 import io.reactivex.rxjava3.functions.Consumer;
-import org.jetbrains.annotations.NotNull;
 import org.mmarini.rl.agents.Kpis;
 import org.mmarini.rl.agents.TrainingKpis;
 import org.mmarini.swing.Messages;
@@ -51,11 +50,11 @@ import static org.mmarini.wheelly.apps.DoubleReducedValue.rms;
  */
 public class KpisPanel extends MatrixTable {
     public static final double MICROS = 1e6;
+    private static final Logger logger = LoggerFactory.getLogger(KpisPanel.class);
     private final DoubleReducedValue criticMean;
     private final DoubleReducedValue advantageMean;
     private final DoubleReducedValue deltaRms;
     private final List<Consumer<Map<String, INDArray>>> handlers;
-    private static final Logger logger = LoggerFactory.getLogger(KpisPanel.class);
 
     /**
      * Creates the kpis panel
@@ -108,13 +107,11 @@ public class KpisPanel extends MatrixTable {
     }
 
     /**
-     * Returns the frame with the monitor
+     * Returns the kpis panel handler for the action identifier
+     *
+     * @param key the action id
      */
-    public JFrame createFrame() {
-        return createFrame(Messages.getString("KpisMonitor.title"));
-    }
-
-    private @NotNull Consumer<Map<String, INDArray>> createActionHandler(String key) {
+    private Consumer<Map<String, INDArray>> createActionHandler(String key) {
         DoubleReducedValue prob = mean();
         DoubleReducedValue probRatio = mean();
 
@@ -125,13 +122,20 @@ public class KpisPanel extends MatrixTable {
                 try (INDArray max = data.max(true, 1)) {
                     printf(key + ".prob", "%,6.1f", prob.add(max).value() * 100);
                 }
-                // and the ratio of max of action probabilities over the probabilities geometric mean value
-                try (INDArray ratio = Kpis.maxGeometricMeanRatio(data)) {
+                // and the log10 ratio of max of action probabilities over the probabilities geometric mean value
+                try (INDArray ratio = Kpis.log10MaxGeometricMeanRatio(data)) {
                     printf(key + ".probRatio", "%,7.2f", probRatio.add(ratio).value());
                 }
             }
 
         };
+    }
+
+    /**
+     * Returns the frame with the monitor
+     */
+    public JFrame createFrame() {
+        return createFrame(Messages.getString("KpisMonitor.title"));
     }
 
     /**

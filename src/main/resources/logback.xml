@@ -76,7 +76,7 @@
     <logger name="org.mmarini.rl.agents.BinArrayFile" level="INFO"/>
     <logger name="org.mmarini.rl.agents.CSVWriter" level="INFO"/>
     <logger name="org.mmarini.rl.agents.TDAgentSingleNN" level="INFO"/>
-    <logger name="org.mmarini.rl.agents.DLAgent" level="DEBUG"/>
+    <logger name="org.mmarini.rl.agents.DLAgent" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.batch.BinFilesDatasetIterator" level="INFO"/>
 

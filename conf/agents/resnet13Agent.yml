@@ -4,8 +4,11 @@ class: org.mmarini.rl.agents.DLAgentBuilder
 numEpochs: 10
 trajectorySize: 256
 batchSize: 32
-alpha: 1e-6
+alphas:
+  head: 1e-9
+  move: 1e-15
 beta: 3e-3
+gamma: 0.99
 avgReward: 0.5
 path: models/resnet13
 network:

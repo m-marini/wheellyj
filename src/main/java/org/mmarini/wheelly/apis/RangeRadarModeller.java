@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright 2026 Marco Marini, marco.marini@mmarini.org
  *
- *  Permission is hereby granted, free of charge, to any person
+ * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- *    END OF TERMS AND CONDITIONS
+ * END OF TERMS AND CONDITIONS
  *
  */
 
@@ -44,7 +44,7 @@ import static java.util.Objects.requireNonNull;
  * @param echoPersistence     the obstacle persistence (ms)
  * @param contactPersistence  the contact persistence (ms)
  * @param correlationInterval the correlation interval (ms)
- * @param decay               the decay parameters
+ * @param decay               the gamma parameters
  */
 public record RangeRadarModeller(GridTopology topology,
                                  long cleanInterval, long echoPersistence, long contactPersistence,
@@ -68,7 +68,7 @@ public record RangeRadarModeller(GridTopology topology,
         long correlationInterval1 = locator.path("correlationInterval").getNode(root).asLong();
         long obstaclePersistence = locator.path("obstaclePersistence").getNode(root).asLong();
         long contactPersistence = locator.path("contactPersistence").getNode(root).asLong();
-        double decay1 = locator.path("decay").getNode(root).asDouble(DEFAULT_DECAY);
+        double decay1 = locator.path("gamma").getNode(root).asDouble(DEFAULT_DECAY);
         GridTopology topology = GridTopology.create(new Point2D.Float(), radarWidth, radarHeight, radarGrid);
         return new RangeRadarModeller(topology, radarCleanInterval, obstaclePersistence, contactPersistence, correlationInterval1, decay1);
     }
@@ -81,7 +81,7 @@ public record RangeRadarModeller(GridTopology topology,
      * @param echoPersistence     the hasObstacle persistence (ms)
      * @param contactPersistence  the contact persistence (ms)
      * @param correlationInterval the correlation interval (ms)
-     * @param decay               the decay parameters
+     * @param decay               the gamma parameters
      */
     public RangeRadarModeller(GridTopology topology,
                               long cleanInterval, long echoPersistence, long contactPersistence, long correlationInterval,

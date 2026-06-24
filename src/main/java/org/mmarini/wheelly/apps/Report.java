@@ -1,32 +1,33 @@
 /*
- * MIT License
+ * Copyright 2026 Marco Marini, marco.marini@mmarini.org
  *
- * Copyright (c) 2022 Marco Marini
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * END OF TERMS AND CONDITIONS
  *
  */
 
 package org.mmarini.wheelly.apps;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.functions.Action;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
@@ -34,57 +35,27 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.ParallelProcess;
+import org.mmarini.rl.agents.BinArrayFile;
+import org.mmarini.rl.agents.CSVWriter;
 import org.mmarini.swing.Messages;
-import org.mmarini.yaml.Locator;
+import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
-
-import static org.mmarini.yaml.Utils.fromFile;
-import static org.mmarini.yaml.Utils.objectMapper;
+import java.util.Optional;
+import java.util.function.UnaryOperator;
+import java.util.stream.Stream;
 
 /**
  * Runs the process to produce report data about learning kpis
  */
 public class Report {
+    public static final int DEFAULT_NUM_BINS = 100;
     private static final long DEFAULT_BATCH_SIZE = 256;
     private static final Logger logger = LoggerFactory.getLogger(Report.class);
-
-    private static final List<ReportProcess.Builder> REPORTS = List.of(
-            ReportProcess.meanReport("reward"), // Reward
-            ReportProcess.meanReport("avgReward"), // Average reward
-
-            ReportProcess.meanReport("dr"), // residual reward
-            ReportProcess.meanReport("dv"), // residual prediction
-            ReportProcess.meanReport("delta"), // td error
-
-            ReportProcess.meanReport("trainingLayers.critic.values"), // Critic
-
-            ReportProcess.statsReport("trainingLayers.move.values"), // max probability for move
-            ReportProcess.maxReport("trainingLayers.move.values"), // max probability for move
-            ReportProcess.gmReport("trainingLayers.move.values"), // gm probability for move
-            ReportProcess.maxMinRatioReport("trainingLayers.move.values"), // max/min probability ratio for move
-            ReportProcess.saturationReport("trainingLayers.move[1].values"), // saturation ratio for move
-            ReportProcess.maxGMRatioReport("trainingLayers.move.values"), // max/mean probability for move
-
-            ReportProcess.statsReport("trainingLayers.sensorAction.values"), // max probability for move
-            ReportProcess.maxReport("trainingLayers.sensorAction.values"), // max probability for sensor
-            ReportProcess.gmReport("trainingLayers.sensorAction.values"), // gm probability for sensor
-            ReportProcess.saturationReport("trainingLayers.sensorAction[1].values"), // saturation for sensor
-            ReportProcess.maxMinRatioReport("trainingLayers.sensorAction.values"), // max probability for sensor
-            ReportProcess.maxGMRatioReport("trainingLayers.sensorAction.values"),
-
-            ReportProcess.rmsReport("deltaGrads.critic"), // delta eta gradient for critic
-            ReportProcess.sumRmsReport("deltaGrads.move"), // delta eta alpha gradient for move
-            ReportProcess.sumRmsReport("deltaGrads.sensorAction"), // delta eta for critic for
-
-            ReportProcess.deltaRatioReport("move"),
-            ReportProcess.deltaRatioReport("sensorAction")
-    );
 
     static {
         Nd4j.zeros(1);
@@ -98,64 +69,29 @@ public class Report {
                 .defaultHelp(true)
                 .version(Messages.getString("Wheelly.title"))
                 .description("Run a session of batch training.");
-        parser.addArgument("-v", "--version")
-                .action(Arguments.version())
-                .help("show current version");
-        parser.addArgument("-p", "--parallel")
-                .action(Arguments.storeTrue())
-                .help("run parallel tasks");
         parser.addArgument("-b", "--batchSize")
                 .setDefault(DEFAULT_BATCH_SIZE)
                 .type(Long.class)
                 .help("batch size");
+        parser.addArgument("-n", "--numBins")
+                .setDefault(DEFAULT_NUM_BINS)
+                .type(Integer.class)
+                .help("batch size");
+        parser.addArgument("-p", "--parallel")
+                .action(Arguments.storeTrue())
+                .help("run parallel tasks");
+        parser.addArgument("-r", "--rewards")
+                .help("specify the reward source path");
+        parser.addArgument("-v", "--version")
+                .action(Arguments.version())
+                .help("show current version");
         parser.addArgument("kpis")
                 .required(true)
                 .help("specify the source kpis path");
-        parser.addArgument("model")
-                .required(true)
-                .help("specify the source model path");
         parser.addArgument("reportPath")
                 .required(true)
                 .help("specify the destination report path");
         return parser;
-    }
-
-    /**
-     * Returns the report json node
-     *
-     * @param root the agent json node
-     */
-    private static JsonNode extractReportYaml(JsonNode root) {
-        Locator networkLocator = Locator.locate("network");
-        Locator layersLocator = networkLocator.path("layers");
-        Locator sizesLocator = networkLocator.path("sizes");
-        double moveTemperature = layersLocator.elements(root)
-                .filter(l -> "move".equals(l.path("name").getNode(root).asText()))
-                .findAny()
-                .map(l -> l.path("temperature").getNode(root).asDouble())
-                .orElse(0d);
-        double sensorTemperature = layersLocator.elements(root)
-                .filter(l -> "sensorAction".equals(l.path("name").getNode(root).asText()))
-                .findAny()
-                .map(l -> l.path("temperature").getNode(root).asDouble())
-                .orElse(0d);
-        long moveSize = sizesLocator.path("move").getNode(root).asLong();
-        long sensorSize = sizesLocator.path("sensorAction").getNode(root).asLong();
-        double ppoEpsilon = root.path("ppoEpsilon").asDouble();
-        double eta = root.path("eta").asDouble();
-        double moveAlpha = Locator.locate("alphas").path("move").getNode(root).asDouble();
-        double sensorAlpha = Locator.locate("alphas").path("sensorAction").getNode(root).asDouble();
-
-        ObjectNode report = objectMapper.createObjectNode();
-        report.put("ppoEpsilon", ppoEpsilon);
-        report.put("sensorActionTemperature", sensorTemperature);
-        report.put("moveTemperature", moveTemperature);
-        report.put("moveSize", moveSize);
-        report.put("sensorActionSize", sensorSize);
-        report.put("eta", eta);
-        report.put("moveAlpha", moveAlpha);
-        report.put("sensorActionAlpha", sensorAlpha);
-        return report;
     }
 
     /**
@@ -175,9 +111,11 @@ public class Report {
     }
 
     private final long batchSize;
+    private final int numBins;
+    private final File reportPath;
+    private final File kpisPath;
+    private final BinArrayFile rewardsFile;
     protected Namespace args;
-    private File reportPath;
-    private File kpisPath;
 
     /**
      * Creates the report application
@@ -187,21 +125,83 @@ public class Report {
     protected Report(Namespace args) {
         this.args = args;
         this.batchSize = args.getLong("batchSize");
+        this.numBins = args.getInt("numBins");
+        this.kpisPath = new File(args.getString("kpis"));
+        this.reportPath = new File(args.getString("reportPath"));
+        this.rewardsFile = Optional.ofNullable(args.getString("rewards"))
+                .map(filename ->
+                        new BinArrayFile(new File(filename), "r"))
+                .orElseGet(() ->
+                        BinArrayFile.createByKey(kpisPath, "rewards"));
     }
 
     /**
-     * Generates a report YAML file
+     * Returns the task for linear data
      *
-     * @throws IOException in case of error
+     * @param path the base path
+     * @param key  the key
      */
-    protected void generateReportYaml() throws IOException {
-        String modelPath = args.getString("model");
-        JsonNode root = fromFile(new File(modelPath, "agent.yml"));
-        JsonNode report = extractReportYaml(root);
-        this.reportPath = new File(args.getString("reportPath"));
-        File resultFile = new File(reportPath, "report.yml");
-        resultFile.getParentFile().mkdirs();
-        objectMapper.writeValue(resultFile, report);
+    private Action createLinearTask(File path, String key) {
+        return createLinearTask(BinArrayFile.createByKey(path, key), key);
+    }
+
+    /**
+     * Returns the task for linear data
+     *
+     * @param reader the binary array file
+     * @param key    the key
+     */
+    private Action createLinearTask(BinArrayFile reader, String key) {
+        return () -> {
+            logger.atInfo().log("Started linear report task for key: {}", key);
+            long n = reader.size();
+            double gamma = Math.min((double) numBins / n, 0.99);
+            try (INDArray report = Reports.linReport(reader, UnaryOperator.identity(), numBins, gamma, batchSize)) {
+                try (CSVWriter writer = CSVWriter.createByKey(reportPath, key)) {
+                    writer.clear();
+                    writer.write(report);
+                }
+            }
+            logger.atInfo().log("Completed linear report for key: {}", key);
+        };
+    }
+
+    /**
+     * Returns the task for logarithmic data
+     *
+     * @param key the key
+     */
+    private Action createLogTask(String key) {
+        return () -> {
+            logger.atInfo().log("Started logarithmic report for key: {}", key);
+            BinArrayFile reader = BinArrayFile.createByKey(kpisPath, key);
+            long n = reader.size();
+            double gamma = Math.min((double) numBins / n, 0.99);
+            try (INDArray report = Reports.policyReport(reader, numBins, gamma, batchSize)) {
+                try (CSVWriter writer = CSVWriter.createByKey(reportPath, key)) {
+                    writer.clear();
+                    writer.write(report);
+                }
+            }
+            logger.atInfo().log("Completed logarithmic report for key: {}", key);
+        };
+    }
+
+    /**
+     *
+     * Returns the tasks
+     */
+    private Stream<Action> createTasks() {
+        Stream<Action> actionTasks = Stream.of("head", "move")
+                .map(this::createLogTask);
+        Stream<Action> kpisTasks = Stream.of("avgReward", "deltas", "critic")
+                .map(key ->
+                        createLinearTask(kpisPath, key)
+                );
+        Stream<Action> rewardTasks = Stream.of(createLinearTask(rewardsFile, "rewards"));
+        return Stream.concat(
+                Stream.concat(rewardTasks, kpisTasks),
+                actionTasks);
     }
 
     /**
@@ -210,24 +210,17 @@ public class Report {
      * @throws IOException in case of error
      */
     protected void start() throws Throwable {
-        this.kpisPath = new File(args.getString("kpis"));
-        this.reportPath = new File(args.getString("reportPath"));
-        List<ReportProcess.Builder> activeReports = REPORTS.stream()
-                .filter(t ->
-                        t.canCreate(kpisPath))
-                .toList();
-
-        List<Action> tasks = activeReports.stream()
-                .<Action>map(t -> () ->
-                        t.build(kpisPath, reportPath, batchSize).process())
-                .toList();
-        generateReportYaml();
+        Stream<Action> tasks = createTasks();
         if (args.getBoolean("parallel")) {
-            ParallelProcess.scheduler(tasks).run();
+            ParallelProcess.scheduler(tasks.toList()).run();
         } else {
-            for (Action task : tasks) {
-                task.run();
-            }
+            tasks.forEach(task -> {
+                try {
+                    task.run();
+                } catch (Throwable e) {
+                    logger.atError().setCause(e).log("Error running task");
+                }
+            });
         }
         logger.atInfo().log("Completed.");
     }

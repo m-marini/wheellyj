@@ -28,7 +28,9 @@
 
 package org.mmarini.rl.agents;
 
+import org.mmarini.Function4;
 import org.mmarini.MapStream;
+import org.mmarini.Tuple2;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.MultiDataSet;
 import org.nd4j.linalg.dataset.api.MultiDataSetPreProcessor;
@@ -42,26 +44,29 @@ import static java.util.Objects.requireNonNull;
 /**
  * Produces mini-batch training data from trajectory
  */
-class TrajectoryDatasetIterator implements RLDatasetIterator, AutoCloseable {
-    private final Trajectory trajectory;
+public class TrajectoryDatasetIterator implements RLDatasetIterator, AutoCloseable {
+
+    private final Map<String, INDArray> states;
+    private final Map<String, INDArray> actionMasks;
+    private final INDArray rewards;
     private final int batchSize;
-    private final RLTrainingDataProvider generator;
+    private final Function4<Map<String, INDArray>, Map<String, INDArray>, INDArray, Float, Tuple2<MultiDataSet, Float>> generator;
     private float avgReward;
     private int cursor;
-    private RLTrainingData data;
     private MultiDataSetPreProcessor preProcessor;
     private boolean stop;
 
     /**
      * Creates dataset iterator
      *
-     * @param trajectory the trajectory
-     * @param batchSize  the mini-batch size
-     * @param avgReward  the initial average reward
-     * @param generator  the data generator
+     * @param batchSize the mini-batch size
+     * @param avgReward the initial average reward
+     * @param generator the data generator
      */
-    TrajectoryDatasetIterator(Trajectory trajectory, int batchSize, float avgReward, RLTrainingDataProvider generator) {
-        this.trajectory = requireNonNull(trajectory);
+    TrajectoryDatasetIterator(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards, int batchSize, float avgReward, Function4<Map<String, INDArray>, Map<String, INDArray>, INDArray, Float, Tuple2<MultiDataSet, Float>> generator) {
+        this.states = states;
+        this.actionMasks = actionMasks;
+        this.rewards = rewards;
         this.batchSize = batchSize;
         this.generator = requireNonNull(generator);
         this.avgReward = avgReward;
@@ -78,16 +83,7 @@ class TrajectoryDatasetIterator implements RLDatasetIterator, AutoCloseable {
     }
 
     @Override
-    public boolean hasNext() {
-        return cursor < trajectory.size() && !stop;
-    }
-
-    @Override
     public void close() {
-        if (data != null) {
-            data.close();
-        }
-        data = null;
     }
 
     @Override
@@ -101,8 +97,8 @@ class TrajectoryDatasetIterator implements RLDatasetIterator, AutoCloseable {
     }
 
     @Override
-    public void stop() {
-        stop = true;
+    public boolean hasNext() {
+        return cursor < rewards.size(0) && !stop;
     }
 
     @Override
@@ -113,23 +109,21 @@ class TrajectoryDatasetIterator implements RLDatasetIterator, AutoCloseable {
     @Override
     public MultiDataSet next(int numRecords) {
         close();
-        int n = min(numRecords, (int) trajectory.size() - cursor);
+        int n = min(numRecords, (int) rewards.size(0) - cursor);
 
-        Map<String, INDArray> clipStates = MapStream.of(trajectory.states())
+        Map<String, INDArray> minibatchStates = MapStream.of(states)
                 .mapValues(data -> data.get(NDArrayIndex.interval(cursor, cursor + n + 1), NDArrayIndex.all()))
                 .toMap();
-        Map<String, INDArray> clipActions = MapStream.of(trajectory.actions())
+        Map<String, INDArray> minibatchActionMasks = MapStream.of(actionMasks)
                 .mapValues(data -> data.get(NDArrayIndex.interval(cursor, cursor + n), NDArrayIndex.all()))
                 .toMap();
 
-        INDArray clipReward = trajectory.rewards().get(NDArrayIndex.interval(cursor, cursor + n), NDArrayIndex.all());
-        Trajectory minibatchTrajectory = new Trajectory(
-                clipStates, clipActions, clipReward
-        );
-        this.data = generator.get(minibatchTrajectory, avgReward);
-        this.avgReward = data.avgReward();
+        INDArray minibatchRewards = rewards.get(NDArrayIndex.interval(cursor, cursor + n), NDArrayIndex.all());
+
+        Tuple2<MultiDataSet, Float> data = generator.apply(minibatchStates, minibatchActionMasks, minibatchRewards, avgReward);
+        this.avgReward = data._2;
         cursor += n;
-        return new org.nd4j.linalg.dataset.MultiDataSet(data.features(), data.labels());
+        return data._1;
     }
 
     @Override
@@ -140,5 +134,10 @@ class TrajectoryDatasetIterator implements RLDatasetIterator, AutoCloseable {
     @Override
     public boolean resetSupported() {
         return true;
+    }
+
+    @Override
+    public void stop() {
+        stop = true;
     }
 }
