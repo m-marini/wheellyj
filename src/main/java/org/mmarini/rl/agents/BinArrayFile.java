@@ -220,13 +220,14 @@ public class BinArrayFile implements ArrayWriter, ArrayReader {
     private void readShape() throws IOException {
         dataFile.seek(0);
         shape = null;
-        if (dataFile.length() < 4) {
+        long length = dataFile.length();
+        if (length < 4) {
             return;
         }
         int rank = dataFile.readInt();
         long[] shape = new long[rank];
         for (int i = 0; i < rank; i++) {
-            if (dataFile.length() < 8) {
+            if (length < 8) {
                 return;
             }
             shape[i] = dataFile.readLong();

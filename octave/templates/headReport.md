@@ -1,25 +1,30 @@
+---
+
 ## Head action
 
-The strategy to determine the direction of the robot proxy sensor is provided by the agent by generating the
-probabilities of selecting a given direction.
+The agent determines the robot head sensor direction by generating the probability distribution over the available directions.
 
-The maximum probability is an indicator of how much the agent generates deterministic behavior.
+The maximum probability indicates how deterministic the policy is.
 
 The minimum value of the maximum probability occurs when all directions are equally probable.
 
-$P(a) = \frac{1}{n}, \forall a \in A$
+$$
+P(a) = \frac{1}{|A|}, \forall a \in A
+$$
 
-With $n$ the number of head directions
+where $|A|$ is the number of available head directions.
 
-For $n = 7$
+For $|A| = 7$
 
-$P(a) \approx 0.1429$.
+$$
+P(a) \approx 0.1429
+$$.
 
-In logarithmic scale it corresponde to
+In logarithmic scale it corresponds to
 
-$\log_{10}(P(a)) = -\log_{10}(n) \approx -0.854$.
+$$
+\log_{10}(P(a)) = -\log_{10}(|A|) \approx -0.854
+$$.
 
-### Head log10 ratio chart
+The report displays logarithmic values together with their corresponding probability values.
 
-| # samples | mean | min | max |
-|-----------|------|-----|-----|

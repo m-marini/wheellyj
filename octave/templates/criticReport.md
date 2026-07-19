@@ -1,16 +1,10 @@
+---
+
 ## Critic
 
-In the average-reward setting, the quality of a policy is defined as the average rate of reward, or simply average
-reward, while following that policy.
+The critic estimates the differential value function of the current state $s_t$.
 
-Returns are defined in terms of differences between rewards and the average reward.
+The value estimate represents the expected long-term differential return under the current policy.
 
-This is known as the differential return, and the corresponding value functions are known as differential value
-functions.
+A growing critic value generally indicates that the agent is learning states associated with higher expected future rewards.
 
-The critic output measures the estimated value of differential value of S(t).
-
-### Critic stats
-
-| # samples | mean | min | max |
-|-----------|------|-----|-----|

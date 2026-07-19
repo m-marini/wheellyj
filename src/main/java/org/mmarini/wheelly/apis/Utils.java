@@ -36,27 +36,15 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Random;
 
-import static java.lang.Math.*;
+import static java.lang.Math.log;
+import static java.lang.Math.round;
 
 /**
  * Utilities functions
  */
 public interface Utils {
-    double SIN_1DEG = sin(toRadians(1));
     Logger logger = LoggerFactory.getLogger(Utils.class);
     double MM = 1e-3;
-
-    static double clip(double value, double min, double max) {
-        return Math.min(Math.max(value, min), max);
-    }
-
-    static float clip(float value, float min, float max) {
-        return Math.min(Math.max(value, min), max);
-    }
-
-    static int clip(int value, int min, int max) {
-        return Math.min(Math.max(value, min), max);
-    }
 
     /**
      * Returns a random number with exponential distribution probability
@@ -128,10 +116,6 @@ public interface Utils {
         vec2.x = x;
         vec2.y = y;
         return vec2;
-    }
-
-    static Vec2 vec2(double[] x) {
-        return vec2(x[0], x[1]);
     }
 
     static Vec2 vec2(double x, double y) {

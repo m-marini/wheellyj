@@ -1,25 +1,31 @@
+---
+
 ## Move action
 
-The strategy to determine the movement of the robot is provided by the agent by generating the probabilities of
-selecting a given movement.
+The agent determines the robot movement strategy by generating the probability distribution over the available actions.
 
-The maximum probability is an indicator of how much the agent generates deterministic behavior.
+The maximum action probability is an indicator of policy determinism.
 
-The minimum value of the maximum probability occurs when all movements are equally probable
+The minimum value of the maximum probability occurs when all movements are equally probable.
 
-$P(a) = \frac{1}{n}, \forall a \in A$
+For a uniform policy, every action has the same probability.
 
-With $n$ the number of move actions
+$$
+P(a) = \frac{1}{|A|}, \forall a \in A
+$$
 
-For $n = 1941$
+where $|A|$ is the number of available move actions.
 
-$P(a) \approx 0.516 \times 10^{-3}$.
+For $|A| = 1941$
 
-In logarithmic scale it corresponde to
+$$
+P(a) \approx 5.16 \times 10^{-4}$$.
 
-$\log_{10}(P(a)) = -\log_{10}(n) \approx -3.288$.
+In logarithmic scale it corresponds to
 
-### Move stats
+$$
+\log_{10}(P(a)) = -\log_{10}(|A|) \approx -3.288
+$$.
 
-| # samples | mean | min | max |
-|-----------|------|-----|-----|
+The report displays logarithmic values together with their corresponding probability values.
+

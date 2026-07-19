@@ -33,6 +33,7 @@ import org.junit.jupiter.api.Test;
 import org.mmarini.rl.agents.BinArrayFile;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.ops.transforms.Transforms;
 
 import java.io.File;
 import java.io.IOException;
@@ -81,6 +82,59 @@ class ReportsTest {
     }
 
     @Test
+    void testLinReg() {
+        // Given a data set
+        INDArray data = Nd4j.arange(1, 4).reshape(3, 1);
+
+        // When compute max
+        Reports.LinearRegression stats = new Reports.LinearRegression().add(data);
+        assertThat(stats.mean(), closeTo(2, 1e-3));
+        assertThat(stats.xm(), closeTo(1, 1e-3));
+
+        double sxx = ((-1) * (-1) + 1) / 3.0;
+        assertThat(stats.sxx(), closeTo(sxx, 1e-3));
+
+        double sumxy = (2 + 2 * 3);
+        assertThat(stats.sumxy, closeTo(sumxy, 1e-3));
+
+        double sxy = ((-1) * (1 - 2) + 1) / 3.0;
+        assertThat(stats.sxy(), closeTo(sxy, 1e-3));
+
+        assertThat(stats.m(), closeTo(1, 1e-3));
+        assertThat(stats.q(), closeTo(1, 1e-3));
+
+        assertThat(stats.initialValue(), closeTo(1, 1e-3));
+        assertThat(stats.finalValue(), closeTo(3, 1e-3));
+    }
+
+    @Test
+    void testLinReg1() {
+        // Given a data set
+        INDArray x = Nd4j.arange(0, 5).reshape(5, 1);
+        INDArray y = Nd4j.create(new float[]{2, 3, 2, 1, 2}).reshape(5, 1);
+
+        // When add data
+        Reports.LinearRegression stats = new Reports.LinearRegression().add(y);
+        assertThat(stats.mean(), closeTo(y.meanNumber().doubleValue(), 1e-3));
+        assertThat(stats.xm(), closeTo(x.meanNumber().doubleValue(), 1e-3));
+
+        double sxx = Transforms.pow(x.sub(x.mean()), 2).meanNumber().doubleValue();
+        assertThat(stats.sxx(), closeTo(sxx, 1e-3));
+
+        double sumxy = x.mul(y).sumNumber().doubleValue();
+        assertThat(stats.sumxy, closeTo(sumxy, 1e-3));
+
+        double sxy = x.sub(x.mean()).mul(y.sub(y.mean())).meanNumber().doubleValue();
+        assertThat(stats.sxy(), closeTo(sxy, 1e-3));
+
+        assertThat(stats.m(), closeTo(-0.2, 1e-3));
+        assertThat(stats.q(), closeTo(2.4, 1e-3));
+
+        assertThat(stats.initialValue(), closeTo(2.4, 1e-3));
+        assertThat(stats.finalValue(), closeTo(1.6, 1e-3));
+    }
+
+    @Test
     void testLinReport() throws IOException {
         // Given a file
         // 2 ... 7
@@ -89,10 +143,10 @@ class ReportsTest {
         BinArrayFile file = new BinArrayFile(BIN_LIN_FILE);
 
         // When generate linear report
-        INDArray result = Reports.linReport(file, x -> x.mul(2), NUM_BINS, 0.25, BATCH_SIZE);
+        INDArray[] result = Reports.linReport(file, x -> x.mul(2), NUM_BINS, 0.25, BATCH_SIZE);
 
         // Then ...
-        assertThat(result, matrixCloseTo(new long[]{NUM_BINS, 5},
+        assertThat(result[0], matrixCloseTo(new long[]{NUM_BINS, 5},
                 1e-3,
                 6, 9f, 4, 14, 9.4328f,
                 12, 21f, 16, 26, 21.4238f,
@@ -119,49 +173,48 @@ class ReportsTest {
         BinArrayFile file = new BinArrayFile(POLICY_FILE);
 
         // When generate linear report
-        INDArray result = Reports.policyReport(file, NUM_BINS, 0.25, BATCH_SIZE);
+        INDArray[] result = Reports.policyReport(file, NUM_BINS, 0.25, BATCH_SIZE);
 
         // Then result should be 3 x 9 array
-        assertArrayEquals(new long[]{NUM_BINS, 9}, result.shape());
+        assertArrayEquals(new long[]{NUM_BINS, 9}, result[0].shape());
         // And next sample index should be ...
-        assertThat(result.getDouble(0, 0), closeTo(6, EPSILON));
+        assertThat(result[0].getDouble(0, 0), closeTo(6, EPSILON));
         // And average max log10 should be ...
-        assertThat(result.getDouble(0, 1), closeTo(log10(3d * 6 * 9 * 12 * 15 * 18) / 6, EPSILON));
+        assertThat(result[0].getDouble(0, 1), closeTo(log10(3d * 6 * 9 * 12 * 15 * 18) / 6, EPSILON));
         // And min max log10 should be ...
-        assertThat(result.getDouble(0, 2), closeTo(log10(3), EPSILON));
+        assertThat(result[0].getDouble(0, 2), closeTo(log10(3), EPSILON));
         // And max max log10 should be ...
-        assertThat(result.getDouble(0, 3), closeTo(log10(18), EPSILON));
+        assertThat(result[0].getDouble(0, 3), closeTo(log10(18), EPSILON));
 
         // And min ratio should be ...
-        assertThat(result.getDouble(0, 6), closeTo(ratio(16, 17, 18), EPSILON));
+        assertThat(result[0].getDouble(0, 6), closeTo(ratio(16, 17, 18), EPSILON));
         // And max ratio should be ...
-        assertThat(result.getDouble(0, 7), closeTo(ratio(1, 2, 3), EPSILON));
+        assertThat(result[0].getDouble(0, 7), closeTo(ratio(1, 2, 3), EPSILON));
 
         // And next sample index should be ...
-        assertThat(result.getDouble(1, 0), closeTo(12, EPSILON));
+        assertThat(result[0].getDouble(1, 0), closeTo(12, EPSILON));
         // And average max log10 should be ...
-        assertThat(result.getDouble(1, 1), closeTo(log10(21d * 24 * 27 * 30 * 33 * 36) / 6, EPSILON));
+        assertThat(result[0].getDouble(1, 1), closeTo(log10(21d * 24 * 27 * 30 * 33 * 36) / 6, EPSILON));
         // And min min log10 should be ...
-        assertThat(result.getDouble(1, 2), closeTo(log10(21), EPSILON));
+        assertThat(result[0].getDouble(1, 2), closeTo(log10(21), EPSILON));
         // And max max log10 should be ...
-        assertThat(result.getDouble(1, 3), closeTo(log10(36), EPSILON));
+        assertThat(result[0].getDouble(1, 3), closeTo(log10(36), EPSILON));
 
         // And min ratio should be ...
-        assertThat(result.getDouble(1, 6), closeTo(ratio(34, 35, 36), EPSILON));
+        assertThat(result[0].getDouble(1, 6), closeTo(ratio(34, 35, 36), EPSILON));
         // And max ratio should be ...
-        assertThat(result.getDouble(1, 7), closeTo(ratio(19, 20, 21), EPSILON));
+        assertThat(result[0].getDouble(1, 7), closeTo(ratio(19, 20, 21), EPSILON));
 
-        assertThat(result.getDouble(2, 0), closeTo(19, EPSILON));
-        assertThat(result.getDouble(2, 1), closeTo(log10(39d * 42 * 45 * 48 * 51 * 54 * 57) / 7, EPSILON));
-        assertThat(result.getDouble(2, 2), closeTo(log10(39), EPSILON));
-        assertThat(result.getDouble(2, 3), closeTo(log10(57), EPSILON));
+        assertThat(result[0].getDouble(2, 0), closeTo(19, EPSILON));
+        assertThat(result[0].getDouble(2, 1), closeTo(log10(39d * 42 * 45 * 48 * 51 * 54 * 57) / 7, EPSILON));
+        assertThat(result[0].getDouble(2, 2), closeTo(log10(39), EPSILON));
+        assertThat(result[0].getDouble(2, 3), closeTo(log10(57), EPSILON));
 
         // And min ratio should be ...
-        assertThat(result.getDouble(2, 6), closeTo(ratio(55, 56, 57), EPSILON));
+        assertThat(result[0].getDouble(2, 6), closeTo(ratio(55, 56, 57), EPSILON));
         // And max ratio should be ...
-        assertThat(result.getDouble(2, 7), closeTo(ratio(37, 38, 39), EPSILON));
+        assertThat(result[0].getDouble(2, 7), closeTo(ratio(37, 38, 39), EPSILON));
     }
-
 
     @Test
     void testStats() {

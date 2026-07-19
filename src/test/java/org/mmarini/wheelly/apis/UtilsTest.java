@@ -35,21 +35,26 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
+import org.nd4j.linalg.api.buffer.DataType;
+import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.factory.Nd4j;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static java.lang.Math.clamp;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 
 class UtilsTest {
 
-    static final double MAX_COORD = 3d;
     public static final int SEED = 1234;
     public static final int NUM_RANDOM_TEST_CASES = 100;
+    static final double MAX_COORD = 3d;
 
     static Stream<Arguments> vect2dArgs() {
         return RandomArgumentsGenerator.create(SEED)
@@ -69,21 +74,7 @@ class UtilsTest {
             "-2,-1"
     })
     void clipFloat(float value, float expected) {
-        assertEquals(expected, Utils.clip(value, -1F, 1F));
-    }
-
-    @ParameterizedTest
-    @CsvSource(value = {
-            "0,0,-1,1,-10,10",
-            "5,0.5,-1,1,-10,10",
-            "10,1,-1,1,-10,10",
-            "20,2,-1,1,-10,10",
-            "-5,-0.5,-1,1,-10,10",
-            "-10,-1,-1,1,-10,10",
-            "-20,-2,-1,1,-10,10"
-    })
-    void linear(double expected, double value, double minX, double maxX, double minY, double maxY) {
-        assertEquals(expected, Utils.linear(value, minX, maxX, minY, maxY));
+        assertEquals(expected, clamp(value, -1F, 1F));
     }
 
     @ParameterizedTest
@@ -113,6 +104,33 @@ class UtilsTest {
         assertThat(m.groupCount(), equalTo(2));
         assertThat(m.group(2), equalTo(method));
         assertThat(className1, equalTo(className));
+    }
+
+    @Test
+    void testEntropy() {
+        INDArray p = Nd4j.create(new double[]{
+                0.25, 0.25, 0.25, 0.25,
+                1d / 256, 1d / 256, 1d / 256, 253d / 256
+        }).reshape(2, 4);
+        INDArray result = p.shannonEntropy(1);
+
+        assertThat(result.castTo(DataType.FLOAT), matrixCloseTo(new long[]{2}, 1e-2,
+                2.0f,
+                0.110557f));
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            "0,0,-1,1,-10,10",
+            "5,0.5,-1,1,-10,10",
+            "10,1,-1,1,-10,10",
+            "20,2,-1,1,-10,10",
+            "-5,-0.5,-1,1,-10,10",
+            "-10,-1,-1,1,-10,10",
+            "-20,-2,-1,1,-10,10"
+    })
+    void testLinear(double expected, double value, double minX, double maxX, double minY, double maxY) {
+        assertEquals(expected, Utils.linear(value, minX, maxX, minY, maxY));
     }
 
     @ParameterizedTest

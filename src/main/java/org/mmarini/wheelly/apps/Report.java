@@ -156,8 +156,15 @@ public class Report {
             logger.atInfo().log("Started linear report task for key: {}", key);
             long n = reader.size();
             double gamma = Math.min((double) numBins / n, 0.99);
-            try (INDArray report = Reports.linReport(reader, UnaryOperator.identity(), numBins, gamma, batchSize)) {
+            INDArray[] reports = Reports.linReport(reader, UnaryOperator.identity(), numBins, gamma, batchSize);
+            try (INDArray report = reports[0]) {
                 try (CSVWriter writer = CSVWriter.createByKey(reportPath, key)) {
+                    writer.clear();
+                    writer.write(report);
+                }
+            }
+            try (INDArray report = reports[1]) {
+                try (CSVWriter writer = CSVWriter.createByKey(reportPath, key + "_reg")) {
                     writer.clear();
                     writer.write(report);
                 }
@@ -171,14 +178,21 @@ public class Report {
      *
      * @param key the key
      */
-    private Action createLogTask(String key) {
+    private Action createPolicyTask(String key) {
         return () -> {
             logger.atInfo().log("Started logarithmic report for key: {}", key);
             BinArrayFile reader = BinArrayFile.createByKey(kpisPath, key);
             long n = reader.size();
             double gamma = Math.min((double) numBins / n, 0.99);
-            try (INDArray report = Reports.policyReport(reader, numBins, gamma, batchSize)) {
+            INDArray[] reports = Reports.policyReport(reader, numBins, gamma, batchSize);
+            try (INDArray report = reports[0]) {
                 try (CSVWriter writer = CSVWriter.createByKey(reportPath, key)) {
+                    writer.clear();
+                    writer.write(report);
+                }
+            }
+            try (INDArray report = reports[1]) {
+                try (CSVWriter writer = CSVWriter.createByKey(reportPath, key + "_reg")) {
                     writer.clear();
                     writer.write(report);
                 }
@@ -193,7 +207,7 @@ public class Report {
      */
     private Stream<Action> createTasks() {
         Stream<Action> actionTasks = Stream.of("head", "move")
-                .map(this::createLogTask);
+                .map(this::createPolicyTask);
         Stream<Action> kpisTasks = Stream.of("avgReward", "deltas", "critic")
                 .map(key ->
                         createLinearTask(kpisPath, key)

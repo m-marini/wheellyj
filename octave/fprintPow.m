@@ -1,3 +1,21 @@
+## usage: fprintPow(hFile, value)
+##
+## Print a base-10 exponent value and its corresponding power notation.
+##
+## hFile
+##     File handle opened for writing where the formatted value is written.
+##
+## value
+##     Numeric value representing a base-10 exponent. The value is
+##     printed as the original number followed by its corresponding
+##     power-of-10 representation in parentheses.
+##
+## Example:
+##
+##  hFile = fopen("output.txt", "w");
+##  fprintPow(hFile, 3);
+##  fclose(hFile);
+
 function fprintPow(hFile, value)
   pow10 = 10.^ value;
   if  value <= -3 || value > 4
