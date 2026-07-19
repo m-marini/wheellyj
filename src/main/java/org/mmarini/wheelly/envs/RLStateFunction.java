@@ -42,8 +42,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
+import static java.lang.Math.clamp;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.apis.Utils.clip;
 
 public class RLStateFunction implements StateFunction {
     public static final int MAX_SENSOR_DIR = 90;
@@ -173,7 +173,7 @@ public class RLStateFunction implements StateFunction {
         for (int i = 0; i < numSectors; i++) {
             CircularSector sector = polarMap.sector(i);
             double dist = sector.hindered()
-                    ? clip(sector.distance(polarMap.center()), 0, maxDistance)
+                    ? clamp(sector.distance(polarMap.center()), 0, maxDistance)
                     : 0;
             sectorDistances.getScalar(i).assign(dist);
             sectorStates.getScalar(i)

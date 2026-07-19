@@ -61,7 +61,6 @@ import static org.mmarini.wheelly.apis.Obstacle.DEFAULT_OBSTACLE_RADIUS;
 import static org.mmarini.wheelly.apis.RobotSpec.*;
 import static org.mmarini.wheelly.apis.RobotStatus.OBSTACLE_SIZE;
 import static org.mmarini.wheelly.apis.RobotStatusId.*;
-import static org.mmarini.wheelly.apis.Utils.clip;
 import static org.mmarini.wheelly.apis.Utils.m2mm;
 
 /**
@@ -531,8 +530,8 @@ public class SimRobot implements RobotApi {
         double maxRotDeg = robotSpec.maxRotRange().toDeg();
         double rotSpeed = absRotDeg > maxRotDeg
                 ? rotDeg >= 0
-                ? robotSpec.maxRotPps()
-                : -robotSpec.maxRotPps()
+                  ? robotSpec.maxRotPps()
+                  : -robotSpec.maxRotPps()
                 // Rotate at speed proportional the rotation angle
                 : robotSpec.maxRotPps() * rotDeg / maxRotDeg;
         // Compute the linear speed
@@ -540,8 +539,8 @@ public class SimRobot implements RobotApi {
         double linSpeed = absRotDeg > maxRotDeg
                 ? 0 // robot not in target direction
                 : distance >= decDistance
-                ? -robotSpec.maxSpeed() // Robot distant from target
-                : -robotSpec.maxSpeed() * distance / decDistance; // Robot near the target
+                  ? -robotSpec.maxSpeed() // Robot distant from target
+                  : -robotSpec.maxSpeed() * distance / decDistance; // Robot near the target
         status.updateAndGet(s ->
                 s.composeSpeed(linSpeed, rotSpeed));
     }
@@ -558,8 +557,8 @@ public class SimRobot implements RobotApi {
                 Fixture fixture = contact.getFixtureA().equals(robotFixture)
                         ? contact.getFixtureB()
                         : contact.getFixtureB().equals(robotFixture)
-                        ? contact.getFixtureA()
-                        : null;
+                          ? contact.getFixtureA()
+                          : null;
                 if (fixture != null) {
                     Complex collisionDir = contactRelativeDirection(contact);
                     if (collisionDir.y() >= 0) {
@@ -615,8 +614,8 @@ public class SimRobot implements RobotApi {
         double maxRotDeg = robotSpec.maxRotRange().toDeg();
         double rotSpeed = absRotDeg > maxRotDeg
                 ? rotDeg >= 0
-                ? robotSpec.maxRotPps()
-                : -robotSpec.maxRotPps()
+                  ? robotSpec.maxRotPps()
+                  : -robotSpec.maxRotPps()
                 // Rotate at speed proportional the rotation angle
                 : robotSpec.maxRotPps() * rotDeg / maxRotDeg;
         // Compute the linear speed
@@ -624,8 +623,8 @@ public class SimRobot implements RobotApi {
         double linSpeed = absRotDeg > maxRotDeg
                 ? 0 // robot not in target direction
                 : distance >= decDistance
-                ? robotSpec.maxSpeed() // Robot distant from target
-                : robotSpec.maxSpeed() * distance / decDistance; // Robot near the target
+                  ? robotSpec.maxSpeed() // Robot distant from target
+                  : robotSpec.maxSpeed() * distance / decDistance; // Robot near the target
         status.updateAndGet(s ->
                 s.composeSpeed(linSpeed, rotSpeed));
     }
@@ -728,8 +727,8 @@ public class SimRobot implements RobotApi {
         return maps.isEmpty()
                 ? List.of()
                 : maps.size() == 1
-                ? maps.getFirst()
-                : maps.get(mapRandom.nextInt(maps.size()));
+                  ? maps.getFirst()
+                  : maps.get(mapRandom.nextInt(maps.size()));
     }
 
     @Override
@@ -856,7 +855,7 @@ public class SimRobot implements RobotApi {
 
     @Override
     public Single<Boolean> scan(int direction) {
-        Complex dir = Complex.fromDeg(clip(direction, -90, 90));
+        Complex dir = Complex.fromDeg(clamp(direction, -90, 90));
         status.updateAndGet(s ->
                 s.headRotation(dir)
         );
@@ -1047,20 +1046,20 @@ public class SimRobot implements RobotApi {
         localForce = localForce.mul((float) (1 + random.nextGaussian() * errSensor));
 
         // Clip the local force to physic constraints
-        localForce.x = (float) clip(localForce.x, -MAX_FORCE, MAX_FORCE);
+        localForce.x = clamp(localForce.x, (float) -MAX_FORCE, (float) MAX_FORCE);
         force = robot.getWorldVector(localForce);
 
         // Angle rotation due to differential motor speeds
         double angularVelocity1 = (right - left) / RobotSpec.ROBOT_TRACK;
         // Limits rotation to max allowed rotation
-        double angularVelocity = clip(angularVelocity1, -MAX_ANGULAR_VELOCITY, MAX_ANGULAR_VELOCITY);
+        double angularVelocity = clamp(angularVelocity1, -MAX_ANGULAR_VELOCITY, MAX_ANGULAR_VELOCITY);
         // Angular impulse to fix the direction
         double robotAngularVelocity = robot.getAngularVelocity();
         double angularTorque = (angularVelocity - robotAngularVelocity) * robot.getInertia() / dt;
         // Add a random factor to angular impulse
         angularTorque *= (1 + random.nextGaussian() * errSigma);
         // Clip the angular torque
-        angularTorque = clip(angularTorque, -MAX_TORQUE, MAX_TORQUE);
+        angularTorque = clamp(angularTorque, -MAX_TORQUE, MAX_TORQUE);
         world.clearForces();
         robot.applyForceToCenter(force);
         robot.applyTorque((float) angularTorque);

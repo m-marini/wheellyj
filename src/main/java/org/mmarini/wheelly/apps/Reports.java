@@ -38,6 +38,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.function.UnaryOperator;
 
+import static java.lang.Math.log;
+
 /**
  * Report utility functions
  */
@@ -46,6 +48,7 @@ public interface Reports {
 
     /**
      * Returns the linear report of a file (mean, min, max, exponential mean)
+     * and the linear regression initial and final values
      *
      * @param file      the file
      * @param preFunc   the input transformation
@@ -53,10 +56,11 @@ public interface Reports {
      * @param gamma     the gamma decay factor
      * @param batchSize the batch size
      */
-    static INDArray linReport(BinArrayFile file, UnaryOperator<INDArray> preFunc, int n, double gamma, long batchSize) throws IOException {
+    static INDArray[] linReport(BinArrayFile file, UnaryOperator<INDArray> preFunc, int n, double gamma, long batchSize) throws IOException {
         INDArray result = Nd4j.create(n, 5);
         long m = file.size();
         // Fills the bins
+        LinearRegression regression = new LinearRegression();
         for (int binIndex = 0; binIndex < n; binIndex++) {
             // Compute the end record index
             long end = (binIndex + 1) * m / n;
@@ -69,8 +73,8 @@ public interface Reports {
                 // Computes the number of records to read
                 try (INDArray batchRecords = batchRecords1) {
                     INDArray records = preFunc.apply(batchRecords);
-
                     stats.add(records);
+                    regression.add(records);
                 }
             }
 
@@ -81,52 +85,54 @@ public interface Reports {
             result.putScalar(binIndex, 3, stats.max);
             result.putScalar(binIndex, 4, stats.moveExpMean);
         }
-        return result;
+        INDArray resultRegression = Nd4j.create(new float[]{
+                        (float) regression.initialValue(),
+                        (float) regression.finalValue()})
+                .reshape(1, 2);
+        return new INDArray[]{result, resultRegression};
     }
 
     /**
-     * Returns the logarithmic best policy
-     *
-     * @param data the policy
-     */
-    static INDArray logBestPolicy(INDArray data) {
-        try (INDArray max = data.max(true, 1)) {
-            return Transforms.log(max);
-        }
-    }
-
-    /**
-     * Returns the logarithmic base 10 report of best policy file (mean, min, max, exponential mean, ratio mean, ratio min, ratio max, ratio exponential mean)
+     * Returns the logarithmic base 10 report of the best policy file
+     * (mean, min, max, exponential mean, ratio mean, ratio min, ratio max, ratio exponential mean),
+     * the best policy linear regression values and the entropy linear regression values
      *
      * @param file      the file
      * @param n         the number of bins
      * @param gamma     the gamma decay factor
      * @param batchSize the batch size
      */
-    static INDArray policyReport(BinArrayFile file, int n, double gamma, long batchSize) throws IOException {
+    static INDArray[] policyReport(BinArrayFile file, int n, double gamma, long batchSize) throws IOException {
         INDArray result = Nd4j.create(n, 9);
         long m = file.size();
         // Fills the bins
+        LinearRegression policyRegression = new LinearRegression();
+        LinearRegression entropyRegression = new LinearRegression();
         for (int binIndex = 0; binIndex < n; binIndex++) {
             // Compute the end record index
             long end = (binIndex + 1) * m / n;
 
             BinStats policyStats = new BinStats(gamma);
-            BinStats ratioStats = new BinStats(gamma);
+            BinStats entropyStats = new BinStats(gamma);
 
             // Read bin data
             INDArray batchRecords1;
             while ((batchRecords1 = readBin(file, end, batchSize)) != null) {
                 // Computes the number of records to read
                 try (INDArray batchRecords = batchRecords1) {
-                    INDArray log10 = Transforms.log(batchRecords, 10, false);
-                    try (INDArray max = log10.max(true, 1)) {
-                        policyStats.add(max);
-                        try (INDArray mean = log10.mean(true, 1)) {
-                            try (INDArray ratio = max.sub(mean)) {
-                                ratioStats.add(ratio);
-                            }
+                    try (INDArray log10 = Transforms.log(batchRecords, 10, true)) {
+                        try (INDArray max = log10.max(true, 1)) {
+                            policyStats.add(max);
+                            policyRegression.add(max);
                         }
+                    }
+                    // Computes the normalised entropy
+                    try (INDArray entropy = batchRecords.entropy(1)
+                            .reshape(batchRecords.size(0), 1)
+                            .divi(log(batchRecords.size(1)))
+                    ) {
+                        entropyStats.add(entropy);
+                        entropyRegression.add(entropy);
                     }
                 }
             }
@@ -137,12 +143,18 @@ public interface Reports {
             result.putScalar(binIndex, 2, policyStats.min);
             result.putScalar(binIndex, 3, policyStats.max);
             result.putScalar(binIndex, 4, policyStats.moveExpMean);
-            result.putScalar(binIndex, 5, ratioStats.mean());
-            result.putScalar(binIndex, 6, ratioStats.min);
-            result.putScalar(binIndex, 7, ratioStats.max);
-            result.putScalar(binIndex, 8, ratioStats.moveExpMean);
+            result.putScalar(binIndex, 5, entropyStats.mean());
+            result.putScalar(binIndex, 6, entropyStats.min);
+            result.putScalar(binIndex, 7, entropyStats.max);
+            result.putScalar(binIndex, 8, entropyStats.moveExpMean);
         }
-        return result;
+        INDArray regressions = Nd4j.create(new float[]{
+                (float) policyRegression.initialValue(),
+                (float) policyRegression.finalValue(),
+                (float) entropyRegression.initialValue(),
+                (float) entropyRegression.finalValue()
+        }).reshape(1, 4);
+        return new INDArray[]{result, regressions};
     }
 
     /**
@@ -195,6 +207,7 @@ public interface Reports {
          */
         public BinStats add(INDArray records) {
             long n = records.size(0);
+            long i0 = numSamples;
             numSamples += n;
             min = Math.min(min, records.minNumber().doubleValue());
             max = Math.max(max, records.maxNumber().doubleValue());
@@ -204,13 +217,107 @@ public interface Reports {
                 moveExpMean = records.getDouble(0, 0);
             }
             for (long i = 0; i < n; i++) {
-                moveExpMean = moveExpMean * notGamma + records.getDouble(i, 0) * gamma;
+                double y = records.getDouble(i, 0);
+                moveExpMean = moveExpMean * notGamma + y * gamma;
+                i0++;
             }
             return this;
         }
 
+        /**
+         * Returns the mean
+         */
         public double mean() {
             return sum / numSamples;
+        }
+    }
+
+    /**
+     * Computes the linear regression of data
+     */
+    class LinearRegression {
+        double sumxy;
+        private long numSamples;
+        private double sum;
+
+        /**
+         * Add data records to bin
+         *
+         * @param records the records
+         */
+        public LinearRegression add(INDArray records) {
+            long n = records.size(0);
+            long i0 = numSamples;
+            numSamples += n;
+            sum += records.sumNumber().doubleValue();
+            for (long i = 0; i < n; i++) {
+                double y = records.getDouble(i, 0);
+                sumxy += i0 * y;
+                i0++;
+            }
+            return this;
+        }
+
+        /**
+         * Returns the linear regression final value
+         */
+        public double finalValue() {
+            return q() + m() * (numSamples - 1);
+        }
+
+        /**
+         * Returns the linear regression initial value
+         */
+        public double initialValue() {
+            return q();
+        }
+
+        /**
+         * Returns the linear regression coefficient
+         */
+        public double m() {
+            return sxy() / sxx();
+        }
+
+        /**
+         * Returns the mean
+         */
+        double mean() {
+            return sum / numSamples;
+        }
+
+        /**
+         * Returns the linear regression offset
+         */
+        public double q() {
+            return mean() - m() * xm();
+        }
+
+        double sxx() {
+            double result = 0;
+            double xm = xm();
+            for (long i = 0; i < numSamples; i++) {
+                double x = i - xm;
+                result += x * x;
+            }
+            return result / numSamples;
+        }
+
+        /**
+         * Returns
+         * <p>
+         * 1 / N sum_i (xi - xm) (yi - ym)
+         * = 1 / N sum_i (xi yi - xi ym - xm yi + xm ym)
+         * = 1 / N sum_i (xi yi) - ym / N sum_i xi - xm / N sum_i yi + xm ym
+         * = 1 / N sum_i (xi yi) - ym xm - xm ym + xm ym
+         * = 1 / N sum_i (xi yi) - ym xm
+         */
+        double sxy() {
+            return sumxy / numSamples - xm() * mean();
+        }
+
+        double xm() {
+            return (numSamples - 1) / 2.0;
         }
     }
 }

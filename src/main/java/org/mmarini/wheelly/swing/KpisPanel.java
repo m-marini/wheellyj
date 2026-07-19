@@ -29,7 +29,6 @@
 package org.mmarini.wheelly.swing;
 
 import io.reactivex.rxjava3.functions.Consumer;
-import org.mmarini.rl.agents.Kpis;
 import org.mmarini.rl.agents.TrainingKpis;
 import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.apps.DoubleReducedValue;
@@ -94,8 +93,8 @@ public class KpisPanel extends MatrixTable {
                     .setPrintTimestamp(false);
         }
         for (String key : actions) {
-            addColumn(key + ".probRatio",
-                    Messages.getStringOpt("KpisPanel." + key + ".probRatio.label").orElse(key), 7)
+            addColumn(key + ".entropy",
+                    Messages.getStringOpt("KpisPanel." + key + ".entropy.label").orElse(key), 6)
                     .setScrollOnChange(true)
                     .setPrintTimestamp(false);
         }
@@ -113,7 +112,7 @@ public class KpisPanel extends MatrixTable {
      */
     private Consumer<Map<String, INDArray>> createActionHandler(String key) {
         DoubleReducedValue prob = mean();
-        DoubleReducedValue probRatio = mean();
+        DoubleReducedValue entropy = mean();
 
         return kpis -> {
             INDArray data = kpis.get(key);
@@ -122,9 +121,11 @@ public class KpisPanel extends MatrixTable {
                 try (INDArray max = data.max(true, 1)) {
                     printf(key + ".prob", "%,6.1f", prob.add(max).value() * 100);
                 }
-                // and the log10 ratio of max of action probabilities over the probabilities geometric mean value
-                try (INDArray ratio = Kpis.log10MaxGeometricMeanRatio(data)) {
-                    printf(key + ".probRatio", "%,7.2f", probRatio.add(ratio).value());
+                // and entropy
+                try (INDArray h = data.entropy(1)
+                        .reshape(data.size(0))
+                        .divi(Math.log(data.size(1)))) {
+                    printf(key + ".entropy", "%,6.1f", entropy.add(h).value() * 100);
                 }
             }
 

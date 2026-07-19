@@ -36,7 +36,6 @@ import org.slf4j.LoggerFactory;
 
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.apis.Utils.clip;
 import static org.mmarini.wheelly.engines.StateResult.*;
 
 /**
@@ -85,7 +84,7 @@ public class MappingState extends TimeOutState {
         ProcessorCommand onInit = ProcessorCommand.create(root, locator.path("onInit"));
         long timeout = locator.path(TIMEOUT_ID).getNode(root).asLong(DEFAULT_TIMEOUT);
         int minNumberOfSamples = locator.path(MIN_NUMBER_OF_SAMPLES_ID).getNode(root).asInt(DEFAULT_MIN_NUMBER_OF_SAMPLES);
-        Complex turnAngle = Complex.fromDeg(clip(locator.path(TURN_ANGLE_ID).getNode(root).asInt(DEFAULT_TURN_ANGLE), 1, 360));
+        Complex turnAngle = Complex.fromDeg(clamp(locator.path(TURN_ANGLE_ID).getNode(root).asInt(DEFAULT_TURN_ANGLE), 1, 360));
         return new MappingState(id, onInit, onEntry, onExit, timeout, turnAngle, minNumberOfSamples);
     }
 
