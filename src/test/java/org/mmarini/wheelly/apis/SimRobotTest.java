@@ -63,17 +63,17 @@ class SimRobotTest {
     public static final float GRID_SIZE = 0.2f;
     public static final int STALEMATE_INTERVAL = 60000;
     public static final int INTERVAL = 10;
-    private static final double PULSES_EPSILON = 1;
     public static final int CLOSE_DELAY = 100;
     public static final int NUM_CASES = 30;
     public static final double MAX_DISTANCE = 1;
+    private static final double PULSES_EPSILON = 1;
 
     /**
      * Given a simulated robot with an obstacle map grid of 0.2 m without obstacles
      */
     private static SimRobot createRobot() {
         return new SimRobot(DEFAULT_ROBOT_SPEC, new Random(SEED), new Random(SEED),
-                0, INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL, 0, 0, List.of(), 0, 0, 0, 0
+                0, INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL, 0, 0, List.of(MapBuilder.empty(41, GRID_SIZE)), 0, 0, 0, 0
         );
     }
 
@@ -90,16 +90,6 @@ class SimRobotTest {
     @BeforeEach
     void setUp() {
         robot = createRobot();
-    }
-
-    @Test
-    void testCreate() {
-        assertEquals(new Point2D.Float(), robot.location());
-        assertEquals(0, robot.direction().toIntDeg());
-        assertEquals(0, robot.sensorDirection().toIntDeg());
-        assertEquals(0d, robot.frontDistance());
-        assertEquals(0d, robot.rearDistance());
-        assertEquals(0L, robot.simulationTime());
     }
 
     @ParameterizedTest(name = "[{index}] R{0}, Target {1} DEG, {2} m")
@@ -132,6 +122,16 @@ class SimRobotTest {
 
         assertNotNull(motion);
         assertThat(motion.robotLocation(), pointCloseTo(target, DEFAULT_TARGET_RANGE));
+    }
+
+    @Test
+    void testCreate() {
+        assertEquals(new Point2D.Float(), robot.location());
+        assertEquals(0, robot.direction().toIntDeg());
+        assertEquals(0, robot.sensorDirection().toIntDeg());
+        assertEquals(0d, robot.frontDistance());
+        assertEquals(0d, robot.rearDistance());
+        assertEquals(0L, robot.simulationTime());
     }
 
     @ParameterizedTest(name = "[{index}] R{0}, Target {1} DEG, {2} m")

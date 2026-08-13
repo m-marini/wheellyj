@@ -1,7 +1,7 @@
 ---
 $schema: https://mmarini.org/wheelly/dl-agent-builder-schema-0.1
 class: org.mmarini.rl.agents.DLAgentBuilder
-numEpochs: 10
+numEpochs: 3
 trajectorySize: 256
 batchSize: 32
 alphas:

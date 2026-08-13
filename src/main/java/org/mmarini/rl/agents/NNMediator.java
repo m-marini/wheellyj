@@ -213,6 +213,46 @@ public record NNMediator(ComputationGraph network, Map<String, Float> alphas,
     }
 
     /**
+     * Returns the network inputs from state removing the last record (last s1)
+     *
+     * @param state the input state values
+     */
+    public INDArray[] createInputData(Map<String, INDArray> state) {
+        return network.getConfiguration().getNetworkInputs().stream()
+                .map(id -> {
+                    INDArray inputs = state.get(id);
+                    return inputs.get(NDArrayIndex.interval(0, inputs.size(0) - 1), NDArrayIndex.all());
+                })
+                .toArray(INDArray[]::new);
+    }
+
+    /**
+     * Returns the outputData (labels)
+     *
+     * @param actionMasks the actions mask
+     * @param predictions the prediction
+     * @param deltas      the deltas
+     */
+    INDArray[] createOutputData(Map<String, INDArray> actionMasks, Map<String, INDArray> predictions, INDArray deltas) {
+        return network.getConfiguration().getNetworkOutputs().stream()
+                .map(id -> {
+                    if (CRITIC_ID.equals(id)) {
+                        return createCriticLabel(predictions, deltas);
+                    } else {
+                        INDArray policy = predictions.get(id);
+                        try (INDArray clipped = policy.get(NDArrayIndex.interval(0, policy.size(0) - 1), NDArrayIndex.all())) {
+                            try (INDArray deltaPolicies = deltas.mul(alphas.get(id))) {
+                                try (INDArray deltaMasks = actionMasks.get(id).mul(deltaPolicies)) {
+                                    return computeNewPolicy(clipped, deltaMasks);
+                                }
+                            }
+                        }
+                    }
+                })
+                .toArray(INDArray[]::new);
+    }
+
+    /**
      * Returns the training datasets (inputs, labels)
      *
      * @param states      the states
@@ -221,24 +261,8 @@ public record NNMediator(ComputationGraph network, Map<String, Float> alphas,
      * @param deltas      the deltas
      */
     INDArray[][] createTrainingData(Map<String, INDArray> states, Map<String, INDArray> actionMasks, Map<String, INDArray> predictions, INDArray deltas) {
-        INDArray[] inputs = reducedInputFromValues(states);
-        INDArray[] labels;
-        labels = network.getConfiguration().getNetworkOutputs().stream()
-                .map(id -> {
-                    if (CRITIC_ID.equals(id)) {
-                        return createCriticLabel(predictions, deltas);
-                    } else {
-                        INDArray policy = predictions.get(id);
-                        try (INDArray clipped = policy.get(NDArrayIndex.interval(0, policy.size(0) - 1), NDArrayIndex.all())) {
-                            try (INDArray deltaPolicies = deltas.mul(alphas.get(id))) {
-                                try (INDArray deltaMasks = actionMasks.get(id).muli(deltaPolicies)) {
-                                    return computeNewPolicy(clipped, deltaMasks);
-                                }
-                            }
-                        }
-                    }
-                })
-                .toArray(INDArray[]::new);
+        INDArray[] inputs = createInputData(states);
+        INDArray[] labels = createOutputData(actionMasks, predictions, deltas);
         return new INDArray[][]{inputs, labels};
     }
 
@@ -250,7 +274,7 @@ public record NNMediator(ComputationGraph network, Map<String, Float> alphas,
      * @param deltas      the deltas
      */
     INDArray[][] createTrainingData(Trajectory trajectory, Map<String, INDArray> predictions, INDArray deltas) {
-        INDArray[] inputs = reducedInputFromValues(trajectory.states());
+        INDArray[] inputs = createInputData(trajectory.states());
         INDArray[] labels;
         labels = network.getConfiguration().getNetworkOutputs().stream()
                 .map(id -> {
@@ -341,19 +365,5 @@ public record NNMediator(ComputationGraph network, Map<String, Float> alphas,
     Stream<Tuple2<String, INDArray>> predictFromValue(Map<String, INDArray> states) {
         INDArray[] inputs = inputFromValues(states);
         return predict(inputs);
-    }
-
-    /**
-     * Returns the network inputs from state removing the last record (last s1)
-     *
-     * @param state the input state values
-     */
-    private INDArray[] reducedInputFromValues(Map<String, INDArray> state) {
-        return network.getConfiguration().getNetworkInputs().stream()
-                .map(id -> {
-                    INDArray inputs = state.get(id);
-                    return inputs.get(NDArrayIndex.interval(0, inputs.size(0) - 1), NDArrayIndex.all());
-                })
-                .toArray(INDArray[]::new);
     }
 }

@@ -48,6 +48,7 @@ import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.dataset.api.MultiDataSet;
+import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -256,7 +257,7 @@ public class DLAgent implements BatchAgent {
                 createTrainingData(states, actionMasks, predictions, deltas);
         MultiDataSet dataset = new org.nd4j.linalg.dataset.MultiDataSet(datasets[0], datasets[1]);
         float avgReward1 = rlData._2;
-        kpis.onNext(new TrainingKpis(predictions, deltas, avgReward1));
+        kpis.onNext(TrainingKpis.create(predictions, deltas, avgReward1));
         return Tuple2.of(dataset, avgReward1);
     }
 
@@ -267,9 +268,8 @@ public class DLAgent implements BatchAgent {
      * @param batchSize  the batch size
      * @param avgReward  the initial average reward
      */
-    public TrajectoryDatasetIterator createTrajectoryIterator(Trajectory trajectory, int batchSize, float avgReward) {
-        Map<String, INDArray> actionMasks = NNMediator.createActionMasks(trajectory.actions(), network());
-        return new TrajectoryDatasetIterator(trajectory.states(), actionMasks, trajectory.rewards(), batchSize, avgReward, this::createDataSet);
+    private TrajectoryDatasetIterator createTrajectoryIterator(Trajectory trajectory, int batchSize, float avgReward) {
+        return TrajectoryDatasetIterator.create(network(), trajectory, batchSize, avgReward, alphas, beta, gamma);
     }
 
     @Override
@@ -387,14 +387,18 @@ public class DLAgent implements BatchAgent {
     private void train(ComputationGraph trainingNetwork, Trajectory trajectory) {
         logger.atDebug().log("Training network ...");
 
-        float avg;
+        double avg;
         try (TrajectoryDatasetIterator iterator = createTrajectoryIterator(trajectory, batchSize, status.get().averageReward())) {
+            iterator.onKpis(kpis::onNext);
+            trainingNetwork.clearLayersStates();
+            Nd4j.getMemoryManager().invokeGc();
             trainingNetwork.fit(iterator, numEpochs);
             avg = iterator.avgReward();
         }
+
         logger.atDebug().log("Trained network");
         status.updateAndGet(s ->
-                s.trained(trainingNetwork, avg));
+                s.trained(trainingNetwork, (float) avg));
     }
 
     @Override
@@ -443,4 +447,5 @@ public class DLAgent implements BatchAgent {
             }
         }
     }
+
 }

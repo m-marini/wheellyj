@@ -35,7 +35,6 @@ import java.util.Objects;
 import java.util.Random;
 
 import static java.lang.Math.clamp;
-import static org.mmarini.wheelly.apis.Obstacle.DEFAULT_OBSTACLE_RADIUS;
 import static org.mmarini.wheelly.apis.RobotStatusId.HALT;
 import static org.mmarini.wheelly.apis.SimRobot.LABEL;
 import static org.mmarini.wheelly.apis.SimRobot.SAFE_DISTANCE;
@@ -79,11 +78,10 @@ public record SimRobotStatus(
         boolean frontSensor, boolean rearSensor,
         double leftPps, double rightPps,
         long motionTimeout, long lidarTimeout, long cameraTimeout, long stalemateTimeout, long startSimulationTime,
-        long lastTick, Collection<Obstacle> template, Collection<Obstacle> obstacleMap,
+        long lastTick, MapBuilder template, Collection<Obstacle> obstacleMap,
         long mapExpiration,
         long randomMapExpiration
 ) implements RobotStatusApi {
-    public static final double MAX_OBSTACLE_DISTANCE = 3;
     public static final double MIN_OBSTACLE_DISTANCE = 1;
 
     /**
@@ -175,12 +173,12 @@ public record SimRobotStatus(
     public SimRobotStatus createObstacleMap(Random random, Point2D robotLocation,
                                             int numObstacles, int numLabels,
                                             long mapPeriod, long mapRandomPeriod) {
-        List<Obstacle> map = MapBuilder.create(template)
+        List<Obstacle> map = template
                 // add obstacles
-                .rand(random, DEFAULT_OBSTACLE_RADIUS, null, new Point2D.Double(), MAX_OBSTACLE_DISTANCE,
+                .rand(random, null,
                         robotLocation, MIN_OBSTACLE_DISTANCE, numObstacles)
                 // add labels
-                .rand(random, DEFAULT_OBSTACLE_RADIUS, LABEL, new Point2D.Double(), MAX_OBSTACLE_DISTANCE,
+                .rand(random, LABEL,
                         robotLocation, MIN_OBSTACLE_DISTANCE, numLabels)
                 .build();
         long mapExpiration = simulationTime + expRandom(random, mapPeriod);
@@ -456,7 +454,7 @@ public record SimRobotStatus(
      *
      * @param template the template map
      */
-    public SimRobotStatus template(Collection<Obstacle> template) {
+    public SimRobotStatus template(MapBuilder template) {
         return Objects.equals(this.template, template)
                 ? this
                 : new SimRobotStatus(simulationTime, status, targetDirection, target, connected, closed, stalemate, headRotation,

@@ -16,7 +16,7 @@ call bin\runnit.cmd org.mmarini.wheelly.apps.BatchTraining -u -k %KPIS% %TEMP%
 rem
 rem Create report data
 rem
-call bin\report.cmd -p -r %TEMP% %KPIS% %CSVS%
+call bin\report.cmd -p -r %TEMP%/rewards.bin %KPIS% %CSVS%
 
 rem
 rem Create report document

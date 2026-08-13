@@ -148,10 +148,10 @@ public class Wheelly {
     private final JButton startButton;
     private final JButton relocateButton;
     private final InferenceConnector inferenceMediator1;
+    long autosaveInstant;
     private JFrame kpisFrame;
     private long robotStartTimestamp;
     private Long sessionDuration;
-    private PolarPanel polarPanel;
     private GridPanel gridPanel;
     private long prevRobotStep;
     private long prevStep;
@@ -165,6 +165,7 @@ public class Wheelly {
     private JFrame frame;
     private InferenceWriter modelDumper;
     private KeyBinWriter kpisWriter;
+    private long savingInterval;
 
     /**
      * Creates the server reinforcement learning engine server
@@ -233,8 +234,8 @@ public class Wheelly {
             agent = dlAgent;
         }
 
-        // TODO manage auto saving
-        long savingInterval = Locator.locate("savingInterval").getNode(config).asLong();
+        this.savingInterval = Locator.locate("savingInterval").getNode(config).asLong();
+        autosaveInstant = System.currentTimeMillis() + savingInterval;
         environment.connect(agent);
 
         kpisPanel.addActionColumns(environment.actionSpec()
@@ -301,7 +302,6 @@ public class Wheelly {
      */
     private void createMultiFrames() {
         // Create multiple frame app
-        JFrame radarFrame = createFixFrame(Messages.getString("Radar.title"), polarPanel);
         JFrame gridFrame = createFixFrame(Messages.getString("Grid.title"), gridPanel);
 
         // Create kpis frame
@@ -319,7 +319,6 @@ public class Wheelly {
         // Collects all frames
         allFrames = new ArrayList<>();
         allFrames.add(frame);
-        allFrames.add(radarFrame);
         allFrames.add(gridFrame);
         if (kpisFrame != null) {
             allFrames.add(kpisFrame);
@@ -344,10 +343,6 @@ public class Wheelly {
      * Creates the panels
      */
     private void createPanels() {
-        this.polarPanel = new PolarPanel();
-        RobotSpec robotSpec = robot.robotSpec();
-        double radarMaxDistance = robotSpec.maxRadarDistance();
-        polarPanel.setRadarMaxDistance(radarMaxDistance);
         this.gridPanel = new GridPanel();
     }
 
@@ -357,7 +352,6 @@ public class Wheelly {
     private void createSingleFrame() {
         JTabbedPane panel = new JTabbedPane();
         panel.addTab(Messages.getString("Wheelly.tabPanel.envMap"), new JScrollPane(envPanel));
-        panel.addTab(Messages.getString("Wheelly.tabPanel.polarMap"), new JScrollPane(polarPanel));
         panel.addTab(Messages.getString("Wheelly.tabPanel.gridMap"), new JScrollPane(gridPanel));
         panel.addTab(Messages.getString("Wheelly.tabPanel.kpi"), new JScrollPane(kpisPanel));
         panel.addTab(Messages.getString("Wheelly.tabPanel.sensor"), new JScrollPane(sensorMonitor));
@@ -434,7 +428,6 @@ public class Wheelly {
         WorldModel worldModel = inferenceResult._1;
         RobotStatus robotStatus = worldModel.robotStatus();
         Map<String, LabelMarker> markers = worldModel.markers();
-        PolarMap polarMap = worldModel.polarMap();
         GridMap map = worldModel.gridMap();
 
         // Dumps world model
@@ -451,7 +444,6 @@ public class Wheelly {
         sensorMonitor.onStatus(robotStatus);
         envPanel.radarMap(worldModel.radarMap());
         envPanel.markers(markers.values());
-        polarPanel.setPolarMap(polarMap, markers.values());
         Complex robotDir = robotStatus.direction();
 
         gridPanel.setGridMap(map);
@@ -617,6 +609,11 @@ public class Wheelly {
         }
         long robotElapsed = status.simulationTime() - robotStartTimestamp;
         envPanel.setTimeRatio(controller.simRealSpeed());
+        long now = System.currentTimeMillis();
+        if (now > autosaveInstant) {
+            agent.backup();
+            autosaveInstant = now + savingInterval;
+        }
         if (robotElapsed > sessionDuration) {
             controller.shutdown();
         }

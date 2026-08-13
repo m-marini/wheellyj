@@ -1,9 +1,10 @@
 ---
-$schema: https://mmarini.org/wheelly/map-schema-0.1
+$schema: https://mmarini.org/wheelly/map-schema-1.0
 class: org.mmarini.wheelly.apis.MapBuilder
+size: 51
+gridSize: 0.2
 shapes:
-  - radius: 0.1
-    components:
+  - components:
       - rect:
           corner: [ -5, -5 ]
-          size: [ 10.1, 10.1 ]
+          size: [ 10, 10 ]

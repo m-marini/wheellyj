@@ -93,7 +93,7 @@ public class DataFileWriter implements DataWriter {
 
     @Override
     public DataFileWriter write(boolean data) throws IOException {
-        return write(data ? 1L : 0L);
+        return write(data ? (byte) 1 : (byte) 0);
     }
 
     @Override

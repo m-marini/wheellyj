@@ -29,6 +29,9 @@ public interface AreaExpression {
         if (children.length == 0) {
             throw new IllegalArgumentException("Missing children");
         }
+        if (children.length == 1) {
+            return children[0];
+        }
         return new Tree() {
             @Override
             public AreaExpression[] children() {
@@ -212,6 +215,9 @@ public interface AreaExpression {
         if (children.length == 0) {
             throw new IllegalArgumentException("Missing children");
         }
+        if (children.length == 1) {
+            return children[0];
+        }
         return new Tree() {
             @Override
             public AreaExpression[] children() {
@@ -278,22 +284,22 @@ public interface AreaExpression {
     }
 
     /**
-     * Returns the rectangular area from point A to point B for the given width
+     * Returns the rectangular area from point A to point B for the given half width
      *
-     * @param a     A point
-     * @param b     B point
-     * @param width the width (m)
+     * @param a         A point
+     * @param b         B point
+     * @param halfWidth the half width (m)
      */
-    static AreaExpression rectangle(Point2D a, Point2D b, double width) {
+    static AreaExpression rectangle(Point2D a, Point2D b, double halfWidth) {
         Complex direction = Complex.direction(a, b);
         Complex left = direction.add(Complex.DEG270);
         Point2D leftPoint = new Point2D.Double(
-                a.getX() + left.x() * width,
-                a.getY() + left.y() * width
+                a.getX() + left.x() * halfWidth,
+                a.getY() + left.y() * halfWidth
         );
         Point2D rightPoint = new Point2D.Double(
-                a.getX() - left.x() * width,
-                a.getY() - left.y() * width
+                a.getX() - left.x() * halfWidth,
+                a.getY() - left.y() * halfWidth
         );
         return and(
                 rightHalfPlane(leftPoint, direction),
@@ -316,15 +322,15 @@ public interface AreaExpression {
     /**
      * Returns the area expression of the segment with round cap
      *
-     * @param end1  the first segment end
-     * @param end2  the second segment end
-     * @param width the segment width (m)
+     * @param end1      the first segment end
+     * @param end2      the second segment end
+     * @param halfWidth the segment half width (m)
      */
-    static AreaExpression roundSegment(Point2D end1, Point2D end2, double width) {
+    static AreaExpression roundSegment(Point2D end1, Point2D end2, double halfWidth) {
         return AreaExpression.or(
-                rectangle(end1, end2, width),
-                circle(end1, width),
-                circle(end2, width)
+                rectangle(end1, end2, halfWidth),
+                circle(end1, halfWidth),
+                circle(end2, halfWidth)
         );
     }
 

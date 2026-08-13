@@ -141,12 +141,9 @@ public record GridTopology(Point2D center, int width, int height, double gridSiz
      * @param y the location ordinate (m)
      */
     public int indexOf(double x, double y) {
-        double x0 = -(width - 1) * gridSize / 2 + center.getX();
-        double y0 = -(height - 1) * gridSize / 2 + center.getY();
-        int i = (int) round((y - y0) / gridSize);
-        int j = (int) round((x - x0) / gridSize);
-        return (i >= 0 && i < height && j >= 0 && j < width)
-                ? i * width + j
+        int[] idx = snapToGridIndex(x, y);
+        return (idx[0] >= 0 && idx[0] < height && idx[1] >= 0 && idx[1] < width)
+                ? idx[0] * width + idx[1]
                 : -1;
     }
 
@@ -167,6 +164,15 @@ public record GridTopology(Point2D center, int width, int height, double gridSiz
     }
 
     /**
+     * Returns the snap the point to grid or null if not in grid
+     *
+     * @param point the point
+     */
+    public Point2D innerSnap(Point2D point) {
+        return location(indexOf(point));
+    }
+
+    /**
      * Returns the location of cell
      *
      * @param index cell index
@@ -175,12 +181,28 @@ public record GridTopology(Point2D center, int width, int height, double gridSiz
         if (!(index >= 0 && index < width * height)) {
             return null;
         } else {
-            int i = index / width;
-            int j = index % width;
-            return new Point2D.Double(
-                    (2 * j - width + 1) * gridSize / 2 + center.getX(),
-                    (2 * i - height + 1) * gridSize / 2 + center.getY());
+            return location(new int[]{index / width, index % width});
         }
+    }
+
+    /**
+     * Returns the location of cell
+     *
+     * @param indices cell indices (iy, jx)
+     */
+    public Point2D location(int[] indices) {
+        return new Point2D.Double(
+                (2 * indices[1] - width + 1) * gridSize / 2 + center.getX(),
+                (2 * indices[0] - height + 1) * gridSize / 2 + center.getY());
+    }
+
+    /**
+     * Returns the snap the point to grid
+     *
+     * @param point the point
+     */
+    public Point2D outerSnap(Point2D point) {
+        return location(snapToGridIndex(point.getX(), point.getY()));
     }
 
     public GridTopology size(int width, int height) {
@@ -190,11 +212,16 @@ public record GridTopology(Point2D center, int width, int height, double gridSiz
     }
 
     /**
-     * Returns the snap the point to grid or null if not in grid
+     * Returns the indices of cell (iy, jx)
      *
-     * @param point the point
+     * @param x the location abscissa (m)
+     * @param y the location ordinate (m)
      */
-    public Point2D snap(Point2D point) {
-        return location(indexOf(point));
+    public int[] snapToGridIndex(double x, double y) {
+        double x0 = -(width - 1) * gridSize / 2 + center.getX();
+        double y0 = -(height - 1) * gridSize / 2 + center.getY();
+        int i = (int) round((y - y0) / gridSize);
+        int j = (int) round((x - x0) / gridSize);
+        return new int[]{i, j};
     }
 }

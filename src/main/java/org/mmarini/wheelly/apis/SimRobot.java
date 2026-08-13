@@ -121,12 +121,12 @@ public class SimRobot implements RobotApi {
         long mapPeriod = locator.path("mapPeriod").getNode(root).asLong();
         long randomPeriod = locator.path("randomPeriod").getNode(root).asLong();
         RobotSpec robotSpec = RobotSpec.fromJson(root, locator);
-        List<List<Obstacle>> maps = locator.path("mapFiles").elements(root)
+        List<MapBuilder> maps = locator.path("mapFiles").elements(root)
                 .map(l -> {
                     String filename = l.getNode(root).asText();
                     try {
                         JsonNode mapYaml = org.mmarini.yaml.Utils.fromFile(filename);
-                        return MapBuilder.create(mapYaml, Locator.root()).build();
+                        return MapBuilder.create(mapYaml, Locator.root());
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
@@ -159,7 +159,7 @@ public class SimRobot implements RobotApi {
     private final BehaviorProcessor<Collection<Obstacle>> obstacleChanged;
     private final BehaviorProcessor<RobotStatusApi> robotLineState;
     private final AtomicReference<SimRobotStatus> status;
-    private final List<List<Obstacle>> maps;
+    private final List<MapBuilder> maps;
     private final World world;
     private final Body robot;
     private final Fixture robotFixture;
@@ -190,7 +190,7 @@ public class SimRobot implements RobotApi {
      */
     public SimRobot(RobotSpec robotSpec, Random random, Random mapRandom,
                     long tickInterval, long interval, long motionInterval, long lidarInterval, long cameraInterval, long stalemateInterval,
-                    double errSensor, double errSigma, List<List<Obstacle>> maps, int numObstacles, int numLabels, long mapPeriod, long randomPeriod) {
+                    double errSensor, double errSigma, List<MapBuilder> maps, int numObstacles, int numLabels, long mapPeriod, long randomPeriod) {
         this.robotSpec = requireNonNull(robotSpec);
         this.random = requireNonNull(random);
         this.mapRandom = requireNonNull(mapRandom);
@@ -235,7 +235,7 @@ public class SimRobot implements RobotApi {
                 false, false, false,
                 Complex.DEG0, 0, 0, true, true,
                 0, 0,
-                0, 0, 0, 0, 0, 0, List.of(), null,
+                0, 0, 0, 0, 0, 0, null, null,
                 0, 0);
         this.status = new AtomicReference<>(initialStatus);
         generateRandomMap();
@@ -481,11 +481,15 @@ public class SimRobot implements RobotApi {
      * Generates a random map and returns the simulated status
      */
     private SimRobotStatus generateRandomMap() {
-        List<Obstacle> template = randomTemplate();
+        // Selects a random map builder
+        MapBuilder template = randomTemplate();
+        // Creates the obstacle map
         SimRobotStatus currentStatus = status.updateAndGet(s ->
                 s.template(template).createObstacleMap(mapRandom, location(), numObstacles, numLabels, mapPeriod, randomPeriod)
         );
-        obstacleChanged.onNext(currentStatus.obstacleMap());
+        Collection<Obstacle> map = currentStatus.obstacleMap();
+        createObstacleBody(map);
+        obstacleChanged.onNext(map);
         return currentStatus;
     }
 
@@ -496,7 +500,9 @@ public class SimRobot implements RobotApi {
         SimRobotStatus currentStatus = status.updateAndGet(s ->
                 s.createObstacleMap(mapRandom, location(), numObstacles, numLabels, mapPeriod, randomPeriod)
         );
-        obstacleChanged.onNext(currentStatus.obstacleMap());
+        Collection<Obstacle> map = currentStatus.obstacleMap();
+        createObstacleBody(map);
+        obstacleChanged.onNext(map);
     }
 
     @Override
@@ -530,8 +536,8 @@ public class SimRobot implements RobotApi {
         double maxRotDeg = robotSpec.maxRotRange().toDeg();
         double rotSpeed = absRotDeg > maxRotDeg
                 ? rotDeg >= 0
-                  ? robotSpec.maxRotPps()
-                  : -robotSpec.maxRotPps()
+                ? robotSpec.maxRotPps()
+                : -robotSpec.maxRotPps()
                 // Rotate at speed proportional the rotation angle
                 : robotSpec.maxRotPps() * rotDeg / maxRotDeg;
         // Compute the linear speed
@@ -539,8 +545,8 @@ public class SimRobot implements RobotApi {
         double linSpeed = absRotDeg > maxRotDeg
                 ? 0 // robot not in target direction
                 : distance >= decDistance
-                  ? -robotSpec.maxSpeed() // Robot distant from target
-                  : -robotSpec.maxSpeed() * distance / decDistance; // Robot near the target
+                ? -robotSpec.maxSpeed() // Robot distant from target
+                : -robotSpec.maxSpeed() * distance / decDistance; // Robot near the target
         status.updateAndGet(s ->
                 s.composeSpeed(linSpeed, rotSpeed));
     }
@@ -557,8 +563,8 @@ public class SimRobot implements RobotApi {
                 Fixture fixture = contact.getFixtureA().equals(robotFixture)
                         ? contact.getFixtureB()
                         : contact.getFixtureB().equals(robotFixture)
-                          ? contact.getFixtureA()
-                          : null;
+                        ? contact.getFixtureA()
+                        : null;
                 if (fixture != null) {
                     Complex collisionDir = contactRelativeDirection(contact);
                     if (collisionDir.y() >= 0) {
@@ -614,8 +620,8 @@ public class SimRobot implements RobotApi {
         double maxRotDeg = robotSpec.maxRotRange().toDeg();
         double rotSpeed = absRotDeg > maxRotDeg
                 ? rotDeg >= 0
-                  ? robotSpec.maxRotPps()
-                  : -robotSpec.maxRotPps()
+                ? robotSpec.maxRotPps()
+                : -robotSpec.maxRotPps()
                 // Rotate at speed proportional the rotation angle
                 : robotSpec.maxRotPps() * rotDeg / maxRotDeg;
         // Compute the linear speed
@@ -623,8 +629,8 @@ public class SimRobot implements RobotApi {
         double linSpeed = absRotDeg > maxRotDeg
                 ? 0 // robot not in target direction
                 : distance >= decDistance
-                  ? robotSpec.maxSpeed() // Robot distant from target
-                  : robotSpec.maxSpeed() * distance / decDistance; // Robot near the target
+                ? robotSpec.maxSpeed() // Robot distant from target
+                : robotSpec.maxSpeed() * distance / decDistance; // Robot near the target
         status.updateAndGet(s ->
                 s.composeSpeed(linSpeed, rotSpeed));
     }
@@ -720,15 +726,17 @@ public class SimRobot implements RobotApi {
         return this;
     }
 
+    public Collection<Obstacle> obstacleMap() {
+        return status.get().obstacleMap();
+    }
+
     /**
      * Returns a random template map
      */
-    private List<Obstacle> randomTemplate() {
-        return maps.isEmpty()
-                ? List.of()
-                : maps.size() == 1
-                  ? maps.getFirst()
-                  : maps.get(mapRandom.nextInt(maps.size()));
+    private MapBuilder randomTemplate() {
+        return maps.size() == 1
+                ? maps.getFirst()
+                : maps.get(mapRandom.nextInt(maps.size()));
     }
 
     @Override
@@ -1064,6 +1072,11 @@ public class SimRobot implements RobotApi {
         robot.applyForceToCenter(force);
         robot.applyTorque((float) angularTorque);
         world.step((float) dt, VELOCITY_ITER, POSITION_ITER);
+
+        Vec2 pos = robot.getPosition();
+        if (abs(pos.x) > 5 * JBOX_SCALE || abs(pos.y) > 5 * JBOX_SCALE) {
+            logger.atInfo().log("Robot location {}", pos);
+        }
     }
 
     @Override
@@ -1076,6 +1089,10 @@ public class SimRobot implements RobotApi {
     @Override
     public long simulationTime() {
         return status.get().simulationTime();
+    }
+
+    public void simulationTime(long time) {
+        status.updateAndGet(s -> s.simulationTime(time));
     }
 
     /**
