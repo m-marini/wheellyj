@@ -49,11 +49,13 @@ import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.event.WindowEvent;
+import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.swing.BaseShape.PATH_COLOR;
@@ -101,7 +103,7 @@ public class RobotExecutor {
      *
      * @param args command line arguments
      */
-    static void main(String[] args) {
+    public static void main(String[] args) {
         ArgumentParser parser = createParser();
         try {
             new RobotExecutor(parser.parseArgs(args)).run();
@@ -115,7 +117,7 @@ public class RobotExecutor {
     }
 
     private final EnvironmentPanel envPanel;
-    private final PolarPanel polarPanel;
+    private final GridPanel gridPanel;
     private final DoubleReducedValue reactionRobotTime;
     private final DoubleReducedValue reactionRealTime;
     private final ComMonitor comMonitor;
@@ -142,7 +144,7 @@ public class RobotExecutor {
     public RobotExecutor(Namespace args) {
         this.args = requireNonNull(args);
         this.envPanel = new EnvironmentPanel();
-        this.polarPanel = new PolarPanel();
+        this.gridPanel = new GridPanel();
         this.comMonitor = new ComMonitor();
         this.engineMonitor = new StateEngineMonitor();
         this.reactionRobotTime = DoubleReducedValue.mean();
@@ -238,35 +240,13 @@ public class RobotExecutor {
     }
 
     /**
-     * Handles the inference result
-     *
-     * @param result the inference result
-     */
-    private void onInference(Tuple2<WorldModel, RobotCommands> result) {
-        if (dumpFile != null) {
-            WorldModel world = result._1;
-            RobotCommands commands = result._2;
-            try {
-                dumpFile.write(world, commands);
-            } catch (IOException e) {
-                logger.atError().setCause(e).log("Error writing dump file {}", args.getString("dump"));
-                try {
-                    dumpFile.close();
-                } catch (IOException ex) {
-                }
-                dumpFile = null;
-            }
-        }
-    }
-
-    /**
      * Creates the multi frames
      */
     private void createMultiFrames() {
         this.allFrames = List.of(
                 createFrame(Messages.getString("RobotExecutor.title"), new JScrollPane(envPanel)),
                 engineMonitor.createFrame(),
-                createFixFrame(Messages.getString("Radar.title"), polarPanel),
+                createFixFrame(Messages.getString("Radar.title"), gridPanel),
                 sensorMonitor.createFrame(),
                 comMonitor.createFrame()
         );
@@ -278,7 +258,7 @@ public class RobotExecutor {
     private void createSingleFrames() {
         JTabbedPane panel = new JTabbedPane();
         panel.addTab(Messages.getString("RobotExecutor.tabPanel.envMap"), new JScrollPane(envPanel));
-        panel.addTab(Messages.getString("RobotExecutor.tabPanel.polarMap"), new JScrollPane(polarPanel));
+        panel.addTab(Messages.getString("RobotExecutor.tabPanel.gridMap"), new JScrollPane(gridPanel));
         panel.addTab(Messages.getString("RobotExecutor.tabPanel.engine"), new JScrollPane(engineMonitor));
         panel.addTab(Messages.getString("RobotExecutor.tabPanel.sensor"), new JScrollPane(sensorMonitor));
         panel.addTab(Messages.getString("RobotExecutor.tabPanel.com"), new JScrollPane(comMonitor));
@@ -291,8 +271,6 @@ public class RobotExecutor {
      * Initializes the user interface
      */
     private void initUI() {
-        double radarMaxDistance = robot.robotSpec().maxRadarDistance();
-        polarPanel.setRadarMaxDistance(radarMaxDistance);
         if (args.getBoolean("windows")) {
             createMultiFrames();
         } else {
@@ -313,6 +291,28 @@ public class RobotExecutor {
     private void onControllerStatus(String status) {
         sensorMonitor.onControllerStatus(status);
         comMonitor.onControllerStatus(status);
+    }
+
+    /**
+     * Handles the inference result
+     *
+     * @param result the inference result
+     */
+    private void onInference(Tuple2<WorldModel, RobotCommands> result) {
+        if (dumpFile != null) {
+            WorldModel world = result._1;
+            RobotCommands commands = result._2;
+            try {
+                dumpFile.write(world, commands);
+            } catch (IOException e) {
+                logger.atError().setCause(e).log("Error writing dump file {}", args.getString("dump"));
+                try {
+                    dumpFile.close();
+                } catch (IOException ex) {
+                }
+                dumpFile = null;
+            }
+        }
     }
 
     /**
@@ -387,7 +387,23 @@ public class RobotExecutor {
         prevRobotStep = robotClock;
         this.prevRealStep = clock;
 
-        polarPanel.setPolarMap(worldModel.polarMap(), worldModel.markers().values());
+        Map<String, LabelMarker> markers = worldModel.markers();
+        GridMap map = worldModel.gridMap();
+        Complex robotDir = status.direction();
+        /*
+         * Transforms the marker locations to grid map coordinates
+         */
+        AffineTransform tr = AffineTransform.getRotateInstance(map.direction().toRad());
+        Point2D center = map.center();
+        tr.translate(-center.getX(), -center.getY());
+        List<Point2D> mks = markers.values().stream()
+                .map(p -> tr.transform(p.location(), null))
+                .toList();
+
+        gridPanel.setGridMap(map);
+        gridPanel.setRobotDirection(robotDir.sub(map.direction()));
+        gridPanel.setMarkers(mks);
+
         if (robotElapsed > sessionDuration) {
             controller.shutdown();
         }

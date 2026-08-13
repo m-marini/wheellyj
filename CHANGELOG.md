@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Add
 
-- Issue [#610](https://github.com/m-marini/wheellyj/issues/585): Added kpis dump
+- Issue [#610](https://github.com/m-marini/wheellyj/issues/610): Added kpis dump
+- Issue [#611](https://github.com/m-marini/wheellyj/issues/611): Added policy entropy kpis
 
 ### Changed
 
@@ -26,6 +27,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Issue [#601](https://github.com/m-marini/wheellyj/issues/601): Bad character in source file
 - Issue [#605](https://github.com/m-marini/wheellyj/issues/605): Missing counter creating datasets
+- Issue [#614](https://github.com/m-marini/wheellyj/issues/614): null pointer in wheelly session
+- Issue [#618](https://github.com/m-marini/wheellyj/issues/618): Missing robot view
 
 ## [[0.26.0]](https://github.com/m-marini/wheellyj/releases/tag/v0.26.0) 2026-02-26
 
