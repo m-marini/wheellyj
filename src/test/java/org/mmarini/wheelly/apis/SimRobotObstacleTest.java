@@ -38,7 +38,6 @@ import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.wheelly.TestFunctions;
 
 import java.awt.geom.Point2D;
-import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Stream;
@@ -87,11 +86,11 @@ class SimRobotObstacleTest {
      * @param obsCoords      the obstacle coordinates x,y, ...
      */
     private SimRobot createRobot(Point2D location, Complex robotDirection, Complex sensorDirection, double... obsCoords) {
-        MapBuilder mapBuilder = MapBuilder.create();
+        MapBuilder mapBuilder = MapBuilder.empty(41, 0.2);
         for (int i = 0; i < obsCoords.length - 1; i += 2) {
-            mapBuilder.put(DEFAULT_OBSTACLE_RADIUS, null, obsCoords[i], obsCoords[i + 1]);
+            mapBuilder = mapBuilder.addObstacle(obsCoords[i], obsCoords[i + 1], null);
         }
-        return createRobot(location, robotDirection, sensorDirection, mapBuilder.build());
+        return createRobot(location, robotDirection, sensorDirection, mapBuilder);
     }
 
     /**
@@ -100,19 +99,19 @@ class SimRobotObstacleTest {
      * @param location        the location
      * @param robotDirection  the direction
      * @param sensorDirection the sensor direction
-     * @param map             the obstacle map
+     * @param mapBuilder      the obstacle map
      */
-    private SimRobot createRobot(Point2D location, Complex robotDirection, Complex sensorDirection, Collection<Obstacle> map) {
+    private SimRobot createRobot(Point2D location, Complex robotDirection, Complex sensorDirection, MapBuilder mapBuilder) {
         Random random = new Random(SEED);
         SimRobot simRobot = new SimRobot(DEFAULT_ROBOT_SPEC, random, random,
                 0, INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL,
                 0, 0,
-                List.of(), 0, 0, CHANGE_MAP_PERIOD, CHANGE_MAP_PERIOD
+                List.of(mapBuilder), 0, 0, CHANGE_MAP_PERIOD, CHANGE_MAP_PERIOD
         );
         simRobot.robotPos(location.getX(), location.getY());
         simRobot.robotDir(robotDirection);
         simRobot.sensorDirection(sensorDirection);
-        simRobot.obstacleMap(map);
+        simRobot.obstacleMap(mapBuilder.build());
         this.lidarSub = new TestSubscriber<>();
         this.contactsSub = new TestSubscriber<>();
         this.motionSub = new TestSubscriber<>();

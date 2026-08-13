@@ -111,9 +111,11 @@ class GridTopologyTest {
         Point2D center = new Point2D.Double(x0, y0);
         GridTopology topology = GridTopology.create(center, width, height, gridSize);
 
-        Point2D p = topology.snap(new Point2D.Double(x, y));
+        Point2D inner = topology.innerSnap(new Point2D.Double(x, y));
+        Point2D outer = topology.outerSnap(new Point2D.Double(x, y));
 
-        assertThat(p, exist ? pointCloseTo(xs, ys, 1e-3) : nullValue());
+        assertThat(inner, exist ? pointCloseTo(xs, ys, 1e-3) : nullValue());
+        assertThat(outer, pointCloseTo(xs, ys, 1e-3));
     }
 
     @Test

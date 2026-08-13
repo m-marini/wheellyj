@@ -53,7 +53,10 @@ public class DataFileReader implements DataReader {
     private final InputStream file;
     private final byte[] buffer;
     private final long size;
+    private final byte[] fileBuffer;
     private long position;
+    private int bufferPosition;
+    private int bufferSize;
 
     /**
      * Creates the world model reader
@@ -65,6 +68,21 @@ public class DataFileReader implements DataReader {
         this.file = requireNonNull(file);
         this.size = size;
         this.buffer = new byte[BUFFER_SIZE];
+        this.fileBuffer = new byte[10 * 1024];
+        this.bufferPosition = this.bufferSize = 0;
+    }
+
+    @Override
+    public int available() throws IOException {
+        return file.available();
+    }
+
+    /**
+     *
+     * Returns the number of available buffer bytes
+     */
+    private int availableBuffer() {
+        return bufferSize - bufferPosition;
     }
 
     @Override
@@ -80,29 +98,53 @@ public class DataFileReader implements DataReader {
     }
 
     @Override
-    public int available() throws IOException {
-        return file.available();
-    }
-
-    @Override
     public boolean readBoolean() throws IOException {
-        return readLong() != 0;
+        return readByte() != 0;
     }
 
     @Override
     public byte readByte() throws IOException {
-        readBytes(buffer, 0, 1);
-        return buffer[0];
+        byte result;
+        int n = availableBuffer();
+        if (n == 0) {
+            // Fill buffer
+            int read1 = file.read(fileBuffer);
+            if (read1 <= 0) {
+                throw new EOFException();
+            }
+            bufferSize = read1;
+            bufferPosition = 0;
+        }
+        // Set move length
+        result = fileBuffer[bufferPosition++];
+        ++position;
+        return result;
     }
 
     @Override
     public int readBytes(byte[] buffer, int offset, int length) throws IOException {
-        int n = file.read(buffer, offset, length);
-        if (n != length) {
-            throw new EOFException();
+        int read = 0;
+        while (length > 0) {
+            int n = availableBuffer();
+            if (n == 0) {
+                // Fill buffer
+                int read1 = file.read(fileBuffer);
+                if (read1 <= 0) {
+                    throw new EOFException();
+                }
+                n = bufferSize = read1;
+                bufferPosition = 0;
+            }
+            // Set move length
+            n = Math.min(length, n);
+            System.arraycopy(fileBuffer, bufferPosition, buffer, offset, n);
+            bufferPosition += n;
+            read += n;
+            offset += n;
+            length -= n;
         }
-        position += n;
-        return n;
+        position += read;
+        return read;
     }
 
     @Override

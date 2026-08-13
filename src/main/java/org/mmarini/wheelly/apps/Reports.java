@@ -31,6 +31,7 @@ package org.mmarini.wheelly.apps;
 import org.mmarini.rl.agents.BinArrayFile;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.ops.transforms.Transforms;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -103,6 +104,66 @@ public interface Reports {
      * @param batchSize the batch size
      */
     static INDArray[] policyReport(BinArrayFile file, int n, double gamma, long batchSize) throws IOException {
+        INDArray result = Nd4j.create(n, 9);
+        long m = file.size();
+        // Fills the bins
+        LinearRegression policyRegression = new LinearRegression();
+        LinearRegression entropyRegression = new LinearRegression();
+        for (int binIndex = 0; binIndex < n; binIndex++) {
+            // Compute the end record index
+            long end = (binIndex + 1) * m / n;
+
+            BinStats policyStats = new BinStats(gamma);
+            BinStats entropyStats = new BinStats(gamma);
+
+            // Read bin data
+            INDArray batchRecords1;
+            while ((batchRecords1 = readBin(file, end, batchSize)) != null) {
+                // Computes the number of records to read
+                try (INDArray batchRecords = batchRecords1) {
+                    INDArray max = batchRecords.get(NDArrayIndex.all(), NDArrayIndex.indices(0));
+                    try (INDArray log10 = Transforms.log(max, 10, true)) {
+                        policyStats.add(log10);
+                        policyRegression.add(log10);
+                    }
+                    // Computes the normalised entropy
+                    INDArray h = batchRecords.get(NDArrayIndex.all(), NDArrayIndex.indices(1));
+                    entropyStats.add(h);
+                    entropyRegression.add(h);
+                }
+            }
+
+            // Writes the bin values
+            result.putScalar(binIndex, 0, (double) file.position());
+            result.putScalar(binIndex, 1, policyStats.mean());
+            result.putScalar(binIndex, 2, policyStats.min);
+            result.putScalar(binIndex, 3, policyStats.max);
+            result.putScalar(binIndex, 4, policyStats.moveExpMean);
+            result.putScalar(binIndex, 5, entropyStats.mean());
+            result.putScalar(binIndex, 6, entropyStats.min);
+            result.putScalar(binIndex, 7, entropyStats.max);
+            result.putScalar(binIndex, 8, entropyStats.moveExpMean);
+        }
+        INDArray regressions = Nd4j.create(new float[]{
+                (float) policyRegression.initialValue(),
+                (float) policyRegression.finalValue(),
+                (float) entropyRegression.initialValue(),
+                (float) entropyRegression.finalValue()
+        }).reshape(1, 4);
+        return new INDArray[]{result, regressions};
+    }
+
+    /**
+     * Returns the logarithmic base 10 report of the best policy file
+     * (mean, min, max, exponential mean, ratio mean, ratio min, ratio max, ratio exponential mean),
+     * the best policy linear regression values and the entropy linear regression values
+     *
+     * @param file      the file
+     * @param n         the number of bins
+     * @param gamma     the gamma decay factor
+     * @param batchSize the batch size
+     */
+    static INDArray[] policyReport1(BinArrayFile file, int n, double gamma, long batchSize) throws IOException {
         INDArray result = Nd4j.create(n, 9);
         long m = file.size();
         // Fills the bins
@@ -207,7 +268,6 @@ public interface Reports {
          */
         public BinStats add(INDArray records) {
             long n = records.size(0);
-            long i0 = numSamples;
             numSamples += n;
             min = Math.min(min, records.minNumber().doubleValue());
             max = Math.max(max, records.maxNumber().doubleValue());
@@ -219,7 +279,6 @@ public interface Reports {
             for (long i = 0; i < n; i++) {
                 double y = records.getDouble(i, 0);
                 moveExpMean = moveExpMean * notGamma + y * gamma;
-                i0++;
             }
             return this;
         }

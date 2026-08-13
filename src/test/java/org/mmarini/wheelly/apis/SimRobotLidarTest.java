@@ -47,6 +47,7 @@ import static org.mmarini.wheelly.TestFunctions.findMessage;
 import static org.mmarini.wheelly.TestFunctions.notBefore;
 import static org.mmarini.wheelly.apis.Obstacle.DEFAULT_OBSTACLE_RADIUS;
 import static org.mmarini.wheelly.apis.RobotSpec.*;
+import static org.mmarini.wheelly.apis.SimRobotObstacleTest.GRID_SIZE;
 import static org.mmarini.wheelly.apis.Utils.MM;
 import static org.mmarini.wheelly.apis.Utils.m2mm;
 
@@ -143,7 +144,7 @@ public class SimRobotLidarTest {
         robot = new SimRobot(DEFAULT_ROBOT_SPEC, new Random(SEED), new Random(SEED),
                 0, 10,
                 SimRobot.DEFAULT_MOTION_INTERVAL, 5, SimRobot.DEFAULT_CAMERA_INTERVAL, SimRobot.DEFAULT_STALEMATE_INTERVAL,
-                0, 0, List.of(), 1, 0,
+                0, 0, List.of(MapBuilder.empty(41, GRID_SIZE)), 0, 0,
                 CHANGE_MAP_PERIOD, CHANGE_MAP_PERIOD);
         robot.robotPos(xRobot, yRobot);
         robot.robotDir(Complex.fromDeg(robotDirDeg));

@@ -6,5 +6,5 @@
 
 # run
 cd ..
-java -jar "lib/wheelly-0.22.0.jar" $1 $2
+java --enable-native-access=ALL-UNNAMED -jar "lib/wheelly-0.22.0.jar" $1 $2
 cd bin

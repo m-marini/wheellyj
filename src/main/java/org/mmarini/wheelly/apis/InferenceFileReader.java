@@ -57,6 +57,7 @@ public class InferenceFileReader extends DataFileReader implements InferenceRead
     public static InferenceFileReader fromFile(File file) throws IOException {
         requireNonNull(file);
         file.getCanonicalFile().getParentFile().mkdirs();
+
         FileInputStream stream = new FileInputStream(file);
         return new InferenceFileReader(stream, file.length()).init();
     }
@@ -82,20 +83,6 @@ public class InferenceFileReader extends DataFileReader implements InferenceRead
         worldSpec = header._1;
         topology = header._2;
         return this;
-    }
-
-    /**
-     * Returns the grid topology
-     */
-    public GridTopology topology() {
-        return topology;
-    }
-
-    /**
-     * Returns the world model spec
-     */
-    public WorldModelSpec worldSpec() {
-        return worldSpec;
     }
 
     @Override
@@ -129,5 +116,19 @@ public class InferenceFileReader extends DataFileReader implements InferenceRead
         WheellyLidarMessage lidar = readLidarMessage();
         return new RobotStatus(worldSpec.robotSpec(), simTime, motion, contacts,
                 DEFAULT_SUPPLY_MESSAGE, DEFAULT_DECODE_VOLTAGE, camera, lidar);
+    }
+
+    /**
+     * Returns the grid topology
+     */
+    public GridTopology topology() {
+        return topology;
+    }
+
+    /**
+     * Returns the world model spec
+     */
+    public WorldModelSpec worldSpec() {
+        return worldSpec;
     }
 }

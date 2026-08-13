@@ -249,7 +249,7 @@ public class RRTPathFinder {
         if (distance <= growthDistance) {
             return to;
         }
-        return map().topology().snap(new Point2D.Double(
+        return map().topology().innerSnap(new Point2D.Double(
                 from.getX() + (to.getX() - from.getX()) * growthDistance / distance,
                 from.getY() + (to.getY() - from.getY()) * growthDistance / distance
         ));

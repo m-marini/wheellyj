@@ -12,5 +12,6 @@ radarDecay: 120000
 minRadarDistance: 0.3
 markerDecay: 1000
 markerCleanDecay: 300000
+markerSize: 0.2
 minNumberEvents: 2
 robotMapSize: 125

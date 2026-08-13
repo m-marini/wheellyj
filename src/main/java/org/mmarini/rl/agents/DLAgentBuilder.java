@@ -250,7 +250,10 @@ public class DLAgentBuilder {
 
         return builder.addLayer(id + "_01",
                         new ConvolutionLayer.Builder(new int[]{1, 1}, stride)
-                                .nOut(filters[0]).build(),
+                                .nOut(filters[0])
+//                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
+//                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
+                                .build(),
                         input)
                 .addLayer(batchName + "_01", new BatchNormalization(), id + "_01")
                 .addLayer(reluName + "_01",
@@ -259,7 +262,10 @@ public class DLAgentBuilder {
 
                 .addLayer(id + "_02",
                         new ConvolutionLayer.Builder(kernelSize).nOut(filters[1])
-                                .convolutionMode(ConvolutionMode.Same).build(),
+                                .convolutionMode(ConvolutionMode.Same)
+//                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
+//                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
+                                .build(),
                         reluName + "_01")
                 .addLayer(batchName + "_02", new BatchNormalization(), id + "_02")
                 .addLayer(reluName + "_02",
@@ -267,13 +273,21 @@ public class DLAgentBuilder {
                         batchName + "_02")
 
                 .addLayer(id + "_03",
-                        new ConvolutionLayer.Builder(new int[]{1, 1}).nOut(filters[2]).build(),
+                        new ConvolutionLayer.Builder(new int[]{1, 1})
+                                .nOut(filters[2])
+                                //                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
+                                //                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
+                                .build(),
                         reluName + "_02")
                 .addLayer(batchName + "_03", new BatchNormalization(), id + "_03")
 
                 // shortcut
                 .addLayer(id + "_11",
-                        new ConvolutionLayer.Builder(new int[]{1, 1}, stride).nOut(filters[2]).build(),
+                        new ConvolutionLayer.Builder(new int[]{1, 1}, stride)
+                                .nOut(filters[2])
+//                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
+//                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
+                                .build(),
                         input)
                 .addLayer(batchName + "_11", new BatchNormalization(), id + "_11")
 
@@ -342,6 +356,8 @@ public class DLAgentBuilder {
         return builder.addLayer(id + "_1",
                         new ConvolutionLayer.Builder(new int[]{1, 1})
                                 .nOut(filters[0])
+//                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
+//                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
                                 .cudnnAlgoMode(ConvolutionLayer.AlgoMode.PREFER_FASTEST)
                                 .build(),
                         input)
@@ -353,6 +369,8 @@ public class DLAgentBuilder {
                 .addLayer(id + "_2",
                         new ConvolutionLayer.Builder(kernelSize)
                                 .nOut(filters[1])
+//                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
+//                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
                                 .cudnnAlgoMode(ConvolutionLayer.AlgoMode.PREFER_FASTEST)
                                 .convolutionMode(ConvolutionMode.Same)
                                 .build(),
@@ -365,6 +383,8 @@ public class DLAgentBuilder {
                 .addLayer(id + "_3",
                         new ConvolutionLayer.Builder(new int[]{1, 1})
                                 .nOut(filters[2])
+//                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
+//                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
                                 .cudnnAlgoMode(ConvolutionLayer.AlgoMode.PREFER_FASTEST)
                                 .build(),
                         reluName + "_2")
@@ -585,6 +605,8 @@ public class DLAgentBuilder {
         }
         return builder
                 .nOut(locator.path(N_OUT_ID).getNode(root).asInt())
+//                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
+//                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
                 .build();
     }
 
@@ -691,6 +713,8 @@ public class DLAgentBuilder {
 
     private Layer buildOutputLayer(Locator locator) {
         OutputLayer.Builder builder = new OutputLayer.Builder()
+//                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
+//                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
                 .nOut(locator.path(N_OUT_ID).getNode(root).asInt());
         Activation activation = getOptByMap(locator.path(ACTIVATION_ID), activationMap);
         if (activation != null) {

@@ -33,6 +33,7 @@ import org.mmarini.rl.agents.TrainingKpis;
 import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.apps.DoubleReducedValue;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -118,15 +119,10 @@ public class KpisPanel extends MatrixTable {
             INDArray data = kpis.get(key);
             if (data != null) {
                 // shows the max of action probabilities
-                try (INDArray max = data.max(true, 1)) {
-                    printf(key + ".prob", "%,6.1f", prob.add(max).value() * 100);
-                }
-                // and entropy
-                try (INDArray h = data.entropy(1)
-                        .reshape(data.size(0))
-                        .divi(Math.log(data.size(1)))) {
-                    printf(key + ".entropy", "%,6.1f", entropy.add(h).value() * 100);
-                }
+                INDArray max = data.get(NDArrayIndex.all(), NDArrayIndex.indices(0));
+                INDArray h = data.get(NDArrayIndex.all(), NDArrayIndex.indices(1));
+                printf(key + ".prob", "%,6.1f", prob.add(max).value() * 100);
+                printf(key + ".entropy", "%,6.1f", entropy.add(h).value() * 100);
             }
 
         };

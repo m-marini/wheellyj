@@ -1,20 +1,28 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/map-schema-0.1
+$id: https://mmarini.org/wheelly/map-schema-1.0
 title: Obstacle Map
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/map-schema-0.1
+    const: https://mmarini.org/wheelly/map-schema-1.0
   class:
     const: org.mmarini.wheelly.apis.MapBuilder
   shapes:
     type: array
     items:
       $ref: "#/$defs/Shape"
+  size:
+    type: integer
+    minimum: 0
+  gridSize:
+    type: number
+    minimum: 0
 required:
   - $schema
   - class
+  - size
+  - gridSize
   - shapes
 $defs:
   Obstacle:
@@ -76,5 +84,4 @@ $defs:
         items:
           $ref: "#/$defs/Obstacle"
     required:
-      - radius
       - components

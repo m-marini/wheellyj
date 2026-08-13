@@ -19,6 +19,9 @@ properties:
   markerDecay:
     type: number
     exclusiveMinimum: 0
+  markerSize:
+    type: number
+    exclusiveMinimum: 0
   minNumberEvents:
     type: integer
     minimum: 1
@@ -61,5 +64,6 @@ required:
   - radarDecay
   - markerDecay
   - markerCleanDecay
+  - markerSize
   - minRadarDistance
   - robotMapSize
