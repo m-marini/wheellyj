@@ -6,7 +6,13 @@ rem
 if exist %TEMP%\ goto train
 call bin\runnit.cmd org.mmarini.wheelly.apps.CreateDatasets -t %TEMP% %INFERENCE%
 
-:train
+
+type null > .running
+
+:run
+
+if not exist ".running" goto end
+
 rem
 rem Run batch training
 rem
@@ -24,3 +30,7 @@ rem
 cd octave
 "C:\Program Files\GNU Octave\Octave-7.2.0\octave-launch" --no-gui dlReport.m
 cd ..
+
+goto run
+
+:end
