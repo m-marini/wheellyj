@@ -6,6 +6,7 @@ rem
 if exist %TEMP%\ goto train
 call bin\runnit.cmd org.mmarini.wheelly.apps.CreateDatasets -t %TEMP% %INFERENCE%
 
+:train
 
 type null > .running
 
