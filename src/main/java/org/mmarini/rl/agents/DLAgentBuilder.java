@@ -34,6 +34,7 @@ import org.deeplearning4j.nn.conf.*;
 import org.deeplearning4j.nn.conf.distribution.TruncatedNormalDistribution;
 import org.deeplearning4j.nn.conf.graph.ElementWiseVertex;
 import org.deeplearning4j.nn.conf.graph.GraphVertex;
+import org.deeplearning4j.nn.conf.graph.MergeVertex;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.layers.*;
 import org.deeplearning4j.nn.graph.ComputationGraph;
@@ -60,6 +61,7 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -69,7 +71,7 @@ import static org.mmarini.rl.agents.DLAgent.*;
  * Builds DL Agent
  */
 public class DLAgentBuilder {
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/dl-agent-builder-schema-0.1";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/dl-agent-builder-schema-1.0";
     public static final String INPUTS_ID = "inputs";
     public static final String OUTPUTS_ID = "outputs";
     public static final String HIDDEN_ID = "hiddens";
@@ -141,10 +143,11 @@ public class DLAgentBuilder {
     public static final String SQUARED_HINGE_ID = "SquaredHinge";
     public static final String WASSERSTEIN_ID = "Wasserstein";
     public static final String XENT_ID = "Xent";
-    public static final String FILTERS_ID = "filters";
     public static final String CONVOLUTION_RES_NET_BLOCK_ID = "ConvolutionResNetBlock";
     public static final String IDENTITY_RES_NET_BLOCK_ID = "IdentityResNetBlock";
     public static final String FORMAT_ID = "format";
+    public static final String DENSE_LAYER_ID = "DenseLayer";
+    public static final String MERGE_VERTEX_ID = "MergeVertex";
     private static final String STOCHASTIC_GRADIENT_DESCENT_ID = "StochasticGradientDescent";
     private static final Map<String, SubsamplingLayer.PoolingType> poolingTypeMap = Map.of(
             AVG_ID, SubsamplingLayer.PoolingType.AVG,
@@ -184,118 +187,15 @@ public class DLAgentBuilder {
             LINE_GRADIENT_DESCENT_ID, OptimizationAlgorithm.LINE_GRADIENT_DESCENT,
             STOCHASTIC_GRADIENT_DESCENT_ID, OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT
     );
-    private static final Map<String, GraphVertex> vertexMap = Map.of(
-            ELEMENT_WISE_VERTEX_ID, new ElementWiseVertex(ElementWiseVertex.Op.Add)
+    private static final Map<String, Supplier<GraphVertex>> vertexMap = Map.of(
+            ELEMENT_WISE_VERTEX_ID, () -> new ElementWiseVertex(ElementWiseVertex.Op.Add),
+            MERGE_VERTEX_ID, MergeVertex::new
     );
     private static final Map<String, CNN2DFormat> cnn2DFormatMap = Map.of(
             CNN2DFormat.NCHW.name(), CNN2DFormat.NCHW,
             CNN2DFormat.NHWC.name(), CNN2DFormat.NHWC
     );
-
-    /**
-     * Creates the convolution resnet block that increases the number of channels
-     * <p>
-     * The block is composed of two branches
-     * <pre>
-     *     id_01                  id_11
-     *     Convolution filter[0]  Convolution filter[2]
-     *     kernel = [1 x 1]       kernel = [1 x 1]
-     *     stride = [stride]      stride = [stride]
-     *
-     *     id_batch_01            id_batch_11
-     *     Batch Normalization    Batch Normalization
-     *
-     *     id_relu_01
-     *     RELU
-     *
-     *     id_02
-     *     Convolution filter[1]
-     *     kernel = kernel
-     *     stride = [1x1]
-     *     mode=same
-     *
-     *     id_batch_02
-     *     Batch Normalization
-     *
-     *     id_relu_02
-     *     RELU
-     *
-     *     id_03
-     *     Convolution filter[2]
-     *     kernel = kernel
-     *     stride = [1x1]
-     *
-     *     id_batch_03
-     *     Batch Normalization
-     *
-     *                     id_add
-     *                     Element Wise Add
-     *                     (id_batch_03, id_batch_11)
-     *
-     *                     id
-     *                     RELU
-     * </pre>
-     *
-     * @param builder    the builder
-     * @param id         the layer id (out)
-     * @param input      the input layer
-     * @param kernelSize the kernel size (height, width)
-     * @param stride     the stride (height, width)
-     * @param filters    the number of filters for each of the 3 layers [a, b, c]
-     */
-    static ComputationGraphConfiguration.GraphBuilder buildConvResNetBlock(ComputationGraphConfiguration.GraphBuilder builder, String id, String input, int[] kernelSize, int[] stride, int[] filters) {
-        String batchName = id + "_batch";
-        String reluName = id + "_relu";
-        String addName = id + "_add";
-
-        return builder.addLayer(id + "_01",
-                        new ConvolutionLayer.Builder(new int[]{1, 1}, stride)
-                                .nOut(filters[0])
-//                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
-//                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
-                                .build(),
-                        input)
-                .addLayer(batchName + "_01", new BatchNormalization(), id + "_01")
-                .addLayer(reluName + "_01",
-                        new ActivationLayer.Builder().activation(Activation.RELU).build(),
-                        batchName + "_01")
-
-                .addLayer(id + "_02",
-                        new ConvolutionLayer.Builder(kernelSize).nOut(filters[1])
-                                .convolutionMode(ConvolutionMode.Same)
-//                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
-//                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
-                                .build(),
-                        reluName + "_01")
-                .addLayer(batchName + "_02", new BatchNormalization(), id + "_02")
-                .addLayer(reluName + "_02",
-                        new ActivationLayer.Builder().activation(Activation.RELU).build(),
-                        batchName + "_02")
-
-                .addLayer(id + "_03",
-                        new ConvolutionLayer.Builder(new int[]{1, 1})
-                                .nOut(filters[2])
-                                //                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
-                                //                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
-                                .build(),
-                        reluName + "_02")
-                .addLayer(batchName + "_03", new BatchNormalization(), id + "_03")
-
-                // shortcut
-                .addLayer(id + "_11",
-                        new ConvolutionLayer.Builder(new int[]{1, 1}, stride)
-                                .nOut(filters[2])
-//                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
-//                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
-                                .build(),
-                        input)
-                .addLayer(batchName + "_11", new BatchNormalization(), id + "_11")
-
-                .addVertex(addName, new ElementWiseVertex(ElementWiseVertex.Op.Add), batchName + "_03",
-                        batchName + "_11")
-                .addLayer(id, new ActivationLayer.Builder().activation(Activation.RELU).build(),
-                        addName);
-    }
+    private static final int[] SINGLE_PIXEL = new int[]{1, 1};
 
     /**
      * Creates the convolution resnet block that maintains the number of channels
@@ -303,9 +203,8 @@ public class DLAgentBuilder {
      * The block is composed of
      * <pre>
      *     id_1
-     *     Convolution filter[0]
+     *     Convolution
      *     kernel = [1 x 1]
-     *     stride = [1 x 1]
      *
      *     id_batch_1
      *     Batch Normalization
@@ -316,84 +215,147 @@ public class DLAgentBuilder {
      *     id_2
      *     Convolution filter[1]
      *     kernel = kernel
-     *     stride = [1x1]
      *     mode=same
      *
      *     id_batch_2
      *     Batch Normalization
      *
-     *     id_relu_2
-     *     RELU
+     *                id_add
+     *                Element Wise Add
+     *                (id_batch_2, input)
      *
-     *     id_3
-     *     Convolution filter[2]
-     *     kernel = [1x1]
-     *     stride = [1x1]
-     *
-     *     id_batch_3
-     *     Batch Normalization
-     *
-     *                     id_add
-     *                     Element Wise Add
-     *                     (id_batch_3, input)
-     *
-     *                     id
-     *                     RELU
+     *                id
+     *                RELU
      * </pre>
      *
      * @param builder    the builder
      * @param id         the layer id (out)
      * @param input      the input layer
      * @param kernelSize the kernel size (height, width)
-     * @param filters    the number of filters for each of the 3 layers [a, b, c]
+     * @param stride     the stride (height, width)
+     * @param depth      the number of channels
      */
-    static ComputationGraphConfiguration.GraphBuilder buildIdentityResNetBlock(ComputationGraphConfiguration.GraphBuilder builder, String id, String input,
-                                                                               int[] kernelSize, int[] filters) {
-        String batchName = id + "_batch";
-        String reluName = id + "_relu";
-        String addName = id + "_short";
+    static ComputationGraphConfiguration.GraphBuilder buildConvResNetBlock(ComputationGraphConfiguration.GraphBuilder builder, String id, String input,
+                                                                           int[] kernelSize, int[] stride, int depth) {
+        String id1 = id + "_1";
+        String batch1 = id + "_1_batch";
+        String relu1 = id + "_1_relu";
+        String id2 = id + "_2";
+        String batch2 = id + "_2_batch";
+        String id3 = id + "_3";
+        String batch3 = id + "_3_batch";
+        String add = id + "_short";
 
-        return builder.addLayer(id + "_1",
-                        new ConvolutionLayer.Builder(new int[]{1, 1})
-                                .nOut(filters[0])
+        return builder.addLayer(id1,
+                        new ConvolutionLayer.Builder(SINGLE_PIXEL, stride)
 //                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
 //                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
                                 .cudnnAlgoMode(ConvolutionLayer.AlgoMode.PREFER_FASTEST)
+                                .nOut(depth)
                                 .build(),
                         input)
-                .addLayer(batchName + "_1", new BatchNormalization(), id + "_1")
-                .addLayer(reluName + "_1",
-                        new ActivationLayer.Builder().activation(Activation.RELU).build(),
-                        batchName + "_1")
-
-                .addLayer(id + "_2",
+                .addLayer(batch1, new BatchNormalization(), id1)
+                .addLayer(relu1, new BatchNormalization(), batch1)
+                .addLayer(id2,
                         new ConvolutionLayer.Builder(kernelSize)
-                                .nOut(filters[1])
 //                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
 //                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
                                 .cudnnAlgoMode(ConvolutionLayer.AlgoMode.PREFER_FASTEST)
                                 .convolutionMode(ConvolutionMode.Same)
+                                .nOut(depth)
                                 .build(),
-                        reluName + "_1")
-                .addLayer(batchName + "_2", new BatchNormalization(), id + "_2")
-                .addLayer(reluName + "_2",
-                        new ActivationLayer.Builder().activation(Activation.RELU).build(),
-                        batchName + "_2")
-
-                .addLayer(id + "_3",
-                        new ConvolutionLayer.Builder(new int[]{1, 1})
-                                .nOut(filters[2])
+                        relu1)
+                .addLayer(batch2, new BatchNormalization(), id2)
+                .addLayer(id3,
+                        new ConvolutionLayer.Builder(SINGLE_PIXEL, stride)
 //                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
 //                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
                                 .cudnnAlgoMode(ConvolutionLayer.AlgoMode.PREFER_FASTEST)
+                                .nOut(depth)
                                 .build(),
-                        reluName + "_2")
-                .addLayer(batchName + "_3", new BatchNormalization(), id + "_3")
-
-                .addVertex(addName, new ElementWiseVertex(ElementWiseVertex.Op.Add),
-                        input, batchName + "_3")
+                        input)
+                .addLayer(batch3, new BatchNormalization(), id3)
+                .addVertex(add, new ElementWiseVertex(ElementWiseVertex.Op.Add),
+                        batch2, batch3)
                 .addLayer(id, new ActivationLayer.Builder().activation(Activation.RELU).build(),
-                        addName);
+                        add);
+    }
+
+    /**
+     * Creates the convolution resnet block that maintains the number of channels
+     * <p>
+     * The block is composed of
+     * <pre>
+     *     id_1
+     *     Convolution
+     *     kernel = [1 x 1]
+     *
+     *     id_batch_1
+     *     Batch Normalization
+     *
+     *     id_relu_1
+     *     RELU
+     *
+     *     id_2
+     *     Convolution filter[1]
+     *     kernel = kernel
+     *     mode=same
+     *
+     *     id_batch_2
+     *     Batch Normalization
+     *
+     *                id_add
+     *                Element Wise Add
+     *                (id_batch_2, input)
+     *
+     *                id
+     *                RELU
+     * </pre>
+     *
+     * @param builder    the builder
+     * @param id         the layer id (out)
+     * @param input      the input layer
+     * @param kernelSize the kernel size (height, width)
+     * @param depth      the number of channels
+     */
+    static ComputationGraphConfiguration.GraphBuilder buildIdentityResNetBlock(ComputationGraphConfiguration.GraphBuilder builder, String id, String input,
+                                                                               int[] kernelSize, int depth) {
+        String id01 = id + "_1";
+        String batch01 = id + "_1_batch";
+        String relu01 = id + "_1_relu";
+        String id02 = id + "_2";
+        String batch02 = id + "_2_batch";
+        String add = id + "_short";
+
+        return builder.addLayer(id01,
+                        new ConvolutionLayer.Builder(SINGLE_PIXEL)
+//                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
+//                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
+                                .cudnnAlgoMode(ConvolutionLayer.AlgoMode.PREFER_FASTEST)
+                                .convolutionMode(ConvolutionMode.Same)
+                                .nOut(depth)
+                                .build(),
+                        input)
+                .addLayer(batch01, new BatchNormalization(), id01)
+                .addLayer(relu01,
+                        new ActivationLayer.Builder().activation(Activation.RELU).build(),
+                        batch01)
+
+                .addLayer(id02,
+                        new ConvolutionLayer.Builder(kernelSize)
+//                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
+//                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
+                                .cudnnAlgoMode(ConvolutionLayer.AlgoMode.PREFER_FASTEST)
+                                .convolutionMode(ConvolutionMode.Same)
+                                .nOut(depth)
+                                .build(),
+                        relu01)
+                .addLayer(batch02, new BatchNormalization(), id02)
+
+                .addVertex(add, new ElementWiseVertex(ElementWiseVertex.Op.Add),
+                        input, batch02)
+                .addLayer(id, new ActivationLayer.Builder().activation(Activation.RELU).build(),
+                        add);
     }
 
     /**
@@ -410,7 +372,7 @@ public class DLAgentBuilder {
     }
 
     /**
-     * Returns the builder of agant
+     * Returns the builder of agent
      *
      * @param root the configuration
      * @param file the configuration file
@@ -447,6 +409,7 @@ public class DLAgentBuilder {
         );
         this.layerMap = Map.of(
                 ACTIVATION_LAYER_ID, this::buildActivationLayer,
+                DENSE_LAYER_ID, this::buildDenseLayer,
                 BATCH_NORMALIZATION_LAYER_ID, this::buildBatchNormalizationLayer,
                 CONVOLUTION_LAYER_ID, this::buildConvolutionLayer,
                 OUTPUT_LAYER_ID, this::buildOutputLayer,
@@ -545,9 +508,9 @@ public class DLAgentBuilder {
     }
 
     /**
-     * Returns the computeation graph configuration
+     * Returns the computation graph configuration
      *
-     * @param locator the json locator
+     * @param locator the JSON locator
      */
     private ComputationGraphConfiguration buildConf(Locator locator) {
         this.graphBuilder = buildNNConf(locator).graphBuilder();
@@ -565,15 +528,15 @@ public class DLAgentBuilder {
 
         List<Def<Layer>> outputs = buildLayers(graphBuilderLocator.path(OUTPUTS_ID)).toList();
         List<Def<Layer>> hiddens = buildLayers(graphBuilderLocator.path(HIDDEN_ID)).toList();
-        List<Def<GraphVertex>> vertices = buildVertices(graphBuilderLocator.path(VERTICES_ID)).toList();
+        List<Def<Supplier<GraphVertex>>> vertices = buildVertices(graphBuilderLocator.path(VERTICES_ID)).toList();
         for (Def<Layer> layerDef : outputs) {
             graphBuilder = graphBuilder.addLayer(layerDef.id, layerDef.layer, layerDef.inputs);
         }
         for (Def<Layer> layerDef : hiddens) {
             graphBuilder = graphBuilder.addLayer(layerDef.id, layerDef.layer, layerDef.inputs);
         }
-        for (Def<GraphVertex> layerDef : vertices) {
-            graphBuilder = graphBuilder.addVertex(layerDef.id, layerDef.layer, layerDef.inputs);
+        for (Def<Supplier<GraphVertex>> layerDef : vertices) {
+            graphBuilder = graphBuilder.addVertex(layerDef.id, layerDef.layer.get(), layerDef.inputs);
         }
         buildBlocks(graphBuilderLocator.path("blocks"));
         graphBuilder = graphBuilder.setOutputs(
@@ -592,8 +555,8 @@ public class DLAgentBuilder {
         String[] inputs = Utils.loadStringArray(root, locator.path(INPUTS_ID));
         int[] kernelSize = Utils.loadIntArray(root, locator.path(KERNEL_SIZE_ID));
         int[] stride = Utils.loadIntArray(root, locator.path(STRIDE_ID));
-        int[] filters = Utils.loadIntArray(root, locator.path(FILTERS_ID));
-        graphBuilder = buildConvResNetBlock(graphBuilder, id, inputs[0], kernelSize, stride, filters);
+        int depth = locator.path(DEPTH_ID).getNode(root).asInt();
+        graphBuilder = buildConvResNetBlock(graphBuilder, id, inputs[0], kernelSize, stride, depth);
     }
 
     private Layer buildConvolutionLayer(Locator locator) {
@@ -602,6 +565,10 @@ public class DLAgentBuilder {
         int[] stride = Utils.loadIntArray(root, locator.path(STRIDE_ID));
         if (stride != null) {
             builder = builder.stride(stride);
+        }
+        int[] padding = Utils.loadIntArray(root, locator.path(PADDING_ID));
+        if (padding != null) {
+            builder = builder.padding(padding);
         }
         return builder
                 .nOut(locator.path(N_OUT_ID).getNode(root).asInt())
@@ -624,6 +591,13 @@ public class DLAgentBuilder {
                 locator.path(DEPTH_ID).getNode(root).asLong());
     }
 
+    private Layer buildDenseLayer(Locator locator) {
+        DenseLayer.Builder builder = new DenseLayer.Builder();
+        int nOut = locator.path(N_OUT_ID).getNode(root).asInt();
+        builder.nOut(nOut);
+        return builder.build();
+    }
+
     private InputType buildFeedForwardInput(Locator locator) {
         return InputType.feedForward(
                 locator.path(SIZE_ID).getNode(root).asLong()
@@ -633,8 +607,8 @@ public class DLAgentBuilder {
     private void buildIdentityResNetBlock(String id, Locator locator) {
         String[] inputs = Utils.loadStringArray(root, locator.path(INPUTS_ID));
         int[] kernelSize = Utils.loadIntArray(root, locator.path(KERNEL_SIZE_ID));
-        int[] filters = Utils.loadIntArray(root, locator.path(FILTERS_ID));
-        graphBuilder = buildIdentityResNetBlock(graphBuilder, id, inputs[0], kernelSize, filters);
+        int depth = locator.path(DEPTH_ID).getNode(root).asInt();
+        graphBuilder = buildIdentityResNetBlock(graphBuilder, id, inputs[0], kernelSize, depth);
     }
 
     private InputType buildInput(Locator locator) {
@@ -771,7 +745,11 @@ public class DLAgentBuilder {
         SubsamplingLayer.Builder builder = new SubsamplingLayer.Builder(kernelSize);
         int[] stride = Utils.loadIntArray(root, locator.path(STRIDE_ID));
         if (stride != null) {
-            builder = builder.stride(stride);
+            builder.stride(stride);
+        }
+        int[] padding = Utils.loadIntArray(root, locator.path(PADDING_ID));
+        if (padding != null) {
+            builder.padding(padding);
         }
         SubsamplingLayer.PoolingType poolingType = getOptByMap(locator.path(POOLING_TYPE_ID), poolingTypeMap);
         builder = builder.poolingType(poolingType);
@@ -785,14 +763,14 @@ public class DLAgentBuilder {
                 new WeightInitDistribution(new TruncatedNormalDistribution(mean, stddev)));
     }
 
-    private Def<GraphVertex> buildVertex(String id, Locator locator) {
+    private Def<Supplier<GraphVertex>> buildVertex(String id, Locator locator) {
         String[] inputs = locator.path(INPUTS_ID).elements(root)
                 .map(l -> l.getNode(root).asText())
                 .toArray(String[]::new);
-        return new Def<>(id, getRequiredByMap(locator.path(TYPE_ID), vertexMap), inputs);
+        return new Def<>(id, getRequiredByMap(locator.path(TYPE_ID)), inputs);
     }
 
-    private Stream<Def<GraphVertex>> buildVertices(Locator locator) {
+    private Stream<Def<Supplier<GraphVertex>>> buildVertices(Locator locator) {
         return locator.propertyNames(root)
                 .mapToObj(this::buildVertex);
     }
@@ -811,8 +789,8 @@ public class DLAgentBuilder {
         return map.get(key);
     }
 
-    private <T> T getRequiredByMap(Locator locator, Map<String, T> map) {
-        T result = getOptByMap(locator, map);
+    private <T> T getRequiredByMap(Locator locator) {
+        T result = getOptByMap(locator, (Map<String, T>) DLAgentBuilder.vertexMap);
         if (result == null) {
             throw new IllegalArgumentException(format("Invalid type \"%s\" at %s",
                     locator.path(TYPE_ID).getNode(root).asText(), locator));

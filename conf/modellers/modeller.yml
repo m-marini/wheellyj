@@ -14,4 +14,4 @@ markerDecay: 1000
 markerCleanDecay: 300000
 markerSize: 0.2
 minNumberEvents: 2
-robotMapSize: 125
+robotMapSize: 69

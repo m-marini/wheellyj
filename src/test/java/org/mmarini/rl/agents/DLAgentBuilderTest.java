@@ -31,6 +31,7 @@ package org.mmarini.rl.agents;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.graph.ElementWiseVertex;
+import org.deeplearning4j.nn.conf.graph.MergeVertex;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -84,23 +85,21 @@ class DLAgentBuilderTest {
         assertThat(conf.getNetworkInputs(), containsInAnyOrder("map"));
         assertThat(conf.getNetworkOutputs(), containsInAnyOrder("action"));
 
-        assertThat(conf.getVertices(), hasKey("convResnet_01"));
-        assertThat(conf.getVertices(), hasKey("convResnet_batch_01"));
-        assertThat(conf.getVertices(), hasKey("convResnet_relu_01"));
-        assertThat(conf.getVertices(), hasKey("convResnet_02"));
-        assertThat(conf.getVertices(), hasKey("convResnet_batch_02"));
-        assertThat(conf.getVertices(), hasKey("convResnet_relu_02"));
-        assertThat(conf.getVertices(), hasKey("convResnet_03"));
-        assertThat(conf.getVertices(), hasKey("convResnet_batch_03"));
-        assertThat(conf.getVertices(), hasKey("convResnet_11"));
-        assertThat(conf.getVertices(), hasKey("convResnet_batch_11"));
         assertThat(conf.getVertices(), hasKey("convResnet"));
+        assertThat(conf.getVertices(), hasKey("convResnet_short"));
+        assertThat(conf.getVertices(), hasKey("convResnet_3_batch"));
+        assertThat(conf.getVertices(), hasKey("convResnet_3"));
+        assertThat(conf.getVertices(), hasKey("convResnet_2_batch"));
+        assertThat(conf.getVertices(), hasKey("convResnet_2"));
+        assertThat(conf.getVertices(), hasKey("convResnet_1_relu"));
+        assertThat(conf.getVertices(), hasKey("convResnet_1_batch"));
+        assertThat(conf.getVertices(), hasKey("convResnet_1"));
     }
 
     @Test
-    void testIdentityResNet() throws IOException {
+    void testDense() throws IOException {
         // Given a JSON configuration
-        JsonNode root = Utils.fromResource("/org.mmarini.rl.agents.DLAgentBuilderTest/identityResNet.yml");
+        JsonNode root = Utils.fromResource("/org.mmarini.rl.agents.DLAgentBuilderTest/dense.yml");
         // When create agent.yml
         agent = DLAgentBuilder.create(root, env);
 
@@ -110,16 +109,7 @@ class DLAgentBuilderTest {
 
         assertThat(conf.getNetworkInputs(), containsInAnyOrder("map"));
         assertThat(conf.getNetworkOutputs(), containsInAnyOrder("action"));
-
-        assertThat(conf.getVertices(), hasKey("convResnet_1"));
-        assertThat(conf.getVertices(), hasKey("convResnet_batch_1"));
-        assertThat(conf.getVertices(), hasKey("convResnet_relu_1"));
-        assertThat(conf.getVertices(), hasKey("convResnet_2"));
-        assertThat(conf.getVertices(), hasKey("convResnet_batch_2"));
-        assertThat(conf.getVertices(), hasKey("convResnet_relu_2"));
-        assertThat(conf.getVertices(), hasKey("convResnet_3"));
-        assertThat(conf.getVertices(), hasKey("convResnet_batch_3"));
-        assertThat(conf.getVertices(), hasKey("convResnet"));
+        assertThat(conf.getVertices(), hasKey("dense"));
     }
 
     @Test
@@ -157,5 +147,47 @@ class DLAgentBuilderTest {
         assertEquals(2, merge.minVertexInputs());
         assertEquals(Integer.MAX_VALUE, merge.maxVertexInputs());
         assertEquals(ElementWiseVertex.Op.Add, merge.getOp());
+    }
+
+    @Test
+    void testIdentityResNet() throws IOException {
+        // Given a JSON configuration
+        JsonNode root = Utils.fromResource("/org.mmarini.rl.agents.DLAgentBuilderTest/identityResNet.yml");
+        // When create agent.yml
+        agent = DLAgentBuilder.create(root, env);
+
+        // Then
+        ComputationGraph network = agent.network();
+        ComputationGraphConfiguration conf = network.getConfiguration();
+
+        assertThat(conf.getNetworkInputs(), containsInAnyOrder("map"));
+        assertThat(conf.getNetworkOutputs(), containsInAnyOrder("action"));
+
+        assertThat(conf.getVertices(), hasKey("convResnet_1"));
+        assertThat(conf.getVertices(), hasKey("convResnet_1_batch"));
+        assertThat(conf.getVertices(), hasKey("convResnet_1_relu"));
+        assertThat(conf.getVertices(), hasKey("convResnet_2"));
+        assertThat(conf.getVertices(), hasKey("convResnet_2_batch"));
+        assertThat(conf.getVertices(), hasKey("convResnet"));
+    }
+
+    @Test
+    void testMerge() throws IOException {
+        // Given a JSON configuration
+        JsonNode root = Utils.fromResource("/org.mmarini.rl.agents.DLAgentBuilderTest/merge.yml");
+        // When create agent.yml
+        agent = DLAgentBuilder.create(root, env);
+
+        // Then
+        ComputationGraph network = agent.network();
+        ComputationGraphConfiguration conf = network.getConfiguration();
+
+        assertThat(conf.getNetworkInputs(), containsInAnyOrder("map"));
+        assertThat(conf.getNetworkOutputs(), containsInAnyOrder("action"));
+
+        assertThat(conf.getVertices(), hasKey("merge"));
+        assertThat(conf.getVertices().get("merge"), isA(MergeVertex.class));
+        MergeVertex merge = (MergeVertex) conf.getVertices().get("merge");
+        assertEquals(2, merge.minVertexInputs());
     }
 }

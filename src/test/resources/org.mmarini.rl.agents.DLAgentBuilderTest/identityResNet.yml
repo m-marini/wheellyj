@@ -1,5 +1,5 @@
 ---
-$schema: https://mmarini.org/wheelly/dl-agent-builder-schema-0.1
+$schema: https://mmarini.org/wheelly/dl-agent-builder-schema-1.0
 class: org.mmarini.rl.agents.DLAgentBuilder
 numEpochs: 5
 trajectorySize: 255
@@ -36,8 +36,7 @@ network:
         inputs: [ map ]
         type: IdentityResNetBlock
         kernelSize: [ 3, 3 ]
-        filters: [ 64, 64, 4 ]
-        stride: [ 2, 2 ]
+        depth: 4
     outputs:
       action:
         type: OutputLayer

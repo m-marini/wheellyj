@@ -33,7 +33,7 @@ network:
     hiddens: { }
     vertices:
       merge:
-        type: ElementWiseVertex
+        type: MergeVertex
         inputs: [ map, map ]
     outputs:
       action:
