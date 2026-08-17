@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#596](https://github.com/m-marini/wheellyj/issues/596): Camera calibration with goto commands
 - Issue [#599](https://github.com/m-marini/wheellyj/issues/599): Batch with go commands
 - Issue [#607](https://github.com/m-marini/wheellyj/issues/607): Change agent by concurrent training
+- Issue [#622](https://github.com/m-marini/wheellyj/issues/622): Change DLAgentBuilder
 
 ### Fixed
 

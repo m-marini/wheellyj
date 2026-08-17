@@ -1,11 +1,11 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/dl-agent-builder-schema-0.1
+$id: https://mmarini.org/wheelly/dl-agent-builder-schema-1.0
 title: Agent
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/dl-agent-builder-schema-0.1
+    const: https://mmarini.org/wheelly/dl-agent-builder-schema-1.0
   class:
     const: org.mmarini.rl.agents.DLAgentBuilder
   alphas:
@@ -73,26 +73,25 @@ $defs:
           type: array
           items:
             type: integer
-            minItems: 2
-            maxItems: 2
+            minimum: 1
+          minItems: 2
+          maxItems: 2
         stride:
           type: array
           items:
             type: integer
-            minItems: 2
-            maxItems: 2
-        filters:
-          type: array
-          items:
+            minimum: 1
+          minItems: 2
+          maxItems: 2
+        depth:
             type: integer
-            minItems: 3
-            maxItems: 3
+            minimum: 1
       required:
         - type
         - inputs
         - kernelSize
         - stride
-        - filters
+        - depth
     IdentityResNetBlock:
       type: object
       properties:
@@ -100,27 +99,25 @@ $defs:
           type: array
           items:
             type: string
-            minItems: 1
-            maxItems: 1
+          minItems: 1
+          maxItems: 1
         type:
           const: IdentityResNetBlock
         kernelSize:
           type: array
           items:
             type: integer
-            minItems: 2
-            maxItems: 2
-        filters:
-          type: array
-          items:
-            type: integer
-            minItems: 3
-            maxItems: 3
+            minimum: 1
+          minItems: 2
+          maxItems: 2
+        depth:
+          type: integer
+          minimum: 1
       required:
         - type
         - inputs
         - kernelSize
-        - filters
+        - depth
   CNN2DFormat:
     type: string
     enum:
@@ -194,6 +191,7 @@ $defs:
       - $ref: "#/$defs/Layers/ActivationLayer"
       - $ref: "#/$defs/Layers/BatchNormalizationLayer"
       - $ref: "#/$defs/Layers/ConvolutionLayer"
+      - $ref: "#/$defs/Layers/DenseLayer"
       - $ref: "#/$defs/Layers/OutputLayer"
       - $ref: "#/$defs/Layers/SubsamplingLayer"
       - $ref: "#/$defs/Layers/ZeroPaddingLayer"
@@ -205,6 +203,8 @@ $defs:
           type: array
           items:
             type: string
+            minItems: 1
+            maxItems: 1
         type:
           const: ActivationLayer
         activation:
@@ -219,6 +219,8 @@ $defs:
           type: array
           items:
             type: string
+            minItems: 1
+            maxItems: 1
         type:
           const: BatchNormalizationLayer
       required:
@@ -231,6 +233,8 @@ $defs:
           type: array
           items:
             type: string
+            minItems: 1
+            maxItems: 1
         type:
           const: ConvolutionLayer
         kernelSize:
@@ -239,6 +243,10 @@ $defs:
             type: integer
         # default [ 5, 5 ]
         stride:
+          type: array
+          items:
+            type: integer
+        padding:
           type: array
           items:
             type: integer
@@ -251,6 +259,24 @@ $defs:
         - inputs
         - kernelSize
         - nOut
+    DenseLayer:
+      type: object
+      properties:
+        inputs:
+          type: array
+          items:
+            type: string
+            minItems: 1
+            maxItems: 1
+        type:
+          const: DenseLayer
+        nOut:
+          type: integer
+          minimum: 1
+      required:
+        - type
+        - inputs
+        - nOut
     OutputLayer:
       type: object
       properties:
@@ -258,6 +284,8 @@ $defs:
           type: array
           items:
             type: string
+            minItems: 1
+            maxItems: 1
         type:
           const: OutputLayer
         nOut:
@@ -280,6 +308,8 @@ $defs:
           type: array
           items:
             type: string
+            minItems: 1
+            maxItems: 1
         type:
           const: SubsamplingLayer
         kernelSize:
@@ -287,6 +317,10 @@ $defs:
           items:
             type: integer
         stride:
+          type: array
+          items:
+            type: integer
+        padding:
           type: array
           items:
             type: integer
@@ -303,6 +337,8 @@ $defs:
           type: array
           items:
             type: string
+            minItems: 1
+            maxItems: 1
         type:
           const: ZeroPaddingLayer
         padding:
@@ -415,6 +451,7 @@ $defs:
   Vertex:
     anyOf:
       - $ref: "#/$defs/Vertices/ElementWiseVertex"
+      - $ref: "#/$defs/Vertices/MergeVertex"
   Vertices:
     ElementWiseVertex:
       type: object
@@ -425,6 +462,20 @@ $defs:
           type: array
           items:
             type: string
+            minItems: 1
+      required:
+        - type
+        - inputs
+    MergeVertex:
+      type: object
+      properties:
+        type:
+          const: MergeVertex
+        inputs:
+          type: array
+          items:
+            type: string
+            minItems: 1
       required:
         - type
         - inputs

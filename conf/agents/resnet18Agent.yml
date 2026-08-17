@@ -1,0 +1,151 @@
+---
+$schema: https://mmarini.org/wheelly/dl-agent-builder-schema-1.0
+class: org.mmarini.rl.agents.DLAgentBuilder
+numEpochs: 3
+trajectorySize: 256
+batchSize: 32
+alphas:
+  head: 1e-9
+  move: 1e-15
+beta: 3e-3
+gamma: 0.99
+avgReward: 0.5
+path: models/resnet13
+network:
+  activation: Identity
+  updater:
+    type: RmsProp
+    learningRate: 1e-6
+    decayRms: 0.96
+    epsilon: 1e-3
+  optimizationAlog: StochasticGradientDescent
+  weightInit:
+    type: Xavier
+  #weightInit:
+  #  type: TruncatedNormalDistribution
+  #  mean: 0
+  #  stddev: 0.5
+  l1: 1e-7
+  l2: 5e-5
+  graphBuilder:
+    # maxpool-out subsampling(3,3)    1024 x 1 x 1
+    # resnet42 resnet(1024, k=3)      1024 x 3 x 3
+    # resnet41 resnet(1024, k=3, s=2) 1024 x 3 x 3
+    # resnet32 resnet(512, k=3)       512 x 5 x 5
+    # resnet31 resnet(512, k=3, s=2)  512 x 5 x 5
+    # resnet22 resnet(256, k=3)       256 x 9 x 9
+    # resnet21 resnet(256, k=3, s=2)  256 x 9 x 9
+    # resnet12 resnet(128, k=3)       128 x 17 x 17
+    # resnet11 resnet(128, k=3, s=2)  128 x 17 x 17
+    # maxpool-in subsampling(3,3)     32 x 33 x 33
+    # cnn-in cnn(32, k=7, s=2, p=3)   32 x 35 x 35
+    # map(6.9m x 6.9m)                5 x 69 x 69
+
+    inputs:
+      map:
+        # map 5 x 69 x 69
+        type: Convolutional
+        width: 69
+        height: 69
+        depth: 5
+        format: NCHW
+    hiddens:
+      cnn-in:
+        # cnn-in cnn(128, k=7, s=2, p=3) 128 x 35 x 35
+        inputs: [ map ]
+        type: ConvolutionLayer
+        nOut: 128
+        kernelSize: [ 7, 7 ]
+        stride: [ 2, 2 ]
+        padding: [ 3, 3 ]
+      batch-in:
+        inputs: [ cnn-in ]
+        type: BatchNormalizationLayer
+      relu-in:
+        inputs: [ batch-in ]
+        type: ActivationLayer
+        activation: Relu
+      maxpool-in:
+        # maxpool-in subsampling(3,3)   128 x 33 x 33
+        inputs: [ relu-in ]
+        type: SubsamplingLayer
+        kernelSize: [ 3, 3 ]
+        poolingType: Max
+      out:
+        # maxpool-out subsampling(3,3) 1024 x 1 x 1
+        inputs: [ resnet42 ]
+        type: SubsamplingLayer
+        kernelSize: [ 3, 3 ]
+        poolingType: Max
+    blocks:
+      resnet11:
+        # resnet11 resnet(128, k=3, s=2)  128 x 17 x 17
+        inputs: [ maxpool-in ]
+        type: IdentityResNetBlock
+        depth: 128
+        kernelSize: [ 3, 3 ]
+      resnet12:
+        # resnet12 resnet(128, k=3)       128 x 17 x 17
+        inputs: [ resnet11 ]
+        type: IdentityResNetBlock
+        depth: 128
+        kernelSize: [ 3, 3 ]
+      resnet21:
+        # resnet21 resnet(256, k=3, s=2)  256 x 9 x 9
+        inputs: [ resnet12 ]
+        type: ConvolutionResNetBlock
+        depth: 256
+        kernelSize: [ 3, 3 ]
+        stride: [ 2, 2 ]
+      resnet22:
+        # resnet22 resnet(256, k=3)       256 x 9 x 9
+        inputs: [ resnet21 ]
+        type: IdentityResNetBlock
+        depth: 256
+        kernelSize: [ 3, 3 ]
+      resnet31:
+        # resnet31 resnet(512, k=3, s=2)  512 x 5 x 5
+        inputs: [ resnet22 ]
+        type: ConvolutionResNetBlock
+        depth: 512
+        kernelSize: [ 3, 3 ]
+        stride: [ 2, 2 ]
+      resnet32:
+        # resnet32 resnet(512, k=3)       512 x 5 x 5
+        inputs: [ resnet31 ]
+        type: IdentityResNetBlock
+        depth: 512
+        kernelSize: [ 3, 3 ]
+      resnet41:
+        # resnet41 resnet(1024, k=3, s=2) 1024 x 3 x 3
+        inputs: [ resnet32 ]
+        type: ConvolutionResNetBlock
+        depth: 1024
+        kernelSize: [ 3, 3 ]
+        stride: [ 2, 2 ]
+      resnet42:
+        # resnet42 resnet(1024, k=3)      1024 x 3 x 3
+        inputs: [ resnet41 ]
+        type: IdentityResNetBlock
+        depth: 1024
+        kernelSize: [ 3, 3 ]
+    outputs:
+      critic:
+        type: OutputLayer
+        inputs: [ out ]
+        nOut: 1
+        activation: Identity
+        lossFunction: SquaredLoss
+      move:
+        type: OutputLayer
+        inputs: [ out ]
+        nOut: 1941
+        activation: SoftMax
+        lossFunction: NegativeLogLikelihood
+      head:
+        type: OutputLayer
+        inputs: [ out ]
+        nOut: 7
+        activation: SoftMax
+        lossFunction: NegativeLogLikelihood
+    vertices: { }

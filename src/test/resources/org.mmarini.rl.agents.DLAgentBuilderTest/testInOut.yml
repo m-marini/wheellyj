@@ -1,5 +1,5 @@
 ---
-$schema: https://mmarini.org/wheelly/dl-agent-builder-schema-0.1
+$schema: https://mmarini.org/wheelly/dl-agent-builder-schema-1.0
 class: org.mmarini.rl.agents.DLAgentBuilder
 numEpochs: 5
 trajectorySize: 255

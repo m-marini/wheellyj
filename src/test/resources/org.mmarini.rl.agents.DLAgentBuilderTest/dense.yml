@@ -26,20 +26,19 @@ network:
   graphBuilder:
     inputs:
       map:
-        type: Convolutional
-        width: 50
-        height: 50
-        depth: 4
-    hiddens: { }
-    vertices:
-      merge:
-        type: ElementWiseVertex
-        inputs: [ map, map ]
+        type: FeedForward
+        size: 4
+    hiddens:
+      dense:
+        type: DenseLayer
+        inputs: [ map ]
+        nOut: 8
+    vertices: { }
     outputs:
       action:
         type: OutputLayer
         lossFunction: NegativeLogLikelihood
-        inputs: [ merge ]
+        inputs: [ dense ]
         nOut: 10
         activation: SoftMax
         dropOut: 0.8
