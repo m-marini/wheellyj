@@ -7,6 +7,13 @@ The code of Webcam controller is at [Wheellycam project](https://github.com/m-ma
 
 The documentation is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
+## Release [0.27.0](https://github.com/m-marini/wheellyj/releases/tag/v0.27.0)
+
+- Added Goto commands
+- Move partial robot config in robot spec
+- Added policy entropy kpis
+- Change resnet13 to resnet18
+
 ## Release [0.26.0](https://github.com/m-marini/wheellyj/releases/tag/v0.26.0)
 
 - Add lidars
