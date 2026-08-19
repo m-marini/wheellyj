@@ -48,7 +48,7 @@ fprintf(hFile, "- **Data folder:** `%s`\n", dataPath);
 fprintf(hFile, "- **Report folder:** `%s`\n", reportPath);
 
 fprintf(hFile, "\n");
-fprintf(hFile, "[TOC]\n");
+fprintf(hFile, "[TOC]\n\n");
 
 # Definitions
 importFile(hFile, "templates/defs.md");

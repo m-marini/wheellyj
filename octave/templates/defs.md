@@ -16,3 +16,4 @@ $P(a) = \frac{1}{|A|}, \forall a \in A$
 
 Entropy values close to 1 indicate a near-uniform policy.
 Entropy values close to 0 indicate a near-deterministic policy.
+

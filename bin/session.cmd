@@ -12,7 +12,7 @@ rmdir /S /Q  %REPORT%
 
 rem  Run session
 rem old call bin\runnit.cmd org.mmarini.wheelly.apps.Wheelly -k %KPIS% -w -s -t 21600 -i %INFERENCE%
-call bin\runnit.cmd org.mmarini.wheelly.apps.Wheelly -k %KPIS% -w -s -t 172800 -i %INFERENCE%
+call bin\runnit.cmd org.mmarini.wheelly.apps.Wheelly -k %KPIS% -w -s -t 86400 -i %INFERENCE%
 
 rem
 rem Create report data

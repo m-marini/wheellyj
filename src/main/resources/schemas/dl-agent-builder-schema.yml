@@ -65,8 +65,8 @@ $defs:
           type: array
           items:
             type: string
-            minItems: 1
-            maxItems: 1
+          minItems: 1
+          maxItems: 1
         type:
           const: ConvolutionResNetBlock
         kernelSize:
@@ -203,8 +203,7 @@ $defs:
           type: array
           items:
             type: string
-            minItems: 1
-            maxItems: 1
+          minItems: 1
         type:
           const: ActivationLayer
         activation:
@@ -219,8 +218,7 @@ $defs:
           type: array
           items:
             type: string
-            minItems: 1
-            maxItems: 1
+          minItems: 1
         type:
           const: BatchNormalizationLayer
       required:
@@ -233,8 +231,8 @@ $defs:
           type: array
           items:
             type: string
-            minItems: 1
-            maxItems: 1
+          minItems: 1
+          maxItems: 1
         type:
           const: ConvolutionLayer
         kernelSize:
@@ -266,8 +264,7 @@ $defs:
           type: array
           items:
             type: string
-            minItems: 1
-            maxItems: 1
+          minItems: 1
         type:
           const: DenseLayer
         nOut:
@@ -284,8 +281,7 @@ $defs:
           type: array
           items:
             type: string
-            minItems: 1
-            maxItems: 1
+          minItems: 1
         type:
           const: OutputLayer
         nOut:
@@ -308,8 +304,8 @@ $defs:
           type: array
           items:
             type: string
-            minItems: 1
-            maxItems: 1
+          minItems: 1
+          maxItems: 1
         type:
           const: SubsamplingLayer
         kernelSize:
@@ -337,8 +333,8 @@ $defs:
           type: array
           items:
             type: string
-            minItems: 1
-            maxItems: 1
+          minItems: 1
+          maxItems: 1
         type:
           const: ZeroPaddingLayer
         padding:
@@ -451,6 +447,7 @@ $defs:
   Vertex:
     anyOf:
       - $ref: "#/$defs/Vertices/ElementWiseVertex"
+      - $ref: "#/$defs/Vertices/FlattenVertex"
       - $ref: "#/$defs/Vertices/MergeVertex"
   Vertices:
     ElementWiseVertex:
@@ -462,7 +459,20 @@ $defs:
           type: array
           items:
             type: string
-            minItems: 1
+          minItems: 1
+      required:
+        - type
+        - inputs
+    FlattenVertex:
+      type: object
+      properties:
+        type:
+          const: FlattenVertex
+        inputs:
+          type: array
+          items:
+            type: string
+          minItems: 1
       required:
         - type
         - inputs
@@ -475,7 +485,7 @@ $defs:
           type: array
           items:
             type: string
-            minItems: 1
+          minItems: 1
       required:
         - type
         - inputs
