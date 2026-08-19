@@ -10,7 +10,7 @@ alphas:
 beta: 3e-3
 gamma: 0.99
 avgReward: 0.5
-path: models/resnet13
+path: models/resnet18
 network:
   activation: Identity
   updater:
@@ -36,9 +36,9 @@ network:
     # resnet22 resnet(256, k=3)       256 x 9 x 9
     # resnet21 resnet(256, k=3, s=2)  256 x 9 x 9
     # resnet12 resnet(128, k=3)       128 x 17 x 17
-    # resnet11 resnet(128, k=3, s=2)  128 x 17 x 17
-    # maxpool-in subsampling(3,3)     32 x 33 x 33
-    # cnn-in cnn(32, k=7, s=2, p=3)   32 x 35 x 35
+    # resnet11 resnet(128, k=3)       128 x 17 x 17
+    # maxpool-in subsampling(3,3)     128 x 33 x 33
+    # cnn-in cnn(32, k=7, s=2, p=3)   128 x 35 x 35
     # map(6.9m x 6.9m)                5 x 69 x 69
 
     inputs:
@@ -49,6 +49,10 @@ network:
         height: 69
         depth: 5
         format: NCHW
+      canMoveStates:
+        # canMoveStates 6
+        type: FeedForward
+        size: 6
     hiddens:
       cnn-in:
         # cnn-in cnn(128, k=7, s=2, p=3) 128 x 35 x 35
@@ -65,18 +69,29 @@ network:
         inputs: [ batch-in ]
         type: ActivationLayer
         activation: Relu
+      dense-out:
+        type: DenseLayer
+        inputs: [ canMoveStates, flattenMap ]
+        nOut: 2048
       maxpool-in:
         # maxpool-in subsampling(3,3)   128 x 33 x 33
         inputs: [ relu-in ]
         type: SubsamplingLayer
         kernelSize: [ 3, 3 ]
         poolingType: Max
-      out:
+      maxpool-out:
         # maxpool-out subsampling(3,3) 1024 x 1 x 1
         inputs: [ resnet42 ]
         type: SubsamplingLayer
         kernelSize: [ 3, 3 ]
         poolingType: Max
+      batch-out:
+        inputs: [ dense-out ]
+        type: BatchNormalizationLayer
+      out:
+        inputs: [ batch-out ]
+        type: ActivationLayer
+        activation: Relu
     blocks:
       resnet11:
         # resnet11 resnet(128, k=3, s=2)  128 x 17 x 17
@@ -148,4 +163,7 @@ network:
         nOut: 7
         activation: SoftMax
         lossFunction: NegativeLogLikelihood
-    vertices: { }
+    vertices:
+      flattenMap:
+        type: FlattenVertex
+        inputs: [ maxpool-out ]

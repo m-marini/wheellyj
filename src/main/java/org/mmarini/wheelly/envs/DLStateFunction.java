@@ -82,7 +82,7 @@ public class DLStateFunction implements StateFunction {
     public static final String MAP_SIGNAL_ID = "map";
     public static final int NUM_CELL_STATES = 4; // unknown, empty, eco, contact
     public static final int NUM_CAN_MOVE_STATES = 6;
-    public static final IntSignalSpec CAN_MOVE_SPEC = new IntSignalSpec(new long[]{1}, NUM_CAN_MOVE_STATES);
+    public static final IntSignalSpec CAN_MOVE_SPEC = new IntSignalSpec(new long[]{NUM_CAN_MOVE_STATES}, 2);
     public static final int UNKNOWN_CHANNEL = 0;
     public static final int EMPTY_CHANNEL = 1;
     public static final int CONTACT_CHANNEL = 2;
@@ -151,7 +151,7 @@ public class DLStateFunction implements StateFunction {
     public Map<String, Signal> signals(WorldModel... states) {
         int n = states.length;
         INDArray sensor = Nd4j.zeros(n, 1).castTo(DataType.FLOAT);
-        INDArray canMoveStates = Nd4j.zeros(n, 1).castTo(DataType.FLOAT);
+        INDArray canMoveStates = Nd4j.zeros(n, NUM_CAN_MOVE_STATES).castTo(DataType.FLOAT);
 
         long numMarkers = markers.size();
         long numChannels = NUM_CELL_STATES + numMarkers;
@@ -161,14 +161,15 @@ public class DLStateFunction implements StateFunction {
         int height = map.topology().height();
         INDArray mapSignals = Nd4j.zeros(n, numChannels, width, height).castTo(DataType.FLOAT);
 
+        int[] indices = new int[2];
         for (int k = 0; k < n; k++) {
+            indices[0] = k;
             model = states[k];
             RobotStatus robotStatus = model.getRobotStatus();
             Point2D robotLocation = robotStatus.location();
             map = model.gridMap();
             Complex mapDir = map.direction();
 
-            int[] indices = {k, 0};
 
             Complex sensorMapRelativeDir = robotStatus.headAbsDirection().sub(mapDir);
             sensor.putScalar(indices, (float) sensorMapRelativeDir.toIntDeg());
@@ -192,7 +193,8 @@ public class DLStateFunction implements StateFunction {
                             (robotStatus.frontSensor() ? 5 : 1) :
                             // front obstacle rear obstacle
                             (robotStatus.frontSensor() ? 4 : 0);
-            canMoveStates.putScalar(indices, (float) canMoveCode);
+            indices[1] = canMoveCode;
+            canMoveStates.putScalar(indices, 1f);
 
             // Create marker state signals
             Map<String, LabelMarker> markerMap = model.markers();

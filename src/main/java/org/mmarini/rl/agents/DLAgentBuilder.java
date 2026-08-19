@@ -35,8 +35,10 @@ import org.deeplearning4j.nn.conf.distribution.TruncatedNormalDistribution;
 import org.deeplearning4j.nn.conf.graph.ElementWiseVertex;
 import org.deeplearning4j.nn.conf.graph.GraphVertex;
 import org.deeplearning4j.nn.conf.graph.MergeVertex;
+import org.deeplearning4j.nn.conf.graph.PreprocessorVertex;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.layers.*;
+import org.deeplearning4j.nn.conf.preprocessor.CnnToFeedForwardPreProcessor;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.nn.weights.WeightInitDistribution;
@@ -148,6 +150,7 @@ public class DLAgentBuilder {
     public static final String FORMAT_ID = "format";
     public static final String DENSE_LAYER_ID = "DenseLayer";
     public static final String MERGE_VERTEX_ID = "MergeVertex";
+    public static final String FLATTEN_VERTEX_ID = "FlattenVertex";
     private static final String STOCHASTIC_GRADIENT_DESCENT_ID = "StochasticGradientDescent";
     private static final Map<String, SubsamplingLayer.PoolingType> poolingTypeMap = Map.of(
             AVG_ID, SubsamplingLayer.PoolingType.AVG,
@@ -189,7 +192,8 @@ public class DLAgentBuilder {
     );
     private static final Map<String, Supplier<GraphVertex>> vertexMap = Map.of(
             ELEMENT_WISE_VERTEX_ID, () -> new ElementWiseVertex(ElementWiseVertex.Op.Add),
-            MERGE_VERTEX_ID, MergeVertex::new
+            MERGE_VERTEX_ID, MergeVertex::new,
+            FLATTEN_VERTEX_ID, DLAgentBuilder::buildFlattenVertex
     );
     private static final Map<String, CNN2DFormat> cnn2DFormatMap = Map.of(
             CNN2DFormat.NCHW.name(), CNN2DFormat.NCHW,
@@ -279,6 +283,12 @@ public class DLAgentBuilder {
                         batch2, batch3)
                 .addLayer(id, new ActivationLayer.Builder().activation(Activation.RELU).build(),
                         add);
+    }
+
+    private static GraphVertex buildFlattenVertex() {
+        PreprocessorVertex vertex = new PreprocessorVertex();
+        vertex.setPreProcessor(new CnnToFeedForwardPreProcessor());
+        return vertex;
     }
 
     /**

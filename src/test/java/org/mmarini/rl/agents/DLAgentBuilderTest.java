@@ -29,9 +29,16 @@
 package org.mmarini.rl.agents;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
+import org.deeplearning4j.nn.conf.*;
 import org.deeplearning4j.nn.conf.graph.ElementWiseVertex;
 import org.deeplearning4j.nn.conf.graph.MergeVertex;
+import org.deeplearning4j.nn.conf.graph.PreprocessorVertex;
+import org.deeplearning4j.nn.conf.inputs.InputType;
+import org.deeplearning4j.nn.conf.layers.ConvolutionLayer;
+import org.deeplearning4j.nn.conf.layers.OutputLayer;
+import org.deeplearning4j.nn.conf.layers.PoolingType;
+import org.deeplearning4j.nn.conf.layers.SubsamplingLayer;
+import org.deeplearning4j.nn.conf.preprocessor.CnnToFeedForwardPreProcessor;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -113,6 +120,76 @@ class DLAgentBuilderTest {
     }
 
     @Test
+    void testFlatten() throws IOException {
+        // Given a JSON configuration
+        JsonNode root = Utils.fromResource("/org.mmarini.rl.agents.DLAgentBuilderTest/flatten.yml");
+        // When create agent.yml
+        agent = DLAgentBuilder.create(root, env);
+
+        // Then
+        ComputationGraph network = agent.network();
+        ComputationGraphConfiguration conf = network.getConfiguration();
+
+        assertThat(conf.getNetworkInputs(), containsInAnyOrder("map", "other"));
+        assertThat(conf.getNetworkOutputs(), containsInAnyOrder("out"));
+
+        assertThat(conf.getVertices(), hasKey("flatten"));
+        assertThat(conf.getVertices().get("flatten"), isA(PreprocessorVertex.class));
+    }
+
+    @Test
+    void testFlatten1() throws IOException {
+        // Given a network
+        PreprocessorVertex flatten = new PreprocessorVertex();
+        flatten.setPreProcessor(new CnnToFeedForwardPreProcessor());
+        /*
+            in1 feedforward(5)      5
+            in2 convolution(4,3,3)  4 x 3 x 3
+            avgpool(3,3)            4 x 3 x 3 -> 4 x 1 x 1
+            flatten                 4 x 1 x 1 -> 4
+            dense(6)                4 + 5 -> 6
+            out(10)                 6 -> 10
+         */
+        ComputationGraphConfiguration.GraphBuilder graphBuilder = new NeuralNetConfiguration.Builder()
+                .miniBatch(true)
+                .cacheMode(CacheMode.NONE)
+                .trainingWorkspaceMode(WorkspaceMode.ENABLED)
+                .inferenceWorkspaceMode(WorkspaceMode.ENABLED)
+                .cudnnAlgoMode(ConvolutionLayer.AlgoMode.PREFER_FASTEST)
+                .convolutionMode(ConvolutionMode.Truncate)
+                .graphBuilder()
+                .addInputs("in1", "in2")
+                .setInputTypes(
+                        InputType.feedForward(5),
+                        InputType.convolutional(3, 3, 4, CNN2DFormat.NCHW))
+                .addLayer("pool",
+                        new SubsamplingLayer.Builder(3, 3)
+                                .poolingType(PoolingType.AVG)
+                                .build(),
+                        "in2")
+                .addVertex("flatten", flatten, "pool")
+                .addLayer("out",
+                        new OutputLayer.Builder()
+                                .nOut(10)
+                                .build(),
+                        "flatten", "in1")
+                .setOutputs("out");
+
+
+        ComputationGraphConfiguration conf = graphBuilder.build();
+
+        ComputationGraph network = new ComputationGraph(conf);
+        network.init();
+        network.save(new File("test/network.zip"));
+
+        // Then
+
+        assertThat(conf.getNetworkInputs(), containsInAnyOrder("in1", "in2"));
+        assertThat(conf.getNetworkOutputs(), contains("out"));
+
+    }
+
+    @Test
     void testInOut() throws IOException {
         // Given a JSON configuration
         JsonNode root = Utils.fromResource("/org.mmarini.rl.agents.DLAgentBuilderTest/testInOut.yml");
@@ -125,28 +202,6 @@ class DLAgentBuilderTest {
 
         assertThat(conf.getNetworkInputs(), containsInAnyOrder("map"));
         assertThat(conf.getNetworkOutputs(), containsInAnyOrder("action"));
-    }
-
-    @Test
-    void testVertex() throws IOException {
-        // Given a JSON configuration
-        JsonNode root = Utils.fromResource("/org.mmarini.rl.agents.DLAgentBuilderTest/vertex.yml");
-        // When create agent.yml
-        agent = DLAgentBuilder.create(root, env);
-
-        // Then
-        ComputationGraph network = agent.network();
-        ComputationGraphConfiguration conf = network.getConfiguration();
-
-        assertThat(conf.getNetworkInputs(), containsInAnyOrder("map"));
-        assertThat(conf.getNetworkOutputs(), containsInAnyOrder("action"));
-
-        assertThat(conf.getVertices(), hasKey("merge"));
-        assertThat(conf.getVertices().get("merge"), isA(ElementWiseVertex.class));
-        ElementWiseVertex merge = (ElementWiseVertex) conf.getVertices().get("merge");
-        assertEquals(2, merge.minVertexInputs());
-        assertEquals(Integer.MAX_VALUE, merge.maxVertexInputs());
-        assertEquals(ElementWiseVertex.Op.Add, merge.getOp());
     }
 
     @Test
@@ -189,5 +244,27 @@ class DLAgentBuilderTest {
         assertThat(conf.getVertices().get("merge"), isA(MergeVertex.class));
         MergeVertex merge = (MergeVertex) conf.getVertices().get("merge");
         assertEquals(2, merge.minVertexInputs());
+    }
+
+    @Test
+    void testVertex() throws IOException {
+        // Given a JSON configuration
+        JsonNode root = Utils.fromResource("/org.mmarini.rl.agents.DLAgentBuilderTest/vertex.yml");
+        // When create agent.yml
+        agent = DLAgentBuilder.create(root, env);
+
+        // Then
+        ComputationGraph network = agent.network();
+        ComputationGraphConfiguration conf = network.getConfiguration();
+
+        assertThat(conf.getNetworkInputs(), containsInAnyOrder("map"));
+        assertThat(conf.getNetworkOutputs(), containsInAnyOrder("action"));
+
+        assertThat(conf.getVertices(), hasKey("merge"));
+        assertThat(conf.getVertices().get("merge"), isA(ElementWiseVertex.class));
+        ElementWiseVertex merge = (ElementWiseVertex) conf.getVertices().get("merge");
+        assertEquals(2, merge.minVertexInputs());
+        assertEquals(Integer.MAX_VALUE, merge.maxVertexInputs());
+        assertEquals(ElementWiseVertex.Op.Add, merge.getOp());
     }
 }

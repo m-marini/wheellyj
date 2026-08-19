@@ -48,6 +48,7 @@ function printReport(hFile, data, regression, headTemplate, title, reportPath, c
   importFile(hFile, headTemplate);
   fprintf(hFile, "### Statistics\n");
   if log10Flag
+    fprintf(hFile, "\n");
     fprintf(hFile, "The reported values are $\\log_{10}$ of the maximum action probability.\n");
     fprintf(hFile, "The probability values are shown in parentheses.\n");
   endif
