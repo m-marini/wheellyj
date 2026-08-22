@@ -38,7 +38,8 @@ public interface WheellyJsonSchemas {
     Logger logger = LoggerFactory.getLogger(WheellyJsonSchemas.class);
 
     org.mmarini.yaml.JsonSchemas singleton = org.mmarini.yaml.JsonSchemas.load("/schemas/action-func-rl-schema.yml",
-            "/schemas/action-func-dl-schema.yml",
+            "/schemas/action-func-map-schema.yml",
+            "/schemas/action-func-circular-schema.yml",
             "/schemas/agent-single-nn-schema.yml",
             "/schemas/agent-state-machine-schema.yml",
             "/schemas/batch-schema.yml",

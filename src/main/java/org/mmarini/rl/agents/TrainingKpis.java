@@ -54,12 +54,14 @@ public record TrainingKpis(Map<String, INDArray> predictions, INDArray deltas, f
      * @param policy the policy
      */
     private static INDArray computePolicyKpis(INDArray policy) {
-        try (INDArray max = policy.max(true, 1)) {
-            // Computes the normalised entropy
-            try (INDArray entropy = policy.entropy(1)
-                    .reshape(policy.size(0), 1)
-                    .divi(log(policy.size(1)))) {
-                return Nd4j.hstack(max, entropy);
+        try (INDArray size = Nd4j.ones(policy.size(0), 1).mul(policy.size(1))) {
+            try (INDArray max = policy.max(true, 1)) {
+                // Computes the normalised entropy
+                try (INDArray entropy = policy.entropy(1)
+                        .reshape(policy.size(0), 1)
+                        .divi(log(policy.size(1)))) {
+                    return Nd4j.hstack(max, entropy, size);
+                }
             }
         }
     }

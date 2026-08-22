@@ -1,19 +1,14 @@
-
 ---
-$schema: https://mmarini.org/wheelly/env-dl-schema-0.1
+$schema: https://mmarini.org/wheelly/env-dl-schema-1.0
 class: org.mmarini.wheelly.envs.DLEnvironment
 actionFunction:
-  $schema: https://mmarini.org/wheelly/action-func-circular-schema-0.1
-  class: org.mmarini.wheelly.envs.DLCircularActionFunction
+  $schema: https://mmarini.org/wheelly/action-func-map-schema-0.1
+  class: org.mmarini.wheelly.envs.DLMapActionFunction
   numRotations: 36
   numHeadRotations: 7
+  gridSize: 31
   gridStep: 0.2
   hideRadius: 0.3
-  layers:
-    - distance: 1
-      size: 5
-    - distance: 3
-      size: 3
 stateFunction:
   $schema: https://mmarini.org/wheelly/state-func-dl-schema-0.1
   class: org.mmarini.wheelly.envs.DLStateFunction

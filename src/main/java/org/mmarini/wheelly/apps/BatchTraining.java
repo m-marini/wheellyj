@@ -115,7 +115,7 @@ public class BatchTraining {
     /**
      * @param args command line arguments
      */
-    static void main(String[] args) {
+    public static void main(String[] args) {
         ArgumentParser parser = createParser();
         try {
             new BatchTraining(parser.parseArgs(args)).run();

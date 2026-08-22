@@ -1,0 +1,42 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/action-func-circular-schema-0.1
+title: DL action function
+type: object
+properties:
+  $schema:
+    const: https://mmarini.org/wheelly/action-func-circular-schema-0.1
+  class:
+    const: org.mmarini.wheelly.envs.DLCircularActionFunction
+  numRotations:
+    type: integer
+    minimum: 2
+  numHeadRotations:
+    type: integer
+    minimum: 2
+  gridStep:
+    type: number
+    exclusiveMinimum: 0
+  hideRadius:
+    type: number
+    minimum: 0
+  layers:
+    type: array
+    minItems: 1
+    iterms:
+      type: object
+      properties:
+        distance:
+          type: integer
+          minimum: 1
+        size:
+          type: integer
+          minimum: 1
+      required:
+        - distance
+        - size
+required:
+  - $schema
+  - class
+  - layers
+

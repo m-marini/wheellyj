@@ -16,16 +16,3 @@ $$
 
 where $|A|$ is the number of available move actions.
 
-For $|A| = 1941$
-
-$$
-P(a) \approx 5.16 \times 10^{-4}$$.
-
-In logarithmic scale it corresponds to
-
-$$
-\log_{10}(P(a)) = -\log_{10}(|A|) \approx -3.288
-$$.
-
-The report displays logarithmic values together with their corresponding probability values.
-

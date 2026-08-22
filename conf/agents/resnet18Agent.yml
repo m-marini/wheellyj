@@ -1,5 +1,5 @@
 ---
-$schema: https://mmarini.org/wheelly/dl-agent-builder-schema-1.0
+$schema: https://mmarini.org/wheelly/dl-agent-builder-schema-2.0
 class: org.mmarini.rl.agents.DLAgentBuilder
 numEpochs: 3
 trajectorySize: 256
@@ -20,7 +20,7 @@ network:
     epsilon: 1e-3
   optimizationAlog: StochasticGradientDescent
   weightInit:
-    type: Xavier
+    type: He
   #weightInit:
   #  type: TruncatedNormalDistribution
   #  mean: 0
@@ -73,6 +73,8 @@ network:
         type: DenseLayer
         inputs: [ canMoveStates, flattenMap ]
         nOut: 2048
+        weightInit:
+          type: Xavier
       maxpool-in:
         # maxpool-in subsampling(3,3)   128 x 33 x 33
         inputs: [ relu-in ]
@@ -151,18 +153,24 @@ network:
         nOut: 1
         activation: Identity
         lossFunction: SquaredLoss
+        weightInit:
+          type: Xavier
       move:
         type: OutputLayer
         inputs: [ out ]
-        nOut: 1941
+        nOut: 365
         activation: SoftMax
         lossFunction: NegativeLogLikelihood
+        weightInit:
+          type: Xavier
       head:
         type: OutputLayer
         inputs: [ out ]
         nOut: 7
         activation: SoftMax
         lossFunction: NegativeLogLikelihood
+        weightInit:
+          type: Xavier
     vertices:
       flattenMap:
         type: FlattenVertex

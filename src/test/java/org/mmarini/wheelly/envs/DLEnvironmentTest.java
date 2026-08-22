@@ -41,7 +41,11 @@ import java.util.Map;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasKey;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mmarini.wheelly.envs.DLActionFunction.*;
+import static org.mmarini.wheelly.envs.DLActionFunction.HEAD_ACTION_ID;
+import static org.mmarini.wheelly.envs.DLActionFunction.MOVE_ACTION_ID;
+import static org.mmarini.wheelly.envs.DLCircularActionFunction.DEFAULT_GRID_STEP;
+import static org.mmarini.wheelly.envs.DLMapActionFunction.DEFAULT_GRID_SIZE;
+import static org.mmarini.wheelly.envs.DLMapActionFunction.DEFAULT_HIDE_RADIUS;
 
 class DLEnvironmentTest {
     public static final int NUM_SENSOR_VALUES = 4;
@@ -54,7 +58,7 @@ class DLEnvironmentTest {
     void setUp() {
         this.worldModel = new WorldModelBuilder()
                 .build();
-        ActionFunction actionFunction = DLActionFunction.create(NUM_DIRECTION_VALUES, NUM_SENSOR_VALUES,
+        ActionFunction actionFunction = DLMapActionFunction.create(NUM_DIRECTION_VALUES, NUM_SENSOR_VALUES,
                 DEFAULT_GRID_SIZE, DEFAULT_GRID_STEP, DEFAULT_HIDE_RADIUS);
         this.env = new DLEnvironment(actionFunction, spec ->
                 DLStateFunction.create(spec, List.of("A")));
