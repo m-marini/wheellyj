@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+# Changed
+
+- Issue [#626](https://github.com/m-marini/wheellyj/issues/626): Reduce move action space
+
+
 ## [[0.27.0]](https://github.com/m-marini/wheellyj/releases/tag/v0.27.0) 2026-08-19
 
 ### Add
