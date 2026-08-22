@@ -39,8 +39,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.function.UnaryOperator;
 
-import static java.lang.Math.log;
-
 /**
  * Report utility functions
  */
@@ -94,9 +92,20 @@ public interface Reports {
     }
 
     /**
-     * Returns the logarithmic base 10 report of the best policy file
-     * (mean, min, max, exponential mean, ratio mean, ratio min, ratio max, ratio exponential mean),
-     * the best policy linear regression values and the entropy linear regression values
+     * Returns the bin stats polt records.
+     * The best policy linear regression values and the entropy linear regression values
+     * <pre>
+     *  initial record number,
+     *  mean of max policy,
+     *  min of max policy,
+     *  max policy,
+     *  EMA of max policy,
+     *  mean of entropy,
+     *  min of entropy,
+     *  max of entropy,
+     *  EMA of entropy,
+     *  number of actions
+     * </pre>
      *
      * @param file      the file
      * @param n         the number of bins
@@ -104,7 +113,7 @@ public interface Reports {
      * @param batchSize the batch size
      */
     static INDArray[] policyReport(BinArrayFile file, int n, double gamma, long batchSize) throws IOException {
-        INDArray result = Nd4j.create(n, 9);
+        INDArray result = Nd4j.create(n, 10);
         long m = file.size();
         // Fills the bins
         LinearRegression policyRegression = new LinearRegression();
@@ -117,6 +126,7 @@ public interface Reports {
             BinStats entropyStats = new BinStats(gamma);
 
             // Read bin data
+            int numActions = 0;
             INDArray batchRecords1;
             while ((batchRecords1 = readBin(file, end, batchSize)) != null) {
                 // Computes the number of records to read
@@ -130,6 +140,7 @@ public interface Reports {
                     INDArray h = batchRecords.get(NDArrayIndex.all(), NDArrayIndex.indices(1));
                     entropyStats.add(h);
                     entropyRegression.add(h);
+                    numActions = batchRecords.getInt(0, 2);
                 }
             }
 
@@ -143,71 +154,7 @@ public interface Reports {
             result.putScalar(binIndex, 6, entropyStats.min);
             result.putScalar(binIndex, 7, entropyStats.max);
             result.putScalar(binIndex, 8, entropyStats.moveExpMean);
-        }
-        INDArray regressions = Nd4j.create(new float[]{
-                (float) policyRegression.initialValue(),
-                (float) policyRegression.finalValue(),
-                (float) entropyRegression.initialValue(),
-                (float) entropyRegression.finalValue()
-        }).reshape(1, 4);
-        return new INDArray[]{result, regressions};
-    }
-
-    /**
-     * Returns the logarithmic base 10 report of the best policy file
-     * (mean, min, max, exponential mean, ratio mean, ratio min, ratio max, ratio exponential mean),
-     * the best policy linear regression values and the entropy linear regression values
-     *
-     * @param file      the file
-     * @param n         the number of bins
-     * @param gamma     the gamma decay factor
-     * @param batchSize the batch size
-     */
-    static INDArray[] policyReport1(BinArrayFile file, int n, double gamma, long batchSize) throws IOException {
-        INDArray result = Nd4j.create(n, 9);
-        long m = file.size();
-        // Fills the bins
-        LinearRegression policyRegression = new LinearRegression();
-        LinearRegression entropyRegression = new LinearRegression();
-        for (int binIndex = 0; binIndex < n; binIndex++) {
-            // Compute the end record index
-            long end = (binIndex + 1) * m / n;
-
-            BinStats policyStats = new BinStats(gamma);
-            BinStats entropyStats = new BinStats(gamma);
-
-            // Read bin data
-            INDArray batchRecords1;
-            while ((batchRecords1 = readBin(file, end, batchSize)) != null) {
-                // Computes the number of records to read
-                try (INDArray batchRecords = batchRecords1) {
-                    try (INDArray log10 = Transforms.log(batchRecords, 10, true)) {
-                        try (INDArray max = log10.max(true, 1)) {
-                            policyStats.add(max);
-                            policyRegression.add(max);
-                        }
-                    }
-                    // Computes the normalised entropy
-                    try (INDArray entropy = batchRecords.entropy(1)
-                            .reshape(batchRecords.size(0), 1)
-                            .divi(log(batchRecords.size(1)))
-                    ) {
-                        entropyStats.add(entropy);
-                        entropyRegression.add(entropy);
-                    }
-                }
-            }
-
-            // Writes the bin values
-            result.putScalar(binIndex, 0, (double) file.position());
-            result.putScalar(binIndex, 1, policyStats.mean());
-            result.putScalar(binIndex, 2, policyStats.min);
-            result.putScalar(binIndex, 3, policyStats.max);
-            result.putScalar(binIndex, 4, policyStats.moveExpMean);
-            result.putScalar(binIndex, 5, entropyStats.mean());
-            result.putScalar(binIndex, 6, entropyStats.min);
-            result.putScalar(binIndex, 7, entropyStats.max);
-            result.putScalar(binIndex, 8, entropyStats.moveExpMean);
+            result.putScalar(binIndex, 9, numActions);
         }
         INDArray regressions = Nd4j.create(new float[]{
                 (float) policyRegression.initialValue(),

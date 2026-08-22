@@ -1,13 +1,13 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/action-func-dl-schema-1.0
+$id: https://mmarini.org/wheelly/action-func-map-schema-0.1
 title: DL action function
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/action-func-dl-schema-1.0
+    const: https://mmarini.org/wheelly/action-func-map-schema-0.1
   class:
-    const: org.mmarini.wheelly.envs.DLActionFunction
+    const: org.mmarini.wheelly.envs.DLMapActionFunction
   numRotations:
     type: integer
     minimum: 2

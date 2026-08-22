@@ -31,7 +31,6 @@ package org.mmarini.rl.agents;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.*;
-import org.deeplearning4j.nn.conf.distribution.TruncatedNormalDistribution;
 import org.deeplearning4j.nn.conf.graph.ElementWiseVertex;
 import org.deeplearning4j.nn.conf.graph.GraphVertex;
 import org.deeplearning4j.nn.conf.graph.MergeVertex;
@@ -41,7 +40,6 @@ import org.deeplearning4j.nn.conf.layers.*;
 import org.deeplearning4j.nn.conf.preprocessor.CnnToFeedForwardPreProcessor;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.weights.WeightInit;
-import org.deeplearning4j.nn.weights.WeightInitDistribution;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.wheelly.apis.Utils;
@@ -61,7 +59,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -73,7 +70,7 @@ import static org.mmarini.rl.agents.DLAgent.*;
  * Builds DL Agent
  */
 public class DLAgentBuilder {
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/dl-agent-builder-schema-1.0";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/dl-agent-builder-schema-2.0";
     public static final String INPUTS_ID = "inputs";
     public static final String OUTPUTS_ID = "outputs";
     public static final String HIDDEN_ID = "hiddens";
@@ -110,9 +107,6 @@ public class DLAgentBuilder {
     public static final String CONJUGATE_GRADIENT_ID = "ConjugateGradient";
     public static final String LINE_GRADIENT_DESCENT_ID = "LineGradientDescent";
     public static final String WEIGHT_INIT_ID = "weightInit";
-    public static final String TRUNCATED_NORMAL_DISTRIBUTION_ID = "TruncatedNormalDistribution";
-    public static final String MEAN_ID = "mean";
-    public static final String STDDEV_ID = "stddev";
     public static final String RMS_PROP_ID = "RmsProp";
     public static final String L1_ID = "l1";
     public static final String L2_ID = "l2";
@@ -151,6 +145,7 @@ public class DLAgentBuilder {
     public static final String DENSE_LAYER_ID = "DenseLayer";
     public static final String MERGE_VERTEX_ID = "MergeVertex";
     public static final String FLATTEN_VERTEX_ID = "FlattenVertex";
+    public static final String XAVIER_ID = "Xavier";
     private static final String STOCHASTIC_GRADIENT_DESCENT_ID = "StochasticGradientDescent";
     private static final Map<String, SubsamplingLayer.PoolingType> poolingTypeMap = Map.of(
             AVG_ID, SubsamplingLayer.PoolingType.AVG,
@@ -238,9 +233,10 @@ public class DLAgentBuilder {
      * @param kernelSize the kernel size (height, width)
      * @param stride     the stride (height, width)
      * @param depth      the number of channels
+     * @param weightInit the weight initialiser
      */
     static ComputationGraphConfiguration.GraphBuilder buildConvResNetBlock(ComputationGraphConfiguration.GraphBuilder builder, String id, String input,
-                                                                           int[] kernelSize, int[] stride, int depth) {
+                                                                           int[] kernelSize, int[] stride, int depth, WeightInit weightInit) {
         String id1 = id + "_1";
         String batch1 = id + "_1_batch";
         String relu1 = id + "_1_relu";
@@ -250,33 +246,36 @@ public class DLAgentBuilder {
         String batch3 = id + "_3_batch";
         String add = id + "_short";
 
+        ConvolutionLayer.Builder builder1 = new ConvolutionLayer.Builder(SINGLE_PIXEL, stride)
+                .cudnnAlgoMode(ConvolutionLayer.AlgoMode.PREFER_FASTEST)
+                .nOut(depth);
+        if (weightInit != null) {
+            builder1.weightInit(weightInit);
+        }
+        ConvolutionLayer.Builder builder2 = new ConvolutionLayer.Builder(kernelSize)
+                .cudnnAlgoMode(ConvolutionLayer.AlgoMode.PREFER_FASTEST)
+                .convolutionMode(ConvolutionMode.Same)
+                .nOut(depth);
+        if (weightInit != null) {
+            builder2.weightInit(weightInit);
+        }
+        ConvolutionLayer.Builder builder3 = new ConvolutionLayer.Builder(SINGLE_PIXEL, stride)
+                .cudnnAlgoMode(ConvolutionLayer.AlgoMode.PREFER_FASTEST)
+                .nOut(depth);
+        if (weightInit != null) {
+            builder3.weightInit(weightInit);
+        }
         return builder.addLayer(id1,
-                        new ConvolutionLayer.Builder(SINGLE_PIXEL, stride)
-//                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
-//                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
-                                .cudnnAlgoMode(ConvolutionLayer.AlgoMode.PREFER_FASTEST)
-                                .nOut(depth)
-                                .build(),
+                        builder1.build(),
                         input)
                 .addLayer(batch1, new BatchNormalization(), id1)
                 .addLayer(relu1, new BatchNormalization(), batch1)
                 .addLayer(id2,
-                        new ConvolutionLayer.Builder(kernelSize)
-//                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
-//                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
-                                .cudnnAlgoMode(ConvolutionLayer.AlgoMode.PREFER_FASTEST)
-                                .convolutionMode(ConvolutionMode.Same)
-                                .nOut(depth)
-                                .build(),
+                        builder2.build(),
                         relu1)
                 .addLayer(batch2, new BatchNormalization(), id2)
                 .addLayer(id3,
-                        new ConvolutionLayer.Builder(SINGLE_PIXEL, stride)
-//                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
-//                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
-                                .cudnnAlgoMode(ConvolutionLayer.AlgoMode.PREFER_FASTEST)
-                                .nOut(depth)
-                                .build(),
+                        builder3.build(),
                         input)
                 .addLayer(batch3, new BatchNormalization(), id3)
                 .addVertex(add, new ElementWiseVertex(ElementWiseVertex.Op.Add),
@@ -327,43 +326,44 @@ public class DLAgentBuilder {
      * @param input      the input layer
      * @param kernelSize the kernel size (height, width)
      * @param depth      the number of channels
+     * @param weightInit the weight initialiser
      */
     static ComputationGraphConfiguration.GraphBuilder buildIdentityResNetBlock(ComputationGraphConfiguration.GraphBuilder builder, String id, String input,
-                                                                               int[] kernelSize, int depth) {
-        String id01 = id + "_1";
-        String batch01 = id + "_1_batch";
-        String relu01 = id + "_1_relu";
-        String id02 = id + "_2";
-        String batch02 = id + "_2_batch";
+                                                                               int[] kernelSize, int depth, WeightInit weightInit) {
+        String id1 = id + "_1";
+        String batch1 = id + "_1_batch";
+        String relu1 = id + "_1_relu";
+        String id2 = id + "_2";
+        String batch2 = id + "_2_batch";
         String add = id + "_short";
 
-        return builder.addLayer(id01,
-                        new ConvolutionLayer.Builder(SINGLE_PIXEL)
-//                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
-//                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
-                                .cudnnAlgoMode(ConvolutionLayer.AlgoMode.PREFER_FASTEST)
-                                .convolutionMode(ConvolutionMode.Same)
-                                .nOut(depth)
-                                .build(),
+        ConvolutionLayer.Builder builder1 = new ConvolutionLayer.Builder(SINGLE_PIXEL)
+                .cudnnAlgoMode(ConvolutionLayer.AlgoMode.PREFER_FASTEST)
+                .convolutionMode(ConvolutionMode.Same)
+                .nOut(depth);
+        if (weightInit != null) {
+            builder1.weightInit(weightInit);
+        }
+        ConvolutionLayer.Builder builder2 = new ConvolutionLayer.Builder(kernelSize)
+                .cudnnAlgoMode(ConvolutionLayer.AlgoMode.PREFER_FASTEST)
+                .convolutionMode(ConvolutionMode.Same)
+                .nOut(depth);
+        if (weightInit != null) {
+            builder2.weightInit(weightInit);
+        }
+        return builder.addLayer(id1,
+                        builder1.build(),
                         input)
-                .addLayer(batch01, new BatchNormalization(), id01)
-                .addLayer(relu01,
+                .addLayer(batch1, new BatchNormalization(), id1)
+                .addLayer(relu1,
                         new ActivationLayer.Builder().activation(Activation.RELU).build(),
-                        batch01)
-
-                .addLayer(id02,
-                        new ConvolutionLayer.Builder(kernelSize)
-//                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
-//                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
-                                .cudnnAlgoMode(ConvolutionLayer.AlgoMode.PREFER_FASTEST)
-                                .convolutionMode(ConvolutionMode.Same)
-                                .nOut(depth)
-                                .build(),
-                        relu01)
-                .addLayer(batch02, new BatchNormalization(), id02)
-
+                        batch1)
+                .addLayer(id2,
+                        builder2.build(),
+                        relu1)
+                .addLayer(batch2, new BatchNormalization(), id2)
                 .addVertex(add, new ElementWiseVertex(ElementWiseVertex.Op.Add),
-                        input, batch02)
+                        input, batch2)
                 .addLayer(id, new ActivationLayer.Builder().activation(Activation.RELU).build(),
                         add);
     }
@@ -401,10 +401,9 @@ public class DLAgentBuilder {
     private final Map<String, Function<Locator, Layer>> layerMap;
     private final Map<String, Function<Locator, InputType>> inputTypeMap;
     private final Map<String, Function<Locator, IUpdater>> updaterMap;
-    private final Map<String, Consumer<Locator>> netWeigthInitMap;
+    private final Map<String, WeightInit> netWeigthInitMap;
     private final Map<String, BiConsumer<String, Locator>> blockMap;
     private ComputationGraphConfiguration.GraphBuilder graphBuilder;
-    private NeuralNetConfiguration.Builder nnBuilder;
 
     /**
      * Creates the builder
@@ -427,8 +426,8 @@ public class DLAgentBuilder {
                 ZERO_PADDING_LAYER_ID, this::buildZeroPaddingLayer
         );
         this.netWeigthInitMap = Map.of(
-                TRUNCATED_NORMAL_DISTRIBUTION_ID, this::buildTruncatedNormalDistribution,
-                "Xavier", this::buildXavier
+                XAVIER_ID, WeightInit.XAVIER,
+                "He", WeightInit.XAVIER
         );
         this.updaterMap = Map.of(
                 ADAM_ID, this::buildAdam,
@@ -566,7 +565,8 @@ public class DLAgentBuilder {
         int[] kernelSize = Utils.loadIntArray(root, locator.path(KERNEL_SIZE_ID));
         int[] stride = Utils.loadIntArray(root, locator.path(STRIDE_ID));
         int depth = locator.path(DEPTH_ID).getNode(root).asInt();
-        graphBuilder = buildConvResNetBlock(graphBuilder, id, inputs[0], kernelSize, stride, depth);
+        WeightInit weightInit = getOptByMap(locator.path(WEIGHT_INIT_ID), netWeigthInitMap);
+        graphBuilder = buildConvResNetBlock(graphBuilder, id, inputs[0], kernelSize, stride, depth, weightInit);
     }
 
     private Layer buildConvolutionLayer(Locator locator) {
@@ -579,6 +579,10 @@ public class DLAgentBuilder {
         int[] padding = Utils.loadIntArray(root, locator.path(PADDING_ID));
         if (padding != null) {
             builder = builder.padding(padding);
+        }
+        WeightInit weightInit = getOptByMap(locator.path(WEIGHT_INIT_ID), netWeigthInitMap);
+        if (weightInit != null) {
+            builder.weightInit(weightInit);
         }
         return builder
                 .nOut(locator.path(N_OUT_ID).getNode(root).asInt())
@@ -605,6 +609,10 @@ public class DLAgentBuilder {
         DenseLayer.Builder builder = new DenseLayer.Builder();
         int nOut = locator.path(N_OUT_ID).getNode(root).asInt();
         builder.nOut(nOut);
+        WeightInit weightInit = getOptByMap(locator.path(WEIGHT_INIT_ID), netWeigthInitMap);
+        if (weightInit != null) {
+            builder.weightInit(weightInit);
+        }
         return builder.build();
     }
 
@@ -618,7 +626,8 @@ public class DLAgentBuilder {
         String[] inputs = Utils.loadStringArray(root, locator.path(INPUTS_ID));
         int[] kernelSize = Utils.loadIntArray(root, locator.path(KERNEL_SIZE_ID));
         int depth = locator.path(DEPTH_ID).getNode(root).asInt();
-        graphBuilder = buildIdentityResNetBlock(graphBuilder, id, inputs[0], kernelSize, depth);
+        WeightInit weightInit = getOptByMap(locator.path(WEIGHT_INIT_ID), netWeigthInitMap);
+        graphBuilder = buildIdentityResNetBlock(graphBuilder, id, inputs[0], kernelSize, depth, weightInit);
     }
 
     private InputType buildInput(Locator locator) {
@@ -649,7 +658,7 @@ public class DLAgentBuilder {
      * @param locator the JSON locator
      */
     private NeuralNetConfiguration.Builder buildNNConf(Locator locator) {
-        this.nnBuilder = new NeuralNetConfiguration.Builder()
+        NeuralNetConfiguration.Builder nnBuilder = new NeuralNetConfiguration.Builder()
                 .miniBatch(true)
                 .cacheMode(CacheMode.NONE)
                 .trainingWorkspaceMode(WorkspaceMode.ENABLED)
@@ -660,9 +669,9 @@ public class DLAgentBuilder {
         if (updater != null) {
             nnBuilder.updater(updater);
         }
-        Consumer<Locator> weightInit = getOptByMap(locator.path(WEIGHT_INIT_ID), netWeigthInitMap);
+        WeightInit weightInit = getOptByMap(locator.path(WEIGHT_INIT_ID), netWeigthInitMap);
         if (weightInit != null) {
-            weightInit.accept(locator);
+            nnBuilder.weightInit(weightInit);
         }
         Activation activation = getOptByMap(locator.path(ACTIVATION_ID), activationMap);
         if (activation != null) {
@@ -697,9 +706,11 @@ public class DLAgentBuilder {
 
     private Layer buildOutputLayer(Locator locator) {
         OutputLayer.Builder builder = new OutputLayer.Builder()
-//                                .constrainWeights(new MinMaxNormConstraint(2.0, 1, 1,2,3))
-//                                .constrainBias(new MaxNormConstraint(1.0, 1, 1,2,3))
                 .nOut(locator.path(N_OUT_ID).getNode(root).asInt());
+        WeightInit weightInit = getOptByMap(locator.path(WEIGHT_INIT_ID), netWeigthInitMap);
+        if (weightInit != null) {
+            builder.weightInit(weightInit);
+        }
         Activation activation = getOptByMap(locator.path(ACTIVATION_ID), activationMap);
         if (activation != null) {
             builder = builder.activation(activation);
@@ -766,13 +777,6 @@ public class DLAgentBuilder {
         return builder.build();
     }
 
-    private void buildTruncatedNormalDistribution(Locator locator) {
-        double mean = locator.path(MEAN_ID).getNode(root).asDouble();
-        double stddev = locator.path(STDDEV_ID).getNode(root).asDouble();
-        nnBuilder = nnBuilder.weightInit(
-                new WeightInitDistribution(new TruncatedNormalDistribution(mean, stddev)));
-    }
-
     private Def<Supplier<GraphVertex>> buildVertex(String id, Locator locator) {
         String[] inputs = locator.path(INPUTS_ID).elements(root)
                 .map(l -> l.getNode(root).asText())
@@ -783,10 +787,6 @@ public class DLAgentBuilder {
     private Stream<Def<Supplier<GraphVertex>>> buildVertices(Locator locator) {
         return locator.propertyNames(root)
                 .mapToObj(this::buildVertex);
-    }
-
-    private void buildXavier(Locator locator) {
-        nnBuilder = nnBuilder.weightInit(WeightInit.XAVIER);
     }
 
     private Layer buildZeroPaddingLayer(Locator locator) {

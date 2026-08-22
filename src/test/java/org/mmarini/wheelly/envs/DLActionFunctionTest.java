@@ -55,12 +55,14 @@ import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_HEAD_FOV_DEG;
 import static org.mmarini.wheelly.apis.Utils.MM;
-import static org.mmarini.wheelly.envs.DLActionFunction.*;
+import static org.mmarini.wheelly.envs.DLActionFunction.HEAD_ACTION_ID;
+import static org.mmarini.wheelly.envs.DLActionFunction.MOVE_ACTION_ID;
+import static org.mmarini.wheelly.envs.DLMapActionFunction.*;
 
 class DLActionFunctionTest {
     public static final double EPSILON = 1e-5;
     public static final int SEED = 1234;
-    public static final int DEFAULT_NUM_MOVE_ACTIONS = DLActionFunction.DEFAULT_GRID_SIZE * DLActionFunction.DEFAULT_GRID_SIZE - 5;
+    public static final int DEFAULT_NUM_MOVE_ACTIONS = DEFAULT_GRID_SIZE * DEFAULT_GRID_SIZE - 5;
     public static final int NUM_RANDOM_TEST_CASES = 30;
     public static final int FORWARD_SW = 37;
     public static final int FORWARD_SE = 67;

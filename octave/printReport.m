@@ -46,6 +46,11 @@
 function printReport(hFile, data, regression, headTemplate, title, reportPath, chartFile, log10Flag=false)
   stats = stats(data);
   importFile(hFile, headTemplate);
+
+  if log10Flag
+    printPolicyDescr(hFile, data(1, 10));
+  endif
+
   fprintf(hFile, "### Statistics\n");
   if log10Flag
     fprintf(hFile, "\n");
