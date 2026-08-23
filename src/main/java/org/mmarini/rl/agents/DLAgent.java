@@ -31,8 +31,6 @@ package org.mmarini.rl.agents;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.core.Completable;
-import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.graph.ComputationGraph;
@@ -54,10 +52,12 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -124,7 +124,7 @@ public class DLAgent implements BatchAgent {
         AtomicReference<DLAgentStatus> status = new AtomicReference<>(new DLAgentStatus(network, null,
                 trajectoryBuffer, null, false, avgReward));
         return new DLAgent(filePath, random, numEpochs, batchSize, beta, alphas, gamma, concurrentTraining,
-                PublishProcessor.create(), PublishProcessor.create(), status);
+                status, new ArrayList<>(), new ArrayList<>());
     }
 
     /**
@@ -158,9 +158,9 @@ public class DLAgent implements BatchAgent {
     private final float beta;
     private final float gamma;
     private final boolean concurrentTraining;
-    private final PublishProcessor<TrainingKpis> kpis;
-    private final PublishProcessor<INDArray> rewards;
     private final AtomicReference<DLAgentStatus> status;
+    private final List<Consumer<TrainingKpis>> onKpis;
+    private final List<Consumer<INDArray>> onRewards;
 
     /**
      * Creates the agent
@@ -173,11 +173,14 @@ public class DLAgent implements BatchAgent {
      * @param alphas             the policy action factors
      * @param gamma              the average reward gamma factor
      * @param concurrentTraining true if concurrent training
-     * @param kpis               the kpi publisher
-     * @param rewards            the rewards publisher
      * @param status             the agent status
+     * @param onKpis             the KPIS callback list
+     * @param onRewards          the rewards callback list
      */
-    protected DLAgent(File filePath, Random random, int numEpochs, int batchSize, float beta, Map<String, Float> alphas, float gamma, boolean concurrentTraining, PublishProcessor<TrainingKpis> kpis, PublishProcessor<INDArray> rewards, AtomicReference<DLAgentStatus> status) {
+    protected DLAgent(File filePath, Random random, int numEpochs, int batchSize,
+                      float beta, Map<String, Float> alphas, float gamma, boolean concurrentTraining,
+                      AtomicReference<DLAgentStatus> status, List<Consumer<TrainingKpis>> onKpis,
+                      List<Consumer<INDArray>> onRewards) {
         this.filePath = requireNonNull(filePath);
         this.random = requireNonNull(random);
         this.numEpochs = numEpochs;
@@ -186,9 +189,9 @@ public class DLAgent implements BatchAgent {
         this.alphas = alphas;
         this.gamma = gamma;
         this.concurrentTraining = concurrentTraining;
-        this.kpis = requireNonNull(kpis);
-        this.rewards = rewards;
         this.status = requireNonNull(status);
+        this.onKpis = onKpis;
+        this.onRewards = onRewards;
     }
 
     @Override
@@ -227,6 +230,29 @@ public class DLAgent implements BatchAgent {
         return batchSize;
     }
 
+    /**
+     * Invokes registered kpis callbacks
+     *
+     * @param kpis the KPIS
+     */
+    private void callOnKpis(TrainingKpis kpis) {
+        for (Consumer<TrainingKpis> callback : onKpis) {
+            callback.accept(kpis);
+        }
+    }
+
+
+    /**
+     * Invokes registered rewards callbacks
+     *
+     * @param rewards the rewards
+     */
+    private void callOnRewards(INDArray rewards) {
+        for (Consumer<INDArray> callback : onRewards) {
+            callback.accept(rewards);
+        }
+    }
+
     @Override
     public void close() {
         save();
@@ -240,7 +266,7 @@ public class DLAgent implements BatchAgent {
      */
     public DLAgent concurrentTraining(boolean concurrentTraining) {
         return this.concurrentTraining != concurrentTraining
-                ? new DLAgent(filePath, random, numEpochs, batchSize, beta, alphas, gamma, concurrentTraining, kpis, rewards, status)
+                ? new DLAgent(filePath, random, numEpochs, batchSize, beta, alphas, gamma, concurrentTraining, status, onKpis, onRewards)
                 : this;
     }
 
@@ -257,7 +283,9 @@ public class DLAgent implements BatchAgent {
                 createTrainingData(states, actionMasks, predictions, deltas);
         MultiDataSet dataset = new org.nd4j.linalg.dataset.MultiDataSet(datasets[0], datasets[1]);
         float avgReward1 = rlData._2;
-        kpis.onNext(TrainingKpis.create(predictions, deltas, avgReward1));
+        try (TrainingKpis kpis = TrainingKpis.create(predictions, deltas, avgReward1)) {
+            callOnKpis(kpis);
+        }
         return Tuple2.of(dataset, avgReward1);
     }
 
@@ -325,7 +353,7 @@ public class DLAgent implements BatchAgent {
         ComputationGraph trainingNetwork = st.trainingNetwork();
         if (trainingNetwork != null) {
             Trajectory trajectory = st.trajectory();
-            rewards.onNext(trajectory.rewards());
+            callOnRewards(trajectory.rewards());
             if (concurrentTraining) {
                 Completable.complete()
                         .subscribeOn(Schedulers.computation())
@@ -339,17 +367,23 @@ public class DLAgent implements BatchAgent {
     }
 
     /**
-     * Returns the kpis flow
+     * Adds the kpis callback function
+     *
+     * @param callback the callback function
      */
-    public Flowable<TrainingKpis> readKpis() {
-        return kpis;
+    public DLAgent onKpis(Consumer<TrainingKpis> callback) {
+        this.onKpis.add(callback);
+        return this;
     }
 
     /**
-     * Returns the rewards flow
+     * Adds the reward callback function
+     *
+     * @param callback the callback function
      */
-    public Flowable<INDArray> readRewards() {
-        return rewards;
+    public DLAgent onRewards(Consumer<INDArray> callback) {
+        this.onRewards.add(callback);
+        return this;
     }
 
     @Override
@@ -389,7 +423,7 @@ public class DLAgent implements BatchAgent {
 
         double avg;
         try (TrajectoryDatasetIterator iterator = createTrajectoryIterator(trajectory, batchSize, status.get().averageReward())) {
-            iterator.onKpis(kpis::onNext);
+            iterator.onKpis(this::callOnKpis);
             trainingNetwork.clearLayersStates();
             Nd4j.getMemoryManager().invokeGc();
             trainingNetwork.fit(iterator, numEpochs);

@@ -180,7 +180,9 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
 
             // inputs, datasets[1], kpis;
             if (onKpis != null) {
-                onKpis.accept(TrainingKpis.create(network.getConfiguration().getNetworkOutputs(), predictions, deltas.dup(), avgReward));
+                try (TrainingKpis kpis = TrainingKpis.create(network.getConfiguration().getNetworkOutputs(), predictions, deltas, avgReward)) {
+                    onKpis.accept(kpis);
+                }
             }
         }
         logger.atDebug().log("Created labels");

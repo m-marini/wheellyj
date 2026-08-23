@@ -23,7 +23,7 @@ properties:
   layers:
     type: array
     minItems: 1
-    iterms:
+    items:
       type: object
       properties:
         distance:

@@ -8,4 +8,4 @@ modeller: conf/modellers/modeller.yml
 environment: conf/environments/env.yml
 rewardFunction: conf/objectives/findLabel2.yml
 agent: conf/agents/resnet18Agent.yml
-savingInterval: 3600000
+savingInterval: 14400000
