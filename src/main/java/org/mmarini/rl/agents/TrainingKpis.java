@@ -47,7 +47,8 @@ import static org.mmarini.rl.agents.NNMediator.CRITIC_ID;
  * @param deltas      the RL errors
  * @param avgReward   the average rewards
  */
-public record TrainingKpis(Map<String, INDArray> predictions, INDArray deltas, float avgReward) {
+public record TrainingKpis(Map<String, INDArray> predictions, INDArray deltas,
+                           float avgReward) implements AutoCloseable {
     /**
      * Returns policy KPIS from policy
      *
@@ -91,10 +92,17 @@ public record TrainingKpis(Map<String, INDArray> predictions, INDArray deltas, f
         Map<String, INDArray> map = MapStream.of(predictions)
                 .mapValues((key, values) ->
                         CRITIC_ID.equals(key)
-                                ? values.dup()
+                                ? values
                                 : computePolicyKpis(values))
                 .toMap();
-        return new TrainingKpis(map, deltas.dup(), avgReward);
+        return new TrainingKpis(map, deltas, avgReward);
+    }
+
+    @Override
+    public void close() {
+        MapStream.of(predictions)
+                .filterKeys(id -> !CRITIC_ID.equals(id))
+                .forEach((id, ary) -> ary.close());
     }
 
     /**

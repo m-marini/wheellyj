@@ -149,7 +149,6 @@ public class Wheelly {
     private final JButton relocateButton;
     private final InferenceConnector inferenceMediator1;
     long autosaveInstant;
-    private JFrame kpisFrame;
     private long robotStartTimestamp;
     private Long sessionDuration;
     private GridPanel gridPanel;
@@ -226,11 +225,9 @@ public class Wheelly {
         this.agent = agentBuilder.apply(environment);
 
         if (agent instanceof DLAgent dlAgent) {
-            dlAgent = dlAgent.concurrentTraining(args.getBoolean("parallel"));
-            dlAgent.readKpis().observeOn(Schedulers.computation())
-                    .subscribe(this::onKpis);
-            dlAgent.readRewards().observeOn(Schedulers.computation())
-                    .subscribe(this::onRewards);
+            dlAgent = dlAgent.concurrentTraining(args.getBoolean("parallel"))
+                    .onKpis(this::onKpis)
+                    .onRewards(this::onRewards);
             agent = dlAgent;
         }
 
@@ -305,7 +302,7 @@ public class Wheelly {
         JFrame gridFrame = createFixFrame(Messages.getString("Grid.title"), gridPanel);
 
         // Create kpis frame
-        this.kpisFrame = kpisPanel.createFrame();
+        JFrame kpisFrame = kpisPanel.createFrame();
         frame = createFrame(Messages.getString("Wheelly.title"), new JScrollPane(envPanel));
         frame.getContentPane().add(createToolBar(), BorderLayout.NORTH);
         SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)

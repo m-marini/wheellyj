@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 # Changed
 
 - Issue [#626](https://github.com/m-marini/wheellyj/issues/626): Reduce move action space
-
+- Issue [#629](https://github.com/m-marini/wheellyj/issues/629): Callback kpis
 
 ## [[0.27.0]](https://github.com/m-marini/wheellyj/releases/tag/v0.27.0) 2026-08-19
 

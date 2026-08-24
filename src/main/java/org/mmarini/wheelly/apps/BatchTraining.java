@@ -245,9 +245,7 @@ public class BatchTraining {
                     logger.atError().log("File {} already exists", path.getAbsoluteFile());
                 }
             }
-            dlAgent.readKpis()
-                    .observeOn(Schedulers.computation())
-                    .subscribe(this::onKpis);
+            dlAgent.onKpis(this::onKpis);
         }
     }
 
