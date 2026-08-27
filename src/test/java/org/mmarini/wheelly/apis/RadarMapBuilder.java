@@ -108,11 +108,11 @@ public class RadarMapBuilder {
     }
 
     private UnaryOperator<RadarMap> radarMapper;
-    private long simulationTime;
+    private long time;
     private GridTopology topology;
 
     public RadarMapBuilder() {
-        this.simulationTime = 1;
+        this.time = 1;
         this.topology = TOPOLOGY;
         this.radarMapper = UnaryOperator.identity();
     }
@@ -130,7 +130,7 @@ public class RadarMapBuilder {
 
     public RadarMapBuilder addContactsCell(Supplier<Point2D> location) {
         return mapCell(location, cell ->
-                cell.setContact(simulationTime));
+                cell.setContact(time));
     }
 
     public RadarMapBuilder addEchoCell(Point2D location) {
@@ -139,20 +139,20 @@ public class RadarMapBuilder {
 
     public RadarMapBuilder addEchoCell(Supplier<Point2D> supplier) {
         return mapCell(supplier, cell ->
-                cell.addEchogenic(simulationTime, DECAY));
+                cell.addEchogenic(time, DECAY));
     }
 
     public RadarMapBuilder addEmptyCell(Supplier<Point2D> location) {
         return mapCell(location, cell ->
-                cell.addAnechoic(simulationTime, DECAY));
+                cell.addAnechoic(time, DECAY));
     }
 
     public RadarMapBuilder addEmptyCell(Point2D location) {
         return addEmptyCell(() -> location);
     }
 
-    public RadarMapBuilder addSimulationTime(long deltaTime) {
-        simulationTime += deltaTime;
+    public RadarMapBuilder addTime(long deltaTime) {
+        time += deltaTime;
         return this;
     }
 
@@ -166,16 +166,16 @@ public class RadarMapBuilder {
                 return MapCell::setUnknown;
             } else if (empty.equals(id)) {
                 return cell ->
-                        cell.addAnechoic(simulationTime, DECAY);
+                        cell.addAnechoic(time, DECAY);
             } else if (obstacle.equals(id)) {
                 return cell ->
-                        cell.addEchogenic(simulationTime, DECAY);
+                        cell.addEchogenic(time, DECAY);
             } else if (contact.equals(id)) {
                 return cell ->
-                        cell.setContact(simulationTime);
+                        cell.setContact(time);
             } else if (isMarker(id)) {
                 return cell ->
-                        cell.addEchogenic(simulationTime, DECAY);
+                        cell.addEchogenic(time, DECAY);
             } else {
                 return UnaryOperator.identity();
             }
@@ -239,8 +239,13 @@ public class RadarMapBuilder {
         });
     }
 
-    public RadarMapBuilder simulationTime(long simulationTime) {
-        this.simulationTime = simulationTime;
+    /**
+     * Sets the time
+     *
+     * @param time the time (ms)
+     */
+    public RadarMapBuilder time(long time) {
+        this.time = time;
         return this;
     }
 

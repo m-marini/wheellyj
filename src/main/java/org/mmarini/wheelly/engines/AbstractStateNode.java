@@ -61,12 +61,12 @@ public abstract class AbstractStateNode implements StateNode {
 
     @Override
     public long elapsedTime(ProcessorContextApi context) {
-        return context.worldModel().robotStatus().simulationTime() - entryTime;
+        return context.worldModel().robotStatus().robotTime() - entryTime;
     }
 
     @Override
     public void entry(ProcessorContextApi context) {
-        this.entryTime = context.worldModel().robotStatus().simulationTime();
+        this.entryTime = context.worldModel().robotStatus().robotTime();
         ProcessorCommand onEntry = onEntry();
         if (onEntry != null) {
             onEntry.execute(context);

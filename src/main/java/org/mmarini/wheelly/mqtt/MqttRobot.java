@@ -51,9 +51,12 @@ import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -218,12 +221,12 @@ public class MqttRobot implements RobotApi {
     private final AtomicReference<MqttRobotStatus> status;
     private final BehaviorProcessor<RobotStatusApi> states;
     private final PublishProcessor<Throwable> errors;
-    private final PublishProcessor<CameraEvent> cameraEvents;
-    private final PublishProcessor<WheellyMotionMessage> motionMessages;
-    private final PublishProcessor<WheellyLidarMessage> lidarMessages;
-    private final PublishProcessor<WheellyContactsMessage> contactMessages;
-    private final PublishProcessor<WheellySupplyMessage> supplyMessages;
     private final String[] config;
+    private final List<Consumer<WheellyContactsMessage>> onContacts;
+    private final List<Consumer<WheellyMotionMessage>> onMotions;
+    private final List<Consumer<WheellyLidarMessage>> onLidars;
+    private final List<Consumer<WheellySupplyMessage>> onSupplies;
+    private final List<Consumer<CameraEvent>> onCameras;
 
     /**
      * Creates the mqtt robot
@@ -234,7 +237,7 @@ public class MqttRobot implements RobotApi {
      * @param configureTimeout the configuration timeout (ms)
      * @param retryInterval    the retry configuration interval (ms)
      * @param robotSpec        the robot specification
-     * @param config           the configuratios
+     * @param config           the configurations
      */
     public MqttRobot(RxMqttClient client, RemoteDevice robotDevice, RemoteDevice qrDetectorDevice, long configureTimeout, long retryInterval, RobotSpec robotSpec, String[] config) {
         this.client = requireNonNull(client);
@@ -249,37 +252,30 @@ public class MqttRobot implements RobotApi {
                 0, null));
         this.states = BehaviorProcessor.createDefault(status.get());
         this.errors = PublishProcessor.create();
-        this.cameraEvents = PublishProcessor.create();
-        this.lidarMessages = PublishProcessor.create();
-        this.motionMessages = PublishProcessor.create();
-        this.contactMessages = PublishProcessor.create();
-        this.supplyMessages = PublishProcessor.create();
         robotDevice.readData("mt", this::toMotionMessage)
-                .subscribe(motionMessages::onNext,
-                        motionMessages::onError,
-                        motionMessages::onComplete
-                );
+                .subscribe(this::onMotionMessage,
+                        errors::onNext);
         robotDevice.readData("ct", this::toContactMessage)
-                .subscribe(contactMessages::onNext,
-                        contactMessages::onError,
-                        contactMessages::onComplete);
+                .subscribe(this::onContactMessage,
+                        errors::onError);
         robotDevice.readData("rg", this::toLidarMessage)
-                .subscribe(lidarMessages::onNext,
-                        lidarMessages::onError,
-                        lidarMessages::onComplete);
+                .subscribe(this::onLidarMessage,
+                        errors::onNext);
         robotDevice.readData("sv", this::toSupplyMessage)
-                .subscribe(supplyMessages::onNext,
-                        supplyMessages::onError,
-                        supplyMessages::onComplete);
+                .subscribe(this::onSupplyMessages,
+                        errors::onNext);
         robotDevice.readData("hi", m -> new String(m.getPayload()))
                 .subscribe(this::onRobotHiMessage,
-                        supplyMessages::onError,
-                        supplyMessages::onComplete);
+                        errors::onNext);
         qrDetectorDevice.readData("qr", this::toCameraMessage)
                 .subscribe(
-                        cameraEvents::onNext,
-                        cameraEvents::onError,
-                        cameraEvents::onComplete);
+                        this::onCameraEvent,
+                        errors::onNext);
+        this.onMotions = new ArrayList<>();
+        this.onLidars = new ArrayList<>();
+        this.onContacts = new ArrayList<>();
+        this.onSupplies = new ArrayList<>();
+        this.onCameras = new ArrayList<>();
     }
 
     @Override
@@ -295,13 +291,6 @@ public class MqttRobot implements RobotApi {
                 .map(s -> !s);
     }
 
-    /**
-     * Returns the configuration command
-     */
-    public String[] config() {
-        return config;
-    }
-
     @Override
     public void close() {
         logger.atInfo().log("Closing ...");
@@ -309,10 +298,6 @@ public class MqttRobot implements RobotApi {
         MqttRobotStatus s1 = status.updateAndGet(MqttRobotStatus::setClosed);
         if (!status.get().connected()) {
             logger.atInfo().log("Completing sensor data flows ...");
-            cameraEvents.onComplete();
-            contactMessages.onComplete();
-            motionMessages.onComplete();
-            supplyMessages.onComplete();
         }
         try {
             logger.atInfo().log("Closing mqtt ...");
@@ -327,6 +312,13 @@ public class MqttRobot implements RobotApi {
         robotDevice.closed().blockingAwait();
         qrDetectorDevice.closed().blockingAwait();
         logger.atInfo().log("Robot closed ...");
+    }
+
+    /**
+     * Returns the configuration command
+     */
+    public String[] config() {
+        return config;
     }
 
     /**
@@ -455,6 +447,22 @@ public class MqttRobot implements RobotApi {
         }
     }
 
+    @Override
+    public void onCamera(Consumer<CameraEvent> callback) {
+        onCameras.add(callback);
+    }
+
+    /**
+     * Handles camera event
+     *
+     * @param cameraEvent the camera event
+     */
+    private void onCameraEvent(CameraEvent cameraEvent) {
+        for (Consumer<CameraEvent> callback : onCameras) {
+            callback.accept(cameraEvent);
+        }
+    }
+
     /**
      * Handles the broker client connection event
      *
@@ -483,6 +491,54 @@ public class MqttRobot implements RobotApi {
         notifyError("Error mqtt", error);
         Completable.timer(retryInterval, TimeUnit.MILLISECONDS, Schedulers.computation())
                 .subscribe(this::reconnect);
+    }
+
+    /**
+     * Handles contact message
+     *
+     * @param message the message
+     */
+    private void onContactMessage(WheellyContactsMessage message) {
+        for (Consumer<WheellyContactsMessage> callback : onContacts) {
+            callback.accept(message);
+        }
+    }
+
+    @Override
+    public void onContacts(Consumer<WheellyContactsMessage> callback) {
+        onContacts.add(callback);
+    }
+
+    @Override
+    public void onLidar(Consumer<WheellyLidarMessage> callback) {
+        onLidars.add(callback);
+    }
+
+    /**
+     * Handles lidar message
+     *
+     * @param message the message
+     */
+    private void onLidarMessage(WheellyLidarMessage message) {
+        for (Consumer<WheellyLidarMessage> callback : onLidars) {
+            callback.accept(message);
+        }
+    }
+
+    @Override
+    public void onMotion(Consumer<WheellyMotionMessage> callback) {
+        onMotions.add(callback);
+    }
+
+    /**
+     * Handles motion message
+     *
+     * @param message the message
+     */
+    private void onMotionMessage(WheellyMotionMessage message) {
+        for (Consumer<WheellyMotionMessage> callback : onMotions) {
+            callback.accept(message);
+        }
     }
 
     /**
@@ -515,6 +571,22 @@ public class MqttRobot implements RobotApi {
         configure();
     }
 
+    @Override
+    public void onSupply(Consumer<WheellySupplyMessage> callback) {
+        onSupplies.add(callback);
+    }
+
+    /**
+     * Handles the supply message
+     *
+     * @param message the message
+     */
+    private void onSupplyMessages(WheellySupplyMessage message) {
+        for (Consumer<WheellySupplyMessage> callback : onSupplies) {
+            callback.accept(message);
+        }
+    }
+
     /**
      * Returns the robot device
      */
@@ -523,38 +595,13 @@ public class MqttRobot implements RobotApi {
     }
 
     @Override
-    public Flowable<CameraEvent> readCamera() {
-        return cameraEvents;
-    }
-
-    @Override
-    public Flowable<WheellyContactsMessage> readContacts() {
-        return contactMessages;
-    }
-
-    @Override
     public Flowable<Throwable> readErrors() {
         return errors;
     }
 
     @Override
-    public Flowable<WheellyLidarMessage> readLidar() {
-        return lidarMessages;
-    }
-
-    @Override
-    public Flowable<WheellyMotionMessage> readMotion() {
-        return motionMessages;
-    }
-
-    @Override
     public Flowable<RobotStatusApi> readRobotStatus() {
         return states;
-    }
-
-    @Override
-    public Flowable<WheellySupplyMessage> readSupply() {
-        return supplyMessages;
     }
 
     @Override
@@ -599,7 +646,7 @@ public class MqttRobot implements RobotApi {
     }
 
     @Override
-    public long simulationTime() {
+    public long robotTime() {
         return System.currentTimeMillis() - status.get().startTime();
     }
 
@@ -611,7 +658,7 @@ public class MqttRobot implements RobotApi {
     private CameraEvent toCameraMessage(MqttMessage mqttMessage) {
         double widthRatio = 2 * tan(robotSpec.cameraFOV().toRad() / 2);
         try {
-            return CameraEvent.parse(simulationTime(), new String(mqttMessage.getPayload()), widthRatio);
+            return CameraEvent.parse(robotTime(), new String(mqttMessage.getPayload()), widthRatio);
         } catch (Throwable ex) {
             logger.atError().setCause(ex).log("Error parsing camera message");
             return null;
@@ -625,7 +672,7 @@ public class MqttRobot implements RobotApi {
      */
     private WheellyContactsMessage toContactMessage(MqttMessage mqttMessage) {
         try {
-            return WheellyContactsMessage.parse(simulationTime(), new String(mqttMessage.getPayload()));
+            return WheellyContactsMessage.parse(robotTime(), new String(mqttMessage.getPayload()));
         } catch (Throwable ex) {
             logger.atError().setCause(ex).log("Error parsing contact message");
             return null;
@@ -634,7 +681,7 @@ public class MqttRobot implements RobotApi {
 
     private WheellyLidarMessage toLidarMessage(MqttMessage mqttMessage) {
         try {
-            return WheellyLidarMessage.parse(simulationTime(), new String(mqttMessage.getPayload()));
+            return WheellyLidarMessage.parse(robotTime(), new String(mqttMessage.getPayload()));
         } catch (Throwable ex) {
             logger.atError().setCause(ex).log("Error parsing lidar message");
             return null;
@@ -648,7 +695,7 @@ public class MqttRobot implements RobotApi {
      */
     private WheellyMotionMessage toMotionMessage(MqttMessage mqttMessage) {
         try {
-            return WheellyMotionMessage.parse(simulationTime(), new String(mqttMessage.getPayload()));
+            return WheellyMotionMessage.parse(robotTime(), new String(mqttMessage.getPayload()));
         } catch (Throwable ex) {
             logger.atError().setCause(ex).log("Error parsing motion message");
             return null;
@@ -662,7 +709,7 @@ public class MqttRobot implements RobotApi {
      */
     private WheellySupplyMessage toSupplyMessage(MqttMessage mqttMessage) {
         try {
-            return WheellySupplyMessage.parse(simulationTime(), new String(mqttMessage.getPayload()));
+            return WheellySupplyMessage.parse(robotTime(), new String(mqttMessage.getPayload()));
         } catch (Throwable ex) {
             logger.atError().setCause(ex).log("Error parsing supply message");
             return null;

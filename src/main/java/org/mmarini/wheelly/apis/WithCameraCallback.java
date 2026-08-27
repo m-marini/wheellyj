@@ -36,5 +36,5 @@ public interface WithCameraCallback {
      *
      * @param callback the callback
      */
-    void setOnCamera(Consumer<CameraEvent> callback);
+    void onCamera(Consumer<CameraEvent> callback);
 }

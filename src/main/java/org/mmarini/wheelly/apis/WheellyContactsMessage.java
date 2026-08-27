@@ -37,13 +37,13 @@ import static java.lang.String.format;
 /**
  * Contains the contact message
  *
- * @param simulationTime  the simulation markerTime (ms)
+ * @param time            the message time (ms)
  * @param frontSensors    the front sensors signals
  * @param rearSensors     the rear sensors signals
  * @param canMoveForward  true if it can move forward
  * @param canMoveBackward true if it can move backward
  */
-public record WheellyContactsMessage(long simulationTime,
+public record WheellyContactsMessage(long time,
                                      boolean frontSensors, boolean rearSensors,
                                      boolean canMoveForward, boolean canMoveBackward)
         implements WheellyMessage {
@@ -114,10 +114,10 @@ public record WheellyContactsMessage(long simulationTime,
      *     [canMoveBackward]
      * </pre>
      *
-     * @param simTime the simulation time (ms)
-     * @param arg     the arguments string
+     * @param time the message time (ms)
+     * @param arg  the arguments string
      */
-    public static WheellyContactsMessage parse(long simTime, String arg) {
+    public static WheellyContactsMessage parse(long time, String arg) {
         Matcher m = ARG_PATTERN.matcher(arg);
         if (!m.matches()) {
             throw new IllegalArgumentException(format("Wrong contacts message \"%s\"", arg));
@@ -128,7 +128,7 @@ public record WheellyContactsMessage(long simulationTime,
         boolean canMoveForward = Integer.parseInt(m.group(3)) != 0;
         boolean canMoveBackward = Integer.parseInt(m.group(4)) != 0;
         return new WheellyContactsMessage(
-                simTime, frontSensors, rearSensors,
+                time, frontSensors, rearSensors,
                 canMoveForward, canMoveBackward
         );
     }
@@ -138,9 +138,9 @@ public record WheellyContactsMessage(long simulationTime,
      *
      * @param canMoveBackward true if the robot can move backward
      */
-    public WheellyContactsMessage setCanMoveBackward(boolean canMoveBackward) {
+    public WheellyContactsMessage canMoveBackward(boolean canMoveBackward) {
         return canMoveBackward != this.canMoveBackward
-                ? new WheellyContactsMessage(simulationTime, frontSensors, rearSensors,
+                ? new WheellyContactsMessage(time, frontSensors, rearSensors,
                 canMoveForward, canMoveBackward)
                 : this;
     }
@@ -150,21 +150,21 @@ public record WheellyContactsMessage(long simulationTime,
      *
      * @param canMoveForward true if robot can move forward
      */
-    public WheellyContactsMessage setCanMoveForward(boolean canMoveForward) {
+    public WheellyContactsMessage canMoveForward(boolean canMoveForward) {
         return canMoveForward != this.canMoveForward
-                ? new WheellyContactsMessage(simulationTime, frontSensors, rearSensors,
+                ? new WheellyContactsMessage(time, frontSensors, rearSensors,
                 canMoveForward, canMoveBackward)
                 : this;
     }
 
     /**
-     * Returns the contact message with simulation markerTime
+     * Returns the contact message with message time
      *
-     * @param simulationTime the simulation markerTime (ms)
+     * @param time the simulation time (ms)
      */
-    public WheellyContactsMessage setSimulationTime(long simulationTime) {
-        return simulationTime != this.simulationTime
-                ? new WheellyContactsMessage(simulationTime, frontSensors, rearSensors,
+    public WheellyContactsMessage time(long time) {
+        return time != this.time
+                ? new WheellyContactsMessage(time, frontSensors, rearSensors,
                 canMoveForward, canMoveBackward)
                 : this;
     }

@@ -55,5 +55,5 @@ public interface WheellyMessage {
     /**
      * Returns the simulation markerTime
      */
-    long simulationTime();
+    long time();
 }

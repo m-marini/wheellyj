@@ -136,6 +136,11 @@ public class DLEnvironment implements EnvironmentApi {
         requireNonNull(agent);
         requireNonNull(stateFunc);
 
+        if (!state.robotStatus().halt()) {
+            logger.atDebug().log("Robot is moving ...");
+            return null;
+        }
+
         Map<String, Signal> signals1 = state(state);
         Map<String, Signal> actions = agent.act(signals1);
         RobotCommands commands = actionFunc.commands(actions, state).getFirst();

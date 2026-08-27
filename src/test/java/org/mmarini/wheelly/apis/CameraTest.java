@@ -51,7 +51,7 @@ class CameraTest {
 
         // Then
         assertNotNull(event);
-        assertEquals(SIMULATON_TIME, event.simulationTime());
+        assertEquals(SIMULATON_TIME, event.time());
         assertEquals("A", event.qrCode());
         assertEquals(new Point2D.Double(90, 108.8), event.points()[0]);
         assertEquals(new Point2D.Double(182, 107), event.points()[1]);

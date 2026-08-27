@@ -38,7 +38,7 @@ public class RobotStatusBuilder {
     public static final double EPSILON = 1e-5;
     public static final int DECAY = 1000;
 
-    private long simulationTime;
+    private long time;
     private int robotDirDeg;
     private int headAngle;
     private double frontDistance;
@@ -54,12 +54,12 @@ public class RobotStatusBuilder {
 
     public RobotStatusBuilder() {
         this.canMoveBackward = this.canMoveForward = this.frontSensor = this.rearSensor = true;
-        this.simulationTime = 1;
+        this.time = 1;
         this.robotLocation = new Point2D.Double();
     }
 
-    public RobotStatusBuilder addSimulationTime(long deltaTime) {
-        simulationTime += deltaTime;
+    public RobotStatusBuilder addTime(long deltaTime) {
+        time += deltaTime;
         return this;
     }
 
@@ -71,14 +71,14 @@ public class RobotStatusBuilder {
     public RobotStatus build() {
         double xPulses = RobotSpec.distance2Pulse(robotLocation.getX());
         double yPulses = RobotSpec.distance2Pulse(robotLocation.getY());
-        WheellyMotionMessage motion = new WheellyMotionMessage(simulationTime,
+        WheellyMotionMessage motion = new WheellyMotionMessage(time,
                 xPulses,
                 yPulses,
                 robotDirDeg, 0, 0, 0, true, 0, 0, 0, 0);
-        WheellyContactsMessage contacts = new WheellyContactsMessage(simulationTime, frontSensor, rearSensor, canMoveForward, canMoveBackward);
-        CameraEvent camera = new CameraEvent(simulationTime, "?", 3, 4, null, Complex.DEG0);
+        WheellyContactsMessage contacts = new WheellyContactsMessage(time, frontSensor, rearSensor, canMoveForward, canMoveBackward);
+        CameraEvent camera = new CameraEvent(time, "?", 3, 4, null, Complex.DEG0);
         WheellyLidarMessage lidars = new WheellyLidarMessage(lidarTime, m2mm(frontDistance), m2mm(rearDistance), xPulses, yPulses, robotDirDeg, headAngle);
-        return new RobotStatus(DEFAULT_ROBOT_SPEC, simulationTime, motion, contacts,
+        return new RobotStatus(DEFAULT_ROBOT_SPEC, time, motion, contacts,
                 InferenceFileReader.DEFAULT_SUPPLY_MESSAGE,
                 InferenceFileReader.DEFAULT_DECODE_VOLTAGE,
                 new CorrelatedCameraEvent(camera, lidars),
@@ -103,7 +103,7 @@ public class RobotStatusBuilder {
 
     public RobotStatusBuilder frontDistance(double frontDistance) {
         this.frontDistance = frontDistance;
-        this.lidarTime = simulationTime;
+        this.lidarTime = time;
         return this;
     }
 
@@ -131,7 +131,7 @@ public class RobotStatusBuilder {
 
     public RobotStatusBuilder rearDistance(double rearDistance) {
         this.rearDistance = rearDistance;
-        this.lidarTime = simulationTime;
+        this.lidarTime = time;
         return this;
     }
 
@@ -168,17 +168,17 @@ public class RobotStatusBuilder {
         robotDirDeg = robotDir().add(angle).toIntDeg();
     }
 
-    public long simulationTime() {
-        return simulationTime;
+    public long time() {
+        return time;
     }
 
-    public RobotStatusBuilder simulationTime(long simulationTime) {
-        this.simulationTime = simulationTime;
+    public RobotStatusBuilder time(long time) {
+        this.time = time;
         return this;
     }
 
     public RobotStatusBuilder updateLidarTime() {
-        lidarTime = simulationTime;
+        lidarTime = time;
         return this;
     }
 }

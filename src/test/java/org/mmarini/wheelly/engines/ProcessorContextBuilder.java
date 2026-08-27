@@ -65,7 +65,7 @@ public class ProcessorContextBuilder {
     }
 
     public ProcessorContextBuilder addSimulationTime(long deltaTime) {
-        worldModelBuilder.addSimulationTime(deltaTime);
+        worldModelBuilder.addTime(deltaTime);
         return this;
     }
 
@@ -147,7 +147,7 @@ public class ProcessorContextBuilder {
     }
 
     public ProcessorContextBuilder simulationTime(long simulationTime) {
-        worldModelBuilder.simulationTime(simulationTime);
+        worldModelBuilder.time(simulationTime);
         return this;
     }
 

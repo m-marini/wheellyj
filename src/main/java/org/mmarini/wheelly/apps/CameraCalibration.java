@@ -161,7 +161,6 @@ public class CameraCalibration {
      */
     private void createConnections() {
         controller.connectRobot(robot);
-        controller.setOnInference(this::onInference);
     }
 
     /**
@@ -188,8 +187,7 @@ public class CameraCalibration {
      * Create the flows
      */
     private void createFlows() {
-        controller.readRobotStatus()
-                .subscribe(this::onStatus);
+        controller.onRobotStatus(this::onStatus);
         controller.readErrors()
                 .subscribe(er -> {
                     comMonitor.onError(er);
@@ -205,8 +203,8 @@ public class CameraCalibration {
                 .doOnNext(s ->
                         logger.atDebug().log("Distinct {}", s))
                 .subscribe(this::onControlStatus);
-        controller.setOnLatch(this::onLatch);
-        controller.setOnInference(this::onInference);
+        controller.onLatch(this::onLatch);
+        controller.onInference(this::onInference);
         Observable.mergeArray(
                         SwingObservable.window(commandFrame, SwingObservable.WINDOW_ACTIVE),
                         SwingObservable.window(sensorFrame, SwingObservable.WINDOW_ACTIVE),
@@ -422,7 +420,7 @@ public class CameraCalibration {
     private void sampling(RobotStatus status) {
         CameraEvent cameraEvent = status.cameraEvent().camerEvent();
         WheellyLidarMessage lidar = status.lidarMessage();
-        long t0 = cameraEvent.simulationTime();
+        long t0 = cameraEvent.time();
         if (samplingStart == 0) {
             samplingStart = t0;
         }

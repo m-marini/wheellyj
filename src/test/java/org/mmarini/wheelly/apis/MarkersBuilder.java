@@ -42,11 +42,11 @@ public class MarkersBuilder {
 
     private final List<Supplier<List<LabelMarker>>> markerBuilders;
     private final long cleanTime;
-    private long simulationTime;
+    private long time;
 
     public MarkersBuilder() {
         this.markerBuilders = new ArrayList<>();
-        this.simulationTime = 1;
+        this.time = 1;
         cleanTime = Long.MAX_VALUE;
     }
 
@@ -55,7 +55,7 @@ public class MarkersBuilder {
     }
 
     public MarkersBuilder addMarker(String id, Point2D location) {
-        return addMarker(new LabelMarker(id, location, 1, simulationTime, cleanTime));
+        return addMarker(new LabelMarker(id, location, 1, time, cleanTime));
     }
 
     public MarkersBuilder addMarkers(Supplier<List<LabelMarker>> markers) {
@@ -63,8 +63,8 @@ public class MarkersBuilder {
         return this;
     }
 
-    public MarkersBuilder addSimulationTime(long deltaTime) {
-        simulationTime += deltaTime;
+    public MarkersBuilder addTime(long deltaTime) {
+        time += deltaTime;
         return this;
     }
 
@@ -84,12 +84,12 @@ public class MarkersBuilder {
                         .filter(t ->
                                 RadarMapBuilder.isMarker(t._2))
                         .map(t ->
-                                new LabelMarker(t._2, t._1, 1, simulationTime, cleanTime))
+                                new LabelMarker(t._2, t._1, 1, time, cleanTime))
                         .toList());
     }
 
-    public MarkersBuilder simulationTime(long simulationTime) {
-        this.simulationTime = simulationTime;
+    public MarkersBuilder time(long time) {
+        this.time = time;
         return this;
     }
 }

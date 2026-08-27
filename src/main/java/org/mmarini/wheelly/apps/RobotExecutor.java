@@ -220,8 +220,7 @@ public class RobotExecutor {
         controller.readControllerStatus()
                 .map(ControllerStatusMapper::map)
                 .subscribe(this::onControllerStatus);
-        controller.readCommand()
-                .subscribe(sensorMonitor::onCommand);
+        controller.onCommand(sensorMonitor::onCommand);
         agent.readState()
                 .subscribe(this::onState);
         agent.readStepUp()
@@ -370,13 +369,13 @@ public class RobotExecutor {
         WorldModel worldModel = ctx.worldModel();
         RobotStatus status = worldModel.robotStatus();
         if (robotStartTimestamp < 0) {
-            robotStartTimestamp = status.simulationTime();
+            robotStartTimestamp = status.robotTime();
         }
         sensorMonitor.onStatus(status);
         envPanel.robotStatus(status);
         envPanel.radarMap(worldModel.radarMap());
         envPanel.markers(worldModel.markers().values());
-        long robotClock = status.simulationTime();
+        long robotClock = status.robotTime();
         long robotElapsed = robotClock - robotStartTimestamp;
         envPanel.setTimeRatio((double) robotElapsed / (System.currentTimeMillis() - start));
         long clock = System.currentTimeMillis();

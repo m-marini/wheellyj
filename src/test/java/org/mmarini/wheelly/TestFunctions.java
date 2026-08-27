@@ -36,7 +36,6 @@ import org.hamcrest.Matcher;
 import org.junit.jupiter.params.provider.Arguments;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.GridTopology;
-import org.mmarini.wheelly.apis.RobotApi;
 import org.mmarini.wheelly.apis.WheellyMessage;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -63,28 +62,15 @@ import static org.mmarini.yaml.Utils.fromResource;
 
 public interface TestFunctions {
     static Predicate<? super WheellyMessage> after(long time) {
-        return msg -> msg.simulationTime() > time;
+        return msg -> msg.time() > time;
     }
 
     static Predicate<? super WheellyMessage> before(long time) {
-        return msg -> msg.simulationTime() < time;
+        return msg -> msg.time() < time;
     }
 
     static <T extends WheellyMessage> T findMessage(List<T> messages, Predicate<? super WheellyMessage> pred) {
         return messages.stream().filter(pred).findFirst().orElse(null);
-    }
-
-    /**
-     * Pause the execution until simulation time >= time
-     *
-     * @param robot the robot
-     * @param time  the time
-     */
-    static void pause(RobotApi robot, long time) {
-        robot.readMotion()
-                .filter(msg ->
-                        msg.simulationTime() >= time)
-                .blockingFirst();
     }
 
     static ArgumentJsonParser jsonFileArguments(String resource) throws IOException {
@@ -131,7 +117,7 @@ public interface TestFunctions {
     }
 
     static Predicate<WheellyMessage> notBefore(long time) {
-        return msg -> msg.simulationTime() >= time;
+        return msg -> msg.time() >= time;
     }
 
     static <T extends WheellyMessage> void waitFor(Flowable<T> messages, Predicate<T> pred, long timeout) {

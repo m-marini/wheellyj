@@ -130,8 +130,8 @@ public class WorldModeller implements WorldModellerApi {
     @Override
     public WorldModeller connectController(RobotControllerConnector controller) {
         this.controller = requireNonNull(controller);
-        controller.setOnLatch(this::onLatch);
-        controller.setOnInference(this::onInference);
+        controller.onLatch(this::onLatch);
+        controller.onInference(this::onInference);
         controller.readReady()
                 .subscribeOn(Schedulers.io())
                 .subscribe(this::onConnected);

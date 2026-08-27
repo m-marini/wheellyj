@@ -40,13 +40,13 @@ import static java.lang.String.format;
 /**
  * The camera event
  *
- * @param simulationTime the simulation time (ms)
- * @param qrCode         the captured QRCode
- * @param points         the QRCode vertices
- * @param direction      the direction of label
+ * @param time      the message time (ms)
+ * @param qrCode    the captured QRCode
+ * @param points    the QRCode vertices
+ * @param direction the direction of label
  */
 public record CameraEvent(
-        long simulationTime,
+        long time,
         String qrCode,
         int width, int height,
         Point2D[] points,
@@ -58,7 +58,7 @@ public record CameraEvent(
     /**
      * Returns the camera event from line
      *
-     * @param line  the data line
+     * @param line       the data line
      * @param widthRatio the width ratio
      */
     public static CameraEvent create(Timed<String> line, double widthRatio, long timeOffset) {
@@ -89,11 +89,11 @@ public record CameraEvent(
     /**
      * Returns the camera event from line
      *
-     * @param simTime    the simulation time
+     * @param time       the message time (ms)
      * @param arg        the data line
      * @param widthRatio the width ratio
      */
-    public static CameraEvent parse(long simTime, String arg, double widthRatio) {
+    public static CameraEvent parse(long time, String arg, double widthRatio) {
         Matcher m = ARG_PATTERN.matcher(arg);
         if (!m.matches()) {
             throw new IllegalArgumentException(format("Wrong camera message \"%s\"", arg));
@@ -110,7 +110,7 @@ public record CameraEvent(
             xTot += x;
         }
         Complex direction = Complex.fromPoint(((xTot - width * 2) / 4) * widthRatio, width);
-        return new CameraEvent(simTime, qrcode, width, height, points, direction);
+        return new CameraEvent(time, qrcode, width, height, points, direction);
     }
 
     /**

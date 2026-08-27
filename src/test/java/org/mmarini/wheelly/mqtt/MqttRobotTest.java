@@ -40,6 +40,7 @@ import org.mmarini.Tuple2;
 import org.mmarini.wheelly.apis.*;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -68,10 +69,10 @@ class MqttRobotTest {
     private MqttRobot robot;
     private TestSubscriber<RobotStatusApi> statusSub;
     private TestSubscriber<Throwable> errorSub;
-    private TestSubscriber<CameraEvent> cameraSub;
-    private TestSubscriber<WheellyContactsMessage> contactsSub;
-    private TestSubscriber<WheellyMotionMessage> motionSub;
     private MockMqttClient mockClient;
+    private List<WheellyContactsMessage> contacts;
+    private List<WheellyMotionMessage> motions;
+    private List<CameraEvent> cameras;
 
     void createRobot(String url) throws MqttException {
         robot = assertDoesNotThrow(() -> MqttRobot.create(url, CLIENT_ID, USER, PASSWORD,
@@ -79,19 +80,11 @@ class MqttRobotTest {
                 CONFIGURE_TIMEOUT, RETRY_INTERVAL, DEFAULT_ROBOT_SPEC,
                 new String[]{CONFIG_STRING}));
         assertNotNull(robot);
-        statusSub = new TestSubscriber<>();
-        errorSub = new TestSubscriber<>();
-        cameraSub = new TestSubscriber<>();
-        this.motionSub = new TestSubscriber<>();
-        this.contactsSub = new TestSubscriber<>();
         robot.readRobotStatus().subscribe(statusSub);
         robot.readErrors().subscribe(errorSub);
-        robot.readCamera()
-                .subscribe(cameraSub);
-        robot.readContacts()
-                .subscribe(contactsSub);
-        robot.readMotion()
-                .subscribe(motionSub);
+        robot.onCamera(cameras::add);
+        robot.onContacts(contacts::add);
+        robot.onMotion(motions::add);
         mockClient = assertDoesNotThrow(MockMqttClient::new);
         mockClient.start();
         mockClient.readCommands().subscribe(
@@ -102,6 +95,11 @@ class MqttRobotTest {
 
     @BeforeEach
     void setUp() throws MqttException {
+        statusSub = new TestSubscriber<>();
+        errorSub = new TestSubscriber<>();
+        cameras = new ArrayList<>();
+        this.motions = new ArrayList<>();
+        this.contacts = new ArrayList<>();
         createRobot(BROKER_URL);
     }
 
@@ -134,13 +132,52 @@ class MqttRobotTest {
         mockClient.close();
         Completable.timer(CLOSE_DELAY, TimeUnit.MILLISECONDS).blockingAwait();
 
-        cameraSub.assertNoErrors();
-        cameraSub.assertComplete();
-        cameraSub.assertValueCount(1);
+        assertThat(cameras, hasSize(1));
 
-        List<CameraEvent> msgs = cameraSub.values();
-        assertThat(msgs.getFirst().simulationTime(), greaterThan(0L));
+        List<CameraEvent> msgs = cameras;
+        assertThat(msgs.getFirst().time(), greaterThan(0L));
         assertEquals("A", msgs.getFirst().qrCode());
+    }
+
+    @Test
+    void testConfiguration() throws IOException {
+        // Given...
+
+        // When ....
+        robot.connect();
+
+        robot.readRobotStatus()
+                .any(RobotStatusApi::configured)
+                .blockingGet();
+
+        Completable.timer(100, TimeUnit.MILLISECONDS).blockingAwait();
+        robot.close();
+        robot.readRobotStatus().ignoreElements().blockingAwait();
+        Completable.timer(100, TimeUnit.MILLISECONDS).blockingAwait();
+        mockClient.close();
+
+        // Then ...
+        statusSub.assertNoErrors();
+        statusSub.assertComplete();
+
+        List<RobotStatusApi> msgs = statusSub.values();
+        boolean configured = msgs.stream().anyMatch(RobotStatusApi::configured);
+        assertTrue(configured);
+
+        TestSubscriber<Tuple2<String, MqttMessage>> subscriber = mockClient.subscriber();
+        subscriber.assertComplete();
+        subscriber.assertNoErrors();
+        assertEquals(CONFIG_STRING, subscriber.values().stream()
+                .filter(t -> "cmd/wheelly/cf".equals(t._1))
+                .map(t -> new String(t._2.getPayload()))
+                .findAny()
+                .get());
+
+        errorSub.assertNoErrors();
+        errorSub.assertComplete();
+        errorSub.assertNoValues();
+
+        assertThat(cameras, empty());
     }
 
     @Test
@@ -183,68 +220,14 @@ class MqttRobotTest {
         errorSub.assertComplete();
         errorSub.assertNoValues();
 
-        cameraSub.assertComplete();
-        cameraSub.assertNoErrors();
-        cameraSub.assertNoValues();
-
-        motionSub.assertComplete();
-        motionSub.assertNoErrors();
-        motionSub.assertNoValues();
-
-        contactsSub.assertComplete();
-        contactsSub.assertNoErrors();
-        contactsSub.assertNoValues();
-    }
-
-    @Test
-    void testConfiguration() throws IOException {
-        // Given...
-
-        // When ....
-        robot.connect();
-
-        robot.readRobotStatus()
-                .any(RobotStatusApi::configured)
-                .blockingGet();
-
-        Completable.timer(100, TimeUnit.MILLISECONDS).blockingAwait();
-        robot.close();
-        robot.readRobotStatus().ignoreElements().blockingAwait();
-        Completable.timer(100, TimeUnit.MILLISECONDS).blockingAwait();
-        mockClient.close();
-
-        // Then ...
-        statusSub.assertNoErrors();
-        statusSub.assertComplete();
-
-        List<RobotStatusApi> msgs = statusSub.values();
-        boolean configured = msgs.stream().anyMatch(RobotStatusApi::configured);
-        assertTrue(configured);
-
-        TestSubscriber<Tuple2<String, MqttMessage>> subscriber = mockClient.subscriber();
-        subscriber.assertComplete();
-        subscriber.assertNoErrors();
-        assertEquals(CONFIG_STRING, subscriber.values().stream()
-                .filter(t -> "cmd/wheelly/cf".equals(t._1))
-                .map(t -> new String(t._2.getPayload()))
-                .findAny()
-                .get());
-
-        errorSub.assertNoErrors();
-        errorSub.assertComplete();
-        errorSub.assertNoValues();
-
-        cameraSub.assertNoErrors();
-        cameraSub.assertComplete();
-        errorSub.assertNoValues();
+        assertThat(cameras, empty());
+        assertThat(motions, empty());
+        assertThat(contacts, empty());
     }
 
     @Test
     void testContactsMessage() throws IOException {
         // Given ...
-
-        TestSubscriber<WheellyContactsMessage> contactSub = new TestSubscriber<>();
-        robot.readContacts().subscribe(contactSub);
         // When connect
         robot.connect();
         // And waiting for robotConfigured
@@ -266,20 +249,15 @@ class MqttRobotTest {
         errorSub.assertComplete();
         errorSub.assertValueCount(0);
 
-        contactSub.assertNoErrors();
-        contactSub.assertComplete();
-        contactSub.assertValueCount(1);
+        assertThat(contacts, hasSize(1));
 
-        List<WheellyContactsMessage> msgs = contactSub.values();
-        assertThat(msgs.getFirst().simulationTime(), greaterThanOrEqualTo(10L));
+        List<WheellyContactsMessage> msgs = contacts;
+        assertThat(msgs.getFirst().time(), greaterThanOrEqualTo(10L));
         assertTrue(msgs.getFirst().frontSensors());
         assertFalse(msgs.getFirst().rearSensors());
         assertTrue(msgs.getFirst().canMoveForward());
         assertFalse(msgs.getFirst().canMoveBackward());
-
-        cameraSub.assertNoErrors();
-        cameraSub.assertComplete();
-        cameraSub.assertValueCount(0);
+        assertThat(cameras, empty());
     }
 
     @Test
@@ -315,10 +293,7 @@ class MqttRobotTest {
         errorSub.assertComplete();
         errorSub.assertValueCount(0);
 
-        cameraSub.assertNoErrors();
-        cameraSub.assertComplete();
-        cameraSub.assertValueCount(0);
-
+        assertThat(cameras, empty());
     }
 
     @Test
@@ -361,9 +336,7 @@ class MqttRobotTest {
         errorSub.assertComplete();
         errorSub.assertValueCount(0);
 
-        cameraSub.assertNoErrors();
-        cameraSub.assertComplete();
-        cameraSub.assertValueCount(0);
+        assertThat(cameras, empty());
     }
 
     @Test
@@ -380,7 +353,7 @@ class MqttRobotTest {
                 .blockingAwait(TIMEOUT, TimeUnit.MILLISECONDS);
 
         Completable.timer(10, TimeUnit.MILLISECONDS).blockingAwait();
-        long t0 = robot.simulationTime();
+        long t0 = robot.robotTime();
         mockClient.sendRobot("mt", "0,0,0,-45,0,0,0,0,0,0,0,0,0,0");
         Completable.timer(MESSAGE_DELAY, TimeUnit.MILLISECONDS).blockingAwait();
 
@@ -394,18 +367,14 @@ class MqttRobotTest {
         errorSub.assertComplete();
         errorSub.assertNoErrors();
 
-        motionSub.assertNoErrors();
-        motionSub.assertComplete();
-        motionSub.assertValueCount(1);
+        assertThat(motions, hasSize(1));
 
-        List<WheellyMotionMessage> msgs = motionSub.values();
-        assertThat(msgs.getFirst().simulationTime(), greaterThanOrEqualTo(t0));
-        assertThat(msgs.getFirst().simulationTime(), lessThanOrEqualTo(t0 + 100L));
+        List<WheellyMotionMessage> msgs = motions;
+        assertThat(msgs.getFirst().time(), greaterThanOrEqualTo(t0));
+        assertThat(msgs.getFirst().time(), lessThanOrEqualTo(t0 + 100L));
         assertEquals(-45, msgs.getFirst().directionDeg());
 
-        cameraSub.assertNoErrors();
-        cameraSub.assertComplete();
-        cameraSub.assertNoErrors();
+        assertThat(cameras, empty());
     }
 
     @Test
@@ -441,16 +410,14 @@ class MqttRobotTest {
         errorSub.assertComplete();
         errorSub.assertValueCount(0);
 
-        cameraSub.assertNoErrors();
-        cameraSub.assertComplete();
-        cameraSub.assertValueCount(0);
+        assertThat(cameras, empty());
     }
 
     @Test
     void testSupplyMessage() throws IOException {
         // Given ...
-        TestSubscriber<WheellySupplyMessage> supplySub = new TestSubscriber<>();
-        robot.readSupply().subscribe(supplySub);
+        List<WheellySupplyMessage> supplies = new ArrayList<>();
+        robot.onSupply(supplies::add);
 
         // When connect
         robot.connect();
@@ -473,17 +440,12 @@ class MqttRobotTest {
         errorSub.assertComplete();
         errorSub.assertValueCount(0);
 
-        supplySub.assertNoErrors();
-        supplySub.assertComplete();
-        supplySub.assertValueCount(1);
+        assertThat(supplies, hasSize(1));
 
-        List<WheellySupplyMessage> msgs = supplySub.values();
-        assertThat(msgs.getFirst().simulationTime(), greaterThanOrEqualTo(10L));
-        assertEquals(1, msgs.getFirst().supplySensor());
+        assertThat(supplies.getFirst().time(), greaterThanOrEqualTo(10L));
+        assertEquals(1, supplies.getFirst().supplySensor());
 
-        cameraSub.assertNoErrors();
-        cameraSub.assertComplete();
-        cameraSub.assertValueCount(0);
+        assertThat(cameras, empty());
     }
 
     @Test

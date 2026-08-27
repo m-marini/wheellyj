@@ -38,10 +38,10 @@ import static java.lang.String.format;
 /**
  * Contains the supply voltage value
  *
- * @param simulationTime the simulation markerTime (ms)
- * @param supplySensor   the supply voltage (U)
+ * @param time         the simulation markerTime (ms)
+ * @param supplySensor the supply voltage (U)
  */
-public record WheellySupplyMessage(long simulationTime, int supplySensor) implements WheellyMessage {
+public record WheellySupplyMessage(long time, int supplySensor) implements WheellyMessage {
     public static final int NO_PARAMS = 3;
     // [sampleTime] [voltage (U)]
     public static final Pattern ARG_PATTERN = Pattern.compile("^\\d+,(\\d+)$");
@@ -89,15 +89,15 @@ public record WheellySupplyMessage(long simulationTime, int supplySensor) implem
      *     [voltage (U)]
      * </pre>
      *
-     * @param simTime the simulation time (ms)
-     * @param arg     the argument string
+     * @param time the message time (ms)
+     * @param arg  the argument string
      */
-    public static WheellySupplyMessage parse(long simTime, String arg) {
+    public static WheellySupplyMessage parse(long time, String arg) {
         Matcher m = ARG_PATTERN.matcher(arg);
         if (!m.matches()) {
             throw new IllegalArgumentException(format("Wrong supply message \"%s\"", arg));
         }
         int supplySensor = parseInt(m.group(1));
-        return new WheellySupplyMessage(simTime, supplySensor);
+        return new WheellySupplyMessage(time, supplySensor);
     }
 }

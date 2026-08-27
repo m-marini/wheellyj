@@ -259,8 +259,8 @@ public class Wheelly {
      * Creates the flows of events
      */
     private void createFlows() {
-        controller.readRobotStatus().subscribe(this::onStatusReady);
-        controller.readCommand().subscribe(sensorMonitor::onCommand);
+        controller.onRobotStatus(this::onStatusReady);
+        controller.onCommand(sensorMonitor::onCommand);
         controller.readErrors().subscribe(err -> {
             comMonitor.onError(err);
             logger.atError().setCause(err).log();
@@ -422,6 +422,7 @@ public class Wheelly {
      * @param inferenceResult the inference result
      */
     private void onInference(Tuple2<WorldModel, RobotCommands> inferenceResult) {
+        logger.atDebug().log("on Inference");
         WorldModel worldModel = inferenceResult._1;
         RobotStatus robotStatus = worldModel.robotStatus();
         Map<String, LabelMarker> markers = worldModel.markers();
@@ -436,7 +437,7 @@ public class Wheelly {
             }
         }
 
-        long robotClock = robotStatus.simulationTime();
+        long robotClock = robotStatus.robotTime();
         envPanel.robotStatus(robotStatus);
         sensorMonitor.onStatus(robotStatus);
         envPanel.radarMap(worldModel.radarMap());
@@ -465,6 +466,7 @@ public class Wheelly {
         }
         prevRobotStep = robotClock;
         prevStep = time;
+        logger.atDebug().log("on Inference end");
     }
 
     private RobotCommands onInferenceProcess(WorldModel state) {
@@ -601,10 +603,13 @@ public class Wheelly {
      * @param status the status
      */
     private void onStatusReady(RobotStatus status) {
+        envPanel.robotStatus(status);
+        envPanel.robotStatus(status);
+        sensorMonitor.onStatus(status);
         if (robotStartTimestamp < 0) {
-            robotStartTimestamp = status.simulationTime();
+            robotStartTimestamp = status.robotTime();
         }
-        long robotElapsed = status.simulationTime() - robotStartTimestamp;
+        long robotElapsed = status.robotTime() - robotStartTimestamp;
         envPanel.setTimeRatio(controller.simRealSpeed());
         long now = System.currentTimeMillis();
         if (now > autosaveInstant) {

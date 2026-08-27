@@ -41,7 +41,8 @@ import java.io.File;
 /**
  * API Interface for robot
  */
-public interface RobotApi extends Closeable, WithWheellyMessageFlowable, WithCameraFlowable, WithErrorFlowable {
+public interface RobotApi extends Closeable, WithErrorFlowable,
+        WithWheellyMessageCallback, WithCameraCallback {
 
     /**
      * Returns the robot api from configuration
@@ -63,9 +64,23 @@ public interface RobotApi extends Closeable, WithWheellyMessageFlowable, WithCam
     }
 
     /**
+     * Moves robot to the given position returning true on success
+     *
+     * @param location the location (DEG)
+     */
+    Single<Boolean> backward(Point2D location);
+
+    /**
      * Connects the robot
      */
     void connect();
+
+    /**
+     * Moves robot to the given position returning true on success
+     *
+     * @param location the location (DEG)
+     */
+    Single<Boolean> forward(Point2D location);
 
     /**
      * Halts the robot returning true on success
@@ -76,27 +91,6 @@ public interface RobotApi extends Closeable, WithWheellyMessageFlowable, WithCam
      * Returns true if the robot is halted
      */
     boolean isHalt();
-
-    /**
-     * Moves robot to the given position returning true on success
-     *
-     * @param location the location (DEG)
-     */
-    Single<Boolean> backward(Point2D location);
-
-    /**
-     * Moves robot to the given position returning true on success
-     *
-     * @param location the location (DEG)
-     */
-    Single<Boolean> forward(Point2D location);
-
-    /**
-     * Rotate robot to the given direction returning true on success
-     *
-     * @param dir the direction (DEG)
-     */
-    Single<Boolean> rotate(int dir);
 
     /**
      * Returns the robot line status
@@ -114,6 +108,11 @@ public interface RobotApi extends Closeable, WithWheellyMessageFlowable, WithCam
     RobotSpec robotSpec();
 
     /**
+     * Returns the robot localTime
+     */
+    long robotTime();
+
+    /**
      * Moves the sensor to the given direction returning true on success
      *
      * @param direction the direction (DEG)
@@ -126,7 +125,9 @@ public interface RobotApi extends Closeable, WithWheellyMessageFlowable, WithCam
     double simulationSpeed();
 
     /**
-     * Returns the robot localTime
+     * Rotate robot to the given direction returning true on success
+     *
+     * @param dir the direction (DEG)
      */
-    long simulationTime();
+    Single<Boolean> rotate(int dir);
 }

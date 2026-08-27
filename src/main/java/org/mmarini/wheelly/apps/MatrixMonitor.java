@@ -89,7 +89,7 @@ public class MatrixMonitor {
      *
      * @param args the command line arguments
      */
-    static void main(String[] args) {
+    public static void main(String[] args) {
         try {
             new MatrixMonitor().init(args).run();
         } catch (ArgumentParserException ignored) {
@@ -246,7 +246,6 @@ public class MatrixMonitor {
      */
     private void createConnections() {
         controller.connectRobot(robot);
-        controller.setOnInference(this::onInference);
     }
 
     /**
@@ -274,8 +273,7 @@ public class MatrixMonitor {
      * Create the flows
      */
     private void createFlows() {
-        controller.readRobotStatus()
-                .subscribe(this::onRobotStatus);
+        controller.onRobotStatus(this::onRobotStatus);
         controller.readErrors()
                 .subscribe(er -> {
                     comMonitor.onError(er);
@@ -291,8 +289,8 @@ public class MatrixMonitor {
                 .doOnNext(s ->
                         logger.atDebug().log("Distinct {}", s))
                 .subscribe(this::onControlStatus);
-        controller.setOnLatch(this::onLatch);
-        controller.setOnInference(this::onInference);
+        controller.onLatch(this::onLatch);
+        controller.onInference(this::onInference);
 
         Observable.mergeArray(
                         SwingObservable.window(commandFrame, SwingObservable.WINDOW_ACTIVE),

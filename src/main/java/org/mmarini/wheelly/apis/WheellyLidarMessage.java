@@ -42,7 +42,7 @@ import static org.mmarini.wheelly.apis.RobotSpec.pulses2Location;
 /**
  * Contains the lidar sensor information
  *
- * @param simulationTime   the simulation markerTime (ms)
+ * @param time             the simulation markerTime (ms)
  * @param headDirectionDeg the sensor direction at ping (DEG)
  * @param headDirection    the sensor direction at ping
  * @param frontDistance    the front distance (mm)
@@ -52,7 +52,7 @@ import static org.mmarini.wheelly.apis.RobotSpec.pulses2Location;
  * @param robotYawDeg      the robot direction at ping (DEG)
  * @param robotYaw         the robot direction at ping
  */
-public record WheellyLidarMessage(long simulationTime,
+public record WheellyLidarMessage(long time,
                                   int headDirectionDeg, Complex headDirection,
                                   int frontDistance,
                                   int rearDistance,
@@ -95,7 +95,7 @@ public record WheellyLidarMessage(long simulationTime,
     /**
      * Creates the message
      *
-     * @param simulationTime   the simulation markerTime (ms)
+     * @param time             the message time (ms)
      * @param frontDistance    the front distance (mm)
      * @param rearDistance     the rear distance (mm)
      * @param xPulses          the x robot location pulses at hasObstacle ping
@@ -103,15 +103,15 @@ public record WheellyLidarMessage(long simulationTime,
      * @param robotYawDeg      the robot direction at ping (DEG)
      * @param headDirectionDeg the sensor direction at ping (DEG)
      */
-    public WheellyLidarMessage(long simulationTime, int frontDistance, int rearDistance, double xPulses, double yPulses, int robotYawDeg, int headDirectionDeg) {
-        this(simulationTime, headDirectionDeg, Complex.fromDeg(headDirectionDeg), frontDistance, rearDistance, xPulses, yPulses,
+    public WheellyLidarMessage(long time, int frontDistance, int rearDistance, double xPulses, double yPulses, int robotYawDeg, int headDirectionDeg) {
+        this(time, headDirectionDeg, Complex.fromDeg(headDirectionDeg), frontDistance, rearDistance, xPulses, yPulses,
                 robotYawDeg, Complex.fromDeg(robotYawDeg));
     }
 
     /**
      * Creates the lidar message
      *
-     * @param simulationTime   the simulation markerTime (ms)
+     * @param time             the message time (ms)
      * @param headDirectionDeg the sensor direction at ping (DEG)
      * @param headDirection    the sensor direction at ping
      * @param frontDistance    the front distance (mm)
@@ -121,10 +121,10 @@ public record WheellyLidarMessage(long simulationTime,
      * @param robotYawDeg      the robot direction at ping (DEG)
      * @param robotYaw         the robot direction at ping
      */
-    public WheellyLidarMessage(long simulationTime, int headDirectionDeg, Complex headDirection,
+    public WheellyLidarMessage(long time, int headDirectionDeg, Complex headDirection,
                                int frontDistance, int rearDistance,
                                double xPulses, double yPulses, int robotYawDeg, Complex robotYaw) {
-        this.simulationTime = simulationTime;
+        this.time = time;
         this.headDirectionDeg = headDirectionDeg;
         this.headDirection = requireNonNull(headDirection);
         this.frontDistance = frontDistance;
@@ -142,7 +142,7 @@ public record WheellyLidarMessage(long simulationTime,
      */
     public WheellyLidarMessage frontDistance(int frontDistance) {
         return frontDistance != this.frontDistance
-                ? new WheellyLidarMessage(simulationTime, headDirectionDeg, headDirection, frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, robotYaw)
+                ? new WheellyLidarMessage(time, headDirectionDeg, headDirection, frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, robotYaw)
                 : this;
     }
 
@@ -154,7 +154,7 @@ public record WheellyLidarMessage(long simulationTime,
     public WheellyLidarMessage headDirection(Complex direction) {
         int headDirectionDeg = direction.toIntDeg();
         return headDirectionDeg != this.headDirectionDeg
-                ? new WheellyLidarMessage(simulationTime, frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, headDirectionDeg)
+                ? new WheellyLidarMessage(time, frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, headDirectionDeg)
                 : this;
     }
 
@@ -165,7 +165,7 @@ public record WheellyLidarMessage(long simulationTime,
      */
     public WheellyLidarMessage rearDistance(int rearDistance) {
         return rearDistance != this.rearDistance
-                ? new WheellyLidarMessage(simulationTime, headDirectionDeg, headDirection, frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, robotYaw)
+                ? new WheellyLidarMessage(time, headDirectionDeg, headDirection, frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, robotYaw)
                 : this;
     }
 
@@ -177,6 +177,19 @@ public record WheellyLidarMessage(long simulationTime,
     }
 
     /**
+     * Returns the lidar messahe with robot location set
+     *
+     * @param robotLocation the robot location
+     */
+    public WheellyLidarMessage robotLocation(Point2D robotLocation) {
+        Point2D locationPulses = location2Pulses(robotLocation);
+        return !(locationPulses.getX() == xPulses && locationPulses.getY() == yPulses)
+                ? new WheellyLidarMessage(time, headDirectionDeg, headDirection, frontDistance, rearDistance, locationPulses.getX(), locationPulses.getY(), robotYawDeg, robotYaw)
+                : this;
+
+    }
+
+    /**
      * Sets the robot yaw
      *
      * @param direction the direction
@@ -184,7 +197,7 @@ public record WheellyLidarMessage(long simulationTime,
     public WheellyLidarMessage robotYaw(Complex direction) {
         int robotYawDeg = direction.toIntDeg();
         return robotYawDeg != this.robotYawDeg
-                ? new WheellyLidarMessage(simulationTime, frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, headDirectionDeg)
+                ? new WheellyLidarMessage(time, frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, headDirectionDeg)
                 : this;
     }
 
@@ -195,31 +208,18 @@ public record WheellyLidarMessage(long simulationTime,
      */
     public WheellyLidarMessage sensorDirection(int sensorDirectionDeg) {
         return sensorDirectionDeg != this.headDirectionDeg
-                ? new WheellyLidarMessage(simulationTime, sensorDirectionDeg, Complex.fromDeg(sensorDirectionDeg), frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, robotYaw)
+                ? new WheellyLidarMessage(time, sensorDirectionDeg, Complex.fromDeg(sensorDirectionDeg), frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, robotYaw)
                 : this;
     }
 
     /**
-     * Returns the lidar messahe with roboto location set
+     * Returns the proxy message with time
      *
-     * @param robotLocation the robot location
+     * @param time the message time (ms)
      */
-    public WheellyLidarMessage setRobotLocation(Point2D robotLocation) {
-        Point2D locationPulses = location2Pulses(robotLocation);
-        return !(locationPulses.getX() == xPulses && locationPulses.getY() == yPulses)
-                ? new WheellyLidarMessage(simulationTime, headDirectionDeg, headDirection, frontDistance, rearDistance, locationPulses.getX(), locationPulses.getY(), robotYawDeg, robotYaw)
-                : this;
-
-    }
-
-    /**
-     * Returns the proxy message with simulation markerTime
-     *
-     * @param simulationTime the simulation markerTime
-     */
-    public WheellyLidarMessage simulationTime(long simulationTime) {
-        return simulationTime != this.simulationTime
-                ? new WheellyLidarMessage(simulationTime, headDirectionDeg, Complex.fromDeg(headDirectionDeg), frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, robotYaw)
+    public WheellyLidarMessage time(long time) {
+        return time != this.time
+                ? new WheellyLidarMessage(time, headDirectionDeg, Complex.fromDeg(headDirectionDeg), frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, robotYaw)
                 : this;
     }
 }
