@@ -244,7 +244,7 @@ public record ProcessorCommand(String id, Consumer<ProcessorContextApi> command)
      * @param context the processor context
      */
     private static void timeCommand(ProcessorContextApi context) {
-        context.push(context.worldModel().robotStatus().simulationTime());
+        context.push(context.worldModel().robotStatus().robotTime());
     }
 
     /**

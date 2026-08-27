@@ -149,7 +149,7 @@ public class MappingState extends TimeOutState {
     private StateResult checkForRange(ProcessorContextApi context) {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         int sensorDir = robotStatus.headDirection().toIntDeg();
-        long lidarTime = robotStatus.lidarMessage().simulationTime();
+        long lidarTime = robotStatus.lidarMessage().time();
         if (sensorDir != targetSensorDir || prevLidarTime == lidarTime) {
             return new StateResult(NONE_EXIT,
                     RobotCommands.halt(targetSensorDir));
@@ -176,7 +176,7 @@ public class MappingState extends TimeOutState {
         this.status = MappingStateStatus.RIGHT_SCANNING;
         this.numberOfSamples = 0;
         this.targetSensorDir = 0;
-        this.prevLidarTime = status.lidarMessage().simulationTime();
+        this.prevLidarTime = status.lidarMessage().time();
         logger.atDebug().log("Entry scan {} ...", 0);
     }
 

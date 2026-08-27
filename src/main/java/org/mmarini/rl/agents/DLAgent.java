@@ -361,6 +361,8 @@ public class DLAgent implements BatchAgent {
             } else {
                 train(trainingNetwork, trajectory);
             }
+        } else {
+            logger.atDebug().log("Trajectory size {}", st.trajectoryBuffer().size());
         }
         logger.atDebug().log("Observed result.");
         return this;
@@ -419,7 +421,7 @@ public class DLAgent implements BatchAgent {
      * @param trajectory      the trajectory
      */
     private void train(ComputationGraph trainingNetwork, Trajectory trajectory) {
-        logger.atDebug().log("Training network ...");
+        logger.atInfo().log("Training network ...");
 
         double avg;
         try (TrajectoryDatasetIterator iterator = createTrajectoryIterator(trajectory, batchSize, status.get().averageReward())) {
@@ -430,7 +432,7 @@ public class DLAgent implements BatchAgent {
             avg = iterator.avgReward();
         }
 
-        logger.atDebug().log("Trained network");
+        logger.atInfo().log("Trained network");
         status.updateAndGet(s ->
                 s.trained(trainingNetwork, (float) avg));
     }

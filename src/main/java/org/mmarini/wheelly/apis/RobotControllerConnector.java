@@ -53,12 +53,12 @@ public interface RobotControllerConnector {
      *
      * @param callback the callback
      */
-    void setOnInference(Consumer<RobotStatus> callback);
+    void onInference(Consumer<RobotStatus> callback);
 
     /**
      * Registers the consumer of latch event
      *
      * @param callback the callback
      */
-    void setOnLatch(Consumer<RobotStatus> callback);
+    void onLatch(Consumer<RobotStatus> callback);
 }

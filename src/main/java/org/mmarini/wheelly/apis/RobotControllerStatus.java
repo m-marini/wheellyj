@@ -43,7 +43,8 @@ import java.util.Objects;
  * @param ready              true if the controller is ready
  * @param started            true if the controller is started
  * @param lastInference      the last inference instant
- * @param nextSyncTime       the next sync time
+ * @param nextSyncTime       the next sync instant
+ * @param commandTime        the command instant
  * @param lastSyncCommand    the last sync command
  */
 public record RobotControllerStatus(
@@ -53,7 +54,9 @@ public record RobotControllerStatus(
         boolean inferenceRequested, boolean ready,
         boolean started,
         long lastInference,
-        long nextSyncTime, RobotCommands lastSyncCommand) implements RobotControllerStatusApi {
+        long nextSyncTime,
+        long commandTime,
+        RobotCommands lastSyncCommand) implements RobotControllerStatusApi {
 
     private static final Logger logger = LoggerFactory.getLogger(RobotControllerStatus.class);
 
@@ -64,7 +67,7 @@ public record RobotControllerStatus(
         logger.atDebug().log("Clear inference");
         return !inferencing && !inferenceRequested
                 ? this
-                : new RobotControllerStatus(robotStatus, command, false, false, ready, started, lastInference, nextSyncTime, lastSyncCommand);
+                : new RobotControllerStatus(robotStatus, command, false, false, ready, started, lastInference, nextSyncTime, commandTime, lastSyncCommand);
     }
 
     /**
@@ -75,7 +78,7 @@ public record RobotControllerStatus(
     public RobotControllerStatus command(RobotCommands command) {
         return Objects.equals(this.command, command)
                 ? this
-                : new RobotControllerStatus(robotStatus, command, inferencing, inferenceRequested, ready, started, lastInference, nextSyncTime, lastSyncCommand);
+                : new RobotControllerStatus(robotStatus, command, inferencing, inferenceRequested, ready, started, lastInference, nextSyncTime, robotStatus.robotTime(), lastSyncCommand);
     }
 
     /**
@@ -93,7 +96,7 @@ public record RobotControllerStatus(
     public RobotControllerStatus nextSyncTime(long nextSyncTime) {
         return this.nextSyncTime == nextSyncTime
                 ? this
-                : new RobotControllerStatus(robotStatus, command, inferencing, inferenceRequested, ready, started, lastInference, nextSyncTime, command);
+                : new RobotControllerStatus(robotStatus, command, inferencing, inferenceRequested, ready, started, lastInference, nextSyncTime, commandTime, command);
     }
 
     /**
@@ -104,7 +107,7 @@ public record RobotControllerStatus(
     public RobotControllerStatus ready(boolean ready) {
         return this.ready == ready
                 ? this
-                : new RobotControllerStatus(robotStatus, command, inferencing, inferenceRequested, ready, started, lastInference, nextSyncTime, lastSyncCommand);
+                : new RobotControllerStatus(robotStatus, command, inferencing, inferenceRequested, ready, started, lastInference, nextSyncTime, commandTime, lastSyncCommand);
     }
 
     /**
@@ -116,10 +119,10 @@ public record RobotControllerStatus(
     public RobotControllerStatus requestInference(long time, long inferenceInterval) {
         if (inferenceRequested) {
             logger.atDebug().log("Inference already requested inferencing={}", inferencing);
-            return new RobotControllerStatus(robotStatus, command, inferencing, false, ready, started, lastInference, nextSyncTime, lastSyncCommand);
+            return new RobotControllerStatus(robotStatus, command, inferencing, false, ready, started, lastInference, nextSyncTime, commandTime, lastSyncCommand);
         } else if (ready && !((inferencing || time < lastInference + inferenceInterval))) {
             logger.atDebug().log("Scheduling inference");
-            return new RobotControllerStatus(robotStatus, command, true, true, true, started, time, nextSyncTime, lastSyncCommand);
+            return new RobotControllerStatus(robotStatus, command, true, true, true, started, time, nextSyncTime, commandTime, lastSyncCommand);
         } else {
             return this;
         }
@@ -133,7 +136,7 @@ public record RobotControllerStatus(
     public RobotControllerStatus robotStatus(RobotStatus robotStatus) {
         return Objects.equals(this.robotStatus, robotStatus)
                 ? this
-                : new RobotControllerStatus(robotStatus, command, inferencing, inferenceRequested, ready, started, lastInference, nextSyncTime, lastSyncCommand);
+                : new RobotControllerStatus(robotStatus, command, inferencing, inferenceRequested, ready, started, lastInference, nextSyncTime, commandTime, lastSyncCommand);
     }
 
     /**
@@ -144,7 +147,7 @@ public record RobotControllerStatus(
     public RobotControllerStatus started(boolean started) {
         return this.started == started
                 ? this
-                : new RobotControllerStatus(robotStatus, command, inferencing, inferenceRequested, ready, started, lastInference, nextSyncTime, lastSyncCommand);
+                : new RobotControllerStatus(robotStatus, command, inferencing, inferenceRequested, ready, started, lastInference, nextSyncTime, commandTime, lastSyncCommand);
     }
 
     @Override

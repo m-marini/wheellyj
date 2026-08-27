@@ -137,8 +137,8 @@ class RobotControllerTestMockito {
         List<RobotStatus> states = statusSub.values();
 
         assertThat(states, hasSize(greaterThanOrEqualTo(2)));
-        assertEquals(0L, states.getFirst().simulationTime());
-        assertEquals(5000L, states.getLast().simulationTime());
+        assertEquals(0L, states.getFirst().robotTime());
+        assertEquals(5000L, states.getLast().robotTime());
 
         assertThat(counter.get(), greaterThanOrEqualTo(7));
     }
@@ -172,8 +172,8 @@ class RobotControllerTestMockito {
         List<RobotStatus> states = statusSub.values();
 
         assertThat(states, hasSize(11));
-        assertEquals(0L, states.getFirst().simulationTime());
-        assertEquals(5000L, states.getLast().simulationTime());
+        assertEquals(0L, states.getFirst().robotTime());
+        assertEquals(5000L, states.getLast().robotTime());
     }
 
      */
@@ -198,8 +198,8 @@ class RobotControllerTestMockito {
         List<RobotStatus> states = statusSub.values();
 
         assertThat(states, hasSize(11));
-        assertEquals(0L, states.getFirst().simulationTime());
-        assertEquals(5000L, states.getLast().simulationTime());
+        assertEquals(0L, states.getFirst().robotTime());
+        assertEquals(5000L, states.getLast().robotTime());
     }
 
     @Test
@@ -230,8 +230,8 @@ class RobotControllerTestMockito {
         List<RobotStatus> states = statusSub.values();
 
         assertThat(states, hasSize(11));
-        assertEquals(0L, states.getFirst().simulationTime());
-        assertEquals(5000L, states.getLast().simulationTime());
+        assertEquals(0L, states.getFirst().robotTime());
+        assertEquals(5000L, states.getLast().robotTime());
     }
 
     @Test

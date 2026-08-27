@@ -28,7 +28,6 @@
 
 package org.mmarini.wheelly.apis;
 
-import io.reactivex.rxjava3.subscribers.TestSubscriber;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -36,6 +35,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
 
 import java.awt.geom.Point2D;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Stream;
@@ -54,11 +54,12 @@ import static org.mmarini.wheelly.apis.Utils.m2mm;
 public class SimRobotLidarTest {
 
     public static final long SEED = 1234;
-    public static final double MIN_OBSTALCE_DISTANCE = DEFAULT_OBSTACLE_RADIUS + ROBOT_RADIUS + MM;
-    public static final double MAX_OBSTALCE_DISTANCE = MAX_RADAR_DISTANCE - DEFAULT_OBSTACLE_RADIUS - DEFAULT_HEAD_Y - DEFAULT_FRONT_LIDAR_DISTANCE;
-    public static final double CENTRES_DISTANCE = MIN_OBSTALCE_DISTANCE / sin(toRadians((double) DEFAULT_LIDAR_FOV_DEG / 2));
+    public static final double MIN_OBSTACLE_DISTANCE = DEFAULT_OBSTACLE_RADIUS + ROBOT_RADIUS + MM;
+    public static final double MAX_OBSTACLE_DISTANCE = MAX_RADAR_DISTANCE - DEFAULT_OBSTACLE_RADIUS - DEFAULT_HEAD_Y - DEFAULT_FRONT_LIDAR_DISTANCE;
+    public static final double CENTRES_DISTANCE = MIN_OBSTACLE_DISTANCE / sin(toRadians((double) DEFAULT_LIDAR_FOV_DEG / 2));
     public static final long CHANGE_MAP_PERIOD = 600000;
     public static final int NUM_RANDOM_TEST_CASES = 30;
+    public static final int LIDAR_INTERVAL = 5;
 
     public static Stream<Arguments> dataLidarFarObstacle() {
         return RandomArgumentsGenerator.create(SEED)
@@ -72,14 +73,14 @@ public class SimRobotLidarTest {
     }
 
     public static Stream<Arguments> dataLidarFarOuterObstacle() {
-        int outerAngleDeg = (int) (round(2 * toDegrees(asin(DEFAULT_OBSTACLE_RADIUS / MAX_OBSTALCE_DISTANCE)) + (double) DEFAULT_LIDAR_FOV_DEG / 2) + 1);
+        int outerAngleDeg = (int) (round(2 * toDegrees(asin(DEFAULT_OBSTACLE_RADIUS / MAX_OBSTACLE_DISTANCE)) + (double) DEFAULT_LIDAR_FOV_DEG / 2) + 1);
         return RandomArgumentsGenerator.create(SEED)
                 .uniform(-5.0, 5.0, 17) // x
                 .uniform(-5.0, 5.0, 17) // x
                 .uniform(0, 359) // robot dir
                 .uniform(-90, 90) // head dir
                 .uniform(outerAngleDeg, 360 - outerAngleDeg, 3) // obs dir
-                .choice(MAX_OBSTALCE_DISTANCE, MAX_OBSTALCE_DISTANCE) // obs distance
+                .choice(MAX_OBSTACLE_DISTANCE, MAX_OBSTACLE_DISTANCE) // obs distance
                 .build(NUM_RANDOM_TEST_CASES);
     }
 
@@ -90,12 +91,12 @@ public class SimRobotLidarTest {
                 .uniform(0, 359) // robot dir
                 .uniform(-90, 90) // head dir
                 .uniform(-10, 10) // obs dir
-                .choice(MIN_OBSTALCE_DISTANCE, MAX_OBSTALCE_DISTANCE) // obs distance
+                .choice(MIN_OBSTACLE_DISTANCE, MAX_OBSTACLE_DISTANCE) // obs distance
                 .build(NUM_RANDOM_TEST_CASES);
     }
 
     public static Stream<Arguments> dataLidarNearOuterObstacle() {
-        double d = MIN_OBSTALCE_DISTANCE + CENTRES_DISTANCE;
+        double d = MIN_OBSTACLE_DISTANCE + CENTRES_DISTANCE;
         int outerAngleDeg = (int) (round(2 * toDegrees(asin(DEFAULT_OBSTACLE_RADIUS / d)) + (double) DEFAULT_LIDAR_FOV_DEG / 2) + 1);
         return RandomArgumentsGenerator.create(SEED)
                 .uniform(-5.0, 5.0, 17) // x
@@ -108,7 +109,7 @@ public class SimRobotLidarTest {
     }
 
     private SimRobot robot;
-    private TestSubscriber<WheellyLidarMessage> lidarSub;
+    private List<WheellyLidarMessage> lidars;
 
     /**
      * Adds an obstacle at given distance + obstacle radius directed to the direction from the front lidar
@@ -143,18 +144,18 @@ public class SimRobotLidarTest {
     void createRobot(double xRobot, double yRobot, int robotDirDeg, int headDirDeg) {
         robot = new SimRobot(DEFAULT_ROBOT_SPEC, new Random(SEED), new Random(SEED),
                 0, 10,
-                SimRobot.DEFAULT_MOTION_INTERVAL, 5, SimRobot.DEFAULT_CAMERA_INTERVAL, SimRobot.DEFAULT_STALEMATE_INTERVAL,
+                SimRobot.DEFAULT_MOTION_INTERVAL, LIDAR_INTERVAL, SimRobot.DEFAULT_CAMERA_INTERVAL, SimRobot.DEFAULT_STALEMATE_INTERVAL,
                 0, 0, List.of(MapBuilder.empty(41, GRID_SIZE)), 0, 0,
                 CHANGE_MAP_PERIOD, CHANGE_MAP_PERIOD);
         robot.robotPos(xRobot, yRobot);
         robot.robotDir(Complex.fromDeg(robotDirDeg));
         robot.sensorDirection(Complex.fromDeg(headDirDeg));
-        robot.readLidar().subscribe(lidarSub);
+        robot.onLidar(lidars::add);
     }
 
     @BeforeEach
     void setUp() {
-        this.lidarSub = new TestSubscriber<>();
+        this.lidars = new ArrayList<>();
     }
 
     @ParameterizedTest(name = "[{index}] @({0},{1}) R{2} Head {3} DEG obs {4} DEG D{5}")
@@ -166,20 +167,15 @@ public class SimRobotLidarTest {
         createFrontObstacle(obsDir, obsDistance);
 
         // When connect and wait for simulated 500 ms
-        robot.connect();
-        robot.readLidar()
-                .filter(msg -> msg.simulationTime() > 0)
-                .blockingFirst();
+        robot.syncConnect();
+        do {
+            robot.simulate();
+        } while (robot.robotTime() <= LIDAR_INTERVAL);
         robot.close();
-        robot.readRobotStatus()
-                .ignoreElements()
-                .blockingAwait();
-
-        lidarSub.assertComplete();
-        lidarSub.assertNoErrors();
+        robot.simulate();
 
         // And the first proxy message after 1 ms should signal the obstacle
-        WheellyLidarMessage lidar = findMessage(lidarSub.values(), notBefore(1));
+        WheellyLidarMessage lidar = findMessage(lidars, notBefore(1));
         assertNotNull(lidar);
         assertEquals(m2mm(obsDistance), lidar.frontDistance());
     }
@@ -197,20 +193,15 @@ public class SimRobotLidarTest {
         createFrontObstacle(obsDir, obsDistance);
 
         // When connect and wait for simulated 500 ms
-        robot.connect();
-        robot.readLidar()
-                .filter(msg -> msg.simulationTime() > 0)
-                .blockingFirst();
+        robot.syncConnect();
+        do {
+            robot.simulate();
+        } while (robot.robotTime() <= LIDAR_INTERVAL);
         robot.close();
-        robot.readRobotStatus()
-                .ignoreElements()
-                .blockingAwait();
-
-        lidarSub.assertComplete();
-        lidarSub.assertNoErrors();
+        robot.simulate();
 
         // And the first proxy message after 1 ms should signal the obstacle
-        WheellyLidarMessage lidar = findMessage(lidarSub.values(), notBefore(1));
+        WheellyLidarMessage lidar = findMessage(lidars, notBefore(1));
         assertNotNull(lidar);
         assertEquals(0, lidar.frontDistance());
     }
@@ -224,20 +215,15 @@ public class SimRobotLidarTest {
         createRearObstacle(obsDir, obsDistance);
 
         // When connect and wait for simulated 500 ms
-        robot.connect();
-        robot.readLidar()
-                .filter(msg -> msg.simulationTime() > 0)
-                .blockingFirst();
+        robot.syncConnect();
+        do {
+            robot.simulate();
+        } while (robot.robotTime() <= LIDAR_INTERVAL);
         robot.close();
-        robot.readRobotStatus()
-                .ignoreElements()
-                .blockingAwait();
-
-        lidarSub.assertComplete();
-        lidarSub.assertNoErrors();
+        robot.simulate();
 
         // And the first proxy message after 1 ms should signal the obstacle
-        WheellyLidarMessage lidar = findMessage(lidarSub.values(), notBefore(1));
+        WheellyLidarMessage lidar = findMessage(lidars, notBefore(1));
         assertNotNull(lidar);
         assertEquals(m2mm(obsDistance), lidar.rearDistance());
     }
@@ -255,20 +241,15 @@ public class SimRobotLidarTest {
         createRearObstacle(obsDir, obsDistance);
 
         // When connect and wait for simulated 500 ms
-        robot.connect();
-        robot.readLidar()
-                .filter(msg -> msg.simulationTime() > 0)
-                .blockingFirst();
+        robot.syncConnect();
+        do {
+            robot.simulate();
+        } while (robot.robotTime() <= LIDAR_INTERVAL);
         robot.close();
-        robot.readRobotStatus()
-                .ignoreElements()
-                .blockingAwait();
-
-        lidarSub.assertComplete();
-        lidarSub.assertNoErrors();
+        robot.simulate();
 
         // And the first proxy message after 1 ms should signal the obstacle
-        WheellyLidarMessage lidar = findMessage(lidarSub.values(), notBefore(1));
+        WheellyLidarMessage lidar = findMessage(lidars, notBefore(1));
         assertNotNull(lidar);
         assertEquals(0, lidar.rearDistance());
     }

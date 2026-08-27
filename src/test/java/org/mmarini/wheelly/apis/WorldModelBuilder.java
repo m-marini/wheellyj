@@ -44,8 +44,8 @@ public class WorldModelBuilder {
 
     private final RadarMapBuilder radarMapBuilder;
     private final RobotStatusBuilder robotStatusBuilder;
-    private int gridMapSize;
     private final MarkersBuilder markersBuilder;
+    private int gridMapSize;
     private int numSectors;
 
     public WorldModelBuilder() {
@@ -84,10 +84,10 @@ public class WorldModelBuilder {
         return this;
     }
 
-    public WorldModelBuilder addSimulationTime(long deltaTime) {
-        robotStatusBuilder.addSimulationTime(deltaTime);
-        radarMapBuilder.addSimulationTime(deltaTime);
-        markersBuilder.addSimulationTime(deltaTime);
+    public WorldModelBuilder addTime(long deltaTime) {
+        robotStatusBuilder.addTime(deltaTime);
+        radarMapBuilder.addTime(deltaTime);
+        markersBuilder.addTime(deltaTime);
         return this;
     }
 
@@ -103,6 +103,10 @@ public class WorldModelBuilder {
         return this;
     }
 
+    /**
+     *
+     * Returns the World model built by the builder
+     */
     public WorldModel build() {
         RobotStatus robotStatus = robotStatusBuilder.build();
         Map<String, LabelMarker> markers = markersBuilder.build();
@@ -147,13 +151,13 @@ public class WorldModelBuilder {
 
     }
 
-    public WorldModelBuilder gridMapSize(int gridMapSize) {
-        this.gridMapSize = gridMapSize;
+    public WorldModelBuilder frontSensor(boolean frontSensor) {
+        this.robotStatusBuilder.frontSensor(frontSensor);
         return this;
     }
 
-    public WorldModelBuilder frontSensor(boolean frontSensor) {
-        this.robotStatusBuilder.frontSensor(frontSensor);
+    public WorldModelBuilder gridMapSize(int gridMapSize) {
+        this.gridMapSize = gridMapSize;
         return this;
     }
 
@@ -167,13 +171,13 @@ public class WorldModelBuilder {
         return this;
     }
 
-    public WorldModelBuilder numSectors(int numSectors) {
-        this.numSectors = numSectors;
+    public WorldModelBuilder mapRadar(UnaryOperator<MapCell> cellMapper) {
+        radarMapBuilder.map(cellMapper);
         return this;
     }
 
-    public WorldModelBuilder mapRadar(UnaryOperator<MapCell> cellMapper) {
-        radarMapBuilder.map(cellMapper);
+    public WorldModelBuilder numSectors(int numSectors) {
+        this.numSectors = numSectors;
         return this;
     }
 
@@ -224,10 +228,10 @@ public class WorldModelBuilder {
         return this;
     }
 
-    public WorldModelBuilder simulationTime(long simulationTime) {
-        this.robotStatusBuilder.simulationTime(simulationTime);
-        this.radarMapBuilder.simulationTime(simulationTime);
-        this.markersBuilder.simulationTime(simulationTime);
+    public WorldModelBuilder time(long time) {
+        this.robotStatusBuilder.time(time);
+        this.radarMapBuilder.time(time);
+        this.markersBuilder.time(time);
         return this;
     }
 

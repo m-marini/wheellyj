@@ -42,7 +42,7 @@ class WheellyContactsMessageTest {
     void testParse() {
         WheellyContactsMessage result = WheellyContactsMessage.parse(1234, "4321,1,0,1,0");
         assertNotNull(result);
-        assertEquals(1234, result.simulationTime());
+        assertEquals(1234, result.time());
         assertTrue(result.frontSensors());
         assertFalse(result.rearSensors());
         assertTrue(result.canMoveForward());

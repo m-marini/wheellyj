@@ -47,12 +47,10 @@ import org.slf4j.LoggerFactory;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import static java.lang.Math.*;
@@ -61,6 +59,7 @@ import static org.mmarini.wheelly.apis.Obstacle.DEFAULT_OBSTACLE_RADIUS;
 import static org.mmarini.wheelly.apis.RobotSpec.*;
 import static org.mmarini.wheelly.apis.RobotStatus.OBSTACLE_SIZE;
 import static org.mmarini.wheelly.apis.RobotStatusId.*;
+import static org.mmarini.wheelly.apis.Utils.expRandom;
 import static org.mmarini.wheelly.apis.Utils.m2mm;
 
 /**
@@ -76,12 +75,13 @@ public class SimRobot implements RobotApi {
     public static final int CAMERA_HEIGHT = 240;
     public static final int CAMERA_WIDTH = 240;
     public static final String QR_CODE = "A";
-    public static final double NANOS_PER_MILLIS = 10e6;
+    public static final double NANOS_PER_MILLIS = 1e6;
     public static final long DEFAULT_STALEMATE_INTERVAL = 60000;
     public static final long DEFAULT_MOTION_INTERVAL = 500;
     public static final long DEFAULT_LIDAR_INTERVAL = 500;
     public static final long DEFAULT_CAMERA_INTERVAL = 500;
     public static final String LABEL = "A";
+    public static final double MIN_OBSTACLE_DISTANCE = 1;
     private static final Logger logger = LoggerFactory.getLogger(SimRobot.class);
     private static final Vec2 GRAVITY = new Vec2();
     private static final double ROBOT_FRICTION = 1;
@@ -98,7 +98,7 @@ public class SimRobot implements RobotApi {
     /**
      * Returns the simulated robot from JSON configuration
      *
-     * @param root the json document
+     * @param root the JSON document
      * @param file the configuration file
      */
     public static SimRobot create(JsonNode root, File file) {
@@ -151,22 +151,45 @@ public class SimRobot implements RobotApi {
     private final int numLabels;
     private final double errSensor;
     private final double errSigma;
-    private final PublishProcessor<CameraEvent> cameraEvents;
     private final PublishProcessor<Throwable> errors;
-    private final PublishProcessor<WheellyContactsMessage> contactsMessages;
-    private final PublishProcessor<WheellyMotionMessage> motionMessages;
-    private final PublishProcessor<WheellySupplyMessage> supplyMessages;
     private final BehaviorProcessor<Collection<Obstacle>> obstacleChanged;
     private final BehaviorProcessor<RobotStatusApi> robotLineState;
-    private final AtomicReference<SimRobotStatus> status;
     private final List<MapBuilder> maps;
     private final World world;
     private final Body robot;
     private final Fixture robotFixture;
     private final long interval;
     private final long tickInterval;
-    private final PublishProcessor<WheellyLidarMessage> lidarMessages;
+    private final AtomicReference<RobotRequests> requests;
+    private final List<Consumer<WheellyContactsMessage>> onContacts;
+    private final List<Consumer<WheellyLidarMessage>> onLidars;
+    private final List<Consumer<WheellyMotionMessage>> onMotions;
+    private final List<Consumer<CameraEvent>> onCameras;
     private Body obstacleBody;
+    private boolean connected;
+    private boolean closed;
+    private long startSimulationTime;
+    private long robotTime;
+    private long lastTick;
+    private long motionTimeout;
+    private long lidarTimeout;
+    private long cameraTimeout;
+    private long stalemateTimeout;
+    private boolean stalemate;
+    private long mapExpiration;
+    private Collection<Obstacle> obstacleMap;
+    private MapBuilder template;
+    private long randomMapExpiration;
+    private Complex targetDirection;
+    private Point2D target;
+    private Complex headDirection;
+    private RobotStatusId statusId;
+    private double frontDistance;
+    private double rearDistance;
+    private boolean frontSensor;
+    private boolean rearSensor;
+    private double leftPps;
+    private double rightPps;
 
     /**
      * Creates the simulated robot
@@ -207,11 +230,7 @@ public class SimRobot implements RobotApi {
         this.interval = interval;
         this.tickInterval = tickInterval;
         this.maps = requireNonNull(maps);
-        this.cameraEvents = PublishProcessor.create();
-        this.contactsMessages = PublishProcessor.create();
-        this.motionMessages = PublishProcessor.create();
-        this.supplyMessages = PublishProcessor.create();
-        this.lidarMessages = PublishProcessor.create();
+        this.requests = new AtomicReference<>(RobotRequests.empty());
         this.errors = PublishProcessor.create();
         this.obstacleChanged = BehaviorProcessor.create();
         // Creates the jbox2 physic world
@@ -230,23 +249,21 @@ public class SimRobot implements RobotApi {
         fixDef.density = (float) ROBOT_DENSITY;
         fixDef.restitution = (float) ROBOT_RESTITUTION;
         this.robotFixture = robot.createFixture(fixDef);
-        SimRobotStatus initialStatus = new SimRobotStatus(0,
-                HALT, Complex.DEG0, new Point2D.Double(),
-                false, false, false,
-                Complex.DEG0, 0, 0, true, true,
-                0, 0,
-                0, 0, 0, 0, 0, 0, null, null,
-                0, 0);
-        this.status = new AtomicReference<>(initialStatus);
+        this.headDirection = Complex.DEG0;
+        this.statusId = HALT;
+        this.frontSensor = this.rearSensor = true;
         generateRandomMap();
-        this.robotLineState = BehaviorProcessor.createDefault(status.get());
+        this.robotLineState = BehaviorProcessor.createDefault(new RobotLineState(false, false, false, false));
+        this.onContacts = new ArrayList<>();
+        this.onLidars = new ArrayList<>();
+        this.onMotions = new ArrayList<>();
+        this.onCameras = new ArrayList<>();
     }
 
     @Override
     public Single<Boolean> backward(Point2D location) {
-        status.updateAndGet(s -> s.status(BACKWARD)
-                .target(location));
-        checkForSpeed();
+        requireNonNull(location);
+        requests.updateAndGet(s -> s.backward(location));
         return Single.just(true);
     }
 
@@ -272,57 +289,72 @@ public class SimRobot implements RobotApi {
     }
 
     /**
+     * Returns true if robot can move backward
+     */
+    public boolean canMoveBackward() {
+        return rearSensor && (rearDistance == 0 || rearDistance > SAFE_DISTANCE);
+    }
+
+    /**
+     * Returns true if robot can move forward
+     */
+    public boolean canMoveForward() {
+        return frontSensor && (frontDistance == 0 || frontDistance > SAFE_DISTANCE);
+    }
+
+    /**
      * Checks for lidar and contact sensors.
      * Sends the robot status in case of contact changes
      *
-     * @param initial the initial status
+     * @param initialFrontSensor true if no contact at front sensor before sensor check
+     * @param initialRearSensor  true if no contact at rear sensor before sensor check
      */
-    private void checkForSensor(SimRobotStatus initial) {
+    private void checkForSensor(boolean initialFrontSensor, boolean initialRearSensor) {
         Point2D position = location();
-        SimRobotStatus status = this.status.get();
 
         // Finds the nearest obstacle in front lidar range
-        double frontDistance;
+        double currentFrontDistance;
         AreaExpression.Parser frontParser = frontLidarArea()
                 .createParser();
-        Obstacle nearestFrontObstacle = status.obstacleMap().stream()
+        Obstacle nearestFrontObstacle = obstacleMap.stream()
                 .filter(o -> frontParser.test(o.centre()))
                 .min(Comparator.comparingDouble(o -> o.centre().distanceSq(position)))
                 .orElse(null);
         if (nearestFrontObstacle != null) {
             // Computes the distance of obstacles
             Point2D lidarLocation = frontLidarLocation();
-            frontDistance = nearestFrontObstacle.centre().distance(lidarLocation) - nearestFrontObstacle.radius()
+            currentFrontDistance = nearestFrontObstacle.centre().distance(lidarLocation) - nearestFrontObstacle.radius()
                     + random.nextGaussian() * errSensor;
         } else {
-            frontDistance = 0;
+            currentFrontDistance = 0;
         }
 
         // Finds the nearest obstacle in front lidar range
-        double rearDistance;
+        double currentRearDistance;
         AreaExpression.Parser rearParser = rearLidarArea().createParser();
-        Obstacle nearestRearObstacle = status.obstacleMap().stream()
+        Obstacle nearestRearObstacle = obstacleMap.stream()
                 .filter(o -> rearParser.test(o.centre()))
                 .min(Comparator.comparingDouble(o -> o.centre().distanceSq(position)))
                 .orElse(null);
         if (nearestRearObstacle != null) {
             // Computes the distance of obstacles
             Point2D lidarLocation = rearLidarLocation();
-            rearDistance = nearestRearObstacle.centre().distance(lidarLocation) - nearestRearObstacle.radius()
+            currentRearDistance = nearestRearObstacle.centre().distance(lidarLocation) - nearestRearObstacle.radius()
                     + random.nextGaussian() * errSensor;
         } else {
-            rearDistance = 0;
+            currentRearDistance = 0;
         }
-        status = this.status.updateAndGet(s -> s.frontDistance(frontDistance).rearDistance(rearDistance));
+        boolean prevFrontLidarAlarm = frontDistance > 0 && frontDistance <= SAFE_DISTANCE;
+        boolean prevRearLidarAlarm = rearDistance > 0 && rearDistance <= SAFE_DISTANCE;
+        this.frontDistance = currentFrontDistance;
+        this.rearDistance = currentRearDistance;
 
-        boolean frontLidarAlarm = frontDistance > 0 && frontDistance <= SAFE_DISTANCE;
-        boolean rearLidarAlarm = rearDistance > 0 && rearDistance <= SAFE_DISTANCE;
-        boolean prevFrontLidarAlarm = initial.frontDistance() > 0 && initial.frontDistance() <= SAFE_DISTANCE;
-        boolean prevRearLidarAlarm = initial.rearDistance() > 0 && initial.rearDistance() <= SAFE_DISTANCE;
+        boolean frontLidarAlarm = currentFrontDistance > 0 && currentFrontDistance <= SAFE_DISTANCE;
+        boolean rearLidarAlarm = currentRearDistance > 0 && currentRearDistance <= SAFE_DISTANCE;
         if (frontLidarAlarm != prevFrontLidarAlarm
                 || rearLidarAlarm != prevRearLidarAlarm
-                || initial.rearSensor() != status.rearSensor()
-                || initial.frontSensor() != status.frontSensor()) {
+                || initialRearSensor != rearSensor
+                || initialFrontSensor != frontSensor) {
             // Contacts changed -> send status
             sendLidar();
             sendContacts();
@@ -334,31 +366,39 @@ public class SimRobot implements RobotApi {
      * Halt the robot if it is moving in forbidden direction
      */
     private void checkForSpeed() {
-        SimRobotStatus s = status.get();
-        if ((!s.canMoveForward() && (s.leftPps() + s.rightPps()) > 1)
-                || (!s.canMoveBackward() && (s.leftPps() + s.rightPps()) < -1)) {
-            halt();
+        if (!HALT.equals(statusId)
+                && (!canMoveForward()
+                || !canMoveBackward())) {
+            haltImmediate();
+            sendMotion();
         }
     }
 
     @Override
     public void close() {
-        if (!status.getAndUpdate(status -> status.closed(true)).closed()) {
-            robotLineState.onNext(status.get());
-            robotLineState.onComplete();
-            cameraEvents.onComplete();
-            contactsMessages.onComplete();
-            motionMessages.onComplete();
-            supplyMessages.onComplete();
-            lidarMessages.onComplete();
-            errors.onComplete();
-        }
+        requests.updateAndGet(r -> r.close(true));
+    }
+
+    /**
+     * Set speed by composing linear and rotation speeds
+     *
+     * @param linear   the linear speed (pps)
+     * @param rotation the rotation speed (pps)
+     */
+    private void composeSpeed(double linear, double rotation) {
+        leftPps = clamp(linear + rotation, -RobotSpec.MAX_PPS, RobotSpec.MAX_PPS);
+        rightPps = clamp(linear - rotation, -RobotSpec.MAX_PPS, RobotSpec.MAX_PPS);
     }
 
     @Override
     public void connect() {
-        if (!syncConnect()) {
-            tick();
+        if (!closed && !connected) {
+            syncConnect();
+            if (tickInterval == 0) {
+                startSyncSimulation();
+            } else {
+                tick();
+            }
         }
     }
 
@@ -392,9 +432,9 @@ public class SimRobot implements RobotApi {
         Body obstacleBody = this.obstacleBody;
         if (obstacleBody != null) {
             world.destroyBody(obstacleBody);
-            status.updateAndGet(s -> s.frontSensor(true).rearSensor(true));
+            frontSensor = true;
+            rearSensor = true;
         }
-
         BodyDef obsDef = new BodyDef();
         obsDef.type = BodyType.STATIC;
         obstacleBody = world.createBody(obsDef);
@@ -409,6 +449,22 @@ public class SimRobot implements RobotApi {
             obstacleBody.createFixture(obsFixDef);
         }
         this.obstacleBody = obstacleBody;
+        this.obstacleMap = obstacleMap;
+    }
+
+    /**
+     * Returns a new obstacle map from the current template
+     */
+    private List<Obstacle> createObstacleMap() {
+        Point2D robotLocation = location();
+        return template
+                // add obstacles
+                .rand(random, null,
+                        robotLocation, MIN_OBSTACLE_DISTANCE, numObstacles)
+                // add labels
+                .rand(random, LABEL,
+                        robotLocation, MIN_OBSTACLE_DISTANCE, numLabels)
+                .build();
     }
 
     /**
@@ -420,9 +476,8 @@ public class SimRobot implements RobotApi {
 
     @Override
     public Single<Boolean> forward(Point2D location) {
-        status.updateAndGet(s -> s.status(FORWARD)
-                .target(location));
-        checkForSpeed();
+        requireNonNull(location);
+        requests.updateAndGet(s -> s.forward(location));
         return Single.just(true);
     }
 
@@ -430,7 +485,7 @@ public class SimRobot implements RobotApi {
      * Returns the rear distance (m)
      */
     public double frontDistance() {
-        return status.get().frontDistance();
+        return frontDistance;
     }
 
     /**
@@ -450,6 +505,14 @@ public class SimRobot implements RobotApi {
      */
     Point2D frontLidarLocation() {
         return robotSpec.frontLidarLocation(location(), direction(), sensorDirection());
+    }
+
+    /**
+     *
+     * Returns true if no contact at front sensor
+     */
+    public boolean frontSensor() {
+        return frontSensor;
     }
 
     /**
@@ -480,56 +543,53 @@ public class SimRobot implements RobotApi {
     /**
      * Generates a random map and returns the simulated status
      */
-    private SimRobotStatus generateRandomMap() {
+    private void generateRandomMap() {
         // Selects a random map builder
-        MapBuilder template = randomTemplate();
+        template = maps.size() == 1
+                ? maps.getFirst()
+                : maps.get(mapRandom.nextInt(maps.size()));
         // Creates the obstacle map
-        SimRobotStatus currentStatus = status.updateAndGet(s ->
-                s.template(template).createObstacleMap(mapRandom, location(), numObstacles, numLabels, mapPeriod, randomPeriod)
-        );
-        Collection<Obstacle> map = currentStatus.obstacleMap();
+        Collection<Obstacle> map = createObstacleMap();
         createObstacleBody(map);
         obstacleChanged.onNext(map);
-        return currentStatus;
     }
 
     /**
      * Generates a random content map and returns the simulated status
      */
     private void generateRandomMapContent() {
-        SimRobotStatus currentStatus = status.updateAndGet(s ->
-                s.createObstacleMap(mapRandom, location(), numObstacles, numLabels, mapPeriod, randomPeriod)
-        );
-        Collection<Obstacle> map = currentStatus.obstacleMap();
+        Collection<Obstacle> map = createObstacleMap();
         createObstacleBody(map);
         obstacleChanged.onNext(map);
     }
 
     @Override
     public Single<Boolean> halt() {
-        SimRobotStatus s0 = status.getAndUpdate(s ->
-                s.halt().headRotation(Complex.DEG0));
-        logger.atDebug().log("{}: Halt", s0.simulationTime());
+        requests.updateAndGet(RobotRequests::halt);
         return Single.just(true);
+    }
+
+    private void haltImmediate() {
+        statusId = HALT;
+        leftPps = rightPps = 0;
     }
 
     /**
      * Sets the motor speed to handle move backward
      */
     private void handleBackward() {
-        SimRobotStatus st = status.get();
-
         // Compute the distance to target
         Point2D robotLocation = location();
-        double distance = robotLocation.distance(st.target());
+        double distance = robotLocation.distance(target);
         // Check for target reached
         if (distance <= robotSpec.targetRange()) {
             // Target reached
-            halt();
+            haltImmediate();
+            sendMotion();
             return;
         }
         // Compute the rotation angle
-        Complex targetDirection = Complex.direction(robotLocation, st.target());
+        Complex targetDirection = Complex.direction(robotLocation, target);
         double rotDeg = targetDirection.sub(direction()).opposite().toDeg();
         double absRotDeg = abs(rotDeg);
         // Compute che rotation speed
@@ -547,8 +607,7 @@ public class SimRobot implements RobotApi {
                 : distance >= decDistance
                 ? -robotSpec.maxSpeed() // Robot distant from target
                 : -robotSpec.maxSpeed() * distance / decDistance; // Robot near the target
-        status.updateAndGet(s ->
-                s.composeSpeed(linSpeed, rotSpeed));
+        composeSpeed(linSpeed, rotSpeed);
     }
 
     /**
@@ -579,18 +638,15 @@ public class SimRobot implements RobotApi {
             }
             contact = contact.getNext();
         }
-        boolean finalFrontSensor = frontSensor;
-        boolean finalRearSensor = rearSensor;
-        status.updateAndGet(s1 -> s1.frontSensor(finalFrontSensor).rearSensor(finalRearSensor));
+        this.frontSensor = frontSensor;
+        this.rearSensor = rearSensor;
     }
 
     /**
      * Sets the motor speed based on the command status
      */
     private void handleEngine() {
-        SimRobotStatus simStatus = status.get();
-        switch (simStatus.status()) {
-            case HALT -> status.updateAndGet(SimRobotStatus::halt);
+        switch (statusId) {
             case ROTATE -> handleRotation();
             case FORWARD -> handleForward();
             case BACKWARD -> handleBackward();
@@ -601,19 +657,18 @@ public class SimRobot implements RobotApi {
      * Sets the motor speed to handle move forward
      */
     private void handleForward() {
-        SimRobotStatus st = status.get();
-
         // Compute the distance to target
         Point2D robotLocation = location();
-        double distance = robotLocation.distance(st.target());
+        double distance = robotLocation.distance(target);
         // Check for target reached
         if (distance <= robotSpec.targetRange()) {
             // Target reached
-            halt();
+            haltImmediate();
+            sendMotion();
             return;
         }
         // Compute the rotation angle
-        Complex targetDirection = Complex.direction(robotLocation, st.target());
+        Complex targetDirection = Complex.direction(robotLocation, target);
         double rotDeg = targetDirection.sub(direction()).toDeg();
         double absRotDeg = abs(rotDeg);
         // Compute che rotation speed
@@ -631,24 +686,78 @@ public class SimRobot implements RobotApi {
                 : distance >= decDistance
                 ? robotSpec.maxSpeed() // Robot distant from target
                 : robotSpec.maxSpeed() * distance / decDistance; // Robot near the target
-        status.updateAndGet(s ->
-                s.composeSpeed(linSpeed, rotSpeed));
+        composeSpeed(linSpeed, rotSpeed);
+    }
+
+    /**
+     * Handles the pending requests
+     */
+    private void handleRequests() {
+        // Handle close request
+        if (!closed) {
+            RobotRequests r = requests.getAndSet(RobotRequests.empty());
+            if (r.close()) {
+                logger.atInfo().log("Closing sim robot");
+                closed = true;
+                errors.onComplete();
+                robotLineState.onNext(new RobotLineState(false, false, false, false));
+                robotLineState.onComplete();
+                logger.atInfo().log("Sim robot closed");
+                return;
+            }
+            long t = r.simulationTime();
+            if (t >= 0) {
+                logger.atInfo().log("Set simulation time");
+                robotTime = t;
+            }
+            if (r.statusId() != null) {
+                switch (r.statusId()) {
+                    case ROTATE -> {
+                        statusId = ROTATE;
+                        targetDirection = Complex.fromDeg(r.targetDir());
+                        logger.atDebug().log("Rotate robot to {} DEG", targetDirection.toIntDeg());
+                    }
+                    case BACKWARD -> {
+                        statusId = BACKWARD;
+                        target = r.target();
+                        logger.atDebug().log("Move robot backward to {}", target);
+                    }
+                    case FORWARD -> {
+                        statusId = FORWARD;
+                        target = r.target();
+                        logger.atDebug().log("Move robot forward to {}", target);
+                    }
+                    default -> {
+                        statusId = HALT;
+                        headDirection = Complex.DEG0;
+                        leftPps = rightPps = 0;
+                        logger.atDebug().log("Halt robot");
+                    }
+                }
+                checkForSpeed();
+            }
+            Complex headDir = r.headDir();
+            if (headDir != null) {
+                this.headDirection = headDir;
+                logger.atDebug().log("Rotate head to {} DEG", headDir.toIntDeg());
+            }
+        }
     }
 
     /**
      * Sets the motor speed to handle rotation
      */
     private void handleRotation() {
-        SimRobotStatus st = status.get();
         // Compute the rotation angle
-        double rotDeg = st.targetDirection().sub(direction()).toDeg();
+        double rotDeg = targetDirection.sub(direction()).toDeg();
         double absRotDeg = abs(rotDeg);
         // Compute che rotation speed
         double rotSpeed;
         // Check for rotation completed
         if (absRotDeg <= robotSpec.directionRange().toIntDeg()) {
             // Rotation completed -> halt robot
-            halt();
+            haltImmediate();
+            sendMotion();
             return;
         }
         double maxRotDeg = robotSpec.maxRotRange().toDeg();
@@ -661,8 +770,7 @@ public class SimRobot implements RobotApi {
             // Rotate at speed proportional the rotation angle
             rotSpeed = robotSpec.maxRotPps() * rotDeg / maxRotDeg;
         }
-        status.updateAndGet(s ->
-                s.composeSpeed(0, rotSpeed));
+        composeSpeed(0, rotSpeed);
     }
 
     /**
@@ -670,20 +778,17 @@ public class SimRobot implements RobotApi {
      * Checks for stalemate and relocate the robot in case of stalemate timeout
      */
     private void handleStalemate() {
-        status.updateAndGet(s -> {
-            if (s.frontSensor() || s.rearSensor()) {
-                // no stalemate
-                s = s.stalemate(false);
-            } else if (!s.stalemate()) {
-                // First stalemate, start the timer
-                s = s.stalemateTimeout(s.simulationTime() + stalemateInterval)
-                        .stalemate(true);
-            } else if (s.simulationTime() >= s.stalemateTimeout()) {
-                // stalemate timeout
-                safeRelocateRandom();
-            }
-            return s;
-        });
+        if (frontSensor || rearSensor) {
+            // no stalemate
+            stalemate = false;
+        } else if (!stalemate) {
+            // First stalemate, start the timer
+            stalemate = true;
+            stalemateTimeout = robotTime + stalemateInterval;
+        } else if (robotTime >= stalemateTimeout) {
+            // stalemate timeout
+            safeRelocateRandom();
+        }
     }
 
     /**
@@ -697,13 +802,12 @@ public class SimRobot implements RobotApi {
      * Returns the head direction relative the robot
      */
     public Complex headDirection() {
-        return status.get().headRotation();
+        return headDirection;
     }
 
     @Override
     public boolean isHalt() {
-        SimRobotStatus st = status.get();
-        return HALT.equals(st.status());
+        return HALT.equals(statusId);
     }
 
     /**
@@ -720,48 +824,43 @@ public class SimRobot implements RobotApi {
      * @param map the map
      */
     public SimRobot obstacleMap(Collection<Obstacle> map) {
-        status.updateAndGet(s -> s.obstacleMap(map));
+        obstacleMap = map;
         createObstacleBody(map);
         obstacleChanged.onNext(map);
         return this;
     }
 
     public Collection<Obstacle> obstacleMap() {
-        return status.get().obstacleMap();
-    }
-
-    /**
-     * Returns a random template map
-     */
-    private MapBuilder randomTemplate() {
-        return maps.size() == 1
-                ? maps.getFirst()
-                : maps.get(mapRandom.nextInt(maps.size()));
+        return obstacleMap;
     }
 
     @Override
-    public Flowable<CameraEvent> readCamera() {
-        return cameraEvents;
+    public void onCamera(Consumer<CameraEvent> callback) {
+        onCameras.add(callback);
     }
 
     @Override
-    public Flowable<WheellyContactsMessage> readContacts() {
-        return contactsMessages;
+    public void onContacts(Consumer<WheellyContactsMessage> callback) {
+        onContacts.add(callback);
+    }
+
+    @Override
+    public void onLidar(Consumer<WheellyLidarMessage> callback) {
+        onLidars.add(callback);
+    }
+
+    @Override
+    public void onMotion(Consumer<WheellyMotionMessage> callback) {
+        onMotions.add(callback);
+    }
+
+    @Override
+    public void onSupply(Consumer<WheellySupplyMessage> callback) {
     }
 
     @Override
     public Flowable<Throwable> readErrors() {
         return errors;
-    }
-
-    @Override
-    public Flowable<WheellyLidarMessage> readLidar() {
-        return lidarMessages;
-    }
-
-    @Override
-    public Flowable<WheellyMotionMessage> readMotion() {
-        return motionMessages;
     }
 
     /**
@@ -776,16 +875,11 @@ public class SimRobot implements RobotApi {
         return robotLineState;
     }
 
-    @Override
-    public Flowable<WheellySupplyMessage> readSupply() {
-        return supplyMessages;
-    }
-
     /**
      * Returns the front distance (m)
      */
     public double rearDistance() {
-        return status.get().rearDistance();
+        return rearDistance;
     }
 
     /**
@@ -805,6 +899,14 @@ public class SimRobot implements RobotApi {
      */
     Point2D rearLidarLocation() {
         return robotSpec.rearLidarLocation(location(), direction(), sensorDirection());
+    }
+
+    /**
+     *
+     * Returns true if no contact at rear sensor
+     */
+    public boolean rearSensor() {
+        return rearSensor;
     }
 
     @Override
@@ -841,10 +943,13 @@ public class SimRobot implements RobotApi {
     }
 
     @Override
+    public long robotTime() {
+        return robotTime;
+    }
+
+    @Override
     public Single<Boolean> rotate(int dir) {
-        status.updateAndGet(s -> s.status(ROTATE)
-                .targetDirection(Complex.fromDeg(dir)));
-        checkForSpeed();
+        requests.updateAndGet(r -> r.rotate(dir));
         return Single.just(true);
     }
 
@@ -852,8 +957,7 @@ public class SimRobot implements RobotApi {
      * Randomly relocates the robot
      */
     public void safeRelocateRandom() {
-        SimRobotStatus s = status.get();
-        Collection<Obstacle> map = s.obstacleMap();
+        Collection<Obstacle> map = obstacleMap;
         Point2D loc = map != null
                 ? generateLocation(map)
                 : new Point2D.Double();
@@ -864,8 +968,8 @@ public class SimRobot implements RobotApi {
     @Override
     public Single<Boolean> scan(int direction) {
         Complex dir = Complex.fromDeg(clamp(direction, -90, 90));
-        status.updateAndGet(s ->
-                s.headRotation(dir)
+        requests.updateAndGet(s ->
+                s.headDir(dir)
         );
         return Single.just(true);
     }
@@ -874,13 +978,12 @@ public class SimRobot implements RobotApi {
      * Sends the camera message
      */
     private void sendCamera() {
-        SimRobotStatus s = status.get();
         Point2D cameraLocation = location();
-        Complex cameraAzimuth = direction().add(s.headRotation());
+        Complex cameraAzimuth = direction().add(headDirection);
         // Extracts the obstacles intersecting the camera fov
         Predicate<Point2D> areaParser = cameraSensorArea()
                 .createParser()::test;
-        Point2D markerLocation = s.obstacleMap().stream()
+        Point2D markerLocation = obstacleMap.stream()
                 .filter(o -> o.label() != null)
                 .map(Obstacle::centre)
                 .filter(areaParser)
@@ -892,74 +995,76 @@ public class SimRobot implements RobotApi {
         if (markerLocation != null) {
             Complex markerDirection = Complex.direction(cameraLocation, markerLocation);
             Complex markerRelativeDirection = markerDirection.sub(cameraAzimuth);
-            event = new CameraEvent(s.simulationTime(), QR_CODE, CAMERA_WIDTH, CAMERA_HEIGHT, points, markerRelativeDirection);
+            event = new CameraEvent(robotTime, QR_CODE, CAMERA_WIDTH, CAMERA_HEIGHT, points, markerRelativeDirection);
         } else {
-            event = CameraEvent.unknown(s.simulationTime());
+            event = CameraEvent.unknown(robotTime);
         }
-        cameraEvents.onNext(event);
-        status.updateAndGet(s1 -> s1.cameraTimeout(s.simulationTime() + cameraInterval));
+        for (Consumer<CameraEvent> callback : onCameras) {
+            callback.accept(event);
+        }
+        cameraTimeout = robotTime + cameraInterval;
     }
 
     /**
      * Sends the contact message
      */
     private void sendContacts() {
-        SimRobotStatus s = status.get();
         WheellyContactsMessage msg = new WheellyContactsMessage(
-                s.simulationTime(),
-                s.frontSensor(), s.rearSensor(),
-                s.canMoveForward(),
-                s.canMoveBackward()
+                robotTime,
+                frontSensor, rearSensor,
+                canMoveForward(),
+                canMoveBackward()
         );
-        logger.atDebug().log("On contacts {}", msg);
-        contactsMessages.onNext(msg);
+        for (Consumer<WheellyContactsMessage> callback : onContacts) {
+            callback.accept(msg);
+        }
     }
 
     /**
      * Sends the lidar message
      */
     private void sendLidar() {
-        SimRobotStatus s = status.get();
         Point2D pos = this.location();
         double xPulses = distance2Pulse(pos.getX());
         double yPulses = distance2Pulse(pos.getY());
         Complex robotYaw = direction();
         WheellyLidarMessage msg = new WheellyLidarMessage(
-                s.simulationTime(),
-                m2mm(s.frontDistance()), m2mm(s.rearDistance()),
-                xPulses, yPulses, robotYaw.toIntDeg(), s.headRotation().toIntDeg()
+                robotTime,
+                m2mm(frontDistance), m2mm(rearDistance),
+                xPulses, yPulses, robotYaw.toIntDeg(), headDirection.toIntDeg()
         );
-        logger.atDebug().log("lidar R{} D{} D{}", msg.headDirection().toDeg(), msg.frontDistance(), msg.rearDistance());
-        lidarMessages.onNext(msg);
-        status.updateAndGet(s1 -> s1.lidarTimeout(s1.simulationTime() + lidarInterval));
+        lidarTimeout = robotTime + lidarInterval;
+        for (Consumer<WheellyLidarMessage> callback : onLidars) {
+            callback.accept(msg);
+        }
     }
 
     /**
      * Sends the motion message
      */
     private void sendMotion() {
-        SimRobotStatus s = status.get();
         Point2D pos = this.location();
         double xPulses = pos.getX() / DISTANCE_PER_PULSE;
         double yPulses = pos.getY() / DISTANCE_PER_PULSE;
         Complex robotDir = direction();
-        logger.atDebug().log("{}: send R{}", s.simulationTime(), robotDir.toIntDeg());
         WheellyMotionMessage msg = new WheellyMotionMessage(
-                s.simulationTime(),
+                robotTime,
                 xPulses, yPulses, robotDir.toIntDeg(),
-                s.leftPps(), s.rightPps(),
+                leftPps, rightPps,
                 0, isHalt(),
-                (int) round(s.leftPps()), (int) round(s.rightPps()),
+                (int) round(leftPps), (int) round(rightPps),
                 0, 0);
-        motionMessages.onNext(msg);
-        status.updateAndGet(s1 -> s1.motionTimeout(s1.simulationTime() + motionInterval));
+        motionTimeout = robotTime + motionInterval;
+        for (Consumer<WheellyMotionMessage> callback : onMotions) {
+            callback.accept(msg);
+        }
     }
 
     /**
      * Returns the sensor direction
      */
     public Complex sensorDirection() {
-        return status.get().headRotation();
+        return headDirection;
     }
 
     /**
@@ -967,8 +1072,8 @@ public class SimRobot implements RobotApi {
      *
      * @param sensorDirection the sensor direction
      */
-    public SimRobot sensorDirection(Complex sensorDirection) {
-        status.updateAndGet(s -> s.headRotation(sensorDirection));
+    SimRobot sensorDirection(Complex sensorDirection) {
+        headDirection = sensorDirection;
         return this;
     }
 
@@ -976,27 +1081,40 @@ public class SimRobot implements RobotApi {
      * Simulate the time interval
      */
     void simulate() {
-        SimRobotStatus initialStatus = status.get();
-        SimRobotStatus currentStatus = status.updateAndGet(s ->
-                s.simulationTime(s.simulationTime() + interval)
-                        .lastTick(System.nanoTime()));
+        // Update current simulation time
+        robotTime += interval;
+        lastTick = System.nanoTime();
+        handleRequests();
+
+        if (closed) {
+            return;
+        }
+
+        // Check for random map expiration
+        if (robotTime >= randomMapExpiration) {
+            generateRandomMap();
+            randomMapExpiration = robotTime + expRandom(random, mapPeriod);
+            mapExpiration = robotTime + expRandom(random, randomPeriod);
+        }
 
         // Check for map expiration
-        if (currentStatus.simulationTime() >= currentStatus.mapExpiration()) {
-            currentStatus = generateRandomMap();
-        }
-        // Check for random map expiration
-        if (currentStatus.simulationTime() >= currentStatus.randomMapExpiration()) {
+        if (robotTime >= mapExpiration) {
             generateRandomMapContent();
+            mapExpiration = robotTime + expRandom(random, randomPeriod);
         }
-        // Behavior controller
+
+        // Behaviour controller
         handleEngine();
+
         // Simulate robot motion
         simulatePhysics();
+
+        boolean frontSensor0 = frontSensor;
+        boolean rearSensor0 = rearSensor;
         // Handle contacts
         handleContacts();
         // Check for sensor
-        checkForSensor(initialStatus);
+        checkForSensor(frontSensor0, rearSensor0);
         // Check for movement constraints
         checkForSpeed();
         // Handles stalemate
@@ -1012,30 +1130,28 @@ public class SimRobot implements RobotApi {
      */
     private void simulatePhysics() {
         double dt = interval * 1e-3;
-        SimRobotStatus status = this.status.get();
 
         // Relative left-right motor speeds
-        double leftPps = status.leftPps();
-        double rightPps = status.rightPps();
+        double expectedLeftPps = leftPps;
+        double expectedRightPps = rightPps;
 
         // Check for block
-        if ((leftPps < 0 && !status.canMoveBackward())
-                || (leftPps > 0 && !status.canMoveForward())) {
-            leftPps = 0;
+        if ((expectedLeftPps < 0 && !canMoveBackward())
+                || (expectedLeftPps > 0 && !canMoveForward())) {
+            expectedLeftPps = 0;
         }
-        if ((rightPps < 0 && !status.canMoveBackward())
-                || (rightPps > 0 && !status.canMoveForward())) {
-            rightPps = 0;
+        if ((expectedRightPps < 0 && !canMoveBackward())
+                || (expectedRightPps > 0 && !canMoveForward())) {
+            expectedRightPps = 0;
         }
 
         // Update the status with the speed
-        double finalLeftPps = leftPps;
-        double finalRightPps = rightPps;
-        this.status.updateAndGet(s -> s.speed(finalLeftPps, finalRightPps));
+        leftPps = expectedLeftPps;
+        rightPps = expectedRightPps;
 
         // Real left-right motor speeds
-        double left = leftPps * DISTANCE_PER_PULSE;
-        double right = rightPps * DISTANCE_PER_PULSE;
+        double left = expectedLeftPps * DISTANCE_PER_PULSE;
+        double right = expectedRightPps * DISTANCE_PER_PULSE;
 
         // Real forward velocity
         double forwardVelocity = (left + right) / 2;
@@ -1081,54 +1197,54 @@ public class SimRobot implements RobotApi {
 
     @Override
     public double simulationSpeed() {
-        SimRobotStatus s = status.get();
-        long dt = s.lastTick() - s.startSimulationTime();
-        return dt > 0 ? s.simulationTime() * NANOS_PER_MILLIS / dt : 1;
+        long dt = lastTick - startSimulationTime;
+        return dt > 0 ? robotTime * NANOS_PER_MILLIS / dt : 1;
     }
 
-    @Override
-    public long simulationTime() {
-        return status.get().simulationTime();
-    }
-
+    /**
+     * Sets the simulation time
+     *
+     * @param time the simulation time
+     */
     public void simulationTime(long time) {
-        status.updateAndGet(s -> s.simulationTime(time));
+        requests.updateAndGet(r -> r.simulationTime(time));
     }
 
     /**
-     * Returns the current robot status
+     * Starts synchronous simulation
      */
-    SimRobotStatus status() {
-        return status.get();
+    private void startSyncSimulation() {
+        Schedulers.computation().scheduleDirect(() -> {
+            while (!closed) {
+                simulate();
+            }
+        });
     }
 
     /**
-     * Connects the robot if not yet connected and returns true if already connected
+     * Connect without starting simulation polling
      */
-    boolean syncConnect() {
-        boolean alreadyConnected = status.getAndUpdate(status ->
-                status.connected(true)
-        ).connected();
-        if (!alreadyConnected) {
-            SimRobotStatus st = status.updateAndGet(s -> s.startSimulationTime(System.nanoTime()));
-            robotLineState.onNext(st);
+    void syncConnect() {
+        if (!closed && !connected) {
+            // Send the connection sequence
+            robotLineState.onNext(new RobotLineState(true, false, false, false));
+            this.startSimulationTime = System.nanoTime();
+            connected = true;
+            robotLineState.onNext(new RobotLineState(true, true, false, true));
+            robotLineState.onNext(new RobotLineState(true, true, true, false));
+            robotLineState.onNext(new RobotLineState(true, true, false, true));
             updateMotion();
             updateLidar();
             updateCamera();
         }
-        return alreadyConnected;
     }
 
     /**
      * Schedules the computation of status on the time interval
      */
     private void tick() {
-        SimRobotStatus s = status.get();
-        if (s.connected() && !s.closed()) {
-            (tickInterval == 0
-                    ? Completable.complete()
-                    : Completable.timer(tickInterval, TimeUnit.MILLISECONDS))
-                    .subscribeOn(Schedulers.computation())
+        if (!closed) {
+            Completable.timer(tickInterval, TimeUnit.MILLISECONDS).subscribeOn(Schedulers.computation())
                     .subscribe(() -> {
                         simulate();
                         // Reschedules the simulation
@@ -1141,8 +1257,7 @@ public class SimRobot implements RobotApi {
      * Sends the proxy message if the interval has elapsed
      */
     private void updateCamera() {
-        SimRobotStatus s = status.get();
-        if (s.simulationTime() >= s.cameraTimeout()) {
+        if (robotTime >= cameraTimeout) {
             sendCamera();
         }
     }
@@ -1151,8 +1266,7 @@ public class SimRobot implements RobotApi {
      * Sends the proxy message if the interval has elapsed
      */
     private void updateLidar() {
-        SimRobotStatus s = status.get();
-        if (s.simulationTime() >= s.lidarTimeout()) {
+        if (robotTime >= lidarTimeout) {
             sendLidar();
         }
     }
@@ -1161,9 +1275,121 @@ public class SimRobot implements RobotApi {
      * Sends the motion message if the interval has elapsed
      */
     private void updateMotion() {
-        SimRobotStatus s = status.get();
-        if (s.simulationTime() >= s.motionTimeout()) {
+        if (robotTime >= motionTimeout) {
             sendMotion();
+        }
+    }
+
+    /**
+     * Contains the robot line status flags
+     *
+     * @param connecting  true if connecting
+     * @param connected   true if connected
+     * @param configuring true if configuring
+     * @param configured  true if configured
+     */
+    record RobotLineState(boolean connecting, boolean connected, boolean configuring,
+                          boolean configured) implements RobotStatusApi {
+    }
+
+    /**
+     * The robot queued requests
+     *
+     * @param connect        true if connect request
+     * @param simulationTime the simulation time (ms) valid request if >= 0
+     * @param statusId       the requested status
+     * @param targetDir      the target direction (DEG)
+     * @param target         the target location
+     * @param headDir        the head direction request
+     */
+    record RobotRequests(boolean connect, boolean close, long simulationTime, RobotStatusId statusId, int targetDir,
+                         Point2D target, Complex headDir) {
+
+        private static final RobotRequests EMPTY = new RobotRequests(false, false, -1, null, 0, null, null);
+
+        /**
+         *
+         * Returns the empty requests
+         */
+        public static RobotRequests empty() {
+            return EMPTY;
+        }
+
+        /**
+         * Sets the rotation request
+         *
+         * @param target the target location
+         */
+        public RobotRequests backward(Point2D target) {
+            return BACKWARD.equals(statusId) && Objects.equals(this.target, target)
+                    ? this
+                    : new RobotRequests(connect, close, simulationTime, BACKWARD, targetDir, target, headDir);
+        }
+
+        /**
+         * Sets the close request
+         *
+         * @param close true if close request
+         */
+        public RobotRequests close(boolean close) {
+            return this.close == close ? this : new RobotRequests(connect, close, simulationTime, statusId, targetDir, target, headDir);
+        }
+
+        /**
+         * Sets the connect request
+         *
+         * @param connect true if connect request
+         */
+        public RobotRequests connect(boolean connect) {
+            return this.connect == connect ? this : new RobotRequests(connect, close, simulationTime, statusId, targetDir, target, headDir);
+        }
+
+        /**
+         * Sets the rotation request
+         *
+         * @param target the target location
+         */
+        public RobotRequests forward(Point2D target) {
+            return FORWARD.equals(statusId) && Objects.equals(this.target, target)
+                    ? this
+                    : new RobotRequests(connect, close, simulationTime, FORWARD, targetDir, target, headDir);
+        }
+
+        public RobotRequests halt() {
+            return HALT.equals(statusId)
+                    ? this
+                    : new RobotRequests(connect, close, simulationTime, HALT, targetDir, target, headDir);
+        }
+
+        /**
+         * Sets the head direction
+         *
+         * @param headDir the head direction
+         */
+        public RobotRequests headDir(Complex headDir) {
+            return Objects.equals(this.headDir, headDir)
+                    ? this
+                    : new RobotRequests(connect, close, simulationTime, statusId, targetDir, target, headDir);
+        }
+
+        /**
+         * Sets the rotation request
+         *
+         * @param dir the direction (DEG)
+         */
+        public RobotRequests rotate(int dir) {
+            return ROTATE.equals(statusId) && this.targetDir == dir
+                    ? this
+                    : new RobotRequests(connect, close, simulationTime, ROTATE, dir, target, headDir);
+        }
+
+        /**
+         * Sets the simulation time
+         *
+         * @param simulationTime the simulation time (ms)
+         */
+        public RobotRequests simulationTime(long simulationTime) {
+            return this.simulationTime == simulationTime ? this : new RobotRequests(connect, close, simulationTime, statusId, targetDir, target, headDir);
         }
     }
 }

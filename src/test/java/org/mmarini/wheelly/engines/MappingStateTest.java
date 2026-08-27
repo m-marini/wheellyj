@@ -192,7 +192,7 @@ class MappingStateTest {
         }
         // And the status of flow state should be ...
         assertEquals(MappingStateStatus.LEFT_SCANNING, state.status());
-        assertEquals(status.simulationTime(), state.prevLidarTime());
+        assertEquals(status.robotTime(), state.prevLidarTime());
         assertEquals(0, state.numberOfSamples());
         assertEquals(-MAX_HEAD_DEG, state.targetSensorDir());
 
@@ -215,7 +215,7 @@ class MappingStateTest {
             assertEquals(head, result.commands().scanDirection());
             // And the status of flow state should be ...
             assertEquals(MappingStateStatus.LEFT_SCANNING, state.status());
-            assertEquals(status.simulationTime(), state.prevLidarTime());
+            assertEquals(status.robotTime(), state.prevLidarTime());
             assertEquals(1, state.numberOfSamples());
             assertEquals(head, state.targetSensorDir());
 
@@ -233,7 +233,7 @@ class MappingStateTest {
             assertThat(Complex.fromDeg(result.commands().scanDirection()), angleCloseTo(head + DELTA_DIR));
             // And the status of flow state should be ...
             assertEquals(MappingStateStatus.LEFT_SCANNING, state.status());
-            assertEquals(status.simulationTime(), state.prevLidarTime());
+            assertEquals(status.robotTime(), state.prevLidarTime());
             assertEquals(0, state.numberOfSamples());
             assertEquals(head + DELTA_DIR, state.targetSensorDir());
 
@@ -256,7 +256,7 @@ class MappingStateTest {
         assertThat(Complex.fromDeg(result.commands().scanDirection()), angleCloseTo(head));
         // And the status of flow state should be ...
         assertEquals(MappingStateStatus.LEFT_SCANNING, state.status());
-        assertEquals(status.simulationTime(), state.prevLidarTime());
+        assertEquals(status.robotTime(), state.prevLidarTime());
         assertEquals(1, state.numberOfSamples());
         assertEquals(head, state.targetSensorDir());
 
@@ -274,7 +274,7 @@ class MappingStateTest {
         assertEquals(0, result.commands().scanDirection());
         // And the status of flow state should be ...
         assertEquals(MappingStateStatus.LEFT_SCANNING, state.status());
-        assertEquals(status.simulationTime(), state.prevLidarTime());
+        assertEquals(status.robotTime(), state.prevLidarTime());
         assertEquals(0, state.numberOfSamples());
         assertEquals(0, state.targetSensorDir());
 
@@ -294,7 +294,7 @@ class MappingStateTest {
         assertEquals(0, result.commands().scanDirection());
         // And the status of flow state should be ...
         assertEquals(MappingStateStatus.LEFT_SCANNING, state.status());
-        assertEquals(status.simulationTime(), state.prevLidarTime());
+        assertEquals(status.robotTime(), state.prevLidarTime());
         assertEquals(1, state.numberOfSamples());
         assertEquals(0, state.targetSensorDir());
 
@@ -314,7 +314,7 @@ class MappingStateTest {
         assertThat(Complex.fromDeg(result.commands().rotationDirection()), angleCloseTo(robotDeg + DEFAULT_TURN_ANGLE));
         // And the status of flow state should be ...
         assertEquals(TURING_ROBOT, state.status());
-        assertEquals(status.simulationTime(), state.prevLidarTime());
+        assertEquals(status.robotTime(), state.prevLidarTime());
         assertEquals(0, state.numberOfSamples());
         assertEquals(0, state.targetSensorDir());
         assertThat(state.targetRobotDir(), angleCloseTo(robotDeg + DEFAULT_TURN_ANGLE));
@@ -356,7 +356,7 @@ class MappingStateTest {
             assertEquals(head, result.commands().scanDirection());
             // And the status of flow state should be ...
             assertEquals(RIGHT_SCANNING, state.status());
-            assertEquals(status.simulationTime(), state.prevLidarTime());
+            assertEquals(status.robotTime(), state.prevLidarTime());
             assertEquals(1, state.numberOfSamples());
             assertEquals(head, state.targetSensorDir());
 
@@ -375,7 +375,7 @@ class MappingStateTest {
 
             // And the status of flow state should be ...
             assertEquals(RIGHT_SCANNING, state.status());
-            assertEquals(status.simulationTime(), state.prevLidarTime());
+            assertEquals(status.robotTime(), state.prevLidarTime());
             assertEquals(0, state.numberOfSamples());
             assertEquals(head + DELTA_DIR, state.targetSensorDir());
             head += DELTA_DIR;
@@ -397,7 +397,7 @@ class MappingStateTest {
         assertEquals(head, result.commands().scanDirection());
         // And the status of flow state should be ...
         assertEquals(RIGHT_SCANNING, state.status());
-        assertEquals(status.simulationTime(), state.prevLidarTime());
+        assertEquals(status.robotTime(), state.prevLidarTime());
         assertEquals(1, state.numberOfSamples());
         assertEquals(head, state.targetSensorDir());
 
@@ -414,7 +414,7 @@ class MappingStateTest {
         assertEquals(MAX_HEAD_DEG, result.commands().scanDirection());
         // And the status of flow state should be ...
         assertEquals(RIGHT_SCANNING, state.status());
-        assertEquals(status.simulationTime(), state.prevLidarTime());
+        assertEquals(status.robotTime(), state.prevLidarTime());
         assertEquals(0, state.numberOfSamples());
         assertEquals(MAX_HEAD_DEG, state.targetSensorDir());
 
@@ -434,7 +434,7 @@ class MappingStateTest {
         assertEquals(MAX_HEAD_DEG, result.commands().scanDirection());
         // And the status of flow state should be ...
         assertEquals(RIGHT_SCANNING, state.status());
-        assertEquals(status.simulationTime(), state.prevLidarTime());
+        assertEquals(status.robotTime(), state.prevLidarTime());
         assertEquals(1, state.numberOfSamples());
         assertEquals(MAX_HEAD_DEG, state.targetSensorDir());
 
@@ -452,7 +452,7 @@ class MappingStateTest {
         assertEquals(-MAX_HEAD_DEG, result.commands().scanDirection());
         // And the status of flow state should be ...
         assertEquals(MappingStateStatus.LEFT_SCANNING, state.status());
-        assertEquals(status.simulationTime(), state.prevLidarTime());
+        assertEquals(status.robotTime(), state.prevLidarTime());
         assertEquals(0, state.numberOfSamples());
         assertEquals(-MAX_HEAD_DEG, state.targetSensorDir());
     }
@@ -481,7 +481,7 @@ class MappingStateTest {
 
         // And the status of flow state should be ...
         assertEquals(TURING_ROBOT, state.status());
-        assertEquals(status.simulationTime(), state.prevLidarTime());
+        assertEquals(status.robotTime(), state.prevLidarTime());
         assertEquals(0, state.numberOfSamples());
         assertEquals(0, state.targetSensorDir());
 
@@ -532,7 +532,7 @@ class MappingStateTest {
         } while (!TURING_ROBOT.equals(state.status()));
         // And the status of flow state should be ...
         assertEquals(TURING_ROBOT, state.status());
-        assertEquals(status.simulationTime(), state.prevLidarTime());
+        assertEquals(status.robotTime(), state.prevLidarTime());
         assertEquals(0, state.numberOfSamples());
         assertEquals(0, state.targetSensorDir());
         assertThat(state.targetRobotDir(), angleCloseTo(robotDeg));

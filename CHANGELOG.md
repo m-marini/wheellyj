@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 # Changed
 
+- Issue [#616](https://github.com/m-marini/wheellyj/issues/616): Act and observation at action completion
 - Issue [#626](https://github.com/m-marini/wheellyj/issues/626): Reduce move action space
 - Issue [#629](https://github.com/m-marini/wheellyj/issues/629): Callback kpis
 

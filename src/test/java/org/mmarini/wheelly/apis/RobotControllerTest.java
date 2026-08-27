@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.apis;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.subscribers.TestSubscriber;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,6 +43,7 @@ import org.mmarini.RandomArgumentsGenerator;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -73,13 +75,16 @@ class RobotControllerTest {
     }
 
     private RobotController controller;
+    private List<RobotStatus> robotStates;
 
     @BeforeEach
     void setUp() throws IOException {
+        this.robotStates = new ArrayList<>();
         JsonNode root = fromResource("/simRobot0Obstacles.yml");
         SimRobot robot = SimRobot.create(root, new File("simRobot0Obstacles.yml"));
         this.controller = new RobotController(REACTION_INTERVAL, COMMAND_INTERVAL, x -> 12d)
                 .connectRobot(robot);
+        this.controller.onRobotStatus(robotStates::add);
     }
 
     @AfterEach
@@ -93,10 +98,10 @@ class RobotControllerTest {
 
         // Given a mock robot
         // and a controller
-        TestSubscriber<RobotStatus> statusSub = new TestSubscriber<>();
-        controller.readRobotStatus()
-                .subscribe(statusSub);
         Point2D target = Complex.fromDeg(targetDeg).at(new Point2D.Double(), targetDistance);
+
+        PublishProcessor<RobotStatus> events = PublishProcessor.create();
+        controller.onRobotStatus(events::onNext);
 
         // When start the controller
         controller.start();
@@ -106,22 +111,20 @@ class RobotControllerTest {
                 .blockingGet();
         controller.execute(RobotCommands.backward(headDeg, target));
         // Wait for 5 simulated seconds
-        controller.readRobotStatus()
-                .filter(s -> s.simulationTime() >= TEST_DURATION)
+        events.filter(s -> s.robotTime() >= TEST_DURATION)
                 .firstElement()
                 .ignoreElement()
                 .blockingAwait();
+
         controller.shutdown();
         controller.readShutdown().blockingAwait();
 
         // Then the move method of robot should be invoked
-        statusSub.assertComplete();
-        statusSub.assertNoErrors();
-        List<RobotStatus> states = statusSub.values();
+        List<RobotStatus> states = robotStates;
 
         assertThat(states, hasSize(greaterThanOrEqualTo(2)));
-        assertEquals(0L, states.getFirst().simulationTime());
-        assertEquals(TEST_DURATION, states.getLast().simulationTime());
+        assertEquals(0L, states.getFirst().robotTime());
+        assertEquals(TEST_DURATION, states.getLast().robotTime());
         assertEquals(headDeg, states.getLast().headDirection().toIntDeg());
         assertTrue(states.getLast().halt());
         assertThat(states.getLast().location(), pointCloseTo(target, DEFAULT_TARGET_RANGE));
@@ -162,11 +165,9 @@ class RobotControllerTest {
 
         // Given a mock robot
         // and a controller
-        TestSubscriber<RobotStatus> statusSub = new TestSubscriber<>();
-        controller.readRobotStatus()
-                .subscribe(statusSub);
         Point2D target = Complex.fromDeg(targetDeg).at(new Point2D.Double(), targetDistance);
-
+        PublishProcessor<RobotStatus> events = PublishProcessor.create();
+        controller.onRobotStatus(events::onNext);
         // When start the controller
         controller.start();
         controller.readControllerStatus()
@@ -175,8 +176,7 @@ class RobotControllerTest {
                 .blockingGet();
         controller.execute(RobotCommands.forward(headDeg, target));
         // Wait for 5 simulated seconds
-        controller.readRobotStatus()
-                .filter(s -> s.simulationTime() >= TEST_DURATION)
+        events.filter(s -> s.robotTime() >= TEST_DURATION)
                 .firstElement()
                 .ignoreElement()
                 .blockingAwait();
@@ -184,13 +184,11 @@ class RobotControllerTest {
         controller.readShutdown().blockingAwait();
 
         // Then the move method of robot should be invoked
-        statusSub.assertComplete();
-        statusSub.assertNoErrors();
-        List<RobotStatus> states = statusSub.values();
+        List<RobotStatus> states = robotStates;
 
         assertThat(states, hasSize(greaterThanOrEqualTo(2)));
-        assertEquals(0L, states.getFirst().simulationTime());
-        assertEquals(TEST_DURATION, states.getLast().simulationTime());
+        assertEquals(0L, states.getFirst().robotTime());
+        assertEquals(TEST_DURATION, states.getLast().robotTime());
         assertEquals(headDeg, states.getLast().headDirection().toIntDeg());
         assertTrue(states.getLast().halt());
         assertThat(states.getLast().location(), pointCloseTo(target, DEFAULT_TARGET_RANGE));
@@ -201,14 +199,10 @@ class RobotControllerTest {
     void testInference() {
         // Given a mock robot
         // and a controller
-        TestSubscriber<RobotStatus> statusSub = new TestSubscriber<>();
-        controller.readRobotStatus()
-                .subscribe(statusSub);
-
         AtomicInteger counter = new AtomicInteger();
         Consumer<RobotStatus> inferenceMock = ignored ->
                 counter.incrementAndGet();
-        controller.setOnInference(inferenceMock);
+        controller.onInference(inferenceMock);
 
         // When start the controller
         controller.start();
@@ -223,13 +217,11 @@ class RobotControllerTest {
         controller.readShutdown().blockingAwait();
 
         // Then ...
-        statusSub.assertComplete();
-        statusSub.assertNoErrors();
-        List<RobotStatus> states = statusSub.values();
+        List<RobotStatus> states = robotStates;
 
         assertThat(states, hasSize(greaterThanOrEqualTo(2)));
-        assertEquals(0L, states.getFirst().simulationTime());
-        assertEquals(COMMAND_INTERVAL, states.getLast().simulationTime());
+        assertEquals(0L, states.getFirst().robotTime());
+        assertEquals(COMMAND_INTERVAL, states.getLast().robotTime());
 
         assertThat(counter.get(), greaterThanOrEqualTo(2));
     }
@@ -239,10 +231,8 @@ class RobotControllerTest {
     void testRotate(int headDeg, int targetDeg, double targetDistance) {
 
         // Given a mock robot
-        // and a controller
-        TestSubscriber<RobotStatus> statusSub = new TestSubscriber<>();
-        controller.readRobotStatus()
-                .subscribe(statusSub);
+        PublishProcessor<RobotStatus> events = PublishProcessor.create();
+        controller.onRobotStatus(events::onNext);
 
         // When start the controller
         controller.start();
@@ -252,8 +242,7 @@ class RobotControllerTest {
                 .blockingGet();
         controller.execute(RobotCommands.rotate(headDeg, targetDeg));
         // Wait for 5 simulated seconds
-        controller.readRobotStatus()
-                .filter(s -> s.simulationTime() >= TEST_DURATION)
+        events.filter(s -> s.robotTime() >= TEST_DURATION)
                 .firstElement()
                 .ignoreElement()
                 .blockingAwait();
@@ -261,13 +250,11 @@ class RobotControllerTest {
         controller.readShutdown().blockingAwait();
 
         // Then the move method of robot should be invoked
-        statusSub.assertComplete();
-        statusSub.assertNoErrors();
-        List<RobotStatus> states = statusSub.values();
+        List<RobotStatus> states = robotStates;
 
         assertThat(states, hasSize(greaterThanOrEqualTo(2)));
-        assertEquals(0L, states.getFirst().simulationTime());
-        assertEquals(TEST_DURATION, states.getLast().simulationTime());
+        assertEquals(0L, states.getFirst().robotTime());
+        assertEquals(TEST_DURATION, states.getLast().robotTime());
         assertEquals(headDeg, states.getLast().headDirection().toIntDeg());
         assertTrue(states.getLast().halt());
         assertThat(states.getLast().direction(), angleCloseTo(targetDeg, 10));
@@ -277,10 +264,8 @@ class RobotControllerTest {
     @ValueSource(ints = {-65, -60, -45, -30, -15, -0, 15, 30, 45, 60, 65})
     void testScan(int headDeg) {
         // Given a mock robot
-        // and a controller
-        TestSubscriber<RobotStatus> statusSub = new TestSubscriber<>();
-        controller.readRobotStatus()
-                .subscribe(statusSub);
+        PublishProcessor<RobotStatus> events = PublishProcessor.create();
+        controller.onRobotStatus(events::onNext);
 
         // When start the controller
         controller.start();
@@ -290,8 +275,7 @@ class RobotControllerTest {
                 .blockingGet();
         controller.execute(RobotCommands.halt(headDeg));
         // Wait for 5 simulated seconds
-        controller.readRobotStatus()
-                .filter(s -> s.simulationTime() >= 5000)
+        events.filter(s -> s.robotTime() >= 5000)
                 .firstElement()
                 .ignoreElement()
                 .blockingAwait();
@@ -299,13 +283,11 @@ class RobotControllerTest {
         controller.readShutdown().blockingAwait();
 
         // And
-        statusSub.assertComplete();
-        statusSub.assertNoErrors();
-        List<RobotStatus> states = statusSub.values();
+        List<RobotStatus> states = robotStates;
 
         assertThat(states, hasSize(greaterThanOrEqualTo(2)));
-        assertEquals(0L, states.getFirst().simulationTime());
-        assertEquals(5000L, states.getLast().simulationTime());
+        assertEquals(0L, states.getFirst().robotTime());
+        assertEquals(5000L, states.getLast().robotTime());
         assertEquals(headDeg, states.getLast().headDirection().toIntDeg());
     }
 

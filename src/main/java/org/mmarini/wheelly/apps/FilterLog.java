@@ -56,7 +56,7 @@ public class FilterLog {
         File file = new File("conf/robots/simRobot0Obstacles.yml");
         JsonNode root = Utils.fromFile(file);
         SimRobot robot = SimRobot.create(root, file);
-        robot.simulationTime(status.simulationTime());
+        robot.simulationTime(status.robotTime());
         robot.robotDir(status.direction());
         Point2D location = status.location();
         robot.robotPos(location.getX(), location.getY());
@@ -120,7 +120,7 @@ public class FilterLog {
             logger.atInfo().log("Record {}: RobotStatus @{}, R{}, t={} ms Backward={} Forward={}",
                     numRecord + i, location,
                     robotStatus.direction().toIntDeg(),
-                    robotStatus.simulationTime(),
+                    robotStatus.robotTime(),
                     robotStatus.canMoveBackward(),
                     robotStatus.canMoveForward());
 
@@ -128,7 +128,7 @@ public class FilterLog {
             logger.atInfo().log("    SimRobot @{}, R{}, t={} ms",
                     robot.location(),
                     robot.direction().toIntDeg(),
-                    robot.simulationTime());
+                    robot.robotTime());
             RobotCommands cmd = record._2;
             logger.atInfo().log("    Command {}",
                     cmd);

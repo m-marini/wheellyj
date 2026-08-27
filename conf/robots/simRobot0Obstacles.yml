@@ -18,8 +18,8 @@ lidarFOV: 15
 stalemateInterval: 60000
 contactRadius: 0.28
 maxRadarDistance: 2
-interval: 100
 cameraInterval: 500
 motionInterval: 500
 proxyInterval: 500
-tickInterval: 0
+interval: 100
+tickInterval: 90

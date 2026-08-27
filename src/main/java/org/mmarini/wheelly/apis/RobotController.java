@@ -42,6 +42,8 @@ import org.slf4j.LoggerFactory;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -89,14 +91,14 @@ public class RobotController implements RobotControllerApi {
     private final long reactionInterval;
     private final IntToDoubleFunction decodeVoltage;
     private final CompletableSubject shutdownCompletable;
-    private final BehaviorProcessor<RobotStatus> statusMessages;
     private final PublishProcessor<Throwable> controllerErrors;
-    private final PublishProcessor<RobotCommands> commands;
     private final BehaviorProcessor<RobotControllerStatusApi> controllerStatus;
     private final AtomicReference<RobotControllerStatus> status;
+    private final List<Consumer<RobotStatus>> onRobotStatus;
+    private final List<Consumer<RobotStatus>> onLatches;
+    private final List<Consumer<RobotCommands>> onCommands;
+    private final List<Consumer<RobotStatus>> onInferences;
     private RobotApi robot;
-    private Consumer<RobotStatus> onInference;
-    private Consumer<RobotStatus> onLatch;
 
     /**
      * Creates the robot controller
@@ -112,12 +114,26 @@ public class RobotController implements RobotControllerApi {
         this.status = new AtomicReference<>(new RobotControllerStatus(
                 null, RobotCommands.halt(),
                 false, false, true, false,
-                0, 0, null));
-        this.statusMessages = BehaviorProcessor.create();
+                0, 0, 0, null));
         this.controllerStatus = BehaviorProcessor.createDefault(status.get());
-        this.commands = PublishProcessor.create();
         this.controllerErrors = PublishProcessor.create();
         this.shutdownCompletable = CompletableSubject.create();
+        this.onRobotStatus = new ArrayList<>();
+        this.onLatches = new ArrayList<>();
+        this.onCommands = new ArrayList<>();
+        this.onInferences = new ArrayList<>();
+    }
+
+    /**
+     * Synchronises the robot actions
+     */
+    private void checkForSync(RobotStatus robotStatus) {
+        long time = robotStatus.robotTime();
+        RobotControllerStatus s = status.get();
+        // Check for the command interval
+        if (s.syncRequired(time)) {
+            syncActions(robotStatus);
+        }
     }
 
     @Override
@@ -126,27 +142,12 @@ public class RobotController implements RobotControllerApi {
         RobotStatus robotStatus = RobotStatus.create(robot.robotSpec(), decodeVoltage);
         RobotControllerStatus st = this.status.updateAndGet(s -> s.robotStatus(robotStatus));
         this.controllerStatus.onNext(st);
-        statusMessages.onNext(robotStatus);
-        this.robot.readCamera()
-                .subscribeOn(Schedulers.computation())
-                .subscribe(this::onCamera,
-                        logError(logger, "Error reading camera messages"));
-        this.robot.readLidar()
-                .subscribeOn(Schedulers.computation())
-                .subscribe(this::onLidarMessage,
-                        logError(logger, "Error reading lidar messages"));
-        this.robot.readMotion()
-                .subscribeOn(Schedulers.computation())
-                .subscribe(this::onMotionMessage,
-                        logError(logger, "Error reading motion messages"));
-        this.robot.readSupply()
-                .subscribeOn(Schedulers.computation())
-                .subscribe(this::onSupplyMessage,
-                        logError(logger, "Error reading supply messages"));
-        this.robot.readContacts()
-                .subscribeOn(Schedulers.computation())
-                .subscribe(this::onContactsMessage,
-                        logError(logger, "Error reading contacts messages"));
+        notifyRobotStatus(robotStatus);
+        this.robot.onCamera(this::onCamera);
+        this.robot.onLidar(this::onLidarMessage);
+        this.robot.onContacts(this::onContactsMessage);
+        this.robot.onMotion(this::onMotionMessage);
+        this.robot.onSupply(this::onSupplyMessage);
         this.robot.readRobotStatus()
                 .subscribeOn(Schedulers.computation())
                 .distinctUntilChanged(RobotStatusApi::configured)
@@ -154,18 +155,6 @@ public class RobotController implements RobotControllerApi {
                         logError(logger, "Error reading robot configuration status")
                 );
         return this;
-    }
-
-    /**
-     * Synchronises the robot actions
-     */
-    private void checkForSync(RobotStatus robotStatus) {
-        long time = robotStatus.simulationTime();
-        RobotControllerStatus s = status.get();
-        // Check for the command interval
-        if (s.syncRequired(time)) {
-            syncActions(robotStatus);
-        }
     }
 
     @Override
@@ -182,7 +171,31 @@ public class RobotController implements RobotControllerApi {
             // command changed
             syncActions(status.get().robotStatus());
         }
-        commands.onNext(command);
+        for (Consumer<RobotCommands> callback : onCommands) {
+            callback.accept(command);
+        }
+    }
+
+    void notifyOnLatch(RobotStatus status) {
+        for (Consumer<RobotStatus> callback : onLatches) {
+            try {
+                callback.accept(status);
+            } catch (Throwable ex) {
+                logger.atError().setCause(ex).log("Error on latch");
+                controllerErrors.onNext(ex);
+            }
+        }
+    }
+
+    /**
+     * Notify robot status
+     *
+     * @param robotStatus the robot status
+     */
+    private void notifyRobotStatus(RobotStatus robotStatus) {
+        for (Consumer<RobotStatus> callback : onRobotStatus) {
+            callback.accept(robotStatus);
+        }
     }
 
     /**
@@ -194,13 +207,39 @@ public class RobotController implements RobotControllerApi {
         RobotControllerStatus st = status.updateAndGet(s -> {
             RobotStatus s1 = s.robotStatus()
                     .setCameraMessage(new CorrelatedCameraEvent(cameraEvent, s.robotStatus().lidarMessage()))
-                    .setSimulationTime(robot.simulationTime());
+                    .setSimulationTime(robot.robotTime());
             return s.robotStatus(s1);
         });
         RobotStatus robotStatus = st.robotStatus();
-        statusMessages.onNext(robotStatus);
+        notifyRobotStatus(robotStatus);
         scheduleInference(robotStatus);
         checkForSync(robotStatus);
+    }
+
+    @Override
+    public void onCommand(Consumer<RobotCommands> callback) {
+        onCommands.add(callback);
+    }
+
+    /**
+     * Handles contacts messages
+     *
+     * @param message the message
+     */
+    private void onContactsMessage(WheellyContactsMessage message) {
+        RobotStatus status = this.status.updateAndGet(st ->
+                        st.robotStatus(st.robotStatus()
+                                .setContactsMessage(message)
+                                .setSimulationTime(message.time())))
+                .robotStatus();
+        notifyRobotStatus(status);
+        scheduleInference(status);
+        checkForSync(status);
+    }
+
+    @Override
+    public void onInference(Consumer<RobotStatus> callback) {
+        this.onInferences.add(callback);
     }
 
     /**
@@ -223,20 +262,9 @@ public class RobotController implements RobotControllerApi {
         controllerStatus.onNext(st1);
     }
 
-    /**
-     * Handles contacts messages
-     *
-     * @param message the message
-     */
-    private void onContactsMessage(WheellyContactsMessage message) {
-        RobotStatus status = this.status.updateAndGet(st ->
-                        st.robotStatus(st.robotStatus()
-                                .setContactsMessage(message)
-                                .setSimulationTime(message.simulationTime())))
-                .robotStatus();
-        statusMessages.onNext(status);
-        scheduleInference(status);
-        checkForSync(status);
+    @Override
+    public void onLatch(Consumer<RobotStatus> callback) {
+        this.onLatches.add(callback);
     }
 
     /**
@@ -248,9 +276,9 @@ public class RobotController implements RobotControllerApi {
         RobotStatus status = this.status.updateAndGet(st ->
                         st.robotStatus(st.robotStatus()
                                 .setLidarMessage(message)
-                                .setSimulationTime(message.simulationTime())))
+                                .setSimulationTime(message.time())))
                 .robotStatus();
-        statusMessages.onNext(status);
+        notifyRobotStatus(status);
         scheduleInference(status);
         checkForSync(status);
     }
@@ -264,9 +292,9 @@ public class RobotController implements RobotControllerApi {
         RobotStatus status = this.status.updateAndGet(st ->
                         st.robotStatus(st.robotStatus()
                                 .setMotionMessage(message)
-                                .setSimulationTime(message.simulationTime())))
+                                .setSimulationTime(message.time())))
                 .robotStatus();
-        statusMessages.onNext(status);
+        notifyRobotStatus(status);
         scheduleInference(status);
         checkForSync(status);
     }
@@ -282,6 +310,11 @@ public class RobotController implements RobotControllerApi {
         controllerStatus.onNext(st);
     }
 
+    @Override
+    public void onRobotStatus(Consumer<RobotStatus> callback) {
+        onRobotStatus.add(callback);
+    }
+
     /**
      * Handles supply messages
      *
@@ -291,9 +324,9 @@ public class RobotController implements RobotControllerApi {
         RobotStatus status = this.status.updateAndGet(st ->
                         st.robotStatus(st.robotStatus()
                                 .setSupplyMessage(message)
-                                .setSimulationTime(message.simulationTime())))
+                                .setSimulationTime(message.time())))
                 .robotStatus();
-        statusMessages.onNext(status);
+        notifyRobotStatus(status);
         scheduleInference(status);
         checkForSync(status);
     }
@@ -313,11 +346,6 @@ public class RobotController implements RobotControllerApi {
         return readControllerStatus()
                 .map(RobotControllerStatusApi::ready)
                 .distinctUntilChanged();
-    }
-
-    @Override
-    public Flowable<RobotStatus> readRobotStatus() {
-        return statusMessages;
     }
 
     @Override
@@ -344,44 +372,27 @@ public class RobotController implements RobotControllerApi {
         RobotControllerStatus st = status.get();
         if (st.ready()) {
             // notify latch of status
-            if (onLatch != null) {
-                try {
-                    onLatch.accept(currentStatus);
-                } catch (Throwable ex) {
-                    logger.atError().setCause(ex).log("Error on latch");
-                    controllerErrors.onNext(ex);
-                }
-            }
-            if (onInference != null) {
-                long time = currentStatus.simulationTime();
-                st = status.updateAndGet(s ->
-                        s.requestInference(time, reactionInterval));
-                if (st.inferenceRequested()) {
-                    controllerStatus.onNext(st);
-                    // schedule inference
-                    Completable.fromAction(() -> {
+            notifyOnLatch(currentStatus);
+            long time = currentStatus.robotTime();
+            st = status.updateAndGet(s ->
+                    s.requestInference(time, reactionInterval));
+            if (st.inferenceRequested()) {
+                controllerStatus.onNext(st);
+                // schedule inference
+                Completable.fromAction(() -> {
+                            for (Consumer<RobotStatus> callback : onInferences) {
                                 try {
-                                    onInference.accept(currentStatus);
+                                    callback.accept(currentStatus);
                                 } catch (Throwable ex) {
                                     logger.atError().setCause(ex).log("Error on inference function");
                                     throw ex;
                                 }
-                            }).subscribeOn(Schedulers.computation())
-                            .subscribe(this::onInferenceCompletion,
-                                    this::onInferenceError);
-                }
+                            }
+                        }).subscribeOn(Schedulers.computation())
+                        .subscribe(this::onInferenceCompletion,
+                                this::onInferenceError);
             }
         }
-    }
-
-    @Override
-    public void setOnInference(Consumer<RobotStatus> callback) {
-        this.onInference = callback;
-    }
-
-    @Override
-    public void setOnLatch(Consumer<RobotStatus> callback) {
-        this.onLatch = callback;
     }
 
     @Override
@@ -394,10 +405,8 @@ public class RobotController implements RobotControllerApi {
             } catch (IOException e) {
                 logger.atError().setCause(e).log("Error closing robot");
             }
-            robot.readMotion().blockingSubscribe();
-            statusMessages.onComplete();
+            robot.readRobotStatus().blockingSubscribe();
             controllerErrors.onComplete();
-            commands.onComplete();
             RobotControllerStatus st = status.updateAndGet(s -> s.ready(false));
             controllerStatus.onNext(st);
             controllerStatus.onComplete();
@@ -419,17 +428,22 @@ public class RobotController implements RobotControllerApi {
         }
     }
 
-    @Override
-    public Flowable<RobotCommands> readCommand() {
-        return commands;
-    }
-
     /**
      * Synchronises the robot status to commands
      */
     private void syncActions(RobotStatus robotStatus) {
-        long time = robotStatus.simulationTime();
-        RobotControllerStatus s = status.get();
+        long time = robotStatus.robotTime();
+        //RobotControllerStatus s = status.get();
+        RobotControllerStatus s = status.updateAndGet(s1 -> {
+            RobotCommands cmd = s1.command();
+            if (!cmd.isHalt()
+                    && time > s1.commandTime() + commandInterval
+                    && robotStatus.halt()) {
+                logger.atDebug().log("Halt due command {} not accepted", cmd.status());
+                return s1.command(RobotCommands.halt());
+            }
+            return s1;
+        });
         RobotCommands cmd = s.command();
         // Check for commands required
         switch (cmd.status()) {

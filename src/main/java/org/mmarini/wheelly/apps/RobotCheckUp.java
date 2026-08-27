@@ -95,8 +95,8 @@ public class RobotCheckUp {
     public static final double MOVEMENT_DISTANCE = 0.6;
     public static final long MOVEMENT_DURATION = round(MOVEMENT_DISTANCE / DISTANCE_PER_PULSE / TEST_SPEED * 1000) + EXTENSION_DURATION;
     public static final double DISTANCE_TOLERANCE = 0.25;
-    private static final Logger logger = LoggerFactory.getLogger(RobotCheckUp.class);
     public static final double THRESHOLD_DISTANCE = 0.2;
+    private static final Logger logger = LoggerFactory.getLogger(RobotCheckUp.class);
     private static final Point2D CENTRE_TARGET = new Point2D.Double();
     private static final Point2D NORTH_TARGET = new Point2D.Double(0, MOVEMENT_DISTANCE);
     private static final Point2D EAST_TARGET = new Point2D.Double(MOVEMENT_DISTANCE, 0);
@@ -129,13 +129,14 @@ public class RobotCheckUp {
      *
      * @param args the command line arguments
      */
-    static void main(String[] args) {
+    public static void main(String[] args) {
         try {
             new RobotCheckUp().init(args).run();
         } catch (Throwable e) {
             logger.error(e.getMessage(), e);
         }
     }
+
     private final ComMonitor comMonitor;
     private final JFrame frame;
     private final JFrame monitorFrame;
@@ -203,7 +204,7 @@ public class RobotCheckUp {
 
             @Override
             public List<ScannerResult> apply(RobotStatus status) {
-                long time = status.simulationTime();
+                long time = status.robotTime();
                 RobotCommands command = RobotCommands.halt();
                 // Check for first sample
                 if (currentTest < 0) {
@@ -448,7 +449,7 @@ public class RobotCheckUp {
         controller.readShutdown()
                 .subscribe(this::onShutdown,
                         this::onFlowError);
-        controller.setOnInference(this::onInference);
+        controller.onInference(this::onInference);
         frame.setVisible(true);
         sensorFrame.setVisible(true);
         monitorFrame.setVisible(true);
@@ -656,7 +657,7 @@ public class RobotCheckUp {
             long numMovementFailure = moveResults.stream()
                     .filter(result ->
                             result.distanceError > DISTANCE_TOLERANCE
-                            || result.imuFailure != 0).count();
+                                    || result.imuFailure != 0).count();
             double maxMoveDistanceError = 0;
             for (MovementResult r : moveResults) {
                 if (r.imuFailure == 0) {
@@ -736,7 +737,7 @@ public class RobotCheckUp {
 
                 @Override
                 public boolean test(RobotStatus status) {
-                    long time = status.simulationTime();
+                    long time = status.robotTime();
                     if (startLocation == null) {
                         // store start location
                         startLocation = status.location();
@@ -781,7 +782,7 @@ public class RobotCheckUp {
 
                 @Override
                 public boolean test(RobotStatus status) {
-                    long time = status.simulationTime();
+                    long time = status.robotTime();
                     if (startLocation == null) {
                         // store start location
                         startLocation = status.location();
@@ -826,7 +827,7 @@ public class RobotCheckUp {
 
                 @Override
                 public boolean test(RobotStatus status) {
-                    long time = status.simulationTime();
+                    long time = status.robotTime();
                     Complex dir = status.direction();
                     if (startLocation == null) {
                         // store start location, time, rotation at the beginning of test

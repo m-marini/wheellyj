@@ -71,7 +71,7 @@ public interface AbstractRadarModeller extends RadarModeller {
     default RadarMap update(RadarMap map, RobotStatus status) {
         // Updates the radar map
         RobotSpec robotSpec = status.robotSpec();
-        long time = status.simulationTime();
+        long time = status.robotTime();
         SensorSignal frontSignal = new SensorSignal(status.frontLidarLocation(),
                 status.headAbsDirection(),
                 status.frontDistance(), time

@@ -28,11 +28,11 @@
 
 package org.mmarini.wheelly.apis;
 
-import io.reactivex.rxjava3.core.Flowable;
+import java.util.function.Consumer;
 
-public interface WithInferenceFlowable {
+public interface WithRobotStatusCallback {
     /**
-     * Returns the stream of inference events
+     * Adds the robot status callback
      */
-    Flowable<RobotStatus> readInference();
+    void onRobotStatus(Consumer<RobotStatus> callback);
 }

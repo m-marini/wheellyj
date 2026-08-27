@@ -57,7 +57,7 @@ public record CorrelatedCameraEvent(CameraEvent camerEvent, WheellyLidarMessage 
      * Returns the camera simulation time (ms)
      */
     public long cameraTime() {
-        return camerEvent.simulationTime();
+        return camerEvent.time();
     }
 
     /**
@@ -71,7 +71,7 @@ public record CorrelatedCameraEvent(CameraEvent camerEvent, WheellyLidarMessage 
      * Returns the lidar message simulation time (ms)
      */
     public long lidarTime() {
-        return lidar.simulationTime();
+        return lidar.time();
     }
 
     /**

@@ -39,16 +39,29 @@
         </encoder>
     </appender>
 
-    <logger name="org.mmarini" level="INFO"/>
     <logger name="com.networknt.schema" level="INFO"/>
     <logger name="io.netty" level="INFO"/>
 
-    <logger name="org.mmarini.wheelly.mqtt.MqttRobot" level="DEBUG"/>
+    <logger name="org.mmarini" level="INFO"/>
+
+    <logger name="org.mmarini.rl.agents.BinArrayFile" level="INFO"/>
+    <logger name="org.mmarini.rl.agents.CSVWriter" level="INFO"/>
+    <logger name="org.mmarini.rl.agents.TDAgentSingleNN" level="INFO"/>
+    <logger name="org.mmarini.rl.agents.DLAgent" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.apis.SimRobot" level="INFO"/>
-    <logger name="org.mmarini.wheelly.apis.RobotController" level="DEBUG"/>
+    <logger name="org.mmarini.wheelly.apis.RobotController" level="INFO"/>
     <logger name="org.mmarini.wheelly.apis.RobotControllerStatus" level="INFO"/>
     <logger name="org.mmarini.wheelly.apis.RadarMap" level="INFO"/>
+
+    <logger name="org.mmarini.wheelly.apps.MatrixMonitor" level="INFO"/>
+    <logger name="org.mmarini.wheelly.apps.RobotCheckUp" level="INFO"/>
+    <logger name="org.mmarini.wheelly.apps.RobotExecutor" level="INFO"/>
+    <logger name="org.mmarini.wheelly.apps.Report" level="INFO"/>
+    <logger name="org.mmarini.wheelly.apps.Wheelly" level="INFO"/>
+    <logger name="org.mmarini.wheelly.apps.CameraCalibration" level="INFO"/>
+
+    <logger name="org.mmarini.wheelly.batch.BinFilesDatasetIterator" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.engines.StateMachineAgent" level="INFO"/>
     <logger name="org.mmarini.wheelly.engines.AbstractSearchAndMoveState" level="INFO"/>
@@ -64,21 +77,11 @@
     <logger name="org.mmarini.wheelly.engines.SearchRefreshState" level="INFO"/>
     <logger name="org.mmarini.wheelly.engines.AStar" level="INFO"/>
 
-    <logger name="org.mmarini.wheelly.apps.MatrixMonitor" level="INFO"/>
-    <logger name="org.mmarini.wheelly.apps.RobotCheckUp" level="INFO"/>
-    <logger name="org.mmarini.wheelly.apps.RobotExecutor" level="INFO"/>
-    <logger name="org.mmarini.wheelly.apps.Report" level="INFO"/>
-    <logger name="org.mmarini.wheelly.apps.Wheelly" level="INFO"/>
-    <logger name="org.mmarini.wheelly.apps.CameraCalibration" level="INFO"/>
+    <logger name="org.mmarini.wheelly.envs.DLEnvironment" level="INFO"/>
+
+    <logger name="org.mmarini.wheelly.mqtt.MqttRobot" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.swing.NNActivityPanel" level="INFO"/>
-
-    <logger name="org.mmarini.rl.agents.BinArrayFile" level="INFO"/>
-    <logger name="org.mmarini.rl.agents.CSVWriter" level="INFO"/>
-    <logger name="org.mmarini.rl.agents.TDAgentSingleNN" level="INFO"/>
-    <logger name="org.mmarini.rl.agents.DLAgent" level="INFO"/>
-
-    <logger name="org.mmarini.wheelly.batch.BinFilesDatasetIterator" level="INFO"/>
 
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>

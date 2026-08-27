@@ -42,7 +42,7 @@ import static org.mmarini.wheelly.apis.Utils.mm2m;
  * Creates the robot status
  *
  * @param robotSpec       the robot specification
- * @param simulationTime  the simulated markerTime (ms)
+ * @param robotTime  the simulated markerTime (ms)
  * @param motionMessage   the motion message
  * @param contactsMessage the contact's message
  * @param supplyMessage   the supply message
@@ -50,7 +50,7 @@ import static org.mmarini.wheelly.apis.Utils.mm2m;
  * @param cameraEvent     the camera event
  * @param lidarMessage    the lidar message
  */
-public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotionMessage motionMessage,
+public record RobotStatus(RobotSpec robotSpec, long robotTime, WheellyMotionMessage motionMessage,
                           WheellyContactsMessage contactsMessage,
                           WheellySupplyMessage supplyMessage, IntToDoubleFunction decodeVoltage,
                           CorrelatedCameraEvent cameraEvent,
@@ -73,7 +73,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
                 WheellyLidarMessage.DEFAULT_MESSAGE);
     }
 
-    public RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotionMessage motionMessage,
+    public RobotStatus(RobotSpec robotSpec, long robotTime, WheellyMotionMessage motionMessage,
                        WheellyContactsMessage contactsMessage, WheellySupplyMessage supplyMessage,
                        IntToDoubleFunction decodeVoltage, CorrelatedCameraEvent cameraEvent, WheellyLidarMessage lidarMessage) {
         this.motionMessage = requireNonNull(motionMessage);
@@ -81,7 +81,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
         this.supplyMessage = requireNonNull(supplyMessage);
         this.robotSpec = requireNonNull(robotSpec);
         this.decodeVoltage = requireNonNull(decodeVoltage);
-        this.simulationTime = simulationTime;
+        this.robotTime = robotTime;
         this.cameraEvent = requireNonNull(cameraEvent);
         this.lidarMessage = requireNonNull(lidarMessage);
     }
@@ -272,7 +272,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
     public RobotStatus setCameraMessage(CorrelatedCameraEvent cameraEvent) {
         return Objects.equals(cameraEvent, this.cameraEvent)
                 ? this
-                : new RobotStatus(robotSpec, simulationTime, motionMessage, contactsMessage,
+                : new RobotStatus(robotSpec, robotTime, motionMessage, contactsMessage,
                 supplyMessage, decodeVoltage, cameraEvent, lidarMessage);
     }
 
@@ -283,8 +283,8 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      */
     public RobotStatus setCanMoveBackward(boolean canMoveBackward) {
         return setContactsMessage(
-                contactsMessage.setCanMoveBackward(canMoveBackward)
-                        .setSimulationTime(simulationTime));
+                contactsMessage.canMoveBackward(canMoveBackward)
+                        .time(robotTime));
     }
 
     /**
@@ -294,8 +294,8 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      */
     public RobotStatus setCanMoveForward(boolean canMoveForward) {
         return setContactsMessage(
-                contactsMessage.setCanMoveForward(canMoveForward)
-                        .setSimulationTime(simulationTime));
+                contactsMessage.canMoveForward(canMoveForward)
+                        .time(robotTime));
     }
 
     /**
@@ -305,7 +305,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      */
     public RobotStatus setContactsMessage(WheellyContactsMessage contactsMessage) {
         return !Objects.equals(this.contactsMessage, contactsMessage)
-                ? new RobotStatus(robotSpec, simulationTime, motionMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, lidarMessage)
+                ? new RobotStatus(robotSpec, robotTime, motionMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, lidarMessage)
                 : this;
     }
 
@@ -316,7 +316,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      */
     public RobotStatus setDirection(Complex direction) {
         return setMotionMessage(
-                motionMessage.setDirection(direction.toIntDeg()));
+                motionMessage.direction(direction.toIntDeg()));
     }
 
     /**
@@ -335,8 +335,8 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      */
     public RobotStatus setHalt(boolean halt) {
         return setMotionMessage(
-                motionMessage.setHalt(halt)
-                        .setSimulationTime(simulationTime));
+                motionMessage.halt(halt)
+                        .time(robotTime));
     }
 
     /**
@@ -346,18 +346,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      */
     public RobotStatus setLidarMessage(WheellyLidarMessage lidarMessage) {
         return !Objects.equals(this.lidarMessage, lidarMessage)
-                ? new RobotStatus(robotSpec, simulationTime, motionMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, lidarMessage)
-                : this;
-    }
-
-    /**
-     * Returns the robot status updated by motion message
-     *
-     * @param motionMessage the motion message
-     */
-    public RobotStatus setMotionMessage(WheellyMotionMessage motionMessage) {
-        return !Objects.equals(this.motionMessage, motionMessage)
-                ? new RobotStatus(robotSpec, simulationTime, motionMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, lidarMessage)
+                ? new RobotStatus(robotSpec, robotTime, motionMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, lidarMessage)
                 : this;
     }
 
@@ -368,10 +357,21 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      */
     public RobotStatus setLocation(Point2D location) {
         return setMotionMessage(
-                motionMessage.setPulses(
+                motionMessage.pulses(
                                 distance2Pulse(location.getX()),
                                 distance2Pulse(location.getY()))
-                        .setSimulationTime(simulationTime));
+                        .time(robotTime));
+    }
+
+    /**
+     * Returns the robot status updated by motion message
+     *
+     * @param motionMessage the motion message
+     */
+    public RobotStatus setMotionMessage(WheellyMotionMessage motionMessage) {
+        return !Objects.equals(this.motionMessage, motionMessage)
+                ? new RobotStatus(robotSpec, robotTime, motionMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, lidarMessage)
+                : this;
     }
 
     /**
@@ -389,7 +389,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      * @param simulationTime the simulation markerTime (ms)
      */
     public RobotStatus setSimulationTime(long simulationTime) {
-        return simulationTime != this.simulationTime ?
+        return simulationTime != this.robotTime ?
                 new RobotStatus(robotSpec, simulationTime, motionMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, lidarMessage)
                 : this;
     }
@@ -402,8 +402,8 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      */
     public RobotStatus setSpeeds(double leftPps, double rightPps) {
         return setMotionMessage(
-                motionMessage.setSpeeds(leftPps, rightPps)
-                        .setSimulationTime(simulationTime));
+                motionMessage.speeds(leftPps, rightPps)
+                        .time(robotTime));
     }
 
     /**
@@ -413,7 +413,7 @@ public record RobotStatus(RobotSpec robotSpec, long simulationTime, WheellyMotio
      */
     public RobotStatus setSupplyMessage(WheellySupplyMessage supplyMessage) {
         return !Objects.equals(this.supplyMessage, supplyMessage)
-                ? new RobotStatus(robotSpec, simulationTime, motionMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, lidarMessage)
+                ? new RobotStatus(robotSpec, robotTime, motionMessage, contactsMessage, supplyMessage, decodeVoltage, cameraEvent, lidarMessage)
                 : this;
     }
 

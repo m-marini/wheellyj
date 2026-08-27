@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2023 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -28,30 +28,14 @@
 
 package org.mmarini.wheelly.apis;
 
-import io.reactivex.rxjava3.core.Flowable;
+import java.util.function.Consumer;
 
 /**
- * Reads wheelly messages
+ *
  */
-public interface WithWheellyMessageFlowable {
-
+public interface WithCommandCallback {
     /**
-     * Returns the stream of wheelly contacts messages
+     * Adds the command callback
      */
-    Flowable<WheellyContactsMessage> readContacts();
-
-    /**
-     * Returns the stream of wheelly motion messages
-     */
-    Flowable<WheellyMotionMessage> readMotion();
-
-    /**
-     * Returns the stream of wheelly proxy messages
-     */
-    Flowable<WheellyLidarMessage> readLidar();
-
-    /**
-     * Returns the stream of wheelly supply messages
-     */
-    Flowable<WheellySupplyMessage> readSupply();
+    void onCommand(Consumer<RobotCommands> callback);
 }

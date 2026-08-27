@@ -58,7 +58,7 @@ class WheellyLidarMessageTest {
         WheellyLidarMessage m = WheellyLidarMessage.parse(SIM_TIME, arg);
 
         assertNotNull(m);
-        assertEquals(SIM_TIME, m.simulationTime());
+        assertEquals(SIM_TIME, m.time());
         assertEquals(sensorDeg, m.headDirectionDeg());
         assertEquals(frontDistance, m.frontDistance());
         assertEquals(rearDistance, m.rearDistance());

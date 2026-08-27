@@ -42,7 +42,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * @param camera the camera event
      */
     default <T extends InferenceWriter> T write(CameraEvent camera) throws IOException {
-        return write(camera.simulationTime())
+        return write(camera.time())
                 .write(camera.qrCode())
                 .write(camera.width())
                 .write(camera.height());
@@ -79,7 +79,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * @param contacts the contact message
      */
     default <T extends InferenceWriter> T write(WheellyContactsMessage contacts) throws IOException {
-        return write(contacts.simulationTime())
+        return write(contacts.time())
                 .write(contacts.frontSensors())
                 .write(contacts.rearSensors())
                 .write(contacts.canMoveForward())
@@ -109,7 +109,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * @param motion the motion message
      */
     default <T extends InferenceWriter> T write(WheellyMotionMessage motion) throws IOException {
-        return write(motion.simulationTime())
+        return write(motion.time())
                 .write((float) motion.xPulses())
                 .write((float) motion.yPulses())
                 .write(motion.directionDeg())
@@ -167,7 +167,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * @param status the status
      */
     default <T extends InferenceWriter> T write(RobotStatus status) throws IOException {
-        write(status.simulationTime());
+        write(status.robotTime());
         return write(status.motionMessage())
                 .write(status.contactsMessage())
                 .write(status.cameraEvent())
@@ -209,7 +209,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * Returns the lidar message
      */
     default <T extends InferenceWriter> T write(WheellyLidarMessage message) throws IOException {
-        return write(message.simulationTime())
+        return write(message.time())
                 .write(message.headDirectionDeg())
                 .write(message.frontDistance())
                 .write(message.rearDistance())
