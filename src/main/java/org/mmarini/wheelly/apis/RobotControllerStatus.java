@@ -36,22 +36,21 @@ import java.util.Objects;
 /**
  * The controller status
  *
- * @param robotStatus        the current robot status
- * @param command            the last command
- * @param inferencing        true if the controller is inferencing
- * @param inferenceRequested true if the controller has to schedule inference
- * @param ready              true if the controller is ready
- * @param started            true if the controller is started
- * @param lastInference      the last inference instant
- * @param nextSyncTime       the next sync instant
- * @param commandTime        the command instant
- * @param lastSyncCommand    the last sync command
+ * @param robotStatus     the current robot status
+ * @param command         the last command
+ * @param inferencing     true if the controller is inferencing
+ * @param ready           true if the controller is ready
+ * @param started         true if the controller is started
+ * @param lastInference   the last inference instant
+ * @param nextSyncTime    the next sync instant
+ * @param commandTime     the command instant
+ * @param lastSyncCommand the last sync command
  */
 public record RobotControllerStatus(
         RobotStatus robotStatus,
         RobotCommands command,
         boolean inferencing,
-        boolean inferenceRequested, boolean ready,
+        boolean ready,
         boolean started,
         long lastInference,
         long nextSyncTime,
@@ -60,14 +59,10 @@ public record RobotControllerStatus(
 
     private static final Logger logger = LoggerFactory.getLogger(RobotControllerStatus.class);
 
-    /**
-     * Returns the status with requested inference
-     */
     public RobotControllerStatus clearInference() {
-        logger.atDebug().log("Clear inference");
-        return !inferencing && !inferenceRequested
+        return !inferencing
                 ? this
-                : new RobotControllerStatus(robotStatus, command, false, false, ready, started, lastInference, nextSyncTime, commandTime, lastSyncCommand);
+                : new RobotControllerStatus(robotStatus, command, false, ready, started, lastInference, nextSyncTime, commandTime, lastSyncCommand);
     }
 
     /**
@@ -78,14 +73,17 @@ public record RobotControllerStatus(
     public RobotControllerStatus command(RobotCommands command) {
         return Objects.equals(this.command, command)
                 ? this
-                : new RobotControllerStatus(robotStatus, command, inferencing, inferenceRequested, ready, started, lastInference, nextSyncTime, robotStatus.robotTime(), lastSyncCommand);
+                : new RobotControllerStatus(robotStatus, command, inferencing, ready, started, lastInference, nextSyncTime, robotStatus.robotTime(), lastSyncCommand);
     }
 
     /**
-     * Return true if inference requested and must be scheduled
+     * Returns true if the inference is requested
+     *
+     * @param time              the current time (ms)
+     * @param inferenceInterval the inference interval (ms)
      */
-    public boolean inferenceRequested() {
-        return inferenceRequested;
+    public boolean isInferenceReady(long time, long inferenceInterval) {
+        return ready && !inferencing && time >= lastInference + inferenceInterval;
     }
 
     /**
@@ -96,7 +94,7 @@ public record RobotControllerStatus(
     public RobotControllerStatus nextSyncTime(long nextSyncTime) {
         return this.nextSyncTime == nextSyncTime
                 ? this
-                : new RobotControllerStatus(robotStatus, command, inferencing, inferenceRequested, ready, started, lastInference, nextSyncTime, commandTime, command);
+                : new RobotControllerStatus(robotStatus, command, inferencing, ready, started, lastInference, nextSyncTime, commandTime, command);
     }
 
     /**
@@ -107,25 +105,19 @@ public record RobotControllerStatus(
     public RobotControllerStatus ready(boolean ready) {
         return this.ready == ready
                 ? this
-                : new RobotControllerStatus(robotStatus, command, inferencing, inferenceRequested, ready, started, lastInference, nextSyncTime, commandTime, lastSyncCommand);
+                : new RobotControllerStatus(robotStatus, command, inferencing, ready, started, lastInference, nextSyncTime, commandTime, lastSyncCommand);
     }
 
     /**
      * Returns the status with requested inference
      *
-     * @param time              the simulation timestamp
-     * @param inferenceInterval the inference interval
+     * @param time              the request time (ms)
+     * @param inferenceInterval the inference interval (ms)
      */
     public RobotControllerStatus requestInference(long time, long inferenceInterval) {
-        if (inferenceRequested) {
-            logger.atDebug().log("Inference already requested inferencing={}", inferencing);
-            return new RobotControllerStatus(robotStatus, command, inferencing, false, ready, started, lastInference, nextSyncTime, commandTime, lastSyncCommand);
-        } else if (ready && !((inferencing || time < lastInference + inferenceInterval))) {
-            logger.atDebug().log("Scheduling inference");
-            return new RobotControllerStatus(robotStatus, command, true, true, true, started, time, nextSyncTime, commandTime, lastSyncCommand);
-        } else {
-            return this;
-        }
+        return isInferenceReady(time, inferenceInterval)
+                ? new RobotControllerStatus(robotStatus, command, true, true, started, time, nextSyncTime, commandTime, lastSyncCommand)
+                : this;
     }
 
     /**
@@ -136,7 +128,7 @@ public record RobotControllerStatus(
     public RobotControllerStatus robotStatus(RobotStatus robotStatus) {
         return Objects.equals(this.robotStatus, robotStatus)
                 ? this
-                : new RobotControllerStatus(robotStatus, command, inferencing, inferenceRequested, ready, started, lastInference, nextSyncTime, commandTime, lastSyncCommand);
+                : new RobotControllerStatus(robotStatus, command, inferencing, ready, started, lastInference, nextSyncTime, commandTime, lastSyncCommand);
     }
 
     /**
@@ -147,7 +139,7 @@ public record RobotControllerStatus(
     public RobotControllerStatus started(boolean started) {
         return this.started == started
                 ? this
-                : new RobotControllerStatus(robotStatus, command, inferencing, inferenceRequested, ready, started, lastInference, nextSyncTime, commandTime, lastSyncCommand);
+                : new RobotControllerStatus(robotStatus, command, inferencing, ready, started, lastInference, nextSyncTime, commandTime, lastSyncCommand);
     }
 
     @Override

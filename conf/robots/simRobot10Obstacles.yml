@@ -21,4 +21,4 @@ cameraInterval: 500
 motionInterval: 500
 proxyInterval: 500
 interval: 100
-tickInterval: 10
+tickInterval: 0

@@ -57,9 +57,6 @@ public class SensorMonitor extends MatrixTable {
     public static final String CONTROLLER_STATUS_KEY = "controllerStatus";
     public static final String SUPPLY_KEY = "supply";
     public static final String SCAN_HEAD_KEY = "moveHead";
-    public static final String TARGET_DIR_KEY = "rotateDir";
-    public static final String TARGET_X_KEY = "targetX";
-    public static final String TARGET_Y_KEY = "targetY";
     public static final String REWARD_KEY = "reward";
     public static final String LEFT_POWER_KEY = "leftPower";
     public static final String RIGHT_POWER_KEY = "rightPower";
@@ -68,6 +65,7 @@ public class SensorMonitor extends MatrixTable {
     private static final Logger logger = LoggerFactory.getLogger(SensorMonitor.class);
     private static final String FRONT_CONTACT_KEY = "frontContact";
     private static final String REAR_CONTACT_KEY = "rearContact";
+    public static final String MOVE_KEY = "move";
 
     /**
      * Create the sensor monitor
@@ -88,10 +86,8 @@ public class SensorMonitor extends MatrixTable {
                         addColumn(X_LOCATION_KEY, Messages.getString("SensorMonitor.xLocation"), 5),
                         addColumn(Y_LOCATION_KEY, Messages.getString("SensorMonitor.yLocation"), 5),
                         addColumn(CONTROLLER_STATUS_KEY, Messages.getString("SensorMonitor.controllerStatus"), 3),
+                        addColumn(MOVE_KEY, Messages.getString("SensorMonitor.move"), 13),
                         addColumn(SCAN_HEAD_KEY, Messages.getString("SensorMonitor.scanHead"), 4),
-                        addColumn(TARGET_DIR_KEY, Messages.getString("SensorMonitor.targetDir"), 3),
-                        addColumn(TARGET_X_KEY, Messages.getString("SensorMonitor.targetX"), 5),
-                        addColumn(TARGET_Y_KEY, Messages.getString("SensorMonitor.targetY"), 5),
                         addColumn(REWARD_KEY, Messages.getString("SensorMonitor.reward"), 6),
                         addColumn(LEFT_TARGET_PPS_KEY, Messages.getString("SensorMonitor.leftTargetPps"), 3),
                         addColumn(RIGHT_TARGET_PPS_KEY, Messages.getString("SensorMonitor.rightTargetPps"), 3),
@@ -118,15 +114,21 @@ public class SensorMonitor extends MatrixTable {
      */
     public void onCommand(RobotCommands command) {
         switch (command.status()) {
-            case HALT -> printf(SCAN_HEAD_KEY, "%4d", command.scanDirection());
+            case HALT -> {
+                printf(SCAN_HEAD_KEY, "%4d", command.scanDirection());
+                printf(MOVE_KEY, "ha");
+            }
             case ROTATE -> {
                 printf(SCAN_HEAD_KEY, "%4d", command.scanDirection());
-                printf(TARGET_DIR_KEY, "%4d", command.rotationDirection());
+                printf(MOVE_KEY, "rt %4d", command.rotationDirection());
             }
-            case FORWARD, BACKWARD -> {
+            case FORWARD -> {
                 printf(SCAN_HEAD_KEY, "%4d", command.scanDirection());
-                printf(TARGET_X_KEY, "%6.2f", command.target().getX());
-                printf(TARGET_Y_KEY, "%6.2f", command.target().getY());
+                printf(MOVE_KEY, "fw %.2f,%.2f", command.target().getX(), command.target().getY());
+            }
+            case BACKWARD -> {
+                printf(SCAN_HEAD_KEY, "%4d", command.scanDirection());
+                printf(MOVE_KEY, "bw %.2f,%.2f", command.target().getX(), command.target().getY());
             }
         }
     }
