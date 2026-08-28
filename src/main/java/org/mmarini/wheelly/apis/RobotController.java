@@ -113,7 +113,7 @@ public class RobotController implements RobotControllerApi {
         this.commandInterval = commandInterval;
         this.status = new AtomicReference<>(new RobotControllerStatus(
                 null, RobotCommands.halt(),
-                false, false, true, false,
+                false, true, false,
                 0, 0, 0, null));
         this.controllerStatus = BehaviorProcessor.createDefault(status.get());
         this.controllerErrors = PublishProcessor.create();
@@ -242,26 +242,6 @@ public class RobotController implements RobotControllerApi {
         this.onInferences.add(callback);
     }
 
-    /**
-     * Handles the inference completion
-     */
-    private void onInferenceCompletion() {
-        RobotControllerStatus st1 = status.updateAndGet(RobotControllerStatus::clearInference);
-        controllerStatus.onNext(st1);
-    }
-
-    /**
-     * Handles the inference error
-     *
-     * @param e the error
-     */
-    private void onInferenceError(Throwable e) {
-        logger.atError().setCause(e).log("Error on inference");
-        controllerErrors.onNext(e);
-        RobotControllerStatus st1 = status.updateAndGet(RobotControllerStatus::clearInference);
-        controllerStatus.onNext(st1);
-    }
-
     @Override
     public void onLatch(Consumer<RobotStatus> callback) {
         this.onLatches.add(callback);
@@ -359,39 +339,32 @@ public class RobotController implements RobotControllerApi {
     }
 
     /**
-     * Schedules the inference task
+     * Schedules the inference task.
      * <p>
-     * Emits the latch status
-     * If no inference has scheduled and reaction interval has elapsed run an inference thread emitting inference status.
+     * If no inference is already running and reaction interval has elapsed runs the latch callback and run the inference.
      * </p>
      *
      * @param currentStatus the robot status
      */
     private void scheduleInference(RobotStatus currentStatus) {
         // Check for controller ready
-        RobotControllerStatus st = status.get();
-        if (st.ready()) {
-            // notify latch of status
+        long time = currentStatus.robotTime();
+        RobotControllerStatus prevStatus = status.getAndUpdate(s ->
+                s.requestInference(time, reactionInterval)
+        );
+        if (prevStatus.isInferenceReady(time, reactionInterval)) {
             notifyOnLatch(currentStatus);
-            long time = currentStatus.robotTime();
-            st = status.updateAndGet(s ->
-                    s.requestInference(time, reactionInterval));
-            if (st.inferenceRequested()) {
-                controllerStatus.onNext(st);
-                // schedule inference
-                Completable.fromAction(() -> {
-                            for (Consumer<RobotStatus> callback : onInferences) {
-                                try {
-                                    callback.accept(currentStatus);
-                                } catch (Throwable ex) {
-                                    logger.atError().setCause(ex).log("Error on inference function");
-                                    throw ex;
-                                }
-                            }
-                        }).subscribeOn(Schedulers.computation())
-                        .subscribe(this::onInferenceCompletion,
-                                this::onInferenceError);
+            controllerStatus.onNext(status.get());
+            for (Consumer<RobotStatus> callback : onInferences) {
+                try {
+                    callback.accept(currentStatus);
+                } catch (Throwable ex) {
+                    logger.atError().setCause(ex).log("Error on inference function");
+                    throw ex;
+                }
             }
+            status.updateAndGet(RobotControllerStatus::clearInference);
+            controllerStatus.onNext(status.get());
         }
     }
 

@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#616](https://github.com/m-marini/wheellyj/issues/616): Act and observation at action completion
 - Issue [#626](https://github.com/m-marini/wheellyj/issues/626): Reduce move action space
 - Issue [#629](https://github.com/m-marini/wheellyj/issues/629): Callback kpis
+- Issue [#633](https://github.com/m-marini/wheellyj/issues/633): Switch inference from async to sync
 
 ## [[0.27.0]](https://github.com/m-marini/wheellyj/releases/tag/v0.27.0) 2026-08-19
 
