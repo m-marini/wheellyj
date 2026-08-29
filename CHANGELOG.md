@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 
+- Issue [#617](https://github.com/m-marini/wheellyj/issues/633): Fix marker signal
 - Issue [#635](https://github.com/m-marini/wheellyj/issues/633): Fix persistent blocking signal after robot movement
 
 ## [[0.27.0]](https://github.com/m-marini/wheellyj/releases/tag/v0.27.0) 2026-08-19
