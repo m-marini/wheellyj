@@ -56,6 +56,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.swing.BaseShape.PATH_COLOR;
@@ -84,7 +85,7 @@ public class RobotExecutor {
                 .help("specify inference dump file");
         parser.addArgument("-s", "--silent")
                 .action(Arguments.storeTrue())
-                .help("specify silent closing (no window messages)");
+                .help("specify silent shuttingDown (no window messages)");
         parser.addArgument("-t", "--time")
                 .setDefault(43200L)
                 .type(Long.class)
@@ -124,6 +125,7 @@ public class RobotExecutor {
     private final SensorMonitor sensorMonitor;
     private final StateEngineMonitor engineMonitor;
     private final Namespace args;
+    private final AtomicBoolean shuttingDown;
     private RobotApi robot;
     private long start;
     private long sessionDuration;
@@ -153,6 +155,7 @@ public class RobotExecutor {
         this.prevRobotStep = -1;
         this.prevRealStep = -1;
         this.sensorMonitor = new SensorMonitor();
+        this.shuttingDown = new AtomicBoolean(false);
     }
 
     /**
@@ -194,7 +197,6 @@ public class RobotExecutor {
         }
     }
 
-
     /**
      * Creates the reactive flows
      */
@@ -211,7 +213,7 @@ public class RobotExecutor {
                 break;
         }
         controller.readShutdown()
-                .subscribe(this::onShutdown);
+                .subscribe(this::onControllerShutdown);
         controller.readErrors()
                 .subscribe(err -> {
                     comMonitor.onError(err);
@@ -283,6 +285,25 @@ public class RobotExecutor {
     }
 
     /**
+     * Handles the controller shutdown
+     */
+    private void onControllerShutdown() {
+        if (dumpFile != null) {
+            try {
+                dumpFile.close();
+                logger.atInfo().log("Closed dump file {}", args.getString("dump"));
+            } catch (IOException e) {
+                logger.atError().setCause(e).log("Error shuttingDown dump file {}", args.getString("dump"));
+            }
+        }
+        allFrames.forEach(JFrame::dispose);
+        if (!args.getBoolean("silent")) {
+            JOptionPane.showMessageDialog(null,
+                    "Completed", "Information", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
+    /**
      * Handles controller status event
      *
      * @param status the controller status string
@@ -330,25 +351,6 @@ public class RobotExecutor {
      */
     private void onPath(List<Point2D> path) {
         envPanel.path(PATH_COLOR, path.toArray(Point2D[]::new));
-    }
-
-    /**
-     * Handles the application shutdown
-     */
-    private void onShutdown() {
-        allFrames.forEach(JFrame::dispose);
-        if (dumpFile != null) {
-            try {
-                dumpFile.close();
-                logger.atInfo().log("Closed dump file {}", args.getString("dump"));
-            } catch (IOException e) {
-                logger.atError().setCause(e).log("Error closing dump file {}", args.getString("dump"));
-            }
-        }
-        if (!args.getBoolean("silent")) {
-            JOptionPane.showMessageDialog(null,
-                    "Completed", "Information", JOptionPane.INFORMATION_MESSAGE);
-        }
     }
 
     /**
@@ -404,7 +406,7 @@ public class RobotExecutor {
         gridPanel.setMarkers(mks);
 
         if (robotElapsed > sessionDuration) {
-            controller.shutdown();
+            shutdown();
         }
     }
 
@@ -418,12 +420,12 @@ public class RobotExecutor {
     }
 
     /**
-     * Handles window closing
+     * Handles window shuttingDown
      *
      * @param windowEvent the window event
      */
     private void onWindowClosing(WindowEvent windowEvent) {
-        controller.shutdown();
+        shutdown();
     }
 
     /**
@@ -446,5 +448,11 @@ public class RobotExecutor {
         this.start = System.currentTimeMillis();
         allFrames.reversed().forEach(f -> f.setVisible(true));
         controller.start();
+    }
+
+    private void shutdown() {
+        if (!shuttingDown.getAndSet(true)) {
+            controller.shutdown();
+        }
     }
 }

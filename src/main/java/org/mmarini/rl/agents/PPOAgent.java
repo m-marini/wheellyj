@@ -30,6 +30,7 @@ package org.mmarini.rl.agents;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.MapStream;
 import org.mmarini.NotImplementedException;
@@ -354,6 +355,11 @@ public class PPOAgent extends AbstractAgentNN {
     @Override
     public Tuple2<MultiDataSet, Float> createDataSet(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards, float avgReward) {
         throw new NotImplementedException();
+    }
+
+    @Override
+    public Completable readShutdown() {
+        return Completable.complete();
     }
 
     @Override

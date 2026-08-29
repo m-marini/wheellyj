@@ -77,7 +77,7 @@ public class MockMqttClient implements Closeable {
         try {
             client.close();
         } catch (MqttException e) {
-            logger.atError().setCause(e).log("Error closing mqtt");
+            logger.atError().setCause(e).log("Error shuttingDown mqtt");
         }
     }
 

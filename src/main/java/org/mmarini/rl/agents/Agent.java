@@ -29,12 +29,13 @@
 package org.mmarini.rl.agents;
 
 import org.mmarini.rl.envs.WithSignalsSpec;
+import org.mmarini.wheelly.apis.WithShutdownCompletable;
 import org.mmarini.yaml.Utils;
 
 import java.io.File;
 import java.util.function.Function;
 
-public interface Agent extends AgentConnector, AutoCloseable {
+public interface Agent extends AgentConnector, AutoCloseable, WithShutdownCompletable {
 
     /**
      * Returns the agent from agent

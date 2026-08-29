@@ -30,6 +30,7 @@ package org.mmarini.rl.agents;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.MapStream;
 import org.mmarini.NotImplementedException;
@@ -296,11 +297,6 @@ public class TDAgentSingleNN extends AbstractAgentNN {
     }
 
     @Override
-    public BatchAgent train(RLDatasetIterator datasetIterator, int numEpochs) {
-        throw new NotImplementedException();
-    }
-
-    @Override
     public TDAgentSingleNN eta(float eta) {
         return eta != this.eta
                 ? new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
@@ -342,11 +338,21 @@ public class TDAgentSingleNN extends AbstractAgentNN {
     }
 
     @Override
+    public Completable readShutdown() {
+        return Completable.complete();
+    }
+
+    @Override
     public TDAgentSingleNN setPostTrainKpis(boolean postTrainKpis) {
         return postTrainKpis != this.postTrainKpis
                 ? new TDAgentSingleNN(state, actions, avgReward, rewardAlpha, eta, alphas, lambda, numSteps, numEpochs, batchSize, network, trajectory, processor, random, modelPath,
                 indicatorsPub, postTrainKpis)
                 : this;
+    }
+
+    @Override
+    public BatchAgent train(RLDatasetIterator datasetIterator, int numEpochs) {
+        throw new NotImplementedException();
     }
 
     @Override

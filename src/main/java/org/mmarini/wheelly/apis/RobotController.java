@@ -280,6 +280,18 @@ public class RobotController implements RobotControllerApi {
     }
 
     /**
+     * Handle the robot closure
+     */
+    private void onRobotClosed() {
+        RobotControllerStatus st = status.updateAndGet(s -> s.ready(false));
+        controllerErrors.onComplete();
+        controllerStatus.onNext(st);
+        controllerStatus.onComplete();
+        shutdownCompletable.onComplete();
+        logger.atInfo().log("Controller shut down.");
+    }
+
+    /**
      * Handles the robot connection
      *
      * @param status the status
@@ -371,20 +383,16 @@ public class RobotController implements RobotControllerApi {
     @Override
     public void shutdown() {
         if (status.getAndUpdate(s -> s.started(false)).started()) {
-            logger.atInfo().log("Shutting down...");
+            logger.atInfo().log("Shutting down controller...");
             robot.halt();
             try {
                 robot.close();
             } catch (IOException e) {
-                logger.atError().setCause(e).log("Error closing robot");
+                logger.atError().setCause(e).log("Error shuttingDown robot");
             }
-            robot.readRobotStatus().blockingSubscribe();
-            controllerErrors.onComplete();
-            RobotControllerStatus st = status.updateAndGet(s -> s.ready(false));
-            controllerStatus.onNext(st);
-            controllerStatus.onComplete();
-            shutdownCompletable.onComplete();
-            logger.atInfo().log("Shut down.");
+            robot.readRobotStatus()
+                    .ignoreElements()
+                    .subscribe(this::onRobotClosed);
         }
     }
 

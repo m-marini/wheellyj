@@ -35,7 +35,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mmarini.RandomArgumentsGenerator;
-import org.mmarini.wheelly.TestFunctions;
 
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
@@ -48,7 +47,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.pointCloseTo;
-import static org.mmarini.wheelly.TestFunctions.*;
 import static org.mmarini.wheelly.apis.Obstacle.DEFAULT_OBSTACLE_RADIUS;
 import static org.mmarini.wheelly.apis.RobotSpec.*;
 import static org.mmarini.wheelly.apis.SimRobot.SAFE_DISTANCE;
@@ -76,7 +74,6 @@ class SimRobotObstacleTest {
     private SimRobot robot;
     private List<WheellyContactsMessage> contacts;
     private List<WheellyLidarMessage> lidars;
-    private List<WheellyMotionMessage> motions;
 
     /**
      * Given a simulated robot with a map grid of 0.2 m and obstacles at x,y,...
@@ -114,7 +111,6 @@ class SimRobotObstacleTest {
         simRobot.sensorDirection(sensorDirection);
         simRobot.obstacleMap(mapBuilder.build());
 
-        simRobot.onMotion(motions::add);
         simRobot.onContacts(contacts::add);
         simRobot.onLidar(lidars::add);
 
@@ -157,7 +153,6 @@ class SimRobotObstacleTest {
     void setUp() {
         this.lidars = new ArrayList<>();
         this.contacts = new ArrayList<>();
-        this.motions = new ArrayList<>();
     }
 
     @ParameterizedTest(name = "[{index}] Robot at R{0}")
@@ -184,15 +179,14 @@ class SimRobotObstacleTest {
          * When connect robot
          */
         robot.syncConnect();
+        robot.forward(new Point2D.Double());
 
         /*
          When moving the robot to a given direction until contact
          */
         long maxTime = 1500;
         do {
-            robot.forward(new Point2D.Double());
             robot.simulate();
-
         } while (!(robot.robotTime() >= maxTime
                 || !robot.frontSensor()
                 || !robot.rearSensor()));
@@ -203,9 +197,11 @@ class SimRobotObstacleTest {
         assertTrue(robot.robotTime() < maxTime);
 
         // And collision should be detected
+        assertFalse(robot.canMoveForward());
         assertFalse(robot.frontSensor());
-        assertThat(contacts, not(empty()));
-        assertFalse(contacts.getFirst().frontSensors());
+        assertThat(contacts, hasSize(2));
+        assertTrue(contacts.getFirst().frontSensors());
+        assertFalse(contacts.getLast().frontSensors());
 
         // And robot movement should be close the collision distance
         assertThat(robot.location().distance(location), closeTo(MM10, MM));
@@ -240,51 +236,35 @@ class SimRobotObstacleTest {
          */
         robot.syncConnect();
 
-        /*
-         * Then the robot should remain stopped at contact point
-         */
-        WheellyMotionMessage motion = findMessage(motions, notBefore(0));
-        assertNotNull(motion);
-        assertEquals(0L, motion.time());
-        assertThat(motion.robotLocation(), pointCloseTo(contactPoint, DISTANCE_EPSILON));
-
         // And when move ahead at max power
         robot.forward(new Point2D.Double());
-        // robot.move(robotDir.toIntDeg(), RobotSpec.MAX_PPS);
         robot.simulate();
         robot.close();
         robot.simulate();
 
-        // Then event flow should be completed without errors
+        /*
+         * Then the robot should remain stopped at contact point
+         */
+        assertThat(robot.location(), pointCloseTo(contactPoint, DISTANCE_EPSILON));
+        assertFalse(robot.frontSensor());
+        assertFalse(robot.canMoveForward());
 
-        // And the robot should not change the location after movement
-        motion = TestFunctions.findMessage(motions, after(0));
-        assertNotNull(motion);
-        assertThat(motion.robotLocation(), pointCloseTo(contactPoint, DISTANCE_EPSILON));
+        /*
+         * And contact message should be emitted
+         */
+        assertThat(contacts, hasSize(2));
+        assertFalse(contacts.getLast().frontSensors());
+        assertFalse(contacts.getLast().canMoveForward());
 
         /*
          * and the sensor should signal no obstacle (head directed to right)
          */
-        WheellyLidarMessage lidarMessage = findMessage(lidars, after(0));
+        assertThat(robot.frontDistance(), closeTo(0, MM));
+
+        assertThat(lidars, hasSize(2));
+        WheellyLidarMessage lidarMessage = lidars.getLast();
         assertNotNull(lidarMessage);
         assertEquals(0, lidarMessage.frontDistance());
-
-        /*
-         * and the proximity should signal 12 (front contacts),
-         * and the forward block should be active
-         * and the backward block should be inactive
-         */
-        WheellyContactsMessage contact = findMessage(contacts, notBefore(0));
-        assertNotNull(contact);
-        assertFalse(contact.frontSensors());
-        assertTrue(contact.rearSensors());
-        assertFalse(contact.canMoveForward());
-        assertTrue(contact.canMoveBackward());
-        assertEquals(10L, contact.time());
-
-        // And no contact message after movement
-        contact = findMessage(contacts, after(500));
-        assertNull(contact);
     }
 
     @ParameterizedTest(name = "[{index}] Robot at R{0}")
@@ -318,9 +298,9 @@ class SimRobotObstacleTest {
         /*
          When moving the robot to a given direction until contact
          */
+        robot.forward(new Point2D.Double());
         long maxTime = 1500;
         do {
-            robot.forward(new Point2D.Double());
             robot.simulate();
         } while (!(robot.robotTime() >= maxTime
                 || !robot.canMoveForward()
@@ -334,9 +314,9 @@ class SimRobotObstacleTest {
         // And collision should be detected
         assertTrue(robot.frontSensor());
         assertFalse(robot.canMoveForward());
-        assertThat(contacts, not(empty()));
-        assertTrue(contacts.getFirst().frontSensors());
-        assertFalse(contacts.getFirst().canMoveForward());
+        assertThat(contacts, hasSize(2));
+        assertTrue(contacts.getLast().frontSensors());
+        assertFalse(contacts.getLast().canMoveForward());
 
         // And robot movement should be close the collision distance
         assertThat(robot.location().distance(location), closeTo(MM10, 2 * MM));
@@ -366,7 +346,6 @@ class SimRobotObstacleTest {
         // When connect and wait for simulated 500 ms
         robot.syncConnect();
 
-
         /*
          When moving the robot to a given direction for maxTime
          */
@@ -378,24 +357,20 @@ class SimRobotObstacleTest {
         robot.close();
         robot.simulate();
 
-        // Than no collision should be detected before moving
-        WheellyContactsMessage contact = findMessage(contacts, before(500));
-        assertNull(contact);
-
-        /*
-         And collision should be detected after moving
-         */
-        contact = findMessage(contacts, notBefore(500));
-        assertNull(contact);
-
-        /*
-         and the last robot location should be the expected location
-         */
-        assertThat(motions, hasSize(greaterThanOrEqualTo(1)));
-        WheellyMotionMessage motion = motions.getLast();
-        double movement = robotLocation.distance(motion.robotLocation());
+        // Then robot cannot be blocked
+        assertTrue(robot.canMoveForward());
+        assertTrue(robot.canMoveBackward());
+        // and should move to expected location
+        double movement = robotLocation.distance(robot.location());
         assertThat(movement, closeTo(abs(expMovement * MM1), DEFAULT_TARGET_RANGE));
-        assertThat(motion.robotLocation(), pointCloseTo(moveLocation, DEFAULT_TARGET_RANGE));
+        assertThat(robot.location(), pointCloseTo(moveLocation, DEFAULT_TARGET_RANGE));
+
+        // and should generate just initial contact message
+        assertThat(contacts, hasSize(1));
+        assertTrue(contacts.getFirst().canMoveForward());
+        assertTrue(contacts.getFirst().canMoveBackward());
+        assertTrue(contacts.getFirst().frontSensors());
+        assertTrue(contacts.getFirst().rearSensors());
     }
 
     @ParameterizedTest(name = "[{index}] Robot at R{0}")
@@ -425,9 +400,9 @@ class SimRobotObstacleTest {
         /*
          When moving the robot backward the given direction until contact
          */
+        robot.backward(new Point2D.Double());
         long maxTime = 1500;
         do {
-            robot.backward(new Point2D.Double());
             robot.simulate();
         } while (!(robot.robotTime() >= maxTime
                 || !robot.frontSensor()
@@ -440,8 +415,10 @@ class SimRobotObstacleTest {
 
         // And collision should be detected
         assertFalse(robot.rearSensor());
-        assertThat(contacts, not(empty()));
-        assertFalse(contacts.getFirst().rearSensors());
+        assertFalse(robot.canMoveBackward());
+        assertThat(contacts, hasSize(2));
+        assertTrue(contacts.getFirst().rearSensors());
+        assertFalse(contacts.getLast().rearSensors());
 
         // And robot movement should be close the collision distance
         assertThat(robot.location().distance(location), closeTo(MM10, MM));
@@ -477,48 +454,35 @@ class SimRobotObstacleTest {
          */
         robot.syncConnect();
 
-        /*
-         * Then the robot should remain stopped at contact point
-         */
-        WheellyMotionMessage motion = findMessage(motions, notBefore(0));
-        assertNotNull(motion);
-        assertEquals(0L, motion.time());
-        assertThat(motion.robotLocation(), pointCloseTo(contactPoint, DISTANCE_EPSILON));
-
         // And when move backward at max power
         robot.backward(new Point2D.Double());
         robot.simulate();
         robot.close();
         robot.simulate();
 
-        // And the robot should not change the location after movement
-        motion = TestFunctions.findMessage(motions, after(0));
-        assertNotNull(motion);
-        assertThat(motion.robotLocation(), pointCloseTo(contactPoint, DISTANCE_EPSILON));
+        /*
+         * Then the robot should remain stopped at contact point
+         */
+        assertThat(robot.location(), pointCloseTo(contactPoint, DISTANCE_EPSILON));
+        assertFalse(robot.rearSensor());
+        assertFalse(robot.canMoveBackward());
 
         /*
-         * and the sensor should signal no rear obstacle (head directed to right)
+         * And contact message should be emitted
          */
-        WheellyLidarMessage lidarMessage = findMessage(lidars, after(0));
+        assertThat(contacts, hasSize(2));
+        assertFalse(contacts.getLast().rearSensors());
+        assertFalse(contacts.getLast().canMoveBackward());
+
+        /*
+         * and the sensor should signal no obstacle (head directed to right)
+         */
+        assertThat(robot.rearDistance(), closeTo(0, MM));
+
+        assertThat(lidars, hasSize(2));
+        WheellyLidarMessage lidarMessage = lidars.getLast();
         assertNotNull(lidarMessage);
         assertEquals(0, lidarMessage.rearDistance());
-
-        /*
-         * and the proximity should signal 12 (front contacts),
-         * and the forward block should be active
-         * and the backward block should be inactive
-         */
-        WheellyContactsMessage contact = findMessage(contacts, notBefore(0));
-        assertNotNull(contact);
-        assertTrue(contact.frontSensors());
-        assertFalse(contact.rearSensors());
-        assertTrue(contact.canMoveForward());
-        assertFalse(contact.canMoveBackward());
-        assertEquals(10L, contact.time());
-
-        // And no contact message after movement
-        contact = findMessage(contacts, after(500));
-        assertNull(contact);
     }
 
     @ParameterizedTest(name = "[{index}] Robot at R{0}")
@@ -553,9 +517,9 @@ class SimRobotObstacleTest {
         /*
          When moving the robot to a given direction until contact
          */
+        robot.backward(new Point2D.Double());
         long maxTime = 1500;
         do {
-            robot.backward(new Point2D.Double());
             robot.simulate();
         } while (!(robot.robotTime() >= maxTime
                 || !robot.canMoveForward()
@@ -569,9 +533,9 @@ class SimRobotObstacleTest {
         // And collision should be detected
         assertTrue(robot.rearSensor());
         assertFalse(robot.canMoveBackward());
-        assertThat(contacts, not(empty()));
-        assertTrue(contacts.getFirst().rearSensors());
-        assertFalse(contacts.getFirst().canMoveBackward());
+        assertThat(contacts, hasSize(2));
+        assertTrue(contacts.getLast().rearSensors());
+        assertFalse(contacts.getLast().canMoveBackward());
 
         // And robot movement should be close the collision distance
         assertThat(robot.location().distance(location), closeTo(MM10, 2 * MM));
@@ -658,11 +622,12 @@ class SimRobotObstacleTest {
 
         // Then collision should be detected
         assertFalse(robot.frontSensor());
+        assertTrue(robot.canMoveBackward());
 
         // When moving backward
+        robot.backward(target);
         long maxTime = 1500;
         do {
-            robot.backward(target);
             robot.simulate();
         } while (!(robot.robotTime() >= maxTime
                 || robot.frontSensor() && robot.rearSensor()));

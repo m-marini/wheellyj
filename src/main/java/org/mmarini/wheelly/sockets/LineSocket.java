@@ -192,7 +192,7 @@ public class LineSocket implements Closeable {
                 logger.atInfo().log("Closing channel");
                 ch.close();
             } catch (IOException e) {
-                logger.atError().setCause(e).log("Error closing socket");
+                logger.atError().setCause(e).log("Error shuttingDown socket");
             }
         }
     }
@@ -213,7 +213,7 @@ public class LineSocket implements Closeable {
                 logger.atInfo().log("Closing channel");
                 ch.close();
             } catch (Throwable ex) {
-                logger.atError().setCause(ex).log("{}:{} error closing channel", host, port);
+                logger.atError().setCause(ex).log("{}:{} error shuttingDown channel", host, port);
             }
         }
         if (!st.closed()) {
@@ -251,7 +251,7 @@ public class LineSocket implements Closeable {
                 logger.atInfo().log("Closing channel");
                 ch.close();
             } catch (IOException ex) {
-                logger.atError().setCause(ex).log("{}:{} error closing channel", host, port);
+                logger.atError().setCause(ex).log("{}:{} error shuttingDown channel", host, port);
             }
         }
         connect();
@@ -272,7 +272,7 @@ public class LineSocket implements Closeable {
             logger.atInfo().log("Closing channel");
             ch.close();
         } catch (IOException ex) {
-            logger.atError().setCause(ex).log("{}:{} error closing channel", host, port);
+            logger.atError().setCause(ex).log("{}:{} error shuttingDown channel", host, port);
         }
     }
 

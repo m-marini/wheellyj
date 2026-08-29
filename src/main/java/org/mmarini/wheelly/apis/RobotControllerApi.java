@@ -29,7 +29,6 @@
 package org.mmarini.wheelly.apis;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.reactivex.rxjava3.core.Completable;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -103,7 +102,7 @@ import java.io.File;
  * </p>
  */
 public interface RobotControllerApi extends RobotControllerConnector,
-        WithRobotStatusCallback, WithCommandCallback, WithErrorFlowable, WithControllerFlowable {
+        WithRobotStatusCallback, WithCommandCallback, WithErrorFlowable, WithControllerFlowable, WithShutdownCompletable {
     /**
      * Returns the robot controller from configuration JSON
      *
@@ -130,11 +129,6 @@ public interface RobotControllerApi extends RobotControllerConnector,
      * @param robot the robot
      */
     RobotControllerApi connectRobot(RobotApi robot);
-
-    /**
-     * Returns the shutdown signal
-     */
-    Completable readShutdown();
 
     /**
      * Reconnect the robot

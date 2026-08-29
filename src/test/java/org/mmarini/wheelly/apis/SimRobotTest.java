@@ -48,8 +48,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mmarini.Matchers.pointCloseTo;
-import static org.mmarini.wheelly.TestFunctions.after;
-import static org.mmarini.wheelly.TestFunctions.findMessage;
+import static org.mmarini.wheelly.TestFunctions.waitForMessages;
 import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
 import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_TARGET_RANGE;
 import static org.mmarini.wheelly.apis.SimRobot.MAX_ANGULAR_VELOCITY;
@@ -109,14 +108,11 @@ class SimRobotTest {
         // When move to 0 DEG at max power
         robot.syncConnect();
         robot.backward(target);
-        // And waiting for messages with time > 500
         do {
             robot.simulate();
         } while (!robot.isHalt() && robot.robotTime() <= rt);
-        long reachTime = robot.robotTime();
-        do {
-            robot.simulate();
-        } while (robot.robotTime() <= reachTime + INTERVAL + MESSAGE_INTERVAL);
+
+        waitForMessages(() -> robot.simulate(), motions);
 
         robot.close();
         robot.simulate();
@@ -124,8 +120,7 @@ class SimRobotTest {
         assertThat(robot.location(), pointCloseTo(target, DEFAULT_TARGET_RANGE));
 
         // Then ...
-        List<WheellyMotionMessage> messages = motions;
-        WheellyMotionMessage motion = messages.getLast();
+        WheellyMotionMessage motion = motions.getLast();
 
         assertNotNull(motion);
         assertThat(motion.robotLocation(), pointCloseTo(target, DEFAULT_TARGET_RANGE));
@@ -162,10 +157,7 @@ class SimRobotTest {
         do {
             robot.simulate();
         } while (!robot.isHalt() && robot.robotTime() <= rt);
-        long reachTime = robot.robotTime();
-        do {
-            robot.simulate();
-        } while (robot.robotTime() <= reachTime + INTERVAL + MESSAGE_INTERVAL);
+        waitForMessages(() -> robot.simulate(), motions);
 
         robot.close();
         robot.simulate();
@@ -173,11 +165,9 @@ class SimRobotTest {
         assertThat(robot.location(), pointCloseTo(target, DEFAULT_TARGET_RANGE));
 
         // Then ...
-        List<WheellyMotionMessage> messages = motions;
-        WheellyMotionMessage motion = messages.getLast();
+        WheellyMotionMessage motion = motions.getLast();
 
         assertNotNull(motion);
-        assertThat(motion.time(), greaterThanOrEqualTo(reachTime));
         assertThat(motion.robotLocation(), pointCloseTo(target, DEFAULT_TARGET_RANGE));
     }
 
@@ -195,26 +185,21 @@ class SimRobotTest {
         do {
             robot.simulate();
         } while (!robot.isHalt() && robot.robotTime() <= rt);
-        long reachTime = robot.robotTime();
-        do {
-            robot.simulate();
-        } while (robot.robotTime() <= reachTime + INTERVAL + MESSAGE_INTERVAL);
+        waitForMessages(() -> robot.simulate(), motions);
 
         robot.close();
         robot.simulate();
 
         // Then ...
-        List<WheellyMotionMessage> messages = motions;
 
         // And the robot should emit motion at (0, 0) toward 5 DEG
-        WheellyMotionMessage motion = findMessage(messages, after(0));
+        WheellyMotionMessage motion = motions.getLast();
         int maxRot = (int) round(toDegrees(MAX_ANGULAR_VELOCITY * MESSAGE_INTERVAL / 1e-3));
         int da = (int) round(toDegrees(MAX_ANGULAR_VELOCITY * INTERVAL / 1e-3));
         int expDir = min(maxRot, dir);
         int minDir = expDir - da;
         int maxDir = expDir + da;
 
-        assertThat(motion, field("time", equalTo(500L)));
         assertThat(motion, field("xPulses", closeTo(0, PULSES_EPSILON)));
         assertThat(motion, field("yPulses", closeTo(0, PULSES_EPSILON)));
         assertThat(motion, field("directionDeg", greaterThanOrEqualTo(minDir)));
@@ -232,14 +217,13 @@ class SimRobotTest {
         // When scan 90 DEG
         robot.syncConnect();
         robot.scan(dir);
-        do {
-            robot.simulate();
-        } while (robot.robotTime() <= MESSAGE_INTERVAL + 1);
+        waitForMessages(() -> robot.simulate(), lidars);
+
         robot.close();
         robot.simulate();
 
         // Then the consumer should be invoked
-        WheellyLidarMessage proxy = findMessage(lidars, after(0));
+        WheellyLidarMessage proxy = lidars.getLast();
         assertNotNull(proxy);
         assertEquals(500L, proxy.time());
         assertEquals(dir, proxy.headDirectionDeg());

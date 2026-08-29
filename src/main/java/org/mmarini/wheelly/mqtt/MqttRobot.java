@@ -304,7 +304,7 @@ public class MqttRobot implements RobotApi {
             client.close();
             client.closed().blockingAwait();
         } catch (MqttException e) {
-            logger.atError().setCause(e).log("Error closing mqtt");
+            logger.atError().setCause(e).log("Error shuttingDown mqtt");
         }
         states.onNext(s1);
         errors.onComplete();
