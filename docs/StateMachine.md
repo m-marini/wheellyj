@@ -22,7 +22,7 @@ named arguments:
   -a AGENT, --agent AGENT
                          specify agent  yaml  configuration  file (default:
                          agent.yml)
-  -s, --silent           specify  silent  closing   (no   window  messages)
+  -s, --silent           specify  silent  shuttingDown   (no   window  messages)
                          (default: false)
   -t TIME, --localTime TIME   specify number  of  seconds  of  session  duration
                          (default: 43200)

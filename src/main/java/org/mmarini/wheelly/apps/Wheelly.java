@@ -30,7 +30,6 @@ package org.mmarini.wheelly.apps;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
-import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.CompletableSubject;
@@ -39,6 +38,7 @@ import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
+import org.jetbrains.annotations.NotNull;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.agents.*;
 import org.mmarini.rl.envs.WithSignalsSpec;
@@ -67,6 +67,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 import static io.reactivex.rxjava3.core.Flowable.interval;
@@ -106,7 +107,7 @@ public class Wheelly {
                 .help("specify concurrent training");
         parser.addArgument("-s", "--silent")
                 .action(Arguments.storeTrue())
-                .help("specify silent closing (no window messages)");
+                .help("specify silent shuttingDown (no window messages)");
         parser.addArgument("-t", "--localTime")
                 .setDefault(43200L)
                 .type(Long.class)
@@ -118,6 +119,20 @@ public class Wheelly {
                 .action(Arguments.storeTrue())
                 .help("use multiple windows");
         return parser;
+    }
+
+    @NotNull
+    private static Container createWaitPanel() {
+        JProgressBar progressBar = new JProgressBar();
+        progressBar.setIndeterminate(true);
+        progressBar.setString("   Waiting for completion ...   ");
+        progressBar.setStringPainted(true);
+        Container panel = new GridLayoutHelper<>(new JPanel())
+                .modify("insets,5")
+                .add(progressBar)
+                .getContainer();
+        panel.setPreferredSize(new Dimension(300, 50));
+        return panel;
     }
 
     /**
@@ -148,6 +163,7 @@ public class Wheelly {
     private final JButton startButton;
     private final JButton relocateButton;
     private final InferenceConnector inferenceMediator1;
+    private final AtomicBoolean shuttingDown;
     long autosaveInstant;
     private long robotStartTimestamp;
     private Long sessionDuration;
@@ -165,6 +181,7 @@ public class Wheelly {
     private InferenceWriter modelDumper;
     private KeyBinWriter kpisWriter;
     private long savingInterval;
+    private final JFrame waitFrame;
 
     /**
      * Creates the server reinforcement learning engine server
@@ -186,9 +203,11 @@ public class Wheelly {
         this.relocateButton = SwingUtils.getInstance().initButton(new JButton(), "Wheelly.relocateButton");
         this.stopButton = SwingUtils.getInstance().initButton(new JButton(), "Wheelly.stopButton");
         this.startButton = SwingUtils.getInstance().initButton(new JButton(), "Wheelly.runButton");
-
         this.inferenceMediator1 = Wheelly.this::onInferenceProcess;
+        this.waitFrame = center(createFrame("Shutdown", createWaitPanel()));
+        this.shuttingDown = new AtomicBoolean(false);
         comMonitor.setPrintTimestamp(true);
+        waitFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
     }
 
     /**
@@ -269,7 +288,17 @@ public class Wheelly {
                 .map(ControllerStatusMapper::map)
                 .distinct()
                 .subscribe(this::onControllerStatus);
-        controller.readShutdown().subscribe(this::onShutdown);
+        controller.readShutdown()
+                .observeOn(Schedulers.io())
+                .subscribe(this::onControllerShutdown);
+        agent.readShutdown()
+                .observeOn(Schedulers.io())
+                .subscribe(this::onAgentShutdown);
+
+        controller.readShutdown().andThen(agent.readShutdown())
+                .observeOn(Schedulers.io())
+                .subscribe(this::onShutdownCompleted);
+
         worldModeller.readInference().subscribe(this::onInference);
 
         Observable<WindowEvent>[] windowObs = allFrames.stream()
@@ -398,12 +427,39 @@ public class Wheelly {
     }
 
     /**
+     * Handles the agent shutdown
+     */
+    private void onAgentShutdown() {
+        // Shutting down
+        if (kpisWriter != null) {
+            try {
+                kpisWriter.close();
+            } catch (Exception e) {
+                logger.atError().setCause(e).log("Error shuttingDown kpisWriter");
+            }
+            kpisWriter = null;
+            logger.atInfo().log("kpi writer closed");
+        }
+    }
+
+    /**
      * Handles the clear map button event
      *
      * @param actionEvent the event
      */
     private void onClearMapButton(ActionEvent actionEvent) {
         worldModeller.clearRadarMap();
+    }
+
+    private void onControllerShutdown() {
+        if (modelDumper != null) {
+            try {
+                modelDumper.close();
+            } catch (Exception e) {
+                logger.atError().setCause(e).log("Error shuttingDown model dumper");
+            }
+            logger.atInfo().log("Model dumper closed");
+        }
     }
 
     /**
@@ -533,57 +589,20 @@ public class Wheelly {
         }
     }
 
-    /**
-     * Handles the application shutdown
-     */
-    private void onShutdown() {
-        // Open wait frame
-        logger.atInfo().log("Shutdown");
-        JProgressBar progressBar = new JProgressBar();
-        progressBar.setIndeterminate(true);
-        progressBar.setString("   Waiting for completion ...   ");
-        progressBar.setStringPainted(true);
-        Container panel = new GridLayoutHelper<>(new JPanel())
-                .modify("insets,5")
-                .add(progressBar)
-                .getContainer();
-        panel.setPreferredSize(new Dimension(300, 50));
-        JFrame waitFrame = center(createFrame("Shutdown", panel));
-        waitFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-        waitFrame.setVisible(true);
-        Completable shuttingDown = Completable.fromAction(() -> {
-                    // Shutting down
-                    agent.close();
-                    if (modelDumper != null) {
-                        try {
-                            modelDumper.close();
-                        } catch (Exception e) {
-                            logger.atError().setCause(e).log("Error closing model dumper");
-                        }
-                    }
-                })
-                .subscribeOn(Schedulers.computation());
+    private void onShutdownCompleted() {
+        // Close waiting frame
+        waitFrame.dispose();
 
-        shuttingDown.andThen(completion)
-                // Wait for completion
-                .subscribeOn(Schedulers.computation())
-                .subscribe(() -> {
-                    logger.atInfo().log("Shutdown completed.");
-                    // Close waiting frame
-                    waitFrame.dispose();
-                    if (!args.getBoolean("silent")) {
-                        JOptionPane.showMessageDialog(null,
-                                "Completed", "Information", JOptionPane.INFORMATION_MESSAGE);
-                    }
-                    // Close all frame
-                    allFrames.forEach(JFrame::dispose);
-                    if (kpisWriter != null) {
-                        kpisWriter.close();
-                        kpisWriter = null;
-                    }
-                    // Notify completion
-                    logger.atInfo().log("completed.");
-                });
+        // Show the completion frame if requested
+        if (!args.getBoolean("silent")) {
+            logger.atInfo().log("Waiting for completion frame closure.");
+            JOptionPane.showMessageDialog(null,
+                    "Completed", "Information", JOptionPane.INFORMATION_MESSAGE);
+        }
+        // Close all frame
+        allFrames.forEach(JFrame::dispose);
+        // Notify completion
+        logger.atInfo().log("Shutdown completed.");
     }
 
     /**
@@ -617,7 +636,7 @@ public class Wheelly {
             autosaveInstant = now + savingInterval;
         }
         if (robotElapsed > sessionDuration) {
-            controller.shutdown();
+            shutDown();
         }
     }
 
@@ -633,12 +652,12 @@ public class Wheelly {
     }
 
     /**
-     * Handles the window closing events
+     * Handles the window shuttingDown events
      *
      * @param windowEvent the event
      */
     private void onWindowClosing(WindowEvent windowEvent) {
-        controller.shutdown();
+        shutDown();
     }
 
     /**
@@ -700,5 +719,19 @@ public class Wheelly {
         active = true;
         startButton.setEnabled(false);
         frame.setVisible(true);
+    }
+
+    /**
+     * Shutdown task
+     */
+    private void shutDown() {
+        if (!shuttingDown.getAndSet(true)) {
+            logger.atInfo().log("Shutdown");
+            waitFrame.setVisible(true);
+            Schedulers.computation().scheduleDirect(() -> {
+                controller.shutdown();
+                agent.close();
+            });
+        }
     }
 }

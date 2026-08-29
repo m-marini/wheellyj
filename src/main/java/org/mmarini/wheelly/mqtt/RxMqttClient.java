@@ -111,7 +111,7 @@ public class RxMqttClient implements AutoCloseable {
             }
         } finally {
             try {
-                logger.atDebug().log("Client {} closing ...", client.hashCode());
+                logger.atDebug().log("Client {} shuttingDown ...", client.hashCode());
                 client.close();
             } finally {
                 closed.onComplete();

@@ -52,6 +52,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -99,12 +100,6 @@ public interface TestFunctions {
         return new CustomMatcher<>(format("INDArray with shape %s",
                 Arrays.toString(expShape))) {
             @Override
-            public boolean matches(Object o) {
-                return o instanceof INDArray
-                        && Arrays.equals(((INDArray) o).shape(), expShape);
-            }
-
-            @Override
             public void describeMismatch(Object item, Description description) {
                 if (item instanceof INDArray value) {
                     description.appendText("was ")
@@ -113,11 +108,21 @@ public interface TestFunctions {
                     super.describeMismatch(item, description);
                 }
             }
+
+            @Override
+            public boolean matches(Object o) {
+                return o instanceof INDArray
+                        && Arrays.equals(((INDArray) o).shape(), expShape);
+            }
         };
     }
 
     static Predicate<WheellyMessage> notBefore(long time) {
         return msg -> msg.time() >= time;
+    }
+
+    static String text(String... lines) {
+        return String.join("\n", lines) + "\n";
     }
 
     static <T extends WheellyMessage> void waitFor(Flowable<T> messages, Predicate<T> pred, long timeout) {
@@ -127,10 +132,15 @@ public interface TestFunctions {
                 .blockingGet();
     }
 
-    static String text(String... lines) {
-        return String.join("\n", lines) + "\n";
+    static <T> void waitForMessages(Runnable stepOver, List<T>... messages) {
+        int[] n = Arrays.stream(messages)
+                .mapToInt(l -> l.size())
+                .toArray();
+        do {
+            stepOver.run();
+        } while (IntStream.range(0, messages.length).allMatch(i ->
+                messages[i].size() <= n[i]));
     }
-
 
     class ArgumentJsonParser {
         public static <T> Predicate<Tuple2<T, String>> all() {

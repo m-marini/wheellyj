@@ -190,6 +190,9 @@ public class SimRobot implements RobotApi {
     private boolean rearSensor;
     private double leftPps;
     private double rightPps;
+    private boolean sendLidar;
+    private boolean sendMotion;
+    private boolean sendContacts;
 
     /**
      * Creates the simulated robot
@@ -356,9 +359,7 @@ public class SimRobot implements RobotApi {
                 || initialRearSensor != rearSensor
                 || initialFrontSensor != frontSensor) {
             // Contacts changed -> send status
-            sendLidar();
-            sendContacts();
-            sendMotion();
+            sendLidar = sendContacts = sendMotion = true;
         }
     }
 
@@ -366,17 +367,17 @@ public class SimRobot implements RobotApi {
      * Halt the robot if it is moving in forbidden direction
      */
     private void checkForSpeed() {
-        if (!HALT.equals(statusId)
-                && (!canMoveForward()
-                || !canMoveBackward())) {
+        if ((FORWARD.equals(statusId) && !canMoveForward())
+                || (BACKWARD.equals(statusId) && !canMoveBackward())) {
             haltImmediate();
-            sendMotion();
+            sendMotion = true;
         }
     }
 
     @Override
     public void close() {
         requests.updateAndGet(r -> r.close(true));
+        logger.atInfo().log("Closing robot ...");
     }
 
     /**
@@ -585,7 +586,7 @@ public class SimRobot implements RobotApi {
         if (distance <= robotSpec.targetRange()) {
             // Target reached
             haltImmediate();
-            sendMotion();
+            sendMotion = true;
             return;
         }
         // Compute the rotation angle
@@ -664,7 +665,7 @@ public class SimRobot implements RobotApi {
         if (distance <= robotSpec.targetRange()) {
             // Target reached
             haltImmediate();
-            sendMotion();
+            sendMotion = true;
             return;
         }
         // Compute the rotation angle
@@ -697,7 +698,6 @@ public class SimRobot implements RobotApi {
         if (!closed) {
             RobotRequests r = requests.getAndSet(RobotRequests.empty());
             if (r.close()) {
-                logger.atInfo().log("Closing sim robot");
                 closed = true;
                 errors.onComplete();
                 robotLineState.onNext(new RobotLineState(false, false, false, false));
@@ -707,7 +707,7 @@ public class SimRobot implements RobotApi {
             }
             long t = r.simulationTime();
             if (t >= 0) {
-                logger.atInfo().log("Set simulation time");
+                logger.atDebug().log("Set simulation time");
                 robotTime = t;
             }
             if (r.statusId() != null) {
@@ -757,7 +757,7 @@ public class SimRobot implements RobotApi {
         if (absRotDeg <= robotSpec.directionRange().toIntDeg()) {
             // Rotation completed -> halt robot
             haltImmediate();
-            sendMotion();
+            sendMotion = true;
             return;
         }
         double maxRotDeg = robotSpec.maxRotRange().toDeg();
@@ -827,6 +827,8 @@ public class SimRobot implements RobotApi {
         obstacleMap = map;
         createObstacleBody(map);
         obstacleChanged.onNext(map);
+        randomMapExpiration = robotTime + mapPeriod;
+        mapExpiration = robotTime + randomPeriod;
         return this;
     }
 
@@ -1083,6 +1085,7 @@ public class SimRobot implements RobotApi {
     void simulate() {
         // Update current simulation time
         robotTime += interval;
+        sendMotion = sendContacts = sendLidar = false;
         lastTick = System.nanoTime();
         handleRequests();
 
@@ -1120,9 +1123,18 @@ public class SimRobot implements RobotApi {
         // Handles stalemate
         handleStalemate();
         // Update robot status
-        updateMotion();
-        updateLidar();
-        updateCamera();
+        if (sendMotion || robotTime >= motionTimeout) {
+            sendMotion();
+        }
+        if (sendLidar || robotTime >= lidarTimeout) {
+            sendLidar();
+        }
+        if (sendContacts) {
+            sendContacts();
+        }
+        if (robotTime >= cameraTimeout) {
+            sendCamera();
+        }
     }
 
     /**
@@ -1233,9 +1245,10 @@ public class SimRobot implements RobotApi {
             robotLineState.onNext(new RobotLineState(true, true, false, true));
             robotLineState.onNext(new RobotLineState(true, true, true, false));
             robotLineState.onNext(new RobotLineState(true, true, false, true));
-            updateMotion();
-            updateLidar();
-            updateCamera();
+            sendMotion();
+            sendContacts();
+            sendLidar();
+            sendCamera();
         }
     }
 
@@ -1250,33 +1263,6 @@ public class SimRobot implements RobotApi {
                         // Reschedules the simulation
                         tick();
                     });
-        }
-    }
-
-    /**
-     * Sends the proxy message if the interval has elapsed
-     */
-    private void updateCamera() {
-        if (robotTime >= cameraTimeout) {
-            sendCamera();
-        }
-    }
-
-    /**
-     * Sends the proxy message if the interval has elapsed
-     */
-    private void updateLidar() {
-        if (robotTime >= lidarTimeout) {
-            sendLidar();
-        }
-    }
-
-    /**
-     * Sends the motion message if the interval has elapsed
-     */
-    private void updateMotion() {
-        if (robotTime >= motionTimeout) {
-            sendMotion();
         }
     }
 
@@ -1333,15 +1319,6 @@ public class SimRobot implements RobotApi {
          */
         public RobotRequests close(boolean close) {
             return this.close == close ? this : new RobotRequests(connect, close, simulationTime, statusId, targetDir, target, headDir);
-        }
-
-        /**
-         * Sets the connect request
-         *
-         * @param connect true if connect request
-         */
-        public RobotRequests connect(boolean connect) {
-            return this.connect == connect ? this : new RobotRequests(connect, close, simulationTime, statusId, targetDir, target, headDir);
         }
 
         /**

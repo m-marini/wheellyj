@@ -29,6 +29,7 @@
 package org.mmarini.rl.agents;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
 import org.mmarini.MapStream;
 import org.mmarini.NotImplementedException;
@@ -179,6 +180,11 @@ public class RandomAgent implements AgentRL {
     @Override
     public Flowable<Map<String, INDArray>> readKpis() {
         return Flowable.empty();
+    }
+
+    @Override
+    public Completable readShutdown() {
+        return Completable.complete();
     }
 
     @Override

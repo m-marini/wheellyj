@@ -41,6 +41,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 import static java.lang.Math.min;
@@ -63,8 +64,9 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
      * @param alphas     the alphas parameters
      * @param beta       the beta parameter
      * @param gamma      the gamma reward parameter
+     * @param isStop     the check for stop function
      */
-    public static TrajectoryDatasetIterator create(ComputationGraph network, Trajectory trajectory, int batchSize, float avgReward, Map<String, Float> alphas, float beta, float gamma) {
+    public static TrajectoryDatasetIterator create(ComputationGraph network, Trajectory trajectory, int batchSize, float avgReward, Map<String, Float> alphas, float beta, float gamma, BooleanSupplier isStop) {
         Map<String, INDArray> state = trajectory.states();
         INDArray[] inputs = network.getConfiguration().getNetworkInputs().stream()
                 .map(state::get)
@@ -83,7 +85,7 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
         }
 
         INDArray rewards = trajectory.rewards();
-        return new TrajectoryDatasetIterator(network, inputs, actionMasks, rewards, batchSize, avgReward, alphas1, beta, gamma);
+        return new TrajectoryDatasetIterator(network, inputs, actionMasks, rewards, batchSize, avgReward, alphas1, beta, gamma, isStop);
     }
 
     private final ComputationGraph network;
@@ -96,11 +98,11 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
     private final float beta;
     private final float gamma;
     private final int criticIdx;
+    private final BooleanSupplier isStop;
     private float avgReward;
     private INDArray[] labels;
     private int cursor;
     private MultiDataSetPreProcessor preProcessor;
-    private boolean stop;
     private Consumer<TrainingKpis> onKpis;
 
     /**
@@ -115,8 +117,9 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
      * @param alphas           the alphas
      * @param beta             the beta parameter
      * @param gamma            the gamma parameter
+     * @param isStop           the check for stop function
      */
-    protected TrajectoryDatasetIterator(ComputationGraph network, INDArray[] inputs, INDArray[] actionMasks, INDArray rewards, int batchSize, float initialAvgReward, float[] alphas, float beta, float gamma) {
+    protected TrajectoryDatasetIterator(ComputationGraph network, INDArray[] inputs, INDArray[] actionMasks, INDArray rewards, int batchSize, float initialAvgReward, float[] alphas, float beta, float gamma, BooleanSupplier isStop) {
         this.network = requireNonNull(network);
         this.inputs = requireNonNull(inputs);
         this.actionMasks = requireNonNull(actionMasks);
@@ -127,6 +130,7 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
         this.gamma = gamma;
         this.criticIdx = network.getConfiguration().getNetworkOutputs().indexOf(CRITIC_ID);
         this.avgReward = this.initialAvgReward = initialAvgReward;
+        this.isStop = isStop;
     }
 
     @Override
@@ -240,7 +244,9 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
 
     @Override
     public boolean hasNext() {
-        return cursor < rewards.size(0) && !stop;
+        return cursor < rewards.size(0)
+                // Stop not requested
+                && !(isStop != null && isStop.getAsBoolean());
     }
 
     @Override
@@ -291,9 +297,5 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
     @Override
     public boolean resetSupported() {
         return true;
-    }
-
-    public void stop() {
-        stop = true;
     }
 }

@@ -32,6 +32,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
+import io.reactivex.rxjava3.subjects.CompletableSubject;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.mmarini.Tuple2;
@@ -41,6 +42,7 @@ import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.wheelly.apis.BatchAgent;
 import org.mmarini.wheelly.apis.WheellyJsonSchemas;
+import org.mmarini.wheelly.apis.WithShutdownCompletable;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -66,7 +68,7 @@ import static org.mmarini.rl.agents.NNMediator.CRITIC_ID;
 /**
  * Agent based on Temporal Difference Actor-Critic with DL4J ComputationGraph network
  */
-public class DLAgent implements BatchAgent {
+public class DLAgent implements BatchAgent, WithShutdownCompletable {
     public static final String NUM_EPOCHS_ID = "numEpochs";
     public static final String TRAJECTORY_SIZE_ID = "trajectorySize";
     public static final String MODEL_FILENAME = "model.zip";
@@ -122,7 +124,7 @@ public class DLAgent implements BatchAgent {
                                     boolean concurrentTraining) {
         TrajectoryBuffer trajectoryBuffer = new TrajectoryBuffer(trajectorySize);
         AtomicReference<DLAgentStatus> status = new AtomicReference<>(new DLAgentStatus(network, null,
-                trajectoryBuffer, null, false, avgReward));
+                trajectoryBuffer, null, false, avgReward, false));
         return new DLAgent(filePath, random, numEpochs, batchSize, beta, alphas, gamma, concurrentTraining,
                 status, new ArrayList<>(), new ArrayList<>());
     }
@@ -161,6 +163,7 @@ public class DLAgent implements BatchAgent {
     private final AtomicReference<DLAgentStatus> status;
     private final List<Consumer<TrainingKpis>> onKpis;
     private final List<Consumer<INDArray>> onRewards;
+    private final CompletableSubject shutdownProcessor;
 
     /**
      * Creates the agent
@@ -192,6 +195,7 @@ public class DLAgent implements BatchAgent {
         this.status = requireNonNull(status);
         this.onKpis = onKpis;
         this.onRewards = onRewards;
+        this.shutdownProcessor = CompletableSubject.create();
     }
 
     @Override
@@ -255,8 +259,11 @@ public class DLAgent implements BatchAgent {
 
     @Override
     public void close() {
-        save();
-        status.get().close();
+        DLAgentStatus st = status.updateAndGet(s -> s.shuttingDown(true));
+        logger.atInfo().log("Closing agent ...");
+        if (!st.training()) {
+            onShutdownCompletion();
+        }
     }
 
     /**
@@ -297,7 +304,8 @@ public class DLAgent implements BatchAgent {
      * @param avgReward  the initial average reward
      */
     private TrajectoryDatasetIterator createTrajectoryIterator(Trajectory trajectory, int batchSize, float avgReward) {
-        return TrajectoryDatasetIterator.create(network(), trajectory, batchSize, avgReward, alphas, beta, gamma);
+        return TrajectoryDatasetIterator.create(network(), trajectory, batchSize, avgReward, alphas, beta, gamma,
+                () -> status.get().shuttingDown());
     }
 
     @Override
@@ -350,19 +358,23 @@ public class DLAgent implements BatchAgent {
     public DLAgent observe(ExecutionResult result) {
         logger.atDebug().log("Observing result ...");
         DLAgentStatus st = status.updateAndGet(s -> s.observe(result));
-        ComputationGraph trainingNetwork = st.trainingNetwork();
-        if (trainingNetwork != null) {
-            Trajectory trajectory = st.trajectory();
-            callOnRewards(trajectory.rewards());
-            if (concurrentTraining) {
-                Completable.complete()
-                        .subscribeOn(Schedulers.computation())
-                        .subscribe(() -> train(trainingNetwork, trajectory));
+        if (!st.shuttingDown()) {
+            // Shutdown not requested
+            ComputationGraph trainingNetwork = st.trainingNetwork();
+            if (trainingNetwork != null) {
+                Trajectory trajectory = st.trajectory();
+                callOnRewards(trajectory.rewards());
+                if (concurrentTraining) {
+                    Completable.complete()
+                            .subscribeOn(Schedulers.computation())
+                            .subscribe(() -> train(trainingNetwork, trajectory));
+
+                } else {
+                    train(trainingNetwork, trajectory);
+                }
             } else {
-                train(trainingNetwork, trajectory);
+                logger.atDebug().log("Trajectory size {}", st.trajectoryBuffer().size());
             }
-        } else {
-            logger.atDebug().log("Trajectory size {}", st.trajectoryBuffer().size());
         }
         logger.atDebug().log("Observed result.");
         return this;
@@ -388,10 +400,26 @@ public class DLAgent implements BatchAgent {
         return this;
     }
 
+    /**
+     * Handle the shutdown completion
+     */
+    private void onShutdownCompletion() {
+        save();
+        status.get().close();
+        shutdownProcessor.onComplete();
+        logger.atInfo().log("Agent closed.");
+    }
+
+    @Override
+    public Completable readShutdown() {
+        return shutdownProcessor;
+    }
+
     @Override
     public void save() {
         try {
             DLAgentStatus st = status.get();
+            logger.atInfo().log("Saving model into \"{}\" ...", filePath);
             filePath.mkdirs();
             JsonNode yaml = json();
             File agentFile = new File(filePath, AGENT_FILENAME);
@@ -433,8 +461,11 @@ public class DLAgent implements BatchAgent {
         }
 
         logger.atInfo().log("Trained network");
-        status.updateAndGet(s ->
+        DLAgentStatus st = status.updateAndGet(s ->
                 s.trained(trainingNetwork, (float) avg));
+        if (st.shuttingDown()) {
+            onShutdownCompletion();
+        }
     }
 
     @Override

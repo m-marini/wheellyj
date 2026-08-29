@@ -43,8 +43,7 @@ import java.util.stream.Stream;
 import static java.lang.Math.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mmarini.wheelly.TestFunctions.findMessage;
-import static org.mmarini.wheelly.TestFunctions.notBefore;
+import static org.mmarini.wheelly.TestFunctions.waitForMessages;
 import static org.mmarini.wheelly.apis.Obstacle.DEFAULT_OBSTACLE_RADIUS;
 import static org.mmarini.wheelly.apis.RobotSpec.*;
 import static org.mmarini.wheelly.apis.SimRobotObstacleTest.GRID_SIZE;
@@ -166,16 +165,15 @@ public class SimRobotLidarTest {
         createRobot(xRobot, yRobot, robotDir, headDir);
         createFrontObstacle(obsDir, obsDistance);
 
-        // When connect and wait for simulated 500 ms
+        // When connect and wait lidar message
         robot.syncConnect();
-        do {
-            robot.simulate();
-        } while (robot.robotTime() <= LIDAR_INTERVAL);
+        waitForMessages(() -> robot.simulate(), lidars);
+
         robot.close();
         robot.simulate();
 
         // And the first proxy message after 1 ms should signal the obstacle
-        WheellyLidarMessage lidar = findMessage(lidars, notBefore(1));
+        WheellyLidarMessage lidar = lidars.getLast();
         assertNotNull(lidar);
         assertEquals(m2mm(obsDistance), lidar.frontDistance());
     }
@@ -192,16 +190,15 @@ public class SimRobotLidarTest {
         createRobot(xRobot, yRobot, robotDir, headDir);
         createFrontObstacle(obsDir, obsDistance);
 
-        // When connect and wait for simulated 500 ms
+        // When connect and wait lidar message
         robot.syncConnect();
-        do {
-            robot.simulate();
-        } while (robot.robotTime() <= LIDAR_INTERVAL);
+        waitForMessages(() -> robot.simulate(), lidars);
+
         robot.close();
         robot.simulate();
 
         // And the first proxy message after 1 ms should signal the obstacle
-        WheellyLidarMessage lidar = findMessage(lidars, notBefore(1));
+        WheellyLidarMessage lidar = lidars.getLast();
         assertNotNull(lidar);
         assertEquals(0, lidar.frontDistance());
     }
@@ -214,16 +211,16 @@ public class SimRobotLidarTest {
         createRobot(xRobot, yRobot, robotDir, headDir);
         createRearObstacle(obsDir, obsDistance);
 
-        // When connect and wait for simulated 500 ms
+        // When connect
         robot.syncConnect();
-        do {
-            robot.simulate();
-        } while (robot.robotTime() <= LIDAR_INTERVAL);
+        // And wait for lidar message
+        waitForMessages(() -> robot.simulate(), lidars);
+
         robot.close();
         robot.simulate();
 
         // And the first proxy message after 1 ms should signal the obstacle
-        WheellyLidarMessage lidar = findMessage(lidars, notBefore(1));
+        WheellyLidarMessage lidar = lidars.getLast();
         assertNotNull(lidar);
         assertEquals(m2mm(obsDistance), lidar.rearDistance());
     }
@@ -242,14 +239,14 @@ public class SimRobotLidarTest {
 
         // When connect and wait for simulated 500 ms
         robot.syncConnect();
-        do {
-            robot.simulate();
-        } while (robot.robotTime() <= LIDAR_INTERVAL);
+        // And wait for lidar message
+        waitForMessages(() -> robot.simulate(), lidars);
+
         robot.close();
         robot.simulate();
 
         // And the first proxy message after 1 ms should signal the obstacle
-        WheellyLidarMessage lidar = findMessage(lidars, notBefore(1));
+        WheellyLidarMessage lidar = lidars.getLast();
         assertNotNull(lidar);
         assertEquals(0, lidar.rearDistance());
     }

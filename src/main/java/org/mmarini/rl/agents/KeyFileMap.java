@@ -90,7 +90,7 @@ public interface KeyFileMap {
     }
 
     /**
-     * Returns the files after closing them
+     * Returns the files after shuttingDown them
      *
      * @param files the file
      */

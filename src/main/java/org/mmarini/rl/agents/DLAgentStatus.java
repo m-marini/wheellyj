@@ -42,12 +42,13 @@ import static java.util.Objects.requireNonNull;
  * @param trajectory       the training trajectory
  * @param training         true if it is training
  * @param averageReward    the average reward
+ * @param shuttingDown     true if shutdown requested
  */
 public record DLAgentStatus(ComputationGraph network,
                             ComputationGraph trainingNetwork,
                             TrajectoryBuffer trajectoryBuffer,
                             Trajectory trajectory,
-                            boolean training, float averageReward)
+                            boolean training, float averageReward, boolean shuttingDown)
         implements AutoCloseable {
     /**
      * Creates the status
@@ -58,14 +59,16 @@ public record DLAgentStatus(ComputationGraph network,
      * @param trajectory       the training trajectory
      * @param training         true if it is training
      * @param averageReward    the average reward
+     * @param shuttingDown     true if shut down requested
      */
-    public DLAgentStatus(ComputationGraph network, ComputationGraph trainingNetwork, TrajectoryBuffer trajectoryBuffer, Trajectory trajectory, boolean training, float averageReward) {
+    public DLAgentStatus(ComputationGraph network, ComputationGraph trainingNetwork, TrajectoryBuffer trajectoryBuffer, Trajectory trajectory, boolean training, float averageReward, boolean shuttingDown) {
         this.network = requireNonNull(network);
         this.trajectoryBuffer = requireNonNull(trajectoryBuffer);
         this.trainingNetwork = trainingNetwork;
         this.trajectory = trajectory;
         this.training = training;
         this.averageReward = averageReward;
+        this.shuttingDown = shuttingDown;
     }
 
     /**
@@ -75,7 +78,7 @@ public record DLAgentStatus(ComputationGraph network,
      */
     public DLAgentStatus averageReward(float avgReward) {
         return this.averageReward != avgReward
-                ? new DLAgentStatus(network, trainingNetwork, trajectoryBuffer, trajectory, training, avgReward)
+                ? new DLAgentStatus(network, trainingNetwork, trajectoryBuffer, trajectory, training, avgReward, shuttingDown)
                 : this;
     }
 
@@ -103,9 +106,20 @@ public record DLAgentStatus(ComputationGraph network,
             // Ready to train
             Trajectory trajectory = trajectoryBuffer.trajectory();
             ComputationGraph trainingNetwork = network.clone();
-            return new DLAgentStatus(network, trainingNetwork, trajectoryBuffer.clear(), trajectory, true, averageReward);
+            return new DLAgentStatus(network, trainingNetwork, trajectoryBuffer.clear(), trajectory, true, averageReward, shuttingDown);
         }
-        return new DLAgentStatus(network, null, trajectoryBuffer, null, training, averageReward);
+        return new DLAgentStatus(network, null, trajectoryBuffer, null, training, averageReward, shuttingDown);
+    }
+
+    /**
+     * Sets the shuttingDown flag
+     *
+     * @param shuttingDown true if shutdown requested
+     */
+    public DLAgentStatus shuttingDown(boolean shuttingDown) {
+        return this.shuttingDown == shuttingDown
+                ? this
+                : new DLAgentStatus(network, trainingNetwork, trajectoryBuffer, trajectory, training, averageReward, shuttingDown);
     }
 
     /**
@@ -115,6 +129,6 @@ public record DLAgentStatus(ComputationGraph network,
      * @param averageReward the average reward
      */
     public DLAgentStatus trained(ComputationGraph network, float averageReward) {
-        return new DLAgentStatus(network, null, trajectoryBuffer, null, false, averageReward);
+        return new DLAgentStatus(network, null, trajectoryBuffer, null, false, averageReward, shuttingDown);
     }
 }

@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2023 Marco Marini, marco.marini@mmarini.org
  *
- *  Permission is hereby granted, free of charge, to any person
+ * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -28,37 +28,14 @@
 
 package org.mmarini.wheelly.apis;
 
-import io.reactivex.rxjava3.core.Flowable;
-
-import java.util.function.Consumer;
+import io.reactivex.rxjava3.core.Completable;
 
 /**
- * The robot controller connector api
+ * Access the shutdown completable that notify the shutdown completion
  */
-public interface RobotControllerConnector {
+public interface WithShutdownCompletable {
     /**
-     * Executes the command
-     *
-     * @param command the command
+     * Returns the shutdown completable
      */
-    void execute(RobotCommands command);
-
-    /**
-     * Registers the consumer of inference event
-     *
-     * @param callback the callback
-     */
-    void onInference(Consumer<RobotStatus> callback);
-
-    /**
-     * Registers the consumer of latch event
-     *
-     * @param callback the callback
-     */
-    void onLatch(Consumer<RobotStatus> callback);
-
-    /**
-     * Returns the flow of controller ready
-     */
-    Flowable<Boolean> readReady();
+    Completable readShutdown();
 }
