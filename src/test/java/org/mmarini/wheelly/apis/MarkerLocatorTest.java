@@ -47,11 +47,11 @@ import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.Utils.add;
 import static org.mmarini.Utils.mul;
 import static org.mmarini.wheelly.apis.RobotSpec.*;
+import static org.mmarini.wheelly.apis.Utils.MM;
 import static org.mmarini.wheelly.apis.Utils.mm2m;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class MarkerLocatorTest {
-    public static final double MM_1 = 1e-3;
     public static final long CORRELATION_INTERVAL = 500;
     public static final double DECAY_TIME = 600;
     public static final long CLEAN_INTERVAL = 600;
@@ -64,6 +64,7 @@ public class MarkerLocatorTest {
     public static final double MARKER_SIZE = 0.2;
     public static final String LABEL_A = "A";
     public static final String LABEL_B = "B";
+    MarkerLocator locator;
 
     static CameraEvent createCameraEvent(long cameraTime, String label, int labelDeg) {
         return new CameraEvent(cameraTime, label, 0, 0, new Point2D[0], Complex.fromDeg(labelDeg));
@@ -136,7 +137,7 @@ public class MarkerLocatorTest {
                 .exponential(300, 1000, 17) // distance
                 .uniform(-DEFAULT_LIDAR_FOV_DEG / 2, DEFAULT_LIDAR_FOV_DEG / 2) // labelDeg
                 .uniform(-DEFAULT_LIDAR_FOV_DEG / 2 + 2, DEFAULT_LIDAR_FOV_DEG / 2 - 2) // markerRange
-                .exponential(1.001, 2, 17) // distance
+                .exponential(1.001 + MARKER_SIZE / 2, 2, 17) // distance
                 .build(100);
     }
 
@@ -216,7 +217,7 @@ public class MarkerLocatorTest {
                 .uniform(-90, 90) // headDeg
                 .exponential(300, 1000, 5) // distance
                 .uniform(-DEFAULT_LIDAR_FOV_DEG / 2 + 2, DEFAULT_LIDAR_FOV_DEG / 2 - 2) // markerDeg
-                .exponential(1.001, 2, 5) // markerDistance
+                .exponential(1.001 + MARKER_SIZE / 2, 2, 5) // markerDistance
                 .build(100);
     }
 
@@ -232,7 +233,7 @@ public class MarkerLocatorTest {
                 .build(100);
     }
 
-    static Stream<Arguments> dateExistingMarker() {
+    static Stream<Arguments> dataExistingMarker() {
         return RandomArgumentsGenerator.create(SEED)
                 .uniform(-2.0, 2.0, 9) // xRobot
                 .uniform(-2.0, 2.0, 9) // yRobot
@@ -246,7 +247,17 @@ public class MarkerLocatorTest {
                 .build(100);
     }
 
-    MarkerLocator locator;
+    Stream<Arguments> dataUnknownNearInRange() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-2.0, 2.0, 9) // xRobot
+                .uniform(-2.0, 2.0, 9) // yRobot
+                .uniform(0, 359) // robotDeg
+                .uniform(-90, 90) // headDeg
+                .uniform(1000, 2000) // distance
+                .uniform(-DEFAULT_LIDAR_FOV_DEG / 2 + 2, DEFAULT_LIDAR_FOV_DEG / 2 - 2) // markerDeg
+                .uniform(0d, MARKER_SIZE / 2) // deltaMarkerDistance
+                .build(100);
+    }
 
     @BeforeEach
     void setUp() {
@@ -260,7 +271,7 @@ public class MarkerLocatorTest {
     @CsvSource({
             "0,0, 0,0, 1000,0, 0,0,0.3"
     })
-    @MethodSource("dateExistingMarker")
+    @MethodSource("dataExistingMarker")
     void testExistingMarker(double xRobot, double yRobot, int robotDeg, int headDeg, int distance, int labelDeg,
                             int dTimeMarker, int markerDeg, double markerDistance) {
         // Given a correlated event with a label
@@ -293,7 +304,7 @@ public class MarkerLocatorTest {
         Point2D expectedMarker = add(
                 mul(marker.location(), gamma),
                 mul(labelLocation, notGamma));
-        assertThat(newMarker.location(), pointCloseTo(expectedMarker, MM_1));
+        assertThat(newMarker.location(), pointCloseTo(expectedMarker, MM));
     }
 
     /**
@@ -333,7 +344,7 @@ public class MarkerLocatorTest {
                 robotDir, headDir);
         Complex labelDir = robotDir.add(headDir).add(Complex.fromDeg(labelDeg));
         Point2D expected = labelDir.at(lidarLocation, mm2m(distance));
-        assertThat(marker.location(), pointCloseTo(expected, MM_1));
+        assertThat(marker.location(), pointCloseTo(expected, MM));
     }
 
     /**
@@ -378,7 +389,7 @@ public class MarkerLocatorTest {
                 robotDir, headDir);
         Complex labelDir = robotDir.add(headDir).add(Complex.fromDeg(labelDeg));
         Point2D expected = labelDir.at(lidarLocation, mm2m(distance));
-        assertThat(markerB.location(), pointCloseTo(expected, MM_1));
+        assertThat(markerB.location(), pointCloseTo(expected, MM));
     }
 
     /**
@@ -417,7 +428,7 @@ public class MarkerLocatorTest {
                 robotDir, headDir);
         Complex labelDir = robotDir.add(headDir).add(Complex.fromDeg(labelDeg));
         Point2D expected = labelDir.at(cameraLocation, mm2m(distance));
-        assertThat(marker.location(), pointCloseTo(expected, MM_1));
+        assertThat(marker.location(), pointCloseTo(expected, MM));
     }
 
     /**
@@ -513,12 +524,36 @@ public class MarkerLocatorTest {
     })
     @ParameterizedTest(name = "[{index} Robot @({0},{1}) R{2} head {3} DEG, D{4} mm, marker {5} DEG, D{6} m")
     @MethodSource("dataUnknownInRange")
-    void testUnknownInRange(double xRobot, double yRobot, int robotDeg, int headDeg, int distance, int markerDeg, double markerDistance) {
+    void testUnknownInRange(double xRobot, double yRobot, int robotDeg, int headDeg, int distance,
+                            int markerDeg, double markerDistance) {
         // Given a correlated event with a marker
         CorrelatedCameraEvent event = createCorrelateEvent(xRobot, yRobot, robotDeg, headDeg, distance, UNKNOWN_QR_CODE, 0);
         // And a marker in lidar range
         Map<String, LabelMarker> map = Map.of(LABEL_A,
                 createMarkerAt(event, markerDeg, markerDistance));
+
+        // When update by event
+        Map<String, LabelMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
+
+        // Then the map should be empty
+        assertTrue(newMap.isEmpty());
+    }
+
+    /**
+     * A new unknown marker in a map with marker in range
+     */
+    @ParameterizedTest(name = "[{index}] Robot @({0},{1}) R{2} head {3} DEG, D{4} mm, marker {5} DEG, +{6} m")
+    @CsvSource({
+            "0,0, 0,0, 1000, 0,0.0"
+    })
+    @MethodSource("dataUnknownNearInRange")
+    void testUnknownNearInRange(double xRobot, double yRobot, int robotDeg, int headDeg, int distance,
+                                int markerDeg, double deltaDistance) {
+        // Given a correlated event with a marker
+        CorrelatedCameraEvent event = createCorrelateEvent(xRobot, yRobot, robotDeg, headDeg, distance, UNKNOWN_QR_CODE, 0);
+        // And a marker near lidar range
+        Map<String, LabelMarker> map = Map.of(LABEL_A,
+                createMarkerAt(event, markerDeg, mm2m(distance) + deltaDistance));
 
         // When update by event
         Map<String, LabelMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
@@ -552,5 +587,4 @@ public class MarkerLocatorTest {
         // Then the map should be empty
         assertThat(newMap, hasEntry(LABEL_A, marker));
     }
-
 }

@@ -44,10 +44,10 @@ import java.util.stream.Stream;
 import static java.lang.Math.clamp;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.wheelly.apis.MarkerLocatorTest.LABEL_A;
-import static org.mmarini.wheelly.apis.MarkerLocatorTest.MM_1;
 import static org.mmarini.wheelly.apis.RobotSpec.*;
 import static org.mmarini.wheelly.apis.RobotStatusId.BACKWARD;
 import static org.mmarini.wheelly.apis.RobotStatusId.FORWARD;
+import static org.mmarini.wheelly.apis.Utils.MM;
 import static org.mmarini.wheelly.engines.LabelStuckState.*;
 import static org.mmarini.wheelly.engines.LabelStuckState.DEFAULT_DIRECTION_RANGE;
 import static org.mmarini.wheelly.engines.StateResult.*;
@@ -73,7 +73,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-DEFAULT_HEAD_FOV_DEG / 2 + 1, DEFAULT_HEAD_FOV_DEG / 2 - 1, 9) // headDeg
                 .uniform(-DEFAULT_HEAD_FOV_DEG / 2 + 1, -DEFAULT_DIRECTION_RANGE - 1) // markerDeg
-                .uniform(DEFAULT_MIN_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(DEFAULT_MIN_DISTANCE + MM, DEFAULT_MAX_DISTANCE - MM, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -84,7 +84,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-DEFAULT_HEAD_FOV_DEG / 2 + 1, DEFAULT_HEAD_FOV_DEG / 2 - 1, 9) // headDeg
                 .uniform(-DEFAULT_DIRECTION_RANGE + 1, DEFAULT_DIRECTION_RANGE - 1) // markerDeg
-                .uniform(DEFAULT_MIN_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(DEFAULT_MIN_DISTANCE + MM, DEFAULT_MAX_DISTANCE - MM, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -95,8 +95,8 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-DEFAULT_LIDAR_FOV_DEG / 2 + DEFAULT_DIRECTION_RANGE + 1, DEFAULT_LIDAR_FOV_DEG / 2 - DEFAULT_DIRECTION_RANGE - 1) // headDeg
                 .uniform(-DEFAULT_DIRECTION_RANGE + 1, DEFAULT_DIRECTION_RANGE - 1) // markerDeg
-                .uniform(DEFAULT_MIN_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
-                .uniform(DEFAULT_CORRELATION_DISTANCE + MM_1, MAX_RADAR_DISTANCE, 9) // markerDistance
+                .uniform(DEFAULT_MIN_DISTANCE + MM, DEFAULT_MAX_DISTANCE - MM, 9) // markerDistance
+                .uniform(DEFAULT_CORRELATION_DISTANCE + MM, MAX_RADAR_DISTANCE, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -107,8 +107,8 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-DEFAULT_LIDAR_FOV_DEG / 2 + DEFAULT_DIRECTION_RANGE + 1, DEFAULT_LIDAR_FOV_DEG / 2 - DEFAULT_DIRECTION_RANGE - 1) // headDeg
                 .uniform(-DEFAULT_DIRECTION_RANGE + 1, DEFAULT_DIRECTION_RANGE - 1) // markerDeg
-                .uniform(DEFAULT_MIN_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
-                .uniform(-DEFAULT_MIN_DISTANCE, -DEFAULT_CORRELATION_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(DEFAULT_MIN_DISTANCE + MM, DEFAULT_MAX_DISTANCE - MM, 9) // markerDistance
+                .uniform(-DEFAULT_MIN_DISTANCE, -DEFAULT_CORRELATION_DISTANCE - MM, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -119,7 +119,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-DEFAULT_HEAD_FOV_DEG / 2 + 1, DEFAULT_HEAD_FOV_DEG / 2 - 1, 9) // headDeg
                 .uniform(DEFAULT_DIRECTION_RANGE + 1, DEFAULT_HEAD_FOV_DEG / 2 - 1) // markerDeg
-                .uniform(DEFAULT_MIN_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(DEFAULT_MIN_DISTANCE + MM, DEFAULT_MAX_DISTANCE - MM, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -130,7 +130,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(-180, -DEFAULT_HEAD_FOV_DEG / 2 - 1) // markerDeg
-                .uniform(DEFAULT_MIN_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(DEFAULT_MIN_DISTANCE + MM, DEFAULT_MAX_DISTANCE - MM, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -141,7 +141,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(DEFAULT_HEAD_FOV_DEG / 2 + 1, 179) // markerDeg
-                .uniform(DEFAULT_MIN_DISTANCE + MM_1, DEFAULT_MAX_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(DEFAULT_MIN_DISTANCE + MM, DEFAULT_MAX_DISTANCE - MM, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -152,7 +152,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(0, 359) // markerDeg
-                .uniform(DEFAULT_SEARCH_DISTANCE + MM_1, DEFAULT_SEARCH_DISTANCE * 2, 9) // markerDistance
+                .uniform(DEFAULT_SEARCH_DISTANCE + MM, DEFAULT_SEARCH_DISTANCE * 2, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -163,7 +163,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-DEFAULT_HEAD_FOV_DEG / 2 + 1, DEFAULT_HEAD_FOV_DEG / 2 - 1, 9) // headDeg
                 .uniform(-DEFAULT_DIRECTION_RANGE + 1, DEFAULT_DIRECTION_RANGE - 1) // markerDeg
-                .uniform(RobotSpec.ROBOT_RADIUS, DEFAULT_MIN_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(RobotSpec.ROBOT_RADIUS, DEFAULT_MIN_DISTANCE - MM, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -174,7 +174,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(-DEFAULT_HEAD_FOV_DEG / 2 + 1, -DEFAULT_DIRECTION_RANGE - 1) // markerDeg
-                .uniform(RobotSpec.ROBOT_RADIUS, DEFAULT_MIN_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(RobotSpec.ROBOT_RADIUS, DEFAULT_MIN_DISTANCE - MM, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -185,7 +185,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(DEFAULT_DIRECTION_RANGE + 1, DEFAULT_HEAD_FOV_DEG / 2 - 1) // markerDeg
-                .uniform(RobotSpec.ROBOT_RADIUS, DEFAULT_MIN_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(RobotSpec.ROBOT_RADIUS, DEFAULT_MIN_DISTANCE - MM, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -196,7 +196,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(-180, -DEFAULT_HEAD_FOV_DEG / 2 - 1) // markerDeg
-                .uniform(RobotSpec.ROBOT_RADIUS, DEFAULT_MIN_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(RobotSpec.ROBOT_RADIUS, DEFAULT_MIN_DISTANCE - MM, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -207,7 +207,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(DEFAULT_HEAD_FOV_DEG / 2 + 1, 179) // markerDeg
-                .uniform(RobotSpec.ROBOT_RADIUS, DEFAULT_MIN_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(RobotSpec.ROBOT_RADIUS, DEFAULT_MIN_DISTANCE - MM, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -218,7 +218,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(-DEFAULT_DIRECTION_RANGE, DEFAULT_DIRECTION_RANGE) // markerDeg
-                .uniform(DEFAULT_MAX_DISTANCE + MM_1, DEFAULT_SEARCH_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(DEFAULT_MAX_DISTANCE + MM, DEFAULT_SEARCH_DISTANCE - MM, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -229,7 +229,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(-DEFAULT_HEAD_FOV_DEG / 2 + 1, -DEFAULT_DIRECTION_RANGE - 1) // markerDeg
-                .uniform(DEFAULT_MAX_DISTANCE + MM_1, DEFAULT_SEARCH_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(DEFAULT_MAX_DISTANCE + MM, DEFAULT_SEARCH_DISTANCE - MM, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -240,7 +240,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(DEFAULT_DIRECTION_RANGE + 1, DEFAULT_HEAD_FOV_DEG / 2 - 1) // markerDeg
-                .uniform(DEFAULT_MAX_DISTANCE + MM_1, DEFAULT_SEARCH_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(DEFAULT_MAX_DISTANCE + MM, DEFAULT_SEARCH_DISTANCE - MM, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -251,7 +251,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(-180, -DEFAULT_HEAD_FOV_DEG / 2 - 1) // markerDeg
-                .uniform(DEFAULT_MAX_DISTANCE + MM_1, DEFAULT_SEARCH_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(DEFAULT_MAX_DISTANCE + MM, DEFAULT_SEARCH_DISTANCE - MM, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 
@@ -262,7 +262,7 @@ class LabelStuckStateTest {
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90, 9) // headDeg
                 .uniform(DEFAULT_HEAD_FOV_DEG / 2 + 1, 179) // markerDeg
-                .uniform(DEFAULT_MAX_DISTANCE + MM_1, DEFAULT_SEARCH_DISTANCE - MM_1, 9) // markerDistance
+                .uniform(DEFAULT_MAX_DISTANCE + MM, DEFAULT_SEARCH_DISTANCE - MM, 9) // markerDistance
                 .build(NUM_TEST_CASE);
     }
 

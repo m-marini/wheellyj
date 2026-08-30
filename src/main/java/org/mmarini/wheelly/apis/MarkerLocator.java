@@ -59,6 +59,41 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
     public static final Complex CLEAR_REDUCTION_ANGLE = Complex.fromDeg(3);
 
     /**
+     * Creates the marker locator
+     *
+     * @param locationDecay       the gamma marker time (ms)
+     * @param cleanDecay          the clean gamma time (ms)
+     * @param correlationInterval the correlation interval (ms)
+     * @param minNumberEvents     the minimum number of unknown qr code events to update the marker map
+     * @param markerSize          the marker size (m)
+     */
+    public MarkerLocator(double locationDecay, double cleanDecay, long correlationInterval, int minNumberEvents,
+                         double markerSize) {
+        this(locationDecay, cleanDecay, correlationInterval, minNumberEvents,
+                markerSize, new AtomicReference<>(new MarkerLocatorStatus(0, null)));
+    }
+
+    /**
+     * Creates the marker locator
+     *
+     * @param locationDecay       the gamma marker time (ms)
+     * @param cleanDecay          the clean gamma time (ms)
+     * @param correlationInterval the correlation interval (ms)
+     * @param minNumberEvents     the minimum number of unknown qr code events to update the marker map
+     * @param markerSize          the marker size (m)
+     * @param status              the marker locator status
+     */
+    public MarkerLocator(double locationDecay, double cleanDecay, long correlationInterval, int minNumberEvents,
+                         double markerSize, AtomicReference<MarkerLocatorStatus> status) {
+        this.locationDecay = locationDecay;
+        this.cleanDecay = cleanDecay;
+        this.correlationInterval = correlationInterval;
+        this.minNumberEvents = minNumberEvents;
+        this.markerSize = markerSize;
+        this.status = requireNonNull(status);
+    }
+
+    /**
      * Returns the marker locator
      *
      * @param locationDecay       the gamma marker time (ms)
@@ -104,41 +139,6 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
     }
 
     /**
-     * Creates the marker locator
-     *
-     * @param locationDecay       the gamma marker time (ms)
-     * @param cleanDecay          the clean gamma time (ms)
-     * @param correlationInterval the correlation interval (ms)
-     * @param minNumberEvents     the minimum number of unknown qr code events to update the marker map
-     * @param markerSize          the marker size (m)
-     */
-    public MarkerLocator(double locationDecay, double cleanDecay, long correlationInterval, int minNumberEvents,
-                         double markerSize) {
-        this(locationDecay, cleanDecay, correlationInterval, minNumberEvents,
-                markerSize, new AtomicReference<>(new MarkerLocatorStatus(0, null)));
-    }
-
-    /**
-     * Creates the marker locator
-     *
-     * @param locationDecay       the gamma marker time (ms)
-     * @param cleanDecay          the clean gamma time (ms)
-     * @param correlationInterval the correlation interval (ms)
-     * @param minNumberEvents     the minimum number of unknown qr code events to update the marker map
-     * @param markerSize          the marker size (m)
-     * @param status              the marker locator status
-     */
-    public MarkerLocator(double locationDecay, double cleanDecay, long correlationInterval, int minNumberEvents,
-                         double markerSize, AtomicReference<MarkerLocatorStatus> status) {
-        this.locationDecay = locationDecay;
-        this.cleanDecay = cleanDecay;
-        this.correlationInterval = correlationInterval;
-        this.minNumberEvents = minNumberEvents;
-        this.markerSize = markerSize;
-        this.status = requireNonNull(status);
-    }
-
-    /**
      * Returns the filtered map area
      *
      * @param map       the map of marker
@@ -159,7 +159,7 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
                         long dt = time - marker.cleanTime();
                         double alpha = min(dt / cleanDecay, 1);
                         // dt -> 0 => alpha -> 0, weight -> weight
-                        // dt -> gamma => alpha -> 1, weight -> -1
+                        // dt -> cleanDecay => alpha -> 1, weight -> -1
                         // weight -> (-1-weight) * alpha + weight;
                         double weight = marker.weight();
                         weight = -(1 + weight) * alpha + weight;
@@ -194,7 +194,7 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
             Complex lidarFov = robotSpec.lidarFOV();
             Complex cameraFov = robotSpec.cameraFOV();
             Complex cameraAzimuth = cameraEvent.lidarYaw();
-            double clearDistance = (distance == 0 ? maxDistance : distance);
+            double clearDistance = (distance == 0 ? maxDistance : distance + markerSize / 2);
             Point2D lidarLocation = robotSpec.frontLidarLocation(cameraEvent.robotLocation(), cameraEvent.robotDirection(), cameraEvent.headDirection());
 
             if (distance == 0) {
