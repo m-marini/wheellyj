@@ -111,8 +111,8 @@ class SimRobotObstacleTest {
         simRobot.sensorDirection(sensorDirection);
         simRobot.obstacleMap(mapBuilder.build());
 
-        simRobot.onContacts(contacts::add);
-        simRobot.onLidar(lidars::add);
+        simRobot.addOnContacts(contacts::add);
+        simRobot.addOnLidar(lidars::add);
 
         return simRobot;
     }

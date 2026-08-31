@@ -116,7 +116,7 @@ public class WorldModelBuilder {
         MarkerLocator markerLocator = new MarkerLocator(1000, 1000, 1000, 1, MARKER_SIZE);
         WorldModelSpec worldSpec = new WorldModelSpec(robotStatus.robotSpec(), numSectors, gridMapSize);
         WorldModel model = new WorldModel(worldSpec, robotStatus, radarMap, markers, null, null, null);
-        return new WorldModeller(radarModeller, polarModeller, markerLocator, gridMapSize)
+        return new WorldModeller(radarModeller, polarModeller, markerLocator, null, gridMapSize)
                 .updateForInference(model);
     }
 

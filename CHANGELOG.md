@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#626](https://github.com/m-marini/wheellyj/issues/626): Reduce move action space
 - Issue [#629](https://github.com/m-marini/wheellyj/issues/629): Callback kpis
 - Issue [#633](https://github.com/m-marini/wheellyj/issues/633): Switch inference from async to sync
+- Issue [#638](https://github.com/m-marini/wheellyj/issues/638): Inference after movement
 
 ### Fixed
 

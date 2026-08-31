@@ -222,7 +222,7 @@ public class RobotExecutor {
         controller.readControllerStatus()
                 .map(ControllerStatusMapper::map)
                 .subscribe(this::onControllerStatus);
-        controller.onCommand(sensorMonitor::onCommand);
+        controller.addOnCommand(sensorMonitor::onCommand);
         agent.readState()
                 .subscribe(this::onState);
         agent.readStepUp()
@@ -235,9 +235,7 @@ public class RobotExecutor {
                 .subscribe(this::onPath);
         agent.readTriggers()
                 .subscribe(this::onTrigger);
-
-        modeller.readInference()
-                .subscribe(this::onInference);
+        modeller.addOnInference(this::onInference);
     }
 
     /**

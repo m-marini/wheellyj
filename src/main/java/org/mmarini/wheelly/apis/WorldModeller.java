@@ -29,8 +29,6 @@
 package org.mmarini.wheelly.apis;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.mmarini.Tuple2;
 import org.mmarini.yaml.Locator;
@@ -38,8 +36,11 @@ import org.mmarini.yaml.Utils;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
 
@@ -73,7 +74,7 @@ public class WorldModeller implements WorldModellerApi {
         PolarMapModeller polarModeller = PolarMapModeller.create(root, locator);
         MarkerLocator markerModeller = MarkerLocator.create(root, locator);
         int gridSize = locator.path("robotMapSize").getNode(root).asInt();
-        return new WorldModeller(radarModeller, polarModeller, markerModeller, gridSize);
+        return new WorldModeller(radarModeller, polarModeller, markerModeller, new ArrayList<>(), gridSize);
     }
 
     /**
@@ -89,7 +90,7 @@ public class WorldModeller implements WorldModellerApi {
     private final RadarModeller radarModeller;
     private final PolarMapModeller polarModeller;
     private final MarkerLocator markerLocator;
-    private final PublishProcessor<Tuple2<WorldModel, RobotCommands>> inferenceProcessor;
+    private final List<Consumer<Tuple2<WorldModel, RobotCommands>>> onInferences;
     private WorldModelSpec worldSpec;
     private WorldModel currentModel;
     private RobotControllerConnector controller;
@@ -101,14 +102,20 @@ public class WorldModeller implements WorldModellerApi {
      * @param radarModeller the radar modeller
      * @param polarModeller the polar map modeller
      * @param markerLocator the marker locator
+     * @param onInferences  the inference callback list
      * @param robotMapSize  the robot relative map size
      */
-    public WorldModeller(RadarModeller radarModeller, PolarMapModeller polarModeller, MarkerLocator markerLocator, int robotMapSize) {
+    protected WorldModeller(RadarModeller radarModeller, PolarMapModeller polarModeller, MarkerLocator markerLocator, List<Consumer<Tuple2<WorldModel, RobotCommands>>> onInferences, int robotMapSize) {
         this.radarModeller = requireNonNull(radarModeller);
         this.polarModeller = requireNonNull(polarModeller);
+        this.onInferences = requireNonNull(onInferences);
         this.worldSpec = new WorldModelSpec(null, polarModeller.numSectors(), robotMapSize);
         this.markerLocator = requireNonNull(markerLocator);
-        this.inferenceProcessor = PublishProcessor.create();
+    }
+
+    @Override
+    public void addOnInference(Consumer<Tuple2<WorldModel, RobotCommands>> callback) {
+        onInferences.add(callback);
     }
 
     @Override
@@ -160,7 +167,9 @@ public class WorldModeller implements WorldModellerApi {
             RobotCommands commands = inference.onInference(model);
             if (commands != null) {
                 controller.execute(commands);
-                inferenceProcessor.onNext(Tuple2.of(model, commands));
+                for (Consumer<Tuple2<WorldModel, RobotCommands>> callback : onInferences) {
+                    callback.accept(Tuple2.of(model, commands));
+                }
             }
         }
     }
@@ -184,11 +193,6 @@ public class WorldModeller implements WorldModellerApi {
     @Override
     public RadarModeller radarModeller() {
         return radarModeller;
-    }
-
-    @Override
-    public Flowable<Tuple2<WorldModel, RobotCommands>> readInference() {
-        return inferenceProcessor;
     }
 
     /**

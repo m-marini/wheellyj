@@ -187,7 +187,7 @@ public class CameraCalibration {
      * Create the flows
      */
     private void createFlows() {
-        controller.onRobotStatus(this::onStatus);
+        controller.addOnRobotStatus(this::onStatus);
         controller.readErrors()
                 .subscribe(er -> {
                     comMonitor.onError(er);

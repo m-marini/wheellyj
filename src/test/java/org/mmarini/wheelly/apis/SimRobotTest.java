@@ -103,7 +103,7 @@ class SimRobotTest {
                 .at(new Point2D.Double(), targetDistance);
         long rt = 10000;
         List<WheellyMotionMessage> motions = new ArrayList<>();
-        robot.onMotion(motions::add);
+        robot.addOnMotion(motions::add);
 
         // When move to 0 DEG at max power
         robot.syncConnect();
@@ -147,7 +147,7 @@ class SimRobotTest {
         Point2D target = Complex.fromDeg(targetAngle).add(robotDirection)
                 .at(new Point2D.Double(), targetDistance);
         List<WheellyMotionMessage> motions = new ArrayList<>();
-        robot.onMotion(motions::add);
+        robot.addOnMotion(motions::add);
 
         // When move to 0 DEG at max power
         long rt = 10000;
@@ -176,7 +176,7 @@ class SimRobotTest {
     void testRotate(int dir) {
         // Given a robot connected and robotConfigured
         List<WheellyMotionMessage> motions = new ArrayList<>();
-        robot.onMotion(motions::add);
+        robot.addOnMotion(motions::add);
 
         // When move to 5 DEG at 0 power
         long rt = 10000;
@@ -212,7 +212,7 @@ class SimRobotTest {
         // Given a sim robot connected and robotConfigured
         // Given a robot connected and robotConfigured
         List<WheellyLidarMessage> lidars = new ArrayList<>();
-        robot.onLidar(lidars::add);
+        robot.addOnLidar(lidars::add);
 
         // When scan 90 DEG
         robot.syncConnect();

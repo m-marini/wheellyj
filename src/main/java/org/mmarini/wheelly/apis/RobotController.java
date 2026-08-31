@@ -137,24 +137,8 @@ public class RobotController implements RobotControllerApi {
     }
 
     @Override
-    public RobotController connectRobot(RobotApi robot) {
-        this.robot = requireNonNull(robot);
-        RobotStatus robotStatus = RobotStatus.create(robot.robotSpec(), decodeVoltage);
-        RobotControllerStatus st = this.status.updateAndGet(s -> s.robotStatus(robotStatus));
-        this.controllerStatus.onNext(st);
-        notifyRobotStatus(robotStatus);
-        this.robot.onCamera(this::onCamera);
-        this.robot.onLidar(this::onLidarMessage);
-        this.robot.onContacts(this::onContactsMessage);
-        this.robot.onMotion(this::onMotionMessage);
-        this.robot.onSupply(this::onSupplyMessage);
-        this.robot.readRobotStatus()
-                .subscribeOn(Schedulers.computation())
-                .distinctUntilChanged(RobotStatusApi::configured)
-                .subscribe(this::onRobotConfigured,
-                        logError(logger, "Error reading robot configuration status")
-                );
-        return this;
+    public void addOnCommand(Consumer<RobotCommands> callback) {
+        onCommands.add(callback);
     }
 
     @Override
@@ -217,8 +201,8 @@ public class RobotController implements RobotControllerApi {
     }
 
     @Override
-    public void onCommand(Consumer<RobotCommands> callback) {
-        onCommands.add(callback);
+    public void addOnRobotStatus(Consumer<RobotStatus> callback) {
+        onRobotStatus.add(callback);
     }
 
     /**
@@ -303,8 +287,24 @@ public class RobotController implements RobotControllerApi {
     }
 
     @Override
-    public void onRobotStatus(Consumer<RobotStatus> callback) {
-        onRobotStatus.add(callback);
+    public RobotController connectRobot(RobotApi robot) {
+        this.robot = requireNonNull(robot);
+        RobotStatus robotStatus = RobotStatus.create(robot.robotSpec(), decodeVoltage);
+        RobotControllerStatus st = this.status.updateAndGet(s -> s.robotStatus(robotStatus));
+        this.controllerStatus.onNext(st);
+        notifyRobotStatus(robotStatus);
+        this.robot.onCamera(this::onCamera);
+        this.robot.addOnLidar(this::onLidarMessage);
+        this.robot.addOnContacts(this::onContactsMessage);
+        this.robot.addOnMotion(this::onMotionMessage);
+        this.robot.addOnSupply(this::onSupplyMessage);
+        this.robot.readRobotStatus()
+                .subscribeOn(Schedulers.computation())
+                .distinctUntilChanged(RobotStatusApi::configured)
+                .subscribe(this::onRobotConfigured,
+                        logError(logger, "Error reading robot configuration status")
+                );
+        return this;
     }
 
     /**

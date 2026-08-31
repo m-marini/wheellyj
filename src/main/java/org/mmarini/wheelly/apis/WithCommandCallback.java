@@ -37,5 +37,5 @@ public interface WithCommandCallback {
     /**
      * Adds the command callback
      */
-    void onCommand(Consumer<RobotCommands> callback);
+    void addOnCommand(Consumer<RobotCommands> callback);
 }

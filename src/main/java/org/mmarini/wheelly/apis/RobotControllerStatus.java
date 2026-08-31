@@ -83,7 +83,7 @@ public record RobotControllerStatus(
      * @param inferenceInterval the inference interval (ms)
      */
     public boolean isInferenceReady(long time, long inferenceInterval) {
-        return ready && !inferencing && time >= lastInference + inferenceInterval;
+        return ready && !inferencing && time >= lastInference + inferenceInterval && robotStatus.halt();
     }
 
     /**

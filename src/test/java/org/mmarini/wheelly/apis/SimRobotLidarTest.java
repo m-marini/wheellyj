@@ -149,7 +149,7 @@ public class SimRobotLidarTest {
         robot.robotPos(xRobot, yRobot);
         robot.robotDir(Complex.fromDeg(robotDirDeg));
         robot.sensorDirection(Complex.fromDeg(headDirDeg));
-        robot.onLidar(lidars::add);
+        robot.addOnLidar(lidars::add);
     }
 
     @BeforeEach

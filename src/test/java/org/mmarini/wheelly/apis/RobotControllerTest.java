@@ -85,7 +85,7 @@ class RobotControllerTest {
         this.robot = SimRobot.create(root, new File("simRobot0Obstacles.yml"));
         this.controller = new RobotController(REACTION_INTERVAL, COMMAND_INTERVAL, x -> 12d)
                 .connectRobot(robot);
-        this.controller.onRobotStatus(robotStates::add);
+        this.controller.addOnRobotStatus(robotStates::add);
     }
 
     @AfterEach
@@ -102,7 +102,7 @@ class RobotControllerTest {
         Point2D target = Complex.fromDeg(targetDeg).at(new Point2D.Double(), targetDistance);
 
         PublishProcessor<RobotStatus> events = PublishProcessor.create();
-        controller.onRobotStatus(events::onNext);
+        controller.addOnRobotStatus(events::onNext);
 
         // When start the controller
         controller.start();
@@ -168,7 +168,7 @@ class RobotControllerTest {
         // and a controller
         Point2D target = Complex.fromDeg(targetDeg).at(new Point2D.Double(), targetDistance);
         PublishProcessor<RobotStatus> events = PublishProcessor.create();
-        controller.onRobotStatus(events::onNext);
+        controller.addOnRobotStatus(events::onNext);
         // When start the controller
         controller.start();
         controller.readControllerStatus()
@@ -233,7 +233,7 @@ class RobotControllerTest {
 
         // Given a mock robot
         PublishProcessor<RobotStatus> events = PublishProcessor.create();
-        controller.onRobotStatus(events::onNext);
+        controller.addOnRobotStatus(events::onNext);
 
         // When start the controller
         controller.start();
@@ -266,7 +266,7 @@ class RobotControllerTest {
     void testScan(int headDeg) {
         // Given a mock robot
         PublishProcessor<RobotStatus> events = PublishProcessor.create();
-        controller.onRobotStatus(events::onNext);
+        controller.addOnRobotStatus(events::onNext);
 
         // When start the controller
         controller.start();

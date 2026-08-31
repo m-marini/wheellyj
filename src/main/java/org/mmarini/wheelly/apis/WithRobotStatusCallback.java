@@ -34,5 +34,5 @@ public interface WithRobotStatusCallback {
     /**
      * Adds the robot status callback
      */
-    void onRobotStatus(Consumer<RobotStatus> callback);
+    void addOnRobotStatus(Consumer<RobotStatus> callback);
 }
