@@ -273,7 +273,7 @@ public class MatrixMonitor {
      * Create the flows
      */
     private void createFlows() {
-        controller.onRobotStatus(this::onRobotStatus);
+        controller.addOnRobotStatus(this::onRobotStatus);
         controller.readErrors()
                 .subscribe(er -> {
                     comMonitor.onError(er);

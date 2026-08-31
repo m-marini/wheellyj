@@ -83,8 +83,8 @@ class MqttRobotTest {
         robot.readRobotStatus().subscribe(statusSub);
         robot.readErrors().subscribe(errorSub);
         robot.onCamera(cameras::add);
-        robot.onContacts(contacts::add);
-        robot.onMotion(motions::add);
+        robot.addOnContacts(contacts::add);
+        robot.addOnMotion(motions::add);
         mockClient = assertDoesNotThrow(MockMqttClient::new);
         mockClient.start();
         mockClient.readCommands().subscribe(
@@ -417,7 +417,7 @@ class MqttRobotTest {
     void testSupplyMessage() throws IOException {
         // Given ...
         List<WheellySupplyMessage> supplies = new ArrayList<>();
-        robot.onSupply(supplies::add);
+        robot.addOnSupply(supplies::add);
 
         // When connect
         robot.connect();

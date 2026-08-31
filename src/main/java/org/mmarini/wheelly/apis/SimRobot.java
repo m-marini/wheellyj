@@ -842,22 +842,22 @@ public class SimRobot implements RobotApi {
     }
 
     @Override
-    public void onContacts(Consumer<WheellyContactsMessage> callback) {
+    public void addOnContacts(Consumer<WheellyContactsMessage> callback) {
         onContacts.add(callback);
     }
 
     @Override
-    public void onLidar(Consumer<WheellyLidarMessage> callback) {
+    public void addOnLidar(Consumer<WheellyLidarMessage> callback) {
         onLidars.add(callback);
     }
 
     @Override
-    public void onMotion(Consumer<WheellyMotionMessage> callback) {
+    public void addOnMotion(Consumer<WheellyMotionMessage> callback) {
         onMotions.add(callback);
     }
 
     @Override
-    public void onSupply(Consumer<WheellySupplyMessage> callback) {
+    public void addOnSupply(Consumer<WheellySupplyMessage> callback) {
     }
 
     @Override

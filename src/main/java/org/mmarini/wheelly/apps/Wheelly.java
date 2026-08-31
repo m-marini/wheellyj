@@ -164,6 +164,7 @@ public class Wheelly {
     private final JButton relocateButton;
     private final InferenceConnector inferenceMediator1;
     private final AtomicBoolean shuttingDown;
+    private final JFrame waitFrame;
     long autosaveInstant;
     private long robotStartTimestamp;
     private Long sessionDuration;
@@ -181,7 +182,6 @@ public class Wheelly {
     private InferenceWriter modelDumper;
     private KeyBinWriter kpisWriter;
     private long savingInterval;
-    private final JFrame waitFrame;
 
     /**
      * Creates the server reinforcement learning engine server
@@ -278,8 +278,8 @@ public class Wheelly {
      * Creates the flows of events
      */
     private void createFlows() {
-        controller.onRobotStatus(this::onStatusReady);
-        controller.onCommand(sensorMonitor::onCommand);
+        controller.addOnRobotStatus(this::onStatusReady);
+        controller.addOnCommand(sensorMonitor::onCommand);
         controller.readErrors().subscribe(err -> {
             comMonitor.onError(err);
             logger.atError().setCause(err).log();
@@ -299,7 +299,7 @@ public class Wheelly {
                 .observeOn(Schedulers.io())
                 .subscribe(this::onShutdownCompleted);
 
-        worldModeller.readInference().subscribe(this::onInference);
+        worldModeller.addOnInference(this::onInference);
 
         Observable<WindowEvent>[] windowObs = allFrames.stream()
                 .map(f -> SwingObservable.window(f, SwingObservable.WINDOW_ACTIVE))

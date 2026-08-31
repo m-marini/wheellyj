@@ -28,13 +28,10 @@
 
 package org.mmarini.wheelly.apis;
 
-import io.reactivex.rxjava3.core.Flowable;
-import org.mmarini.Tuple2;
-
 /**
  * Models the world by interpreting the event flow
  */
-public interface WorldModellerApi extends WorldModellerConnector {
+public interface WorldModellerApi extends WorldModellerConnector, WithInferenceCallback {
 
     /**
      * Connects the controller
@@ -47,11 +44,6 @@ public interface WorldModellerApi extends WorldModellerConnector {
      * Returns the radar modeller
      */
     RadarModeller radarModeller();
-
-    /**
-     * Returns the flow of inference events
-     */
-    Flowable<Tuple2<WorldModel, RobotCommands>> readInference();
 
     /**
      * Returns the world model specification

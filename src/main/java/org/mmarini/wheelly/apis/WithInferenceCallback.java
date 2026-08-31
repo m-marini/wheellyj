@@ -28,38 +28,15 @@
 
 package org.mmarini.wheelly.apis;
 
+import org.mmarini.Tuple2;
+
 import java.util.function.Consumer;
 
-/**
- * Reads wheelly messages
- */
-public interface WithWheellyMessageCallback {
-
+public interface WithInferenceCallback {
     /**
-     * Set the wheelly contacts messages callback
+     * Registers the consumer of inference
      *
      * @param callback the callback
      */
-    void addOnContacts(Consumer<WheellyContactsMessage> callback);
-
-    /**
-     * Set the wheelly lidar messages callback
-     *
-     * @param callback the callback
-     */
-    void addOnLidar(Consumer<WheellyLidarMessage> callback);
-
-    /**
-     * Set the wheelly motion messages callback
-     *
-     * @param callback the callback
-     */
-    void addOnMotion(Consumer<WheellyMotionMessage> callback);
-
-    /**
-     * Sets the wheelly supply messages callback
-     *
-     * @param callback the callback
-     */
-    void addOnSupply(Consumer<WheellySupplyMessage> callback);
+    void addOnInference(Consumer<Tuple2<WorldModel, RobotCommands>> callback);
 }
