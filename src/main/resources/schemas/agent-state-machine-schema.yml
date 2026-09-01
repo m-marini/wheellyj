@@ -26,10 +26,11 @@ $defs:
     type: [ string, number ]
   StateNode:
     type: object
-    class:
-      type: string
-    $id:
-      type: string
+    properties:
+      class:
+        type: string
+      $id:
+        type: string
     required:
       - class
       - $id

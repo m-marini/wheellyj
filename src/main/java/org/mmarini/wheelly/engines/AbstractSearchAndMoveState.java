@@ -28,6 +28,8 @@
 
 package org.mmarini.wheelly.engines;
 
+import io.reactivex.rxjava3.core.Maybe;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WorldModel;
 import org.slf4j.Logger;
@@ -35,6 +37,7 @@ import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
@@ -80,22 +83,9 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
     private final int minGoals;
     private final long maxSearchTime;
     private final Function<ProcessorContextApi, RRTPathFinder> pathFinderSupplier;
+    private final AtomicReference<Object> searchStatus;
     private int targetIndex;
     private List<Point2D> path;
-
-    /**
-     * Returns the path
-     */
-    List<Point2D> path() {
-        return path;
-    }
-
-    /**
-     * Returns the current target index
-     */
-    int targetIndex() {
-        return targetIndex;
-    }
 
     /**
      * Create the abstract node
@@ -118,27 +108,57 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
         this.minGoals = minGoals;
         this.maxSearchTime = maxSearchTime;
         this.pathFinderSupplier = requireNonNull(pathFinderSupplier);
-    }
-
-
-    /**
-     * Creates path
-     *
-     * @param context the context
-     */
-    private void createPath(ProcessorContextApi context) {
-        path = searchPath(context);
-        context.path(path);
-        if (path != null) {
-            context.target(path.getLast());
-        }
-        targetIndex = 0;
+        this.searchStatus = new AtomicReference<>(null);
     }
 
     @Override
     public void entry(ProcessorContextApi context) {
         super.entry(context);
-        createPath(context);
+        logger.atDebug().log("Entry");
+        // Create the pathfinder
+        targetIndex = -1;
+        Object searchId = new Object();
+        searchStatus.set(searchId);
+        RRTPathFinder pathFinder = pathFinderSupplier.apply(context);
+        // Run the search process
+        Maybe.fromSupplier(() -> {
+                    logger.atDebug().log("Searching ...");
+                    List<Point2D> path = searchPath(pathFinder);
+                    logger.atDebug().log("Search completed");
+                    return path;
+                })
+                .subscribeOn(Schedulers.computation())
+                .observeOn(Schedulers.io())
+                .subscribe(path1 -> {
+                            // Search completed with result
+                            Object id = searchStatus.getAndUpdate(s -> null);
+                            if (searchId == id) {
+                                logger.atDebug().log("Path found");
+                                this.path = path1;
+                            } else {
+                                logger.atDebug().log("Path found but discarded");
+                            }
+                        },
+                        ex ->
+                                logger.atError().setCause(ex).log("Error searching path"),
+                        () -> {
+                            // Search completed without result
+                            Object id = searchStatus.getAndUpdate(s -> null);
+                            if (searchId == id) {
+                                logger.atDebug().log("Path not found");
+                                this.path = null;
+                            } else {
+                                logger.atDebug().log("Path not found but discarded");
+                            }
+                        });
+    }
+
+    @Override
+    public void exit(ProcessorContextApi context) {
+        searchStatus.set(null);
+        super.exit(context);
+        // Purge the current search request if any
+        logger.atDebug().log("Exit search and move");
     }
 
     /**
@@ -175,22 +195,28 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
     }
 
     /**
+     * Returns the path
+     */
+    List<Point2D> path() {
+        return path;
+    }
+
+    /**
      * Returns the path to target
      *
-     * @param context the context
+     * @param pathFinder the pathfinder
      */
-    protected List<Point2D> searchPath(ProcessorContextApi context) {
-        RRTPathFinder pathFinder = pathFinderSupplier.apply(context);
+    protected List<Point2D> searchPath(RRTPathFinder pathFinder) {
         if (pathFinder == null) {
             return null;
         }
         pathFinder.init();
-        long timeout = System.currentTimeMillis() + maxSearchTime;
+        long searchTimeout = System.currentTimeMillis() + this.maxSearchTime;
         // Look for the maximum time interval
         for (int i = 0; i < maxIterations
                 && !pathFinder.isCompleted()
                 && pathFinder.rrt().goals().size() < minGoals
-                && System.currentTimeMillis() <= timeout; i++) {
+                && System.currentTimeMillis() <= searchTimeout; i++) {
             pathFinder.grow();
         }
         if (!pathFinder.isFound()) {
@@ -209,8 +235,29 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
             //context.path(null).target(null);
             return result;
         }
+        if (searchStatus.get() != null) {
+            // Still searching
+            return StateResult.noneHalt();
+        }
+        if (targetIndex < 0) {
+            logger.atDebug().log("Context initialised after search");
+            // Initialise contex for movement
+            context.path(path);
+            if (path != null) {
+                context.target(path.getLast());
+            }
+            targetIndex = 0;
+        }
         return path == null
                 ? notFound()
+                // move robot
                 : move(context);
+    }
+
+    /**
+     * Returns the current target index
+     */
+    int targetIndex() {
+        return targetIndex;
     }
 }

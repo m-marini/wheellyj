@@ -114,7 +114,6 @@ public class CreateDatasets {
     protected final Namespace args;
     private final JProgressBar progressBar;
     private final JTextField infoBar;
-    private BatchAgent agent;
     private WorldModeller modeller;
     private DLEnvironment environment;
     private JFrame frame;
@@ -182,7 +181,7 @@ public class CreateDatasets {
         // Creates agent
         Function<WithSignalsSpec, Agent> agentBuilder = Agent.fromFile(
                 new File(Locator.locate("agent").getNode(config).asText()));
-        agent = (BatchAgent) agentBuilder.apply(environment);
+        BatchAgent agent = (BatchAgent) agentBuilder.apply(environment);
         environment.connect(agent);
 
         // Creates random number generator
@@ -285,7 +284,7 @@ public class CreateDatasets {
 
         // Creates and start the batch
         Completable batchCompleted = Completable.fromAction(this::runBatch)
-                .subscribeOn(Schedulers.computation())
+                .subscribeOn(Schedulers.io())
                 .doOnError(ex -> {
                     logger.atError().setCause(ex).log("Error running batch");
                     info("Error running batch %s", ex.getMessage());
@@ -310,7 +309,7 @@ public class CreateDatasets {
                 new File(this.args.getString("temp")),
                 environment);
         builder.readProgressInfo()
-                .subscribeOn(Schedulers.computation())
+                .subscribeOn(Schedulers.io())
                 .throttleLatest(PROGRESS_INTERVAL, TimeUnit.MILLISECONDS)
                 .subscribe(this::onProgress);
         builder.build();

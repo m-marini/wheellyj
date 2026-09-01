@@ -365,9 +365,9 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
                 Trajectory trajectory = st.trajectory();
                 callOnRewards(trajectory.rewards());
                 if (concurrentTraining) {
-                    Completable.complete()
+                    Completable.fromRunnable(() -> train(trainingNetwork, trajectory))
                             .subscribeOn(Schedulers.computation())
-                            .subscribe(() -> train(trainingNetwork, trajectory));
+                            .subscribe();
 
                 } else {
                     train(trainingNetwork, trajectory);

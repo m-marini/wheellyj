@@ -480,7 +480,7 @@ public class NNActivityMonitor {
         rewind();
 
         Flowable.interval(SIM_PERIOD, TimeUnit.MILLISECONDS).
-                observeOn(Schedulers.computation())
+                observeOn(Schedulers.io())
                 .filter(ignored -> isPlaying())
                 .filter(t -> t % timeDivider == 0)
                 .doOnNext(ignored -> {

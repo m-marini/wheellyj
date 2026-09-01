@@ -82,15 +82,16 @@ public class SimRobot implements RobotApi {
     public static final long DEFAULT_CAMERA_INTERVAL = 500;
     public static final String LABEL = "A";
     public static final double MIN_OBSTACLE_DISTANCE = 1;
+    static final float JBOX_SCALE = 100;
+    static final double MAX_ACC = 1 * JBOX_SCALE;
     private static final Logger logger = LoggerFactory.getLogger(SimRobot.class);
     private static final Vec2 GRAVITY = new Vec2();
     private static final double ROBOT_FRICTION = 1;
     private static final double ROBOT_RESTITUTION = 0;
-    private static final float JBOX_SCALE = 100;
     private static final double ROBOT_DENSITY = RobotSpec.ROBOT_MASS / (RobotSpec.ROBOT_RADIUS * RobotSpec.ROBOT_RADIUS * PI * JBOX_SCALE * JBOX_SCALE);
-    private static final double MAX_ACC = 1 * JBOX_SCALE;
     private static final double MAX_FORCE = MAX_ACC * RobotSpec.ROBOT_MASS;
-    private static final double MAX_TORQUE = 0.7 * JBOX_SCALE * JBOX_SCALE;
+    private static final double MAX_TORQUE = MAX_FORCE * ROBOT_TRACK * JBOX_SCALE;
+    // private static final double MAX_TORQUE = 0.7 * JBOX_SCALE * JBOX_SCALE;
     private static final int VELOCITY_ITER = 10;
     private static final int POSITION_ITER = 10;
     private static final double SAFE_DISTANCE_SQ = pow(SAFE_DISTANCE + OBSTACLE_SIZE, 2);
@@ -264,6 +265,25 @@ public class SimRobot implements RobotApi {
     }
 
     @Override
+    public void addOnContacts(Consumer<WheellyContactsMessage> callback) {
+        onContacts.add(callback);
+    }
+
+    @Override
+    public void addOnLidar(Consumer<WheellyLidarMessage> callback) {
+        onLidars.add(callback);
+    }
+
+    @Override
+    public void addOnMotion(Consumer<WheellyMotionMessage> callback) {
+        onMotions.add(callback);
+    }
+
+    @Override
+    public void addOnSupply(Consumer<WheellySupplyMessage> callback) {
+    }
+
+    @Override
     public Single<Boolean> backward(Point2D location) {
         requireNonNull(location);
         requests.updateAndGet(s -> s.backward(location));
@@ -398,6 +418,7 @@ public class SimRobot implements RobotApi {
             if (tickInterval == 0) {
                 startSyncSimulation();
             } else {
+                logger.atInfo().log("Started simulation");
                 tick();
             }
         }
@@ -842,25 +863,6 @@ public class SimRobot implements RobotApi {
     }
 
     @Override
-    public void addOnContacts(Consumer<WheellyContactsMessage> callback) {
-        onContacts.add(callback);
-    }
-
-    @Override
-    public void addOnLidar(Consumer<WheellyLidarMessage> callback) {
-        onLidars.add(callback);
-    }
-
-    @Override
-    public void addOnMotion(Consumer<WheellyMotionMessage> callback) {
-        onMotions.add(callback);
-    }
-
-    @Override
-    public void addOnSupply(Consumer<WheellySupplyMessage> callback) {
-    }
-
-    @Override
     public Flowable<Throwable> readErrors() {
         return errors;
     }
@@ -1161,19 +1163,20 @@ public class SimRobot implements RobotApi {
         leftPps = expectedLeftPps;
         rightPps = expectedRightPps;
 
-        // Real left-right motor speeds
+        // left-right motor speeds (m/s)
         double left = expectedLeftPps * DISTANCE_PER_PULSE;
         double right = expectedRightPps * DISTANCE_PER_PULSE;
 
-        // Real forward velocity
+        // Real forward velocity (m/s)
         double forwardVelocity = (left + right) / 2;
 
-        // target real power
+        // target real power (jbox2d/s)
         Vec2 targetVelocity = robot.getWorldVector(Utils.vec2(forwardVelocity * JBOX_SCALE, 0));
         // Difference of power
         Vec2 dv = targetVelocity.sub(robot.getLinearVelocity());
         // Impulse to fix the power
-        Vec2 dq = dv.mul(robot.getMass());
+        float mass = robot.getMass();
+        Vec2 dq = dv.mul(mass);
         // Force to fix the power
         Vec2 force = dq.mul((float) (1 / dt));
         // Robot relative force
@@ -1185,13 +1188,14 @@ public class SimRobot implements RobotApi {
         localForce.x = clamp(localForce.x, (float) -MAX_FORCE, (float) MAX_FORCE);
         force = robot.getWorldVector(localForce);
 
-        // Angle rotation due to differential motor speeds
+        // Angle rotation due to differential motor speeds (rad/s)
         double angularVelocity1 = (right - left) / RobotSpec.ROBOT_TRACK;
-        // Limits rotation to max allowed rotation
+        // Limits rotation to max allowed rotation (rad/s)
         double angularVelocity = clamp(angularVelocity1, -MAX_ANGULAR_VELOCITY, MAX_ANGULAR_VELOCITY);
         // Angular impulse to fix the direction
         double robotAngularVelocity = robot.getAngularVelocity();
-        double angularTorque = (angularVelocity - robotAngularVelocity) * robot.getInertia() / dt;
+        float inertia = robot.getInertia();
+        double angularTorque = (angularVelocity - robotAngularVelocity) * inertia / dt;
         // Add a random factor to angular impulse
         angularTorque *= (1 + random.nextGaussian() * errSigma);
         // Clip the angular torque
@@ -1200,11 +1204,6 @@ public class SimRobot implements RobotApi {
         robot.applyForceToCenter(force);
         robot.applyTorque((float) angularTorque);
         world.step((float) dt, VELOCITY_ITER, POSITION_ITER);
-
-        Vec2 pos = robot.getPosition();
-        if (abs(pos.x) > 5 * JBOX_SCALE || abs(pos.y) > 5 * JBOX_SCALE) {
-            logger.atInfo().log("Robot location {}", pos);
-        }
     }
 
     @Override
@@ -1226,11 +1225,14 @@ public class SimRobot implements RobotApi {
      * Starts synchronous simulation
      */
     private void startSyncSimulation() {
-        Schedulers.computation().scheduleDirect(() -> {
-            while (!closed) {
-                simulate();
-            }
-        });
+        Completable.fromRunnable(() -> {
+                    logger.atInfo().log("Started simulation");
+                    while (!closed) {
+                        simulate();
+                    }
+                    logger.atInfo().log("Simulation completed");
+                }).subscribeOn(Schedulers.io())
+                .subscribe();
     }
 
     /**
@@ -1257,12 +1259,15 @@ public class SimRobot implements RobotApi {
      */
     private void tick() {
         if (!closed) {
-            Completable.timer(tickInterval, TimeUnit.MILLISECONDS).subscribeOn(Schedulers.computation())
+            Completable.timer(tickInterval, TimeUnit.MILLISECONDS)
+                    .observeOn(Schedulers.computation())
                     .subscribe(() -> {
                         simulate();
                         // Reschedules the simulation
                         tick();
                     });
+        } else {
+            logger.atInfo().log("Simulation completed");
         }
     }
 

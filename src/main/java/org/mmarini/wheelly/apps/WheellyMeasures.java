@@ -57,8 +57,8 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.List;
 import java.util.*;
+import java.util.List;
 import java.util.stream.Stream;
 
 import static java.lang.Math.round;
@@ -434,7 +434,7 @@ public class WheellyMeasures {
                 .add(String.valueOf(rightStepDownPower))
                 .toString();
         // Wait for status
-        return readStatus().subscribeOn(Schedulers.computation())
+        return readStatus().subscribeOn(Schedulers.io())
                 .firstElement()
                 .toSingle()
                 .flatMap(status -> {
@@ -443,7 +443,7 @@ public class WheellyMeasures {
                                 logger.atError().log("{}", err);
                                 return Single.error(new IllegalArgumentException(err));
                             }
-                            Single<List<Status>> r = readStatus().subscribeOn(Schedulers.computation())
+                    Single<List<Status>> r = readStatus().subscribeOn(Schedulers.io())
                                     .skipWhile(s -> !s.isTesting())
                                     .takeWhile(Status::isTesting)
                                     .toList();

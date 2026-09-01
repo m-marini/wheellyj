@@ -223,6 +223,7 @@ public class RobotExecutor {
                 .map(ControllerStatusMapper::map)
                 .subscribe(this::onControllerStatus);
         controller.addOnCommand(sensorMonitor::onCommand);
+        controller.addOnRobotStatus(envPanel::robotStatus);
         agent.readState()
                 .subscribe(this::onState);
         agent.readStepUp()
@@ -372,7 +373,7 @@ public class RobotExecutor {
             robotStartTimestamp = status.robotTime();
         }
         sensorMonitor.onStatus(status);
-        envPanel.robotStatus(status);
+//      envPanel.robotStatus(status);
         envPanel.radarMap(worldModel.radarMap());
         envPanel.markers(worldModel.markers().values());
         long robotClock = status.robotTime();

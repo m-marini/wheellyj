@@ -65,6 +65,7 @@
 
     <logger name="org.mmarini.wheelly.engines.StateMachineAgent" level="INFO"/>
     <logger name="org.mmarini.wheelly.engines.AbstractSearchAndMoveState" level="INFO"/>
+    <logger name="org.mmarini.wheelly.engines.RRTPathFinder" level="INFO"/>
     <logger name="org.mmarini.wheelly.engines.AvoidingState" level="INFO"/>
     <logger name="org.mmarini.wheelly.engines.MovePathState" level="INFO"/>
     <logger name="org.mmarini.wheelly.engines.HaltState" level="INFO"/>

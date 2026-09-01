@@ -175,7 +175,7 @@ public class RemoteDevice {
                 })
                 .publish()
                 .autoConnect()
-                .observeOn(Schedulers.computation())
+                .observeOn(Schedulers.io())
                 .doOnSubscribe(x -> logger.atDebug().log("Subscribe flow {}", topic))
                 .doOnNext(x -> logger.atDebug().log("Message {}", x));
     }
