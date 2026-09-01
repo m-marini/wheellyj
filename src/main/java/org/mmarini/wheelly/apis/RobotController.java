@@ -299,7 +299,7 @@ public class RobotController implements RobotControllerApi {
         this.robot.addOnMotion(this::onMotionMessage);
         this.robot.addOnSupply(this::onSupplyMessage);
         this.robot.readRobotStatus()
-                .subscribeOn(Schedulers.computation())
+                .subscribeOn(Schedulers.io())
                 .distinctUntilChanged(RobotStatusApi::configured)
                 .subscribe(this::onRobotConfigured,
                         logError(logger, "Error reading robot configuration status")

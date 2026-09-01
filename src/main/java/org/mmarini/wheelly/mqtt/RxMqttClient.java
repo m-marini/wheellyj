@@ -97,7 +97,7 @@ public class RxMqttClient implements AutoCloseable {
         this.options = options;
         this.closed = CompletableSubject.create();
         this.connectedSubject = SingleSubject.create();
-        this.connected = connectedSubject.observeOn(Schedulers.computation());
+        this.connected = connectedSubject.observeOn(Schedulers.io());
         logger.atDebug().log("Client {} created", client.hashCode());
     }
 
@@ -193,7 +193,7 @@ public class RxMqttClient implements AutoCloseable {
             logger.atError().setCause(e).log("Client {} error disconnecting", client.hashCode());
             result.onError(e);
         }
-        return result.observeOn(Schedulers.computation());
+        return result.observeOn(Schedulers.io());
     }
 
     /**
@@ -242,7 +242,7 @@ public class RxMqttClient implements AutoCloseable {
         } catch (MqttException e) {
             result.onError(e);
         }
-        return result.observeOn(Schedulers.computation());
+        return result.observeOn(Schedulers.io());
     }
 
     /**
@@ -261,6 +261,6 @@ public class RxMqttClient implements AutoCloseable {
             logger.atError().setCause(ex).log("Client {} error subscribing", client.hashCode());
             messages.onError(ex);
         }
-        return messages.observeOn(Schedulers.computation());
+        return messages.observeOn(Schedulers.io());
     }
 }

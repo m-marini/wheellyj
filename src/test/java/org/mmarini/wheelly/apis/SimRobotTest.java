@@ -49,9 +49,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.TestFunctions.waitForMessages;
-import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
-import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_TARGET_RANGE;
-import static org.mmarini.wheelly.apis.SimRobot.MAX_ANGULAR_VELOCITY;
+import static org.mmarini.wheelly.apis.RobotSpec.*;
+import static org.mmarini.wheelly.apis.SimRobot.*;
+import static org.mmarini.wheelly.apis.Utils.MM;
 import static rocks.cleancode.hamcrest.record.HasFieldMatcher.field;
 
 class SimRobotTest {
@@ -227,5 +227,73 @@ class SimRobotTest {
         assertNotNull(proxy);
         assertEquals(500L, proxy.time());
         assertEquals(dir, proxy.headDirectionDeg());
+    }
+
+    @ParameterizedTest(name = "[{index}] R{0}, Target {1} DEG, {2} m")
+    @MethodSource({
+            "dataFar",
+    })
+    void testSpeedBackward(int robotDeg, int targetAngle, double targetDistance) {
+        // Given a robot connected and robotConfigured
+        Complex robotDirection = Complex.fromDeg(robotDeg);
+        this.robot.robotDir(robotDirection);
+        Point2D target = robotDirection.opposite().at(new Point2D.Double(), MAX_DISTANCE);
+
+        // When move to 0 DEG at max power
+        long rt = 10000;
+        robot.syncConnect();
+        robot.backward(target);
+        robot.simulate();
+
+        // Then the location should be the expected location
+        double expDistance = MAX_ACC / JBOX_SCALE / 2 * INTERVAL * INTERVAL * 1e-3 * 1e-3;
+        Point2D expLocation = robotDirection.opposite().at(new Point2D.Double(), expDistance);
+
+        assertThat(robot.location(), pointCloseTo(expLocation, MM));
+    }
+
+    @ParameterizedTest(name = "[{index}] R{0}, Target {1} DEG, {2} m")
+    @MethodSource({
+            "dataFar",
+    })
+    void testSpeedForward(int robotDeg, int targetAngle, double targetDistance) {
+        // Given a robot connected and robotConfigured
+        Complex robotDirection = Complex.fromDeg(robotDeg);
+        this.robot.robotDir(robotDirection);
+        Point2D target = robotDirection.at(new Point2D.Double(), MAX_DISTANCE);
+
+        // When move to 0 DEG at max power
+        long rt = 10000;
+        robot.syncConnect();
+        robot.forward(target);
+        robot.simulate();
+
+        // Then the location should be the expected location
+        double expDistance = MAX_ACC / JBOX_SCALE / 2 * INTERVAL * INTERVAL * 1e-3 * 1e-3;
+        Point2D expLocation = robotDirection.at(new Point2D.Double(), expDistance);
+
+        assertThat(robot.location(), pointCloseTo(expLocation, MM));
+    }
+
+    @Test
+    void testSpeedRotate() {
+        // Given a robot connected and robotConfigured
+        double force = MAX_ACC / JBOX_SCALE * ROBOT_MASS;
+        double torque = force * ROBOT_TRACK;
+        //double torque = MAX_TORQUE;
+        double inertia = ROBOT_MASS / 2 * ROBOT_RADIUS * ROBOT_RADIUS;
+        double angularAcc = torque / inertia;
+        double expectedDir = angularAcc * INTERVAL * INTERVAL * 1e-3 * 1e-3;
+        //double timeToTurnaround = (PI * 2) / (expectedDir / INTERVAL / 1e-3);
+
+        // When rotate to -180 DEG
+        long rt = 10000;
+        robot.syncConnect();
+        robot.rotate(135);
+        robot.simulate();
+
+        // Then the robot direction should be the expected
+        double robotDirection = robot.direction().toRad();
+        assertThat(robotDirection, closeTo(expectedDir, expectedDir / 10));
     }
 }

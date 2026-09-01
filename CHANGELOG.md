@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#629](https://github.com/m-marini/wheellyj/issues/629): Callback kpis
 - Issue [#633](https://github.com/m-marini/wheellyj/issues/633): Switch inference from async to sync
 - Issue [#638](https://github.com/m-marini/wheellyj/issues/638): Inference after movement
+- Issue [#639](https://github.com/m-marini/wheellyj/issues/639): Parallelise long-running inference
 
 ### Fixed
 

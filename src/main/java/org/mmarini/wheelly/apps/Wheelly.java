@@ -30,6 +30,7 @@ package org.mmarini.wheelly.apps;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
+import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.CompletableSubject;
@@ -314,7 +315,7 @@ public class Wheelly {
 
         if (environment instanceof DLEnvironment dlEnvironment) {
             dlEnvironment.readRewards()
-                    .subscribeOn(Schedulers.computation())
+                    .subscribeOn(Schedulers.io())
                     .subscribe(reward -> {
                         envPanel.setReward(reward);
                         sensorMonitor.onReward(reward);
@@ -494,8 +495,6 @@ public class Wheelly {
         }
 
         long robotClock = robotStatus.robotTime();
-        envPanel.robotStatus(robotStatus);
-        sensorMonitor.onStatus(robotStatus);
         envPanel.radarMap(worldModel.radarMap());
         envPanel.markers(markers.values());
         Complex robotDir = robotStatus.direction();
@@ -623,7 +622,6 @@ public class Wheelly {
      */
     private void onStatusReady(RobotStatus status) {
         envPanel.robotStatus(status);
-        envPanel.robotStatus(status);
         sensorMonitor.onStatus(status);
         if (robotStartTimestamp < 0) {
             robotStartTimestamp = status.robotTime();
@@ -728,10 +726,12 @@ public class Wheelly {
         if (!shuttingDown.getAndSet(true)) {
             logger.atInfo().log("Shutdown");
             waitFrame.setVisible(true);
-            Schedulers.computation().scheduleDirect(() -> {
-                controller.shutdown();
-                agent.close();
-            });
+            Completable.fromRunnable(() -> {
+                        controller.shutdown();
+                        agent.close();
+                    })
+                    .subscribeOn(Schedulers.io())
+                    .subscribe();
         }
     }
 }

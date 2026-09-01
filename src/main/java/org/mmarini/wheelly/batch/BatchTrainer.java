@@ -103,7 +103,7 @@ public class BatchTrainer {
                 agent::createDataSet);
         // Registers for dataset iterator progress info
         datasetIterator.readProgressInfo()
-                .subscribeOn(Schedulers.computation())
+                .subscribeOn(Schedulers.io())
                 .subscribe(progressInfo::onNext,
                         progressInfo::onError,
                         () -> {

@@ -489,7 +489,7 @@ public class MqttRobot implements RobotApi {
      */
     private void onConnectionFailure(Throwable error) {
         notifyError("Error mqtt", error);
-        Completable.timer(retryInterval, TimeUnit.MILLISECONDS, Schedulers.computation())
+        Completable.timer(retryInterval, TimeUnit.MILLISECONDS, Schedulers.io())
                 .subscribe(this::reconnect);
     }
 
@@ -555,7 +555,7 @@ public class MqttRobot implements RobotApi {
             logger.atDebug().log("Robot configuration failed");
             MqttRobotStatus s1 = status.updateAndGet(MqttRobotStatus::setRobotNotConfigured);
             states.onNext(s1);
-            Completable.timer(retryInterval, TimeUnit.MILLISECONDS, Schedulers.computation())
+            Completable.timer(retryInterval, TimeUnit.MILLISECONDS, Schedulers.io())
                     .subscribe(this::configure);
         }
     }

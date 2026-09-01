@@ -380,7 +380,7 @@ public class BatchTraining {
 
         // Creates and start the batch
         Completable.fromAction(this::runBatch)
-                .subscribeOn(Schedulers.computation())
+                .subscribeOn(Schedulers.io())
                 .subscribe(this::onBatchCompletion,
                         this::onBatchError);
         logger.atInfo().log("Run completed");
@@ -417,7 +417,7 @@ public class BatchTraining {
         }
         this.trainer = new BatchTrainer(agent, stateFiles, actionMaskFiles, rewardFile);
         trainer.readProgressInfo()
-                .observeOn(Schedulers.computation())
+                .observeOn(Schedulers.io())
                 .throttleLatest(PROGRESS_INTERVAL, TimeUnit.MILLISECONDS)
                 .subscribe(this::onProgress);
         // Runs the training session
