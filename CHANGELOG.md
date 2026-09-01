@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- Issue [#642](https://github.com/m-marini/wheellyj/issues/639): Add toolbar in robot executor
+
 ### Changed
 
 - Issue [#616](https://github.com/m-marini/wheellyj/issues/616): Act and observation at action completion
