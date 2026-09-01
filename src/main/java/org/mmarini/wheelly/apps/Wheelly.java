@@ -41,7 +41,10 @@ import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
 import org.mmarini.Tuple2;
-import org.mmarini.rl.agents.*;
+import org.mmarini.rl.agents.Agent;
+import org.mmarini.rl.agents.DLAgent;
+import org.mmarini.rl.agents.KeyBinWriter;
+import org.mmarini.rl.agents.TrainingKpis;
 import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.Messages;
@@ -86,6 +89,63 @@ public class Wheelly {
 
     static {
         Nd4j.zeros(1);
+    }
+
+    protected final EnvironmentPanel envPanel;
+    private final WheellyToolBar toolBar;
+    private final DoubleReducedValue reactionRobotTime;
+    private final DoubleReducedValue reactionRealTime;
+    private final ComMonitor comMonitor;
+    private final SensorMonitor sensorMonitor;
+    private final KpisPanel kpisPanel;
+    private final CompletableSubject completion;
+    private final Namespace args;
+    private final JButton relocateButton;
+    private final AtomicBoolean shuttingDown;
+    private final JFrame waitFrame;
+    private final AtomicBoolean active;
+    private long autosaveInstant;
+    private long robotStartTimestamp;
+    private Long sessionDuration;
+    private GridPanel gridPanel;
+    private long prevRobotStep;
+    private long prevStep;
+    private List<JFrame> allFrames;
+    private RobotControllerApi controller;
+    private WorldModeller worldModeller;
+    private EnvironmentApi environment;
+    private RobotApi robot;
+    private Agent agent;
+    private JFrame frame;
+    private InferenceWriter modelDumper;
+    private KeyBinWriter kpisWriter;
+    private long savingInterval;
+
+    /**
+     * Creates the server reinforcement learning engine server
+     *
+     * @param args the parsed argument
+     */
+    public Wheelly(Namespace args) {
+        this.args = requireNonNull(args);
+        this.envPanel = new EnvironmentPanel();
+        this.kpisPanel = new KpisPanel();
+        this.comMonitor = new ComMonitor();
+        this.sensorMonitor = new SensorMonitor();
+        this.toolBar = new WheellyToolBar();
+        this.robotStartTimestamp = -1;
+        this.reactionRobotTime = DoubleReducedValue.mean();
+        this.reactionRealTime = DoubleReducedValue.mean();
+        this.prevRobotStep = -1;
+        this.prevStep = -1;
+        this.completion = CompletableSubject.create();
+        this.relocateButton = SwingUtils.getInstance().initButton(new JButton(), "Wheelly.relocateButton");
+        this.waitFrame = center(createFrame("Shutdown", createWaitPanel()));
+        this.shuttingDown = new AtomicBoolean(false);
+        this.active = new AtomicBoolean(true);
+
+        comMonitor.setPrintTimestamp(true);
+        waitFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
     }
 
     /**
@@ -152,65 +212,6 @@ public class Wheelly {
         }
     }
 
-    protected final EnvironmentPanel envPanel;
-    private final DoubleReducedValue reactionRobotTime;
-    private final DoubleReducedValue reactionRealTime;
-    private final ComMonitor comMonitor;
-    private final SensorMonitor sensorMonitor;
-    private final KpisPanel kpisPanel;
-    private final CompletableSubject completion;
-    private final Namespace args;
-    private final JButton stopButton;
-    private final JButton startButton;
-    private final JButton relocateButton;
-    private final InferenceConnector inferenceMediator1;
-    private final AtomicBoolean shuttingDown;
-    private final JFrame waitFrame;
-    long autosaveInstant;
-    private long robotStartTimestamp;
-    private Long sessionDuration;
-    private GridPanel gridPanel;
-    private long prevRobotStep;
-    private long prevStep;
-    private List<JFrame> allFrames;
-    private boolean active;
-    private RobotControllerApi controller;
-    private WorldModeller worldModeller;
-    private EnvironmentApi environment;
-    private RobotApi robot;
-    private Agent agent;
-    private JFrame frame;
-    private InferenceWriter modelDumper;
-    private KeyBinWriter kpisWriter;
-    private long savingInterval;
-
-    /**
-     * Creates the server reinforcement learning engine server
-     *
-     * @param args the parsed argument
-     */
-    public Wheelly(Namespace args) {
-        this.args = requireNonNull(args);
-        this.envPanel = new EnvironmentPanel();
-        this.kpisPanel = new KpisPanel();
-        this.comMonitor = new ComMonitor();
-        this.sensorMonitor = new SensorMonitor();
-        this.robotStartTimestamp = -1;
-        this.reactionRobotTime = DoubleReducedValue.mean();
-        this.reactionRealTime = DoubleReducedValue.mean();
-        this.prevRobotStep = -1;
-        this.prevStep = -1;
-        this.completion = CompletableSubject.create();
-        this.relocateButton = SwingUtils.getInstance().initButton(new JButton(), "Wheelly.relocateButton");
-        this.stopButton = SwingUtils.getInstance().initButton(new JButton(), "Wheelly.stopButton");
-        this.startButton = SwingUtils.getInstance().initButton(new JButton(), "Wheelly.runButton");
-        this.inferenceMediator1 = Wheelly.this::onInferenceProcess;
-        this.waitFrame = center(createFrame("Shutdown", createWaitPanel()));
-        this.shuttingDown = new AtomicBoolean(false);
-        comMonitor.setPrintTimestamp(true);
-        waitFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-    }
-
     /**
      * Creates the context from configuration
      *
@@ -229,7 +230,7 @@ public class Wheelly {
         this.worldModeller = AppYaml.modellerFromJson(config);
         worldModeller.setRobotSpec(robot.robotSpec());
         worldModeller.connectController(controller);
-        worldModeller.connect(inferenceMediator1);
+        worldModeller.connect(this::onInferenceProcess);
 
         logger.atInfo().log("Creating RL environment ...");
         this.environment = AppYaml.envFromJson(config);
@@ -273,12 +274,20 @@ public class Wheelly {
                 logger.atError().setCause(e).log("Error dumping inference to {}", file);
             }
         });
+        if (!(robot instanceof SimRobot)) {
+            toolBar.relocateButton().setEnabled(false);
+        }
     }
 
     /**
      * Creates the flows of events
      */
     private void createFlows() {
+        toolBar.pauseButton().addActionListener(this::onStopButton);
+        toolBar.playButton().addActionListener(this::onStartButton);
+        toolBar.resetButton().addActionListener(this::onResetButton);
+        toolBar.clearMapButton().addActionListener(this::onClearMapButton);
+        toolBar.relocateButton().addActionListener(this::onRelocateButton);
         controller.addOnRobotStatus(this::onStatusReady);
         controller.addOnCommand(sensorMonitor::onCommand);
         controller.readErrors().subscribe(err -> {
@@ -334,7 +343,7 @@ public class Wheelly {
         // Create kpis frame
         JFrame kpisFrame = kpisPanel.createFrame();
         frame = createFrame(Messages.getString("Wheelly.title"), new JScrollPane(envPanel));
-        frame.getContentPane().add(createToolBar(), BorderLayout.NORTH);
+        frame.getContentPane().add(toolBar, BorderLayout.NORTH);
         SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
                 .filter(ev ->
                         ev.getID() == WindowEvent.WINDOW_OPENED)
@@ -386,33 +395,13 @@ public class Wheelly {
 
         // Create single frame app
         this.frame = createFrame(Messages.getString("Wheelly.title"), panel);
-        frame.getContentPane().add(createToolBar(), BorderLayout.NORTH);
+        frame.getContentPane().add(toolBar, BorderLayout.NORTH);
         SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE)
                 .filter(ev ->
                         ev.getID() == WindowEvent.WINDOW_OPENED)
                 .subscribe(this::onWindowOpened);
         center(frame);
         allFrames = List.of(frame);
-    }
-
-    /**
-     * Returns the toolbar
-     */
-    private JToolBar createToolBar() {
-        JToolBar toolBar = new JToolBar();
-        JButton resetButton = SwingUtils.getInstance().initButton(new JButton(), "Wheelly.resetButton");
-        JButton clearMapButton = SwingUtils.getInstance().initButton(new JButton(), "Wheelly.clearMapButton");
-        toolBar.add(stopButton);
-        toolBar.add(startButton);
-        toolBar.add(resetButton);
-        toolBar.add(clearMapButton);
-        toolBar.add(relocateButton);
-        stopButton.addActionListener(this::onStopButton);
-        startButton.addActionListener(this::onStartButton);
-        resetButton.addActionListener(this::onResetButton);
-        clearMapButton.addActionListener(this::onClearMapButton);
-        relocateButton.addActionListener(this::onRelocateButton);
-        return toolBar;
     }
 
     /**
@@ -525,7 +514,7 @@ public class Wheelly {
     }
 
     private RobotCommands onInferenceProcess(WorldModel state) {
-        return active
+        return active.get()
                 ? environment.onInference(state)
                 : RobotCommands.halt();
     }
@@ -610,9 +599,9 @@ public class Wheelly {
      * @param actionEvent the event
      */
     private void onStartButton(ActionEvent actionEvent) {
-        active = true;
-        stopButton.setEnabled(true);
-        startButton.setEnabled(false);
+        active.set(true);
+        toolBar.pauseButton().setEnabled(true);
+        toolBar.playButton().setEnabled(false);
     }
 
     /**
@@ -644,9 +633,9 @@ public class Wheelly {
      * @param actionEvent the action event
      */
     private void onStopButton(ActionEvent actionEvent) {
-        active = false;
-        stopButton.setEnabled(false);
-        startButton.setEnabled(true);
+        active.set(false);
+        toolBar.pauseButton().setEnabled(false);
+        toolBar.playButton().setEnabled(true);
     }
 
     /**
@@ -677,11 +666,6 @@ public class Wheelly {
 
         // Create context
         createContext(config);
-
-        // Init agent
-        if (agent instanceof AbstractAgentNN agentNN) {
-            agent = agentNN.setPostTrainKpis(true);
-        }
 
         if (robot instanceof SimRobot robot1) {
             // Add the obstacles location changes
@@ -714,8 +698,7 @@ public class Wheelly {
         createFlows();
 
         // Starts the environment interaction
-        active = true;
-        startButton.setEnabled(false);
+        toolBar.playButton().setEnabled(false);
         frame.setVisible(true);
     }
 

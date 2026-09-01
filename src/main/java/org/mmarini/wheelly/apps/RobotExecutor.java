@@ -48,6 +48,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.awt.event.WindowEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
@@ -68,6 +70,53 @@ import static org.mmarini.wheelly.swing.Utils.*;
 public class RobotExecutor {
     public static final String EXECUTOR_SCHEMA_YML = "https://mmarini.org/wheelly/executor-schema-2.0";
     private static final Logger logger = LoggerFactory.getLogger(RobotExecutor.class);
+    private final EnvironmentPanel envPanel;
+    private final GridPanel gridPanel;
+    private final DoubleReducedValue reactionRobotTime;
+    private final DoubleReducedValue reactionRealTime;
+    private final ComMonitor comMonitor;
+    private final SensorMonitor sensorMonitor;
+    private final StateEngineMonitor engineMonitor;
+    private final Namespace args;
+    private final WheellyToolBar toolBar;
+    private final AtomicBoolean shuttingDown;
+    private final AtomicBoolean active;
+    private final InferenceConnector inferenceMediator;
+    private RobotApi robot;
+    private long start;
+    private long sessionDuration;
+    private StateMachineAgent agent;
+    private long robotStartTimestamp;
+    private long prevRobotStep;
+    private long prevRealStep;
+    private List<JFrame> allFrames;
+    private RobotControllerApi controller;
+    private WorldModeller modeller;
+    private InferenceFileWriter dumpFile;
+
+    /**
+     * Creates the roboto executor
+     *
+     * @param args the line command parsed arguments
+     */
+    public RobotExecutor(Namespace args) {
+        this.args = requireNonNull(args);
+        this.envPanel = new EnvironmentPanel();
+        this.gridPanel = new GridPanel();
+        this.comMonitor = new ComMonitor();
+        this.toolBar = new WheellyToolBar();
+        this.engineMonitor = new StateEngineMonitor();
+        this.reactionRobotTime = DoubleReducedValue.mean();
+        this.reactionRealTime = DoubleReducedValue.mean();
+        this.robotStartTimestamp = -1;
+        this.prevRobotStep = -1;
+        this.prevRealStep = -1;
+        this.sensorMonitor = new SensorMonitor();
+        this.shuttingDown = new AtomicBoolean(false);
+        this.active = new AtomicBoolean(true);
+        this.inferenceMediator = RobotExecutor.this::onInferenceProcess;
+        toolBar.resetButton().setEnabled(false);
+    }
 
     /**
      * Returns the argument parser
@@ -117,47 +166,6 @@ public class RobotExecutor {
         }
     }
 
-    private final EnvironmentPanel envPanel;
-    private final GridPanel gridPanel;
-    private final DoubleReducedValue reactionRobotTime;
-    private final DoubleReducedValue reactionRealTime;
-    private final ComMonitor comMonitor;
-    private final SensorMonitor sensorMonitor;
-    private final StateEngineMonitor engineMonitor;
-    private final Namespace args;
-    private final AtomicBoolean shuttingDown;
-    private RobotApi robot;
-    private long start;
-    private long sessionDuration;
-    private StateMachineAgent agent;
-    private long robotStartTimestamp;
-    private long prevRobotStep;
-    private long prevRealStep;
-    private List<JFrame> allFrames;
-    private RobotControllerApi controller;
-    private WorldModeller modeller;
-    private InferenceFileWriter dumpFile;
-
-    /**
-     * Creates the roboto executor
-     *
-     * @param args the line command parsed arguments
-     */
-    public RobotExecutor(Namespace args) {
-        this.args = requireNonNull(args);
-        this.envPanel = new EnvironmentPanel();
-        this.gridPanel = new GridPanel();
-        this.comMonitor = new ComMonitor();
-        this.engineMonitor = new StateEngineMonitor();
-        this.reactionRobotTime = DoubleReducedValue.mean();
-        this.reactionRealTime = DoubleReducedValue.mean();
-        this.robotStartTimestamp = -1;
-        this.prevRobotStep = -1;
-        this.prevRealStep = -1;
-        this.sensorMonitor = new SensorMonitor();
-        this.shuttingDown = new AtomicBoolean(false);
-    }
-
     /**
      * Creates the context.
      * It consists of the robot, the controller, the modeller and the state machine agent
@@ -182,7 +190,7 @@ public class RobotExecutor {
         logger.atInfo().log("Creating agent ...");
         this.agent = StateMachineAgent.fromFile(
                 new File(config.path("agent").asText()));
-        modeller.connect(agent);
+        modeller.connect(this::onInferenceProcess);
         agent.modeller(modeller);
 
         this.sessionDuration = this.args.getLong("time") * 1000;
@@ -195,12 +203,41 @@ public class RobotExecutor {
             this.dumpFile = InferenceFileWriter.fromFile(file);
             logger.atInfo().log("Writing dump {}", file);
         }
+        if (!(this.robot instanceof SimRobot)) {
+            toolBar.relocateButton().setEnabled(false);
+        }
+    }
+
+    /**
+     * Handles stop button
+     *
+     * @param actionEvent the action event
+     */
+    private void onStopButton(ActionEvent actionEvent) {
+        active.set(false);
+        toolBar.pauseButton().setEnabled(false);
+        toolBar.playButton().setEnabled(true);
+    }
+
+    /**
+     * Handles the start button event
+     *
+     * @param actionEvent the event
+     */
+    private void onStartButton(ActionEvent actionEvent) {
+        active.set(true);
+        toolBar.pauseButton().setEnabled(true);
+        toolBar.playButton().setEnabled(false);
     }
 
     /**
      * Creates the reactive flows
      */
     private void createFlows() {
+        toolBar.playButton().addActionListener(this::onStartButton);
+        toolBar.pauseButton().addActionListener(this::onStopButton);
+        toolBar.clearMapButton().addActionListener(this::onClearMapButton);
+        toolBar.relocateButton().addActionListener(this::onRelocateButton);
         switch (robot) {
             case SimRobot sim:
                 sim.readObstacleMap()
@@ -243,8 +280,10 @@ public class RobotExecutor {
      * Creates the multi frames
      */
     private void createMultiFrames() {
+        JFrame frame = createFrame(Messages.getString("RobotExecutor.title"), new JScrollPane(envPanel));
+        frame.getContentPane().add(toolBar, BorderLayout.NORTH);
         this.allFrames = List.of(
-                createFrame(Messages.getString("RobotExecutor.title"), new JScrollPane(envPanel)),
+                frame,
                 engineMonitor.createFrame(),
                 createFixFrame(Messages.getString("Radar.title"), gridPanel),
                 sensorMonitor.createFrame(),
@@ -262,9 +301,18 @@ public class RobotExecutor {
         panel.addTab(Messages.getString("RobotExecutor.tabPanel.engine"), new JScrollPane(engineMonitor));
         panel.addTab(Messages.getString("RobotExecutor.tabPanel.sensor"), new JScrollPane(sensorMonitor));
         panel.addTab(Messages.getString("RobotExecutor.tabPanel.com"), new JScrollPane(comMonitor));
-        allFrames = List.of(
-                createFrame(Messages.getString("RobotExecutor.title"), panel)
-        );
+        JFrame frame = createFrame(Messages.getString("RobotExecutor.title"), panel);
+        allFrames = List.of(frame);
+        frame.getContentPane().add(toolBar, BorderLayout.NORTH);
+    }
+
+    /**
+     * Handles the clear map button event
+     *
+     * @param actionEvent the event
+     */
+    private void onClearMapButton(ActionEvent actionEvent) {
+        modeller.clearRadarMap();
     }
 
     /**
@@ -310,6 +358,12 @@ public class RobotExecutor {
     private void onControllerStatus(String status) {
         sensorMonitor.onControllerStatus(status);
         comMonitor.onControllerStatus(status);
+    }
+
+    private RobotCommands onInferenceProcess(WorldModel state) {
+        return active.get()
+                ? agent.onInference(state)
+                : RobotCommands.halt();
     }
 
     /**
@@ -438,6 +492,7 @@ public class RobotExecutor {
         createContext();
         createFlows();
         initUI();
+        toolBar.playButton().setEnabled(false);
         if (dumpFile != null) {
             dumpFile.writeHeader(modeller.worldModelSpec(), modeller.radarModeller().topology());
         }
@@ -447,6 +502,15 @@ public class RobotExecutor {
         this.start = System.currentTimeMillis();
         allFrames.reversed().forEach(f -> f.setVisible(true));
         controller.start();
+    }
+
+    /**
+     * @param actionEvent the action event
+     */
+    private void onRelocateButton(ActionEvent actionEvent) {
+        if (this.robot instanceof SimRobot simRobot) {
+            simRobot.safeRelocateRandom();
+        }
     }
 
     private void shutdown() {
