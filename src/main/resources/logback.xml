@@ -46,7 +46,6 @@
 
     <logger name="org.mmarini.rl.agents.BinArrayFile" level="INFO"/>
     <logger name="org.mmarini.rl.agents.CSVWriter" level="INFO"/>
-    <logger name="org.mmarini.rl.agents.TDAgentSingleNN" level="INFO"/>
     <logger name="org.mmarini.rl.agents.DLAgent" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.apis.SimRobot" level="INFO"/>
@@ -81,8 +80,6 @@
     <logger name="org.mmarini.wheelly.envs.DLEnvironment" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.mqtt.MqttRobot" level="INFO"/>
-
-    <logger name="org.mmarini.wheelly.swing.NNActivityPanel" level="INFO"/>
 
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>

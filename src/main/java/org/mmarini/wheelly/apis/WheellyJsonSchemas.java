@@ -37,10 +37,9 @@ import org.slf4j.LoggerFactory;
 public interface WheellyJsonSchemas {
     Logger logger = LoggerFactory.getLogger(WheellyJsonSchemas.class);
 
-    org.mmarini.yaml.JsonSchemas singleton = org.mmarini.yaml.JsonSchemas.load("/schemas/action-func-rl-schema.yml",
+    org.mmarini.yaml.JsonSchemas singleton = org.mmarini.yaml.JsonSchemas.load(
             "/schemas/action-func-map-schema.yml",
             "/schemas/action-func-circular-schema.yml",
-            "/schemas/agent-single-nn-schema.yml",
             "/schemas/agent-state-machine-schema.yml",
             "/schemas/batch-schema.yml",
             "/schemas/camera-calibration-schema.yml",
@@ -54,11 +53,7 @@ public interface WheellyJsonSchemas {
             "/schemas/map-schema.yml",
             "/schemas/monitor-schema.yml",
             "/schemas/mqtt-robot-schema.yml",
-            "/schemas/network-list-schema.yml",
             "/schemas/network-schema.yml",
-            "/schemas/ppo-agent-schema.yml",
-            "/schemas/ppo-agent-spec-schema.yml",
-            "/schemas/tdagent-spec-schema.yml",
             "/schemas/objective-avoid-contact-schema.yml",
             "/schemas/objective-cautious-schema.yml",
             "/schemas/objective-nomove-schema.yml",
@@ -68,8 +63,6 @@ public interface WheellyJsonSchemas {
             "/schemas/objective-label-schema.yml",
             "/schemas/objective-moveToLabel-schema.yml",
             "/schemas/objective-sensor-label-schema.yml",
-//            "/schemas/objective-action-set-schema.yml",
-            "/schemas/real-robot-schema.yml",
             "/schemas/sim-robot-schema.yml",
             "/schemas/signal-schema.yml",
             "/schemas/state-avoid-schema.yml",
