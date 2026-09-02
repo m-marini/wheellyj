@@ -81,77 +81,6 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
     public static final double DEFAULT_GAMMA = 1D;
     private static final Logger logger = LoggerFactory.getLogger(DLAgent.class);
     private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/dl-agent-schema-0.1";
-
-    /**
-     * Returns the agent
-     *
-     * @param stateSpec          the state specification
-     * @param actionSpec         the action specification
-     * @param network            the network
-     * @param random             the random number generator
-     * @param numEpochs          the number of epochs to train
-     * @param numSteps           the minimum length of training trajectory
-     * @param batchSize          the mini batch size
-     * @param alphas             the policy change factors
-     * @param beta               the average rewards factor
-     * @param gamma              the average rewards gamma factor
-     * @param filePath           the file path for the agent save
-     * @param concurrentTraining true if concurrent training
-     */
-    public static DLAgent create(Map<String, SignalSpec> stateSpec, Map<String, SignalSpec> actionSpec, ComputationGraph network, Random random, int numEpochs, int numSteps, int batchSize, Map<String, Float> alphas, float beta, float gamma, File filePath, boolean concurrentTraining) {
-        DLAgent agent = create(filePath, network, random, numEpochs, numSteps, batchSize, alphas, beta, gamma, 0, concurrentTraining);
-        agent.validate(stateSpec, actionSpec);
-        return agent;
-    }
-
-    /**
-     * Returns the agent
-     *
-     * @param filePath           the file path for agent save
-     * @param network            the neural network
-     * @param random             the random number generator
-     * @param numEpochs          the number of epochs to train
-     * @param batchSize          the mini batch size
-     * @param alphas             the policy change factors
-     * @param beta               the average reward factor
-     * @param gamma              the average reward gamma factor
-     * @param avgReward          the average reward
-     * @param concurrentTraining true if concurrent training
-     */
-    protected static DLAgent create(File filePath, ComputationGraph network, Random random, int numEpochs,
-                                    int trajectorySize, int batchSize,
-                                    Map<String, Float> alphas, float beta, float gamma, float avgReward,
-                                    boolean concurrentTraining) {
-        TrajectoryBuffer trajectoryBuffer = new TrajectoryBuffer(trajectorySize);
-        AtomicReference<DLAgentStatus> status = new AtomicReference<>(new DLAgentStatus(network, null,
-                trajectoryBuffer, null, false, avgReward, false));
-        return new DLAgent(filePath, random, numEpochs, batchSize, beta, alphas, gamma, concurrentTraining,
-                status, new ArrayList<>(), new ArrayList<>());
-    }
-
-    /**
-     * Returns the agent from the file path
-     *
-     * @param filePath the file path
-     * @param random   the random number generator seed
-     * @throws IOException in case of error
-     */
-    public static DLAgent fromFile(File filePath, Random random) throws IOException {
-        JsonNode json = Utils.fromFile(new File(filePath, AGENT_FILENAME));
-        WheellyJsonSchemas.instance().validateOrThrow(json, SCHEMA_NAME);
-        ComputationGraph network = ComputationGraph.load(new File(filePath, MODEL_FILENAME), true);
-        int numEpochs = Locator.locate(NUM_EPOCHS_ID).getNode(json).asInt();
-        int trajectorySize1 = Locator.locate(TRAJECTORY_SIZE_ID).getNode(json).asInt();
-        int batchSize = Locator.locate(BATCH_SIZE_ID).getNode(json).asInt();
-        Map<String, Float> alphas = Locator.locate(ALPHAS_ID).propertyNames(json)
-                .mapValues(locator -> (float) locator.getNode(json).asDouble())
-                .toMap();
-        float beta = (float) Locator.locate(BETA_ID).getNode(json).asDouble();
-        float gamma = (float) Locator.locate(GAMMA_ID).getNode(json).asDouble(DEFAULT_GAMMA);
-        float avgReward = (float) Locator.locate(BETA_ID).getNode(json).asDouble();
-        return create(filePath, network, random, numEpochs, trajectorySize1, batchSize, alphas, beta, gamma, avgReward, false);
-    }
-
     private final File filePath;
     private final Random random;
     private final int numEpochs;
@@ -196,6 +125,76 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
         this.onKpis = onKpis;
         this.onRewards = onRewards;
         this.shutdownProcessor = CompletableSubject.create();
+    }
+
+    /**
+     * Returns the agent
+     *
+     * @param stateSpec          the state specification
+     * @param actionSpec         the action specification
+     * @param network            the network
+     * @param random             the random number generator
+     * @param numEpochs          the number of epochs to train
+     * @param numSteps           the minimum length of training trajectory
+     * @param batchSize          the mini batch size
+     * @param alphas             the policy change factors
+     * @param beta               the average rewards factor
+     * @param gamma              the average rewards gamma factor
+     * @param filePath           the file path for the agent save
+     * @param concurrentTraining true if concurrent training
+     */
+    public static DLAgent create(Map<String, SignalSpec> stateSpec, Map<String, SignalSpec> actionSpec, ComputationGraph network, Random random, int numEpochs, int numSteps, int batchSize, Map<String, Float> alphas, float beta, float gamma, File filePath, boolean concurrentTraining) {
+        DLAgent agent = create(filePath, network, random, numEpochs, numSteps, batchSize, alphas, beta, gamma, 0, concurrentTraining);
+        agent.validate(stateSpec, actionSpec);
+        return agent;
+    }
+
+    /**
+     * Returns the agent
+     *
+     * @param filePath           the file path for agent save
+     * @param network            the neural network
+     * @param random             the random number generator
+     * @param numEpochs          the number of epochs to train
+     * @param batchSize          the mini batch size
+     * @param alphas             the policy change factors
+     * @param beta               the average reward factor
+     * @param gamma              the average reward gamma factor
+     * @param avgReward          the average reward
+     * @param concurrentTraining true if concurrent training
+     */
+    protected static DLAgent create(File filePath, ComputationGraph network, Random random, int numEpochs,
+                                    int trajectorySize, int batchSize,
+                                    Map<String, Float> alphas, float beta, float gamma, float avgReward,
+                                    boolean concurrentTraining) {
+        TrajectoryBuffer trajectoryBuffer = new TrajectoryBuffer(trajectorySize);
+        AtomicReference<DLAgentStatus> status = new AtomicReference<>(new DLAgentStatus(network, null,
+                trajectoryBuffer, null, false, avgReward, false, true));
+        return new DLAgent(filePath, random, numEpochs, batchSize, beta, alphas, gamma, concurrentTraining,
+                status, new ArrayList<>(), new ArrayList<>());
+    }
+
+    /**
+     * Returns the agent from the file path
+     *
+     * @param filePath the file path
+     * @param random   the random number generator seed
+     * @throws IOException in case of error
+     */
+    public static DLAgent fromFile(File filePath, Random random) throws IOException {
+        JsonNode json = Utils.fromFile(new File(filePath, AGENT_FILENAME));
+        WheellyJsonSchemas.instance().validateOrThrow(json, SCHEMA_NAME);
+        ComputationGraph network = ComputationGraph.load(new File(filePath, MODEL_FILENAME), true);
+        int numEpochs = Locator.locate(NUM_EPOCHS_ID).getNode(json).asInt();
+        int trajectorySize1 = Locator.locate(TRAJECTORY_SIZE_ID).getNode(json).asInt();
+        int batchSize = Locator.locate(BATCH_SIZE_ID).getNode(json).asInt();
+        Map<String, Float> alphas = Locator.locate(ALPHAS_ID).propertyNames(json)
+                .mapValues(locator -> (float) locator.getNode(json).asDouble())
+                .toMap();
+        float beta = (float) Locator.locate(BETA_ID).getNode(json).asDouble();
+        float gamma = (float) Locator.locate(GAMMA_ID).getNode(json).asDouble(DEFAULT_GAMMA);
+        float avgReward = (float) Locator.locate(BETA_ID).getNode(json).asDouble();
+        return create(filePath, network, random, numEpochs, trajectorySize1, batchSize, alphas, beta, gamma, avgReward, false);
     }
 
     @Override
@@ -361,7 +360,7 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
         if (!st.shuttingDown()) {
             // Shutdown not requested
             ComputationGraph trainingNetwork = st.trainingNetwork();
-            if (trainingNetwork != null) {
+            if (trainingNetwork != null && st.learning()) {
                 Trajectory trajectory = st.trajectory();
                 callOnRewards(trajectory.rewards());
                 if (concurrentTraining) {
@@ -378,6 +377,11 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
         }
         logger.atDebug().log("Observed result.");
         return this;
+    }
+
+    @Override
+    public void learning(boolean learning) {
+        status.updateAndGet(s -> s.learning(learning));
     }
 
     /**

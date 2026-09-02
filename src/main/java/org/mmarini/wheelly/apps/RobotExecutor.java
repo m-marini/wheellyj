@@ -116,6 +116,7 @@ public class RobotExecutor {
         this.active = new AtomicBoolean(true);
         this.inferenceMediator = RobotExecutor.this::onInferenceProcess;
         toolBar.resetButton().setEnabled(false);
+        toolBar.learningButton().setEnabled(false);
     }
 
     /**

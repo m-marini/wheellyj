@@ -71,6 +71,11 @@ public class WheellyToolBar extends JToolBar {
     private final JButton clearMapButton;
 
     /**
+     * Button used to activate/deactivate learning
+     */
+    private final JButton learningButton;
+
+    /**
      * Creates a new Wheelly toolbar and initialises its control buttons.
      * <p>
      * The buttons are added to the toolbar in the following order:
@@ -81,6 +86,7 @@ public class WheellyToolBar extends JToolBar {
      *     <li>Reset</li>
      *     <li>Clear map</li>
      *     <li>Relocate</li>
+     *     <li>Learning</li>
      * </ol>
      */
     public WheellyToolBar() {
@@ -94,12 +100,22 @@ public class WheellyToolBar extends JToolBar {
                 .initButton(new JButton(), "WheellyToolBar.resetButton");
         this.clearMapButton = SwingUtils.getInstance()
                 .initButton(new JButton(), "WheellyToolBar.clearMapButton");
+        this.learningButton = SwingUtils.getInstance()
+                .initButton(new JButton(), "WheellyToolBar.learningButton");
 
         add(pauseButton);
         add(playButton);
         add(resetButton);
         add(clearMapButton);
         add(relocateButton);
+        add(learningButton);
+    }
+
+    /**
+     * Returns the button used to activate / deactivate learning
+     */
+    public JButton learningButton() {
+        return learningButton;
     }
 
     /**

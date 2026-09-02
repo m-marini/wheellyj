@@ -29,7 +29,7 @@
 package org.mmarini.wheelly.apis;
 
 /**
- * Inferences the roboto command for the given state
+ * Inferences the robot command for the given state
  */
 public interface InferenceConnector {
 
