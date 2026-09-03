@@ -66,7 +66,14 @@ import static java.util.Objects.requireNonNull;
 import static org.mmarini.rl.agents.NNMediator.CRITIC_ID;
 
 /**
- * Agent based on Temporal Difference Actor-Critic with DL4J ComputationGraph network
+ * The DLAgent class is the main Deep Learning Reinforcement Learning agent.
+ * It implements a Temporal Difference Actor-Critic algorithm using a DeepLearning4J
+ *
+ * <p>
+ * It does not implement all the neural-network calculations itself,
+ * but coordinates the environment interaction, experience collection, data preparation, training,
+ * and model update.
+ * </p>
  */
 public class DLAgent implements BatchAgent, WithShutdownCompletable {
     public static final String NUM_EPOCHS_ID = "numEpochs";
@@ -81,51 +88,6 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
     public static final double DEFAULT_GAMMA = 1D;
     private static final Logger logger = LoggerFactory.getLogger(DLAgent.class);
     private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/dl-agent-schema-0.1";
-    private final File filePath;
-    private final Random random;
-    private final int numEpochs;
-    private final int batchSize;
-    private final Map<String, Float> alphas;
-    private final float beta;
-    private final float gamma;
-    private final boolean concurrentTraining;
-    private final AtomicReference<DLAgentStatus> status;
-    private final List<Consumer<TrainingKpis>> onKpis;
-    private final List<Consumer<INDArray>> onRewards;
-    private final CompletableSubject shutdownProcessor;
-
-    /**
-     * Creates the agent
-     *
-     * @param filePath           the file path for agent save
-     * @param random             the random number generator
-     * @param numEpochs          the number of epochs to train
-     * @param batchSize          the mini batch size
-     * @param beta               the average reward factor
-     * @param alphas             the policy action factors
-     * @param gamma              the average reward gamma factor
-     * @param concurrentTraining true if concurrent training
-     * @param status             the agent status
-     * @param onKpis             the KPIS callback list
-     * @param onRewards          the rewards callback list
-     */
-    protected DLAgent(File filePath, Random random, int numEpochs, int batchSize,
-                      float beta, Map<String, Float> alphas, float gamma, boolean concurrentTraining,
-                      AtomicReference<DLAgentStatus> status, List<Consumer<TrainingKpis>> onKpis,
-                      List<Consumer<INDArray>> onRewards) {
-        this.filePath = requireNonNull(filePath);
-        this.random = requireNonNull(random);
-        this.numEpochs = numEpochs;
-        this.batchSize = batchSize;
-        this.beta = beta;
-        this.alphas = alphas;
-        this.gamma = gamma;
-        this.concurrentTraining = concurrentTraining;
-        this.status = requireNonNull(status);
-        this.onKpis = onKpis;
-        this.onRewards = onRewards;
-        this.shutdownProcessor = CompletableSubject.create();
-    }
 
     /**
      * Returns the agent
@@ -197,6 +159,60 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
         return create(filePath, network, random, numEpochs, trajectorySize1, batchSize, alphas, beta, gamma, avgReward, false);
     }
 
+    private final File filePath;
+    private final Random random;
+    private final int numEpochs;
+    private final int batchSize;
+    private final Map<String, Float> alphas;
+    private final float beta;
+    private final float gamma;
+    private final boolean concurrentTraining;
+    private final AtomicReference<DLAgentStatus> status;
+    private final List<Consumer<TrainingKpis>> onKpis;
+    private final List<Consumer<INDArray>> onRewards;
+    private final CompletableSubject shutdownProcessor;
+
+    /**
+     * Creates the agent
+     *
+     * @param filePath           the file path for agent save
+     * @param random             the random number generator
+     * @param numEpochs          the number of epochs to train
+     * @param batchSize          the mini batch size
+     * @param beta               the average reward factor
+     * @param alphas             the policy action factors
+     * @param gamma              the average reward gamma factor
+     * @param concurrentTraining true if concurrent training
+     * @param status             the agent status
+     * @param onKpis             the KPIS callback list
+     * @param onRewards          the rewards callback list
+     */
+    protected DLAgent(File filePath, Random random, int numEpochs, int batchSize,
+                      float beta, Map<String, Float> alphas, float gamma, boolean concurrentTraining,
+                      AtomicReference<DLAgentStatus> status, List<Consumer<TrainingKpis>> onKpis,
+                      List<Consumer<INDArray>> onRewards) {
+        this.filePath = requireNonNull(filePath);
+        this.random = requireNonNull(random);
+        this.numEpochs = numEpochs;
+        this.batchSize = batchSize;
+        this.beta = beta;
+        this.alphas = alphas;
+        this.gamma = gamma;
+        this.concurrentTraining = concurrentTraining;
+        this.status = requireNonNull(status);
+        this.onKpis = onKpis;
+        this.onRewards = onRewards;
+        this.shutdownProcessor = CompletableSubject.create();
+    }
+
+    /**
+     * Chooses an action.
+     * <p>
+     * It delegates the actual neural-network processing to NNMediator
+     * </p>
+     */
+
+
     @Override
     public Map<String, Signal> act(Map<String, Signal> state) {
         return mediator().chooseAction(random, state);
@@ -207,6 +223,9 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
         return status.get().averageReward();
     }
 
+    /**
+     * Before saving, backup() can rename the existing files to timestamped backups.
+     */
     @Override
     public void backup() {
         if (filePath != null) {
@@ -243,7 +262,6 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
             callback.accept(kpis);
         }
     }
-
 
     /**
      * Invokes registered rewards callbacks
@@ -332,6 +350,12 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
                 .put(BATCH_SIZE_ID, batchSize);
     }
 
+    @Override
+    public void learning(boolean learning) {
+        status.updateAndGet(s ->
+                s.learning(learning));
+    }
+
     /**
      *
      * Returns the NN mediator
@@ -353,6 +377,27 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
         return numEpochs;
     }
 
+    /**
+     * It is the central part of the learning loop.
+     * <p>
+     * It receives the result of one interaction with the environment.<br/>
+     * The result is passed to the current DLAgentStatus to adds the result to the TrajectoryBuffer.<br/>
+     * When the buffer becomes full and learning is enabled, DLAgentStatus.observe() creates a Trajectory and
+     * a cloned trainingNetwork<br/>
+     * The DLAgent then starts training.
+     * </p>
+     * <p></p>
+     * The class supports two modes
+     * <ul>
+     *     <li>Synchronous training is executed directly and the agent waits until training is completed</li>
+     *     <li>Concurrent training is executed asynchronously allowing the agent to continue interacting
+     *     with the environment while the training computation runs</li>
+     * </ul>
+     *
+     * </p>
+     *
+     * @param result the execution result
+     */
     @Override
     public DLAgent observe(ExecutionResult result) {
         logger.atDebug().log("Observing result ...");
@@ -360,7 +405,7 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
         if (!st.shuttingDown()) {
             // Shutdown not requested
             ComputationGraph trainingNetwork = st.trainingNetwork();
-            if (trainingNetwork != null && st.learning()) {
+            if (trainingNetwork != null) {
                 Trajectory trajectory = st.trajectory();
                 callOnRewards(trajectory.rewards());
                 if (concurrentTraining) {
@@ -377,11 +422,6 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
         }
         logger.atDebug().log("Observed result.");
         return this;
-    }
-
-    @Override
-    public void learning(boolean learning) {
-        status.updateAndGet(s -> s.learning(learning));
     }
 
     /**

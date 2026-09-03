@@ -34,16 +34,21 @@ import org.mmarini.rl.envs.ExecutionResult;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Keeps the status og DL Agent
+ * DLAgentStatus is the state container of the Deep Learning agent.
+ * <p>It keeps track of the active neural network, the training network, collected trajectory data,
+ * training status, reward statistics, learning activation, and shutdown requests.
+ * Its observe() method coordinates the transition from data collection to training,
+ * while trained() restores the agent to its normal observation phase with the newly trained network.
+ * </p>
  *
  * @param network          the online network used for acting
- * @param trainingNetwork  the training network
+ * @param trainingNetwork  temporary copy of the network used during training
  * @param trajectoryBuffer the trajectory buffer
  * @param trajectory       the training trajectory
- * @param training         true if it is training
- * @param averageReward    the average reward
- * @param shuttingDown     true if shutdown requested
- * @param learning         true if learning is activated
+ * @param training         true if the agent is currently training
+ * @param averageReward    the agent's current average reward
+ * @param shuttingDown     true if a shutdown of the agent has been requested.
+ * @param learning         true if the learning process is enabled.
  */
 public record DLAgentStatus(ComputationGraph network,
                             ComputationGraph trainingNetwork,
@@ -98,6 +103,17 @@ public record DLAgentStatus(ComputationGraph network,
     }
 
     /**
+     * Sets the learning flag
+     *
+     * @param learning true if learning activated
+     */
+    public DLAgentStatus learning(boolean learning) {
+        return this.learning == learning
+                ? this
+                : new DLAgentStatus(network, trainingNetwork, trajectoryBuffer, trajectory, training, averageReward, shuttingDown, learning);
+    }
+
+    /**
      * Registers the observation and prepare for training
      * The return value contains the training network and the trajectory if it is ready to train.
      *
@@ -105,9 +121,10 @@ public record DLAgentStatus(ComputationGraph network,
      */
     public DLAgentStatus observe(ExecutionResult result) {
         trajectoryBuffer.add(result);
-        if (!training && trajectoryBuffer.isFilled()) {
+        // Checks for training ready (not yet training and buffer full and learning activated
+        if (!training && trajectoryBuffer.isFilled() && learning) {
             // Ready to train
-            Trajectory trajectory = trajectoryBuffer.trajectory();
+            Trajectory trajectory = trajectoryBuffer.createTrajectory();
             ComputationGraph trainingNetwork = network.clone();
             return new DLAgentStatus(network, trainingNetwork, trajectoryBuffer.clear(), trajectory, true, averageReward, shuttingDown, learning);
         }
@@ -126,23 +143,17 @@ public record DLAgentStatus(ComputationGraph network,
     }
 
     /**
-     * Stores the trained network and reset the trining flag
+     * After training has finished, the method:
+     * <ul>
+     * <li>creates a new status containing the newly trained network</li>
+     * <li>resets the training state</li>
+     * <li>the new network becomes the active online network.</li>
+     * </ul>
      *
      * @param network       the trained network
      * @param averageReward the average reward
      */
     public DLAgentStatus trained(ComputationGraph network, float averageReward) {
         return new DLAgentStatus(network, null, trajectoryBuffer, null, false, averageReward, shuttingDown, learning);
-    }
-
-    /**
-     * Sets the learning flag
-     *
-     * @param learning true if learning activated
-     */
-    public DLAgentStatus learning(boolean learning) {
-        return this.learning == learning
-                ? this
-                : new DLAgentStatus(network, trainingNetwork, trajectoryBuffer, trajectory, training, averageReward, shuttingDown, learning);
     }
 }

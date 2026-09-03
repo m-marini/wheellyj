@@ -41,7 +41,11 @@ import java.util.Map;
 import static java.lang.Math.min;
 
 /**
- * Stores the trajectory during observation using a cycle buffer
+ * TrajectoryBuffer is a circular data structure used to temporarily store the latest experiences of
+ * a Reinforcement Learning agent.
+ * <br/>
+ * It efficiently stores states, actions, and rewards and then converts them into an ordered Trajectory
+ * that can be used for training or analysis.
  */
 public class TrajectoryBuffer implements AutoCloseable {
 
@@ -88,8 +92,17 @@ public class TrajectoryBuffer implements AutoCloseable {
     private final INDArray rewards;
     private Map<String, INDArray> states;
     private Map<String, INDArray> actions;
-    private int startStateIndex;
+    /**
+     * Indicates where the next action and reward will be stored.
+     */
     private int startIndex;
+    /**
+     * Indicates where the next state will be stored.
+     */
+    private int startStateIndex;
+    /**
+     * Indicates how many valid transitions are currently stored.
+     */
     private int size;
 
     /**
@@ -108,7 +121,17 @@ public class TrajectoryBuffer implements AutoCloseable {
     }
 
     /**
-     * Adds a result in the buffer
+     * Inserts a new ExecutionResult into the buffer
+     * <p>
+     * The method stores:
+     * <ul>
+     * <li>the initial state,</li>
+     * <li>the next state,</li>
+     * <li>the action,</li>
+     * <li>the reward.</li>
+     * </ul>
+     * It then updates the circular-buffer indexes.
+     * </p>
      *
      * @param result the result
      */
@@ -174,6 +197,27 @@ public class TrajectoryBuffer implements AutoCloseable {
     }
 
     /**
+     * Converts the data stored in the circular buffer into an ordered Trajectory
+     * <p>
+     * Because the data may be split between the end and the beginning of the circular buffer,
+     * the method uses extract() to reconstruct the correct chronological order.
+     * </p>
+     */
+    public Trajectory createTrajectory() {
+        int bfrSize = bufferSize();
+        int stateIdx0 = (startStateIndex + bfrSize + 1 - size) % (bfrSize + 1);
+        Map<String, INDArray> states0 = MapStream.of(states)
+                .mapValues(buffer -> extract(buffer, stateIdx0, size + 1))
+                .toMap();
+        int idx0 = (startIndex + bfrSize - size) % bfrSize;
+        Map<String, INDArray> actions0 = MapStream.of(actions)
+                .mapValues(signals -> extract(signals, idx0, size))
+                .toMap();
+        INDArray rewards0 = extract(rewards, idx0, size);
+        return new Trajectory(states0, actions0, rewards0);
+    }
+
+    /**
      * Initialises the buffer with the result
      */
     private void init(ExecutionResult result) {
@@ -228,22 +272,5 @@ public class TrajectoryBuffer implements AutoCloseable {
      */
     Map<String, INDArray> states() {
         return states;
-    }
-
-    /**
-     * Returns the trajectory
-     */
-    public Trajectory trajectory() {
-        int bfrSize = bufferSize();
-        int stateIdx0 = (startStateIndex + bfrSize + 1 - size) % (bfrSize + 1);
-        Map<String, INDArray> states0 = MapStream.of(states)
-                .mapValues(buffer -> extract(buffer, stateIdx0, size + 1))
-                .toMap();
-        int idx0 = (startIndex + bfrSize - size) % bfrSize;
-        Map<String, INDArray> actions0 = MapStream.of(actions)
-                .mapValues(signals -> extract(signals, idx0, size))
-                .toMap();
-        INDArray rewards0 = extract(rewards, idx0, size);
-        return new Trajectory(states0, actions0, rewards0);
     }
 }

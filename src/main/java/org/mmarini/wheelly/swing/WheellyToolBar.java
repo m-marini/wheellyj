@@ -73,7 +73,7 @@ public class WheellyToolBar extends JToolBar {
     /**
      * Button used to activate/deactivate learning
      */
-    private final JButton learningButton;
+    private final JToggleButton learningButton;
 
     /**
      * Creates a new Wheelly toolbar and initialises its control buttons.
@@ -101,7 +101,7 @@ public class WheellyToolBar extends JToolBar {
         this.clearMapButton = SwingUtils.getInstance()
                 .initButton(new JButton(), "WheellyToolBar.clearMapButton");
         this.learningButton = SwingUtils.getInstance()
-                .initButton(new JButton(), "WheellyToolBar.learningButton");
+                .initButton(new JToggleButton(), "WheellyToolBar.learningButton");
 
         add(pauseButton);
         add(playButton);
@@ -114,7 +114,7 @@ public class WheellyToolBar extends JToolBar {
     /**
      * Returns the button used to activate / deactivate learning
      */
-    public JButton learningButton() {
+    public JToggleButton learningButton() {
         return learningButton;
     }
 

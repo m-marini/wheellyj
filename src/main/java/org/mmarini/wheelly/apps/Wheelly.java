@@ -340,9 +340,8 @@ public class Wheelly {
      * @param actionEvent the event
      */
     private void onLearningToggle(ActionEvent actionEvent) {
-        boolean learning = !toolBar.learningButton().isEnabled();
+        boolean learning = toolBar.learningButton().isSelected();
         agent.learning(learning);
-        toolBar.learningButton().setEnabled(learning);
     }
 
     /**
@@ -711,6 +710,7 @@ public class Wheelly {
 
         // Starts the environment interaction
         toolBar.playButton().setEnabled(false);
+        toolBar.learningButton().setSelected(true);
         frame.setVisible(true);
     }
 

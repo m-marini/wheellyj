@@ -61,7 +61,7 @@ class NNMediatorTest {
         for (int i = 0; i < NUM_STEPS; i++) {
             buffer.add(createResult(i * REWARD / (NUM_STEPS - 1)));
         }
-        this.trajectory = buffer.trajectory();
+        this.trajectory = buffer.createTrajectory();
     }
 
     @Test

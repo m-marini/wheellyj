@@ -217,7 +217,7 @@ class TrajectoryBufferTest {
         // When add result
         buffer.add(result0);
 
-        Trajectory trajectory = buffer.trajectory();
+        Trajectory trajectory = buffer.createTrajectory();
 
         assertThat(trajectory.states(), hasKey("A"));
         assertThat(trajectory.states().get("A"), matrixCloseTo(new long[]{2, 2}, EPSILON,
@@ -238,7 +238,7 @@ class TrajectoryBufferTest {
         buffer.add(result0);
         buffer.add(result1);
 
-        Trajectory trajectory = buffer.trajectory();
+        Trajectory trajectory = buffer.createTrajectory();
 
         assertThat(trajectory.states(), hasKey("A"));
         assertThat(trajectory.states().get("A"), matrixCloseTo(new long[]{3, 2}, EPSILON,
@@ -262,7 +262,7 @@ class TrajectoryBufferTest {
         buffer.add(result1);
         buffer.add(result2);
 
-        Trajectory trajectory = buffer.trajectory();
+        Trajectory trajectory = buffer.createTrajectory();
 
         assertThat(trajectory.states(), hasKey("A"));
         assertThat(trajectory.states().get("A"), matrixCloseTo(new long[]{3, 2}, EPSILON,
@@ -287,7 +287,7 @@ class TrajectoryBufferTest {
         buffer.add(result2);
         buffer.add(result3);
 
-        Trajectory trajectory = buffer.trajectory();
+        Trajectory trajectory = buffer.createTrajectory();
 
         assertThat(trajectory.states(), hasKey("A"));
         assertThat(trajectory.states().get("A"), matrixCloseTo(new long[]{SIZE + 1, 2}, EPSILON,
