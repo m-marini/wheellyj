@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
-- Issue [#642](https://github.com/m-marini/wheellyj/issues/639): Add toolbar in robot executor
+- Issue [#642](https://github.com/m-marini/wheellyj/issues/642): Add toolbar in robot executor
+- Issue [#644](https://github.com/m-marini/wheellyj/issues/644): Add learning button in toolbar
 
 ### Changed
 

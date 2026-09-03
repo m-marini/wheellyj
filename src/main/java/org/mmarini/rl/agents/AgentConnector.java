@@ -47,4 +47,11 @@ public interface AgentConnector {
      * @param result the execution result
      */
     Agent observe(ExecutionResult result);
+
+    /**
+     * Sets the learning mode
+     *
+     * @param learning true if learning active
+     */
+    void learning(boolean learning);
 }

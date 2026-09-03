@@ -6,5 +6,5 @@
 
 # run
 cd ..
-java --enable-native-access=ALL-UNNAMED -jar "lib/wheelly-0.22.0.jar" $1 $2
+java --enable-native-access=ALL-UNNAMED -Xms2G -Xmx4G -Dorg.bytedeco.javacpp.maxbytes=8G -Dorg.bytedeco.javacpp.maxphysicalbytes=12G -jar "lib/wheelly-0.22.0.jar" $1 $2
 cd bin

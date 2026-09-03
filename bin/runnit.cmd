@@ -15,7 +15,7 @@ IF ERRORLEVEL 2 goto noJavaw
 javaw > nul
 IF ERRORLEVEL 2 goto noJavaw
 
-java --enable-native-access=ALL-UNNAMED -cp "lib/*;../classes" %*
+java --enable-native-access=ALL-UNNAMED -Xms2G -Xmx4G -Dorg.bytedeco.javacpp.maxbytes=8G -Dorg.bytedeco.javacpp.maxphysicalbytes=12G -cp "lib/*;../classes" %*
 goto end
 
 :noJavaw

@@ -288,6 +288,7 @@ public class Wheelly {
         toolBar.resetButton().addActionListener(this::onResetButton);
         toolBar.clearMapButton().addActionListener(this::onClearMapButton);
         toolBar.relocateButton().addActionListener(this::onRelocateButton);
+        toolBar.learningButton().addActionListener(this::onLearningToggle);
         controller.addOnRobotStatus(this::onStatusReady);
         controller.addOnCommand(sensorMonitor::onCommand);
         controller.readErrors().subscribe(err -> {
@@ -331,6 +332,16 @@ public class Wheelly {
                     });
         }
         completion.onComplete();
+    }
+
+    /**
+     * Handles the learning toggle button
+     *
+     * @param actionEvent the event
+     */
+    private void onLearningToggle(ActionEvent actionEvent) {
+        boolean learning = toolBar.learningButton().isSelected();
+        agent.learning(learning);
     }
 
     /**
@@ -699,6 +710,7 @@ public class Wheelly {
 
         // Starts the environment interaction
         toolBar.playButton().setEnabled(false);
+        toolBar.learningButton().setSelected(true);
         frame.setVisible(true);
     }
 
