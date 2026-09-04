@@ -145,7 +145,7 @@ public class SimRobotLidarTest {
                 0, 10,
                 SimRobot.DEFAULT_MOTION_INTERVAL, LIDAR_INTERVAL, SimRobot.DEFAULT_CAMERA_INTERVAL, SimRobot.DEFAULT_STALEMATE_INTERVAL,
                 0, 0, List.of(MapBuilder.empty(41, GRID_SIZE)), 0, 0,
-                CHANGE_MAP_PERIOD, CHANGE_MAP_PERIOD);
+                CHANGE_MAP_PERIOD, CHANGE_MAP_PERIOD, SimRobot.DEFAULT_WORLD_SIZE);
         robot.robotPos(xRobot, yRobot);
         robot.robotDir(Complex.fromDeg(robotDirDeg));
         robot.sensorDirection(Complex.fromDeg(headDirDeg));

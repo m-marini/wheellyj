@@ -4,11 +4,13 @@ class: org.mmarini.wheelly.apis.SimRobot
 # robotSeed: 1234
 mapSeed: 1234
 mapFiles:
-  - conf/maps/room10x10.yml
+  - conf/maps/room4x4.yml
+worldSize: 4
 mapPeriod: 7200000
 randomPeriod: 3600000
 numLabels: 1
 numObstacles: 0
+labelPeriod: 900000
 errSigma: 0.05
 errSensor: 0.05
 sensorReceptiveAngle: 15
