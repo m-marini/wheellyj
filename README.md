@@ -7,6 +7,15 @@ The code of Webcam controller is at [Wheellycam project](https://github.com/m-ma
 
 The documentation is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
+## Release [0.28.0](https://github.com/m-marini/wheellyj/releases/tag/v0.28.0)
+
+- Add toolbar in robot executor with learning button in toolbar
+- Act and observation at action completion
+- Reduce move action space
+- Switch inference from async to sync
+- Inference after movement
+- Parallelise long-running inference in robot executor
+
 ## Release [0.27.0](https://github.com/m-marini/wheellyj/releases/tag/v0.27.0)
 
 - Added Goto commands
