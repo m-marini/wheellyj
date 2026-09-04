@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [[0.28.0]](https://github.com/m-marini/wheellyj/releases/tag/v0.28.0) 2026-09-04
+
 ### Added
 
 - Issue [#642](https://github.com/m-marini/wheellyj/issues/642): Add toolbar in robot executor
