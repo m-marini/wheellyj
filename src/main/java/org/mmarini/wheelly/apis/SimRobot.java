@@ -66,9 +66,8 @@ import static org.mmarini.wheelly.apis.Utils.m2mm;
  * Simulated robot
  */
 public class SimRobot implements RobotApi {
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/sim-robot-schema-3.2";
-    public static final double GRID_SIZE = 0.2;
-    public static final double WORLD_SIZE = 10;
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/sim-robot-schema-3.3";
+    public static final double DEFAULT_WORLD_SIZE = 10;
     public static final double MAX_ANGULAR_PPS = 20;
     public static final double MAX_ANGULAR_VELOCITY = MAX_ANGULAR_PPS * DISTANCE_PER_PULSE / RobotSpec.ROBOT_TRACK * 2; // RAD/s
     public static final double SAFE_DISTANCE = 0.2;
@@ -95,50 +94,6 @@ public class SimRobot implements RobotApi {
     private static final int VELOCITY_ITER = 10;
     private static final int POSITION_ITER = 10;
     private static final double SAFE_DISTANCE_SQ = pow(SAFE_DISTANCE + OBSTACLE_SIZE, 2);
-
-    /**
-     * Returns the simulated robot from JSON configuration
-     *
-     * @param root the JSON document
-     * @param file the configuration file
-     */
-    public static SimRobot create(JsonNode root, File file) {
-        Locator locator = Locator.root();
-        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME, file.toString());
-        long mapSeed = locator.path("mapSeed").getNode(root).asLong(0);
-        long robotSeed = locator.path("robotSeed").getNode(root).asLong(0);
-        int numObstacles = locator.path("numObstacles").getNode(root).asInt();
-        int numLabels = locator.path("numLabels").getNode(root).asInt();
-        Random mapRandom = mapSeed > 0L ? new Random(mapSeed) : new Random();
-        Random robotRandom = robotSeed > 0L ? new Random(robotSeed) : new Random();
-        double errSigma = locator.path("errSigma").getNode(root).asDouble();
-        double errSensor = locator.path("errSensor").getNode(root).asDouble();
-        long motionInterval = locator.path("motionInterval").getNode(root).asLong(DEFAULT_MOTION_INTERVAL);
-        long lidarInterval = locator.path("lidarInterval").getNode(root).asLong(DEFAULT_LIDAR_INTERVAL);
-        long stalemateInterval = locator.path("stalemateInterval").getNode(root).asLong(DEFAULT_STALEMATE_INTERVAL);
-        long cameraInterval = locator.path("cameraInterval").getNode(root).asLong(DEFAULT_CAMERA_INTERVAL);
-        long interval = locator.path("interval").getNode(root).asLong();
-        long tickInterval = locator.path("tickInterval").getNode(root).asLong();
-        long mapPeriod = locator.path("mapPeriod").getNode(root).asLong();
-        long randomPeriod = locator.path("randomPeriod").getNode(root).asLong();
-        RobotSpec robotSpec = RobotSpec.fromJson(root, locator);
-        List<MapBuilder> maps = locator.path("mapFiles").elements(root)
-                .map(l -> {
-                    String filename = l.getNode(root).asText();
-                    try {
-                        JsonNode mapYaml = org.mmarini.yaml.Utils.fromFile(filename);
-                        return MapBuilder.create(mapYaml, Locator.root());
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-                .toList();
-        return new SimRobot(robotSpec, robotRandom, mapRandom,
-                tickInterval, interval, motionInterval, lidarInterval, cameraInterval, stalemateInterval,
-                errSensor, errSigma,
-                maps, numObstacles, numLabels, mapPeriod, randomPeriod);
-    }
-
     private final RobotSpec robotSpec;
     private final Random random;
     private final Random mapRandom;
@@ -150,6 +105,7 @@ public class SimRobot implements RobotApi {
     private final long randomPeriod;
     private final int numObstacles;
     private final int numLabels;
+    private final double worldSize;
     private final double errSensor;
     private final double errSigma;
     private final PublishProcessor<Throwable> errors;
@@ -214,10 +170,12 @@ public class SimRobot implements RobotApi {
      * @param numLabels         the number of labels
      * @param mapPeriod         the change map period (ms)
      * @param randomPeriod      the change obstacle period (ms)
+     * @param worldSize         the world size (m)
      */
     public SimRobot(RobotSpec robotSpec, Random random, Random mapRandom,
-                    long tickInterval, long interval, long motionInterval, long lidarInterval, long cameraInterval, long stalemateInterval,
-                    double errSensor, double errSigma, List<MapBuilder> maps, int numObstacles, int numLabels, long mapPeriod, long randomPeriod) {
+                    long tickInterval, long interval, long motionInterval, long lidarInterval, long cameraInterval,
+                    long stalemateInterval, double errSensor, double errSigma, List<MapBuilder> maps, int numObstacles,
+                    int numLabels, long mapPeriod, long randomPeriod, double worldSize) {
         this.robotSpec = requireNonNull(robotSpec);
         this.random = requireNonNull(random);
         this.mapRandom = requireNonNull(mapRandom);
@@ -234,6 +192,7 @@ public class SimRobot implements RobotApi {
         this.interval = interval;
         this.tickInterval = tickInterval;
         this.maps = requireNonNull(maps);
+        this.worldSize = worldSize;
         this.requests = new AtomicReference<>(RobotRequests.empty());
         this.errors = PublishProcessor.create();
         this.obstacleChanged = BehaviorProcessor.create();
@@ -256,12 +215,56 @@ public class SimRobot implements RobotApi {
         this.headDirection = Complex.DEG0;
         this.statusId = HALT;
         this.frontSensor = this.rearSensor = true;
-        generateRandomMap();
         this.robotLineState = BehaviorProcessor.createDefault(new RobotLineState(false, false, false, false));
         this.onContacts = new ArrayList<>();
         this.onLidars = new ArrayList<>();
         this.onMotions = new ArrayList<>();
         this.onCameras = new ArrayList<>();
+        generateRandomMap();
+    }
+
+    /**
+     * Returns the simulated robot from JSON configuration
+     *
+     * @param root the JSON document
+     * @param file the configuration file
+     */
+    public static SimRobot create(JsonNode root, File file) {
+        Locator locator = Locator.root();
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME, file.toString());
+        long mapSeed = locator.path("mapSeed").getNode(root).asLong(0);
+        long robotSeed = locator.path("robotSeed").getNode(root).asLong(0);
+        int numObstacles = locator.path("numObstacles").getNode(root).asInt();
+        int numLabels = locator.path("numLabels").getNode(root).asInt();
+        Random mapRandom = mapSeed > 0L ? new Random(mapSeed) : new Random();
+        Random robotRandom = robotSeed > 0L ? new Random(robotSeed) : new Random();
+        double errSigma = locator.path("errSigma").getNode(root).asDouble();
+        double errSensor = locator.path("errSensor").getNode(root).asDouble();
+        long motionInterval = locator.path("motionInterval").getNode(root).asLong(DEFAULT_MOTION_INTERVAL);
+        long lidarInterval = locator.path("lidarInterval").getNode(root).asLong(DEFAULT_LIDAR_INTERVAL);
+        long stalemateInterval = locator.path("stalemateInterval").getNode(root).asLong(DEFAULT_STALEMATE_INTERVAL);
+        long cameraInterval = locator.path("cameraInterval").getNode(root).asLong(DEFAULT_CAMERA_INTERVAL);
+        long interval = locator.path("interval").getNode(root).asLong();
+        long tickInterval = locator.path("tickInterval").getNode(root).asLong();
+        long mapPeriod = locator.path("mapPeriod").getNode(root).asLong();
+        long randomPeriod = locator.path("randomPeriod").getNode(root).asLong();
+        double worldSize = locator.path("worldSize").getNode(root).asDouble(DEFAULT_WORLD_SIZE);
+        RobotSpec robotSpec = RobotSpec.fromJson(root, locator);
+        List<MapBuilder> maps = locator.path("mapFiles").elements(root)
+                .map(l -> {
+                    String filename = l.getNode(root).asText();
+                    try {
+                        JsonNode mapYaml = org.mmarini.yaml.Utils.fromFile(filename);
+                        return MapBuilder.create(mapYaml, Locator.root());
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .toList();
+        return new SimRobot(robotSpec, robotRandom, mapRandom,
+                tickInterval, interval, motionInterval, lidarInterval, cameraInterval, stalemateInterval,
+                errSensor, errSigma,
+                maps, numObstacles, numLabels, mapPeriod, randomPeriod, worldSize);
     }
 
     @Override
@@ -547,8 +550,8 @@ public class SimRobot implements RobotApi {
         for (; ; ) {
             // Generates a random location in the map
             loc1 = new Point2D.Double(
-                    random.nextDouble() * WORLD_SIZE - WORLD_SIZE / 2,
-                    random.nextDouble() * WORLD_SIZE - WORLD_SIZE / 2
+                    random.nextDouble() * worldSize - worldSize / 2,
+                    random.nextDouble() * worldSize - worldSize / 2
             );
             Point2D finalLoc = loc1;
             // Check for safe distance from any obstacles

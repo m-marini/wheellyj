@@ -1,6 +1,6 @@
 ---
 $schema: https://mmarini.org/wheelly/batch-schema-0.4
-robot: conf/robots/simRobot10Obstacles.yml
+robot: conf/robots/simRobotSmallNoObstacles.yml
 controller: conf/controllers/controller.yml
 modeller: conf/modellers/modeller.yml
 environment: conf/environments/env.yml

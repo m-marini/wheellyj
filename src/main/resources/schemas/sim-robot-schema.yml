@@ -1,11 +1,11 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/sim-robot-schema-3.2
+$id: https://mmarini.org/wheelly/sim-robot-schema-3.3
 title: Robot
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/sim-robot-schema-3.2
+    const: https://mmarini.org/wheelly/sim-robot-schema-3.3
   class:
     const: org.mmarini.wheelly.apis.SimRobot
   mapSeed:

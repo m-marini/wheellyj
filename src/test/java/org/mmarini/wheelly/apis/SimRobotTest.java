@@ -72,8 +72,8 @@ class SimRobotTest {
         return new SimRobot(DEFAULT_ROBOT_SPEC, new Random(SEED), new Random(SEED),
                 0, INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL,
                 0, 0, List.of(MapBuilder.empty(41, GRID_SIZE)),
-                0, 0, 0, 0
-        );
+                0, 0, 0, 0,
+                SimRobot.DEFAULT_WORLD_SIZE);
     }
 
     public static Stream<Arguments> dataFar() {
