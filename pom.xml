@@ -252,13 +252,6 @@
             <artifactId>jersey-media-json-jackson</artifactId>
             <version>2.27</version>
         </dependency>
-        <!--
-        <dependency>
-            <groupId>org.cqfn</groupId>
-            <artifactId>rio</artifactId>
-            <version>0.3</version>
-        </dependency>
-        -->
         <dependency>
             <groupId>javax.xml.bind</groupId>
             <artifactId>jaxb-api</artifactId>
@@ -291,23 +284,10 @@
             <version>15.0.0</version>
             <scope>runtime</scope>
         </dependency>
+
         <!--
         ND4J backend: every project needs one of these. The backend defines the hardware on which network training
         will occur. "nd4j-native-platform" is for CPUs only (for running on all operating systems).
-        -->
-        <!--
-        <dependency>
-            <groupId>org.nd4j</groupId>
-            <artifactId>nd4j-native</artifactId>
-            <version>${dl4j-master.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.nd4j</groupId>
-            <artifactId>nd4j-native</artifactId>
-            <version>${dl4j-master.version}</version>
-            <classifier>windows-x86_64-avx2</classifier>
-            <classifier>linux-x86_64-avx512</classifier>
-        </dependency>
         -->
         <!-- CUDA ND4J backend (required) -->
         <dependency>
@@ -323,28 +303,26 @@
         </dependency>
 
         <dependency>
-            <groupId>org.deeplearning4j</groupId>
-            <artifactId>deeplearning4j-ui</artifactId>
+            <groupId>org.nd4j</groupId>
+            <artifactId>nd4j-native</artifactId>
             <version>${dl4j-master.version}</version>
-        </dependency>        <!--
+        </dependency>
         <dependency>
-            <groupId>org.bytedeco</groupId>
-            <artifactId>cuda-platform-redist</artifactId>
-            <version>12.3-8.9-1.5.10</version>
+            <groupId>org.nd4j</groupId>
+            <artifactId>nd4j-native</artifactId>
+            <version>${dl4j-master.version}</version>
+            <classifier>windows-x86_64-avx2</classifier>
+            <!--
+            <classifier>linux-x86_64-avx512</classifier>
+            -->
         </dependency>
 
         <dependency>
-            <groupId>org.nd4j</groupId>
-            <artifactId>nd4j-cuda-11.6</artifactId>
+            <groupId>org.deeplearning4j</groupId>
+            <artifactId>deeplearning4j-ui</artifactId>
             <version>${dl4j-master.version}</version>
         </dependency>
-        <dependency>
-            <groupId>org.nd4j</groupId>
-            <artifactId>nd4j-cuda-11.6</artifactId>
-            <version>${dl4j-master.version}</version>
-            <classifier>windows-x86_64-cudnn</classifier>
-        </dependency>
-        -->
+
         <!-- https://mvnrepository.com/artifact/org.jbox2d/jbox2d-library -->
         <dependency>
             <groupId>org.jbox2d</groupId>

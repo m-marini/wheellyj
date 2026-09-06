@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Add
 
 - Issue [#649](https://github.com/m-marini/wheellyj/issues/649): Add CUDA Support
+- Issue [#651](https://github.com/m-marini/wheellyj/issues/651): Add Support Both CUDA and CPU backends
 
 ### Changed
 
