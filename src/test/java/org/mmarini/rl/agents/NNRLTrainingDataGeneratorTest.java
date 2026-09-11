@@ -45,9 +45,9 @@ import static org.mmarini.rl.agents.DLAgentTest.*;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 import static org.mmarini.wheelly.TestFunctions.matrixShape;
 
-class NNMediatorTest {
+class NNRLTrainingDataGeneratorTest {
 
-    NNMediator mediator;
+    NNRLTrainingDataGenerator mediator;
     private Trajectory trajectory;
 
     @BeforeEach
@@ -56,7 +56,7 @@ class NNMediatorTest {
         // logger.atDebug().log("yaml network {}", conf.toYaml());
         ComputationGraph net = new ComputationGraph(conf);
         net.init();
-        this.mediator = new NNMediator(net, Map.of(), 0, 1);
+        this.mediator = new NNRLTrainingDataGenerator(net, Map.of(), 0, 1);
         TrajectoryBuffer buffer = new TrajectoryBuffer(NUM_STEPS);
         for (int i = 0; i < NUM_STEPS; i++) {
             buffer.add(createResult(i * REWARD / (NUM_STEPS - 1)));
@@ -73,7 +73,7 @@ class NNMediatorTest {
         INDArray deltas = Nd4j.createFromArray(
                 1F, 0F, 0F, 0F,
                 0F, 0F, 0F, 1F).reshape(2, 4);
-        INDArray newPolicy = NNMediator.computeNewPolicy(policy, deltas);
+        INDArray newPolicy = NNRLTrainingDataGenerator.computeNewPolicy(policy, deltas);
 
         assertThat(newPolicy, matrixCloseTo(new long[]{2, 4}, 1e-4,
                 0.4754F, 0.1749F, 0.1749F, 0.1749F,
@@ -84,7 +84,7 @@ class NNMediatorTest {
     @Test
     void testCreateActionMask() {
         // When create action masks
-        INDArray mask = NNMediator.createActionMask(trajectory.actions().get(DLActionFunction.MOVE_ACTION_ID), NUM_MOVEMENT_COMMANDS);
+        INDArray mask = NNRLTrainingDataGenerator.createActionMask(trajectory.actions().get(DLActionFunction.MOVE_ACTION_ID), NUM_MOVEMENT_COMMANDS);
         assertThat(mask, matrixShape(NUM_EPOCHS, NUM_MOVEMENT_COMMANDS));
     }
 
@@ -93,7 +93,7 @@ class NNMediatorTest {
         // When create average
         INDArray rewards = Nd4j.ones(4, 1);
         INDArray prediction = Nd4j.ones(BATCH_SIZE, 1).muli(0.5);
-        Tuple2<INDArray, Float> t = NNMediator.processRewards(rewards, prediction, REWARD0, 0.5F, 1);
+        Tuple2<INDArray, Float> t = NNRLTrainingDataGenerator.processRewards(rewards, prediction, REWARD0, 0.5F, 1);
         INDArray deltas = t._1;
         float avg = t._2;
         assertEquals(0.9375F, avg);

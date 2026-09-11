@@ -21,8 +21,7 @@
   ~ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
   ~ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
   ~ OTHER DEALINGS IN THE SOFTWARE.
-  ~
-  ~ END OF TERMS AND CONDITIONS
+  ~  ~ END OF TERMS AND CONDITIONS
   ~
   -->
 
@@ -49,6 +48,7 @@
     <logger name="com.networknt.schema" level="INFO"/>
 
     <logger name="org.mmarini.rl.agents.DLAgent" level="INFO"/>
+    <logger name="org.mmarini.rl.agents.TrajectoryDatasetIterator" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.sockets.LineSocket" level="DEBUG"/>
     <logger name="org.mmarini.wheelly.apis.SimRobotObstacleTest" level="INFO"/>
@@ -61,6 +61,7 @@
 
     <logger name="org.mmarini.wheelly.engines.AStar" level="INFO"/>
     <logger name="org.mmarini.wheelly.engines.MappingState" level="INFO"/>
+
 
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>

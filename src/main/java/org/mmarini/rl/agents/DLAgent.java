@@ -60,10 +60,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.rl.agents.NNMediator.CRITIC_ID;
+import static org.mmarini.rl.agents.NNRLTrainingDataGenerator.CRITIC_ID;
 
 /**
  * The DLAgent class is the main Deep Learning Reinforcement Learning agent.
@@ -155,7 +156,7 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
                 .toMap();
         float beta = (float) Locator.locate(BETA_ID).getNode(json).asDouble();
         float gamma = (float) Locator.locate(GAMMA_ID).getNode(json).asDouble(DEFAULT_GAMMA);
-        float avgReward = (float) Locator.locate(BETA_ID).getNode(json).asDouble();
+        float avgReward = (float) Locator.locate(AVG_REWARD_ID).getNode(json).asDouble();
         return create(filePath, network, random, numEpochs, trajectorySize1, batchSize, alphas, beta, gamma, avgReward, false);
     }
 
@@ -211,11 +212,9 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
      * It delegates the actual neural-network processing to NNMediator
      * </p>
      */
-
-
     @Override
     public Map<String, Signal> act(Map<String, Signal> state) {
-        return mediator().chooseAction(random, state);
+        return createDataGenerator(status.get().network()).chooseAction(random, state);
     }
 
     @Override
@@ -294,13 +293,22 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
                 : this;
     }
 
+    /**
+     * Returns the NN mediator
+     *
+     * @param network the nerwork
+     */
+    NNRLTrainingDataGenerator createDataGenerator(ComputationGraph network) {
+        return new NNRLTrainingDataGenerator(network, alphas, beta, gamma);
+    }
+
     @Override
     public Tuple2<MultiDataSet, Float> createDataSet(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards, float avgReward) {
-        NNMediator mediator = mediator();
+        NNRLTrainingDataGenerator mediator = createDataGenerator(status.get().network());
         // Computes the predictions (critic + actor policy)
         Map<String, INDArray> predictions = mediator.predictFromValue(states).collect(Tuple2.toMap());
         // Computes the deltas and the average rewards
-        Tuple2<INDArray, Float> rlData = NNMediator.processRewards(rewards, predictions.get(CRITIC_ID), avgReward, beta, gamma);
+        Tuple2<INDArray, Float> rlData = NNRLTrainingDataGenerator.processRewards(rewards, predictions.get(CRITIC_ID), avgReward, beta, gamma);
         INDArray deltas = rlData._1;
         // Creates the training data
         INDArray[][] datasets = mediator.
@@ -311,18 +319,6 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
             callOnKpis(kpis);
         }
         return Tuple2.of(dataset, avgReward1);
-    }
-
-    /**
-     * Returns the trajector data set iterator
-     *
-     * @param trajectory the trajectory
-     * @param batchSize  the batch size
-     * @param avgReward  the initial average reward
-     */
-    private TrajectoryDatasetIterator createTrajectoryIterator(Trajectory trajectory, int batchSize, float avgReward) {
-        return TrajectoryDatasetIterator.create(network(), trajectory, batchSize, avgReward, alphas, beta, gamma,
-                () -> status.get().shuttingDown());
     }
 
     @Override
@@ -354,14 +350,6 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
     public void learning(boolean learning) {
         status.updateAndGet(s ->
                 s.learning(learning));
-    }
-
-    /**
-     *
-     * Returns the NN mediator
-     */
-    NNMediator mediator() {
-        return new NNMediator(status.get().network(), alphas, beta, gamma);
     }
 
     /**
@@ -454,6 +442,15 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
         logger.atInfo().log("Agent closed.");
     }
 
+    /**
+     * Predicts the outputs from the state
+     *
+     * @param state the state
+     */
+    public Stream<Tuple2<String, INDArray>> predictFromState(Map<String, Signal> state) {
+        return createDataGenerator(network()).predictFromState(state);
+    }
+
     @Override
     public Completable readShutdown() {
         return shutdownProcessor;
@@ -496,7 +493,10 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
         logger.atInfo().log("Training network ...");
 
         double avg;
-        try (TrajectoryDatasetIterator iterator = createTrajectoryIterator(trajectory, batchSize, status.get().averageReward())) {
+        try (TrajectoryDatasetIterator iterator =
+                     TrajectoryDatasetIterator.create(trainingNetwork, trajectory, batchSize,
+                             status.get().averageReward(), alphas, beta, gamma,
+                             () -> status.get().shuttingDown())) {
             iterator.onKpis(this::callOnKpis);
             trainingNetwork.clearLayersStates();
             Nd4j.getMemoryManager().invokeGc();

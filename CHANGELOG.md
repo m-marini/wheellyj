@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Issue [#646](https://github.com/m-marini/wheellyj/issues/646): Simplify simulation robot model
 
+### Fix
+
+- Issue [#653](https://github.com/m-marini/wheellyj/issues/653): Policy learning issue
+
 ## [[0.28.0]](https://github.com/m-marini/wheellyj/releases/tag/v0.28.0) 2026-09-04
 
 ### Added

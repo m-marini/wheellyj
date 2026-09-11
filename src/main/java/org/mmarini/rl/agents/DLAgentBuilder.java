@@ -146,6 +146,8 @@ public class DLAgentBuilder {
     public static final String MERGE_VERTEX_ID = "MergeVertex";
     public static final String FLATTEN_VERTEX_ID = "FlattenVertex";
     public static final String XAVIER_ID = "Xavier";
+    public static final String NETWORK_ID = "network";
+    public static final String SEED_ID = "seed";
     private static final String STOCHASTIC_GRADIENT_DESCENT_ID = "StochasticGradientDescent";
     private static final Map<String, SubsamplingLayer.PoolingType> poolingTypeMap = Map.of(
             AVG_ID, SubsamplingLayer.PoolingType.AVG,
@@ -452,7 +454,7 @@ public class DLAgentBuilder {
         if (filePath.exists()) {
             return DLAgent.fromFile(filePath, random);
         }
-        ComputationGraphConfiguration conf = buildConf(Locator.locate("network"));
+        ComputationGraphConfiguration conf = buildConf(Locator.locate(NETWORK_ID));
         ComputationGraph network = new ComputationGraph(conf);
         network.init();
         int numEpochs = Locator.locate(NUM_EPOCHS_ID).getNode(root).asInt();
@@ -464,7 +466,8 @@ public class DLAgentBuilder {
                 ).toMap();
         float beta = (float) Locator.locate(BETA_ID).getNode(root).asDouble();
         float gamma = (float) Locator.locate(GAMMA_ID).getNode(root).asDouble();
-        return DLAgent.create(filePath, network, random, numEpochs, trajectorySize, batchSize, alphas, beta, gamma, 0, false);
+        float avgReward = (float) Locator.locate(AVG_REWARD_ID).getNode(root).asDouble();
+        return DLAgent.create(filePath, network, random, numEpochs, trajectorySize, batchSize, alphas, beta, gamma, avgReward, false);
     }
 
     private ActivationLayer buildActivationLayer(Locator locator) {
@@ -665,6 +668,10 @@ public class DLAgentBuilder {
                 .inferenceWorkspaceMode(WorkspaceMode.ENABLED)
                 .cudnnAlgoMode(ConvolutionLayer.AlgoMode.PREFER_FASTEST)
                 .convolutionMode(ConvolutionMode.Truncate);
+        long seed = locator.path(SEED_ID).getNode(root).asLong();
+        if (seed != 0) {
+            nnBuilder = nnBuilder.seed(seed);
+        }
         IUpdater updater = buildOptByMap(locator.path(UPDATER_ID), updaterMap);
         if (updater != null) {
             nnBuilder.updater(updater);

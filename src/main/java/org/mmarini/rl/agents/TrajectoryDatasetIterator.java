@@ -29,6 +29,7 @@
 package org.mmarini.rl.agents;
 
 import org.deeplearning4j.nn.graph.ComputationGraph;
+import org.mmarini.TextTable;
 import org.mmarini.Tuple2;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.MultiDataSet;
@@ -45,8 +46,9 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 import static java.lang.Math.min;
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.rl.agents.NNMediator.CRITIC_ID;
+import static org.mmarini.rl.agents.NNRLTrainingDataGenerator.CRITIC_ID;
 
 /**
  * Produces mini-batch training data from trajectory
@@ -72,7 +74,7 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
                 .map(state::get)
                 .toArray(INDArray[]::new);
         Map<String, INDArray> actions = trajectory.actions();
-        Map<String, INDArray> actionsMaskMap = NNMediator.createActionMasks(actions, network);
+        Map<String, INDArray> actionsMaskMap = NNRLTrainingDataGenerator.createActionMasks(actions, network);
         List<String> outputIds = network.getConfiguration().getNetworkOutputs();
         INDArray[] actionMasks = new INDArray[outputIds.size()];
         float[] alphas1 = new float[outputIds.size()];
@@ -88,11 +90,25 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
         return new TrajectoryDatasetIterator(network, inputs, actionMasks, rewards, batchSize, avgReward, alphas1, beta, gamma, isStop);
     }
 
+    /**
+     * Returns the mask index
+     *
+     * @param value the value
+     */
+    public static int maskIndex(INDArray value) {
+        for (int i = 0; i < value.size(1); i++) {
+            if (value.getInt(0, i) != 0) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+
     private final ComputationGraph network;
     private final INDArray[] inputs;
     private final INDArray[] actionMasks;
     private final INDArray rewards;
-    private final float initialAvgReward;
     private final int batchSize;
     private final float[] alphas;
     private final float beta;
@@ -129,7 +145,7 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
         this.beta = beta;
         this.gamma = gamma;
         this.criticIdx = network.getConfiguration().getNetworkOutputs().indexOf(CRITIC_ID);
-        this.avgReward = this.initialAvgReward = initialAvgReward;
+        this.avgReward = initialAvgReward;
         this.isStop = isStop;
     }
 
@@ -176,11 +192,13 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
         logger.atDebug().log("Created predictions");
 
         // Computes the deltas and the average rewards
-        Tuple2<INDArray, Float> rlData = NNMediator.processRewards(rewards, predictions[criticIdx], initialAvgReward, beta, gamma);
+        Tuple2<INDArray, Float> rlData = NNRLTrainingDataGenerator.processRewards(rewards, predictions[criticIdx], avgReward, beta, gamma);
         try (INDArray deltas = rlData._1) {
             // Creates the training data
             createLabels(predictions, deltas);
             avgReward = rlData._2;
+
+            logTrajectory(deltas, predictions);
 
             // inputs, datasets[1], kpis;
             if (onKpis != null) {
@@ -211,7 +229,7 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
                 try (INDArray clipped = policy.get(NDArrayIndex.interval(0, policy.size(0) - 1), NDArrayIndex.all())) {
                     try (INDArray deltaPolicies = deltas.mul(alphas[i])) {
                         try (INDArray deltaMasks = actionMasks[i].mul(deltaPolicies)) {
-                            labels[i] = NNMediator.computeNewPolicy(clipped, deltaMasks);
+                            labels[i] = NNRLTrainingDataGenerator.computeNewPolicy(clipped, deltaMasks);
                         }
                     }
                 }
@@ -247,6 +265,22 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
         return cursor < rewards.size(0)
                 // Stop not requested
                 && !(isStop != null && isStop.getAsBoolean());
+    }
+
+    /**
+     * Logs the trajectory
+     *
+     * @param deltas      the td errors
+     * @param predictions the prediction
+     */
+    private void logTrajectory(INDArray deltas, INDArray[] predictions) {
+        if (logger.isDebugEnabled()) {
+            logger.atDebug().log("Trajectory");
+            for (String line : trajectoryTable(deltas, predictions)) {
+                logger.atDebug().log("  {}", line);
+            }
+        }
+        logger.atDebug().log("  Avg reward: {}", avgReward);
     }
 
     @Override
@@ -297,5 +331,82 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
     @Override
     public boolean resetSupported() {
         return true;
+    }
+
+    /**
+     * Log trajectory data
+     */
+    private List<String> trajectoryTable(INDArray deltas, INDArray[] predictions) {
+
+        int col = 0;
+        TextTable table = new TextTable();
+        for (int j = 0; j < inputs.length; j++) {
+            table.formatHeader(col++, "s%d", j);
+        }
+        for (int j = 0; j < actionMasks.length; j++) {
+            if (j != criticIdx) {
+                table.formatHeader(col++, "a%d", j);
+            }
+        }
+        table.headers(col, "r", "v", "v*", "avg", "delta");
+        col += 5;
+        for (int outIdx = 0; outIdx < predictions.length; outIdx++) {
+            if (outIdx != criticIdx) {
+                table.formatHeader(col++, "pi(a%d|s)", outIdx);
+            }
+        }
+        for (int outIdx = 0; outIdx < predictions.length; outIdx++) {
+            if (outIdx != criticIdx) {
+                table.formatHeader(col++, "pi*(a%d|s)", outIdx);
+            }
+        }
+
+        INDArray critic = predictions[criticIdx];
+        INDArray criticLabel = labels[criticIdx];
+        float avg = avgReward;
+        for (int i = 0; i < criticLabel.size(0); i++) {
+            col = 0;
+            for (INDArray input : inputs) {
+                table.format(i, col++, "%d", maskIndex(input.get(NDArrayIndex.indices(i))));
+            }
+            for (int j = 0; j < actionMasks.length; j++) {
+                if (j != criticIdx) {
+                    table.format(i, col++, "%d", maskIndex(actionMasks[j].get(NDArrayIndex.indices(i))));
+                }
+            }
+            table.format(i, col++, "%+.3f", rewards.getFloat(i, 0))
+                    .format(i, col++, "%+.3f", critic.getFloat(i, 0))
+                    .format(i, col++, "%+.3f", criticLabel.getFloat(i, 0))
+                    .format(i, col++, "%+.3f", avg)
+                    .format(i, col++, "%+.3f", deltas.getFloat(i, 0));
+            for (int outIdx = 0; outIdx < predictions.length; outIdx++) {
+                if (outIdx != criticIdx) {
+                    INDArray pi = predictions[outIdx];
+                    StringBuilder piStr = new StringBuilder();
+                    for (int action = 0; action < pi.size(1); action++) {
+                        if (action > 0) {
+                            piStr.append(" ");
+                        }
+                        piStr.append(format("%.4f", pi.getFloat(i, action)));
+                    }
+                    table.set(i, col++, piStr.toString());
+                }
+            }
+            for (int outIdx = 0; outIdx < predictions.length; outIdx++) {
+                if (outIdx != criticIdx) {
+                    INDArray piLabel = labels[outIdx];
+                    StringBuilder piStr = new StringBuilder();
+                    for (int action = 0; action < piLabel.size(1); action++) {
+                        if (action > 0) {
+                            piStr.append(" ");
+                        }
+                        piStr.append(format("%.4f", piLabel.getFloat(i, action)));
+                    }
+                    table.set(i, col++, piStr.toString());
+                }
+            }
+            avg = avg + beta * deltas.getFloat(i, 0);
+        }
+        return table.build();
     }
 }

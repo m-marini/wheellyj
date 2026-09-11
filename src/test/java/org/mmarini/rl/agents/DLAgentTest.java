@@ -45,8 +45,6 @@ import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.learning.config.Sgd;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -81,7 +79,6 @@ class DLAgentTest {
     public static final int BATCH_SIZE = 5;
     public static final File FILE = new File("tmp/model");
     public static final float GAMMA = 1F;
-    static final Logger logger = LoggerFactory.getLogger(DLAgentTest.class);
 
     static {
         Nd4j.getRandom().setSeed(SEED);
@@ -94,7 +91,7 @@ class DLAgentTest {
                 .graphBuilder()
                 .addInputs(MAP_SIGNAL_ID)
                 .setInputTypes(new InputType.InputTypeConvolutional(GRID_SIZE, GRID_SIZE, NUM_CHANNELS))
-                .addLayer(NNMediator.CRITIC_ID,
+                .addLayer(NNRLTrainingDataGenerator.CRITIC_ID,
                         new OutputLayer.Builder()
                                 .nOut(1)
                                 .activation(Activation.IDENTITY)
@@ -116,7 +113,7 @@ class DLAgentTest {
                                 .build(),
                         MAP_SIGNAL_ID
                 )
-                .setOutputs(NNMediator.CRITIC_ID, MOVE_ACTION_ID, HEAD_ACTION_ID)
+                .setOutputs(NNRLTrainingDataGenerator.CRITIC_ID, MOVE_ACTION_ID, HEAD_ACTION_ID)
                 .build();
     }
 
