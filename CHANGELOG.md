@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 
 - Issue [#646](https://github.com/m-marini/wheellyj/issues/646): Simplify simulation robot model
+- Issue [#655](https://github.com/m-marini/wheellyj/issues/655): Skip Forward Pass
 
 ### Fix
 
