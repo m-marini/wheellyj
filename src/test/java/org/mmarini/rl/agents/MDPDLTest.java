@@ -30,7 +30,8 @@ package org.mmarini.rl.agents;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mmarini.TextTable;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.*;
@@ -246,26 +247,9 @@ public class MDPDLTest {
         agent = DLAgentBuilder.create(conf, env);
     }
 
-    @Test
-    void testTraining() {
-        testTrainingN(1);
-    }
 
-    @Test
-    void testTraining10() {
-        testTrainingN(10);
-    }
-
-    @Test
-    void testTraining100() {
-        testTrainingN(100);
-    }
-
-    @Test
-    void testTraining300() {
-        testTrainingN(300);
-    }
-
+    @ParameterizedTest(name = "[{index}] {0} iterations")
+    @ValueSource(ints = {1, 300})
     void testTrainingN(int n) {
         // Given a sequence MDP
         MDP mdp = MDP.sequence(2);

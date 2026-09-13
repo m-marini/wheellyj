@@ -87,7 +87,10 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
         }
 
         INDArray rewards = trajectory.rewards();
-        return new TrajectoryDatasetIterator(network, inputs, actionMasks, rewards, batchSize, avgReward, alphas1, beta, gamma, isStop);
+        // Computes the predictions (critic + actor policy)
+        INDArray[] predictions = network.output(inputs);
+        return new TrajectoryDatasetIterator(network, inputs, actionMasks, rewards, predictions, batchSize, avgReward,
+                alphas1, beta, gamma, isStop);
     }
 
     /**
@@ -115,6 +118,7 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
     private final float gamma;
     private final int criticIdx;
     private final BooleanSupplier isStop;
+    private final INDArray[] predictions;
     private float avgReward;
     private INDArray[] labels;
     private int cursor;
@@ -128,6 +132,7 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
      * @param inputs           the inputs
      * @param actionMasks      the action masks
      * @param rewards          the rewards
+     * @param predictions      the trajectory predictions
      * @param batchSize        the batch size
      * @param initialAvgReward the initial average reward
      * @param alphas           the alphas
@@ -135,7 +140,7 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
      * @param gamma            the gamma parameter
      * @param isStop           the check for stop function
      */
-    protected TrajectoryDatasetIterator(ComputationGraph network, INDArray[] inputs, INDArray[] actionMasks, INDArray rewards, int batchSize, float initialAvgReward, float[] alphas, float beta, float gamma, BooleanSupplier isStop) {
+    protected TrajectoryDatasetIterator(ComputationGraph network, INDArray[] inputs, INDArray[] actionMasks, INDArray rewards, INDArray[] predictions, int batchSize, float initialAvgReward, float[] alphas, float beta, float gamma, BooleanSupplier isStop) {
         this.network = requireNonNull(network);
         this.inputs = requireNonNull(inputs);
         this.actionMasks = requireNonNull(actionMasks);
@@ -147,6 +152,7 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
         this.criticIdx = network.getConfiguration().getNetworkOutputs().indexOf(CRITIC_ID);
         this.avgReward = initialAvgReward;
         this.isStop = isStop;
+        this.predictions = predictions;
     }
 
     @Override
@@ -169,6 +175,11 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
                 data.close();
             }
         }
+        for (INDArray data : predictions) {
+            if (data != null) {
+                data.close();
+            }
+        }
     }
 
     /**
@@ -186,16 +197,11 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
      * Creates the labels
      */
     private void createLabels() {
-        // Computes the predictions (critic + actor policy)
-        logger.atDebug().log("Creating predictions");
-        INDArray[] predictions = predict();
-        logger.atDebug().log("Created predictions");
-
         // Computes the deltas and the average rewards
         Tuple2<INDArray, Float> rlData = NNRLTrainingDataGenerator.processRewards(rewards, predictions[criticIdx], avgReward, beta, gamma);
         try (INDArray deltas = rlData._1) {
             // Creates the training data
-            createLabels(predictions, deltas);
+            createLabels(deltas);
             avgReward = rlData._2;
 
             logTrajectory(deltas, predictions);
@@ -207,20 +213,14 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
                 }
             }
         }
-        logger.atDebug().log("Created labels");
-        for (INDArray prediction : predictions) {
-            prediction.close();
-        }
-        logger.atDebug().log("Closed predictions");
     }
 
     /**
      * Creates labels from prediction and deltas
      *
-     * @param predictions the predictions
-     * @param deltas      the deltas
+     * @param deltas the deltas
      */
-    private void createLabels(INDArray[] predictions, INDArray deltas) {
+    private void createLabels(INDArray deltas) {
         labels = new INDArray[predictions.length];
         labels[criticIdx] = createCriticLabel(predictions[criticIdx], deltas);
         for (int i = 0; i < labels.length; i++) {
@@ -316,13 +316,6 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
         return this;
     }
 
-    /**
-     * Returns the prediction
-     */
-    private INDArray[] predict() {
-        return network.output(inputs);
-    }
-
     @Override
     public void reset() {
         this.cursor = 0;
@@ -337,7 +330,6 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
      * Log trajectory data
      */
     private List<String> trajectoryTable(INDArray deltas, INDArray[] predictions) {
-
         int col = 0;
         TextTable table = new TextTable();
         for (int j = 0; j < inputs.length; j++) {
