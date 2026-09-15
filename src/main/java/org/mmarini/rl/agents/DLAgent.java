@@ -1,7 +1,7 @@
 /*
- * Copyright 2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * END OF TERMS AND CONDITIONS
+ *    END OF TERMS AND CONDITIONS
  *
  */
 
@@ -47,7 +47,6 @@ import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
-import org.nd4j.linalg.dataset.api.MultiDataSet;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,7 +63,6 @@ import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.rl.agents.NNRLTrainingDataGenerator.CRITIC_ID;
 
 /**
  * The DLAgent class is the main Deep Learning Reinforcement Learning agent.
@@ -218,6 +216,11 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
     }
 
     @Override
+    public Map<String, Float> alphas() {
+        return alphas;
+    }
+
+    @Override
     public float avgReward() {
         return status.get().averageReward();
     }
@@ -249,6 +252,11 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
     @Override
     public int batchSize() {
         return batchSize;
+    }
+
+    @Override
+    public float beta() {
+        return beta;
     }
 
     /**
@@ -303,22 +311,8 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
     }
 
     @Override
-    public Tuple2<MultiDataSet, Float> createDataSet(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards, float avgReward) {
-        NNRLTrainingDataGenerator mediator = createDataGenerator(status.get().network());
-        // Computes the predictions (critic + actor policy)
-        Map<String, INDArray> predictions = mediator.predictFromValue(states).collect(Tuple2.toMap());
-        // Computes the deltas and the average rewards
-        Tuple2<INDArray, Float> rlData = NNRLTrainingDataGenerator.processRewards(rewards, predictions.get(CRITIC_ID), avgReward, beta, gamma);
-        INDArray deltas = rlData._1;
-        // Creates the training data
-        INDArray[][] datasets = mediator.
-                createTrainingData(states, actionMasks, predictions, deltas);
-        MultiDataSet dataset = new org.nd4j.linalg.dataset.MultiDataSet(datasets[0], datasets[1]);
-        float avgReward1 = rlData._2;
-        try (TrainingKpis kpis = TrainingKpis.create(predictions, deltas, avgReward1)) {
-            callOnKpis(kpis);
-        }
-        return Tuple2.of(dataset, avgReward1);
+    public float gamma() {
+        return gamma;
     }
 
     @Override
@@ -519,6 +513,11 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
         float avgReward = datasetIterator.avgReward();
         status.updateAndGet(s -> s.averageReward(avgReward));
         return this;
+    }
+
+    @Override
+    public long trajectorySize() {
+        return status.get().trajectoryBuffer().bufferSize();
     }
 
     /**

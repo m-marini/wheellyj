@@ -1,7 +1,7 @@
 /*
- * Copyright 2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * END OF TERMS AND CONDITIONS
+ *    END OF TERMS AND CONDITIONS
  *
  */
 
@@ -162,6 +162,23 @@ public record NNRLTrainingDataGenerator(ComputationGraph network, Map<String, Fl
     }
 
     /**
+     * Creates the critic training labels from the critic predictions and
+     * temporal-difference errors.
+     * <p>
+     * The last critic prediction is excluded because it corresponds to the
+     * state following the final transition and therefore has no associated
+     * training target.
+     *
+     * @param critic the network critic predictions
+     * @param deltas the temporal-difference errors
+     * @return the critic training labels
+     */
+    static INDArray createCriticLabel(INDArray critic, INDArray deltas) {
+        INDArray clipped = critic.get(NDArrayIndex.interval(0, critic.size(0) - 1));
+        return clipped.add(deltas);
+    }
+
+    /**
      * Computes the temporal-difference errors and the updated average reward.
      * <p>
      * For each transition, the temporal-difference error is computed as:
@@ -260,105 +277,6 @@ public record NNRLTrainingDataGenerator(ComputationGraph network, Map<String, Fl
     }
 
     /**
-     * Creates the critic training labels from the critic predictions and
-     * temporal-difference errors.
-     * <p>
-     * The last critic prediction is excluded because it corresponds to the
-     * state following the final transition and therefore has no associated
-     * training target.
-     *
-     * @param predictionMap the network predictions, including the critic
-     * @param deltas        the temporal-difference errors
-     * @return the critic training labels
-     */
-    private INDArray createCriticLabel(Map<String, INDArray> predictionMap, INDArray deltas) {
-        INDArray critic0 = predictionMap.get(CRITIC_ID);
-        INDArray clipped = critic0.get(NDArrayIndex.interval(0, critic0.size(0) - 1));
-        return clipped.add(deltas);
-    }
-
-    /**
-     * Creates the network input data from state values.
-     * <p>
-     * The last state is excluded because it represents the state following
-     * the final transition and has no corresponding action or training
-     * target.
-     *
-     * @param state the state values indexed by network input identifier
-     * @return the input arrays ordered according to the network input
-     * configuration
-     */
-    public INDArray[] createInputData(Map<String, INDArray> state) {
-        return network.getConfiguration().getNetworkInputs().stream()
-                .map(id -> {
-                    INDArray inputs = state.get(id);
-                    return inputs.get(NDArrayIndex.interval(0, inputs.size(0) - 1), NDArrayIndex.all());
-                })
-                .toArray(INDArray[]::new);
-    }
-
-    /**
-     * Creates the network output labels for a training batch.
-     * <p>
-     * The critic labels are obtained by adding the temporal-difference errors
-     * to the critic predictions. Policy labels are obtained by applying the
-     * corresponding policy update only to the selected actions.
-     *
-     * @param actionMasks the action masks indexed by policy output identifier
-     * @param predictions the network predictions indexed by output identifier
-     * @param deltas      the temporal-difference errors
-     * @return the output label arrays ordered according to the network output
-     * configuration
-     */
-    INDArray[] createOutputData(Map<String, INDArray> actionMasks, Map<String, INDArray> predictions, INDArray deltas) {
-        return network.getConfiguration().getNetworkOutputs().stream()
-                .map(id -> {
-                    if (CRITIC_ID.equals(id)) {
-                        return createCriticLabel(predictions, deltas);
-                    } else {
-                        INDArray policy = predictions.get(id);
-                        try (INDArray clipped = policy.get(NDArrayIndex.interval(0, policy.size(0) - 1), NDArrayIndex.all())) {
-                            try (INDArray deltaPolicies = deltas.mul(alphas.get(id))) {
-                                try (INDArray deltaMasks = actionMasks.get(id).mul(deltaPolicies)) {
-                                    return computeNewPolicy(clipped, deltaMasks);
-                                }
-                            }
-                        }
-                    }
-                })
-                .toArray(INDArray[]::new);
-    }
-
-    /**
-     * Creates the network inputs and output labels used for training.
-     *
-     * @param states      the state values indexed by network input identifier
-     * @param actionMasks the action masks indexed by policy output identifier
-     * @param predictions the network predictions indexed by output identifier
-     * @param deltas      the temporal-difference errors
-     * @return a two-element array containing the network inputs at index
-     * {@code 0} and the output labels at index {@code 1}
-     */
-    INDArray[][] createTrainingData(Map<String, INDArray> states, Map<String, INDArray> actionMasks, Map<String, INDArray> predictions, INDArray deltas) {
-        INDArray[] inputs = createInputData(states);
-        INDArray[] labels = createOutputData(actionMasks, predictions, deltas);
-        return new INDArray[][]{inputs, labels};
-    }
-
-    /**
-     * Converts state values into the input arrays expected by the network.
-     *
-     * @param state the state values indexed by network input identifier
-     * @return the input arrays ordered according to the network input
-     * configuration
-     */
-    private INDArray[] inputFromValues(Map<String, INDArray> state) {
-        return network.getConfiguration().getNetworkInputs().stream()
-                .map(state::get)
-                .toArray(INDArray[]::new);
-    }
-
-    /**
      * Converts state signals into the input arrays expected by the network.
      *
      * @param state the state signals indexed by network input identifier
@@ -394,18 +312,6 @@ public record NNRLTrainingDataGenerator(ComputationGraph network, Map<String, Fl
      */
     public Stream<Tuple2<String, INDArray>> predictFromState(Map<String, Signal> states) {
         INDArray[] inputs = inputsFromSignals(states);
-        return predict(inputs);
-    }
-
-    /**
-     * Computes network predictions for the specified state values.
-     *
-     * @param states the state values indexed by network input identifier
-     * @return a stream containing the predictions indexed by output-layer
-     * identifier
-     */
-    Stream<Tuple2<String, INDArray>> predictFromValue(Map<String, INDArray> states) {
-        INDArray[] inputs = inputFromValues(states);
         return predict(inputs);
     }
 }

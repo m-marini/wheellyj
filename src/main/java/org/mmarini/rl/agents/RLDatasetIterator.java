@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -31,14 +31,29 @@ package org.mmarini.rl.agents;
 import org.nd4j.linalg.dataset.api.iterator.MultiDataSetIterator;
 
 /**
- * Extends the multi dataset iterator with the final average reward
+ * A {@link MultiDataSetIterator} for reinforcement-learning training data
+ * that also provides the average reward associated with the current training
+ * data and supports requesting termination of the iteration.
+ *
+ * <p>The average reward can be used by reinforcement-learning algorithms to
+ * monitor the quality of the generated training data.</p>
+ *
+ * @see MultiDataSetIterator
  */
-public interface RLDatasetIterator extends MultiDataSetIterator {
 
+public interface RLDatasetIterator extends MultiDataSetIterator {
     /**
-     * Returns the mini batch final average reward
+     * Returns the current average reward.
+     *
+     * @return the average reward associated with the current training data
      */
     float avgReward();
 
+    /**
+     * Requests the iterator to stop processing.
+     *
+     * <p>The implementation should terminate processing as soon as reasonably
+     * possible after receiving this request.</p>
+     */
     void stop();
 }
