@@ -44,6 +44,7 @@ import org.junit.jupiter.api.Test;
 import org.mmarini.TextTable;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.dataset.api.iterator.MultiDataSetIterator;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.learning.config.Sgd;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
@@ -58,8 +59,8 @@ public class NNTest {
 
     public static final long SEED = 12345L;
     public static final double LEARNING_RATE = 1e-1;
-    public static final int NUM_EPOCHS = 10;
-    public static final int DATA_SIZE = 1000;
+    public static final int NUM_EPOCHS = 8;
+    public static final int DATA_SIZE = 1024;
     static final Logger logger = LoggerFactory.getLogger(NNTest.class);
     private ComputationGraph network;
     private INDArray[] inputs;
@@ -130,6 +131,33 @@ public class NNTest {
         for (int i = 0; i < NUM_EPOCHS; i++) {
             network.fit(inputs, labels);
         }
+
+        INDArray postOutput = network.output(states)[0];
+
+        for (String line : new TextTable()
+                .headers(1, "pi(a0|s0)", "pi(a1|s0)", "pi(a0|s1)'", "pi(a1|s1)'")
+                .set(0, 0, "Pre")
+                .format(0, 1, "%.3f", preOutput.getFloat(0, 0))
+                .format(0, 2, "%.3f", preOutput.getFloat(0, 1))
+                .format(0, 3, "%.3f", preOutput.getFloat(1, 0))
+                .format(0, 4, "%.3f", preOutput.getFloat(1, 1))
+                .set(1, 0, "Post")
+                .format(1, 1, "%.3f", postOutput.getFloat(0, 0))
+                .format(1, 2, "%.3f", postOutput.getFloat(0, 1))
+                .format(1, 3, "%.3f", postOutput.getFloat(1, 0))
+                .format(1, 4, "%.3f", postOutput.getFloat(1, 1))
+                .build()) {
+            logger.atDebug().log("{}", line);
+        }
+        assertTrue(preOutput.getFloat(0, 0) < postOutput.getFloat(0, 0));
+        assertTrue(preOutput.getFloat(1, 1) < postOutput.getFloat(1, 1));
+    }
+
+    @Test
+    void testBatchClassifier() {
+        INDArray preOutput = network.output(states)[0];
+        MultiDataSetIterator iterator = new TestMultiDataSetIterator(inputs, labels, 32);
+        network.fit(iterator, NUM_EPOCHS);
 
         INDArray postOutput = network.output(states)[0];
 

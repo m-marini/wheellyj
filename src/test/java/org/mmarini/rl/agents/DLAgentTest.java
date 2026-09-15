@@ -1,7 +1,7 @@
 /*
- * Copyright 2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * END OF TERMS AND CONDITIONS
+ *    END OF TERMS AND CONDITIONS
  *
  */
 
@@ -54,6 +54,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Utils.deleteRecursive;
+import static org.mmarini.rl.agents.NNRLTrainingDataGenerator.CRITIC_ID;
 import static org.mmarini.wheelly.TestFunctions.matrixShape;
 import static org.mmarini.wheelly.envs.DLActionFunction.HEAD_ACTION_ID;
 import static org.mmarini.wheelly.envs.DLActionFunction.MOVE_ACTION_ID;
@@ -91,7 +92,7 @@ class DLAgentTest {
                 .graphBuilder()
                 .addInputs(MAP_SIGNAL_ID)
                 .setInputTypes(new InputType.InputTypeConvolutional(GRID_SIZE, GRID_SIZE, NUM_CHANNELS))
-                .addLayer(NNRLTrainingDataGenerator.CRITIC_ID,
+                .addLayer(CRITIC_ID,
                         new OutputLayer.Builder()
                                 .nOut(1)
                                 .activation(Activation.IDENTITY)

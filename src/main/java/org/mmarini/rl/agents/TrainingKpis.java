@@ -1,7 +1,7 @@
 /*
- * Copyright 2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * END OF TERMS AND CONDITIONS
+ *    END OF TERMS AND CONDITIONS
  *
  */
 
@@ -100,9 +100,12 @@ public record TrainingKpis(Map<String, INDArray> predictions, INDArray deltas,
 
     @Override
     public void close() {
+        /*
         MapStream.of(predictions)
                 .filterKeys(id -> !CRITIC_ID.equals(id))
                 .forEach((id, ary) -> ary.close());
+
+         */
     }
 
     /**

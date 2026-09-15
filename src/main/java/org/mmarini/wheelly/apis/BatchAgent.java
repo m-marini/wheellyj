@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -28,12 +28,10 @@
 
 package org.mmarini.wheelly.apis;
 
-import org.mmarini.Tuple2;
+import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.AgentConnector;
 import org.mmarini.rl.agents.RLDatasetIterator;
-import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.dataset.api.MultiDataSet;
 
 import java.util.Map;
 
@@ -41,6 +39,12 @@ import java.util.Map;
  * Trains the agent by batch
  */
 public interface BatchAgent extends Agent, AgentConnector {
+
+    /**
+     * Returns the scaling coefficients applied to the
+     * temporal-difference errors for each policy output
+     */
+    Map<String, Float> alphas();
 
     /**
      * Returns the current average reward
@@ -53,15 +57,16 @@ public interface BatchAgent extends Agent, AgentConnector {
     int batchSize();
 
     /**
-     * Returns the multi dataset to train the agent and the final average reward from the given states, actionMasks,
-     * rewards and initial average reward
-     *
-     * @param states      the states (n+1)
-     * @param actionMasks the action masks (n)
-     * @param rewards     the rewards (n)
-     * @param avgReward   the initial average reward
+     * Returns the learning rate used to update the average reward
      */
-    Tuple2<MultiDataSet, Float> createDataSet(Map<String, INDArray> states, Map<String, INDArray> actionMasks, INDArray rewards, float avgReward);
+    float beta();
+
+    /**
+     * Returns the decay factor used when updating the average reward
+     */
+    float gamma();
+
+    ComputationGraph network();
 
     /**
      * Returns the number of training epochs
@@ -75,4 +80,10 @@ public interface BatchAgent extends Agent, AgentConnector {
      * @param numEpochs       the number of epochs@
      */
     BatchAgent train(RLDatasetIterator datasetIterator, int numEpochs);
+
+    /**
+     *
+     * Returns the trajectory size
+     */
+    long trajectorySize();
 }

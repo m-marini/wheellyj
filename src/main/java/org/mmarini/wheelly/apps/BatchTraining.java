@@ -1,7 +1,7 @@
 /*
- * Copyright 2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * END OF TERMS AND CONDITIONS
+ *    END OF TERMS AND CONDITIONS
  *
  */
 
@@ -245,7 +245,6 @@ public class BatchTraining {
                     logger.atError().log("File {} already exists", path.getAbsoluteFile());
                 }
             }
-            dlAgent.onKpis(this::onKpis);
         }
     }
 
@@ -420,6 +419,7 @@ public class BatchTraining {
                 .observeOn(Schedulers.io())
                 .throttleLatest(PROGRESS_INTERVAL, TimeUnit.MILLISECONDS)
                 .subscribe(this::onProgress);
+        trainer.onKpis(this::onKpis);
         // Runs the training session
         progressBar.setValue(0);
         info("Training ...");
