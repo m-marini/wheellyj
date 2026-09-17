@@ -119,7 +119,7 @@ public class BatchTrainer {
          */
         try (
                 BinFilesDatasetIterator datasetIterator = new BinFilesDatasetIterator(states, actionMasks, rewards, agent.batchSize(),
-                        agent.trajectorySize(), agent.network(), agent.alphas(), agent.beta(), agent.gamma(), agent.avgReward())) {
+                        agent.trajectorySize(), agent.network(), agent.alphas(), agent.beta(), agent.avgReward())) {
             if (onKpis != null) {
                 datasetIterator.onKpis(onKpis);
             }

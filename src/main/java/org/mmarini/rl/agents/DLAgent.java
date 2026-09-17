@@ -84,7 +84,6 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
     public static final String ALPHAS_ID = "alphas";
     public static final String BETA_ID = "beta";
     public static final String GAMMA_ID = "gamma";
-    public static final double DEFAULT_GAMMA = 1D;
     private static final Logger logger = LoggerFactory.getLogger(DLAgent.class);
     private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/dl-agent-schema-0.1";
 
@@ -100,12 +99,11 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
      * @param batchSize          the mini batch size
      * @param alphas             the policy change factors
      * @param beta               the average rewards factor
-     * @param gamma              the average rewards gamma factor
      * @param filePath           the file path for the agent save
      * @param concurrentTraining true if concurrent training
      */
-    public static DLAgent create(Map<String, SignalSpec> stateSpec, Map<String, SignalSpec> actionSpec, ComputationGraph network, Random random, int numEpochs, int numSteps, int batchSize, Map<String, Float> alphas, float beta, float gamma, File filePath, boolean concurrentTraining) {
-        DLAgent agent = create(filePath, network, random, numEpochs, numSteps, batchSize, alphas, beta, gamma, 0, concurrentTraining);
+    public static DLAgent create(Map<String, SignalSpec> stateSpec, Map<String, SignalSpec> actionSpec, ComputationGraph network, Random random, int numEpochs, int numSteps, int batchSize, Map<String, Float> alphas, float beta, File filePath, boolean concurrentTraining) {
+        DLAgent agent = create(filePath, network, random, numEpochs, numSteps, batchSize, alphas, beta, 0, concurrentTraining);
         agent.validate(stateSpec, actionSpec);
         return agent;
     }
@@ -120,18 +118,17 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
      * @param batchSize          the mini batch size
      * @param alphas             the policy change factors
      * @param beta               the average reward factor
-     * @param gamma              the average reward gamma factor
      * @param avgReward          the average reward
      * @param concurrentTraining true if concurrent training
      */
     protected static DLAgent create(File filePath, ComputationGraph network, Random random, int numEpochs,
                                     int trajectorySize, int batchSize,
-                                    Map<String, Float> alphas, float beta, float gamma, float avgReward,
+                                    Map<String, Float> alphas, float beta, float avgReward,
                                     boolean concurrentTraining) {
         TrajectoryBuffer trajectoryBuffer = new TrajectoryBuffer(trajectorySize);
         AtomicReference<DLAgentStatus> status = new AtomicReference<>(new DLAgentStatus(network, null,
                 trajectoryBuffer, null, false, avgReward, false, true));
-        return new DLAgent(filePath, random, numEpochs, batchSize, beta, alphas, gamma, concurrentTraining,
+        return new DLAgent(filePath, random, numEpochs, batchSize, beta, alphas, concurrentTraining,
                 status, new ArrayList<>(), new ArrayList<>());
     }
 
@@ -153,9 +150,8 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
                 .mapValues(locator -> (float) locator.getNode(json).asDouble())
                 .toMap();
         float beta = (float) Locator.locate(BETA_ID).getNode(json).asDouble();
-        float gamma = (float) Locator.locate(GAMMA_ID).getNode(json).asDouble(DEFAULT_GAMMA);
         float avgReward = (float) Locator.locate(AVG_REWARD_ID).getNode(json).asDouble();
-        return create(filePath, network, random, numEpochs, trajectorySize1, batchSize, alphas, beta, gamma, avgReward, false);
+        return create(filePath, network, random, numEpochs, trajectorySize1, batchSize, alphas, beta, avgReward, false);
     }
 
     private final File filePath;
@@ -164,7 +160,6 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
     private final int batchSize;
     private final Map<String, Float> alphas;
     private final float beta;
-    private final float gamma;
     private final boolean concurrentTraining;
     private final AtomicReference<DLAgentStatus> status;
     private final List<Consumer<TrainingKpis>> onKpis;
@@ -180,14 +175,13 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
      * @param batchSize          the mini batch size
      * @param beta               the average reward factor
      * @param alphas             the policy action factors
-     * @param gamma              the average reward gamma factor
      * @param concurrentTraining true if concurrent training
      * @param status             the agent status
      * @param onKpis             the KPIS callback list
      * @param onRewards          the rewards callback list
      */
     protected DLAgent(File filePath, Random random, int numEpochs, int batchSize,
-                      float beta, Map<String, Float> alphas, float gamma, boolean concurrentTraining,
+                      float beta, Map<String, Float> alphas, boolean concurrentTraining,
                       AtomicReference<DLAgentStatus> status, List<Consumer<TrainingKpis>> onKpis,
                       List<Consumer<INDArray>> onRewards) {
         this.filePath = requireNonNull(filePath);
@@ -196,7 +190,6 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
         this.batchSize = batchSize;
         this.beta = beta;
         this.alphas = alphas;
-        this.gamma = gamma;
         this.concurrentTraining = concurrentTraining;
         this.status = requireNonNull(status);
         this.onKpis = onKpis;
@@ -297,22 +290,17 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
      */
     public DLAgent concurrentTraining(boolean concurrentTraining) {
         return this.concurrentTraining != concurrentTraining
-                ? new DLAgent(filePath, random, numEpochs, batchSize, beta, alphas, gamma, concurrentTraining, status, onKpis, onRewards)
+                ? new DLAgent(filePath, random, numEpochs, batchSize, beta, alphas, concurrentTraining, status, onKpis, onRewards)
                 : this;
     }
 
     /**
      * Returns the NN mediator
      *
-     * @param network the nerwork
+     * @param network the network
      */
     NNRLTrainingDataGenerator createDataGenerator(ComputationGraph network) {
-        return new NNRLTrainingDataGenerator(network, alphas, beta, gamma);
-    }
-
-    @Override
-    public float gamma() {
-        return gamma;
+        return new NNRLTrainingDataGenerator(network, alphas, beta);
     }
 
     @Override
@@ -333,7 +321,6 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
         alphas.forEach(alphasJson::put);
         jsonNode.set(ALPHAS_ID, alphasJson);
         return jsonNode.put(BETA_ID, beta)
-                .put(GAMMA_ID, gamma)
                 .put(AVG_REWARD_ID, st.averageReward())
                 .put(NUM_EPOCHS_ID, numEpochs)
                 .put(TRAJECTORY_SIZE_ID, st.trajectoryBuffer().bufferSize())
@@ -489,7 +476,7 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
         double avg;
         try (TrajectoryDatasetIterator iterator =
                      TrajectoryDatasetIterator.create(trainingNetwork, trajectory, batchSize,
-                             status.get().averageReward(), alphas, beta, gamma,
+                             status.get().averageReward(), alphas, beta,
                              () -> status.get().shuttingDown())) {
             iterator.onKpis(this::callOnKpis);
             trainingNetwork.clearLayersStates();

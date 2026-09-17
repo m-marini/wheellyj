@@ -62,10 +62,9 @@ public interface BatchAgent extends Agent, AgentConnector {
     float beta();
 
     /**
-     * Returns the decay factor used when updating the average reward
+     *
+     * Returns the neural network
      */
-    float gamma();
-
     ComputationGraph network();
 
     /**

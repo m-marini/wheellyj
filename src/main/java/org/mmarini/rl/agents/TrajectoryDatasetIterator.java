@@ -60,11 +60,12 @@ public class TrajectoryDatasetIterator implements MultiDataSetIterator, AutoClos
      * @param avgReward  the initial average reward
      * @param alphas     the alphas parameters
      * @param beta       the beta parameter
-     * @param gamma      the gamma reward parameter
      * @param isStop     the check for stop function
      */
-    public static TrajectoryDatasetIterator create(ComputationGraph network, Trajectory trajectory, int batchSize, float avgReward, Map<String, Float> alphas, float beta, float gamma, BooleanSupplier isStop) {
-        TrajectoryDataGenerator dataGenerator = TrajectoryDataGenerator.create(network, alphas, beta, gamma, trajectory);
+    public static TrajectoryDatasetIterator create(ComputationGraph network, Trajectory trajectory, int batchSize,
+                                                   float avgReward, Map<String, Float> alphas, float beta,
+                                                   BooleanSupplier isStop) {
+        TrajectoryDataGenerator dataGenerator = TrajectoryDataGenerator.create(network, alphas, beta, trajectory);
         return new TrajectoryDatasetIterator(dataGenerator, batchSize, avgReward, isStop);
     }
 

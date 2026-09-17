@@ -86,7 +86,6 @@ public class BinFilesDatasetIterator implements RLDatasetIterator, AutoCloseable
     private final ComputationGraph network;
     private final Map<String, Float> alphas;
     private final float beta;
-    private final float gamma;
     private final PublishProcessor<ProgressInfo> progressInfo;
     private final long size;
     private float avgReward;
@@ -109,12 +108,11 @@ public class BinFilesDatasetIterator implements RLDatasetIterator, AutoCloseable
      * @param network        neural network used to generate the trajectory training data
      * @param alphas         action weighting factors used by the trajectory data generator
      * @param beta           beta parameter used by the trajectory data generator
-     * @param gamma          discount factor used by the trajectory data generator
      * @param avgReward      initial average reward
      */
     BinFilesDatasetIterator(Map<String, BinArrayFile> stateFile, Map<String, BinArrayFile> actionMaskFile,
                             BinArrayFile rewardFile, int batchSize, long trajectorySize, ComputationGraph network,
-                            Map<String, Float> alphas, float beta, float gamma, float avgReward) {
+                            Map<String, Float> alphas, float beta, float avgReward) {
         this.batchSize = batchSize;
         this.trajectorySize = trajectorySize;
         this.statesFile = requireNonNull(stateFile);
@@ -123,7 +121,6 @@ public class BinFilesDatasetIterator implements RLDatasetIterator, AutoCloseable
         this.network = requireNonNull(network);
         this.alphas = requireNonNull(alphas);
         this.beta = beta;
-        this.gamma = gamma;
         this.avgReward = avgReward;
         this.progressInfo = PublishProcessor.create();
         long tempSize = 0;
@@ -263,8 +260,7 @@ public class BinFilesDatasetIterator implements RLDatasetIterator, AutoCloseable
      * the state following the last reward.</p>
      *
      * <p>After loading the data, the records are converted into
-     * {@link TrajectoryTrainingData} using
-     * {@link TrajectoryDataGenerator#createFromMask(ComputationGraph, Map, float, float, Map, Map, INDArray)}.</p>
+     * {@link TrajectoryTrainingData} using createFromMask.</p>
      *
      * @return the generated trajectory training data
      * @throws IOException if the binary files cannot be read
@@ -277,7 +273,7 @@ public class BinFilesDatasetIterator implements RLDatasetIterator, AutoCloseable
         Map<String, INDArray> actionMasks = dataList.get(1);
         this.trajectoryCursor = 0;
         this.datasetCursor += n;
-        TrajectoryDataGenerator dataGenerator = TrajectoryDataGenerator.createFromMask(network, alphas, beta, gamma, states, actionMasks, rewards);
+        TrajectoryDataGenerator dataGenerator = TrajectoryDataGenerator.createFromMask(network, alphas, beta, states, actionMasks, rewards);
         if (onKpis != null) {
             dataGenerator.onKpis(onKpis);
         }

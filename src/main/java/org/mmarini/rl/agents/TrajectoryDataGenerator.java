@@ -31,7 +31,6 @@ package org.mmarini.rl.agents;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.mmarini.Tuple2;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 
 import java.util.Arrays;
@@ -74,7 +73,6 @@ public class TrajectoryDataGenerator {
      * @param alphas  the policy scaling coefficients, indexed by network
      *                output name
      * @param beta    the learning rate used to update the average reward
-     * @param gamma   the decay factor used when updating the average reward
      * @param state   the trajectory states, indexed by network input name
      * @param actions the actions selected during the trajectory, indexed by
      *                network output name
@@ -83,10 +81,10 @@ public class TrajectoryDataGenerator {
      * network and trajectory
      */
     public static TrajectoryDataGenerator create(ComputationGraph network, Map<String, Float> alphas,
-                                                 float beta, float gamma,
+                                                 float beta,
                                                  Map<String, INDArray> state, Map<String, INDArray> actions, INDArray rewards) {
         Map<String, INDArray> actionsMaskMap = createActionMasks(actions, network);
-        return createFromMask(network, alphas, beta, gamma, state, actionsMaskMap, rewards);
+        return createFromMask(network, alphas, beta, state, actionsMaskMap, rewards);
     }
 
     /**
@@ -94,14 +92,13 @@ public class TrajectoryDataGenerator {
      * <p>
      * This method extracts the states, actions, and rewards from the specified
      * trajectory and delegates the creation to
-     * {@link #create(ComputationGraph, Map, float, float, Map, Map, INDArray)}.
+     * {@link #create(ComputationGraph, Map, float, Map, Map, INDArray)}.
      *
      * @param network    the neural network used to compute policy and critic
      *                   predictions
      * @param alphas     the scaling coefficients applied to the temporal-difference
      *                   errors for each policy output
      * @param beta       the learning rate used to update the average reward
-     * @param gamma      the decay factor used when updating the average reward
      * @param trajectory the trajectory containing the states, actions, and
      *                   rewards used to generate the training data
      * @return a new trajectory data generator configured for the specified
@@ -110,13 +107,13 @@ public class TrajectoryDataGenerator {
      *                              {@code trajectory} is {@code null}
      */
     public static TrajectoryDataGenerator create(ComputationGraph network,
-                                                 Map<String, Float> alphas, float beta, float gamma,
+                                                 Map<String, Float> alphas, float beta,
                                                  Trajectory trajectory) {
         requireNonNull(trajectory);
-        return create(network, alphas, beta, gamma, trajectory.states(), trajectory.actions(), trajectory.rewards());
+        return create(network, alphas, beta, trajectory.states(), trajectory.actions(), trajectory.rewards());
     }
 
-    public static TrajectoryDataGenerator createFromMask(ComputationGraph network, Map<String, Float> alphas, float beta, float gamma, Map<String, INDArray> states, Map<String, INDArray> actionsMaskMap, INDArray rewards) {
+    public static TrajectoryDataGenerator createFromMask(ComputationGraph network, Map<String, Float> alphas, float beta, Map<String, INDArray> states, Map<String, INDArray> actionsMaskMap, INDArray rewards) {
         INDArray[] inputs = network.getConfiguration().getNetworkInputs().stream()
                 .map(states::get)
                 .toArray(INDArray[]::new);
@@ -134,7 +131,7 @@ public class TrajectoryDataGenerator {
             }
         }
         int criticIdx = outputIds.indexOf(CRITIC_ID);
-        return new TrajectoryDataGenerator(network, inputs, actionMasks1, rewards, alphas1, beta, gamma, criticIdx);
+        return new TrajectoryDataGenerator(network, inputs, actionMasks1, rewards, alphas1, beta, criticIdx);
     }
 
     private final ComputationGraph network;
@@ -143,7 +140,6 @@ public class TrajectoryDataGenerator {
     private final INDArray rewards;
     private final float[] alphas;
     private final float beta;
-    private final float gamma;
     private final int criticIdx;
     private Consumer<TrainingKpis> onKpis;
 
@@ -160,7 +156,6 @@ public class TrajectoryDataGenerator {
      * @param alphas      the scaling coefficients applied to the
      *                    temporal-difference errors for each policy output
      * @param beta        the learning rate used to update the average reward
-     * @param gamma       the decay factor used when updating the average reward
      * @param criticIdx   the index of the critic output in the network outputs
      * @throws NullPointerException if {@code network}, {@code inputs},
      *                              {@code actionMasks}, {@code rewards}, or
@@ -168,14 +163,13 @@ public class TrajectoryDataGenerator {
      */
     public TrajectoryDataGenerator(ComputationGraph network,
                                    INDArray[] inputs, INDArray[] actionMasks, INDArray rewards,
-                                   float[] alphas, float beta, float gamma, int criticIdx) {
+                                   float[] alphas, float beta, int criticIdx) {
         this.network = requireNonNull(network);
         this.inputs = requireNonNull(inputs);
         this.actionMasks = requireNonNull(actionMasks);
         this.rewards = requireNonNull(rewards);
         this.alphas = requireNonNull(alphas);
         this.beta = beta;
-        this.gamma = gamma;
         this.criticIdx = criticIdx;
     }
 
@@ -248,19 +242,16 @@ public class TrajectoryDataGenerator {
      */
     private Tuple2<INDArray, Float> computeTDErrors(INDArray rewards, INDArray critic, float avg) {
         int n = (int) rewards.size(0);
-        INDArray deltas = Nd4j.create(n, 1);
+        float avgRewTrajectory = rewards.meanNumber().floatValue();
+        avg += beta * (avgRewTrajectory - avg);
         try (INDArray critic1 = critic.get(NDArrayIndex.interval(1, n + 1), NDArrayIndex.all())) {
             try (INDArray critic0 = critic.get(NDArrayIndex.interval(0, n), NDArrayIndex.all())) {
                 try (INDArray criticDiff = critic1.sub(critic0)) {
-                    for (int i = 0; i < n; i++) {
-                        float delta = rewards.getFloat(i, 0) - avg + criticDiff.getFloat(i, 0);
-                        deltas.putScalar(i, 0, delta);
-                        avg = avg * gamma + beta * delta;
-                    }
+                    INDArray deltas = rewards.add(criticDiff).subi(avg);
+                    return Tuple2.of(deltas, avg);
                 }
             }
         }
-        return Tuple2.of(deltas, avg);
     }
 
     /**

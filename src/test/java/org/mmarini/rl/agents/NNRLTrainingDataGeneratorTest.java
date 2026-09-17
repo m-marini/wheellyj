@@ -1,7 +1,7 @@
 /*
- * Copyright 2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * END OF TERMS AND CONDITIONS
+ *    END OF TERMS AND CONDITIONS
  *
  */
 
@@ -56,7 +56,7 @@ class NNRLTrainingDataGeneratorTest {
         // logger.atDebug().log("yaml network {}", conf.toYaml());
         ComputationGraph net = new ComputationGraph(conf);
         net.init();
-        this.mediator = new NNRLTrainingDataGenerator(net, Map.of(), 0, 1);
+        this.mediator = new NNRLTrainingDataGenerator(net, Map.of(), 0);
         TrajectoryBuffer buffer = new TrajectoryBuffer(NUM_STEPS);
         for (int i = 0; i < NUM_STEPS; i++) {
             buffer.add(createResult(i * REWARD / (NUM_STEPS - 1)));

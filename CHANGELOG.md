@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#646](https://github.com/m-marini/wheellyj/issues/646): Simplify simulation robot model
 - Issue [#655](https://github.com/m-marini/wheellyj/issues/655): Skip Forward Pass
 - Issue [#657](https://github.com/m-marini/wheellyj/issues/657): Computes td-error for each trajectory
+- Issue [#659](https://github.com/m-marini/wheellyj/issues/659): Computes average reward per step for each trajectory
 
 ### Fix
 
