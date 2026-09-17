@@ -7,6 +7,12 @@ The code of Webcam controller is at [Wheellycam project](https://github.com/m-ma
 
 The documentation is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
+## Release [0.28.1](https://github.com/m-marini/wheellyj/releases/tag/v0.28.1)
+
+- Add Support Both CUDA and CPU backends
+- Simplify simulation robot model
+- Computes td-error and average reward per step for each trajectory
+
 ## Release [0.28.0](https://github.com/m-marini/wheellyj/releases/tag/v0.28.0)
 
 - Add toolbar in robot executor with learning button in toolbar
