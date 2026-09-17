@@ -66,11 +66,9 @@ import static java.util.Objects.requireNonNull;
  *                identifier
  * @param beta    the coefficient used to update the average reward estimate
  *                from the temporal-difference error
- * @param gamma   the decay factor applied to the previous average reward
- *                estimate
  */
 public record NNRLTrainingDataGenerator(ComputationGraph network, Map<String, Float> alphas,
-                                        float beta, float gamma) {
+                                        float beta) {
     public static final String CRITIC_ID = "critic";
 
     /**
@@ -236,15 +234,12 @@ public record NNRLTrainingDataGenerator(ComputationGraph network, Map<String, Fl
      * @param alphas  the policy update coefficients indexed by network output
      *                identifier
      * @param beta    the coefficient controlling the average reward update
-     * @param gamma   the decay factor applied to the previous average reward
-     *                estimate
      * @throws NullPointerException if {@code network} is {@code null}
      */
-    public NNRLTrainingDataGenerator(ComputationGraph network, Map<String, Float> alphas, float beta, float gamma) {
+    public NNRLTrainingDataGenerator(ComputationGraph network, Map<String, Float> alphas, float beta) {
         this.network = requireNonNull(network);
         this.alphas = alphas;
         this.beta = beta;
-        this.gamma = gamma;
     }
 
     /**
