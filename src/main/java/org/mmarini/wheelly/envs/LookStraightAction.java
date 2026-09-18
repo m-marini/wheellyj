@@ -65,7 +65,7 @@ public class LookStraightAction extends AbstractCommitmentAction {
      */
     @Override
     protected RobotCommands executeAction(MacroActionContext context, WorldModel state) {
-        if (!committed()) {
+        if (expired()) {
             context.requestNextAction();
         }
         return RobotCommands.halt(0);

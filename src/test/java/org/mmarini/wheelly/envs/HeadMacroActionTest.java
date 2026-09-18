@@ -30,15 +30,24 @@ package org.mmarini.wheelly.envs;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
+
+import java.awt.geom.Point2D;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class MacroActionContextTest {
+class HeadMacroActionTest {
     public static final int COMMITMENT_TIME = 10;
     public static final int SCAN_INTERVAL = 20;
     public static final int[] SCAN_HEAD_DEG = {-45, 0, 45};
+    public static final int DIRECTION_RANGE_DEG = 45;
+    public static final int TARGET_DISTANCE = 1;
+
     MockMacroActionContext ctx;
     private WorldModelBuilder builder;
 
@@ -46,6 +55,65 @@ class MacroActionContextTest {
     void setUp() {
         this.builder = new WorldModelBuilder();
         this.ctx = new MockMacroActionContext();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0, true, 0",
+            "-30, true, -30",
+            "30, true, 30",
+            "-45, true, -45",
+            "45, true, 45",
+
+            "0, false, 0",
+            "-30, false, -30",
+            "30, false, 30",
+            "-45, false, -45",
+            "45, false, 45",
+
+            "-46, true, 0",
+            "46, true, 0",
+            "-135, true, 0",
+            "135, true, 0",
+            "-180, true, 0",
+
+            "-46, false, 0",
+            "46, false, 0",
+            "-135, false, 0",
+            "135, false, 0",
+            "-180, false, 0",
+    })
+    void testLookAtTarget(int targetDeg,
+                          boolean frontFacing,
+                          int expectedDir) {
+        // Given a look at target action
+        WorldModel world = builder.build();
+        Complex targetDir = Complex.fromDeg(targetDeg);
+        if (!frontFacing) {
+            targetDir = targetDir.opposite();
+        }
+        Point2D target = targetDir.at(world.robotStatus().headLocation(), TARGET_DISTANCE);
+        LookAtTargetAction action = new LookAtTargetAction(COMMITMENT_TIME, target, frontFacing, DIRECTION_RANGE_DEG);
+
+        // When executing the action for the first time
+        RobotCommands cmd = action.execute(ctx, world);
+
+        // Then command should scan the expected direction
+        assertEquals(expectedDir, cmd.scanDirection());
+        // And no next action should have been required
+        assertEquals(0, ctx.requestNextActionNum());
+
+        // When executing the action after commitment time
+        ctx.clearRequests();
+        cmd = action.execute(ctx,
+                builder.addTime(COMMITMENT_TIME)
+                        .build());
+        // Then command should scan the expected direction
+        assertEquals(expectedDir, cmd.scanDirection());
+        // And next action should have been required
+        assertEquals(1, ctx.requestNextActionNum());
+
+
     }
 
     @Test

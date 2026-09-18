@@ -42,6 +42,41 @@ import org.mmarini.wheelly.apis.WorldModel;
 public interface MacroAction {
 
     /**
+     * Default macro-action instance that immediately halts the robot and requests
+     * the next action during the same cycle. This action is permanently expired.
+     */
+    MacroAction HALT_ACTION = new MacroAction() {
+        @Override
+        public RobotCommands execute(MacroActionContext context, WorldModel state) {
+            context.requestNextAction();
+            return RobotCommands.halt();
+        }
+
+        @Override
+        public boolean expired() {
+            return true;
+        }
+    };
+
+    /**
+     * Returns the singleton instance of the default halt macro-action.
+     *
+     * @return the {@link #HALT_ACTION} instance
+     */
+    static MacroAction haltAction() {
+        return HALT_ACTION;
+    }
+
+    /**
+     * Executes the macro-action for the current cycle based on the environment state.
+     *
+     * @param context the macro-action context managing transitions and inference
+     * @param state   the current world model state representing the robot and environment status
+     * @return the {@link RobotCommands} to be dispatched to the robot for this cycle
+     */
+    RobotCommands execute(MacroActionContext context, WorldModel state);
+
+    /**
      * Checks if the action is currently committed to its execution.
      * <p>
      * This method returns true until the minimum commitment time for this action expires.
@@ -52,14 +87,5 @@ public interface MacroAction {
      * @return {@code true} if the minimum commitment time has not yet expired;
      * {@code false} otherwise
      */
-    boolean committed();
-
-    /**
-     * Executes the macro-action for the current cycle based on the environment state.
-     *
-     * @param context the macro-action context managing transitions and inference
-     * @param state   the current world model state representing the robot and environment status
-     * @return the {@link RobotCommands} to be dispatched to the robot for this cycle
-     */
-    RobotCommands execute(MacroActionContext context, WorldModel state);
+    boolean expired();
 }

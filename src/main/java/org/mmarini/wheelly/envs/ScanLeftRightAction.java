@@ -130,7 +130,7 @@ public class ScanLeftRightAction extends AbstractCommitmentAction {
             }
         }
         // Handles commitment interval
-        if (!committed()) {
+        if (expired()) {
             context.requestNextAction();
         }
         return RobotCommands.halt(headDeg[currentStepIndex]);

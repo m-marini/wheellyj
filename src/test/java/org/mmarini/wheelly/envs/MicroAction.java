@@ -31,32 +31,20 @@ package org.mmarini.wheelly.envs;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.WorldModel;
 
+import java.awt.geom.Point2D;
+
 import static java.util.Objects.requireNonNull;
 
-public class ComposedAbstractAction implements MacroAction {
-    private final MacroAction baseMovementState;
-    private final MacroAction headMovementState;
+public class MicroAction extends AbstractCommitmentAction {
+    private final Point2D targetPosition;
 
-    public ComposedAbstractAction(MacroAction baseMovementState, MacroAction headMovementState) {
-        this.baseMovementState = requireNonNull(baseMovementState);
-        this.headMovementState = requireNonNull(headMovementState);
+    public MicroAction(int commitmentTime, Point2D targetPosition) {
+        super(commitmentTime);
+        this.targetPosition = requireNonNull(targetPosition);
     }
 
     @Override
-    public boolean expired() {
-        return false;
-    }
-
-    @Override
-    public RobotCommands execute(MacroActionContext context, WorldModel state) {
-        requireNonNull(context);
-        requireNonNull(state);
-
-        // Process both sub-states concurrently
-        RobotCommands motionCommands = baseMovementState.execute(context, state);
-        RobotCommands headCommands = headMovementState.execute(context, state);
-
-        // Merge the independent motor commands and scanner commands into a unified set
-        return RobotCommands.merge(motionCommands, headCommands);
+    protected RobotCommands executeAction(MacroActionContext context, WorldModel state) {
+        return null;
     }
 }
