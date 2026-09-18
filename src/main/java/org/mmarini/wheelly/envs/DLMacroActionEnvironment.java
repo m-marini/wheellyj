@@ -1,7 +1,7 @@
 /*
- * Copyright 2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * END OF TERMS AND CONDITIONS
+ *    END OF TERMS AND CONDITIONS
  *
  */
 
@@ -96,7 +96,8 @@ public class DLMacroActionEnvironment implements EnvironmentApi, MacroActionCont
     private RewardFunction rewardFunc;
     private volatile AgentConnector agent;
     private volatile EnvironmentStepState stepState;
-    private volatile MacroActions currentAction;
+    private volatile MacroAction currentAction;
+    private volatile boolean requestNextAction;
 
     /**
      * Creates the deep learning environment
@@ -108,17 +109,8 @@ public class DLMacroActionEnvironment implements EnvironmentApi, MacroActionCont
         this.actionFunc = requireNonNull(actionFunc);
         this.stateFunctionBuilder = requireNonNull(stateFunctionBuilder);
         this.rewards = PublishProcessor.create();
-        this.currentAction = new ComposedAbstractAction(MacroActions.haltAction(), MacroActions.lookStrightAction());
-        ;
+        this.currentAction = null;
         logger.atDebug().log("Created");
-    }
-
-    /**
-     *
-     * Returns the agent
-     */
-    public AgentConnector agent() {
-        return agent;
     }
 
     /**
@@ -133,43 +125,12 @@ public class DLMacroActionEnvironment implements EnvironmentApi, MacroActionCont
         return actionFunc.spec();
     }
 
-    @Override
-    public void connect(WorldModellerConnector connector) {
-        requireNonNull(connector);
-        WorldModelSpec worldSpec = connector.worldModelSpec();
-        this.stateFunc = stateFunctionBuilder.apply(worldSpec);
-    }
-
-    @Override
-    public void connect(AgentConnector agent) {
-        requireNonNull(agent);
-        this.agent = agent;
-    }
-
     /**
-     * Sets the current state
      *
-     * @param currentState the current state
+     * Returns the agent
      */
-    public void currentAction(MacroActions currentState) {
-        this.currentAction = requireNonNull(currentState);
-    }
-
-    @Override
-    public RobotCommands onInference(WorldModel state) {
-        requireNonNull(state);
-        ensureConnected();
-        return currentAction.execute(this, state);
-    }
-
-    /**
-     * Returns the combined actions
-     *
-     * @param baseMovementAction the base movement action
-     * @param headMovementAction the head movement action
-     */
-    private RobotCommands combineActions(RobotCommands baseMovementAction, RobotCommands headMovementAction) {
-        throw new NotImplementedException(); // TODO
+    public AgentConnector agent() {
+        return agent;
     }
 
     private RobotCommands askForInference(WorldModel state) {
@@ -194,6 +155,29 @@ public class DLMacroActionEnvironment implements EnvironmentApi, MacroActionCont
     }
 
     /**
+     * Returns the combined actions
+     *
+     * @param baseMovementAction the base movement action
+     * @param headMovementAction the head movement action
+     */
+    private RobotCommands combineActions(RobotCommands baseMovementAction, RobotCommands headMovementAction) {
+        throw new NotImplementedException(); // TODO
+    }
+
+    @Override
+    public void connect(WorldModellerConnector connector) {
+        requireNonNull(connector);
+        WorldModelSpec worldSpec = connector.worldModelSpec();
+        this.stateFunc = stateFunctionBuilder.apply(worldSpec);
+    }
+
+    @Override
+    public void connect(AgentConnector agent) {
+        requireNonNull(agent);
+        this.agent = agent;
+    }
+
+    /**
      * Validates that all required operational dependencies are connected.
      */
     private void ensureConnected() {
@@ -205,11 +189,34 @@ public class DLMacroActionEnvironment implements EnvironmentApi, MacroActionCont
         }
     }
 
+    @Override
+    public MacroAction nextAction(MacroAction currentAction) {
+        this.currentAction = requireNonNull(currentAction);
+        return this.currentAction;
+    }
+
+    @Override
+    public RobotCommands onInference(WorldModel state) {
+        requireNonNull(state);
+        ensureConnected();
+        if (requestNextAction) {
+            askForInference(state);
+            // Process resulting actions
+            requestNextAction = false;
+        }
+        return currentAction.execute(this, state);
+    }
+
     /**
      * Returns the rewards flow
      */
     public Flowable<Double> readRewards() {
         return rewards;
+    }
+
+    @Override
+    public void requestNextAction() {
+        this.requestNextAction = true;
     }
 
     @Override
@@ -233,11 +240,6 @@ public class DLMacroActionEnvironment implements EnvironmentApi, MacroActionCont
     public Map<String, SignalSpec> stateSpec() {
         ensureConnected();
         return stateFunc.spec();
-    }
-
-    @Override
-    public MacroActions infere(MacroActionContext context, WorldModel state) {
-        throw new NotImplementedException(); // TODO
     }
 
     /**

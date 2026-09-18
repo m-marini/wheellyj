@@ -31,32 +31,35 @@ package org.mmarini.wheelly.envs;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.WorldModel;
 
-import static java.util.Objects.requireNonNull;
+/**
+ * Represents a high-level macro-action executable within the environment.
+ * <p>
+ * A macro-action encapsulates behaviors that may span multiple cycles,
+ * maintaining an execution state and generating robot commands until its
+ * commitment expires or a transition occurs.
+ * </p>
+ */
+public interface MacroAction {
 
-public class ComposedAbstractAction implements MacroAction {
-    private final MacroAction baseMovementState;
-    private final MacroAction headMovementState;
+    /**
+     * Checks if the action is currently committed to its execution.
+     * <p>
+     * This method returns true until the minimum commitment time for this action expires.
+     * While committed, the environment will typically continue executing this action
+     * instead of transitioning to a new one.
+     * </p>
+     *
+     * @return {@code true} if the minimum commitment time has not yet expired;
+     * {@code false} otherwise
+     */
+    boolean committed();
 
-    public ComposedAbstractAction(MacroAction baseMovementState, MacroAction headMovementState) {
-        this.baseMovementState = requireNonNull(baseMovementState);
-        this.headMovementState = requireNonNull(headMovementState);
-    }
-
-    @Override
-    public boolean committed() {
-        return false;
-    }
-
-    @Override
-    public RobotCommands execute(MacroActionContext context, WorldModel state) {
-        requireNonNull(context);
-        requireNonNull(state);
-
-        // Process both sub-states concurrently
-        RobotCommands motionCommands = baseMovementState.execute(context, state);
-        RobotCommands headCommands = headMovementState.execute(context, state);
-
-        // Merge the independent motor commands and scanner commands into a unified set
-        return RobotCommands.merge(motionCommands, headCommands);
-    }
+    /**
+     * Executes the macro-action for the current cycle based on the environment state.
+     *
+     * @param context the macro-action context managing transitions and inference
+     * @param state   the current world model state representing the robot and environment status
+     * @return the {@link RobotCommands} to be dispatched to the robot for this cycle
+     */
+    RobotCommands execute(MacroActionContext context, WorldModel state);
 }

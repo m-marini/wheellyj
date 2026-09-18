@@ -28,8 +28,26 @@
 
 package org.mmarini.wheelly.envs;
 
-import org.mmarini.wheelly.apis.WorldModel;
 
+/**
+ * Manages the execution context of macro-actions within the environment.
+ * Provides the necessary mechanisms to determine transitions between macro-actions
+ * and to explicitly request the scheduling of the next action.
+ */
 public interface MacroActionContext {
-    MacroActions infere(MacroActionContext context, WorldModel state);
+
+    /**
+     * Determines the next macro-action to execute based on the current action
+     * and the internal state of the context.
+     *
+     * @param action the {@link MacroAction} currently executing
+     * @return the next {@link MacroAction} to be executed
+     */
+    MacroAction nextAction(MacroAction action);
+
+    /**
+     * Requests the next macro-action. The inference engine will be invoked
+     * on the next cycle to generate and schedule the upcoming action.
+     */
+    void requestNextAction();
 }

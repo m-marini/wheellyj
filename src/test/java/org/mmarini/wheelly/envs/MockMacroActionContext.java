@@ -28,24 +28,39 @@
 
 package org.mmarini.wheelly.envs;
 
-import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.WorldModel;
+import java.util.ArrayList;
+import java.util.List;
 
-public interface MacroActions {
-    MacroActions HALT_ACTION = new MacroActions() {
-        @Override
-        public RobotCommands execute(MacroActionContext context, WorldModel state) {
-            return RobotCommands.halt();
-        }
-    };
+public class MockMacroActionContext implements MacroActionContext {
+    private final List<MacroAction> actions;
+    private int requestNextActionNum;
 
-    static MacroActions lookStrightAction() {
-        return HALT_ACTION;
+    public MockMacroActionContext() {
+        this.actions = new ArrayList<>();
     }
 
-    static MacroActions haltAction() {
-        return HALT_ACTION;
+    public List<MacroAction> actions() {
+        return actions;
     }
 
-    RobotCommands execute(MacroActionContext context, WorldModel state);
+    public MockMacroActionContext clearRequests() {
+        requestNextActionNum = 0;
+        return this;
+    }
+
+    @Override
+    public MacroAction nextAction(MacroAction macroAction) {
+        actions.add(macroAction);
+        return macroAction;
+    }
+
+    @Override
+    public void requestNextAction() {
+        requestNextActionNum++;
+
+    }
+
+    public int requestNextActionNum() {
+        return requestNextActionNum;
+    }
 }
