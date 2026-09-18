@@ -40,38 +40,15 @@ import org.mmarini.wheelly.apis.WorldModel;
  * </p>
  */
 public interface MacroAction {
-
     /**
-     * Default macro-action instance that immediately halts the robot and requests
-     * the next action during the same cycle. This action is permanently expired and completed.
-     */
-    MacroAction HALT_ACTION = new MacroAction() {
-        @Override
-        public boolean completed() {
-            return true;
-        }
-
-        @Override
-        public RobotCommands execute(MacroActionContext context, WorldModel state) {
-            context.requestNextAction();
-            return RobotCommands.halt();
-        }
-
-        @Override
-        public boolean expired() {
-            return true;
-        }
-    };
-
-    /**
-     * Returns the singleton instance of the default halt macro-action.
+     * Checks whether the macro-action has successfully completed its objective.
+     * <p>
+     * Completion criteria depend on the specific implementation (e.g., reaching a target position,
+     * finishing a waiting period, or completing a rotation).
+     * </p>
      *
-     * @return the {@link #HALT_ACTION} instance
+     * @return {@code true} if the action has completed its goal, {@code false} otherwise
      */
-    static MacroAction haltAction() {
-        return HALT_ACTION;
-    }
-
     boolean completed();
 
     /**

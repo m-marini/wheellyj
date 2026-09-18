@@ -53,7 +53,6 @@ public class MicroAction extends AbstractCommitmentAction {
      * The target geographic position to reach.
      */
     private final Point2D targetPosition;
-
     /**
      * Indicates whether the action has been successfully completed.
      */
@@ -99,7 +98,9 @@ public class MicroAction extends AbstractCommitmentAction {
     protected RobotCommands executeAction(MacroActionContext context, WorldModel state) {
         RobotStatus robotStatus = state.robotStatus();
         double targetRange = robotStatus.robotSpec().targetRange();
-        if (robotStatus.location().distance(targetPosition) <= targetRange) {
+        if (robotStatus.location().distance(targetPosition) <= targetRange
+                || !robotStatus.canMoveForward()
+                || !robotStatus.canMoveBackward()) {
             completed = true;
         }
         if (completed || expired()) {
