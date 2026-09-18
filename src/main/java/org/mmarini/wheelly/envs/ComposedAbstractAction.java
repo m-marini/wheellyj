@@ -43,8 +43,8 @@ public class ComposedAbstractAction implements MacroAction {
     }
 
     @Override
-    public boolean expired() {
-        return false;
+    public boolean completed() {
+        return true;
     }
 
     @Override
@@ -58,5 +58,10 @@ public class ComposedAbstractAction implements MacroAction {
 
         // Merge the independent motor commands and scanner commands into a unified set
         return RobotCommands.merge(motionCommands, headCommands);
+    }
+
+    @Override
+    public boolean expired() {
+        return false;
     }
 }

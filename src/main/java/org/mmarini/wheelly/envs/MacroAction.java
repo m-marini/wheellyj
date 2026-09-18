@@ -43,9 +43,14 @@ public interface MacroAction {
 
     /**
      * Default macro-action instance that immediately halts the robot and requests
-     * the next action during the same cycle. This action is permanently expired.
+     * the next action during the same cycle. This action is permanently expired and completed.
      */
     MacroAction HALT_ACTION = new MacroAction() {
+        @Override
+        public boolean completed() {
+            return true;
+        }
+
         @Override
         public RobotCommands execute(MacroActionContext context, WorldModel state) {
             context.requestNextAction();
@@ -66,6 +71,8 @@ public interface MacroAction {
     static MacroAction haltAction() {
         return HALT_ACTION;
     }
+
+    boolean completed();
 
     /**
      * Executes the macro-action for the current cycle based on the environment state.

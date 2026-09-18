@@ -52,6 +52,11 @@ public class LookStraightAction extends AbstractCommitmentAction {
         super(commitmentInstant);
     }
 
+    @Override
+    public boolean completed() {
+        return expired();
+    }
+
     /**
      * Executes the action.
      *

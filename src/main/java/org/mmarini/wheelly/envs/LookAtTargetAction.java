@@ -53,6 +53,11 @@ public class LookAtTargetAction extends AbstractCommitmentAction {
     private final boolean frontFacing;
     private final int directionRangeDeg;
 
+    @Override
+    public boolean completed() {
+        return expired();
+    }
+
     /**
      * Constructs a LookAtTargetAction with the specified configuration.
      *

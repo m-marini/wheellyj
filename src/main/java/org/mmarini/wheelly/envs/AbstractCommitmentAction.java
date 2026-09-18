@@ -99,7 +99,7 @@ public abstract class AbstractCommitmentAction implements MacroAction {
     /**
      * Checks if the action is still committed based on the last recorded robot time.
      *
-     * @return {@code true} if the current robot time is not strictly less than the commitment instant;
+     * @return {@code true} if the current robot time is strictly less than the commitment instant;
      * {@code false} otherwise
      */
     @Override

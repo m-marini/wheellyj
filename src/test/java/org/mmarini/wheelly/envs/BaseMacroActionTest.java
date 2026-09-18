@@ -30,14 +30,14 @@ package org.mmarini.wheelly.envs;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.apis.*;
 
 import java.awt.geom.Point2D;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mmarini.Matchers.pointCloseTo;
+import static org.mmarini.wheelly.apis.Utils.MM;
 
 class BaseMacroActionTest {
     public static final int COMMITMENT_TIME = 10;
@@ -66,23 +66,106 @@ class BaseMacroActionTest {
         assertEquals(1, ctx.requestNextActionNum());
     }
 
-    @ParameterizedTest
-    @CsvSource({
-            "0.1"
-    })
-    void testMicroAction(double distance) {
+    @Test
+    void testMicroActionBackward() {
         // Given a micro action
         WorldModel world0 = builder.build();
         RobotStatus robotStatus = world0.robotStatus();
+        double distance = robotStatus.robotSpec().targetRange() * 2;
+        Point2D targetPosition = robotStatus.direction().at(robotStatus.location(), -distance);
+        MicroAction action = new MicroAction(COMMITMENT_TIME, targetPosition);
+
+        // When executing the action for the first time
+        RobotCommands cmd = action.execute(ctx, builder.build());
+
+        // Then the command should be forward to target position
+        assertEquals(RobotStatusId.BACKWARD, cmd.status());
+        assertThat(cmd.target(), pointCloseTo(targetPosition, MM));
+        // And action should not have been completed
+        assertFalse(action.completed());
+        // And action should not have been expired
+        assertFalse(action.expired());
+        // And no next action should have been required
+        assertEquals(0, ctx.requestNextActionNum());
+
+        // When executing the action with robot at commitment time
+        ctx.clearRequests();
+        cmd = action.execute(ctx, builder.addTime(COMMITMENT_TIME).build());
+
+        // Then the command should be forward to target position
+        assertEquals(RobotStatusId.BACKWARD, cmd.status());
+        assertThat(cmd.target(), pointCloseTo(targetPosition, MM));
+        // And action should not have been completed
+        assertFalse(action.completed());
+        // And action should not have been expired
+        assertTrue(action.expired());
+        // And no next action should have been required
+        assertEquals(1, ctx.requestNextActionNum());
+
+        // When executing the action with robot after commitment time and robot in target range
+        ctx.clearRequests();
+        cmd = action.execute(ctx, builder.addTime(COMMITMENT_TIME)
+                .backward(distance)
+                .build());
+
+        // Then the command should be forward to target position
+        assertTrue(cmd.isHalt());
+        // And action should not have been completed
+        assertTrue(action.completed());
+        // And action should not have been expired
+        assertTrue(action.expired());
+        // And no next action should have been required
+        assertEquals(1, ctx.requestNextActionNum());
+    }
+
+    @Test
+    void testMicroActionForward() {
+        // Given a micro action
+        WorldModel world0 = builder.build();
+        RobotStatus robotStatus = world0.robotStatus();
+        double distance = robotStatus.robotSpec().targetRange() * 2;
         Point2D targetPosition = robotStatus.direction().at(robotStatus.location(), distance);
         MicroAction action = new MicroAction(COMMITMENT_TIME, targetPosition);
 
         // When executing the action for the first time
-        RobotCommands cmd = action.executeAction(ctx, builder.build());
-        assertEquals(distance >= 0
-                        ? RobotStatusId.FORWARD
-                        : RobotStatusId.BACKWARD,
-                cmd.status());
+        RobotCommands cmd = action.execute(ctx, builder.build());
+
+        // Then the command should be forward to target position
+        assertEquals(RobotStatusId.FORWARD, cmd.status());
+        assertThat(cmd.target(), pointCloseTo(targetPosition, MM));
+        // And action should not have been completed
+        assertFalse(action.completed());
+        // And action should not have been expired
+        assertFalse(action.expired());
+        // And no next action should have been required
+        assertEquals(0, ctx.requestNextActionNum());
+
+        // When executing the action with robot at commitment time
+        ctx.clearRequests();
+        cmd = action.execute(ctx, builder.addTime(COMMITMENT_TIME).build());
+
+        // Then the command should be forward to target position
+        assertEquals(RobotStatusId.FORWARD, cmd.status());
+        assertThat(cmd.target(), pointCloseTo(targetPosition, MM));
+        // And action should not have been completed
+        assertFalse(action.completed());
+        // And action should not have been expired
+        assertTrue(action.expired());
+        // And no next action should have been required
+        assertEquals(1, ctx.requestNextActionNum());
+
+        // When executing the action with robot after commitment time and robot in target range
+        ctx.clearRequests();
+        cmd = action.execute(ctx, builder.addTime(COMMITMENT_TIME)
+                .forward(distance)
+                .build());
+
+        // Then the command should be forward to target position
+        assertTrue(cmd.isHalt());
+        // And action should not have been completed
+        assertTrue(action.completed());
+        // And action should not have been expired
+        assertTrue(action.expired());
         // And no next action should have been required
         assertEquals(1, ctx.requestNextActionNum());
     }

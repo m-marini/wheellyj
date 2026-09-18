@@ -54,17 +54,15 @@ public class ScanLeftRightAction extends AbstractCommitmentAction {
      * The time interval between two consecutive scan positions.
      */
     private final long scanInterval;
-
     /**
      * The sequence of head angles, in degrees, used during the scan.
      */
     private final int[] headDeg;
-
+    private boolean completed;
     /**
      * The robot time at which the current scan step started.
      */
     private long startStepTime;
-
     /**
      * The index of the current scan position in {@link #headDeg}.
      *
@@ -94,6 +92,10 @@ public class ScanLeftRightAction extends AbstractCommitmentAction {
         currentStepIndex = -1;
     }
 
+    @Override
+    public boolean completed() {
+        return completed;
+    }
 
     /**
      * Executes the current scan step.
@@ -122,6 +124,7 @@ public class ScanLeftRightAction extends AbstractCommitmentAction {
             // Scan interval elapsed
             if (currentStepIndex >= headDeg.length - 1) {
                 // Reached end of scan
+                completed = true;
                 context.requestNextAction();
             } else {
                 // Next scan

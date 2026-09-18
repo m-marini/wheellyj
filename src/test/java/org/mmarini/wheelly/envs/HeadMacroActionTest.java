@@ -39,7 +39,7 @@ import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.awt.geom.Point2D;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 class HeadMacroActionTest {
     public static final int COMMITMENT_TIME = 10;
@@ -102,6 +102,8 @@ class HeadMacroActionTest {
         assertEquals(expectedDir, cmd.scanDirection());
         // And no next action should have been required
         assertEquals(0, ctx.requestNextActionNum());
+        // And action should not be completed
+        assertFalse(action.completed());
 
         // When executing the action after commitment time
         ctx.clearRequests();
@@ -112,8 +114,8 @@ class HeadMacroActionTest {
         assertEquals(expectedDir, cmd.scanDirection());
         // And next action should have been required
         assertEquals(1, ctx.requestNextActionNum());
-
-
+        // And action should be completed
+        assertTrue(action.completed());
     }
 
     @Test
@@ -128,6 +130,8 @@ class HeadMacroActionTest {
         assertEquals(0, cmd.scanDirection());
         // And no next action should have been required
         assertEquals(0, ctx.requestNextActionNum());
+        // And action should not be completed
+        assertFalse(action.completed());
 
         // When executing the action after commitment time
         ctx.clearRequests();
@@ -138,6 +142,8 @@ class HeadMacroActionTest {
         assertEquals(0, cmd.scanDirection());
         // And next action should have been required
         assertEquals(1, ctx.requestNextActionNum());
+        // And action should be completed
+        assertTrue(action.completed());
     }
 
     @Test
@@ -162,6 +168,8 @@ class HeadMacroActionTest {
         assertEquals(SCAN_HEAD_DEG[0], cmd.scanDirection());
         // And next action should have been required
         assertEquals(1, ctx.requestNextActionNum());
+        // And action should not be completed
+        assertFalse(action.completed());
 
         // When executing the action after scan interval and commitment interval
         ctx.clearRequests();
@@ -172,6 +180,8 @@ class HeadMacroActionTest {
         assertEquals(SCAN_HEAD_DEG[1], cmd.scanDirection());
         // And next action should have been required
         assertEquals(1, ctx.requestNextActionNum());
+        // And action should not be completed
+        assertFalse(action.completed());
 
         // When executing the action after second scan interval and commitment interval
         ctx.clearRequests();
@@ -182,6 +192,8 @@ class HeadMacroActionTest {
         assertEquals(SCAN_HEAD_DEG[2], cmd.scanDirection());
         // And next action should have been required
         assertEquals(1, ctx.requestNextActionNum());
+        // And action should not be completed
+        assertFalse(action.completed());
 
         // When executing the action after third scan interval and commitment interval
         ctx.clearRequests();
@@ -192,5 +204,7 @@ class HeadMacroActionTest {
         assertEquals(SCAN_HEAD_DEG[2], cmd.scanDirection());
         // And next action should have been required twice (commitment and end of action)
         assertEquals(2, ctx.requestNextActionNum());
+        // And action should not be completed
+        assertTrue(action.completed());
     }
 }
