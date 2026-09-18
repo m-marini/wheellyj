@@ -169,6 +169,16 @@ public record RobotCommands(RobotStatusId status, int scanDirection, int rotatio
     }
 
     /**
+     * Returns the commands by merging motion command and head command
+     *
+     * @param motionCommands the motion command
+     * @param headCommands   the head command
+     */
+    public static RobotCommands merge(RobotCommands motionCommands, RobotCommands headCommands) {
+        return new RobotCommands(motionCommands.status, headCommands.scanDirection, motionCommands.rotationDirection, motionCommands.target);
+    }
+
+    /**
      * Creates the robot status command
      *
      * @param status            the status
@@ -215,5 +225,4 @@ public record RobotCommands(RobotStatusId status, int scanDirection, int rotatio
         return scanDirection == this.scanDirection ? this
                 : new RobotCommands(status, scanDirection, rotationDirection, target);
     }
-
 }
